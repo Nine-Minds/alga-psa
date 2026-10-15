@@ -15,14 +15,15 @@ export async function sendCoManagedSlaEmail(delivery: CoManagedSlaEmailDelivery)
   if (!['http:', 'https:'].includes(base.protocol)) throw new Error('Invalid SLA email application URL');
   const presentation = coManagedSlaPresentation(delivery.message);
   const template = await new DatabaseTemplateProcessor(await getConnection(delivery.tenant), `sla-${delivery.message.notificationType}`)
-    .process({ tenantId: delivery.tenant, locale });
+    // Pseudo-locales (xx/yy) never ship template copy; the processor then renders English.
+    .process({ tenantId: delivery.tenant, locale: locale === 'xx' || locale === 'yy' ? undefined : locale });
   const data: Record<string, unknown> = { ...presentation.data, recipientName: delivery.recipientName,
     ticketUrl: new URL(presentation.link, base.origin).toString() };
   // LEVERAGE: friction email-template-context-escaping — generic rendering needs distinct HTML and plain-text substitution.
   const render = (value: string, html = false) => value.replace(/{{\s*([A-Za-z0-9_]+)\s*}}/g, (_match, key: string) => {
     const text = String(data[key] ?? ''); return html ? escape(text) : text;
   });
-  const result = await TenantEmailService.getInstance(delivery.tenant).sendEmail({ tenantId: delivery.tenant,
+  const result = await TenantEmailService.getInstance(delivery.tenant).sendEmail({ tenantId: delivery.tenant, mailClass: 'ticket',
     to: delivery.email, userId: delivery.recipientUserId, notificationSubtypeId: delivery.subtypeId, locale, retryPolicy: 'caller',
     templateProcessor: new StaticTemplateProcessor(render(template.subject).replace(/[\r\n]+/g, ' '), render(template.html, true), render(template.text)),
     headers: { ...AUTO_GENERATED_MAIL_HEADERS, 'Message-ID': delivery.messageId },

@@ -1,0 +1,30 @@
+{
+  "scope": "Complete local Node tooling execution; not native CI or full plan completion",
+  "revision": "c704e97ad5fe525be040cc01bf0fcd17b719e603",
+  "status": "passed",
+  "counts": {
+    "tests": 486,
+    "passed": 486,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "executedFileCount": 46,
+  "source": {
+    "before": {
+      "revision": "c704e97ad5fe525be040cc01bf0fcd17b719e603",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "c704e97ad5fe525be040cc01bf0fcd17b719e603",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "log": "/tmp/alga-node-tooling-c704.log",
+  "sha256": {
+    "test-results/node-tooling/evidence.json": "c9226149c33f92eb67b38d86153e924f47a633493c00e841d7295dc752020efb"
+  }
+}

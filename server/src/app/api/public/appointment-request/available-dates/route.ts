@@ -12,6 +12,7 @@ const TENANT_SLUG_REGEX = /^[a-f0-9]{12}$/i;
 // UUID pattern for validation
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// LEVERAGE: pattern iana-zone-catalog — builds/validates its own IANA zone list; see @alga-psa/core/timeZones (validateStorableTimeZone, describeTimeZone)
 // Get valid IANA timezones for validation (with Node 18 fallback)
 function getValidTimezones(): Set<string> | null {
   try {

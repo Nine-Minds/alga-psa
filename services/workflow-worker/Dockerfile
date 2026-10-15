@@ -1,4 +1,4 @@
-FROM node:20.19-bullseye-slim AS builder
+FROM node:22-bookworm-slim AS builder
 
 # Install required system dependencies
 RUN apt-get update && apt-get install -y \
@@ -39,6 +39,36 @@ COPY packages/storage/package.json ./packages/storage/
 COPY packages/types/package.json ./packages/types/
 COPY packages/ui/package.json ./packages/ui/
 
+# Include the selected workspaces' transitive local dependencies before npm
+# resolves them; the later source COPY cannot repair missing install inputs.
+COPY packages/assets/package.json ./packages/assets/
+COPY packages/auth/package.json ./packages/auth/
+COPY packages/billing/package.json ./packages/billing/
+COPY packages/block-content/package.json ./packages/block-content/
+COPY packages/clients/package.json ./packages/clients/
+COPY packages/documents/package.json ./packages/documents/
+COPY packages/email/package.json ./packages/email/
+COPY packages/integrations/package.json ./packages/integrations/
+COPY packages/inventory/package.json ./packages/inventory/
+COPY packages/jobs/package.json ./packages/jobs/
+COPY packages/licensing/package.json ./packages/licensing/
+COPY packages/list-views/package.json ./packages/list-views/
+COPY packages/notifications/package.json ./packages/notifications/
+COPY packages/opportunities/package.json ./packages/opportunities/
+COPY packages/projects/package.json ./packages/projects/
+COPY packages/reference-data/package.json ./packages/reference-data/
+COPY packages/scheduling/package.json ./packages/scheduling/
+COPY packages/search/package.json ./packages/search/
+COPY packages/sla/package.json ./packages/sla/
+COPY packages/tags/package.json ./packages/tags/
+COPY packages/tenancy/package.json ./packages/tenancy/
+COPY packages/tickets/package.json ./packages/tickets/
+COPY packages/user-composition/package.json ./packages/user-composition/
+COPY packages/users/package.json ./packages/users/
+COPY packages/validation/package.json ./packages/validation/
+COPY packages/workflow-inference/package.json ./packages/workflow-inference/
+COPY packages/workflow-streams/package.json ./packages/workflow-streams/
+
 # Install dependencies for required workspaces (shared, worker, server, and required @alga-psa/* deps)
 # Skip puppeteer Chrome download to save disk space
 RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm install --include-workspace-root \
@@ -62,6 +92,7 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=@alga-psa/types \
   --workspace=@alga-psa/validation \
   --workspace=@alga-psa/email \
+  --workspace=@alga-psa/opportunities \
   --workspace=@alga-psa/ui \
   && npm install --no-save openai@^4.104.0
 
@@ -115,6 +146,13 @@ RUN npm run build
 WORKDIR /app/shared
 RUN npm run build
 
+# The scheduled renewal/whitespace generators are dynamically imported from
+# @alga-psa/opportunities/lib/generators/runGenerators at runtime, which resolves
+# through the exports map into dist/. Without this build the action fails with
+# "Cannot find module".
+WORKDIR /app/packages/opportunities
+RUN npm run build
+
 # Build workflow package dist so Temporal-authored modules can resolve runtime exports.
 WORKDIR /app/ee/packages/workflows
 RUN npm run build
@@ -153,7 +191,7 @@ RUN rm -rf /app/server /app/node_modules/server \
 # into a clean stage drops the intermediate layers; removing server/ source
 # reclaims ~2GB more.
 # ---------------------------------------------------------------------------
-FROM node:20.19-bullseye-slim AS runtime
+FROM node:22-bookworm-slim AS runtime
 
 RUN apt-get update && apt-get install -y \
     postgresql-client \

@@ -13,6 +13,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { getSharedProjectTaskConversationAction, saveSharedProjectTaskCommentAction } from '@/lib/actions/coManagedProjectTaskConversationActions';
 import { conversationDocument, conversationText } from './conversationText';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 const Document = dynamic(() => import('./CoManagedConversationDocument'), { ssr: false });
 type Screen = Awaited<ReturnType<typeof getSharedProjectTaskConversationAction>>;
@@ -38,7 +39,7 @@ function Composer({ resource, audiences, draft, onSaved, onCancel, onUnavailable
     if (inFlight.current || !allowedRef.current || conflict || (draft.kind !== 'delete' && !validated)) return;
     inFlight.current = true; setBusy(true); setError(null);
     if (!saved.current) {
-      const operationId = crypto.randomUUID();
+      const operationId = newCoManagedOperationId();
       saved.current = draft.kind === 'new' ? { kind: 'create', operationId, audience, document: validated! }
         : draft.kind === 'reply' ? { kind: 'create', operationId, parent: reference(draft.item), expectedAudience: audience, document: validated! }
         : draft.kind === 'edit' ? { kind: 'edit', operationId, comment: reference(draft.item), expectedRevision: draft.item.revision!, document: validated! }

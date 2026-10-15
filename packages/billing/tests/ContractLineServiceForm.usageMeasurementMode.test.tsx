@@ -26,6 +26,10 @@ const actionMocks = vi.hoisted(() => ({
   deleteBucketOverlay: vi.fn(),
 }));
 
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 vi.mock('@alga-psa/billing/actions/contractLineAction', () => ({
   getContractLineById: actionMocks.getContractLineById,
   updateContractLineFixedConfig: actionMocks.updateContractLineFixedConfig,

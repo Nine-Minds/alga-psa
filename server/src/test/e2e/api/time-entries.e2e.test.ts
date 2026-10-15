@@ -17,6 +17,7 @@ import {
 import { createTestTicket } from '../utils/ticketTestData';
 import { v4 as uuidv4 } from 'uuid';
 import { ApiTestClient } from '../utils/apiTestHelpers';
+import { grantTestUserPermission } from '../utils/simpleRoleSetup';
 
 const API_BASE = '/api/v1/time-entries';
 
@@ -150,6 +151,12 @@ describe('Time Entries API E2E Tests', () => {
         assertSuccess(response, 201);
         expect(response.data.data.work_date).toBe('2024-07-01');
         expect(response.data.data.work_timezone).toBe('America/Los_Angeles');
+        const reopened = await env.apiClient.get(`${API_BASE}/${response.data.data.entry_id}`);
+        assertSuccess(reopened);
+        expect(reopened.data.data).toMatchObject({
+          work_date: '2024-07-01', work_timezone: 'America/Los_Angeles',
+          start_time: '2024-07-02T06:30:00.000Z',
+        });
 
         // Verify the server attached the entry to the period containing work_date (period1).
         const sheet = await tenantTable('time_sheets')
@@ -221,7 +228,10 @@ describe('Time Entries API E2E Tests', () => {
           is_billable: true
         });
 
-        assertError(response, 400);
+        assertError(response, 409, 'CONFLICT');
+        const persisted = await tenantTable('time_entries').where({ work_item_id: ticket.ticket_id, user_id: env.userId });
+        expect(persisted).toHaveLength(1);
+        expect(persisted[0].notes).toBe('First entry');
       });
     });
 
@@ -374,7 +384,9 @@ describe('Time Entries API E2E Tests', () => {
           notes: 'Try to update approved'
         });
         
-        assertError(response, 400);
+        assertError(response, 409, 'CONFLICT');
+        const persisted = await tenantTable('time_entries').where({ entry_id: entry.entry_id }).first();
+        expect(persisted).toMatchObject({ approval_status: 'APPROVED', notes: entry.notes });
       });
     });
 
@@ -425,7 +437,9 @@ describe('Time Entries API E2E Tests', () => {
         });
 
         const response = await env.apiClient.delete(`${API_BASE}/${entry.entry_id}`);
-        assertError(response, 400);
+        assertError(response, 409, 'CONFLICT');
+        const persisted = await tenantTable('time_entries').where({ entry_id: entry.entry_id }).first();
+        expect(persisted).toMatchObject({ approval_status: 'APPROVED', notes: entry.notes });
       });
     });
   });
@@ -682,8 +696,23 @@ describe('Time Entries API E2E Tests', () => {
         work_item_type: 'ticket',
         service_id: service.service_id,
         start_time: expect.any(String),
-        status: 'active'
+        end_time: null,
+        status: 'active',
+        elapsed_minutes: expect.any(Number)
       });
+      // Legacy adapter over the server-side stopwatch: the session id is the stopwatch session id.
+      const active = await env.apiClient.get(`${API_BASE}/active-session`);
+      assertSuccess(active);
+      expect(active.data.data.session_id).toBe(response.data.data.session_id);
+      expect(active.data.data.start_time).toBe(response.data.data.start_time);
+
+      // A second start conflicts with the open session.
+      const second = await env.apiClient.post(`${API_BASE}/start-tracking`, {
+        work_item_id: ticket.ticket_id,
+        work_item_type: 'ticket',
+        service_id: service.service_id
+      });
+      assertError(second, 409);
     });
 
     it('should stop a tracking session', async () => {
@@ -716,12 +745,21 @@ describe('Time Entries API E2E Tests', () => {
         work_item_type: 'ticket',
         service_id: service.service_id,
         notes: 'Completed work',
-        billable_duration: expect.any(Number)
+        billable_duration: expect.any(Number),
+        time_sheet_id: expect.any(String)
       });
+      // Stopping logs the stopwatch session: nothing is left running.
+      const active = await env.apiClient.get(`${API_BASE}/active-session`);
+      assertSuccess(active);
+      expect(active.data.data).toBeNull();
     });
   });
 
-  describe.skip('Approval Workflow', () => {
+  describe('Approval Workflow', () => {
+    beforeEach(async () => {
+      await grantTestUserPermission(env.db, env.userId, env.tenant, 'time_entry', 'approve');
+    });
+
     it('should approve time entries', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
         client_id: env.clientId,
@@ -732,7 +770,7 @@ describe('Time Entries API E2E Tests', () => {
       const service = await createTestService(env.db, env.tenant);
       
       // Create multiple entries with SUBMITTED status
-      const entries = [];
+      const entries: string[] = [];
       for (let i = 0; i < 2; i++) {
         const entry = await createTestTimeEntry(env.db, env.tenant, {
           work_item_id: ticket.ticket_id,
@@ -750,6 +788,11 @@ describe('Time Entries API E2E Tests', () => {
       
       assertSuccess(response);
       expect(response.data.data.approved_count).toBe(2);
+      const persisted = await env.db('time_entries')
+        .where({ tenant: env.tenant }).whereIn('entry_id', entries)
+        .select('entry_id', 'approval_status');
+      expect(persisted).toHaveLength(2);
+      expect(persisted.every(entry => entry.approval_status === 'APPROVED')).toBe(true);
     });
 
     it('should reject invalid entry IDs for approval', async () => {
@@ -921,7 +964,7 @@ describe('Time Entries API E2E Tests', () => {
       const service = await createTestService(env.db, env.tenant);
       
       // Create entries
-      const entryIds = [];
+      const entryIds: string[] = [];
       for (let i = 0; i < 2; i++) {
         const entry = await createTestTimeEntry(env.db, env.tenant, {
           work_item_id: ticket.ticket_id,
@@ -956,7 +999,7 @@ describe('Time Entries API E2E Tests', () => {
       const service = await createTestService(env.db, env.tenant);
       
       // Create entries
-      const entries = [];
+      const entries: string[] = [];
       for (let i = 0; i < 2; i++) {
         const entry = await createTestTimeEntry(env.db, env.tenant, {
           work_item_id: ticket.ticket_id,
@@ -1029,7 +1072,6 @@ describe('Time Entries API E2E Tests', () => {
       const restrictedClient = new ApiTestClient({
         baseUrl: env.apiClient['config'].baseUrl,
         apiKey: plaintextKey, // Use plaintext key for requests
-        tenantId: env.tenant
       });
       const response = await restrictedClient.get(API_BASE);
       
@@ -1068,7 +1110,6 @@ describe('Time Entries API E2E Tests', () => {
       const restrictedClient = new ApiTestClient({
         baseUrl: env.apiClient['config'].baseUrl,
         apiKey: plaintextKey, // Use plaintext key for requests
-        tenantId: env.tenant
       });
       const response = await restrictedClient.post(API_BASE, {
         notes: 'Test'
@@ -1123,7 +1164,6 @@ describe('Time Entries API E2E Tests', () => {
       const restrictedClient = new ApiTestClient({
         baseUrl: env.apiClient['config'].baseUrl,
         apiKey: plaintextKey, // Use plaintext key for requests
-        tenantId: env.tenant
       });
       const response = await restrictedClient.put(`${API_BASE}/${entry.entry_id}`, {
         notes: 'Updated'
@@ -1178,7 +1218,6 @@ describe('Time Entries API E2E Tests', () => {
       const restrictedClient = new ApiTestClient({
         baseUrl: env.apiClient['config'].baseUrl,
         apiKey: plaintextKey, // Use plaintext key for requests
-        tenantId: env.tenant
       });
       const response = await restrictedClient.delete(`${API_BASE}/${entry.entry_id}`);
       

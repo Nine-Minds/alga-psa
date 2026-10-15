@@ -13,6 +13,8 @@ import {
 import type { PrintableTableColumn } from './PrintableTable';
 import { useTranslation, useOptionalI18n } from '../lib/i18n/client';
 import { LOCALE_CONFIG } from '../lib/i18n/config';
+import { useDateFormat } from '../lib/dateFormat/useDateFormat';
+import { formatDateValue } from '../lib/i18n/formatDateValue';
 import type { ColumnDefinition } from '@alga-psa/types';
 
 export type PrintColumnOption<T> = PrintableTableColumn<T> & {
@@ -66,8 +68,17 @@ function getNestedColumnValue<T>(record: T, dataIndex: string | string[]): unkno
 function LocaleDateTime({ date }: { date: Date }) {
   const i18n = useOptionalI18n();
   const locale = i18n?.locale ?? LOCALE_CONFIG.defaultLocale;
+  const dateFormat = useDateFormat();
+  // `dateStyle`/`timeStyle` hand both the digit order and the 12/24h clock to
+  // the language; the printed header has to match the country like every other
+  // date on the page, so the parts are spelled out and routed centrally.
   return (
-    <>{new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(date)}</>
+    <>{formatDateValue(
+      date,
+      locale,
+      { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' },
+      dateFormat,
+    )}</>
   );
 }
 

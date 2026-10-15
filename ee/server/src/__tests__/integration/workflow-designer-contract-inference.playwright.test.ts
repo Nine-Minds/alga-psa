@@ -5,7 +5,7 @@
  * including inferred vs pinned modes, schema previews, and validation states.
  */
 import { test, expect, type Page } from '@playwright/test';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
@@ -813,7 +813,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await workflowPage.waitForWorkflowInList(workflowName);
 
       // Step 4: Publish the workflow
-      await workflowPage.publishButton.click();
+      await workflowPage.publish();
       // Wait for publish to complete
       await expect(workflowPage.publishButton).toBeEnabled({ timeout: 30_000 });
 
@@ -857,7 +857,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       const publishDisabled = await workflowPage.publishButton.isDisabled();
       // If not disabled, clicking should show an error
       if (!publishDisabled) {
-        await workflowPage.publishButton.click();
+        await workflowPage.publish();
         // Should show validation error or toast
         await expect(page.getByText(/cannot publish|missing schema|validation/i)).toBeVisible({ timeout: 5_000 });
       } else {

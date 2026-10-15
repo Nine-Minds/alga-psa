@@ -20,7 +20,8 @@ export async function addCoManagedNativeTimeSheetComment(db: Knex, tenant: strin
       await tenantDb(trx, tenant).table('users').where('user_id', actor.userId).forUpdate().first('user_id');
       return actor;
     }, { view: true, requireCompleteContent: true });
-    if (!current.handled) return current;
+    // Explicit `=== false`: truthiness does not narrow a boolean-literal discriminant.
+    if (current.handled === false) return current;
     if (!actor || !current.sheet) throw new CoManagedSharedWorkError();
     if (!text) throw new Error('Comment cannot be empty');
     await assertCoManagedOperationalWrite(trx, tenant);

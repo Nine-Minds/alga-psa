@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "scope": "Xero refresh-token HTTP lifecycle",
+  "reference": "https://developer.xero.com/faq/oauth2",
+  "reviewed": "2026-09-08",
+  "before": {
+    "testsFailed": 2,
+    "failures": [
+      "Old refresh token rejected before 30-minute grace expiry",
+      "Unused refresh token remained valid after 60 days"
+    ]
+  },
+  "after": {
+    "testsPassed": 16,
+    "filesPassed": 2,
+    "testsFailed": 0
+  },
+  "runtime": "Native server Vitest, ephemeral emulator HTTP servers, private virtual clock",
+  "limitations": [
+    "No current-source GitHub proof for this follow-up yet.",
+    "No live Xero sandbox, full scope issuance or JWT signature parity claim."
+  ],
+  "offlineConsent": {
+    "reference": "https://developer.xero.com/documentation/guides/oauth2/auth-flow/",
+    "before": "Request with accounting.invoices alone incorrectly received a refresh_token",
+    "after": "Response preserves the granted scope and omits refresh_token"
+  },
+  "typecheck": "passed"
+}

@@ -4,7 +4,7 @@ import { getAdminConnection, retryOnAdminReadOnly } from '@alga-psa/db/admin.js'
 import { hashPassword } from '@alga-psa/core/encryption';
 import { generateTemporaryPassword as generatePassword } from './email-activities.js';
 import { sendWelcomeEmail as sendEmail } from './email-activities.js';
-import type { SendWelcomeEmailActivityInput } from '../types/workflow-types.js';
+import type { SendWelcomeEmailActivityInput, PortalProvisioningStatus } from '../types/workflow-types.js';
 
 const logger = () => Context.current().log;
 
@@ -96,7 +96,12 @@ export async function updateUserPassword(
   log.info('Password updated successfully', { userId });
 }
 
-// Wrapper for existing sendWelcomeEmail activity
+// Wrapper for existing sendWelcomeEmail activity.
+//
+// The resend flow only resets the workspace admin password; it never touches
+// the Nine Minds Support Portal account. `portalStatus` is therefore left
+// undefined by default, which makes the email conservative (no portal claim)
+// rather than promising credentials that were not changed.
 export async function sendWelcomeEmail(input: {
   tenantId: string;
   tenantName: string;
@@ -108,6 +113,7 @@ export async function sendWelcomeEmail(input: {
   };
   temporaryPassword: string;
   productCode?: 'psa' | 'algadesk';
+  portalStatus?: PortalProvisioningStatus;
 }) {
   const log = logger();
   log.info('Sending welcome email', {
@@ -126,6 +132,7 @@ export async function sendWelcomeEmail(input: {
     },
     temporaryPassword: input.temporaryPassword,
     productCode: input.productCode,
+    portalStatus: input.portalStatus,
   };
 
   const result = await sendEmail(emailInput);

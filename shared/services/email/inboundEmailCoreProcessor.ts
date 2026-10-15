@@ -23,6 +23,7 @@ import type { InboundConversationEventRetainer } from './inboundConversationEven
 import type { EmailReplyAdmission } from './qualifiedReplyAdmission';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
+import { recordMessageOutcome } from './inboundEmailMetrics';
 import { tenantDb, withAdminTransaction } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite, isCoManagedLifecycleError, getCoManagedOperationalState } from '@alga-psa/licensing';
 import type {
@@ -49,6 +50,7 @@ import {
   readStagedSourceMime,
 } from './inboundEmailSourceStager';
 import { processInboundEmailInApp } from './processInboundEmailInApp';
+import { inboundErrorMessage, recordInboundDiagnostic, summarizeInboundError } from './inboundErrorDiagnostics';
 import { InboundEmailOutboxEventPublisher } from '../../workflow/adapters/inboundEmailOutboxEventPublisher';
 import { buildArtifactKey } from './inboundEmailIdentity';
 import { extractEmbeddedImageAttachments } from './inboundEmailArtifactHelpers';
@@ -85,7 +87,11 @@ export async function processInboundInbox(
   if (existing && TERMINAL_STATUSES.has(existing.status)) return storedOutcomeDisposition(existing);
   if (!existing) return { disposition: 'retry', error: 'inbox_row_unclaimable' };
   const lifecycle = await getCoManagedOperationalState(db, params.tenantId);
-  if (!lifecycle.canWrite) {
+  // Compare against the literal: CoManagedOperationalState is discriminated on
+  // `canWrite`, and TypeScript only narrows the union through an explicit
+  // `=== false`. A truthiness test leaves `state` as the full union and the
+  // non-writable states cannot be passed on.
+  if (lifecycle.canWrite === false) {
     const until = new Date(Date.now() + 60_000);
     await deferInboxForCoManagedLifecycle(db, { tenant: params.tenantId, inboxId: params.inboxId,
       state: lifecycle.state, until });
@@ -233,41 +239,99 @@ export async function processInboundInbox(
   let commitResult: CoreCommitResult;
   try {
     commitResult = await withAdminTransaction(async (trx: Knex.Transaction) => {
-      // Acquire lifecycle locks before the inbox/operational rows. A license
-      // or relationship change during source fetch cannot slip into this commit.
-      await assertCoManagedOperationalWrite(trx, params.tenantId);
-      const locked = await lockInboxForUpdate(trx, {
-        tenant: params.tenantId,
-        inbox_id: params.inboxId,
-        token: leaseToken,
-        version: leaseVersion,
-      });
-      if (!locked) {
-        throw new Error('inbox_fence_superseded');
-      }
+      try {
+        // Acquire lifecycle locks before the inbox/operational rows. A license
+        // or relationship change during source fetch cannot slip into this commit.
+        await assertCoManagedOperationalWrite(trx, params.tenantId);
+        const locked = await lockInboxForUpdate(trx, {
+          tenant: params.tenantId,
+          inbox_id: params.inboxId,
+          token: leaseToken,
+          version: leaseVersion,
+        });
+        if (!locked) {
+          throw new Error('inbox_fence_superseded');
+        }
 
-      const effects = await getEffectsForInbox(trx, params.tenantId, params.inboxId);
-      if (effects.length > 0) {
-        // Replay of an already-committed message: return the stored outcome.
-        return { terminalReplay: true as const, inbox: locked };
-      }
+        const effects = await getEffectsForInbox(trx, params.tenantId, params.inboxId);
+        if (effects.length > 0) {
+          // Replay of an already-committed message: return the stored outcome.
+          return { terminalReplay: true as const, inbox: locked };
+        }
 
-      const result = await runCommitPhase({
-        tenantId: params.tenantId,
-        inboxId: params.inboxId,
-        owner: params.owner,
-        mode: params.mode,
-        trx,
-        inbox: locked,
-        emailData: parsed.emailData,
-        qualifiedReplyAdmission: params.qualifiedReplyAdmission,
-        namedConversationReplyAdmission: params.namedConversationReplyAdmission,
-        retainConversationEvent: params.retainConversationEvent,
-      });
-      return { terminalReplay: false as const, ...result };
+        const result = await runCommitPhase({
+          tenantId: params.tenantId,
+          inboxId: params.inboxId,
+          owner: params.owner,
+          mode: params.mode,
+          trx,
+          inbox: locked,
+          emailData: parsed.emailData,
+          qualifiedReplyAdmission: params.qualifiedReplyAdmission,
+          namedConversationReplyAdmission: params.namedConversationReplyAdmission,
+          retainConversationEvent: params.retainConversationEvent,
+        });
+        return { terminalReplay: false as const, ...result };
+      } catch (error) {
+        // Observe the error *as this transaction raised it* -- inside the
+        // callback, so nothing between here and the handler below has touched
+        // it yet -- then rethrow it unchanged. This observation must not alter
+        // control flow; it only records.
+        //
+        // It exists because `withAdminTransaction` is not a transparent
+        // rethrow. Its own `catch` evaluates `error.stack` to build a console
+        // line before rethrowing (`packages/db/src/index.ts`), and reading
+        // `.stack` can itself throw: V8 formats it lazily and vite-node's
+        // source-mapping `prepareStackTrace` costs stack to run, so the read
+        // can fail precisely when the stack is already exhausted. When it does,
+        // the caller receives the *getter's* error, not this one.
+        //
+        // CI runs 35522723445 and 35524282543 both carry exactly that
+        // signature: `processInboundInbox` catches `RangeError: Maximum call
+        // stack size exceeded`, yet `Transaction failed:` -- which
+        // `withAdminTransaction` emits unconditionally before it rethrows --
+        // appears nowhere in either log. The rethrow therefore did not complete
+        // normally, and the error reaching the handler below is not known to be
+        // the error raised here. This stage is what will say.
+        //
+        // `readStack: false` is load-bearing: the point is to describe the
+        // error without performing the read suspected of destroying it.
+        recordInboundDiagnostic('commit_body', {
+          tenant: params.tenantId,
+          inboxId: params.inboxId,
+          classifiedAsLifecycle: isCoManagedLifecycleError(error),
+          lifecycleState: typeof (error as { lifecycle?: { state?: unknown } })?.lifecycle?.state === 'string'
+            ? (error as { lifecycle: { state: string } }).lifecycle.state : null,
+          lifecycleCanWrite: typeof (error as { lifecycle?: { canWrite?: unknown } })?.lifecycle?.canWrite === 'boolean'
+            ? (error as { lifecycle: { canWrite: boolean } }).lifecycle.canWrite : null,
+        }, error, { readStack: false });
+        throw error;
+      }
     });
   } catch (error: any) {
-    if (isCoManagedLifecycleError(error)) {
+    // The commit transaction has already rolled back by the time this runs.
+    // Name the original exception in primitives before anything can try to
+    // serialize it: on CI run 35492001110 the reporter blew its stack here and
+    // the first error was never reported at all.
+    recordInboundDiagnostic('rollback', {
+      tenant: params.tenantId, inboxId: params.inboxId, claimed: claimResult.claimed,
+    }, error);
+    const lifecyclePause = isCoManagedLifecycleError(error);
+    if (!lifecyclePause) {
+      // Why the typed classification declined. A lifecycle error that crossed a
+      // separately compiled module boundary with a damaged contract shows up
+      // here as the exact field that failed to match, not as a bare `retry`.
+      const summary = summarizeInboundError(error);
+      recordInboundDiagnostic('lifecycle_classification', {
+        tenant: params.tenantId, inboxId: params.inboxId, classifiedAsLifecycle: false,
+        candidateName: summary.name, candidateCode: summary.code,
+        candidateLifecycleState: typeof (error as { lifecycle?: { state?: unknown } })?.lifecycle?.state === 'string'
+          ? (error as { lifecycle: { state: string } }).lifecycle.state : null,
+        candidateCanWrite: typeof (error as { lifecycle?: { canWrite?: unknown } })?.lifecycle?.canWrite === 'boolean'
+          ? (error as { lifecycle: { canWrite: boolean } }).lifecycle.canWrite : null,
+      });
+    }
+    if (lifecyclePause) {
       const until = new Date(Date.now() + 60_000);
       const released = await deferInboxForCoManagedLifecycle(db, {
         tenant: params.tenantId, inboxId: params.inboxId, state: error.lifecycle.state, until,
@@ -276,7 +340,11 @@ export async function processInboundInbox(
       return { disposition: 'defer', untilIso: until.toISOString(),
         reason: released ? `co_managed_${error.lifecycle.state}` : 'lifecycle_pause_ownership_lost' };
     }
-    const message = error?.message || String(error);
+    // Always a bounded string. `error.message` is used verbatim when it already
+    // is one, so sentinel comparisons and persisted provenance are unchanged;
+    // a thrown value whose `message` is an object can no longer put a walkable
+    // graph into a disposition or into inbound_email_inbox.
+    const message = inboundErrorMessage(error);
     if (message === 'inbox_fence_superseded') {
       // A competing reclaim owns the row now. Stop without ACKing success or
       // burning a Redis retry; the DB fence governs the next delivery.
@@ -292,12 +360,28 @@ export async function processInboundInbox(
     if (marked.terminal) {
       return { disposition: 'ack', outcome: 'terminal_failed', reason: 'max_attempts_exhausted' };
     }
+    recordInboundDiagnostic('disposition', {
+      tenant: params.tenantId, inboxId: params.inboxId, disposition: 'retry', reason: 'commit_failure',
+    }, error);
     return { disposition: 'retry', error: message };
   }
 
   if (commitResult.terminalReplay === true) {
     return storedOutcomeDisposition(commitResult.inbox);
   }
+  // Recorded only after the durable transaction committed, so a rollback can
+  // never over-count. Terminal replays were already counted on first commit.
+  // LEVERAGE: pattern inbound-message-outcome-metric — same shape in unifiedInboundEmailQueueJobProcessor.ts
+  recordMessageOutcome({
+    providerType: inbox.provider_type,
+    outcome:
+      commitResult.kind === 'reconciled'
+        ? 'deduped'
+        : commitResult.kind === 'retryable'
+          ? 'failed'
+          : commitResult.kind,
+    reason: commitResult.kind === 'retryable' ? 'error' : commitResult.reason,
+  });
   if (commitResult.kind === 'skipped') {
     return { disposition: 'ack', outcome: 'skipped', reason: commitResult.reason };
   }
@@ -398,7 +482,7 @@ async function runCommitPhase(params: {
         inboxId: params.inboxId,
         qualifiedReplyAdmission: params.qualifiedReplyAdmission,
         namedConversationReplyAdmission: params.namedConversationReplyAdmission,
-        eventPublishers: { ticket: ticketPublisher, comment: commentPublisher },
+        eventPublishers: { ticket: ticketPublisher, comment: commentPublisher, contact: ticketPublisher },
       },
     }
   );

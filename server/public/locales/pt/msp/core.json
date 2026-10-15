@@ -69,9 +69,10 @@
       "servicePeriods": "Períodos de serviço",
       "credits": "Créditos",
       "serviceTypes": "Tipos de serviço",
+      "serviceCategories": "Categorias de serviço",
       "serviceCatalog": "Serviços",
       "products": "Produtos",
-      "taxRates": "Taxas de imposto",
+      "taxRates": "Impostos",
       "usageTracking": "Rastreamento de uso",
       "reports": "Relatórios",
       "accountingExports": "Exportações Contábeis"
@@ -102,9 +103,15 @@
       "channels": "Canais"
     },
     "passwords": "Senhas",
+    "ticketsAll": "Todos os tickets",
+    "ticketsRecurring": "Tickets recorrentes",
     "coManaged": "TI cogerida",
     "coManagedDelegation": "Administração delegada",
-    "coManagedAccess": "Acesso cogerido"
+    "coManagedAccess": "Acesso cogerido",
+    "ticketsCustomer": "Tickets de clientes",
+    "projectsSharedTasks": "Tarefas compartilhadas",
+    "coManagedOverview": "Visão geral",
+    "ticketsTemplates": "Modelos de tickets"
   },
   "sidebar": {
     "backToMain": "Voltar ao principal",
@@ -117,7 +124,8 @@
     "collapseSidebar": "Recolher barra lateral",
     "collapseSection": "Recolher {{section}}",
     "expandSection": "Expandir {{section}}",
-    "appLogoAlt": "Logotipo do {{appName}}"
+    "appLogoAlt": "Logotipo do {{appName}}",
+    "poweredBy": "Com tecnologia de"
   },
   "settings": {
     "sections": {
@@ -238,7 +246,20 @@
       "system": "Sistema",
       "selected": "Selecionado"
     },
-    "openUserMenu": "Abrir menu do usuário"
+    "openUserMenu": "Abrir menu do usuário",
+    "stopwatch": {
+      "untitled": "Sem título",
+      "ariaLabelPaused": "Cronômetro pausado: {{label}} em {{clock}}",
+      "ariaLabelRunning": "Cronômetro em andamento: {{label}} em {{clock}}",
+      "paused": "Cronômetro pausado",
+      "running": "Cronômetro em andamento",
+      "resume": "Retomar",
+      "pause": "Pausar",
+      "stop": "Parar e registrar",
+      "discard": "Descartar",
+      "pausedNoDrawer": "Cronômetro pausado em {{clock}}. Abra o item de trabalho para registrar o tempo.",
+      "openTicket": "Abrir ticket"
+    }
   },
   "dialogs": {
     "aiInterrupt": {

@@ -1,0 +1,20 @@
+{
+  "suite": "node-tooling",
+  "revision": "8b1c4dcdd401d509dd9668f2e2b3e4da8d767d01",
+  "status": "passed",
+  "counts": {
+    "tests": 475,
+    "passed": 475,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "selection": {
+    "mode": "full"
+  },
+  "workingTreeDirty": false,
+  "failures": [],
+  "sha256": "639edf03d40ac4cbab729016503788d4efd7247b6936ecbc186c2aca024fc61d",
+  "scope": "Local complete node-tooling runner with local network access; native CI still pending."
+}

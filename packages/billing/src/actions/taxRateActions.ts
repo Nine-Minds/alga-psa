@@ -2,14 +2,19 @@
 
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { ITaxRate, DeletionValidationResult } from '@alga-psa/types';
-import { TaxService } from '../services/taxService';
+import { TaxService, normalizeTaxCapAmount } from '../services/taxService';
 import { v4 as uuid4 } from 'uuid';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { getAnalyticsAsync } from '../lib/authHelpers';
+import { isSupportedCurrency } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import {
+  isTaxRateUsableAsDefault,
+  lockTaxRegionRow,
+  readConfiguredDefaultTaxRateId,
+} from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 import {
   actionError,
@@ -24,6 +29,33 @@ import {
 
 export type DeleteTaxRateResult = DeletionValidationResult & { success: boolean; deleted?: boolean };
 type TaxRateActionError = ActionMessageError | ActionPermissionError;
+
+class TenantDefaultTaxRateDeleteError extends Error {
+  constructor() {
+    super('This tax rate is the tenant default. Choose a different default in Billing Settings before deleting it.');
+    this.name = 'TenantDefaultTaxRateDeleteError';
+  }
+}
+
+function tenantDefaultDeleteResult(): DeleteTaxRateResult {
+  return {
+    success: false,
+    canDelete: false,
+    code: 'IS_DEFAULT',
+    message: 'This tax rate is the tenant default. Choose a different default in Billing Settings before deleting it.',
+    dependencies: [{
+      type: 'tenant_default_tax_rate',
+      count: 1,
+      label: 'Tenant default tax rate',
+      description: 'New clients, products, and services inherit this rate.',
+    }],
+    alternatives: [{
+      action: 'replace_default',
+      label: 'Choose a replacement default',
+      description: 'Set another rate as the tenant default in Billing Settings → Tax Rates, then delete this one.',
+    }],
+  };
+}
 
 function taxRateActionErrorFrom(error: unknown): TaxRateActionError | null {
   if (error instanceof ProductAccessError) {
@@ -43,6 +75,12 @@ function taxRateActionErrorFrom(error: unknown): TaxRateActionError | null {
         return actionError('Tax rate ID is required for updates.', 'msp/billing-settings:errors.taxRate.idRequired');
       case 'Tax rate not found':
         return actionError('Tax rate not found.', 'msp/billing-settings:errors.taxRate.notFound');
+      case 'Tax rate cap amount must be a non-negative whole number.':
+        return actionError('Tax rate cap amount must be a non-negative whole number.', 'msp/billing-settings:errors.taxRate.capInvalid');
+      case 'Tax rate cap requires an explicit currency.':
+        return actionError('Choose a rate currency before setting or changing a tax cap.', 'msp/billing-settings:errors.taxRate.capCurrencyRequired');
+      case 'Tax rate currency is unsupported.':
+        return actionError('Choose a supported rate currency.', 'msp/billing-settings:errors.taxRate.currencyInvalid');
       // Thrown by deleteTaxRate's in-transaction guards; intentionally
       // user-visible, so keep the wording rather than degrading to the
       // generic delete fallback.
@@ -50,6 +88,16 @@ function taxRateActionErrorFrom(error: unknown): TaxRateActionError | null {
         return actionError(
           'Tax rate not found or already deleted.',
           'msp/billing-settings:errors.taxRate.notFoundOrAlreadyDeleted'
+        );
+      case 'This tax rate is the tenant default and these changes would make it invalid. Choose a different default first, then edit this rate.':
+        return actionError(
+          'This tax rate is the tenant default and these changes would make it invalid. Choose a different default first, then edit this rate.',
+          'msp/billing-settings:errors.taxRate.defaultMutationBlocked'
+        );
+      case 'This tax rate is the tenant default. Choose a different default in Billing Settings before deleting it.':
+        return actionError(
+          'This tax rate is the tenant default. Choose a different default in Billing Settings before deleting it.',
+          'msp/billing-settings:errors.taxRate.defaultDeleteBlocked'
         );
     }
   }
@@ -77,6 +125,37 @@ function taxRateActionErrorFrom(error: unknown): TaxRateActionError | null {
   return null;
 }
 
+function normalizeRate(row: ITaxRate): ITaxRate {
+  return { ...row, cap_amount: normalizeTaxCapAmount(row.cap_amount), currency_code: row.currency_code ?? null };
+}
+
+function validateCurrency(currency: unknown): asserts currency is string | null {
+  if (currency !== null && (typeof currency !== 'string' || !isSupportedCurrency(currency))) {
+    throw new Error('Tax rate currency is unsupported.');
+  }
+}
+
+export const getTaxRatePermissions = withAuth(async (user, { tenant }): Promise<{
+  canCreate: boolean; canUpdate: boolean; canDelete: boolean;
+} | TaxRateActionError> => {
+  try {
+    await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
+    if (!await hasPermission(user, 'billing', 'read')) {
+      return permissionError('Permission denied: Cannot read tax rates', 'msp/billing-settings:errors.permissions.readTaxRates');
+    }
+    const [canCreate, canUpdate, canDelete] = await Promise.all([
+      hasPermission(user, 'billing', 'create'),
+      hasPermission(user, 'billing', 'update'),
+      hasPermission(user, 'billing', 'delete'),
+    ]);
+    return { canCreate, canUpdate, canDelete };
+  } catch (error) {
+    const expected = taxRateActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
 export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[] | TaxRateActionError> => {
   try {
     await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
@@ -85,9 +164,9 @@ export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[]
     }
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      return await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
-        .select('*');
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const rates = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates').select('*');
+      return rates.map(normalizeRate);
     });
   } catch (error) {
     const expected = taxRateActionErrorFrom(error);
@@ -112,7 +191,7 @@ export const addTaxRate = withAuth(async (
     }
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
       const taxService = new TaxService();
 
       if (!taxRateData.region_code) {
@@ -128,11 +207,19 @@ export const addTaxRate = withAuth(async (
 
       // Generate a UUID for the tax_rate_id
       const tax_rate_id = uuid4();
+      // Validate the cap before it reaches the database; throws the mapped
+      // "cap amount" action error for negative/fractional/non-numeric values.
+      const cap_amount = normalizeTaxCapAmount(taxRateData.cap_amount);
+      const currency_code = taxRateData.currency_code ?? null;
+      validateCurrency(currency_code);
+      if (cap_amount !== null && currency_code === null) {
+        throw new Error('Tax rate cap requires an explicit currency.');
+      }
 
       const [newTaxRate] = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
-        .insert({ ...taxRateData, tax_rate_id, tenant: tenant! })
+        .insert({ ...taxRateData, cap_amount, currency_code, tax_rate_id, tenant: tenant! })
         .returning('*');
-      return newTaxRate;
+      return normalizeRate(newTaxRate);
     });
   } catch (error: any) {
     console.error('Error adding tax rate:', error);
@@ -156,34 +243,24 @@ export const updateTaxRate = withAuth(async (
     }
 
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
       const taxService = new TaxService();
 
       if (!taxRateData.tax_rate_id) {
         throw new Error('Tax rate ID is required for updates');
       }
 
-      // Validate date range before update, excluding current tax rate
-      if (taxRateData.start_date || taxRateData.end_date) {
-        const existingRate = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
-          .where({
-            tax_rate_id: taxRateData.tax_rate_id,
-            tenant
-          })
-          .first();
+      // Lock and validate the effective pair in the authenticated tenant. Omission
+      // preserves either field, and unrelated edits preserve unresolved legacy caps.
+      const existingRate = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
+        .where({ tax_rate_id: taxRateData.tax_rate_id }).forUpdate().first();
+      if (!existingRate) throw new Error('Tax rate not found');
 
-        if (!existingRate) {
-          throw new Error('Tax rate not found');
-        }
-
-        if (!taxRateData.region_code) {
-          throw new Error('Region is required');
-        }
-
+      if (taxRateData.start_date !== undefined || taxRateData.end_date !== undefined || taxRateData.region_code !== undefined) {
         await taxService.validateTaxRateDateRange(
-          taxRateData.region_code,
-          taxRateData.start_date,
-          taxRateData.end_date || null,
+          taxRateData.region_code ?? existingRate.region_code,
+          taxRateData.start_date ?? existingRate.start_date,
+          taxRateData.end_date === undefined ? existingRate.end_date ?? null : taxRateData.end_date || null,
           taxRateData.tax_rate_id
         );
       }
@@ -192,6 +269,45 @@ export const updateTaxRate = withAuth(async (
       const { tenant: _, ...updateData } = { ...taxRateData };
       if (updateData.end_date === '') {
         updateData.end_date = null;
+      }
+      const hasCap = taxRateData.cap_amount !== undefined;
+      const hasCurrency = taxRateData.currency_code !== undefined;
+      if (hasCap) updateData.cap_amount = normalizeTaxCapAmount(taxRateData.cap_amount);
+      else delete updateData.cap_amount;
+      if (hasCurrency) validateCurrency(updateData.currency_code);
+      else delete updateData.currency_code;
+
+      const oldCap = normalizeTaxCapAmount(existingRate.cap_amount);
+      const oldCurrency = existingRate.currency_code ?? null;
+      const effectiveCap = hasCap ? updateData.cap_amount : oldCap;
+      const effectiveCurrency = hasCurrency ? updateData.currency_code : oldCurrency;
+      const unchangedPair = effectiveCap === oldCap && effectiveCurrency === oldCurrency;
+      if (!unchangedPair && effectiveCap !== null) {
+        if (effectiveCurrency == null) throw new Error('Tax rate cap requires an explicit currency.');
+        validateCurrency(effectiveCurrency);
+      }
+
+      // Lock the effective region (lock order: tax_rates -> tax_regions) before
+      // reading the configured default, so a concurrent region deactivation
+      // cannot slip between this check and the update.
+      const effectiveRegionCode =
+        (updateData as Partial<ITaxRate>).region_code ?? existingRate.region_code;
+      await lockTaxRegionRow(trx, tenant, effectiveRegionCode);
+
+      // Lifecycle guard: a configured tenant default must remain usable. Changing
+      // its region, deactivating it, or shifting its date range so it no longer
+      // applies today would silently invalidate every future default assignment.
+      const configuredDefaultId = await readConfiguredDefaultTaxRateId(trx, tenant);
+      if (configuredDefaultId === taxRateData.tax_rate_id) {
+        const nextRate = {
+          is_active: updateData.is_active !== undefined ? Boolean(updateData.is_active) : existingRate.is_active,
+          region_code: updateData.region_code ?? existingRate.region_code,
+          start_date: updateData.start_date ?? existingRate.start_date,
+          end_date: updateData.end_date === undefined ? existingRate.end_date : updateData.end_date,
+        };
+        if (!(await isTaxRateUsableAsDefault(trx, tenant, nextRate))) {
+          throw new Error('This tax rate is the tenant default and these changes would make it invalid. Choose a different default first, then edit this rate.');
+        }
       }
 
       const [updatedTaxRate] = await tenantDb(trx, tenant).table<ITaxRate>('tax_rates')
@@ -204,7 +320,7 @@ export const updateTaxRate = withAuth(async (
       if (!updatedTaxRate) {
         throw new Error('Tax rate not found');
       }
-      return updatedTaxRate;
+      return normalizeRate(updatedTaxRate);
     });
   } catch (error: any) {
     console.error('Error updating tax rate:', error);
@@ -230,6 +346,7 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
       };
     }
     const { knex } = await createTenantKnex();
+
     const result = await deleteEntityWithValidation('tax_rate', taxRateId, knex, tenant, async (trx, tenantId) => {
       // Fail-fast tenant guard: confirm the tax rate belongs to this tenant before touching
       // child tables scoped through tax_rates.
@@ -239,6 +356,14 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
         .first('tax_rate_id');
       if (!exists) {
         throw new Error('Tax rate not found or already deleted.');
+      }
+
+      // Check the tenant default inside the deletion transaction. Besides
+      // keeping this check atomic with the delete, this ensures established
+      // deleteEntityWithValidation errors still reach the normal mapper.
+      const configuredDefaultId = await readConfiguredDefaultTaxRateId(trx, tenantId);
+      if (configuredDefaultId === taxRateId) {
+        throw new TenantDefaultTaxRateDeleteError();
       }
 
       await db.parentScopedTable('composite_tax_mappings')
@@ -268,6 +393,10 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
     };
   } catch (error: any) {
     console.error('Error processing tax rate deletion:', error);
+
+    if (error instanceof TenantDefaultTaxRateDeleteError) {
+      return tenantDefaultDeleteResult();
+    }
 
     // Never echo error.message to the client: raw Postgres/Knex failures here
     // carry the interpolated SQL statement, which DeleteEntityDialog renders

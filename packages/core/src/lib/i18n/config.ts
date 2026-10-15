@@ -18,13 +18,14 @@ export const LOCALE_CONFIG = {
    * Array of supported locales
    * Add new languages here to enable them throughout the application
    *
-   * Region-tagged entries (`en-AU`) are regional variants of a shipped language:
-   * their text reuses the language pack via fallback (see I18N_CONFIG.load), but
-   * their full tag is preserved so date/currency formatting follows the region
-   * (e.g. en-AU writes DD/MM/YYYY while en writes MM/DD/YYYY). Adding another
-   * regional variant is data — a list entry plus names — not new code.
+   * Language only, deliberately. A region tag used to ride along here purely to
+   * buy DD/MM dates ('en-AU'), which coupled two unrelated decisions: it had no
+   * translation files of its own, and the next such entry ('en-GB') would have
+   * promised British spelling we do not ship. Date shape is now a function of
+   * the tenant's country — see countryDateFormat — so a locale names a language
+   * and nothing else.
    */
-  supportedLocales: ['en', 'en-AU', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'] as const,
+  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'sv', 'xx', 'yy'] as const,
 
   /**
    * Human-readable names for each locale
@@ -32,7 +33,6 @@ export const LOCALE_CONFIG = {
    */
   localeNames: {
     en: 'English',
-    'en-AU': 'English (Australia)',
     fr: 'Français',
     es: 'Español',
     de: 'Deutsch',
@@ -40,6 +40,7 @@ export const LOCALE_CONFIG = {
     it: 'Italiano',
     pl: 'Polski',
     pt: 'Português (Brasil)',
+    sv: 'Svenska',
     xx: 'Pseudo (xx)',
     yy: 'Pseudo (yy)',
   } as const,
@@ -83,10 +84,10 @@ export function isSupportedLocale(locale: string): locale is SupportedLocale {
  * still does not name a shipped language returns null so callers can fall
  * through deliberately rather than guess.
  *
- * Region matters for shipped regional variants: `en-AU` is a first-class locale
- * whose dates must render DD/MM/YYYY, so it is preserved as `en-AU` rather than
- * collapsed to `en`. Only region tags that name no shipped variant (`en-US`,
- * `pt_BR`) fall back to their language code.
+ * Every region tag now collapses to its language, `en-AU` included: the region
+ * used to survive here only so dates would read DD/MM, and that answer comes
+ * from the tenant's country instead. This is also what normalises the saved
+ * 'en-AU' preferences on read, so no stored value needs migrating.
  */
 export function normalizeLocale(value: unknown): SupportedLocale | null {
   if (typeof value !== 'string') return null;
@@ -94,21 +95,41 @@ export function normalizeLocale(value: unknown): SupportedLocale | null {
   const trimmed = value.trim().toLowerCase();
   if (!trimmed) return null;
 
-  // Case- and separator-insensitive match against the shipped list first, so a
-  // regional variant ('en-AU', 'en_au', 'EN-AU') resolves to its canonical tag.
-  const normalizedSeparators = trimmed.replace(/[_-]/g, '-');
-  for (const supported of LOCALE_CONFIG.supportedLocales) {
-    if (supported.toLowerCase().replace(/[_-]/g, '-') === normalizedSeparators) {
-      return supported;
-    }
-  }
   if (isSupportedLocale(trimmed)) return trimmed;
 
-  // 'pt_BR' / 'pt-BR' / 'zh-Hans-CN' -> leading language subtag
+  // 'en-AU' / 'pt_BR' / 'zh-Hans-CN' -> leading language subtag
   const languagePart = trimmed.split(/[-_]/)[0];
   return isSupportedLocale(languagePart) ? languagePart : null;
 }
 
+/**
+ * Get the best matching locale from a list of preferred locales.
+ *
+ * Only Accept-Language resolution calls this, and a browser header is a guess
+ * about the visitor rather than a language they chose, so it may only land on a
+ * locale we actually offer: the same filter that hides non-production locales
+ * from the pickers applies here. Otherwise a production visitor sending
+ * `Accept-Language: sv-SE` with no stored preference was auto-assigned the very
+ * pack we withhold from the picker pending native review. Explicit selections
+ * still reach those locales — the cookie, user, client and tenant preferences
+ * resolve through normalizeLocale, not through here.
+ */
+export function getBestMatchingLocale(
+  preferredLocales: readonly string[],
+): SupportedLocale {
+  for (const locale of preferredLocales) {
+    const normalized = normalizeLocale(locale);
+    if (normalized && filterPseudoLocales([normalized]).length > 0) {
+      return normalized;
+    }
+  }
+
+  return LOCALE_CONFIG.defaultLocale as SupportedLocale;
+}
+
+/**
+ * Configuration for i18next
+ */
 /**
  * The language-code key under which a locale's translation resources are stored.
  *
@@ -129,25 +150,6 @@ export function getTranslationLanguageCode(locale: SupportedLocale): SupportedLo
   return isSupportedLocale(languagePart) ? languagePart : locale;
 }
 
-/**
- * Get the best matching locale from a list of preferred locales
- */
-export function getBestMatchingLocale(
-  preferredLocales: readonly string[],
-): SupportedLocale {
-  for (const locale of preferredLocales) {
-    const normalized = normalizeLocale(locale);
-    if (normalized) {
-      return normalized;
-    }
-  }
-
-  return LOCALE_CONFIG.defaultLocale as SupportedLocale;
-}
-
-/**
- * Configuration for i18next
- */
 export const I18N_CONFIG = {
   debug: process.env.NODE_ENV === 'development',
   fallbackLng: LOCALE_CONFIG.defaultLocale,
@@ -157,7 +159,7 @@ export const I18N_CONFIG = {
   interpolation: {
     escapeValue: false, // React already escapes values
   },
-  load: 'languageOnly' as const, // Regional variants reuse the language pack's resources
+  load: 'languageOnly' as const, // Region tags in incoming headers reuse the language pack
   cleanCode: true,
   nonExplicitSupportedLngs: true,
 };
@@ -176,6 +178,9 @@ export const PSEUDO_LOCALES: ReadonlyArray<SupportedLocale> = ['xx', 'yy'];
  * QA'd, hidden from production language pickers — but they are genuine
  * translations, not QA fills. Promote to a production locale by removing the
  * code from this list once review passes.
+ *
+ * Empty today: 'sv' was previewed here and promoted after its glossary pass.
+ * Keep server/src/middleware/i18nConfig.ts in sync.
  */
 export const PREVIEW_LOCALES: ReadonlyArray<SupportedLocale> = [];
 
@@ -184,6 +189,8 @@ export const PREVIEW_LOCALES: ReadonlyArray<SupportedLocale> = [];
  * offered in any picker, dev or prod. Translations remain on disk so existing
  * users who already selected them keep working, and so we can continue
  * iterating on them, but they won't appear as new selections.
+ *
+ * Empty today.
  */
 export const INCOMPLETE_LOCALES: ReadonlyArray<SupportedLocale> = [];
 
@@ -225,11 +232,15 @@ export const ROUTE_NAMESPACES = {
   '/msp/schedule': ['common', 'msp/core', 'msp/schedule'],
   '/msp/knowledge-base': ['common', 'msp/core', 'features/documents', 'msp/knowledge-base'],
   '/msp/jobs': ['common', 'msp/core', 'msp/jobs'],
-  '/msp/tickets': ['common', 'msp/core', 'features/tickets', 'msp/licensing'],
-  '/msp/projects': ['common', 'msp/core', 'features/projects'],
+  // msp/time-entry loads on ticket and project surfaces because the shared
+  // time-entry launcher (period picker + blocked-launch feedback) is opened
+  // from both. msp/user-activities loads on ticket, project and dispatch
+  // surfaces because they host the shared "My group" activity-group control.
+  '/msp/tickets': ['common', 'msp/core', 'features/tickets', 'msp/time-entry', 'msp/user-activities', 'msp/licensing'],
+  '/msp/projects': ['common', 'msp/core', 'features/projects', 'msp/time-entry', 'msp/user-activities'],
   '/msp/billing/credits': ['common', 'msp/core', 'features/billing', 'msp/credits'],
   '/msp/reports': ['common', 'msp/core', 'msp/reports'],
-  '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing'],
+  '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing', 'msp/billing-settings'],
   '/msp/quote-approvals': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
   '/msp/quote-document-templates': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
   '/msp/inventory': ['common', 'msp/core', 'features/inventory'],
@@ -245,7 +256,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/workflows/runs': ['common', 'msp/core', 'msp/workflows'],
   '/msp/workflow-editor': ['common', 'msp/core', 'msp/workflows'],
   '/msp/workflow-control': ['common', 'msp/core', 'msp/workflows'],
-  '/msp/technician-dispatch': ['common', 'msp/core', 'msp/dispatch'],
+  '/msp/technician-dispatch': ['common', 'msp/core', 'msp/dispatch', 'msp/user-activities'],
   '/msp/time-entry': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/time-sheet-approvals': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/time-management': ['common', 'msp/core', 'msp/time-entry'],
@@ -253,7 +264,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/settings/extensions': ['common', 'msp/core', 'msp/settings', 'msp/extensions'],
   '/msp/settings/opportunities': ['common', 'msp/core', 'msp/settings', 'msp/opportunities'],
   '/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/keyboard-shortcuts', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets', 'msp/billing-settings', 'msp/service-catalog', 'features/billing', 'msp/calendar', 'msp/integrations'],
-  '/msp/profile': ['common', 'msp/core', 'msp/settings', 'msp/profile', 'msp/calendar'],
+  '/msp/profile': ['common', 'msp/core', 'msp/settings', 'msp/profile', 'msp/calendar', 'msp/schedule'],
   '/msp/security-settings': ['common', 'msp/core', 'msp/settings', 'msp/profile'],
   '/msp/platform-updates': ['common', 'msp/core', 'msp/profile'],
   '/msp/extensions': ['common', 'msp/core', 'msp/extensions'],

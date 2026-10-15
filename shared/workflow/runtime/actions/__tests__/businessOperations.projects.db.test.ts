@@ -389,6 +389,7 @@ async function createProjectTicketLink(
     phaseId: string;
     taskId: string;
     ticketId: string;
+    billUnderProject?: boolean;
   }
 ): Promise<string> {
   const linkId = uuidv4();
@@ -400,6 +401,7 @@ async function createProjectTicketLink(
     task_id: params.taskId,
     ticket_id: params.ticketId,
     created_at: new Date().toISOString(),
+    ...(params.billUnderProject === undefined ? {} : { bill_under_project: params.billUnderProject }),
   });
   return linkId;
 }
@@ -1284,11 +1286,15 @@ describe('project business operation db actions', () => {
       taskId: sourceTaskId,
       ticketId: ticketA,
     });
+    // Opted out of project billing, so the copy must stay opted out: the copy
+    // spreads select('*'), and narrowing that would silently reset this link to
+    // the column default and start billing the ticket's time as project time.
     await createProjectTicketLink(db, runtimeState.tenantId, {
       projectId: sourceProjectId,
       phaseId: sourcePhaseId,
       taskId: sourceTaskId,
       ticketId: ticketB,
+      billUnderProject: false,
     });
 
     const result = await invokeAction('projects.duplicate_task', {
@@ -1329,9 +1335,14 @@ describe('project business operation db actions', () => {
     const duplicatedLinks = await tenantTable(db, runtimeState.tenantId, 'project_ticket_links')
       .where({ tenant: runtimeState.tenantId, task_id: result.task_id })
       .orderBy('ticket_id', 'asc')
-      .select('project_id', 'phase_id', 'ticket_id');
+      .select('project_id', 'phase_id', 'ticket_id', 'bill_under_project');
     expect(duplicatedLinks).toHaveLength(2);
     expect(duplicatedLinks.every((row: { project_id: string; phase_id: string }) => row.project_id === targetProjectId && row.phase_id === targetPhaseId)).toBe(true);
+    const billingByTicket = new Map(
+      duplicatedLinks.map((row: { ticket_id: string; bill_under_project: boolean }) => [row.ticket_id, row.bill_under_project])
+    );
+    expect(billingByTicket.get(ticketA)).toBe(true);
+    expect(billingByTicket.get(ticketB)).toBe(false);
   });
 
   it('T016: projects.delete_task deletes task after cleaning ticket links and checklist items', async () => {
@@ -1514,10 +1525,26 @@ describe('project business operation db actions', () => {
     });
     await createTimeEntryForProjectTask(db, runtimeState.tenantId, blockedTaskId, runtimeState.actorUserId);
 
+    const preservedRows = async () => ({
+      project: await tenantTable(db, runtimeState.tenantId, 'projects').where({ project_id: blockedProjectId }).first(),
+      phase: await tenantTable(db, runtimeState.tenantId, 'project_phases').where({ phase_id: blockedPhaseId }).first(),
+      task: await tenantTable(db, runtimeState.tenantId, 'project_tasks').where({ task_id: blockedTaskId }).first(),
+      timeEntries: await tenantTable(db, runtimeState.tenantId, 'time_entries')
+        .where({ work_item_type: 'project_task', work_item_id: blockedTaskId }),
+    });
+    const beforeBlockedDelete = await preservedRows();
+    expect(beforeBlockedDelete.timeEntries).toHaveLength(1);
     const blockedDeleteResult = await invokeAction('projects.delete', { project_id: blockedProjectId });
     expect(blockedDeleteResult.success).toBe(false);
     expect(blockedDeleteResult.can_delete).toBe(false);
-    expect(blockedDeleteResult.code).toBe('VALIDATION_FAILED');
+    expect(blockedDeleteResult.deleted).toBe(false);
+    // The shared deletion validator now catches tracked work before the
+    // action's legacy fallback, and exposes the structured dependency code.
+    expect(blockedDeleteResult.code).toBe('DEPENDENCIES_EXIST');
+    expect(blockedDeleteResult.dependencies).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'time_entry', count: 1 }),
+    ]));
+    expect(await preservedRows()).toEqual(beforeBlockedDelete);
   });
 
   it('T019: projects.link_ticket_to_task creates both link tables with task project/phase metadata', async () => {

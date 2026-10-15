@@ -111,6 +111,7 @@ Ticket webhooks support these event types in v1:
 - `ticket.assigned`
 - `ticket.closed`
 - `ticket.comment.added`
+- `ticket.response_state_changed` (payload adds `previous_response_state` / `new_response_state`, and `response_state` always reflects the current state — equal to `new_response_state` on this event; `comment` and `comments[]` entries now also carry `author_type`, and `contact_id` / `contact_name` when a contact wrote them)
 
 ### Notification Suppression
 
@@ -310,6 +311,8 @@ Every outbound webhook is delivered as JSON:
 ```
 
 `author_type` identifies whether the comment was posted by an MSP agent or by a client through the client portal. Possible values are `"internal"` (an MSP team member wrote the comment), `"client"` (a contact replied via the client portal), or `null` (the author type is unknown, for example on comments created before this field was tracked). Use `author_type` to distinguish client-initiated replies from agent replies without a separate user-record lookup.
+
+The `author` field is always populated. For comments from an internal user or contact, `author` carries their display name. For inbound-email comments whose sender does not match any contact or user record, `author` is resolved from the message's sender name and email address. If no sender identity is available, `author` falls back to `"System"`.
 
 Comment payloads never include attachments.
 

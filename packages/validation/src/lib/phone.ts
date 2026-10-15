@@ -142,6 +142,42 @@ export function normalizePhone(
   return { value: packed.number, e164: '', extension: extensionDigits, error: null };
 }
 
+/** Display formatting is intentionally separate from the canonical stored value. */
+export function formatPhoneForDisplay(
+  value: string | null | undefined,
+  extension?: string | null,
+  defaultCountry?: string | null
+): { number: string; extension: string; e164: string } {
+  const raw = (value ?? '').trim();
+  const packed = splitPackedExtension(raw);
+  const ext = (extension ?? '').trim() || packed.extension;
+  if (!raw) return { number: '', extension: ext, e164: '' };
+  const region = defaultCountry?.trim().toUpperCase() || undefined;
+  const rawFallback = packed.number;
+  try {
+    const parsed = parsePhoneNumberWithError(packed.number, {
+      defaultCountry: region as CountryCode | undefined,
+      extract: false,
+    });
+    if (!parsed.country && !packed.number.startsWith('+')) {
+      return { number: rawFallback, extension: ext, e164: '' };
+    }
+    // react-phone-number-input's PhoneInput presents international values with spaces via formatInternational().
+    return { number: parsed.formatInternational(), extension: ext || parsed.ext || '', e164: parsed.number };
+  } catch {
+    return { number: rawFallback, extension: ext, e164: '' };
+  }
+}
+
+/** Join display number and extension using the caller's localized extension label. */
+export function formatPhoneLabel(
+  phone: ReturnType<typeof formatPhoneForDisplay>,
+  extensionLabel = 'ext.'
+): string {
+  if (!phone.number) return '';
+  return phone.extension ? `${phone.number} ${extensionLabel} ${phone.extension}` : phone.number;
+}
+
 /** Convenience for callers that only need to know whether a value is storable. */
 export function isStructurallyValidPhone(
   input: string | null | undefined,

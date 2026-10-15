@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
@@ -69,7 +69,7 @@ export async function fetchTenantParty(
   const tenantClient = await tenantClientQuery.first<Record<string, unknown>>();
 
   if (tenantClient?.client_id) {
-    const logoUrl = await getClientLogoUrl(String(tenantClient.client_id), tenant).catch(() => null);
+    const logoUrl = await getClientDocumentLogoUrl(String(tenantClient.client_id), tenant).catch(() => null);
 
     return {
       name: asTrimmedString(tenantClient.client_name) || 'Your Company',

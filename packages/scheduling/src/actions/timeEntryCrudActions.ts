@@ -1,16 +1,12 @@
 'use server'
 
 import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
-import { resolveTimeEntryContract } from '../lib/timeEntryContract';
-import { reconcileTimeEntryBillingAllocations } from '../lib/timeEntryBillingAllocations';
 import {
   ITimeEntry,
   ITimeEntryWithWorkItem,
-  type ContractLineSource,
 } from '@alga-psa/types';
 import { IWorkItem } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { v4 as uuidv4 } from 'uuid';
 import { formatISO } from 'date-fns';
 import { validateData } from '@alga-psa/validation';
 import {
@@ -21,16 +17,14 @@ import {
   updateTimeEntryApprovalStatusParamsSchema,
   UpdateTimeEntryApprovalStatusParams,
 } from './timeEntrySchemas'; // Import schemas
-import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from '@alga-psa/db';
 import { assertCanActOnBehalf, assertCanApproveSubject } from './timeEntryDelegationAuth';
-import { toPlainDate } from '@alga-psa/core';
 import {
   createTimeEntryChangeRequestRecord,
   fetchTimeEntryChangeRequestsForEntryIdsFromDb,
-  markTimeEntryChangeRequestsHandled,
 } from './timeEntryChangeRequestActions';
+import { NON_BILLABLE_FALLBACK_WORK_ITEM_ID, persistTimeEntry, publishPersistedTimeEntryEvents } from '../lib/timeEntryWriteCore';
+import { logSession } from '../lib/stopwatch/stopwatchCore';
 import { attachTimeEntryChangeRequests } from '../lib/timeEntryChangeRequests';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
 import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
@@ -42,6 +36,7 @@ import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNat
   CoManagedSharedWorkError, retainCoManagedTimeParticipation, assertCoManagedTimeSaveFields, reviewCoManagedNativeTimeEntry, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeSheet, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 import { reverseDeletedTimeEntryBilling } from '../lib/timeEntryDeletionBilling';
+import { publishTimeEntrySearchEvent } from '../lib/timeEntrySearchEvents';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 import { timeEntrySchema } from '../schemas/timeSheet.schemas';
 
@@ -49,43 +44,6 @@ function captureAnalytics(_event: string, _properties?: Record<string, any>, _us
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
 }
 
-const NON_BILLABLE_FALLBACK_WORK_ITEM_ID = '__non_billable__';
-
-type TimeEntrySearchEventType =
-  | 'TIME_ENTRY_CREATED'
-  | 'TIME_ENTRY_UPDATED'
-  | 'TIME_ENTRY_DELETED'
-  | 'TIME_ENTRY_SUBMITTED'
-  | 'TIME_ENTRY_APPROVED'
-  | 'TIME_ENTRY_CHANGES_REQUESTED';
-
-async function publishTimeEntrySearchEvent(
-  eventType: TimeEntrySearchEventType,
-  payload: {
-    tenantId: string;
-    timeEntryId: string;
-    userId?: string;
-    workItemId?: string | null;
-    workItemType?: string | null;
-    approvedBy?: string;
-    deletedBy?: string;
-    requestedBy?: string;
-    reason?: string;
-    changes?: Record<string, unknown>;
-  },
-): Promise<void> {
-  try {
-    await publishEvent({
-      eventType,
-      payload: {
-        ...payload,
-        timestamp: new Date().toISOString(),
-      },
-    });
-  } catch (eventError) {
-    console.error(`[TimeEntryActions] Failed to publish ${eventType} event`, eventError);
-  }
-}
 
 function normalizeFetchedWorkItemId(entry: Pick<ITimeEntry, 'work_item_id' | 'work_item_type'>): string {
   if (entry.work_item_type === 'non_billable_category' && !entry.work_item_id) {
@@ -308,7 +266,7 @@ export const getTimeEntryBillingMode = withAuth(async (user, { tenant }) => {
   return mode;
 });
 
-export const saveTimeEntry = withAuth(async (user, { tenant }, timeEntry: Omit<ITimeEntry, 'tenant'>): Promise<ITimeEntryWithWorkItem | TimeSheetActionError> => {
+export const saveTimeEntry = withAuth(async (user, { tenant }, timeEntry: Omit<ITimeEntry, 'tenant'> & { stopwatch_session_id?: string | null }): Promise<ITimeEntryWithWorkItem | TimeSheetActionError> => {
   const { knex } = await createTenantKnex();
   try {
     return await withTransaction(knex, async trx => {
@@ -336,7 +294,7 @@ export const saveTimeEntry = withAuth(async (user, { tenant }, timeEntry: Omit<I
   }
 });
 
-async function saveTimeEntryWithConnection(user: IUser, tenant: string, timeEntry: Omit<ITimeEntry, 'tenant'>,
+async function saveTimeEntryWithConnection(user: IUser, tenant: string, timeEntry: Omit<ITimeEntry, 'tenant'> & { stopwatch_session_id?: string | null },
   db: Knex.Transaction, operational: boolean, access: CoManagedNativeTimeAccess | null): Promise<ITimeEntryWithWorkItem> {
   const tenantScopedDb = tenantDb(db, tenant) as any;
   // Check permission based on whether this is a create or update operation
@@ -362,337 +320,50 @@ async function saveTimeEntryWithConnection(user: IUser, tenant: string, timeEntr
     throw new Error('Service is required for time entries');
   }
 
-  const actorUserId = user.user_id;
-  let timeEntryUserId = validatedTimeEntry.user_id || actorUserId;
-
-    if (validatedTimeEntry.entry_id) {
-      const existing = await tenantScopedDb.table('time_entries')
-        .where({ entry_id: validatedTimeEntry.entry_id })
-        .select('user_id', 'invoiced', 'time_sheet_id')
-        .first();
-
-      if (!existing) {
-        throw new Error(`Original time entry with ID ${validatedTimeEntry.entry_id} not found for update.`);
-      }
-
-      if (existing.invoiced) {
-        throw new Error('This time entry has already been invoiced and cannot be modified.');
-      }
-
-      timeEntryUserId = existing.user_id;
+    // Everything from ownership checks to bucket/hour-block draws lives in the
+    // shared write core (D6); it runs inside this action-owned transaction.
+    // With a stopwatch session the entry and the session close together (logSession semantics):
+    // the drawer's values win over the session-derived ones, the session must be the acting
+    // user's own open session, and any failure rolls back both.
+    const stopwatchSessionId = validatedTimeEntry.stopwatch_session_id;
+    if (stopwatchSessionId && validatedTimeEntry.entry_id) {
+      throw new Error('Validation failed: a stopwatch session can only be logged as a new time entry');
     }
-
-    if (access) timeEntryUserId = access.subjectUserId;
-    else await assertCanActOnBehalf(user, tenant, timeEntryUserId, db);
-
-    // Extract only the fields that exist in the database schema
-    const {
-      entry_id,
-      work_item_id,
-      work_item_type,
-      start_time,
-      end_time,
-      billable_duration,
-      notes,
-      time_sheet_id,
-      approval_status,
-      service_id,
-      tax_region,
-      contract_line_id,
-      tax_rate_id, // Extract tax_rate_id from input
-    } = validatedTimeEntry;
-
-    const subjectTimeZone = await resolveUserTimeZone(db, tenant, timeEntryUserId);
-    const { work_date, work_timezone } = computeWorkDateFields(start_time, subjectTimeZone);
-    const { work_date: end_work_date } = computeWorkDateFields(end_time, subjectTimeZone);
-
-    if (time_sheet_id) {
-      const timeSheetWithPeriodQuery = tenantScopedDb.table('time_sheets');
-      tenantScopedDb.tenantJoin(
-        timeSheetWithPeriodQuery,
-        'time_periods',
-        'time_sheets.period_id',
-        'time_periods.period_id',
-      );
-      const timeSheetWithPeriod = await timeSheetWithPeriodQuery
-        .where({
-          'time_sheets.id': time_sheet_id
-        })
-        .select('time_sheets.user_id', 'time_periods.start_date', 'time_periods.end_date')
-        .first();
-
-      if (!timeSheetWithPeriod) {
-        throw new Error('Time sheet not found');
-      }
-
-      if (timeSheetWithPeriod.user_id !== timeEntryUserId) {
-        throw new Error('Time entry user does not match time sheet owner');
-      }
-
-      const periodStart = toPlainDate(timeSheetWithPeriod.start_date).toString();
-      const periodEnd = toPlainDate(timeSheetWithPeriod.end_date).toString();
-
-      if (
-        work_date < periodStart ||
-        work_date >= periodEnd ||
-        end_work_date < periodStart ||
-        end_work_date >= periodEnd
-      ) {
-        throw new Error('Time entry must fall within the time period for the time sheet');
-      }
+    // Stopwatch sessions log commercial time (a service is required); operational
+    // or co-managed time is entered directly.
+    if (timeEntry.stopwatch_session_id && (operational || access)) {
+      throw new Error('Validation failed: a stopwatch session cannot be logged as operational or co-managed time');
     }
-
-    // LEVERAGE: pattern time-entry-duration-persist — same normalize-to-minute + round shape
-    // lives in TimeEntryService (create/update/stop); a shared persist layer would own it once.
-    const startDate = truncateToMinute(start_time);
-    const endDate = truncateToMinute(end_time);
-    const actualDurationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
-    if (access && actualDurationMinutes <= 0) throw new Error('Time entry must contain at least one minute');
-    
-    // Always store actual duration, only set billable_duration to 0 if explicitly non-billable
-    const finalBillableDuration = billable_duration === 0 ? 0 :
-                               (typeof billable_duration === 'number' && billable_duration > 0 ? billable_duration : actualDurationMinutes);
-
-    console.log('Calculating billable duration:', {
-      providedBillableDuration: billable_duration,
-      actualDurationMinutes,
-      finalBillableDuration,
-      isExplicitlyZero: billable_duration === 0,
-      isValidNumber: typeof billable_duration === 'number' && billable_duration > 0,
-      billableDurationType: typeof billable_duration
-    });
-
-    const cleanedEntry = {
-      work_item_id,
-      work_item_type,
-      co_managed_work_reference_id: work_item_type === 'co_managed' ? work_item_id : null,
-      start_time: formatISO(startDate), // minute-truncated; keep stored instant in sync with duration
-      end_time: formatISO(endDate),
-      work_date,
-      work_timezone,
-      billable_duration: finalBillableDuration,
-      notes,
-      time_sheet_id,
-      approval_status,
-      service_id,
-      tax_region,
-      contract_line_id,
-      // Provenance for the contract line (F062). A caller-supplied line is
-      // 'explicit' by definition; the resolver below overwrites this when it
-      // picks (or fails to pick) one itself.
-      contract_line_source: (contract_line_id ? 'explicit' : null) as ContractLineSource | null,
-      tax_rate_id, // Add tax_rate_id to the object being saved
-      user_id: timeEntryUserId,
-      updated_by: actorUserId,
-      tenant: tenant as string,
-      updated_at: new Date().toISOString()
-    };
-
-    if (operationalFields) Object.assign(cleanedEntry, operationalFields);
-    if (access && work_item_type === 'non_billable_category' && work_item_id === NON_BILLABLE_FALLBACK_WORK_ITEM_ID) Object.assign(cleanedEntry, { work_item_id: null });
-
-
-    let resultingEntry: ITimeEntry | null = null;
-
-    if (!operational) Object.assign(cleanedEntry, await resolveTimeEntryContract(db as Knex.Transaction, tenant, cleanedEntry, {
-      explicitLineId: contract_line_id,
-    }));
-
-    await withTransaction(db, async (trx) => {
-      const trxTenantDb = tenantDb(trx, tenant) as any;
-      console.log('Starting transaction for time entry');
-      let oldEntrySpan: {
-        billing_mode?: string;
-        billable_duration?: number;
-        service_id?: string | null;
-        start_time?: string | Date;
-        end_time?: string | Date;
-        contract_line_id?: string | null;
-        work_item_id?: string | null;
-        work_item_type?: string | null;
-      } | null = null;
-      if (entry_id) {
-        // Fetch original entry before update to calculate delta
-        const originalEntryForUpdate = await trxTenantDb.table('time_entries')
-          .where({ entry_id })
-          .select('billing_mode', 'billable_duration', 'work_item_id', 'work_item_type', 'service_id', 'start_time', 'end_time', 'contract_line_id')
-          .first();
-        // If original entry not found, maybe throw error or handle gracefully?
-        // Throwing error for now as update shouldn't happen if original is gone.
-        if (!originalEntryForUpdate) {
-             throw new Error(`Original time entry with ID ${entry_id} not found for update.`);
-        }
-        oldEntrySpan = originalEntryForUpdate;
-
-        // Update existing entry - exclude tenant from SET clause (partition key cannot be modified)
-        const { tenant: _tenant, user_id: _user_id, ...updateData } = cleanedEntry;
-        const [updated] = await trxTenantDb.table('time_entries')
-          .where({ entry_id })
-          .update(updateData)
-          .returning('*');
-
-        if (!updated) {
-          throw new Error('Time entry not found');
-        }
-
-        resultingEntry = updated;
-
-        if (updated.time_sheet_id) {
-          const timeSheetStatus = await trxTenantDb.table('time_sheets')
-            .where({
-              id: updated.time_sheet_id,
-            })
-            .first('approval_status');
-
-          if (timeSheetStatus?.approval_status === 'CHANGES_REQUESTED') {
-            await markTimeEntryChangeRequestsHandled(trx, {
-              tenant,
-              timeEntryId: entry_id,
-              handledBy: actorUserId,
-            });
-          }
-        }
-
-        await recalculateProjectTaskActualHoursForEntryChange(
-          trx,
+    const persisted = stopwatchSessionId
+      ? (await logSession(db, tenant, user, stopwatchSessionId, {
+          work_item_id: validatedTimeEntry.work_item_id,
+          work_item_type: validatedTimeEntry.work_item_type,
+          start_time: validatedTimeEntry.start_time,
+          end_time: validatedTimeEntry.end_time,
+          billable_duration: validatedTimeEntry.billable_duration,
+          notes: validatedTimeEntry.notes,
+          service_id: validatedTimeEntry.service_id,
+          contract_line_id: validatedTimeEntry.contract_line_id,
+          tax_region: validatedTimeEntry.tax_region,
+          tax_rate_id: validatedTimeEntry.tax_rate_id,
+          time_sheet_id: validatedTimeEntry.time_sheet_id,
+          user_id: validatedTimeEntry.user_id,
+        })).persisted
+      : await persistTimeEntry(db, {
           tenant,
-          originalEntryForUpdate,
-          updated,
-        );
-      } else {
-        // Insert new entry
-        const [inserted] = await trxTenantDb.table('time_entries')
-          .insert({
-            ...cleanedEntry,
-            entry_id: uuidv4(),
-            created_at: new Date().toISOString(),
-            created_by: actorUserId
-          })
-          .returning('*');
+          actor: user,
+          entry: validatedTimeEntry,
+          operational: operationalFields ? { fields: operationalFields } : null,
+          access,
+        });
 
-        if (!inserted) {
-          throw new Error('Time entry insert completed without returning a saved row.');
-        }
+    // Publish only after the owning transaction has committed.
+    registerAfterCommit(db, () => publishPersistedTimeEntryEvents(persisted), 'time-entry-search');
 
-        resultingEntry = inserted;
-
-        await recalculateProjectTaskActualHoursForEntryChange(trx, tenant, null, inserted);
-        // Operational effort does not implicitly change work assignments.
-        if (!access && work_item_type === 'project_task') {
-
-          // Get current task to check if it already has an assignee
-          const task = await trxTenantDb.table('project_tasks')
-            .where({
-              task_id: work_item_id,
-            })
-            .first();
-
-          if (task) {
-            // Check if user is already in task_resources for this task
-            const existingResource = await trxTenantDb.table('task_resources')
-              .where({
-                task_id: work_item_id,
-              })
-              .where(function(this: any) {
-                this.where('assigned_to', timeEntryUserId)
-                  .orWhere('additional_user_id', timeEntryUserId);
-              })
-              .first();
-
-            // If task already has an assignee and it's not the current user
-            if (task.assigned_to && task.assigned_to !== timeEntryUserId) {
-              // Only add as additional user if not already in resources
-              if (!existingResource) {
-                await trxTenantDb.table('task_resources').insert({
-                  task_id: work_item_id,
-                  assigned_to: task.assigned_to,
-                  additional_user_id: timeEntryUserId,
-                  assigned_at: new Date(),
-                  tenant,
-                });
-              }
-            } else if (!task.assigned_to) {
-              // If task has no assignee, only update the task's assigned_to field
-              await trxTenantDb.table('project_tasks')
-                .where({
-                  task_id: work_item_id,
-                })
-                .update({
-                  assigned_to: timeEntryUserId,
-                  updated_at: new Date(),
-                });
-              // No task_resources record is created when there's no additional user
-            }
-          }
-        } else if (!access && work_item_type === 'ticket') {
-          // Check if user is already in ticket_resources for this ticket
-          const existingResource = await trxTenantDb.table('ticket_resources')
-            .where({
-              ticket_id: work_item_id,
-            })
-            .where(function(this: any) {
-              this.where('assigned_to', timeEntryUserId)
-                .orWhere('additional_user_id', timeEntryUserId);
-            })
-            .first();
-
-          if (!existingResource) {
-            // Get current ticket to check if it already has an assignee
-            const ticket = await trxTenantDb.table('tickets')
-              .where({
-                ticket_id: work_item_id,
-              })
-              .first();
-
-            if (ticket) {
-              // If ticket already has an assignee, add user as additional_user_id
-              if (ticket.assigned_to && ticket.assigned_to !== timeEntryUserId) {
-                await trxTenantDb.table('ticket_resources').insert({
-                  ticket_id: work_item_id,
-                  assigned_to: ticket.assigned_to,
-                  additional_user_id: timeEntryUserId,
-                  assigned_at: new Date(),
-                  tenant,
-                });
-              } else if (!ticket.assigned_to) {
-                // If ticket has no assignee, update the ticket to set user as assigned_to
-                // Note: We do NOT create a ticket_resources record here because that table
-                // is only for additional agents, not the primary assignee
-                await trxTenantDb.table('tickets')
-                  .where({
-                    ticket_id: work_item_id,
-                  })
-                  .update({
-                    assigned_to: timeEntryUserId,
-                    updated_at: new Date().toISOString(),
-                    updated_by: actorUserId,
-                  });
-              }
-            }
-          }
-        }
-      }
-      await reconcileTimeEntryBillingAllocations(trx, tenant, oldEntrySpan, resultingEntry);
-    });
-
-    if (!resultingEntry) {
-      throw new Error('Time entry save completed without creating or updating a row.');
-    }
-
-    // Ensure resultingEntry is treated as ITimeEntry
-    const entry = resultingEntry as ITimeEntry;
-    if (!entry.entry_id) {
-      throw new Error('Time entry save returned a row without an entry ID.');
-    }
-
-    registerAfterCommit(db, () => publishTimeEntrySearchEvent(entry_id ? 'TIME_ENTRY_UPDATED' : 'TIME_ENTRY_CREATED', {
-      tenantId: tenant,
-      timeEntryId: entry.entry_id!,
-      userId: entry.user_id,
-      workItemId: entry.work_item_id,
-      workItemType: entry.work_item_type,
-      changes: entry_id && !access ? validatedTimeEntry : undefined,
-    }), 'time-entry-search');
+    const entry = persisted.entry;
+    const entry_id = validatedTimeEntry.entry_id;
+    const { notes, service_id, tax_region, contract_line_id, approval_status } = validatedTimeEntry;
+    const finalBillableDuration = persisted.finalBillableDuration;
 
     // Fetch work item details based on the saved entry
     let workItemDetails: IWorkItem;

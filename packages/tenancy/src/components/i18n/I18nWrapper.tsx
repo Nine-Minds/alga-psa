@@ -12,6 +12,8 @@ interface I18nWrapperProps {
   portal?: 'msp' | 'client';
   /** Server-embedded namespace resources for the current route (no HTTP fetch). */
   preloadedResources?: Record<string, Record<string, unknown>>;
+  /** Allow auth forms to render with fallback copy while locale resources load. */
+  renderChildrenWhileLoading?: boolean;
 }
 
 export function I18nWrapper({
@@ -19,6 +21,7 @@ export function I18nWrapper({
   initialLocale,
   portal = 'msp',
   preloadedResources,
+  renderChildrenWhileLoading = false,
 }: I18nWrapperProps) {
   const [locale, setLocale] = useState<SupportedLocale>(
     initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
@@ -63,6 +66,7 @@ export function I18nWrapper({
       portal={portal}
       namespaces={namespaces}
       preloadedResources={preloadedResources}
+      renderChildrenWhileLoading={renderChildrenWhileLoading}
     >
       {children}
     </I18nProvider>

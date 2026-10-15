@@ -30,7 +30,11 @@ import {
   parseStagedMimeIntoEmailDetails,
   readStagedSourceMime,
 } from './inboundEmailSourceStager';
-import { processInboundEmailArtifactsBestEffort } from './processInboundEmailArtifacts';
+import {
+  processInboundEmailArtifactsBestEffort,
+  type ProcessInboundEmailArtifactsResult,
+} from './processInboundEmailArtifacts';
+import { applyEmbeddedImageUrlMappingsToStoredBodies } from './inboundEmbeddedImageUrlRewrite';
 import { ORIGINAL_EMAIL_ATTACHMENT_ID, extractEmbeddedImageAttachments, sanitizeGeneratedFileName } from './inboundEmailArtifactHelpers';
 import { hasNamedConversationReplyHint, qualifiedReplyTokenFromBody } from './qualifiedReplyAdmission';
 import type { QualifiedReplyArtifactProcessor, QualifiedReplyArtifactInput } from './qualifiedReplyArtifacts';
@@ -203,8 +207,9 @@ export async function processInboundArtifactJob(
   }
 
   let processError: string | null = null;
+  let artifactsResult: ProcessInboundEmailArtifactsResult | null = null;
   try {
-    await processInboundEmailArtifactsBestEffort({
+    artifactsResult = await processInboundEmailArtifactsBestEffort({
       tenantId: inbox.tenant,
       providerId: inbox.provider_id,
       ticketId: inbox.ticket_id,
@@ -250,6 +255,29 @@ export async function processInboundArtifactJob(
       document_id: mirror.document_id,
     });
     if (!written) return { disposition: 'retry', error: 'artifact_fence_superseded' };
+
+    // Resolve inline `cid:` sources in the stored bodies once real file ids
+    // exist. Best-effort: a rewrite failure must never flip the succeeded
+    // artifact back to retry. The fenced transition above already committed.
+    if (artifactsResult?.embeddedImageUrlMappings?.length) {
+      const targets = [
+        ...(inbox.comment_id
+          ? [{ kind: 'comment' as const, id: inbox.comment_id }]
+          : []),
+        ...(inbox.outcome_kind === 'created' && inbox.ticket_id
+          ? [{ kind: 'ticket-description' as const, id: inbox.ticket_id }]
+          : []),
+      ];
+      if (targets.length > 0) {
+        await applyEmbeddedImageUrlMappingsToStoredBodies({
+          tenantId: inbox.tenant,
+          html: parsed.emailData.body?.html,
+          text: parsed.emailData.body?.text,
+          mappings: artifactsResult.embeddedImageUrlMappings,
+          targets,
+        });
+      }
+    }
     return { disposition: 'ack' };
   }
 

@@ -33,7 +33,16 @@ describe('authenticated notification refresh signals', () => {
     expect(validateDocumentRoomAccess(room, request())).toMatchObject({ status: 'ok' });
     await expect(extension.onConnect({ documentName: room, request: new Request('http://localhost'), connection })).rejects.toThrow('missing token');
   });
-  it.each([{ tenantId: randomUUID() }, { userId: randomUUID() }, { sessionId: 'not-a-session' }, { scope: 'ticket' }])('rejects a mismatched token %j', overrides => {
+  // Fixed identifiers, not randomUUID(): `%j` interpolates the case into the
+  // test NAME, and the shard runner reconciles collected names against executed
+  // ones. A value generated at module load differs between the collection pass
+  // and the execution pass, so every run reported
+  // "Collected/executed test count differs" / "Unexpected executed test" and
+  // failed the shard. The assertion only needs identifiers that do NOT match the
+  // signed token, which these do.
+  const OTHER_TENANT = '00000000-0000-4000-8000-0000000000aa';
+  const OTHER_USER = '00000000-0000-4000-8000-0000000000bb';
+  it.each([{ tenantId: OTHER_TENANT }, { userId: OTHER_USER }, { sessionId: 'not-a-session' }, { scope: 'ticket' }])('rejects a mismatched token %j', overrides => {
     expect(() => validateDocumentRoomAccess(room, request(overrides))).toThrow();
   });
   it('rejects expired, oversized-lifetime and incorrectly signed tokens', () => {

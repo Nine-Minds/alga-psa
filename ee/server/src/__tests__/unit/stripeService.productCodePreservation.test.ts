@@ -13,46 +13,22 @@ function createTransitionKnex(state: {
   stripeUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }>;
 }) {
   const knex = ((table: string) => {
-    if (table === 'apple_iap_subscriptions') {
-      return {
-        where: () => ({
-          whereNotNull: () => ({
-            first: async () => ({
-              original_transaction_id: 'orig_tx_1',
-              transition_stripe_subscription_external_id: 'sub_transition_1',
-            }),
-          }),
-          update: async (values: Record<string, any>) => {
-            state.appleUpdates.push({ criteria: {}, values });
-            return 1;
-          },
-        }),
-      };
-    }
-
-    if (table === 'tenants') {
-      return {
-        where: (criteria: Record<string, any>) => ({
-          update: async (values: Record<string, any>) => {
-            state.tenantUpdates.push({ criteria, values });
-            return 1;
-          },
-        }),
-      };
-    }
-
-    if (table === 'stripe_subscriptions') {
-      return {
-        where: (criteria: Record<string, any>) => ({
-          update: async (values: Record<string, any>) => {
-            state.stripeUpdates.push({ criteria, values });
-            return 1;
-          },
-        }),
-      };
-    }
-
-    throw new Error(`Unexpected table ${table}`);
+    const updates = table === 'tenants' ? state.tenantUpdates
+      : table === 'apple_iap_subscriptions' ? state.appleUpdates
+        : table === 'stripe_subscriptions' ? state.stripeUpdates : null;
+    if (!updates) throw new Error(`Unexpected table ${table}`);
+    const criteria: Record<string, any> = {};
+    const query = {
+      where: (field: string | Record<string, any>, value?: unknown) => {
+        const values = typeof field === 'string' ? { [field]: value } : field;
+        for (const [key, value] of Object.entries(values)) criteria[key.split('.').at(-1)!] = value;
+        return query;
+      },
+      whereNotNull: () => query,
+      first: async () => ({ original_transaction_id: 'orig_tx_1', transition_stripe_subscription_external_id: 'sub_transition_1' }),
+      update: async (values: Record<string, any>) => { updates.push({ criteria, values }); return 1; },
+    };
+    return query;
   }) as any;
 
   knex.fn = { now: () => new Date('2026-05-05T00:00:00.000Z') };

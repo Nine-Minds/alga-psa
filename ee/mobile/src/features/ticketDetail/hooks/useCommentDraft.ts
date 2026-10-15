@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TicketComment, TicketNotificationSuppressionOptions } from "../../../api/tickets";
-import { addTicketComment, updateTicketStatus } from "../../../api/tickets";
+import { updateTicketStatus } from "../../../api/tickets";
+import { commentDraftKey, createCommentApi, ticketTarget, type CommentTarget } from "../../comments/commentTarget";
 import { getSecureJson, secureStorage, setSecureJson } from "../../../storage/secureStorage";
 import { getClientMetadataHeaders } from "../../../device/clientMetadata";
 import { invalidateTicketsListCache } from "../../../cache/ticketsCache";
@@ -20,9 +21,14 @@ export function useCommentDraft(
     fetchTicket: () => Promise<void>;
     fetchComments: () => Promise<void>;
     setComments: React.Dispatch<React.SetStateAction<TicketComment[]>>;
+    /** Where the thread lives; defaults to the ticket named by `ticketId`. */
+    target?: CommentTarget;
   },
 ) {
   const { client, session, ticketId, showToast, t, isOffline, fetchTicket, fetchComments, setComments } = deps;
+  const target = useMemo<CommentTarget>(() => deps.target ?? ticketTarget(ticketId), [deps.target, ticketId]);
+  const api = useMemo(() => createCommentApi(target), [target]);
+  const isTicket = target.kind === "ticket";
 
   const [commentsVisibleCount, setCommentsVisibleCount] = useState(20);
   const [commentDraft, setCommentDraft] = useState("");
@@ -30,6 +36,11 @@ export function useCommentDraft(
   const [commentIsInternal, setCommentIsInternal] = useState(true);
   const [commentIsResolution, setCommentIsResolution] = useState(false);
   const [commentCloseStatusId, setCommentCloseStatusId] = useState<string | null>(null);
+  const [commentScheduleAt, setCommentScheduleAt] = useState<Date | null>(null);
+  // One-off Cc/Bcc for this comment's email. Never persisted with the draft and
+  // never sent with an internal note.
+  const [commentCc, setCommentCc] = useState<string[]>([]);
+  const [commentBcc, setCommentBcc] = useState<string[]>([]);
   const [commentSendError, setCommentSendError] = useState<string | null>(null);
   const [commentSending, setCommentSending] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -37,10 +48,7 @@ export function useCommentDraft(
   const commentEditorRef = useRef<TicketRichTextEditorRef>(null);
   const commentSendInFlightRef = useRef(false);
 
-  const draftKey = useMemo(() => {
-    const userId = session?.user?.id ?? "anonymous";
-    return `alga.mobile.ticketDraft.${userId}.${ticketId}`;
-  }, [session?.user?.id, ticketId]);
+  const draftKey = useMemo(() => commentDraftKey(target, session?.user?.id), [session?.user?.id, target]);
 
   const visibilityPrefKey = useMemo(() => {
     const userId = session?.user?.id ?? "anonymous";
@@ -78,11 +86,12 @@ export function useCommentDraft(
     void setSecureJson(draftKey, { text: commentDraft, isInternal: commentIsInternal });
   }, [commentDraft, commentIsInternal, draftKey, draftLoaded]);
 
-  // Persist visibility preference
+  // Persist visibility preference. Task comments are always internal and must
+  // not overwrite the user's ticket default.
   useEffect(() => {
-    if (!draftLoaded) return;
+    if (!draftLoaded || !isTicket) return;
     void setSecureJson(visibilityPrefKey, commentIsInternal);
-  }, [commentIsInternal, draftLoaded, visibilityPrefKey]);
+  }, [commentIsInternal, draftLoaded, isTicket, visibilityPrefKey]);
 
   const submitCommentPayload = useCallback(
     async ({
@@ -94,6 +103,9 @@ export function useCommentDraft(
       isResolution,
       closeStatusId,
       notificationSuppression,
+      scheduleAt,
+      cc,
+      bcc,
     }: {
       serializedDraft: string;
       text: string;
@@ -103,10 +115,14 @@ export function useCommentDraft(
       isResolution?: boolean;
       closeStatusId?: string | null;
       notificationSuppression?: TicketNotificationSuppressionOptions;
+      scheduleAt?: Date | null;
+      cc?: string[];
+      bcc?: string[];
     }): Promise<boolean> => {
       if (!client || !session) return false;
       if (commentSendInFlightRef.current || commentSending) return false;
       commentSendInFlightRef.current = true;
+      const scheduled = scheduleAt && !originalIsInternal ? scheduleAt : null;
 
       const trimmedText = text.trim();
       if (!trimmedText) {
@@ -134,6 +150,7 @@ export function useCommentDraft(
         created_at: new Date().toISOString(),
         created_by_name: session.user?.name ?? session.user?.email ?? "You",
         optimistic: true,
+        ...(scheduled ? { publish_state: "scheduled" as const, scheduled_publish_at: scheduled.toISOString() } : {}),
       };
 
       setComments((prev) => [...prev, optimisticComment]);
@@ -143,12 +160,21 @@ export function useCommentDraft(
       setCommentSending(true);
       try {
         const auditHeaders = await getClientMetadataHeaders();
-        const result = await addTicketComment(client, {
+        const result = await api.add(client, {
           apiKey: session.accessToken,
-          ticketId,
           comment_text: serializedDraft,
-          is_internal: originalIsInternal,
+          is_internal: isTicket ? originalIsInternal : true,
           is_resolution: isResolution,
+          ...(scheduled
+            ? {
+                scheduled_publish_at: scheduled.toISOString(),
+                scheduled_publish_tz: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+              }
+            : {}),
+          // The API rejects cc/bcc on an internal note, so only a public
+          // comment carries them.
+          ...(isTicket && !originalIsInternal && cc?.length ? { cc } : {}),
+          ...(isTicket && !originalIsInternal && bcc?.length ? { bcc } : {}),
           auditHeaders,
         });
         if (!result.ok) {
@@ -204,16 +230,16 @@ export function useCommentDraft(
         }
 
         await secureStorage.deleteItem(draftKey);
-        invalidateTicketsListCache();
+        if (isTicket) invalidateTicketsListCache();
         await Promise.all([fetchTicket(), fetchComments()]);
-        showToast({ message: t("comments.commentSent"), tone: "success" });
+        showToast({ message: t(scheduled ? "comments.commentScheduled" : "comments.commentSent"), tone: "success" });
         return true;
       } finally {
         setCommentSending(false);
         commentSendInFlightRef.current = false;
       }
     },
-    [client, commentSending, draftKey, fetchComments, fetchTicket, isOffline, session, showToast, ticketId],
+    [api, client, commentSending, draftKey, fetchComments, fetchTicket, isOffline, isTicket, session, showToast, ticketId],
   );
 
   // Lean reply path: optimistic insert nested under the parent, POST with
@@ -260,11 +286,10 @@ export function useCommentDraft(
 
       try {
         const auditHeaders = await getClientMetadataHeaders();
-        const result = await addTicketComment(client, {
+        const result = await api.add(client, {
           apiKey: session.accessToken,
-          ticketId,
           comment_text: serializedDraft,
-          is_internal: false,
+          is_internal: !isTicket,
           parent_comment_id: parentCommentId,
           auditHeaders,
         });
@@ -295,7 +320,7 @@ export function useCommentDraft(
             };
           }),
         );
-        invalidateTicketsListCache();
+        if (isTicket) invalidateTicketsListCache();
         await fetchComments();
         showToast({ message: t("comments.commentSent"), tone: "success" });
         return true;
@@ -305,7 +330,7 @@ export function useCommentDraft(
         return false;
       }
     },
-    [client, fetchComments, isOffline, session, showToast, t, ticketId, setComments],
+    [api, client, fetchComments, isOffline, isTicket, session, showToast, t, setComments],
   );
 
   const sendComment = async (notificationSuppression?: TicketNotificationSuppressionOptions) => {
@@ -327,10 +352,16 @@ export function useCommentDraft(
       isResolution: commentIsResolution,
       closeStatusId: commentCloseStatusId,
       notificationSuppression,
+      scheduleAt: commentScheduleAt,
+      cc: commentCc,
+      bcc: commentBcc,
     });
     if (sent) {
       setCommentIsResolution(false);
       setCommentCloseStatusId(null);
+      setCommentScheduleAt(null);
+      setCommentCc([]);
+      setCommentBcc([]);
     }
   };
 
@@ -347,6 +378,12 @@ export function useCommentDraft(
     setCommentIsResolution,
     commentCloseStatusId,
     setCommentCloseStatusId,
+    commentScheduleAt,
+    setCommentScheduleAt,
+    commentCc,
+    setCommentCc,
+    commentBcc,
+    setCommentBcc,
     commentSendError,
     commentSending,
     draftLoaded,

@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { previewCoManagedThreadDisclosureAction, discloseCoManagedThreadAction } from '@/lib/actions/coManagedThreadDisclosureActions';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 export default function CoManagedThreadDisclosure({ resource, thread, actor, audiences, onClosed, onSaved }: {
   resource: CoManagedSharedResource; thread: CoManagedThreadReference; actor: { tenant: string; userId: string };
@@ -40,7 +41,7 @@ export default function CoManagedThreadDisclosure({ resource, thread, actor, aud
   }, []);
   async function submit() {
     if (inFlight.current || rejected || !preview || !audience || !audiences.includes(audience) || preview.pendingAttachments) return;
-    if (!submission.current) submission.current = { ...target.current.thread, operationId: crypto.randomUUID(), expectedSnapshot: preview.snapshot, audience, confirmed: true };
+    if (!submission.current) submission.current = { ...target.current.thread, operationId: newCoManagedOperationId(), expectedSnapshot: preview.snapshot, audience, confirmed: true };
     inFlight.current = true; setBusy(true); setError(null);
     try {
       const result = await discloseCoManagedThreadAction(target.current.resource, submission.current);

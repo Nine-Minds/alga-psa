@@ -1,5 +1,7 @@
 # Co-managed IT: T01–T07 implementation audit
 
+> Current status, 2026-09-20: this is historical source/validation evidence. The [completion and correction PRD](2026-09-20-co-managed-it-completion/PRD.md) requires current-candidate acceptance for every T01–T22 contract and both UI follow-ons. “Implemented” below does not certify current CI or complete browser/provider/runtime journeys. Human-review readiness remains blocked.
+
 Reviewed 2026-09-08 against the approved scope and behavioral requirements in [the implementation plan](2026-09-06-co-managed-it-plan.md). Evidence below comes from the current branch's source and existing tests. Existing tests were inspected; focused checks were also run for the implementation findings closed during this review. Historical checkpoint claims are not treated as proof of completion.
 
 | Requirement | Current implementation | Remaining acceptance evidence |
@@ -16,7 +18,7 @@ Reviewed 2026-09-08 against the approved scope and behavioral requirements in [t
 
 **Implemented.** [Product capabilities](../../packages/types/src/constants/productCapabilities.ts) give `co_managed` operational features and omit billing, sales, accounting, RMM, extensions and sponsorship. [Product surface rules](../../server/src/lib/productSurfaceRegistry.ts) allow operational UI/API paths and reject unsupported paths. Settings routes resolve through [the settings allowlist](../../server/src/lib/settingsProductTabs.ts), including SLA and notifications; the older route-rule row alone does not determine those routes. [Product access guards](../../shared/services/productAccessGuard.ts), operational lifecycle admission and the product-specific onboarding [permission catalog](../../server/migrations/utils/permissions/catalog.cjs) provide further enforcement. Nested sponsorship is rejected by reservation admission even if a sponsored tenant's product is incorrectly changed to PSA.
 
-**Existing validation.** [Product surface tests](../../server/src/test/unit/product/coManagedProductSurface.test.ts) exercise the three products, operational routes/API metadata, commercial exclusions and SCIM. [Reservation integration tests](../../server/src/test/integration/coManagedReservations.integration.test.ts) verify operational role seeds, omission of commercial permissions, replay without overwriting custom settings and nested-sponsor denial. [Bootstrap integration tests](../../server/src/test/integration/coManagedBootstrap.integration.test.ts) exercise real ticket/project/document/KB/time/scheduling action and API paths, including active operation and lifecycle denial. These are substantial behavioral slices, not a complete browser matrix.
+**Existing validation.** [Product surface tests](../../server/src/test/unit/product/coManagedProductSurface.test.ts) exercise the three products, operational routes/API metadata, commercial exclusions and SCIM. [Reservation integration tests](../../server/src/test/integration/coManagedReservations.integration.test.ts) verify operational role seeds, omission of commercial permissions, replay without overwriting custom settings and nested-sponsor denial. [Bootstrap integration tests](../../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts) exercise real ticket/project/document/KB/time/scheduling action and API paths, including active operation and lifecycle denial. These are substantial behavioral slices, not a complete browser matrix.
 
 **Closed implementation findings.** Hidden navigation does not deny direct server actions. At audit discovery, `saveTacticalRmmConfiguration` in [Tactical RMM actions](../../packages/integrations/src/actions/integrations/tacticalRmmActions.ts) checked only `system_settings:update` before storing credentials and integration settings. The seeded customer Admin has that permission; neither `withAuth` nor `hasPermission` performs product admission. Commit `6c05e235a0` guards all 28 Tactical/generic RMM actions plus the Tactical background sync engines and webhook. A real PostgreSQL direct-call case and 37 Tactical unit checks pass.
 
@@ -79,3 +81,14 @@ Native customer KBs, documents and vault entries do not receive an automatic MSP
 ## Acceptance work versus future features
 
 No additional repository implementation defect remains demonstrated in this bounded review after the fixes above. Production price/issuer verification and the combined multi-actor browser/API/Citus smoke matrix remain acceptance evidence; broad builds and suites were intentionally deferred under the user's faster implementation/testing direction. Nested tenants, multiple sponsors, existing-tenant attachment, cross-installation live trust, annual customer-seat pricing and new RMM/directory connectors remain outside the approved release.
+
+## Client-integrated follow-on addendum (2026-09-11)
+
+This addendum covers the client-record management, provisioning, and purchase paths moved by the [2026-09-11 follow-on plan](2026-09-11-co-managed-client-integration/PRD.md). It does not revise the historical results above.
+
+- Client target management now resolves from the authorized local client through the shared management projection (`getCoManagedClientManagement`, `resolveCoManagedManagementTarget`, `getCoManagedOperationTarget`) rather than a browser-supplied operation or customer tenant. The migrated-database cases cover single/multiple/ended relationships, forged selections, redaction, the cross-client overview, and the single-setup resume guard.
+- The client view exposes fixed-client setup, resumable provisioning, allocation, access/SLA, delegation, and departure; a shortfall purchase reviews the absolute sponsor pool total, freezes the operation, and requires verified entitlement before the allocation retries.
+- The hosted pool editor is shared with Account Management; self-host capacity changes route to License Management with a validated relative return. The typed purchase-availability result prevents CE stubs and unconfigured providers from presenting as purchasable.
+
+Pending acceptance evidence is unchanged in kind: real hosted Stripe test-mode purchase/reconciliation, self-host signed-license return, and Citus coverage for the added client-mapping lookup. The lookup reuses the existing `operations` projection and adds no index or new transaction path.
+

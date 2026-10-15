@@ -6,32 +6,33 @@ const ENV_BACKUP_REGEXES = [
   /(^|\/)\.env[^/]*\.bak[^/]*$/i,
 ];
 
-const findTrackedEnvBackups = () => new Promise((resolve, reject) => {
-  // Stream the index: a monorepo's file list can exceed execFileSync's buffer.
-  // NUL framing preserves filenames even when a chunk ends mid-name.
-  const git = spawn('git', ['ls-files', '-z'], { stdio: ['ignore', 'pipe', 'inherit'] });
+const findOffenders = async () => {
+  const child = spawn('git', ['ls-files', '-z'], { stdio: ['ignore', 'pipe', 'inherit'] });
+  const completed = new Promise((resolve) => {
+    child.once('error', (error) => resolve({ error }));
+    child.once('close', (code, signal) => resolve({ code, signal }));
+  });
+  child.stdout.setEncoding('utf8');
   const offenders = [];
   let pending = '';
-  git.stdout.setEncoding('utf8');
-  git.stdout.on('data', chunk => {
+  for await (const chunk of child.stdout) {
     pending += chunk;
-    let end;
-    while ((end = pending.indexOf('\0')) !== -1) {
-      const file = pending.slice(0, end);
-      pending = pending.slice(end + 1);
-      if (ENV_BACKUP_REGEXES.some(re => re.test(file))) offenders.push(file);
+    let separator;
+    while ((separator = pending.indexOf('\0')) !== -1) {
+      const file = pending.slice(0, separator);
+      pending = pending.slice(separator + 1);
+      if (ENV_BACKUP_REGEXES.some((re) => re.test(file))) offenders.push(file);
     }
-  });
-  git.on('error', reject);
-  git.stdout.on('error', reject);
-  git.on('close', (code, signal) => {
-    if (code !== 0 || pending) reject(new Error(`Unable to scan tracked files: git exited with ${signal ?? code}`));
-    else resolve(offenders);
-  });
-});
+  }
+  const result = await completed;
+  if (result.error) throw result.error;
+  if (result.code !== 0) throw new Error(`git ls-files failed (${result.signal ?? result.code})`);
+  if (pending) throw new Error('git ls-files returned an incomplete filename');
+  return offenders;
+};
 
 const main = async () => {
-  const offenders = await findTrackedEnvBackups();
+  const offenders = await findOffenders();
 
   if (offenders.length === 0) {
     process.exit(0);
@@ -47,8 +48,8 @@ const main = async () => {
   process.exit(1);
 };
 
-main().catch(error => {
-  console.error(error.message);
+main().catch((error) => {
+  console.error(`Unable to inspect tracked filenames: ${error.message}`);
   process.exitCode = 1;
 });
 

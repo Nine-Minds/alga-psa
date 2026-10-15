@@ -14,6 +14,7 @@ import {
   type WorkflowPublishHooks
 } from './schemas/eventBusSchema';
 import { WorkflowEventBaseSchema } from './schemas/workflowEventSchema';
+import { enforceWorkflowEventContract } from './workflow/workflowEventContract';
 
 type EventHandler = (event: Event) => Promise<void>;
 
@@ -29,9 +30,8 @@ const createRedisClient = async () => {
     logger.warn('[EventBus] No Redis password configured - this is not recommended for production');
   }
 
-  const client = createClient({
+  const clientOptions: Parameters<typeof createClient>[0] = {
     url: config.url,
-    password: password || undefined,
     socket: {
       reconnectStrategy: (retries) => {
         if (retries > config.eventBus.reconnectStrategy.retries) {
@@ -47,7 +47,15 @@ const createRedisClient = async () => {
         return delay;
       }
     }
-  });
+  };
+
+  // node-redis treats the presence of the password option as a request to
+  // authenticate, even when its value is undefined or empty.
+  if (password) {
+    clientOptions.password = password;
+  }
+
+  const client = createClient(clientOptions);
 
   client.on('error', (err) => {
     logger.error('[EventBus] Redis Client Error:', err);
@@ -163,12 +171,33 @@ async function getClient() {
 
 // Helper to check connection status (for external monitoring)
 export function isEventBusConnected(): boolean {
-  return isConnected && !eventBusDisabled;
+  return eventBusRegistry[EVENT_BUS_KEY]?.isConnected() ?? false;
+}
+
+// Next's main and EE graphs can bundle this module independently. All
+// subscribers in the process must share one consumer: separate consumers in
+// the same Redis group compete for messages and ACK each other's work.
+const EVENT_BUS_KEY = Symbol.for('alga.eventBus.v1');
+const eventBusRegistry = globalThis as typeof globalThis & {
+  [EVENT_BUS_KEY]?: EventBus;
+};
+
+// LEVERAGE: pattern redis-consumer-group-ensure — same NOGROUP detection and group-cache invalidation lives in shared/workflow/streams/redisStreamClient.ts
+function isNoGroupError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('NOGROUP');
+}
+
+// Redis reports "No such key '<key>' or consumer group ..."; used for logging only.
+function extractNoGroupKey(message: string): string | undefined {
+  return /No such key '([^']+)'/.exec(message)?.[1];
 }
 
 export class EventBus {
-  private static instance: EventBus;
   private static createdConsumerGroups: Set<string> = new Set<string>();
+  // Streams whose group we dropped from the cache after a NOGROUP, so the recreate can be logged as a recovery.
+  private static recoveringConsumerGroups: Set<string> = new Set<string>();
+  private consecutiveNoGroup = 0;
   // Map<EventType, Map<Channel, Handlers>> so channel-specific consumers do not step on each other.
   private handlers: Map<EventType, Map<string, Set<EventHandler>>>;
   // Stable per-handler ids for per-(event, handler) processed tracking.
@@ -179,6 +208,14 @@ export class EventBus {
   private consumerName: string;
   private processingEvents: boolean = false;
   private defaultChannel: string;
+  private closed = false;
+  private blockingReader: Awaited<ReturnType<typeof createRedisClient>> | null = null;
+
+  private async stopBlockingRead(): Promise<void> {
+    const reader = this.blockingReader;
+    this.blockingReader = null;
+    if (reader?.isOpen) await reader.disconnect();
+  }
 
   private constructor() {
     this.handlers = new Map();
@@ -187,10 +224,14 @@ export class EventBus {
   }
 
   public static getInstance(): EventBus {
-    if (!EventBus.instance) {
-      EventBus.instance = new EventBus();
+    if (!eventBusRegistry[EVENT_BUS_KEY]) {
+      eventBusRegistry[EVENT_BUS_KEY] = new EventBus();
     }
-    return EventBus.instance;
+    return eventBusRegistry[EVENT_BUS_KEY];
+  }
+
+  public isConnected(): boolean {
+    return !this.closed && isConnected && !eventBusDisabled;
   }
 
   private getStreamKey(eventType: EventType, channel: string): string {
@@ -246,6 +287,15 @@ export class EventBus {
     return subscriptions;
   }
 
+  // A multi-stream XREADGROUP reports only the first missing group, but a Redis
+  // wipe removes all of them. Invalidate every active stream so one pass heals all.
+  private invalidateConsumerGroups(streams: string[]): void {
+    for (const stream of streams) {
+      EventBus.createdConsumerGroups.delete(stream);
+      EventBus.recoveringConsumerGroups.add(stream);
+    }
+  }
+
   private async ensureStreamAndGroup(stream: string): Promise<void> {
     // Check if we've already created this consumer group
     if (EventBus.createdConsumerGroups.has(stream)) {
@@ -260,12 +310,23 @@ export class EventBus {
       await client.xGroupCreate(stream, config.eventBus.consumerGroup, '0', {
         MKSTREAM: true
       });
-      logger.info(`[EventBus] Created consumer group for stream: ${stream}`);
+      if (EventBus.recoveringConsumerGroups.delete(stream)) {
+        logger.warn('[EventBus] consumer group missing, recreating', {
+          stream,
+          group: config.eventBus.consumerGroup
+        });
+      } else {
+        logger.info(`[EventBus] Created consumer group for stream: ${stream}`);
+      }
       // Add to the set of created consumer groups
       EventBus.createdConsumerGroups.add(stream);
     } catch (err: any) {
       if (err.message.includes('BUSYGROUP')) {
-        logger.info(`[EventBus] Consumer group already exists for stream: ${stream}`);
+        if (EventBus.recoveringConsumerGroups.delete(stream)) {
+          logger.debug(`[EventBus] Consumer group already recreated for stream: ${stream}`);
+        } else {
+          logger.info(`[EventBus] Consumer group already exists for stream: ${stream}`);
+        }
         // Add to the set of created consumer groups even if it already existed
         EventBus.createdConsumerGroups.add(stream);
       } else {
@@ -275,6 +336,7 @@ export class EventBus {
   }
 
   public async initialize() {
+    if (this.closed) throw new Error('Event bus is closed; obtain a new instance with getEventBus()');
     if (!this.initialized) {
       console.log('[EventBus] Initializing event bus');
       await getClient();
@@ -289,8 +351,9 @@ export class EventBus {
     }
   }
 
-  private getProcessedSetKey(tenantId: string): string {
-    return `processed_events:${tenantId}`;
+  private getProcessedSetKey(tenantId: string, channel: string): string {
+    const channelSuffix = channel === this.defaultChannel ? '' : `:${channel}`;
+    return `${getRedisConfig().prefix}processed_events:${tenantId}${channelSuffix}`;
   }
 
   private getEventTenantId(event: Event): string {
@@ -301,16 +364,14 @@ export class EventBus {
 
   private async isEventProcessed(event: Event, channel: string): Promise<boolean> {
     const client = await getClient();
-    const setKey = this.getProcessedSetKey(this.getEventTenantId(event));
-    // A stable producer ID is shared across channel publications. Completion
-    // on global must not suppress email or internal-notification consumers.
-    return await client.sIsMember(setKey, JSON.stringify([event.id, channel]));
+    const setKey = this.getProcessedSetKey(this.getEventTenantId(event), channel);
+    return await client.sIsMember(setKey, event.id);
   }
 
   private async markEventProcessed(event: Event, channel: string): Promise<void> {
     const client = await getClient();
-    const setKey = this.getProcessedSetKey(this.getEventTenantId(event));
-    await client.sAdd(setKey, JSON.stringify([event.id, channel]));
+    const setKey = this.getProcessedSetKey(this.getEventTenantId(event), channel);
+    await client.sAdd(setKey, event.id);
     // Set expiration to prevent unbounded growth (3 days)
     await client.expire(setKey, 60 * 60 * 24 * 3);
   }
@@ -319,20 +380,21 @@ export class EventBus {
     return this.handlerIds.get(handler) || handler.name || 'anonymous';
   }
 
-  private getProcessedHandlersSetKey(tenantId: string): string {
-    return `processed_event_handlers:${tenantId}`;
+  private getProcessedHandlersSetKey(tenantId: string, channel: string): string {
+    const channelSuffix = channel === this.defaultChannel ? '' : `:${channel}`;
+    return `${getRedisConfig().prefix}processed_event_handlers:${tenantId}${channelSuffix}`;
   }
 
-  private async isHandlerProcessed(event: Event, channel: string, handlerKey: string): Promise<boolean> {
+  private async isHandlerProcessed(event: Event, handlerKey: string, channel: string): Promise<boolean> {
     const client = await getClient();
-    const setKey = this.getProcessedHandlersSetKey(this.getEventTenantId(event));
-    return await client.sIsMember(setKey, JSON.stringify([event.id, channel, handlerKey]));
+    const setKey = this.getProcessedHandlersSetKey(this.getEventTenantId(event), channel);
+    return await client.sIsMember(setKey, `${event.id}:${handlerKey}`);
   }
 
-  private async markHandlerProcessed(event: Event, channel: string, handlerKey: string): Promise<void> {
+  private async markHandlerProcessed(event: Event, handlerKey: string, channel: string): Promise<void> {
     const client = await getClient();
-    const setKey = this.getProcessedHandlersSetKey(this.getEventTenantId(event));
-    await client.sAdd(setKey, JSON.stringify([event.id, channel, handlerKey]));
+    const setKey = this.getProcessedHandlersSetKey(this.getEventTenantId(event), channel);
+    await client.sAdd(setKey, `${event.id}:${handlerKey}`);
     // Set expiration to prevent unbounded growth (3 days)
     await client.expire(setKey, 60 * 60 * 24 * 3);
   }
@@ -361,15 +423,26 @@ export class EventBus {
 
         // xReadGroup expects flat stream descriptors; reuse the subscriptions list we built above.
         const readStartedAt = Date.now();
-        const readPromise = client.xReadGroup(
-          config.eventBus.consumerGroup,
-          this.consumerName,
-          subscriptions.map(({ stream }) => ({ key: stream, id: '>' })),
-          {
-            COUNT: config.eventBus.batchSize,
-            BLOCK: config.eventBus.blockingTimeout
+        // A blocking command on the publishing socket queues every write behind
+        // the read timeout. Lease a separate connection and retain it so a stuck
+        // read can be interrupted before resetting or draining the parent pool.
+        const readPromise = client.executeIsolated(async (reader) => {
+          if (!this.processingEvents) return null;
+          this.blockingReader = reader;
+          try {
+            return await reader.xReadGroup(
+                config.eventBus.consumerGroup,
+                this.consumerName,
+                subscriptions.map(({ stream }) => ({ key: stream, id: '>' })),
+                {
+                  COUNT: config.eventBus.batchSize,
+                  BLOCK: config.eventBus.blockingTimeout
+                }
+            );
+          } finally {
+            if (this.blockingReader === reader) this.blockingReader = null;
           }
-        );
+        });
 
         // In practice, a Redis socket drop while a blocking XREADGROUP is in-flight can leave the
         // promise pending indefinitely even after the client reports "ready" again. That stalls
@@ -392,6 +465,10 @@ export class EventBus {
 
         const streamEntries = await Promise.race([readPromise, hardTimeoutPromise]);
 
+        // A read may settle after close. It must not reset the replacement
+        // instance's connection or deliver through the old subscriptions.
+        if (!this.processingEvents) return;
+
         if (didHardTimeout) {
           // Prevent an eventual rejection from becoming unhandled if we timed out first.
           void readPromise.catch(() => undefined);
@@ -404,6 +481,7 @@ export class EventBus {
             isReconnecting
           });
 
+          await this.stopBlockingRead();
           await resetClient('xreadgroup_hard_timeout', {
             hardTimeoutMs,
             blockingTimeoutMs: config.eventBus.blockingTimeout
@@ -434,10 +512,36 @@ export class EventBus {
           }
         }
 
+        this.consecutiveNoGroup = 0;
         await this.claimPendingMessages(subscriptionLookup);
         setImmediate(processEvents);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
+
+        // NOGROUP must be handled before the connection-error branch: it means Redis
+        // lost the stream/group (restart without persistence, DEL, FLUSHALL).
+        if (isNoGroupError(error)) {
+          const streams = this.getActiveSubscriptions().map((s) => s.stream);
+          this.invalidateConsumerGroups(streams);
+          this.consecutiveNoGroup += 1;
+          if (this.consecutiveNoGroup === 1) {
+            logger.warn('[EventBus] NOGROUP in event processing loop, recreating consumer groups', {
+              stream: extractNoGroupKey(errorMessage),
+              group: getRedisConfig().eventBus.consumerGroup,
+              streams: streams.length
+            });
+            setImmediate(processEvents);
+          } else {
+            if (this.consecutiveNoGroup % 60 === 0) {
+              logger.warn('[EventBus] NOGROUP persists in event processing loop', {
+                stream: extractNoGroupKey(errorMessage),
+                occurrences: this.consecutiveNoGroup
+              });
+            }
+            setTimeout(processEvents, 1000);
+          }
+          return;
+        }
         const isConnectionError = errorMessage.includes('ECONNREFUSED') ||
                                   errorMessage.includes('ENOTCONN') ||
                                   errorMessage.includes('Socket closed') ||
@@ -511,7 +615,7 @@ export class EventBus {
       // its consumer. An unrelated handler cannot acknowledge its recovery.
       if (targetSubscriber && selectedHandlers.length === 0) return;
 
-      if (selectedHandlers.length > 0) {
+      if (handlers.length > 0) {
         const isProcessed = forceRedelivery ? false : await this.isEventProcessed(event, subscription.channel);
         if (!isProcessed) {
           // Invoke every registered handler for (eventType, channel) — not
@@ -522,11 +626,11 @@ export class EventBus {
           for (const handler of selectedHandlers) {
             const handlerKey = this.getHandlerKey(handler);
             try {
-              if (!forceRedelivery && await this.isHandlerProcessed(event, subscription.channel, handlerKey)) {
+              if (!forceRedelivery && await this.isHandlerProcessed(event, handlerKey, subscription.channel)) {
                 continue;
               }
               await handler(event);
-              await this.markHandlerProcessed(event, subscription.channel, handlerKey);
+              await this.markHandlerProcessed(event, handlerKey, subscription.channel);
             } catch (error) {
               anyFailure = true;
               logger.error('[EventBus] Error in event handler:', {
@@ -644,6 +748,14 @@ export class EventBus {
         }
       }
     } catch (error) {
+      if (isNoGroupError(error)) {
+        // The next loop iteration re-runs ensureStreamAndGroup for these streams.
+        this.invalidateConsumerGroups(Array.from(subscriptionLookup.keys()));
+        logger.warn('[EventBus] NOGROUP while claiming pending messages; consumer groups will be recreated', {
+          stream: extractNoGroupKey(error instanceof Error ? error.message : String(error))
+        });
+        return;
+      }
       logger.error('[EventBus] Error claiming pending messages:', error);
     }
   }
@@ -789,6 +901,17 @@ export class EventBus {
       return;
     }
 
+    // Plan step F: validate catalogued payloads against the schema the workflow worker uses.
+    // Deliberately OUTSIDE the try/catch below, which swallows publish errors: a contract
+    // violation must reach the emitter (throws in test, warns in development, no-op in production).
+    if ((options?.channel || this.defaultChannel) === this.defaultChannel) {
+      const wire = convertToWorkflowEvent(
+        { ...event, id: options?.eventId ?? 'contract-check', timestamp: new Date().toISOString() } as Event,
+        options?.workflow
+      );
+      enforceWorkflowEventContract(wire.event_type, wire.payload);
+    }
+
     try {
       // Unless a caller specifies otherwise, publish onto the default channel for this service.
       const channel = options?.channel || this.defaultChannel;
@@ -914,22 +1037,28 @@ export class EventBus {
   }
 
   public async close(): Promise<void> {
+    if (this.closed) return;
+    this.closed = true;
     this.processingEvents = false;
-    const currentClient = await getClient();
-    if (currentClient) {
-      await currentClient.quit();
+    const currentClient = client;
+    try {
+      await this.stopBlockingRead();
+      if (currentClient) await currentClient.quit();
+    } finally {
       client = null;
+      clientPromise = null;
+      isConnected = false;
+      isReconnecting = false;
+      this.initialized = false;
+      this.handlers.clear();
+      EventBus.createdConsumerGroups.clear();
+      EventBus.recoveringConsumerGroups.clear();
+      if (eventBusRegistry[EVENT_BUS_KEY] === this) delete eventBusRegistry[EVENT_BUS_KEY];
     }
-    this.initialized = false;
   }
 }
 
 // Defer instance creation until explicitly requested
-let eventBusInstance: EventBus | null = null;
-
 export function getEventBus(): EventBus {
-  if (!eventBusInstance) {
-    eventBusInstance = EventBus.getInstance();
-  }
-  return eventBusInstance;
+  return EventBus.getInstance();
 }

@@ -95,11 +95,15 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
-  DataTable: ({ id, data = [], columns = [] }: any) => (
+  DataTable: ({ id, data = [], columns = [], onRowClick, rowClassName }: any) => (
     <table id={id}>
       <tbody>
         {data.map((record: any, rowIndex: number) => (
-          <tr key={rowIndex}>
+          <tr
+            key={rowIndex}
+            className={typeof rowClassName === 'function' ? rowClassName(record) : undefined}
+            onClick={() => onRowClick?.(record)}
+          >
             {columns.map((column: any, colIndex: number) => (
               <td key={colIndex}>
                 {column.render
@@ -244,6 +248,34 @@ describe('AssetTypesManager (T308)', () => {
     expect(byId('assets-types-delete-workstation')).toBeNull();
   });
 
+  it('opens the edit dialog when a row is clicked', async () => {
+    const user = userEvent.setup();
+    await renderManager();
+
+    await user.click(screen.getByText('Firewall').closest('tr')!);
+
+    expect(byId('assets-types-dialog')).toBeTruthy();
+    expect(inputById('assets-types-name-input').value).toBe('Firewall');
+    // Custom types expose the schema editor in the row-opened dialog.
+    expect(byId('asset-type-field-0-label')).toBeTruthy();
+  });
+
+  it('filters rows by name or identifier, ignoring case and surrounding whitespace', async () => {
+    const user = userEvent.setup();
+    await renderManager();
+
+    await user.type(inputById('assets-types-search'), '  FIRE  ');
+
+    expect(screen.getByText('Firewall')).toBeTruthy();
+    expect(screen.queryByText('Workstation')).toBeNull();
+
+    await user.clear(inputById('assets-types-search'));
+    await user.type(inputById('assets-types-search'), 'workstation');
+
+    expect(screen.getByText('Workstation')).toBeTruthy();
+    expect(screen.queryByText('Firewall')).toBeNull();
+  });
+
   it('create flow round-trips a schema with one of each field kind', async () => {
     const user = userEvent.setup();
     mockCreateAssetTypeAction.mockResolvedValue({ success: true, data: customType });
@@ -300,7 +332,7 @@ describe('AssetTypesManager (T308)', () => {
     expect(mockToastSuccess).toHaveBeenCalledWith('Asset type created');
   }, 15_000);
 
-  it('built-in edit allows name/icon only and locks the schema area with a hint', async () => {
+  it('built-in edit allows additional schema fields while keeping the standard form fixed', async () => {
     const user = userEvent.setup();
     mockUpdateAssetTypeAction.mockResolvedValue({ success: true, data: builtinType });
     await renderManager();
@@ -308,14 +340,13 @@ describe('AssetTypesManager (T308)', () => {
     await user.click(byId('assets-types-edit-workstation')!);
     expect(byId('assets-types-dialog')).toBeTruthy();
 
-    // Schema editor is replaced by a read-only hint; no field rows, no add button.
     expect(byId('assets-types-builtin-schema-note')).toBeTruthy();
-    expect(byId('asset-type-field-0-label')).toBeNull();
-    expect(byId('assets-types-add-field-button')).toBeNull();
+    expect(byId('asset-type-field-0-label')).toBeTruthy();
+    expect(byId('assets-types-add-field-button')).toBeTruthy();
     expect(byId('assets-types-display-order-input')).toBeNull();
     expect(
       screen.getByText(
-        'Built-in types use fixed forms managed by AlgaPSA, so their field schema cannot be edited. You can still rename the type or change its icon.'
+        'The standard built-in form stays fixed. These additional fields are tenant-defined.'
       )
     ).toBeTruthy();
 
@@ -330,6 +361,7 @@ describe('AssetTypesManager (T308)', () => {
     expect(mockUpdateAssetTypeAction).toHaveBeenCalledWith('workstation', {
       name: 'Workstation X',
       icon: 'monitor',
+      fields_schema: [{ key: 'cpu', label: 'CPU', kind: 'text' }],
     });
     await waitFor(() => expect(byId('assets-types-dialog')).toBeNull());
   });
@@ -372,6 +404,19 @@ describe('AssetTypesManager (T308)', () => {
     await waitFor(() => expect(byId('assets-types-delete-dialog')).toBeNull());
     expect(mockGetAssetTypes).toHaveBeenCalledTimes(2);
     expect(mockToastSuccess).toHaveBeenCalledWith('Asset type deleted');
+  });
+
+  it('shows one Additional fields heading for built-ins and Fields for custom types', async () => {
+    const user = userEvent.setup();
+    await renderManager();
+
+    await user.click(byId('assets-types-edit-workstation')!);
+    expect(screen.getAllByText('Additional fields')).toHaveLength(1);
+    expect(screen.queryByText('Fields')).toBeNull();
+
+    await user.click(byId('assets-types-cancel-button')!);
+    await user.click(byId('assets-types-edit-firewall')!);
+    expect(screen.getAllByText('Fields')).toHaveLength(1);
   });
 });
 

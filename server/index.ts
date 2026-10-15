@@ -9,6 +9,7 @@ import {
   authorizationMiddleware
 } from './src/middleware/express/authMiddleware';
 import { getAppVersion } from './src/lib/utils/version';
+import { attachNextUpgradeHandler } from './src/lib/http/upgradeHandling';
 
 const dev = globalThis.process.env.NODE_ENV !== 'production';
 const hostname = globalThis.process.env.HOSTNAME || 'localhost';
@@ -93,7 +94,17 @@ async function createServer() {
       console.error('HTTP server error:', err);
     });
 
-    // Next.js handles WebSocket upgrades for HMR automatically
+    // With a custom server Next does not own the HTTP server, so we own the
+    // single `upgrade` listener: HMR is delegated back to Next, `/hocuspocus`
+    // is proxied when configured, and every other upgrade is rejected promptly.
+    // Unanswered upgrade sockets occupy Chromium's per-origin WebSocket slot
+    // and stall HMR/hydration, so unmatched requests must always be closed.
+    // Next would otherwise add its own listener on the first HTTP request.
+    attachNextUpgradeHandler(httpServer, app, {
+      delegateHmrToNext: dev,
+      hocuspocusHost: globalThis.process.env.HOCUSPOCUS_HOST,
+      hocuspocusPort: globalThis.process.env.HOCUSPOCUS_PORT,
+    });
 
   } catch (error) {
     console.error('Error starting server:', error);

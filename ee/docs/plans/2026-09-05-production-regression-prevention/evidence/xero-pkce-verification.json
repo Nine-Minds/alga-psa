@@ -1,0 +1,21 @@
+{
+  "scope": "Xero emulator S256 exchange verification",
+  "reference": "https://developer.xero.com/documentation/guides/oauth2/pkce-flow",
+  "test": "packages/emulators/xero/tests/smoke.test.ts",
+  "before": "Invalid challenge method returned302 instead of400",
+  "after": {
+    "testsPassed": 10,
+    "typecheck": "passed",
+    "checks": [
+      "Reject unsupported method or missing/malformed challenge",
+      "Reject missing, wrong or malformed verifier",
+      "Correct verifier exchanges same unconsumed code",
+      "Successful code cannot be reused"
+    ]
+  },
+  "limits": [
+    "Application registration and client secret validation are not implemented",
+    "Without registered application types, PKCE is enforced only when the authorization request supplies PKCE fields",
+    "Native verification and complete provider protocol parity remain outstanding"
+  ]
+}

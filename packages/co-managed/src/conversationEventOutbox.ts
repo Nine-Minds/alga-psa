@@ -1,4 +1,4 @@
-import { retainCoManagedConversationParticipation } from './conversationParticipationEvidence';
+import { retainCoManagedConversationParticipation, type CoManagedCaptureIntent } from './conversationParticipationEvidence';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -23,7 +23,8 @@ const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(va
 /** Admission is supplied by the mutation's retained transaction. Publication
  * records carry metadata only; ticket creation bodies load at dispatch, while
  * task changes remain metadata-only. */
-export async function enqueueCoManagedConversationEvent(trx: Knex.Transaction, input: CoManagedEventIntent | CoManagedTaskEventIntent): Promise<void> {
+export async function enqueueCoManagedConversationEvent(trx: Knex.Transaction, input: CoManagedEventIntent | CoManagedTaskEventIntent,
+  intent: CoManagedCaptureIntent = {}): Promise<void> {
   if (!input || typeof input !== 'object') throw new CoManagedSharedWorkError();
   const task = 'resource' in input, resourceId = task ? input.resource?.id : input.ticketId;
   if (!trx.isTransaction || ![input.tenant, input.eventId, resourceId, input.commentId, input.threadId].every(isCoManagedUuid) ||
@@ -46,7 +47,7 @@ export async function enqueueCoManagedConversationEvent(trx: Knex.Transaction, i
     event_type: publication.eventType, audience, publication: JSON.stringify(publication), request_hash: requestHash }).onConflict(['tenant', 'event_id']).ignore().returning('event_id');
   const row = await owner.table(TABLE).where('event_id', eventId).forShare().first('request_hash');
   if (row?.request_hash !== requestHash) throw new Error('Co-managed event identity was reused with different intent');
-  if (inserted.length) await retainCoManagedConversationParticipation(trx, tenant, eventId);
+  if (inserted.length) await retainCoManagedConversationParticipation(trx, tenant, eventId, intent);
   await enqueueCoManagedEventConsumers(trx, tenant, eventId, publication.eventType, { channel: publication.channel });
 }
 /** Current audience and publication checks apply to newly-created-message

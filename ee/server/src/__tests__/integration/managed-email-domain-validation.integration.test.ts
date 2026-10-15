@@ -20,7 +20,7 @@ vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => ({ id: 'user-test-1' })),
 }));
 
-vi.mock('@/lib/email-domains/workflowClient', () => ({
+vi.mock('@ee/lib/email-domains/workflowClient', () => ({
   enqueueManagedEmailDomainWorkflow: vi.fn((args) => enqueueWorkflow(args)),
 }));
 
@@ -57,22 +57,27 @@ vi.mock('@/lib/db', () => ({
   getTenantContext: vi.fn(async () => tenantId),
 }));
 
-vi.mock('server/src/lib/auth/rbac', () => ({
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (action: any) => async (...args: any[]) => action({ user_id: 'user-test-1', user_type: 'internal' }, { tenant: tenantId }, ...args),
   hasPermission: vi.fn(async () => true),
 }));
 
 type ManagedDomainActionsModule = typeof import('@/lib/actions/email-actions/managedDomainActions');
 let requestManagedEmailDomain: ManagedDomainActionsModule['requestManagedEmailDomain'];
 
-async function runMigrationsAndSeeds(knex: Knex): Promise<void> {
-  await knex.migrate.latest({
-    directory: './server/migrations',
+async function expectInvalidDomain(domain: string): Promise<void> {
+  await expect(requestManagedEmailDomain(domain)).resolves.toMatchObject({
+    success: false,
+    code: 'invalid_domain',
+    fieldErrors: { domain: expect.any(String) },
   });
+  expect(await db('email_domains').where({ tenant: tenantId })).toHaveLength(0);
+  expect(enqueueWorkflow).not.toHaveBeenCalled();
 }
 
 async function ensureTenant(knex: Knex): Promise<string> {
   const existingTenant = await knex('tenants')
-    .where({ company_name: 'managed-domain-validation-test' })
+    .where({ client_name: 'managed-domain-validation-test' })
     .first();
 
   if (existingTenant) {
@@ -82,7 +87,8 @@ async function ensureTenant(knex: Knex): Promise<string> {
   const newTenantId = uuidv4();
   await knex('tenants').insert({
     tenant: newTenantId,
-    company_name: 'managed-domain-validation-test',
+    client_name: 'managed-domain-validation-test',
+    email: 'managed-domain@example.invalid',
     created_at: new Date(),
   });
 
@@ -95,7 +101,6 @@ describe('Managed Email Domain Validation – Integration Tests', () => {
   beforeAll(async () => {
     ({ requestManagedEmailDomain } = await import('@/lib/actions/email-actions/managedDomainActions'));
     db = await createTestDbConnection();
-    await runMigrationsAndSeeds(db);
     tenantId = await ensureTenant(db);
   }, HOOK_TIMEOUT);
 
@@ -108,7 +113,7 @@ describe('Managed Email Domain Validation – Integration Tests', () => {
   beforeEach(async () => {
     enqueueWorkflow.mockClear();
     if (tenantId) {
-      await db('email_domains').where({ tenant_id: tenantId }).delete();
+      await db('email_domains').where({ tenant: tenantId }).delete();
     }
   }, HOOK_TIMEOUT);
 
@@ -136,119 +141,81 @@ describe('Managed Email Domain Validation – Integration Tests', () => {
 
   describe('Invalid domain names - should reject obviously bogus domains', () => {
     it('should reject single-label domains (no TLD)', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('localhost');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('localhost');
     });
 
     it('should reject domains with spaces', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('my domain.com');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('my domain.com');
     });
 
     it('should reject domains starting with a hyphen', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('-example.com');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('-example.com');
     });
 
     it('should reject domains ending with a hyphen', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('example-.com');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('example-.com');
     });
 
     it('should reject domains with consecutive dots', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('example..com');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('example..com');
     });
 
     it('should reject domains starting with a dot', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('.example.com');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('.example.com');
     });
 
     it('should reject domains ending with a dot', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('example.com.');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('example.com.');
     });
 
     it('should reject domains with underscores', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('my_domain.com');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('my_domain.com');
     });
 
     it('should reject empty strings', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('');
     });
 
     it('should reject domains with special characters', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('exa!mple.com');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('exa!mple.com');
     });
 
     it('should reject domains with @ symbol', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('user@example.com');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('user@example.com');
     });
 
     it('should reject domains that are too long (>253 chars)', async () => {
       const longDomain = 'a'.repeat(240) + '.example.com';
-      await expect(async () => {
-        await requestManagedEmailDomain(longDomain);
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain(longDomain);
     });
 
     it('should reject domains with labels longer than 63 characters', async () => {
       const longLabel = 'a'.repeat(64);
-      await expect(async () => {
-        await requestManagedEmailDomain(`${longLabel}.example.com`);
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain(`${longLabel}.example.com`);
     });
 
     it('should reject IP addresses', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('192.168.1.1');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('192.168.1.1');
     });
 
     it('should reject URLs with protocol', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('https://example.com');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('https://example.com');
     });
 
     it('should reject domains with path components', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('example.com/path');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('example.com/path');
     });
 
     it('should reject domains with port numbers', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('example.com:8080');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('example.com:8080');
     });
 
     it('should reject numeric-only TLDs', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('example.123');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('example.123');
     });
 
     it('should reject domains with consecutive hyphens in labels', async () => {
-      await expect(async () => {
-        await requestManagedEmailDomain('ex--ample.com');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('ex--ample.com');
     });
   });
 
@@ -259,7 +226,7 @@ describe('Managed Email Domain Validation – Integration Tests', () => {
 
       // Verify it was stored as lowercase
       const record = await db('email_domains')
-        .where({ tenant_id: tenantId, domain_name: 'example.com' })
+        .where({ tenant: tenantId, domain_name: 'example.com' })
         .first();
 
       expect(record).toBeDefined();
@@ -271,7 +238,7 @@ describe('Managed Email Domain Validation – Integration Tests', () => {
       expect(result.success).toBe(true);
 
       const record = await db('email_domains')
-        .where({ tenant_id: tenantId, domain_name: 'example.com' })
+        .where({ tenant: tenantId, domain_name: 'example.com' })
         .first();
 
       expect(record).toBeDefined();
@@ -279,9 +246,7 @@ describe('Managed Email Domain Validation – Integration Tests', () => {
 
     it('should handle internationalized domain names (IDN)', async () => {
       // Punycode representation of café.com
-      await expect(async () => {
-        await requestManagedEmailDomain('café.com');
-      }).rejects.toThrow(/invalid domain/i);
+      await expectInvalidDomain('café.com');
     });
   });
 });

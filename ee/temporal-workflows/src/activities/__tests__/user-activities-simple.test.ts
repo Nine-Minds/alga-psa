@@ -1,383 +1,99 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { setupTestDatabase, type TestDatabase } from '../../test-utils/database';
-import { tenantDb } from '@alga-psa/db';
-import { withAdminTransaction } from '@alga-psa/db.js';
-import { v4 as uuidv4 } from 'uuid';
-import { hashPassword, generateSecurePassword } from '@alga-psa/core/encryption';
-import type { Knex } from 'knex';
+import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { MockActivityEnvironment } from '@temporalio/testing';
+import { randomUUID } from 'node:crypto';
+import { destroyAdminConnection, getAdminConnection } from '@alga-psa/db/admin';
+import { verifyPassword } from '@alga-psa/core/encryption';
+import { createAdminUser, rollbackUser } from '../user-activities';
+import { rollbackTenant } from '../tenant-activities';
+import { createTestTenant } from '../../db/__tests__/upgrade-test-fixtures';
 
-// Simple database operations that mirror the user activity logic without Temporal context
-async function createAdminUserInDB(
-  input: {
-    tenantId: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    clientId?: string;
-  },
-  testDb?: TestDatabase
-) {
-  return await withAdminTransaction(async (trx: Knex.Transaction) => {
-    const tenantScopedDb = tenantDb(trx, input.tenantId);
+// Exercise the shipped activities, not a second implementation in the test.
+const activity = new MockActivityEnvironment();
+const tenants = new Set<string>();
+beforeAll(() => {
+  vi.stubEnv('SECRET_READ_CHAIN', 'env');
+  vi.stubEnv('NEXTAUTH_SECRET', 'synthetic-temporal-user-activity-key-82cc');
+});
+afterAll(() => vi.unstubAllEnvs());
+afterEach(async () => {
+  for (const tenantId of tenants) await activity.run(rollbackTenant, tenantId);
+  tenants.clear();
+});
+afterAll(destroyAdminConnection);
 
-    // Check if user already exists globally
-    const existingUser = await tenantScopedDb.unscoped(
-      'users',
-      'user activity simple test checks global email uniqueness before tenant-scoped insert'
-    )
-      .where({ email: input.email.toLowerCase() })
-      .first();
-
-    if (existingUser) {
-      throw new Error(`User with email ${input.email} already exists`);
-    }
-
-    // Generate user ID and temporary password
-    const userId = uuidv4();
-    const temporaryPassword = generateSecurePassword();
-
-    // Hash the temporary password
-    const hashedPassword = await hashPassword(temporaryPassword);
-
-    // Create user record
-    await tenantScopedDb.table('users').insert({
-      user_id: userId,
-      tenant: input.tenantId,
-      first_name: input.firstName,
-      last_name: input.lastName,
-      email: input.email.toLowerCase(),
-      username: input.email.toLowerCase(),
-      hashed_password: hashedPassword,
-      user_type: 'internal',
-      is_inactive: false,
-      created_at: new Date(),
-      updated_at: new Date(),
-    });
-
-    // Get or create Admin role
-    let adminRole = await tenantScopedDb.table('roles')
-      .whereRaw('LOWER(role_name) = ?', ['admin'])
-      .first();
-
-    if (!adminRole) {
-      // Create Admin role if it doesn't exist
-      const roleId = uuidv4();
-      await tenantScopedDb.table('roles').insert({
-        role_id: roleId,
-        tenant: input.tenantId,
-        role_name: 'Admin',
-        description: 'Administrator with full system access',
-        created_at: new Date(),
-      });
-
-      adminRole = { role_id: roleId };
-    }
-
-    // Assign Admin role to user
-    await tenantScopedDb.table('user_roles').insert({
-      user_id: userId,
-      role_id: adminRole.role_id,
-      tenant: input.tenantId,
-      created_at: new Date(),
-    });
-
-    // If a client was created, associate the user as the account manager
-    if (input.clientId) {
-      await tenantScopedDb.table('clients')
-        .where({ client_id: input.clientId })
-        .update({ 
-          account_manager_id: userId,
-          updated_at: new Date(),
-        });
-    }
-
-    // Track user for cleanup
-    if (testDb) {
-      testDb.trackUser(userId);
-    }
-
-    return {
-      userId,
-      roleId: adminRole.role_id,
-      temporaryPassword,
-    };
-  });
+async function fixture(withAdmin = true) {
+  const db = await getAdminConnection();
+  const { tenantId } = await createTestTenant(db, { name: `Admin activity ${randomUUID()}`, productCode: 'psa' });
+  tenants.add(tenantId);
+  const roleId = randomUUID();
+  if (withAdmin) await db('roles').insert({ tenant: tenantId, role_id: roleId, role_name: 'Admin', msp: true, client: false });
+  return { db, tenantId, roleId };
 }
+const request = (tenantId: string, email = `Admin-${randomUUID()}@example.test`) => ({
+  tenantId, email, firstName: 'Test', lastName: 'Administrator',
+});
 
-async function rollbackUserInDB(userId: string, tenantId: string): Promise<void> {
-  return await withAdminTransaction(async (trx: Knex.Transaction) => {
-    const tenantScopedDb = tenantDb(trx, tenantId);
+it('creates an internal admin using the existing MSP role and a usable generated password', async () => {
+  const { db, tenantId, roleId } = await fixture();
+  // The identically named portal role must never be selected for an internal admin.
+  await db('roles').insert({ tenant: tenantId, role_id: randomUUID(), role_name: 'Admin', msp: false, client: true });
+  const input = request(tenantId);
+  const result = await activity.run(createAdminUser, input);
+  expect(result.roleId).toBe(roleId);
+  const user = await db('users').where({ tenant: tenantId, user_id: result.userId }).first();
+  expect(user).toMatchObject({ email: input.email.toLowerCase(), username: input.email.toLowerCase(), user_type: 'internal', first_name: 'Test', last_name: 'Administrator' });
+  expect(user.hashed_password).not.toBe(result.temporaryPassword);
+  expect(result.temporaryPassword.length).toBeGreaterThanOrEqual(16);
+  expect(await verifyPassword(result.temporaryPassword, user.hashed_password)).toBe(true);
+  expect(await verifyPassword('wrong-password', user.hashed_password)).toBe(false);
+  expect(await db('user_roles').where({ tenant: tenantId, user_id: result.userId })).toEqual([
+    expect.objectContaining({ role_id: roleId }),
+  ]);
+  expect(await db('roles').where({ tenant: tenantId, msp: true, client: false, role_name: 'Admin' })).toHaveLength(1);
+});
 
-    // Remove user preferences
-    await tenantScopedDb.table('user_preferences')
-      .where({ user_id: userId })
-      .del();
+it('honours a supplied appliance password and salts hashes independently', async () => {
+  const { db, tenantId } = await fixture();
+  const password = 'Synthetic-appliance-password-82cc!';
+  const first = await activity.run(createAdminUser, { ...request(tenantId), password });
+  const second = await activity.run(createAdminUser, { ...request(tenantId), password });
+  expect(first.temporaryPassword).toBe(password);
+  expect(second.temporaryPassword).toBe(password);
+  const users = await db('users').where({ tenant: tenantId }).whereIn('user_id', [first.userId, second.userId]);
+  expect(users).toHaveLength(2);
+  expect(users[0].hashed_password).not.toBe(users[1].hashed_password);
+  for (const user of users) expect(await verifyPassword(password, user.hashed_password)).toBe(true);
+});
 
-    // Remove user roles
-    await tenantScopedDb.table('user_roles')
-      .where({ user_id: userId })
-      .del();
+it('refuses duplicate internal email across tenants and preserves the original account', async () => {
+  const first = await fixture();
+  const second = await fixture();
+  const email = `duplicate-${randomUUID()}@example.test`;
+  const original = await activity.run(createAdminUser, request(first.tenantId, email));
+  await expect(activity.run(createAdminUser, request(second.tenantId, email.toUpperCase()))).rejects.toThrow('already exists');
+  expect(await first.db('users').where({ tenant: first.tenantId, user_id: original.userId }).first()).toMatchObject({ email });
+  expect(await first.db('users').where({ tenant: second.tenantId })).toEqual([]);
+  expect(await first.db('user_roles').where({ tenant: second.tenantId })).toEqual([]);
+});
 
-    // Remove user as account manager from clients
-    await tenantScopedDb.table('clients')
-      .where({ account_manager_id: userId })
-      .update({ 
-        account_manager_id: null,
-        updated_at: new Date(),
-      });
+it('rolls back the inserted account if the required MSP Admin role is missing', async () => {
+  const { db, tenantId } = await fixture(false);
+  await db('roles').insert({ tenant: tenantId, role_id: randomUUID(), role_name: 'Admin', msp: false, client: true });
+  await expect(activity.run(createAdminUser, request(tenantId))).rejects.toThrow('Admin role not found');
+  expect(await db('users').where({ tenant: tenantId })).toEqual([]);
+  expect(await db('user_roles').where({ tenant: tenantId })).toEqual([]);
+});
 
-    // Remove the user
-    await tenantScopedDb.table('users')
-      .where({ user_id: userId })
-      .del();
-  });
-}
-
-describe('User Activities Database Logic', () => {
-  let testDb: TestDatabase;
-
-  beforeEach(async () => {
-    testDb = await setupTestDatabase();
-  });
-
-  afterEach(async () => {
-    await testDb.cleanup();
-  });
-
-  describe('createAdminUserInDB', () => {
-    it('should create an admin user with all required fields', async () => {
-      // First create a tenant to use
-      const tenantId = uuidv4();
-      const timestamp = Date.now();
-      await testDb.createTenant({
-        tenantId,
-        tenantName: 'Test Tenant',
-        email: 'tenant@test.com'
-      });
-
-      const input = {
-        tenantId,
-        firstName: 'John',
-        lastName: 'Admin',
-        email: `john.admin-${timestamp}@testclient.com`
-      };
-
-      const result = await createAdminUserInDB(input, testDb);
-
-      expect(result.userId).toBeDefined();
-      expect(result.roleId).toBeDefined();
-      expect(result.temporaryPassword).toBeDefined();
-      expect(result.temporaryPassword).toHaveLength(12);
-
-      // Verify user was created in database
-      const user = await testDb.getUserById(result.userId, tenantId);
-      expect(user).toBeDefined();
-      expect(user.first_name).toBe('John');
-      expect(user.last_name).toBe('Admin');
-      expect(user.email).toBe(`john.admin-${timestamp}@testclient.com`);
-      expect(user.user_type).toBe('internal');
-      expect(user.is_inactive).toBe(false);
-
-      // Verify user role assignment
-      const userRoles = await testDb.getUserRoles(result.userId, tenantId);
-      expect(userRoles).toHaveLength(1);
-      expect(userRoles[0].role_id).toBe(result.roleId);
-
-      // Verify Admin role was created
-      const role = await testDb.getRoleById(result.roleId, tenantId);
-      expect(role).toBeDefined();
-      expect(role.role_name).toBe('Admin');
-    });
-
-    it('should create user and associate with client as account manager', async () => {
-      // First create a tenant and client
-      const tenantId = uuidv4();
-      const clientId = uuidv4();
-      const timestamp = Date.now();
-      
-      await testDb.createTenant({
-        tenantId,
-        tenantName: 'Test Tenant',
-        email: 'tenant@test.com'
-      });
-
-      await testDb.createClient({
-        clientId,
-        tenantId,
-        clientName: 'Test Client'
-      });
-
-      const input = {
-        tenantId,
-        firstName: 'Jane',
-        lastName: 'Manager',
-        email: `jane.manager-${timestamp}@testclient.com`,
-        clientId
-      };
-
-      const result = await createAdminUserInDB(input, testDb);
-
-      expect(result.userId).toBeDefined();
-
-      // Verify user was created
-      const user = await testDb.getUserById(result.userId, tenantId);
-      expect(user).toBeDefined();
-
-      // Verify user was set as account manager
-      const client = await testDb.getClientById(clientId, tenantId);
-      expect(client).toBeDefined();
-      expect(client.account_manager_id).toBe(result.userId);
-    });
-
-    it('should reuse existing Admin role if it exists', async () => {
-      // First create a tenant
-      const tenantId = uuidv4();
-      const timestamp = Date.now();
-      await testDb.createTenant({
-        tenantId,
-        tenantName: 'Test Tenant',
-        email: 'tenant@test.com'
-      });
-
-      // Create an Admin role first
-      const existingRoleId = uuidv4();
-      await testDb.createRole({
-        roleId: existingRoleId,
-        tenantId,
-        roleName: 'Admin',
-        description: 'Existing admin role'
-      });
-
-      const input = {
-        tenantId,
-        firstName: 'Bob',
-        lastName: 'Admin',
-        email: `bob.admin-${timestamp}@testclient.com`
-      };
-
-      const result = await createAdminUserInDB(input, testDb);
-
-      expect(result.userId).toBeDefined();
-      expect(result.roleId).toBe(existingRoleId); // Should reuse existing role
-
-      // Verify only one Admin role exists
-      const roles = await testDb.getRolesForTenant(tenantId);
-      const adminRoles = roles.filter(r => r.role_name.toLowerCase() === 'admin');
-      expect(adminRoles).toHaveLength(1);
-    });
-
-    it('should prevent duplicate email addresses', async () => {
-      // First create a tenant and user
-      const tenantId = uuidv4();
-      const timestamp = Date.now();
-      await testDb.createTenant({
-        tenantId,
-        tenantName: 'Test Tenant',
-        email: 'tenant@test.com'
-      });
-
-      const duplicateEmail = `duplicate-${timestamp}@test.com`;
-      const input1 = {
-        tenantId,
-        firstName: 'First',
-        lastName: 'User',
-        email: duplicateEmail
-      };
-
-      const input2 = {
-        tenantId,
-        firstName: 'Second',
-        lastName: 'User',
-        email: duplicateEmail
-      };
-
-      // Create first user
-      const result1 = await createAdminUserInDB(input1, testDb);
-      expect(result1.userId).toBeDefined();
-
-      // Try to create second user with same email - should fail
-      await expect(createAdminUserInDB(input2, testDb)).rejects.toThrow(`User with email ${duplicateEmail} already exists`);
-    });
-  });
-
-  describe('rollbackUserInDB', () => {
-    it('should completely remove user and all associated data', async () => {
-      // Create tenant, client, and user
-      const tenantId = uuidv4();
-      const clientId = uuidv4();
-      const timestamp = Date.now();
-      
-      await testDb.createTenant({
-        tenantId,
-        tenantName: 'Test Tenant',
-        email: 'tenant@test.com'
-      });
-
-      await testDb.createClient({
-        clientId,
-        tenantId,
-        clientName: 'Test Client'
-      });
-
-      const input = {
-        tenantId,
-        firstName: 'To',
-        lastName: 'Delete',
-        email: `to.delete-${timestamp}@testclient.com`,
-        clientId
-      };
-
-      const result = await createAdminUserInDB(input, testDb);
-      const userId = result.userId;
-
-      // Verify user exists before deletion
-      const userBefore = await testDb.getUserById(userId, tenantId);
-      expect(userBefore).toBeDefined();
-
-      // Verify client has account manager set
-      const clientBefore = await testDb.getClientById(clientId, tenantId);
-      expect(clientBefore.account_manager_id).toBe(userId);
-
-      // Perform rollback
-      await rollbackUserInDB(userId, tenantId);
-
-      // Verify user is deleted
-      const userAfter = await testDb.getUserById(userId, tenantId);
-      expect(userAfter).toBeUndefined();
-
-      // Verify user roles are deleted
-      const userRoles = await testDb.getUserRoles(userId, tenantId);
-      expect(userRoles).toHaveLength(0);
-
-      // Verify account manager is cleared from client
-      const clientAfter = await testDb.getClientById(clientId, tenantId);
-      expect(clientAfter.account_manager_id).toBeNull();
-    });
-  });
-
-  describe('password handling', () => {
-    it('should generate secure temporary passwords', async () => {
-      const password1 = generateSecurePassword();
-      const password2 = generateSecurePassword();
-      
-      expect(password1).toHaveLength(16);
-      expect(password2).toHaveLength(16);
-      expect(password1).not.toBe(password2); // Should be random
-      
-      // Should contain mix of characters
-      expect(password1).toMatch(/[A-Z]/);
-      expect(password1).toMatch(/[a-z]/);
-      expect(password1).toMatch(/[0-9]/);
-    });
-
-    it('should hash passwords securely', async () => {
-      const password = 'test123';
-      const hash1 = await hashPassword(password);
-      const hash2 = await hashPassword(password);
-      
-      expect(hash1).not.toBe(hash2); // Different salts should produce different hashes
-      expect(hash1).toContain(':'); // Should contain salt separator
-      expect(hash1.length).toBeGreaterThan(80); // Should be reasonably long
-    });
-  });
+it('scopes rollback to its tenant, removes role grants and tolerates repeated cleanup', async () => {
+  const first = await fixture();
+  const second = await fixture();
+  const user = await activity.run(createAdminUser, request(first.tenantId));
+  const survivor = await activity.run(createAdminUser, request(second.tenantId));
+  await activity.run(rollbackUser, user.userId, second.tenantId);
+  expect(await first.db('users').where({ tenant: first.tenantId, user_id: user.userId }).first()).toBeTruthy();
+  await activity.run(rollbackUser, user.userId, first.tenantId);
+  expect(await first.db('users').where({ tenant: first.tenantId })).toEqual([]);
+  expect(await first.db('user_roles').where({ tenant: first.tenantId })).toEqual([]);
+  expect(await second.db('users').where({ tenant: second.tenantId, user_id: survivor.userId }).first()).toBeTruthy();
+  await activity.run(rollbackUser, user.userId, first.tenantId);
 });

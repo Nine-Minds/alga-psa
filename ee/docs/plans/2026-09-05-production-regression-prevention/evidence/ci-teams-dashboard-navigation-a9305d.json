@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "scope": "Teams development dashboard readiness prerequisite",
+  "observedCandidate": {
+    "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+    "runId": "34330619264",
+    "jobId": "102405175451",
+    "executionArtifactId": "10097964294",
+    "diagnosticArtifactId": "10097965566",
+    "containerLogArtifactId": "10098015696"
+  },
+  "execution": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "flaky": 0,
+    "failure": "Initial createMicrosoftProfile settings navigation exceeded unchanged 90000ms navigation timeout; no Teams operations executed."
+  },
+  "trace": {
+    "clock": "Playwright monotonic milliseconds",
+    "dashboardRequestStart": 61011.039,
+    "dashboardLayoutRequestStart": 64116.071,
+    "signInUrlExpectationEnd": 64332.587,
+    "settingsNavigationStart": 64786.435,
+    "settingsRedirectedRequestStart": 67494.368,
+    "dashboardLayoutUnfinishedAtSettingsNavigation": true,
+    "observedJavaScriptErrors": 0
+  },
+  "staticResponses": [
+    {
+      "complete": true,
+      "captureTruncated": false,
+      "wireBytes": 14359502,
+      "decodedBytes": 66899934,
+      "gzipValid": true,
+      "javascriptSyntaxValid": true,
+      "sha256": "782da54bc68f0a7f87e086938886eb23c5e32157750e1088f5e1ca3ee3712fc2"
+    },
+    {
+      "complete": false,
+      "captureTruncated": false,
+      "wireBytes": 7748918,
+      "partialDecodedBytes": 36429484,
+      "gzipValid": false,
+      "partialDecodedIsExactPrefixOfCompleteResponse": true,
+      "sha256": "1a3a66c68987da127fa71443173b6c2569cd914364280f174ed6ae3db62a602f"
+    }
+  ],
+  "serverLogObservations": {
+    "explicitMemoryRestartMarkerFound": false,
+    "outOfMemoryMarkerFound": false,
+    "backgroundCommentRecoveryPoolTimeoutFound": true
+  },
+  "change": {
+    "file": "e2e-tests/development-tests/teams-profile.spec.ts",
+    "behavior": "Require the existing dashboard-main automation marker to be visible after real signIn, before settings navigation.",
+    "sharedSignInChanged": false,
+    "timeoutsOrRetriesChanged": false,
+    "specSha256": "253ebe842078fab5629d994bc2e4b34a4ac5994e4f5c1217938eabbd1c12c432"
+  },
+  "validation": {
+    "kind": "collection-only",
+    "command": "cd e2e-tests && E2E_EDITION=enterprise E2E_TEAMS_DEVELOPMENT=true node node_modules/@playwright/test/cli.js test --config playwright.teams-development.config.ts --list --reporter=list",
+    "exitCode": 0,
+    "tests": 1,
+    "files": 1,
+    "project": "enterprise-chromium",
+    "nativeRuntime": "Node 25.5.0"
+  },
+  "limitations": [
+    "Incomplete layout may result from navigation cancellation; this does not prove webpack rewrote a streaming response or establish the cause of the settings timeout.",
+    "Unlike the earlier native 12GiB comparison, this CI log has no explicit memory restart and its trace has no JavaScript syntax error.",
+    "The prerequisite change has been collected, not executed in a browser. Current candidate remains failed; no CI recovery or stability claim.",
+    "No extra route prewarming, native Next process, Docker execution, or timeout/retry increase was performed."
+  ]
+}

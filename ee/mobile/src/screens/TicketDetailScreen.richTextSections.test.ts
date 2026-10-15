@@ -4,6 +4,10 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { Linking } from "react-native";
 import type { TicketRichTextEditorRef } from "../features/ticketRichText/TicketRichTextEditor";
 
+vi.mock("../capabilities/CapabilitiesContext", () => ({
+  useCapabilities: () => ({ features: { clientsCreate: false, clientsUpdate: false, contactsCreate: false, contactsUpdate: false }, defaultCountry: null, loaded: true, refresh: () => Promise.resolve() }),
+}));
+vi.mock("../features/contacts/components/ContactFormModal", () => ({ ContactFormModal: () => null }));
 vi.mock("../auth/AuthContext", () => ({
   useAuth: () => ({
     session: null,
@@ -24,6 +28,8 @@ vi.mock("../api", () => ({
 
 vi.mock("../api/tickets", () => ({
   addTicketComment: vi.fn(),
+  cancelScheduledTicketComment: vi.fn(),
+  isScheduledComment: (c: { publish_state?: string | null }) => c.publish_state === "scheduled",
   getTicketById: vi.fn(),
   getTicketComments: vi.fn(),
   getTicketPriorities: vi.fn(),

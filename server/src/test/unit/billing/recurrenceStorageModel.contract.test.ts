@@ -218,8 +218,7 @@ describe('recurrence storage model contracts', () => {
     expect(packagePresetModel).toContain('normalizePresetRecurringStorage');
     expect(packageRepository).toContain('normalizeTemplateRecurringStorage');
     expect(packageRepository).toContain('normalizeLiveRecurringStorage');
-    expect(serverRepository).toContain('normalizeTemplateRecurringStorage');
-    expect(serverRepository).toContain('normalizeLiveRecurringStorage');
+    expect(serverRepository).toContain("export * from '@alga-psa/billing/repositories/contractLineRepository'");
     expect(sharedReader).toContain('normalizeLiveRecurringStorage');
   });
 
@@ -263,8 +262,7 @@ describe('recurrence storage model contracts', () => {
     expect(contractLineAction).toContain('normalizeLiveRecurringStorage');
     expect(packageRepository).toContain('normalizeTemplateRecurringStorage({');
     expect(packageRepository).toContain('normalizeLiveRecurringStorage(baseLine)');
-    expect(serverRepository).toContain('normalizeTemplateRecurringStorage({');
-    expect(serverRepository).toContain('normalizeLiveRecurringStorage(baseLine)');
+    expect(serverRepository).toContain("export * from '@alga-psa/billing/repositories/contractLineRepository'");
     expect(contractLineService).toContain('normalizeTemplateRecurringStorage({');
   });
 
@@ -331,7 +329,7 @@ describe('recurrence storage model contracts', () => {
     expect(fixedPresetConfiguration).toContain('resolveBillingCycleAlignmentForCompatibility({');
     expect(fixedContractLineConfiguration).toContain('resolveBillingCycleAlignmentForCompatibility({');
     expect(packageRepository).toContain('billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({');
-    expect(serverRepository).toContain('billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({');
+    expect(serverRepository).toContain("export * from '@alga-psa/billing/repositories/contractLineRepository'");
     expect(contractLineDialog).not.toContain("billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start'");
     expect(fixedPresetConfiguration).not.toContain("billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start'");
     expect(fixedContractLineConfiguration).not.toContain("billing_cycle_alignment: enableProration ? billingCycleAlignment : 'start'");
@@ -367,9 +365,7 @@ describe('recurrence storage model contracts', () => {
     expect(packageRepository).toContain('return normalizeLiveRecurringStorage(row);');
     expect(packageRepository).toContain('fallbackBillingTiming: existingTemplateLine?.billing_timing,');
     expect(packageRepository).toContain('fallbackBillingTiming: existingLine?.billing_timing,');
-    expect(serverRepository).toContain('return row ? normalizeLiveRecurringStorage(row) : undefined;');
-    expect(serverRepository).toContain('fallbackBillingTiming: existingTemplateLine?.billing_timing,');
-    expect(serverRepository).toContain('fallbackBillingTiming: existingLine?.billing_timing,');
+    expect(serverRepository).toContain("export * from '@alga-psa/billing/repositories/contractLineRepository'");
   });
 
   it('T064: recurring authoring and storage helpers no longer use template-term fallback reads or shadow writes in normal paths', () => {

@@ -1,0 +1,13 @@
+# cd server && DB_PORT=5376 DB_NAME_SERVER=server_co_managed DB_NAME=server_co_managed npx vitest run <integration file> -t 'T003 working|T004 a redacted|T014 bulk|T021 '
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > T003 working is responsibility OR assignment on one relation: assignment-only stays, unassigned customer work leaves, and client narrowing scopes the workspace options 657ms 197 MB heap used
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > T021 handed-back tickets and a viewer without a staff assignment contribute no signal 182ms 202 MB heap used
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > T021 a redacted driving field excludes the row from its signal and the count follows the filter 191ms 201 MB heap used
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > T021 revoked and ended relationships contribute nothing to options, rows or signal counts, and a second customer with the same ticket id stays isolated 132ms 201 MB heap used
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > T021 signal counts keep two customer workspaces with the same ticket number and id isolated 249ms 168 MB heap used
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > T004 a redacted assignment is omitted rather than false and leaks neither membership nor signal; sibling-client and revoked rows stay out 174ms 175 MB heap used
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > T021 signal counts equal exactly the rows their authorized filters return and working never contains native tickets 161ms 172 MB heap used
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > T014 bulk handback: one receipt per success, stale and forbidden items reported per item, exact retry replays, and working/oversight are re-queried 261ms 174 MB heap used
+ Test Files  1 passed (1)
+      Tests  8 passed | 1422 skipped (1430)
+   Start at  17:28:45
+   Duration  14.17s (transform 2.81s, setup 68ms, collect 4.06s, tests 6.47s, environment 0ms, prepare 34ms)

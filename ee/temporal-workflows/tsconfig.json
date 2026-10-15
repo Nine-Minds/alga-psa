@@ -111,7 +111,7 @@
     "typeRoots": ["../../node_modules/@types", "./node_modules/@types"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/test-utils/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/test-utils/**/*", "src/__tests__/integration/**/*"],
   "ts-node": {
     "esm": true
   }

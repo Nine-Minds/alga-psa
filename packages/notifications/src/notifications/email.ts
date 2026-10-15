@@ -18,6 +18,7 @@ import type {
 } from '../types/notification';
 import { TenantEmailService, StaticTemplateProcessor } from '@alga-psa/email';
 import type { TenantEmailSettings } from '@alga-psa/types';
+import { resolveEmailPreferenceEnabled } from './emailPreferenceState';
 import { resolveEmailLocale } from './emailLocaleResolver';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 
@@ -31,32 +32,8 @@ export class EmailNotificationService implements NotificationService {
   }
 
   private async getTenantEmailSettings(tenantId: string): Promise<TenantEmailSettings | null> {
-    try {
-      const knex = await getConnection(tenantId);
-      const settings = await this.tenantScopedTable(knex, 'tenant_email_settings', tenantId)
-        .first();
-
-      if (!settings) {
-        console.warn(`No email settings found for tenant ${tenantId}`);
-        return null;
-      }
-
-      return {
-        tenantId,
-        defaultFromDomain: settings.default_from_domain,
-        ticketingFromEmail: settings.ticketing_from_email,
-        customDomains: settings.custom_domains || [],
-        emailProvider: settings.email_provider,
-        providerConfigs: settings.provider_configs || [],
-        trackingEnabled: settings.tracking_enabled,
-        maxDailyEmails: settings.max_daily_emails,
-        createdAt: settings.created_at,
-        updatedAt: settings.updated_at
-      };
-    } catch (error) {
-      console.error(`Error fetching tenant email settings:`, error);
-      return null;
-    }
+    const knex = await getConnection(tenantId);
+    return TenantEmailService.getTenantEmailSettings(tenantId, knex);
   }
 
   private async compileTemplate(template: string, data: Record<string, any>): Promise<string> {
@@ -373,6 +350,9 @@ export class EmailNotificationService implements NotificationService {
     emailAddress: string;
     templateName: string;
     data: Record<string, any>;
+    mailClass: import('@alga-psa/types').OutboundMailClass;
+    boardId?: string;
+    senderId?: string;
   }): Promise<void> {
     const knex = await this.getTenantKnex();
 
@@ -416,7 +396,7 @@ export class EmailNotificationService implements NotificationService {
       })
       .first();
 
-    if (preference && !preference.is_enabled) {
+    if (!resolveEmailPreferenceEnabled(settings.is_enabled, isCategoryEnabled, isSubtypeEnabled, preference?.is_enabled)) {
       return;
     }
 
@@ -439,6 +419,9 @@ export class EmailNotificationService implements NotificationService {
       const result = await service.sendEmail({
         to: params.emailAddress,
         tenantId: params.tenant,
+        mailClass: params.mailClass,
+        boardId: params.boardId,
+        senderId: params.senderId,
         templateProcessor: processor,
         userId: params.userId
       });

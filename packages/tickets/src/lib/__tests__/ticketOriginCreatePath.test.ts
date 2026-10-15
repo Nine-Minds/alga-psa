@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 
 // Ticket numbering now goes through the shared service (prefix + padding + the
 // tenant's optional date format) instead of a raw generate_next_number call.
@@ -69,6 +70,13 @@ describe('ticket origin create-path persistence contracts', () => {
         if (table === 'tickets') {
           return ticketQuery;
         }
+        if (table === 'board_default_watchers') {
+          // No default watchers configured: any chain resolves to an empty list.
+          const chain: any = new Proxy(() => chain, {
+            get: (_t, prop) => (prop === 'then' ? (resolve: (v: unknown[]) => void) => resolve([]) : () => chain),
+          });
+          return chain;
+        }
 
         throw new Error(`Unexpected table: ${table}`);
       },
@@ -90,7 +98,7 @@ describe('ticket origin create-path persistence contracts', () => {
         entered_by: UUIDS.user,
       },
       UUIDS.tenant,
-      trx
+      trx, {}, silentTicketCreation('test fixture'),
     );
 
     expect(insertMock).toHaveBeenCalledTimes(1);

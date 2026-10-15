@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { IContractTemplateLine } from '@alga-psa/types';
 
+// LEVERAGE: pattern template-clone-substrate — older, divergent template->contract clone (drops hourly/usage rates and fixed config detail). The faithful one is cloneTemplateLineToContract in packages/billing/src/repositories/contractLineRepository.ts (alga-2026-0002371).
 interface CloneTemplateOptions {
   tenant: string;
   templateContractLineId: string;
@@ -52,14 +53,15 @@ export async function cloneTemplateContractLine(
   const templateCustomRate = await resolveTemplateCustomRate(trx, tenant, templateContractId, templateContractLineId);
   const appliedCustomRate = overrideRate ?? templateCustomRate;
 
-  if (appliedCustomRate !== null) {
-    await db.table('contract_lines')
-      .where({ contract_line_id: contractLineId })
-      .update({
-        custom_rate: appliedCustomRate,
-        updated_at: trx.fn.now()
-      });
-  }
+  // A template rate is a clone-time snapshot source; a null one follows the
+  // live catalog. Template edits stay provenance-only for live lines.
+  await db.table('contract_lines')
+    .where({ contract_line_id: contractLineId })
+    .update({
+      custom_rate: appliedCustomRate,
+      rate_provenance: appliedCustomRate === null ? 'inherited' : 'custom',
+      updated_at: trx.fn.now()
+    });
 
   return { appliedCustomRate };
 }
@@ -216,7 +218,7 @@ async function cloneServiceConfiguration(
     }
 
     if (configuration.configuration_type === 'Fixed') {
-      await cloneFixedConfig(trx, tenant, configuration.config_id, newConfigId);
+      await cloneTemplateServiceFixedConfig(trx, tenant, configuration.config_id, newConfigId);
     }
   }
 }
@@ -330,18 +332,45 @@ async function cloneUsageConfig(trx: Knex.Transaction, tenant: string, sourceCon
   });
 }
 
-async function cloneFixedConfig(trx: Knex.Transaction, tenant: string, sourceConfigId: string, targetConfigId: string) {
+/**
+ * Copy a template service's fixed-config row (pricing basis + optional default
+ * unit rate) onto the contract line's service configuration. Shared by every
+ * template → contract copy path so a per-seat service can never silently
+ * demote to a bundle allocation because one path forgot the row.
+ *
+ * Templates carry no provenance column: a stored template base_rate is an
+ * intentional clone-time snapshot (`custom`); a null one follows the live
+ * catalog in the contract's currency (`inherited`). Never copy a template-row
+ * provenance verbatim.
+ *
+ * LEVERAGE: pattern template-pool-roundtrip — third template → contract copy
+ * that must remember a template-side table (pools, fixed config); a single
+ * "clone everything hanging off a template service config" layer would stop
+ * each path from having to enumerate them.
+ */
+export async function cloneTemplateServiceFixedConfig(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  sourceConfigId: string,
+  targetConfigId: string
+): Promise<void> {
   const db = tenantDb(trx, tenant);
-  const fixedConfig = await db.table('contract_template_line_service_fixed_config')
+  const fixedConfig = await db.table<{ base_rate: number | string | null; pricing_basis: string | null }>(
+    'contract_template_line_service_fixed_config'
+  )
     .where('config_id', sourceConfigId)
-    .first();
+    .first('base_rate', 'pricing_basis');
 
   if (!fixedConfig) return;
 
+  const templateBaseRate = normalizeNumeric(fixedConfig.base_rate);
+
   await db.table('contract_line_service_fixed_config').insert({
-    ...fixedConfig,
     tenant,
     config_id: targetConfigId,
+    base_rate: templateBaseRate,
+    pricing_basis: fixedConfig.pricing_basis ?? null,
+    rate_provenance: templateBaseRate === null ? 'inherited' : 'custom',
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   });

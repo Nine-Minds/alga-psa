@@ -69,6 +69,9 @@ describe('ContractLineServiceConfigurationService usage configuration', () => {
     expect(mocks.usageCreate).toHaveBeenCalledWith({
       config_id: 'config-1',
       unit_of_measure: 'item',
+      // The service defaults measurement_mode to 'additive' when not provided
+      // (explicit usage-contract measurement semantics).
+      measurement_mode: 'additive',
       enable_tiered_pricing: false,
       minimum_usage: 0,
       base_rate: 25000,

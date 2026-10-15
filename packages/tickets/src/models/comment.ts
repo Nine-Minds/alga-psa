@@ -1,3 +1,4 @@
+import { reconcileCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import type { Knex } from 'knex';
 import type { IComment } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
@@ -54,12 +55,45 @@ async function collaborationAttribution(trx: Knex.Transaction, tenant: string, c
 const Comment = {
   getAllbyTicketId: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, ticket_id: string): Promise<IComment[]> => {
     try {
-      const comments = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
-        .select('comments.*')
+      // Read-time bundle provenance lives here, in the shared read layer, so
+      // every MSP path that lists a ticket's comments — the initial
+      // consolidated load and every refresh (remote update, post add/edit/
+      // delete) — returns the same shape. A comment is a mirror when
+      // ticket_bundle_mirrors points at it; the mirror's source comment
+      // carries the master ticket so the chip can name and link it. All joins
+      // are tenant-co-located via tenantJoin.
+      const commentsQuery = tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant).select(
+        'comments.*',
+        'bm.source_comment_id as bundle_mirror_source_comment_id',
+        'mt.ticket_id as bundle_source_ticket_id',
+        'mt.ticket_number as bundle_source_ticket_number'
+      );
+      const scopedConn = tenantDb(knexOrTrx, tenant);
+      scopedConn.tenantJoin(commentsQuery, 'ticket_bundle_mirrors as bm', 'comments.comment_id', 'bm.child_comment_id', { type: 'left' });
+      scopedConn.tenantJoin(commentsQuery, 'comments as src', 'bm.source_comment_id', 'src.comment_id', { type: 'left', rootTenantColumn: 'comments.tenant' });
+      scopedConn.tenantJoin(commentsQuery, 'tickets as mt', 'src.ticket_id', 'mt.ticket_id', { type: 'left', rootTenantColumn: 'comments.tenant' });
+
+      const comments = await commentsQuery
         .where('comments.ticket_id', ticket_id)
         .whereRaw(legacyTicketConversationSql(knexOrTrx, tenant))
         .orderBy('comments.created_at', 'asc');
-      return comments;
+
+      return (comments as Array<Record<string, unknown>>).map((comment) => {
+        const sourceCommentId = comment.bundle_mirror_source_comment_id as string | null | undefined;
+        const masterTicketId = (comment.bundle_source_ticket_id as string | null) ?? null;
+        const masterTicketNumber = (comment.bundle_source_ticket_number as string | null) ?? null;
+        delete comment.bundle_mirror_source_comment_id;
+        delete comment.bundle_source_ticket_id;
+        delete comment.bundle_source_ticket_number;
+        comment.bundle_mirror_source = sourceCommentId
+          ? {
+              source_comment_id: sourceCommentId,
+              master_ticket_id: masterTicketId,
+              master_ticket_number: masterTicketNumber,
+            }
+          : null;
+        return comment as unknown as IComment;
+      });
     } catch (error) {
       console.error('Error getting all comments:', error);
       throw error;
@@ -228,6 +262,15 @@ const Comment = {
 
         await attachNativeRootToConversation({ trx, ticket: { tenant, ticketId: comment.ticket_id }, storeTenant: tenant },
           threadId, collaboration?.conversationId);
+
+        // Claim the note's attachment drafts inside the insert's own transaction, so a
+        // comment is never visible without the files it references. Callers that build a
+        // comment through this model (commentActions.addCommentToTicket among them) rely
+        // on the model for this; only a few action paths reconcile again themselves, and
+        // reconciliation is idempotent. A foreign collaboration author carries no local
+        // user_id, so the claiming actor is the collaboration actor.
+        await reconcileCommentAttachments(trx, tenant, inserted.comment_id, comment.user_id ?? collaboration?.actorUserId ?? '');
+
         return inserted.comment_id as string;
       } catch (error) {
         logger.error('Error inserting comment:', error);
@@ -262,7 +305,7 @@ const Comment = {
     });
   },
 
-  update: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, comment: Partial<IComment>): Promise<void> => {
+  update: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, comment: Partial<IComment>, actorId?: string): Promise<void> => {
     return withCoManagedOperationalTransaction(knexOrTrx, tenant, async trx => {
       try {
         // Get existing comment first
@@ -320,6 +363,9 @@ const Comment = {
           ...comment,
           updated_at: new Date().toISOString(),
         };
+        // bundle_mirror_source is read-time provenance from ticket_bundle_mirrors,
+        // not a comments column; strip it so a smuggled payload can never be written.
+        delete (updateData as { bundle_mirror_source?: unknown }).bundle_mirror_source;
 
         logger.info('Updating comment with data:', {
           ...updateData,
@@ -330,6 +376,10 @@ const Comment = {
         await tenantScopedTable<IComment>(trx, 'comments', tenant)
           .where('comment_id', id)
           .update(updateData);
+
+        // An edited note can add or remove file references, so the claims must be
+        // re-derived from the new note in the same transaction as the edit.
+        if (comment.note !== undefined) await reconcileCommentAttachments(trx, tenant, id, actorId || existingComment.user_id || '');
       } catch (error) {
         console.error(`Error updating comment with id ${id}:`, error);
         throw error;
@@ -353,6 +403,11 @@ const Comment = {
           throw new Error('Use Cancel schedule to cancel this email.');
         if ((existingComment as any).actor_reference_id) throw new Error('Qualified comment authors require a collaboration command');
         await assertCommentThreadAudience(trx, tenant, existingComment.thread_id!, {});
+
+        // Release the attachment claims before the comment is tombstoned: the row that
+        // grants read access is keyed on the comment, so leaving it attached would keep
+        // a deleted comment's files readable.
+        await withdrawCommentAttachments(trx, tenant, id);
 
         await tenantScopedTable(trx, 'comments', tenant).where('comment_id', id).forUpdate().first();
         await assertCoManagedOperationalWrite(trx, tenant);

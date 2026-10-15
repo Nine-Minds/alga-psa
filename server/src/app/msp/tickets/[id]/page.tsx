@@ -21,6 +21,7 @@ import {
 } from '@alga-psa/tickets/actions/ticketBentoActions';
 import { getTicketLayoutPreference } from '@alga-psa/tickets/actions/ticketLayoutPreference';
 import { getTicketChecklistItems } from '@alga-psa/tickets/actions/checklists/ticketChecklistActions';
+import { getTicketExternalLinks } from '@alga-psa/tickets/actions/externalLinks/externalLinkActions';
 import { getTicketAutoCloseState } from '@alga-psa/tickets/actions/close-rules/closeRuleActions';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { listTicketMaterials } from '@alga-psa/tickets/actions/materialCatalogActions';
@@ -37,9 +38,19 @@ import { fetchTimeEntriesForTicket } from '@alga-psa/scheduling/actions/timeEntr
 import { AIChatContextBoundary } from '@product/chat/context';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
 const getCachedTicket = cache((id: string) => getTicketById(id));
+
+// Only a ticket id belongs in this segment. The sibling bulk-action modal routes are
+// intercepted, and Next resolves that interception to a marker path
+// ('/msp/tickets/(.)bulk-tags'); whenever the router hands that path to this dynamic
+// route instead, the marker reached the ticket queries as an id and Postgres' uuid cast
+// surfaced as "One of the selected ticket values is invalid. Please refresh and try
+// again." — on what the user opened as a bulk dialog. A segment that cannot be a ticket
+// id is a 404, not a database round trip.
+const TICKET_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function getActionErrorMessage(value: unknown): string | null {
   if (typeof value !== 'object' || value === null) {
@@ -64,6 +75,9 @@ export async function generateMetadata({ params }: TicketDetailsPageProps): Prom
 
   try {
     const { id } = await params;
+    if (!TICKET_ID_PATTERN.test(id)) {
+      return { title: t('msp.tickets.detail.fallbackTitle', { defaultValue: 'Ticket Details' }) };
+    }
     const ticket = await getCachedTicket(id);
     if (ticket && 'ticket_number' in ticket) {
       return {
@@ -90,6 +104,11 @@ interface TicketDetailsPageProps {
 export default async function TicketDetailsPage({ params, searchParams }: TicketDetailsPageProps) {
   const resolvedParams = await params;
   const { id } = resolvedParams;
+  if (!TICKET_ID_PATTERN.test(id)) {
+    // Outside the try below on purpose: notFound() signals by throwing, and the catch
+    // would render it as an error message instead of the not-found page.
+    notFound();
+  }
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const returnFiltersParam = typeof resolvedSearchParams.returnFilters === 'string'
     ? resolvedSearchParams.returnFilters
@@ -112,6 +131,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       surveySummary,
       layoutPreference,
       checklistItems,
+      externalLinks,
       autoCloseState,
       permissions,
       teams,
@@ -125,6 +145,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       }),
       getTicketLayoutPreference().catch(() => null),
       getTicketChecklistItems(id).catch(() => null),
+      getTicketExternalLinks(id).catch(() => null),
       getTicketAutoCloseState(id).catch(() => null),
       getCurrentUserPermissions().catch(() => null),
       getTeams().catch(() => null),
@@ -153,6 +174,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
     const bootstrap: TicketScreenBootstrap = {
       layoutPreference: safeLayoutPreference,
       checklistItems,
+      externalLinks: isReturnedActionError(externalLinks) ? null : externalLinks,
       autoCloseState,
       canViewCommentMetadataDebug: permissions ? hasAdminSettingsViewAccess(permissions) : null,
       teams: safeTeams,

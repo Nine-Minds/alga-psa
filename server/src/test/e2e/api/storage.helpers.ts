@@ -1,4 +1,3 @@
-import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { knexConfig as baseKnexConfig } from '@alga-psa/db';
@@ -143,15 +142,6 @@ export async function resetStorageTables(tenantId?: string): Promise<void> {
       await maintenanceDb.unscoped('storage_schemas', 'E2E storage helper all-tenant reset').delete().catch(() => undefined);
       await maintenanceDb.unscoped('storage_usage', 'E2E storage helper all-tenant reset').delete().catch(() => undefined);
     }
-  } finally {
-    await db.destroy();
-  }
-}
-
-export async function withTenantConnection<T>(tenantId: string, callback: (trx: Knex) => Promise<T>): Promise<T> {
-  const db = await createTestDbConnection({ recreate: false });
-  try {
-    return await callback(db.withSchema('public'));
   } finally {
     await db.destroy();
   }

@@ -17,6 +17,7 @@ type StatusRow = {
   order_number: number;
   color?: string | null;
   icon?: string | null;
+  portal_selectable?: boolean;
   created_by?: string;
 };
 
@@ -25,6 +26,7 @@ let state: { boards: BoardRow[]; statuses: StatusRow[] };
 
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
+const hasPermissionMock = vi.fn();
 
 type ReturnedActionError = { actionError: string } | { permissionError: string };
 
@@ -46,6 +48,7 @@ function expectActionSuccess<T>(result: T | ReturnedActionError): T {
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
+  hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -95,6 +98,7 @@ function createStatusQuery() {
       is_custom: {},
       color: {},
       icon: {},
+      portal_selectable: {},
       created_at: {},
       updated_at: {},
     }),
@@ -202,6 +206,7 @@ describe('boardTicketStatusActions', () => {
       ],
     };
     createTenantKnexMock.mockResolvedValue({ knex: { any: true } });
+    hasPermissionMock.mockResolvedValue(true);
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
       callback(createTrx())
     );
@@ -265,5 +270,101 @@ describe('boardTicketStatusActions', () => {
     expect(
       await deleteBoardTicketStatus('board-b', 'status-b-open')
     ).toMatchObject({ actionError: 'Add at least one ticket status before saving the board.' });
+  });
+
+  it('T027: a portal caller cannot re-enable a restricted status through saveBoardTicketStatuses when the flag is omitted', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+    state.statuses.push({
+      tenant: 'tenant-1',
+      status_id: 'status-a-restricted',
+      board_id: 'board-a',
+      name: 'Waiting on Vendor',
+      status_type: 'ticket',
+      is_closed: false,
+      is_default: false,
+      order_number: 30,
+      portal_selectable: false,
+    });
+
+    const { saveBoardTicketStatuses } = await import('./boardTicketStatusActions');
+
+    const result = await saveBoardTicketStatuses('board-a', [
+      { status_id: 'status-a-open', name: 'Open', is_closed: false, is_default: true },
+      { status_id: 'status-a-closed', name: 'Closed', is_closed: true, is_default: false },
+      { status_id: 'status-a-restricted', name: 'Waiting on Vendor', is_closed: false, is_default: false },
+    ]);
+
+    expect(result).toMatchObject({ permissionError: expect.stringContaining('Permission denied') });
+    expect(state.statuses.find((status) => status.status_id === 'status-a-restricted')?.portal_selectable).toBe(false);
+    expect(withTransactionMock).not.toHaveBeenCalled();
+  });
+
+  it('T028: a portal caller cannot re-enable a restricted status through updateBoardTicketStatus', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+    state.statuses.push({
+      tenant: 'tenant-1',
+      status_id: 'status-a-restricted',
+      board_id: 'board-a',
+      name: 'Waiting on Vendor',
+      status_type: 'ticket',
+      is_closed: false,
+      is_default: false,
+      order_number: 30,
+      portal_selectable: false,
+    });
+
+    const { updateBoardTicketStatus } = await import('./boardTicketStatusActions');
+
+    const result = await updateBoardTicketStatus('board-a', 'status-a-restricted', { portal_selectable: true });
+
+    expect(result).toMatchObject({ permissionError: expect.stringContaining('Permission denied') });
+    expect(state.statuses.find((status) => status.status_id === 'status-a-restricted')?.portal_selectable).toBe(false);
+  });
+
+  it('T029: a portal caller cannot create or delete board ticket statuses', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+
+    const { createBoardTicketStatus, deleteBoardTicketStatus } = await import('./boardTicketStatusActions');
+
+    expect(
+      await createBoardTicketStatus('board-a', { name: 'Sneaky', is_closed: false, is_default: false })
+    ).toMatchObject({ permissionError: expect.stringContaining('Permission denied') });
+    expect(
+      await deleteBoardTicketStatus('board-a', 'status-a-closed')
+    ).toMatchObject({ permissionError: expect.stringContaining('Permission denied') });
+
+    expect(state.statuses.some((status) => status.name === 'Sneaky')).toBe(false);
+    expect(state.statuses.some((status) => status.status_id === 'status-a-closed')).toBe(true);
+  });
+
+  it('T030: an authorized administrator can persist portal_selectable as false', async () => {
+    hasPermissionMock.mockResolvedValue(true);
+    state.statuses.push({
+      tenant: 'tenant-1',
+      status_id: 'status-a-restricted',
+      board_id: 'board-a',
+      name: 'Waiting on Vendor',
+      status_type: 'ticket',
+      is_closed: false,
+      is_default: false,
+      order_number: 30,
+      portal_selectable: true,
+    });
+
+    const { saveBoardTicketStatuses, updateBoardTicketStatus } = await import('./boardTicketStatusActions');
+
+    const updated = expectActionSuccess(
+      await updateBoardTicketStatus('board-a', 'status-a-restricted', { portal_selectable: false })
+    ) as IStatus;
+    expect(updated.portal_selectable).toBe(false);
+
+    const saved = expectActionSuccess(
+      await saveBoardTicketStatuses('board-a', [
+        { status_id: 'status-a-open', name: 'Open', is_closed: false, is_default: true },
+        { status_id: 'status-a-closed', name: 'Closed', is_closed: true, is_default: false },
+        { status_id: 'status-a-restricted', name: 'Waiting on Vendor', is_closed: false, is_default: false, portal_selectable: false },
+      ])
+    ) as IStatus[];
+    expect(saved.find((status) => status.status_id === 'status-a-restricted')?.portal_selectable).toBe(false);
   });
 });

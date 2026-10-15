@@ -8,6 +8,15 @@ const read = (relativePath: string) =>
   fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 
 describe('ClientQuickView call sites', () => {
+  it('exposes the co-managed summary and full-client link from the Details-only quick view', () => {
+    const quickView = read('packages/clients/src/components/clients/ClientQuickView.tsx');
+    expect(quickView).toContain('renderClientCoManagedIntegration');
+    expect(quickView).toContain('slots?.summary');
+    const leanProvider = read('packages/msp-composition/src/clients/MspClientQuickViewProvider.tsx');
+    expect(leanProvider).toContain('useOptionalClientCrossFeature');
+    expect(leanProvider).toContain('renderClientCoManagedIntegration');
+  });
+
   it('uses ClientQuickView for client quick-view drawers instead of ClientDetails quickView', () => {
     const migratedFiles = [
       'packages/msp-composition/src/tickets/MspTicketsPageClient.tsx',

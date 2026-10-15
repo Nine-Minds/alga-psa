@@ -27,7 +27,7 @@
     "@types/mailparser": "^3.4.6",
     "@types/nodemailer": "^7.0.9",
     "@types/smtp-server": "^3.5.10",
-    "nodemailer": "^9.0.3",
+    "nodemailer": "^10.0.13",
     "tsup": "^8.0.0",
     "typescript": "^5.7.3",
     "vitest": "^4.1.9"

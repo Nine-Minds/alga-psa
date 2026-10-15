@@ -1,16 +1,13 @@
 import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-const templateWitPath = resolve(
-  process.cwd(),
-  '../alga-client-sdk/templates/component-basic/wit/extension-runner.wit',
-)
-const runnerWitPath = resolve(
-  process.cwd(),
-  '../../ee/runner/wit/extension-runner.wit',
-)
+const templateWitPath = fileURLToPath(new URL(
+  '../../alga-client-sdk/templates/component-basic/wit/extension-runner.wit',
+  import.meta.url,
+))
+const runnerWitPath = fileURLToPath(new URL('../../../ee/runner/wit/extension-runner.wit', import.meta.url))
 
 describe('extension runner WIT contract', () => {
   it('defines clients list/get imports with typed records', () => {

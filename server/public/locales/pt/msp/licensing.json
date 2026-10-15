@@ -57,56 +57,55 @@
     "confirmation": {
       "title": "Confirmar atualização da licença",
       "increaseDescription": "Revise os detalhes do aumento da sua licença antes de confirmar.",
-      "decreaseDescription": "Revise os detalhes da redução da sua licença. As alterações entrarão em vigor no final do seu período de faturamento.",
       "currentMonthlyCost": "Custo mensal atual",
       "currentLicenseCount": "Contagem de licenças atuais",
       "newMonthlyCost": "Novo custo mensal",
       "newLicenseCount": "Nova contagem de licenças",
       "monthlyIncrease": "Aumento Mensal",
-      "monthlySavings": "Poupança Mensal",
       "paymentMethod": "Método de pagamento",
       "changePaymentMethod": "Mudar",
       "immediateChargeTitle": "Cobrança imediata",
       "immediateChargeDescription": "Você será cobrado {{amountDue}} agora pelo valor rateado.",
       "prorationDescription": "Proporção: {{amount}} para o restante deste período de faturamento",
-      "scheduledTitle": "Programado para o final do período",
-      "scheduledDescription": "A redução da licença entrará em vigor em {{date}} no final do seu período de faturamento atual.",
-      "scheduledKeepAccess": "Você manterá acesso a todas as licenças {{count}} até então.",
       "cancel": "Cancelar",
       "confirmPayNow": "Confirme e pague agora",
-      "confirmSchedule": "Confirmar agendamento"
+      "confirm": "Confirmar",
+      "trialTitle": "Sem cobrança durante o período de teste",
+      "trialDescription": "Seu período de teste continua como antes. A cobrança começa em {{date}} com {{amount}}."
     },
     "usage": {
       "title": "Uso da licença atual",
       "licensesUsed": "licenças usadas"
     },
     "fields": {
-      "totalLicenseCount": "Contagem total de licenças"
+      "licensesToAdd": "Licenças a adicionar"
     },
     "help": {
-      "totalLicenseCount": "Insira o novo número total de licenças (mínimo: {{minimum}}). Atualmente: {{current}}",
-      "reduceViaAccount": "Para reduzir licenças, visite Gerenciamento de contas",
-      "quantityWarning": "Aviso: você tem usuários {{used}}, mas está definindo o total como {{quantity}}"
+      "licensesToAdd": "Informe quantas licenças deseja adicionar. O novo total é atualizado abaixo."
     },
     "pricing": {
       "pricePerLicense": "Preço por licença:",
-      "quantity": "Quantidade:",
-      "total": "Total:"
+      "addedCost": "Custo adicional:",
+      "newTotal": "Novo total:"
     },
     "actions": {
       "creatingCheckout": "Criando Check-out...",
-      "noChange": "Sem alteração",
-      "updateToTotal": "Atualizar para {{quantity}} Total ({{difference}} {{licenseLabel}})"
+      "addLicenses": "Adicionar {{count}} {{licenseLabel}}"
     },
     "info": {
-      "totalQuantity": "Isso define a quantidade total de assinaturas (não um acréscimo às licenças atuais)",
       "increasingImmediate": "Aumento de licenças: acesso imediato com cobrança proporcional",
-      "billedMonthly": "As licenças são cobradas mensalmente e podem ser canceladas a qualquer momento"
+      "billedMonthly": "As licenças são cobradas mensalmente e podem ser canceladas a qualquer momento",
+      "addsToTotal": "As licenças são adicionadas ao seu total atual. Para reduzir licenças, acesse o Gerenciamento da conta."
     },
     "solo": {
       "title": "Solo inclui um usuário",
       "description": "O plano Solo foi projetado para um único usuário e não oferece suporte para adição de licenças. Atualize para o Pro para adicionar mais usuários à sua equipe.",
       "upgradeCta": "Atualizar para Pro"
+    },
+    "summary": {
+      "currentLicenses": "Licenças atuais",
+      "licensesToAdd": "Licenças a adicionar",
+      "newTotal": "Novo total"
     }
   },
   "removalModal": {
@@ -354,7 +353,8 @@
       "activateClaimCode": "Falha ao ativar o código de ativação.",
       "startTrial": "Falha ao iniciar a avaliação.",
       "refreshLicense": "Falha ao atualizar a licença."
-    }
+    },
+    "returnToClient": "Voltar ao cliente"
   },
   "errors": {
     "notSignedIn": "Não autorizado. Faça login para gerenciar o licenciamento.",
@@ -363,6 +363,7 @@
   "coManaged": {
     "title": "TI cogerida",
     "description": "Gerencie os assentos de técnico disponíveis para os espaços de trabalho dos seus clientes.",
+    "sharedWork": "Trabalho compartilhado",
     "capacity": "Assentos comprados",
     "allocated": "Alocados a clientes",
     "available": "Assentos disponíveis",
@@ -570,7 +571,7 @@
     },
     "queue": {
       "title": "Filas de tickets cogeridos",
-      "workingDescription": "Tickets do MSP e de clientes atualmente tratados pela sua equipa.",
+      "workingDescription": "Tickets compartilhados pelos quais sua equipe é responsável ou aos quais está atribuída.",
       "oversightDescription": "Tickets de clientes dentro do acesso aprovado, incluindo os tratados pelas equipas de TI dos clientes.",
       "view": "Vista",
       "working": "Fila de trabalho",
@@ -589,6 +590,8 @@
       "loadError": "Não foi possível carregar os tickets. Atualize para verificar o seu acesso.",
       "counts": "{{total}} tickets · {{open}} abertos · {{closed}} fechados",
       "empty": "Nenhum ticket permitido corresponde a estes filtros.",
+      "emptyUnfiltered": "Ainda não há tickets de clientes para mostrar.",
+      "retry": "Tentar novamente",
       "page": "Página {{page}}",
       "sortFields": {
         "updated": "Última atualização",
@@ -600,6 +603,7 @@
         "ticket": "Ticket",
         "workspace": "Espaço de trabalho",
         "state": "Estado",
+        "status": "Estado",
         "priority": "Prioridade",
         "responsibility": "Organização responsável",
         "updated": "Atualização"
@@ -617,8 +621,14 @@
         "returned": "Devolvido à equipa de TI do cliente",
         "forbidden": "Acesso negado",
         "changed": "O ticket foi alterado. Atualize antes de tentar novamente.",
-        "invalid": "Seleção inválida"
-      }
+        "invalid": "Seleção inválida",
+        "selected": "Serão devolvidos {{count}} ticket(s) selecionado(s).",
+        "resume": "Uma devolução ao TI do cliente foi interrompida. Retome para confirmar o resultado.",
+        "noReloadRecovery": "A recuperação ao recarregar não está disponível neste navegador; ainda pode tentar novamente nesta sessão."
+      },
+      "scopeUnavailable": "Abrindo a lista de chamados…",
+      "searchPlaceholder": "Pesquisar por número ou título",
+      "mspAlsoAssigned": "MSP também atribuído"
     },
     "conversation": {
       "title": "Conversa",
@@ -751,7 +761,8 @@
         "unknownOutcome": "Não foi possível confirmar se a edição foi salva. Tente salvar novamente ou descarte suas alterações e recarregue."
       },
       "loadError": "Não foi possível carregar este projeto ou tarefa.",
-      "discard": "Descartar alterações e recarregar"
+      "discard": "Descartar alterações e recarregar",
+      "title": "Projetos"
     },
     "sla": {
       "title": "Prioridades de SLA da cogestão",
@@ -918,6 +929,105 @@
       "loadError": "As suas permissões atuais não permitem exportar este espaço.",
       "lengthError": "Use uma frase entre 16 e 1024 bytes UTF-8.",
       "matchError": "As frases de recuperação têm de ser iguais."
+    },
+    "accountTitle": "TI cogerida",
+    "checkoutUnavailable": "O pagamento incorporado não está disponível. Tente novamente após reparar a configuração de pagamento.",
+    "pendingCapacity": "Está pendente uma compra de {{quantity}} lugares.",
+    "previewError": "Não foi possível calcular o preço desta alteração. Atualize e tente novamente.",
+    "purchaseNeedsAdmin": "Um administrador da conta deve adicionar capacidade cogerida.",
+    "purchaseProviderUnconfigured": "O fornecedor de pagamentos não está configurado.",
+    "purchaseUnavailable": "A compra cogerida alojada não está disponível nesta implementação.",
+    "client": {
+      "awaitingAcceptance": "O administrador do cliente deve aceitar antes que o acesso seja concedido.",
+      "capacity": "Capacidade",
+      "chooseRelationship": "Escolher relação",
+      "endedHint": "Esta relação terminou. O histórico retido e os arquivos continuam disponíveis.",
+      "forClient": "TI cogerida para {{name}}",
+      "history": "Histórico da relação",
+      "invitation": "Convite do administrador",
+      "notEnabled": "TI cogerida não ativada",
+      "progress": "Progresso da configuração",
+      "provisioningHint": "Os lugares reservados permanecem retidos até a configuração ser concluída ou a limpeza ser confirmada.",
+      "relationship": "Relação",
+      "seatAllocation": "{{allocated}} lugares de técnico atribuídos",
+      "seatUsage": "{{used}} de {{allocated}} lugares de técnico",
+      "selectionRequired": "Várias relações cogeridas",
+      "setupHint": "Ative a TI cogerida neste cliente para reservar técnicos do cliente e convidar um administrador.",
+      "tab": "TI cogerida",
+      "viewHistory": "Ver histórico",
+      "work": "Trabalho",
+      "workHint": "Os projetos do cliente e as filas de tarefas partilhadas permanecem na shell do MSP com as suas identidades qualificadas.",
+      "workspace": "Espaço de trabalho do cliente",
+      "sharedTickets": "Tickets compartilhados",
+      "openCustomerTickets": "Abrir em Tickets de clientes"
+    },
+    "overview": {
+      "clients": "Clientes cogeridos",
+      "allClients": "Todos os clientes",
+      "empty": "Nenhum cliente cogerido corresponde a esta pesquisa.",
+      "loadError": "Não foi possível carregar os clientes cogeridos.",
+      "search": "Pesquisar clientes",
+      "unnamed": "Cliente",
+      "client": "Cliente",
+      "workspace": "Espaço de trabalho",
+      "status": "Estado",
+      "seats": "Lugares",
+      "actions": "Ações"
+    },
+    "shortfall": {
+      "baselineChanged": "O conjunto mudou desde este orçamento. Reveja a insuficiência novamente.",
+      "confirming": "A capacidade comprada está a ser verificada. Atualize e guarde a atribuição novamente.",
+      "ineligible": "O espaço de trabalho patrocinador não é elegível para mais capacidade cogerida.",
+      "needsAdmin": "Esta atribuição necessita de mais capacidade do conjunto. Um administrador da conta deve adicioná-la.",
+      "pending": "Já está a ser preparada ou processada uma compra cogerida. Retome-a antes de alterar a capacidade.",
+      "pool": "Conjunto: {{capacity}} comprados, {{allocated}} atribuídos, {{available}} disponíveis",
+      "provider": "O fornecedor de pagamentos não está configurado. Um administrador deve concluir a configuração de faturação.",
+      "raceRetry": "Os lugares estão no conjunto. A atribuição ainda não pôde ser guardada; tente novamente.",
+      "review": "Adicione {{additional}} lugares ao conjunto do patrocinador (novo total {{total}}).",
+      "selfHost": "Esta atribuição excede a capacidade self-host verificada. Atualize a licença assinada e, em seguida, atualize.",
+      "unavailable": "A compra cogerida alojada não está disponível nesta implementação."
+    },
+    "unavailable": "Este link de TI cogerida não está disponível.",
+    "directory": {
+      "prompt": "Selecione o espaço de trabalho cogerido que deseja gerir.",
+      "empty": "Não há espaços de trabalho cogeridos disponíveis para gerir."
+    },
+    "customerTickets": {
+      "title": "Tickets de clientes",
+      "view": "Exibição",
+      "columns": "Colunas",
+      "density": "Densidade",
+      "filters": "Filtros",
+      "client": "Cliente",
+      "allClients": "Todos os clientes",
+      "share": "Compartilhar",
+      "clearSignal": "Limpar",
+      "unavailable": "Esta exibição ainda não está disponível para a sua conta.",
+      "allTickets": "Todos os tickets",
+      "signals": {
+        "escalatedUnassigned": "Escalados sem atribuição",
+        "awaitingReply": "Aguardando sua resposta"
+      }
+    },
+    "callout": {
+      "title": "Tickets de clientes precisam de você",
+      "escalatedUnassigned_one": "{{count}} ticket escalado sem atribuição",
+      "escalatedUnassigned_other": "{{count}} tickets escalados sem atribuição",
+      "awaitingReply_one": "{{count}} ticket aguardando sua resposta",
+      "awaitingReply_other": "{{count}} tickets aguardando sua resposta",
+      "dismiss": "Dispensar"
     }
-  }
+  },
+  "actions": {
+    "cancel": "Cancelar"
+  },
+  "common": {
+    "actions": {
+      "cancel": "Cancelar"
+    }
+  },
+  "dashboard": {
+    "title": "Painel de tickets"
+  },
+  "resetFilters": "Reiniciar"
 }

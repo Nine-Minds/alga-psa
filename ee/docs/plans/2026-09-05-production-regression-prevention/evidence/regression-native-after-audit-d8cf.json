@@ -1,0 +1,96 @@
+{
+  "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+  "proofs": [
+    {
+      "edition": "community",
+      "artifact": "fresh-install-playwright-community",
+      "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "verifiedCounts": {
+        "passed": 23,
+        "failed": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "interrupted": 0,
+        "missing": 0
+      },
+      "rawReportSha256": "2e36773aee12092c4d9e9ee958c82dda0947b10bdb38694029522f43f9ab2ea3",
+      "rawCollectionSha256": "c0c2429704ac10069d2783e0a90ff61c2af4a0432e074290cd88e926199c67db",
+      "cases": [
+        {
+          "file": "e2e-tests/tests/invoice-generation.spec.ts",
+          "title": "a manual invoice preserves its entered number, finalizes and downloads without duplicate financial effects on retry",
+          "project": "community-chromium",
+          "status": "passed",
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "edition": "enterprise",
+      "artifact": "fresh-install-playwright-enterprise",
+      "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "verifiedCounts": {
+        "passed": 27,
+        "failed": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "interrupted": 0,
+        "missing": 0
+      },
+      "rawReportSha256": "3af5e2bb258a776bcac48be68c039e32f2521fe3a4cd2b9712e97affab084e99",
+      "rawCollectionSha256": "b79bfebe8758553677a7e8111405087c59b2679d2daae6842d22dcebb74ed3b0",
+      "cases": [
+        {
+          "file": "e2e-tests/tests/invoice-generation.spec.ts",
+          "title": "a manual invoice preserves its entered number, finalizes and downloads without duplicate financial effects on retry",
+          "project": "enterprise-chromium",
+          "status": "passed",
+          "retry": 0
+        },
+        {
+          "file": "e2e-tests/tests/microsoft-calendar.spec.ts",
+          "title": "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from provider outage without losing remote linkage",
+          "project": "enterprise-chromium",
+          "status": "passed",
+          "retry": 0
+        },
+        {
+          "file": "e2e-tests/tests/microsoft-calendar.spec.ts",
+          "title": "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from permission denial without losing remote linkage",
+          "project": "enterprise-chromium",
+          "status": "passed",
+          "retry": 0
+        },
+        {
+          "file": "e2e-tests/tests/microsoft-calendar.spec.ts",
+          "title": "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from throttling without losing remote linkage",
+          "project": "enterprise-chromium",
+          "status": "passed",
+          "retry": 0
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "auditedAt": "2026-09-07",
+  "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34118119011",
+  "headRevision": "d8cf156c731bdfb9414ee6435152a676e0bcecf4",
+  "mergeParents": [
+    "9c7890a8a61d02c6d051f6fcb5094e5448f27206",
+    "d8cf156c731bdfb9414ee6435152a676e0bcecf4"
+  ],
+  "fixAncestorsVerified": [
+    "ecf91e46a3",
+    "5f2566f966"
+  ],
+  "unchangedSourcesAtAudit": [
+    "e2e-tests/tests/invoice-generation.spec.ts",
+    "e2e-tests/tests/microsoft-calendar.spec.ts",
+    "e2e-tests/fixtures/recurring-billing.ts"
+  ],
+  "limitations": [
+    "Historical native after-fix evidence; not current-candidate readiness.",
+    "No production incident identifiers supplied.",
+    "Finance manual-invoice journey complements the focused optional-source authorization replay; the browser does not independently assert the absence of sales-order permissions."
+  ]
+}

@@ -5,6 +5,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getSharedProjectTaskAssignmentAction, listSharedProjectTaskAssigneesAction, assignSharedProjectTaskAction } from '@/lib/actions/coManagedProjectTaskActions';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 export default function CoManagedProjectTaskAssignment({ resource, onUnavailable, onChanged }: {
   resource: CoManagedSharedResource; onUnavailable: () => void; onChanged: () => void;
@@ -44,7 +45,7 @@ function Assignment({ resource, onUnavailable, onChanged }: { resource: CoManage
   }
   async function save(assignee: CoManagedTaskAssignee | null) {
     if (!state?.canEdit || state.revision === undefined || busy) return;
-    const request = pending ?? { operationId: crypto.randomUUID(), expectedRevision: state.revision, assignee };
+    const request = pending ?? { operationId: newCoManagedOperationId(), expectedRevision: state.revision, assignee };
     const current = generation.current; setPending(request); setBusy(true); setError(null);
     try {
       const result = await assignSharedProjectTaskAction(resource, request); if (current !== generation.current) return;

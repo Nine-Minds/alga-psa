@@ -41,7 +41,12 @@
           "title": "Offertegegevens"
         }
       },
-      "title": "Facturatie"
+      "title": "Facturatie",
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Kaart instellen"
+        }
+      }
     },
     "clientSettings": {
       "description": "Beheer uw bedrijfsinstellingen en configuraties",
@@ -261,6 +266,12 @@
       "detail": {
         "title": "Ticket nr. {{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Ticketgegevens"
+      },
+      "recurring": {
+        "title": "Terugkerende tickets"
+      },
+      "templates": {
+        "title": "Ticketsjablonen"
       }
     },
     "timeEntry": {
@@ -510,6 +521,9 @@
       }
     },
     "coManagement": {
+      "providers": {
+        "title": "E-mail- en identiteitsproviders"
+      },
       "title": "Toegang voor gezamenlijk beheer",
       "administration": {
         "title": "Gedelegeerd beheer"
@@ -545,6 +559,9 @@
       "upgrade": {
         "title": "Upgraden naar AlgaPSA"
       }
+    },
+    "customerTickets": {
+      "title": "Klanttickets"
     }
   },
   "auth": {
@@ -659,6 +676,11 @@
       "layout": {
         "title": "Privacybeleid"
       }
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Kaart instellen"
     }
   }
 }

@@ -1,0 +1,23 @@
+{
+  "scope": "Real registered email resolution action with tenant-scoped PostgreSQL lookups",
+  "baseRevision": "5b911561006c226b629d80ac23ccfde8c53e9c46",
+  "workingTreeDirty": true,
+  "validation": {
+    "artifact": "/tmp/alga-email-thread-resolution-final.log",
+    "sha256": "38f8e202b11df43ea0d4ed4a76bbbdf2ec7a19960939bbf58ae46711020810c9",
+    "passed": 28,
+    "failed": 0,
+    "newLookupCases": 4
+  },
+  "behavior": [
+    "Actual action/activity resolves threadId, bracketed In-Reply-To, References list after a miss, and threading fallback after an unmatched reply token.",
+    "Two tenants have the same thread/message identifiers. The action returns the current tenant ticket and persists its successful output. A foreign-only thread returns no match.",
+    "Removed the equivalent retired stubbed threading assertion. Only application-action email start remains retired."
+  ],
+  "limits": [
+    "Cloned migrated tables use synthetic ticket rows; foreign-key relationships to clients are not part of this lookup test.",
+    "Administrative transaction connection is substituted to route real queries through the rollback-only task schema. Query semantics and action output schemas are real.",
+    "No live provider, HTTP ingress or updated native CI candidate claim.",
+    "Initial fixture setup failed because current tickets require client_id; corrected fixture after inspecting the migrated schema. No production bug fix was needed for these four cases."
+  ]
+}

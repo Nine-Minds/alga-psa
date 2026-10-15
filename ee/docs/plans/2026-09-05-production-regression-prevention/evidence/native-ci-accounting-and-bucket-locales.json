@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "baseRevision": "c523418b5d70082ae191689e26cdfa1bc9a5973d",
+  "workingTreeDirty": true,
+  "sourceSha256": {
+    "scripts/tests/test-execution-evidence.test.mjs": "c29a23a6c254b47ebb20409aabe8bc030467677b1e3eb386acfaf14fff3229dc",
+    "scripts/tests/test-execution-evidence.vitest.test.mjs": "ba3ab02eaf18ca077863487a6a763cc773382b912c3ab92ee29c75d525c8cb19",
+    "server/public/locales/en/msp/billing.json": "658f70b3d7d24c4919792af289bc00046dd560c01937666c8a395abf6551b28d"
+  },
+  "observedFailures": [
+    {
+      "runId": "34320694357",
+      "jobId": "102366429360",
+      "cause": "Lightweight job lacks Vitest dependencies needed by relocated runtime case"
+    },
+    {
+      "runId": "34320694000",
+      "jobId": "102366427260",
+      "cause": "Two bucket balance error/retry locale keys absent"
+    }
+  ],
+  "validation": {
+    "noDependenciesAccounting": {
+      "passed": 26,
+      "failed": 0
+    },
+    "installedVitestBehavior": {
+      "passed": 1,
+      "failed": 0
+    },
+    "englishLocaleChecker": {
+      "command": "I18N_ENFORCE=true node scripts/find-missing-i18n-keys.cjs",
+      "exitCode": 0
+    }
+  },
+  "limits": [
+    "Candidate CI of these follow-ups remains pending.",
+    "No test assertion, skipped-test budget, retry or timeout relaxed."
+  ]
+}

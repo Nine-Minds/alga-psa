@@ -43,7 +43,7 @@ export function MentionSuggestionList({
         borderColor: colors.border,
         borderRadius: 10,
         marginBottom: spacing.xs,
-        shadowColor: "#000",
+        shadowColor: colors.shadow,
         shadowOffset: { width: 0, height: -2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,

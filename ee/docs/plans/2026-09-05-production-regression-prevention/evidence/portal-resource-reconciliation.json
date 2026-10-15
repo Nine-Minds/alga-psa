@@ -1,0 +1,53 @@
+{
+  "status": "passed",
+  "counts": {
+    "passed": 194,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "failures": [],
+  "source": {
+    "before": {
+      "revision": "9ed8b450a36d30187b72688530bfbd8ad979eb9c",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/src/activities/__tests__/portal-domain-reconcile.integration.test.ts"
+        },
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.readiness.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        }
+      ]
+    },
+    "after": {
+      "revision": "9ed8b450a36d30187b72688530bfbd8ad979eb9c",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/src/activities/__tests__/portal-domain-reconcile.integration.test.ts"
+        },
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.readiness.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        }
+      ]
+    }
+  },
+  "files": 27,
+  "limits": [
+    "Native verification pending. Portal reconciliation exercises real temporary manifests with simulated Git/kubectl and database calls; it does not verify live certificate issuance."
+  ]
+}

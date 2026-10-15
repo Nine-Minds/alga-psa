@@ -19,6 +19,14 @@ import {
  * the original sender so downstream contact-matching, watch-list seeding, and
  * notifications use the human author rather than the list address.
  *
+ * When the author's domain does NOT enforce DMARC the list leaves `From:` intact
+ * but still breaks SPF/DKIM alignment for it (the relay re-signs and uses its
+ * own bounce address). Google Groups records the author it saw in
+ * `X-Original-Sender`; when that equals `From:` and the receiving MX vouches for
+ * the author domain (typically via its `arc=pass (... dkdomain=author)` verdict),
+ * the message is resolved as a verified relay with `via: 'preserved-from'` so the
+ * sender-auth gate does not discard the author's contact match.
+ *
  * Safety: the recovered sender is only trusted when the receiving MX's
  * `Authentication-Results` (or `ARC-Authentication-Results`) show DKIM/DMARC/SPF
  * passing in alignment with the recovered domain. This prevents a spammer who
@@ -32,7 +40,7 @@ export type HeaderBag = Record<string, string>;
 export interface ListRewriteResolution {
   sender: ParsedEmailAddress;
   listAddress: string;
-  via: 'x-original-from' | 'x-original-sender' | 'reply-to';
+  via: 'x-original-from' | 'x-original-sender' | 'reply-to' | 'preserved-from';
 }
 
 const ENV_FLAG = 'INBOUND_RESOLVE_LIST_ORIGINAL_SENDER';
@@ -134,10 +142,25 @@ export function computeListRewriteSender(
   const fromEmail = from?.email ?? null;
   const listAddress = resolveListAddress(headers, fromEmail);
 
-  // Only act on the rewrite case: the visible From was replaced with the list
-  // address. Normal list mail (From preserved) is left untouched.
-  if (!listAddress || !fromEmail || fromEmail !== listAddress) {
+  if (!listAddress || !fromEmail) {
     return null;
+  }
+
+  // Preserved-From relay: the list kept the author in From but the relay hop
+  // broke SPF/DKIM alignment for it. Only a relay that records the author it
+  // received (X-Original-Sender / X-Original-From == From) qualifies, and the
+  // receiving MX must still vouch for the author domain.
+  if (fromEmail !== listAddress) {
+    const recorded = [headers['x-original-from'], headers['x-original-sender']]
+      .map((value) => (value ? parseEmailAddress(value)?.email ?? null : null))
+      .find((email) => email && email === fromEmail);
+    if (!recorded || !from) {
+      return null;
+    }
+    if (!authResultsTrustDomain(headers, extractEmailDomain(fromEmail))) {
+      return null;
+    }
+    return { sender: from, listAddress, via: 'preserved-from' };
   }
 
   const candidates: Array<{ via: ListRewriteResolution['via']; value?: string }> = [

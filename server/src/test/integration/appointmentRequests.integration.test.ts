@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { tenantDb } from '@alga-psa/db';
+import { coManagedLifecycleMock } from '@alga-psa/db/testing';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { setupCommonMocks, createMockUser, setMockUser } from '../../../test-utils/testMocks';
@@ -136,9 +137,13 @@ vi.mock('@alga-psa/core/features', async () => {
   };
 });
 
-vi.mock('@alga-psa/licensing', () => ({
+vi.mock('@alga-psa/licensing', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   getLicenseStateRow: vi.fn(async () => null),
   resolveSelfHostTier: vi.fn(() => null),
+  // Appointment creation now retains the co-managed time calendar, so lifecycle
+  // admission is on this path. These fixtures are an independent workspace.
+  ...coManagedLifecycleMock({ fn: vi.fn }),
 }));
 
 // Mock SystemEmailService to prevent actual email sending
@@ -159,12 +164,23 @@ vi.mock('@alga-psa/email', () => ({
 
 // Mock event bus to prevent actual event publishing
 vi.mock('server/src/lib/eventBus/publishers', () => ({
-  publishEvent: vi.fn(() => Promise.resolve())
+  publishEvent: vi.fn(() => Promise.resolve()),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(() => Promise.resolve()),
-  publishWorkflowEvent: vi.fn(() => Promise.resolve())
+  publishWorkflowEvent: vi.fn(() => Promise.resolve()),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 // Mock internal notification actions
@@ -772,7 +788,7 @@ describe('Appointment Request Integration Tests', () => {
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
-      const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+      const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
 
       // Clear mocks from appointment creation
       vi.clearAllMocks();
@@ -786,11 +802,11 @@ describe('Appointment Request Integration Tests', () => {
       // the action publishes APPOINTMENT_REQUEST_APPROVED (with the resolved
       // clientUserId) and internalNotificationSubscriber renders the
       // appointment-request-approved template from it.
-      expect(publishEvent).toHaveBeenCalledWith(
+      expect(publishWorkflowEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           eventType: 'APPOINTMENT_REQUEST_APPROVED',
+          ctx: expect.objectContaining({ tenantId }),
           payload: expect.objectContaining({
-            tenantId,
             appointmentRequestId: createResult.data!.appointment_request_id,
             clientUserId
           })
@@ -1818,7 +1834,7 @@ describe('Appointment Request Integration Tests', () => {
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
-      const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+      const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
 
       // Clear mocks from appointment creation
       vi.clearAllMocks();
@@ -1832,11 +1848,11 @@ describe('Appointment Request Integration Tests', () => {
       // the action publishes APPOINTMENT_REQUEST_DECLINED (with the resolved
       // clientUserId and reason) and internalNotificationSubscriber renders the
       // appointment-request-declined template from it.
-      expect(publishEvent).toHaveBeenCalledWith(
+      expect(publishWorkflowEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           eventType: 'APPOINTMENT_REQUEST_DECLINED',
+          ctx: expect.objectContaining({ tenantId }),
           payload: expect.objectContaining({
-            tenantId,
             appointmentRequestId: createResult.data!.appointment_request_id,
             clientUserId,
             declineReason: 'Service temporarily unavailable'

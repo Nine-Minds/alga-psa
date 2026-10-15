@@ -8,6 +8,7 @@ import type {
 } from '../contracts';
 import { evaluateRelationshipRules } from '../relationships';
 import { ALLOW_ALL_SCOPE, DENY_ALL_SCOPE } from '../scope';
+import { resolveVisibleContactIds } from '../../portal/visibility';
 
 export type BuiltinRelationshipRulesResolver = (
   input: AuthorizationEvaluationInput
@@ -69,6 +70,39 @@ export class BuiltinAuthorizationKernelProvider implements BuiltinAuthorizationP
     const rules = this.resolveRules(input);
 
     if (!input.record) {
+      if (rules.some((rule) => rule.template === 'contact_visibility')) {
+        const visibility = input.contactVisibility;
+        if (!visibility?.clientId || visibility.visibleBoardIds?.length === 0 ||
+            (visibility.effectiveTicketScope !== 'client' &&
+              (visibility.effectiveTicketScope !== 'contact' || !visibility.contactId))) {
+          return { allowed: false, scope: DENY_ALL_SCOPE, reasons: [] };
+        }
+        // A constraint list is a pure conjunction and cannot express the OR the
+        // `contact_visibility` template evaluates (own/reports ∨ profile grant ∨
+        // watcher). Emit the strictly *narrower* conjunct instead: the contact
+        // and the people who report to them. Fails closed. Consumers that need
+        // the full predicate use the template's compileSql/matches.
+        const visibleContactIds = resolveVisibleContactIds(visibility);
+        return {
+          allowed: true,
+          scope: {
+            allowAll: false,
+            denied: false,
+            constraints: [
+              { field: 'client_id', operator: 'eq', value: visibility.clientId },
+              ...(visibility.visibleBoardIds === null ? [] : [
+                { field: 'board_id', operator: 'in' as const, value: visibility.visibleBoardIds },
+              ]),
+              ...(visibility.effectiveTicketScope === 'contact' ? [
+                visibleContactIds.length === 1
+                  ? { field: 'contact_name_id', operator: 'eq' as const, value: visibility.contactId }
+                  : { field: 'contact_name_id', operator: 'in' as const, value: visibleContactIds },
+              ] : []),
+            ],
+          },
+          reasons: [],
+        };
+      }
       // Scope-only evaluation. A client subject with the same_client rule must
       // never produce an unconstrained allow: constrain to the subject's client
       // when known, deny when it is missing.

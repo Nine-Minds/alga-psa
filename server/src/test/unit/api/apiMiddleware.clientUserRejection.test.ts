@@ -5,7 +5,6 @@ const mocks = vi.hoisted(() => ({
   findUserByIdForApi: vi.fn(),
   validateApiKeyForTenant: vi.fn(),
   validateApiKeyAnyTenant: vi.fn(),
-  validateApiKey: vi.fn(),
   getSecretProviderInstance: vi.fn(),
   runAsSystem: vi.fn(),
   runWithTenant: vi.fn(),
@@ -22,9 +21,6 @@ vi.mock('@alga-psa/users/actions', () => ({
 }));
 
 vi.mock('@alga-psa/auth', () => ({
-  ApiKeyService: {
-    validateApiKey: mocks.validateApiKey,
-  },
   runWithApiKeyUser: mocks.runWithApiKeyUser,
 }));
 
@@ -115,7 +111,7 @@ function validKeyRecord() {
 
 describe('user API context construction rejects client users', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     mocks.enforceApiRateLimit.mockResolvedValue(null);
     mocks.getTenantProduct.mockResolvedValue('psa');
     mocks.resolveProductApiBehavior.mockReturnValue('allowed');
@@ -174,7 +170,7 @@ describe('user API context construction rejects client users', () => {
   });
 
   it('legacy withApiKeyAuth and withAuth wrappers reject a client user with 401', async () => {
-    mocks.validateApiKey.mockResolvedValue(validKeyRecord());
+    mocks.validateApiKeyAnyTenant.mockResolvedValue(validKeyRecord());
     mocks.findUserByIdForApi.mockResolvedValue(CLIENT_USER);
 
     const legacyWithApiKeyAuth = withApiKeyAuth()(async () => new Response('ok', { status: 200 }));
@@ -186,6 +182,7 @@ describe('user API context construction rejects client users', () => {
       apiRequest({ 'x-api-key': 'k' }) as any
     );
     expect(legacyWithAuthResponse.status).toBe(401);
+    expect(mocks.findUserByIdForApi).toHaveBeenCalledTimes(2);
   });
 
   it('enhanced withApiKeyAuth rejects a client user with 401', async () => {
@@ -230,13 +227,14 @@ describe('user API context construction rejects client users', () => {
     expect(response.status).toBe(200);
     expect(seenContext).toMatchObject({ kind: 'system', rateLimitSubjectId: 'nm_store' });
     // The ordinary-user validator must not have been consulted for the system key.
-    expect(mocks.validateApiKey).not.toHaveBeenCalled();
+    expect(mocks.validateApiKeyAnyTenant).not.toHaveBeenCalled();
+    expect(mocks.validateApiKeyForTenant).not.toHaveBeenCalled();
     expect(mocks.findUserByIdForApi).not.toHaveBeenCalled();
   });
 
   it('an ordinary user key cannot enter the NM Store system branch', async () => {
     mocks.getSecretProviderInstance.mockResolvedValue({ getAppSecret: async () => 'nm-store-key' });
-    mocks.validateApiKey.mockResolvedValue(validKeyRecord());
+    mocks.validateApiKeyForTenant.mockResolvedValue(validKeyRecord());
     mocks.findUserByIdForApi.mockResolvedValue(INTERNAL_USER);
 
     const { withApiKeyAuth: legacyWithOptions } = await import('../../../lib/api/middleware/apiMiddleware');

@@ -99,35 +99,33 @@ async function saveAnalyticsSettings(tenant: string, analyticsSettings: Analytic
         .first();
 
       const currentSettings = existingSettings?.settings || {};
+      // Citus forbids STABLE database functions such as now() in a distributed
+      // table's ON CONFLICT merge. Bind one application timestamp instead.
+      const updatedAt = new Date().toISOString();
       const updatedSettings = {
         ...currentSettings,
         analytics: {
           ...currentSettings.analytics,
           ...analyticsSettings,
-          last_updated_at: new Date().toISOString()
+          last_updated_at: updatedAt
         }
       };
 
-      // Check if tenant settings already exist
-      const existingRecord = await tenantSettings()
-        .first();
-
-      if (existingRecord) {
-        // Update existing settings
-        await tenantSettings()
-          .update({
-            settings: JSON.stringify(updatedSettings),
-            updated_at: trx.fn.now()
-          });
-      } else {
-        // Insert new settings
-        await tenantSettings()
-          .insert({
-            tenant,
-            settings: JSON.stringify(updatedSettings),
-            updated_at: trx.fn.now()
-          });
-      }
+      // The default-tax setting can create tenant_settings before analytics is
+      // initialized. Use one atomic upsert so a concurrent initializer (or a
+      // row that appears after the read above) cannot abort the caller's
+      // transaction with a duplicate primary key.
+      await tenantSettings()
+        .insert({
+          tenant,
+          settings: JSON.stringify(updatedSettings),
+          updated_at: updatedAt
+        })
+        .onConflict('tenant')
+        .merge({
+          settings: JSON.stringify(updatedSettings),
+          updated_at: updatedAt
+        });
     });
   } catch (error) {
     console.error('Error saving analytics settings:', error);

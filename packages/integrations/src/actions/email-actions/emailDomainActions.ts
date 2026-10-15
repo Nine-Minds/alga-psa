@@ -6,6 +6,7 @@
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   actionError,
   type ActionMessageError,
@@ -135,11 +136,14 @@ export const verifyEmailDomain = withAuth(async (
 });
 
 export const deleteEmailDomain = withAuth(async (
-  _user,
+  user,
   { tenant },
   domainName: string
 ): Promise<{ success: boolean; message: string } | EmailDomainActionError> => {
   const { knex } = await createTenantKnex();
+  if (!await hasPermission(user, 'settings', 'update', knex)) {
+    return actionError('You do not have permission to update email settings', 'errors.permissionDenied');
+  }
 
   try {
     const db = tenantDb(knex, tenant);
@@ -151,6 +155,17 @@ export const deleteEmailDomain = withAuth(async (
 
     if (!domain) {
       return actionError('Domain not found', 'msp/email-providers:errors.domain.notFound');
+    }
+
+    const senders = await db.table('email_sender_addresses').select('email_address');
+    const routedSender = senders.find((sender: { email_address: string }) =>
+      sender.email_address.toLowerCase().split('@')[1] === domainName.toLowerCase()
+    );
+    if (routedSender) {
+      return actionError(
+        `Cannot delete ${domainName} while sender ${routedSender.email_address} uses it. Reassign or delete that sender first.`,
+        'msp/email-providers:errors.domain.stillReferenced'
+      );
     }
 
     // Delete from provider if it was successfully created

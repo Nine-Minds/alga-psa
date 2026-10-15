@@ -1,0 +1,62 @@
+{
+  "status": "verified_locally",
+  "scope": "Representative invoice generation and persisted accounting behavior on single-node Citus",
+  "test": "server/src/test/integration/invoiceTicketImmutable.integration.test.ts",
+  "assertions": [
+    "Hash distribution required for invoices, invoice_charges and tickets; all five billing-table topology entries recorded",
+    "Invoice preview, generation and immutable ticket snapshots",
+    "PDF and accounting export consistency after source edits",
+    "Credit application and duplicate generation prevention",
+    "Existing malformed and historical snapshot behavior retained"
+  ],
+  "environment": {
+    "database": "invoice_citus_82cc",
+    "bootstrap": "Fresh combined CE+EE migrations and development seeds",
+    "log": "/tmp/alga-invoice-citus-immutable.log"
+  },
+  "limits": [
+    "Extracted complete file added to mandatory integration floor and prepared Citus runtime gate; combined/native gate verification pending.",
+    "Authentication is supplied by the existing fixture mock; native authenticated browser coverage is separate.",
+    "Does not prove prior-release upgrade coverage or all F022 requirements.",
+    "Actual production distribution of time-entry tables has not been verified; mixed fresh-schema topology is recorded explicitly."
+  ],
+  "firstRun": {
+    "status": "failed",
+    "reason": "New assertion incorrectly assumed time_entries and invoice_time_entries were hash distributed; actual combined migrations leave those local. Billing assertions were not reached.",
+    "log": "/tmp/alga-invoice-citus-runtime.log"
+  },
+  "postgresExtractedCase": {
+    "passed": 1,
+    "failed": 0,
+    "log": "/tmp/alga-invoice-immutable-postgres.log"
+  },
+  "citusExtractedCase": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "durationSeconds": 319.46,
+    "log": "/tmp/alga-invoice-citus-immutable.log",
+    "topology": [
+      {
+        "name": "invoices",
+        "partmethod": "h"
+      },
+      {
+        "name": "tickets",
+        "partmethod": "h"
+      },
+      {
+        "name": "invoice_charges",
+        "partmethod": "h"
+      },
+      {
+        "name": "invoice_time_entries",
+        "partmethod": null
+      },
+      {
+        "name": "time_entries",
+        "partmethod": null
+      }
+    ]
+  }
+}

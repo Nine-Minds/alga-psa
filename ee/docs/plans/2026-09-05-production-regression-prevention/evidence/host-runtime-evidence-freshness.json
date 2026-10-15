@@ -1,0 +1,21 @@
+{
+  "scope": "Host runtime evidence target and freshness enforcement",
+  "coverage": [
+    "Versioned runtime envelope required; legacy bare arrays rejected",
+    "Exact consumer-owned context/namespace/workload-set match, with ordering immaterial and duplicate/missing workload rejection",
+    "Positive maximum age policy required; stale/future/invalid timestamps rejected with exact millisecond threshold",
+    "Collector captures timestamp before queries and serializes identity metadata together with observations",
+    "Actual collector return value survives JSON serialization and is accepted by promotion; same images from altered target rejected",
+    "Promotion CLI fixture now uses runtime envelope and explicit target/age policy"
+  ],
+  "log": {
+    "path": "/tmp/alga-runtime-freshness-final.log",
+    "sha256": "460175f2a085d21935ff85718026b7c1cd05348121f86a6cdf4df7a3a50f3b0a"
+  },
+  "limitations": [
+    "Host fixtures and read adapter only; no live cluster queried",
+    "Target-specific age policy and clock synchronization need validation",
+    "CI smoke evidence production and actual release wiring remain incomplete",
+    "No Docker builds"
+  ]
+}

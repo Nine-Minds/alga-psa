@@ -15,11 +15,12 @@ import {
   type CreateExportErrorInput,
   type UpdateExportBatchStatusInput,
   AccountingExportValidation,
-  AccountingExportInvoiceSelector
+  AccountingExportInvoiceSelector,
+  AccountingAdapterRegistry
 } from '@alga-psa/billing/services';
 import { AppError } from '@alga-psa/core';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { runWithTenant, createTenantKnex } from '../../db';
+import { createTenantKnex } from '../../db';
 import { tenantDb } from '@alga-psa/db';
 import {
   AuthenticatedApiRequest,
@@ -118,7 +119,7 @@ export class ApiAccountingExportController extends ApiBaseController {
   async createBatch(req: NextRequest): Promise<NextResponse> {
     try {
       const apiRequest = await this.authenticate(req);
-      return await runWithTenant(apiRequest.context.tenant, async () => {
+      return await this.runWithApiKeyContext(apiRequest, async () => {
         await this.authorize(apiRequest, 'create');
 
         const body = (await apiRequest.json()) as CreateExportBatchInput;
@@ -181,7 +182,7 @@ export class ApiAccountingExportController extends ApiBaseController {
   async listBatches(req: NextRequest): Promise<NextResponse> {
     try {
       const apiRequest = await this.authenticate(req);
-      return await runWithTenant(apiRequest.context.tenant, async () => {
+      return await this.runWithApiKeyContext(apiRequest, async () => {
         await this.authorize(apiRequest, 'read');
 
         const url = new URL(apiRequest.url);
@@ -205,7 +206,7 @@ export class ApiAccountingExportController extends ApiBaseController {
       const apiRequest = await this.authenticate(req);
       apiRequest.params = params;
 
-      return await runWithTenant(apiRequest.context.tenant, async () => {
+      return await this.runWithApiKeyContext(apiRequest, async () => {
         await this.authorize(apiRequest, 'read');
 
         const data = await getAccountingExportBatch(params.batchId);
@@ -229,7 +230,7 @@ export class ApiAccountingExportController extends ApiBaseController {
     try {
       const apiRequest = await this.authenticate(req);
 
-      return await runWithTenant(apiRequest.context.tenant, async () => {
+      return await this.runWithApiKeyContext(apiRequest, async () => {
         await this.authorize(apiRequest, 'read');
 
         const body = ((await apiRequest.json()) as { filters?: Record<string, unknown> }) ?? {};
@@ -297,7 +298,7 @@ export class ApiAccountingExportController extends ApiBaseController {
     try {
       const apiRequest = await this.authenticate(req);
 
-      return await runWithTenant(apiRequest.context.tenant, async () => {
+      return await this.runWithApiKeyContext(apiRequest, async () => {
         await this.authorize(apiRequest, 'update');
 
         const body = (await apiRequest.json()) as {
@@ -441,7 +442,7 @@ export class ApiAccountingExportController extends ApiBaseController {
       const apiRequest = await this.authenticate(req);
       apiRequest.params = params;
 
-      return await runWithTenant(apiRequest.context.tenant, async () => {
+      return await this.runWithApiKeyContext(apiRequest, async () => {
         await this.authorize(apiRequest, 'update');
 
         const body = (await apiRequest.json()) as { lines: Array<CreateExportLineInput & {
@@ -458,7 +459,10 @@ export class ApiAccountingExportController extends ApiBaseController {
         }) as CreateExportLineInput[];
         const lines = await appendAccountingExportLines(params.batchId, normalizedLines);
 
-        await AccountingExportValidation.ensureMappingsForBatch(params.batchId);
+        await AccountingExportValidation.ensureMappingsForBatch(
+          params.batchId,
+          await AccountingAdapterRegistry.createDefault()
+        );
         return NextResponse.json(lines, { status: 201 });
       });
     } catch (error) {
@@ -471,7 +475,7 @@ export class ApiAccountingExportController extends ApiBaseController {
       const apiRequest = await this.authenticate(req);
       apiRequest.params = params;
 
-      return await runWithTenant(apiRequest.context.tenant, async () => {
+      return await this.runWithApiKeyContext(apiRequest, async () => {
         await this.authorize(apiRequest, 'update');
 
         const body = (await apiRequest.json()) as { errors: CreateExportErrorInput[] };
@@ -489,7 +493,7 @@ export class ApiAccountingExportController extends ApiBaseController {
       const apiRequest = await this.authenticate(req);
       apiRequest.params = params;
 
-      return await runWithTenant(apiRequest.context.tenant, async () => {
+      return await this.runWithApiKeyContext(apiRequest, async () => {
         await this.authorize(apiRequest, 'update');
 
         const body = (await apiRequest.json()) as UpdateExportBatchStatusInput;
@@ -511,7 +515,7 @@ export class ApiAccountingExportController extends ApiBaseController {
       const apiRequest = await this.authenticate(req);
       apiRequest.params = params;
 
-      return await runWithTenant(apiRequest.context.tenant, async () => {
+      return await this.runWithApiKeyContext(apiRequest, async () => {
         await this.authorize(apiRequest, 'execute');
 
         try {
@@ -566,7 +570,7 @@ export class ApiAccountingExportController extends ApiBaseController {
       const apiRequest = await this.authenticate(req);
       apiRequest.params = params;
 
-      return await runWithTenant(apiRequest.context.tenant, async () => {
+      return await this.runWithApiKeyContext(apiRequest, async () => {
         await this.authorize(apiRequest, 'execute');
 
         try {

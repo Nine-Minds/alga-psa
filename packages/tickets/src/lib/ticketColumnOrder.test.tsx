@@ -82,12 +82,13 @@ describe('createTicketColumns column ordering', () => {
   it('still renders a column that was added to the catalog after the order was saved', () => {
     const columns = keysOf(createTicketColumns({
       ...baseOptions,
-      // An order saved before `created` and `created_by` existed.
+      // An order saved before `created`, `created_by` and `contact` existed.
       columnOrder: ['status', 'priority'],
-      displaySettings: { list: { columnVisibility: { created: true, created_by: true } } },
+      displaySettings: { list: { columnVisibility: { created: true, created_by: true, contact: true } } },
     }));
 
     expect(columns).toContain('entered_at');
     expect(columns).toContain('entered_by_name');
+    expect(columns).toContain('contact_name');
   });
 });

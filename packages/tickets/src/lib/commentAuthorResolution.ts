@@ -17,13 +17,13 @@ export interface CommentContactAuthor {
 }
 
 export interface ResolvedCommentAuthor {
-  source: 'user' | 'contact' | 'collaborator' | 'unknown';
+  source: 'user' | 'contact' | 'collaborator' | 'system' | 'unknown';
   displayName: string;
   email?: string;
   userId?: string;
   contactId?: string;
   userType?: string;
-  avatarKind: 'user' | 'contact' | 'unknown';
+  avatarKind: 'user' | 'contact' | 'system' | 'unknown';
   avatarUrl: string | null;
   avatarName?: string;
 }
@@ -35,12 +35,19 @@ const UNKNOWN_AUTHOR: ResolvedCommentAuthor = {
   avatarUrl: null,
 };
 
-type CommentAuthorFields = Pick<IComment, 'user_id' | 'contact_id' | 'actor_reference_id' | 'actor_display_name' | 'actor_organization_name'>;
+type CommentAuthorFields = Pick<IComment, 'user_id' | 'contact_id' | 'is_system_generated' | 'actor_reference_id' | 'actor_display_name' | 'actor_organization_name'>;
 
 /** Partial or malformed foreign attribution must not trigger a local lookup. */
 export function hasCommentCollaborationAttribution(comment: CommentAuthorFields): boolean {
   return [comment.actor_reference_id, comment.actor_display_name, comment.actor_organization_name].some(value => value != null);
 }
+
+const SYSTEM_AUTHOR: ResolvedCommentAuthor = {
+  source: 'system',
+  displayName: 'System',
+  avatarKind: 'system',
+  avatarUrl: null,
+};
 
 export function resolveCommentAuthor(
   comment: CommentAuthorFields,
@@ -86,6 +93,10 @@ export function resolveCommentAuthor(
         avatarUrl: contact.avatarUrl,
       };
     }
+  }
+
+  if (comment.is_system_generated) {
+    return SYSTEM_AUTHOR;
   }
 
   return UNKNOWN_AUTHOR;

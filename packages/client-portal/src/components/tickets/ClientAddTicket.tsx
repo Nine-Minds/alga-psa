@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Link2 } from 'lucide-react';
 import { createClientTicket } from '@alga-psa/client-portal/actions';
-import { getClientTicketFormData } from '@alga-psa/tickets/actions/ticketFormActions';
+import { getClientTicketFormData, getClientTicketPrioritiesForBoard } from '@alga-psa/tickets/actions/ticketFormActions';
 import { IPriority, IBoard } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -22,6 +22,7 @@ import {
   getErrorMessage,
   isActionMessageError,
   isActionPermissionError,
+  UserFacingError,
 } from '@alga-psa/ui/lib/errorHandling';
 
 const isReturnedActionError = (value: unknown) =>
@@ -101,11 +102,9 @@ export function ClientAddTicket({
         const mappedBoards = portalBoards || [];
         setBoards(mappedBoards);
         setPriorities(formData.priorities as IPriority[]);
-        if (mappedBoards.length > 0) {
-          setBoardId((mappedBoards[0] as IBoard).board_id ?? '');
-        } else {
-          setBoardId('');
-        }
+        // The loader orders the tenant default first and loads its priorities.
+        const preselected = mappedBoards.find((board) => board.is_default) ?? mappedBoards[0];
+        setBoardId(preselected?.board_id ?? '');
       } catch (error) {
         console.error('Error fetching form data:', error);
       } finally {
@@ -115,6 +114,19 @@ export function ClientAddTicket({
 
     fetchData();
   }, [open]);
+
+  const handleBoardChange = async (nextBoardId: string) => {
+    setBoardId(nextBoardId);
+    if (!nextBoardId || nextBoardId === boardId) return;
+    // Boards can carry different priority types, so the priority list follows the board.
+    setPriorityId('');
+    try {
+      setPriorities(await getClientTicketPrioritiesForBoard(nextBoardId));
+    } catch (error) {
+      console.error('Error fetching priorities for board:', error);
+      setPriorities([]);
+    }
+  };
 
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
@@ -168,7 +180,7 @@ export function ClientAddTicket({
     try {
       const validationErrors = validateForm();
       if (validationErrors.length > 0) {
-        throw new Error(validationErrors.join('\n'));
+        throw new UserFacingError(validationErrors.join('\n'));
       }
 
       const formData = new FormData();
@@ -193,12 +205,9 @@ export function ClientAddTicket({
       onTicketAdded?.();
     } catch (error) {
       console.error('Error creating ticket:', error);
-      // Map backend error messages to translation keys
-      let errorMessage = t('create.errors.createFailed');
-      if (error instanceof Error) {
-        errorMessage = mapCreateTicketError(error.message);
-      }
-      setError(errorMessage);
+      // Only the returned-action-error branch above carries user-safe text; a thrown
+      // error may hold server detail, so it gets the generic message.
+      setError(error instanceof UserFacingError ? error.message : t('create.errors.createFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -318,7 +327,7 @@ export function ClientAddTicket({
                     id="client-ticket-board"
                     value={boardId}
                     onValueChange={(value) => {
-                      setBoardId(value);
+                      handleBoardChange(value);
                       clearErrorIfSubmitted();
                     }}
                     options={memoizedBoardOptions}

@@ -1,0 +1,26 @@
+{
+  "status": "local_real_action_database_verified",
+  "database": "workflow_invocation_82cc",
+  "result": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0
+  },
+  "log": "/tmp/alga-real-email-comment-db-final.log",
+  "typescript": "Targeted tsc passed (/tmp/alga-workflow-db-types-final.log)",
+  "verified": [
+    "Registered create_comment_from_parsed_email executes through real Temporal activity",
+    "Actual comment and awaiting_internal response state persist",
+    "Sequential replay produces one comment and one invocation"
+  ],
+  "doubles": [
+    "Admin connection/transaction injected into disposable DB",
+    "Event-bus publication mocked; notification delivery not tested",
+    "Temporal worker transport not exercised"
+  ],
+  "remaining": [
+    "New-ticket and attachment real action effects",
+    "Live Temporal worker and worker-loss recovery",
+    "Legacy integration requirements mapping and skip removal"
+  ]
+}

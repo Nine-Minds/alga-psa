@@ -1,34 +1,21 @@
-export type DiagnosticsStepStatus = 'pass' | 'warn' | 'fail' | 'skip';
+import type {
+  DiagnosticsStepStatus,
+  DiagnosticsStep,
+  DiagnosticsHttpMeta,
+  DiagnosticsErrorMeta,
+} from './diagnostics.interfaces';
 
-export interface DiagnosticsHttpMeta {
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
-  url?: string;
-  path?: string;
-  resource?: string;
-  status?: number;
-  requestId?: string;
-  clientRequestId?: string;
-}
+export type {
+  DiagnosticsStepStatus,
+  DiagnosticsHttpMeta,
+  DiagnosticsErrorMeta,
+} from './diagnostics.interfaces';
 
-export interface DiagnosticsErrorMeta {
-  message: string;
-  status?: number;
-  code?: string;
-  requestId?: string;
-  clientRequestId?: string;
-  responseBody?: unknown;
-}
-
-export interface Microsoft365DiagnosticsStep {
-  id: string;
-  title: string;
-  status: DiagnosticsStepStatus;
-  startedAt: string;
-  durationMs: number;
-  http?: DiagnosticsHttpMeta;
-  data?: Record<string, unknown>;
-  error?: DiagnosticsErrorMeta;
-}
+/**
+ * Microsoft 365 email diagnostics reuse the generic step envelope. The step
+ * shape is intentionally identical so the email report contract is unchanged.
+ */
+export type Microsoft365DiagnosticsStep = DiagnosticsStep;
 
 export interface Microsoft365DiagnosticsSummary {
   providerId: string;
@@ -58,4 +45,3 @@ export interface Microsoft365DiagnosticsOptions {
   requiredScopes?: string[];
   folderListTop?: number;
 }
-

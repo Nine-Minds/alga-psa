@@ -17,6 +17,13 @@ export {
 } from './ticketColumnCatalog';
 export type { TicketColumnSpec, TicketColumnKind, TicketListColumnKey } from './ticketColumnCatalog';
 export {
+  TICKET_LIST_SORT_KEYS,
+  DEFAULT_TICKET_LIST_SORT_KEY,
+  isTicketListSortKey,
+  normalizeTicketListSortKey,
+} from './ticketListSort';
+export type { TicketListSortKey } from './ticketListSort';
+export {
   CAPTURE_EXCLUDED_FILTER_KEYS,
   TICKET_VIEW_DENSITY_DEFAULT,
   TICKET_VIEW_DENSITY_STEP,
@@ -31,6 +38,65 @@ export type {
   ResolvedTicketViewSettings,
   TicketViewSettings,
 } from './ticketViewSettings';
+export {
+  CUSTOMER_TICKETS_PATHNAME,
+  DEFAULT_TICKET_LIST_PRESENTATION,
+  NATIVE_TICKET_LIST_SCOPE,
+  TICKET_LIST_CLIENT_PARAM,
+  TICKET_LIST_DEFAULT_PAGE,
+  TICKET_LIST_DEFAULT_PAGE_SIZE,
+  TICKET_LIST_DIRECTION_PARAM,
+  TICKET_LIST_MAX_PAGE_SIZE,
+  TICKET_LIST_MAX_SEARCH_LENGTH,
+  TICKET_LIST_MIN_PAGE_SIZE,
+  TICKET_LIST_PAGE_PARAM,
+  TICKET_LIST_PAGE_SIZE_PARAM,
+  TICKET_LIST_QUEUE_VIEW_PARAM,
+  TICKET_LIST_SEARCH_PARAM,
+  TICKET_LIST_SIGNAL_PARAM,
+  TICKET_LIST_SORT_PARAM,
+  TICKET_LIST_STATE_PARAM,
+  TICKET_LIST_WORKSPACE_PARAM,
+  buildTicketListHref,
+  hasExplicitQualifiedScope,
+  isQualifiedTicketListScope,
+  isTicketQueueDirection,
+  isTicketQueueSignal,
+  isTicketQueueSort,
+  isTicketQueueState,
+  normalizeTicketListPage,
+  normalizeTicketListPageSize,
+  parseTicketListPresentation,
+  parseTicketListScope,
+  resetQualifiedTicketListPresentation,
+  resolveLegacyQueueRedirect,
+  serializeTicketListQuery,
+  switchTicketListView,
+  ticketListScopesEqual,
+  ticketListWorkspaceToken,
+} from './ticketListScope';
+export type {
+  NativeTicketListScope,
+  QualifiedTicketListScope,
+  TicketListPresentation,
+  TicketListScope,
+  TicketListWorkspace,
+  TicketQueueDirection,
+  TicketQueueSignal,
+  TicketQueueSort,
+  TicketQueueState,
+  TicketQueueView,
+} from './ticketListScope';
+export {
+  isQualifiedHandbackEligible,
+  isSharedTicketListIdentity,
+  nativeTicketListIdentity,
+  sharedTicketListIdentity,
+  ticketListDetailHref,
+  ticketListIdentityFromQueueItem,
+  ticketListIdentityKey,
+} from './ticketListIdentity';
+export type { TicketListIdentity, TicketListIdentitySource } from './ticketListIdentity';
 export { calculateItilPriority, ItilLabels } from './itilUtils';
 export { getCommentResponseSource, getLatestCustomerResponseSource } from './responseSource';
 export { resolveCommentAuthor } from './commentAuthorResolution';
@@ -53,7 +119,8 @@ export {
 } from './ticketMobileEditorBridge';
 export { TicketMobileEditorRuntime } from './ticketMobileEditorRuntime';
 export {
-  applyVisibilityBoardFilter,
+  applyTicketVisibilityFilter,
+  ticketMatchesVisibility,
   VISIBILITY_GROUP_MISMATCH_ERROR,
   VISIBILITY_GROUP_MISSING_ERROR,
 } from './clientPortalVisibility';
@@ -96,6 +163,20 @@ export type {
 export type { TicketMobileEditorRuntimeOptions } from './ticketMobileEditorRuntime';
 export { getTicketOrigin, TICKET_ORIGIN_OTHER } from './ticketOrigin';
 export type { ResolvedTicketOrigin } from './ticketOrigin';
+export {
+  isBuiltInExternalSystemKey,
+  isCustomExternalSystemKey,
+  findBuiltInExternalSystem,
+  customExternalSystemToDefinition,
+  resolveExternalSystem,
+  listExternalSystems,
+  safeExternalUrl,
+  isValidExternalUrl,
+  renderExternalLinkUrl,
+  resolveExternalSystemOrigin,
+} from './externalSystems';
+export { resolveDocumentViewUrl, documentViewUrl } from './documentViewUrl';
+export type { DocumentViewUrlInput } from './documentViewUrl';
 // Only the client-safe close-rule types/constants/error are exported from this
 // barrel. enforceTicketCloseRules / evaluateTicketCloseRules are server-only
 // (they import hasPermission + DB) and must be imported from the deep path
@@ -114,3 +195,17 @@ export type {
   EnforceTicketCloseRulesOptions,
   EnforceTicketCloseRulesResult,
 } from './closeRuleConstants';
+export {
+  BundlePropagationConfirmationRequiredError,
+} from './ticketBundlePropagation';
+export type {
+  TicketBundleBoundary,
+  BundlePropagationChild,
+  BundlePropagationUnaffectedReason,
+  BundlePropagationUnaffectedChild,
+  BundleStatusPropagationPreview,
+  BundlePropagationUser,
+  BundleStatusPropagationContext,
+  PropagateBundleMasterStatusOptions,
+  PropagateBundleMasterStatusResult,
+} from './ticketBundlePropagation';

@@ -1,0 +1,338 @@
+[
+  {
+    "id": "F001",
+    "description": "packages/formatting/src/blocknoteUtils.ts exports a sanitizeHref helper that returns a safe href string or null, allowing http, https and mailto schemes only.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements > FR1"]
+  },
+  {
+    "id": "F002",
+    "description": "sanitizeHref normalizes its input before evaluating the scheme: leading and trailing whitespace, embedded tab/newline/NUL control characters, and case are neutralized so JaVaScRiPt: and java\\tscript: are rejected.",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F003",
+    "description": "sanitizeHref rejects protocol-relative URLs (//host) rather than treating them as scheme-less.",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F004",
+    "description": "sanitizeHref preserves scheme-less relative paths (/terms, terms.html) and fragments (#section).",
+    "implemented": true,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F005",
+    "description": "The BlockNote-to-HTML link emission at blocknoteUtils.ts:526 routes its href through sanitizeHref and escapeHtml, and omits the anchor entirely when sanitizeHref returns null, emitting the link text alone.",
+    "implemented": true,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F006",
+    "description": "The ProseMirror-to-HTML link mark at blocknoteUtils.ts:840 routes its href through sanitizeHref, omitting the anchor when rejected.",
+    "implemented": true,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F007",
+    "description": "The BlockNote-to-Markdown link emission at blocknoteUtils.ts:262 routes its href through sanitizeHref, emitting bare text when rejected.",
+    "implemented": true,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F008",
+    "description": "The ProseMirror-to-Markdown link mark at blocknoteUtils.ts:1014 routes its href through sanitizeHref, emitting bare text when rejected.",
+    "implemented": true,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F009",
+    "description": "The no-op escape at blocknoteUtils.ts:754 (codeBlock text) is replaced with escapeHtml, so code block content is HTML-escaped in convertBlockNoteToHTML output.",
+    "implemented": true,
+    "prdRefs": ["FR4", "Problem > The security defect this uncovers"]
+  },
+  {
+    "id": "F010",
+    "description": "The no-op escape at blocknoteUtils.ts:786 (unknown-block string content) is replaced with escapeHtml.",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F011",
+    "description": "The language prop interpolated into class=\"language-${language}\" at blocknoteUtils.ts:755 is escaped, matching the already-correct ProseMirror path at :914.",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F012",
+    "description": "The image src emission at blocknoteUtils.ts:774 routes its URL through sanitizeHref, extended to allow the data: scheme for images only, and omits the img element when rejected.",
+    "implemented": true,
+    "prdRefs": ["FR1", "FR5"]
+  },
+  {
+    "id": "F013",
+    "description": "Colour values interpolated into style attributes (blocknoteUtils.ts:303, 308, 337, 500, 572-580, 638-653) are escaped or validated before emission.",
+    "implemented": true,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F014",
+    "description": "The textAlignment prop interpolated into style at blocknoteUtils.ts:638-653 is constrained to a known set of alignment values rather than interpolated raw.",
+    "implemented": true,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F015",
+    "description": "The divergent inline escapers at blocknoteUtils.ts:531, 550, 563 are replaced by calls to the shared escapeHtml helper, leaving one escaping implementation in the file.",
+    "implemented": true,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F016",
+    "description": "A migration adds quotes.terms_and_conditions_block as a nullable jsonb column, guarded by a hasColumn check, with one subcommand per alterTable call and a working down migration.",
+    "implemented": true,
+    "prdRefs": ["FR7", "NFR1", "Data / API / Integrations"]
+  },
+  {
+    "id": "F017",
+    "description": "IQuote and QuoteViewModel in packages/types/src/interfaces/quote.interfaces.ts carry terms_and_conditions_block alongside terms_and_conditions.",
+    "implemented": true,
+    "prdRefs": ["FR7", "Data / API / Integrations"]
+  },
+  {
+    "id": "F018",
+    "description": "packages/billing/src/schemas/quoteSchemas.ts accepts terms_and_conditions_block on create and update.",
+    "implemented": true,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F019",
+    "description": "A shared helper flattens BlockNote block content to plain text for the terms_and_conditions projection column, used by every write path so the two columns cannot drift.",
+    "implemented": true,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F020",
+    "description": "createQuote writes both columns: the block column as given, the text column as the flattened projection of it.",
+    "implemented": true,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F021",
+    "description": "updateQuote writes both columns together, and clearing the rich value clears both.",
+    "implemented": true,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F022",
+    "description": "createQuoteFromTemplate (quoteActions.ts:1117) copies terms_and_conditions_block alongside terms_and_conditions, preserving its input-over-template-over-null precedence for both.",
+    "implemented": true,
+    "prdRefs": ["FR10"]
+  },
+  {
+    "id": "F023",
+    "description": "duplicateQuote (quoteActions.ts:1179) copies both columns.",
+    "implemented": true,
+    "prdRefs": ["FR10"]
+  },
+  {
+    "id": "F024",
+    "description": "saveQuoteAsTemplate (quoteActions.ts:1251) copies both columns.",
+    "implemented": true,
+    "prdRefs": ["FR10"]
+  },
+  {
+    "id": "F025",
+    "description": "Quote.createRevision (packages/billing/src/models/quote.ts:407) copies both columns.",
+    "implemented": true,
+    "prdRefs": ["FR10"]
+  },
+  {
+    "id": "F026",
+    "description": "The workflow duplicate path (shared/workflow/runtime/actions/businessOperations/crm.ts:1611) copies both columns.",
+    "implemented": true,
+    "prdRefs": ["FR10"]
+  },
+  {
+    "id": "F027",
+    "description": "A plain-string write through the REST API (server/src/lib/api/schemas/quoteSchemas.ts) sets the text column and clears the block column, so the written value is the displayed value.",
+    "implemented": true,
+    "prdRefs": ["FR11", "Open Questions > 3"]
+  },
+  {
+    "id": "F028",
+    "description": "A plain-string write through the workflow business operations sets the text column and clears the block column.",
+    "implemented": true,
+    "prdRefs": ["FR11"]
+  },
+  {
+    "id": "F029",
+    "description": "TemplateNodeType and the TemplateNode union in packages/types/src/lib/invoice-template-ast.ts gain a richText node carrying a content value expression.",
+    "implemented": true,
+    "prdRefs": ["FR12"]
+  },
+  {
+    "id": "F030",
+    "description": "The zod nodeSchema in packages/billing/src/lib/invoice-template-ast/schema.ts gains the matching strict richText variant, and NodeInput mirrors it.",
+    "implemented": true,
+    "prdRefs": ["FR12"]
+  },
+  {
+    "id": "F031",
+    "description": "react-renderer.tsx renders a richText node by resolving its content binding and emitting convertBlockContentToHTML output through dangerouslySetInnerHTML.",
+    "implemented": true,
+    "prdRefs": ["FR13"]
+  },
+  {
+    "id": "F032",
+    "description": "A richText node whose resolved content is a plain string renders it as escaped text with whiteSpace: 'pre-line', matching the text node's treatment rather than passing it to the converter.",
+    "implemented": true,
+    "prdRefs": ["FR13", "Rollout / Migration"]
+  },
+  {
+    "id": "F033",
+    "description": "A richText node whose resolved content is null, undefined or empty falls back to the legacy text node's empty pre-line paragraph (never the converter's '[No content]' placeholder), so migrated stock layouts reproduce the pre-change PDF output byte-for-byte.",
+    "implemented": true,
+    "prdRefs": ["FR13"]
+  },
+  {
+    "id": "F034",
+    "description": "The AST text node is left unchanged, so every existing layout renders as before.",
+    "implemented": true,
+    "prdRefs": ["FR14"]
+  },
+  {
+    "id": "F035",
+    "description": "i18nLabels.ts resolveNode handles the richText node type so its content expression participates in i18n resolution like the text node's.",
+    "implemented": true,
+    "prdRefs": ["FR12"]
+  },
+  {
+    "id": "F036",
+    "description": "mapLoadedQuoteToViewModel (packages/billing/src/lib/adapters/quoteAdapters.ts:583) exposes terms_and_conditions_block on the view model.",
+    "implemented": true,
+    "prdRefs": ["FR15"]
+  },
+  {
+    "id": "F037",
+    "description": "The termsAndConditions binding resolves to the block column when it is populated and the text column otherwise.",
+    "implemented": true,
+    "prdRefs": ["FR9", "FR15"]
+  },
+  {
+    "id": "F038",
+    "description": "standardTemplates.ts (packages/billing/src/lib/quote-template-ast/) declares terms-copy as a richText node in all four stock layouts, so the in-code fallback used by templateSelection.ts matches the seeded rows.",
+    "implemented": true,
+    "prdRefs": ["FR16"]
+  },
+  {
+    "id": "F039",
+    "description": "A migration rewrites the terms-copy node to type richText in standard_quote_document_templates rows for the four standard quote template codes.",
+    "implemented": true,
+    "prdRefs": ["FR17"]
+  },
+  {
+    "id": "F040",
+    "description": "The same migration rewrites terms-copy in tenant-owned quote_document_templates rows, and only where the node still matches the stock shape (type 'text' bound to termsAndConditions), leaving customized nodes untouched.",
+    "implemented": true,
+    "prdRefs": ["FR17", "Rollout / Migration", "Open Questions > 1"]
+  },
+  {
+    "id": "F041",
+    "description": "The terms-copy migration is idempotent and has a down migration that restores the text node type.",
+    "implemented": true,
+    "prdRefs": ["FR17"]
+  },
+  {
+    "id": "F042",
+    "description": "workspaceAst.ts AST import no longer silently discards a node whose type is absent from typeMap (:1892 'if (!designerType) return'); it raises instead.",
+    "implemented": true,
+    "prdRefs": ["FR19"]
+  },
+  {
+    "id": "F043",
+    "description": "DesignerComponentType (designerStore.ts) gains a richText component type and typeMap maps the AST richText node to it.",
+    "implemented": true,
+    "prdRefs": ["FR18"]
+  },
+  {
+    "id": "F044",
+    "description": "componentSchema.ts defines the richText component's schema and the palette catalog (componentCatalog.ts) exposes it.",
+    "implemented": true,
+    "prdRefs": ["FR18"]
+  },
+  {
+    "id": "F045",
+    "description": "DesignCanvas.tsx renders a richText node in the canvas preview.",
+    "implemented": true,
+    "prdRefs": ["FR18"]
+  },
+  {
+    "id": "F046",
+    "description": "workspaceAst.ts converts richText in both directions, round-tripping the content expression through metadata the way the text node does at :1909.",
+    "implemented": true,
+    "prdRefs": ["FR18"]
+  },
+  {
+    "id": "F047",
+    "description": "A shared quote-terms display component converts block content to HTML once and renders it, so no display surface carries its own conversion.",
+    "implemented": true,
+    "prdRefs": ["FR22"]
+  },
+  {
+    "id": "F048",
+    "description": "QuoteForm.tsx replaces the Terms & Conditions TextArea (:1494) with the standard BlockNote editor, keeping the field inside the Client-facing text card.",
+    "implemented": true,
+    "prdRefs": ["FR20", "UX / UI Notes"]
+  },
+  {
+    "id": "F049",
+    "description": "QuoteFormState carries the terms value as block content, and handleChange's generic string setter no longer coerces it.",
+    "implemented": true,
+    "prdRefs": ["FR20"]
+  },
+  {
+    "id": "F050",
+    "description": "The editor seeds from terms_and_conditions_block, falling back to a single paragraph built from terms_and_conditions when the block column is null.",
+    "implemented": true,
+    "prdRefs": ["FR20", "FR9"]
+  },
+  {
+    "id": "F051",
+    "description": "The Terms & Conditions editor renders for business templates on the same terms as quotes, and the template-selection prefill path (QuoteForm.tsx:393-402) carries block content.",
+    "implemented": true,
+    "prdRefs": ["FR21"]
+  },
+  {
+    "id": "F052",
+    "description": "The Terms & Conditions editor is read-only when the form is read-only, matching the TextArea's disabled behaviour.",
+    "implemented": true,
+    "prdRefs": ["FR20"]
+  },
+  {
+    "id": "F053",
+    "description": "QuoteDetail.tsx (:1260) renders terms through the shared display component instead of a whitespace-pre-wrap paragraph, keeping its em-dash placeholder when empty.",
+    "implemented": true,
+    "prdRefs": ["FR22"]
+  },
+  {
+    "id": "F054",
+    "description": "The client portal's QuoteDetailPage.tsx (:653) renders terms through the same shared display component, keeping its behaviour of hiding the section when empty.",
+    "implemented": true,
+    "prdRefs": ["FR22"]
+  },
+  {
+    "id": "F055",
+    "description": "Interactive elements added to QuoteForm carry unique id attributes per the repo's component ID guidelines, and the editor renders correctly in both light and dark themes.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F056",
+    "description": "Normal and prebuilt Temporal worker images include formatting dist required by shared quote terms and fail their build if the compiled helper cannot load or serialize rich terms.",
+    "implemented": true,
+    "prdRefs": ["NFR3"]
+  }
+]

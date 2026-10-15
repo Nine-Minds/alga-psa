@@ -1,6 +1,28 @@
 import { createClient } from 'redis'
 import { validateNotificationSignalRoom } from './tenantValidation.js'
 
+/** Inbox events that collapse to a content-free wake-up. */
+const NOTIFICATION_CHANGE_EVENTS = ['notification.created', 'notification.read', 'notifications.all_read', 'notifications.unread_count']
+
+/** Maps a Redis event onto the stateless signal this room relays, or null when the
+ * room relays nothing for it.
+ *
+ * Inbox events carry no payload at all: bodies, links, counts and metadata stay in
+ * the database behind the browser's own session-authorized read.
+ *
+ * The telephony ring is the one payload-carrying signal, and it stays inside the
+ * invariant because it is *stateless*: broadcastStateless is filtered per
+ * connection by tenant/user/expiry and is never written to a Yjs map, so nothing
+ * is retained for a later connection to replay. */
+export function toNotificationSignal(event) {
+  if (NOTIFICATION_CHANGE_EVENTS.includes(event?.type)) return { type: 'notifications.changed' }
+  if (event?.type === 'telephony.incoming_call' && event.event && event.call && typeof event.call === 'object') {
+    return { type: 'telephony.incoming_call',
+      entry: { event: event.event, call: event.call, receivedAt: event.timestamp || new Date().toISOString() } }
+  }
+  return null
+}
+
 /** Notification rooms contain no inbox data. Redis events only wake the
  * browser's session-authorized reader; Yjs documents never cache message bodies,
  * links, counts or metadata for a later connection to reuse. */
@@ -54,11 +76,11 @@ export class NotificationExtension {
       const parts = channel.slice(prefix.length).split(':')
       if (parts.length !== 2) return
       const [tenant, userId] = parts
-      const event = JSON.parse(message)
-      if (!['notification.created', 'notification.read', 'notifications.all_read', 'notifications.unread_count'].includes(event.type)) return
+      const signal = toNotificationSignal(JSON.parse(message))
+      if (!signal) return
       const document = this.instance?.documents?.get(`notification-signals:${tenant}:${userId}`)
       if (!document) return
-      document.broadcastStateless(JSON.stringify({ type: 'notifications.changed' }), connection => {
+      document.broadcastStateless(JSON.stringify(signal), connection => {
         const access = connection.context?.notificationSignals
         return access?.tenantId === tenant && access?.userId === userId && access.expiresAt > Date.now()
       })

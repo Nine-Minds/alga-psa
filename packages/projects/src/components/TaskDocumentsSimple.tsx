@@ -586,7 +586,14 @@ export default function TaskDocumentsSimple({
                   }
                 }
               },
-              onAllUploadsComplete: () => setShowUpload(false),
+              onAllUploadsComplete: (summary: { failed: number }) => {
+                // Keep the uploader open while any file failed so the user can
+                // correct and reselect; successful per-file additions above are
+                // preserved either way.
+                if (summary.failed === 0) {
+                  setShowUpload(false);
+                }
+              },
               onCancel: () => setShowUpload(false),
             })}
           </div>

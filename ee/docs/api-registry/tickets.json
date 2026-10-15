@@ -8,7 +8,7 @@
       "metadata": {
         "displayName": "List Tickets",
         "summary": "List tickets",
-        "description": "Returns a paginated list of tickets for the current tenant. Supports filtering by board, status, priority, client, assignee, category, open/closed/overdue flags, and entered/closed date ranges — see the parameters list for all available filters. For aggregate counts (e.g. how many tickets are open or high priority), prefer GET /api/v1/tickets/stats or set limit=1 and read pagination.total from the response. Use GET /api/v1/boards, GET /api/v1/statuses, and GET /api/v1/priorities for lookup data instead of sampling tickets. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, tags, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description.",
+        "description": "Returns a paginated list of tickets for the current tenant. Supports filtering by board, status, priority, client, assignee, category, open/closed/overdue flags, and entered/closed date ranges — see the parameters list for all available filters. For aggregate counts (e.g. how many tickets are open or high priority), prefer GET /api/v1/tickets/stats or set limit=1 and read pagination.total from the response. Use GET /api/v1/boards, GET /api/v1/statuses, and GET /api/v1/priorities for lookup data instead of sampling tickets. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, latest_activity_at, tags, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description. Use sort=latest_activity_at to order by the most recently active tickets.",
         "rbacResource": "ticket",
         "approvalRequired": false,
         "parameters": [
@@ -181,6 +181,13 @@
             "schema": { "type": "boolean" }
           },
           {
+            "name": "response_state",
+            "in": "query",
+            "required": false,
+            "description": "Only tickets whose turn it is: awaiting_client (we replied, waiting on the client) or awaiting_internal (the client replied, waiting on us).",
+            "schema": { "type": "string", "enum": ["awaiting_client", "awaiting_internal"] }
+          },
+          {
             "name": "entered_from",
             "in": "query",
             "required": false,
@@ -209,10 +216,39 @@
             "schema": { "type": "string", "format": "date-time" }
           },
           {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "Field to sort by (default entered_at). Only these values are accepted: ticket_number, title, entered_at, updated_at, closed_at, due_date, client_name, status_name, priority_name, latest_activity_at, plus created_at as a legacy alias for entered_at. latest_activity_at orders by the newest of the ticket's own timestamps and its newest visible comment. Any other value is rejected with a 400 error.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ticket_number",
+                "title",
+                "entered_at",
+                "created_at",
+                "updated_at",
+                "closed_at",
+                "due_date",
+                "client_name",
+                "status_name",
+                "priority_name",
+                "latest_activity_at"
+              ]
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "description": "Sort direction (default desc). Ties break on ticket_id descending.",
+            "schema": { "type": "string", "enum": ["asc", "desc"] }
+          },
+          {
             "name": "fields",
             "in": "query",
             "required": false,
-            "description": "Comma-separated list of fields to return. Use only these exact values: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, tags, or mobile_list. If you are not sure, omit fields entirely instead of guessing aliases.",
+            "description": "Comma-separated list of fields to return. Use only these exact values: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, latest_activity_at, tags, or mobile_list. If you are not sure, omit fields entirely instead of guessing aliases.",
             "schema": { "type": "string" }
           },
           {
@@ -239,7 +275,8 @@
                   "status_id": { "type": "string", "format": "uuid" },
                   "priority_id": { "type": "string", "format": "uuid" },
                   "assigned_to": { "type": ["string", "null"], "format": "uuid" },
-                  "entered_at": { "type": "string", "format": "date-time" }
+                  "entered_at": { "type": "string", "format": "date-time" },
+                  "latest_activity_at": { "type": ["string", "null"], "format": "date-time", "description": "Newest of the ticket's own timestamps and its newest visible comment. Returned when requested through fields." }
                 },
                 "required": [
                   "ticket_id",
@@ -685,6 +722,18 @@
             "suppressInternalNotifications": {
               "type": "boolean",
               "description": "Also suppress agent and watcher notifications for this comment. Requires suppressContactNotifications=true."
+            },
+            "cc": {
+              "type": "array",
+              "items": { "type": "string", "format": "email" },
+              "maxItems": 20,
+              "description": "One-off Cc recipients for this comment's email only. They are never added to the ticket watch list and receive no later comments. Not allowed with is_internal. Max 20 cc + bcc combined."
+            },
+            "bcc": {
+              "type": "array",
+              "items": { "type": "string", "format": "email" },
+              "maxItems": 20,
+              "description": "One-off Bcc recipients for this comment's email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined."
             }
           },
           "required": ["comment_text"]
@@ -799,6 +848,71 @@
             "notes": "Use this endpoint to render time-tracking summaries on the ticket detail page or in mobile clients without paging through the global timesheet list."
           }
         ]
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/{id}/external-links"
+      },
+      "metadata": {
+        "displayName": "List Ticket External Links",
+        "summary": "List external links for a ticket",
+        "description": "Returns structured references from the ticket to records in external systems (Discord, Slack, GitHub, Jira, email, custom systems). Each entry carries the registry key, external id, realm, relationship (origin/mirror/reference), actor, and a resolved display object with a readable label and link-out href. The origin link, when present, is how the ticket arrived in Alga.",
+        "rbacResource": "ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets/{id}/external-links"
+      },
+      "metadata": {
+        "displayName": "Add Ticket External Link",
+        "summary": "Add an external link to a ticket",
+        "description": "Creates an external-system reference for a ticket. Defaults to a ticket-level link; set entity_type to 'comment' with a comment_id to attach the reference to one of the ticket's comments. Only one origin link per entity is permitted; a duplicate external record is rejected. Provide an http(s) url when the system has no URL template. Use GET /api/v1/tickets/by-external-link to find an existing ticket for the same external record before creating one.",
+        "rbacResource": "ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "patch",
+        "path": "/api/v1/tickets/{id}/external-links/{linkId}"
+      },
+      "metadata": {
+        "displayName": "Update Ticket External Link",
+        "summary": "Update a ticket external link",
+        "description": "Updates mutable fields on an existing link belonging to the ticket: relationship, url, actor, external_status, external_updated_at, last_synced_at, and metadata. system and external_id are immutable.",
+        "rbacResource": "ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "delete",
+        "path": "/api/v1/tickets/{id}/external-links/{linkId}"
+      },
+      "metadata": {
+        "displayName": "Remove Ticket External Link",
+        "summary": "Remove an external link from a ticket",
+        "description": "Deletes a link belonging to the ticket and records a ticket activity entry. Any inbound integration that relies on the link for deduplication should stop using it after removal.",
+        "rbacResource": "ticket",
+        "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/by-external-link"
+      },
+      "metadata": {
+        "displayName": "Find Ticket By External Link",
+        "summary": "Find a ticket by its external record",
+        "description": "Returns the ticket and matching link for a system/external_id pair, with an optional external_parent_id for comment-level records. Returns 404 when no ticket carries the external record. Use this as the dedupe check before creating a ticket from an external source.",
+        "rbacResource": "ticket",
+        "approvalRequired": false
       }
     }
   ]

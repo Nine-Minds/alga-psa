@@ -1,0 +1,188 @@
+{
+  "status": "partial; full candidate acceptance pending",
+  "sourceHeadBeforeUncommittedRepairs": "4bbc0c7c4cee00c14b83d6f22a73a2572d9cec66",
+  "originMainAncestor": "a58838822228ae17a5c02a7b477d6eb92bddaae5",
+  "application": {
+    "image": "sha256:2d3f0db9b006857afd4b5977a39e39e5c9bf29ec703201cf7d9d12a1abe4e88d",
+    "candidate": "9b12c5 (older than source repairs)",
+    "database": "browser_ee_migrations_1788672908117",
+    "container": "alga-regression-email-app"
+  },
+  "apiBaseline": {
+    "durationSeconds": 67.84,
+    "collectedCases": 327,
+    "files": [
+      {
+        "file": "server/src/test/e2e/api/accountingExports.e2e.test.ts",
+        "assertions": {
+          "failed": 3
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/boards.e2e.test.ts",
+        "assertions": {
+          "failed": 2,
+          "passed": 8
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/clients.e2e.test.ts",
+        "assertions": {
+          "passed": 19,
+          "failed": 4
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/contacts.e2e.test.ts",
+        "assertions": {
+          "failed": 2,
+          "passed": 27
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/extensions.e2e.test.ts",
+        "assertions": {
+          "failed": 1
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/permissions.e2e.test.ts",
+        "assertions": {
+          "passed": 15
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/priorities.e2e.test.ts",
+        "assertions": {
+          "skipped": 12
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/projects.e2e.test.ts",
+        "assertions": {
+          "failed": 3,
+          "passed": 20
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/roles.e2e.test.ts",
+        "assertions": {
+          "passed": 16
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/services.e2e.test.ts",
+        "assertions": {
+          "skipped": 10
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/statuses.e2e.test.ts",
+        "assertions": {
+          "failed": 2,
+          "passed": 12
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/storage.e2e.test.ts",
+        "assertions": {
+          "failed": 6
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/teams.e2e.test.ts",
+        "assertions": {
+          "failed": 1,
+          "passed": 35
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/ticket-statuses.e2e.test.ts",
+        "assertions": {
+          "skipped": 3
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/ticketRichTextRoundTrip.e2e.test.ts",
+        "assertions": {
+          "passed": 2
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/tickets.e2e.test.ts",
+        "assertions": {
+          "failed": 14,
+          "passed": 49
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/time-entries.e2e.test.ts",
+        "assertions": {
+          "passed": 14,
+          "failed": 25,
+          "skipped": 2
+        }
+      },
+      {
+        "file": "server/src/test/e2e/api/users.e2e.test.ts",
+        "assertions": {
+          "failed": 3,
+          "passed": 19
+        }
+      }
+    ],
+    "reportedCases": 329,
+    "passed": 236,
+    "failed": 66,
+    "skipped": 27,
+    "note": "The list command omits two explicitly skipped time-entry approval tests which the run reporter includes. Twenty-five other skipped cases belong to suites whose setup failed. Some reported passes have empty bodies and are not behavioral evidence.",
+    "rawReportLocal": "/tmp/alga-api-built-baseline.json",
+    "logLocal": "/tmp/alga-api-built-baseline.log"
+  },
+  "repairs": [
+    {
+      "change": "Await asynchronous storage route params",
+      "before": {
+        "databaseTestsFailed": 8,
+        "passed": 2
+      },
+      "after": {
+        "databaseTestsPassed": 10
+      },
+      "logs": [
+        "/tmp/alga-storage-async-before.log",
+        "/tmp/alga-storage-async-after.log"
+      ]
+    },
+    {
+      "change": "Versioned missing-key error envelope and validated board list defaults",
+      "before": {
+        "focusedTestsFailed": 2,
+        "passed": 2
+      },
+      "after": "Included in 37 passing API boundary tests",
+      "logs": [
+        "/tmp/alga-api-boundaries-before.log",
+        "/tmp/alga-api-boundaries-final-v2.log"
+      ]
+    },
+    {
+      "change": "Require explicit owned application connection; remove fixture schema relaxation and self-starting dev app; fail on unavailable candidate",
+      "after": "Database configuration and server replacement guards pass; rich-text built HTTP cases pass in full baseline"
+    }
+  ],
+  "validation": {
+    "boundaryFiles": 7,
+    "boundaryTestsPassed": 37,
+    "storageIntegrationTestsPassed": 10,
+    "targetedTypecheck": "pass; /tmp/alga-api-regression-types-v3.log",
+    "planValidator": "pass (37 features, 31 tests)"
+  },
+  "remaining": [
+    "Rebuild repaired application and run the complete API suite successfully",
+    "Replace empty permission/tenant-isolation test bodies with real requests and persisted assertions",
+    "Repair stale fixture columns and investigate remaining endpoint failures",
+    "Assign API and access-log suites to CI with discovery/execution reconciliation",
+    "Align dedicated API database identity with fresh-install CI currently using database name server"
+  ]
+}

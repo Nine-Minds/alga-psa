@@ -165,8 +165,11 @@ describe('Progress demo', () => {
 
   test('striped variant shows stripe pattern', () => {
     render(<ProgressDemo />);
-    const striped = document.querySelector('[aria-hidden="true"] div') as HTMLElement | null;
-    expect(striped?.style.backgroundImage).toContain('repeating-linear-gradient');
+    const section = screen.getByText('Animated and Striped').parentElement!;
+    const striped = section.querySelector('[aria-valuenow="60"] > div > div') as HTMLElement;
+    expect(striped).not.toBeNull();
+    expect(striped.style.backgroundImage).toContain('linear-gradient');
+    expect(striped.style.backgroundSize).toBe('1rem 1rem');
   });
 
   test('animated variant has moving animation', () => {
@@ -187,7 +190,8 @@ describe('Progress demo', () => {
 
   test('indeterminate mode shows continuous animation', () => {
     render(<ProgressDemo />);
-    const indeterminate = screen.getAllByRole('progressbar').find((el) => el.getAttribute('aria-valuenow') === '25');
+    const section = screen.getByText('Indeterminate').parentElement!;
+    const indeterminate = section.querySelector('[role="progressbar"]');
     const track = indeterminate?.querySelector('div') as HTMLElement | null;
     const bar = track?.querySelector('div') as HTMLElement | null;
     expect(bar?.style.animation).toContain('progress-indeterminate');

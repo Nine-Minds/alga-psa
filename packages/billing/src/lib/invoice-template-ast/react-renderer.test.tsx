@@ -501,7 +501,7 @@ describe('renderEvaluatedTemplateAst', () => {
       const evaluation = evaluateTemplateAst(ast, { items: [{ entryDate }] });
       const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
 
-      expect(fieldText).toBe('1/18/2026');
+      expect(fieldText).toBe('01/18/2026');
       expect(rendered.html).toContain(fieldText as string);
     } finally {
       if (previousTimeZone === undefined) {
@@ -1038,5 +1038,534 @@ describe('renderEvaluatedTemplateAst', () => {
     });
     const emptyRendered = await renderEvaluatedTemplateAst(ast, emptyEvaluation);
     expect(emptyRendered.html).not.toContain('<img');
+  });
+});
+
+describe('renderEvaluatedTemplateAst text nodes', () => {
+  it('T009a: preserves newlines in a text node by default', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'terms',
+            type: 'text',
+            content: { type: 'literal', value: 'First paragraph\n\nSecond paragraph' },
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('First paragraph\n\nSecond paragraph');
+    expect(rendered.html).toContain('white-space:pre-line');
+  });
+
+  it('T009b: an explicit whiteSpace in the text node style overrides the default', async () => {
+    // The renderer contract is tested directly: a text node whose own style
+    // declares whiteSpace must win over the preserve-newlines default.
+    const ast = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'terms',
+            type: 'text',
+            style: { inline: { whiteSpace: 'nowrap' } },
+            content: { type: 'literal', value: 'First\nSecond' },
+          },
+        ],
+      },
+    } as any;
+
+    const evaluation: TemplateEvaluationResult = {
+      sourceCollection: [],
+      output: [],
+      groups: null,
+      aggregates: {},
+      totals: {},
+      bindings: {},
+    };
+
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('white-space:nowrap');
+    expect(rendered.html).not.toContain('white-space:pre-line');
+  });
+});
+
+describe('renderEvaluatedTemplateAst stacked table-cell lines', () => {
+  const renderAst = async (
+    columns: Array<Record<string, unknown>>,
+    rows: Array<Record<string, unknown>>,
+    nodeType: 'dynamic-table' | 'table' = 'dynamic-table'
+  ) => {
+    const tableNode =
+      nodeType === 'table'
+        ? {
+            id: 'line-items',
+            type: 'table' as const,
+            sourceBinding: { bindingId: 'lineItems' },
+            rowBinding: 'row',
+            columns: columns as never,
+          }
+        : {
+            id: 'line-items',
+            type: 'dynamic-table' as const,
+            repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
+            columns: columns as never,
+          };
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {},
+        collections: {
+          lineItems: { id: 'lineItems', kind: 'collection', path: 'items' },
+          recurringItems: { id: 'recurringItems', kind: 'collection', path: 'recurring_items' },
+          onetimeItems: { id: 'onetimeItems', kind: 'collection', path: 'onetime_items' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [tableNode],
+      },
+    };
+    const evaluation = evaluateTemplateAst(ast, { items: rows });
+    return renderEvaluatedTemplateAst(ast, evaluation);
+  };
+
+  it('stacks resolved lines in a cell and drops empty lines', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: { type: 'path', path: 'description' },
+          lines: [
+            {
+              id: 'item-name',
+              value: { type: 'path', path: 'service_name' },
+              style: { inline: { fontWeight: 600, lineHeight: 1.3 } },
+            },
+            {
+              id: 'catalog-description',
+              value: { type: 'path', path: 'catalog_description' },
+              style: { inline: { color: '#4b5563', fontSize: '12px' } },
+            },
+          ],
+        },
+        {
+          id: 'amount',
+          header: 'Amount',
+          value: { type: 'path', path: 'total_price' },
+          format: 'currency',
+          style: { inline: { textAlign: 'right' } },
+        },
+      ],
+      [
+        {
+          quote_item_id: 'a1',
+          service_name: 'Managed Support',
+          catalog_description: 'Full-service support',
+          description: 'ignored when lines resolve',
+          total_price: 2500,
+        },
+        {
+          quote_item_id: 'a2',
+          service_name: null,
+          catalog_description: null,
+          description: 'Discount',
+          total_price: -500,
+        },
+      ]
+    );
+
+    expect(rendered.html).toContain('<div class="ast-table-cell-line" style="font-weight:600;line-height:1.3">Managed Support</div>');
+    expect(rendered.html).toContain('<div class="ast-table-cell-line" style="color:#4b5563;font-size:12px">Full-service support</div>');
+    // All-empty lines fall back to the column value so discounts/custom rows stay readable.
+    expect(rendered.html).toContain('>Discount<');
+    expect(rendered.html).not.toContain('ignored when lines resolve');
+    expect(rendered.html).toContain('$25.00');
+    expect(rendered.html).toContain('-$5.00');
+  });
+
+  it('renders the plain value exactly as before when a column has no lines', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: { type: 'path', path: 'description' },
+        },
+      ],
+      [{ description: 'Plain line', service_name: 'Ignored name' }]
+    );
+
+    expect(rendered.html).toContain('<td>Plain line</td>');
+    expect(rendered.html).not.toContain('Ignored name');
+  });
+
+  it('renders a newline value with the pre-line blank-line convention', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: {
+            type: 'template',
+            template: '{{name}}\n{{description}}',
+            args: {
+              name: { type: 'path', path: 'service_name' },
+              description: { type: 'path', path: 'description' },
+            },
+          },
+        },
+      ],
+      [
+        { service_name: 'Managed Support', description: 'Full-service support' },
+        { service_name: null, description: 'Discount' },
+      ]
+    );
+
+    expect(rendered.html).toContain('<span style="white-space:pre-line">Managed Support\nFull-service support</span>');
+    expect(rendered.html).toContain('>Discount</td>');
+  });
+
+  it('carries line tokenIds classes alongside inline styles on a dynamic-table', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: { type: 'path', path: 'description' },
+          lines: [
+            {
+              id: 'item-name',
+              value: { type: 'path', path: 'service_name' },
+              style: { tokenIds: ['line-strong'], inline: { fontWeight: 600 } },
+            },
+          ],
+        },
+      ],
+      [{ service_name: 'Managed Support', description: 'Description' }]
+    );
+
+    expect(rendered.html).toContain(
+      '<div class="ast-table-cell-line ast-line-strong" style="font-weight:600">Managed Support</div>'
+    );
+  });
+
+  it('carries line tokenIds classes alongside inline styles on a plain table', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: { type: 'path', path: 'description' },
+          lines: [
+            {
+              id: 'item-name',
+              value: { type: 'path', path: 'service_name' },
+              style: { tokenIds: ['line-strong'], inline: { fontWeight: 600 } },
+            },
+          ],
+        },
+      ],
+      [{ service_name: 'Managed Support', description: 'Description' }],
+      'table'
+    );
+
+    expect(rendered.html).toContain(
+      '<div class="ast-table-cell-line ast-line-strong" style="font-weight:600">Managed Support</div>'
+    );
+  });
+
+  it('stacks resolved lines inside a plain table node', async () => {
+    const rendered = await renderAst(
+      [
+        {
+          id: 'description',
+          header: 'Description',
+          value: { type: 'path', path: 'description' },
+          lines: [
+            { id: 'item-name', value: { type: 'path', path: 'service_name' } },
+            { id: 'catalog-description', value: { type: 'path', path: 'catalog_description' } },
+          ],
+        },
+        {
+          id: 'amount',
+          header: 'Amount',
+          value: { type: 'path', path: 'total_price' },
+          format: 'currency',
+        },
+      ],
+      [
+        { service_name: 'Managed Support', catalog_description: 'Full-service support', total_price: 2500 },
+        { service_name: null, catalog_description: null, description: 'Discount', total_price: -500 },
+      ],
+      'table'
+    );
+
+    expect(rendered.html).toContain('<div class="ast-table-cell-line">Managed Support</div>');
+    expect(rendered.html).toContain('<div class="ast-table-cell-line">Full-service support</div>');
+    expect(rendered.html).toContain('>Discount</td>');
+    expect(rendered.html).toContain('$25.00');
+    expect(rendered.html).toContain('-$5.00');
+  });
+});
+
+describe('renderEvaluatedTemplateAst richText node', () => {
+  const renderTerms = async (value: unknown) => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          terms: { id: 'terms', kind: 'value', path: 'terms_and_conditions_rich' },
+        },
+        collections: {},
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'terms-copy',
+            type: 'richText',
+            content: { type: 'binding', bindingId: 'terms' },
+          },
+        ],
+      },
+    };
+    const evaluation = evaluateTemplateAst(ast, { terms_and_conditions_rich: value });
+    return renderEvaluatedTemplateAst(ast, evaluation);
+  };
+
+  it('emits structured content as HTML with a live link', async () => {
+    const rendered = await renderTerms([
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'Read our ' },
+          {
+            type: 'link',
+            href: 'https://example.com/terms',
+            content: [{ type: 'text', text: 'terms' }],
+          },
+        ],
+      },
+    ]);
+
+    expect(rendered.html).toContain('href="https://example.com/terms"');
+    expect(rendered.html).toContain('>terms</a>');
+  });
+
+  it('neutralizes a javascript: link while keeping its text', async () => {
+    const rendered = await renderTerms([
+      {
+        type: 'paragraph',
+        content: [
+          {
+            type: 'link',
+            href: 'javascript:alert(1)',
+            content: [{ type: 'text', text: 'click me' }],
+          },
+        ],
+      },
+    ]);
+
+    expect(rendered.html).not.toContain('<a');
+    expect(rendered.html).toContain('click me');
+  });
+
+  it('mirrors the legacy text node for plain, empty and null values', async () => {
+    const stringRendered = await renderTerms('Line one\nLine two');
+    expect(stringRendered.html).toContain('Line one');
+    expect(stringRendered.html).toContain('white-space:pre-line');
+
+    const emptyRendered = await renderTerms('');
+    expect(emptyRendered.html).toContain('white-space:pre-line');
+    expect(emptyRendered.html).not.toContain('[No content]');
+
+    const nullRendered = await renderTerms(null);
+    expect(nullRendered.html).not.toContain('[No content]');
+  });
+});
+
+describe('legacy quote terms PDF compatibility', () => {
+  const renderTermsNode = async (nodeType: 'text' | 'richText', bindingId: string, value: unknown) => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: { [bindingId]: { id: bindingId, kind: 'value', path: 'terms_value' } },
+        collections: {},
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [{ id: 'terms-copy', type: nodeType, content: { type: 'binding', bindingId } }],
+      },
+    };
+    const evaluation = evaluateTemplateAst(ast, { terms_value: value });
+    return renderEvaluatedTemplateAst(ast, evaluation);
+  };
+
+  it('renders multiline legacy terms identically through the text node and a migrated richText node', async () => {
+    const value = 'Line one\nLine two\n\nLine four';
+
+    const legacy = await renderTermsNode('text', 'terms', value);
+    const migrated = await renderTermsNode('richText', 'termsRich', value);
+
+    for (const rendered of [legacy, migrated]) {
+      expect(rendered.html).toContain('white-space:pre-line');
+      expect(rendered.html).toContain('Line one\nLine two\n\nLine four');
+    }
+  });
+
+  it('preserves an empty legacy terms paragraph through both node types', async () => {
+    const legacy = await renderTermsNode('text', 'terms', '');
+    const migrated = await renderTermsNode('richText', 'termsRich', '');
+
+    for (const rendered of [legacy, migrated]) {
+      expect(rendered.html).toMatch(/white-space:pre-line[^>]*><\/p>/);
+      expect(rendered.html).not.toContain('[No content]');
+    }
+  });
+});
+
+describe('titled sections with nothing to head', () => {
+  // Regression: alga-2026-0002383 — a quote without terms rendered an empty
+  // "Terms & Conditions" heading at the foot of page 1 and pushed the signature
+  // block onto a page of its own.
+  const renderSection = async (children: TemplateAst['layout']['children'], data: Record<string, unknown>) => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          termsRich: { id: 'termsRich', kind: 'value', path: 'terms', fallback: '' },
+          notes: { id: 'notes', kind: 'value', path: 'notes', fallback: '' },
+          logo: { id: 'logo', kind: 'value', path: 'logo' },
+        },
+        collections: {
+          lineItems: { id: 'lineItems', kind: 'collection', path: 'line_items' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          { id: 'terms-section', type: 'section', title: 'Terms & Conditions', children: children ?? [] },
+          { id: 'after', type: 'text', content: { type: 'literal', value: 'Signature' } },
+        ],
+      },
+    };
+    const evaluation = evaluateTemplateAst(ast, data);
+    return renderEvaluatedTemplateAst(ast, evaluation);
+  };
+
+  const termsCopy = { id: 'terms-copy', type: 'richText', content: { type: 'binding', bindingId: 'termsRich' } } as const;
+
+  it('omits the section and its heading when a richText child resolves to nothing', async () => {
+    for (const terms of ['', '   \n', null, [], [{ type: 'paragraph', content: [] }]]) {
+      const rendered = await renderSection([termsCopy], { terms });
+      expect(rendered.html).not.toContain('Terms &amp; Conditions');
+      expect(rendered.html).not.toContain('id="terms-section"');
+      expect(rendered.html).toContain('Signature');
+    }
+  });
+
+  it('renders the heading with its content when the richText child has text', async () => {
+    const plain = await renderSection([termsCopy], { terms: 'Net 30.' });
+    expect(plain.html).toContain('<h2>Terms &amp; Conditions</h2>');
+    expect(plain.html).toContain('Net 30.');
+
+    const structured = await renderSection([termsCopy], {
+      terms: [{ type: 'paragraph', content: [{ type: 'text', text: 'Net 30.' }] }],
+    });
+    expect(structured.html).toContain('<h2>Terms &amp; Conditions</h2>');
+    expect(structured.html).toContain('Net 30.');
+  });
+
+  it('omits the section when a legacy text child resolves to whitespace', async () => {
+    const rendered = await renderSection(
+      [{ id: 'notes-copy', type: 'text', content: { type: 'binding', bindingId: 'notes' } }],
+      { notes: '  ' },
+    );
+    expect(rendered.html).not.toContain('Terms &amp; Conditions');
+  });
+
+  it('keeps a section whose table paints an empty-state row', async () => {
+    const rendered = await renderSection(
+      [
+        {
+          id: 'items',
+          type: 'dynamic-table',
+          repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
+          columns: [{ id: 'description', header: 'Description', value: { type: 'path', path: 'description' } }],
+          emptyStateText: 'No items',
+        },
+      ],
+      { line_items: [] },
+    );
+    expect(rendered.html).toContain('<h2>Terms &amp; Conditions</h2>');
+    expect(rendered.html).toContain('No items');
+  });
+
+  it('omits the section when its only child is a repeating stack over an empty collection', async () => {
+    const rendered = await renderSection(
+      [
+        {
+          id: 'bands',
+          type: 'stack',
+          repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
+          children: [{ id: 'band', type: 'text', content: { type: 'path', path: 'description' } }],
+        },
+      ],
+      { line_items: [] },
+    );
+    expect(rendered.html).not.toContain('Terms &amp; Conditions');
+  });
+
+  it('keeps a section when an image child resolves to a source', async () => {
+    const rendered = await renderSection(
+      [{ id: 'logo', type: 'image', src: { type: 'binding', bindingId: 'logo' } }],
+      { logo: 'https://example.test/logo.png' },
+    );
+    expect(rendered.html).toContain('<h2>Terms &amp; Conditions</h2>');
+    expect(rendered.html).toContain('<img');
+  });
+
+  it('leaves an untitled empty section in place as a layout wrapper', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: { values: {}, collections: {} },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [{ id: 'wrapper', type: 'section', children: [] }],
+      },
+    };
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluateTemplateAst(ast, {}));
+    expect(rendered.html).toContain('id="wrapper"');
+  });
+
+  it('keeps headings with their content and the signature block whole across page breaks', async () => {
+    const rendered = await renderSection([termsCopy], { terms: 'Net 30.' });
+    expect(rendered.css).toContain('section > h2 { break-after: avoid; }');
+    expect(rendered.css).toContain('section > h2 + * { break-before: avoid; }');
+    expect(rendered.css).toContain('#signature-block { break-inside: avoid; }');
   });
 });

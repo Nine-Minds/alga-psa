@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-09T06:37:38.730818+00:00",
+  "sourceFile": "docker-compose.e2e-emulators.yaml",
+  "sourceSha256": "e32ffe731233175432357be0c2b791c84e9e686f5b15608b4093768a032f0158",
+  "diagnosis": {
+    "log": "/tmp/alga-561a6-teams-failed.log",
+    "workflowId": "marketing-fanout:send-sequence-steps-workflow-2026-09-09T06:00:00Z",
+    "activity": "runMarketingJobForTenant",
+    "attempt": 2,
+    "activityFailureTime": "2026-09-09T06:00:33.730Z",
+    "failureLines": [
+      11474,
+      11505
+    ],
+    "message": "No public marketing base URL available (NEXT_PUBLIC_BASE_URL or NEXT_PUBLIC_APP_URL); refusing to send sequence steps",
+    "classification": "Real scheduled background activity missing required CI configuration, not a negative test",
+    "primaryBrowser": "47 passed at06:00:41; worker stopped06:00:48",
+    "laterTeamsFailure": "dashboard-marker-missing at06:16:40, lines9112-9113; this background activity is not established as its root cause"
+  },
+  "fix": "Pass existing required NEXT_PUBLIC_BASE_URL through to temporal-worker in disposable CI overlay; no fallback or activity policy change",
+  "composeVerification": {
+    "version": "5.1.2",
+    "daemonUsed": false,
+    "envFile": ".env.example (copied by existing CI setup)",
+    "profile": "enterprise",
+    "files": [
+      "docker-compose.base.yaml",
+      "docker-compose.ce.yaml",
+      "docker-compose.prod.yaml",
+      "docker-compose.setup-ubuntu.override.yaml",
+      "docker-compose.imap-test.yaml",
+      "docker-compose.e2e-emulators.yaml",
+      "docker-compose.e2e-ee.yaml"
+    ],
+    "serverPublicUrl": "http://localhost:3000",
+    "workerPublicUrl": "http://localhost:3000",
+    "assertion": "Both resolved values equal existing CI public URL"
+  },
+  "nativeTests": {
+    "command": "cd ee/temporal-workflows && /opt/homebrew/opt/node@25/bin/node ../../node_modules/vitest/vitest.mjs run --config vitest.no-docker.config.ts src/activities/__tests__/marketing-activities.test.ts",
+    "passed": 9,
+    "log": "/tmp/alga-marketing-public-url-tests.log",
+    "behavior": "Actual activity invokes mocked sequence sender with normalized configured URL; fallback public APP_URL and refusal when only internal URLs exist remain covered"
+  },
+  "limitations": [
+    "No actual email delivery or active Temporal worker was started.",
+    "Current-source CI activity success remains pending.",
+    "This does not establish or repair the Teams dashboard root cause."
+  ]
+}

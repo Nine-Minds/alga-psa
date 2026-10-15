@@ -1,0 +1,42 @@
+{
+  "scope": "Shipped inbound email definition on a real Temporal engine; underlying activity failure diagnostics",
+  "baseRevision": "922112111781fd2f9bcf511ee7c1c7d39b422706",
+  "workingTreeDirty": true,
+  "validation": {
+    "emailBefore": {
+      "artifact": "/tmp/alga-email-definition-engine-before.log",
+      "sha256": "4c59bf24bfb90b495277228e83278afd07e363ccbd29d7b3cbfc2cb8328958a3",
+      "passed": 6,
+      "failed": 1
+    },
+    "engineAfter": {
+      "artifact": "/tmp/alga-email-definition-engine-after.log",
+      "sha256": "bc3b6de0244a6097ebb98a69b56ffc89be8399b559d5ff3385613f7740e81f7a",
+      "passed": 51,
+      "failed": 0
+    },
+    "runtimeUnit": {
+      "artifact": "/tmp/alga-email-definition-runtime-unit.log",
+      "sha256": "86a6c032aeb77306a70d0fd3c3c21dfc37ebadb738a3881db5371c094ce0ea9f",
+      "passed": 32,
+      "failed": 0
+    },
+    "discoveryGate": {
+      "artifact": "/tmp/alga-email-definition-discovery.log",
+      "sha256": "29816422c0b7e44b231e1e8308e59c312b2cc1fa81888e9a1ab29dbcea8e3dff",
+      "passed": 10,
+      "failed": 0
+    }
+  },
+  "behavior": [
+    "Seven scenarios cover reply/new-ticket branches, unmatched sender acknowledgement suppression, missing defaults, attachment failure continuation, acknowledgement failure continuation and parsing failure routing to a human task.",
+    "Production definition and expression mapping execute through a real Temporal worker. Assertions check mapped contact/tenant/provider inputs, downstream ticket identity, explicit idempotency expressions, branch ordering and final states.",
+    "Before fix, six scenarios pass and parsing failure loses its cause behind ActivityFailure. After fix, the human task includes the underlying application failure message. Existing error category handling is preserved.",
+    "Added suite to both engine runner configuration and independent candidate discovery."
+  ],
+  "limits": [
+    "Node/action effects, pinned definition loading and projections are fixtures. This suite does not prove database writes, real parsing/sanitization, context lookup, attachment processing, delivery or durable idempotency.",
+    "The 29-case retired interpreter suite remains skipped pending full assertion-by-assertion replacement. This addition alone does not justify removing it.",
+    "Local engine evidence only; no updated native CI candidate pass."
+  ]
+}

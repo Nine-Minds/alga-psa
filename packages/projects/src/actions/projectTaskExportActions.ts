@@ -1,9 +1,10 @@
 'use server'
 
-import type { ITag } from '@alga-psa/types';
+import type { ITag, IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
 import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { Knex } from 'knex';
@@ -28,6 +29,7 @@ const CSV_FIELDS = [
   'priority',
   'assigned_to',
   'assigned_team',
+  'start_date',
   'due_date',
   'estimated_hours',
   'actual_hours',
@@ -47,6 +49,7 @@ const CSV_HEADERS: Record<string, string> = {
   priority: 'Priority',
   assigned_to: 'Assigned To',
   assigned_team: 'Assigned Team',
+  start_date: 'Start Date',
   due_date: 'Due Date',
   estimated_hours: 'Estimated Hours',
   actual_hours: 'Actual Hours',
@@ -69,6 +72,15 @@ function formatDate(value: string | Date | null | undefined): string {
   const date = typeof value === 'string' ? new Date(value) : value;
   if (isNaN(date.getTime())) return '';
   return date.toISOString();
+}
+
+/**
+ * project_tasks stores durations as whole minutes; the "Estimated Hours" and
+ * "Actual Hours" columns are hours, so a round-trip through the importer keeps
+ * the same value.
+ */
+function formatMinutesAsHours(minutes: number): string {
+  return String(Number((Number(minutes) / 60).toFixed(2)));
 }
 
 function formatTaskType(typeKey: string | null | undefined): string {
@@ -94,6 +106,7 @@ interface TaskRow {
   created_at: Date;
   updated_at: Date;
   wbs_code: string;
+  start_date: Date | null;
   due_date: Date | null;
   priority_id: string | null;
   task_type_key: string;
@@ -132,6 +145,9 @@ function projectTaskExportErrorFrom(error: unknown): ProjectTaskExportActionErro
     }
     if (message.includes('Product access denied')) {
       return permissionError(message);
+    }
+    if (message === 'Project not found') {
+      return actionError(message, 'projects:errors.project.notFound');
     }
   }
 
@@ -196,9 +212,10 @@ function taskToRow(
     priority: priorityName,
     assigned_to: assignedToName,
     assigned_team: assignedTeamName,
+    start_date: formatDate(task.start_date),
     due_date: formatDate(task.due_date),
-    estimated_hours: task.estimated_hours != null ? String(task.estimated_hours) : '',
-    actual_hours: task.actual_hours != null ? String(task.actual_hours) : '',
+    estimated_hours: task.estimated_hours != null ? formatMinutesAsHours(task.estimated_hours) : '',
+    actual_hours: task.actual_hours != null ? formatMinutesAsHours(task.actual_hours) : '',
     checklist_progress: checklistProgress,
     tags,
     created_at: formatDate(task.created_at),
@@ -359,6 +376,10 @@ export const exportProjectTasksToCSV = withAuth(async (
       if (!hasRead) {
         throw new Error('Permission denied: Cannot read project');
       }
+
+      // project:read is tenant-wide; the export dumps one project's tasks, so the
+      // caller also has to be allowed to read that specific project record.
+      await assertProjectReadAllowed(trx, tenant, _user as IUserWithRoles, projectId);
 
       let tasks: TaskRow[];
 

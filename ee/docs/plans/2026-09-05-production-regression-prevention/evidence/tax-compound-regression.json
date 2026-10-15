@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "classification": "discovered-during-regression-audit",
+  "baseRevision": "a8fd74d09fd762930ac792d118d4a3fb1549c847",
+  "testFiles": [
+    "packages/billing/tests/tax/taxService.thresholdsAndComposite.test.ts",
+    "packages/billing/src/components/settings/tax/TaxComponentEditor.preview.test.tsx",
+    "server/src/test/unit/taxService.test.ts",
+    "server/src/test/unit/taxCalculation.test.ts"
+  ],
+  "before": {
+    "service": {
+      "passed": 7,
+      "failed": 6,
+      "log": "/tmp/alga-tax-expanded-before.log"
+    },
+    "preview": {
+      "passed": 0,
+      "failed": 1,
+      "log": "/tmp/alga-tax-preview-before.log"
+    },
+    "observations": [
+      "On a 10000-cent base, a 5% independent component followed by a 2% compound component returned 700 rather than 710 cents.",
+      "A subsequent 3% independent component used an inflated base.",
+      "Zero bases produced NaN tax rates in composite and threshold paths; negative bases produced negative composite tax or negative-zero effective rates.",
+      "The rendered preview showed $2.00 for the compound component instead of $2.10."
+    ]
+  },
+  "after": {
+    "status": "focused-execution-passed",
+    "files": 5,
+    "passed": 42,
+    "todo": 13,
+    "log": "/tmp/alga-tax-regression-final.log",
+    "scope": "Real TaxService with substituted database/model I/O and rendered TaxComponentEditor with substituted server actions."
+  },
+  "hashes": {
+    "alga-tax-expanded-before.log": "92b2fe79aad8e721eb7be4be14fff4140913d425cb76fff7a7add74a11a20bca",
+    "alga-tax-preview-before.log": "1825eebd15da00a9d7b2da1d8fde8d8e2aeec13588f02ea0dae6ecbcb47dbe0b",
+    "alga-tax-regression-final.log": "049014b42cd17e4d2a299f531c5fbc032675949086743b33cc4643567e4d5e35"
+  },
+  "limitations": [
+    "Local focused validation; no current native CI or release readiness claim.",
+    "13 pre-existing tax TODOs remain; full-suite readiness still fails until omissions are addressed.",
+    "No production incident ID was supplied."
+  ]
+}

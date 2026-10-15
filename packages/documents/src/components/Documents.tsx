@@ -92,13 +92,17 @@ const isDocumentActionError = (value: unknown): value is ActionMessageError | Ac
   isActionPermissionError(value) || isActionMessageError(value);
 
 interface DocumentsProps {
+  /** Open the standard document editor without showing the document manager. */
+  documentToOpen?: IDocument;
+  drawerOnly?: boolean;
+  onDocumentClosed?: () => void;
   id?: string;
   documents: IDocument[];
   gridColumns?: 3 | 4;
   userId: string;
   searchTermFromParent?: string;
   entityId?: string;
-  entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract';
+  entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract' | 'opportunity';
   isLoading?: boolean;
   onDocumentCreated?: () => Promise<void>;
   isInDrawer?: boolean;
@@ -118,6 +122,9 @@ interface DocumentsProps {
 }
 
 const Documents = ({
+  documentToOpen,
+  drawerOnly = false,
+  onDocumentClosed,
   id = 'documents',
   documents: initialDocuments,
   gridColumns,
@@ -365,24 +372,6 @@ const Documents = ({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<IDocument | null>(null);
 
-  // Track previous initialDocuments to avoid infinite loops
-  const prevInitialDocumentsRef = useRef<string>('');
-
-  // Sync documents from props when they change (e.g., after router.refresh() in entity mode)
-  useEffect(() => {
-    // In entity mode, sync from initialDocuments when they actually change
-    if (!inFolderMode) {
-      // Compare document IDs to detect actual changes (not just reference changes)
-      const currentIds = initialDocuments.map(d => d.document_id).sort().join(',');
-      if (currentIds !== prevInitialDocumentsRef.current) {
-        prevInitialDocumentsRef.current = currentIds;
-        setDocumentsToDisplay(initialDocuments);
-        setTotalDocuments(initialDocuments.length);
-      }
-    }
-  }, [initialDocuments, inFolderMode]);
-
-
   // Folder mode: fetch documents from server
   // Track all fetch dependencies to detect actual changes vs reference-only changes
   const prevFetchKeyRef = useRef<string>('');
@@ -442,7 +431,8 @@ const Documents = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, pageSize, inFolderMode, currentFolder, filters]);
 
-  // Entity mode: handle search filtering
+  // Entity mode: sync the complete rows, including same-ID attachment metadata
+  // after claim/edit, and apply search in the same effect.
   useEffect(() => {
     if (inFolderMode) return;
 
@@ -455,10 +445,13 @@ const Documents = ({
     }
 
     setDocumentsToDisplay(filtered);
+    setTotalDocuments(initialDocuments.length);
   }, [searchTermFromParent, inFolderMode, initialDocuments]);
 
-  // Refresh documents - handles both folder mode and entity mode
-  const refreshDocuments = useCallback(async () => {
+  // Refresh documents - handles both folder mode and entity mode.
+  // Returns false when the refresh failed so upload batch completion can
+  // surface reload guidance instead of silently swallowing the failure.
+  const refreshDocuments = useCallback(async (): Promise<boolean> => {
     if (inFolderMode) {
       // Folder mode: refetch from server
       try {
@@ -467,14 +460,16 @@ const Documents = ({
         const response = await getDocumentsByFolder(folderToFetch, includeSubfolders, currentPage, pageSize, filters);
         if (isDocumentActionError(response)) {
           handleError(response, getErrorMessage(response));
-          return;
+          return false;
         }
         setDocumentsToDisplay(response.documents);
         setTotalDocuments(response.total);
         setTotalPages(Math.ceil(response.total / pageSize));
+        return true;
       } catch (err) {
         console.error('Error refreshing documents:', err);
         setError(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
+        return false;
       }
     } else {
       // Entity mode: directly fetch updated documents
@@ -483,7 +478,7 @@ const Documents = ({
           const response = await getDocumentsByEntity(entityId, entityType, filters, currentPage, pageSize);
           if (isDocumentActionError(response)) {
             handleError(response, getErrorMessage(response));
-            return;
+            return false;
           }
           setDocumentsToDisplay(response.documents);
           setTotalDocuments(response.totalCount);
@@ -491,12 +486,21 @@ const Documents = ({
         } catch (err) {
           console.error('Error refreshing entity documents:', err);
           setError(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
+          return false;
         }
       }
-      // Also notify parent in case it needs to update other state
+      // Also notify parent in case it needs to update other state. Await it so
+      // a rejected refresh propagates instead of becoming an unhandled promise.
       if (onDocumentCreated) {
-        onDocumentCreated();
+        try {
+          await onDocumentCreated();
+        } catch (err) {
+          console.error('Error notifying parent after document refresh:', err);
+          setError(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
+          return false;
+        }
       }
+      return true;
     }
   }, [inFolderMode, entityId, entityType, filters, currentFolder, currentPage, pageSize, onDocumentCreated, tDoc]);
 
@@ -1227,6 +1231,14 @@ const Documents = ({
     handleDocumentClickRef.current = handleDocumentClick;
   });
   useEffect(() => {
+    if (documentToOpen) void handleDocumentClickRef.current(documentToOpen);
+  }, [documentToOpen]);
+  const wasDrawerOpen = useRef(false);
+  useEffect(() => {
+    if (wasDrawerOpen.current && !isDrawerOpen) onDocumentClosed?.();
+    wasDrawerOpen.current = isDrawerOpen;
+  }, [isDrawerOpen, onDocumentClosed]);
+  useEffect(() => {
     if (!inFolderMode) return;
     const docId = searchParams?.get('doc') ?? null;
     if (!docId || autoOpenedDocRef.current === docId) return;
@@ -1618,6 +1630,33 @@ const Documents = ({
     </div>
   );
 
+  if (drawerOnly) {
+    return (
+      <>
+        <Drawer
+          id={`${id}-document-drawer`}
+          isOpen={isDrawerOpen}
+          onClose={handleDrawerClose}
+          isInDrawer={isInDrawer}
+          hideCloseButton={true}
+          drawerVariant="document"
+        >
+          {renderDrawerBody()}
+        </Drawer>
+        <ConfirmationDialog
+          id={`${id}-unsaved-changes-dialog`}
+          isOpen={showUnsavedChangesDialog}
+          onClose={() => setShowUnsavedChangesDialog(false)}
+          onConfirm={executeDrawerClose}
+          title="Unsaved Changes"
+          message="Are you sure you want to cancel? Any unsaved changes will be lost."
+          confirmLabel="Discard changes"
+          cancelLabel="Continue editing"
+        />
+      </>
+    );
+  }
+
   // Folder mode: show folder tree sidebar and new layout
   if (inFolderMode) {
     return (
@@ -1718,10 +1757,20 @@ const Documents = ({
                   entityId={entityId}
                   entityType={entityType}
                   folderPath={currentFolder}
-                  onUploadComplete={async () => {
-                    setShowUpload(false);
-                    await refreshDocuments();
-                    setFolderTreeKey(prev => prev + 1);
+                  onUploadComplete={() => {}}
+                  onAllUploadsComplete={async (summary) => {
+                    if (summary.succeeded > 0) {
+                      const refreshed = await refreshDocuments();
+                      if (!refreshed) {
+                        // Let the uploader surface reload guidance and stay
+                        // open rather than closing over a stale list.
+                        throw new Error('Document list refresh failed after upload');
+                      }
+                      setFolderTreeKey(prev => prev + 1);
+                    }
+                    if (summary.failed === 0) {
+                      setShowUpload(false);
+                    }
                   }}
                   onCancel={() => setShowUpload(false)}
                   getFoldersFn={getFoldersFn}
@@ -2006,12 +2055,22 @@ const Documents = ({
                   entityId={entityId}
                   entityType={entityType}
                   folderPath={forceUploadToRoot ? null : undefined}
-                  onUploadComplete={async () => {
-                    setShowUpload(false);
-                    // Refresh the documents list (triggers router.refresh() in entity mode)
-                    await refreshDocuments();
-                    if (inFolderMode) {
-                      setFolderTreeKey(prev => prev + 1);
+                  onUploadComplete={() => {}}
+                  onAllUploadsComplete={async (summary) => {
+                    if (summary.succeeded > 0) {
+                      // Refresh the documents list (triggers router.refresh() in entity mode)
+                      const refreshed = await refreshDocuments();
+                      if (!refreshed) {
+                        // Let the uploader surface reload guidance and stay
+                        // open rather than closing over a stale list.
+                        throw new Error('Document list refresh failed after upload');
+                      }
+                      if (inFolderMode) {
+                        setFolderTreeKey(prev => prev + 1);
+                      }
+                    }
+                    if (summary.failed === 0) {
+                      setShowUpload(false);
                     }
                   }}
                   onCancel={() => setShowUpload(false)}

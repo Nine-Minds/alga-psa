@@ -168,7 +168,8 @@
       "expandGroup": "Espandi gruppo",
       "collapseGroup": "Comprimi gruppo",
       "renameGroup": "Rinomina gruppo",
-      "deleteGroup": "Elimina gruppo"
+      "deleteGroup": "Elimina gruppo",
+      "groupMenu": "Azioni del gruppo"
     },
     "dropActivitiesHere": "Trascina le attività qui",
     "ungroupedHeading": "Non raggruppate",
@@ -178,6 +179,16 @@
       "status": "Stato",
       "priority": "Priorità",
       "dueDate": "Data di scadenza"
+    },
+    "defaultBadge": "Predefinito",
+    "defaultBadgeHint": "Le attività che non hai inserito in un gruppo compaiono qui, incluso il lavoro appena assegnato.",
+    "defaultGroupEmpty": "Il nuovo lavoro assegnato a te apparirà qui",
+    "menu": {
+      "setDefault": "Imposta come predefinito per il nuovo lavoro",
+      "unsetDefault": "Smetti di usare come predefinito"
+    },
+    "errors": {
+      "setDefaultFailed": "Impossibile aggiornare il gruppo predefinito"
     }
   },
   "printable": {
@@ -533,5 +544,32 @@
   "actions": {
     "print": "Stampa",
     "printOptions": "Opzioni di stampa"
+  },
+  "actionMenu": {
+    "moveToGroup": "Sposta nel gruppo",
+    "loadingGroups": "Caricamento…",
+    "newGroupTitle": "Nuovo gruppo"
+  },
+  "deepLink": {
+    "notInView": "Questo elemento non è nella vista corrente.",
+    "notOnList": "Questo elemento non è più nel tuo elenco di attività.",
+    "clearFilters": "Cancella filtri"
+  },
+  "myGroup": {
+    "label": "Il mio gruppo",
+    "chip": "Il mio gruppo: {{name}}",
+    "ungrouped": "Non raggruppato",
+    "privacyHint": "Solo tu puoi vederlo. Organizza il tuo elenco di attività.",
+    "selectPlaceholder": "Scegli un gruppo",
+    "newGroup": "Nuovo gruppo…",
+    "newGroupPlaceholder": "Nome del gruppo",
+    "create": "Crea",
+    "cancel": "Annulla",
+    "showOnBoard": "Mostra nelle mie attività",
+    "errors": {
+      "load": "Impossibile caricare i tuoi gruppi.",
+      "move": "Impossibile cambiare il tuo gruppo. Riprova.",
+      "create": "Impossibile creare il gruppo. Riprova."
+    }
   }
 }

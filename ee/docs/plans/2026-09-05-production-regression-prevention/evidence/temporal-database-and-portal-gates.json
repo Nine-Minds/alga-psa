@@ -1,0 +1,106 @@
+{
+  "temporal-engine": {
+    "status": "passed",
+    "counts": {
+      "passed": 29,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "pending": 0
+    },
+    "failures": [],
+    "source": {
+      "before": {
+        "revision": "37094181656435d1988e68bf9069ba57b2df66d4",
+        "dirty": true,
+        "changes": [
+          {
+            "status": " M",
+            "file": "ee/temporal-workflows/src/workflows/portal-domains/__tests__/registration.workflow.integration.test.ts"
+          }
+        ]
+      },
+      "after": {
+        "revision": "37094181656435d1988e68bf9069ba57b2df66d4",
+        "dirty": true,
+        "changes": [
+          {
+            "status": " M",
+            "file": "ee/temporal-workflows/src/workflows/portal-domains/__tests__/registration.workflow.integration.test.ts"
+          }
+        ]
+      }
+    },
+    "files": 6
+  },
+  "temporal-database": {
+    "status": "passed",
+    "counts": {
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "pending": 0
+    },
+    "failures": [],
+    "source": {
+      "before": {
+        "revision": "37094181656435d1988e68bf9069ba57b2df66d4",
+        "dirty": true,
+        "changes": [
+          {
+            "status": " M",
+            "file": ".github/workflows/citus-migration-smoke.yml"
+          },
+          {
+            "status": " M",
+            "file": "ee/temporal-workflows/src/workflows/portal-domains/__tests__/registration.workflow.integration.test.ts"
+          },
+          {
+            "status": " M",
+            "file": "scripts/lib/test-discovery.mjs"
+          },
+          {
+            "status": " M",
+            "file": "scripts/run-additional-workspace-tests.mjs"
+          },
+          {
+            "status": "??",
+            "file": "ee/temporal-workflows/vitest.database.config.ts"
+          }
+        ]
+      },
+      "after": {
+        "revision": "37094181656435d1988e68bf9069ba57b2df66d4",
+        "dirty": true,
+        "changes": [
+          {
+            "status": " M",
+            "file": ".github/workflows/citus-migration-smoke.yml"
+          },
+          {
+            "status": " M",
+            "file": "ee/temporal-workflows/src/workflows/portal-domains/__tests__/registration.workflow.integration.test.ts"
+          },
+          {
+            "status": " M",
+            "file": "scripts/lib/test-discovery.mjs"
+          },
+          {
+            "status": " M",
+            "file": "scripts/run-additional-workspace-tests.mjs"
+          },
+          {
+            "status": "??",
+            "file": "ee/temporal-workflows/vitest.database.config.ts"
+          }
+        ]
+      }
+    },
+    "files": 1
+  },
+  "limits": [
+    "Local evidence; native rerun pending.",
+    "Database suite upgrades product data on current migrated schema, not a previous supported release schema."
+  ]
+}

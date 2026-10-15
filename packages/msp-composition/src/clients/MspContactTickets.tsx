@@ -14,6 +14,7 @@ import { getTicketsForListWithCursor } from '@alga-psa/tickets/actions/optimized
 import { XCircle } from 'lucide-react';
 import { useDrawer } from "@alga-psa/ui";
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
+import { ticketDetailsInitialProps } from '../tickets/ticketDetailsInitialProps';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import {
@@ -85,7 +86,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
   initialUsers = []
 }) => {
   const { t } = useTranslation('msp/contacts');
-  const { locale } = useFormatters();
+  const { locale, dateFormat } = useFormatters();
   const router = useRouter();
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -218,7 +219,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
           initialClient={ticketData.client}
           initialContacts={ticketData.contacts}
           initialContactInfo={ticketData.contactInfo}
-          initialCreatedByUser={ticketData.createdByUser}
+          {...ticketDetailsInitialProps(ticketData)}
           initialAdditionalAgents={ticketData.additionalAgents}
           initialAvailableAgents={ticketData.availableAgents}
           initialUserMap={ticketData.userMap}
@@ -311,7 +312,8 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
       showClient: true, // Show client column in contact view
       onClientClick: handleClientClick,
       locale,
-    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleTagsChange, handleClientClick, locale]);
+      dateFormat,
+    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleTagsChange, handleClientClick, locale, dateFormat]);
 
   const handleCategorySelect = (
     selectedCategories: string[],

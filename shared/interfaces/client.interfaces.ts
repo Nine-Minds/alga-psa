@@ -50,6 +50,8 @@ export interface CreateClientInput {
   country?: string;
   default_currency_code?: string;
   notes?: string;
+  /** Calendar date the relationship began ('YYYY-MM-DD'); null uses created_at. */
+  client_since?: string | null;
   properties?: Record<string, any>;
   parent_client_id?: string;
   contract_line_id?: string;

@@ -11,7 +11,6 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
-import { Switch } from '@alga-psa/ui/components/Switch';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
@@ -19,13 +18,8 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActi
 import { updateUser } from '@alga-psa/users/actions/user-actions/userActions';
 import { useUserAvatar, invalidateUserAvatar } from '@alga-psa/user-composition/hooks';
 import type { IUserWithRoles } from '@alga-psa/types';
-import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from '@alga-psa/notifications';
-import {
-  getCategoriesAction,
-  getCategoryWithSubtypesAction,
-  updateUserPreferenceAction
-} from '@alga-psa/notifications/actions/notification-actions/notificationActions';
 import { InternalNotificationPreferences } from '@alga-psa/notifications/components/settings/InternalNotificationPreferences';
+import { EmailNotificationPreferences } from '@alga-psa/notifications/components/settings/EmailNotificationPreferences';
 import PasswordChangeForm from '@alga-psa/users/components/settings/PasswordChangeForm';
 import UserAvatarUpload from '@alga-psa/users/components/profile/UserAvatarUpload';
 import SessionManagement from '@alga-psa/auth/components/settings/security/SessionManagement';
@@ -99,8 +93,6 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [user, setUser] = useState<IUserWithRoles | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<NotificationCategory[]>([]);
-  const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, NotificationSubtype[]>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   // Plausibility warnings. Rendered beneath the field; never gate the save.
   const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
@@ -168,20 +160,6 @@ export default function UserProfile({ userId }: UserProfileProps) {
         setPhone(currentUser.phone || '');
         setPhoneExtension(currentUser.phone_extension || '');
         setTimezone(currentUser.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
-
-        // Get notification categories and subtypes
-        const notificationCategories = await getCategoriesAction();
-        setCategories(notificationCategories);
-
-        // Get subtypes for each category
-        const subtypes: Record<number, NotificationSubtype[]> = {};
-        await Promise.all(
-          notificationCategories.map(async (category: NotificationCategory): Promise<void> => {
-            const { subtypes: categorySubtypes } = await getCategoryWithSubtypesAction(category.id);
-            subtypes[category.id] = categorySubtypes;
-          })
-        );
-        setSubtypesByCategory(subtypes);
 
       } catch (err) {
         console.error('Error initializing profile:', err);
@@ -296,10 +274,17 @@ export default function UserProfile({ userId }: UserProfileProps) {
         const errorKeys: Record<typeof result.code, string> = {
           SOLO_PLAN_LIMIT: 'common:users.soloLicenseLimit',
           LICENSE_LIMIT_REACHED: 'common:users.technicianLicenseLimit',
+          CO_MANAGED_SEAT_LIMIT: 'common:users.coManagedAdmission.seatLimit',
+          CO_MANAGED_POOL_LIMIT: 'common:users.coManagedAdmission.poolLimit',
+          CO_MANAGED_NOT_ACTIVE: 'common:users.coManagedAdmission.notActive',
+          CO_MANAGED_LICENSE_LAPSED: 'common:users.coManagedAdmission.licenseLapsed',
+          CO_MANAGED_INVITATION_INVALID: 'common:users.coManagedAdmission.invitationInvalid',
+          CO_MANAGED_ALLOCATION_CONFLICT: 'common:users.coManagedAdmission.allocationConflict',
           EMAIL_ALREADY_EXISTS: 'profile.messages.error.emailAlreadyExists',
           REPORTS_TO_SELF: 'profile.messages.error.reportsToSelf',
           REPORTS_TO_CYCLE: 'profile.messages.error.reportsToCycle',
           SCIM_MANAGED_INACTIVE: 'profile.messages.error.scimManagedInactive',
+          INVALID_TIMEZONE: 'profile.messages.error.invalidTimezone',
           PERMISSION_DENIED: 'profile.messages.error.permissionDenied',
           USER_UPDATE_FAILED: 'profile.messages.error.updateFailed',
         };
@@ -317,23 +302,6 @@ export default function UserProfile({ userId }: UserProfileProps) {
         defaultValue: 'Failed to save profile',
       }));
     }
-  };
-
-  const handleCategoryToggle = (categoryId: number, enabled: boolean) => {
-    setCategories(prev => 
-      prev.map((cat):NotificationCategory => 
-        cat.id === categoryId ? { ...cat, is_enabled: enabled } : cat
-      )
-    );
-  };
-
-  const handleSubtypeToggle = (categoryId: number, subtypeId: number, enabled: boolean) => {
-    setSubtypesByCategory(prev => ({
-      ...prev,
-      [categoryId]: prev[categoryId].map((subtype):NotificationSubtype =>
-        subtype.id === subtypeId ? { ...subtype, is_enabled: enabled } : subtype
-      )
-    }));
   };
 
   if (loading) {
@@ -559,31 +527,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
           </CardHeader>
           <CardContent>
             {notificationView === 'email' ? (
-              <div className="space-y-6">
-                {categories.map((category: NotificationCategory): React.JSX.Element => (
-                  <div key={category.id} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>{category.name}</Label>
-                      <Switch
-                        checked={category.is_enabled}
-                        onCheckedChange={(checked) => handleCategoryToggle(category.id, checked)}
-                      />
-                    </div>
-                    <div className="ml-6 space-y-2">
-                      {subtypesByCategory[category.id]?.map((subtype: NotificationSubtype): React.JSX.Element => (
-                        <div key={subtype.id} className="flex items-center justify-between">
-                          <Label className="text-sm">{subtype.name}</Label>
-                          <Switch
-                            checked={subtype.is_enabled}
-                            disabled={!category.is_enabled}
-                            onCheckedChange={(checked) => handleSubtypeToggle(category.id, subtype.id, checked)}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <EmailNotificationPreferences />
             ) : (
               <InternalNotificationPreferences />
             )}

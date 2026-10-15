@@ -4,6 +4,7 @@ import {
   createQuoteItemSchema,
   createQuoteSchema,
   quoteStatusTransitionSchema,
+  updateQuoteItemSchema,
 } from '../../src/schemas/quoteSchemas';
 
 describe('Quote types and schemas', () => {
@@ -129,6 +130,37 @@ describe('Quote types and schemas', () => {
     expect(result.error?.issues.map((issue) => issue.path.join('.'))).toEqual(
       expect.arrayContaining(['description', 'quantity'])
     );
+  });
+
+  it('T014a: createQuoteItemSchema strips a caller-supplied catalog_description (snapshot is server-captured)', () => {
+    const result = createQuoteItemSchema.safeParse({
+      quote_id: '11111111-1111-4111-8111-111111111111',
+      service_id: '11111111-1111-4111-8111-111111111111',
+      description: 'Managed Firewall Service',
+      quantity: 1,
+      unit_price: 25000,
+      catalog_description: 'CALLER FORGED SNAPSHOT',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect('catalog_description' in result.data).toBe(false);
+    }
+  });
+
+  it('T014b: updateQuoteItemSchema strips a caller-supplied catalog_description', () => {
+    const result = updateQuoteItemSchema.safeParse({
+      quote_id: '11111111-1111-4111-8111-111111111111',
+      description: 'Edited line description',
+      quantity: 2,
+      unit_price: 30000,
+      catalog_description: 'CALLER FORGED SNAPSHOT',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect('catalog_description' in result.data).toBe(false);
+    }
   });
 
   it('T015: status transition validation allows draft→sent but rejects draft→accepted', () => {

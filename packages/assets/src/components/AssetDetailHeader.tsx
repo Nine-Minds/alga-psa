@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useTransition } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSWRConfig } from 'swr';
 import {
@@ -19,12 +19,14 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { DeleteEntityDialog } from '@alga-psa/ui';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { StatusBadge } from './shared/StatusBadge';
 import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { getIconComponent } from '@alga-psa/ui/components/IconPicker';
 import type { Asset, DeletionValidationResult } from '@alga-psa/types';
 import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
 import { RemoteAccessButton } from './RemoteAccessButton';
+import { hasRemoteAccessLinks } from '../actions/remoteAccessLinkActions';
 import { getRmmProviderDisplayName } from '../lib/rmmProviderDisplay';
 import { deleteAsset } from '../actions/assetActions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
@@ -41,6 +43,9 @@ interface AssetDetailHeaderProps {
   asset: Asset;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  /** Sends a reboot command through the asset's RMM after the user confirms. */
+  onReboot?: () => Promise<void> | void;
+  isRebooting?: boolean;
   /**
    * Opens the detail page's focus drawer on the Edit view. Falls back to the
    * /msp/assets/[id]/edit route when absent, so the header still works on its
@@ -64,11 +69,16 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
   asset,
   onRefresh,
   isRefreshing,
+  onReboot,
+  isRebooting,
   onEdit
 }) => {
+  const [hasTemplateLinks, setHasTemplateLinks] = useState(false);
+  useEffect(() => { void hasRemoteAccessLinks().then((result) => setHasTemplateLinks(result === true)).catch(() => setHasTemplateLinks(false)); }, []);
   const { t } = useTranslation('msp/assets');
   const router = useRouter();
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
+  const [isRebootDialogOpen, setIsRebootDialogOpen] = useState(false);
   const { mutate } = useSWRConfig();
   const { renderQuickAddTicket } = useAssetCrossFeature();
   const assetTypeEntries = useAssetTypeRegistry();
@@ -191,12 +201,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
             id="asset-detail-print-button"
             variant="outline"
           />
-          {asset.rmm_provider && (
-            <RemoteAccessButton
-              asset={asset}
-              variant="default"
-            />
-          )}
+          <RemoteAccessButton asset={asset} variant="default" hasTemplateLinks={hasTemplateLinks} surface="asset-header" />
           
           <Button 
             id="create-ticket-header-btn"
@@ -230,9 +235,15 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
                       ? t('assetDetailHeader.actions.refreshing', { defaultValue: 'Refreshing...' })
                       : t('assetDetailHeader.actions.refreshData', { defaultValue: 'Refresh Data' })}
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem
+                    id="reboot-device-action"
+                    disabled={!onReboot || isRebooting}
+                    onSelect={() => setIsRebootDialogOpen(true)}
+                  >
                     <Power className="mr-2 h-4 w-4" />
-                    {t('assetDetailHeader.actions.rebootDevice', { defaultValue: 'Reboot Device' })}
+                    {isRebooting
+                      ? t('assetDetailHeader.actions.rebooting', { defaultValue: 'Rebooting...' })
+                      : t('assetDetailHeader.actions.rebootDevice', { defaultValue: 'Reboot Device' })}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
@@ -283,6 +294,24 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing || isDeletePending}
+      />
+
+      <ConfirmationDialog
+        id={`reboot-device-dialog-${asset.asset_id}`}
+        isOpen={isRebootDialogOpen}
+        onClose={() => setIsRebootDialogOpen(false)}
+        onConfirm={async () => {
+          setIsRebootDialogOpen(false);
+          await onReboot?.();
+        }}
+        title={t('assetDetailHeader.reboot.title', { defaultValue: 'Reboot device?' })}
+        message={t('assetDetailHeader.reboot.message', {
+          defaultValue: '{{name}} will restart immediately through {{provider}}. Anyone signed in will lose unsaved work.',
+          name: asset.name,
+          provider: getRmmProviderDisplayName(asset.rmm_provider),
+        })}
+        confirmLabel={t('assetDetailHeader.reboot.confirm', { defaultValue: 'Reboot now' })}
+        isConfirming={isRebooting}
       />
     </>
   );

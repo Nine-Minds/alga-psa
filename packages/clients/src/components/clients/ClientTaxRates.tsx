@@ -222,7 +222,7 @@ const ClientTaxRates: React.FC<ClientTaxRatesProps> = ({
                     <h2 className="text-lg font-semibold">{t('clientTaxRates.createDrawerTitle', { defaultValue: 'Create New Tax Rate' })}</h2>
                     <p className="text-sm text-muted-foreground">{t('clientTaxRates.createDrawerDescription', { defaultValue: 'Enter the details for the new tax rate.' })}</p>
                  </div>
-                <TaxRateCreateForm onSuccess={handleCreateSuccess} onError={handleCreateError} />
+                <TaxRateCreateForm onSuccess={handleCreateSuccess} onError={handleCreateError} onCancel={() => setIsCreateDrawerOpen(false)} />
             </Drawer>
         </Card>
     );

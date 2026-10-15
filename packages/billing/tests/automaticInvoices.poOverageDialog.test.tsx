@@ -9,7 +9,7 @@
  *   formatCurrency, overstating the overage 100x ($612.50 rendered as "$61,250.00").
  */
 import React from 'react';
-import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
@@ -21,6 +21,10 @@ const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn();
 const mockGenerateGroupedInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
 const mockGenerateInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
 
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: vi.fn(),
@@ -28,7 +32,14 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  // The explained preview failures render the real English locale copy, so the
+  // test proves each code has a shipped, actionable translation.
+  const { readFileSync } = await import('node:fs');
+  const { resolve } = await import('node:path');
+  const invoicingLocale = JSON.parse(
+    readFileSync(resolve(__dirname, '../../../server/public/locales/en/msp/invoicing.json'), 'utf8'),
+  );
   const NO_BILLING_EMAIL_COPY =
     '{{clientName}} has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location, then try again.';
   const interpolate = (template: string, vars: Record<string, unknown>) =>
@@ -37,10 +48,15 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
       return value === undefined ? match : String(value);
     });
   return {
+    useOptionalI18n: () => null,
     useTranslation: () => ({
       t: (key: string, opts?: { defaultValue?: string } & Record<string, unknown>) => {
         if (key === 'manualInvoices.errors.NO_BILLING_EMAIL') {
           return interpolate(NO_BILLING_EMAIL_COPY, opts ?? {});
+        }
+        const explainedCode = key.match(/^manualInvoices\.errors\.(RECURRING_PERIODS_NOT_MATERIALIZED|NO_ACTIVE_CONTRACT_LINES|NOTHING_TO_BILL)$/)?.[1];
+        if (explainedCode) {
+          return invoicingLocale.manualInvoices.errors[explainedCode];
         }
         return (opts && typeof opts.defaultValue === 'string' ? opts.defaultValue : key);
       },
@@ -112,32 +128,7 @@ vi.mock('@alga-psa/ui/components/Badge', () => ({
 vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: ({ containerClassName: _containerClassName, ...props }: any) => <input {...props} />,
 }));
-vi.mock('@alga-psa/ui/components/Checkbox', () => ({
-  // The component drives parent-row selection through onClick (for shift-range
-  // support) and calls event.preventDefault(). On a native jsdom checkbox that
-  // cancels the click activation and reverts `.checked`, so we hand the
-  // component a no-op preventDefault instead.
-  Checkbox: ({ indeterminate: _indeterminate, onClick, ...props }: any) => (
-    <input
-      type="checkbox"
-      data-indeterminate={_indeterminate ? 'true' : 'false'}
-      {...props}
-      onClick={
-        onClick
-          ? (event: any) => {
-            onClick({
-              shiftKey: event.shiftKey,
-              metaKey: event.metaKey,
-              ctrlKey: event.ctrlKey,
-              stopPropagation: () => event.stopPropagation(),
-              preventDefault: () => {},
-            });
-          }
-          : undefined
-      }
-    />
-  ),
-}));
+
 vi.mock('@alga-psa/ui/components/DateRangePicker', () => ({
   DateRangePicker: () => <div data-testid="date-range-picker" />,
 }));
@@ -234,8 +225,16 @@ function buildMember(index: number) {
   };
 }
 
+let AutomaticInvoices: typeof import('../src/components/billing-dashboard/AutomaticInvoices').default;
+
+// Compile the component graph once in explicit setup. On cold parallel CI this
+// consumed the first regression's entire 20s budget; the UI assertions below
+// still retain their original test and polling limits.
+beforeAll(async () => {
+  AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
+}, 60_000);
+
 async function selectParentAndClickGenerate() {
-  const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
   render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
   const parentCheckbox = await waitFor(() => {
@@ -252,7 +251,6 @@ async function selectParentAndClickGenerate() {
 }
 
 async function selectParentAndClickPreview() {
-  const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
   render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
   const parentCheckbox = await waitFor(() => {
@@ -294,7 +292,6 @@ function buildSinglePreviewSuccess() {
 }
 
 async function selectSingleChildAndOpenPreview() {
-  const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
   render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
   const toggle = await waitFor(() => {
@@ -463,7 +460,7 @@ describe('AutomaticInvoices PO overage dialog', () => {
             billingCycleId: null,
             executionIdentityKey: 'exec-1',
             executionWindowKind: 'contract_cadence_window' as const,
-            errorMessage: 'Failed to generate invoice for this billing cycle.',
+            errorMessage: 'Invoice generation did not complete.',
           },
         ],
       });
@@ -472,7 +469,7 @@ describe('AutomaticInvoices PO overage dialog', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/Failed to generate invoice for this billing cycle\./),
+          screen.getByText(/Invoice generation did not complete\./),
         ).toBeInTheDocument();
       });
       expect(screen.queryByText(/has no billing email/i)).toBeNull();
@@ -497,6 +494,51 @@ describe('AutomaticInvoices PO overage dialog', () => {
             /Acme Co has no billing email\. Set a billing contact, a client billing email, or an email on the billing or default location, then try again\./,
           ).length,
         ).toBeGreaterThan(0);
+      });
+    });
+
+    it.each([
+      [
+        'RECURRING_PERIODS_NOT_MATERIALIZED',
+        'Recurring service periods were not materialized for this recurring execution window.',
+        /Service periods haven't been generated for this billing window yet\. Use Fix all/,
+      ],
+      [
+        'NO_ACTIVE_CONTRACT_LINES',
+        'No active contract lines found for this client in the selected billing period.',
+        /No contract line is active for this billing period\. Check the contract's start and end dates/,
+      ],
+      [
+        'NOTHING_TO_BILL',
+        'Nothing to bill',
+        /Nothing is ready to invoice for this window\. Arrears lines can only be invoiced after their service period ends/,
+      ],
+    ])('renders the localized, actionable message for the coded %s preview failure', async (code, rawMessage, expected) => {
+      mockPreviewGroupedInvoicesForSelectionInputs.mockResolvedValue({
+        success: false,
+        error: 'Server fallback wording that the locale copy must override',
+        code,
+      });
+
+      await selectParentAndClickPreview();
+
+      await waitFor(() => {
+        expect(screen.getAllByText(expected).length).toBeGreaterThan(0);
+      });
+      expect(screen.queryByText(/Server fallback wording/)).toBeNull();
+      expect(screen.queryByText(rawMessage)).toBeNull();
+    });
+
+    it('falls back to the server message when a preview failure code has no shipped translation', async () => {
+      mockPreviewGroupedInvoicesForSelectionInputs.mockResolvedValue({
+        success: false,
+        error: 'Billing cycle not found',
+      });
+
+      await selectParentAndClickPreview();
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/Billing cycle not found/).length).toBeGreaterThan(0);
       });
     });
 

@@ -1,0 +1,43 @@
+{
+  "status": "User API assertions strengthened; search remains failing against the older local image and requires rebuilt acceptance",
+  "changes": [
+    "Require 403 when user read/create permission is removed and verify unrelated reads remain authorized",
+    "Denied creation preserves both users and user-role rows; restoring the grant permits create, readback and persisted identity checks",
+    "Require successful fixture creation for pagination, search, role and filter cases",
+    "Use supported client counterexample instead of silently ignored invalid contractor user type",
+    "Require populated pagination/filter results and exact identities for uniquely queried search fixtures"
+  ],
+  "validation": {
+    "initialPermissionSelection": {
+      "passed": 4,
+      "filteredOut": 21,
+      "durationSeconds": 3.34,
+      "log": "/tmp/alga-user-api-permission-outcomes.log"
+    },
+    "expandedSelection": {
+      "passed": 7,
+      "failed": 1,
+      "filteredOut": 17,
+      "durationSeconds": 6.81,
+      "log": "/tmp/alga-user-api-outcomes-final.log"
+    },
+    "finalSearchDiagnostic": {
+      "failed": 1,
+      "filteredOut": 24,
+      "error": "HTTP401 UNAUTHORIZED: Invalid API key",
+      "log": "/tmp/alga-user-api-search-current-image.log"
+    },
+    "types": "Focused strictNullChecks tsc passed; /tmp/alga-user-api-outcomes-types-final.log"
+  },
+  "environment": {
+    "container": "alga-regression-email-app",
+    "verifiedImage": "sha256:2d3f0db9b006857afd4b5977a39e39e5c9bf29ec703201cf7d9d12a1abe4e88d",
+    "database": "Preserved owned isolated browser database; synthetic per-suite tenants",
+    "limitation": "Current source includes newer shared API-key middleware fixes, but this run does not prove rebuilt search behavior. Success and exact-result assertions remain mandatory."
+  },
+  "remaining": [
+    "Execute against rebuilt native CE/EE application after API attestation fix is published",
+    "Full integration job 101608767833 revalidated live; preserve before push",
+    "Other plan requirements and historical integration skips remain incomplete"
+  ]
+}

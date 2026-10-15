@@ -212,6 +212,7 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
               // Convert from hours (wizard UI) to minutes (storage)
               estimated_hours: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
               duration_days: task.duration_days || null,
+              start_offset_days: task.start_offset_days ?? null,
               task_type_key: task.task_type_key || 'task',
               priority_id: task.priority_id || null,
               assigned_to: task.assigned_to || null,
@@ -413,6 +414,7 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
               // Convert from hours (wizard UI) to minutes (storage)
               estimated_hours: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
               duration_days: task.duration_days || null,
+              start_offset_days: task.start_offset_days ?? null,
               task_type_key: task.task_type_key || 'task',
               priority_id: task.priority_id || null,
               assigned_to: task.assigned_to || null,
@@ -578,6 +580,7 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
           description_rich_text: task.description_rich_text,
           estimated_hours: task.estimated_hours,
           duration_days: task.duration_days,
+          start_offset_days: task.start_offset_days ?? null,
           task_type_key: task.task_type_key,
           priority_id: task.priority_id,
           assigned_to: task.assigned_to,

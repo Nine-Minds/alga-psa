@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ClientLifecycleStatus, ContactPhoneNumberInput, CreateContactInput, IClient, IClientLocation } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
@@ -21,12 +21,18 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
 import { createClient } from '@alga-psa/clients/actions/clientActions';
 import { createClientLocation } from '@alga-psa/clients/actions/clientLocationActions';
-import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActions';
+import { getAllCountries, getTenantDefaultCountry, ICountry } from '@alga-psa/clients/actions/countryActions';
 import { listContactPhoneTypeSuggestions, createClientContact } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { ChevronRight } from 'lucide-react';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
@@ -61,6 +67,9 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 type CreateClientData = Omit<IClient, "client_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at">;
 
 type CreateLocationData = Omit<IClientLocation, "location_id" | "tenant" | "created_at" | "updated_at">;
+
+const isClientLocationActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 type CreateContactData = Pick<IContact, 'full_name' | 'email' | 'role' | 'notes'> & Pick<
   CreateContactInput,
@@ -106,6 +115,11 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     account_manager_id: null
   };
 
+  // The tenant's own country, once resolved. Declared ahead of the initial form
+  // data because every reset seeds the country field from it.
+  const [tenantDefaultCountry, setTenantDefaultCountry] = useState<ICountry | null>(null);
+  const hasEditedCountryRef = useRef(false);
+
   const initialLocationData: CreateLocationData = {
     client_id: '',
     location_name: 'Main Office',
@@ -115,8 +129,8 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     city: '',
     state_province: '',
     postal_code: '',
-    country_code: 'US',
-    country_name: 'United States',
+    country_code: tenantDefaultCountry?.code ?? 'US',
+    country_name: tenantDefaultCountry?.name ?? 'United States',
     region_code: null,
     is_billing_address: true,
     is_shipping_address: true,
@@ -203,8 +217,21 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         if (isLoadingCountries || countries.length > 0) return;
         setIsLoadingCountries(true);
         try {
-          const countriesData = await getAllCountries();
+          // A missing tenant default must not empty the picker, so it fails soft.
+          const [countriesData, tenantCountry] = await Promise.all([
+            getAllCountries(),
+            getTenantDefaultCountry().catch(() => null),
+          ]);
           setCountries(countriesData);
+          if (tenantCountry) {
+            setTenantDefaultCountry(tenantCountry);
+            // An in-progress selection outranks the default that arrives after it.
+            setLocationData(prev => hasEditedCountryRef.current ? prev : {
+              ...prev,
+              country_code: tenantCountry.code,
+              country_name: tenantCountry.name,
+            });
+          }
         } catch (error: any) {
           handleError(error, t('quickAddClient.countriesLoadError', {
             defaultValue: 'Failed to load countries.',
@@ -233,6 +260,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       setFormData(initialFormData);
       setLocationData(initialLocationData);
       setContactData(initialContactData);
+      hasEditedCountryRef.current = false;
       setContactPhoneValidationErrors([]);
       setContactEmailValidationErrors([]);
       setIsSubmitting(false);
@@ -460,9 +488,12 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       if (locationData.address_line1.trim() || locationData.city.trim() || 
           hasActualPhone || locationData.email?.trim()) {
         try {
-          await createClientLocation(newClient.client_id, locationData);
+          const locationResult = await createClientLocation(newClient.client_id, locationData);
+          if (isClientLocationActionError(locationResult)) {
+            handleError(locationResult, t('quickAddClient.clientCreatedLocationFailed', { defaultValue: 'Client created but failed to add location.' }));
+          }
         } catch (locationError) {
-          handleError(locationError, "Client created but failed to add location.");
+          handleError(locationError, t('quickAddClient.clientCreatedLocationFailed', { defaultValue: 'Client created but failed to add location.' }));
         }
       }
 
@@ -481,7 +512,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
             jobTitle: contactData.role ?? undefined,
           });
         } catch (contactError) {
-          handleError(contactError, "Client created but failed to add contact.");
+          handleError(contactError, t('quickAddClient.clientCreatedContactFailed', { defaultValue: 'Client created but failed to add contact.' }));
         }
       }
 
@@ -512,6 +543,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         setFormData(initialFormData);
         setLocationData(initialLocationData);
         setContactData(initialContactData);
+        hasEditedCountryRef.current = false;
         setContactPhoneValidationErrors([]);
         setContactEmailValidationErrors([]);
         setIsSubmitting(false);
@@ -623,6 +655,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   };
 
   const handleCountryChange = (countryCode: string, countryName: string) => {
+    hasEditedCountryRef.current = true;
     setLocationData(prev => ({
       ...prev,
       country_code: countryCode,

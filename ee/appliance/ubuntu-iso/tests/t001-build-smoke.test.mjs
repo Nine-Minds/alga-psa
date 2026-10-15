@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { parse, parseAllDocuments } from 'yaml';
+import { pinnedImage } from '../../../../scripts/lib/pinned-images.mjs';
 
 const repoRoot = path.resolve(path.join(import.meta.dirname, '..', '..', '..', '..'));
 const buildScript = path.join(repoRoot, 'ee', 'appliance', 'ubuntu-iso', 'scripts', 'build-ubuntu-appliance-iso.sh');
@@ -149,11 +150,11 @@ test('T001 build smoke: remastered ISO is branded and includes the offline appli
   assert.equal(fs.existsSync(shaOut), true);
 });
 
-test('T002 installer config sanity: network and storage remain user-confirmed before install actions', () => {
+test('T002 installer config sanity: network, storage and identity remain user-confirmed', () => {
   const userData = parse(fs.readFileSync(userDataPath, 'utf8'));
   const lateCommands = userData.autoinstall['late-commands'];
 
-  assert.deepEqual(userData.autoinstall['interactive-sections'], ['network', 'storage']);
+  assert.deepEqual(userData.autoinstall['interactive-sections'], ['network', 'storage', 'identity']);
   assert.equal(userData.autoinstall.storage.layout.name, 'direct');
   assert.equal(userData.autoinstall.storage.layout['sizing-policy'], 'all');
   assert.equal(userData.autoinstall.ssh['install-server'], true);
@@ -163,18 +164,18 @@ test('T002 installer config sanity: network and storage remain user-confirmed be
 
 test('T003 storage manifest avoids k3s default local-path RBAC collisions and grants configmap access', () => {
   const docs = parseAllDocuments(fs.readFileSync(storageManifestPath, 'utf8')).map((doc) => doc.toJSON());
-  const clusterRole = docs.find((doc) => doc?.kind === 'ClusterRole' && doc.metadata?.name === 'alga-local-path-provisioner-cluster-role');
-  const clusterRoleBinding = docs.find((doc) => doc?.kind === 'ClusterRoleBinding' && doc.metadata?.name === 'alga-local-path-provisioner-cluster-bind');
-  const namespacedRole = docs.find((doc) => doc?.kind === 'Role' && doc.metadata?.name === 'alga-local-path-provisioner-namespaced-role');
-  const namespacedRoleBinding = docs.find((doc) => doc?.kind === 'RoleBinding' && doc.metadata?.name === 'alga-local-path-provisioner-namespaced-bind');
+  const clusterRole = docs.find((doc) => doc?.kind === 'ClusterRole' && doc.metadata?.name === 'alga-local-path-provisioner-role');
+  const clusterRoleBinding = docs.find((doc) => doc?.kind === 'ClusterRoleBinding' && doc.metadata?.name === 'alga-local-path-provisioner-bind');
+  const namespacedRole = docs.find((doc) => doc?.kind === 'Role' && doc.metadata?.name === 'local-path-provisioner-role');
+  const namespacedRoleBinding = docs.find((doc) => doc?.kind === 'RoleBinding' && doc.metadata?.name === 'local-path-provisioner-bind');
 
   assert.ok(clusterRole);
   assert.ok(clusterRoleBinding);
   assert.ok(namespacedRole);
   assert.ok(namespacedRoleBinding);
   assert.equal(docs.some((doc) => doc?.kind === 'ClusterRoleBinding' && doc.metadata?.name === 'local-path-provisioner-bind'), false);
-  assert.equal(clusterRoleBinding.roleRef.name, 'alga-local-path-provisioner-cluster-role');
-  assert.equal(namespacedRoleBinding.roleRef.name, 'alga-local-path-provisioner-namespaced-role');
+  assert.equal(clusterRoleBinding.roleRef.name, 'alga-local-path-provisioner-role');
+  assert.equal(namespacedRoleBinding.roleRef.name, 'local-path-provisioner-role');
   assert.ok(namespacedRole.rules.some((rule) => rule.resources.includes('configmaps') && rule.verbs.includes('get')));
   assert.ok(clusterRole.rules.some((rule) => rule.resources.includes('configmaps') && rule.verbs.includes('get')));
 });
@@ -193,6 +194,11 @@ test('T004 Temporal chart waits for schema-safe startup and creates the default 
   assert.equal(env.SKIP_ADD_CUSTOM_SEARCH_ATTRIBUTES, 'true');
   assert.equal(temporalContainer.livenessProbe.initialDelaySeconds, 300);
   assert.ok(temporalContainer.startupProbe.failureThreshold >= 60);
+  // 512Mi OOMKilled temporal-server on field appliances; GOMEMLIMIT keeps the Go
+  // heap under whatever limit is set.
+  assert.equal(temporalContainer.resources.limits.memory, '1Gi');
+  const goMemLimit = temporalContainer.env.find((entry) => entry.name === 'GOMEMLIMIT');
+  assert.deepEqual(goMemLimit?.valueFrom?.resourceFieldRef, { containerName: 'temporal', resource: 'limits.memory' });
 
   assert.equal(job.metadata.annotations['helm.sh/hook'], 'post-install,post-upgrade');
   assert.match(job.spec.template.spec.containers[0].command.join('\n'), /temporal operator namespace create/);
@@ -226,39 +232,88 @@ test('T006 alga-core appliance profile gives the app Deployment a first-install-
   assert.ok(deployment.spec.progressDeadlineSeconds >= 1800);
 });
 
-test('T006b alga-core appliance bootstrap is serialized and avoids duplicate first-boot app image pulls', () => {
+test('T006b appliance bootstrap runs concurrently and refuses fresh setup over existing data', () => {
   const docs = helmTemplate(algaCoreChartPath, path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'single-node', 'values', 'alga-core.single-node.yaml'));
   const job = docs.find((doc) => doc.kind === 'Job' && doc.metadata?.name === 'test-release-sebastian-bootstrap');
   const deployment = docs.find((doc) => doc.kind === 'Deployment' && doc.metadata?.name === 'test-release-sebastian');
   const configMap = docs.find((doc) => doc.kind === 'ConfigMap' && doc.metadata?.name === 'test-release-sebastian-appliance-bootstrap');
 
   assert.ok(job);
-  assert.equal(job.metadata.annotations['helm.sh/hook'], 'post-install,post-upgrade');
-  assert.match(job.metadata.annotations['helm.sh/hook-delete-policy'], /before-hook-creation/);
-  assert.equal(job.spec.backoffLimit, 0);
+  // The appliance Deployment waits for bootstrap. A post-install hook would
+  // wait for that Deployment and deadlock; the ordinary Job must run alongside
+  // it and tolerate PostgreSQL starting first.
+  assert.equal(job.metadata.annotations?.['helm.sh/hook'], undefined);
+  assert.equal(job.spec.backoffLimit, 6);
   assert.equal(job.spec.template.spec.containers[0].imagePullPolicy, 'IfNotPresent');
 
   assert.ok(deployment);
   const waitInit = deployment.spec.template.spec.initContainers.find((container) => container.name === 'wait-for-bootstrap');
   assert.ok(waitInit);
-  assert.equal(waitInit.image, 'ankane/pgvector:latest');
+  // The profile carries no wait image of its own: it resolves to the pinned DB image.
+  assert.equal(waitInit.image, pinnedImage('pgvector'));
   assert.equal(waitInit.imagePullPolicy, 'IfNotPresent');
+
+  const dbStatefulSet = docs.find((doc) => doc.kind === 'StatefulSet' && doc.metadata?.name === 'db');
+  assert.ok(dbStatefulSet);
+  const dbContainer = dbStatefulSet.spec.template.spec.containers.find((container) => container.name === 'db');
+  assert.equal(dbContainer.image, pinnedImage('pgvector'));
+  assert.equal(dbContainer.imagePullPolicy, 'IfNotPresent');
+
+  // Existing data directories are reconciled by a plain Job (not a hook, so a
+  // failure cannot fail the Helm upgrade).
+  const updateJobs = docs.filter((doc) => doc.kind === 'Job' && /^db-extension-update-/.test(doc.metadata?.name ?? ''));
+  assert.equal(updateJobs.length, 1);
+  const [updateJob] = updateJobs;
+  assert.equal(updateJob.metadata.annotations?.['helm.sh/hook'], undefined);
+  const updateContainer = updateJob.spec.template.spec.containers[0];
+  assert.equal(updateContainer.image, pinnedImage('pgvector'));
+  const updateEnv = Object.fromEntries(updateContainer.env.map((entry) => [entry.name, entry]));
+  assert.equal(updateEnv.PGHOST.value, 'db');
+  assert.deepEqual(updateEnv.PGPASSWORD.valueFrom.secretKeyRef, { name: 'db-credentials', key: 'DB_PASSWORD_SUPERUSER' });
   assert.equal(deployment.spec.template.spec.containers[0].imagePullPolicy, 'IfNotPresent');
 
   assert.ok(configMap);
   const script = configMap.data['appliance-bootstrap.sh'];
-  assert.match(script, /createdb_admin\(\)/);
-  assert.match(script, /acquire_bootstrap_lock\(\)/);
-  assert.match(script, /alga_appliance_bootstrap_lock/);
-  assert.match(script, /clear_stale_knex_migration_lock/);
-  assert.match(script, /Database .* was created by another bootstrap attempt/);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-bootstrap-preflight-'));
+  try {
+    const bin = path.join(tmp, 'bin');
+    fs.mkdirSync(bin);
+    const unexpected = path.join(tmp, 'unexpected-mutation');
+    const commands = path.join(tmp, 'psql-commands');
+    // A synthetic psql process reports an already initialized database. Any
+    // mutation or migration command is a failure: fresh mode must stop first.
+    fs.writeFileSync(path.join(bin, 'psql'), `#!/bin/sh
+printf '%s\\n' "$*" >> "$PSQL_COMMAND_LOG"
+case "$*" in
+  *'\\q'*) exit 0 ;;
+  *'SELECT EXISTS'* | *'SELECT to_regclass'*) echo t ;;
+  *'SELECT 1'* | *'SELECT COUNT(*) FROM users;'*) echo 1 ;;
+  *) touch "$UNEXPECTED_MUTATION"; exit 95 ;;
+esac
+`, { mode: 0o755 });
+    const bootstrap = path.join(tmp, 'bootstrap.sh');
+    fs.writeFileSync(bootstrap, script);
+    const result = run('bash', [bootstrap], {
+      ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`,
+      BOOTSTRAP_MODE: 'fresh', DB_NAME_SERVER: 'fixture_server',
+      DB_NAME_HOCUSPOCUS: 'fixture_hocuspocus', DB_PASSWORD_ADMIN: 'fixture_password',
+      BOOTSTRAP_WAIT_TIMEOUT_SECONDS: '1', BOOTSTRAP_WAIT_RETRY_SECONDS: '0',
+      UNEXPECTED_MUTATION: unexpected,
+      PSQL_COMMAND_LOG: commands,
+    });
+    assert.equal(result.status, 1, `${result.stderr || result.stdout}\n${fs.readFileSync(commands, 'utf8')}`);
+    assert.match(result.stdout, /Existing application database state detected/);
+    assert.equal(fs.existsSync(unexpected), false, 'fresh-mode rejection must precede database mutation');
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
 });
 
-test('T007 Flux HelmReleases retry transient single-node install stalls', () => {
+test('T007 Flux leaves failed appliance installs available for explicit recovery', () => {
   for (const file of fs.readdirSync(fluxReleaseDir).filter((name) => name.endsWith('.yaml'))) {
     const doc = parse(fs.readFileSync(path.join(fluxReleaseDir, file), 'utf8'));
-    assert.ok(doc.spec.install.remediation.retries >= 1, `${file} install retries`);
-    assert.ok(doc.spec.upgrade.remediation.retries >= 1, `${file} upgrade retries`);
+    assert.equal(doc.spec.install.remediation.retries, 0, `${file} must not automatically uninstall a failed installation`);
+    assert.equal(doc.spec.upgrade.remediation.retries, 0, `${file} must retain failed upgrade state for recovery`);
   }
 });
 
@@ -277,8 +332,10 @@ test('T009/T010 install flow sanity: payload copy and disk-first marker are pres
   const grubConfig = fs.readFileSync(path.join(build.workRoot, 'iso-root', 'boot', 'grub', 'grub.cfg'), 'utf8');
 
   assert.ok(lateCommands.some((command) => command.includes('/cdrom/alga-overlay') && command.includes('/target/')));
-  assert.ok(lateCommands.some((command) => command.includes('systemctl enable alga-appliance.service')));
+  assert.ok(lateCommands.some((command) => command.includes('systemctl mask alga-appliance.service')));
   assert.ok(lateCommands.some((command) => command.includes('systemctl enable alga-appliance-console.service')));
+  assert.ok(lateCommands.some((command) => command.includes('systemctl enable alga-appliance-bootstrap.service')));
+  assert.ok(lateCommands.some((command) => command.includes('systemctl enable alga-host-agent.service')));
   assert.ok(lateCommands.some((command) => command.includes('/target/etc/alga-appliance/booted-from-disk')));
   assert.ok(lateCommands.some((command) => command.includes('lvextend -r -l +100%FREE /dev/ubuntu-vg/ubuntu-lv')));
 

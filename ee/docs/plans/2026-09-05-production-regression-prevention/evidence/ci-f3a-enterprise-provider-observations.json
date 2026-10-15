@@ -1,0 +1,362 @@
+{
+  "schemaVersion": 1,
+  "runId": "34330619264",
+  "runAttempt": 1,
+  "testedRevision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+  "artifactId": 10097275264,
+  "artifactSha256": "ced633c92aadb3cf49c4b4bea8dc311d9098b601e2afca6e71ce3c3751c06b80",
+  "browserCounts": {
+    "passed": 47,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "interrupted": 0,
+    "missing": 0
+  },
+  "providerReplay": {
+    "schemaVersion": 1,
+    "scope": "browser-provider-readiness",
+    "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+    "status": "passed",
+    "failures": [],
+    "configuration": {
+      "edition": "enterprise",
+      "authentication": "real-credentials",
+      "serverLifecycle": "externally-started-production-build"
+    },
+    "observations": [
+      {
+        "identity": [
+          "e2e-tests/tests/inbound-email.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery"
+          ]
+        ],
+        "schemaVersion": 1,
+        "status": "observed",
+        "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "runId": "34330619264",
+        "runAttempt": 1,
+        "retry": 0,
+        "artifactContext": "validated-browser-ci-archives",
+        "artifactManifestSha256": "00e12ded2a4ce5312ae577dc943d80a9dd70f42377308f34adcd5d2516dfb938",
+        "providers": [
+          {
+            "provider": "smtp-sink",
+            "mode": "emulator",
+            "supported": true,
+            "complete": true,
+            "requestCount": 5,
+            "dropped": 0,
+            "inFlight": 0
+          }
+        ],
+        "limitation": "Fixture observations only; no required-provider completeness, isolation, OAuth, protocol parity or release readiness claim."
+      },
+      {
+        "identity": [
+          "e2e-tests/tests/microsoft-calendar.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from provider outage without losing remote linkage"
+          ]
+        ],
+        "schemaVersion": 1,
+        "status": "observed",
+        "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "runId": "34330619264",
+        "runAttempt": 1,
+        "retry": 0,
+        "artifactContext": "validated-browser-ci-archives",
+        "artifactManifestSha256": "00e12ded2a4ce5312ae577dc943d80a9dd70f42377308f34adcd5d2516dfb938",
+        "providers": [
+          {
+            "provider": "msgraph",
+            "mode": "emulator",
+            "supported": true,
+            "complete": true,
+            "requestCount": 39,
+            "dropped": 0,
+            "inFlight": 0
+          }
+        ],
+        "limitation": "Fixture observations only; no required-provider completeness, isolation, OAuth, protocol parity or release readiness claim."
+      },
+      {
+        "identity": [
+          "e2e-tests/tests/microsoft-calendar.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from permission denial without losing remote linkage"
+          ]
+        ],
+        "schemaVersion": 1,
+        "status": "observed",
+        "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "runId": "34330619264",
+        "runAttempt": 1,
+        "retry": 0,
+        "artifactContext": "validated-browser-ci-archives",
+        "artifactManifestSha256": "00e12ded2a4ce5312ae577dc943d80a9dd70f42377308f34adcd5d2516dfb938",
+        "providers": [
+          {
+            "provider": "msgraph",
+            "mode": "emulator",
+            "supported": true,
+            "complete": true,
+            "requestCount": 39,
+            "dropped": 0,
+            "inFlight": 0
+          }
+        ],
+        "limitation": "Fixture observations only; no required-provider completeness, isolation, OAuth, protocol parity or release readiness claim."
+      },
+      {
+        "identity": [
+          "e2e-tests/tests/microsoft-calendar.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from throttling without losing remote linkage"
+          ]
+        ],
+        "schemaVersion": 1,
+        "status": "observed",
+        "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "runId": "34330619264",
+        "runAttempt": 1,
+        "retry": 0,
+        "artifactContext": "validated-browser-ci-archives",
+        "artifactManifestSha256": "00e12ded2a4ce5312ae577dc943d80a9dd70f42377308f34adcd5d2516dfb938",
+        "providers": [
+          {
+            "provider": "msgraph",
+            "mode": "emulator",
+            "supported": true,
+            "complete": true,
+            "requestCount": 39,
+            "dropped": 0,
+            "inFlight": 0
+          }
+        ],
+        "limitation": "Fixture observations only; no required-provider completeness, isolation, OAuth, protocol parity or release readiness claim."
+      },
+      {
+        "identity": [
+          "e2e-tests/tests/microsoft-calendar.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from all-day throttling without losing remote linkage"
+          ]
+        ],
+        "schemaVersion": 1,
+        "status": "observed",
+        "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "runId": "34330619264",
+        "runAttempt": 1,
+        "retry": 0,
+        "artifactContext": "validated-browser-ci-archives",
+        "artifactManifestSha256": "00e12ded2a4ce5312ae577dc943d80a9dd70f42377308f34adcd5d2516dfb938",
+        "providers": [
+          {
+            "provider": "msgraph",
+            "mode": "emulator",
+            "supported": true,
+            "complete": true,
+            "requestCount": 39,
+            "dropped": 0,
+            "inFlight": 0
+          }
+        ],
+        "limitation": "Fixture observations only; no required-provider completeness, isolation, OAuth, protocol parity or release readiness claim."
+      },
+      {
+        "identity": [
+          "e2e-tests/tests/microsoft-mailbox.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "Microsoft mailbox OAuth receives a ticket, sends a UI reply through Graph and deduplicates callbacks"
+          ]
+        ],
+        "schemaVersion": 1,
+        "status": "observed",
+        "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "runId": "34330619264",
+        "runAttempt": 1,
+        "retry": 0,
+        "artifactContext": "validated-browser-ci-archives",
+        "artifactManifestSha256": "00e12ded2a4ce5312ae577dc943d80a9dd70f42377308f34adcd5d2516dfb938",
+        "providers": [
+          {
+            "provider": "msgraph",
+            "mode": "emulator",
+            "supported": true,
+            "complete": true,
+            "requestCount": 33,
+            "dropped": 0,
+            "inFlight": 0
+          }
+        ],
+        "limitation": "Fixture observations only; no required-provider completeness, isolation, OAuth, protocol parity or release readiness claim."
+      },
+      {
+        "identity": [
+          "e2e-tests/tests/qbo-export.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "QuickBooks OAuth and UI mapping export to the selected company and recover without duplicate invoices"
+          ]
+        ],
+        "schemaVersion": 1,
+        "status": "observed",
+        "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "runId": "34330619264",
+        "runAttempt": 1,
+        "retry": 0,
+        "artifactContext": "validated-browser-ci-archives",
+        "artifactManifestSha256": "00e12ded2a4ce5312ae577dc943d80a9dd70f42377308f34adcd5d2516dfb938",
+        "providers": [
+          {
+            "provider": "qbo",
+            "mode": "emulator",
+            "supported": true,
+            "complete": true,
+            "requestCount": 34,
+            "dropped": 0,
+            "inFlight": 0
+          }
+        ],
+        "limitation": "Fixture observations only; no required-provider completeness, isolation, OAuth, protocol parity or release readiness claim."
+      },
+      {
+        "identity": [
+          "e2e-tests/tests/stripe-payment.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "portal Checkout settles the invoice exactly once through signed webhook delivery and redelivery"
+          ]
+        ],
+        "schemaVersion": 1,
+        "status": "observed",
+        "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "runId": "34330619264",
+        "runAttempt": 1,
+        "retry": 0,
+        "artifactContext": "validated-browser-ci-archives",
+        "artifactManifestSha256": "00e12ded2a4ce5312ae577dc943d80a9dd70f42377308f34adcd5d2516dfb938",
+        "providers": [
+          {
+            "provider": "stripe",
+            "mode": "emulator",
+            "supported": true,
+            "complete": true,
+            "requestCount": 6,
+            "dropped": 0,
+            "inFlight": 0
+          }
+        ],
+        "limitation": "Fixture observations only; no required-provider completeness, isolation, OAuth, protocol parity or release readiness claim."
+      },
+      {
+        "identity": [
+          "e2e-tests/tests/stripe-payment.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "declined and cancelled Checkout leaves the invoice unpaid and creates no payment ledger entry"
+          ]
+        ],
+        "schemaVersion": 1,
+        "status": "observed",
+        "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "runId": "34330619264",
+        "runAttempt": 1,
+        "retry": 0,
+        "artifactContext": "validated-browser-ci-archives",
+        "artifactManifestSha256": "00e12ded2a4ce5312ae577dc943d80a9dd70f42377308f34adcd5d2516dfb938",
+        "providers": [
+          {
+            "provider": "stripe",
+            "mode": "emulator",
+            "supported": true,
+            "complete": true,
+            "requestCount": 6,
+            "dropped": 0,
+            "inFlight": 0
+          }
+        ],
+        "limitation": "Fixture observations only; no required-provider completeness, isolation, OAuth, protocol parity or release readiness claim."
+      },
+      {
+        "identity": [
+          "e2e-tests/tests/stripe-payment.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "Checkout creation failure offers a retry and recovers for the same unpaid invoice"
+          ]
+        ],
+        "schemaVersion": 1,
+        "status": "observed",
+        "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "runId": "34330619264",
+        "runAttempt": 1,
+        "retry": 0,
+        "artifactContext": "validated-browser-ci-archives",
+        "artifactManifestSha256": "00e12ded2a4ce5312ae577dc943d80a9dd70f42377308f34adcd5d2516dfb938",
+        "providers": [
+          {
+            "provider": "stripe",
+            "mode": "emulator",
+            "supported": true,
+            "complete": true,
+            "requestCount": 8,
+            "dropped": 0,
+            "inFlight": 0
+          }
+        ],
+        "limitation": "Fixture observations only; no required-provider completeness, isolation, OAuth, protocol parity or release readiness claim."
+      },
+      {
+        "identity": [
+          "e2e-tests/tests/xero-export.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "Xero OAuth and UI mapping export to the selected organisation and recover without duplicate invoices"
+          ]
+        ],
+        "schemaVersion": 1,
+        "status": "observed",
+        "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "runId": "34330619264",
+        "runAttempt": 1,
+        "retry": 0,
+        "artifactContext": "validated-browser-ci-archives",
+        "artifactManifestSha256": "00e12ded2a4ce5312ae577dc943d80a9dd70f42377308f34adcd5d2516dfb938",
+        "providers": [
+          {
+            "provider": "xero",
+            "mode": "emulator",
+            "supported": true,
+            "complete": true,
+            "requestCount": 17,
+            "dropped": 0,
+            "inFlight": 0
+          }
+        ],
+        "limitation": "Fixture observations only; no required-provider completeness, isolation, OAuth, protocol parity or release readiness claim."
+      }
+    ],
+    "limitation": "Candidate CI archive-backed provider observations only; no OAuth, protocol parity, live-provider or deployment verification claim."
+  },
+  "limitation": "Independent replay of primary enterprise browser raw artifacts only. API, supported upgrades, Teams development, Microsoft callback and final readiness remain separate execution requirements."
+}

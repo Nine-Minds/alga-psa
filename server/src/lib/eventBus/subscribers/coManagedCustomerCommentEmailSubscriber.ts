@@ -12,9 +12,14 @@ export async function deliverCoManagedCustomerCommentEmailEvent(event: BaseEvent
  * Native events without that intent retain their existing delivery path. */
 export async function handleCoManagedCustomerCommentEmailEvent(input: BaseEvent, connection?: Knex): Promise<boolean> {
   if (!isCoManagedUuid(input.id)) return false;
+  // Ownership is decided by the retained outbox row before the co-managed
+  // schema is applied: a native event (for example an author-less workflow
+  // comment) is not co-managed's to validate and must reach its own delivery.
+  const ownerTenant = (input.payload as { tenantId?: unknown } | undefined)?.tenantId;
+  if (!isCoManagedUuid(ownerTenant)) return false;
+  const db = connection ?? await getConnection(ownerTenant);
+  if (!await tenantDb(db, ownerTenant).table('co_management_event_outbox').where('event_id', input.id).first('event_id')) return false;
   const event = EventSchemas.TICKET_COMMENT_ADDED.parse(input);
-  const db = connection ?? await getConnection(event.payload.tenantId);
-  if (!await tenantDb(db, event.payload.tenantId).table('co_management_event_outbox').where('event_id', event.id).first('event_id')) return false;
   const obligation = await tenantDb(db, event.payload.tenantId).table('co_management_event_consumers')
     .where({ event_id: event.id, consumer: 'customer-internal-email' }).first('status', 'error_code');
   if (obligation?.status === 'cancelled' && obligation.error_code === 'legacy_native_delivery') return false;

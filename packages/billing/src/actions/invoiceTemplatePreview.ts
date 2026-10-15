@@ -2,6 +2,7 @@
 'use server'
 
 import crypto from 'crypto';
+import { timePresentationLabels } from '../lib/invoice-template-ast/timePresentationLocalization';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
@@ -9,9 +10,10 @@ import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/s
 import { exportWorkspaceToTemplateAst } from '../components/invoice-designer/ast/workspaceAst';
 import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
-import { localizeTemplateAstForLocale } from '../lib/invoice-template-ast/i18nLabels';
+import { localizeTemplateAstForLocale, resolveTemplateAstI18n } from '../lib/invoice-template-ast/i18nLabels';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { validateTemplateAst } from '../lib/invoice-template-ast/schema';
+import { createPDFGenerationService } from '../services/pdfGenerationService';
 
 type AuthoritativePreviewInput = {
   workspace: DesignerWorkspaceSnapshot;
@@ -33,6 +35,8 @@ type AuthoritativePreviewDiagnostic = {
 };
 
 type AuthoritativePreviewResult = {
+  presentationLabels?: Record<string, string>;
+  effectiveLocale?: string;
   success: boolean;
   sourceHash: string | null;
   generatedSource: string | null;
@@ -80,7 +84,7 @@ function previewFailureResult(message: string, details?: string): AuthoritativeP
 }
 
 export const runAuthoritativeInvoiceTemplatePreview = withAuth(
-  async (user, _context, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
+  async (user, { tenant }, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
     if (!await hasPermission(user, 'billing', 'read')) {
       return previewFailureResult('Permission denied: billing read required');
     }
@@ -119,7 +123,14 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
       };
     }
 
-    const ast = exportWorkspaceToTemplateAst(input.workspace);
+    let ast;
+    try {
+      ast = exportWorkspaceToTemplateAst(input.workspace);
+    } catch (error) {
+      // Live editing can temporarily leave transforms incomplete. Report the
+      // compiler diagnostic through the preview UI instead of rejecting the action.
+      return previewFailureResult(error instanceof Error ? error.message : 'Workspace export failed.');
+    }
     const generatedSource = JSON.stringify(ast, null, 2);
     const sourceHash = crypto.createHash('sha256').update(generatedSource).digest('hex');
 
@@ -153,10 +164,26 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
         input.invoiceData as unknown as Record<string, unknown>,
         { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
       );
-      // Same seam the PDF path uses, so the preview is authoritative.
+      // Same seam the PDF path uses, so the preview is authoritative. There is
+      // no concrete invoice here, so the country is the tenant's default.
       const localized = await localizeTemplateAstForLocale(validation.ast, input.locale);
-      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale });
+      const dateFormat = await createPDFGenerationService(tenant).resolveRenderCountry({});
+      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, {
+        locale: localized.locale,
+        dateFormat,
+        t: localized.t,
+      });
+      const presentationLabels = timePresentationLabels(localized.t);
+      // Reuse the document AST's display-only walk for canvas labels. Never
+      // translate authored literals or expose the translator across the wire.
+      resolveTemplateAstI18n(validation.ast, (key, options) => {
+        const value = localized.t?.(key, options) ?? options.defaultValue;
+        presentationLabels[key] = value;
+        return value;
+      });
       return {
+        presentationLabels,
+        effectiveLocale: localized.locale ?? 'en',
         success: true,
         sourceHash,
         generatedSource,

@@ -108,7 +108,7 @@ const pulse = (overrides: Partial<ClientPulse> = {}): ClientPulse => ({
   documents: { totalCount: 0, recent: [] },
   notes: { hasNotes: false, previewLines: [], lastEditedAt: null },
   record: {
-    url: 'example.com', accountManagerName: null, defaultContactName: null,
+    url: 'example.com', accountManagerName: null, defaultContactName: null, defaultContactId: null,
     inboundDomains: [], taxRegion: null, clientSince: null, isInactive: false,
   },
   ...overrides,
@@ -148,6 +148,17 @@ describe('ClientCommandCenter', () => {
     });
   });
 
+  it('formats the default location phone with its country and extension in the identity strip', async () => {
+    getClientPulseMock.mockResolvedValue(pulse({ locations: [{
+      location_id: 'loc-1', location_name: 'HQ', address_line1: null, city: null,
+      phone: '+13202521658', phone_extension: '42', country_code: 'US', email: null,
+      is_default: true, is_billing: false, is_shipping: false,
+    }] }));
+    renderCenter();
+    expect(await screen.findAllByText('+1 320 252 1658 ext. 42')).toHaveLength(2);
+    expect(document.getElementById('cc-identity')).toHaveTextContent('+1 320 252 1658 ext. 42');
+  });
+
   describe('deep links', () => {
     it('waits for an asynchronously registered tab before consuming ?tab=', async () => {
       const { rerender } = render(
@@ -183,6 +194,50 @@ describe('ClientCommandCenter', () => {
       rerender(<ClientCommandCenter {...baseProps} tabs={[...tabs]} initialTabId="details" />);
       expect(screen.queryByText('Details view')).toBeNull();
     });
+
+    it('opens a registered tab in place when the host requests it', async () => {
+      const tabs = [tab('details', 'Details'), tab('co-managed', 'Co-managed IT')];
+      const { rerender } = render(<ClientCommandCenter {...baseProps} tabs={tabs} />);
+      await waitFor(() => expect(getClientPulseMock).toHaveBeenCalled());
+      expect(screen.queryByText('Co-managed IT view')).toBeNull();
+
+      rerender(<ClientCommandCenter {...baseProps} tabs={tabs} openTabRequest={{ tabId: 'co-managed', nonce: 1 }} />);
+      expect(await screen.findByText('Co-managed IT view')).toBeInTheDocument();
+    });
+
+    it('opens the co-managed focus view and lists it in the rail when the tab registers asynchronously', async () => {
+      const { rerender } = render(
+        <ClientCommandCenter {...baseProps} tabs={[tab('details', 'Details')]} initialTabId="co-managed" />,
+      );
+
+      await waitFor(() => expect(getClientPulseMock).toHaveBeenCalled());
+      expect(document.getElementById('cc-focus-rail-co-managed')).toBeNull();
+
+      rerender(
+        <ClientCommandCenter
+          {...baseProps}
+          tabs={[tab('details', 'Details'), tab('co-managed', 'Co-managed IT')]}
+          initialTabId="co-managed"
+        />,
+      );
+
+      expect(await screen.findByText('Co-managed IT view')).toBeInTheDocument();
+      expect(document.getElementById('cc-focus-rail-co-managed')).not.toBeNull();
+    });
+
+    it('closes a focus view whose tab becomes unavailable without reopening it later', async () => {
+      const coManaged = tab('co-managed', 'Co-managed IT');
+      const { rerender } = render(
+        <ClientCommandCenter {...baseProps} tabs={[tab('details', 'Details'), coManaged]} initialTabId="co-managed" />,
+      );
+      expect(await screen.findByText('Co-managed IT view')).toBeInTheDocument();
+
+      rerender(<ClientCommandCenter {...baseProps} tabs={[tab('details', 'Details')]} initialTabId="co-managed" />);
+      await waitFor(() => expect(screen.queryByText('Co-managed IT view')).toBeNull());
+
+      rerender(<ClientCommandCenter {...baseProps} tabs={[tab('details', 'Details'), coManaged]} initialTabId="co-managed" />);
+      expect(screen.queryByText('Co-managed IT view')).toBeNull();
+    });
   });
 
   describe('unsaved-record guard', () => {
@@ -212,6 +267,19 @@ describe('ClientCommandCenter', () => {
       expect(onDiscardRecordChanges).toHaveBeenCalledTimes(1);
       expect(onTabUrlChange).toHaveBeenLastCalledWith(null);
       expect(screen.queryByText('Details view')).toBeNull();
+    });
+
+    it('guards a focus view that reports unsaved feature drafts', async () => {
+      const discard = vi.fn();
+      const coManaged: TabContent = { ...tab('co-managed', 'Co-managed IT'), hasUnsavedChanges: () => true, onDiscardUnsavedChanges: discard };
+      render(<ClientCommandCenter {...baseProps} tabs={[coManaged]} initialTabId="co-managed" />);
+      expect(await screen.findByText('Co-managed IT view')).toBeInTheDocument();
+      fireEvent.click(document.getElementById('cc-focus-close')!);
+      expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
+      expect(discard).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByText('Discard changes'));
+      expect(discard).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText('Co-managed IT view')).toBeNull();
     });
 
     it('does not guard focus views that do not edit the record buffer', async () => {
@@ -245,7 +313,7 @@ describe('ClientCommandCenter', () => {
       getClientPulseMock.mockResolvedValue(pulse({
         people: {
           totalCount: 1,
-          top: [{ contact_name_id: 'c-1', full_name: 'Ada Lovelace', role: null, email: null, phone: null, is_default: false, avatarUrl: null }],
+          top: [{ contact_name_id: 'c-1', full_name: 'Ada Lovelace', role: null, email: null, phone: null, phone_extension: null, is_default: false, avatarUrl: null }],
         },
       }));
       renderCenter();

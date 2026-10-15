@@ -1,0 +1,15 @@
+{
+  "revision": "9a0ea31e57ac9b9825232bda312cc04cc33dc213",
+  "status": "local_combined_execution_passed_with_explicit_remaining_skips",
+  "suite": "server/src/test/integration/invoiceTicketProduction.integration.test.ts",
+  "passed": 9,
+  "skipped": 3,
+  "durationSeconds": 108.39,
+  "log": "/tmp/alga-invoice-combined-9a0ea.log",
+  "environment": "Owned disposable PostgreSQL database invoice_ticket_regression_82cc with migrated schema and real PDF generation; PDF extraction through owned Poppler container",
+  "limits": [
+    "Three manual cases remain skipped: custom UI-saved layout, authenticated ownership, and visually authored historical locale matrix.",
+    "Browser ownership replacement still requires native execution and complete parity verification.",
+    "This local result does not prove CI or overall plan completion."
+  ]
+}

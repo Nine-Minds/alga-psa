@@ -10,6 +10,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CoManagedCheckout from '@enterprise/components/co-managed/CoManagedCheckout';
 import { purchaseCoManagedUpgradeAction, retryCoManagedUpgradePaymentAction } from '@ee/lib/actions/coManagedUpgradeActions';
 import type { CoManagedUpgradePurchaseRequest } from '@alga-psa/co-managed';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 export default function CoManagedUpgradePurchase({ seatsRequired, pendingPurchase, onChanged }: {
   seatsRequired: number; pendingPurchase?: (CoManagedUpgradePurchaseRequest & { paymentFailed?: boolean }) | null; onChanged: () => Promise<void>;
@@ -27,13 +28,13 @@ export default function CoManagedUpgradePurchase({ seatsRequired, pendingPurchas
   }, [pendingPurchase?.operationId]);
   const purchase = async (resetFailed = false) => {
     if (busy) return;
-    command.current ??= { operationId: crypto.randomUUID(), quantity, interval };
+    command.current ??= { operationId: newCoManagedOperationId(), quantity, interval };
     setBusy(true); setMessage(null);
     try {
       if (resetFailed) {
         await retryCoManagedUpgradePaymentAction(command.current.operationId);
         if (!alive.current) return;
-        command.current = { operationId: crypto.randomUUID(), quantity, interval };
+        command.current = { operationId: newCoManagedOperationId(), quantity, interval };
         setConfirmRetry(false);
       }
       const result = await purchaseCoManagedUpgradeAction(command.current);

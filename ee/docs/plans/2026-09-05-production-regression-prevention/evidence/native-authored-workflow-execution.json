@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "scope": "native-compiled-authored-workflow",
+  "status": "passed",
+  "revision": "7980581c497e675f01e61ccd904acbb7b11f4269",
+  "databaseName": "authored_worker_test_67ee995f9e75414eaa78784b6c2dcb49",
+  "nodeVersion": "v25.5.0",
+  "harnessSha256": "5567b560d4d5bf9304ebf9660dae0c65a85270304fbce56ad9dbfaae105650ff",
+  "shutdown": {
+    "worker": {
+      "code": 0,
+      "signal": null
+    },
+    "redis": {
+      "code": 0,
+      "signal": null
+    }
+  },
+  "limitations": [
+    "Reuses installed dependencies and existing compiled artifacts; no Docker or clean build proof.",
+    "Runs one authored state node with real persistence; no provider actions or Redis event dispatch are exercised."
+  ],
+  "readiness": {
+    "ready": true,
+    "startedAt": "2026-09-08T19:59:33.850Z",
+    "workers": {
+      "temporal": true,
+      "eventStream": true,
+      "dataStoreSweep": true
+    }
+  },
+  "dispatch": {
+    "workflowId": "workflow-runtime-v2:run:24eaf874-cfff-4d13-99a8-e6b58f9215c3",
+    "firstExecutionRunId": "01a0829a-bf55-7edc-adab-3782dd3a436a"
+  },
+  "execution": {
+    "temporalStatus": "COMPLETED",
+    "runStatus": "SUCCEEDED",
+    "persistedSteps": [
+      {
+        "definitionStepId": "mark_ready",
+        "status": "SUCCEEDED"
+      },
+      {
+        "definitionStepId": "finish",
+        "status": "SUCCEEDED"
+      }
+    ],
+    "state": "native-ready"
+  },
+  "databaseDropped": true,
+  "feature": "F031",
+  "harness": "services/workflow-worker/scripts/native-authored-workflow-proof.mjs",
+  "validationCommand": "NATIVE_WORKFLOW_ENV_FILE=<private-env-file> NATIVE_WORKFLOW_DB_HOST=127.0.0.1 NATIVE_WORKFLOW_DB_PORT=55432 NATIVE_TEMPORAL_CLI=<installed-temporal-cli> node services/workflow-worker/scripts/native-authored-workflow-proof.mjs",
+  "topology": {
+    "database": "Fresh uniquely named database with actual CE/EE migrations; no source database reset or clone",
+    "redis": "Owned localhost ephemeral instance, persistence disabled",
+    "temporal": "Owned native Temporal CLI 1.5.1 / server 1.29.1, default namespace",
+    "worker": "Actual compiled entrypoint with compiled workflow/activity modules; no module overrides"
+  },
+  "assertions": [
+    "Production runtime validates definition and registered state.set config before seeding",
+    "Production models create tenant-scoped pinned definition/version/run fixtures",
+    "Production dispatcher returns the expected workflow-runtime-v2:run identifier",
+    "Temporal completes the execution and database run is SUCCEEDED with completed_at",
+    "Exactly mark_ready and finish steps are persisted with SUCCEEDED status",
+    "Actual state-step snapshot contains meta.state native-ready"
+  ],
+  "sourceIdentityNote": "Revision is repository HEAD observed by the harness; compiled dependencies were reused, so this is not a clean source-to-image build certification."
+}

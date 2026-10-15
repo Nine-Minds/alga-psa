@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -27,11 +28,12 @@ type QboStatus = Awaited<ReturnType<typeof getQboConnectionStatus>>;
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 /**
- * The setup guide lives in this repository rather than on a docs site, so the
- * link points at the published source. Update both together.
+ * The customer-facing setup guide on nineminds.com. The admin-oriented version
+ * lives in this repository at docs/integrations/quickbooks.md; keep the two in
+ * step when the connection flow changes.
  */
-const QBO_SETUP_GUIDE_URL =
-  'https://github.com/Nine-Minds/alga-psa/blob/main/docs/integrations/quickbooks.md';
+const QBO_SETUP_GUIDE_URL = 'https://www.nineminds.com/documentation/connect-quickbooks-online';
+const INTUIT_DEVELOPER_URL = 'https://developer.intuit.com/';
 
 interface QboIntegrationSettingsProps {
   syncHealthSlot?: React.ReactNode;
@@ -91,6 +93,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [clientId, setClientId] = React.useState('');
   const [clientSecret, setClientSecret] = React.useState('');
+  const [showOwnAppFields, setShowOwnAppFields] = React.useState(false);
   const [automatedSalesTax, setAutomatedSalesTax] = React.useState(false);
   const [savingAutomatedSalesTax, setSavingAutomatedSalesTax] = React.useState(false);
 
@@ -256,6 +259,10 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
 
   const readyToSave = clientId.trim().length > 0 && clientSecret.trim().length > 0;
   const canConnect = Boolean(status?.credentials.ready);
+  const credentialSource = status?.credentials.source ?? null;
+  // With a shared app the credential fields are opt-in; otherwise they are the
+  // only way forward and stay visible.
+  const ownAppFieldsVisible = credentialSource !== 'app' || showOwnAppFields;
   const defaultConnection = status?.defaultConnection;
   const canManageConnections = caps.connectionsManage;
   const canManageMappings = caps.mappingsManage;
@@ -312,7 +319,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
           <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
             <p className="font-medium text-foreground">{t('integrations.qbo.settings.howItWorksTitle', { defaultValue: 'How live QuickBooks works in this release' })}</p>
             <p className="mt-2">
-              {t('integrations.qbo.settings.howItWorksDescription', { defaultValue: 'Save QuickBooks app credentials here, complete the Intuit OAuth flow, and AlgaPSA will use the connected QuickBooks company as the default live context for exports and mappings.' })}
+              {t('integrations.qbo.settings.howItWorksDescription', { defaultValue: 'Connect your QuickBooks company by signing in to Intuit, and AlgaPSA will use it as the default live context for exports and mappings. The Intuit App card below tells you whether your deployment already provides the app that sign-in goes through, or whether you need to register one first.' })}
             </p>
             <p className="mt-3">
               <a
@@ -344,9 +351,9 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
 
       <Card id="qbo-integration-credentials-card">
         <CardHeader>
-          <CardTitle>{t('integrations.qbo.settings.tenantOauthTitle', { defaultValue: 'Intuit App Credentials' })}</CardTitle>
+          <CardTitle>{t('integrations.qbo.settings.tenantOauthTitle', { defaultValue: 'Intuit App' })}</CardTitle>
           <CardDescription>
-            {t('integrations.qbo.settings.tenantOauthDescription', { defaultValue: 'Which Intuit app this tenant connects through. Secret values are never returned to the browser after they are saved.' })}
+            {t('integrations.qbo.settings.tenantOauthDescription', { defaultValue: 'AlgaPSA reaches QuickBooks through an Intuit app: a developer registration at developer.intuit.com, not a setting inside QuickBooks or AlgaPSA. This card tells you whether one is already provided for you.' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -355,97 +362,157 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
           ) : (
             <>
               {/* Whether a shared app exists is the whole difference between
-                  "click Connect" and "go register an Intuit app first", so it is
-                  stated before the credential fields rather than after them. */}
-              <Alert variant="info" id="qbo-credential-source-alert">
-                <AlertDescription>
-                  {status?.credentials.source === 'app'
-                    ? t('integrations.qbo.settings.credentialSource.app', { defaultValue: 'This deployment provides a shared Intuit app, so you can connect QuickBooks without registering one. Fill in the fields below only if you want this tenant to use its own Intuit app instead.' })
-                    : status?.credentials.source === 'tenant'
-                      ? t('integrations.qbo.settings.credentialSource.tenant', { defaultValue: 'This tenant connects through its own Intuit app, using the credentials stored below.' })
-                      : t('integrations.qbo.settings.credentialSource.none', { defaultValue: 'No Intuit app is available yet. Register one in the Intuit Developer portal and paste its client ID and secret below — the setup guide walks through it.' })}
-                </AlertDescription>
-              </Alert>
+                  "click Connect" and "go register an Intuit app first". On a
+                  hosted deployment the credential fields are hidden entirely
+                  until the admin opts into their own app, so nobody goes
+                  hunting for keys they do not need. */}
+              {credentialSource === 'app' ? (
+                <Alert variant="success" id="qbo-credential-source-alert">
+                  <AlertTitle>{t('integrations.qbo.settings.credentialSource.appTitle', { defaultValue: 'No credentials needed' })}</AlertTitle>
+                  <AlertDescription>
+                    {t('integrations.qbo.settings.credentialSource.app', { defaultValue: 'This deployment provides a shared Intuit app, so you can connect QuickBooks without registering one. Skip this card and click Connect QuickBooks below.' })}
+                  </AlertDescription>
+                </Alert>
+              ) : credentialSource === 'tenant' ? (
+                <Alert variant="info" id="qbo-credential-source-alert">
+                  <AlertDescription>
+                    {t('integrations.qbo.settings.credentialSource.tenant', { defaultValue: 'This tenant connects through its own Intuit app, using the credentials stored below. To rotate a key, paste the new value and save.' })}
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert variant="warning" id="qbo-credential-source-alert">
+                  <AlertTitle>{t('integrations.qbo.settings.credentialSource.none', { defaultValue: 'No Intuit app is available yet. Register one with Intuit before you can connect.' })}</AlertTitle>
+                  <AlertDescription>
+                    <ol className="mt-2 list-decimal space-y-1.5 pl-5" id="qbo-register-app-steps">
+                      <li>
+                        {t('integrations.qbo.settings.registerSteps.createApp', { defaultValue: 'Sign in at' })}{' '}
+                        <a
+                          id="qbo-intuit-developer-link"
+                          href={INTUIT_DEVELOPER_URL}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-medium underline underline-offset-4"
+                        >
+                          developer.intuit.com
+                        </a>{' '}
+                        {t('integrations.qbo.settings.registerSteps.createAppSuffix', { defaultValue: 'and create an app for QuickBooks Online and Payments with the Accounting scope. Your QuickBooks login works there.' })}
+                      </li>
+                      <li>{t('integrations.qbo.settings.registerSteps.openKeys', { defaultValue: 'Open the app\'s Keys & credentials page. Use the Development keys when the Intuit Environment below says Sandbox, or the Production keys when it says Production.' })}</li>
+                      <li>{t('integrations.qbo.settings.registerSteps.addRedirect', { defaultValue: 'Add the Redirect URI shown below to the app\'s redirect URI list, exactly as displayed.' })}</li>
+                      <li>{t('integrations.qbo.settings.registerSteps.pasteKeys', { defaultValue: 'Copy the Client ID and Client Secret from that page into the two fields below, then click Save QuickBooks Credentials.' })}</li>
+                      <li>{t('integrations.qbo.settings.registerSteps.connect', { defaultValue: 'Click Connect QuickBooks and sign in to the QuickBooks company you want to link.' })}</li>
+                    </ol>
+                  </AlertDescription>
+                </Alert>
+              )}
 
-              <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">{t('integrations.qbo.settings.redirectUri', { defaultValue: 'Redirect URI' })}</p>
-                  <p className="mt-1 break-all rounded-md bg-background px-3 py-2 font-mono text-xs">
-                    {status?.redirectUri}
-                  </p>
-                </div>
+              {credentialSource === 'app' ? (
+                <CollapseToggleButton
+                  id="qbo-own-app-toggle"
+                  tone="outline"
+                  className="text-sm"
+                  isCollapsed={!showOwnAppFields}
+                  collapsedLabel={t('integrations.qbo.settings.ownApp.show', { defaultValue: 'Use your own Intuit app instead (advanced)' })}
+                  expandedLabel={t('integrations.qbo.settings.ownApp.hide', { defaultValue: 'Hide own-app settings' })}
+                  onClick={() => setShowOwnAppFields((current) => !current)}
+                >
+                  {showOwnAppFields
+                    ? t('integrations.qbo.settings.ownApp.hide', { defaultValue: 'Hide own-app settings' })
+                    : t('integrations.qbo.settings.ownApp.show', { defaultValue: 'Use your own Intuit app instead (advanced)' })}
+                </CollapseToggleButton>
+              ) : null}
 
-                <div>
-                  <p className="text-sm font-medium text-foreground">{t('integrations.qbo.settings.requiredScopes', { defaultValue: 'Required Scopes' })}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {status?.scopes?.map((scope) => (
-                      <Badge key={scope} variant="secondary">
-                        {scope}
-                      </Badge>
-                    ))}
+              {ownAppFieldsVisible ? (
+                <div className="space-y-6" id="qbo-own-app-section">
+                  {credentialSource === 'app' ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t('integrations.qbo.settings.ownApp.intro', { defaultValue: 'Only do this if you want this tenant to authorize through an Intuit app you control. Register the app as described in the setup guide, then paste its keys here. Until both are saved, the shared app keeps being used.' })}
+                    </p>
+                  ) : null}
+
+                  <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{t('integrations.qbo.settings.redirectUri', { defaultValue: 'Redirect URI' })}</p>
+                      <p className="mt-1 break-all rounded-md bg-background px-3 py-2 font-mono text-xs">
+                        {status?.redirectUri}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{t('integrations.qbo.settings.requiredScopes', { defaultValue: 'Required Scopes' })}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {status?.scopes?.map((scope) => (
+                          <Badge key={scope} variant="secondary">
+                            {scope}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{t('integrations.qbo.settings.environment', { defaultValue: 'Intuit Environment' })}</p>
+                      <div className="mt-2">
+                        <Badge variant={status?.environment === 'production' ? 'default' : 'secondary'}>
+                          {status?.environment === 'production'
+                            ? t('integrations.qbo.settings.environmentProduction', { defaultValue: 'Production' })
+                            : t('integrations.qbo.settings.environmentSandbox', { defaultValue: 'Sandbox' })}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="qbo-client-id">{t('integrations.qbo.settings.clientIdLabel', { defaultValue: 'QuickBooks Client ID' })}</Label>
+                      <Input
+                        id="qbo-client-id"
+                        value={clientId}
+                        disabled={!canManageConnections}
+                        onChange={(event) => setClientId(event.target.value)}
+                        placeholder={t('integrations.qbo.settings.clientIdPlaceholder', { defaultValue: 'Paste your Intuit app client ID' })}
+                      />
+                      {status?.credentials.clientIdMasked ? (
+                        <p className="text-xs text-muted-foreground">
+                          {t('integrations.qbo.settings.storedClientId', { defaultValue: 'Stored client ID: {{value}}', value: status.credentials.clientIdMasked })}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          {t('integrations.qbo.settings.noClientId', { defaultValue: 'No client ID is stored for this tenant yet.' })}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="qbo-client-secret">{t('integrations.qbo.settings.clientSecretLabel', { defaultValue: 'QuickBooks Client Secret' })}</Label>
+                      <Input
+                        id="qbo-client-secret"
+                        type="password"
+                        value={clientSecret}
+                        disabled={!canManageConnections}
+                        onChange={(event) => setClientSecret(event.target.value)}
+                        placeholder={t('integrations.qbo.settings.clientSecretPlaceholder', { defaultValue: 'Paste your Intuit app client secret' })}
+                      />
+                      {status?.credentials.clientSecretMasked ? (
+                        <p className="text-xs text-muted-foreground">
+                          {t('integrations.qbo.settings.storedClientSecret', { defaultValue: 'Stored client secret: {{value}}', value: status.credentials.clientSecretMasked })}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          {t('integrations.qbo.settings.noClientSecret', { defaultValue: 'No client secret is stored for this tenant yet.' })}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                <div>
-                  <p className="text-sm font-medium text-foreground">{t('integrations.qbo.settings.environment', { defaultValue: 'Intuit Environment' })}</p>
-                  <div className="mt-2">
-                    <Badge variant={status?.environment === 'production' ? 'default' : 'secondary'}>
-                      {status?.environment === 'production'
-                        ? t('integrations.qbo.settings.environmentProduction', { defaultValue: 'Production' })
-                        : t('integrations.qbo.settings.environmentSandbox', { defaultValue: 'Sandbox' })}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="qbo-client-id">{t('integrations.qbo.settings.clientIdLabel', { defaultValue: 'QuickBooks Client ID' })}</Label>
-                  <Input
-                    id="qbo-client-id"
-                    value={clientId}
-                    disabled={!canManageConnections}
-                    onChange={(event) => setClientId(event.target.value)}
-                    placeholder={t('integrations.qbo.settings.clientIdPlaceholder', { defaultValue: 'Paste your Intuit app client ID' })}
-                  />
-                  {status?.credentials.clientIdMasked ? (
-                    <p className="text-xs text-muted-foreground">
-                      {t('integrations.qbo.settings.storedClientId', { defaultValue: 'Stored client ID: {{value}}', value: status.credentials.clientIdMasked })}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      {t('integrations.qbo.settings.noClientId', { defaultValue: 'No client ID is stored for this tenant yet.' })}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="qbo-client-secret">{t('integrations.qbo.settings.clientSecretLabel', { defaultValue: 'QuickBooks Client Secret' })}</Label>
-                  <Input
-                    id="qbo-client-secret"
-                    type="password"
-                    value={clientSecret}
-                    disabled={!canManageConnections}
-                    onChange={(event) => setClientSecret(event.target.value)}
-                    placeholder={t('integrations.qbo.settings.clientSecretPlaceholder', { defaultValue: 'Paste your Intuit app client secret' })}
-                  />
-                  {status?.credentials.clientSecretMasked ? (
-                    <p className="text-xs text-muted-foreground">
-                      {t('integrations.qbo.settings.storedClientSecret', { defaultValue: 'Stored client secret: {{value}}', value: status.credentials.clientSecretMasked })}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      {t('integrations.qbo.settings.noClientSecret', { defaultValue: 'No client secret is stored for this tenant yet.' })}
-                    </p>
-                  )}
-                </div>
-              </div>
+              ) : null}
 
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={status?.credentials.ready ? 'default' : 'secondary'}>
-                  {status?.credentials.ready
-                    ? t('integrations.qbo.settings.badges.credentialsReady', { defaultValue: 'Credentials Ready' })
-                    : t('integrations.qbo.settings.badges.credentialsRequired', { defaultValue: 'Credentials Required' })}
+                  {credentialSource === 'app'
+                    ? t('integrations.qbo.settings.badges.sharedApp', { defaultValue: 'Shared Intuit App' })
+                    : status?.credentials.ready
+                      ? t('integrations.qbo.settings.badges.credentialsReady', { defaultValue: 'Credentials Ready' })
+                      : t('integrations.qbo.settings.badges.credentialsRequired', { defaultValue: 'Credentials Required' })}
                 </Badge>
                 {defaultConnection ? (
                   <Badge variant={statusBadgeVariant(defaultConnection.status)}>
@@ -470,16 +537,18 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                   {t('integrations.qbo.settings.actions.refresh', { defaultValue: 'Refresh' })}
                 </Button>
 
-                <Button
-                  id="qbo-settings-save"
-                  type="button"
-                  onClick={() => void handleSave()}
-                  disabled={!readyToSave || saving || !canManageConnections}
-                >
-                  {saving
-                    ? t('integrations.qbo.settings.actions.saving', { defaultValue: 'Saving…' })
-                    : t('integrations.qbo.settings.actions.saveCredentials', { defaultValue: 'Save QuickBooks Credentials' })}
-                </Button>
+                {ownAppFieldsVisible ? (
+                  <Button
+                    id="qbo-settings-save"
+                    type="button"
+                    onClick={() => void handleSave()}
+                    disabled={!readyToSave || saving || !canManageConnections}
+                  >
+                    {saving
+                      ? t('integrations.qbo.settings.actions.saving', { defaultValue: 'Saving…' })
+                      : t('integrations.qbo.settings.actions.saveCredentials', { defaultValue: 'Save QuickBooks Credentials' })}
+                  </Button>
+                ) : null}
               </div>
             </>
           )}
@@ -490,7 +559,9 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
         <CardHeader>
           <CardTitle>{t('integrations.qbo.settings.connection.title', { defaultValue: 'Live QuickBooks Connection' })}</CardTitle>
           <CardDescription>
-            {t('integrations.qbo.settings.connection.description', { defaultValue: 'Start OAuth only after QuickBooks app credentials are configured. Disconnecting removes stored QuickBooks access tokens but keeps the tenant-owned app credentials in place.' })}
+            {credentialSource === 'app'
+              ? t('integrations.qbo.settings.connection.descriptionShared', { defaultValue: 'Click Connect QuickBooks, sign in to Intuit, and choose the company to link. Nothing else needs to be configured first. Disconnecting removes the stored QuickBooks access tokens.' })
+              : t('integrations.qbo.settings.connection.description', { defaultValue: 'Connect QuickBooks becomes available once an Intuit app is in place (see the Intuit App card above). Disconnecting removes stored QuickBooks access tokens but keeps this tenant\'s own Intuit app credentials in place.' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -545,7 +616,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
           ) : (
             <Alert variant="info">
               <AlertDescription>
-                {t('integrations.qbo.settings.connection.notConnected', { defaultValue: 'No QuickBooks company is connected yet. Save credentials, then click Connect QuickBooks.' })}
+                {t('integrations.qbo.settings.connection.notConnected', { defaultValue: 'No QuickBooks company is connected yet. Click Connect QuickBooks to sign in to Intuit and choose a company.' })}
               </AlertDescription>
             </Alert>
           )}

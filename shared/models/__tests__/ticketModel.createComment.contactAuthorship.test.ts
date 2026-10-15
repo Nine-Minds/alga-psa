@@ -1,7 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TicketModel } from '../ticketModel';
 // Audience locking is exercised against PostgreSQL; this harness isolates author mapping.
-vi.mock('../../lib/commentAudience', () => ({ assertCommentThreadAudience: vi.fn().mockResolvedValue('requester') }));
+vi.mock('../../lib/commentAudience', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/commentAudience')>()),
+  assertCommentThreadAudience: vi.fn().mockResolvedValue('requester'),
+}));
+
+// Conversation-store binding is exercised against PostgreSQL; this harness
+// isolates author mapping, so stub the named-conversation attach.
+vi.mock('../../lib/tickets/namedConversations', () => ({
+  attachNativeRootToConversation: vi.fn(async () => ({ conversationId: 'conv-00000000-0000-4000-8000-000000000001' })),
+}));
 
 // The model queries through the tenantDb facade now; these fakes dispatch by
 // table name, so mock the facade as a passthrough — tenant scoping is the
@@ -48,6 +57,7 @@ function createTrxHarness(options?: {
   const threadInserts: any[] = [];
 
   const trx: any = vi.fn((table: string) => {
+    if (table === 'ticket_comment_attachments') return { where: () => ({ orderBy: () => ({ forUpdate: async () => [] }) }) };
     if (table === 'tickets') {
       return { where: ticketsWhere };
     }
@@ -55,7 +65,7 @@ function createTrxHarness(options?: {
       return { where: contactsWhere };
     }
     if (table === 'comments') {
-      return { insert: commentsInsert };
+      return { insert: commentsInsert, where: () => ({ forUpdate: () => ({ first: async () => insertedComments.at(-1) }) }) };
     }
     // Comment threading: root comments insert a thread row; replies bump
     // reply_count via where().update().

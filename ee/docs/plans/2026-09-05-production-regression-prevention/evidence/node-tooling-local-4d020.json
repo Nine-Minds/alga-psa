@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "suite": "node-tooling",
+  "revision": "4d02008fae41ee644fccd5b99242d869e0298080",
+  "status": "passed",
+  "counts": {
+    "tests": 487,
+    "passed": 487,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "source": {
+    "before": {
+      "revision": "4d02008fae41ee644fccd5b99242d869e0298080",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "4d02008fae41ee644fccd5b99242d869e0298080",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "workingTreeDirty": false,
+  "failures": [],
+  "exclusions": [
+    {
+      "file": "tools/i18n/tests/baseline.test.mjs",
+      "owner": "Localization maintainers",
+      "reason": "Optional local comparison against gitignored baseline.json files. The existing validate-translations workflow explicitly replaces these baselines with zero-regression glossary, placeholder and parity gates; its three mandatory tooling suites also run in node-tooling. This file provides no CI execution coverage and must remain visible as a manual exclusion.",
+      "issue": "https://github.com/Nine-Minds/alga-psa/pull/3343",
+      "expires": "2026-12-06"
+    }
+  ],
+  "expectedFiles": 47,
+  "executedFiles": 47,
+  "discovery": "passed",
+  "durationMs": 138831.861458,
+  "log": "/tmp/alga-node-tooling-selection-repair.log",
+  "hashes": {
+    "events.jsonl": "93ebc00719d7228308e2b9bd5899d87cc00203a12658a69d366c17084ade9f17",
+    "evidence.json": "184bac3beca2ed33fe4b05043fe79aa96859423910e99cc9cc7241e826cf6b8f",
+    "discovery.json": "a5a851c37f69245877047125d6970036b3cc98acef2ef2453a3ec1f12bfff4e0",
+    "runner.log": "4b5fb2094445a033e62605de625d294707c3939858a69e67ffde6c9927c33f86"
+  },
+  "precedingFailure": {
+    "revision": "5da86c90e1eeab0a853efebc691b5f7013c9d460",
+    "passed": 486,
+    "failed": 1,
+    "cause": "Temporary selection-test repository omitted newly imported test-sharding.mjs; subsequent focused run also exposed uncommitted fixture manifest edits."
+  },
+  "limitations": [
+    "Local complete tooling-lane evidence; does not establish native PR CI readiness or full-plan completion."
+  ]
+}

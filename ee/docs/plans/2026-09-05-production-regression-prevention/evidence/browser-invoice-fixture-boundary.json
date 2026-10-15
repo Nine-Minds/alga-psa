@@ -1,0 +1,30 @@
+{
+  "runId": 34104450316,
+  "publishedHead": "2f75678de27624df23ba08e3241c83a429541f1d",
+  "browserResults": {
+    "community": {
+      "startTime": "2026-09-07T09:41:15.316Z",
+      "duration": 327727.93799999997,
+      "expected": 22,
+      "skipped": 0,
+      "unexpected": 1,
+      "flaky": 0
+    },
+    "enterprise": {
+      "startTime": "2026-09-07T09:39:45.036Z",
+      "duration": 457219.183,
+      "expected": 24,
+      "skipped": 0,
+      "unexpected": 1,
+      "flaky": 0
+    }
+  },
+  "localRepair": {
+    "status": "fixture-check-passed",
+    "runtime": "Standalone Playwright against owned migrated Citus database; transaction rolled back",
+    "log": "/tmp/alga-invoice-fixture-check-final-82cc.log"
+  },
+  "limits": [
+    "Browser journey repair not yet verified in native CI. API steps still running."
+  ]
+}

@@ -18,6 +18,8 @@ import { QuickAddInteraction } from '@alga-psa/clients/components/interactions/Q
 import { getClientById, getAllClients } from '@alga-psa/clients/actions';
 import { getContactByContactNameId } from '@alga-psa/clients/actions';
 import { deleteInteraction } from '@alga-psa/clients/actions';
+import { getInteractionCallArtifacts, type InteractionCallArtifact } from '@alga-psa/clients/actions';
+import { CallTranscriptDrawerContent } from './CallTranscriptDrawerContent';
 import { Text, Flex, Heading } from '@radix-ui/themes';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -104,9 +106,30 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRefreshingRecordings, setIsRefreshingRecordings] = useState(false);
   const [userFullName, setUserFullName] = useState<string>('');
+  const [callArtifacts, setCallArtifacts] = useState<InteractionCallArtifact[]>([]);
   const onlineMeeting = interaction.online_meeting;
   const showOnlineMeetingRecordingControls = onlineMeetingArtifactsEnabled();
   const onlineMeetingStatusKey = getOnlineMeetingStatusKey(onlineMeeting?.status);
+
+  // Call recordings/transcripts hang off the telephony ledger, not the interaction row.
+  useEffect(() => {
+    if (!showOnlineMeetingRecordingControls || !initialInteraction.interaction_id) {
+      setCallArtifacts([]);
+      return;
+    }
+    let cancelled = false;
+    getInteractionCallArtifacts(initialInteraction.interaction_id)
+      .then((result) => {
+        if (!cancelled) setCallArtifacts(result?.artifacts ?? []);
+      })
+      .catch((error) => {
+        console.error('Error fetching call artifacts:', error);
+        if (!cancelled) setCallArtifacts([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialInteraction.interaction_id, showOnlineMeetingRecordingControls]);
 
   // UI Reflection System Integration
   const { automationIdProps: editButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
@@ -452,8 +475,11 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
                     const artifactLabel = artifact.artifact_type === 'transcript'
                       ? t('interactions.onlineMeeting.viewTranscript', { defaultValue: 'View transcript' })
                       : t('interactions.onlineMeeting.downloadRecording', { defaultValue: 'Download recording' });
+                    // A co-managed artifact carries its own access-checked
+                    // download_url and must win. Otherwise a transcript opens in
+                    // the document viewer rather than downloading raw bytes.
                     const artifactUrl = artifact.download_url ?? (artifact.artifact_type === 'transcript' && artifact.document_id
-                      ? `/api/documents/${encodeURIComponent(artifact.document_id)}/download`
+                      ? `/msp/documents?doc=${encodeURIComponent(artifact.document_id)}`
                       : `/api/online-meetings/recordings/${encodeURIComponent(artifact.artifact_id)}`);
 
                     return (
@@ -496,6 +522,70 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
                 </Text>
               )
             )}
+          </div>
+        )}
+
+        {callArtifacts.length > 0 && (
+          <div
+            id="interaction-call-artifacts-section"
+            className="space-y-2 rounded-md border border-gray-200 p-4"
+          >
+            <Text size="2" weight="bold">
+              {t('interactions.callArtifacts.sectionTitle', { defaultValue: 'Call recording and transcript' })}
+            </Text>
+            {callArtifacts.map((artifact) => {
+              const createdAt = artifact.createdDateTime
+                ? new Date(artifact.createdDateTime).toLocaleString()
+                : null;
+              const isTranscript = artifact.artifactType === 'transcript';
+              const transcriptDocumentId = isTranscript ? artifact.documentId : null;
+              const recordingUrl = !isTranscript && artifact.fileId
+                ? `/api/telephony/call-recordings/${encodeURIComponent(artifact.artifactId)}`
+                : null;
+              if (!transcriptDocumentId && !recordingUrl) return null;
+
+              return (
+                <div
+                  key={artifact.artifactId}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-2 dark:bg-gray-800"
+                >
+                  <div className="flex min-w-0 items-center gap-2 text-sm">
+                    {isTranscript ? (
+                      <FileText className="h-4 w-4 text-gray-500" />
+                    ) : (
+                      <Download className="h-4 w-4 text-gray-500" />
+                    )}
+                    <span className="font-medium">
+                      {isTranscript
+                        ? t('interactions.onlineMeeting.transcriptArtifact', { defaultValue: 'Transcript' })
+                        : t('interactions.onlineMeeting.recordingArtifact', { defaultValue: 'Recording' })}
+                    </span>
+                    {createdAt && <span className="text-gray-500">{createdAt}</span>}
+                  </div>
+                  {transcriptDocumentId ? (
+                    <Button
+                      id={`interaction-call-transcript-${artifact.artifactId}`}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openDrawer(<CallTranscriptDrawerContent documentId={transcriptDocumentId} />)}
+                    >
+                      {t('interactions.callArtifacts.viewTranscript', { defaultValue: 'View transcript' })}
+                    </Button>
+                  ) : (
+                    <Button
+                      id={`interaction-call-recording-${artifact.artifactId}`}
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                    >
+                      <a href={recordingUrl!} target="_blank" rel="noopener noreferrer">
+                        {t('interactions.callArtifacts.downloadRecording', { defaultValue: 'Download recording' })}
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 

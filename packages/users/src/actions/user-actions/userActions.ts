@@ -1,6 +1,6 @@
 'use server';
 
-import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
+import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected, type CoManagedAdmissionLimitCode } from '../../lib/internalUserLicenseGuard';
 import User from '@alga-psa/db/models/user';
 import { DeletionValidationResult, IUser, IUserRole } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
@@ -12,15 +12,18 @@ import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { hashPassword } from '@alga-psa/core/encryption';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
+import { ListViewModel } from '@alga-psa/list-views/models/listViewModel';
 import { getUserAvatarUrl } from '@alga-psa/user-composition/lib/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/lib/permissions';
 import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import logger from '@alga-psa/core/logger';
+import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { prepareTicketResourceReassignment } from "@alga-psa/db/reassignTicketResources";
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import {
   sanitizeUserForResponse,
   USER_RESPONSE_FIELD_NAMES,
@@ -52,6 +55,7 @@ export type AddUserErrorCode =
   | 'ROLE_CLIENT_NOT_ALLOWED_FOR_MSP'
   | 'EMAIL_ALREADY_EXISTS'
   | 'LICENSE_LIMIT_REACHED'
+  | CoManagedAdmissionLimitCode
   | 'SOLO_PLAN_LIMIT'
   | 'PERMISSION_DENIED'
   | 'USER_CREATE_FAILED';
@@ -63,10 +67,12 @@ type AddUserResult =
 export type UpdateUserErrorCode =
   | 'SOLO_PLAN_LIMIT'
   | 'LICENSE_LIMIT_REACHED'
+  | CoManagedAdmissionLimitCode
   | 'EMAIL_ALREADY_EXISTS'
   | 'REPORTS_TO_SELF'
   | 'REPORTS_TO_CYCLE'
   | 'SCIM_MANAGED_INACTIVE'
+  | 'INVALID_TIMEZONE'
   | 'PERMISSION_DENIED'
   | 'USER_UPDATE_FAILED';
 
@@ -599,7 +605,7 @@ export const addUser = withAuth(async (
 
     if (result.success) {
       const occurredAt = new Date().toISOString();
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'USER_CREATED',
         payload: {
           userId: result.user.user_id,
@@ -753,6 +759,8 @@ export const deleteUser = withAuth(async (
         ['authorization_bundle_assignments', 'created_by'],
         ['authorization_bundle_assignments', 'updated_by'],
         ['authorization_bundle_rules', 'created_by'],
+        ['calendars', 'created_by'],
+        ['calendar_shares', 'created_by'],
       ];
       for (const [table, column] of nullColumns) {
         await tenantScopedTable(table)
@@ -790,6 +798,12 @@ export const deleteUser = withAuth(async (
           .update({ [column]: actorId });
       }
 
+      // ── Named list views ──────────────────────────────────────────────
+      // Private views go with the user; shared views pass to the deleting
+      // admin so the team keeps them. owner_user_id is NOT NULL, so this
+      // must run before the user row goes.
+      await ListViewModel.handOverForDeletedUser(trx, tenantId, userId, actorId);
+
       // ── User-scoped rows → DELETE ─────────────────────────────────────
       // Rows that have no meaning without the user.
       const deleteByUserId = [
@@ -804,6 +818,8 @@ export const deleteUser = withAuth(async (
         'telemetry_consent_log',
         'calendar_providers',
         'team_members',
+        'board_notification_rule_recipients',
+        'board_default_watchers',
         'schedule_entry_assignees',
         'comment_reactions',
         'project_task_comment_reactions',
@@ -816,6 +832,21 @@ export const deleteUser = withAuth(async (
       for (const table of deleteByUserId) {
         await tenantScopedTable(table).where({ user_id: userId }).del();
       }
+
+      // Shared calendars: shares held by the user (polymorphic grantee, no FK),
+      // then the user's personal calendar and its shares.
+      await tenantScopedTable('calendar_shares')
+        .where({ grantee_type: 'user', grantee_id: userId })
+        .del();
+      const personalCalendarIds = tenantScopedTable('calendars')
+        .select('calendar_id')
+        .where({ calendar_type: 'personal', owner_user_id: userId });
+      await tenantScopedTable('calendar_shares')
+        .whereIn('calendar_id', personalCalendarIds)
+        .del();
+      await tenantScopedTable('calendars')
+        .where({ calendar_type: 'personal', owner_user_id: userId })
+        .del();
 
       // import_jobs uses created_by, not user_id
       await tenantScopedTable('import_jobs').where({ created_by: userId }).del();
@@ -874,7 +905,7 @@ export const deleteUser = withAuth(async (
 
     if (response.success) {
       const occurredAt = new Date().toISOString();
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'USER_DELETED',
         payload: {
           userId,
@@ -1009,16 +1040,44 @@ export const updateUser = withAuth(async (
       }
 
       let normalizedUserData = userData;
+
+      // The email uniqueness check and the timezone change check both need the
+      // stored row, so read it once.
+      const timezoneProvided = 'timezone' in userData && userData.timezone !== undefined;
+      const existing = (userData.email || timezoneProvided)
+        ? await tenantDb(trx, tenant).table('users')
+            .where({ user_id: userId })
+            .select('email', 'user_type', 'timezone')
+            .first()
+        : undefined;
+
+      if (timezoneProvided) {
+        // Only validate when the zone actually changes. This path saves the whole
+        // profile at once; re-checking an unchanged legacy value (e.g. "EST" on
+        // another install) would block unrelated edits such as a phone number.
+        const requested = userData.timezone ?? null;
+        const stored = (existing?.timezone as string | null | undefined) ?? null;
+        if (requested !== stored) {
+          const validation = validateStorableTimeZone(requested);
+          if (validation.ok === false) {
+            return {
+              success: false,
+              code: 'INVALID_TIMEZONE',
+              error: validation.reason === 'not_location'
+                ? `${validation.input} isn't a city-based time zone. Choose a zone such as America/New_York.`
+                : `Invalid timezone: ${validation.input}`,
+            };
+          }
+          normalizedUserData = { ...normalizedUserData, timezone: validation.timeZone as IUser['timezone'] };
+        }
+      }
+
       if (userData.email) {
         const normalizedEmail = userData.email.toLowerCase();
         // Only run the global uniqueness check when the email is actually
         // changing — otherwise editing any field (e.g. setting a manager)
         // would re-validate the unchanged email and could trip on legitimate
         // cross-tenant duplicates.
-        const existing = await tenantDb(trx, tenant).table('users')
-          .where({ user_id: userId })
-          .select('email', 'user_type')
-          .first();
         const currentEmail = existing?.email?.toLowerCase();
 
         if (currentEmail !== normalizedEmail) {
@@ -1037,7 +1096,7 @@ export const updateUser = withAuth(async (
         }
 
         normalizedUserData = {
-          ...userData,
+          ...normalizedUserData,
           email: normalizedEmail,
         };
       }
@@ -1061,7 +1120,7 @@ export const updateUser = withAuth(async (
         (field) => userData[field as keyof typeof userData] !== undefined
       );
 
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'USER_UPDATED',
         payload: {
           userId,
@@ -1309,7 +1368,9 @@ export const deactivateUserWithDisposition = withAuth(
               assigned_to: nextAssignee,
             };
             if (disposition.tickets.action === "archive") {
+              // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
               update.status_id = ticketArchiveStatuses.get(ticket.board_id);
+              Object.assign(update, ticketStatusClockPatch(trx, update.status_id as string | undefined));
               update.is_closed = true;
               update.closed_at = new Date();
               update.closed_by = currentUser.user_id;
@@ -1378,7 +1439,7 @@ export const deactivateUserWithDisposition = withAuth(
       revalidatePath("/settings");
       const occurredAt = new Date().toISOString();
       try {
-        await publishWorkflowEvent({
+        await publishNonCatalogWorkflowEvent({
           eventType: "USER_UPDATED",
           payload: {
             userId,
@@ -1453,7 +1514,7 @@ export const updateUserRoles = withAuth(async (
     });
 
     const occurredAt = new Date().toISOString();
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'USER_ROLES_UPDATED',
       payload: {
         userId,
@@ -1553,6 +1614,7 @@ export const registerClientUser = withAuth(async (
           client_id: 'contacts.client_id',
           tenant: 'contacts.tenant',
           is_inactive: 'contacts.is_inactive',
+          contact_kind: 'contacts.contact_kind',
           full_name: 'contacts.full_name',
         })
         .first();
@@ -1563,6 +1625,10 @@ export const registerClientUser = withAuth(async (
 
       if (contact.is_inactive) {
         return { success: false, code: 'CONTACT_INACTIVE', error: 'Contact is inactive' };
+      }
+
+      if (contact.contact_kind === 'shared_mailbox') {
+        return { success: false, code: 'REGISTRATION_FAILED', error: 'Shared mailbox contacts cannot have a client portal user.' };
       }
 
       // Check if a client user with this email already exists. Internal users

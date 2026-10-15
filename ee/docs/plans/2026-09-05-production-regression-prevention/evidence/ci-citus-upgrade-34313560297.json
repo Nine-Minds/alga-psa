@@ -1,0 +1,385 @@
+{
+  "schemaVersion": 1,
+  "scope": "completed-citus-supported-upgrade-bounded-observation",
+  "runId": "34313560297",
+  "executionArtifactId": "10090767317",
+  "diagnosticsArtifactId": "10090767965",
+  "revision": "9ba03b9f3ad6b2e369c561399cd4049d590ac0c4",
+  "source": {
+    "before": {
+      "revision": "9ba03b9f3ad6b2e369c561399cd4049d590ac0c4",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "9ba03b9f3ad6b2e369c561399cd4049d590ac0c4",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "baseline": {
+    "schemaVersion": 1,
+    "release": "v1.5.0",
+    "commit": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+    "selection": "Explicitly approved by the user for the supported-upgrade test",
+    "fixtureStatus": "implemented"
+  },
+  "schemaStatus": "passed",
+  "migrations": {
+    "baseline": 1028,
+    "upgrade": [
+      "20260827090000_create_tenant_secrets.cjs",
+      "20260827091000_reconcile_tenant_permissions.cjs",
+      "20260827110000_rename_time_permission_resources.cjs",
+      "20260827120000_reconcile_permission_catalog.cjs",
+      "20260828120000_add_credential_audit_permission.cjs",
+      "20260830120000_add_accounting_capability_permissions.cjs",
+      "20260830120000_external_mapping_tombstone_and_realm_normalization.cjs",
+      "20260830120000_prune_accounting_export_error_metadata.cjs",
+      "20260830120000_tighten_accounting_mapping_realm.cjs",
+      "20260830130000_create_provider_disconnect_records.cjs",
+      "20260831000000_add_accounting_catalog_read_permission.cjs",
+      "20260831000000_add_prefix_date_format_to_next_number.cjs",
+      "20260831090000_unique_pending_accounting_sync_operations.cjs",
+      "20260902090000_add_service_request_submission_client_key.cjs",
+      "20260902090000_add_work_item_snapshot_to_invoice_time_entries.cjs",
+      "20260902090100_add_by_ticket_standard_invoice_template.cjs",
+      "20260903120000_fix_interaction_default_status.cjs",
+      "20260903160000_unique_active_online_meeting_per_schedule_entry.cjs",
+      "20260904100000_contract_quantity_usage_semantics.cjs",
+      "20260904110000_usage_tracking_request_id.cjs",
+      "20260904120000_allow_chargeless_invoice_claims_on_recurring_service_periods.cjs",
+      "20260904120000_enforce_availability_scope_uniqueness.cjs",
+      "20260904120000_usage_period_total_request_history.cjs",
+      "20260904130000_billing_semantics_lock.cjs",
+      "20260904140000_usage_measurement_revisions.cjs",
+      "20260904210725_ticket_comment_attachments.cjs",
+      "20260904221253_ticket_comment_attachment_recovery.cjs",
+      "20260905025507_invoice_ticket_charge_provenance.cjs",
+      "20260905031510_invoice_ticket_primary_template.cjs",
+      "20260906123000_add_usage_comments.cjs",
+      "20260907190000_add_project_survey_subjects.cjs",
+      "20260907200000_add_project_survey_email_template.cjs",
+      "20260907210000_add_workflow_action_replay_output.cjs",
+      "20260908170000_add_schedule_entry_all_day.cjs"
+    ],
+    "batch": 2
+  },
+  "distribution": {
+    "baseline": [
+      {
+        "table_name": "clients",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "contracts",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "tenants",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "tickets",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "time_entries",
+        "partmethod": null,
+        "distribution_column": null
+      },
+      {
+        "table_name": "usage_tracking",
+        "partmethod": null,
+        "distribution_column": null
+      },
+      {
+        "table_name": "users",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      }
+    ],
+    "upgraded": [
+      {
+        "table_name": "clients",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "contracts",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "tenants",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "tickets",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "time_entries",
+        "partmethod": null,
+        "distribution_column": null
+      },
+      {
+        "table_name": "usage_tracking",
+        "partmethod": null,
+        "distribution_column": null
+      },
+      {
+        "table_name": "users",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      }
+    ]
+  },
+  "browserStatus": "passed",
+  "tests": [
+    {
+      "file": "retained-invoice.spec.ts",
+      "title": "upgraded billing sources generate a correctly priced invoice without consuming other tenant records",
+      "projectId": "enterprise-chromium",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "startTime": "2026-09-09T06:11:11.887Z",
+          "duration": 20233
+        }
+      ]
+    },
+    {
+      "file": "retained-ticket.spec.ts",
+      "title": "upgraded tenants retain ticket writes and reject other-tenant record access",
+      "projectId": "enterprise-chromium",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "startTime": "2026-09-09T06:11:32.388Z",
+          "duration": 35056
+        }
+      ]
+    },
+    {
+      "file": "retained-usage.spec.ts",
+      "title": "Add Usage after upgrade preserves the old record and uses its existing contract line",
+      "projectId": "enterprise-chromium",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "startTime": "2026-09-09T06:12:07.482Z",
+          "duration": 7631
+        }
+      ]
+    }
+  ],
+  "snapshot": {
+    "max_connections": "100",
+    "connections": [
+      {
+        "datname": "postgres",
+        "usename": "postgres",
+        "backend_type": "Citus Maintenance Daemon: 5/10",
+        "state": null,
+        "count": 1
+      },
+      {
+        "datname": "upgrade_citus_ci",
+        "usename": "app_user",
+        "backend_type": "client backend",
+        "state": "idle",
+        "count": 44
+      },
+      {
+        "datname": "upgrade_citus_ci",
+        "usename": "postgres",
+        "backend_type": "Citus Maintenance Daemon: 17226/10",
+        "state": null,
+        "count": 1
+      },
+      {
+        "datname": null,
+        "usename": null,
+        "backend_type": "checkpointer",
+        "state": null,
+        "count": 1
+      },
+      {
+        "datname": "postgres",
+        "usename": "postgres",
+        "backend_type": "client backend",
+        "state": "active",
+        "count": 1
+      },
+      {
+        "datname": "upgrade_citus_ci",
+        "usename": "postgres",
+        "backend_type": "client backend",
+        "state": "idle",
+        "count": 16
+      },
+      {
+        "datname": null,
+        "usename": null,
+        "backend_type": "autovacuum launcher",
+        "state": null,
+        "count": 1
+      },
+      {
+        "datname": "upgrade_citus_ci",
+        "usename": "postgres",
+        "backend_type": "client backend",
+        "state": "active",
+        "count": 1
+      },
+      {
+        "datname": null,
+        "usename": "postgres",
+        "backend_type": "logical replication launcher",
+        "state": null,
+        "count": 1
+      },
+      {
+        "datname": null,
+        "usename": null,
+        "backend_type": "walwriter",
+        "state": null,
+        "count": 1
+      },
+      {
+        "datname": null,
+        "usename": null,
+        "backend_type": "background writer",
+        "state": null,
+        "count": 1
+      }
+    ]
+  },
+  "diagnostics": {
+    "serviceLogLines": 39575,
+    "sha256": "bada2056da241684066e363cdb625a390b53afee73ec066cfed7c0ec9e86e241",
+    "snapshotSha256": "e2dd822586c2c682cbd9a113ddeec2bfcb2f7beed36998db69f363c32b062e85",
+    "connectionPressure": [],
+    "postgresComplexJoinErrors": [
+      {
+        "line": 247,
+        "timestamp": "2026-09-09T06:12:12.194610728Z"
+      },
+      {
+        "line": 249,
+        "timestamp": "2026-09-09T06:12:14.769060527Z"
+      }
+    ],
+    "allComplexJoinMentions": [
+      {
+        "line": 247,
+        "timestamp": "2026-09-09T06:12:12.194610728Z"
+      },
+      {
+        "line": 249,
+        "timestamp": "2026-09-09T06:12:14.769060527Z"
+      },
+      {
+        "line": 37650,
+        "timestamp": "2026-09-09T06:12:12.199558489Z"
+      },
+      {
+        "line": 37670,
+        "timestamp": "2026-09-09T06:12:12.201683521Z"
+      },
+      {
+        "line": 39338,
+        "timestamp": "2026-09-09T06:12:14.773500374Z"
+      },
+      {
+        "line": 39358,
+        "timestamp": "2026-09-09T06:12:14.774919410Z"
+      }
+    ],
+    "hocuspocusSecretErrors": [
+      {
+        "line": 9479,
+        "timestamp": "2026-09-09T06:11:37.328337275Z"
+      },
+      {
+        "line": 9975,
+        "timestamp": "2026-09-09T06:11:38.383731734Z"
+      },
+      {
+        "line": 10088,
+        "timestamp": "2026-09-09T06:11:40.443373269Z"
+      },
+      {
+        "line": 14792,
+        "timestamp": "2026-09-09T06:11:43.966885740Z"
+      },
+      {
+        "line": 17110,
+        "timestamp": "2026-09-09T06:11:45.385987830Z"
+      },
+      {
+        "line": 18508,
+        "timestamp": "2026-09-09T06:11:46.887806003Z"
+      },
+      {
+        "line": 23693,
+        "timestamp": "2026-09-09T06:11:56.125529922Z"
+      },
+      {
+        "line": 24385,
+        "timestamp": "2026-09-09T06:11:57.206312745Z"
+      },
+      {
+        "line": 28908,
+        "timestamp": "2026-09-09T06:11:59.858121548Z"
+      },
+      {
+        "line": 32011,
+        "timestamp": "2026-09-09T06:12:01.378931527Z"
+      },
+      {
+        "line": 33850,
+        "timestamp": "2026-09-09T06:12:02.964147875Z"
+      }
+    ],
+    "postgresInvalidUuidErrors": [],
+    "postgresOtherErrors": [
+      {
+        "line": 230,
+        "timestamp": "2026-09-09T06:10:16.167761554Z"
+      },
+      {
+        "line": 233,
+        "timestamp": "2026-09-09T06:10:21.180457917Z"
+      },
+      {
+        "line": 236,
+        "timestamp": "2026-09-09T06:10:22.218149412Z"
+      },
+      {
+        "line": 247,
+        "timestamp": "2026-09-09T06:12:12.194610728Z"
+      },
+      {
+        "line": 249,
+        "timestamp": "2026-09-09T06:12:14.769060527Z"
+      }
+    ]
+  },
+  "limitations": [
+    "Tests executed merge9ba03b9f; current local unpublished bucket query/UI fixes are NOT covered by this run.",
+    "Three first-attempt browser passes do not prove bucket summary correctness; retained Citus complex join errors still occurred.",
+    "Single-node mixed-distribution topology; metadata covers seven listed tables, not all bucket tables or multi-worker distributed joins.",
+    "Connection snapshot is not peak/load telemetry. No whole-run clean-log or production readiness claim."
+  ]
+}

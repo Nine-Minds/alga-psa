@@ -1,11 +1,12 @@
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import type { IProjectPhase } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Upload } from 'lucide-react';
 import PhaseListItem from './PhaseListItem';
-import type { PhaseBillingBadge } from '@alga-psa/core';
+import { getServices } from '../actions/serviceCatalogActions';
+import type { PhaseBillingBadge, TimeEntryServiceChoice } from '@alga-psa/core';
 import styles from './ProjectDetail.module.css';
 import { useTranslation } from 'react-i18next';
 
@@ -20,6 +21,7 @@ interface ProjectPhasesProps {
   editingPhaseDescription: string | null;
   editingStartDate?: Date;
   editingEndDate?: Date;
+  editingPhaseServiceId?: string | null;
   phaseTaskCounts?: Record<string, number>;
   phaseDropTarget: {
     phaseId: string;
@@ -32,6 +34,7 @@ interface ProjectPhasesProps {
   onEditingPhaseDescriptionChange: (description: string | null) => void;
   onEditingStartDateChange?: (date: Date | undefined) => void;
   onEditingEndDateChange?: (date: Date | undefined) => void;
+  onEditingPhaseServiceChange?: (serviceId: string | null) => void;
   onAddTask: () => void;
   onAddPhase: () => void;
   onEditPhase: (phase: IProjectPhase) => void;
@@ -49,6 +52,8 @@ interface ProjectPhasesProps {
   phaseBillingBadges?: Record<string, PhaseBillingBadge>;
   /** Per-phase "all tasks closed" flags for the completion nudge (F138). */
   phaseAllTasksClosed?: Record<string, boolean>;
+  /** Per-phase count of phase-scoped status columns; 0/absent = inherits project defaults. */
+  phaseCustomStatusCounts?: Record<string, number>;
   /** Whether the user can mark phases complete / reopen them (F137). */
   canCompletePhase?: boolean;
   onMarkPhaseComplete?: (phase: IProjectPhase) => void;
@@ -66,6 +71,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   editingPhaseDescription,
   editingStartDate,
   editingEndDate,
+  editingPhaseServiceId,
   phaseTaskCounts = {},
   phaseDropTarget,
   taskDraggingOverPhaseId,
@@ -81,6 +87,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   onEditingPhaseDescriptionChange,
   onEditingStartDateChange,
   onEditingEndDateChange,
+  onEditingPhaseServiceChange,
   onDragOver,
   onDragLeave,
   onDrop,
@@ -90,11 +97,27 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   onImport,
   phaseBillingBadges,
   phaseAllTasksClosed,
+  phaseCustomStatusCounts,
   canCompletePhase,
   onMarkPhaseComplete,
   onReopenPhase,
 }) => {
   const { t } = useTranslation(['features/projects', 'common']);
+  // One catalog load for the whole list — the picker in the phase editor and the
+  // service name on phases that already have a default both read from it.
+  const [services, setServices] = useState<TimeEntryServiceChoice[]>([]);
+  const needsServices = Boolean(editingPhaseId) || phases.some((phase) => Boolean(phase.service_id));
+  useEffect(() => {
+    if (!needsServices || services.length > 0) return;
+    let cancelled = false;
+    getServices(1, 999)
+      .then((response) => {
+        if (!cancelled) setServices(response.services);
+      })
+      .catch(() => { if (!cancelled) setServices([]); });
+    return () => { cancelled = true; };
+  }, [needsServices, services.length]);
+
   const handleContainerDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     
@@ -261,6 +284,8 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               editingDescription={editingPhaseDescription}
               editingStartDate={editingStartDate}
               editingEndDate={editingEndDate}
+              editingServiceId={editingPhaseServiceId}
+              services={services}
               taskCount={phaseTaskCounts[phase.phase_id]}
               taskDraggingOverPhaseId={taskDraggingOverPhaseId}
               onSelect={onPhaseSelect}
@@ -272,6 +297,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               onDescriptionChange={onEditingPhaseDescriptionChange}
               onStartDateChange={onEditingStartDateChange}
               onEndDateChange={onEditingEndDateChange}
+              onServiceChange={onEditingPhaseServiceChange}
               onDragOver={onDragOver}
               onDragLeave={onDragLeave}
               onDrop={onDrop}
@@ -280,6 +306,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               onStatusesChanged={onStatusesChanged}
               billingBadge={phaseBillingBadges?.[phase.phase_id]}
               allTasksClosed={phaseAllTasksClosed?.[phase.phase_id]}
+              customStatusCount={phaseCustomStatusCounts ? phaseCustomStatusCounts[phase.phase_id] ?? 0 : undefined}
               canCompletePhase={canCompletePhase}
               onMarkComplete={onMarkPhaseComplete}
               onReopen={onReopenPhase}

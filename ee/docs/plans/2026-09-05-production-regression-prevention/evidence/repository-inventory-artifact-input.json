@@ -1,0 +1,20 @@
+{
+  "status": "incomplete",
+  "sourceRun": "https://github.com/Nine-Minds/alga-psa/actions/runs/34102126267",
+  "sourceMergeRevision": "df2c988ca0742d4d19d7048353dc4416703c4063",
+  "auditScope": "Native workspace collections against current local repository inventory",
+  "candidates": 3944,
+  "accountedFor": 451,
+  "unmatched": 3493,
+  "runnerArtifacts": 10,
+  "validation": {
+    "command": "node --test scripts/tests/test-discovery.test.mjs scripts/tests/test-discovery.vitest.test.mjs",
+    "passed": 7,
+    "failed": 0
+  },
+  "limits": [
+    "Partial collection input: unmatched files are not proven orphaned.",
+    "Other runner artifacts and individual owner assignments remain outstanding.",
+    "Discovery is not execution or revision-matched global readiness."
+  ]
+}

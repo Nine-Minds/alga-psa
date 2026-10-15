@@ -12,6 +12,13 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/scim-malicious/v2/connection-id/Users')).toBe(false);
   });
 
+  it('lets the smart ticket search stream authenticate its session in the route handler', () => {
+    expect(shouldSkipApiKeyAuth('/api/smart-search/ticket/stream')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/smart-search/project/stream')).toBe(true);
+    // Other ticket API routes still need an API key.
+    expect(shouldSkipApiKeyAuth('/api/tickets/123')).toBe(false);
+  });
+
   it('allows the Teams package download route to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/download')).toBe(true);
   });
@@ -30,8 +37,29 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/documents/123/content')).toBe(true);
   });
 
+  it('lets only client portal document file and export handlers authenticate the portal session', () => {
+    const documentId = '2187d639-b796-4b0e-b760-8a2576bb435f';
+    expect(shouldSkipApiKeyAuth(`/api/client-portal/documents/${documentId}/file`)).toBe(true);
+    expect(shouldSkipApiKeyAuth(`/api/client-portal/documents/${documentId}/export`)).toBe(true);
+
+    // The exception is bound to the two intended handlers and one document ID segment.
+    expect(shouldSkipApiKeyAuth(`/api/client-portal/documents/${documentId}/content`)).toBe(false);
+    expect(shouldSkipApiKeyAuth(`/api/client-portal/documents/${documentId}/file/other`)).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/documents/file')).toBe(false);
+    expect(shouldSkipApiKeyAuth(`/api/client-portal/documents/${documentId}/export-malicious`)).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);
+  });
+
   it('allows the Teams online-meeting recording proxy to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/online-meetings/recordings/artifact-123')).toBe(true);
+  });
+
+  it('allows 3CX CRM template routes (per-tenant Bearer ApiKey verified in the route)', () => {
+    expect(shouldSkipApiKeyAuth('/api/telephony/3cx/abc123def456/lookup')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/telephony/3cx/abc123def456/lookup-by-email')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/telephony/3cx/abc123def456/search')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/telephony/3cx/abc123def456/report-call')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/telephony/3cx-malicious/x/lookup')).toBe(false);
   });
 
   it('allows public appointment calendar downloads from email links', () => {
@@ -67,6 +95,57 @@ describe('shouldSkipApiKeyAuth', () => {
       expect(shouldSkipApiKeyAuth(prefix + 'file-id/other-action')).toBe(false);
     }
     expect(shouldSkipApiKeyAuth('/api/tickets/conversation-synthesis-other')).toBe(false);
+  });
+
+  it('allows the notification live token API to use browser session auth', () => {
+    expect(shouldSkipApiKeyAuth('/api/notifications/live-token')).toBe(true);
+  });
+
+  it('exempts the notification live token exactly, never a prefixed or deeper sibling', () => {
+    expect(shouldSkipApiKeyAuth('/api/notifications')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/notifications/live-token-evil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/notifications/live-token/mint')).toBe(false);
+  });
+
+  it('allows co-managed portal conversation attachment downloads to use the client session', () => {
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments/attachment-123')).toBe(true);
+  });
+
+  it('exempts one conversation attachment id only, never a sibling or deeper path', () => {
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments/attachment-123/raw')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments-evil/attachment-123')).toBe(false);
+  });
+
+  it('allows meeting artifact downloads to resolve their session or API-key actor in-route', () => {
+    expect(shouldSkipApiKeyAuth('/api/online-meetings/artifacts/artifact-123')).toBe(true);
+  });
+
+  it('exempts one meeting artifact id only, never a sibling or deeper path', () => {
+    expect(shouldSkipApiKeyAuth('/api/online-meetings/artifacts')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/online-meetings/artifacts/artifact-123/content')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/online-meetings/artifacts-evil/artifact-123')).toBe(false);
+  });
+
+  it('allows the Level.io webhook route (X-Alga-Webhook-Secret authenticated in-route)', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelio')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/')).toBe(true);
+  });
+
+  it('exempts the Level.io route exactly, never a prefixed or deeper sibling', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelioevil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelio-extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelio.more')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/malicious')).toBe(false);
+  });
+
+  it('keeps sibling RMM + payment webhook routes and unrelated APIs gated', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/ninjaone')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/tacticalrmm')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/ai-gateway')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/stripe/payments')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/other-provider')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);
   });
 
   it('still requires an API key for unrelated API routes', () => {

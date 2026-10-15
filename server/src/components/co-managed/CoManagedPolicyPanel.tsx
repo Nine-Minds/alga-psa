@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { CoManagedDelegatedAdministrationLink } from './CoManagedDelegatedAdministrationLink';
+import CoManagedWorkspaceDirectory, { type CoManagedWorkspaceChoice, workspaceChoices } from './CoManagedWorkspaceDirectory';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CoManagedCustomerScope, CoManagedStaffAssignment } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -13,7 +14,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedPolicyScreen, searchCoManagedPolicyOptions, saveCustomerCoManagedScope, saveSponsorCoManagedAssignments,
   type CoManagedPolicyOption, type CoManagedPolicyOptionKind } from '@/lib/actions/coManagedPolicyActions';
 
-type Screen = Awaited<ReturnType<typeof getCoManagedPolicyScreen>>;
+type Screen = Exclude<Awaited<ReturnType<typeof getCoManagedPolicyScreen>>, { side: 'directory' }>;
 type Entry = { id: string; collaborate: boolean };
 type Submission = { side: Screen['side']; revision: number; scope: CoManagedCustomerScope; assignments: CoManagedStaffAssignment[] };
 
@@ -82,6 +83,7 @@ function PolicyEntries({ kind, operationId, entries, labels, disabled, canExpand
 export default function CoManagedPolicyPanel({ operationId }: { operationId?: string }) {
   const { t } = useTranslation('msp/licensing');
   const [state, setState] = useState<Screen | null>(null);
+  const [directory, setDirectory] = useState<CoManagedWorkspaceChoice[] | null>(null);
   const [scope, setScope] = useState<CoManagedCustomerScope>({ visibilityMode: 'board_scope', boards: [], projects: [] });
   const [assignments, setAssignments] = useState<CoManagedStaffAssignment[]>([]);
   const [submitted, setSubmitted] = useState<Submission | null>(null);
@@ -89,13 +91,17 @@ export default function CoManagedPolicyPanel({ operationId }: { operationId?: st
   const [error, setError] = useState<'loadError' | 'saveError' | null>(null);
   const [saved, setSaved] = useState(false);
   const generation = useRef(0);
-  const apply = useCallback((next: Screen) => {
-    setState(next); setScope({ visibilityMode: next.policy.visibilityMode, boards: next.policy.boards, projects: next.policy.projects });
-    setAssignments(next.policy.assignments); setSubmitted(null);
+  const apply = useCallback((next: Awaited<ReturnType<typeof getCoManagedPolicyScreen>>) => {
+    const choices = workspaceChoices(next);
+    if (choices) { setDirectory(choices); setState(null); return; }
+    const screen = next as Screen;
+    setDirectory(null); setState(screen);
+    setScope({ visibilityMode: screen.policy.visibilityMode, boards: screen.policy.boards, projects: screen.policy.projects });
+    setAssignments(screen.policy.assignments); setSubmitted(null);
   }, []);
   useEffect(() => {
     const current = ++generation.current;
-    setState(null); setError(null); setSubmitted(null); setSaved(false); setBusy(false);
+    setState(null); setDirectory(null); setError(null); setSubmitted(null); setSaved(false); setBusy(false);
     void getCoManagedPolicyScreen(operationId).then(next => { if (current === generation.current) apply(next); })
       .catch(() => { if (current === generation.current) setError('loadError'); });
     return () => { ++generation.current; };
@@ -129,7 +135,8 @@ export default function CoManagedPolicyPanel({ operationId }: { operationId?: st
     <h1 className="text-3xl font-bold">{t('coManaged.policy.title')}</h1>
     {error && <p role="alert" className="text-destructive">{t(`coManaged.policy.${error}`)}</p>}
     {saved && <p role="status">{t('coManaged.policy.saved')}</p>}
-    {!state && !error && <p role="status">{t('coManaged.loading')}</p>}
+    {directory && <CoManagedWorkspaceDirectory basePath="/msp/co-management" idPrefix="co-policy-workspace" workspaces={directory} />}
+    {!state && !directory && !error && <p role="status">{t('coManaged.loading')}</p>}
     {state && <Card><CardHeader><CardTitle>{state.counterpartName || t('coManaged.policy.title')}</CardTitle></CardHeader>
       <CardContent key={operationId || 'home'} className="space-y-5">
         <p>{t(`coManaged.policy.${state.side}Description`)}</p>

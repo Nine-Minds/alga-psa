@@ -1,0 +1,41 @@
+{
+  "scope": "Open-ended tax-rate overlap validation regression",
+  "baseRevision": "28735644e3",
+  "workingTreeDirty": true,
+  "before": {
+    "failed": 3,
+    "passed": 23
+  },
+  "afterDatabase": {
+    "passed": 27,
+    "failed": 0,
+    "skipped": 0
+  },
+  "bug": "An absent proposed end was replaced with its start, permitting overlaps with equal-start or future existing intervals.",
+  "fix": "Use half-open intersection: existing end absent or after proposed start; existing start before proposed end only when proposed end exists.",
+  "coverage": [
+    "Existing finite and unbounded intervals",
+    "Equal-start and future overlap",
+    "Adjacent non-overlapping boundaries",
+    "Edited-rate exclusion",
+    "Tenant and region isolation"
+  ],
+  "limitations": [
+    "Local database execution with transaction-scoped tenant context; canonical DB lane assigned but native CI unverified",
+    "Three unrelated tax unit TODOs remain"
+  ],
+  "artifacts": [
+    {
+      "path": "/tmp/alga-tax-overlap-before.log",
+      "sha256": "570bf51bdd873e39295cb88ae4462bc0c6bb9c79b0697fc18d6c6aa8b59c3169"
+    },
+    {
+      "path": "/tmp/alga-tax-overlap-final.log",
+      "sha256": "67e3dc08fa520c744bfa3e731d058d7841ec1a72f77887b97bd62f81dc8763df"
+    },
+    {
+      "path": "/tmp/alga-tax-overlap-unit.log",
+      "sha256": "4b6e93efcf546d04a4787e82ced46468e662f9f73122a7859530ff01e8316c97"
+    }
+  ]
+}

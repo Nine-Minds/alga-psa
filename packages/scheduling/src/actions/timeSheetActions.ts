@@ -11,9 +11,9 @@ import {
   ITimeSheetApprovalView,
   ITimePeriodView
 } from '@alga-psa/types';
+import { publishNativeEvent } from '../lib/nativeEventPublication';
 import { commandCoManagedNativeTimeSheets, listCoManagedNativeTimeSheets, readCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { formatISO } from 'date-fns';
 import { toPlainDate } from '@alga-psa/core';
@@ -249,7 +249,7 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
   try {
     const { knex: db } = await createTenantKnex();
     const current = await commandCoManagedNativeTimeSheets(db, tenant, { sheetIds: timeSheetIds, command: 'approve', actingUserId: managerId },
-      () => resolveNativeTimeBrowserActor(user, tenant), event => publishEvent(event));
+      () => resolveNativeTimeBrowserActor(user, tenant), publishNativeEvent);
     if (current.handled) return { success: true };
 
     if (!await hasPermission(user, 'time_sheet', 'approve', db)) {
@@ -524,7 +524,7 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
   try {
     const { knex: db } = await createTenantKnex();
     const current = await commandCoManagedNativeTimeSheets(db, tenant, { sheetIds: [timeSheetId], command: 'approve', actingUserId: approverId },
-      () => resolveNativeTimeBrowserActor(user, tenant), event => publishEvent(event));
+      () => resolveNativeTimeBrowserActor(user, tenant), publishNativeEvent);
     if (current.handled) return;
 
     if (!await hasPermission(user, 'time_sheet', 'approve', db)) {
@@ -618,7 +618,7 @@ export const requestChangesForTimeSheet = withAuth(async (user, { tenant }, time
   try {
     const { knex: db } = await createTenantKnex();
     const current = await commandCoManagedNativeTimeSheets(db, tenant, { sheetIds: [timeSheetId], command: 'request_changes', actingUserId: approverId },
-      () => resolveNativeTimeBrowserActor(user, tenant), event => publishEvent(event));
+      () => resolveNativeTimeBrowserActor(user, tenant), publishNativeEvent);
     if (current.handled) return;
 
     if (!await hasPermission(user, 'time_sheet', 'approve', db)) {
@@ -682,7 +682,7 @@ export const reverseTimeSheetApproval = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     const current = await commandCoManagedNativeTimeSheets(db, tenant, { sheetIds: [timeSheetId], command: 'reverse', reason, actingUserId: approverId },
-      () => resolveNativeTimeBrowserActor(user, tenant), event => publishEvent(event));
+      () => resolveNativeTimeBrowserActor(user, tenant), publishNativeEvent);
     if (current.handled) return;
 
     if (!await hasPermission(user, 'time_sheet', 'reverse', db)) {

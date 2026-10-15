@@ -55,4 +55,36 @@ describe('time entry service requirement validation', () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it('reports a missing service_id with the documented message at path service_id', async () => {
+    // The schema leaves the requirement to the retained service admission, which
+    // still rejects a commercial entry with the documented message and path.
+    const { TimeEntryService } = await import('../../../lib/api/services/TimeEntryService');
+    let error: any;
+    try {
+      (TimeEntryService.prototype as any).assertServiceIdPresent.call({}, undefined);
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error?.name).toBe('ValidationError');
+    expect(error.details).toEqual([{ path: ['service_id'], message: 'service_id is required for time entries' }]);
+  });
+
+  it('rejects end_time that is not after start_time at path end_time', () => {
+    const result = createTimeEntrySchema.safeParse({
+      ...baseCreatePayload,
+      service_id: '00000000-0000-4000-8000-000000000002',
+      end_time: baseCreatePayload.start_time,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.some(i => i.path[0] === 'end_time')).toBe(true);
+  });
+
+  it('accepts a complete create payload', () => {
+    const result = createTimeEntrySchema.safeParse({
+      ...baseCreatePayload,
+      service_id: '00000000-0000-4000-8000-000000000002',
+    });
+    expect(result.success).toBe(true);
+  });
 });

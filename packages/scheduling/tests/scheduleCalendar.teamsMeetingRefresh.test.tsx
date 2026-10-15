@@ -1,8 +1,14 @@
 /**
  * @vitest-environment jsdom
  */
+// Exercise the existing feature behavior with the release flag enabled.
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import toast from 'react-hot-toast';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ScheduleCalendar from '../src/components/schedule/ScheduleCalendar';
@@ -34,6 +40,7 @@ const {
   getCurrentUser,
   getCurrentUserPermissions,
   getUserAvatarUrlsBatchAction,
+  getShareableUsers,
 } = vi.hoisted(() => ({
   getScheduleEntries: vi.fn(),
   addScheduleEntry: vi.fn(),
@@ -49,9 +56,34 @@ const {
   getCurrentUser: vi.fn(),
   getCurrentUserPermissions: vi.fn(),
   getUserAvatarUrlsBatchAction: vi.fn(),
+  getShareableUsers: vi.fn(),
 }));
 
 vi.mock('@alga-psa/scheduling/actions', () => ({
+  // Shared calendars: the viewer sees every calendar (user_schedule:update).
+  getCalendarsVisibleToMe: vi.fn(async () => ({
+    success: true,
+    data: {
+      viewerUserId: 'tech-1',
+      canViewAll: true,
+      me: {
+        key: 'tech-1', calendar_type: 'personal', calendar_id: null, owner_user_id: 'tech-1',
+        name: 'Tess Tech', color: '#2563eb', access_level: 'edit',
+      },
+      people: [],
+      groups: [],
+    },
+  })),
+  getMyCalendarShares: vi.fn(async () => ({ success: true, data: [] })),
+  setMyCalendarShares: vi.fn(async () => ({ success: true, data: [] })),
+  getShareableTeams: vi.fn(async () => ({ success: true, data: [] })),
+  getShareableUsers,
+  createGroupCalendar: vi.fn(),
+  updateGroupCalendar: vi.fn(),
+  getGroupCalendarShares: vi.fn(async () => ({ success: true, data: [] })),
+  setGroupCalendarShares: vi.fn(),
+  archiveGroupCalendar: vi.fn(),
+  restoreGroupCalendar: vi.fn(),
   getScheduleEntries,
   addScheduleEntry,
   updateScheduleEntry,
@@ -92,8 +124,11 @@ vi.mock('@alga-psa/user-composition/hooks', () => {
 // The calendar grid itself is not under test: stand it in with one button per
 // event, wired to the real onSelectEvent, so clicking an event opens the real
 // EntryPopup through ScheduleCalendar's own handleSelectEvent.
+const calendarSurface = vi.hoisted(() => ({ props: null as any }));
 vi.mock('next/dynamic', () => ({
-  default: () => (props: any) => (
+  default: () => (props: any) => {
+    calendarSurface.props = props;
+    return (
     <div>
       {props.events.map((ev: any) => (
         <button
@@ -106,7 +141,7 @@ vi.mock('next/dynamic', () => ({
         </button>
       ))}
     </div>
-  ),
+  ); },
 }));
 
 vi.mock('react-big-calendar', () => ({
@@ -136,10 +171,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
 });
 
 vi.mock('react-hot-toast', () => ({
-  default: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
+  default: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
 }));
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
@@ -220,7 +252,24 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/UserPicker', () => ({
-  default: ({ id }: any) => <select id={id} />,
+  // Expose the option set so a test can prove ScheduleCalendar fed the popup
+  // the gated getShareableUsers list rather than useUsers/displayedTechnicians.
+  default: ({ value, users, placeholder = 'Not assigned' }: any) => {
+    const current = (users ?? []).find((user: any) => user.user_id === value);
+    const name = (user: any) => `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim();
+    return (
+      <div data-testid="user-picker">
+        <span data-testid="user-picker-value">{current ? name(current) : placeholder}</span>
+        <ul data-testid="user-picker-options">
+          {(users ?? []).map((user: any) => (
+            <li key={user.user_id} data-testid={`user-option-${user.user_id}`}>
+              {name(user)}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  },
 }));
 
 vi.mock('@alga-psa/ui/components/DateTimePicker', () => ({
@@ -363,6 +412,7 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
     getAppointmentRequestById.mockResolvedValue({ success: false });
     getWorkItemById.mockResolvedValue(null);
     getUserAvatarUrlsBatchAction.mockResolvedValue({});
+    getShareableUsers.mockResolvedValue({ success: true, data: [] });
     getScheduleEntryTeamsMeeting.mockImplementation(async (entryId: string) => ({
       success: true,
       data: serverMeetings[entryId] ?? null,
@@ -371,6 +421,73 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it.each(['save', 'resize', 'drop'] as const)('surfaces a provider warning after a successful local %s without reverting it', async (gesture) => {
+    const warning = 'Entry moved, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.';
+    const entry = baseEntry({ entry_id: 'entry-warning', notes: `Join Teams Meeting: ${JOIN_URL}` });
+    serverEvents = [entry];
+    serverMeetings['entry-warning'] = { meeting_id: 'meeting-warning', join_url: JOIN_URL };
+    updateScheduleEntry.mockImplementation(async (entryId, data) => {
+      const updated = { ...entry, ...data, entry_id: entryId };
+      serverEvents = [updated];
+      return { success: true, entry: updated, teamsMeetingWarning: warning };
+    });
+    render(<ScheduleCalendar />);
+    await screen.findByTestId('calendar-event-entry-warning');
+    if (gesture === 'save') {
+      openEntry('entry-warning');
+      await screen.findByRole('button', { name: 'Join Teams Meeting' });
+      fireEvent.change(screen.getByTestId('scheduled_start'), { target: { value: '2026-09-04T14:30:00.000Z' } });
+      clickSave();
+    } else {
+      const props = calendarSurface.props;
+      const args = { event: entry, start: new Date('2026-09-04T14:30:00Z'), end: new Date('2026-09-04T15:30:00Z'), isAllDay: false };
+      await act(async () => gesture === 'resize' ? props.onEventResize(args) : props.onEventDrop(args));
+    }
+    await waitFor(() => expect(toast).toHaveBeenCalledWith(warning, { icon: '⚠️' }));
+    expect(toast).toHaveBeenCalledTimes(1);
+    expect(updateScheduleEntry).toHaveBeenCalledTimes(1);
+    expect(new Date(serverEvents[0].scheduled_start).toISOString()).toBe('2026-09-04T14:30:00.000Z');
+    openEntry('entry-warning');
+    await screen.findByRole('button', { name: 'Join Teams Meeting' });
+    expect(notesField().value).toContain(JOIN_URL);
+    expect((screen.getByTestId('scheduled_start') as HTMLInputElement).value).toBe('2026-09-04T14:30:00.000Z');
+  });
+
+  it('rolls back a rejected resize and does not announce its supplied success warning', async () => {
+    const entry = baseEntry({ entry_id: 'entry-rejected' });
+    serverEvents = [entry];
+    updateScheduleEntry.mockResolvedValue({ success: false, error: 'Schedule update rejected', teamsMeetingWarning: 'Do not announce this failed save' });
+    render(<ScheduleCalendar />);
+    await screen.findByTestId('calendar-event-entry-rejected');
+    await act(async () => calendarSurface.props.onEventResize({ event: entry,
+      start: new Date('2026-09-04T14:30:00Z'), end: new Date('2026-09-04T15:30:00Z') }));
+    expect(updateScheduleEntry).toHaveBeenCalledTimes(1);
+    expect(toast).not.toHaveBeenCalled();
+    openEntry('entry-rejected');
+    await screen.findByRole('button', { name: 'Create Teams meeting' });
+    expect((screen.getByTestId('scheduled_start') as HTMLInputElement).value).toBe('2026-09-04T14:00:00.000Z');
+  });
+
+  it('supplies local all-day grid dates and persists exclusive UTC dates after resize and drop', async () => {
+    const entry = baseEntry({ entry_id: 'all-day-grid', is_all_day: true, scheduled_start: new Date('2026-10-25T00:00:00Z'),
+      scheduled_end: new Date('2026-10-26T00:00:00Z') });
+    serverEvents = [entry];
+    render(<ScheduleCalendar />);
+    await screen.findByTestId('calendar-event-all-day-grid');
+    const props = calendarSurface.props;
+    expect(props.startAccessor(entry)).toEqual(new Date(2026, 9, 25));
+    expect(props.endAccessor(entry)).toEqual(new Date(2026, 9, 26));
+    expect(props.allDayAccessor(entry)).toBe(true);
+    await act(async () => props.onEventResize({ event: entry, start: new Date(2026, 9, 25), end: new Date(2026, 9, 27) }));
+    expect(updateScheduleEntry.mock.calls[0][1]).toMatchObject({ scheduled_start: new Date('2026-10-25T00:00:00Z'),
+      scheduled_end: new Date('2026-10-27T00:00:00Z') });
+    updateScheduleEntry.mockClear();
+    await act(async () => props.onEventDrop({ event: entry, start: new Date(2026, 9, 26), end: new Date(2026, 9, 27), isAllDay: true }));
+    await waitFor(() => expect(updateScheduleEntry).toHaveBeenCalledTimes(1));
+    expect(updateScheduleEntry.mock.calls[0][1]).toMatchObject({ scheduled_start: new Date('2026-10-26T00:00:00Z'),
+      scheduled_end: new Date('2026-10-27T00:00:00Z') });
   });
 
   it('standalone entry: creating a meeting refetches events (not via save) so reopen binds the persisted entry', async () => {
@@ -493,5 +610,51 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
     expect(savedEntryId).toBe('entry-materialized');
     expect(savedData.notes).toContain(JOIN_URL);
     expect(savedData.recurrence_pattern).toBeNull();
+  });
+
+  it('loads gated assignee options after the entry popup opens and preserves the draft', async () => {
+    const tech = { user_id: 'tech-1', first_name: 'Tess', last_name: 'Tech', user_type: 'internal', is_inactive: false };
+    const alice = { user_id: 'alice', first_name: 'Alice', last_name: 'Adams', user_type: 'internal', is_inactive: false };
+    serverEvents = [baseEntry({ entry_id: 'entry-assignees' })];
+    let resolveUsers!: (result: { success: true; data: typeof tech[] }) => void;
+    const usersResponse = new Promise<{ success: true; data: typeof tech[] }>((resolve) => {
+      resolveUsers = resolve;
+    });
+    getShareableUsers.mockReturnValue(usersResponse);
+
+    render(<ScheduleCalendar />);
+    await screen.findByTestId('calendar-event-entry-assignees');
+
+    openEntry('entry-assignees');
+
+    expect(await screen.findByTestId('user-picker')).toBeInTheDocument();
+    // The stored assignee is passed to the gated action so an inactive or
+    // out-of-scope assignee can still resolve to a name.
+    expect(getShareableUsers).toHaveBeenCalledWith(['tech-1']);
+    // The picker mounts before its options arrive. Keep the request pending
+    // explicitly so this coverage cannot depend on React/microtask timing.
+    expect(screen.queryByTestId('user-option-alice')).not.toBeInTheDocument();
+    fireEvent.change(notesField(), { target: { value: 'Draft while assignees load' } });
+
+    await act(async () => {
+      resolveUsers({ success: true, data: [tech, alice] });
+      await usersResponse;
+    });
+
+    // Alice is not in useUsers() (which only has tech-1); her presence proves the
+    // popup is fed the gated list, not the getAllUsers-derived technicians.
+    expect(await screen.findByTestId('user-option-alice')).toBeInTheDocument();
+    expect(screen.getByTestId('user-picker-value')).toHaveTextContent('Tess Tech');
+    expect(notesField().value).toBe('Draft while assignees load');
+
+    clickSave();
+    await waitFor(() => expect(updateScheduleEntry).toHaveBeenCalledTimes(1));
+    expect(updateScheduleEntry.mock.calls[0]).toEqual([
+      'entry-assignees',
+      expect.objectContaining({
+        assigned_user_ids: ['tech-1'],
+        notes: 'Draft while assignees load',
+      }),
+    ]);
   });
 });

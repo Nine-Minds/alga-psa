@@ -1,3 +1,4 @@
+import { createWorkerStripeClient } from '../config/stripeClient.js';
 import Stripe from 'stripe';
 import { getSecret } from '@alga-psa/core/secrets';
 
@@ -15,10 +16,7 @@ export async function getStripeClient(): Promise<Stripe> {
       throw new Error('STRIPE_SECRET_KEY not configured in Temporal worker');
     }
 
-    stripeClient = new Stripe(secretKey, {
-      apiVersion: '2024-12-18.acacia' as any,
-      typescript: true,
-    });
+    stripeClient = createWorkerStripeClient(secretKey);
   }
 
   return stripeClient;

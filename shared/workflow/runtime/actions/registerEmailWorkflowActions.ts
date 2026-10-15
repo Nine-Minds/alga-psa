@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { resolveRunActorUserId } from './businessOperations/shared';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
@@ -68,7 +69,7 @@ const parsedEmailReplySchema = z.object({
   warnings: z.array(z.string()).optional().describe('Parser warnings'),
   tokens: z.object({
     conversationToken: z.string().optional().describe('Extracted conversation reply token')
-  }).optional().describe('Extracted tokens from email')
+  }).nullable().optional().describe('Extracted tokens from email')
 });
 
 const parsedEmailSchema = z.object({
@@ -122,6 +123,30 @@ const inboundTicketDefaultsSchema = z.object({
   location_id: z.string().optional().describe('Default location ID')
 });
 
+/**
+ * With a run connection the work shares one transaction (co-managed admission
+ * and event retention need it). Without one, the shared email actions open
+ * their own connection, as on main.
+ */
+type EmailExecution = { actorUserId: string | undefined; options: Parameters<typeof createCommentFromEmail>[3] };
+
+/** Pass the run's owning transaction on only when there is one; otherwise call
+ * the shared action with its original (tenant-only) contract. */
+function withExecution<D, R>(
+  action: (data: D, tenant: string, userId?: string, options?: EmailExecution['options']) => Promise<R>,
+  execution: EmailExecution | undefined
+) {
+  return (data: D, tenant: string) =>
+    execution ? action(data, tenant, execution.actorUserId, execution.options) : action(data, tenant);
+}
+
+async function withOptionalTransaction<T>(
+  knex: Knex | undefined,
+  fn: (trx: Knex.Transaction | undefined) => Promise<T>
+): Promise<T> {
+  return knex ? withTransaction(knex, trx => fn(trx)) : fn(undefined);
+}
+
 function buildCommentPayload(parsedEmail: any, emailData: any) {
   const sanitizedHtml = parsedEmail?.sanitizedHtml;
   const sanitizedText = parsedEmail?.sanitizedText;
@@ -135,6 +160,25 @@ function buildCommentPayload(parsedEmail: any, emailData: any) {
         : 'text';
   const metadata = parsedEmail?.metadata;
   return { content, format, metadata };
+}
+
+/**
+ * Stamp the inbound sender onto comment metadata, matching the shape
+ * processInboundEmailInApp stores. An email from an unmatched sender otherwise
+ * produces a comment with no identity and a notification with no author.
+ */
+function withEmailSenderMetadata(metadata: any, from?: { email?: string; name?: string }) {
+  if (!from?.email && !from?.name) return metadata;
+  const base = metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? { ...metadata } : {};
+  const email = base.email && typeof base.email === 'object' && !Array.isArray(base.email) ? base.email : {};
+  return {
+    ...base,
+    email: {
+      ...(from.email ? { fromAddress: from.email } : {}),
+      ...(from.name ? { fromName: from.name } : {}),
+      ...email,
+    },
+  };
 }
 
 /** Schema for client data */
@@ -551,14 +595,14 @@ export function registerEmailWorkflowActionsV2(): void {
     idempotency: { mode: 'engineProvided' },
     ui: { label: 'Create Ticket + Initial Comment', category: 'Email' },
     handler: async (input, ctx) => {
-      if (!ctx.tenantId || !ctx.knex) throw new Error('Email workflow requires tenant and database context');
-      return withTransaction(ctx.knex, async trx => {
-        const actorUserId = await resolveRunActorUserId(trx, ctx.tenantId!, ctx.runId) ?? undefined;
-        const executionOptions = { existingConnection: trx, workflowRunId: ctx.runId, workflowTicketAction: 'create' as const };
+      if (!ctx.tenantId) throw new Error('Email workflow requires tenant and database context');
+      return withOptionalTransaction(ctx.knex, async trx => {
+        const actorUserId = trx ? await resolveRunActorUserId(trx, ctx.tenantId!, ctx.runId) ?? undefined : undefined;
+        const execution: EmailExecution | undefined = trx ? { actorUserId, options: { existingConnection: trx, workflowRunId: ctx.runId, workflowTicketAction: 'create' } } : undefined;
         const tenant = ctx.tenantId ?? '';
         const emailData = input.emailData;
 
-        const ticketResult = await createTicketFromEmail({
+        const ticketResult = await withExecution(createTicketFromEmail, execution)({
           title: emailData.subject,
           description: input.parsedEmail?.sanitizedText || emailData.body?.text || '',
           client_id: input.targetClientId ?? undefined,
@@ -580,10 +624,10 @@ export function registerEmailWorkflowActionsV2(): void {
             references: emailData.references,
             providerId: emailData.providerId
           }
-        }, tenant, actorUserId, executionOptions);
+        }, tenant);
 
         const commentPayload = buildCommentPayload(input.parsedEmail, emailData);
-        const commentId = await createCommentFromEmail({
+        const commentId = await withExecution(createCommentFromEmail, execution)({
           ticket_id: ticketResult.ticket_id,
           content: commentPayload.content,
           format: commentPayload.format,
@@ -593,8 +637,8 @@ export function registerEmailWorkflowActionsV2(): void {
           contact_id: input.targetContactId ?? undefined,
           // First comment on a new ticket: covered by the TICKET_CREATED email, so keep in-app only.
           suppressTechEmailNotification: true,
-          metadata: commentPayload.metadata
-        }, tenant, actorUserId, executionOptions);
+          metadata: withEmailSenderMetadata(commentPayload.metadata, emailData.from)
+        }, tenant);
 
         return {
           ticket_id: ticketResult.ticket_id,
@@ -642,11 +686,11 @@ export function registerEmailWorkflowActionsV2(): void {
     idempotency: { mode: 'engineProvided' },
     ui: { label: 'Create Comment from Email', category: 'Email' },
     handler: async (input, ctx) => {
-      if (!ctx.tenantId || !ctx.knex) throw new Error('Email workflow requires tenant and database context');
-      return withTransaction(ctx.knex, async trx => {
-        const actorUserId = await resolveRunActorUserId(trx, ctx.tenantId!, ctx.runId) ?? undefined;
-        const executionOptions = { existingConnection: trx, workflowRunId: ctx.runId };
-        const commentId = await createCommentFromEmail({
+      if (!ctx.tenantId) throw new Error('Email workflow requires tenant and database context');
+      return withOptionalTransaction(ctx.knex, async trx => {
+        const actorUserId = trx ? await resolveRunActorUserId(trx, ctx.tenantId!, ctx.runId) ?? undefined : undefined;
+        const execution: EmailExecution | undefined = trx ? { actorUserId, options: { existingConnection: trx, workflowRunId: ctx.runId } } : undefined;
+        const commentId = await withExecution(createCommentFromEmail, execution)({
           ticket_id: input.ticket_id,
           content: input.content,
           format: input.format,
@@ -665,8 +709,11 @@ export function registerEmailWorkflowActionsV2(): void {
             provider: string;
             matchedBy: string;
           } | undefined,
-          metadata: input.metadata
-        }, ctx.tenantId!, actorUserId, executionOptions);
+          metadata: withEmailSenderMetadata(
+            input.metadata,
+            input.inboundReplyEvent ? { email: input.inboundReplyEvent.from } : undefined
+          )
+        }, ctx.tenantId!);
         return { comment_id: commentId };
       });
     }
@@ -691,10 +738,10 @@ export function registerEmailWorkflowActionsV2(): void {
     idempotency: { mode: 'engineProvided' },
     ui: { label: 'Create Comment from Parsed Email', category: 'Email' },
     handler: async (input, ctx) => {
-      if (!ctx.tenantId || !ctx.knex) throw new Error('Email workflow requires tenant and database context');
-      return withTransaction(ctx.knex, async trx => {
-        const actorUserId = await resolveRunActorUserId(trx, ctx.tenantId!, ctx.runId) ?? undefined;
-        const executionOptions = { existingConnection: trx, workflowRunId: ctx.runId };
+      if (!ctx.tenantId) throw new Error('Email workflow requires tenant and database context');
+      return withOptionalTransaction(ctx.knex, async trx => {
+        const actorUserId = trx ? await resolveRunActorUserId(trx, ctx.tenantId!, ctx.runId) ?? undefined : undefined;
+        const execution: EmailExecution | undefined = trx ? { actorUserId, options: { existingConnection: trx, workflowRunId: ctx.runId } } : undefined;
         const tenant = ctx.tenantId ?? '';
         const commentPayload = buildCommentPayload(input.parsedEmail, input.emailData);
         const senderEmail = input.emailData?.from?.email;
@@ -706,7 +753,7 @@ export function registerEmailWorkflowActionsV2(): void {
         const resolvedAuthorId = input.author_id ?? matchedContact?.user_id;
         const resolvedAuthorType = input.author_type ?? 'contact';
 
-        const commentId = await createCommentFromEmail({
+        const commentId = await withExecution(createCommentFromEmail, execution)({
           ticket_id: input.ticketId,
           content: commentPayload.content,
           format: commentPayload.format,
@@ -714,8 +761,8 @@ export function registerEmailWorkflowActionsV2(): void {
           author_type: resolvedAuthorType,
           author_id: resolvedAuthorId,
           contact_id: resolvedContactId,
-          metadata: commentPayload.metadata
-        }, tenant, actorUserId, executionOptions);
+          metadata: withEmailSenderMetadata(commentPayload.metadata, input.emailData?.from)
+        }, tenant);
         return { comment_id: commentId };
       });
     }

@@ -20,12 +20,25 @@ import type { TicketViewSettings } from '../lib/ticketViewSettings';
 export type TicketListSettings = TicketViewSettings;
 
 export type TicketingDisplaySettings = {
-  dateTimeFormat?: string; // date-fns format string, e.g. 'MMM d, yyyy h:mm a'
+  showWeekday?: boolean; // default false — prefixes the weekday name to ticket timestamps
   responseStateTrackingEnabled?: boolean; // default true — when false, response state is not tracked or displayed
   list?: TicketListSettings;
 };
 
-const DEFAULT_TICKETING_DATETIME_FORMAT = 'MMM d, yyyy h:mm a';
+/**
+ * Whether the tenant asked for a weekday, from either the new flag or the
+ * retired pattern setting.
+ *
+ * The pattern picker is gone — digit order, separator and clock now come from
+ * the tenant's country — but the one thing it expressed that the country cannot
+ * is "write the weekday too", which nine tenants had chosen. Deriving that at
+ * read time from the stored 'EEE, …' pattern keeps them on a weekday with no
+ * JSON migration; every other stored pattern simply stops being consulted.
+ */
+function resolveShowWeekday(display: { showWeekday?: unknown; dateTimeFormat?: unknown }): boolean {
+  if (typeof display.showWeekday === 'boolean') return display.showWeekday;
+  return typeof display.dateTimeFormat === 'string' && display.dateTimeFormat.startsWith('EEE');
+}
 
 export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): Promise<TicketingDisplaySettings> => {
   // Prefer dedicated column if present; fallback to nested settings for backward compatibility
@@ -40,7 +53,7 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
     const display = Object.keys(fromColumn).length ? fromColumn : nested;
 
     return {
-      dateTimeFormat: display.dateTimeFormat || DEFAULT_TICKETING_DATETIME_FORMAT,
+      showWeekday: resolveShowWeekday(display),
       responseStateTrackingEnabled: display.responseStateTrackingEnabled ?? true,
       list: {
         // Defaults (and the "Refined List" fold behavior) come from the shared
@@ -59,7 +72,7 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
   } catch (e) {
     // As a last resort return defaults
     return {
-      dateTimeFormat: DEFAULT_TICKETING_DATETIME_FORMAT,
+      showWeekday: false,
       responseStateTrackingEnabled: true,
       list: {
         columnVisibility: resolveTicketColumnVisibility(),

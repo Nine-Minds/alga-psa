@@ -34,6 +34,7 @@ vi.mock('@alga-psa/clients/actions/clientLocationActions', () => ({
 
 vi.mock('@alga-psa/clients/actions/countryActions', () => ({
   getAllCountries: vi.fn().mockResolvedValue([{ code: 'US', name: 'United States', phone_code: '+1' }]),
+  getTenantDefaultCountry: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@alga-psa/clients/actions/contact-actions/contactActions', () => ({
@@ -121,10 +122,6 @@ vi.mock('@alga-psa/ui/components/UserPicker', () => ({
 
 vi.mock('@alga-psa/ui/components/CountryPicker', () => ({
   default: () => <div data-testid="country-picker" />,
-}));
-
-vi.mock('../../../../../packages/clients/src/components/clients/ClientCreatedDialog', () => ({
-  default: () => <div data-testid="client-created-dialog" />,
 }));
 
 vi.mock('@alga-psa/tags/components/QuickAddTagPicker', () => ({

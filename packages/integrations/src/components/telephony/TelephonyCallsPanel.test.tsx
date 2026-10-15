@@ -21,6 +21,8 @@ vi.mock('../../actions/integrations/telephonyActions', () => ({
   listTelephonyLinkableTickets: mocks.listLinkableTickets,
   linkTelephonyCallToTicket: mocks.linkToTicket,
   createTicketFromTelephonyCall: mocks.createTicket,
+  listTelephonyChats: vi.fn(async () => ({ success: true, chats: [] })),
+  resolveTelephonyChat: vi.fn(async () => ({ success: true })),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {

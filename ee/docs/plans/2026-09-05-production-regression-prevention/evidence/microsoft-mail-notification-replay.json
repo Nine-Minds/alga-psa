@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "kind": "local-protocol-execution",
+  "revision": "fbee456666",
+  "workingTreeDirty": true,
+  "status": "passed",
+  "testsPassed": 49,
+  "filesPassed": 4,
+  "skipped": 0,
+  "durationSeconds": 1.14,
+  "regression": {
+    "before": "New mailbox messages incorrectly reached updated/deleted-only subscriptions; real HTTP assertion observed /mail and /updated instead of /mail only.",
+    "after": "Creation delivery filters subscription changeType as well as resource and expiry.",
+    "beforeLogSha256": "66f7d721802560891993e04d94f968d50678e90f70076bf1e52e9cef0a05ea4d"
+  },
+  "replay": [
+    "Existing message identity is reused across two callback deliveries; the mailbox still contains exactly one message.",
+    "Real HTTP202 succeeds;503 and302 fail without following the redirect.",
+    "Connection reset reports status:null and an error while preserving the message."
+  ],
+  "validation": {
+    "suiteLogSha256": "faf8b66bbb663c190f9139bffdeb91ffc0d99ae925b9411a51beb1aa31168f5a",
+    "typecheck": "passed"
+  },
+  "limitations": [
+    "Protocol checks use a loopback callback receiver; mailbox browser and application processing acceptance remain outstanding.",
+    "The single-mailbox emulator does not prove cross-mailbox or delegated permission parity.",
+    "Native CI requires publishing the local checkpoint."
+  ]
+}

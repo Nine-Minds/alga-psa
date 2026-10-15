@@ -1,0 +1,102 @@
+{
+  "status": "local behavior and full server-colocated gate verified; native rerun and built HTTP acceptance pending",
+  "publishedHead": "3464c562eedd90cccb39a7d57c3a30e64903e9e1",
+  "sourceHeadBeforeRepairs": "178230dc45f167133c4017e927741c8c5f0a220b",
+  "projectLifecycle": {
+    "defects": [
+      "API-created projects had no task-status mappings, so tasks could not be created",
+      "Bare API project deletion failed with phases and omitted shared dependency validation and owned-record cleanup"
+    ],
+    "repairs": [
+      "Initialize mappings within the create transaction, preferring tenant task statuses and falling back to global standard statuses as the UI does",
+      "Route project deletion through the shared validator and ProjectModel cleanup; remove owned tag mappings, ticket links, email reply tokens and hidden-column preferences",
+      "Count task time entries as blocking dependencies alongside task schedule entries using the same tenant-scoped query helper"
+    ],
+    "test": "server/src/test/integration/api/projectService.statusLookup.integration.test.ts",
+    "database": "project_task_mapping_82cc",
+    "mappingBefore": {
+      "failed": 2,
+      "passed": 3,
+      "logLocal": "/tmp/alga-project-task-mapping-before-v2.log",
+      "failure": "Expected mappings were empty"
+    },
+    "deleteBefore": {
+      "failed": 2,
+      "passed": 3,
+      "logLocal": "/tmp/alga-project-lifecycle-delete-before.log",
+      "failure": "Mapping and task assertions passed; delete failed on project_phases foreign key"
+    },
+    "after": {
+      "passed": 7,
+      "failed": 0,
+      "durationSeconds": 17.01,
+      "logLocal": "/tmp/alga-project-lifecycle-final-v2.log"
+    },
+    "assertions": [
+      "Standard and custom mappings are ordered and usable for real task creation",
+      "Deletion removes phases, tasks and mappings while preserving the neighboring project and mappings",
+      "Tracked task time returns409 and preserves all records; another tenant sees404",
+      "Mapping-write failure rolls project rows and numbering back"
+    ],
+    "boundaries": "Real migrated PostgreSQL and application services/models/validators. Only event publication and connection selection are substituted; the rollback case injects a mapping-write rejection while the enclosing transaction remains real.",
+    "fixtureCorrections": "First draft used a removed tenant column on global standard_statuses; corrected to read seeded global references. Rollback assertion converts the pg bigint string for numeric comparison.",
+    "http": "Added project->phase->task->reopen->delete journey, strict fixture-creation assertions and visible teardown failures. Actual execution against a repaired built application still pending."
+  },
+  "sharedDeletionUnits": {
+    "files": 3,
+    "passed": 47,
+    "logLocal": "/tmp/alga-project-deletion-unit.log"
+  },
+  "legacyEventBusFixture": {
+    "nativeBefore": {
+      "runId": 34074425999,
+      "workflow": "Additional workspace tests",
+      "failedTest": "server/src/lib/eventBus/index.hardTimeout.test.ts: resets the Redis client if xReadGroup hangs beyond the hard timeout",
+      "logLocal": "/tmp/alga-workspace-3464.log"
+    },
+    "repair": "Mock @alga-psa/core/secrets, the real shared bus dependency, instead of the obsolete server secret module. Keep the timeout and reconnection assertions unchanged.",
+    "targetedAfter": {
+      "passed": 1,
+      "logLocal": "/tmp/alga-legacy-bus-hard-timeout-after.log"
+    },
+    "fullLaneAfter": {
+      "command": "node scripts/run-additional-workspace-tests.mjs server-colocated",
+      "status": "passed",
+      "expectedFiles": 76,
+      "executedFiles": 76,
+      "expectedTests": 381,
+      "executedTests": 381,
+      "counts": {
+        "passed": 381,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "workingTreeDirty": true,
+      "logLocal": "/tmp/alga-server-colocated-after-legacy-mock.log",
+      "evidenceLocal": "test-results/server-colocated/evidence.json",
+      "discoveryLocal": "test-results/server-colocated/discovery.json"
+    }
+  },
+  "types": {
+    "status": "passed",
+    "strictNullChecks": true,
+    "logLocal": "/tmp/alga-project-lifecycle-types-final.log",
+    "fixtureRepairs": [
+      "Explicit service-type-id guard",
+      "Current Faker fractionDigits option",
+      "Removed ignored API client tenantId properties"
+    ]
+  },
+  "liveCi": {
+    "integrationRun": 34074426143,
+    "integrationJob": 101597733451,
+    "status": "in_progress at last observation",
+    "browserRun": 34074426154,
+    "communityJob": 101601381552,
+    "enterpriseJob": 101601381575,
+    "browserStatus": "in_progress; all image builds succeeded"
+  },
+  "remaining": "Do not claim the full plan complete. Native full integration/browser results, repaired API image acceptance, API lane assignment and remaining plan requirements are outstanding."
+}

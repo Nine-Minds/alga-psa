@@ -1,94 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import http from 'node:http';
-import path from 'node:path';
-import { parse } from 'node:url';
-import { createRequire } from 'node:module';
-import { AsyncLocalStorage } from 'node:async_hooks';
-import type { AddressInfo } from 'node:net';
 import type { Knex } from 'knex';
-import { resetTenantConnectionPool, tenantDb } from '@alga-psa/db';
-import { knexConfig as baseKnexConfig } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { setupE2ETestEnvironment, type E2ETestEnvironment } from '../utils/e2eTestSetup';
 import { createTestTicket } from '../utils/ticketTestData';
 import { assertSuccess } from '../utils/apiTestHelpers';
 
-const cjsRequire = createRequire(import.meta.url);
-const TEST_DB_NAME = 'test_database';
-const TEST_DB_HOST = '127.0.0.1';
-const TEST_DB_PORT = '5438';
-const TEST_DB_ADMIN_USER = 'postgres';
-const TEST_DB_APP_USER = 'app_user';
-const TEST_DB_PASSWORD = process.env.DB_PASSWORD_SERVER || 'postpass123';
-
-const OVERRIDDEN_ENV_KEYS = [
-  'NEXT_TELEMETRY_DISABLED',
-  'NODE_ENV',
-  'NEXTAUTH_URL',
-  'NEXTAUTH_SECRET',
-  'DB_HOST',
-  'DB_PORT',
-  'DB_NAME_SERVER',
-  'DB_USER_ADMIN',
-  'DB_USER_SERVER',
-  'DB_PASSWORD_ADMIN',
-  'DB_PASSWORD_SERVER',
-  'NEXT_RUNTIME',
-  'E2E_SKIP_APP_INIT',
-] as const;
-let savedEnv: Partial<Record<string, string | undefined>> = {};
-let savedKnexConnections: { development: unknown; production: unknown } | null = null;
-let nextApp: any = null;
-let server: http.Server | null = null;
-let baseUrl = '';
 let env: E2ETestEnvironment | null = null;
 let boardId = '';
 let statusIds: { open: string; inProgress: string; closed: string };
 let priorityIds: { low: string; medium: string; high: string };
-
-if (typeof (globalThis as any).AsyncLocalStorage === 'undefined') {
-  (globalThis as any).AsyncLocalStorage = AsyncLocalStorage;
-}
-
-function configureTicketTestDatabase(): void {
-  // The suite shares one fork; snapshot everything this file overrides so
-  // afterAll can restore it and later files don't inherit the e2e wiring.
-  savedEnv = Object.fromEntries(OVERRIDDEN_ENV_KEYS.map((key) => [key, process.env[key]]));
-  savedKnexConnections = {
-    development: baseKnexConfig.development.connection,
-    production: baseKnexConfig.production?.connection,
-  };
-  process.env.NEXT_TELEMETRY_DISABLED = process.env.NEXT_TELEMETRY_DISABLED ?? '1';
-  process.env.NODE_ENV = 'test';
-  process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://127.0.0.1:3000';
-  process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'localtest-nextauth-secret';
-  process.env.DB_HOST = TEST_DB_HOST;
-  process.env.DB_PORT = TEST_DB_PORT;
-  process.env.DB_NAME_SERVER = TEST_DB_NAME;
-  process.env.DB_USER_ADMIN = TEST_DB_ADMIN_USER;
-  process.env.DB_USER_SERVER = TEST_DB_APP_USER;
-  process.env.DB_PASSWORD_ADMIN = TEST_DB_PASSWORD;
-  process.env.DB_PASSWORD_SERVER = TEST_DB_PASSWORD;
-
-  baseKnexConfig.development.connection = {
-    ...(baseKnexConfig.development.connection ?? {}),
-    host: TEST_DB_HOST,
-    port: Number(TEST_DB_PORT),
-    user: TEST_DB_APP_USER,
-    password: TEST_DB_PASSWORD,
-    database: TEST_DB_NAME,
-  };
-
-  if (baseKnexConfig.production) {
-    baseKnexConfig.production.connection = {
-      ...(baseKnexConfig.production.connection ?? {}),
-      host: TEST_DB_HOST,
-      port: Number(TEST_DB_PORT),
-      user: TEST_DB_APP_USER,
-      password: TEST_DB_PASSWORD,
-      database: TEST_DB_NAME,
-    };
-  }
-}
 
 async function resolveTicketDefaults(db: Knex, tenant: string): Promise<void> {
   const tenantTable = (table: string) => tenantDb(db, tenant).table(table);
@@ -125,72 +45,10 @@ async function resolveTicketDefaults(db: Knex, tenant: string): Promise<void> {
 
 describe('Ticket rich-text round-trip E2E', () => {
   beforeAll(async () => {
-    configureTicketTestDatabase();
-
-    process.env.NEXT_RUNTIME = 'nodejs';
-    process.env.E2E_SKIP_APP_INIT = 'true';
-
-    const appDir = path.resolve(__dirname, '../../../../../server');
-    const createNextServer = cjsRequire('next');
-    nextApp = createNextServer({
-      dev: true,
-      dir: appDir,
-      hostname: TEST_DB_HOST,
-      port: 0,
-    });
-    await nextApp.prepare();
-    const requestHandler = nextApp.getRequestHandler();
-
-    server = http.createServer((req, res) => {
-      const parsedUrl = parse(req.url ?? '', true);
-      requestHandler(req, res, parsedUrl);
-    });
-    await new Promise<void>((resolve) => server!.listen(0, TEST_DB_HOST, resolve));
-    const address = server!.address() as AddressInfo;
-    baseUrl = `http://${TEST_DB_HOST}:${address.port}`;
-
-    env = await setupE2ETestEnvironment({ baseUrl });
+    env = await setupE2ETestEnvironment();
     await resolveTicketDefaults(env.db, env.tenant);
-  }, 180_000);
-
-  afterAll(async () => {
-    try {
-      await resetTenantConnectionPool();
-      await env?.cleanup();
-      env = null;
-      if (server) {
-        await new Promise<void>((resolve, reject) => {
-          server!.close((error) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve();
-            }
-          });
-        }).catch(() => undefined);
-        server = null;
-      }
-      if (nextApp && typeof nextApp.close === 'function') {
-        await nextApp.close().catch(() => undefined);
-      }
-    } finally {
-      nextApp = null;
-      for (const key of OVERRIDDEN_ENV_KEYS) {
-        const value = savedEnv[key];
-        if (value === undefined) {
-          delete process.env[key];
-        } else {
-          process.env[key] = value;
-        }
-      }
-      if (savedKnexConnections) {
-        baseKnexConfig.development.connection = savedKnexConnections.development as Knex.Config['connection'];
-        if (baseKnexConfig.production) {
-          baseKnexConfig.production.connection = savedKnexConnections.production as Knex.Config['connection'];
-        }
-      }
-    }
   });
+  afterAll(async () => { await env?.cleanup(); });
 
   it('updates a serialized rich-text description through the ticket API and round-trips the saved value', async () => {
     const ticket = await createTestTicket(env!.db, env!.tenant, {

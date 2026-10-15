@@ -1,0 +1,18 @@
+{
+  "scope": "Tenant creation product bootstrap executed in an ephemeral Temporal server",
+  "test": "ee/temporal-workflows/src/workflows/__tests__/tenant-creation-appliance.test.ts",
+  "validation": {
+    "focusedTestsPassed": 4,
+    "mutation": "Omitting productCode from onboarding activity input fails the AlgaDesk engine case; production source restored"
+  },
+  "checks": [
+    "PSA and AlgaDesk product identity reaches tenant creation and onboarding seeds",
+    "Seeds run between tenant creation and admin creation",
+    "Appliance identity/password and skipped hosted steps retained",
+    "Non-retryable seed failure prevents admin/setup/customer/email steps and does not automatically roll back the created tenant"
+  ],
+  "limits": [
+    "Activities are synthetic; real seed/database correctness is covered separately",
+    "Full native CI execution of follow-up pending publication"
+  ]
+}

@@ -19,7 +19,7 @@ import {
   formatMigrationTimestamp,
   isMigrationStateTransient,
   migrationErrorMessage,
-  migrationStateBadge,
+  migrationOutcomeBadge,
   migrationStepForState,
   migrationStepsAvailable,
   type MigrationStep,
@@ -127,7 +127,7 @@ const MigrationJobDetail = ({ migrationJobId, onBack }: MigrationJobDetailProps)
     );
   }
 
-  const badge = migrationStateBadge(details.state);
+  const badge = migrationOutcomeBadge(details.state, details.entityCounts, t);
 
   return (
     <div className="space-y-6">

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "kind": "native-emulator-clean-workspace-repair",
+  "baseRevision": "9b12c5fa638a6757b990b3894d8f8c1682cddb19",
+  "nativeFailure": {
+    "jobId": 101569759710,
+    "runId": 34064092749,
+    "url": "https://github.com/Nine-Minds/alga-psa/actions/runs/34064092749/job/101569759710",
+    "passed": 44,
+    "failed": 2,
+    "cause": "The two existing real mail-adapter smoke cases imported @alga-psa/db through its unbuilt dist export. Local generated libraries masked this dependency.",
+    "logSha256": "de89e1f5a932b2d47a5283849e21323f313bf1c8adf5a67f7b8e65e4371b56c6"
+  },
+  "fix": "The msgraph Vitest config resolves workspace source via the repository tsconfig paths; no database or adapter behavior is mocked.",
+  "validation": {
+    "generatedApplicationDistDirectoriesTemporarilyAbsent": 12,
+    "allDirectoriesRestored": true,
+    "filesPassed": 4,
+    "testsPassed": 46,
+    "skipped": 0,
+    "typecheck": "passed",
+    "logSha256": "a82b3a6a5044470c865b7259954f8b2909df42449b8a69c72305383a64c287bf"
+  },
+  "status": "local-passed-native-revalidation-pending"
+}

@@ -18,6 +18,26 @@ interface ParsedMailSlice {
   subject?: string;
   text?: unknown;
   html?: unknown;
+  messageId?: string;
+  inReplyTo?: string;
+  references?: string | string[];
+  attachments?: Array<{
+    filename?: string;
+    contentType: string;
+    contentDisposition?: string;
+    contentId?: string;
+    content: Buffer;
+    size: number;
+  }>;
+}
+
+export interface CapturedAttachment {
+  filename: string | null;
+  contentType: string;
+  contentDisposition: string | null;
+  contentId: string | null;
+  contentBase64: string;
+  size: number;
 }
 
 export interface CapturedEmail {
@@ -27,6 +47,10 @@ export interface CapturedEmail {
   subject: string;
   text: string;
   html: string | null;
+  messageId: string | null;
+  inReplyTo: string | null;
+  references: string[];
+  attachments: CapturedAttachment[];
   receivedAt: string;
 }
 
@@ -39,17 +63,23 @@ export class SmtpSinkCore implements EmulatorCore {
   readonly emails: CapturedEmail[] = [];
   rejectWithCode: number | null = null;
   private nextId = 1;
+  generation = 0;
 
   constructor(readonly env: HostEnv) {}
 
   reset(): void {
+    this.generation++;
     this.emails.length = 0;
     this.rejectWithCode = null;
     this.nextId = 1;
   }
 
-  capture(input: Omit<CapturedEmail, 'id' | 'receivedAt'>): CapturedEmail {
-    const email: CapturedEmail = { ...input, id: this.nextId++, receivedAt: this.env.clock.now().toISOString() };
+  capture(input: Omit<CapturedEmail, 'id' | 'receivedAt' | 'messageId' | 'inReplyTo' | 'references' | 'attachments'>
+    & Partial<Pick<CapturedEmail, 'messageId' | 'inReplyTo' | 'references' | 'attachments'>>): CapturedEmail {
+    const email: CapturedEmail = {
+      messageId: null, inReplyTo: null, references: [], attachments: [],
+      ...input, id: this.nextId++, receivedAt: this.env.clock.now().toISOString(),
+    };
     this.emails.push(email);
     return email;
   }
@@ -62,23 +92,42 @@ const smtpSinkEmulator: EmulatorPackage<SmtpSinkCore> = {
 
   createCore: (env) => new SmtpSinkCore(env),
 
-  async serve(core, port, env) {
+  requestHistoryProtocol: 'smtp',
+  async serve(core, port, env, journal) {
+    const pending = new Map<string, () => void>();
     const server = new SMTPServer({
       authOptional: true,
       disabledCommands: ['STARTTLS'],
-      onData(stream, _session, callback) {
-        if (core.rejectWithCode !== null) {
+      onClose(session) { pending.get(session.id)?.(); },
+      onData(stream, session, callback) {
+        const finish = journal.begin();
+        const generation = core.generation;
+        const rejectCode = core.rejectWithCode;
+        let done = false;
+        const abort = () => { if (done) return; done = true; pending.delete(session.id); finish(null, true); };
+        pending.set(session.id, abort);
+        stream.once('error', abort);
+        const respond = (error?: Error & { responseCode?: number }) => {
+          if (done) return;
+          done = true;
+          pending.delete(session.id);
+          callback(error);
+          // smtp-server uses 450 for an error without an explicit responseCode.
+          finish(error ? error.responseCode || 450 : 250, false);
+        };
+        if (rejectCode !== null) {
           stream.on('data', () => undefined);
           stream.on('end', () => {
             const error = new Error('Rejected by smtp-sink fault') as Error & { responseCode: number };
-            error.responseCode = core.rejectWithCode ?? 550;
-            callback(error);
+            error.responseCode = rejectCode;
+            respond(error);
           });
           return;
         }
         simpleParser(stream)
           .then((mail: ParsedMailSlice) => {
-            core.capture({
+            if (done) return;
+            if (generation === core.generation) core.capture({
               from: mail.from?.text ?? '',
               to: (Array.isArray(mail.to) ? mail.to : mail.to ? [mail.to] : []).flatMap((addr) =>
                 addr.value.map((v) => v.address ?? ''),
@@ -86,12 +135,23 @@ const smtpSinkEmulator: EmulatorPackage<SmtpSinkCore> = {
               subject: mail.subject ?? '',
               text: typeof mail.text === 'string' ? mail.text : '',
               html: typeof mail.html === 'string' ? mail.html : null,
+              messageId: mail.messageId ?? null,
+              inReplyTo: mail.inReplyTo ?? null,
+              references: Array.isArray(mail.references) ? mail.references : mail.references ? [mail.references] : [],
+              attachments: (mail.attachments ?? []).map(attachment => ({
+                filename: attachment.filename ?? null,
+                contentType: attachment.contentType,
+                contentDisposition: attachment.contentDisposition ?? null,
+                contentId: attachment.contentId ?? null,
+                contentBase64: attachment.content.toString('base64'),
+                size: attachment.size,
+              })),
             });
-            callback();
+            respond();
           })
           .catch((error: Error) => {
-            env.log('smtp-sink failed to parse message', { error: error.message });
-            callback(error);
+            env.log('smtp-sink failed to parse message');
+            respond(error);
           });
       },
     });

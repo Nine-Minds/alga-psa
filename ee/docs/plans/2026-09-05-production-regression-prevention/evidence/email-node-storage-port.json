@@ -1,0 +1,60 @@
+{
+  "scope": "Real email node parsing, fallback rendering and stored workflow snapshots",
+  "baseRevision": "fb2936fba5396a2f9f62bb9d2073947b2537fb7b",
+  "workingTreeDirty": true,
+  "validation": {
+    "initial": {
+      "artifact": "/tmp/alga-email-node-storage.log",
+      "sha256": "bb74745ec9c760c83dd6305bc2a747bef8a3d4ab00d4adfbc423b718fa9096c7",
+      "passed": 15,
+      "failed": 1
+    },
+    "schemaReproducer": {
+      "artifact": "/tmp/alga-email-node-schema-probe.log",
+      "sha256": "8a0f239ee762d0d2ecb0442a3729304d41c7ea113de4b1f3122e4d46476154e0",
+      "passed": 17,
+      "failed": 1
+    },
+    "final": {
+      "artifact": "/tmp/alga-email-node-storage-final.log",
+      "sha256": "155b1ae3c84b2ebeaa766b3871265a048d0b37e446cb3c559d748bfbce4995eb",
+      "passed": 18,
+      "failed": 0
+    },
+    "parserUnit": {
+      "artifact": "/tmp/alga-email-parser-existing.log",
+      "sha256": "59180f3457c4656313e427c0190d51a0622c1577cc0bbe009299b9cbe52574d5",
+      "passed": 12,
+      "failed": 0
+    },
+    "activityUnit": {
+      "artifact": "/tmp/alga-email-node-activity-unit.log",
+      "sha256": "87869dc2704f7adae945717212d327a1677086fb9f88955695abe6343202ba65",
+      "passed": 13,
+      "failed": 0
+    },
+    "productionWorkflowEntries": {
+      "artifact": "/tmp/alga-email-sanitizer-engine-bundle.log",
+      "sha256": "aeeb06b9f408f0e6000e054c4b815de030ba031967e3d89a887d6a2f8ab16811",
+      "passed": 2,
+      "failed": 0
+    }
+  },
+  "behavior": [
+    "The real parser action accepts its documented null tokens result, succeeds durably, propagates confidence and metadata, and replays through the node without adding a second invocation.",
+    "The email node sanitizes emitted HTML on successful parsing and unavailable/throwing parser fallback, preserving useful text and safe links.",
+    "Real render node persists readable text blocks when HTML conversion returns unavailable or throws.",
+    "Removed three equivalent retired tests: parsedEmail confidence storage, HTML unsafe-content removal and renderCommentBlocks fallback. Twenty-six retired cases remain."
+  ],
+  "dependencies": {
+    "implementationReference": "https://github.com/cure53/DOMPurify#running-dompurify-on-the-server",
+    "runtime": "Declared existing locked DOMPurify 3.4.13 and jsdom 25.0.1 as direct shared dependencies; lazy server-only sanitizer, no jsdom scripts or resource fetching enabled."
+  },
+  "limits": [
+    "Local migrated PostgreSQL fixtures with substituted connection/auth boundaries; no updated native CI candidate proof.",
+    "HTML sanitization applies to the node output, not every parser caller or raw diagnostic field. Raw input/low-confidence metadata remains diagnostic data requiring safe rendering.",
+    "HTML conversion failures and parser fallback conditions inject action handlers; successful parser case uses the real action and parser.",
+    "Production entry checks exercise workflow bundling, not a fresh production worker image build.",
+    "The remaining retired email cases and broad plan requirements remain open."
+  ]
+}

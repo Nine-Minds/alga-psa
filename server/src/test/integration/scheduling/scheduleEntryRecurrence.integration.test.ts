@@ -773,6 +773,168 @@ describe('Schedule entry recurrence integration', () => {
     });
   });
 
+  describe('explicit all-day persistence', () => {
+    it.each([
+      ['2024-06-01T01:00:00Z', '2024-06-02T00:00:00Z'],
+      ['2024-06-01T00:00:00Z', '2024-06-02T01:00:00Z'],
+      ['2024-06-01T00:00:00Z', '2024-06-01T00:00:00Z'],
+      ['2024-06-02T00:00:00Z', '2024-06-01T00:00:00Z'],
+    ])('rejects invalid all-day creation %s to %s without inserting', async (start, end) => {
+      await expect(ScheduleEntry.create(ctx.db, ctx.tenantId, {
+        title: 'Invalid all-day', scheduled_start: new Date(start), scheduled_end: new Date(end),
+        work_item_type: 'ad_hoc', status: 'scheduled', is_all_day: true,
+      }, { assignedUserIds: [ctx.userId] })).rejects.toThrow(/all-day/i);
+      expect(await tenantTable('schedule_entries').select('*')).toHaveLength(0);
+    });
+
+    it.each([undefined, IEditScope.SINGLE, IEditScope.FUTURE, IEditScope.ALL])(
+      'rejects invalid merged all-day dates before mutating scope %s', async (scope) => {
+        const master = await createRecurringEntry({
+          is_all_day: true,
+          scheduled_start: new Date('2024-06-01T00:00:00Z'),
+          scheduled_end: new Date('2024-06-02T00:00:00Z'),
+        });
+        const before = await tenantTable('schedule_entries').select('*');
+        const id = scope ? `${master.entry_id}_${new Date('2024-06-03T00:00:00Z').getTime()}` : master.entry_id as string;
+        await expect(ScheduleEntry.update(ctx.db, ctx.tenantId, id, {
+          scheduled_start: new Date('2024-06-01T01:00:00Z'),
+        }, scope)).rejects.toThrow(/all-day/i);
+        expect(await tenantTable('schedule_entries').select('*')).toEqual(before);
+      });
+
+    it('rejects converting a timed interval to all-day without valid midnight boundaries', async () => {
+      const master = await createRecurringEntry();
+      await expect(ScheduleEntry.update(ctx.db, ctx.tenantId, master.entry_id as string,
+        { is_all_day: true })).rejects.toThrow(/all-day/i);
+      const stored = await tenantTable('schedule_entries').where('entry_id', master.entry_id).first();
+      expect(stored.is_all_day).toBe(false);
+    });
+
+    it.each(['scheduled_start', 'scheduled_end'] as const)('rejects a null all-day %s on create and merged update', async (field) => {
+      const boundaries = {
+        scheduled_start: new Date('2024-06-01T00:00:00Z'),
+        scheduled_end: new Date('2024-06-02T00:00:00Z'),
+      };
+      await expect(ScheduleEntry.create(ctx.db, ctx.tenantId, {
+        title: 'Null boundary', ...boundaries, work_item_type: 'ad_hoc', status: 'scheduled',
+        is_all_day: true, [field]: null,
+      } as any, { assignedUserIds: [ctx.userId] })).rejects.toThrow(/all-day/i);
+      expect(await tenantTable('schedule_entries').select('*')).toHaveLength(0);
+      const master = await createRecurringEntry({ ...boundaries, is_all_day: true });
+      const before = await tenantTable('schedule_entries').where('entry_id', master.entry_id).first();
+      await expect(ScheduleEntry.update(ctx.db, ctx.tenantId, master.entry_id as string,
+        { [field]: null } as any)).rejects.toThrow(/all-day/i);
+      expect(await tenantTable('schedule_entries').where('entry_id', master.entry_id).first()).toEqual(before);
+    });
+
+    it('keeps a title-only future split at UTC midnight across Berlin DST with its original duration', async () => {
+      const previousTimezone = process.env.TZ;
+      process.env.TZ = 'Europe/Berlin';
+      try {
+        await createRecurringEntry({
+          is_all_day: true,
+          scheduled_start: new Date('2026-10-24T00:00:00Z'),
+          scheduled_end: new Date('2026-10-25T00:00:00Z'),
+          recurrence_pattern: JSON.stringify({ frequency: 'daily', interval: 1,
+            startDate: '2026-10-24T00:00:00Z', endDate: '2026-10-28T23:59:59Z' }),
+        });
+        const rangeStart = new Date('2026-10-24T00:00:00Z');
+        const rangeEnd = new Date('2026-10-28T23:59:59Z');
+        const before = await ScheduleEntry.getAll(ctx.db, ctx.tenantId, rangeStart, rangeEnd);
+        expect(before.every(entry => new Date(entry.scheduled_start).getUTCHours() === 0)).toBe(true);
+        expect(before.filter(entry => new Date(entry.scheduled_start).toISOString() === '2026-10-24T00:00:00.000Z')).toHaveLength(1);
+        const target = before.find(entry => new Date(entry.scheduled_start).toISOString() === '2026-10-26T00:00:00.000Z');
+        expect(target).toBeDefined();
+        const updated = await ScheduleEntry.update(ctx.db, ctx.tenantId, target!.entry_id,
+          { title: 'Future title' }, IEditScope.FUTURE);
+        expect(new Date(updated!.scheduled_start).toISOString()).toBe('2026-10-26T00:00:00.000Z');
+        expect(new Date(updated!.scheduled_end).toISOString()).toBe('2026-10-27T00:00:00.000Z');
+        const stored = await tenantTable('schedule_entries').where('entry_id', updated!.entry_id).first();
+        expect(stored.is_all_day).toBe(true);
+        expect(new Date(stored.scheduled_end).toISOString()).toBe('2026-10-27T00:00:00.000Z');
+        const after = await ScheduleEntry.getAll(ctx.db, ctx.tenantId, rangeStart, rangeEnd);
+        expect(after.every(entry => new Date(entry.scheduled_start).getUTCHours() === 0)).toBe(true);
+        expect(after.filter(entry => new Date(entry.scheduled_start).toISOString() === '2026-10-26T00:00:00.000Z')).toHaveLength(1);
+      } finally {
+        if (previousTimezone === undefined) delete process.env.TZ;
+        else process.env.TZ = previousTimezone;
+      }
+    });
+
+    it.each([undefined, false, true])('persists create flag %s without inferring from midnight timestamps', async (flag) => {
+      const created = await ScheduleEntry.create(ctx.db, ctx.tenantId, {
+        title: 'Midnight interval',
+        scheduled_start: new Date('2024-06-01T00:00:00Z'),
+        scheduled_end: new Date('2024-06-02T00:00:00Z'),
+        work_item_type: 'ad_hoc', status: 'scheduled',
+        ...(flag === undefined ? {} : { is_all_day: flag }),
+      }, { assignedUserIds: [ctx.userId] });
+      const read = () => tenantTable('schedule_entries').where('entry_id', created.entry_id).first();
+      expect(created.is_all_day).toBe(flag ?? false);
+      expect((await read()).is_all_day).toBe(flag ?? false);
+      const renamed = await ScheduleEntry.update(ctx.db, ctx.tenantId, created.entry_id, { title: 'Renamed' });
+      expect(renamed!.is_all_day).toBe(flag ?? false);
+      expect((await read()).is_all_day).toBe(flag ?? false);
+      const enabled = await ScheduleEntry.update(ctx.db, ctx.tenantId, created.entry_id, { is_all_day: true });
+      expect(enabled!.is_all_day).toBe(true);
+      expect((await read()).is_all_day).toBe(true);
+      const disabled = await ScheduleEntry.update(ctx.db, ctx.tenantId, created.entry_id, { is_all_day: false });
+      expect(disabled!.is_all_day).toBe(false);
+      expect((await read()).is_all_day).toBe(false);
+    });
+
+    it.each([
+      [IEditScope.SINGLE, undefined], [IEditScope.SINGLE, false],
+      [IEditScope.FUTURE, undefined], [IEditScope.FUTURE, false],
+      [IEditScope.ALL, undefined], [IEditScope.ALL, false],
+    ] as const)('preserves or overrides all-day flag for %s scope (override %s)', async (scope, flag) => {
+      const master = await createRecurringEntry({
+        is_all_day: true,
+        scheduled_start: new Date('2024-06-01T00:00:00Z'),
+        scheduled_end: new Date('2024-06-02T00:00:00Z'),
+      });
+      const rangeStart = new Date('2024-06-01T00:00:00Z');
+      const rangeEnd = new Date('2024-06-07T23:59:59Z');
+      const virtuals = await ScheduleEntry.getAll(ctx.db, ctx.tenantId, rangeStart, rangeEnd);
+      expect(virtuals.length).toBeGreaterThan(1);
+      expect(virtuals.every(entry => entry.is_all_day === true)).toBe(true);
+      const target = virtuals[1];
+      const updated = await ScheduleEntry.update(ctx.db, ctx.tenantId, target.entry_id, {
+        title: 'Changed occurrence',
+        scheduled_start: target.scheduled_start,
+        scheduled_end: target.scheduled_end,
+        ...(flag === undefined ? {} : { is_all_day: flag }),
+      }, scope);
+      const expectedFlag = flag ?? true;
+      expect(updated!.is_all_day).toBe(expectedFlag);
+      const stored = await tenantTable('schedule_entries').where('entry_id', updated!.entry_id).first();
+      expect(stored.is_all_day).toBe(expectedFlag);
+      const original = await tenantTable('schedule_entries').where('entry_id', master.entry_id).first();
+      expect(original.is_all_day).toBe(scope === IEditScope.ALL ? expectedFlag : true);
+      const visible = await ScheduleEntry.getAll(ctx.db, ctx.tenantId, rangeStart, rangeEnd);
+      const changed = visible.filter(entry => entry.entry_id === updated!.entry_id || entry.entry_id.startsWith(`${updated!.entry_id}_`));
+      expect(changed.length).toBeGreaterThan(0);
+      expect(changed.every(entry => entry.is_all_day === expectedFlag)).toBe(true);
+    });
+
+    it('preserves all-day semantics when deleting the first occurrence promotes a successor master', async () => {
+      const master = await createRecurringEntry({
+        is_all_day: true,
+        scheduled_start: new Date('2024-06-01T00:00:00Z'),
+        scheduled_end: new Date('2024-06-02T00:00:00Z'),
+      });
+      expect(await ScheduleEntry.delete(ctx.db, ctx.tenantId, master.entry_id as string, IEditScope.SINGLE)).toBe(true);
+      const remaining = await tenantTable('schedule_entries').select('*');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].entry_id).not.toBe(master.entry_id);
+      expect(remaining[0].is_all_day).toBe(true);
+      const virtuals = await ScheduleEntry.getAll(ctx.db, ctx.tenantId,
+        new Date('2024-06-02T00:00:00Z'), new Date('2024-06-07T23:59:59Z'));
+      expect(virtuals.length).toBeGreaterThan(0);
+      expect(virtuals.every(entry => entry.is_all_day === true)).toBe(true);
+    });
+  });
+
   // ── Tenant isolation ────────────────────────────────────────────────
 
   describe('tenant isolation', () => {

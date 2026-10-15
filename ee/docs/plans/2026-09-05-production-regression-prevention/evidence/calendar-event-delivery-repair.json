@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "kind": "behavioral-regression-local-repair",
+  "baseRevision": "0379468c76",
+  "status": "local-passed-native-pending",
+  "repairs": [
+    {
+      "component": "ScheduleCalendar event renderer",
+      "before": "Hover replaces the inner event component; first click and keyboard focus regressions both failed.",
+      "after": "A stable context consumer calls the current render callback without changing component identity."
+    },
+    {
+      "component": "Event bus across independently loaded module copies",
+      "before": "Real Redis delivered three distinct publications to one subscriber and none to the other because module-local consumers competed in one group.",
+      "after": "A process-wide registry shares the consumer and handlers. Both subscribers receive the same three unique event IDs. Monitoring works through both module copies; closing, reopening in the original module, and closing a stale handle preserve the replacement connection."
+    }
+  ],
+  "validation": {
+    "serverRunner": {
+      "filesPassed": 8,
+      "testsPassed": 11,
+      "skipped": 0,
+      "durationSeconds": 4.46
+    },
+    "packageEventBusRunner": {
+      "filesPassed": 6,
+      "testsPassed": 8
+    },
+    "targetedTypeScript": "passed",
+    "planValidator": "passed"
+  },
+  "logs": [
+    {
+      "path": "/tmp/alga-calendar-renderer-before.log",
+      "sha256": "09b9ed325a0958abd5ef011de6ca5ceeb6ea4d7fcc2b3f3bb50258b3b5629bb2"
+    },
+    {
+      "path": "/tmp/alga-event-bus-bundles-before.log",
+      "sha256": "6f2ce3062f9282364c0bb1589b86a8a18495dc37e1209e5b7fb3b829cee1e75e"
+    },
+    {
+      "path": "/tmp/alga-calendar-event-bus-regression.log",
+      "sha256": "7b9ac6aaa6aa7309cc829090d7684d4323681a01f7df110b99f32dc9f5a789e9"
+    },
+    {
+      "path": "/tmp/alga-event-bus-package-after.log",
+      "sha256": "4caf5d1793bb34f164be0362a961b5a8d9637819ae8e77cdeb3ca57f8bf9dcd0"
+    },
+    {
+      "path": "/tmp/alga-calendar-event-bus-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "limits": [
+    "The normal Microsoft calendar browser journey still requires a newly built candidate containing these repairs. The diagnostic hover workaround is absent from the checked-in journey.",
+    "The process-wide registry addresses independently bundled copies within one process; heterogeneous subscribers in separate processes require a separate fanout design.",
+    "F034 remains incomplete; Microsoft mail and Teams journeys remain outstanding."
+  ]
+}

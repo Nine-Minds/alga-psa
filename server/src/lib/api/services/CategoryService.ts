@@ -158,11 +158,24 @@ export class CategoryService extends BaseService {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
+      // display_order: an explicit value is stored as given. Unlike the UI server action
+      // (which treats 0 as "not provided"), an explicit 0 is honored literally here because an
+      // API caller who sends 0 means 0. Only an omitted value appends after the current max.
+      let displayOrder = data.display_order;
+      if (displayOrder === undefined) {
+        // LEVERAGE: pattern display-order-append — max+1 append also in createTicketCategory and the billing categoryActions UI action
+        const maxOrder = await tenantDb(trx, context.tenant).table('service_categories')
+          .max('display_order as max')
+          .first();
+        displayOrder = Number(maxOrder?.max ?? 0) + 1;
+      }
+
       const categoryData = {
         category_id: uuidv4(),
         category_name: data.category_name.trim(),
         description: data.description?.trim(),
         is_active: data.is_active ?? true,
+        display_order: displayOrder,
         created_by: context.userId,
         updated_by: context.userId,
         created_at: new Date(),
@@ -206,6 +219,10 @@ export class CategoryService extends BaseService {
       }
       if (data.is_active !== undefined) {
         updateData.is_active = data.is_active;
+      }
+      // Absent display_order leaves the stored value untouched.
+      if (data.display_order !== undefined) {
+        updateData.display_order = data.display_order;
       }
 
       const [updated] = await tenantDb(trx, context.tenant).table('service_categories')

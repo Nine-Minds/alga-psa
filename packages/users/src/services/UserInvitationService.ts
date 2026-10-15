@@ -286,6 +286,8 @@ export class UserInvitationService {
         return deletedRows || 0;
       };
 
+      // LEVERAGE: pattern comanaged-trx-threading — identical to PasswordResetService and
+      // PortalInvitationService cleanupExpiredTokens.
       return trx ? cleanup(trx) : withTransaction(knex, cleanup);
     } catch (error) {
       console.error('Error cleaning up expired team invitation tokens:', error);

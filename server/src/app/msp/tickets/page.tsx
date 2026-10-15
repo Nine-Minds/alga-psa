@@ -1,15 +1,17 @@
-import CoManagedTicketQueueLink from '@/components/co-managed/CoManagedTicketQueueLink';
 import { getConsolidatedTicketListData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { getCurrentUser, getCurrentUserPermissions, getUserPreference } from '@alga-psa/user-composition/actions';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
 import type { ITicketListFilters } from '@alga-psa/types';
 import MspTicketsPageClient from '@alga-psa/msp-composition/tickets/MspTicketsPageClient';
+import { getSmartSearchAvailability } from '@enterprise/lib/actions/smartSearchActions';
 import { findBoardById } from '@alga-psa/tickets/actions/board-actions/boardActions';
 import {
+  isTicketListSortKey,
   isTicketStatusOpenFilter,
   TICKET_STATUS_FILTER_OPEN,
 } from '@alga-psa/tickets/lib';
+import { normalizeAssignedToIds } from '@alga-psa/tickets/lib/ticketFilterUtils';
 import {
   hasBoardFilterParam,
   hasTicketViewFilterParams,
@@ -23,6 +25,9 @@ import {
 } from '@alga-psa/tickets/lib/ticketViewSettings';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
+import { redirect } from 'next/navigation';
+import { resolveLegacyQueueRedirect } from '@alga-psa/tickets/lib';
+import { CoManagedCalloutStrip } from '@/components/co-managed/CoManagedCalloutStrip';
 import type { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -50,6 +55,15 @@ function isReturnedActionError(value: unknown): value is { actionError: string }
 }
 
 export default async function TicketsPage({ searchParams }: TicketsPageProps) {
+  // Legacy `?queueView=…` links belong to Customer Tickets; `workspace=msp` (retired)
+  // lands here with the qualified params stripped. Outside the try so the redirect isn't swallowed.
+  const legacyTarget = resolveLegacyQueueRedirect(new URLSearchParams(
+    Object.entries(await searchParams ?? {}).flatMap(([k, v]) => (typeof v === 'string' ? [[k, v] as [string, string]] : [])),
+  ));
+  if (legacyTarget) {
+    redirect(legacyTarget);
+  }
+
   try {
     const user = await getCurrentUser();
     const productCode = await getCurrentTenantProduct();
@@ -62,6 +76,12 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       const { redirect } = await import('next/navigation');
       redirect('/auth/signin?callbackUrl=%2Fmsp%2Ftickets');
     }
+
+    // Decided on the server so the Smart search affordance is right on first
+    // paint. The CE stub answers false; any failure hides it.
+    const smartSearchAvailable = await getSmartSearchAvailability('ticket')
+      .then((result) => result?.available === true)
+      .catch(() => false);
 
     // Await searchParams as required in Next.js 15
     const params = await searchParams;
@@ -146,9 +166,14 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       filtersFromURL.tags = normalizeTags(params.tags);
     }
     if (params?.assignedToIds && typeof params.assignedToIds === 'string') {
-      const assignedToIds = params.assignedToIds.split(',').filter(id => id.trim().length > 0);
-      if (assignedToIds.length > 0) {
-        filtersFromURL.assignedToIds = assignedToIds;
+      // The CSV comes straight off the URL; only well-formed assignee ids may
+      // reach ticketListFiltersSchema (uuid array) or the list query throws.
+      const assignedTo = normalizeAssignedToIds(params.assignedToIds);
+      if (assignedTo.assignedToIds) {
+        filtersFromURL.assignedToIds = assignedTo.assignedToIds;
+      }
+      if (assignedTo.includeUnassigned) {
+        filtersFromURL.includeUnassigned = true;
       }
     }
     if (params?.assignedTeamIds && typeof params.assignedTeamIds === 'string') {
@@ -186,22 +211,9 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         filtersFromURL.slaStatusFilter = params.slaStatusFilter as ITicketListFilters['slaStatusFilter'];
       }
     }
-    const allowedSortKeys = [
-      'ticket_number',
-      'title',
-      'status_name',
-      'priority_name',
-      'board_name',
-      'category_name',
-      'client_name',
-      'entered_at',
-      'entered_by_name',
-      'due_date'
-    ] as const;
-
     if (params?.sortBy && typeof params.sortBy === 'string') {
-      if ((allowedSortKeys as readonly string[]).includes(params.sortBy)) {
-        filtersFromURL.sortBy = params.sortBy as ITicketListFilters['sortBy'];
+      if (isTicketListSortKey(params.sortBy)) {
+        filtersFromURL.sortBy = params.sortBy;
       }
     }
     if (params?.sortDirection && typeof params.sortDirection === 'string') {
@@ -349,7 +361,6 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
     return (
       <div id="tickets-page-container" className="bg-[rgb(var(--color-app-ground))]">
-        {productCode === 'psa' && <CoManagedTicketQueueLink />}
         <MspTicketsPageClient
           consolidatedData={consolidatedData}
           initialFormOptions={consolidatedData.options}
@@ -361,7 +372,9 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
           initialTeams={initialTeams}
           canUpdateTickets={canUpdateTickets}
           allowSlaStatusFilter={allowSlaStatusFilter}
+          smartSearchAvailable={smartSearchAvailable}
           useAlgaDeskQuickAddForm={useAlgaDeskQuickAddForm}
+          listCallout={productCode === 'psa' ? <CoManagedCalloutStrip /> : undefined}
         />
       </div>
     );

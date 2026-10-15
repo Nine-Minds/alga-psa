@@ -6,3 +6,4 @@ export * from './relationships';
 export * from './relationshipTemplates';
 export * from './requestCache';
 export * from './scope';
+export * from './selfApproval';

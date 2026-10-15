@@ -5,10 +5,10 @@ exports.seed = async function(knex) {
     if (!context) return;
 
     const { tenantId, db } = context;
-    const glindaUserId = db.table('users')
+    const glindaUserId = (await db.table('users')
         .where({ username: 'glinda' })
         .select('user_id')
-        .first();
+        .first())?.user_id ?? null;
 
     return db.table('interaction_types').insert([
         {

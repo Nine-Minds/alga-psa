@@ -1,0 +1,51 @@
+{
+  "status": "Local behavioral validation passed; native acceptance pending",
+  "api": {
+    "file": "server/src/test/e2e/api/projects.e2e.test.ts",
+    "changes": [
+      "Require 403 after removing only the synthetic user project read/create grants; restore exact grants and verify access returns",
+      "Denied create leaves persisted projects unchanged; unrelated API access remains valid",
+      "Require all fixture POSTs to succeed and a populated pagination page",
+      "Assert every status-filtered row; name/client unmatched queries return empty results and zero totals",
+      "Replace misleading project-type test (no schema support, previously only listed projects) with real name filtering"
+    ],
+    "validation": {
+      "passed": 7,
+      "failed": 0,
+      "filteredOut": 17,
+      "durationSeconds": 8.39,
+      "logLocal": "/tmp/alga-project-api-behavior-contract.log"
+    },
+    "environment": "Owned application at localhost:3000; existing isolated browser DB preserved; unique synthetic tenant fixtures; real HTTP, authentication and PostgreSQL",
+    "limitation": "Targeted cases ran against the existing local built application. Full rebuilt CE/EE acceptance remains pending; 17 filtered cases are not counted as executed."
+  },
+  "workflowDeletion": {
+    "nativeFailure": {
+      "run": 34078331083,
+      "job": 101608768068,
+      "passed": 424,
+      "failed": 1,
+      "reason": "T018 expected legacy VALIDATION_FAILED; shared tracked-time dependency guard now returns DEPENDENCIES_EXIST",
+      "logLocal": "/tmp/alga-workspace-db-df9b-failed.log"
+    },
+    "changes": [
+      "Assert structured DEPENDENCIES_EXIST and time_entry dependency count 1",
+      "Assert deleted=false and exact preservation of the project, phase, task and tracked time"
+    ],
+    "initialLocalFailure": "Dependency type assertion used table name time_entries; corrected to the shared public type time_entry after inspecting the runtime result and deletion config",
+    "validation": {
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0,
+      "durationSeconds": 30.23,
+      "database": "workflow_project_deletion_82cc (worker-suffixed by harness)",
+      "logLocal": "/tmp/alga-workflow-project-deletion-final.log"
+    }
+  },
+  "types": "Both modified test files pass focused tsc with strictNullChecks; /tmp/alga-project-api-behavior-types-final.log",
+  "remaining": [
+    "Native CI execution of these changes",
+    "Full integration job 101608767833 was revalidated in progress; no push while live",
+    "Broader plan requirements and historical skipped integration cases remain incomplete"
+  ]
+}

@@ -378,9 +378,11 @@ ALTER TABLE clients ADD COLUMN sla_policy_id    UUID;  -- FK to sla_policies (cl
 - `PgBossSlaBackend` for CE (delegates to polling)
 - `TemporalSlaBackend` for EE (real Temporal workflows)
 - `slaTicketWorkflow` with threshold-based sleep/wake
-- 5 activities: calculate, notify, escalate, status update, audit log
+- 6 activities: calculate, notify, escalate, status update, audit log, get pause state
 - Signal handlers: pause, resume, completeResponse, completeResolution, cancel
 - State query for real-time SLA status
+- **Pause self-healing**: while paused, the workflow polls `getTicketSlaPauseState` every 5 minutes to detect a missed resume signal. If a pause/resume cycle interrupts a threshold wait, the workflow re-enters the same threshold on resume rather than skipping it — threshold notifications always fire for in-progress waits.
+- **History management**: when Temporal's event history reaches 10,000 events (or the server requests a rollover), the workflow executes `continueAsNew`, carrying the SLA clock, pause state, notified thresholds, and deadlines forward. This prevents the 51,200-event hard limit from ever being reached on long-running or heavily-paused tickets.
 
 ## Integration Points
 

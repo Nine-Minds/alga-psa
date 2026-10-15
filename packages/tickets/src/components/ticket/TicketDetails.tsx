@@ -2,8 +2,9 @@
 
 import type { TicketLiveRemoteUpdate } from '../../hooks/useTicketLive';
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getUserTimeZone, generateUUID } from '@alga-psa/core';
+import { getUserTimeZone } from '@alga-psa/core';
 import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
@@ -31,12 +32,14 @@ import { TagManager } from "@alga-psa/tags/components";
 import { findTagsByEntityId, isTagActionError } from "@alga-psa/tags/actions";
 import { useTags } from '@alga-psa/tags/context';
 import TicketInfo from "./TicketInfo";
-import type { TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
+import TicketNotificationSuppressionControl, { type TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
 import { TicketCredentialsSection } from "./TicketCredentialsSection";
+import { TicketExternalLinksSection } from "./TicketExternalLinksSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
+import type { CommentEmailRecipientsPayload } from "./CommentEmailRecipientsControl";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
@@ -64,7 +67,11 @@ import {
     type ITicketAutoCloseState,
 } from "../../actions/close-rules/closeRuleActions";
 import { getTicketChecklistItems, type ITicketChecklistItem } from "../../actions/checklists/ticketChecklistActions";
+import type { ITicketExternalLinkView } from "../../actions/externalLinks/externalLinkActions";
 import type { CloseRuleFailure } from "../../lib/validateTicketClosure";
+import { previewBundleStatusPropagationAction } from "../../actions/ticketBundleActions";
+import { BundleStatusPropagationDialog } from "../BundleStatusPropagationDialog";
+import type { BundleStatusPropagationPreview } from "../../lib/ticketBundlePropagation";
 import TicketChecklistSection, { summarizeChecklist } from "./TicketChecklistSection";
 import { Dialog, DialogContent, DialogFooter } from "@alga-psa/ui/components/Dialog";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
@@ -74,18 +81,19 @@ import { addTicketResource, getTicketResources, removeTicketResource } from "../
 import { assignTeamToTicket, removeTeamFromTicket } from "../../actions/teamAssignmentActions";
 import { getTeamById, getTeams, isTeamActionError } from '@alga-psa/teams/actions';
 import AgentScheduleDrawer from "./AgentScheduleDrawer";
+import type { WorkItemScheduleContext } from '@alga-psa/ui/context';
 import { Button } from "@alga-psa/ui/components/Button";
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from "@alga-psa/ui/components/Input";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Label } from "@alga-psa/ui/components/Label";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { ExternalLink, Mail, History, Trash2 } from 'lucide-react';
+import { ExternalLink, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
+import { useTicketTemplatePermissions } from '../templates/useTicketTemplatePermissions';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
-import { useTicketTimeTracking } from "@alga-psa/ui/hooks";
-import { IntervalTrackingService } from "@alga-psa/ui/services";
 import { convertBlockNoteToMarkdown } from "@alga-psa/formatting/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
@@ -104,8 +112,11 @@ import {
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
-import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
+import { buildTicketTimeEntryContext } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
+import { getRecurringSourceForTicket } from '../../actions/recurringTicketActions';
+import type { RecurringTicketSource } from '../../lib/recurring/types';
+import { buildCreateTicketHref } from '../../lib/createTicketRoute';
 import {
     setTicketWatchListOnAttributes,
     type TicketWatchListEntry,
@@ -113,13 +124,17 @@ import {
 import {
     addChildrenToBundleAction,
     findTicketByNumberAction,
+    getBundleMasterClosedContextAction,
     promoteBundleMasterAction,
     removeChildFromBundleAction,
     unbundleMasterTicketAction,
     updateBundleSettingsAction,
     searchEligibleChildTicketsAction,
+    type BundleMasterClosedContextActionResult,
     type EligibleChildTicket
 } from '../../actions/ticketBundleActions';
+import { ClosedMasterChoiceFields } from './ClosedMasterChoiceFields';
+import type { ClosedMasterChoice } from '../../lib/ticketBundlePolicy';
 import { deleteDraftClipboardImages } from '../../actions/comment-actions/clipboardImageDraftActions';
 import {
     resolveCommentReferencedImageDocuments,
@@ -142,6 +157,11 @@ const LIVE_UPDATE_HIGHLIGHT_MS = 600;
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
     isActionMessageError(value) || isActionPermissionError(value);
+
+const emptyNotificationSuppression = (): TicketNotificationSuppressionValue => ({
+    suppressContactNotifications: false,
+    suppressInternalNotifications: false,
+});
 
 const handleTicketActionError = (error: unknown, fallback: string) => {
     if (isReturnedActionError(error)) {
@@ -166,6 +186,7 @@ interface TicketDetailsProps {
     initialContacts?: IContact[];
     initialContactInfo?: IContact | null;
     initialCreatedByUser?: IUser | null;
+    initialUpdatedByUser?: IUser | null;
     initialBoard?: any;
     initialAdditionalAgents?: ITicketResource[];
     initialAvailableAgents?: IUserWithRoles[];
@@ -184,12 +205,16 @@ interface TicketDetailsProps {
     currentUser?: IUser | null;
 
     // Optimized handlers
-    onTicketUpdate?: (field: string, value: any) => Promise<void>;
+    onTicketUpdate?: (
+        field: string,
+        value: any,
+        options?: { propagateToChildren?: boolean }
+    ) => Promise<void>;
     onBatchTicketUpdate?: (
         changes: Record<string, unknown>,
-        options?: TicketNotificationSuppressionValue
+        options?: Partial<TicketNotificationSuppressionValue> & { propagateToChildren?: boolean }
     ) => Promise<boolean>;
-    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null) => Promise<void>;
+    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
     /**
@@ -228,6 +253,12 @@ interface TicketDetailsProps {
     renderCreateProjectTask?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
 
     /**
+     * Optional injected UI for quick-invoicing a ticket (e.g. billing package
+     * QuickInvoiceTicketDialog). Keeps @alga-psa/tickets from importing billing.
+     */
+    renderQuickInvoice?: (args: { ticket: ITicket }) => React.ReactNode;
+
+    /**
      * Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
      * If omitted, TicketDetails falls back to a minimal drawer with a link to open the client page.
      */
@@ -236,11 +267,8 @@ interface TicketDetailsProps {
         client: IClient;
     }) => React.ReactNode;
 
-    /**
-     * Optional injected UI for interval management (e.g. @alga-psa/scheduling IntervalManagement).
-     * Shows auto-tracked time intervals below the ticket timer.
-     */
-    renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
+    /** AlgaDesk product mode: Duplicate opens the AlgaDesk create form variant. */
+    isAlgaDeskMode?: boolean;
     hideSlaStatus?: boolean;
     hideBilling?: boolean;
     hideScheduling?: boolean;
@@ -261,6 +289,8 @@ interface TicketDetailsProps {
     disableAgentSchedule?: boolean;
 }
 
+const EMPTY_DOCUMENTS: NonNullable<TicketDetailsProps['initialDocuments']> = [];
+
 const TicketDetails: React.FC<TicketDetailsProps> = ({
     id = 'ticket-details',
     initialTicket,
@@ -270,11 +300,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     isInDrawer = false,
     // Pre-fetched data with defaults
     initialComments = [],
-    initialDocuments = [],
+    initialDocuments = EMPTY_DOCUMENTS,
     initialClient = null,
     initialContacts = [],
     initialContactInfo = null,
     initialCreatedByUser = null,
+    initialUpdatedByUser = null,
     initialBoard = null,
     initialAdditionalAgents = [],
     initialAvailableAgents = [],
@@ -301,8 +332,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     associatedAssets = null,
     renderContactDetails,
     renderCreateProjectTask,
+    renderQuickInvoice,
     renderClientDetails,
-    renderIntervalManagement,
+    isAlgaDeskMode = false,
     hideSlaStatus = false,
     hideBilling = false,
     hideScheduling = false,
@@ -318,7 +350,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 }) => {
     const { t } = useTranslation('features/tickets');
     // Hardcoded English, and a date that followed the browser's locale.
-    const { formatDate, locale } = useFormatters();
+    const { formatDate, locale, dateFormat } = useFormatters();
     const ticketLive = useTicketLiveContext();
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
@@ -340,6 +372,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     });
     const { getDocumentByTicketId, deleteDocument } = useDocumentsCrossFeature();
     const router = useRouter();
+    // Gates the header "Create template from ticket" item and the template link; server actions are authoritative.
+    const templatePermissions = useTicketTemplatePermissions();
     const searchParams = useSearchParams();
 
     useEffect(() => {
@@ -395,6 +429,90 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isSubmittingCloseOverride, setIsSubmittingCloseOverride] = useState(false);
     const [isResolutionCloseDialogOpen, setIsResolutionCloseDialogOpen] = useState(false);
     const [isSubmittingResolutionClose, setIsSubmittingResolutionClose] = useState(false);
+    // Flagging an existing comment as the resolution while editing it offers the
+    // close the composer's resolution toggle would have done inline. Declining
+    // leaves the comment flagged and the status untouched.
+    const [resolutionClosePrompt, setResolutionClosePrompt] = useState<{
+        isOpen: boolean;
+        statusId: string | null;
+        suppression: TicketNotificationSuppressionValue;
+    }>({ isOpen: false, statusId: null, suppression: emptyNotificationSuppression() });
+    const [isSubmittingResolutionClosePrompt, setIsSubmittingResolutionClosePrompt] = useState(false);
+
+    // Bundle status propagation confirmation. The preview is fetched first; when
+    // it crosses the open/closed boundary with affected children we suspend the
+    // caller on a promise until the operator chooses propagate / master-only /
+    // cancel. This keeps the choice in one place for all four status-change sites.
+    const [bundlePropagationPreview, setBundlePropagationPreview] = useState<BundleStatusPropagationPreview | null>(null);
+    // Separate from the resolve/close-override dialogs' busy flags: the
+    // propagation confirm button must be enabled while the operator chooses, so
+    // this is armed only once a decision has resolved and the write is in flight.
+    const [isSubmittingBundlePropagation, setIsSubmittingBundlePropagation] = useState(false);
+    const bundleDecisionResolverRef = useRef<
+        ((decision: { proceed: boolean; propagateToChildren?: boolean }) => void) | null
+    >(null);
+
+    const resolveBundlePropagationDecision = useCallback(
+        (decision: { proceed: boolean; propagateToChildren?: boolean }) => {
+            const resolver = bundleDecisionResolverRef.current;
+            bundleDecisionResolverRef.current = null;
+            setBundlePropagationPreview(null);
+            resolver?.(decision);
+        },
+        [],
+    );
+
+    const confirmBundlePropagation = useCallback(
+        async (newStatusId: string): Promise<{ proceed: boolean; propagateToChildren?: boolean }> => {
+            if (!ticket.ticket_id) return { proceed: true };
+            try {
+                const preview = await previewBundleStatusPropagationAction({
+                    masterTicketId: ticket.ticket_id,
+                    newStatusId,
+                });
+                if (isActionMessageError(preview) || isActionPermissionError(preview)) {
+                    return { proceed: true };
+                }
+                if (preview.crossesBoundary && preview.affectedChildren.length > 0) {
+                    return await new Promise<{ proceed: boolean; propagateToChildren?: boolean }>((resolve) => {
+                        bundleDecisionResolverRef.current = resolve;
+                        setBundlePropagationPreview(preview);
+                    });
+                }
+            } catch (previewError) {
+                // Fall through to the write; the server still enforces the choice.
+                console.error('Bundle propagation preview failed:', previewError);
+            }
+            return { proceed: true };
+        },
+        [ticket.ticket_id],
+    );
+
+    const confirmStatusChange = useCallback(
+        async (newStatusId: string): Promise<{ proceed: boolean; propagateToChildren?: boolean }> => {
+            if (ticket.ticket_id) {
+                try {
+                    const check = await checkTicketClosure(ticket.ticket_id, newStatusId);
+                    if (check.wouldClose && !check.allowed) {
+                        setCloseOverrideReason('');
+                        setCloseBlockedDialog({
+                            isOpen: true,
+                            statusId: newStatusId,
+                            failures: check.failures,
+                            canOverride: check.canOverride,
+                            suppression: null,
+                        });
+                        return { proceed: false };
+                    }
+                } catch (checkError) {
+                    // Fall through to the write; the server still enforces.
+                    console.error('Close rules pre-check failed:', checkError);
+                }
+            }
+            return confirmBundlePropagation(newStatusId);
+        },
+        [confirmBundlePropagation, ticket.ticket_id],
+    );
 
     const [checklistItems, setChecklistItems] = useState<ITicketChecklistItem[] | undefined>(
         bootstrap?.checklistItems ?? undefined,
@@ -418,8 +536,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             .catch((err) => console.error('Failed to load auto-close state:', err));
         return () => { cancelled = true; };
         // Re-check the pending auto-close whenever the status changes — a
-        // status move usually cancels or reschedules it.
-    }, [ticket.ticket_id, ticket.status_id]);
+        // status move usually cancels or reschedules it. Board, category,
+        // subcategory and priority are the checklist auto-apply matchers, so a
+        // save that changes them can attach template items server-side.
+    }, [
+        ticket.ticket_id,
+        ticket.status_id,
+        ticket.board_id,
+        ticket.category_id,
+        ticket.subcategory_id,
+        ticket.priority_id,
+    ]);
 
     const checklistSummary = useMemo(
         () => summarizeChecklist(checklistItems ?? []),
@@ -430,9 +557,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         if (!closeBlockedDialog.statusId || !ticket.ticket_id) return;
         setIsSubmittingCloseOverride(true);
         try {
+            // Close rules were already overridden, so only the propagation
+            // choice remains before we write.
+            const propagationDecision = await confirmBundlePropagation(closeBlockedDialog.statusId);
+            if (!propagationDecision.proceed) {
+                return;
+            }
+            setIsSubmittingBundlePropagation(true);
             const result = await updateTicketWithCache(ticket.ticket_id, { status_id: closeBlockedDialog.statusId }, {
                 overrideCloseRules: true,
                 overrideCloseRulesReason: closeOverrideReason.trim() || null,
+                propagateToChildren: propagationDecision.propagateToChildren,
                 ...(closeBlockedDialog.suppression?.suppressContactNotifications
                     ? {
                         suppressContactNotifications: true,
@@ -451,6 +586,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             handleTicketActionError(error, t('messages.closeFailed', 'Failed to close ticket'));
         } finally {
             setIsSubmittingCloseOverride(false);
+            setIsSubmittingBundlePropagation(false);
         }
     };
     const [ticketDeleteValidation, setTicketDeleteValidation] = useState<DeletionValidationResult | null>(null);
@@ -458,9 +594,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isTicketDeleteProcessing, setIsTicketDeleteProcessing] = useState(false);
     const [conversations, setConversations] = useState<IComment[]>(initialComments);
     const [documents, setDocuments] = useState<any[]>(initialDocuments);
+    // A server refresh can change metadata or access without changing IDs.
+    useEffect(() => {
+        setDocuments(initialDocuments);
+    }, [initialDocuments]);
     const [client, setClient] = useState<IClient | null>(initialClient);
     const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
+    const [updatedByUser, setUpdatedByUser] = useState<IUser | null>(initialUpdatedByUser);
 
     const closedStatusOptions = useMemo(() => {
         const boardId = ticket.board_id;
@@ -483,6 +624,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const addResolutionComment = useCallback(async (
         resolution: string,
         suppression: TicketNotificationSuppressionValue,
+        isInternal: boolean = false,
+        emailRecipients?: CommentEmailRecipientsPayload,
     ): Promise<boolean> => {
         const ticketId = ticket.ticket_id;
         if (!ticketId) {
@@ -496,10 +639,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     const result = await addTicketCommentWithCache(
                         ticketId,
                         resolution,
-                        false,
+                        isInternal,
                         true,
                         true,
                         suppression,
+                        null,
+                        // The close email carries these; see the email
+                        // subscriber's closes_ticket handling.
+                        emailRecipients,
                     );
                     if (isReturnedActionError(result)) {
                         throw result;
@@ -532,7 +679,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [clients, setClients] = useState<IClient[]>(initialClients);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
-    const [dateTimeFormat, setDateTimeFormat] = useState<string>(bootstrap?.displaySettings?.dateTimeFormat ?? 'MMM d, yyyy h:mm a');
+    const [showWeekday, setShowWeekday] = useState<boolean>(bootstrap?.displaySettings?.showWeekday ?? false);
     const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(bootstrap?.displaySettings?.responseStateTrackingEnabled ?? true);
     const [createdRelativeTime, setCreatedRelativeTime] = useState<string>('');
     const [updatedRelativeTime, setUpdatedRelativeTime] = useState<string>('');
@@ -550,15 +697,61 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isUpdatingBundleSettings, setIsUpdatingBundleSettings] = useState(false);
     const [isAddChildMultiClientConfirmOpen, setIsAddChildMultiClientConfirmOpen] = useState(false);
     const [pendingChildToAdd, setPendingChildToAdd] = useState<{ ticket_id: string; ticket_number?: string | null; client_id?: string | null } | null>(null);
+    const [isClosedMasterChoiceOpen, setIsClosedMasterChoiceOpen] = useState(false);
+    const [closedMasterContext, setClosedMasterContext] = useState<BundleMasterClosedContextActionResult | null>(null);
+    const [closedMasterChoice, setClosedMasterChoice] = useState<ClosedMasterChoice | null>(null);
+    const [pendingClosedMasterChildId, setPendingClosedMasterChildId] = useState<string | null>(null);
+    const [isLoadingClosedMasterContext, setIsLoadingClosedMasterContext] = useState(false);
     const [isWatchListSaving, setIsWatchListSaving] = useState(false);
     const [allContactsForWatchList, setAllContactsForWatchList] = useState<IContact[]>([]);
     const [allContactsForWatchListLoading, setAllContactsForWatchListLoading] = useState(false);
-    const ticketOrigin = useMemo(() => getTicketOrigin(ticket as any), [ticket]);
+    // Single source of truth for this ticket's links: seeded from the server
+    // bootstrap, then kept current by the section's onLinksChanged so the origin
+    // badge and comment chips update immediately on add/edit/remove — no reload.
+    const [externalLinks, setExternalLinks] = useState<ITicketExternalLinkView[] | null>(
+        bootstrap?.externalLinks ?? null,
+    );
+    const originExternalLink = useMemo(
+        () => (externalLinks ?? []).find(
+            (link) => link.entity_type === 'ticket' && link.relationship === 'origin',
+        ),
+        [externalLinks],
+    );
+    const externalLinksByCommentId = useMemo(() => {
+        const grouped: Record<string, ITicketExternalLinkView[]> = {};
+        for (const link of externalLinks ?? []) {
+            if (link.entity_type !== 'comment' || !link.entity_id) continue;
+            (grouped[link.entity_id] ??= []).push(link);
+        }
+        return grouped;
+    }, [externalLinks]);
+    const ticketOrigin = useMemo(
+        () =>
+            getTicketOrigin({
+                ...(ticket as any),
+                origin_link_system: originExternalLink?.system ?? null,
+            }),
+        [ticket, originExternalLink?.system],
+    );
+    // The definition a recurring ticket came from; null (no link) when the viewer may not read definitions.
+    const [recurringSource, setRecurringSource] = useState<RecurringTicketSource | null>(null);
+    useEffect(() => {
+        if (ticketOrigin !== 'recurring' || !ticket.ticket_id) {
+            setRecurringSource(null);
+            return;
+        }
+        let cancelled = false;
+        void getRecurringSourceForTicket(ticket.ticket_id)
+            .then((source) => { if (!cancelled) setRecurringSource(source ?? null); })
+            .catch((error) => console.error('Failed to load the recurring ticket source:', error));
+        return () => { cancelled = true; };
+    }, [ticketOrigin, ticket.ticket_id]);
     const ticketOriginLabels = useMemo(() => ({
         internal: t('origin.internal', 'Created Internally'),
         clientPortal: t('origin.clientPortal', 'Created via Client Portal'),
         inboundEmail: t('origin.inboundEmail', 'Created via Inbound Email'),
         api: t('origin.api', 'Created via API'),
+        recurring: t('origin.recurring', 'Created by Recurring Schedule'),
         other: t('origin.other', 'Created via Other'),
     }), [t]);
     const [ticketInfoDirtyFields, setTicketInfoDirtyFields] = useState<string[]>([]);
@@ -798,7 +991,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         highlightLiveFields([field]);
     }, [clearLiveFieldConflict, highlightLiveFields]);
 
-    const refreshTicketSnapshot = useCallback(async (updatedFields: string[] = []) => {
+    const refreshTicketSnapshot = useCallback(async (
+        updatedFields: string[] = [],
+        remoteUpdatedBy?: { userId: string | null; displayName: string }
+    ) => {
         if (!ticket.ticket_id) {
             return { refreshed: false as const };
         }
@@ -811,6 +1007,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             const normalizedUpdatedFields = new Set(updatedFields.map((field) => normalizeTicketLiveField(field)));
 
             setTicket(latestTicket);
+            // Resolve who made the latest write. The live-update payload carries the
+            // actor's display name; without it keep the name only if it still matches.
+            setUpdatedByUser((previous) => {
+                const latestUpdatedBy = latestTicket.updated_by ?? null;
+                if (!latestUpdatedBy) return null;
+                if (previous?.user_id === latestUpdatedBy) return previous;
+                if (remoteUpdatedBy?.userId === latestUpdatedBy) {
+                    return { user_id: latestUpdatedBy, first_name: remoteUpdatedBy.displayName, last_name: '' } as IUser;
+                }
+                return null;
+            });
             setItilImpact(latestTicket.itil_impact || undefined);
             setItilUrgency(latestTicket.itil_urgency || undefined);
             setSavedBoardId(latestTicket.board_id ?? null);
@@ -919,7 +1126,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         const overlappingFields = updatedFields.filter((field) => dirtyFields.has(field));
         const nonOverlappingFields = updatedFields.filter((field) => !dirtyFields.has(field));
 
-        const refreshResult = await refreshTicketSnapshot(pendingUpdate.updatedFields);
+        const refreshResult = await refreshTicketSnapshot(pendingUpdate.updatedFields, pendingUpdate.updatedBy);
         if (!refreshResult.refreshed) {
             return;
         }
@@ -1072,6 +1279,25 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     // Use pre-fetched options directly
     const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
+
+    // Identity stamped into the "Updated … by" header after a local save. The drawer passes a
+    // full currentUser; full-page callers do not, so derive one from the session (resolving the
+    // name from userMap like TicketDetailsContainer's liveCurrentUser). Null only when signed out.
+    const localActor = useMemo<IUser | null>(() => {
+        if (currentUser) return currentUser;
+        const sessionUserId = session?.user?.id;
+        if (!sessionUserId) return null;
+        const mapped = userMap?.[sessionUserId];
+        const sessionName = (session?.user?.name ?? '').trim();
+        const [sessionFirst, ...sessionRest] = sessionName.split(/\s+/).filter(Boolean);
+        return {
+            user_id: sessionUserId,
+            first_name: mapped ? mapped.first_name : (sessionFirst ?? ''),
+            last_name: mapped ? mapped.last_name : sessionRest.join(' '),
+            email: mapped?.email ?? session?.user?.email ?? '',
+            user_type: mapped?.user_type ?? 'internal',
+        } as unknown as IUser;
+    }, [currentUser, session?.user?.id, session?.user?.name, session?.user?.email, userMap]);
     const [contactMap] = useState<Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>>(initialContactMap);
 
     const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
@@ -1105,11 +1331,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isEditing, setIsEditing] = useState(false);
     const [currentComment, setCurrentComment] = useState<IComment | null>(null);
 
-    const [elapsedTime, setElapsedTime] = useState(0);
-    const [isRunning, setIsRunning] = useState(false);
     const [timeDescription, setTimeDescription] = useState('');
     const [timeEntriesRefreshKey, setTimeEntriesRefreshKey] = useState(0);
-    const [nextVisitRefreshKey, setNextVisitRefreshKey] = useState(0);
+    const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0);
     const [tags, setTags] = useState<ITag[]>(bootstrap?.tags ?? []);
     const { tags: allTags } = useTags();
     const [currentTimeSheet, setCurrentTimeSheet] = useState<ITimeSheet | null>(null);
@@ -1127,6 +1351,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isTimeEntryPeriodDialogOpen, setIsTimeEntryPeriodDialogOpen] = useState(false);
     const [pendingDeleteTimeEntry, setPendingDeleteTimeEntry] = useState<{ entry_id: string; user_name: string | null } | null>(null);
     const [isDeletingTimeEntry, setIsDeletingTimeEntry] = useState(false);
+    // Synchronous ref mirrors the state so rapid repeat clicks land before React
+    // re-renders and can be dropped instead of starting a second launch chain.
+    const isLaunchingTimeEntryRef = useRef(false);
+    const [isLaunchingTimeEntry, setIsLaunchingTimeEntry] = useState(false);
 
     // Debounced search for child tickets
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -1229,9 +1457,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     }, [ticket.ticket_id, ticket.ticket_number, isInDrawer, closeDrawer, onClose, router, searchParams, t]);
 
-    // Create a single instance of the service
-    const intervalService = useMemo(() => new IntervalTrackingService(), []);
-
     useEffect(() => {
         if (bootstrapSkips.current.teams) {
             bootstrapSkips.current.teams = false;
@@ -1282,25 +1507,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         loadTeam();
     }, [ticket.assigned_team_id, teams]);
 
-    // Timer logic
-    const tick = useCallback(() => {
-        setElapsedTime(prevTime => {
-            return prevTime + 1;
-        });
-    }, [isRunning]);
-
-    useEffect(() => {
-        let intervalId: NodeJS.Timeout | undefined;
-        if (isRunning) {
-            intervalId = setInterval(tick, 1000);
-        }
-        return () => {
-            if (intervalId) {
-                clearInterval(intervalId);
-            }
-        };
-    }, [isRunning, tick]);
-
     // Load ticketing display settings
     useEffect(() => {
         if (bootstrapSkips.current.display) {
@@ -1310,9 +1516,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         const loadDisplaySettings = async () => {
             try {
                 const settings = await getTicketingDisplaySettings();
-                if (settings?.dateTimeFormat) {
-                    setDateTimeFormat(settings.dateTimeFormat);
-                }
+                setShowWeekday(settings?.showWeekday ?? false);
                 setResponseStateTrackingEnabled(settings?.responseStateTrackingEnabled ?? true);
             } catch (error) {
                 console.error('Failed to load ticketing display settings:', error);
@@ -1326,17 +1530,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         const tz = getUserTimeZone();
         
         if (ticket.entered_at) {
-            const formattedDate = formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, tz);
+            const formattedDate = formatTicketDateTime(ticket.entered_at, locale, tz, dateFormat, showWeekday);
             const distance = formatTicketRelativeToNow(ticket.entered_at, locale);
             setCreatedRelativeTime(`${formattedDate} (${distance})`);
         }
 
         if (ticket.updated_at) {
-            const formattedDate = formatTicketDateTime(ticket.updated_at, dateTimeFormat, locale, tz);
+            const formattedDate = formatTicketDateTime(ticket.updated_at, locale, tz, dateFormat, showWeekday);
             const distance = formatTicketRelativeToNow(ticket.updated_at, locale);
             setUpdatedRelativeTime(`${formattedDate} (${distance})`);
         }
-    }, [ticket.entered_at, ticket.updated_at, dateTimeFormat, locale]);
+    }, [ticket.entered_at, ticket.updated_at, dateFormat, showWeekday, locale]);
 
     // Fetch tags when component mounts
     useEffect(() => {
@@ -1361,208 +1565,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
         fetchTags();
     }, [ticket.ticket_id]);
-
-    // Add automatic interval tracking using the custom hook
-    // Unique holder ID per tab for lock ownership
-    const [holderId] = useState<string>(() => {
-        if (typeof window !== 'undefined') {
-            const existing = sessionStorage.getItem('tabHolderId');
-            if (existing) return existing;
-            const id = generateUUID();
-            sessionStorage.setItem('tabHolderId', id);
-            return id;
-        }
-        return Math.random().toString(36).slice(2);
-    });
-
-    const {
-        isTracking,
-        currentIntervalId,
-        isLockedByOther,
-        startTracking,
-        stopTracking,
-        refreshLockState,
-    } = useTicketTimeTracking(
-        initialTicket.ticket_id || '',
-        initialTicket.ticket_number || '',
-        initialTicket.title || '',
-        userId || '',
-        { autoStart: false, holderId }
-    );
-
-    // Stabilize startTracking for effects to avoid repeated auto-attempts due to function identity changes
-    const startTrackingRef = React.useRef(startTracking);
-    useEffect(() => { startTrackingRef.current = startTracking; }, [startTracking]);
-
-    // Reflect tracking state into local stopwatch state
-    useEffect(() => {
-        console.log('[TicketDetails] isTracking changed ->', isTracking);
-        setIsRunning(!!isTracking);
-    }, [isTracking]);
-
-    // Proactive auto-start on mount when userId/ticketId ready (no dialog on lock)
-    const autoStartedRef = React.useRef(false);
-    useEffect(() => {
-        const auto = async () => {
-            if (autoStartedRef.current) return;
-            if (!initialTicket.ticket_id || !userId) return;
-            if (isTracking) return;
-            if (!isLiveTicketTimerEnabled) return;
-            console.log('[TicketDetails] auto-start attempt');
-            try {
-                const started = await startTrackingRef.current(false);
-                console.log('[TicketDetails] auto-start result ->', started);
-                if (started) {
-                    setElapsedTime(0);
-                    autoStartedRef.current = true;
-                }
-            } catch (e) {
-                // Ignore auto-start failures; time tracking is best-effort here.
-            }
-        };
-        auto();
-        // only attempt once when ids are ready and not already tracking
-    }, [initialTicket.ticket_id, userId, isTracking, isLiveTicketTimerEnabled]);
-
-    // New screens start from zero; no seeding from existing intervals
-
-    useEffect(() => {
-        const disableLiveTimerInView = async () => {
-            if (isLiveTicketTimerEnabled) {
-                return;
-            }
-
-            try {
-                await stopTracking();
-            } catch {
-                // Ignore stop errors while enforcing board policy.
-            }
-
-            setIsRunning(false);
-            setElapsedTime(0);
-        };
-
-        disableLiveTimerInView();
-    }, [isLiveTicketTimerEnabled, stopTracking]);
-
-    // Poll lock state periodically to update UI lock indicator
-    useEffect(() => {
-        let id: any;
-        const poll = async () => {
-            try { await refreshLockState(); } catch {}
-        };
-        id = setInterval(poll, 5000);
-        poll();
-        return () => clearInterval(id);
-    }, [refreshLockState]);
-    
-    // Function to close the current interval before navigation
-    // Enhanced function to close the interval - will find and close any open interval for this ticket
-    const closeCurrentInterval = useCallback(async () => {
-        try {
-            // If we have a currentIntervalId, use it
-            if (currentIntervalId) {
-                console.debug('Closing known interval before navigation:', currentIntervalId);
-                await intervalService.endInterval(currentIntervalId);
-                return;
-            }
-            
-            // If currentIntervalId is null, try to find any open interval for this ticket
-            console.debug('No currentIntervalId available, checking for open intervals');
-            if (userId && initialTicket.ticket_id) {
-                const openInterval = await intervalService.getOpenInterval(initialTicket.ticket_id, userId);
-                if (openInterval) {
-                    console.debug('Found open interval to close:', openInterval.id);
-                    await intervalService.endInterval(openInterval.id);
-                } else {
-                    console.debug('No open intervals found for this ticket');
-                }
-            }
-        } catch (error: any) {
-            console.error('Error closing interval:', error);
-        }
-    }, [currentIntervalId, intervalService, userId, initialTicket.ticket_id]);
-    
-    // Fixed navigation function - wait for interval to close before navigating
-    const handleBackToTickets = useCallback(async () => {
-        try {
-            // Stop tracking and release lock before leaving
-            await stopTracking();
-            // Wait for the interval to close
-            await closeCurrentInterval();
-            
-            // Navigate after interval is closed
-            if (onClose) {
-                onClose();
-            } else {
-                // Use proper routing to tickets dashboard instead of router.back()
-                router.push('/msp/tickets');
-            }
-        } catch (error) {
-            console.error('Error closing interval before navigation:', error);
-            // Navigate anyway to prevent user from being stuck
-            if (onClose) {
-                onClose();
-            } else {
-                // Use proper routing to tickets dashboard instead of router.back()
-                router.push('/msp/tickets');
-            }
-        }
-    }, [closeCurrentInterval, onClose, router, stopTracking]);
-
-    // Handle timer control actions with locking
-    const [isReplaceDialogOpen, setIsReplaceDialogOpen] = useState(false);
-
-    const doStart = useCallback(async (force = false) => {
-        if (!initialTicket.ticket_id || !userId) return;
-        try {
-            const started = await startTracking(force);
-            if (started) {
-                setElapsedTime(0);
-                setIsRunning(true);
-            } else if (!force) {
-                // Locked elsewhere
-                setIsReplaceDialogOpen(true);
-            }
-        } catch (e) {
-            console.error('Failed to start tracking:', e);
-        }
-    }, [initialTicket.ticket_id, userId, startTracking]);
-
-    const handleStartClick = useCallback(() => {
-        doStart(false);
-    }, [doStart]);
-
-    const handleConfirmReplace = useCallback(async () => {
-        setIsReplaceDialogOpen(false);
-        await doStart(true);
-    }, [doStart]);
-
-    const handlePauseClick = useCallback(async () => {
-        try {
-            await stopTracking();
-        } catch {}
-        setIsRunning(false);
-    }, [stopTracking]);
-
-    const handleStopClick = useCallback(async () => {
-        try {
-            await stopTracking();
-        } catch {}
-        setIsRunning(false);
-        setElapsedTime(0);
-    }, [stopTracking]);
-
-    // Ensure we stop tracking only when component unmounts (not on re-renders)
-    const stopTrackingRef = React.useRef(stopTracking);
-    useEffect(() => {
-        stopTrackingRef.current = stopTracking;
-    }, [stopTracking]);
-    useEffect(() => {
-        return () => {
-            stopTrackingRef.current?.().catch(() => {});
-        };
-    }, []);
 
     const handleClientClick = async () => {
         if (!client?.client_id) return;
@@ -1658,12 +1660,31 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
       return;
     }
 
+    if (!ticket.ticket_id) {
+      return;
+    }
+
+    // Seven day columns need the room; the drawer caps itself at 60vw.
     openDrawer(
       <AgentScheduleDrawer
         agentId={userId}
-      />
+        workItemContext={buildScheduleContext(ticket.ticket_id)}
+      />,
+      undefined,
+      undefined,
+      '1200px'
     );
   };
+
+  /** The ticket as a schedulable work item, shared by every scheduling surface on this page. */
+  const buildScheduleContext = (ticketId: string): WorkItemScheduleContext => ({
+    workItemId: ticketId,
+    workItemType: 'ticket',
+    title: ticket.title || t('bento.tiles.scheduledWork', 'Scheduled work'),
+    clientName: client?.client_name ?? null,
+    defaultAssigneeId: ticket.assigned_to ?? null,
+    onScheduled: () => setScheduleRefreshKey((value) => value + 1),
+  });
 
     const handleAddAgent = async (userId: string) => {
         try {
@@ -1706,27 +1727,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 ? (newValue && newValue !== 'unassigned' ? newValue : null)
                 : newValue;
 
-        // Pre-close check: when this status change would close the ticket,
-        // surface unmet close rules in a dialog instead of submitting a write
-        // that the server would reject. The dedicated toolbar action owns the
-        // convenience resolution flow; ordinary status edits stay ordinary.
-        if (field === 'status_id' && normalizedValue && ticket.ticket_id) {
-            try {
-                const check = await checkTicketClosure(ticket.ticket_id, normalizedValue);
-                if (check.wouldClose && !check.allowed) {
-                    setCloseOverrideReason('');
-                    setCloseBlockedDialog({
-                        isOpen: true,
-                        statusId: normalizedValue,
-                        failures: check.failures,
-                        canOverride: check.canOverride,
-                        suppression: null,
-                    });
-                    return;
-                }
-            } catch (checkError) {
-                // Fall through to the write; the server still enforces.
-                console.error('Close rules pre-check failed:', checkError);
+        // Status changes run the full gate: close rules first, then the bundle
+        // propagation confirmation. A cancelled confirmation leaves the select
+        // on its current value with no write.
+        let propagationDecision: { proceed: boolean; propagateToChildren?: boolean } = { proceed: true };
+        if (field === 'status_id' && normalizedValue) {
+            propagationDecision = await confirmStatusChange(normalizedValue);
+            if (!propagationDecision.proceed) {
+                return;
             }
         }
 
@@ -1741,7 +1749,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             await runWithPendingLiveFields([field], async () => {
                 // Use the optimized handler if provided
                 if (onTicketUpdate) {
-                    await onTicketUpdate(field, normalizedValue);
+                    if (field === 'status_id') {
+                        await onTicketUpdate(field, normalizedValue, {
+                            propagateToChildren: propagationDecision.propagateToChildren,
+                        });
+                    } else {
+                        await onTicketUpdate(field, normalizedValue);
+                    }
                     updateSucceeded = true;
                     if (field === 'board_id') {
                         setSavedBoardId(normalizedValue);
@@ -1793,6 +1807,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             // error/revert).
             if (updateSucceeded) {
                 setActivityLogRefreshKey((value) => value + 1);
+                // Header "Updated <time> by <name>": local UI state only. The server
+                // stamps updated_at/updated_by itself; browsers never send them.
+                setTicket(prev => ({ ...prev, updated_at: new Date().toISOString() }));
+                setUpdatedByUser(localActor);
             }
         } catch (error) {
             console.error(`Error updating ticket ${field}:`, error);
@@ -1923,6 +1941,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         closeStatusId: string | null = null,
         options?: TicketNotificationSuppressionValue,
         schedule?: { publishAt: string; timeZone: string } | null,
+        emailRecipients?: CommentEmailRecipientsPayload,
     ): Promise<boolean> => {
         // Check if content is empty
         const contentStr = JSON.stringify(newCommentContent);
@@ -1972,7 +1991,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     isResolution,
                     willCloseTicket,
                     schedule,
+                    emailRecipients,
                 );
+                await refreshTicketDocuments();
 
                 // Optimistically update the response state in UI to match server behavior:
                 // - Internal note: no change
@@ -2000,45 +2021,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
                 // If this was a resolution note and a closed status was selected, close the ticket.
                 if (!schedule && isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
-                    if (options?.suppressContactNotifications) {
-                        // Mirror handleSelectChange's pre-close check so unmet
-                        // close rules open the override dialog (carrying the
-                        // suppression choice) instead of a generic failure.
-                        let closeBlocked = false;
-                        if (ticket.ticket_id) {
-                            try {
-                                const check = await checkTicketClosure(ticket.ticket_id, closeStatusId);
-                                if (check.wouldClose && !check.allowed) {
-                                    closeBlocked = true;
-                                    setCloseOverrideReason('');
-                                    setCloseBlockedDialog({
-                                        isOpen: true,
-                                        statusId: closeStatusId,
-                                        failures: check.failures,
-                                        canOverride: check.canOverride,
-                                        suppression: options,
-                                    });
-                                }
-                            } catch (checkError) {
-                                // Fall through to the write; the server still enforces.
-                                console.error('Close rules pre-check failed:', checkError);
-                            }
-                        }
-                        if (!closeBlocked) {
-                            // Backend clears response_state when closing; keep UI consistent.
-                            setTicket((prev: any) => ({ ...prev, response_state: null }));
-                            const closed = await handleBatchSaveChanges({ status_id: closeStatusId }, options);
-                            if (!closed) {
-                                toast.error(t('messages.closeFailed', 'Failed to close ticket'));
-                            }
-                        }
-                    } else {
-                        // Backend clears response_state when closing; keep UI consistent.
-                        setTicket((prev: any) => ({ ...prev, response_state: null }));
-                        await handleSelectChange('status_id', closeStatusId);
-                    }
+                    await closeTicketForResolution(closeStatusId, options);
                 }
-                
+
                 // Reset the comment input
                 setNewCommentContent([{
                     type: "paragraph",
@@ -2076,13 +2061,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         } : {}),
                         // See email-subscriber suppression note above.
                         ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {})
-                    });
+                    }, emailRecipients);
                     if (isReturnedActionError(newComment)) {
                         handleTicketActionError(newComment, t('messages.addCommentFailed', 'Failed to add comment'));
                         return false;
                     }
                     
                     if (newComment) {
+                        await refreshTicketDocuments();
                         // Refresh comments after adding
                         const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
                         if (isReturnedActionError(updatedComments)) {
@@ -2137,7 +2123,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const handleAddReplyComment = async (
         content: PartialBlock[],
         parentCommentId: string,
-        isInternal: boolean
+        isInternal: boolean,
+        emailRecipients?: CommentEmailRecipientsPayload,
     ): Promise<boolean> => {
         const contentStr = JSON.stringify(content);
         const hasContent = contentStr !== JSON.stringify([{
@@ -2167,7 +2154,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 user_id: userId,
                 author_type: 'internal',
                 parent_comment_id: parentCommentId
-            });
+            }, emailRecipients);
             if (isReturnedActionError(result)) {
                 throw result;
             }
@@ -2177,6 +2164,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 throw updatedComments;
             }
             setConversations(updatedComments);
+            await refreshTicketDocuments();
 
             if (!isInternal && responseStateTrackingEnabled) {
                 setTicket((prev: any) => ({
@@ -2204,6 +2192,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const handleSave = async (updates: Partial<IComment>) => {
         if (!currentComment) return;
+
+        // An existing comment becoming the resolution carries the same close
+        // intent as the composer's resolution toggle, so offer that close once
+        // the edit lands.
+        const becameResolution = Boolean(updates.is_resolution) && !currentComment.is_resolution;
 
         try {
             // Extract plain text from the content for markdown
@@ -2243,6 +2236,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (isReturnedActionError(updateResult)) {
                 throw updateResult;
             }
+            await refreshTicketDocuments();
 
             const updatedCommentData = await findCommentById(currentComment.comment_id!);
             if (isReturnedActionError(updatedCommentData)) {
@@ -2258,8 +2252,36 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
             setIsEditing(false);
             setCurrentComment(null);
+
+            if (becameResolution && !currentStatusIsClosed && closedStatusOptions.length > 0) {
+                setResolutionClosePrompt({
+                    isOpen: true,
+                    statusId: closedStatusOptions.length === 1 ? closedStatusOptions[0].value : null,
+                    suppression: emptyNotificationSuppression(),
+                });
+            }
         } catch (error) {
             handleTicketActionError(error, t('messages.saveCommentFailed'));
+        }
+    };
+
+    const closeResolutionClosePrompt = () => {
+        setResolutionClosePrompt({ isOpen: false, statusId: null, suppression: emptyNotificationSuppression() });
+    };
+
+    const confirmResolutionClosePrompt = async () => {
+        const closeStatusId = resolutionClosePrompt.statusId;
+        if (!closeStatusId) return;
+        const suppression = resolutionClosePrompt.suppression;
+        setIsSubmittingResolutionClosePrompt(true);
+        try {
+            await closeTicketForResolution(
+                closeStatusId,
+                suppression.suppressContactNotifications ? suppression : undefined,
+            );
+            closeResolutionClosePrompt();
+        } finally {
+            setIsSubmittingResolutionClosePrompt(false);
         }
     };
 const handleClose = () => {
@@ -2312,6 +2334,7 @@ const handleClose = () => {
                         attributes: updatedAttributes,
                         updated_at: new Date().toISOString()
                     }));
+                    setUpdatedByUser(localActor);
                 }
                 
                 return success;
@@ -2331,8 +2354,7 @@ const handleClose = () => {
 
                 // Update the ticket
                 const result = await updateTicket(ticket.ticket_id, {
-                    attributes: updatedAttributes,
-                    updated_at: new Date().toISOString()
+                    attributes: updatedAttributes
                 });
                 if (isReturnedActionError(result)) {
                     throw result;
@@ -2344,6 +2366,7 @@ const handleClose = () => {
                     attributes: updatedAttributes,
                     updated_at: new Date().toISOString()
                 }));
+                setUpdatedByUser(localActor);
 
 
                 toast.success(t('messages.descriptionUpdated'));
@@ -2355,39 +2378,45 @@ const handleClose = () => {
         }
     };
 
+    // A stopwatch Stop saved its entry (the session is logged server-side): refresh the time list.
+    const handleStopwatchEntryLogged = useCallback(() => {
+        setTimeEntriesRefreshKey((value) => value + 1);
+    }, []);
+
     const handleAddTimeEntry = async () => {
+        if (isLaunchingTimeEntryRef.current) {
+            return;
+        }
+        isLaunchingTimeEntryRef.current = true;
+        setIsLaunchingTimeEntry(true);
         try {
             if (!ticket.ticket_id) {
                 toast.error(t('messages.ticketIdMissing'));
                 return;
             }
 
-            const baseOnComplete = createTicketTimeEntryOnComplete({
-                stopTracking,
-                setElapsedTime,
-                setIsRunning,
-            });
             await launchTimeEntry({
                 openDrawer,
                 closeDrawer,
                 context: buildTicketTimeEntryContext({
                     ticket,
                     clientName: client?.client_name ?? null,
-                    elapsedTime,
                     timeDescription,
                     masterTicketNumber: bundle?.masterTicket?.ticket_number ?? null,
                 }),
                 onComplete: () => {
-                    baseOnComplete();
                     setTimeEntriesRefreshKey((value) => value + 1);
                 },
             });
         } catch (error) {
             handleTicketActionError(error, t('messages.prepareTimeEntryFailed'));
+        } finally {
+            isLaunchingTimeEntryRef.current = false;
+            setIsLaunchingTimeEntry(false);
         }
     };
 
-    const handleScheduleVisit = async () => {
+    const openScheduleEntryEditor = async (existingEntryId?: string) => {
         try {
             if (!ticket.ticket_id) {
                 toast.error(t('messages.ticketIdMissing'));
@@ -2397,18 +2426,17 @@ const handleClose = () => {
             await launchScheduleEntry({
                 openDrawer,
                 closeDrawer,
-                context: {
-                    workItemId: ticket.ticket_id,
-                    workItemType: 'ticket',
-                    title: ticket.title || t('bento.tiles.scheduledWork', 'Scheduled work'),
-                    clientName: client?.client_name ?? null,
-                },
-                onComplete: () => setNextVisitRefreshKey((value) => value + 1),
+                context: buildScheduleContext(ticket.ticket_id),
+                onComplete: () => setScheduleRefreshKey((value) => value + 1),
+                existingEntryId,
             });
         } catch (error) {
-            handleTicketActionError(error, t('messages.scheduleVisitFailed', { defaultValue: 'Failed to open the scheduler' }));
+            handleTicketActionError(error, t('messages.scheduleOpenFailed', { defaultValue: 'Failed to open the scheduler' }));
         }
     };
+
+    const handleScheduleWork = () => openScheduleEntryEditor();
+    const handleOpenScheduleEntry = (entryId: string) => openScheduleEntryEditor(entryId);
 
     const handleEditTimeEntry = async (entry: { entry_id: string }) => {
         try {
@@ -2423,7 +2451,6 @@ const handleClose = () => {
                 context: buildTicketTimeEntryContext({
                     ticket,
                     clientName: client?.client_name ?? null,
-                    elapsedTime: 0,
                     timeDescription: '',
                     masterTicketNumber: bundle?.masterTicket?.ticket_number ?? null,
                 }),
@@ -2482,6 +2509,7 @@ const handleClose = () => {
                 attributes: updatedAttributes ?? null,
                 updated_at: new Date().toISOString(),
             }));
+            setUpdatedByUser(localActor);
             return true;
         } catch (error) {
             console.error('Error updating watch list:', error);
@@ -2521,16 +2549,44 @@ const handleClose = () => {
         setTags(updatedTags);
     };
 
+    // Changing the contact is a ticket update that notifies the contact, assignee
+    // and watchers, so it asks the same notification question status changes do.
+    const [contactChangePrompt, setContactChangePrompt] = useState<{
+        isOpen: boolean;
+        contactId: string | null;
+        suppression: TicketNotificationSuppressionValue;
+    }>({ isOpen: false, contactId: null, suppression: emptyNotificationSuppression() });
+    const [isSubmittingContactChange, setIsSubmittingContactChange] = useState(false);
+
     const handleContactChange = async (newContactId: string | null) => {
+        if ((ticket.contact_name_id ?? null) === newContactId) {
+            setIsChangeContactDialogOpen(false);
+            return;
+        }
+        setContactChangePrompt({ isOpen: true, contactId: newContactId, suppression: emptyNotificationSuppression() });
+    };
+
+    const applyContactChange = async (
+        newContactId: string | null,
+        suppression?: TicketNotificationSuppressionValue,
+    ) => {
         try {
             await runWithPendingLiveFields(['contact_name_id'], async () => {
-                const result = await updateTicket(ticket.ticket_id!, { contact_name_id: newContactId });
+                const result = await updateTicket(
+                    ticket.ticket_id!,
+                    { contact_name_id: newContactId },
+                    suppression?.suppressContactNotifications ? suppression : undefined,
+                );
                 if (isReturnedActionError(result)) {
                     throw result;
                 }
                 return result;
             });
-            
+
+            // Header "Updated … by …": local UI state only; the server stamps the row.
+            setTicket(prev => ({ ...prev, updated_at: new Date().toISOString() }));
+            setUpdatedByUser(localActor);
+
             if (newContactId) {
                 const contactData = await getContactByContactNameId(newContactId);
                 setContactInfo(contactData);
@@ -2542,6 +2598,20 @@ const handleClose = () => {
             toast.success(t('messages.contactUpdated'));
         } catch (error) {
             handleTicketActionError(error, t('messages.updateContactFailed'));
+        }
+    };
+
+    const closeContactChangePrompt = () => {
+        setContactChangePrompt({ isOpen: false, contactId: null, suppression: emptyNotificationSuppression() });
+    };
+
+    const confirmContactChangePrompt = async () => {
+        setIsSubmittingContactChange(true);
+        try {
+            await applyContactChange(contactChangePrompt.contactId, contactChangePrompt.suppression);
+            closeContactChangePrompt();
+        } finally {
+            setIsSubmittingContactChange(false);
         }
     };
 
@@ -2584,8 +2654,10 @@ const handleClose = () => {
             // Update local ticket state to reflect the change
             setTicket(prevTicket => ({
                 ...prevTicket,
-                ...updateData
+                ...updateData,
+                updated_at: new Date().toISOString()
             }));
+            setUpdatedByUser(localActor);
 
             if (field === 'itil_impact') {
                 toast.success(t('messages.itilImpactUpdated'));
@@ -2630,7 +2702,18 @@ const handleClose = () => {
 
         // If we have a batch handler from container, use it
         if (onBatchTicketUpdate) {
-            const success = await runWithPendingLiveFields(Object.keys(changes), () => onBatchTicketUpdate(changes, options));
+            let propagateToChildren: boolean | undefined;
+            if (targetStatusId && ticket.ticket_id) {
+                const propagationDecision = await confirmBundlePropagation(targetStatusId);
+                if (!propagationDecision.proceed) {
+                    return false;
+                }
+                propagateToChildren = propagationDecision.propagateToChildren;
+            }
+            const batchOptions = propagateToChildren === undefined
+                ? options
+                : { ...(options ?? {}), propagateToChildren };
+            const success = await runWithPendingLiveFields(Object.keys(changes), () => onBatchTicketUpdate(changes, batchOptions));
             if (success) {
                 // Update local ticket state with the saved changes
                 setTicket(prevTicket => ({
@@ -2638,6 +2721,7 @@ const handleClose = () => {
                     ...changes,
                     updated_at: new Date().toISOString()
                 }));
+                setUpdatedByUser(localActor);
                 // Refetch the grid timeline so the "changed <field>" system rows
                 // from this local batch appear live (single bump per batch). The
                 // individual-save fallback below relies on handleSelectChange,
@@ -2664,7 +2748,12 @@ const handleClose = () => {
                 if (result !== 'success') {
                     return false;
                 }
-                setTicket(prevTicket => ({ ...prevTicket, ...ticketChanges }));
+                setTicket(prevTicket => ({
+                    ...prevTicket,
+                    ...ticketChanges,
+                    updated_at: new Date().toISOString()
+                }));
+                setUpdatedByUser(localActor);
                 setActivityLogRefreshKey((value) => value + 1);
                 for (const [field, value] of itilEntries) {
                     await handleItilFieldChange(field, value);
@@ -2685,17 +2774,65 @@ const handleClose = () => {
             return false;
         }
     }, [
+        confirmBundlePropagation,
         handleItilFieldChange,
         handleSelectChange,
+        localActor,
         onBatchTicketUpdate,
         runWithPendingLiveFields,
         ticket.ticket_id,
     ]);
 
+    // Shared by the composer's resolution toggle and the edit-to-resolution
+    // close prompt: mirror handleSelectChange's pre-close check so unmet close
+    // rules open the override dialog (carrying the suppression choice) instead
+    // of a generic failure.
+    const closeTicketForResolution = useCallback(async (
+        closeStatusId: string,
+        options?: TicketNotificationSuppressionValue,
+    ): Promise<void> => {
+        if (options?.suppressContactNotifications) {
+            let closeBlocked = false;
+            if (ticket.ticket_id) {
+                try {
+                    const check = await checkTicketClosure(ticket.ticket_id, closeStatusId);
+                    if (check.wouldClose && !check.allowed) {
+                        closeBlocked = true;
+                        setCloseOverrideReason('');
+                        setCloseBlockedDialog({
+                            isOpen: true,
+                            statusId: closeStatusId,
+                            failures: check.failures,
+                            canOverride: check.canOverride,
+                            suppression: options,
+                        });
+                    }
+                } catch (checkError) {
+                    // Fall through to the write; the server still enforces.
+                    console.error('Close rules pre-check failed:', checkError);
+                }
+            }
+            if (!closeBlocked) {
+                // Backend clears response_state when closing; keep UI consistent.
+                setTicket((prev: any) => ({ ...prev, response_state: null }));
+                const closed = await handleBatchSaveChanges({ status_id: closeStatusId }, options);
+                if (!closed) {
+                    toast.error(t('messages.closeFailed', 'Failed to close ticket'));
+                }
+            }
+        } else {
+            // Backend clears response_state when closing; keep UI consistent.
+            setTicket((prev: any) => ({ ...prev, response_state: null }));
+            await handleSelectChange('status_id', closeStatusId);
+        }
+    }, [handleBatchSaveChanges, handleSelectChange, t, ticket.ticket_id]);
+
     const handleResolveAndClose = useCallback(async (
         statusId: string,
         contentBlocks: PartialBlock[],
         suppression: TicketNotificationSuppressionValue,
+        isInternal: boolean = false,
+        emailRecipients?: CommentEmailRecipientsPayload,
     ) => {
         if (!ticket.ticket_id || !closedStatusOptions.some((option) => option.value === statusId)) {
             toast.error(t('messages.closeFailed', 'Failed to close ticket'));
@@ -2705,7 +2842,12 @@ const handleClose = () => {
         setIsSubmittingResolutionClose(true);
         let resolutionSaved = false;
         try {
-            const resolutionAdded = await addResolutionComment(JSON.stringify(contentBlocks), suppression);
+            const resolutionAdded = await addResolutionComment(
+                JSON.stringify(contentBlocks),
+                suppression,
+                isInternal,
+                emailRecipients,
+            );
             if (!resolutionAdded) {
                 return false;
             }
@@ -2734,12 +2876,24 @@ const handleClose = () => {
                 console.error('Close rules check failed after adding resolution:', checkError);
             }
 
+            // Resolution comment is durable; ask about bundle propagation before
+            // the status write. Cancelling leaves the ticket open (the comment
+            // stays, as before).
+            const propagationDecision = await confirmBundlePropagation(statusId);
+            if (!propagationDecision.proceed) {
+                return resolutionSaved;
+            }
+            setIsSubmittingBundlePropagation(true);
+
             const result = await runWithPendingLiveFields(
                 ['status_id', 'response_state'],
                 () => updateTicketWithCache(
                     ticket.ticket_id!,
                     { status_id: statusId },
-                    suppression.suppressContactNotifications ? suppression : undefined,
+                    {
+                        ...(suppression.suppressContactNotifications ? suppression : {}),
+                        propagateToChildren: propagationDecision.propagateToChildren,
+                    },
                 ),
             );
             if (isReturnedActionError(result)) {
@@ -2752,6 +2906,7 @@ const handleClose = () => {
                 response_state: null,
                 updated_at: new Date().toISOString(),
             }));
+            setUpdatedByUser(localActor);
             setActivityLogRefreshKey((value) => value + 1);
             toast.success(t('messages.ticketClosed', 'Ticket closed'));
             return true;
@@ -2760,8 +2915,9 @@ const handleClose = () => {
             return resolutionSaved;
         } finally {
             setIsSubmittingResolutionClose(false);
+            setIsSubmittingBundlePropagation(false);
         }
-    }, [addResolutionComment, closedStatusOptions, runWithPendingLiveFields, t, ticket.ticket_id]);
+    }, [addResolutionComment, closedStatusOptions, confirmBundlePropagation, localActor, runWithPendingLiveFields, t, ticket.ticket_id]);
 
     const handleClientChange = async (newClientId: string) => {
         try {
@@ -2783,6 +2939,8 @@ const handleClose = () => {
                 getClientLocations(newClientId),
             ]);
             
+            setTicket(prevTicket => ({ ...prevTicket, updated_at: new Date().toISOString() }));
+            setUpdatedByUser(localActor);
             setClient(clientData);
             setContacts(contactsData || []);
             setLocations(locationData || []);
@@ -2811,8 +2969,10 @@ const handleClose = () => {
             setTicket(prevTicket => ({
                 ...prevTicket,
                 location_id: newLocationId,
-                location: newLocationId ? locations.find(l => l.location_id === newLocationId) : undefined
+                location: newLocationId ? locations.find(l => l.location_id === newLocationId) : undefined,
+                updated_at: new Date().toISOString()
             }));
+            setUpdatedByUser(localActor);
 
             toast.success(t('messages.locationUpdated'));
         } catch (error) {
@@ -2831,8 +2991,10 @@ const handleClose = () => {
 
             setTicket(prevTicket => ({
                 ...prevTicket,
-                billing_profile_id: newBillingProfileId
+                billing_profile_id: newBillingProfileId,
+                updated_at: new Date().toISOString()
             }));
+            setUpdatedByUser(localActor);
 
             toast.success(t('messages.billingProfileUpdated', 'Billing profile updated'));
         } catch (error) {
@@ -2947,9 +3109,13 @@ const handleClose = () => {
         }
     }, [ticket.ticket_id, router]);
 
-    const performAddChildToBundle = useCallback(async (childTicketId: string) => {
+    const performAddChildToBundle = useCallback(async (childTicketId: string, onClosedMaster?: ClosedMasterChoice) => {
         if (!ticket.ticket_id) return;
-        const result = await addChildrenToBundleAction({ masterTicketId: ticket.ticket_id, childTicketIds: [childTicketId] });
+        const result = await addChildrenToBundleAction({
+            masterTicketId: ticket.ticket_id,
+            childTicketIds: [childTicketId],
+            ...(onClosedMaster ? { onClosedMaster } : {}),
+        });
         if (isReturnedActionError(result)) {
             toast.error(getErrorMessage(result));
             return;
@@ -2958,7 +3124,38 @@ const handleClose = () => {
         setAddChildTicketNumber('');
         resetChildTicketPickerState();
         router.refresh();
-    }, [ticket.ticket_id, router, resetChildTicketPickerState]);
+    }, [ticket.ticket_id, t, router, resetChildTicketPickerState]);
+
+    // Fetch the master's closed context before linking. An open master links
+    // straight away; a closed master must go through the explicit choice
+    // dialog so the link never silently succeeds.
+    const beginAddChildToBundle = useCallback(async (childTicketId: string) => {
+        if (!ticket.ticket_id) return;
+        setIsLoadingClosedMasterContext(true);
+        try {
+            const context = await getBundleMasterClosedContextAction({ masterTicketId: ticket.ticket_id });
+            if (isReturnedActionError(context)) {
+                toast.error(getErrorMessage(context));
+                return;
+            }
+            if (!context.isClosed) {
+                await performAddChildToBundle(childTicketId);
+                return;
+            }
+            setClosedMasterContext(context);
+            setClosedMasterChoice(
+                context.allowedChoices.includes('keep_closed')
+                    ? 'keep_closed'
+                    : (context.allowedChoices[0] ?? null)
+            );
+            setPendingClosedMasterChildId(childTicketId);
+            setIsClosedMasterChoiceOpen(true);
+        } catch (error) {
+            handleTicketActionError(error, t('messages.addToBundleFailed'));
+        } finally {
+            setIsLoadingClosedMasterContext(false);
+        }
+    }, [ticket.ticket_id, t, performAddChildToBundle]);
 
     const handleAddChildToBundle = useCallback(async () => {
         if (!ticket.ticket_id) return;
@@ -2977,7 +3174,7 @@ const handleClose = () => {
                 setIsAddChildMultiClientConfirmOpen(true);
                 return;
             }
-            await performAddChildToBundle(selectedChildTicket.ticket_id);
+            await beginAddChildToBundle(selectedChildTicket.ticket_id);
             return;
         }
 
@@ -3007,11 +3204,11 @@ const handleClose = () => {
                 return;
             }
 
-            await performAddChildToBundle(found.ticket_id);
+            await beginAddChildToBundle(found.ticket_id);
         } catch (error) {
             handleTicketActionError(error, t('messages.addToBundleFailed'));
         }
-    }, [ticket.ticket_id, ticket.client_id, addChildTicketNumber, selectedChildTicket, performAddChildToBundle]);
+    }, [ticket.ticket_id, ticket.client_id, addChildTicketNumber, selectedChildTicket, beginAddChildToBundle]);
 
     const bundleHasMultipleClients = useMemo(() => {
         if (!bundle?.isBundleMaster || !Array.isArray(bundle.children)) return false;
@@ -3201,6 +3398,14 @@ const handleClose = () => {
                                                 {t('details.bundle.multipleClients', 'Multiple clients')}
                                             </span>
                                         ) : null}
+                                        {ticket.is_closed && (bundle?.openChildrenCount ?? 0) > 0 ? (
+                                            <span
+                                                id="ticket-bundle-master-open-children-badge"
+                                                className="ml-2 inline-flex items-center rounded bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:text-amber-200"
+                                            >
+                                                {t('details.bundle.openChildrenBadge', '{{count}} open children', { count: bundle?.openChildrenCount ?? 0 })}
+                                            </span>
+                                        ) : null}
                                     </div>
                                 ) : null}
 
@@ -3282,7 +3487,7 @@ const handleClose = () => {
                                                 id="ticket-bundle-add-child-button"
                                                 size="sm"
                                                 onClick={handleAddChildToBundle}
-                                                disabled={!addChildTicketNumber.trim()}
+                                                disabled={!addChildTicketNumber.trim() || isLoadingClosedMasterContext}
                                             >
                                                 {t('details.bundle.add', 'Add')}
                                             </Button>
@@ -3296,6 +3501,17 @@ const handleClose = () => {
                                                                 <a className="text-sm text-blue-600 hover:underline" href={`/msp/tickets/${child.ticket_id}`}>
                                                                     {child.ticket_number}
                                                                 </a>
+                                                                <span
+                                                                    className={`ml-2 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                                                                        child.closed_at || child.is_closed
+                                                                            ? 'bg-gray-100 text-gray-600'
+                                                                            : 'bg-emerald-100 text-emerald-700'
+                                                                    }`}
+                                                                >
+                                                                    {child.closed_at || child.is_closed
+                                                                        ? t('details.bundle.childClosedStatus', 'Closed')
+                                                                        : t('details.bundle.childOpenStatus', 'Open')}
+                                                                </span>
                                                                 <div className="text-xs text-gray-500 truncate">
                                                                     {(child.client_name ? `${child.client_name} · ` : '')}{child.title}
                                                                 </div>
@@ -3415,7 +3631,53 @@ const handleClose = () => {
                                     labels={ticketOriginLabels}
                                     size="sm"
                                     className="flex-shrink-0"
+                                    systemLabel={originExternalLink?.display.label ?? null}
                                 />
+                                {recurringSource ? (
+                                    <Link
+                                        id="ticket-recurring-source-link"
+                                        href={`/msp/tickets/recurring/${recurringSource.definition_id}`}
+                                        className="flex-shrink-0 text-xs text-[rgb(var(--color-primary-600))] hover:underline"
+                                    >
+                                        {t('recurring.badge.source', 'Recurring: {{name}}', { name: recurringSource.name })}
+                                    </Link>
+                                ) : null}
+                                {ticket.duplicated_from_ticket_id && ticket.duplicated_from_ticket_number ? (
+                                    <Link
+                                        href={`/msp/tickets/${ticket.duplicated_from_ticket_id}`}
+                                        id={`${id}-duplicated-from-link`}
+                                        className="flex-shrink-0 text-xs text-[rgb(var(--color-primary-600))] hover:underline whitespace-nowrap"
+                                    >
+                                        {t('details.duplicatedFrom', {
+                                            defaultValue: 'Duplicated from #{{number}}',
+                                            number: ticket.duplicated_from_ticket_number,
+                                        })}
+                                    </Link>
+                                ) : null}
+                                {ticket.created_from_template_id && ticket.created_from_template_name ? (
+                                    templatePermissions.read ? (
+                                        <Link
+                                            id={`${id}-created-from-template-link`}
+                                            href={`/msp/tickets/templates/${ticket.created_from_template_id}`}
+                                            className="flex-shrink-0 text-xs text-[rgb(var(--color-primary-600))] hover:underline whitespace-nowrap"
+                                        >
+                                            {t('details.fromTemplate', {
+                                                defaultValue: 'From template: {{name}}',
+                                                name: ticket.created_from_template_name,
+                                            })}
+                                        </Link>
+                                    ) : (
+                                        <span
+                                            id={`${id}-created-from-template`}
+                                            className="flex-shrink-0 text-xs text-gray-600 whitespace-nowrap"
+                                        >
+                                            {t('details.fromTemplate', {
+                                                defaultValue: 'From template: {{name}}',
+                                                name: ticket.created_from_template_name,
+                                            })}
+                                        </span>
+                                    )
+                                ) : null}
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -3445,6 +3707,44 @@ const handleClose = () => {
                                     </Button>
                                 )}
                                 <Button
+                                    id={`${id}-duplicate-ticket-button`}
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => router.push(buildCreateTicketHref({
+                                        duplicateFromTicketId: ticket.ticket_id,
+                                        isAlgaDeskMode,
+                                    }))}
+                                    className="flex items-center gap-2"
+                                >
+                                    <Copy className="h-4 w-4" />
+                                    <span>{t('actions.duplicate', { defaultValue: 'Duplicate' })}</span>
+                                </Button>
+                                {templatePermissions.create ? (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                id={`${id}-more-actions-button`}
+                                                variant="outline"
+                                                size="sm"
+                                                aria-label={t('actions.moreActions', { defaultValue: 'More actions' })}
+                                            >
+                                                <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                                id={`${id}-create-template-menu-item`}
+                                                onClick={() => router.push(
+                                                    `/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticket.ticket_id ?? "")}`
+                                                )}
+                                            >
+                                                <LayoutTemplate className="h-4 w-4 mr-2" />
+                                                {t('actions.createTemplate', { defaultValue: 'Create template from ticket' })}
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                ) : null}
+                                <Button
                                     id={`${id}-delete-ticket-button`}
                                     variant="destructive"
                                     size="sm"
@@ -3469,18 +3769,30 @@ const handleClose = () => {
                         <p>
                             {t('fields.created', 'Created')} {createdRelativeTime || (() => {
                                 const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                return formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, tz);
+                                return formatTicketDateTime(ticket.entered_at, locale, tz, dateFormat, showWeekday);
                             })()}
                         </p>
                     )}
-                    {ticket.updated_at && (
-                        <p>
-                            {t('fields.updated', 'Updated')} {updatedRelativeTime || (() => {
-                                const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                return formatTicketDateTime(ticket.updated_at, dateTimeFormat, locale, tz);
-                            })()}
-                        </p>
-                    )}
+                    {ticket.updated_at && (() => {
+                        const updatedTime = updatedRelativeTime || (() => {
+                            const tz = hasHydrated ? getUserTimeZone() : 'UTC';
+                            return formatTicketDateTime(ticket.updated_at, locale, tz, dateFormat, showWeekday);
+                        })();
+                        const updatedByName = updatedByUser
+                            ? `${updatedByUser.first_name ?? ''} ${updatedByUser.last_name ?? ''}`.trim()
+                            : '';
+                        return (
+                            <p data-testid="ticket-updated-at">
+                                {updatedByName
+                                    ? t('fields.updatedAtBy', {
+                                        defaultValue: 'Updated {{time}} by {{name}}',
+                                        time: updatedTime,
+                                        name: updatedByName,
+                                    })
+                                    : <>{t('fields.updated', 'Updated')} {updatedTime}</>}
+                            </p>
+                        );
+                    })()}
                 </div>
                 {/* Delete Ticket Dialog (with dependency validation) */}
                 <DeleteEntityDialog
@@ -3516,6 +3828,8 @@ const handleClose = () => {
                     currentUserId={userId}
                     statusOptions={closedStatusOptions}
                     isSubmitting={isSubmittingResolutionClose}
+                    clientId={ticket.client_id ?? null}
+                    allowEmailRecipients
                     onClose={() => {
                         if (!isSubmittingResolutionClose) {
                             setIsResolutionCloseDialogOpen(false);
@@ -3527,7 +3841,137 @@ const handleClose = () => {
                     deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
                     resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                 />
-                
+
+                {/* An edit just flagged a comment as the resolution: offer the
+                    close that the composer's resolution toggle does inline. */}
+                <Dialog
+                    id={`${id}-resolution-close-prompt`}
+                    isOpen={resolutionClosePrompt.isOpen}
+                    onClose={() => {
+                        if (!isSubmittingResolutionClosePrompt) {
+                            closeResolutionClosePrompt();
+                        }
+                    }}
+                    title={t('info.closeTicketNowTitle', 'Close the ticket now?')}
+                >
+                    <DialogContent>
+                        <p className="mb-4 text-sm text-[rgb(var(--color-text-600))]">
+                            {t(
+                                'info.closeTicketNowPrompt',
+                                'This comment is now the resolution. Pick a close status to close the ticket, or leave it open.',
+                            )}
+                        </p>
+                        <CustomSelect
+                            id={`${id}-resolution-close-prompt-status`}
+                            label={t('conversation.closeStatus', 'Close status')}
+                            value={resolutionClosePrompt.statusId}
+                            options={closedStatusOptions}
+                            onValueChange={(value: string) =>
+                                setResolutionClosePrompt((prev) => ({ ...prev, statusId: value }))
+                            }
+                            placeholder={t('info.selectCloseStatus', 'Select a close status')}
+                            disabled={isSubmittingResolutionClosePrompt}
+                        />
+                        <div className="mt-4">
+                            <TicketNotificationSuppressionControl
+                                idPrefix={`${id}-resolution-close-prompt-notification-suppression`}
+                                value={resolutionClosePrompt.suppression}
+                                onChange={(suppression) =>
+                                    setResolutionClosePrompt((prev) => ({ ...prev, suppression }))
+                                }
+                                disabled={isSubmittingResolutionClosePrompt}
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button
+                                id={`${id}-resolution-close-prompt-decline`}
+                                type="button"
+                                variant="outline"
+                                onClick={closeResolutionClosePrompt}
+                                disabled={isSubmittingResolutionClosePrompt}
+                            >
+                                {t('info.leaveTicketOpen', 'Leave open')}
+                            </Button>
+                            <Button
+                                id={`${id}-resolution-close-prompt-confirm`}
+                                type="button"
+                                onClick={confirmResolutionClosePrompt}
+                                disabled={!resolutionClosePrompt.statusId || isSubmittingResolutionClosePrompt}
+                            >
+                                {isSubmittingResolutionClosePrompt
+                                    ? t('info.closing', 'Closing…')
+                                    : t('info.closeTicketTitle', 'Close ticket')}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog
+                    id={`${id}-contact-change-prompt`}
+                    isOpen={contactChangePrompt.isOpen}
+                    onClose={() => {
+                        if (!isSubmittingContactChange) {
+                            closeContactChangePrompt();
+                        }
+                    }}
+                    title={
+                        contactChangePrompt.contactId
+                            ? t('info.changeContactTitle', 'Change the ticket contact?')
+                            : t('info.removeContactTitle', 'Remove the ticket contact?')
+                    }
+                >
+                    <DialogContent>
+                        <p className="mb-4 text-sm text-[rgb(var(--color-text-600))]">
+                            {t(
+                                'info.changeContactPrompt',
+                                'The contact, assignee and watchers are told about this update unless you turn their notifications off.',
+                            )}
+                        </p>
+                        <TicketNotificationSuppressionControl
+                            idPrefix={`${id}-contact-change-prompt-notification-suppression`}
+                            value={contactChangePrompt.suppression}
+                            onChange={(suppression) =>
+                                setContactChangePrompt((prev) => ({ ...prev, suppression }))
+                            }
+                            disabled={isSubmittingContactChange}
+                        />
+                        <DialogFooter>
+                            <Button
+                                id={`${id}-contact-change-prompt-cancel`}
+                                type="button"
+                                variant="outline"
+                                onClick={closeContactChangePrompt}
+                                disabled={isSubmittingContactChange}
+                            >
+                                {t('actions.cancel', 'Cancel')}
+                            </Button>
+                            <Button
+                                id={`${id}-contact-change-prompt-confirm`}
+                                type="button"
+                                onClick={() => void confirmContactChangePrompt()}
+                                disabled={isSubmittingContactChange}
+                            >
+                                {isSubmittingContactChange
+                                    ? t('info.saving', 'Saving…')
+                                    : contactChangePrompt.contactId
+                                        ? t('info.changeContact', 'Change contact')
+                                        : t('info.removeContact', 'Remove contact')}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Sync-mode bundle master: choose whether a boundary-crossing
+                    status change propagates to the affected children. */}
+                <BundleStatusPropagationDialog
+                    isOpen={bundlePropagationPreview !== null}
+                    preview={bundlePropagationPreview}
+                    isSubmitting={isSubmittingBundlePropagation}
+                    onCancel={() => resolveBundlePropagationDecision({ proceed: false })}
+                    onMasterOnly={() => resolveBundlePropagationDecision({ proceed: true, propagateToChildren: false })}
+                    onPropagate={() => resolveBundlePropagationDecision({ proceed: true, propagateToChildren: true })}
+                />
+
                 {/* Blocked-close dialog: unmet close rules with quick actions and
                     a permissioned "Close anyway" override. */}
                 <Dialog
@@ -3623,18 +4067,6 @@ const handleClose = () => {
                     </DialogContent>
                 </Dialog>
 
-                {/* Timer Replace Confirmation */}
-                <ConfirmationDialog
-                    id={`${id}-replace-timer-dialog`}
-                    isOpen={isReplaceDialogOpen}
-                    onClose={() => setIsReplaceDialogOpen(false)}
-                    onConfirm={handleConfirmReplace}
-                    title={t('info.timerActiveElsewhereTitle', 'Timer Active Elsewhere')}
-                    message={t('info.timerTakeoverMessage', "This ticket's timer is active in another window. Do you want to take over and replace it here?")}
-                    confirmLabel={t('info.replaceHere', 'Replace Here')}
-                    cancelLabel={t('actions.cancel', 'Cancel')}
-                />
-
                 <ConfirmationDialog
                     id={`${id}-bundle-add-child-multi-client-confirm`}
                     isOpen={isAddChildMultiClientConfirmOpen}
@@ -3648,7 +4080,7 @@ const handleClose = () => {
                             return;
                         }
                         try {
-                            await performAddChildToBundle(pendingChildToAdd.ticket_id);
+                            await beginAddChildToBundle(pendingChildToAdd.ticket_id);
                         } catch (error) {
                             handleTicketActionError(error, t('messages.addToBundleFailed'));
                         } finally {
@@ -3661,6 +4093,65 @@ const handleClose = () => {
                     confirmLabel={t('actions.proceed', 'Proceed')}
                     cancelLabel={t('actions.cancel', 'Cancel')}
                 />
+
+                <Dialog
+                    id={`${id}-bundle-closed-master-choice-dialog`}
+                    isOpen={isClosedMasterChoiceOpen}
+                    onClose={() => {
+                        setIsClosedMasterChoiceOpen(false);
+                        setPendingClosedMasterChildId(null);
+                    }}
+                    className="max-w-lg"
+                >
+                    <DialogContent>
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            {t('details.bundle.closedMasterDialogTitle', "This bundle's master is closed")}
+                        </h2>
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            {t('details.bundle.closedMasterDialogIntro', 'The master is closed. Choose what should happen to the child when it is added.')}
+                        </p>
+                        {closedMasterContext && (
+                            <div className="mt-4">
+                                <ClosedMasterChoiceFields
+                                    idPrefix={`${id}-bundle-closed-master`}
+                                    allowedChoices={closedMasterContext.allowedChoices}
+                                    value={closedMasterChoice}
+                                    onChange={setClosedMasterChoice}
+                                    hasResolutionComment={closedMasterContext.hasResolutionComment}
+                                    masterStatusName={closedMasterContext.masterStatusName}
+                                />
+                            </div>
+                        )}
+                        <DialogFooter>
+                            <Button
+                                id={`${id}-bundle-closed-master-cancel`}
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    setIsClosedMasterChoiceOpen(false);
+                                    setPendingClosedMasterChildId(null);
+                                }}
+                            >
+                                {t('actions.cancel', 'Cancel')}
+                            </Button>
+                            <Button
+                                id={`${id}-bundle-closed-master-confirm`}
+                                type="button"
+                                disabled={!closedMasterChoice || !pendingClosedMasterChildId}
+                                onClick={async () => {
+                                    if (!pendingClosedMasterChildId || !closedMasterChoice) return;
+                                    const childId = pendingClosedMasterChildId;
+                                    const choice = closedMasterChoice;
+                                    setIsClosedMasterChoiceOpen(false);
+                                    setPendingClosedMasterChildId(null);
+                                    await performAddChildToBundle(childId, choice);
+                                }}
+                            >
+                                {t('details.bundle.add', 'Add')}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
                 <ConfirmationDialog
                     id={`${id}-time-period-dialog`}
@@ -3716,6 +4207,7 @@ const handleClose = () => {
                     tags={tags}
                     onTagsChange={handleTagsChange}
                     taskActions={renderCreateProjectTask?.({ ticket, additionalAgents: additionalAgentsForInfo })}
+                    quickInvoiceActions={hideBilling ? undefined : renderQuickInvoice?.({ ticket })}
                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                         ? () => setIsResolutionCloseDialogOpen(true)
                         : undefined}
@@ -3774,25 +4266,23 @@ const handleClose = () => {
                     onChangeClient={handleClientChange}
                     checklistItems={checklistItems ?? []}
                     onChecklistItemsChanged={setChecklistItems}
+                    externalLinks={externalLinks ?? undefined}
+                    onExternalLinksChanged={setExternalLinks}
                     hideTimeEntry={hideTimeEntry}
                     isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
-                    elapsedTime={elapsedTime}
-                    isRunning={isRunning}
-                    isTimerLocked={isLockedByOther}
                     timeDescription={timeDescription}
                     onTimeDescriptionChange={setTimeDescription}
-                    onStart={handleStartClick}
-                    onPause={handlePauseClick}
-                    onStop={handleStopClick}
+                    onTimeEntryLogged={handleStopwatchEntryLogged}
                     onAddTimeEntry={handleAddTimeEntry}
-                    onScheduleVisit={handleScheduleVisit}
-                    nextVisitRefreshKey={nextVisitRefreshKey}
+                    isLaunchingTimeEntry={isLaunchingTimeEntry}
+                    onScheduleWork={handleScheduleWork}
+                    onOpenScheduleEntry={handleOpenScheduleEntry}
+                    scheduleRefreshKey={scheduleRefreshKey}
                     userId={userId || ''}
-                    dateTimeFormat={dateTimeFormat}
+                    showWeekday={showWeekday}
                     timeEntriesRefreshKey={timeEntriesRefreshKey}
                     onEditTimeEntry={handleEditTimeEntry}
                     onDeleteTimeEntry={handleRequestDeleteTimeEntry}
-                    renderIntervalManagement={renderIntervalManagement}
                     additionalAgents={additionalAgents}
                     availableAgents={availableAgents}
                     onAddAgent={handleAddAgent}
@@ -3848,6 +4338,7 @@ const handleClose = () => {
                                     isBundledChild={Boolean(bundle?.isBundleChild)}
                                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                                     renderProjectTaskActions={renderCreateProjectTask}
+                                    renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
                                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                         ? () => setIsResolutionCloseDialogOpen(true)
                                         : undefined}
@@ -3919,6 +4410,8 @@ const handleClose = () => {
                                     defaultNewestFirst
                                     canViewCommentMetadataDebug={canViewCommentMetadataDebug}
                                     reactionRefreshVersion={reactionRefreshVersion}
+                                    externalLinksByCommentId={externalLinksByCommentId}
+                                    allowEmailRecipients
                                 />}
                             </div>
                         </Suspense>
@@ -3952,6 +4445,15 @@ const handleClose = () => {
                             clientId={ticket.client_id ?? null}
                         />
 
+                        <div className="mt-6">
+                            <TicketExternalLinksSection
+                                id={`${id}-external-links-section`}
+                                ticketId={ticket.ticket_id || ''}
+                                initialLinks={externalLinks ?? undefined}
+                                onLinksChanged={setExternalLinks}
+                            />
+                        </div>
+
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
                         <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse skeleton-fill h-96 rounded-lg mb-6"></div>}>
@@ -3962,15 +4464,11 @@ const handleClose = () => {
                                 contactInfo={contactInfo}
                                 createdByUser={createdByUser}
                                 board={board}
-                                elapsedTime={elapsedTime}
-                                isRunning={isRunning}
                                 timeDescription={timeDescription}
-                                isTimerLocked={isLockedByOther}
-                                onStart={handleStartClick}
-                                onPause={handlePauseClick}
-                                onStop={handleStopClick}
                                 onTimeDescriptionChange={setTimeDescription}
+                                onTimeEntryLogged={handleStopwatchEntryLogged}
                                 onAddTimeEntry={handleAddTimeEntry}
+                                isLaunchingTimeEntry={isLaunchingTimeEntry}
                                 onClientClick={handleClientClick}
                                 onContactClick={handleContactClick}
                                 team={team}
@@ -4008,8 +4506,7 @@ const handleClose = () => {
                                 surveySummaryCard={surveySummaryCard}
                                     hideTimeEntry={hideTimeEntry}
                                     hideMaterials={hideMaterials}
-                                    renderIntervalManagement={renderIntervalManagement}
-                                    onRemoveTeamAssignment={handleRemoveTeamAssignment}
+                                                    onRemoveTeamAssignment={handleRemoveTeamAssignment}
                                     onAssignTeam={handleAssignTeam}
                                     isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
                                     timeEntriesRefreshKey={timeEntriesRefreshKey}
@@ -4063,6 +4560,7 @@ const handleClose = () => {
                             isBundledChild={Boolean(bundle?.isBundleChild)}
                             responseStateTrackingEnabled={responseStateTrackingEnabled}
                             renderProjectTaskActions={renderCreateProjectTask}
+                            renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
                             onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                 ? () => setIsResolutionCloseDialogOpen(true)
                                 : undefined}

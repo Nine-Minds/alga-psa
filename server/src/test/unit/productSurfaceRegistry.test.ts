@@ -64,6 +64,14 @@ describe('product surface registry', () => {
     expect(resolveProductApiBehavior('algadesk', '/api/v1/unknown-area')).toBe('denied');
   });
 
+  it('keeps the authenticated smart-search stream available without publishing it as a v1 API', () => {
+    const streamPath = '/api/smart-search/ticket/stream';
+
+    expect(resolveProductApiBehavior('psa', streamPath)).toBe('allowed');
+    expect(resolveProductApiBehavior('algadesk', streamPath)).toBe('allowed');
+    expect(getApiMetadataProducts(streamPath)).toEqual([]);
+  });
+
   it('T003: filters metadata/OpenAPI visibility by product', () => {
     expect(isApiVisibleInMetadata('algadesk', '/api/v1/tickets')).toBe(true);
     expect(isApiVisibleInMetadata('algadesk', '/api/v1/meta/endpoints')).toBe(true);

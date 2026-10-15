@@ -57,56 +57,55 @@
     "confirmation": {
       "title": "Confirm License Update",
       "increaseDescription": "Review the details of your license increase before confirming.",
-      "decreaseDescription": "Review the details of your license decrease. Changes will take effect at the end of your billing period.",
       "currentMonthlyCost": "Current Monthly Cost",
       "currentLicenseCount": "Current License Count",
       "newMonthlyCost": "New Monthly Cost",
       "newLicenseCount": "New License Count",
       "monthlyIncrease": "Monthly Increase",
-      "monthlySavings": "Monthly Savings",
       "paymentMethod": "Payment Method",
       "changePaymentMethod": "Change",
       "immediateChargeTitle": "Immediate charge",
       "immediateChargeDescription": "You will be charged {{amountDue}} now for the prorated amount.",
       "prorationDescription": "Proration: {{amount}} for the remainder of this billing period",
-      "scheduledTitle": "Scheduled for period end",
-      "scheduledDescription": "License decrease will take effect on {{date}} at the end of your current billing period.",
-      "scheduledKeepAccess": "You'll keep access to all {{count}} licenses until then.",
       "cancel": "Cancel",
       "confirmPayNow": "Confirm & Pay Now",
-      "confirmSchedule": "Confirm Schedule"
+      "confirm": "Confirm",
+      "trialTitle": "No charge during your trial",
+      "trialDescription": "Your trial continues as before. Billing starts at {{amount}} on {{date}}."
     },
     "usage": {
       "title": "Current License Usage",
       "licensesUsed": "licenses used"
     },
     "fields": {
-      "totalLicenseCount": "Total License Count"
+      "licensesToAdd": "Licenses to add"
     },
     "help": {
-      "totalLicenseCount": "Enter the new total number of licenses (minimum: {{minimum}}). Currently: {{current}}",
-      "reduceViaAccount": "To reduce licenses, visit Account Management",
-      "quantityWarning": "Warning: You have {{used}} users but are setting the total to {{quantity}}"
+      "licensesToAdd": "Enter how many licenses to add. Your new total updates below."
     },
     "pricing": {
       "pricePerLicense": "Price per license:",
-      "quantity": "Quantity:",
-      "total": "Total:"
+      "addedCost": "Added cost:",
+      "newTotal": "New total:"
     },
     "actions": {
       "creatingCheckout": "Creating Checkout...",
-      "noChange": "No Change",
-      "updateToTotal": "Update to {{quantity}} Total ({{difference}} {{licenseLabel}})"
+      "addLicenses": "Add {{count}} {{licenseLabel}}"
     },
     "info": {
-      "totalQuantity": "This sets your total subscription quantity (not an addition to current licenses)",
       "increasingImmediate": "Increasing licenses: Immediate access with prorated charge",
-      "billedMonthly": "Licenses are billed monthly and can be canceled anytime"
+      "billedMonthly": "Licenses are billed monthly and can be canceled anytime",
+      "addsToTotal": "Licenses are added to your current total. To reduce licenses, visit Account Management."
     },
     "solo": {
       "title": "Solo includes one user",
       "description": "The Solo plan is designed for a single user and does not support adding licenses. Upgrade to Pro to add more users to your team.",
       "upgradeCta": "Upgrade to Pro"
+    },
+    "summary": {
+      "currentLicenses": "Current licenses",
+      "licensesToAdd": "Licenses to add",
+      "newTotal": "New total"
     }
   },
   "removalModal": {
@@ -352,7 +351,8 @@
       "activateClaimCode": "Failed to activate claim code.",
       "startTrial": "Failed to start trial.",
       "refreshLicense": "Failed to refresh the license."
-    }
+    },
+    "returnToClient": "Return to client"
   },
   "errors": {
     "notSignedIn": "Unauthorized. Sign in to manage licensing.",
@@ -361,6 +361,7 @@
   "coManaged": {
     "title": "Co-managed IT",
     "description": "Manage the technician seats available to your customer workspaces.",
+    "sharedWork": "Shared work",
     "capacity": "Purchased seats",
     "allocated": "Allocated to customers",
     "available": "Available seats",
@@ -568,7 +569,7 @@
     },
     "queue": {
       "title": "Co-managed ticket queues",
-      "workingDescription": "MSP tickets and customer tickets currently handled by your team.",
+      "workingDescription": "Shared tickets where your team is responsible or assigned.",
       "oversightDescription": "Customer tickets within your approved access, including work handled by customer IT.",
       "view": "View",
       "working": "Working queue",
@@ -587,6 +588,8 @@
       "loadError": "Unable to load tickets. Refresh to check your current access.",
       "counts": "{{total}} tickets · {{open}} open · {{closed}} closed",
       "empty": "No permitted tickets match these filters.",
+      "emptyUnfiltered": "No customer tickets to show yet.",
+      "retry": "Retry",
       "page": "Page {{page}}",
       "sortFields": {
         "updated": "Last updated",
@@ -598,6 +601,7 @@
         "ticket": "Ticket",
         "workspace": "Workspace",
         "state": "Status",
+        "status": "Status",
         "priority": "Priority",
         "responsibility": "Responsible organization",
         "updated": "Updated"
@@ -615,8 +619,14 @@
         "returned": "Returned to customer IT",
         "forbidden": "Access denied",
         "changed": "Ticket changed. Refresh before trying again.",
-        "invalid": "Invalid selection"
-      }
+        "invalid": "Invalid selection",
+        "selected": "{{count}} selected ticket(s) will be returned.",
+        "resume": "A return to customer IT was interrupted. Resume it to confirm the result.",
+        "noReloadRecovery": "Reload recovery is unavailable in this browser; you can still retry in this session."
+      },
+      "scopeUnavailable": "Opening the ticket list…",
+      "searchPlaceholder": "Search by number or title",
+      "mspAlsoAssigned": "MSP also assigned"
     },
     "conversation": {
       "title": "Conversation",
@@ -749,7 +759,8 @@
         "unknownOutcome": "We could not confirm whether the edit was saved. Retry the same save, or discard your changes and reload."
       },
       "loadError": "Could not load this project or task.",
-      "discard": "Discard changes and reload"
+      "discard": "Discard changes and reload",
+      "title": "Projects"
     },
     "sla": {
       "title": "Co-managed SLA priorities",
@@ -916,6 +927,105 @@
       "loadError": "You cannot export this workspace with your current access.",
       "lengthError": "Use a passphrase between 16 and 1024 UTF-8 bytes.",
       "matchError": "The recovery passphrases must match."
+    },
+    "accountTitle": "Co-managed IT",
+    "checkoutUnavailable": "Embedded checkout is unavailable. Retry after the payment setup is repaired.",
+    "pendingCapacity": "A purchase of {{quantity}} seats is pending.",
+    "previewError": "Could not price this change. Refresh and try again.",
+    "purchaseNeedsAdmin": "An account administrator must add co-managed capacity.",
+    "purchaseProviderUnconfigured": "The payment provider is not configured.",
+    "purchaseUnavailable": "Hosted co-managed purchasing is not available in this deployment.",
+    "client": {
+      "awaitingAcceptance": "The customer administrator must accept before access is granted.",
+      "capacity": "Capacity",
+      "chooseRelationship": "Choose relationship",
+      "endedHint": "This relationship has ended. Retained history and archives remain available.",
+      "forClient": "Co-managed IT for {{name}}",
+      "history": "Relationship history",
+      "invitation": "Administrator invitation",
+      "notEnabled": "Co-managed IT not enabled",
+      "progress": "Setup progress",
+      "provisioningHint": "Reserved seats stay held until setup completes or cleanup is acknowledged.",
+      "relationship": "Relationship",
+      "seatAllocation": "{{allocated}} allocated technician seats",
+      "seatUsage": "{{used}} of {{allocated}} technician seats",
+      "selectionRequired": "Multiple co-managed relationships",
+      "setupHint": "Enable co-managed IT from this client to reserve customer technicians and invite an administrator.",
+      "tab": "Co-managed IT",
+      "viewHistory": "View history",
+      "work": "Work",
+      "workHint": "Client projects and shared task queues stay in the MSP shell with their qualified identities.",
+      "workspace": "Customer workspace",
+      "sharedTickets": "Shared tickets",
+      "openCustomerTickets": "Open in Customer Tickets"
+    },
+    "overview": {
+      "clients": "Co-managed clients",
+      "allClients": "All clients",
+      "empty": "No co-managed clients match this search.",
+      "loadError": "Could not load co-managed clients.",
+      "search": "Search clients",
+      "unnamed": "Client",
+      "client": "Client",
+      "workspace": "Workspace",
+      "status": "Status",
+      "seats": "Seats",
+      "actions": "Actions"
+    },
+    "shortfall": {
+      "baselineChanged": "The pool changed since this quote. Review the shortfall again.",
+      "confirming": "Purchased capacity is being verified. Refresh, then save the allocation again.",
+      "ineligible": "The sponsoring workspace is not eligible for more co-managed capacity.",
+      "needsAdmin": "This allocation needs more pool capacity. An account administrator must add it.",
+      "pending": "A co-managed purchase is already being prepared or checked out. Resume it before changing capacity.",
+      "pool": "Pool: {{capacity}} purchased, {{allocated}} allocated, {{available}} available",
+      "provider": "The payment provider is not configured. An administrator must finish billing setup.",
+      "raceRetry": "The seats are in the pool. The allocation could not be saved yet; retry it.",
+      "review": "Add {{additional}} seats to the sponsor pool (new total {{total}}).",
+      "selfHost": "This allocation exceeds verified self-host capacity. Update the signed license, then refresh.",
+      "unavailable": "Hosted co-managed purchasing is not available in this deployment."
+    },
+    "unavailable": "This co-managed link is unavailable.",
+    "directory": {
+      "prompt": "Select the co-managed workspace to manage.",
+      "empty": "No co-managed workspaces are available to manage."
+    },
+    "customerTickets": {
+      "title": "Customer Tickets",
+      "view": "View",
+      "columns": "Columns",
+      "density": "Density",
+      "filters": "Filters",
+      "client": "Client",
+      "allClients": "All clients",
+      "share": "Share",
+      "clearSignal": "Clear",
+      "unavailable": "This view is not available for your account yet.",
+      "allTickets": "All Tickets",
+      "signals": {
+        "escalatedUnassigned": "Escalated, unassigned",
+        "awaitingReply": "Awaiting your reply"
+      }
+    },
+    "callout": {
+      "title": "Customer tickets need you",
+      "escalatedUnassigned_one": "{{count}} escalated ticket, unassigned",
+      "escalatedUnassigned_other": "{{count}} escalated tickets, unassigned",
+      "awaitingReply_one": "{{count}} ticket awaiting your reply",
+      "awaitingReply_other": "{{count}} tickets awaiting your reply",
+      "dismiss": "Dismiss"
     }
-  }
+  },
+  "actions": {
+    "cancel": "Cancel"
+  },
+  "common": {
+    "actions": {
+      "cancel": "Cancel"
+    }
+  },
+  "dashboard": {
+    "title": "Ticketing Dashboard"
+  },
+  "resetFilters": "Reset"
 }

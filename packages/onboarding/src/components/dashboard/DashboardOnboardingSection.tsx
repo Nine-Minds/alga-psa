@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { usePostHog } from 'posthog-js/react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -16,6 +17,7 @@ import { STEP_DEFINITIONS, type StepDefinition } from '@alga-psa/onboarding/lib'
 import {
   dismissDashboardOnboardingStep,
   restoreDashboardOnboardingStep,
+  dismissDashboardOnboardingSectionAction,
   type OnboardingStepId,
   type OnboardingStepServerState,
 } from '@alga-psa/onboarding/actions';
@@ -160,6 +162,21 @@ function ProgressSummaryCard({
         </Badge>
       </div>
     </div>
+  );
+}
+
+function DismissSectionButton({ t, pending, onClick }: { t: DashboardTranslator; pending: boolean; onClick: () => void }) {
+  const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: 'hide-completed-onboarding-section',
+    type: 'button',
+    label: t('onboarding.cta.hideSection', { defaultValue: 'Hide section' }),
+    variant: 'ghost',
+  });
+  return (
+    <Button {...automationIdProps} id="hide-completed-onboarding-section" variant="ghost" size="sm" onClick={onClick} disabled={pending}>
+      <EyeOff className="mr-1.5 h-4 w-4" />
+      {pending ? t('onboarding.cta.hidingSection', { defaultValue: 'Hiding...' }) : t('onboarding.cta.hideSection', { defaultValue: 'Hide section' })}
+    </Button>
   );
 }
 
@@ -321,6 +338,7 @@ export default function DashboardOnboardingSection({
   const { t } = useTranslation(['msp/dashboard', 'msp/core']);
   const posthog = usePostHog();
   const extraHiddenItems = useHiddenCardsExtras();
+  const router = useRouter();
   const [dismissedStepIds, setDismissedStepIds] = useState<OnboardingStepId[]>(() =>
     getInitialDismissedStepIds(stepStates, initialDismissedStepIds)
   );
@@ -445,7 +463,29 @@ export default function DashboardOnboardingSection({
     });
   };
 
-  if (steps.length === 0) {
+  const [isSectionDismissing, startSectionTransition] = useTransition();
+  const [sectionDismissed, setSectionDismissed] = useState(false);
+  const handleDismissSection = () => {
+    if (isSectionDismissing || !isOnboardingComplete) return;
+    startSectionTransition(async () => {
+      try {
+        const result = await dismissDashboardOnboardingSectionAction();
+        if (!result.success) {
+          throw new Error(result.error || t('onboarding.errors.dismissSectionFailed', { defaultValue: 'Failed to hide the onboarding section.' }));
+        }
+        setSectionDismissed(true);
+        router.refresh();
+        posthog?.capture('onboarding_section_dismissed', { surface: 'dashboard' });
+      } catch (error) {
+        handleError(
+          error,
+          t('onboarding.errors.dismissSectionFailed', { defaultValue: 'Failed to hide the onboarding section.' })
+        );
+      }
+    });
+  };
+
+  if (steps.length === 0 || (isOnboardingComplete && sectionDismissed)) {
     return null;
   }
 
@@ -488,6 +528,9 @@ export default function DashboardOnboardingSection({
             {t('msp/core:dashboard.onboardingWizard')}
           </Link>
           <ProgressSummaryCard completed={summary.completed} total={summary.total} t={t} />
+          {isOnboardingComplete ? (
+            <DismissSectionButton t={t} pending={isSectionDismissing} onClick={handleDismissSection} />
+          ) : null}
         </div>
       </div>
       {!isOnboardingComplete ? (

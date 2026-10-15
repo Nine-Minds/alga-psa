@@ -35,6 +35,10 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import {
+  resolveContractAuthoringRate,
+  type ResolvedContractAuthoringRate,
+} from '../../../lib/contractAuthoringRate';
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -81,23 +85,13 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
   const [customRates, setCustomRates] = useState<Record<string, string>>({}); // Custom rates for services without matching currency
   // Removed tenant state
 
-  // Helper function to get service price in contract currency
-  const getServicePriceInCurrency = (service: IService, currencyCode: string): number | null => {
-    // First check if service has prices array with the matching currency
-    if (service.prices && service.prices.length > 0) {
-      const matchingPrice = service.prices.find(p => p.currency_code === currencyCode);
-      if (matchingPrice) {
-        return matchingPrice.rate;
-      }
-    }
-    // If no matching currency price, return null (requires custom rate)
-    return null;
-  };
-
-  // Check if a service has a price in the contract currency
-  const hasMatchingCurrencyPrice = (service: IService): boolean => {
-    return getServicePriceInCurrency(service, contractCurrency) !== null;
-  };
+  // Resolve the authoring rate for a catalog service using the shared
+  // precedence: contract-currency price, then catalog default_rate.
+  const resolveServiceRate = useCallback(
+    (service: IService): ResolvedContractAuthoringRate =>
+      resolveContractAuthoringRate(service, contractCurrency),
+    [contractCurrency],
+  );
 
   const fetchData = useCallback(async () => { // Added useCallback
     if (!contractLineId) return;
@@ -193,14 +187,14 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
   const handleAddService = async () => {
     if (!contractLineId || selectedServicesToAdd.length === 0) return;
 
-    // Validate that all services without matching currency have custom rates
+    // Validate that all services without a resolvable catalog rate have custom rates
     for (const serviceId of selectedServicesToAdd) {
       const service = availableServices.find(s => s.service_id === serviceId);
-      if (service && !hasMatchingCurrencyPrice(service)) {
+      if (service && resolveServiceRate(service).rate === null) {
         const customRate = customRates[serviceId];
         if (!customRate || parseFloat(customRate) <= 0) {
           setError(t('services.generic.errors.enterRateForService', {
-            defaultValue: 'Please enter a rate for "{{serviceName}}" (no {{currency}} price configured)',
+            defaultValue: 'Please enter a rate for "{{serviceName}}" (no usable {{currency}} catalog rate configured)',
             serviceName: service.service_name,
             currency: contractCurrency,
           }));
@@ -213,13 +207,13 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       for (const serviceId of selectedServicesToAdd) {
         const serviceToAdd = availableServices.find(s => s.service_id === serviceId);
         if (serviceToAdd) {
-          // Get rate: prefer contract currency price, fall back to custom rate
+          // Get rate: prefer the resolved catalog rate (contract-currency price,
+          // then default_rate), otherwise the manual rate validated above.
           let rate: number;
-          const currencyPrice = getServicePriceInCurrency(serviceToAdd, contractCurrency);
-          if (currencyPrice !== null) {
-            rate = currencyPrice;
+          const resolved = resolveServiceRate(serviceToAdd);
+          if (resolved.rate !== null) {
+            rate = resolved.rate;
           } else {
-            // Use custom rate (already validated above)
             rate = Math.round(parseFloat(customRates[serviceId]) * 100); // Convert to cents
           }
 
@@ -324,7 +318,9 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
     },
     {
       title: t('services.generic.columns.derivedConfigType', { defaultValue: 'Derived Config Type' }), // Changed title slightly for clarity
+      id: 'derived_config_type',
       dataIndex: 'billing_method', // Use billing_method and unit_of_measure from record
+      sortable: false,
       render: (_, record) => { // Use record instead of value
         let derivedType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' | undefined; // Allow undefined
 
@@ -352,9 +348,38 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       title: t('services.generic.columns.customRate', { defaultValue: 'Custom Rate' }),
       dataIndex: 'custom_rate',
       render: (value, record) => {
-        const rate = value !== undefined ? value : record.default_rate;
-        // Display rate directly as decimal
-        return rate !== undefined ? money(Math.round(Number(rate) * 100)) : t('common.notAvailable', { defaultValue: 'N/A' });
+        // A row with no custom rate stores SQL NULL, not undefined, so the
+        // catalog fallback has to be nullish — otherwise Standard rows read N/A.
+        const rate = value ?? record.default_rate;
+        const hasCustomRate = value !== undefined && value !== null;
+        // The member-level rate_provenance governs the same way the line-level
+        // one does: `inherited` follows the catalog, `custom`/`unreviewed` take
+        // the stored number. Fall back to stored-rate presence only for rows
+        // that predate the provenance column.
+        const provenance =
+          (record.typeConfig as { rate_provenance?: string | null } | undefined)?.rate_provenance ??
+          null;
+        const isUnreviewed = provenance === 'unreviewed';
+        const isCustom = provenance === 'custom' || (provenance === null && hasCustomRate);
+        const badgeVariant = isUnreviewed
+          ? 'warning'
+          : isCustom
+            ? 'secondary'
+            : 'default-muted';
+        const badgeLabel = isUnreviewed
+          ? t('services.generic.badges.unreviewed', { defaultValue: 'Unreviewed' })
+          : isCustom
+            ? t('services.generic.badges.custom', { defaultValue: 'Custom' })
+            : t('services.generic.badges.standard', { defaultValue: 'Standard' });
+        // custom_rate and the default_rate fallback are both stored in minor units
+        return (
+          <span className="inline-flex items-center gap-2">
+            <Badge variant={badgeVariant}>{badgeLabel}</Badge>
+            {rate !== undefined && rate !== null
+              ? money(Math.round(Number(rate)))
+              : t('common.notAvailable', { defaultValue: 'N/A' })}
+          </span>
+        );
       },
     },
     {
@@ -488,29 +513,37 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
                     {servicesAvailableToAdd.map(service => {
                       // Use service_type_name directly from the service object (fetched via updated getServices)
                       const serviceTypeName = service.service_type_name || t('common.notAvailable', { defaultValue: 'N/A' }); // No cast needed now that IService includes service_type_name
-                      const currencyPrice = getServicePriceInCurrency(service, contractCurrency);
-                      const hasCurrencyPrice = currencyPrice !== null;
+                      const resolvedRate = resolveServiceRate(service);
+                      const hasResolvedRate = resolvedRate.rate !== null;
+                      const isCatalogDefault = resolvedRate.source === 'catalog-default';
                       const isSelected = selectedServicesToAdd.includes(service.service_id!);
                       const currencySymbol = getCurrencySymbol(contractCurrency);
                       const billingMethodOption = BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method);
                       const billingMethod = billingMethodOption
                         ? t(billingMethodOption.labelKey, { defaultValue: billingMethodOption.defaultLabel })
                         : service.billing_method;
-                      const rateDetail = hasCurrencyPrice
-                        ? t('services.generic.serviceToAdd.rateDetail', {
-                            defaultValue: 'Rate: {{symbol}}{{amount}}',
-                            symbol: currencySymbol,
-                            amount: ((currencyPrice || 0) / 100).toFixed(2),
-                          })
+                      const formattedRateAmount = ((resolvedRate.rate || 0) / 100).toFixed(2);
+                      const rateDetail = hasResolvedRate
+                        ? isCatalogDefault
+                          ? t('services.generic.serviceToAdd.catalogDefaultRateDetail', {
+                              defaultValue: 'Catalog default: {{symbol}}{{amount}}',
+                              symbol: currencySymbol,
+                              amount: formattedRateAmount,
+                            })
+                          : t('services.generic.serviceToAdd.rateDetail', {
+                              defaultValue: 'Rate: {{symbol}}{{amount}}',
+                              symbol: currencySymbol,
+                              amount: formattedRateAmount,
+                            })
                         : t('services.generic.serviceToAdd.noCurrencyPrice', {
-                            defaultValue: 'No {{currency}} price',
+                            defaultValue: 'No usable {{currency}} catalog rate',
                             currency: contractCurrency,
                           });
 
                       return (
                         <div
                           key={service.service_id}
-                          className={`flex items-center space-x-2 p-2 hover:bg-muted/50 rounded ${!hasCurrencyPrice ? 'bg-warning/10' : ''}`}
+                          className={`flex items-center space-x-2 p-2 hover:bg-muted/50 rounded ${!hasResolvedRate ? 'bg-warning/10' : ''}`}
                         >
                           <div>
                             <Checkbox
@@ -540,15 +573,15 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
                                 type: serviceTypeName,
                                 method: billingMethod,
                               })}
-                              {hasCurrencyPrice ? (
+                              {hasResolvedRate ? (
                                 <> | {rateDetail}</>
                               ) : (
                                 <> | <span className="text-amber-600">{rateDetail}</span></>
                               )}
                             </span>
                           </div>
-                          {/* Show rate input for services without matching currency when selected */}
-                          {!hasCurrencyPrice && isSelected && (
+                          {/* Manual rate is only required when nothing resolves */}
+                          {!hasResolvedRate && isSelected && (
                             <div className="flex items-center gap-1">
                               <span className="text-xs text-muted-foreground">{currencySymbol}</span>
                               <input

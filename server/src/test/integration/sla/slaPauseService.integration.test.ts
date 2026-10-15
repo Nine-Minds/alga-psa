@@ -50,10 +50,21 @@ vi.mock('next/cache', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(async () => {}),
   publishWorkflowEvent: vi.fn(async () => {}),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(async () => {}),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('server/src/lib/eventBus', () => ({
@@ -361,6 +372,37 @@ describe('SLA Pause Service Integration Tests', () => {
       // Verify ticket was updated
       const ticket = await tenantTable(db, tenantId, 'tickets').where({ tenant: tenantId, ticket_id: ticketId }).first();
       expect(ticket.sla_paused_at).toBeDefined();
+    });
+
+    it('records the pause with triggered_by NULL when no user acted (inbound email / SYSTEM actor)', async () => {
+      const ticketId = uuidv4();
+
+      await insertTicket(db, {
+        tenant: tenantId,
+        ticketId,
+        ticketNumber: `STATUS-PAUSE-SYS-${uuidv4().slice(0, 6)}`,
+        title: 'System Actor Status Pause Test',
+        clientId,
+        contactId,
+        statusId: statusOpenId,
+        priorityId: priorityHighId,
+        boardId,
+      });
+
+      // Ticket events without a userId reach the SLA subscriber as `undefined`; it must
+      // never be replaced by the ticket id (which would violate the users FK).
+      await db.transaction(async (trx) => {
+        await startSlaForTicket(trx, tenantId, ticketId, clientId, boardId, priorityHighId);
+        const result = await handleStatusChange(trx, tenantId, ticketId, statusOpenId, statusPendingId, undefined);
+        expect(result.success).toBe(true);
+        expect(result.is_now_paused).toBe(true);
+      });
+
+      const audit = await tenantTable(db, tenantId, 'sla_audit_log')
+        .where({ tenant: tenantId, ticket_id: ticketId, event_type: 'sla_paused' })
+        .first();
+      expect(audit).toBeDefined();
+      expect(audit.triggered_by).toBeNull();
     });
 
     it('resumes SLA when status changes from pause-configured status', async () => {

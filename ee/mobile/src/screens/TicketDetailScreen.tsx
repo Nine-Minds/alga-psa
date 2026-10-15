@@ -1,5 +1,7 @@
+import { formatPhoneForDisplay, formatPhoneLabel } from "../../../../packages/validation/src/lib/phone";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Linking, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { Linking, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { buildMapsUrl } from "../urls/mapsUrl";
 import { useTranslation } from "react-i18next";
 import type { RootStackParamList } from "../navigation/types";
 import { useTheme } from "../ui/ThemeContext";
@@ -7,6 +9,8 @@ import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
 import { listUsers, getUserDisplayName } from "../api/users";
+import { listContacts } from "../api/contacts";
+import type { CommentRecipientSuggestion } from "../features/ticketDetail/components/CommentEmailRecipients";
 import type { MentionSuggestionItem } from "../features/ticketRichText/MentionSuggestionList";
 import { ErrorState, LoadingState } from "../ui/states";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -32,24 +36,34 @@ import { useTicketContact } from "../features/ticketDetail/hooks/useTicketContac
 import { useTicketTags } from "../features/ticketDetail/hooks/useTicketTags";
 import { useTicketChecklist } from "../features/ticketDetail/hooks/useTicketChecklist";
 import { useTicketQa } from "../features/ticketDetail/hooks/useTicketQa";
+import { useTicketBundle } from "../features/ticketDetail/hooks/useTicketBundle";
+import { isBundleChild } from "./ticketsBundle";
 
 // Components
 import { ActionChip } from "../features/ticketDetail/components/ActionChip";
 import { KeyValue } from "../features/ticketDetail/components/KeyValue";
 import { TicketMetaBar } from "../features/ticketDetail/components/TicketMetaBar";
+import { BundleBanner } from "../features/ticketDetail/components/BundleBanner";
 import { MoreActionsSheet } from "../features/ticketDetail/components/MoreActionsSheet";
+import { CallsEmailsSection } from "../features/ticketDetail/components/CallsEmailsSection";
+import { CallPromptHost } from "../features/interactions/components/CallPromptHost";
+import { usePlaceCall } from "../features/interactions/hooks/usePlaceCall";
+import { resyncScheduleReminders } from "../notifications/reminderSync";
 import { DueDateModal } from "../features/ticketDetail/components/DueDateModal";
 import { TimeEntryModal } from "../features/ticketDetail/components/TimeEntryModal";
 import { PriorityPickerModal } from "../features/ticketDetail/components/PriorityPickerModal";
 import { StatusPickerModal } from "../features/ticketDetail/components/StatusPickerModal";
 import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
 import { ContactPickerModal } from "../features/ticketDetail/components/ContactPickerModal";
+import { ContactFormModal } from "../features/contacts/components/ContactFormModal";
+import { useCapabilities } from "../capabilities/CapabilitiesContext";
 import {
   activeTicketNotificationSuppression,
   DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
   TicketUpdateFooter,
 } from "../features/ticketDetail/components/TicketUpdateFooter";
 import { TagsSection } from "../features/ticketDetail/components/TagsSection";
+import { ClientNotesSection } from "../features/clients/components/ClientNotesSection";
 import { TagPickerModal } from "../features/ticketDetail/components/TagPickerModal";
 import { ChecklistSection } from "../features/ticketDetail/components/ChecklistSection";
 import { TicketTimerChip } from "../features/timer/components/TicketTimerChip";
@@ -120,6 +134,11 @@ export function TicketDetailBody({
   const { colors, spacing, typography } = theme;
   const { showToast } = useToast();
   const { t } = useTranslation("tickets");
+  const { features } = useCapabilities();
+  const [newContactOpen, setNewContactOpen] = useState(false);
+  const [createdContact, setCreatedContact] = useState<{ id: string; name: string; email?: string | null } | null>(null);
+  const placeCall = usePlaceCall();
+  const [callsReloadKey, setCallsReloadKey] = useState(0);
   const network = useNetworkStatus();
   const isOffline = isOfflineStatus(network);
   const scrollRef = useRef<ScrollView>(null);
@@ -189,6 +208,28 @@ export function TicketDetailBody({
   const { ticket, initialLoading, error, comments, commentsError, refreshing, refresh, fetchTicket, fetchComments, setComments } = ticketData;
 
   const commentDraftHook = useCommentDraft({ ...deps, isOffline, fetchTicket, fetchComments, setComments });
+
+  // Cc/Bcc suggestions: the ticket client's contacts, matched server-side on
+  // the typed name or address. Contacts without an email can't be copied.
+  const handleRecipientSearch = useCallback(async (
+    query: string,
+    signal: AbortSignal,
+  ): Promise<CommentRecipientSuggestion[]> => {
+    const clientId = (ticket as Record<string, unknown> | null)?.client_id as string | undefined;
+    if (!client || !session || !clientId) return [];
+    const res = await listContacts(client, {
+      apiKey: session.accessToken,
+      page: 1,
+      limit: 10,
+      search: query,
+      client_id: clientId,
+      signal,
+    });
+    if (!res.ok) return [];
+    return res.data.data
+      .filter((contact) => Boolean(contact.email))
+      .map((contact) => ({ email: contact.email as string, name: contact.full_name }));
+  }, [client, session, ticket]);
   const descEditor = useDescriptionEditor({ ...deps, ticket, setTicket: ticketData.setTicket });
   const checklistHook = useTicketChecklist(deps);
   const boardId = ticket?.board_id as string | undefined;
@@ -214,6 +255,14 @@ export function TicketDetailBody({
     if (timerLastStoppedAt !== null) setTimeEntriesRefreshKey((value) => value + 1);
   }, [timerLastStoppedAt]);
   const assignmentHook = useTicketAssignment({ ...deps, fetchTicket });
+  const bundleHook = useTicketBundle({ client, session, ticketId, ticket });
+  const bundleLocked = isBundleChild(ticket);
+  const notifyBundleLocked = useCallback(() => {
+    showToast({ message: t("detail.bundle.locked"), tone: "info" });
+  }, [showToast, t]);
+  const openBundleTicket = useCallback((targetTicketId: string) => {
+    navigation?.push("TicketDetail", { ticketId: targetTicketId });
+  }, [navigation]);
   const contactHook = useTicketContact({ ...deps, fetchTicket });
   const tagsHook = useTicketTags(deps);
   const titleHook = useTicketTitle({ ...deps, ticket, setTicket: ticketData.setTicket });
@@ -276,6 +325,11 @@ export function TicketDetailBody({
     return <ErrorState title={t("detail.ticketNotFound")} description={t("detail.ticketUnavailable")} />;
   }
 
+  const ticketClientId = (ticket as Record<string, unknown>).client_id as string | null | undefined;
+  const ticketContactId = (ticket as Record<string, unknown>).contact_name_id as string | null | undefined;
+  const contactPhone = ticket.contact_phone?.trim() || null;
+  const clientPhone = ticket.client_phone?.trim() || null;
+
   // --- Derived values ---
   const statusLabel = statusHook.pendingStatusId
     ? (statusHook.statusOptions.find((s) => s.status_id === statusHook.pendingStatusId)?.name ??
@@ -295,7 +349,7 @@ export function TicketDetailBody({
         contentContainerStyle={{ padding: spacing.lg }}
         refreshControl={<RefreshControl
           refreshing={refreshing}
-          onRefresh={() => { void Promise.all([refresh(), tagsHook.fetchTags(), checklistHook.fetchChecklist()]); }}
+          onRefresh={() => { void Promise.all([refresh(), tagsHook.fetchTags(), checklistHook.fetchChecklist(), bundleHook.fetchBundle()]); }}
         />}
         keyboardShouldPersistTaps="handled"
       >
@@ -350,6 +404,16 @@ export function TicketDetailBody({
           </View>
         ) : null}
 
+        <CallPromptHost
+          origin={{ kind: "ticket", id: ticketId }}
+          client={client}
+          apiKey={session.accessToken}
+          userId={meUserId ?? null}
+          onLogged={() => {
+            setCallsReloadKey((key) => key + 1);
+            void resyncScheduleReminders({ accessToken: session.accessToken, tenantId: session.tenantId, userId: session.user?.id, refreshSession });
+          }}
+        />
         <Text style={{ ...typography.caption, color: colors.textSecondary }}>
           {ticket.ticket_number}
           {ticket.client_name ? ` • ${ticket.client_name}` : ""}
@@ -414,6 +478,18 @@ export function TicketDetailBody({
           </Pressable>
         )}
 
+        {bundleHook.bundleRole !== "standalone" ? (
+          <View style={{ marginTop: spacing.sm }}>
+            <BundleBanner
+              role={bundleHook.bundleRole}
+              bundle={bundleHook.bundle}
+              masterTicketNumber={(ticket.bundle_master_ticket_number as string | null | undefined) ?? null}
+              childCount={Number(ticket.bundle_child_count ?? 0)}
+              onOpenTicket={navigation ? openBundleTicket : undefined}
+            />
+          </View>
+        ) : null}
+
         <View style={{ marginTop: spacing.sm }}>
           <TicketMetaBar
             statusLabel={statusLabel}
@@ -421,10 +497,12 @@ export function TicketDetailBody({
             priorityName={ticket.priority_name ?? null}
             assignedToName={ticket.assigned_to_name ?? null}
             dueDateIso={getDueDateIso(ticket)}
-            assigneeDisabled={assignmentHook.assignmentUpdating}
-            onStatusPress={() => { void statusHook.openStatusPicker(); }}
-            onPriorityPress={() => { void priorityHook.openPriorityPicker(); }}
-            onAssigneePress={assignmentHook.openAgentPicker}
+            assigneeDisabled={assignmentHook.assignmentUpdating || bundleLocked}
+            statusDisabled={bundleLocked}
+            priorityDisabled={bundleLocked}
+            onStatusPress={bundleLocked ? notifyBundleLocked : () => { void statusHook.openStatusPicker(); }}
+            onPriorityPress={bundleLocked ? notifyBundleLocked : () => { void priorityHook.openPriorityPicker(); }}
+            onAssigneePress={bundleLocked ? notifyBundleLocked : assignmentHook.openAgentPicker}
             onDuePress={() => {
               dueDateHook.setDueDateDraft(isoToDateInput(getDueDateIso(ticket)) ?? "");
               dueDateHook.setDueDateOpen(true);
@@ -529,8 +607,15 @@ export function TicketDetailBody({
                 statusHook.setStatusPickerOpen(false);
               }
             }}
-            closedStatuses={statusHook.statusOptions.filter((s) => s.is_closed)}
+            closedStatuses={bundleLocked ? [] : statusHook.statusOptions.filter((s) => s.is_closed)}
             closeStatusId={commentDraftHook.commentCloseStatusId}
+            scheduleAt={commentDraftHook.commentScheduleAt}
+            onChangeScheduleAt={commentDraftHook.setCommentScheduleAt}
+            cc={commentDraftHook.commentCc}
+            bcc={commentDraftHook.commentBcc}
+            onChangeCc={commentDraftHook.setCommentCc}
+            onChangeBcc={commentDraftHook.setCommentBcc}
+            onSearchRecipients={handleRecipientSearch}
             onChangeCloseStatusId={commentDraftHook.setCommentCloseStatusId}
             onSend={(notificationSuppression) => void commentDraftHook.sendComment(notificationSuppression)}
             sending={commentDraftHook.commentSending}
@@ -559,15 +644,23 @@ export function TicketDetailBody({
               t("detail.contact"),
             )}
           >
-            {ticket.contact_phone ? (
+            {contactPhone ? (
               <Pressable
-                onPress={() => void Linking.openURL(`tel:${ticket.contact_phone}`)}
+                testID="ticket-detail-call-contact"
+                onPress={() => placeCall({
+                  origin: { kind: "ticket", id: ticketId },
+                  phone: formatPhoneForDisplay(contactPhone).e164 || contactPhone,
+                  name: ticket.contact_name ?? null,
+                  contactId: ticketContactId ?? null,
+                  clientId: ticketClientId ?? null,
+                  ticketId,
+                })}
                 accessibilityRole="button"
                 accessibilityLabel={t("detail.callContact", { name: ticket.contact_name ?? "" })}
                 style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
               >
                 <Text style={{ ...typography.caption, color: colors.primary }}>
-                  {t("detail.contactPhone")}: {ticket.contact_phone}
+                  {t("detail.contactPhone")}: {formatPhoneLabel(formatPhoneForDisplay(ticket.contact_phone), t("detail.phoneExtension", { defaultValue: "ext." }))}
                 </Text>
               </Pressable>
             ) : null}
@@ -605,14 +698,22 @@ export function TicketDetailBody({
               t("detail.client"),
             )}
           >
-            {ticket.client_phone ? (
+            {clientPhone ? (
               <Pressable
-                onPress={() => void Linking.openURL(`tel:${ticket.client_phone}`)}
+                testID="ticket-detail-call-client"
+                onPress={() => placeCall({
+                  origin: { kind: "ticket", id: ticketId },
+                  phone: formatPhoneForDisplay(clientPhone).e164 || clientPhone,
+                  name: ticket.client_name ?? null,
+                  contactId: null,
+                  clientId: ticketClientId ?? null,
+                  ticketId,
+                })}
                 accessibilityRole="button"
                 style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
               >
                 <Text style={{ ...typography.caption, color: colors.primary }}>
-                  {t("detail.contactPhone")}: {ticket.client_phone}
+                  {t("detail.contactPhone")}: {formatPhoneLabel(formatPhoneForDisplay(ticket.client_phone), t("detail.phoneExtension", { defaultValue: "ext." }))}
                 </Text>
               </Pressable>
             ) : null}
@@ -629,20 +730,26 @@ export function TicketDetailBody({
             ) : null}
             {ticket.location_name ? (
               <Pressable
-                onPress={() => {
-                  const query = encodeURIComponent(ticket.location_name ?? "");
-                  const url = Platform.OS === "ios"
-                    ? `maps:0,0?q=${query}`
-                    : `geo:0,0?q=${query}`;
-                  void Linking.openURL(url);
-                }}
+                onPress={() => void Linking.openURL(buildMapsUrl(ticket.location_address || ticket.location_name || ""))}
                 accessibilityRole="button"
                 accessibilityLabel={t("detail.openInMaps")}
                 style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
               >
                 <Text style={{ ...typography.caption, color: colors.textSecondary }}>{t("detail.location")}</Text>
                 <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>{ticket.location_name}</Text>
+                {ticket.location_address ? (
+                  <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>{ticket.location_address}</Text>
+                ) : null}
               </Pressable>
+            ) : null}
+            {ticketClientId ? (
+              <ClientNotesSection
+                variant="inline"
+                client={client}
+                apiKey={session.accessToken}
+                clientId={ticketClientId}
+                titleKey="notes.ticketTitle"
+              />
             ) : null}
           </KeyValue>
           <View style={{ height: spacing.sm }} />
@@ -663,6 +770,22 @@ export function TicketDetailBody({
             actionError={tagsHook.tagPickerOpen ? null : tagsHook.tagActionError}
             updating={tagsHook.tagUpdating}
             onAddPress={tagsHook.openTagPicker}
+            initiallyCollapsed
+          />
+          <View style={{ height: spacing.sm }} />
+          <CallsEmailsSection
+            client={client}
+            apiKey={session.accessToken}
+            userId={meUserId ?? session.user?.id ?? null}
+            ticketId={ticketId}
+            clientId={ticketClientId}
+            contactNameId={ticketContactId}
+            reloadKey={callsReloadKey}
+            onLogged={() => {
+              // A logged interaction may have booked a calendar entry: arm its
+              // local reminder now instead of waiting for the next launch/resume.
+              void resyncScheduleReminders({ accessToken: session.accessToken, tenantId: session.tenantId, userId: session.user?.id, refreshSession });
+            }}
             initiallyCollapsed
           />
           <View style={{ height: spacing.sm }} />
@@ -800,15 +923,39 @@ export function TicketDetailBody({
         updateError={contactHook.contactError}
         currentContactId={(ticket as Record<string, unknown>).contact_name_id as string | null | undefined}
         currentContactName={ticket.contact_name}
-        clientId={(ticket as Record<string, unknown>).client_id as string | null | undefined}
+        clientId={ticketClientId}
         onApply={(contactNameId, notificationSuppression) => {
           if (contactNameId) void contactHook.selectContact(contactNameId, notificationSuppression);
           else void contactHook.removeContact(notificationSuppression);
         }}
-        onClose={contactHook.closeContactPicker}
+        onClose={() => {
+          setCreatedContact(null);
+          contactHook.closeContactPicker();
+        }}
+        onCreateContact={features.contactsCreate && ticketClientId ? () => {
+          contactHook.closeContactPicker();
+          setNewContactOpen(true);
+        } : undefined}
+        preselect={createdContact}
         client={client}
         apiKey={session?.accessToken ?? ""}
         baseUrl={config.ok ? config.baseUrl : null}
+      />
+      <ContactFormModal
+        visible={newContactOpen}
+        mode="create"
+        client={client}
+        apiKey={session?.accessToken ?? ""}
+        baseUrl={config.ok ? config.baseUrl : null}
+        presetClient={ticketClientId ? { id: ticketClientId, name: ticket.client_name ?? "" } : null}
+        lockClient
+        onClose={() => setNewContactOpen(false)}
+        onSaved={(created) => {
+          // Back to the picker with the new contact selected, so the notification
+          // choice is made the same way as for an existing contact.
+          setCreatedContact({ id: created.contact_name_id, name: created.full_name, email: created.email ?? null });
+          contactHook.openContactPicker();
+        }}
       />
     </>
   );

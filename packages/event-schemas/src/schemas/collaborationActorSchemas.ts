@@ -1,15 +1,26 @@
 import { z } from 'zod';
 
 /** Historical attribution, never a credential or a request execution identity. */
-export const collaborationActorReferenceSchema = z.object({
+export interface CollaborationActorReference {
+  ownerTenantId: string;
+  referenceId: string;
+  tenantId: string;
+  userId: string;
+  displayName: string;
+  organizationName: string;
+}
+
+// Typed explicitly: with `strict: false` (ee/server) zod infers every field of a
+// `.strict().refine()` object as optional, which no longer satisfies this contract.
+// Runtime validation is unchanged: every field is still required.
+export const collaborationActorReferenceSchema: z.ZodType<CollaborationActorReference, z.ZodTypeDef, unknown> = z.object({
   ownerTenantId: z.string().uuid(),
   referenceId: z.string().uuid(),
   tenantId: z.string().uuid(),
   userId: z.string().uuid(),
   displayName: z.string().min(1),
   organizationName: z.string().min(1),
-}).strict().refine(actor => actor.ownerTenantId !== actor.tenantId, 'A collaborator belongs to a different tenant');
-export type CollaborationActorReference = z.infer<typeof collaborationActorReferenceSchema>;
+}).strict().refine(actor => actor.ownerTenantId !== actor.tenantId, 'A collaborator belongs to a different tenant') as z.ZodType<CollaborationActorReference, z.ZodTypeDef, unknown>;
 
 /** Validate before a payload schema can strip legacy actor fields. */
 export function collaborationActorPayloadIssue(input: unknown): string | null {

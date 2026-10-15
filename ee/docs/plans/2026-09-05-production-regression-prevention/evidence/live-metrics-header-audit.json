@@ -1,0 +1,68 @@
+{
+  "sourceSpreadsheetId": "1eKcgRVSwd3bDBSbbwyj-WYb8jhqSEDOG8FPO9--O21M",
+  "observedAt": "2026-09-08",
+  "metrics": {
+    "range": "metrics!A1:AB1",
+    "columns": [
+      "timestamp_utc",
+      "suite",
+      "branch",
+      "commit",
+      "passed",
+      "failed",
+      "skipped",
+      "todo",
+      "total",
+      "pass_pct",
+      "lines_pct",
+      "statements_pct",
+      "branches_pct",
+      "functions_pct",
+      "duration_s",
+      "run_url",
+      "executed",
+      "run_status",
+      "files_measured",
+      "files_total",
+      "schema_version",
+      "run_kind",
+      "event_name",
+      "coverage_methodology",
+      "expected_files",
+      "collected_tests",
+      "execution_gate_status",
+      "tested_sha"
+    ],
+    "matchesCurrentExporter": true
+  },
+  "browser": {
+    "range": "browser_readiness!A1:R1",
+    "columns": [
+      "timestamp_utc",
+      "schema_version",
+      "row_kind",
+      "tested_sha",
+      "edition",
+      "lane_status",
+      "run_url",
+      "collected",
+      "executed",
+      "project",
+      "file",
+      "journey",
+      "required",
+      "observed",
+      "outcome",
+      "first_attempt",
+      "retry_count",
+      "artifact_manifest"
+    ],
+    "matchesCurrentExporter": true
+  },
+  "copyStatus": "rejected-awaiting-user-approval",
+  "destinationFolderId": "1LnvKWwRyRoTXZEP4Fu3wv5vRzOcxhEPm",
+  "limitations": [
+    "Headers only: not workbook behavioral or historical-reader validation.",
+    "No original workbook cells were modified."
+  ]
+}

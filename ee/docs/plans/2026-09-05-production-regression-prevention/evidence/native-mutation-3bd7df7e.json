@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "kind": "scoped-mutation-pilot",
+  "enforcement": "report-only-score",
+  "revision": "3bd7df7e5141d58ea6c958dfc442cf3f5a74f142",
+  "workingTreeDirty": false,
+  "runtime": "v25.5.0",
+  "files": [
+    {
+      "file": "packages/authorization/src/kernel/scope.ts",
+      "sourceSha256": "4e076c87dbe1def07059d9b05252517842963f1b40dcf3f82062ed8efb278453",
+      "statuses": {
+        "Killed": 24
+      },
+      "remaining": []
+    },
+    {
+      "file": "shared/billingClients/calendarMonthEndClosePolicy.ts",
+      "sourceSha256": "7aefb6dae922956af13b14cd60fd2f3647a7c5714767082e921ded2bc363e1a3",
+      "statuses": {
+        "Killed": 56,
+        "Survived": 3
+      },
+      "remaining": [
+        {
+          "id": "29",
+          "status": "Survived",
+          "mutator": "ConditionalExpression",
+          "location": {
+            "end": {
+              "column": 12,
+              "line": 66
+            },
+            "start": {
+              "column": 7,
+              "line": 66
+            }
+          },
+          "replacement": "false"
+        },
+        {
+          "id": "31",
+          "status": "Survived",
+          "mutator": "StringLiteral",
+          "location": {
+            "end": {
+              "column": 29,
+              "line": 67
+            },
+            "start": {
+              "column": 24,
+              "line": 67
+            }
+          },
+          "replacement": "\"\""
+        },
+        {
+          "id": "37",
+          "status": "Survived",
+          "mutator": "BlockStatement",
+          "location": {
+            "end": {
+              "column": 4,
+              "line": 81
+            },
+            "start": {
+              "column": 11,
+              "line": 79
+            }
+          },
+          "replacement": "{}"
+        }
+      ]
+    }
+  ],
+  "scope": "native-scoped-mutation-pilot",
+  "counts": {
+    "total": 83,
+    "killed": 80,
+    "survived": 3,
+    "noCoverage": 0,
+    "timeouts": 0,
+    "errors": 0
+  },
+  "score": 96.39,
+  "breakThreshold": 0,
+  "behavioralDryRunTests": 33,
+  "productionCodeChanged": false,
+  "sourceCleanAfter": true,
+  "rawReportSha256": "bba938501fcc1ff0db84ed0f94e74d11c7e4cc042c6fa221cd9f714a46675695",
+  "limitations": [
+    "Native Node25 run, not current published-candidate CI.",
+    "Three public-policy-equivalent billing survivors remain; mutation score remains report-only.",
+    "Authorization cases cover intentionally tolerated nullish runtime constraints, not a demonstrated customer security incident."
+  ]
+}

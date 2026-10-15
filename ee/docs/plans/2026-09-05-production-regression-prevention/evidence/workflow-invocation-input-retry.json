@@ -1,0 +1,29 @@
+{
+  "scope": "Real invocation input diagnostics and successful retry behavior",
+  "baseRevision": "25c62531463a43c51ea9c33d991b70b46df11ebe",
+  "workingTreeDirty": true,
+  "validation": {
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0,
+    "artifact": "/tmp/alga-workflow-invocation-storage.log",
+    "sha256": "4883a70433401ea8d4fa020b9d1ea4a85da43e9f8f05e61a45d088119c99bbe0",
+    "configuration": "server/vitest.config.ts"
+  },
+  "behavior": [
+    "Real executeWorkflowRuntimeV2ActionStep resolves input mappings, calls a registered synthetic action and persists its invocation through real models/SQL.",
+    "Handler receives the original secretRef field while persisted input_json masks it.",
+    "Retry returns the original successful result and executes the handler exactly once."
+  ],
+  "remainingOutputRequirement": {
+    "observedSource": "ee/temporal-workflows/src/activities/workflow-runtime-v2-activities.ts: executeActionInvocation reads existing.output_json on successful retry and writes parsedOutput directly on success.",
+    "constraint": "Redacting output_json in place changes successful retry results; preserve replay semantics while separating diagnostic representation.",
+    "nextWork": "Add a real sensitive-output persistence/retry regression and implement protected replay storage with redacted diagnostic output, including migration, read/export exclusion and upgrade behavior."
+  },
+  "limits": [
+    "The synthetic registered action models an external effect; no vendor is called.",
+    "This covers secret-reference masking, not every resolved secret propagation path.",
+    "Output redaction remains incomplete; the legacy combined invocation test remains skipped.",
+    "No native CI pass is claimed."
+  ]
+}

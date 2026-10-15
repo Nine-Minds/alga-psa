@@ -9,16 +9,19 @@ import { useTierFeature } from '@/context/TierContext';
 import { TIER_FEATURES } from '@alga-psa/types';
 
 export default function IntegrationsSettingsBody(): React.JSX.Element {
+  const canUseIntegrations = useTierFeature(TIER_FEATURES.INTEGRATIONS);
   const canUseCipp = useTierFeature(TIER_FEATURES.CIPP);
   const canUseEntraSync = useTierFeature(TIER_FEATURES.ENTRA_SYNC);
 
   return (
     <>
-      <TaxDelegationNudge />
+      {canUseIntegrations && <TaxDelegationNudge />}
       <IntegrationsSettingsPage
+        canUseIntegrations={canUseIntegrations}
         canUseEntraSync={canUseEntraSync}
         canUseCipp={canUseCipp}
-        qboSyncHealthSlot={<QboSyncHealthPanel />}
+        qboSyncHealthSlot={<QboSyncHealthPanel adapterType="quickbooks_online" />}
+        xeroSyncHealthSlot={<QboSyncHealthPanel adapterType="xero" />}
         qboOnboardingSlot={<QboOnboardingWizardEntry />}
       />
     </>

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "runId": "34330619264",
+  "headRevision": "f3a77aebac4debf9882a8311db33c4e3b6d44cd7",
+  "testedRevision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+  "artifactId": 10096360589,
+  "artifactSha256": "7acb31859c2a16d9001c8b6791f307556ab8c58ea3340ae3a632afe260901ef4",
+  "suiteStatus": "passed",
+  "counts": {
+    "passed": 579,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "failures": [],
+  "surveyCases": [
+    {
+      "name": "Survey trigger dispatch integration sends a survey invitation when a closed ticket matches trigger conditions",
+      "status": "passed",
+      "durationMs": 102.05764900008217
+    },
+    {
+      "name": "Survey trigger dispatch integration does not send surveys when ticket status does not satisfy trigger",
+      "status": "passed",
+      "durationMs": 31.159169999998994
+    },
+    {
+      "name": "Survey trigger dispatch integration sends surveys when a project completes and matches trigger conditions",
+      "status": "passed",
+      "durationMs": 31.99201299995184
+    }
+  ],
+  "limitation": "Current-run shard evidence only; overall run remains live and includes other failed jobs."
+}

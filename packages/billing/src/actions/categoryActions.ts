@@ -240,6 +240,21 @@ export const deleteServiceCategory = withAuth(async (user, { tenant }, categoryI
         return actionError('Cannot delete category: services are using this category', 'msp/service-catalog:errors.category.inUseByServices');
       }
 
+      // service_request_definitions.category_id is declared ON DELETE RESTRICT
+      // (20260329150000_create_service_request_domain_tables.cjs), so a category
+      // referenced by a request definition must have that reference cleared
+      // first or the delete raises a raw FK violation.
+      //
+      // service_request_definition_versions.category_id is a historical snapshot
+      // with no foreign key and is deliberately left alone.
+      //
+      // There is intentionally no ticket in-use check here: ticket categories
+      // live in the `categories` table, not `service_categories`, so joining
+      // `tickets.category_id` against this id would block legitimate deletes.
+      await tenantScopedTable(trx, tenant, 'service_request_definitions')
+        .where({ category_id: categoryId })
+        .update({ category_id: null, category_name_snapshot: null });
+
       const deletedCount = await tenantScopedTable(trx, tenant, 'service_categories')
         .where({ category_id: categoryId })
         .delete();

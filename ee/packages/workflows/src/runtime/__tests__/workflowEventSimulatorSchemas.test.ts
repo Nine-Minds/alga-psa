@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '../index';
-import { workflowEventPayloadSchemas } from '../schemas/workflowEventPayloadSchemas';
+import { workflowEventPayloadSchemas } from '@alga-psa/event-schemas';
 import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 
 describe('workflow event simulator schemas', () => {

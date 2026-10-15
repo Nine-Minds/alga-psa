@@ -1,0 +1,69 @@
+{
+  "sourceRevision": "813ba16d8d",
+  "imageTag": "alga-regression-designer:813ba16d8d",
+  "session": null,
+  "log": "/tmp/alga-designer-production-build-space-retry.log",
+  "status": "stopped: final export/unpack failed for disk space; user directed deferring further Docker builds until final validation",
+  "dependencyBuild": {
+    "status": "passed",
+    "durationSeconds": 16.57,
+    "upstreamTaskCount": 57
+  },
+  "disposableDatabase": "designer_browser_82cc",
+  "syntheticCredentials": "Initialized only in disposable database; private temporary runtime/browser env files; values omitted",
+  "plannedApplication": {
+    "container": "alga-regression-designer-app",
+    "network": "alga-regression-browser",
+    "hostPort": 53010
+  },
+  "limitations": [
+    "Full image build not complete",
+    "No new application container started",
+    "Current production browser regression and native CI unverified"
+  ],
+  "previousAttempt": {
+    "session": 19202,
+    "result": "exit102: full EE build could not allocate memory in 8GB VM",
+    "log": "/tmp/alga-designer-production-build-fixed.log"
+  },
+  "resources": {
+    "hostRamGiB": 48,
+    "testVmRamGiB": 24,
+    "nodeHeapMiB": 12288
+  },
+  "runnerChecks": {
+    "passed": 8,
+    "failed": 0,
+    "log": "/tmp/alga-relocation-runner-checks.log"
+  },
+  "applicationBuild": {
+    "status": "passed in attempt87007",
+    "staticPagesGenerated": 74,
+    "log": "/tmp/alga-designer-production-build-24gb.log"
+  },
+  "imageAssembly": "attempt87007 exited102: no space copying runtime node_modules",
+  "diskRecovery": "Removed inspected unused images and retired stopped task containers without deleting volumes; trimmed free VM blocks. Full image builds remain deferred.",
+  "localDevelopment": {
+    "hostSession": 65069,
+    "browserSession": 21557,
+    "config": "e2e-tests/playwright.local.config.ts",
+    "releaseValidation": false,
+    "status": "passed: 1 host browser journey in 36.4 seconds, zero retries",
+    "previousAttempts": [
+      {
+        "session": 1106,
+        "status": "failed: localhost dashboard connection refused; later run established automatic Next development memory restarts"
+      },
+      {
+        "session": 63407,
+        "status": "failed: callback redirected from 127.0.0.1 to localhost; session cookie absent on redirected request"
+      },
+      {
+        "session": 91735,
+        "status": "failed after successful dashboard: Next logged automatic memory-threshold restart, billing navigation connection refused",
+        "log": "/tmp/alga-designer-host-dualstack.log"
+      }
+    ],
+    "log": "/tmp/alga-designer-host-browser-warm.log"
+  }
+}

@@ -40,7 +40,6 @@ describe('TemplateUsageBasedServicesStep i18n wiring contract', () => {
       'templateUsage.fields.serviceNumber',
       'templateUsage.placeholders.selectService',
       'templateUsage.fields.unitOfMeasureOptional',
-      'templateUsage.placeholders.unitOfMeasure',
       'templateUsage.help.unitOfMeasure',
       'templateUsage.fields.setBucketAllocation',
       'templateUsage.actions.addService',

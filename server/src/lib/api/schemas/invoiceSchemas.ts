@@ -313,6 +313,8 @@ const recurringCadenceOwnerSchema = z.enum(['client', 'contract']);
 
 const recurringExecutionWindowIdentitySchema = z.object({
   kind: recurringExecutionWindowKindSchema,
+  scheduleKey: z.string().min(1).nullable().optional(),
+  periodKey: z.string().min(1).nullable().optional(),
   identityKey: z.string().min(1),
   cadenceOwner: recurringCadenceOwnerSchema,
   clientId: uuidSchema.optional(),
@@ -330,6 +332,15 @@ const recurringDueSelectionInputSchema = z.object({
   billingCycleId: uuidSchema.nullable().optional(),
   executionWindow: recurringExecutionWindowIdentitySchema,
 }).superRefine((value, ctx) => {
+  if (value.executionWindow.kind === 'client_cadence_window') {
+    for (const field of ['scheduleKey', 'periodKey'] as const) {
+      if (!value.executionWindow[field]) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom,
+          message: `selector_input.executionWindow.${field} is required for client-cadence generation.`,
+          path: ['executionWindow', field] });
+      }
+    }
+  }
   if (value.billingCycleId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "kind": "native-ci-execution",
+  "observedAt": "2026-09-06",
+  "revision": "904c0fcaa4299b06c188b73124a88cac246668ec",
+  "status": "passed",
+  "scope": "additional-workspace-tests",
+  "job": "https://github.com/Nine-Minds/alga-psa/actions/runs/34056413260/job/101550141507",
+  "artifactId": 9996210199,
+  "reportSha256": "387ce53ed23d4bb375e4d7adbe8fc1d1f206831a06451b59769ea897e14d528e",
+  "suites": [
+    {
+      "suite": "workspace-unit",
+      "status": "passed",
+      "counts": {
+        "passed": 91,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      }
+    },
+    {
+      "suite": "workspace-runtime",
+      "status": "passed",
+      "counts": {
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      }
+    },
+    {
+      "suite": "server-colocated",
+      "status": "passed",
+      "counts": {
+        "passed": 381,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      }
+    },
+    {
+      "suite": "nx-tooling",
+      "status": "passed",
+      "counts": {
+        "passed": 11,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      }
+    },
+    {
+      "suite": "ui-kit-showcase",
+      "status": "passed",
+      "counts": {
+        "passed": 117,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      }
+    },
+    {
+      "suite": "enterprise-integration",
+      "status": "passed",
+      "counts": {
+        "passed": 328,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      }
+    },
+    {
+      "suite": "ai-gateway",
+      "status": "passed",
+      "counts": {
+        "passed": 58,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      }
+    },
+    {
+      "suite": "enterprise-unit",
+      "status": "passed",
+      "counts": {
+        "passed": 2233,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      }
+    }
+  ],
+  "limits": [
+    "Additional-workspace scope only; does not replace server DB/unit, production browser or repository-wide release gates.",
+    "The same candidate still fails the circular guard and image builds; those are not part of this aggregate."
+  ]
+}

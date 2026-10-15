@@ -7,26 +7,30 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedSlaPolicyScreen, saveCoManagedSlaPriorityMappings } from '@/lib/actions/coManagedPolicyActions';
+import CoManagedWorkspaceDirectory, { type CoManagedWorkspaceChoice, workspaceChoices } from './CoManagedWorkspaceDirectory';
 
-type Screen = Awaited<ReturnType<typeof getCoManagedSlaPolicyScreen>>;
+type Screen = Exclude<Awaited<ReturnType<typeof getCoManagedSlaPolicyScreen>>, { side: 'directory' }>;
 export default function CoManagedSlaPolicyPanel({ operationId }: { operationId?: string }) {
   return <SlaPolicyForm key={operationId || 'missing'} operationId={operationId} />;
 }
 function SlaPolicyForm({ operationId }: { operationId?: string }) {
   const { t } = useTranslation('msp/licensing');
   const [state, setState] = useState<Screen | null>(null), [values, setValues] = useState<Record<string, string>>({});
+  const [directory, setDirectory] = useState<CoManagedWorkspaceChoice[] | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState<'loadError' | 'saveError' | null>(null);
   const [saved, setSaved] = useState(false);
   const [pending, setPending] = useState<Parameters<typeof saveCoManagedSlaPriorityMappings>[0] | null>(null);
   const generation = useRef(0), inFlight = useRef(false);
   const load = useCallback(async () => {
     const current = ++generation.current;
-    setState(null); setError(null); setBusy(true); setPending(null);
+    setState(null); setDirectory(null); setError(null); setBusy(true); setPending(null);
     try {
-      if (!operationId) throw new Error('A co-management relationship is required');
       const next = await getCoManagedSlaPolicyScreen(operationId);
       if (generation.current !== current) return;
-      setState(next); setValues(Object.fromEntries(next.mappings.map(row => [row.customerPriorityId, row.mspPriorityId])));
+      const choices = workspaceChoices(next);
+      if (choices) { setDirectory(choices); return; }
+      const screen = next as Screen;
+      setState(screen); setValues(Object.fromEntries(screen.mappings.map(row => [row.customerPriorityId, row.mspPriorityId])));
     } catch { if (generation.current === current) setError('loadError'); }
     finally { if (generation.current === current) setBusy(false); }
   }, [operationId]);
@@ -49,7 +53,8 @@ function SlaPolicyForm({ operationId }: { operationId?: string }) {
     <p>{t('coManaged.sla.description')}</p>
     {error && <p role="alert" className="text-destructive">{t(`coManaged.policy.${error}`)}</p>}
     {saved && <p role="status">{t('coManaged.policy.saved')}</p>}
-    {!state && busy && <p role="status">{t('coManaged.loading')}</p>}
+    {directory && <CoManagedWorkspaceDirectory basePath="/msp/co-management/sla" idPrefix="co-sla-workspace" workspaces={directory} />}
+    {!state && !directory && busy && <p role="status">{t('coManaged.loading')}</p>}
     {state && <Card><CardHeader><CardTitle>{state.policyName || t('coManaged.sla.missingPolicy')}</CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <Link id="co-sla-settings" href="/msp/settings/sla" className="text-primary underline">{t('coManaged.sla.settings')}</Link>

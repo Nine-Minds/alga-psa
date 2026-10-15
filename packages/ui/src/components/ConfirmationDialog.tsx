@@ -83,13 +83,17 @@ export const ConfirmationDialog = ({
       }}
     >
       <DialogContent>
-        <DialogDescription className="sr-only">
-          {typeof message === 'string' ? message : title}
-        </DialogDescription>
+        {/* The message renders exactly once. A string message *is* the dialog
+            description (so aria-describedby points at the visible copy); a node
+            message keeps the title as the description instead of repeating the
+            body verbatim. */}
         {typeof message === 'string' ? (
-          <p className="text-gray-600">{message}</p>
+          <DialogDescription className="text-gray-600">{message}</DialogDescription>
         ) : (
-          <div className="text-gray-600">{message}</div>
+          <>
+            <DialogDescription className="sr-only">{title}</DialogDescription>
+            <div className="text-gray-600">{message}</div>
+          </>
         )}
         {options && (
           <RadioGroup

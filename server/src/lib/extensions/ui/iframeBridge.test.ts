@@ -1,14 +1,14 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { bootstrapIframe } from './iframeBridge';
 
 function makeIframe(): HTMLIFrameElement {
   const iframe = document.createElement('iframe');
-  // jsdom does not populate contentWindow; attach a stub for our tests
-  (iframe as any).contentWindow = {
-    postMessage: vi.fn(),
-  };
-  // Attach to DOM so events behave more like real
   document.body.appendChild(iframe);
+  const frameWindow = iframe.contentWindow!;
+  vi.spyOn(frameWindow, 'postMessage');
+  // Preserve the observed window if changing src creates a new jsdom window.
+  Object.defineProperty(iframe, 'contentWindow', { configurable: true, get: () => frameWindow });
   return iframe;
 }
 
@@ -29,12 +29,13 @@ describe('bootstrapIframe (host bridge)', () => {
     // Clean DOM
     document.documentElement.innerHTML = '<head></head><body></body>';
     // Dev flag for safety in tests (code still computes explicit origin)
-    (window as any).__ALGA_DEV__ = true;
-    (process.env as any).NODE_ENV = 'test';
+    (window as any).__ALGA_DEV__ = false;
+    vi.stubEnv('NODE_ENV', 'production');
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it('applies sandbox="allow-scripts" by default when none provided', () => {

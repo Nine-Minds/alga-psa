@@ -453,8 +453,12 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     }
   }, [fullCSVData, columnMappings, validateMappings, projectId, importT, defaultPhaseName]);
 
-  const handleImport = useCallback(async () => {
-    if (isProcessing || groupedPhases.length === 0) return;
+  // `phasesOverride` lets callers that just computed a grouping import it directly:
+  // a state setter does not update the value this closure already captured.
+  // The Array.isArray guard keeps a click event passed as the first argument harmless.
+  const handleImport = useCallback(async (phasesOverride?: IGroupedPhaseData[]) => {
+    const phases = Array.isArray(phasesOverride) ? phasesOverride : groupedPhases;
+    if (isProcessing || phases.length === 0) return;
 
     setIsProcessing(true);
     setStep('importing');
@@ -463,7 +467,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     try {
       const result = await importPhasesAndTasks(
         projectId,
-        groupedPhases,
+        phases,
         statusResolutions,
         defaultStatusMappingId || undefined,
         defaultPhaseName || undefined
@@ -543,7 +547,8 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     if (unmatchedStatuses.length > 0) {
       setStep('status_resolution');
     } else {
-      handleImport();
+      // Pass the fresh grouping — setGroupedPhases above cannot reach handleImport's closure.
+      handleImport(grouped);
     }
   }, [validationResults, userLookup, priorityLookup, serviceLookup, statusLookup, statusLookupByPhase, agentResolutions, unmatchedStatuses, handleImport, defaultPhaseName]);
 
@@ -833,7 +838,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
         </Button>
         <Button
           id="status-resolution-import-btn"
-          onClick={handleImport}
+          onClick={() => handleImport()}
           disabled={isProcessing || hasIncompleteStatusMappings || !canProceedWithImport}
         >
           {isProcessing
@@ -880,7 +885,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
             <p className="mt-2 text-sm text-[rgb(var(--color-text-600))]">{importT('uploadIntro', 'Upload a CSV file with phase and task data')}</p>
             <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
               <strong>{importT('requiredFields', 'Required:')}</strong> {importT('requiredFieldsList', 'task_name')}<br />
-              <strong>{importT('optionalFields', 'Optional:')}</strong> {importT('optionalFieldsList', 'phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags')}<br />
+              <strong>{importT('optionalFields', 'Optional:')}</strong> {importT('optionalFieldsList', 'phase_name, task_description, assigned_to, estimated_hours, start_date, due_date, priority, service, task_type, status, tags')}<br />
               <strong>{importT('noteLabel', 'Note:')}</strong> {importT('defaultPhaseNote', 'Tasks without a phase_name will be grouped into "{{phaseName}}"', { phaseName: DEFAULT_PHASE_NAME })}
             </p>
             <div className="mt-4 space-y-3">
@@ -1114,9 +1119,10 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                           <div key={`${phase.phase_name}-${index}`} className="flex items-center gap-2 py-1 text-sm">
                             <span className="text-[rgb(var(--color-text-400))]">•</span>
                             <span>{task.task_name}</span>
-                            {task.estimated_hours && (
-                              <span className="text-[rgb(var(--color-text-500))]">{importT('estimatedHoursSummary', '({{hours}}h)', { hours: task.estimated_hours })}</span>
-                            )}
+                            {task.estimated_hours ? (
+                              // Grouped rows carry minutes (project_tasks.estimated_hours); the preview shows hours.
+                              <span className="text-[rgb(var(--color-text-500))]">{importT('estimatedHoursSummary', '({{hours}}h)', { hours: Number((task.estimated_hours / 60).toFixed(2)) })}</span>
+                            ) : null}
                           </div>
                         ))}
                       </div>

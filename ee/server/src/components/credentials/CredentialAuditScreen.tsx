@@ -274,9 +274,18 @@ export function CredentialAuditScreen() {
 
   return (
     <div id="credentials-audit-screen" className="space-y-5">
+      {/*
+        The primary ramp INVERTS between modes: `primary-900` is the deepest
+        rung of every light pair but the lightest tint of every dark one — pure
+        white in high-contrast dark, where this banner's white lettering
+        disappeared entirely. Each mode names the rung that is actually deep in
+        that mode; `credentialAuditScreen.theme.test.ts` measures the pair.
+        Elevation comes from the theme-aware `card-elevated` the Card already
+        carries — a Tailwind `shadow-*` cannot follow the mode.
+      */}
       <Card
         id="credentials-audit-hero"
-        className="relative overflow-hidden border-0 bg-primary-900 shadow-lg shadow-primary-900/10"
+        className="relative overflow-hidden border-0 bg-primary-900 dark:bg-primary-100"
       >
         <div className="pointer-events-none absolute -right-14 -top-24 h-64 w-64 rounded-full border-[40px] border-white/5" />
         <CardContent className="!p-5 sm:!p-6">

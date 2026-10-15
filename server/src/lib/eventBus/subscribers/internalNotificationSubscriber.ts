@@ -7,10 +7,11 @@ import { registerNotificationCreatedEffects } from '@alga-psa/notifications/acti
 import { resolveTicketCommentNotificationPayload } from '../../notifications/ticketCommentNotificationContext';
 import { readTicketNotificationActor, resolveTicketNotificationActorNames, previousTicketChangeValue } from '../../notifications/ticketNotificationContext';
 
+import { readAssignedTeamId } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getEventBus } from '../index';
 import {
-  EventType, BaseEvent, EventSchemas, TicketCreatedEvent, TicketUpdatedEvent, TicketClosedEvent, TicketAssignedEvent, TicketAdditionalAgentAssignedEvent, TicketCommentAddedEvent, TicketCommentUpdatedEvent, ProjectCreatedEvent, ProjectAssignedEvent, ProjectTaskAssignedEvent, ProjectTaskAdditionalAgentAssignedEvent, TaskCommentAddedEvent, TaskCommentUpdatedEvent, InvoiceGeneratedEvent, MessageSentEvent, UserMentionedInDocumentEvent, AppointmentRequestCreatedEvent, AppointmentRequestApprovedEvent, AppointmentRequestDeclinedEvent, AppointmentRequestCancelledEvent, ProjectMilestoneReadyEvent, ProjectBudgetThresholdReachedEvent, ProjectBudgetExceededEvent
+  EventType, BaseEvent, EventSchemas, TicketCreatedEvent, TicketUpdatedEvent, TicketClosedEvent, TicketAssignedEvent, TicketAdditionalAgentAssignedEvent, TicketCommentAddedEvent, TicketCommentUpdatedEvent, ProjectCreatedEvent, ProjectAssignedEvent, ProjectTaskAssignedEvent, ProjectTaskAdditionalAgentAssignedEvent, TaskCommentAddedEvent, TaskCommentUpdatedEvent, InvoiceGeneratedEvent, MessageSentEvent, UserMentionedInDocumentEvent, AppointmentRequestCreatedEvent, AppointmentRequestApprovedEvent, AppointmentRequestDeclinedEvent, AppointmentRequestCancelledEvent, CalendarShareGrantedEvent, ProjectMilestoneReadyEvent, ProjectBudgetThresholdReachedEvent, ProjectBudgetExceededEvent
 } from '@alga-psa/event-bus/events';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import logger from '@alga-psa/core/logger';
@@ -28,7 +29,11 @@ import {
   recordInboundOutboxDeliveryFailure,
   newInboundDeliveryOwner,
 } from '@alga-psa/shared/services/email/inboundEmailConsumerDedupe';
+import { resolveTicketSubjectLabel, usableDisplayName } from '@alga-psa/shared/lib/ticketRequesterDisplay';
 import { isInboundOutboxEvent } from '@alga-psa/shared/services/email/inboundEmailDurableStore';
+import { resolveBoardNotificationRecipients } from '@alga-psa/shared/lib/tickets/boardNotificationRules';
+import { getAllTicketAssignees } from '@alga-psa/shared/lib/tickets/ticketAssignees';
+import { filterRecipientsWhoCanReadTicket } from '../../notifications/boardNotificationAudience';
 
 /** Consumers of the inbound outbox events use this stable ledger consumer id. */
 const INBOUND_OUTBOX_NOTIFICATION_CONSUMER = 'internal-notification';
@@ -83,11 +88,37 @@ function shouldCreateTicketCommentNotification(
 }
 
 /**
+ * Display name for a users row, or `fallback` when the row is missing or has no
+ * usable name (a null first/last name must not render as "null null").
+ */
+// LEVERAGE: pattern user-display-name — `${u.first_name} ${u.last_name}` is repeated across handlers in this file
+function userDisplayName(
+  user: { first_name?: string | null; last_name?: string | null } | null | undefined,
+  fallback: string
+): string {
+  const name = user ? `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() : '';
+  return name || fallback;
+}
+
+/**
  * Handle ticket created events
  */
 async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { payload } = event;
   const { tenantId, ticketId, userId } = payload;
+  // Creators can suppress either audience (e.g. a workflow that sends its own
+  // notification, or a renewal ticket that is internal MSP work).
+  const suppression = resolveTicketNotificationSuppression(payload);
+  const notifyStaff = shouldCreateStaffTicketNotification(suppression);
+  const notifyContactPortal = shouldCreateContactPortalTicketNotification(suppression);
+
+  if (!notifyStaff && !notifyContactPortal) {
+    logger.debug('[InternalNotificationSubscriber] Skipped ticket created notifications: all audiences suppressed', {
+      ticketId,
+      tenantId
+    });
+    return;
+  }
 
   try {
     const db = opts?.db ?? await getConnection(tenantId);
@@ -106,10 +137,15 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
         't.board_id',
         't.contact_name_id',
         't.client_id',
+        't.email_metadata',
         'c.client_name',
+        'b.board_name',
+        'ct.full_name as contact_name',
+        'ct.email as contact_email',
         'b.default_assigned_team_id as board_default_team_id'
       );
     scopedDb.tenantJoin(ticketQuery, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'contacts as ct', 't.contact_name_id', 'ct.contact_name_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'boards as b', 't.board_id', 'b.board_id', { type: 'left' });
 
     const ticket = await ticketQuery
@@ -134,10 +170,21 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
     const baseData = {
       ticketId: ticket.ticket_number || 'New Ticket',
       ticketTitle: ticket.title,
-      clientName: ticket.client_name || 'Unknown'
+      // No client (inbound email, unmatched portal contact): name the contact,
+      // then the sender's email, rather than interpolating an empty or id value.
+      clientName: resolveTicketSubjectLabel({
+        clientName: ticket.client_name,
+        contactName: ticket.contact_name ?? payload.contactName,
+        senderEmail: payload.senderEmail ?? ticket.email_metadata?.from?.email ?? ticket.contact_email,
+      }) || 'Unknown'
     };
 
+    // Everyone who gets the standard ticket-created notification; board
+    // notification rule recipients in this set are skipped (no duplicates).
+    const notifiedUserIds = new Set<string>();
+
     const notifyMspUser = async (userId: string) => {
+      notifiedUserIds.add(userId);
       await createNotificationFromTemplateInternal(db, {
         tenant: tenantId,
         user_id: userId,
@@ -149,7 +196,12 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
       });
     };
 
-    if (ticket.assigned_to) {
+    if (!notifyStaff) {
+      logger.debug('[InternalNotificationSubscriber] Skipped staff ticket created notifications due to suppression', {
+        ticketId,
+        tenantId
+      });
+    } else if (ticket.assigned_to) {
       // Primary assignee — single, direct notification.
       await notifyMspUser(ticket.assigned_to);
 
@@ -165,9 +217,11 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
       // languish until someone manually scans the board.
       const teamId = ticket.assigned_team_id || ticket.board_default_team_id;
       if (teamId) {
-        const teamMembers = await tenantScopedTable(db, 'team_members', tenantId)
-          .select('user_id')
-          .where({ team_id: teamId });
+        const teamMembersQuery = tenantScopedTable(db, 'team_members', tenantId);
+        scopedDb.tenantJoin(teamMembersQuery, 'users', 'team_members.user_id', 'users.user_id');
+        const teamMembers = await teamMembersQuery
+          .select('team_members.user_id as user_id')
+          .where({ 'team_members.team_id': teamId, 'users.is_inactive': false });
 
         await Promise.all(
           teamMembers
@@ -191,8 +245,39 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
       }
     }
 
+    // Board notification rules (trigger: created). One-shot queue alert to the
+    // rule's users and teams; never assigns and never touches the watch list.
+    if (ticket.board_id && shouldCreateStaffTicketNotification(resolveTicketNotificationSuppression(payload))) {
+      const ruleRecipients = await resolveBoardNotificationRecipients(
+        db,
+        tenantId,
+        { kind: 'created', boardId: ticket.board_id },
+        { excludeUserIds: [...notifiedUserIds, userId] }
+      );
+      if (ruleRecipients.length > 0) {
+        const visibleRecipients = await filterRecipientsWhoCanReadTicket(db, tenantId, ticketId, ruleRecipients);
+        for (const recipient of visibleRecipients) {
+          await createNotificationFromTemplateInternal(db, {
+            tenant: tenantId,
+            user_id: recipient.userId,
+            template_name: 'ticket-board-created',
+            type: 'info',
+            category: 'tickets',
+            link: internalUrl,
+            data: { ...baseData, boardName: ticket.board_name || '' }
+          });
+        }
+        logger.info('[InternalNotificationSubscriber] Created board notification rule notifications for ticket created', {
+          ticketId,
+          boardId: ticket.board_id,
+          recipientCount: visibleRecipients.length,
+          tenantId
+        });
+      }
+    }
+
     // Create notification for client contact if they have portal access
-    if (ticket.contact_name_id && portalUrl) {
+    if (notifyContactPortal && ticket.contact_name_id && portalUrl) {
       // Check if contact has a user account
       const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'user_type')
@@ -234,37 +319,93 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
 }
 
 /**
- * Get all users assigned to a ticket (primary + additional agents)
+ * Handle ticket status changed events. Drives the "status entered" trigger of
+ * board notification rules: one in-app alert per rule recipient. Does not fire
+ * at creation, never assigns, never touches the watch list.
  */
-async function getAllTicketAssignees(
-  db: Knex,
-  tenantId: string,
-  ticketId: string
-): Promise<string[]> {
-  // Get primary assignee
-  const ticket = await tenantScopedTable(db, 'tickets', tenantId)
-    .select('assigned_to')
-    .where({ ticket_id: ticketId })
-    .first();
+async function handleTicketStatusChanged(
+  event: { payload: any },
+  opts?: InternalNotificationHandlerOptions
+): Promise<void> {
+  const { payload } = event;
+  const { tenantId, ticketId, newStatusId } = payload;
 
-  const assignees: string[] = [];
-  if (ticket?.assigned_to) {
-    assignees.push(ticket.assigned_to);
-  }
-
-  // Get additional agents
-  const additionalAgents = await tenantScopedTable(db, 'ticket_resources', tenantId)
-    .select('additional_user_id')
-    .where({ ticket_id: ticketId })
-    .whereNotNull('additional_user_id');
-
-  for (const agent of additionalAgents) {
-    if (agent.additional_user_id && !assignees.includes(agent.additional_user_id)) {
-      assignees.push(agent.additional_user_id);
+  try {
+    if (!shouldCreateStaffTicketNotification(resolveTicketNotificationSuppression(payload))) {
+      return;
     }
-  }
+    const db = opts?.db ?? await getConnection(tenantId);
+    const scopedDb = tenantDb(db, tenantId);
+    const ticketQuery = tenantScopedTable(db, 'tickets as t', tenantId)
+      .select(
+        't.ticket_id',
+        't.ticket_number',
+        't.title',
+        't.board_id',
+        't.status_id',
+        'c.client_name',
+        'b.board_name',
+        's.name as status_name'
+      );
+    scopedDb.tenantJoin(ticketQuery, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'boards as b', 't.board_id', 'b.board_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+    const ticket = await ticketQuery.where('t.ticket_id', ticketId).first();
+    if (!ticket?.board_id) return;
 
-  return assignees;
+    const statusId = newStatusId ?? ticket.status_id;
+    const enteredStatusName = statusId === ticket.status_id
+      ? ticket.status_name
+      : (await tenantScopedTable(db, 'statuses', tenantId).select('name').where({ status_id: statusId }).first())?.name;
+
+    const assignees = await getAllTicketAssignees(db, tenantId, ticketId);
+    const recipients = await resolveBoardNotificationRecipients(
+      db,
+      tenantId,
+      { kind: 'status_entered', statusId },
+      { excludeUserIds: [...assignees, payload.actorUserId, payload.userId] }
+    );
+    if (recipients.length === 0) return;
+    const visibleRecipients = await filterRecipientsWhoCanReadTicket(db, tenantId, ticketId, recipients);
+    if (visibleRecipients.length === 0) return;
+
+    const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'ticket',
+      ticketId,
+      ticketNumber: ticket.ticket_number
+    });
+    for (const recipient of visibleRecipients) {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: recipient.userId,
+        template_name: 'ticket-board-status-entered',
+        type: 'info',
+        category: 'tickets',
+        link: internalUrl,
+        data: {
+          ticketId: ticket.ticket_number || 'Ticket',
+          ticketTitle: ticket.title,
+          clientName: ticket.client_name || 'Unknown',
+          boardName: ticket.board_name || '',
+          statusName: enteredStatusName || ticket.status_name || ''
+        }
+      });
+    }
+    logger.info('[InternalNotificationSubscriber] Created board notification rule notifications for status entered', {
+      ticketId,
+      boardId: ticket.board_id,
+      statusId,
+      recipientCount: visibleRecipients.length,
+      tenantId
+    });
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling ticket status changed', {
+      error,
+      ticketId,
+      tenantId
+    });
+    if (opts?.propagateErrors) throw error;
+  }
 }
 
 /**
@@ -345,9 +486,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent, opts?: InternalN
       .where({ user_id: assignedByUserId })
       .first() : null;
 
-    const performedByName = assignedByUser
-      ? `${assignedByUser.first_name} ${assignedByUser.last_name}`
-      : 'Someone';
+    const performedByName = userDisplayName(assignedByUser, 'Someone');
 
     // Resolve notification link
     const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -384,7 +523,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent, opts?: InternalN
     // ticketEmailSubscriber.handleTicketAssigned: fire only for first
     // individual agent assignments that happen AFTER ticket creation. The
     // ticket-created-client notification already covers creation time.
-    const assignedTeamIdCheck = (event.payload as any).changes?.assigned_team_id as string | undefined;
+    const assignedTeamIdCheck = readAssignedTeamId(event.payload);
     const previousAssigneeId = (event.payload as any).previousAssigneeId as string | undefined;
     const previousAssigneeType = (event.payload as any).previousAssigneeType as 'user' | 'team' | undefined;
     const isFirstIndividualAssignment = !previousAssigneeId || previousAssigneeType === 'team';
@@ -443,7 +582,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent, opts?: InternalN
     });
 
     // If this is a team assignment, notify team members (excluding primary assignee)
-    const assignedTeamId = (event.payload as any).changes?.assigned_team_id as string | undefined;
+    const assignedTeamId = readAssignedTeamId(event.payload);
     if (assignedTeamId && shouldCreateStaffTicketNotification(suppression)) {
       const team = await tenantScopedTable(db, 'teams', tenantId)
         .select('team_name')
@@ -720,6 +859,7 @@ async function handleProjectTaskAdditionalAgentAssigned(
       type: 'info',
       category: 'projects',
       link: internalUrl,
+      metadata: { taskId, projectId },
       data: {
         taskName: taskData.task_name,
         projectName: taskData.project_name,
@@ -751,6 +891,7 @@ async function handleProjectTaskAdditionalAgentAssigned(
         type: 'info',
         category: 'projects',
         link: internalUrl,
+        metadata: { taskId, projectId },
         data: {
           taskName: taskData.task_name,
           projectName: taskData.project_name,
@@ -793,14 +934,15 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
     const actor = readTicketNotificationActor(payload, tenantId,
       payload.updatedByUserId || payload.actorUserId || payload.userId);
     const userId = actor.userId;
-    const [performedByName] = await resolveTicketNotificationActorNames(db, tenantId, [actor], 'Someone');
+    // No acting user (system/contact actor) reads as System, never a raw id.
+    const [performedByName] = await resolveTicketNotificationActorNames(db, tenantId, [actor], userId || actor.actorReference ? 'Someone' : 'System');
 
     // Build metadata with change details
     const metadata: Record<string, any> = {
       ticketId: ticket.ticket_number || 'New Ticket',
       ticketTitle: ticket.title,
       performedByName,
-      performedById: userId || null,
+      ...(userId ? { performedById: userId } : {}),
       ...(actor.actorReference ? { performedByActorReference: actor.actorReference } : {})
     };
 
@@ -902,7 +1044,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
     } else {
       // Notify all assigned agents
       const allAssignees = await getAllTicketAssignees(db, tenantId, ticketId);
-      const notifiedUserIds = new Set<string>([userId]); // Don't notify the person who made the change
+      const notifiedUserIds = new Set<string>(userId ? [userId] : []); // Don't notify the person who made the change
 
       for (const assigneeId of allAssignees) {
         if (!notifiedUserIds.has(assigneeId)) {
@@ -1011,7 +1153,7 @@ async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotif
     } else {
       // Notify all assigned agents
       const allAssignees = await getAllTicketAssignees(db, tenantId, ticketId);
-      const notifiedUserIds = new Set<string>([userId]);
+      const notifiedUserIds = new Set<string>(userId ? [userId] : []);
 
       for (const assigneeId of allAssignees) {
         if (!notifiedUserIds.has(assigneeId)) {
@@ -1642,7 +1784,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
       return;
     }
 
-    const [authorName] = await resolveTicketNotificationActorNames(db, tenantId, [actor], 'Someone');
+    // No user row means a system/contact actor (inbound email); the payload
+    // already carries the real sender identity, so prefer it over 'Someone'.
+    const [authorName] = await resolveTicketNotificationActorNames(db, tenantId, [actor],
+      usableDisplayName(comment?.author) || (userId || actor.actorReference ? 'Someone' : 'System'));
 
     // Extract comment text preview from BlockNote content
     let commentPreview = '';
@@ -1717,7 +1862,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
                 commentText: commentText,
                 commentPreview: commentPreview,
                 commentAuthor: authorName,
-                commentAuthorId: userId || null,
+                ...(userId ? { commentAuthorId: userId } : {}),
                 ...(actor.actorReference ? { commentActorReference: actor.actorReference } : {}),
                 contextType: 'ticket',
                 contextId: ticketId
@@ -1769,7 +1914,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
                 id: comment?.id,
                 text: commentPreview,
                 author: authorName,
-                authorId: userId || null,
+                ...(userId ? { authorId: userId } : {}),
                 ...(actor.actorReference ? { actorReference: actor.actorReference } : {}),
                 isInternal: Boolean(comment?.isInternal)
               }
@@ -1822,7 +1967,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
               id: comment?.id,
               text: commentPreview,
               author: authorName,
-              authorId: userId || null,
+              ...(userId ? { authorId: userId } : {}),
               ...(actor.actorReference ? { actorReference: actor.actorReference } : {}),
               isInternal: false
             }
@@ -1849,7 +1994,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
 /**
  * Handle ticket comment updated events
  */
-async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Promise<void> {
+async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { payload } = event;
   // Qualified edit/delete events are content-free invalidations. Their current
   // content is read through the shared inbox boundary, never a cached mention.
@@ -1864,7 +2009,7 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
   });
 
   try {
-    const db = await getConnection(tenantId);
+    const db = opts?.db ?? await getConnection(tenantId);
 
     // Get ticket details including contact
     const ticket = await tenantScopedTable(db, 'tickets', tenantId)
@@ -1877,13 +2022,15 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
       return;
     }
 
-    // Get author name
-    const author = await tenantScopedTable(db, 'users', tenantId)
-      .select('first_name', 'last_name')
-      .where('user_id', userId)
-      .first();
+    // Get author name. userId is absent when no user edited the comment.
+    const author = userId
+      ? await tenantScopedTable(db, 'users', tenantId)
+          .select('first_name', 'last_name')
+          .where('user_id', userId)
+          .first()
+      : null;
 
-    const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
+    const authorName = userDisplayName(author, usableDisplayName(newComment?.author) || (userId ? 'Someone' : 'System'));
 
     // Extract comment text preview from BlockNote content
     let commentPreview = '';
@@ -1920,10 +2067,11 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
         .filter(id => id !== userId);
 
       if (resolvedNewlyMentionedUserIds.length > 0) {
-        const newlyMentionedUsers = await tenantScopedTable(db, 'users', tenantId)
+        let newlyMentionedUsersQuery = tenantScopedTable(db, 'users', tenantId)
           .select('user_id', 'username', 'user_type', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', resolvedNewlyMentionedUserIds)
-          .modify(query => { if (newComment?.isInternal) query.where('user_type', 'internal'); });
+          .whereIn('user_id', resolvedNewlyMentionedUserIds);
+        if (newComment?.isInternal) newlyMentionedUsersQuery = newlyMentionedUsersQuery.where('user_type', 'internal');
+        const newlyMentionedUsers = await newlyMentionedUsersQuery;
 
         if (newlyMentionedUsers.length > 0) {
           const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -1954,7 +2102,7 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
                 commentText: commentText,
                 commentPreview: commentPreview,
                 commentAuthor: authorName,
-                commentAuthorId: userId,
+                ...(userId ? { commentAuthorId: userId } : {}),
                 contextType: 'ticket',
                 contextId: ticketId
               }
@@ -1975,6 +2123,7 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
       ticketId,
       tenantId
     });
+    if (opts?.propagateErrors) throw error;
   }
 }
 
@@ -2442,6 +2591,7 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
           type: 'info',
           category: 'projects',
           link: internalUrl,
+          metadata: { taskId, projectId },
           data: {
             taskName: task.task_name,
             projectName: task.project_name,
@@ -2460,6 +2610,7 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
           type: 'info',
           category: 'projects',
           link: internalUrl,
+          metadata: { taskId, projectId },
           data: {
             taskName: task.task_name,
             projectName: task.project_name,
@@ -2486,6 +2637,7 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
         type: 'info',
         category: 'projects',
         link: internalUrl,
+        metadata: { taskId, projectId },
         data: {
           taskName: task.task_name,
           projectName: task.project_name,
@@ -2972,6 +3124,65 @@ async function handleAppointmentRequestCancelled(event: AppointmentRequestCancel
 /**
  * Handle all internal notification events
  */
+const CALENDAR_ACCESS_LEVEL_LABELS: Record<string, Record<string, string>> = {
+  en: { free_busy: 'free/busy', read: 'view details', edit: 'edit', manage: 'manage' },
+  fr: { free_busy: 'disponibilité', read: 'voir les détails', edit: 'modification', manage: 'gestion' },
+  es: { free_busy: 'libre/ocupado', read: 'ver detalles', edit: 'edición', manage: 'administración' },
+  de: { free_busy: 'frei/gebucht', read: 'Details anzeigen', edit: 'bearbeiten', manage: 'verwalten' },
+  nl: { free_busy: 'vrij/bezet', read: 'details bekijken', edit: 'bewerken', manage: 'beheren' },
+  it: { free_busy: 'libero/occupato', read: 'visualizza dettagli', edit: 'modifica', manage: 'gestione' },
+  pl: { free_busy: 'wolny/zajęty', read: 'wyświetlanie szczegółów', edit: 'edycja', manage: 'zarządzanie' },
+  pt: { free_busy: 'livre/ocupado', read: 'ver detalhes', edit: 'edição', manage: 'gestão' },
+  sv: { free_busy: 'ledig/upptagen', read: 'visa detaljer', edit: 'redigera', manage: 'hantera' },
+};
+
+/**
+ * Handle calendar share granted events: notify a user grantee that a
+ * colleague shared their personal calendar. Team grants are not notified.
+ */
+async function handleCalendarShareGranted(event: CalendarShareGrantedEvent): Promise<void> {
+  const { tenantId, calendarType, ownerUserId, granteeType, granteeId, accessLevel } = event.payload;
+  if (granteeType !== 'user' || calendarType !== 'personal' || !ownerUserId) {
+    return;
+  }
+
+  try {
+    const db = await getConnection(tenantId);
+    const owner = await tenantDb(db, tenantId).table('users')
+      .where({ user_id: ownerUserId })
+      .first('first_name', 'last_name', 'username');
+    const ownerName = owner
+      ? `${owner.first_name ?? ''} ${owner.last_name ?? ''}`.trim() || owner.username
+      : 'A colleague';
+    const locale = (await getTenantDefaultLocale(tenantId, 'internal')) || 'en';
+    const labels = CALENDAR_ACCESS_LEVEL_LABELS[locale.split('-')[0]] ?? CALENDAR_ACCESS_LEVEL_LABELS.en;
+
+    await createNotificationFromTemplateInternal(db, {
+      tenant: tenantId,
+      user_id: granteeId,
+      template_name: 'calendar-share-granted',
+      type: 'info',
+      category: 'appointments',
+      link: '/msp/schedule',
+      data: {
+        ownerName,
+        accessLevelLabel: labels[accessLevel] ?? accessLevel,
+      },
+      metadata: {
+        calendarId: event.payload.calendarId,
+        ownerUserId,
+        accessLevel,
+      },
+    });
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling calendar share granted', {
+      error,
+      calendarId: event.payload.calendarId,
+      tenantId,
+    });
+  }
+}
+
 async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> {
   const eventSchema = EventSchemas[event.eventType];
   if (!eventSchema) {
@@ -3151,6 +3362,9 @@ async function dispatchInternalNotificationHandlers(
     case 'TICKET_CREATED':
       await handleTicketCreated(validatedEvent as TicketCreatedEvent, opts);
       break;
+    case 'TICKET_STATUS_CHANGED':
+      await handleTicketStatusChanged(validatedEvent, opts);
+      break;
     case 'TICKET_ASSIGNED':
       await handleTicketAssigned(validatedEvent as TicketAssignedEvent, opts);
       break;
@@ -3224,6 +3438,9 @@ async function dispatchInternalNotificationHandlers(
     case 'APPOINTMENT_REQUEST_CANCELLED':
       await handleAppointmentRequestCancelled(validatedEvent as AppointmentRequestCancelledEvent);
       break;
+    case 'CALENDAR_SHARE_GRANTED':
+      await handleCalendarShareGranted(validatedEvent as CalendarShareGrantedEvent);
+      break;
     default:
       // Silently ignore other events
       break;
@@ -3235,6 +3452,8 @@ export const internalNotificationSubscriberTestHarness = {
   shouldCreateContactPortalTicketNotification,
   shouldCreateStaffTicketNotification,
   shouldCreateTicketCommentNotification,
+  handleTicketCreated,
+  handleTicketStatusChanged,
   handleTicketAssigned,
   handleTicketUpdated,
   handleTicketClosed,
@@ -3242,6 +3461,7 @@ export const internalNotificationSubscriberTestHarness = {
   handleTicketCommentUpdated,
   handleTransactionalOutboxDelivery,
   handleInternalNotificationEvent,
+  handleCalendarShareGranted,
 };
 
 /**
@@ -3253,6 +3473,7 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
 
     const eventTypes: EventType[] = [
       'TICKET_CREATED',
+      'TICKET_STATUS_CHANGED',
       'TICKET_ASSIGNED',
       'TICKET_ADDITIONAL_AGENT_ASSIGNED',
       'TICKET_UPDATED',
@@ -3275,7 +3496,8 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
       'APPOINTMENT_REQUEST_CREATED',
       'APPOINTMENT_REQUEST_APPROVED',
       'APPOINTMENT_REQUEST_DECLINED',
-      'APPOINTMENT_REQUEST_CANCELLED'
+      'APPOINTMENT_REQUEST_CANCELLED',
+      'CALENDAR_SHARE_GRANTED'
     ];
 
     // Use a dedicated channel for internal notifications
@@ -3300,6 +3522,7 @@ export async function unregisterInternalNotificationSubscriber(): Promise<void> 
   try {
     const eventTypes: EventType[] = [
       'TICKET_CREATED',
+      'TICKET_STATUS_CHANGED',
       'TICKET_ASSIGNED',
       'TICKET_ADDITIONAL_AGENT_ASSIGNED',
       'TICKET_UPDATED',
@@ -3322,7 +3545,8 @@ export async function unregisterInternalNotificationSubscriber(): Promise<void> 
       'APPOINTMENT_REQUEST_CREATED',
       'APPOINTMENT_REQUEST_APPROVED',
       'APPOINTMENT_REQUEST_DECLINED',
-      'APPOINTMENT_REQUEST_CANCELLED'
+      'APPOINTMENT_REQUEST_CANCELLED',
+      'CALENDAR_SHARE_GRANTED'
     ];
 
     const channel = 'internal-notifications';

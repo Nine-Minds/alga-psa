@@ -86,7 +86,7 @@
         "../packages/auth/src"
       ],
       "@alga-psa/auth/sso/entry": [
-        "../packages/ee/src/components/auth/SsoProviderButtons.tsx"
+        "../packages/auth/src/components/SsoProviderButtons.tsx"
       ],
       "@alga-psa/auth/*": [
         "../packages/auth/src/*",
@@ -195,6 +195,12 @@
       "@alga-psa/ee-microsoft-teams/*": [
         "../ee/packages/microsoft-teams/src/*"
       ],
+      "@alga-psa/ee-threecx": [
+        "../ee/packages/threecx/src/index.ts"
+      ],
+      "@alga-psa/ee-threecx/*": [
+        "../ee/packages/threecx/src/*"
+      ],
       "@alga-psa/ee-stubs": [
         "../packages/ee/src/index.ts"
       ],
@@ -236,6 +242,12 @@
       ],
       "@alga-psa/assets/*": [
         "../packages/assets/src/*"
+      ],
+      "@alga-psa/list-views": [
+        "../packages/list-views/src"
+      ],
+      "@alga-psa/list-views/*": [
+        "../packages/list-views/src/*"
       ],
       "@alga-psa/surveys": [
         "../packages/surveys/src"

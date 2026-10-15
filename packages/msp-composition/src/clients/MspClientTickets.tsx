@@ -14,6 +14,7 @@ import { getTicketsForListWithCursor } from '@alga-psa/tickets/actions/optimized
 import { XCircle } from 'lucide-react';
 import { useDrawer } from "@alga-psa/ui";
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
+import { ticketDetailsInitialProps } from '../tickets/ticketDetailsInitialProps';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import {
@@ -77,7 +78,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
   initialUsers = []
 }) => {
   const { t } = useTranslation('msp/clients');
-  const { locale } = useFormatters();
+  const { locale, dateFormat } = useFormatters();
   const router = useRouter();
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -211,7 +212,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
           initialClient={ticketData.client}
           initialContacts={ticketData.contacts}
           initialContactInfo={ticketData.contactInfo}
-          initialCreatedByUser={ticketData.createdByUser}
+          {...ticketDetailsInitialProps(ticketData)}
           initialAdditionalAgents={ticketData.additionalAgents}
           initialAvailableAgents={ticketData.availableAgents}
           initialUserMap={ticketData.userMap}
@@ -317,6 +318,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       onTagsChange: handleTagsChange,
       showClient: false, // Don't show client column since we're already on client page
       locale,
+      dateFormat,
     }).map((column) => {
       const columnId = Array.isArray(column.dataIndex) ? column.dataIndex.join('_') : column.dataIndex;
       // Every shared ticket column declares a percent width, which makes them
@@ -327,7 +329,7 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       }
       const width = CLIENT_LIST_COLUMN_WIDTHS[columnId];
       return width ? { ...column, width } : column;
-    }), [initialCategories, initialBoards, clientDisplaySettings, handleTicketClick, handleTagsChange, locale]);
+    }), [initialCategories, initialBoards, clientDisplaySettings, handleTicketClick, handleTagsChange, locale, dateFormat]);
 
   // Filter tickets by selected tags
   const filteredTickets = useMemo(() => {

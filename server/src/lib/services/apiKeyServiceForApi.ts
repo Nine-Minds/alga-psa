@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import crypto from 'crypto';
 import { isTenantSuspended, tenantDb } from '@alga-psa/db';
+import { shouldTouchApiKeyLastUsed } from '@alga-psa/auth';
 import { getConnection } from '../db/db';
 
 interface ApiKey {
@@ -96,15 +97,16 @@ export class ApiKeyServiceForApi {
         return null;
       }
 
-      // Update last_used_at timestamp
-      await tenantDb(knex, tenantId).table('api_keys')
-        .where({
-          api_key_id: record.api_key_id
-        })
-        .update({
-          last_used_at: knex.fn.now(),
-          updated_at: knex.fn.now(),
-        });
+      if (shouldTouchApiKeyLastUsed(record.last_used_at)) {
+        await tenantDb(knex, tenantId).table('api_keys')
+          .where({
+            api_key_id: record.api_key_id
+          })
+          .update({
+            last_used_at: knex.fn.now(),
+            updated_at: knex.fn.now(),
+          });
+      }
 
       return record;
     } catch (error) {
@@ -173,15 +175,16 @@ export class ApiKeyServiceForApi {
         return null;
       }
 
-      // Update last_used_at timestamp
-      await tenantDb(knex, record.tenant).table('api_keys')
-        .where({
-          api_key_id: record.api_key_id
-        })
-        .update({
-          last_used_at: knex.fn.now(),
-          updated_at: knex.fn.now(),
-        });
+      if (shouldTouchApiKeyLastUsed(record.last_used_at)) {
+        await tenantDb(knex, record.tenant).table('api_keys')
+          .where({
+            api_key_id: record.api_key_id
+          })
+          .update({
+            last_used_at: knex.fn.now(),
+            updated_at: knex.fn.now(),
+          });
+      }
 
       return record;
     } catch (error) {

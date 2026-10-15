@@ -157,11 +157,10 @@ describe('Client Billing Cycle Anchors', () => {
     await context.db('recurring_service_periods').insert({
       record_id: options.recordId,
       tenant: context.tenantId,
-      schedule_key: `schedule:${context.tenantId}:client_contract_line:${options.clientContractLineId}:client:arrears`,
+      schedule_key: `schedule:${context.tenantId}:${options.clientContractLineId}:client:arrears`,
       period_key: `period:${options.servicePeriodStart}:${options.servicePeriodEnd}`,
       revision: 1,
       obligation_id: options.clientContractLineId,
-      obligation_type: 'client_contract_line',
       charge_family: 'fixed',
       cadence_owner: 'client',
       due_position: 'arrears',

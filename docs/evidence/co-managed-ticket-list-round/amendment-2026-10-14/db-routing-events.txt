@@ -1,0 +1,23 @@
+ERROR:  column "event_type" does not exist
+LINE 1: select event_type, created_at from co_management_ticket_rout...
+               ^
+                    Table "public.co_management_ticket_work"
+       Column       |           Type           | Collation | Nullable | Default 
+--------------------+--------------------------+-----------+----------+---------
+ tenant             | uuid                     |           | not null | 
+ relationship_id    | uuid                     |           | not null | 
+ ticket_id          | uuid                     |           | not null | 
+ work_id            | uuid                     |           | not null | 
+ revision           | integer                  |           | not null | 
+ responsibility     | text                     |           | not null | 
+ can_collaborate    | boolean                  |           | not null | true
+ grant_revoked_at   | timestamp with time zone |           |          | 
+ first_escalated_at | timestamp with time zone |           |          | 
+ last_transition_at | timestamp with time zone |           |          | 
+Indexes:
+    "co_management_ticket_work_pkey" PRIMARY KEY, btree (tenant, relationship_id, ticket_id)
+    "co_management_ticket_work_tenant_work_id_unique" UNIQUE CONSTRAINT, btree (tenant, work_id)
+Check constraints:
+    "co_management_ticket_work_responsibility_check" CHECK (responsibility = ANY (ARRAY['customer'::text, 'msp'::text]))
+    "co_management_ticket_work_revision_check" CHECK (revision > 0)
+    "co_ticket_work_escalation_state_check" CHECK (first_escalated_at IS NOT NULL AND last_transition_at IS NOT NULL OR first_escalated_at IS NULL AND last_transition_at IS NULL AND responsibility = 'customer'::text AND grant_revoked_at IS NOT NULL AND can_collaborate = false)

@@ -1,0 +1,176 @@
+[
+  {
+    "id": "F001",
+    "description": "Migration adds `portal_selectable BOOLEAN NOT NULL DEFAULT true` to `statuses` as a single ALTER TABLE ADD COLUMN, guarded by `knex.schema.hasColumn`, one subcommand per ALTER (Citus-safe; no separate SET NOT NULL).",
+    "implemented": true,
+    "prdRefs": ["Data model", "D1"]
+  },
+  {
+    "id": "F002",
+    "description": "Migration `down` drops the column, guarded by `hasColumn` so it is idempotent.",
+    "implemented": true,
+    "prdRefs": ["Data model"]
+  },
+  {
+    "id": "F003",
+    "description": "`IStatus` in `packages/types/src/interfaces/status.interface.ts` gains `portal_selectable?: boolean`.",
+    "implemented": true,
+    "prdRefs": ["Data model"]
+  },
+  {
+    "id": "F004",
+    "description": "The duplicate `IStatus` in `server/src/interfaces/status.interface.ts` gains the same field, so the two copies do not drift further.",
+    "implemented": true,
+    "prdRefs": ["Data model"]
+  },
+  {
+    "id": "F005",
+    "description": "`BoardTicketStatusInput` and `NormalizedBoardTicketStatus` in `boardTicketStatusActions.ts` carry `portal_selectable`, and `normalizeBoardTicketStatuses` defaults it to `true` when absent.",
+    "implemented": true,
+    "prdRefs": ["D7"]
+  },
+  {
+    "id": "F006",
+    "description": "`buildStatusInsertRow` writes `portal_selectable` on INSERT (column-existence gated via the existing `hasStatusColumn` helper) and the UPDATE block persists changes to it.",
+    "implemented": true,
+    "prdRefs": ["D7"]
+  },
+  {
+    "id": "F007",
+    "description": "Newly created board ticket statuses default to `portal_selectable = true`.",
+    "implemented": true,
+    "prdRefs": ["D5"]
+  },
+  {
+    "id": "F008",
+    "description": "Zod schemas in `server/src/lib/api/schemas/status.ts` (create, update, response) include `portal_selectable`.",
+    "implemented": true,
+    "prdRefs": ["Data model"]
+  },
+  {
+    "id": "F009",
+    "description": "New server action `getClientPortalTicketStatuses(boardId, currentStatusId?)` in `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts` returns board ticket statuses ordered by `order_number`.",
+    "implemented": true,
+    "prdRefs": ["D2"]
+  },
+  {
+    "id": "F010",
+    "description": "`getClientPortalTicketStatuses` filters to `portal_selectable = true OR status_id = currentStatusId`, so a ticket already in a restricted status still renders its current value.",
+    "implemented": true,
+    "prdRefs": ["D2", "D4"]
+  },
+  {
+    "id": "F011",
+    "description": "The shared `getTicketStatuses` / `getStatuses` in `statusActions.ts` are left behaviourally unchanged — no caller-identity branch, no new argument that alters existing call sites.",
+    "implemented": true,
+    "prdRefs": ["D2"]
+  },
+  {
+    "id": "F012",
+    "description": "Portal ticket detail page (`server/src/app/client-portal/tickets/[ticketId]/page.tsx:73`) calls `getClientPortalTicketStatuses(board_id, ticketData.status_id)` instead of `getTicketStatuses`.",
+    "implemented": true,
+    "prdRefs": ["D3"]
+  },
+  {
+    "id": "F013",
+    "description": "Portal ticket list per-row inline status picker (`TicketList.tsx:235`) sources its options from `getClientPortalTicketStatuses(boardId)` — this is a write affordance and must be filtered.",
+    "implemented": true,
+    "prdRefs": ["D3"]
+  },
+  {
+    "id": "F014",
+    "description": "Portal ticket list status FILTER dropdown (`TicketList.tsx:176`) continues to call the unfiltered shared `getTicketStatuses`, so portal users can still find tickets sitting in restricted statuses.",
+    "implemented": true,
+    "prdRefs": ["D3"]
+  },
+  {
+    "id": "F015",
+    "description": "`updateTicketStatus` extends its existing board-validation `.first(...)` query at `client-tickets.ts:836` with `portal_selectable: true`, so there is exactly one place a target status can be admitted from.",
+    "implemented": true,
+    "prdRefs": ["Enforcement"]
+  },
+  {
+    "id": "F016",
+    "description": "Rejection returns the existing `expectedClientTicketActionError` shape carrying the new i18n key `client-portal:errors.tickets.statusNotPortalSelectable`, distinguishable from the wrong-board rejection.",
+    "implemented": true,
+    "prdRefs": ["Enforcement", "i18n"]
+  },
+  {
+    "id": "F017",
+    "description": "The two adjacent currently-unkeyed errors in `updateTicketStatus` (`:832` 'Ticket does not have a board', `:844` wrong-board) are given i18n keys while in the file. Droppable if scope needs trimming.",
+    "implemented": false,
+    "prdRefs": ["Enforcement", "Open questions"]
+  },
+  {
+    "id": "F018",
+    "description": "`enforceTicketCloseRules` remains bypassed for portal users — the audited bypass at `client-tickets.ts:857` is untouched, and the closure path (is_closed, closed_at, closed_by, response_state, TICKET_CLOSED) is unchanged for statuses that ARE selectable.",
+    "implemented": true,
+    "prdRefs": ["Non-goals"]
+  },
+  {
+    "id": "F019",
+    "description": "`updateTicket` (`packages/tickets/src/actions/ticketActions.ts:672`) rejects callers with `user_type !== 'internal'` BEFORE its `hasPermission` check, following the `voidInvoiceActions.ts:35` precedent.",
+    "implemented": true,
+    "prdRefs": ["Discovered adjacent defect"]
+  },
+  {
+    "id": "F020",
+    "description": "`bulkUpdateTicketStatus` (`ticketActions.ts:2043`) rejects non-internal callers the same way.",
+    "implemented": true,
+    "prdRefs": ["Discovered adjacent defect"]
+  },
+  {
+    "id": "F021",
+    "description": "`updateTicketWithCache` (`packages/tickets/src/actions/optimizedTicketActions.ts:3141`) rejects non-internal callers the same way.",
+    "implemented": true,
+    "prdRefs": ["Discovered adjacent defect"]
+  },
+  {
+    "id": "F022",
+    "description": "Board status editor (`BoardsSettings.tsx`, statuses accordion ~:2382) renders a per-status `Switch` for portal selectability, matching the neighbouring `is_closed` / `is_default` controls, with id `inline-ticket-status-portal-selectable-${index}`.",
+    "implemented": true,
+    "prdRefs": ["D6"]
+  },
+  {
+    "id": "F023",
+    "description": "The status row grid template (`md:grid-cols-[minmax(0,1fr)_auto_auto_auto]` at `:2383`) is widened to accommodate the fourth control without wrapping.",
+    "implemented": true,
+    "prdRefs": ["D6"]
+  },
+  {
+    "id": "F024",
+    "description": "`ManagedTicketStatus` and all four of its mappers (`createManagedTicketStatus` :88, `mapBoardStatusesToManagedStatuses` :145, `normalizeManagedTicketStatuses` :168, and the `updateManagedTicketStatus` mutator :743) thread `portal_selectable` through, so it is not silently dropped on save.",
+    "implemented": true,
+    "prdRefs": ["D7"]
+  },
+  {
+    "id": "F025",
+    "description": "The flag round-trips through `updateBoard` / `createBoard` via `ticket_statuses: BoardTicketStatusInput[]` and is reloaded by `getBoardTicketStatuses`.",
+    "implemented": true,
+    "prdRefs": ["D7"]
+  },
+  {
+    "id": "F026",
+    "description": "Onboarding board status step (`packages/onboarding/src/components/steps/TicketingConfigStep.tsx`) continues to create statuses successfully, defaulting the new flag to true without needing a UI control.",
+    "implemented": true,
+    "prdRefs": ["D5"]
+  },
+  {
+    "id": "F027",
+    "description": "New key `errors.tickets.statusNotPortalSelectable` added to `server/public/locales/en/client-portal.json` and the 7 other real locales; `xx`/`yy` regenerated via `scripts/generate-pseudo-locales.cjs`.",
+    "implemented": true,
+    "prdRefs": ["i18n"]
+  },
+  {
+    "id": "F028",
+    "description": "New admin label + column-header keys under `ticketing.boards.fields.ticketStatuses.*` in `server/public/locales/*/msp/settings.json` across all locales.",
+    "implemented": true,
+    "prdRefs": ["i18n"]
+  },
+  {
+    "id": "F029",
+    "description": "`npm run test:i18n` passes — key parity across all 10 locale packs is clean.",
+    "implemented": true,
+    "prdRefs": ["i18n", "Acceptance criteria"]
+  }
+]

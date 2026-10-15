@@ -1,0 +1,41 @@
+{
+  "status": "unimplemented_product_gap_confirmed_by_source_audit",
+  "requirement": "Restore project-completion survey coverage without replacing it with a mock-only dispatch assertion",
+  "findings": [
+    {
+      "file": "server/src/lib/eventBus/subscribers/surveySubscriber.ts",
+      "behavior": "Project completion passes ticketId: projectId to sendSurveyInvitation and catches delivery errors."
+    },
+    {
+      "file": "server/src/services/surveyService.ts",
+      "behavior": "Invitation creation loads a ticket and rejects a missing ticket; recipient resolution, reminder counting and email variables are ticket based."
+    },
+    {
+      "file": "server/migrations/20251108080600_create_survey_tables.cjs",
+      "behavior": "Both invitations and responses require ticket_id with a tenant-qualified ticket foreign key."
+    },
+    {
+      "file": "packages/surveys/src/actions/surveyTokenService.ts",
+      "behavior": "Token resolution exposes ticket identity only."
+    },
+    {
+      "file": "packages/surveys/src/actions/surveyResponseActions.ts",
+      "behavior": "Response persistence and event metadata use ticket identity."
+    },
+    {
+      "file": "packages/surveys/src/services/SurveyAnalyticsService.ts",
+      "behavior": "Survey reporting joins responses to tickets; project responses would need explicit inclusion."
+    }
+  ],
+  "implementation_requirements": [
+    "Introduce an explicit ticket-or-project subject through invitation service, token resolution, response storage and event schemas; preserve existing ticket consumers.",
+    "Migrate invitations and responses with tenant-qualified project ownership and exactly-one-subject constraints; verify upgrade behavior on PostgreSQL and Citus.",
+    "Render project-appropriate invitation context and include project responses in applicable reporting.",
+    "Restore the skipped subscriber case and exercise real invitation persistence, captured outbound email, token opening and response submission; mock only external delivery.",
+    "Verify foreign-tenant rejection, expired/reused tokens and existing ticket surveys remain correct."
+  ],
+  "limitations": [
+    "Source audit only; no project survey implementation or runtime success is claimed.",
+    "The existing skipped test remains visible to the execution gate."
+  ]
+}

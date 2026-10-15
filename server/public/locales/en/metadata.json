@@ -113,7 +113,12 @@
           "title": "Quote Details"
         }
       },
-      "title": "Billing"
+      "title": "Billing",
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Card Setup"
+        }
+      }
     },
     "clientSettings": {
       "description": "Manage your company settings and configurations",
@@ -239,6 +244,9 @@
       }
     },
     "coManagement": {
+      "providers": {
+        "title": "Email and Identity Providers"
+      },
       "title": "Co-Managed Access",
       "administration": {
         "title": "Delegated Administration"
@@ -587,6 +595,12 @@
       "detail": {
         "title": "Ticket #{{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Ticket Details"
+      },
+      "recurring": {
+        "title": "Recurring tickets"
+      },
+      "templates": {
+        "title": "Ticket templates"
       }
     },
     "timeEntry": {
@@ -627,6 +641,9 @@
     },
     "layout": {
       "defaultTitle": "Dashboard | AlgaPSA"
+    },
+    "customerTickets": {
+      "title": "Customer Tickets"
     }
   },
   "share": {
@@ -659,6 +676,11 @@
     },
     "tab": {
       "title": "Teams"
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Card Setup"
     }
   }
 }

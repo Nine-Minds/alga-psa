@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fakeTable, fakeTransaction, type FakeTenantDbOptions } from '@alga-psa/db/testing';
+
+const TICKET_1 = '00000000-0000-4000-8000-000000000001';
 
 let currentUser: any;
 
@@ -6,8 +9,16 @@ const hasPermissionMock = vi.fn();
 const getConnectionMock = vi.fn();
 const withTransactionMock = vi.fn();
 const publishEventMock = vi.fn();
+const publishWorkflowEventMock = vi.fn();
+const writeTicketActivityMock = vi.fn();
+const enforceTicketCloseRulesMock = vi.fn();
 const ticketModelGetDefaultStatusIdMock = vi.fn();
 const ticketModelCreateTicketWithRetryMock = vi.fn();
+
+vi.mock('@alga-psa/shared/lib/tickets/ticketLifecycleEvents', () => ({
+  publishTicketTransitionsAfterCommit: vi.fn(async () => []),
+  captureTicketTransitionSnapshot: vi.fn(async () => null),
+}));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
@@ -31,7 +42,8 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/validation', () => ({
+vi.mock('@alga-psa/validation', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/validation')>()),
   validateData: (_schema: unknown, payload: Record<string, unknown>) => payload,
 }));
 
@@ -52,6 +64,24 @@ vi.mock('@alga-psa/analytics', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: (...args: any[]) => publishEventMock(...args),
+  publishWorkflowEvent: (...args: any[]) => publishWorkflowEventMock(...args),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
+}));
+
+vi.mock('@shared/lib/ticketActivity', () => ({
+  writeTicketActivity: (...args: any[]) => writeTicketActivityMock(...args),
+  TICKET_ACTIVITY_ACTOR: { USER: 'user' },
+  TICKET_ACTIVITY_ENTITY: { TICKET: 'ticket' },
+  TICKET_ACTIVITY_EVENT: { CLOSED: 'closed', REOPENED: 'reopened', STATUS_CHANGED: 'status_changed' },
+  TICKET_ACTIVITY_SOURCE: { CLIENT_PORTAL: 'client_portal' },
+}));
+
+vi.mock('@alga-psa/tickets/lib/validateTicketClosure', () => ({
+  enforceTicketCloseRules: (...args: any[]) => enforceTicketCloseRulesMock(...args),
 }));
 
 vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({
@@ -60,6 +90,7 @@ vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(),
+  revertBundlePropagationForChild: vi.fn(),
 }));
 
 vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
@@ -75,78 +106,49 @@ function createClientPortalTrx(overrides: {
   defaultBoard?: Record<string, unknown> | null;
   ticket?: Record<string, unknown> | null;
   statusForBoard?: Record<string, unknown> | null;
+  oldStatus?: Record<string, unknown> | null;
+  portalStatusRows?: Array<Record<string, unknown>>;
 }) {
   const ticketUpdates: Array<Record<string, unknown>> = [];
+  const ticket = overrides.ticket ?? null;
+  const boardId = (ticket?.board_id as string | undefined)
+    ?? (overrides.defaultBoard?.board_id as string | undefined)
+    ?? 'board-1';
+
+  // Every status lookup proves board membership and the ticket status type in
+  // the same query, so a status the scenario names has to carry both.
+  const statusRow = (status: Record<string, unknown>) => ({ status_type: 'ticket', board_id: boardId, ...status });
+
+  const tables: FakeTenantDbOptions = {
+    tables: {
+      users: [{ user_id: currentUser.user_id, contact_id: 'contact-1' }],
+      contacts: [{ contact_name_id: 'contact-1', client_id: 'client-1' }],
+      // Board resolution filters on the active/default flags, and portal
+      // visibility subtracts boards hidden from the portal.
+      boards: overrides.defaultBoard
+        ? [{ is_inactive: false, is_default: true, client_portal_visible: true, ...overrides.defaultBoard }]
+        : [],
+      // The portal only ever reaches a ticket owned by the requester's client.
+      tickets: ticket ? [{ client_id: 'client-1', ...ticket }] : [],
+      statuses: [
+        ...(overrides.portalStatusRows ?? []),
+        ...(overrides.statusForBoard ? [statusRow(overrides.statusForBoard)] : []),
+        ...(overrides.oldStatus ? [statusRow(overrides.oldStatus)] : []),
+      ],
+    },
+    perTable: {
+      tickets: {
+        onUpdate: (updateData) => {
+          ticketUpdates.push({ updateData });
+          return 1;
+        },
+      },
+    },
+  };
 
   const trx = Object.assign(
-    (table: string) => {
-      if (table === 'users') {
-        return {
-          where: vi.fn().mockReturnValue({
-            first: vi.fn().mockResolvedValue({ user_id: currentUser.user_id, contact_id: 'contact-1' }),
-          }),
-        };
-      }
-
-      if (table === 'contacts') {
-        return {
-          where: vi.fn().mockReturnValue({
-            first: vi.fn().mockResolvedValue({ contact_name_id: 'contact-1', client_id: 'client-1' }),
-          }),
-        };
-      }
-
-      if (table === 'boards') {
-        return {
-          where: vi.fn().mockReturnValue({
-            first: vi.fn().mockResolvedValue(overrides.defaultBoard ?? null),
-          }),
-        };
-      }
-
-      if (table === 'tickets as t') {
-        const builder: any = {
-          select: vi.fn(() => builder),
-          where: vi.fn(() => builder),
-          modify: vi.fn((cb: (query: any) => void) => {
-            cb(builder);
-            return builder;
-          }),
-          first: vi.fn().mockResolvedValue(overrides.ticket ?? null),
-        };
-        return builder;
-      }
-
-      if (table === 'tickets') {
-        let whereClause: Record<string, unknown> = {};
-        return {
-          where: vi.fn((value: Record<string, unknown>) => {
-            whereClause = value;
-            return {
-              first: vi.fn().mockResolvedValue(overrides.ticket ?? null),
-              update: vi.fn(async (updateData: Record<string, unknown>) => {
-                ticketUpdates.push({ where: whereClause, updateData });
-                return 1;
-              }),
-            };
-          }),
-        };
-      }
-
-      if (table === 'statuses') {
-        return {
-          where: vi.fn().mockReturnValue({
-            first: vi.fn().mockResolvedValue(overrides.statusForBoard ?? null),
-          }),
-        };
-      }
-
-      throw new Error(`Unexpected table: ${table}`);
-    },
-    {
-      fn: { now: () => 'now()' },
-      raw: vi.fn().mockResolvedValue({ rows: [] }),
-    }
+    (table: string) => fakeTable(tables, currentUser.tenant, table.split(' ')[0]),
+    fakeTransaction({ raw: vi.fn().mockResolvedValue({ rows: [] }) }),
   ) as any;
 
   return { trx, ticketUpdates };
@@ -168,14 +170,17 @@ describe('client portal board-scoped ticket status validation', () => {
     getConnectionMock.mockResolvedValue(dbConnection);
     hasPermissionMock.mockResolvedValue(true);
     ticketModelGetDefaultStatusIdMock.mockResolvedValue('board-1-default-status');
-    ticketModelCreateTicketWithRetryMock.mockResolvedValue({ ticket_id: 'ticket-1' });
+    ticketModelCreateTicketWithRetryMock.mockResolvedValue({ ticket_id: TICKET_1 });
     publishEventMock.mockResolvedValue(undefined);
+    publishWorkflowEventMock.mockResolvedValue(undefined);
+    writeTicketActivityMock.mockResolvedValue(undefined);
+    enforceTicketCloseRulesMock.mockResolvedValue({ overridden: false, bypassed: false });
   });
 
   it('T041: createClientTicket resolves the default status from the default board before ticket creation', async () => {
     const { trx } = createClientPortalTrx({
       defaultBoard: { board_id: 'board-1', default_assigned_to: null },
-      ticket: { ticket_id: 'ticket-1', tenant: 'tenant-1' },
+      ticket: { ticket_id: TICKET_1, tenant: 'tenant-1' },
     });
 
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(trx));
@@ -207,7 +212,7 @@ describe('client portal board-scoped ticket status validation', () => {
   it('T042: updateTicketStatus rejects a status that does not belong to the ticket board', async () => {
     const { trx, ticketUpdates } = createClientPortalTrx({
       ticket: {
-        ticket_id: 'ticket-1',
+        ticket_id: TICKET_1,
         tenant: 'tenant-1',
         board_id: 'board-1',
         status_id: 'board-1-open',
@@ -219,10 +224,185 @@ describe('client portal board-scoped ticket status validation', () => {
 
     const { updateTicketStatus } = await import('./client-tickets');
 
-    await expect(updateTicketStatus('ticket-1', 'board-2-closed')).resolves.toEqual({
+    await expect(updateTicketStatus(TICKET_1, 'board-2-closed')).resolves.toEqual({
       actionError: 'Selected status is not valid for the ticket board',
     });
     expect(ticketUpdates).toHaveLength(0);
     expect(publishEventMock).not.toHaveBeenCalled();
+    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+  });
+
+  it('T001: updateTicketStatus accepts a default-selectable board status and updates the ticket', async () => {
+    const { trx, ticketUpdates } = createClientPortalTrx({
+      ticket: {
+        ticket_id: TICKET_1,
+        tenant: 'tenant-1',
+        board_id: 'board-1',
+        status_id: 'board-1-open',
+        response_state: null,
+      },
+      statusForBoard: {
+        status_id: 'board-1-in-progress',
+        is_closed: false,
+        name: 'In progress',
+        portal_selectable: true,
+      },
+      oldStatus: { status_id: 'board-1-open', is_closed: false },
+    });
+
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(trx));
+
+    const { updateTicketStatus } = await import('./client-tickets');
+
+    await expect(updateTicketStatus(TICKET_1, 'board-1-in-progress')).resolves.toBeUndefined();
+    expect(ticketUpdates).toHaveLength(1);
+    expect(ticketUpdates[0].updateData).toMatchObject({
+      status_id: 'board-1-in-progress',
+      is_closed: false,
+    });
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'TICKET_UPDATED' })
+    );
+  });
+
+  it('T002/T003: updateTicketStatus rejects a non-selectable status with no mutation or closure event', async () => {
+    const { trx, ticketUpdates } = createClientPortalTrx({
+      ticket: {
+        ticket_id: TICKET_1,
+        tenant: 'tenant-1',
+        board_id: 'board-1',
+        status_id: 'board-1-open',
+        response_state: null,
+      },
+      statusForBoard: {
+        status_id: 'board-1-vendor',
+        is_closed: false,
+        name: 'Waiting on Vendor',
+        portal_selectable: false,
+      },
+      oldStatus: { status_id: 'board-1-open', is_closed: false },
+    });
+
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(trx));
+
+    const { updateTicketStatus } = await import('./client-tickets');
+
+    await expect(updateTicketStatus(TICKET_1, 'board-1-vendor')).resolves.toEqual(
+      expect.objectContaining({
+        actionError: 'This status cannot be selected from the client portal',
+        messageKey: 'client-portal:errors.tickets.statusNotPortalSelectable',
+      })
+    );
+    expect(ticketUpdates).toHaveLength(0);
+    expect(publishEventMock).not.toHaveBeenCalled();
+    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+    expect(enforceTicketCloseRulesMock).not.toHaveBeenCalled();
+  });
+
+  it('T004: getClientPortalTicketStatuses omits non-selectable statuses for the board', async () => {
+    const { trx } = createClientPortalTrx({
+      portalStatusRows: [
+        { status_id: 's-open', board_id: 'board-1', status_type: 'ticket', portal_selectable: true, order_number: 10, name: 'Open' },
+        { status_id: 's-vendor', board_id: 'board-1', status_type: 'ticket', portal_selectable: false, order_number: 20, name: 'Waiting on Vendor' },
+        { status_id: 's-other-board', board_id: 'board-2', status_type: 'ticket', portal_selectable: true, order_number: 30, name: 'Other' },
+      ],
+    });
+
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(trx));
+
+    const { getClientPortalTicketStatuses } = await import('./client-tickets');
+
+    const result = await getClientPortalTicketStatuses('board-1');
+    expect(Array.isArray(result)).toBe(true);
+    expect((result as Array<{ status_id: string }>).map((status) => status.status_id)).toEqual(['s-open']);
+  });
+
+  it('T005: getClientPortalTicketStatuses keeps the current non-selectable status visible', async () => {
+    const { trx } = createClientPortalTrx({
+      portalStatusRows: [
+        { status_id: 's-open', board_id: 'board-1', status_type: 'ticket', portal_selectable: true, order_number: 10, name: 'Open' },
+        { status_id: 's-vendor', board_id: 'board-1', status_type: 'ticket', portal_selectable: false, order_number: 20, name: 'Waiting on Vendor' },
+      ],
+    });
+
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(trx));
+
+    const { getClientPortalTicketStatuses } = await import('./client-tickets');
+
+    const result = await getClientPortalTicketStatuses('board-1', 's-vendor');
+    expect((result as Array<{ status_id: string }>).map((status) => status.status_id).sort()).toEqual([
+      's-open',
+      's-vendor',
+    ]);
+  });
+
+  it('T006: a non-selectable closed status cannot close, a selectable one still closes with the bypass', async () => {
+    const { trx: restrictedTrx, ticketUpdates: restrictedUpdates } = createClientPortalTrx({
+      ticket: {
+        ticket_id: TICKET_1,
+        tenant: 'tenant-1',
+        board_id: 'board-1',
+        status_id: 'board-1-open',
+        response_state: 'awaiting_client',
+      },
+      statusForBoard: {
+        status_id: 'board-1-resolved',
+        is_closed: true,
+        name: 'Resolved',
+        portal_selectable: false,
+      },
+      oldStatus: { status_id: 'board-1-open', is_closed: false },
+    });
+
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(restrictedTrx));
+
+    const { updateTicketStatus } = await import('./client-tickets');
+
+    await expect(updateTicketStatus(TICKET_1, 'board-1-resolved')).resolves.toEqual(
+      expect.objectContaining({ messageKey: 'client-portal:errors.tickets.statusNotPortalSelectable' })
+    );
+    expect(restrictedUpdates).toHaveLength(0);
+    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+    expect(enforceTicketCloseRulesMock).not.toHaveBeenCalled();
+
+    const { trx: allowedTrx, ticketUpdates: allowedUpdates } = createClientPortalTrx({
+      ticket: {
+        ticket_id: TICKET_1,
+        tenant: 'tenant-1',
+        board_id: 'board-1',
+        status_id: 'board-1-open',
+        response_state: 'awaiting_client',
+      },
+      statusForBoard: {
+        status_id: 'board-1-closed',
+        is_closed: true,
+        name: 'Closed',
+        portal_selectable: true,
+      },
+      oldStatus: { status_id: 'board-1-open', is_closed: false },
+    });
+
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(allowedTrx));
+
+    await expect(updateTicketStatus(TICKET_1, 'board-1-closed')).resolves.toBeUndefined();
+    expect(enforceTicketCloseRulesMock).toHaveBeenCalledWith(
+      allowedTrx,
+      'tenant-1',
+      expect.objectContaining({ bypass: { source: 'client_portal' } })
+    );
+    expect(allowedUpdates).toHaveLength(1);
+    expect(allowedUpdates[0].updateData).toMatchObject({
+      status_id: 'board-1-closed',
+      is_closed: true,
+      response_state: null,
+      closed_by: 'client-user-1',
+    });
+    expect(allowedUpdates[0].updateData).toEqual(
+      expect.objectContaining({ closed_at: expect.any(String) })
+    );
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'TICKET_CLOSED' })
+    );
   });
 });

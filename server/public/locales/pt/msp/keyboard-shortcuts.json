@@ -283,6 +283,38 @@
       "moveRight": {
         "label": "Mover para a direita",
         "description": "Mova o item do editor selecionado para a direita."
+      },
+      "moveOut": {
+        "label": "Tirar do contêiner",
+        "description": "Tire o bloco selecionado do seu contêiner."
+      },
+      "moveInto": {
+        "label": "Mover para o contêiner",
+        "description": "Mova o bloco selecionado para o contêiner anterior."
+      },
+      "copy": {
+        "label": "Copiar",
+        "description": "Copie o bloco selecionado."
+      },
+      "cut": {
+        "label": "Recortar",
+        "description": "Recorte o bloco selecionado."
+      },
+      "paste": {
+        "label": "Colar",
+        "description": "Cole o bloco copiado."
+      },
+      "duplicate": {
+        "label": "Duplicar",
+        "description": "Duplique o bloco selecionado."
+      },
+      "copyStyle": {
+        "label": "Copiar estilo",
+        "description": "Copie as cores, bordas, espaçamentos e o estilo de texto do bloco selecionado."
+      },
+      "pasteStyle": {
+        "label": "Colar estilo",
+        "description": "Aplique o estilo copiado ao bloco selecionado."
       }
     },
     "scroll": {

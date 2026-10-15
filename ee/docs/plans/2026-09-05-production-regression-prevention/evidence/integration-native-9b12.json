@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "native-integration-execution",
+  "revision": "9b12c5fa638a6757b990b3894d8f8c1682cddb19",
+  "runId": 34064092834,
+  "jobId": 101569754975,
+  "conclusion": "success",
+  "filesPassed": 276,
+  "filesSkipped": 4,
+  "testsPassed": 2025,
+  "testsSkipped": 49,
+  "durationSeconds": 6525.84,
+  "log": {
+    "path": "/tmp/alga-integration-native-9b12.log",
+    "sha256": "5de9d7b23e9447f9b05329ec4a55b0a10de97138a956cda83b7070ab4e73f181"
+  },
+  "limits": [
+    "This proves the published 9b12c5 candidate, not subsequent local repairs.",
+    "49 skipped assertions remain outside executed coverage."
+  ]
+}

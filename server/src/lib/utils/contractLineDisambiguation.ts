@@ -74,6 +74,7 @@ export async function getEligibleContractLines(
   clientId: string,
   serviceId: string
 ): Promise<EligibleContractLine[]> {
+  if (typeof clientId !== 'string' || clientId.trim().length === 0) return [];
   const db = tenantDb(knex, tenant);
 
   // First, get the service category for the given service

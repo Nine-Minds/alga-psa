@@ -2,7 +2,7 @@
 
 **Branch:** `fix/outbound-email-branding`  
 **Date:** 2026-08-04  
-**Status:** Design complete; no feature code implemented
+**Status:** Shipped. This tenant-wide sender identity work is complete. Multiple named outbound senders with mail-class and board routing are covered by the [follow-up plan](2026-09-26-multiple-outbound-from-addresses-plan.md).
 
 ## Outcome
 

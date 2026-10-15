@@ -22,6 +22,6 @@ describe('Microsoft email OAuth scopes', () => {
       'https://graph.microsoft.com/User.Read',
       'offline_access',
     ]);
-    expect(url.searchParams.get('prompt')).toBe('consent');
+    expect(url.searchParams.get('prompt')).toBe('select_account');
   });
 });

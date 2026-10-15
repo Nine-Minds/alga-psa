@@ -11,12 +11,13 @@ import {
   setDefaultClientLocation 
 } from '@alga-psa/clients/actions';
 import { getActiveTaxRegionsAsync } from '../../lib/billingHelpers';
-import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
+import { getAllCountries, getTenantDefaultCountry, ICountry } from '@alga-psa/clients/actions';
 import { ITaxRegion } from '@alga-psa/types';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -209,7 +210,7 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
                 helperText={t('clients.locations.card.phoneHelper', 'Phone number for this location')}
               >
                 <div className="mt-1">
-                  {`${t('clients.locations.card.phoneLabel', 'Phone')}: ${location.phone}`}
+                  <><span>{t('clients.locations.card.phoneLabel', 'Phone')}: </span><PhoneText value={location.phone} extension={location.phone_extension} defaultCountry={location.country_code} /></>
                 </div>
               </LocationDetailField>
             )}
@@ -317,6 +318,7 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
   const [isLoading, setIsLoading] = useState(false);
   const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]);
   const [countries, setCountries] = useState<ICountry[]>([]);
+  const [tenantDefaultCountry, setTenantDefaultCountry] = useState<ICountry | null>(null);
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [locationToDelete, setLocationToDelete] = useState<IClientLocation | null>(null);
@@ -476,8 +478,13 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
     if (isLoadingCountries || countries.length > 0) return;
     setIsLoadingCountries(true);
     try {
-      const countriesData = await getAllCountries();
+      // A missing tenant default must not empty the picker, so it fails soft.
+      const [countriesData, tenantCountry] = await Promise.all([
+        getAllCountries(),
+        getTenantDefaultCountry().catch(() => null),
+      ]);
       setCountries(countriesData);
+      setTenantDefaultCountry(tenantCountry);
     } catch (error) {
       console.error('Error loading countries:', error);
       toast({
@@ -520,11 +527,32 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
     setEditingLocation(null);
     setFormData({
       ...initialFormData,
+      ...(tenantDefaultCountry
+        ? { country_code: tenantDefaultCountry.code, country_name: tenantDefaultCountry.name }
+        : {}),
       is_default: locations.length === 0 // First location should be default
     });
     setIsDialogOpen(true);
     setHasAttemptedSubmit(false);
     setValidationErrors([]);
+  };
+
+  /**
+   * The picker is keyed on the ISO code, so a row saved with a legacy alias
+   * ('UK') opens with an empty country even though the address reads "United
+   * Kingdom". Match the stored name instead, so the field shows the country and
+   * saving repairs the code.
+   */
+  const storedCountryForPicker = (location: IClientLocation) => {
+    const code = (location.country_code || '').trim().toUpperCase();
+    if (!code || !countries.some((country) => country.code === code)) {
+      const name = (location.country_name || '').trim().toLowerCase();
+      const byName = name && countries.find((country) => country.name.toLowerCase() === name);
+      if (byName) {
+        return { country_code: byName.code, country_name: byName.name };
+      }
+    }
+    return { country_code: location.country_code, country_name: location.country_name };
   };
 
   const handleEditLocation = (location: IClientLocation) => {
@@ -537,8 +565,7 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
       city: location.city,
       state_province: location.state_province || '',
       postal_code: location.postal_code || '',
-      country_code: location.country_code,
-      country_name: location.country_name,
+      ...storedCountryForPicker(location),
       region_code: location.region_code || null,
       phone: location.phone || '',
       phone_extension: location.phone_extension || '',

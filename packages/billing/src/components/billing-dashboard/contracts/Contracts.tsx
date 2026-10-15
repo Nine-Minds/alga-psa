@@ -37,7 +37,7 @@ import {
 import { ContractWizard } from './ContractWizard';
 import { TemplateWizard } from './template-wizard/TemplateWizard';
 import { ContractDialog } from './ContractDialog';
-import { updateClientContractForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { activateClientContractForBilling, updateClientContractForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import {
   type ContractSubTab,
   getDraftTabBadgeCount,
@@ -184,6 +184,8 @@ const Contracts: React.FC = () => {
       const result = await deleteContract(contractToDelete.contractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         handleError(getErrorMessage(result));
+        // The delete may have been refused after the list went stale; show current state.
+        await fetchContracts();
         setContractToDelete(null);
         return;
       }
@@ -194,6 +196,7 @@ const Contracts: React.FC = () => {
         ? err.message
         : t('contractsList.toasts.failedToDeleteContract', { defaultValue: 'Failed to delete contract' });
       toast.error(message);
+      await fetchContracts();
     } finally {
       setIsDeletingContract(false);
     }
@@ -230,6 +233,7 @@ const Contracts: React.FC = () => {
       const result = await deleteContract(draftToDiscard.contractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         handleError(getErrorMessage(result));
+        await fetchContracts();
         return;
       }
       await fetchContracts();
@@ -237,6 +241,7 @@ const Contracts: React.FC = () => {
       setDraftToDiscard(null);
     } catch (err) {
       handleError(err, t('contractsList.toasts.failedToDiscardDraft', { defaultValue: 'Failed to discard draft' }));
+      await fetchContracts();
     } finally {
       setIsDiscardingDraft(false);
     }
@@ -285,11 +290,12 @@ const Contracts: React.FC = () => {
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
       }
-      const result = await updateClientContractForBilling(clientContractId, { is_active: true });
+      const result = await activateClientContractForBilling(clientContractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
         return;
       }
+      toast.success(t('contractsList.toasts.contractActivated', { defaultValue: 'Contract activated' }));
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error

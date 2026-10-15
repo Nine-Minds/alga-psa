@@ -1,5 +1,7 @@
 'use client';
 
+
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -16,6 +18,7 @@ import {
 import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { resolveContractAuthoringRate } from '../../../lib/contractAuthoringRate';
 
 const isReturnedActionError = (value: unknown): boolean =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -83,9 +86,15 @@ export function ServiceSelectionDialog({
         const servicesData = Array.isArray(servicesResponse)
           ? servicesResponse
           : (servicesResponse.services || []);
-        
+
+        // Products are only supported on fixed/product-capable lines. Keep a
+        // defensive client-side filter even though the action narrows the fetch.
+        const itemKindFiltered = contractLineType === 'Fixed'
+          ? servicesData
+          : servicesData.filter((service) => service.item_kind !== 'product');
+
         // Filter out services that are already in the contract line.
-        const availableServices = servicesData.filter(
+        const availableServices = itemKindFiltered.filter(
           service => !existingServiceIds.includes(service.service_id)
         );
         
@@ -153,16 +162,14 @@ export function ServiceSelectionDialog({
           throw new Error(`Selected service ${serviceId} is no longer available`);
         }
 
-        const currencyRate = selectedService.prices?.find(
-          (price) => price.currency_code === currencyCode
-        )?.rate;
-        const resolvedRate = Number(currencyRate ?? selectedService.default_rate ?? 0);
+        const resolved = resolveContractAuthoringRate(selectedService, currencyCode);
+        const resolvedRate = resolved.rate ?? 0;
         const typeConfig = contractLineType === 'Hourly'
           ? { hourly_rate: resolvedRate }
           : contractLineType === 'Usage'
             ? {
                 base_rate: resolvedRate,
-                unit_of_measure: selectedService.unit_of_measure || 'unit',
+                unit_of_measure: selectedService.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
               }
             : { base_rate: resolvedRate };
 
@@ -348,14 +355,10 @@ export function ServiceSelectionDialog({
                       </TableCell>
                       <TableCell>{service.unit_of_measure}</TableCell>
                       <TableCell>
-                        {formatCurrency(
-                          Number(
-                            service.prices?.find((price) => price.currency_code === currencyCode)?.rate
-                              ?? service.default_rate
-                              ?? 0
-                          ) / 100,
-                          currencyCode,
-                        )}
+                        {(() => {
+                          const resolved = resolveContractAuthoringRate(service, currencyCode);
+                          return formatCurrency((resolved.rate ?? 0) / 100, currencyCode);
+                        })()}
                       </TableCell>
                     </TableRow>
                   ))}

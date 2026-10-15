@@ -1,21 +1,103 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fakeTable, fakeTransaction, type FakeTenantDbOptions } from '@alga-psa/db/testing';
+
+const TICKET_1 = '00000000-0000-4000-8000-000000000001';
 
 let currentUser: any;
 
 const hasPermissionMock = vi.fn();
 const getConnectionMock = vi.fn();
 const withTransactionMock = vi.fn();
+
+// Row the shared Comment model and publication intent read back after insert.
+const storedComment = {
+  comment_id: 'comment-1',
+  ticket_id: TICKET_1,
+  thread_id: 'thread-1',
+  user_id: 'user-1',
+  note: '[]',
+  is_internal: false,
+  publish_state: 'published',
+  created_at: '2026-09-05T00:00:00.000Z',
+};
+
+/**
+ * The portal comment path: the requester's user and contact, the ticket they
+ * may see, and the comment the shared model reads back after insert. The
+ * thread the model creates is appended to the table so the audience check that
+ * immediately follows finds it.
+ */
+function buildTrx(capture: {
+  onCommentInsert?: (row: Record<string, any>) => void;
+  onThreadInsert?: (row: Record<string, any>) => void;
+  onCommentUpdate?: (patch: Record<string, any>) => void;
+} = {}) {
+  const commentThreads: Array<Record<string, any>> = [];
+
+  const tables: FakeTenantDbOptions = {
+    tables: {
+      users: [{
+        user_id: 'user-1',
+        contact_id: 'contact-1',
+        first_name: 'Client',
+        last_name: 'User',
+        user_type: 'client',
+      }],
+      contacts: [{ contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: null }],
+      boards: [],
+      tickets: [{ ticket_id: TICKET_1, board_id: 'board-1', client_id: 'client-1' }],
+      comments: [storedComment],
+      comment_threads: commentThreads,
+      // No attachment drafts are claimed in these scenarios.
+      ticket_comment_attachments: [],
+    },
+    perTable: {
+      comment_threads: {
+        onInsert: (rows) => {
+          commentThreads.push(...rows);
+          capture.onThreadInsert?.(rows[0]);
+          return rows;
+        },
+      },
+      comments: {
+        onInsert: (rows) => {
+          capture.onCommentInsert?.(rows[0]);
+          return rows.map((row) => ({ comment_id: 'comment-1', ...row }));
+        },
+        onUpdate: (patch) => {
+          capture.onCommentUpdate?.(patch);
+          return 1;
+        },
+      },
+    },
+  };
+
+  return Object.assign(
+    (table: string) => fakeTable(tables, currentUser.tenant, table.split(' ')[0]),
+    fakeTransaction({
+      raw: vi.fn().mockResolvedValue({ rows: [{ comment_id: 'comment-1', thread_id: 'thread-1' }] }),
+    }),
+  ) as any;
+}
+
 const convertBlockNoteToMarkdownMock = vi.fn();
 const publishEventMock = vi.fn();
 const maybeReopenBundleMasterFromChildReplyMock = vi.fn();
 
 vi.mock('@alga-psa/tickets/lib/clientPortalVisibility.server', () => ({
-  getClientContactVisibilityContext: vi.fn().mockResolvedValue({ clientId: 'client-1', visibleBoardIds: null }),
+  getClientContactVisibilityContext: vi.fn().mockResolvedValue({ clientId: 'client-1', contactId: 'contact-1', effectiveTicketScope: 'client', visibleBoardIds: null }),
 }));
 
 vi.mock('@alga-psa/tickets/lib/portalTicketConversations', () => ({
   readPortalTicketConversations: vi.fn().mockResolvedValue({ selectedConversationId: 'requester-conversation',
     requesterConversations: [{ conversationId: 'requester-conversation', name: 'Requester', isDefault: true, status: 'open' }] }),
+}));
+
+// The shared Comment model binds a new root thread to a named conversation; the
+// conversation store is exercised in its own suite, so stub the attach here.
+vi.mock('@alga-psa/shared/lib/tickets/namedConversations', async importOriginal => ({
+  ...await importOriginal<typeof import('@alga-psa/shared/lib/tickets/namedConversations')>(),
+  attachNativeRootToConversation: vi.fn(async () => ({ conversationId: 'requester-conversation' })),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -29,6 +111,7 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/db', () => ({
   getConnection: (...args: any[]) => getConnectionMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  registerAfterCommit: vi.fn(),
   createTenantKnex: vi.fn(),
   tenantDb: (conn: any, _tenant: string) => ({
     table: (table: string) => conn(table),
@@ -52,11 +135,18 @@ vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: (...args: any[]) => publishEventMock(...args),
+  publishStoredWorkflowEvent: (...args: any[]) => publishEventMock(...args),
+  publishWorkflowEvent: vi.fn(),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: (...args: any[]) =>
     maybeReopenBundleMasterFromChildReplyMock(...args),
+  revertBundlePropagationForChild: vi.fn(),
 }));
 
 vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
@@ -80,102 +170,17 @@ describe('addClientTicketComment response source metadata', () => {
   });
 
   it('T001: stores metadata.responseSource=client_portal when inserting a client comment', async () => {
-    const commentsInsertMock = vi.fn((payload: any) => ({
-      returning: vi.fn().mockResolvedValue([
-        {
-          comment_id: 'comment-1',
-          ...payload,
-        },
-      ]),
-    }));
+    const commentsInsertMock = vi.fn();
 
+    const trx = buildTrx({ onCommentInsert: commentsInsertMock });
     withTransactionMock.mockImplementation(
-      async (_db: any, callback: (trx: any) => Promise<any>) => {
-        const trx = Object.assign(
-          (table: string) => {
-            if (table === 'users') {
-              return {
-                where: () => ({
-                  first: async () => ({
-                    contact_id: 'contact-1',
-                    first_name: 'Client',
-                    last_name: 'User',
-                  }),
-                }),
-              };
-            }
-
-            if (table === 'contacts') {
-              return {
-                where: () => ({
-                  first: async () => ({
-                    contact_name_id: 'contact-1',
-                    client_id: 'client-1',
-                    portal_visibility_group_id: null,
-                  }),
-                }),
-              };
-            }
-
-            if (table === 'tickets as t') {
-              const builder: any = {
-                select: vi.fn(() => builder),
-                where: vi.fn(() => builder),
-                modify: vi.fn((cb: (query: any) => void) => {
-                  cb(builder);
-                  return builder;
-                }),
-                first: vi.fn().mockResolvedValue({
-                  ticket_id: 'ticket-1',
-                  board_id: 'board-1',
-                  client_id: 'client-1',
-                }),
-              };
-              return builder;
-            }
-
-            if (table === 'ticket_conversations') {
-              return { where: () => ({ increment: () => ({ update: vi.fn().mockResolvedValue(1) }) }) };
-            }
-
-            if (table === 'comment_threads') {
-              return {
-                insert: vi.fn().mockResolvedValue(undefined),
-              };
-            }
-
-            if (table === 'comments') {
-              return {
-                insert: commentsInsertMock,
-              };
-            }
-
-            if (table === 'tickets') {
-              return {
-                where: vi.fn().mockReturnValue({
-                  update: vi.fn().mockResolvedValue(1),
-                }),
-              };
-            }
-
-            throw new Error(`Unexpected table: ${table}`);
-          },
-          {
-            fn: { now: vi.fn(() => new Date()) },
-            raw: vi.fn().mockResolvedValue({
-              rows: [{ comment_id: 'comment-1', thread_id: 'thread-1' }],
-            }),
-          }
-        );
-
-        return callback(trx);
-      }
+      async (_db: any, callback: (trx: any) => Promise<any>) => callback(trx)
     );
 
     const { addClientTicketComment } = await import('./client-tickets');
 
     const result = await addClientTicketComment(
-      'ticket-1',
+      TICKET_1,
       '[{"type":"paragraph","content":[{"type":"text","text":"Hello","styles":{}}]}]',
       false,
       false
@@ -192,103 +197,21 @@ describe('addClientTicketComment response source metadata', () => {
   });
 
   it('T019: forces is_internal=false on the comment and thread even when the caller passes true', async () => {
-    const commentThreadsInsertMock = vi.fn().mockResolvedValue(undefined);
-    const commentsInsertMock = vi.fn((payload: any) => ({
-      returning: vi.fn().mockResolvedValue([
-        {
-          comment_id: 'comment-1',
-          ...payload,
-        },
-      ]),
-    }));
+    const commentThreadsInsertMock = vi.fn();
+    const commentsInsertMock = vi.fn();
 
+    const trx = buildTrx({
+      onCommentInsert: commentsInsertMock,
+      onThreadInsert: commentThreadsInsertMock,
+    });
     withTransactionMock.mockImplementation(
-      async (_db: any, callback: (trx: any) => Promise<any>) => {
-        const trx = Object.assign(
-          (table: string) => {
-            if (table === 'users') {
-              return {
-                where: () => ({
-                  first: async () => ({
-                    contact_id: 'contact-1',
-                    first_name: 'Client',
-                    last_name: 'User',
-                  }),
-                }),
-              };
-            }
-
-            if (table === 'contacts') {
-              return {
-                where: () => ({
-                  first: async () => ({
-                    contact_name_id: 'contact-1',
-                    client_id: 'client-1',
-                    portal_visibility_group_id: null,
-                  }),
-                }),
-              };
-            }
-
-            if (table === 'tickets as t') {
-              const builder: any = {
-                select: vi.fn(() => builder),
-                where: vi.fn(() => builder),
-                modify: vi.fn((cb: (query: any) => void) => {
-                  cb(builder);
-                  return builder;
-                }),
-                first: vi.fn().mockResolvedValue({
-                  ticket_id: 'ticket-1',
-                  board_id: 'board-1',
-                  client_id: 'client-1',
-                }),
-              };
-              return builder;
-            }
-
-            if (table === 'ticket_conversations') {
-              return { where: () => ({ increment: () => ({ update: vi.fn().mockResolvedValue(1) }) }) };
-            }
-
-            if (table === 'comment_threads') {
-              return {
-                insert: commentThreadsInsertMock,
-              };
-            }
-
-            if (table === 'comments') {
-              return {
-                insert: commentsInsertMock,
-              };
-            }
-
-            if (table === 'tickets') {
-              return {
-                where: vi.fn().mockReturnValue({
-                  update: vi.fn().mockResolvedValue(1),
-                }),
-              };
-            }
-
-            throw new Error(`Unexpected table: ${table}`);
-          },
-          {
-            fn: { now: vi.fn(() => new Date()) },
-            raw: vi.fn().mockResolvedValue({
-              rows: [{ comment_id: 'comment-1', thread_id: 'thread-1' }],
-            }),
-          }
-        );
-
-        return callback(trx);
-      }
+      async (_db: any, callback: (trx: any) => Promise<any>) => callback(trx)
     );
 
     const { addClientTicketComment } = await import('./client-tickets');
 
     const result = await addClientTicketComment(
-      'ticket-1',
+      TICKET_1,
       '[{"type":"paragraph","content":[{"type":"text","text":"Hello","styles":{}}]}]',
       true,
       false
@@ -300,83 +223,11 @@ describe('addClientTicketComment response source metadata', () => {
   });
 
   it('T020: updateClientTicketComment only persists the note body, ignoring caller-supplied fields', async () => {
-    const commentsUpdateMock = vi.fn().mockResolvedValue(1);
+    const commentsUpdateMock = vi.fn();
 
+    const trx = buildTrx({ onCommentUpdate: commentsUpdateMock });
     withTransactionMock.mockImplementation(
-      async (_db: any, callback: (trx: any) => Promise<any>) => {
-        const trx = Object.assign(
-          (table: string) => {
-            if (table === 'users') {
-              return {
-                where: () => ({
-                  first: async () => ({
-                    contact_id: 'contact-1',
-                    first_name: 'Client',
-                    last_name: 'User',
-                  }),
-                }),
-              };
-            }
-
-            if (table === 'contacts') {
-              return {
-                where: () => ({
-                  first: async () => ({
-                    contact_name_id: 'contact-1',
-                    client_id: 'client-1',
-                    portal_visibility_group_id: null,
-                  }),
-                }),
-              };
-            }
-
-            if (table === 'tickets as t') {
-              const builder: any = {
-                select: vi.fn(() => builder),
-                where: vi.fn(() => builder),
-                modify: vi.fn((cb: (query: any) => void) => {
-                  cb(builder);
-                  return builder;
-                }),
-                first: vi.fn().mockResolvedValue({
-                  ticket_id: 'ticket-1',
-                  board_id: 'board-1',
-                  client_id: 'client-1',
-                }),
-              };
-              return builder;
-            }
-
-            if (table === 'comments') {
-              return {
-                where: vi.fn((criteria: any) => {
-                  if (criteria && 'user_id' in criteria) {
-                    // Ownership lookup: comment_id + user_id
-                    return {
-                      first: vi.fn().mockResolvedValue({
-                        comment_id: 'comment-1',
-                        ticket_id: 'ticket-1',
-                        user_id: 'user-1',
-                      }),
-                    };
-                  }
-                  return {
-                    update: commentsUpdateMock,
-                  };
-                }),
-              };
-            }
-
-            throw new Error(`Unexpected table: ${table}`);
-          },
-          {
-            fn: { now: vi.fn(() => new Date()) },
-            raw: vi.fn().mockResolvedValue({ rows: [] }),
-          }
-        );
-
-        return callback(trx);
-      }
+      async (_db: any, callback: (trx: any) => Promise<any>) => callback(trx)
     );
 
     const { updateClientTicketComment } = await import('./client-tickets');

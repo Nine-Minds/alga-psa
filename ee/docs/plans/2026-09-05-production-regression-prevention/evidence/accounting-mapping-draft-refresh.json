@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "catalog-refresh-draft-regression",
+  "baseRevision": "395193f81b",
+  "status": "local-passed-native-pending",
+  "trigger": "Provider catalog refreshes while an accounting mapping draft is open",
+  "browserObservation": {
+    "jobId": 101562895873,
+    "artifactId": 9997804919,
+    "case": "e2e-tests/tests/xero-export.spec.ts",
+    "observed": "First attempt timed out after Save Mapping. Failure snapshot shows the selected Alga Service had reverted to its placeholder; retry passed.",
+    "limit": "The focused test proves a reset defect consistent with the browser observation. A native browser run of the fix remains necessary."
+  },
+  "before": {
+    "result": "intended-assertion-failure",
+    "assertion": "After real picker selections and a fresh catalog array, Save must submit the selected service/item and metadata. Actual onSubmit calls: 0.",
+    "logSha256": "f64cbc48ae020a4108913aeae465dd7469e9b0126083585cfa9b25bb56a15c9d"
+  },
+  "fix": "Initialize a draft per dialog opening and mapping/organization identity. Catalog refreshes preserve user entries and pending-save state; a removed provider target is cleared explicitly without clearing other fields.",
+  "validation": {
+    "packageRunner": {
+      "filesPassed": 3,
+      "assertionsPassed": 20,
+      "assertionsFailed": 0,
+      "reportSha256": "4434ea62f3f15991859bd21a687d76016e3455e88843f3fe90402edc385d61bd"
+    },
+    "targetedTypecheck": "passed",
+    "serverRunner": {
+      "filesPassed": 3,
+      "assertionsPassed": 20,
+      "assertionsFailed": 0,
+      "reportSha256": "35785ff856254e3ed12c4be8a742cd25b86eef38b8cb920b555eaa96de643718"
+    }
+  },
+  "tests": [
+    "Draft and metadata survive catalog refresh",
+    "Removed catalog target requires deliberate replacement while preserving service/metadata",
+    "Pending save remains disabled across catalog refresh",
+    "Reopen starts a fresh draft",
+    "Organization change starts a fresh draft",
+    "Existing accounting mapping tests remain passing"
+  ],
+  "boundaries": [
+    "Real Dialog, CustomSelect and form submission execute in jsdom",
+    "Provider submission is a recording fixture; browser/DB/provider persistence remain separately covered by the native journey",
+    "Only DOM scrollIntoView and existing reflection/i18n test scaffolding are substituted"
+  ],
+  "ci": {
+    "workflow": ".github/workflows/unit-tests.yml",
+    "job": "Server unit suite + coverage",
+    "browserWorkflow": ".github/workflows/e2e-fresh-install-tests.yaml"
+  }
+}

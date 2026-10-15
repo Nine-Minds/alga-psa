@@ -124,6 +124,24 @@ export class ApiFinancialController extends ApiBaseController {
     this.financialService = financialService;
   }
 
+  listTaxRates() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, 'read');
+          const query = taxRateListQuerySchema.parse(Object.fromEntries(new URL(apiRequest.url).searchParams));
+          const result = await this.financialService.listTaxRates(query, apiRequest.context!);
+          return createPaginatedResponse(result.data, result.total, query.page, query.limit, {
+            filters: query, resource: 'financial/tax/rates',
+          });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
   // ============================================================================
   // TRANSACTION MANAGEMENT ENDPOINTS
   // ============================================================================

@@ -69,9 +69,10 @@
       "servicePeriods": "Périodes de service",
       "credits": "Crédits",
       "serviceTypes": "Types de service",
+      "serviceCategories": "Catégories de service",
       "serviceCatalog": "Services",
       "products": "Produits",
-      "taxRates": "Taux de taxe",
+      "taxRates": "Taxes",
       "usageTracking": "Suivi de l'utilisation",
       "reports": "Rapports",
       "accountingExports": "Exportations comptables"
@@ -102,9 +103,15 @@
       "channels": "Canaux"
     },
     "passwords": "Mots de passe",
+    "ticketsAll": "Tous les tickets",
+    "ticketsRecurring": "Tickets récurrents",
     "coManaged": "Informatique cogérée",
     "coManagedDelegation": "Administration déléguée",
-    "coManagedAccess": "Accès cogéré"
+    "coManagedAccess": "Accès cogéré",
+    "ticketsCustomer": "Tickets clients",
+    "projectsSharedTasks": "Tâches partagées",
+    "coManagedOverview": "Vue d'ensemble",
+    "ticketsTemplates": "Modèles de tickets"
   },
   "sidebar": {
     "backToMain": "Retour au principal",
@@ -117,7 +124,8 @@
     "collapseSidebar": "Réduire la barre latérale",
     "collapseSection": "Réduire {{section}}",
     "expandSection": "Développer {{section}}",
-    "appLogoAlt": "Logo {{appName}}"
+    "appLogoAlt": "Logo {{appName}}",
+    "poweredBy": "Propulsé par"
   },
   "settings": {
     "sections": {
@@ -238,6 +246,19 @@
       "ariaLabel": "Demander à l’IA au sujet de ce workflow",
       "title": "Demander à l’IA",
       "shortcutHint": "Ouvrir Quick Ask pour l’aide sur le workflow"
+    },
+    "stopwatch": {
+      "untitled": "Sans titre",
+      "ariaLabelPaused": "Chronomètre en pause : {{label}} à {{clock}}",
+      "ariaLabelRunning": "Chronomètre en cours : {{label}} à {{clock}}",
+      "paused": "Chronomètre en pause",
+      "running": "Chronomètre en cours",
+      "resume": "Reprendre",
+      "pause": "Pause",
+      "stop": "Arrêter et enregistrer",
+      "discard": "Supprimer",
+      "pausedNoDrawer": "Chronomètre en pause à {{clock}}. Ouvrez l'élément de travail pour enregistrer le temps.",
+      "openTicket": "Ouvrir le ticket"
     }
   },
   "dialogs": {

@@ -11,6 +11,24 @@ export class CoManagedSharedWorkError extends Error {
   readonly code = 'CO_MANAGED_SHARED_WORK_FORBIDDEN';
   constructor() { super('This shared resource is not available for the requested operation.'); this.name = 'CoManagedSharedWorkError'; }
 }
+
+/**
+ * Worker adapters can load a separately compiled copy of this package, so two
+ * distinct `CoManagedSharedWorkError` constructors can be live in one process:
+ * this package's export map resolves the root and a few pure modules to source
+ * while every worker-facing subpath resolves to the tsup bundle, and
+ * `sharedWorkIdentity` is not itself an export-map entry.
+ *
+ * `instanceof` across that boundary silently reports false, and an authorization
+ * rejection that should have been terminal is rethrown as an unclassified
+ * failure instead. `@alga-psa/licensing`'s `isCoManagedLifecycleError` already
+ * matches on the explicit contract for the same reason; this is its counterpart.
+ */
+export function isCoManagedSharedWorkError(error: unknown): error is CoManagedSharedWorkError {
+  if (!error || typeof error !== 'object') return false;
+  const candidate = error as Partial<CoManagedSharedWorkError>;
+  return candidate.name === 'CoManagedSharedWorkError' && candidate.code === 'CO_MANAGED_SHARED_WORK_FORBIDDEN';
+}
 export function isCoManagedUuid(value: unknown): value is string {
   return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }

@@ -236,7 +236,7 @@ const CountryPicker = ({
       >
         <div className="flex items-center gap-2 flex-1">
           {currentCountry && (
-            <span className="text-sm font-mono bg-[rgb(var(--color-border-200))] px-1 rounded">
+            <span className="chip-neutral text-sm font-mono px-1 rounded">
               {currentCountry.code}
             </span>
           )}
@@ -297,7 +297,7 @@ const CountryPicker = ({
                     >
                       <span className="text-base">{getCountryFlag(country.code)}</span>
                       <span className="flex-1 truncate">{country.name}</span>
-                      <span className="text-xs font-mono bg-[rgb(var(--color-border-200))] px-1 rounded ml-2">
+                      <span className="chip-neutral text-xs font-mono px-1 rounded ml-2">
                         {country.code}
                       </span>
                     </div>

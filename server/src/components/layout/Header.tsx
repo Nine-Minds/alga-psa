@@ -30,7 +30,7 @@ import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { NotificationBell } from '@alga-psa/notifications/components/NotificationBell';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { menuItems, bottomMenuItems, MenuItem } from '@/config/menuConfig';
+import { menuItems, bottomMenuItems, settingsNavigationSections, MenuItem } from '@/config/menuConfig';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { useUserAvatar, useContactAvatar } from '@alga-psa/user-composition/hooks';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions/permission-actions';
@@ -47,6 +47,7 @@ import { PaymentFailedBanner } from './PaymentFailedBanner';
 import { useQuickAsk } from './QuickAskContext';
 import { useCatalogShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
 import { useActionPolling } from '@alga-psa/ui/hooks';
+import StopwatchHeaderIndicator from './StopwatchHeaderIndicator';
 
 export const QUICK_CREATE_OPEN_EVENT = 'alga:quick-create:open';
 
@@ -161,14 +162,19 @@ export const getMenuItemNameByPath = (
     return t('header.breadcrumb.dashboard', { defaultValue: 'Dashboard' });
   }
 
-  const allMenuItems = [...menuItems, ...bottomMenuItems];
+  const allMenuItems = [
+    ...menuItems,
+    ...bottomMenuItems,
+    ...settingsNavigationSections.flatMap((section) => section.items),
+  ];
 
   const segments = path.split('/');
   const topLevelPath = segments.length > 1 ? '/' + segments[1] : '/';
 
   const matchingItems = (items: MenuItem[]): MenuItem[] => items.flatMap((item) => {
     const matchesPath = item.href === path
-      || (item.href !== undefined && (item.href === topLevelPath || path.startsWith(item.href)));
+      || (item.href !== undefined && (item.href === topLevelPath || path.startsWith(item.href)))
+      || (item.relatedPaths?.some((relatedPath) => path.startsWith(relatedPath)) ?? false);
     return [
       ...(matchesPath ? [item] : []),
       ...(item.subItems ? matchingItems(item.subItems) : []),
@@ -582,6 +588,7 @@ export default function Header({
             selected: t('header.themeToggle.selected', { defaultValue: 'Selected' }),
           }}
         />
+        <StopwatchHeaderIndicator />
         <NotificationBell />
         <JobActivityIndicator t={t} />
         <DropdownMenu>

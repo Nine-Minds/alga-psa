@@ -23,7 +23,7 @@ const actions = vi.hoisted(() => ({
   create: vi.fn(),
   execute: vi.fn(),
   cancel: vi.fn(),
-  health: vi.fn(),
+  connections: vi.fn(),
 }));
 
 vi.mock('@alga-psa/auth/hooks/useAccountingCapabilities', () => ({
@@ -36,10 +36,7 @@ vi.mock('@alga-psa/billing/actions/accountingExportActions', () => ({
   createAccountingExportBatch: (...args: unknown[]) => actions.create(...args),
   executeAccountingExportBatch: (...args: unknown[]) => actions.execute(...args),
   cancelAccountingExportBatch: (...args: unknown[]) => actions.cancel(...args),
-}));
-
-vi.mock('@alga-psa/billing/actions/accountingSyncActions', () => ({
-  getAccountingSyncHealth: (...args: unknown[]) => actions.health(...args),
+  getAccountingExportConnections: (...args: unknown[]) => actions.connections(...args),
 }));
 
 describe('Accounting Exports permission presentation', () => {
@@ -55,7 +52,13 @@ describe('Accounting Exports permission presentation', () => {
       loaded: true,
     };
     actions.list.mockResolvedValue([]);
-    actions.health.mockResolvedValue({ realms: [] });
+    actions.connections.mockResolvedValue({
+      adapterType: 'quickbooks_online',
+      connected: false,
+      issue: 'none_connected',
+      organisationName: null,
+      realms: [],
+    });
   });
 
   afterEach(() => cleanup());
@@ -72,7 +75,7 @@ describe('Accounting Exports permission presentation', () => {
     expect(screen.queryByText('No export batches yet.')).not.toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(actions.list).not.toHaveBeenCalled();
-    expect(actions.health).not.toHaveBeenCalled();
+    expect(actions.connections).not.toHaveBeenCalled();
   });
 
   it('turns a denied list result into the denied state and removes every export control', async () => {

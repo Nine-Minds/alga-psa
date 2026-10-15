@@ -3,6 +3,18 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
+export const ZOOM_MIN = 0.5;
+export const ZOOM_MAX = 2;
+const ZOOM_STEPS = [0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
+
+/** The next preset zoom level in `direction` from `scale`. */
+export const stepZoom = (scale: number, direction: 1 | -1): number => {
+  const next = direction > 0
+    ? ZOOM_STEPS.find((step) => step > scale + 0.001)
+    : [...ZOOM_STEPS].reverse().find((step) => step < scale - 0.001);
+  return next ?? (direction > 0 ? ZOOM_MAX : ZOOM_MIN);
+};
+
 interface DesignerToolbarProps {
   snapToGrid: boolean;
   showGuides: boolean;
@@ -18,6 +30,8 @@ interface DesignerToolbarProps {
   onToggleGuides: () => void;
   onToggleRulers: () => void;
   onZoomChange: (value: number) => void;
+  /** Zooms so the page width fits the canvas. */
+  onZoomToFit: () => void;
   onUndo: () => void;
   onRedo: () => void;
   onGridSizeChange: (value: number) => void;
@@ -34,6 +48,7 @@ export const DesignerToolbar: React.FC<DesignerToolbarProps> = ({
   onToggleGuides,
   onToggleRulers,
   onZoomChange,
+  onZoomToFit,
   onUndo,
   onRedo,
   onGridSizeChange,
@@ -70,18 +85,44 @@ export const DesignerToolbar: React.FC<DesignerToolbarProps> = ({
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 text-sm text-slate-600 min-w-[160px]">
+        <div className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400 min-w-[160px]">
           <span>{t('designer.toolbar.zoom', { defaultValue: 'Zoom' })}</span>
+          <Button
+            id="designer-zoom-out"
+            variant="outline"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => onZoomChange(stepZoom(canvasScale, -1))}
+            disabled={canvasScale <= ZOOM_MIN}
+            aria-label={t('designer.toolbar.zoomOut', { defaultValue: 'Zoom out' })}
+          >
+            −
+          </Button>
           <input
             type="range"
-            min={50}
-            max={200}
-            step={10}
-            value={canvasScale * 100}
+            min={ZOOM_MIN * 100}
+            max={ZOOM_MAX * 100}
+            step={5}
+            value={Math.round(canvasScale * 100)}
             onChange={(event) => onZoomChange(Number(event.target.value) / 100)}
-            className="w-28"
+            className="w-24"
+            aria-label={t('designer.toolbar.zoom', { defaultValue: 'Zoom' })}
           />
-          <span>{Math.round(canvasScale * 100)}%</span>
+          <Button
+            id="designer-zoom-in"
+            variant="outline"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => onZoomChange(stepZoom(canvasScale, 1))}
+            disabled={canvasScale >= ZOOM_MAX}
+            aria-label={t('designer.toolbar.zoomIn', { defaultValue: 'Zoom in' })}
+          >
+            +
+          </Button>
+          <span className="min-w-12 whitespace-nowrap text-right tabular-nums">{Math.round(canvasScale * 100)}%</span>
+          <Button id="designer-zoom-fit" variant="outline" size="sm" className="h-7 px-2" onClick={onZoomToFit}>
+            {t('designer.toolbar.zoomFit', { defaultValue: 'Fit' })}
+          </Button>
         </div>
         <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-col">
           <span>{t('designer.toolbar.metrics.drags', { defaultValue: 'Drags: {{count}}', count: metrics.totalDrags })}</span>

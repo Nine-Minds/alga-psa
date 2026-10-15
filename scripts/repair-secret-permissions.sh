@@ -100,6 +100,16 @@ fi
 
 RUNNING_UID="$(id -u)"
 
+# GNU stat (Linux) and BSD stat (macOS) use different format switches. Probe
+# metadata only; neither form follows symlinks without an explicit -L option.
+if stat -c '%u' "$ROOT" >/dev/null 2>&1; then
+  entry_owner() { stat -c '%u' "$1"; }
+  entry_mode() { stat -c '%a' "$1"; }
+else
+  entry_owner() { stat -f '%u' "$1"; }
+  entry_mode() { stat -f '%Lp' "$1"; }
+fi
+
 if [ -n "$TARGET_UID" ]; then
   if [ "$APPLY" -eq 1 ] && [ "$RUNNING_UID" != "0" ]; then
     echo "❌ --uid requires running as root (current uid: $RUNNING_UID)." >&2
@@ -110,7 +120,7 @@ else
   # Without --uid, the root's current owner is the reference owner: the
   # provider requires uniform ownership, so anything owned differently is a
   # problem even if the script cannot know the intended service uid.
-  TARGET_OWNER="$(stat -c '%u' "$ROOT")"
+  TARGET_OWNER="$(entry_owner "$ROOT")"
 fi
 
 PASS_ISSUES=0
@@ -131,8 +141,8 @@ check_entry() {
     wanted=600
   fi
 
-  mode="$(stat -c '%a' "$path")"
-  uid="$(stat -c '%u' "$path")"
+  mode="$(entry_mode "$path")"
+  uid="$(entry_owner "$path")"
 
   if [ "$mode" != "$wanted" ]; then
     if [ "$APPLY" -eq 1 ] && { [ "$uid" = "$RUNNING_UID" ] || [ "$RUNNING_UID" = "0" ]; }; then

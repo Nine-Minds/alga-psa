@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "suite": "node-tooling",
+  "revision": "4c860140c5773f2ecac450dff15675dac5270b48",
+  "runtime": "v25.5.0",
+  "status": "passed",
+  "counts": {
+    "tests": 741,
+    "passed": 741,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "source": {
+    "before": {
+      "revision": "4c860140c5773f2ecac450dff15675dac5270b48",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "4c860140c5773f2ecac450dff15675dac5270b48",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "workingTreeDirty": false,
+  "selection": {
+    "mode": "full"
+  },
+  "collectionMode": "file inventory plus registrations observed during execution",
+  "expectedFileCount": 78,
+  "executedFileCount": 78,
+  "expectedAndExecutedFilesMatch": true,
+  "executionEvidenceSha256": "4b8ddd7a1965fcd98a195469e1916932ca01e2e84f663908d8a9d6518f1316d8",
+  "durationMs": 170579.782625,
+  "limitation": "Native Node25 run with installed dependencies and required emulator package builds; does not substitute for clean Linux CI or enterprise browser execution."
+}

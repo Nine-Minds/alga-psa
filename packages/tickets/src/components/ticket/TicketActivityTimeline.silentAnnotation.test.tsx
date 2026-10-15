@@ -71,6 +71,16 @@ describe('TicketActivityTimeline silent annotations', () => {
     expect(entry.annotation).toBe('silent — no notifications');
   });
 
+  it('shows the visibility transition with localized labels in internal history', () => {
+    const [entry] = formatEntries([activityEntry(makeActivity({
+      event_type: 'TICKET_EXTERNAL_LINK_UPDATED', source: 'external_link',
+      changes: { portal_visible: { old: false, new: true } },
+      details: { system_label: 'Vendor', external_id: '42' },
+    }))], (visible) => visible ? 'Geteilt' : 'Intern');
+    expect(entry.subtitle).toBe('Intern → Geteilt');
+    expect(entry.actor).toBe('Pat Agent');
+  });
+
   it('does not annotate normal activity rows', () => {
     const [entry] = formatEntries([
       activityEntry(makeActivity({ details: {} })),

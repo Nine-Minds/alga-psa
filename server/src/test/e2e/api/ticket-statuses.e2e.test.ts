@@ -61,7 +61,7 @@ describe('Ticket Status Lookup API E2E Tests', () => {
       status_type: 'ticket',
       order_number: 210,
       is_closed: false,
-      is_default: true,
+      is_default: false,
     });
 
     secondaryBoardStatusId = uuidv4();
@@ -82,10 +82,6 @@ describe('Ticket Status Lookup API E2E Tests', () => {
       return;
     }
 
-    await env.db('statuses')
-      .whereIn('status_id', [primaryBoardStatusId, secondaryBoardStatusId, legacyGlobalTicketStatusId])
-      .delete();
-    await env.db('boards').where('board_id', secondaryBoardId).delete();
     await env.cleanup();
   });
 

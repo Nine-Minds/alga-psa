@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "runId": "34299806767",
+  "testedRevision": "d7d864473db09832671427a71a4220601709376c",
+  "supportedUpgradeArtifactId": "10085637395",
+  "runtimeArtifactId": "10084697653",
+  "aggregateArtifactId": "10084707918",
+  "supportedUpgrade": {
+    "baseline": "v1.5.0",
+    "baselineRevision": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+    "baselineMigrations": 1028,
+    "upgradeMigrations": 34,
+    "schema": "passed",
+    "browserPassed": 3,
+    "flaky": 0,
+    "skipped": 0
+  },
+  "citusRuntimePassed": 8,
+  "temporalDatabasePassed": 27,
+  "assertions": [
+    "Retained tenant ticket reads and writes by two actors, rejected foreign writes and reads.",
+    "Retained and new usage records persist.",
+    "Invoice subtotal 87500 and total 96250, four linked time entries, foreign records unchanged."
+  ],
+  "limits": [
+    "Single-node Citus with mixed distribution, not multi-node/failover equivalence.",
+    "time_entries and usage_tracking remain local tables.",
+    "Separate PostgreSQL upgrade browser gate failed; this does not claim whole-run readiness."
+  ]
+}

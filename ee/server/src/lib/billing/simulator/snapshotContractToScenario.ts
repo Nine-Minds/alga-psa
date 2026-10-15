@@ -6,6 +6,7 @@
 
 import type { Knex } from "knex";
 import { v4 as uuidv4 } from "uuid";
+import { resolveUnitOfMeasure } from "@alga-psa/core/unitOfMeasure";
 import { Temporal } from "@js-temporal/polyfill";
 import type {
   ContractScenario,
@@ -708,7 +709,7 @@ function buildTemplateScenarioLine(
       const usage = config ? usageByConfigId.get(config.config_id) : undefined;
       configuration = {
         configuration_type: "Usage",
-        unit_of_measure: usage?.unit_of_measure || "unit",
+        unit_of_measure: usage?.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
         enable_tiered_pricing: Boolean(usage?.enable_tiered_pricing),
         minimum_usage:
           usage?.minimum_usage != null ? Number(usage.minimum_usage) : null,
@@ -836,10 +837,12 @@ async function buildScenarioServiceConfig(
     case "Fixed": {
       const fixed = configDetails.typeConfig as {
         base_rate?: number | null;
+        pricing_basis?: "unit" | "bundle" | null;
       } | null;
       return {
         configuration_type: "Fixed",
         base_rate: toCents(fixed?.base_rate ?? null),
+        pricing_basis: fixed?.pricing_basis ?? null,
       };
     }
     case "Hourly": {
@@ -876,7 +879,7 @@ async function buildScenarioServiceConfig(
       } | null;
       return {
         configuration_type: "Usage",
-        unit_of_measure: usage?.unit_of_measure ?? "unit",
+        unit_of_measure: usage?.unit_of_measure ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
         enable_tiered_pricing: Boolean(usage?.enable_tiered_pricing),
         minimum_usage:
           usage?.minimum_usage != null ? Number(usage.minimum_usage) : null,

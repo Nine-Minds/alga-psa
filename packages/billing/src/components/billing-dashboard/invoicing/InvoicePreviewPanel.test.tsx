@@ -15,6 +15,18 @@ const templateRendererMock = vi.fn();
 const paperInvoiceMock = vi.fn();
 const routerPushMock = vi.fn();
 
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
+  default: ({ options, value, onValueChange }: any) => (
+    <select aria-label="Invoice layout" value={value} onChange={event => onValueChange(event.target.value)}>
+      {options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}
+    </select>
+  ),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: routerPushMock,

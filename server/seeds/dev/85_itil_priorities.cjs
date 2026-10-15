@@ -1,7 +1,8 @@
 /**
- * Development seed to create test ITIL board with priorities
+ * Development seed to create test ITIL board with statuses and priorities
  * This is for development/testing only - actual ITIL standards come from migrations
  */
+const { randomUUID } = require('crypto');
 const { getFirstTenantSeedContext } = require('./_tenant.cjs');
 
 exports.seed = async function(knex) {
@@ -25,7 +26,7 @@ exports.seed = async function(knex) {
   }
 
   // Create ITIL-enabled board for testing
-  const boardId = knex.raw('gen_random_uuid()');
+  const boardId = randomUUID();
   await db.table('boards').insert({
     board_id: boardId,
     tenant: tenantId,
@@ -52,6 +53,31 @@ exports.seed = async function(knex) {
   if (!createdByUser) {
     console.log('No user found for tenant, skipping ITIL priorities seed');
     return;
+  }
+
+  // Ticket statuses are per board. Copy the global catalog, as createBoard does,
+  // so the board can open and close tickets with the product's standard set.
+  const standardTicketStatuses = await knex('standard_statuses')
+    .where({ item_type: 'ticket' })
+    .orderBy('display_order', 'asc')
+    .orderBy('name', 'asc');
+
+  if (standardTicketStatuses.length === 0) {
+    console.warn('No standard ticket statuses found; ITIL Support board has no statuses');
+  } else {
+    await db.table('statuses').insert(
+      standardTicketStatuses.map((status) => ({
+        tenant: tenantId,
+        board_id: boardId,
+        name: status.name,
+        status_type: 'ticket',
+        order_number: status.display_order,
+        is_closed: Boolean(status.is_closed),
+        is_default: Boolean(status.is_default),
+        created_by: createdByUser.user_id
+      }))
+    );
+    console.log(`Created ${standardTicketStatuses.length} ticket statuses for ITIL Support board`);
   }
 
   // Copy ITIL priorities from standard_priorities to tenant's priorities table
@@ -84,4 +110,16 @@ exports.seed = async function(knex) {
   }
 
   console.log('Copied ITIL priorities to tenant for testing');
+
+  // Mirror createBoard: default the board to the ITIL "Medium" (level 3) priority.
+  const defaultPriority = await db.table('priorities')
+    .where({ item_type: 'ticket', is_from_itil_standard: true })
+    .orderByRaw('CASE WHEN itil_priority_level = 3 THEN 0 ELSE 1 END, order_number ASC, priority_name ASC')
+    .first('priority_id');
+
+  if (defaultPriority) {
+    await db.table('boards')
+      .where({ board_id: boardId })
+      .update({ default_priority_id: defaultPriority.priority_id });
+  }
 };

@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "scope": "visible-bucket-balances-primary-and-supported-upgrade",
+  "source": {
+    "revision": "717b616bf96cbb13083f0e3353baff40c08e9040",
+    "dirty": true,
+    "files": {
+      "e2e-tests/tests/usage-invoice-preview.spec.ts": "76239d90f8132090067c0cb2a872528ca1126c80bc0f2841cd9d90612d45849b",
+      "e2e-tests/upgrade-tests/retained-usage.spec.ts": "ceddbaad54ccdeebbbefe8c69aa31a5acd4608242e4c348f1aaad2c06a42451a",
+      "scripts/fixtures/upgrade-v150.ts": "be82fd6aa8e9ee9621f3df28656dc0de76f2d352e435bdc0dbc28f9d5dc7fc8f",
+      "scripts/lib/upgrade-retention.mjs": "b75107519ae5c653a8f8120137e500b2ca305bc0762a803451f6c02e8c53689b"
+    }
+  },
+  "expectations": {
+    "usedHours": "0.0",
+    "totalHours": "40.0",
+    "percentage": "0%",
+    "origin": "Independently authored fixture capacity2400minutes with no usage or rollover rows",
+    "upgradeIsolation": "Dedicated zero-rate bucket contract begins current UTC day after retained August invoice period; dedicated service; original billing sources unchanged"
+  },
+  "nativeMigration": {
+    "status": "passed",
+    "baseline": "v1.5.0",
+    "baselineRevision": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+    "baselineMigrations": 1028,
+    "candidateMigrations": 33,
+    "retention": "Pool and member business identities and values plus empty bucket_usage included in before/after comparison",
+    "ownedDatabaseDropped": true,
+    "evidencePath": "/var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-supported-upgrade-Z3TivH/evidence.json"
+  },
+  "collection": {
+    "primary": {
+      "command": "CI=true E2E_EDITION=enterprise ./node_modules/.bin/playwright test --list tests/usage-invoice-preview.spec.ts",
+      "files": 1,
+      "tests": 1
+    },
+    "upgrade": {
+      "command": "CI=true E2E_EDITION=enterprise ./node_modules/.bin/playwright test --config=playwright.upgrade.config.ts --list retained-usage.spec.ts",
+      "files": 1,
+      "tests": 1
+    }
+  },
+  "primaryBrowser": {
+    "report": "/tmp/alga-native-teams-IjhrLl/lifecycle.log",
+    "status": "failed",
+    "durationMs": 99422.717,
+    "newBalanceAssertions": "passed before Add Usage and after reload",
+    "failure": "Existing preview-selected-button absent after filter debounce cleared checkbox selection",
+    "retries": 0,
+    "ownedDatabaseDropped": true
+  },
+  "upgradeBrowser": {
+    "report": "/tmp/alga-native-teams-TJLR3w/lifecycle.log",
+    "status": "failed",
+    "passed": 2,
+    "failed": 1,
+    "skipped": 0,
+    "flaky": 0,
+    "durationMs": 224568.628,
+    "invoice": "passed: retained $962.50 preview, generation and source isolation assertions",
+    "usage": "passed: visible bucket0.0hours used/40.0hours total/0percent before Add Usage and after reload plus all retained usage assertions",
+    "ticketFailure": "ERR_CONNECTION_REFUSED navigating own client; server explicitly reported approaching memory threshold and restarting; subsequent usage test passed",
+    "retries": 0,
+    "ownedDatabaseDropped": true
+  },
+  "cleanup": {
+    "ownedNextRedisTemporalStopped": true,
+    "sourceDatabaseMutated": false,
+    "dockerUsed": false
+  },
+  "limitations": [
+    "Native PostgreSQL only; Citus browser execution remains CI evidence.",
+    "Reused installed dependencies and Next development cache, not clean candidate image execution.",
+    "Full primary and upgrade suites did not pass on these first runs; failures retained above.",
+    "Pre-browser upgrade harness attempt used generated credential log extraction incorrectly; corrected temporary harness to use explicit seeded credentials.",
+    "24GiB heap allowance validates this native Mac run only; CI memory stability and repeatability remain separate.",
+    "Even after bounded read-only route precompile, the full native development upgrade suite remains2passed/1ticketdeadlinefailure. Bucket and invoice cases pass; no broad full-suite readiness claim."
+  ],
+  "nativeRuntimeReview": {
+    "previousNodeOptions": "--max-old-space-size=12288",
+    "nextArgs": [
+      "dev",
+      "--webpack",
+      "--disable-source-maps"
+    ],
+    "previousV8HeapLimitMiB": 12480,
+    "machineMemoryGiB": 48,
+    "restartCondition": "Installed Next start-server.js restarts dev after a request when used_heap_size exceeds80percent of heap_size_limit",
+    "rerunNodeOptions": "--max-old-space-size=24576",
+    "rationale": "Matches installed Next default of50percent of machine memory; previous explicit12GiB option overrode that default. One owned Next server at a time.",
+    "timeoutsOrRetriesChanged": false
+  },
+  "primaryRerunSource": {
+    "automaticInvoicesSha256": "247fcbdfb0caa212df26f9b12a7f6d10fece4690a50bbb7977dcfbfb55b3339a",
+    "status": "passed"
+  },
+  "primaryRerun": {
+    "report": "/tmp/alga-native-teams-NKrleE/lifecycle.log",
+    "stats": {
+      "startTime": "2026-09-09T06:23:49.691Z",
+      "duration": 77522.16,
+      "expected": 1,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "retries": 0,
+    "ownedResourcesCleaned": true,
+    "nextMemoryRestartObserved": false
+  },
+  "upgradeRerun": {
+    "report": "/tmp/alga-native-teams-8X3nrQ/lifecycle.log",
+    "stats": {
+      "startTime": "2026-09-09T06:26:40.433Z",
+      "duration": 225580.16400000002,
+      "expected": 2,
+      "skipped": 0,
+      "unexpected": 1,
+      "flaky": 0
+    },
+    "retries": 0,
+    "ownedResourcesCleaned": true,
+    "nextMemoryRestartObserved": false,
+    "passed": [
+      "retained-invoice including962.50",
+      "retained-usage including new balances"
+    ],
+    "failure": "retained-ticket120000ms deadline at foreign client navigation; preceding own-client route cold compiled28.5s. Both-tenant loop not completed. No timeout/retry changes."
+  },
+  "upgradePrecompiledRun": {
+    "report": "/tmp/alga-native-teams-qRWC1v/lifecycle.log",
+    "stats": {
+      "startTime": "2026-09-09T06:35:30.442Z",
+      "duration": 196180.06,
+      "expected": 2,
+      "skipped": 0,
+      "unexpected": 1,
+      "flaky": 0
+    },
+    "retries": 0,
+    "ownedResourcesCleaned": true,
+    "nextMemoryRestartObserved": false,
+    "precompile": {
+      "deadlineMs": 240000,
+      "authenticated": true,
+      "methods": [
+        "GET own-ticket",
+        "GET own-client"
+      ],
+      "assertions": "Exact origin/path200 and visible own ticket/client; real NextAuth csrf/credentials/session identity; contexts disposed before suite",
+      "mutations": "Synthetic login only; no ticket/client edits"
+    },
+    "passed": [
+      "retained-invoice including962.50",
+      "retained-usage including new balances"
+    ],
+    "failure": "retained-ticket120000ms deadline late in second tenant loop at foreign-ticket page navigation. No test assertions, timeout or retries changed.",
+    "sourceStartRevision": "717b616bf96cbb13083f0e3353baff40c08e9040",
+    "sourceStartDirty": true,
+    "sourceEndRevision": "d82ff5aff60afc5b1f8e03f68ecccb70ec205bca",
+    "sourceNote": "Coordinator committed reviewed source mid-run without content changes; not a clean candidate attestation.",
+    "testedFilesSha256": {
+      "e2e-tests/upgrade-tests/retained-ticket.spec.ts": "34e952ceb558eb86f5bf2a54d1585404a7a2e98fcf61b7a405eca859f4cf86ec",
+      "e2e-tests/upgrade-tests/retained-invoice.spec.ts": "fe1c47c4cf333fb6ba92a656658eb2a87187f6208183d7c51e692780fa9dce40",
+      "e2e-tests/upgrade-tests/retained-usage.spec.ts": "ceddbaad54ccdeebbbefe8c69aa31a5acd4608242e4c348f1aaad2c06a42451a",
+      "scripts/fixtures/upgrade-v150.ts": "be82fd6aa8e9ee9621f3df28656dc0de76f2d352e435bdc0dbc28f9d5dc7fc8f",
+      "packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx": "247fcbdfb0caa212df26f9b12a7f6d10fece4690a50bbb7977dcfbfb55b3339a"
+    }
+  }
+}

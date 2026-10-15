@@ -30,6 +30,13 @@ export async function evaluateExpressionSource(
   return compiled.evaluate(ctx, timeoutMs);
 }
 
+// jsonata parse errors are plain objects ({ code, position, message }), not Error instances.
+export function describeExpressionError(error: unknown): string | null {
+  if (error instanceof Error) return error.message;
+  const message = (error as { message?: unknown } | null)?.message;
+  return typeof message === 'string' && message ? message : null;
+}
+
 export function validateExpressionSource(source: string): void {
   const normalizedSource = normalizeExpressionSource(source);
   const expr = jsonata(normalizedSource);
@@ -81,7 +88,7 @@ export function compileExpression(expr: Expr): CompiledExpression {
   };
 }
 
-function normalizeExpressionSource(source: string): string {
+export function normalizeExpressionSource(source: string): string {
   // JSONata uses `=` / `!=` for equality checks; many authors intuitively write `==`.
   // Normalize `==` to `=` for compatibility with workflow fixtures and designer output.
   const normalized = source.replace(/==/g, '=');

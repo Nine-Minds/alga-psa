@@ -8,6 +8,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getSharedTicketEditorAction, searchSharedTicketEditOptionsAction, saveSharedTicketEditAction, type SharedTicketEditResult } from '@/lib/actions/coManagedTicketEditActions';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 type EditError = Extract<SharedTicketEditResult, { ok: false }>['code'];
 const fieldOrder: CoManagedTicketEditField[] = ['title', 'status_id', 'priority_id', 'due_date', 'response_state', 'url'];
@@ -98,7 +99,7 @@ function TicketEditor({ resource, onSaved, onReload }: { resource: CoManagedShar
       for (const field of state.editableFields) if (draft[field] !== state.values[field]) {
         patch[field] = draft[field] ?? null; expected[field] = state.values[field] ?? null;
       }
-      submitted.current = { operationId: crypto.randomUUID(), patch, expected } as CoManagedTicketEditRequest;
+      submitted.current = { operationId: newCoManagedOperationId(), patch, expected } as CoManagedTicketEditRequest;
     }
     const request = submitted.current;
     inFlight.current = true; setBusy(true); setError(null);

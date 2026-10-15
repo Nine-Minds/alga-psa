@@ -5,6 +5,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { PROVIDER_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import {
   getMicrosoftEmailSetupReadiness,
   getMicrosoftProfileReadiness,
@@ -26,6 +27,7 @@ import {
   type MicrosoftProfileConsumer,
 } from './microsoftShared';
 import { invalidateEntraDirectConnectionOnRebind } from '../../lib/entraBindingInvalidation';
+import { computeEntraCallbackUrl } from '@alga-psa/shared/services/entra/entraCallbackUrl';
 import { resolveMicrosoftBindingCandidateProfile } from '../../lib/microsoftConsumerProfileResolution';
 import {
   backfillMicrosoftEmailProviderIssuerMetadata,
@@ -806,7 +808,7 @@ function getMicrosoftIntegrationMetadata(baseUrl: string): NonNullable<
       teamsTab: `${baseUrl}/api/teams/auth/callback/tab`,
       teamsBot: `${baseUrl}/api/teams/auth/callback/bot`,
       teamsMessageExtension: `${baseUrl}/api/teams/auth/callback/message-extension`,
-      entra: `${baseUrl}/api/auth/microsoft/entra/callback`,
+      entra: computeEntraCallbackUrl(baseUrl),
     },
     scopes: {
       email: [
@@ -1249,7 +1251,7 @@ export async function getMicrosoftEmailSetupMetadataInternal(): Promise<{
     baseUrl,
     mailboxRedirectUri: `${baseUrl}/api/auth/microsoft/callback`,
     setupRedirectUri: `${baseUrl}/api/auth/microsoft/email-setup/callback`,
-    returnTo: `${baseUrl}/msp/settings/integrations?category=providers`,
+    returnTo: `${baseUrl}${PROVIDER_SETUP_ENTRY_PATH}`,
   };
 }
 

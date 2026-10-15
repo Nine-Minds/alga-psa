@@ -4,11 +4,12 @@ const runWithTenantMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 const findCrossedThresholdsMock = vi.fn();
-const publishWorkflowEventMock = vi.fn();
+const publishNonCatalogWorkflowEventMock = vi.fn();
 const loggerInfoMock = vi.fn();
 const loggerErrorMock = vi.fn();
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async () => ({
+  ...(await vi.importActual('@alga-psa/db') as typeof import('@alga-psa/db')),
   runWithTenant: runWithTenantMock,
   createTenantKnex: createTenantKnexMock,
   withTransaction: withTransactionMock,
@@ -19,7 +20,13 @@ vi.mock('@alga-psa/sla', () => ({
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: publishNonCatalogWorkflowEventMock,
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -35,7 +42,10 @@ function createMockTrx(tickets: any[]) {
       where: vi.fn().mockReturnThis(),
       whereNotNull: vi.fn().mockReturnThis(),
       whereNull: vi.fn().mockReturnThis(),
-      select: vi.fn().mockResolvedValue(table === 'tickets' ? tickets : []),
+      select: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue(undefined),
+      then: (resolve: any, reject: any) => Promise.resolve(table === 'tickets as t' ? tickets : []).then(resolve, reject),
       update: vi.fn().mockResolvedValue(1),
     };
     return chain;
@@ -54,6 +64,7 @@ describe('slaTimerHandler', () => {
         ticket_id: 'ticket-1',
         ticket_number: 'T-1',
         sla_policy_id: 'policy-1',
+        response_time_minutes: 100,
         sla_started_at: new Date(now - 50 * 60 * 1000),
         sla_response_due_at: new Date(now + 50 * 60 * 1000),
         sla_response_at: null,
@@ -83,7 +94,7 @@ describe('slaTimerHandler', () => {
       thresholds: [{ threshold_percent: 50 }],
       highestThreshold: 50,
     });
-    publishWorkflowEventMock.mockResolvedValue(undefined);
+    publishNonCatalogWorkflowEventMock.mockResolvedValue(undefined);
 
     const { slaTimerHandler } = await import('../slaTimerHandler');
 
@@ -99,8 +110,8 @@ describe('slaTimerHandler', () => {
       0
     );
 
-    expect(publishWorkflowEventMock).toHaveBeenCalledTimes(1);
-    expect(publishWorkflowEventMock).toHaveBeenCalledWith({
+    expect(publishNonCatalogWorkflowEventMock).toHaveBeenCalledTimes(1);
+    expect(publishNonCatalogWorkflowEventMock).toHaveBeenCalledWith({
       eventType: 'TICKET_SLA_THRESHOLD_REACHED',
       payload: {
         ticketId: 'ticket-1',
@@ -122,6 +133,7 @@ describe('slaTimerHandler', () => {
         ticket_id: 'ticket-2',
         ticket_number: 'T-2',
         sla_policy_id: 'policy-1',
+        response_time_minutes: 100,
         sla_started_at: new Date(now - 10 * 60 * 1000),
         sla_response_due_at: new Date(now + 90 * 60 * 1000),
         sla_response_at: null,
@@ -157,6 +169,6 @@ describe('slaTimerHandler', () => {
     await slaTimerHandler({ tenantId: 'tenant-1' });
 
     expect(findCrossedThresholdsMock).toHaveBeenCalledTimes(1);
-    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+    expect(publishNonCatalogWorkflowEventMock).not.toHaveBeenCalled();
   });
 });

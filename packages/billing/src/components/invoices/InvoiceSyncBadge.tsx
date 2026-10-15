@@ -9,7 +9,10 @@ import type { InvoiceSyncStatus } from '../../actions/accountingSyncActions';
 export type QboEnvironment = 'sandbox' | 'production';
 
 export interface InvoiceSyncBadgeProps {
-  status: Pick<InvoiceSyncStatus, 'state' | 'docNumber' | 'lastSyncedAt' | 'externalId' | 'error'>;
+  status: Pick<
+    InvoiceSyncStatus,
+    'state' | 'docNumber' | 'lastSyncedAt' | 'externalId' | 'error' | 'provider'
+  >;
   environment?: QboEnvironment;
 }
 
@@ -19,6 +22,18 @@ export function qboInvoiceDeepLink(externalId: string, environment?: QboEnvironm
       ? 'https://app.qbo.intuit.com/app/invoice'
       : 'https://app.sandbox.qbo.intuit.com/app/invoice';
   return `${base}?txnId=${encodeURIComponent(externalId)}`;
+}
+
+/**
+ * Xero has a stable deep link for an accounts-receivable invoice. There is no
+ * sandbox/production distinction — Xero organisations are the tenant.
+ */
+export function xeroInvoiceDeepLink(externalId: string): string {
+  return `https://go.xero.com/AccountsReceivable/View.aspx?InvoiceID=${encodeURIComponent(externalId)}`;
+}
+
+function isXero(status: InvoiceSyncBadgeProps['status']): boolean {
+  return status.provider === 'xero';
 }
 
 type BadgeVariant = 'secondary' | 'success' | 'warning' | 'error' | 'default' | 'info' | 'outline';
@@ -46,7 +61,9 @@ export function InvoiceSyncBadge({ status, environment }: InvoiceSyncBadgeProps)
   if (status.docNumber) {
     tooltipLines.push(
       <div key="doc">
-        {t('invoiceSyncBadge.tooltip.qboNumberPrefix', { defaultValue: 'QBO #' })}
+        {isXero(status)
+          ? t('invoiceSyncBadge.tooltip.xeroNumberPrefix', { defaultValue: 'Xero #' })
+          : t('invoiceSyncBadge.tooltip.qboNumberPrefix', { defaultValue: 'QBO #' })}
         {status.docNumber}
       </div>,
     );
@@ -70,7 +87,10 @@ export function InvoiceSyncBadge({ status, environment }: InvoiceSyncBadgeProps)
   }
 
   if (status.externalId) {
-    const href = qboInvoiceDeepLink(status.externalId, environment);
+    const xero = isXero(status);
+    const href = xero
+      ? xeroInvoiceDeepLink(status.externalId)
+      : qboInvoiceDeepLink(status.externalId, environment);
     tooltipLines.push(
       <div key="link">
         <a
@@ -80,7 +100,9 @@ export function InvoiceSyncBadge({ status, environment }: InvoiceSyncBadgeProps)
           className="underline"
           onClick={(e) => e.stopPropagation()}
         >
-          {t('invoiceSyncBadge.tooltip.viewInQuickBooks', { defaultValue: 'View in QuickBooks' })}
+          {xero
+            ? t('invoiceSyncBadge.tooltip.viewInXero', { defaultValue: 'View in Xero' })
+            : t('invoiceSyncBadge.tooltip.viewInQuickBooks', { defaultValue: 'View in QuickBooks' })}
         </a>
       </div>,
     );

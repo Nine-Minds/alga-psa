@@ -14,9 +14,12 @@ export async function generateMetadata(): Promise<Metadata> {
 
 // Self-host licensing UI only. On hosted/SaaS there is no license_state row, so
 // redirect away rather than render the "self-hosted only" stub.
-export default async function Page() {
+export default async function Page({ searchParams }: { searchParams?: Promise<{ returnTo?: string }> }) {
   if (!(await isSelfHostLicensing())) {
     redirect('/msp/dashboard');
   }
-  return <LicenseManagementPage />;
+  // Only a validated relative same-app destination may be echoed back.
+  const raw = (await searchParams)?.returnTo;
+  const returnTo = typeof raw === 'string' && raw.length <= 500 && /^\/msp\/[^/]/.test(raw) && !raw.startsWith('//') ? raw : undefined;
+  return <LicenseManagementPage returnTo={returnTo} />;
 }

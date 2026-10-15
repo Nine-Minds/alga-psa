@@ -1,0 +1,46 @@
+{
+  "scope": "current-enterprise-provider-replica-readiness",
+  "runId": "34304828149",
+  "artifactId": 10087388683,
+  "topology": {
+    "status": "passed",
+    "revision": "f71e845a2c5d66fb634a01daa39161c82dd3e4ff",
+    "edition": "enterprise",
+    "containers": [
+      {
+        "service": "server",
+        "id": "724d4ca19679044002b4cccb2e50912e5e495fc19f88bcac98ff288acdb24fc5",
+        "imageId": "sha256:88f137a24989a81de01c720ec07049febdcfd5283f217c7ec18fde96386fca07"
+      },
+      {
+        "service": "email-service",
+        "id": "886f39a6c078842766c85c901fcd7d62cac1b62e056a56e7b4f20c30b3bb9edf",
+        "imageId": "sha256:8c900f77fa51ed420caf877b699d5b682e8cc422a40386e0b1e700c415770237"
+      },
+      {
+        "service": "workflow-worker",
+        "id": "83453eb615f7c017c6d07e4dea1c0ce6499ba39b897f4e7b5efe7cc42c535520",
+        "imageId": "sha256:df9ab9343f75f897753657b9738b7a9bcfc047cd0b768725d61da21f79c500e3"
+      },
+      {
+        "service": "workflow-worker",
+        "id": "cca274fcef50ff02b7532b640c5c9d0f0fb6f36617c03983c285ed78e0fa829a",
+        "imageId": "sha256:df9ab9343f75f897753657b9738b7a9bcfc047cd0b768725d61da21f79c500e3"
+      },
+      {
+        "service": "temporal-worker",
+        "id": "6d6093062f12edf5065feebbb7d0c9b57041e5a056398692c87f4efa3c9fd54d",
+        "imageId": "sha256:9cdbf91fd0a5e773cf2d183ba5feb86dd8357e742134a063d6f07d0e7f15c104"
+      }
+    ]
+  },
+  "verification": [
+    "Five unique configured container IDs:server1,email-service1,workflow-worker2,temporal-worker1.",
+    "Every per-container probe matches service/container/revision and verifies HTTP journal/shared resolver/fallback checks.",
+    "Image IDs match corresponding actual nine-component browser archive manifest, mappingserver toserver-ee."
+  ],
+  "limits": [
+    "CE finalcontainerartifact remains pending.",
+    "Process connectivity is not proof of every application workflow or registry deployment."
+  ]
+}

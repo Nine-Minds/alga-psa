@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "scope": "completed-postgres-upgrade-connection-pressure-observation",
+  "runId": "34313560297",
+  "executionArtifactId": "10090677246",
+  "diagnosticsArtifactId": "10090677888",
+  "revision": "9ba03b9f3ad6b2e369c561399cd4049d590ac0c4",
+  "baseline": {
+    "schemaVersion": 1,
+    "release": "v1.5.0",
+    "commit": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+    "selection": "Explicitly approved by the user for the supported-upgrade test",
+    "fixtureStatus": "implemented"
+  },
+  "source": {
+    "before": {
+      "revision": "9ba03b9f3ad6b2e369c561399cd4049d590ac0c4",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "9ba03b9f3ad6b2e369c561399cd4049d590ac0c4",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "schemaStatus": "passed",
+  "browserStatus": "passed",
+  "tests": [
+    {
+      "file": "retained-invoice.spec.ts",
+      "title": "upgraded billing sources generate a correctly priced invoice without consuming other tenant records",
+      "projectId": "enterprise-chromium",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "startTime": "2026-09-09T06:07:39.491Z",
+          "duration": 19493
+        }
+      ]
+    },
+    {
+      "file": "retained-ticket.spec.ts",
+      "title": "upgraded tenants retain ticket writes and reject other-tenant record access",
+      "projectId": "enterprise-chromium",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "startTime": "2026-09-09T06:07:59.265Z",
+          "duration": 33388
+        }
+      ]
+    },
+    {
+      "file": "retained-usage.spec.ts",
+      "title": "Add Usage after upgrade preserves the old record and uses its existing contract line",
+      "projectId": "enterprise-chromium",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "startTime": "2026-09-09T06:08:32.684Z",
+          "duration": 7196
+        }
+      ]
+    }
+  ],
+  "retainedDiagnostics": {
+    "members": [
+      "server.log",
+      "database.log",
+      "connection-counts.json"
+    ],
+    "sha256": {
+      "server.log": "2e702890a2c9b8fb41c81303d9eee5d0870e9b983c4a3f1a649e61076b7ebff8",
+      "database.log": "1ed032abe79f9df3d2de0c67f4c50850112701813aee861dcd53ba104570f4e1",
+      "connection-counts.json": "035df7350ea6e1c1b122561c81b730f5641d1caab28e2c601c62fd362af6034c"
+    },
+    "databaseLogLines": 1314,
+    "serverLogLines": 39073,
+    "pressureMatchesDatabase": 0,
+    "pressureMatchesServer": 0,
+    "upgradeWindowStart": "2026-09-09T06:06:56Z",
+    "upgradeWindowLogLines": 81,
+    "upgradeWindowErrors": [
+      {
+        "line": 933,
+        "category": "invalid-uuid-in_progress"
+      },
+      {
+        "line": 936,
+        "category": "invalid-uuid-in_progress"
+      }
+    ],
+    "hocuspocusSecretErrors": 11
+  },
+  "snapshot": {
+    "max_connections": "100",
+    "connections": [
+      {
+        "datname": "upgrade_ci",
+        "usename": "app_user",
+        "backend_type": "client backend",
+        "state": "idle",
+        "count": 16
+      },
+      {
+        "datname": "temporal_visibility",
+        "usename": "postgres",
+        "backend_type": "client backend",
+        "state": "idle",
+        "count": 6
+      },
+      {
+        "datname": null,
+        "usename": null,
+        "backend_type": "checkpointer",
+        "state": null,
+        "count": 1
+      },
+      {
+        "datname": "postgres",
+        "usename": "postgres",
+        "backend_type": "client backend",
+        "state": "active",
+        "count": 1
+      },
+      {
+        "datname": null,
+        "usename": null,
+        "backend_type": "autovacuum launcher",
+        "state": null,
+        "count": 1
+      },
+      {
+        "datname": null,
+        "usename": "postgres",
+        "backend_type": "logical replication launcher",
+        "state": null,
+        "count": 1
+      },
+      {
+        "datname": null,
+        "usename": null,
+        "backend_type": "walwriter",
+        "state": null,
+        "count": 1
+      },
+      {
+        "datname": "upgrade_ci",
+        "usename": "postgres",
+        "backend_type": "client backend",
+        "state": "idle",
+        "count": 14
+      },
+      {
+        "datname": "temporal",
+        "usename": "postgres",
+        "backend_type": "client backend",
+        "state": "idle",
+        "count": 34
+      },
+      {
+        "datname": null,
+        "usename": null,
+        "backend_type": "background writer",
+        "state": null,
+        "count": 1
+      }
+    ]
+  },
+  "comparison": {
+    "priorEvidence": "evidence/ci-postgres-upgrade-a0d077.json",
+    "priorRunId": "34308610232",
+    "priorDeniedAppUserLogins": 2,
+    "currentRetainedDeniedLogins": 0,
+    "priorIdleOriginalServerDatabaseConnections": 30,
+    "currentOriginalServerDatabaseConnections": 0,
+    "priorClientBackends": 95,
+    "currentClientBackends": 71,
+    "maxConnectionsUnchanged": 100
+  },
+  "conclusion": "The completed upgraded-browser phase has three first-attempt passes, no retained pooler/PostgreSQL connection-pressure errors, and no original server database connections in its snapshot. This supports the bounded R080 repair for this run, beyond pass counts alone.",
+  "limits": [
+    "Snapshot is one observation, not peak connection telemetry or load-capacity certification.",
+    "Combined database.log includes earlier same-job services/migrations; phase filtering uses recorded upgrade pooler start time.",
+    "Other retained errors remain: invalid UUID in_progress and missing Hocuspocus JWT secret; no whole-application clean-log claim.",
+    "Approved v1.5.0 synthetic retained data only; no production capacity or other historical release guarantee."
+  ]
+}

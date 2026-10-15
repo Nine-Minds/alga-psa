@@ -146,7 +146,62 @@ describe.each(FAMILIES)('standard $family templates speak the recipient language
   });
 });
 
-describe('the catalog migration mirrors the catalog in code', () => {
+describe('the catalog migrations mirror the catalog in code', () => {
+  it('localizes serial labels without changing serial data bindings and is idempotent', async () => {
+    const migration = await import(
+      /* @vite-ignore */ path.resolve(__dirname,
+        '../../../../../server/migrations/20260813120000_upsert_i18n_standard_document_template_asts.cjs')
+    );
+    // Exercise the shared label vocabulary through the migration's write path.
+    // Pick lists themselves are code-backed, not rows in either migrated table.
+    let ast = {
+      layout: { id: 'root', type: 'document', children: [
+        { id: 'serials-note', type: 'text', content: {
+          type: 'literal', value: 'Allocated serial numbers; subject to change at fulfillment.',
+        } },
+        { id: 'items', type: 'dynamic-table', columns: [
+          { id: 'serials', header: 'Serial numbers',
+            value: { type: 'path', path: 'allocated_serials_display' } },
+        ] },
+      ] },
+    };
+    const updates: unknown[] = [];
+    const knex = Object.assign((table: string) => {
+      expect(table).toBe('standard_invoice_templates');
+      return {
+        select: async () => [{ template_id: 'standard-1', standard_invoice_template_code: 'standard-default', templateAst: ast }],
+        where: (selector: unknown) => {
+          expect(selector).toEqual({ template_id: 'standard-1' });
+          return { update: async (row: { templateAst: string }) => {
+            updates.push(row);
+            ast = JSON.parse(row.templateAst);
+          } };
+        },
+      };
+    }, {
+      schema: {
+        hasTable: async (table: string) => table === 'standard_invoice_templates',
+        hasColumn: async () => true,
+      },
+      raw: (_sql: string, values: string[]) => values[0],
+      fn: { now: () => '2026-09-26' },
+    });
+
+    await migration.up(knex);
+    expect(ast.layout.children).toEqual([
+      { id: 'serials-note', type: 'text', content: {
+        type: 'i18n', i18nKey: 'labels.allocatedSerialsNote',
+        defaultValue: 'Allocated serial numbers; subject to change at fulfillment.',
+      } },
+      { id: 'items', type: 'dynamic-table', columns: [
+        { id: 'serials', header: { i18nKey: 'labels.serialNumbers', defaultValue: 'Serial numbers' },
+          value: { type: 'path', path: 'allocated_serials_display' } },
+      ] },
+    ]);
+    await migration.up(knex);
+    expect(updates).toHaveLength(1);
+  });
+
   it('maps every shipped English label to the same key', async () => {
     const migration = await import(
       /* @vite-ignore */ path.resolve(
@@ -154,9 +209,47 @@ describe('the catalog migration mirrors the catalog in code', () => {
         '../../../../../server/migrations/20260813120000_upsert_i18n_standard_document_template_asts.cjs'
       )
     );
-    const migrationKeys: Record<string, string> =
-      (migration as any).__LABEL_KEYS ?? (migration as any).default?.__LABEL_KEYS;
+    const initialKeys = (migration as any).__LABEL_KEYS ?? (migration as any).default?.__LABEL_KEYS;
+    expect(initialKeys).toBeTruthy();
+    const migrationKeys: Record<string, string> = { ...initialKeys };
     expect(migrationKeys).toBeTruthy();
+
+    // Later catalog migrations introduce labels that did not exist when the
+    // initial localization migration shipped. Exercise the actual upgrade of
+    // the old ticket nodes and include the labels it persists in this check.
+    const ticketMigration = await import(
+      /* @vite-ignore */ path.resolve(__dirname,
+        '../../../../../server/migrations/20260905031510_invoice_ticket_primary_template.cjs')
+    );
+    const oldTicketAst = {
+      bindings: { collections: {} },
+      layout: { id: 'root', type: 'document', children: [
+        { id: 'ticket-time-summary', type: 'dynamic-table',
+          repeat: { sourceBinding: { bindingId: 'ticketGroups' } },
+          columns: [{ header: 'Hours', value: { path: 'totalHours' } }] },
+        { id: 'billed-time-portal-note', type: 'text',
+          content: { type: 'literal', value: 'Legacy portal guidance' } },
+      ] },
+    };
+    let persistedAst: any;
+    await ticketMigration.up((table: string) => {
+      expect(table).toBe('standard_invoice_templates');
+      return { where(selector: unknown) {
+        expect(selector).toEqual({ standard_invoice_template_code: 'standard-invoice-by-ticket' });
+        return {
+          first: async () => ({ templateAst: structuredClone(oldTicketAst) }),
+          update: async (row: { templateAst: string }) => { persistedAst = JSON.parse(row.templateAst); },
+        };
+      } };
+    });
+    expect(persistedAst?.layout).toBeTruthy();
+    const introducedLabels = [
+      ...collectLabelSites(persistedAst.layout, '$.layout').map(site => site.value),
+      ...collectTextExpressions(persistedAst.layout, '$.layout').map(site => site.content),
+    ];
+    for (const label of introducedLabels) {
+      if (isTemplateI18nRef(label)) migrationKeys[label.defaultValue] = label.i18nKey;
+    }
 
     for (const { catalog } of FAMILIES) {
       for (const [code, ast] of Object.entries(catalog)) {

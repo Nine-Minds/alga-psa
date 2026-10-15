@@ -4,6 +4,7 @@ import { Suspense, useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { NotificationSettings } from "@alga-psa/notifications/components/settings/NotificationSettings";
 import { EmailTemplates } from "@alga-psa/notifications/components/settings/EmailTemplates";
+import { EmailBrandingTab } from "@alga-psa/notifications/components/settings/EmailBrandingTab";
 import { NotificationCategories } from "@alga-psa/notifications/components/settings/NotificationCategories";
 import { InternalNotificationCategories } from "@alga-psa/notifications/components/settings/InternalNotificationCategories";
 import { CustomTabs } from "@alga-psa/ui/components/CustomTabs";
@@ -51,8 +52,9 @@ function NotificationsSettingsContent() {
 
   const getInitialTab = (view: NotificationView): string => {
     const requestedTab = tabParam?.toLowerCase();
+    const emailTabIds = isAlgaDesk ? ALGA_DESK_EMAIL_TAB_IDS : EMAIL_NOTIFICATION_TAB_IDS;
     const validTabs: readonly string[] = view === 'email'
-      ? (isAlgaDesk ? ALGA_DESK_EMAIL_TAB_IDS : EMAIL_NOTIFICATION_TAB_IDS)
+      ? [...emailTabIds, ...(isAlgaDesk ? [] : ['email-branding'])]
       : INTERNAL_NOTIFICATION_TAB_IDS;
     const defaultTab = view === 'email' ? DEFAULT_EMAIL_TAB : DEFAULT_INTERNAL_TAB;
 
@@ -150,6 +152,15 @@ function NotificationsSettingsContent() {
       content: (
         <Suspense fallback={<div>{t('notifications.loading.templates')}</div>}>
           <EmailTemplates />
+        </Suspense>
+      ),
+    }]),
+    ...(isAlgaDesk ? [] : [{
+      id: 'email-branding',
+      label: t('notifications.emailTabs.emailBranding'),
+      content: (
+        <Suspense fallback={<div>{t('notifications.loading.templates')}</div>}>
+          <EmailBrandingTab />
         </Suspense>
       ),
     }]),

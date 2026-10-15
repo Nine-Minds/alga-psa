@@ -41,7 +41,12 @@
           "title": "Szczegóły wyceny"
         }
       },
-      "title": "Rozliczenia"
+      "title": "Rozliczenia",
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Konfiguracja karty"
+        }
+      }
     },
     "clientSettings": {
       "description": "Zarządzaj ustawieniami i konfiguracją swojej firmy",
@@ -277,6 +282,12 @@
       "detail": {
         "title": "Zgłoszenie #{{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Szczegóły zgłoszenia"
+      },
+      "recurring": {
+        "title": "Zgłoszenia cykliczne"
+      },
+      "templates": {
+        "title": "Szablony zgłoszeń"
       }
     },
     "workflowEditor": {
@@ -510,6 +521,9 @@
       }
     },
     "coManagement": {
+      "providers": {
+        "title": "Dostawcy poczty e-mail i tożsamości"
+      },
       "title": "Dostęp do współzarządzania",
       "administration": {
         "title": "Administracja delegowana"
@@ -545,6 +559,9 @@
       "upgrade": {
         "title": "Przejdź na AlgaPSA"
       }
+    },
+    "customerTickets": {
+      "title": "Zgłoszenia klientów"
     }
   },
   "auth": {
@@ -659,6 +676,11 @@
     },
     "tab": {
       "title": "Zespoły"
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Konfiguracja karty"
     }
   }
 }

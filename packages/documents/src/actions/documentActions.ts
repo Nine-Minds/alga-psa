@@ -1,8 +1,7 @@
 'use server'
 
-import { resolveDocumentAuthorizationRecords } from '@alga-psa/shared/lib/documents/authorizationRecords';
-
 import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
+import { canAccessAttachmentTicket, expireCommentAttachmentDrafts } from '@shared/lib/ticketCommentAttachments';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -16,6 +15,7 @@ import { join } from 'path';
 import { CacheFactory } from '../cache/CacheFactory';
 import { INLINE_IMAGE_FOLDER_PATH } from '../lib/editorImageUpload';
 import { ensureInlineImageFolder } from '../lib/inlineImageFiling';
+import { createDocumentDownloadResponse } from '../lib/documentDownloadResponse';
 
 import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import {
@@ -47,6 +47,7 @@ import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildDocumentAssociatedPayload,
+  buildDocumentDeletedPayload,
   buildDocumentDetachedPayload,
 } from '@alga-psa/workflow-streams';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -56,15 +57,7 @@ import {
   documentActionErrorMessage,
   type DocumentActionError,
 } from './documentActionErrors';
-import {
-  BuiltinAuthorizationKernelProvider,
-  BundleAuthorizationKernelProvider,
-  RequestLocalAuthorizationCache,
-  createAuthorizationKernel,
-  type AuthorizationSubject,
-  type RelationshipRule,
-} from '@alga-psa/authorization/kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { authorizeAndRedactDocuments as authorizeAndRedactDocumentsWithAdmission } from '@shared/lib/documentAuthorization';
 import { getClientLogoUrlsBatch, getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
 async function loadSharp() {
@@ -112,14 +105,13 @@ async function publishDocumentDeletedSearchEvent(
 ): Promise<void> {
   try {
     const occurredAt = new Date().toISOString();
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'DOCUMENT_DELETED',
-      payload: {
+      payload: buildDocumentDeletedPayload({ documentId, deletedByUserId: userId, deletedAt: occurredAt }),
+      ctx: {
         tenantId: tenant,
         occurredAt,
-        documentId,
-        deletedByUserId: userId,
-        deletedAt: occurredAt,
+        ...(userId ? { actor: { actorType: 'USER' as const, actorUserId: userId } } : {}),
       },
     });
   } catch (eventError) {
@@ -133,7 +125,7 @@ type SafeDocumentSortField = NonNullable<DocumentFilters['sortBy']>;
 type SafeSortOrder = 'asc' | 'desc';
 type SearchableDocumentAssociationEntityType = Extract<
   DocumentAssociationEntityType,
-  'client' | 'contact' | 'ticket' | 'asset' | 'project_task' | 'contract' | 'quote'
+  'client' | 'contact' | 'ticket' | 'asset' | 'project_task' | 'contract' | 'quote' | 'opportunity'
 >;
 
 interface DocumentAssociationEntitySearchOption {
@@ -158,8 +150,10 @@ const SEARCHABLE_ASSOCIATION_ENTITY_TYPES = new Set<SearchableDocumentAssociatio
   'project_task',
   'contract',
   'quote',
+  'opportunity',
 ]);
 
+// LEVERAGE: pattern tenant-scoped-table — document actions and shared authorization repeat this typed facade.
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
   table: string,
@@ -295,180 +289,32 @@ async function ensureEntityFoldersInitializedInternal(
   }
 }
 
-type UserWithOptionalRoles = IUser & { roles?: Array<{ role_id?: string } | string> };
-
-function extractRoleIdsFromUser(user: UserWithOptionalRoles): string[] {
-  if (!Array.isArray(user.roles)) {
-    return [];
-  }
-
-  return user.roles
-    .map((role: { role_id?: string } | string) => {
-      if (typeof role === 'string') {
-        return role;
-      }
-      return typeof role?.role_id === 'string' ? role.role_id : null;
-    })
-    .filter((value: string | null): value is string => Boolean(value));
-}
-
-async function resolveAuthorizationSubjectForUser(
-  trx: Knex.Transaction,
-  tenant: string,
-  user: UserWithOptionalRoles
-): Promise<AuthorizationSubject> {
-  let roleIds = extractRoleIdsFromUser(user);
-  if (roleIds.length === 0) {
-    try {
-      const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-        .where('user_id', user.user_id)
-        .select<{ role_id: string }[]>('role_id');
-      roleIds = roleRows.map((row) => row.role_id);
-    } catch {
-      roleIds = [];
-    }
-  }
-
-  let teamRows: Array<{ team_id: string }> = [];
-  let managedRows: Array<{ user_id: string }> = [];
-  try {
-    teamRows = await tenantScopedTable(trx, 'team_members', tenant)
-      .where('user_id', user.user_id)
-      .select<{ team_id: string }[]>('team_id');
-  } catch {
-    teamRows = [];
-  }
-  try {
-    managedRows = await tenantScopedTable(trx, 'users', tenant)
-      .where('reports_to', user.user_id)
-      .select<{ user_id: string }[]>('user_id');
-  } catch {
-    managedRows = [];
-  }
-
-  return {
-    tenant,
-    userId: user.user_id,
-    userType: user.user_type,
-    roleIds,
-    teamIds: teamRows.map((row) => row.team_id),
-    managedUserIds: managedRows.map((row) => row.user_id),
-    clientId: user.clientId ?? null,
-    portfolioClientIds: user.clientId ? [user.clientId] : [],
-  };
-}
-
-function applyDocumentRedactions<T extends object>(document: T, redactedFields: string[]): T {
-  if (redactedFields.length === 0) {
-    return document;
-  }
-
-  const redacted = { ...document } as Record<string, unknown>;
-  for (const field of redactedFields) {
-    delete redacted[field];
-  }
-  return redacted as T;
-}
-
-function getDocumentBuiltinRelationshipRules(user: IUser): RelationshipRule[] {
-  if (user.user_type !== 'client') {
-    return [];
-  }
-
-  return [{ template: 'own' }, { template: 'same_client' }];
-}
-
-
+/**
+ * Document authorization lives in the shared engine (`@shared/lib/documentAuthorization`)
+ * because the ticket list, the Documents browser and every byte-serving route must
+ * make the *same* allow/deny decision. This wrapper only supplies the co-managed
+ * meeting-admission hook; it deliberately adds no authorization logic of its own, so
+ * there is exactly one place where a document becomes readable.
+ *
+ * Must stay `async`: this module is a `'use server'` boundary, and Next rejects any
+ * non-async export from one — a sync export here fails the whole module graph at
+ * compile time, so every route that imports it 500s. Typechecking does not catch it.
+ */
 export async function authorizeAndRedactDocuments<T extends IDocument>(
   trx: Knex.Transaction,
   tenant: string,
   user: IUser,
-  documents: T[]
+  documents: T[],
+  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
 ): Promise<T[]> {
-  if (documents.length === 0) {
-    return [];
-  }
-
-  const admittedMeetings = await admitMeetingDocumentsForBrowser(trx, tenant, user, documents.map(document => document.document_id));
-  if (admittedMeetings.handled) documents = documents.filter(document => !admittedMeetings.deniedDocumentIds.includes(document.document_id));
-  if (!documents.length) return [];
-
-  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user as UserWithOptionalRoles);
-  const relationshipRules = getDocumentBuiltinRelationshipRules(user);
-  const selectedClientIds = user.clientId ? [user.clientId] : undefined;
-  const authorizationKernel = createAuthorizationKernel({
-    builtinProvider: new BuiltinAuthorizationKernelProvider({
-      relationshipRules,
-    }),
-    bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(trx, input);
-        } catch {
-          return [];
-        }
-      },
-    }),
-    rbacEvaluator: async () => true,
-  });
-  const requestCache = new RequestLocalAuthorizationCache();
-  const authorizationRecords = await resolveDocumentAuthorizationRecords(
+  return authorizeAndRedactDocumentsWithAdmission(
     trx,
     tenant,
     user,
-    documents.map((document) => ({
-      document_id: document.document_id,
-      created_by: document.created_by,
-      is_client_visible: document.is_client_visible,
-    }))
+    documents,
+    verifiedRecipientLifecycleAccess,
+    admitMeetingDocumentsForBrowser
   );
-
-  const decisions = await Promise.all(
-    documents.map(async (document) => {
-      const record = authorizationRecords.get(document.document_id) ?? {
-        id: document.document_id,
-        ownerUserId: document.created_by ?? null,
-        is_client_visible: document.is_client_visible === true,
-      };
-
-      const decision = await authorizationKernel.authorizeResource({
-        subject: authorizationSubject,
-        resource: {
-          type: 'document',
-          action: 'read',
-          id: document.document_id,
-        },
-        record,
-        selectedClientIds,
-        requestCache,
-        knex: trx,
-      });
-
-      const isClientVisible = record.is_client_visible === true;
-      const isOwnedBySubject = record.ownerUserId === authorizationSubject.userId;
-      const deniedByClientVisibility =
-        user.user_type === 'client' && !isOwnedBySubject && !isClientVisible;
-      const allowed = decision.allowed && !deniedByClientVisibility;
-
-      return {
-        allowed,
-        redactedFields: decision.redactedFields,
-      };
-    })
-  );
-
-  const authorizedDocuments: T[] = [];
-  for (let index = 0; index < documents.length; index += 1) {
-    const document = documents[index];
-    const decision = decisions[index];
-    if (!document || !decision?.allowed) {
-      continue;
-    }
-    authorizedDocuments.push(applyDocumentRedactions(document, decision.redactedFields));
-  }
-
-  if (admittedMeetings.handled && 'assertCurrent' in admittedMeetings && typeof admittedMeetings.assertCurrent === 'function') await admittedMeetings.assertCurrent();
-  return authorizedDocuments;
 }
 
 export async function getAuthorizedDocumentByFileId(
@@ -1704,32 +1550,7 @@ export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFi
 
         const { buffer, metadata } = result;
 
-        // Set appropriate headers for file download
-        const headers = new Headers();
-        headers.set('Content-Type', metadata.mime_type || 'application/octet-stream');
-
-        // Properly encode filename to handle special characters
-        const encodedFilename = encodeURIComponent(authorizedDocument.document_name || 'download');
-        const asciiFilename = authorizedDocument.document_name?.replace(/[^\x00-\x7F]/g, '_') || 'download';
-        headers.set('Content-Disposition', `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`);
-        headers.set('Content-Length', buffer.length.toString());
-
-        // Add cache control headers for images to enable browser caching
-        const isImage = metadata.mime_type?.startsWith('image/');
-        if (isImage) {
-            // Cache images for 7 days, but revalidate after 1 day
-            headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
-            // Add ETag for conditional requests
-            headers.set('ETag', `"${authorizedDocument.file_id}"`);
-        } else {
-            // For non-images, use no-cache to ensure fresh content
-            headers.set('Cache-Control', 'no-cache');
-        }
-
-        return new Response(buffer as any, {
-            status: 200,
-            headers
-        });
+        return createDocumentDownloadResponse(buffer, metadata, authorizedDocument);
     } catch (error) {
         console.error('Error downloading document:', error);
         const expectedError = documentActionErrorFrom(error);
@@ -2273,6 +2094,32 @@ export const searchDocumentAssociationEntities = withAuth(async (
       return { options: rows, total };
     }
 
+    if (entityType === 'opportunity') {
+      let query = tenantScopedTable(trx, 'opportunities as o', tenant);
+      db.tenantJoin(query, 'clients as cl', 'o.client_id', 'cl.client_id', { type: 'left' });
+      query = query
+        .select(
+          'o.opportunity_id as value',
+          trx.raw(`
+            CONCAT(
+              COALESCE(o.opportunity_number, 'Opportunity'),
+              ' - ',
+              COALESCE(o.title, 'Untitled opportunity'),
+              CASE
+                WHEN cl.client_name IS NOT NULL AND cl.client_name <> ''
+                THEN CONCAT(' - ', cl.client_name)
+                ELSE ''
+              END
+            ) as label
+          `)
+        )
+        .orderBy('o.updated_at', 'desc');
+      query = applySearch(query, ['o.opportunity_number', 'o.title', 'cl.client_name']);
+      const total = await countRows(query, 'o.opportunity_id');
+      const rows = await query.limit(safeLimit).offset(offset);
+      return { options: rows, total };
+    }
+
     let quoteQuery = tenantScopedTable(trx, 'quotes as q', tenant);
     db.tenantJoin(quoteQuery, 'clients as cl', 'q.client_id', 'cl.client_id', { type: 'left' });
     quoteQuery = quoteQuery
@@ -2499,9 +2346,11 @@ export const uploadDocument = withAuth(async (
     assetId?: string;
     projectTaskId?: string;
     contractId?: string;
+    opportunityId?: string;
     folder_path?: string | null;
     /** The document this upload is embedded in — inline editor images point at their article. */
     parentDocumentId?: string;
+    commentAttachmentDraft?: boolean;
     /** Forces client visibility — used for images embedded in client-facing content. */
     isClientVisible?: boolean;
   }
@@ -2510,7 +2359,9 @@ export const uploadDocument = withAuth(async (
   | { success: false; error: string }
   | ActionPermissionError
 > => {
+  let unclaimedStorageFileId: string | undefined;
   try {
+    options = { ...options, commentAttachmentDraft: options.commentAttachmentDraft === true || file.get('commentAttachmentDraft') === 'true' };
     // Check permission for document creation/upload
     if (!await hasPermission(user, 'document', 'create')) {
       return permissionError('Permission denied: Cannot create documents', 'documents:errors.permissions.create');
@@ -2536,6 +2387,14 @@ export const uploadDocument = withAuth(async (
         });
       }
 
+      if (options.commentAttachmentDraft) {
+        if (!options.ticketId || !await hasPermission(user, 'ticket', 'update') ||
+            !await canAccessAttachmentTicket(knex, tenant, authenticatedUserId, options.ticketId)) {
+          throw new Error('Permission denied: Cannot attach files to this ticket');
+        }
+        await expireCommentAttachmentDrafts(knex, tenant);
+      }
+
       // Extract file from FormData
       const fileData = file.get('file') as File;
       if (!fileData) {
@@ -2552,6 +2411,8 @@ export const uploadDocument = withAuth(async (
         mime_type: fileData.type,
         uploaded_by_id: authenticatedUserId
       });
+
+      if (options.commentAttachmentDraft) unclaimedStorageFileId = uploadResult.file_id;
 
       // Get document type based on mime type
       const typeResult = await getDocumentTypeId(fileData.type);
@@ -2578,6 +2439,7 @@ export const uploadDocument = withAuth(async (
           const primaryEntity = options.ticketId ? { id: options.ticketId, type: 'ticket' }
             : options.projectTaskId ? { id: options.projectTaskId, type: 'project_task' }
             : options.contractId ? { id: options.contractId, type: 'contract' }
+            : options.opportunityId ? { id: options.opportunityId, type: 'opportunity' }
             : options.clientId ? { id: options.clientId, type: 'client' }
             : options.assetId ? { id: options.assetId, type: 'asset' }
             : null;
@@ -2635,10 +2497,11 @@ export const uploadDocument = withAuth(async (
             .andWhere('folder_path', resolvedFolderPath);
 
           const entityId = options.ticketId || options.projectTaskId || options.contractId
-            || options.clientId || options.assetId;
+            || options.opportunityId || options.clientId || options.assetId;
           const entityType = options.ticketId ? 'ticket'
             : options.projectTaskId ? 'project_task'
             : options.contractId ? 'contract'
+            : options.opportunityId ? 'opportunity'
             : options.clientId ? 'client'
             : options.assetId ? 'asset'
             : null;
@@ -2669,12 +2532,19 @@ export const uploadDocument = withAuth(async (
         mime_type: fileData.type,
         file_size: fileData.size,
         folder_path: resolvedFolderPath,
-        is_client_visible: isClientVisible,
+        is_client_visible: options.commentAttachmentDraft ? true : isClientVisible,
       };
 
       // Use transaction for document creation and associations
       const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
         await tenantScopedTable(trx, 'documents', tenant).insert(document);
+        if (options.commentAttachmentDraft) {
+          await tenantDb(trx, tenant).table('ticket_comment_attachments').insert({
+            tenant, ticket_id: options.ticketId, document_id: document.document_id,
+            created_by: authenticatedUserId, state: 'draft',
+            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          });
+        }
         const documentWithId = document;
 
         // Create associations if any entity IDs are provided
@@ -2743,6 +2613,15 @@ export const uploadDocument = withAuth(async (
       });
     }
 
+    if (options.opportunityId) {
+      associations.push({
+        document_id: documentWithId.document_id,
+        entity_id: options.opportunityId,
+        entity_type: 'opportunity',
+        tenant
+      });
+    }
+
         // Create all associations
         if (associations.length > 0) {
           const created = await Promise.all(
@@ -2763,6 +2642,8 @@ export const uploadDocument = withAuth(async (
           document: documentWithId
         };
       });
+
+      unclaimedStorageFileId = undefined; // The document transaction committed; never remove shared storage.
 
       if (createdAssociations.length > 0) {
         const occurredAt = new Date().toISOString();
@@ -2835,6 +2716,11 @@ export const uploadDocument = withAuth(async (
       success: false,
       error: await documentActionErrorMessage(expectedError)
     };
+  } finally {
+    if (unclaimedStorageFileId) {
+      try { await StorageService.deleteFile(unclaimedStorageFileId, user.user_id); }
+      catch (cleanupError) { console.error('[uploadDocument] Failed to remove unclaimed attachment storage', cleanupError); }
+    }
   }
 });
 

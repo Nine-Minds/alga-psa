@@ -83,6 +83,23 @@ describe('clientActions tenant-scoped query contract', () => {
     expect(billingRangeSection).not.toContain(".where('cbc.tenant', tenant)");
   });
 
+  it('selects every default-location column referenced by paginated client queries', () => {
+    const defaultLocationSection = sectionBetween('function buildDefaultClientLocationSubquery', 'export const getAllClientsPaginated');
+    const paginatedSection = sectionBetween('export const getAllClientsPaginated', 'export const getClientsWithBillingCycleRangePaginated');
+    const billingRangeSection = sectionBetween('export const getClientsWithBillingCycleRangePaginated', 'export const validateClientDeletion');
+    const outerLocationColumns = new Set(
+      [...`${paginatedSection}\n${billingRangeSection}`.matchAll(/\bcl\.([a-z_0-9]+)/g)].map((match) => match[1])
+    );
+    const subqueryColumns = new Set([
+      ...[...defaultLocationSection.matchAll(/'([a-z_0-9]+)'/g)].map((match) => match[1]),
+      'rn',
+    ]);
+
+    for (const column of outerLocationColumns) {
+      expect(subqueryColumns, `default-location subquery must expose cl.${column}`).toContain(column);
+    }
+  });
+
   it('uses structural tenant scoping for client deletion roots', () => {
     const validateDeleteSection = sectionBetween('export const validateClientDeletion', 'function tailorClientDeleteAlternatives');
     const deleteSection = sectionBetween('export const deleteClient', 'export const exportClientsToCSV');

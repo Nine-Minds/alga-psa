@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
+import { publishNativeEvent } from './nativeEventPublication';
 import { tenantDb } from '@alga-psa/db';
 import { recoverCoManagedAppointmentMeeting, type AppointmentMeetingProvider } from '@alga-psa/co-managed';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { resolveTeamsMeetingService } from './teamsMeetingService';
 import { buildAppointmentMeetingBodyHtml, buildTeamsMeetingAttendees } from './teamsMeetingContent';
 
@@ -24,6 +24,6 @@ export async function recoverCoManagedAppointmentMeetings(db: Knex, tenant: stri
     .where('next_attempt_at', '<=', db.raw('clock_timestamp()')).orderBy('next_attempt_at').orderBy('operation_id').limit(25).select('operation_id');
   if (!pending.length) return [];
   const provider = await appointmentMeetingProvider(tenant), results: Awaited<ReturnType<typeof recoverCoManagedAppointmentMeeting>>[] = [];
-  for (const row of pending) results.push(await recoverCoManagedAppointmentMeeting(db, tenant, row.operation_id, provider, publishEvent));
+  for (const row of pending) results.push(await recoverCoManagedAppointmentMeeting(db, tenant, row.operation_id, provider, publishNativeEvent));
   return results;
 }

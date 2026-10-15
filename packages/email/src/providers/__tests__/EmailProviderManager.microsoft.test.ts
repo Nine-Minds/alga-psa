@@ -6,12 +6,14 @@ const {
   connectMock,
   sendMailMock,
   testConnectionMock,
+  smtpSendMock,
   tableRows,
 } = vi.hoisted(() => ({
   buildConfigMock: vi.fn(async (config: any) => config),
   connectMock: vi.fn(async () => undefined),
   sendMailMock: vi.fn(async () => ({ requestId: 'request-1' })),
   testConnectionMock: vi.fn(async () => ({ success: true })),
+  smtpSendMock: vi.fn(async () => ({ success: true, messageId: 'smtp-message-1', providerId: 'smtp-provider', providerType: 'smtp', sentAt: new Date() })),
   tableRows: {
     email_providers: null as any,
     microsoft_email_provider_config: null as any,
@@ -22,8 +24,14 @@ vi.mock('@alga-psa/db', () => ({
   getConnection: vi.fn(async () => ({})),
   tenantDb: () => ({
     table: (tableName: keyof typeof tableRows) => ({
-      where: () => ({
-        first: vi.fn(async () => tableRows[tableName]),
+      where: (criteria?: any) => ({
+        first: vi.fn(async () => {
+          const row = tableRows[tableName];
+          if (tableName === 'email_providers' && criteria?.id && row && criteria.id !== row.id) {
+            return { ...row, id: criteria.id, mailbox: 'projects@example.com' };
+          }
+          return row;
+        }),
       }),
     }),
   }),
@@ -38,6 +46,16 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
     connect = connectMock;
     sendMail = sendMailMock;
     testConnection = testConnectionMock;
+  },
+}));
+
+vi.mock('../SMTPEmailProvider', () => ({
+  SMTPEmailProvider: class {
+    providerId: string;
+    providerType = 'smtp';
+    constructor(providerId: string) { this.providerId = providerId; }
+    initialize = vi.fn(async () => undefined);
+    sendEmail = smtpSendMock;
   },
 }));
 
@@ -120,6 +138,7 @@ describe('EmailProviderManager Microsoft Graph support', () => {
     expect(buildConfigMock.mock.calls[0]?.[0].provider_config.accessToken).toBeUndefined();
     expect(sendMailMock).toHaveBeenCalledWith({
       kind: 'json',
+      fromAddress: 'support@example.com',
       message: expect.objectContaining({ subject: 'Common path' }),
     });
     expect(result).toMatchObject({ success: true, providerType: 'microsoft' });
@@ -139,6 +158,17 @@ describe('EmailProviderManager Microsoft Graph support', () => {
     expect(results.every(result => result.success)).toBe(true);
   });
 
+  it('initializes and caches the routed connected mailbox on demand', async () => {
+    const manager = new EmailProviderManager();
+    await manager.initialize(settings());
+    await manager.sendEmail({ ...message('Routed mailbox'), microsoftProviderId: 'inbound-microsoft-2' }, 'tenant-1');
+    expect(buildConfigMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      id: 'inbound-microsoft-2',
+      mailbox: 'projects@example.com',
+    }));
+    expect(connectMock).toHaveBeenCalledTimes(2);
+  });
+
   it('fails before adapter construction when the selected mailbox is disconnected', async () => {
     tableRows.email_providers.status = 'disconnected';
     const manager = new EmailProviderManager();
@@ -148,5 +178,28 @@ describe('EmailProviderManager Microsoft Graph support', () => {
       errorCode: 'MICROSOFT_PROVIDER_NOT_CONNECTED',
     });
     expect(connectMock).not.toHaveBeenCalled();
+  });
+
+  it('ignores a stale Microsoft sender link when SMTP is the active transport', async () => {
+    const manager = new EmailProviderManager();
+    await manager.initialize({
+      ...settings(),
+      emailProvider: 'smtp',
+      providerConfigs: [{
+        providerId: 'smtp-provider',
+        providerType: 'smtp',
+        isEnabled: true,
+        config: { host: 'smtp.example.test', port: 587, from: 'support@example.com' },
+      }],
+    });
+
+    const result = await manager.sendEmail({
+      ...message('SMTP with stale Microsoft link'),
+      microsoftProviderId: 'old-inbound-microsoft-id',
+    }, 'tenant-1');
+
+    expect(smtpSendMock).toHaveBeenCalledWith(expect.objectContaining({ subject: 'SMTP with stale Microsoft link' }), 'tenant-1');
+    expect(result).toMatchObject({ success: true, providerType: 'smtp' });
+    expect(buildConfigMock).not.toHaveBeenCalled();
   });
 });

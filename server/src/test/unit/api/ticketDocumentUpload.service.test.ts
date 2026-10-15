@@ -1,9 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { validateFileUploadMock, uploadFileMock, withTransactionMock } = vi.hoisted(() => ({
+const { validateFileUploadMock, uploadFileMock, withTransactionMock, generateDocumentPreviewsMock } = vi.hoisted(() => ({
   validateFileUploadMock: vi.fn(),
   uploadFileMock: vi.fn(),
   withTransactionMock: vi.fn(),
+  generateDocumentPreviewsMock: vi.fn(),
+}));
+
+vi.mock('@alga-psa/documents/lib/documentPreviewGenerator', () => ({
+  generateDocumentPreviews: (...args: unknown[]) => generateDocumentPreviewsMock(...args),
 }));
 
 vi.mock('@alga-psa/storage/StorageService', () => ({
@@ -67,6 +72,11 @@ describe('TicketService.uploadTicketDocument', () => {
       file_id: 'file-1',
       storage_path: '/docs/file-1',
     });
+    generateDocumentPreviewsMock.mockResolvedValue({
+      thumbnail_file_id: 'thumb-1',
+      preview_file_id: 'preview-1',
+      preview_generated_at: new Date('2026-09-10T00:00:00.000Z'),
+    });
   });
 
   it('T012/T013/T014: uploads the file, creates a ticket association, and returns the created document', async () => {
@@ -74,6 +84,7 @@ describe('TicketService.uploadTicketDocument', () => {
     const insertedDocuments: Record<string, unknown>[] = [];
     const insertedAssociations: Record<string, unknown>[] = [];
     const insertedAuditLogs: Record<string, unknown>[] = [];
+    const previewUpdates: Record<string, unknown>[] = [];
 
     const trx = ((table: string) => {
       if (table === 'tenants') {
@@ -155,6 +166,16 @@ describe('TicketService.uploadTicketDocument', () => {
         return createTypeBuilder({ type_id: 'shared-pdf' });
       }
 
+      if (table === 'documents') {
+        return {
+          where: vi.fn(() => ({
+            update: vi.fn(async (patch: Record<string, unknown>) => {
+              previewUpdates.push(patch);
+            }),
+          })),
+        };
+      }
+
       throw new Error(`Unexpected table ${table}`);
     }) as any;
 
@@ -201,6 +222,39 @@ describe('TicketService.uploadTicketDocument', () => {
       document_name: 'report.pdf',
       file_id: 'file-1',
     });
+    // Previews are generated after commit and persisted on the document row.
+    expect(generateDocumentPreviewsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ document_id: insertedDocuments[0]?.document_id, mime_type: 'application/pdf' }),
+      expect.any(Buffer),
+    );
+    expect(previewUpdates).toEqual([
+      expect.objectContaining({ thumbnail_file_id: 'thumb-1', preview_file_id: 'preview-1' }),
+    ]);
+  });
+
+  it('T016: a preview generation failure does not fail the upload', async () => {
+    const service = new TicketService();
+    generateDocumentPreviewsMock.mockRejectedValue(new Error('sharp missing'));
+    withTransactionMock.mockImplementation(async (_knex: unknown, callback: (trxArg: unknown) => unknown) =>
+      callback((table: string) => ({
+        insert: vi.fn(async () => undefined),
+        where: vi.fn(() => ({ first: vi.fn().mockResolvedValue(null) })),
+        ...(table === 'users' ? {} : {}),
+      })),
+    );
+    const knex = vi.fn((table: string) => {
+      if (table === 'tickets') return createSelectBuilder({ ticket_id: ticketId });
+      if (table === 'document_folders') return createSelectBuilder(null);
+      if (table === 'document_types') return createTypeBuilder(null);
+      if (table === 'shared_document_types') return createTypeBuilder({ type_id: 'shared-img' });
+      throw new Error(`Unexpected table ${table}`);
+    }) as any;
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex });
+    vi.spyOn(service as any, 'getDocumentById').mockResolvedValue({ document_id: 'doc-2', file_id: 'file-1' });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const file = new File([Buffer.from('img')], 'photo.jpg', { type: 'image/jpeg' });
+    await expect(service.uploadTicketDocument(ticketId, file, context)).resolves.toMatchObject({ document_id: 'doc-2' });
   });
 
   it('T015: rejects uploads that omit the file payload', async () => {

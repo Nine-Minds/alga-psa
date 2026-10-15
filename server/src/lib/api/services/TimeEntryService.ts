@@ -23,6 +23,19 @@ import {
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { ConflictError, ForbiddenError, NotFoundError, NotImplementedError, ValidationError } from '../middleware/apiMiddleware';
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'server/src/lib/utils/workDate';
+import { buildTimeEntryApprovedPayload, toWorkflowTimeEntryWorkItemType } from '@alga-psa/workflow-streams';
+import { productTimeEntryMode, type IUser } from '@alga-psa/types';
+import {
+  StopwatchConflictError,
+  discardSession,
+  getOpenSession,
+  getSession,
+  logSession,
+  startSession,
+  type StopwatchSessionView,
+} from '@alga-psa/scheduling/lib/stopwatch/stopwatchCore';
+import { mapStopwatchError, publishLoggedSessionEvents } from './StopwatchApiService';
+import { toCalendarDateString } from '@alga-psa/core';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
 import { hasPermission } from '../../auth/rbac';
 import { recalculateProjectTaskActualHoursForEntryChange, withTransaction, registerAfterCommit } from '@alga-psa/db';
@@ -36,6 +49,7 @@ import { filterVisibleTimeEntries, sortVisibleTimeEntries, visibleTimeEntryStati
 import { reverseDeletedTimeEntryBilling } from '@alga-psa/scheduling/lib/timeEntryDeletionBilling';
 import { resolveTimeEntryContract, TimeEntryContractError } from '@alga-psa/scheduling/lib/timeEntryContract';
 import { reconcileTimeEntryBillingAllocations } from '@alga-psa/scheduling/lib/timeEntryBillingAllocations';
+import { publishNativeEvent } from '@alga-psa/scheduling/lib/nativeEventPublication';
 
 interface TimeApiAdmission {
   entryId?: string; operational: boolean; access: CoManagedNativeTimeAccess | null; existing: any; source: any;
@@ -142,10 +156,14 @@ export class TimeEntryService extends BaseService<any> {
     const sheet = owner.table('time_sheets as sheet').where('sheet.id', source.time_sheet_id);
     owner.tenantJoin(sheet, 'time_periods as period', 'sheet.period_id', 'period.period_id');
     const period = await sheet.first('period.start_date', 'period.end_date');
-    const dateOnly = (value: Date | string) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+    // Period bounds are DATEs: pg hydrates them at local midnight, so they are compared as
+    // calendar dates rather than instants. A period missing either bound cannot contain
+    // anything, so it fails closed alongside a missing period.
+    const periodStart = period ? toCalendarDateString(period.start_date) : null;
+    const periodEnd = period ? toCalendarDateString(period.end_date) : null;
     const endDate = computeWorkDateFields(source.end_time, source.work_timezone).work_date;
-    if (!period || source.work_date < dateOnly(period.start_date) || source.work_date >= dateOnly(period.end_date) ||
-      endDate < dateOnly(period.start_date) || endDate >= dateOnly(period.end_date)) throw new ValidationError('Time entry must fall within the time sheet period');
+    if (!periodStart || !periodEnd || source.work_date < periodStart || source.work_date >= periodEnd ||
+      endDate < periodStart || endDate >= periodEnd) throw new ValidationError('Time entry must fall within the time sheet period');
   }
 
   private admittedPersistFields(admission: TimeApiAdmission) {
@@ -157,13 +175,21 @@ export class TimeEntryService extends BaseService<any> {
   private presentAdmittedTime(entry: any, admission: TimeApiAdmission) {
     const item = admission.access!.workItem;
     const minutes = entry.end_time ? Math.max(0, Math.round((new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / 60000)) : 0;
-    return { ...entry, duration_hours: Math.round(minutes / 60 * 100) / 100, is_billable: entry.billable_duration > 0,
+    // `entry` is an `INSERT/UPDATE ... RETURNING *` row, so work_date arrives as a pg-hydrated
+    // Date rather than through workDateProjection. Project it here or the response ships an instant.
+    return { ...entry, work_date: toCalendarDateString(entry.work_date), duration_hours: Math.round(minutes / 60 * 100) / 100, is_billable: entry.billable_duration > 0,
       work_item: { id: entry.work_item_id, type: entry.work_item_type, title: item.name }, work_item_title: item.name };
   }
 
   private async afterTimeCommit(work: () => Promise<void>) {
     if (!this.retainedConnection) throw new Error('Time mutation events require their owning transaction');
     registerAfterCommit(this.retainedConnection.knex, work, 'api-time-entry');
+  }
+
+  // A PostgreSQL DATE is a calendar date, not an instant. Project it as text
+  // before pg hydrates it into a Date in the Node process's timezone.
+  private workDateProjection(knex: Knex): Knex.Raw {
+    return knex.raw("to_char(??, 'YYYY-MM-DD') as ??", [`${this.tableName}.work_date`, 'work_date']);
   }
 
   private assertServiceIdPresent(serviceId: string | null | undefined): void {
@@ -280,6 +306,7 @@ export class TimeEntryService extends BaseService<any> {
     query
       .select(
         `${this.tableName}.*`,
+        this.workDateProjection(knex),
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'service_catalog.service_name',
         knex.raw(`ROUND(${this.tableName}.billable_duration / 60.0, 2) as duration_hours`),
@@ -342,6 +369,7 @@ export class TimeEntryService extends BaseService<any> {
       .where(`${this.tableName}.${this.primaryKey}`, id)
       .select(
         `${this.tableName}.*`,
+        this.workDateProjection(knex),
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'service_catalog.service_name',
         knex.raw(`ROUND(${this.tableName}.billable_duration / 60.0, 2) as duration_hours`),
@@ -729,6 +757,68 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   // Time tracking sessions
+  //
+  // LEGACY ADAPTERS (plan D7). Installed mobile builds still call start-tracking / stop-tracking /
+  // active-session. These keep the old response shapes but run on the server-side stopwatch
+  // (stopwatchCore); `session_id` is the stopwatch session id and `start_time` the first segment start.
+  // Pauses are not representable in the legacy shape: a paused session is reported with
+  // status 'paused' and elapsed_minutes = active minutes.
+
+  /** Old `time_entries`-row-shaped session payload (activeTimeSessionResponseSchema plus entry columns). */
+  private async toLegacySession(view: StopwatchSessionView, context: ServiceContext): Promise<any> {
+    const { knex } = await this.getKnex();
+    const startTime = new Date(view.segments[0]?.started_at ?? view.created_at);
+    const userTimeZone = await resolveUserTimeZone(knex, context.tenant, view.user_id);
+    const { work_date, work_timezone } = computeWorkDateFields(startTime, userTimeZone);
+    return {
+      session_id: view.session_id,
+      entry_id: view.session_id,
+      tenant: context.tenant,
+      work_item_id: view.work_item_id,
+      work_item_type: view.work_item_type,
+      service_id: view.service_id,
+      user_id: view.user_id,
+      start_time: startTime.toISOString(),
+      end_time: null,
+      work_date,
+      work_timezone,
+      notes: view.notes,
+      billable_duration: 0,
+      approval_status: 'DRAFT',
+      created_at: view.created_at,
+      updated_at: view.updated_at,
+      status: view.status === 'paused' ? 'paused' : 'active',
+      elapsed_minutes: Math.round(view.active_ms / 60_000),
+      work_item_title: view.work_item_title,
+      service_name: view.service_name,
+    };
+  }
+
+  /**
+   * Legacy time-tracking endpoints run on the server-side stopwatch, except where
+   * co-managed rules apply: a workspace with operational time or shared
+   * conversations, a clock on shared (`co_managed`) work, or a clock the native
+   * tracker already owns. There the admitted native tracker serves the request,
+   * because the stopwatch logs commercial time only and carries no co-managed
+   * admission (and an MSP's clock on shared work lives in the native store even
+   * though the MSP workspace itself is an ordinary PSA one).
+   */
+  private async nativeTimeTrackingApplies(knex: Knex, context: ServiceContext, clock?: { workItemType?: string | null; sessionId?: string }): Promise<boolean> {
+    // 'non_billable_category' clocks carry no work item, which the legacy stopwatch log cannot post.
+    if (clock?.workItemType === 'co_managed' || clock?.workItemType === 'non_billable_category') return true;
+    return withTransaction(knex, async (trx) => {
+      const workspace = await tenantDb(trx, context.tenant).table('tenants').first('product_code');
+      if (productTimeEntryMode(workspace?.product_code) === 'operational' || await hasCoManagedConversationOwnership(trx, context.tenant)) return true;
+      // A named clock belongs to the stopwatch only when the stopwatch holds it; any
+      // other id (including another user's or a completed native clock) goes to the
+      // native tracker, which answers with its own refusal instead of a stopwatch miss.
+      if (clock?.sessionId) {
+        return !!context.apiKeyId && !await tenantDb(trx, context.tenant).table('time_tracking_sessions').where('session_id', clock.sessionId).first('session_id');
+      }
+      return !!await tenantDb(trx, context.tenant).table('native_time_tracking_sessions').where('user_id', context.userId).whereNull('completed_entry_id').first('session_id');
+    });
+  }
+
   private timeActor(context: ServiceContext) {
     if (!context.apiKeyId || context.user?.user_id !== context.userId || context.user?.tenant !== context.tenant || context.user?.user_type !== 'internal') throw new CoManagedSharedWorkError();
     return { kind: 'api_key' as const, tenant: context.tenant, userId: context.userId, apiKeyId: context.apiKeyId };
@@ -736,15 +826,47 @@ export class TimeEntryService extends BaseService<any> {
 
   async startTimeTracking(data: StartTimeTrackingData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    return this.withTimeErrors(() => startNativeTimeTracking(knex, this.timeActor(context), data));
+
+    if (await this.nativeTimeTrackingApplies(knex, context, { workItemType: data.work_item_type })) {
+      return this.withTimeErrors(() => startNativeTimeTracking(knex, this.timeActor(context), data));
+    }
+
+    this.assertServiceIdPresent(data.service_id);
+    let view: StopwatchSessionView;
+    try {
+      view = await knex.transaction((trx) =>
+        startSession(
+          trx,
+          context.tenant,
+          context.userId,
+          {
+            workItemType: data.work_item_type,
+            workItemId: data.work_item_id ?? null,
+            serviceId: data.service_id,
+            notes: data.notes || '',
+          },
+          { allowLegacyWorkItemTypes: true },
+        ),
+      );
+    } catch (error) {
+      if (error instanceof StopwatchConflictError) {
+        throw new ConflictError('Active time tracking session already exists. Please stop the current session first.');
+      }
+      throw mapStopwatchError(error);
+    }
+
+    return this.toLegacySession(view, context);
   }
 
   async stopTimeTracking(sessionId: string, data: StopTimeTrackingData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    return this.withTimeErrors(() => stopNativeTimeTracking(knex, this.timeActor(context), sessionId, data, async completion => {
+
+    if (await this.nativeTimeTrackingApplies(knex, context, { sessionId })) {
+      return this.withTimeErrors(() => stopNativeTimeTracking(knex, this.timeActor(context), sessionId, data, async completion => {
       const { trx, actor, clock, endTime, billingMode, serviceId, notes, billable } = completion;
       const service = new TimeEntryService({ knex: trx, tenant: context.tenant });
-      const startTime = new Date(clock.start_time), workDate = clock.work_date instanceof Date ? clock.work_date.toISOString().slice(0, 10) : clock.work_date;
+      const startTime = new Date(clock.start_time), workDate = toCalendarDateString(clock.work_date);
+      if (!workDate) throw new ValidationError('The running timer has no work date');
       const timeSheetId = await service.getOrCreateTimeSheetForWorkDate(workDate, clock.user_id, context);
       const source = { work_item_id: clock.work_item_id, work_item_type: clock.work_item_type, start_time: startTime,
         end_time: endTime, work_date: workDate, work_timezone: clock.work_timezone, time_sheet_id: timeSheetId };
@@ -758,19 +880,65 @@ export class TimeEntryService extends BaseService<any> {
       await access.assertCurrent();
       return result;
     }));
+    }
+
+    let result;
+    try {
+      result = await knex.transaction(async (trx) => {
+        // Only an open (running or paused) session of the caller can be stopped.
+        const session = await getSession(trx, context.tenant, context.userId, sessionId);
+        if (!session || (session.status !== 'running' && session.status !== 'paused')) {
+          throw new NotFoundError('Active session not found');
+        }
+        this.assertServiceIdPresent(data.service_id ?? session.service_id);
+        return logSession(trx, context.tenant, context.user as IUser, sessionId, {
+          end_time: data.end_time,
+          notes: data.notes || undefined,
+          service_id: data.service_id,
+          is_billable: data.is_billable,
+        });
+      });
+    } catch (error) {
+      throw mapStopwatchError(error);
+    }
+
+    await publishLoggedSessionEvents(result.persisted, context);
+
+    return this.getById(result.persisted.entry.entry_id, context);
   }
 
   async cancelTimeTracking(sessionId: string, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    return this.withTimeErrors(() => cancelNativeTimeTracking(knex, this.timeActor(context), sessionId));
+    if (await this.nativeTimeTrackingApplies(knex, context, { sessionId })) {
+      return this.withTimeErrors(() => cancelNativeTimeTracking(knex, this.timeActor(context), sessionId));
+    }
+    // Stopwatch sessions are discarded rather than logged.
+    try {
+      await knex.transaction((trx) => discardSession(trx, context.tenant, context.userId, sessionId));
+    } catch (error) {
+      throw mapStopwatchError(error);
+    }
+    return null;
   }
 
   async getActiveSession(userId: string, context: ServiceContext): Promise<any | null> {
     const { knex } = await this.getKnex();
-    return this.withTimeErrors(() => {
-      if (userId !== context.userId) throw new CoManagedSharedWorkError();
-      return getNativeActiveTimeTracking(knex, this.timeActor(context));
-    });
+
+    if (await this.nativeTimeTrackingApplies(knex, context)) {
+      return this.withTimeErrors(() => {
+        if (userId !== context.userId) throw new CoManagedSharedWorkError();
+        return getNativeActiveTimeTracking(knex, this.timeActor(context));
+      });
+    }
+
+    if (!await hasPermission(context.user, 'time_entry', 'read', knex)) {
+      throw new ForbiddenError('Permission denied: Cannot read time entries');
+    }
+
+    // Legacy endpoint: only the caller's own session (never another user's).
+    const view = await knex.transaction((trx) => getOpenSession(trx, context.tenant, userId));
+    if (!view) return null;
+    return this.toLegacySession(view, context);
   }
 
   async createTemplate(data: CreateTimeTemplateData, context: ServiceContext): Promise<any> {
@@ -836,6 +1004,7 @@ export class TimeEntryService extends BaseService<any> {
     query
       .select(
         `${this.tableName}.*`,
+        this.workDateProjection(knex),
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'service_catalog.service_name',
         knex.raw(`CASE WHEN tickets.ticket_id IS NOT NULL THEN tickets.title ELSE project_tasks.task_name END as work_item_title`),
@@ -890,7 +1059,7 @@ export class TimeEntryService extends BaseService<any> {
   private async reviewCurrentTimeEntry(entryId: string, approvalStatus: 'APPROVED' | 'CHANGES_REQUESTED', comment: string | undefined, context: ServiceContext) {
     const { knex } = await this.getKnex();
     return this.withTimeErrors(() => reviewCoManagedNativeTimeEntry(knex, context.tenant, { entryId, approvalStatus, comment },
-      async () => this.timeActor(context), event => publishEvent(event)));
+      async () => this.timeActor(context), publishNativeEvent));
   }
 
   // Approval operations
@@ -929,15 +1098,36 @@ export class TimeEntryService extends BaseService<any> {
         results.push({ success: true, entry_id: entryId });
 
         // Publish event
-        await publishEvent({
-          eventType: 'TIME_ENTRY_APPROVED',
-          payload: {
-            tenantId: context.tenant,
-            timeEntryId: entryId,
-            approvedBy: context.userId,
-            timestamp: new Date().toISOString()
-          }
-        });
+        const timestamp = new Date().toISOString();
+        const workItemType = toWorkflowTimeEntryWorkItemType(entry.work_item_type);
+        if (workItemType && entry.user_id && entry.work_item_id && context.userId) {
+          await publishWorkflowEvent({
+            eventType: 'TIME_ENTRY_APPROVED',
+            payload: buildTimeEntryApprovedPayload({
+              timeEntryId: entryId,
+              userId: entry.user_id,
+              workItemId: entry.work_item_id,
+              workItemType,
+              approvedBy: context.userId,
+              timestamp,
+            }),
+            ctx: {
+              tenantId: context.tenant,
+              actor: { actorType: 'USER', actorUserId: context.userId },
+            },
+          });
+        } else {
+          // Ad-hoc / interaction / non-billable time has no workflow representation.
+          await publishEvent({
+            eventType: 'TIME_ENTRY_UPDATED',
+            payload: {
+              tenantId: context.tenant,
+              timeEntryId: entryId,
+              approvedBy: context.userId,
+              timestamp,
+            },
+          });
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         results.push({ success: false, error: errorMessage, entry_id: entryId });
@@ -1031,6 +1221,7 @@ export class TimeEntryService extends BaseService<any> {
     query
       .select(
         `${this.tableName}.*`,
+        this.workDateProjection(knex),
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'service_catalog.service_name',
         knex.raw(`CASE WHEN ${this.tableName}.billable_duration > 0 THEN true ELSE false END as is_billable`)
@@ -1121,6 +1312,7 @@ export class TimeEntryService extends BaseService<any> {
     query
       .select(
         `${this.tableName}.*`,
+        this.workDateProjection(knex),
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'service_catalog.service_name'
       )

@@ -17,8 +17,11 @@ import { transferCoManagedAttachment, type CoManagedAttachmentContext } from './
 
 const TABLE = 'co_management_conversation_drafts', FILES = 'co_management_conversation_attachments';
 export interface CoManagedDraftFile { attachmentId: string; fileName: string; mimeType: string; size: number; contentHash: string }
+// Absent members are marked `?: undefined` rather than `?: never`: under the
+// enterprise project's non-strict compilation `?: never` collapses to `never`,
+// which inverts `!== undefined` narrowing and empties the union.
 export type CoManagedConversationDraftRequest = { operationId: string; content: CoManagedConversationContent; files: CoManagedDraftFile[] } &
-  ({ audience: CommentAudience; parent?: never; expectedAudience?: never } | { parent: CoManagedCommentReference; audience?: never; expectedAudience?: CommentAudience });
+  ({ audience: CommentAudience; parent?: undefined; expectedAudience?: undefined } | { parent: CoManagedCommentReference; audience?: undefined; expectedAudience?: CommentAudience });
 export interface CoManagedConversationDraftReference { storeTenant: string; operationId: string }
 export interface CoManagedConversationDraftProgress extends CoManagedConversationDraftReference { status: 'draft' | 'published'; uploadedAttachmentIds: string[] }
 export type CoManagedConversationDraftReceipt = CoManagedCommentCreateReceipt | CoManagedPrivateCommentReceipt;

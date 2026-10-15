@@ -240,6 +240,12 @@ vi.mock('@product/chat/context', () => ({
   AIChatContextProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// The callout/badge provider reads the release flag (needs a real session); this test is not about it.
+vi.mock('@/components/co-managed/CoManagedWorkSignalsProvider', () => ({
+  CoManagedWorkSignalsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useCoManagedWorkSignals: () => ({ available: false, viewerId: null, escalatedUnassigned: 0, awaitingReply: 0, total: 0 }),
+}));
+
 vi.mock('@/context/TierContext', () => ({
   TierProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useTier: () => ({ hasAddOn: () => false, hasFeature: () => true }),
@@ -291,7 +297,8 @@ vi.mock('@alga-psa/tickets/actions/ticketDisplaySettings', () => ({
   getTicketingDisplaySettings: (...args: unknown[]) => getTicketingDisplaySettingsMock(...args),
 }));
 
-vi.mock('@alga-psa/tickets/lib', () => ({
+vi.mock('@alga-psa/tickets/lib', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   isTicketStatusOpenFilter: (value: unknown) => value === 'open',
   TICKET_STATUS_FILTER_OPEN: 'open',
 }));

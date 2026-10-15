@@ -20,8 +20,11 @@ describe('billing_cycle_alignment repository compatibility wiring', () => {
       'utf8',
     );
 
-    expect(serverRepoSource).toContain('resolveBillingCycleAlignmentForCompatibility({');
-    expect(serverRepoSource).toContain('const templateBillingCycleAlignment =');
+    // The server-side fork is a thin re-export (plan §0.5); the compatibility
+    // helper is wired once, in the package implementation it points at.
+    expect(serverRepoSource).toContain(
+      "export * from '@alga-psa/billing/repositories/contractLineRepository';",
+    );
     expect(packageRepoSource).toContain('resolveBillingCycleAlignmentForCompatibility({');
     expect(packageRepoSource).toContain('const templateBillingCycleAlignment =');
   });

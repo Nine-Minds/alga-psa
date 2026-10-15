@@ -17,7 +17,7 @@ export async function sendCoManagedRoutingEmail(delivery: CoManagedRoutingEmailD
   const base = new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000');
   if (!['http:', 'https:'].includes(base.protocol)) throw new Error('Invalid routing notification application URL');
   const url = new URL(presentation.link, base.origin).toString(), text = renderTemplate(template.message, presentation.data);
-  const result = await TenantEmailService.getInstance(delivery.tenant).sendEmail({ tenantId: delivery.tenant,
+  const result = await TenantEmailService.getInstance(delivery.tenant).sendEmail({ tenantId: delivery.tenant, mailClass: 'ticket',
     to: delivery.email, userId: delivery.recipientUserId, notificationSubtypeId: delivery.subtypeId, locale, retryPolicy: 'caller',
     templateProcessor: new StaticTemplateProcessor(renderTemplate(template.title, presentation.data).replace(/[\r\n]+/g, ' '),
       `<p>${escape(text)}</p><p><a href="${escape(url)}">${escape(url)}</a></p>`, `${text}\n\n${url}`),

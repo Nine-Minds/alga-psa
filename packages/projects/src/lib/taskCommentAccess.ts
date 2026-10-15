@@ -21,7 +21,12 @@ export async function withTaskCommentAccess<T>(db: Knex, user: any, tenant: stri
   return withTransaction(db, async trx => {
     if (action === 'update') await assertCoManagedOperationalWrite(trx, tenant); else await getCoManagedOperationalState(trx, tenant);
     const owner = tenantDb(trx, tenant);
-    if (user.user_type !== 'internal' || !await owner.table('users').where({ user_id: user.user_id, user_type: 'internal', is_inactive: false }).forShare().first('user_id')) throw new Error('Only internal users can comment on tasks');
+    // Current local authority: the actor is still a live local user of the type it claims.
+    // Authoring is internal-only and stays that way at the create site; reading a task's
+    // comments, or maintaining one's own, remains open to a client user (see
+    // assertOwnCommentOrInternalUser), so this frame must not refuse them outright.
+    if (!await owner.table('users').where({ user_id: user.user_id, user_type: user.user_type, is_inactive: false }).forShare().first('user_id'))
+      throw new Error('Permission denied: cannot access task comments');
     let collaboration: CoManagedNativeTaskCommentAccess | null = null;
     if (await hasCoManagedConversationOwnership(trx, tenant)) {
       // LEVERAGE: pattern co-managed-browser-identity — browser adapters reject overrides and bind the tracked home session.
@@ -36,7 +41,11 @@ export async function withTaskCommentAccess<T>(db: Knex, user: any, tenant: stri
         const rows = await confirmed.select('task_comment_id', 'task_id');
         if (rows.length !== ids.length || rows.some(row => comments.find(comment => comment.task_comment_id === row.task_comment_id)?.task_id !== row.task_id)) throw new CoManagedSharedWorkError();
       }
-    } else if (!await hasPermission(user, 'project_task', action)) throw new Error('Permission denied: cannot access task comments');
+    } else {
+      // `project_task` is an MSP-portal resource, so a client user can never satisfy it;
+      // their authority over a task comment is owning it, which the callers assert per comment.
+      if (user.user_type === 'internal' && !await hasPermission(user, 'project_task', action)) throw new Error('Permission denied: cannot access task comments');
+    }
     const result = await work({ trx, collaboration });
     await collaboration?.assertCurrent();
     return result;

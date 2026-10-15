@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "scope": "provider-consumer-recovery-and-readiness-evidence",
+  "status": "native-passed-ci-pending",
+  "baseRevision": "7980581c49",
+  "workingTreeDirty": true,
+  "sourceSha256": {
+    "e2e-tests/harness/check-provider-routing.mjs": "c3ee2ed3d1930f297eaef8472d0d47e6d60c613adbd22e292549999b3e814cec",
+    "e2e-tests/harness/check-provider-routing.test.mjs": "dc160444a3469fea618820a3d776572d964c85ade3a2e45b02f0156dca6d4f97",
+    ".github/workflows/e2e-fresh-install-tests.yaml": "c1e3a47dbcca6557a96250d17925e1f062054d8e3f6db631c2a61c97120c4bfd",
+    "packages/emulators/msgraph/tests/teamsOrganizerRouting.test.ts": "522ca8a40f07ad56a0f2ebb3d6da8c13ecc9be4ba47b4e33e1e0c3c308c6b0c4",
+    "packages/emulators/qbo/tests/clientRecoveryConsumer.test.ts": "6388b506f8b30a1910ed216371c57a0c9fcaa35d0b5e9eb819c70fa4f1b68eaf"
+  },
+  "checks": {
+    "qbo": {
+      "passed": 29,
+      "suiteFiles": 5,
+      "typecheck": "passed",
+      "newCases": [
+        "API401 refresh/persist/retry success",
+        "Revoked refresh rejects without overwrite/replay",
+        "Second API401 stops after one refresh"
+      ],
+      "limitations": "Actual consumer and Axios/vendor HTTP; private memory secret store and disconnected DB coordination mocks. Not live vendor parity."
+    },
+    "teams": {
+      "packageRunnerPassed": 4,
+      "serverRunnerPassed": 7,
+      "newCases": "Workspace and EE organizer404 preserve existing settings; later lookup succeeds and updates single row.",
+      "limitations": "Real actions and Graph HTTP; private in-memory table adapter, not live DB/browser/SSO.",
+      "ciRegression": "Replaced obsolete source-string T072 assertion with actual HTTP organizer resolution/persistence coverage."
+    },
+    "providerReadiness": {
+      "passed": 10,
+      "redBeforeFix": [
+        "Redirect accepted with historical successful journal entry",
+        "Stale journal accepted despite no new request record"
+      ],
+      "fixes": [
+        "Reject redirects for every probe",
+        "Require matching journal sequence newer than pre-request cursor"
+      ],
+      "records": "Sanitized endpoint origins, process identity, exact CI candidate revision and successful network checks retained in logs/provider-readiness.",
+      "limitations": "Native transport maps emulator DNS to localhost fixture; productionCLI uses unmodifiedfetch. Does not prove app workflow execution."
+    },
+    "actionlint": "passed"
+  }
+}

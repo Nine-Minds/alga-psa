@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, type ReactNode } from 'react';
+import type { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import type { ITicket, ITicketCategory, IBoard, IUser, ITag, ISlaPolicy, SurveyClientSatisfactionSummary, IOnlineMeeting } from '@alga-psa/types';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -63,6 +64,10 @@ export interface ClientTicketsRenderProps {
   initialUsers?: IUser[];
 }
 
+export interface ClientRecurringTicketsRenderProps {
+  clientId: string;
+}
+
 export interface ContactTicketsRenderProps {
   contactId: string;
   contactName?: string;
@@ -109,9 +114,17 @@ export interface ScheduleTeamsMeetingFromClientInput {
   endDateTime: string | Date;
   client_id?: string | null;
   contact_name_id?: string | null;
+  /** The opportunity the logged interaction belongs to, when scheduled from a deal. */
+  opportunity_id?: string | null;
+  /** Free-form interaction notes; the join link is appended server-side. */
+  notes?: string | null;
   attendees?: Array<{ emailAddress: string; name?: string }>;
-  /** Also place the meeting on the creator's AlgaPSA calendar. */
+  /** Who the logged interaction belongs to — distinct from the Teams organizer. Defaults to the creator. */
+  interactionUserId?: string;
+  /** Also place the meeting on an AlgaPSA calendar. */
   createScheduleEntry?: boolean;
+  /** Whose AlgaPSA calendar to book — distinct from the Teams invitees. Defaults to the creator. */
+  scheduleAssignedUserIds?: string[];
 }
 
 export interface ScheduleTeamsMeetingFromClientResult {
@@ -125,6 +138,40 @@ export interface ScheduleTeamsMeetingFromClientResult {
   };
   error?: string;
 }
+
+/**
+ * Feature slots the app-owned co-managed integration supplies once it has
+ * resolved product eligibility, the release flag, and client read authority.
+ * A null slots value means "no feature UI" and the ordinary client renders.
+ */
+export interface ClientCoManagedSlots {
+  /** Compact relationship state summary for the client header. */
+  summary: ReactNode;
+  /** The stable `co-managed` entry registered in the client tab registry. */
+  tab: TabContent;
+  /**
+   * Rendered above the native client ticket list (never in place of it), e.g. a
+   * callout when this client's shared tickets need MSP action. The Tickets tab
+   * always keeps the native list.
+   */
+  ticketsCallout?: ReactNode;
+}
+
+export interface ClientCoManagedIntegrationProps {
+  clientId: string;
+  clientName: string;
+  /** Instance-specific prefix so a full page and a drawer can coexist. */
+  idPrefix: string;
+  /** Validated query values selecting a relationship and internal section. */
+  relationshipId?: string | null;
+  section?: string | null;
+  /** Opens a registered client tab in place without a server navigation. */
+  onOpenTab?: (tabId: string) => void;
+  /** Render the client body with the current feature slots (or none). */
+  children: (slots: ClientCoManagedSlots | null) => ReactNode;
+}
+
+export type RenderClientCoManagedIntegration = (props: ClientCoManagedIntegrationProps) => ReactNode;
 
 export interface ClientCrossFeatureCallbacks {
   renderQuickAddTicket: (props: QuickAddTicketRenderProps) => ReactNode;
@@ -147,6 +194,8 @@ export interface ClientCrossFeatureCallbacks {
    */
   renderClientUnresolvedChargeReview?: (props: ClientUnresolvedChargeReviewRenderProps) => ReactNode;
   renderClientTickets: (props: ClientTicketsRenderProps) => ReactNode;
+  /** Optional: the Recurring tickets tab on client detail (the tickets package owns the component; clients must not import it). */
+  renderClientRecurringTickets?: (props: ClientRecurringTicketsRenderProps) => ReactNode;
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
   renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;
   renderContractQuickAdd?: (props: ContractQuickAddRenderProps) => ReactNode;
@@ -158,6 +207,12 @@ export interface ClientCrossFeatureCallbacks {
   scheduleTeamsMeeting?: (input: ScheduleTeamsMeetingFromClientInput) => Promise<ScheduleTeamsMeetingFromClientResult>;
   refreshMeetingRecordings?: (meetingId: string) => Promise<IOnlineMeeting | ActionMessageError | ActionPermissionError>;
   getSlaPolicies: () => Promise<ISlaPolicy[]>;
+  /**
+   * Optional: app-owned co-managed integration for the client record. When
+   * absent (AlgaDesk, community, or a deployment without the feature) the
+   * ordinary client renders with no feature slots.
+   */
+  renderClientCoManagedIntegration?: RenderClientCoManagedIntegration;
 }
 
 const ClientCrossFeatureContext = createContext<ClientCrossFeatureCallbacks | null>(null);

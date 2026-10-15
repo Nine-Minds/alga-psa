@@ -3,7 +3,9 @@ import {
   setupE2ETestEnvironment,
   E2ETestEnvironment
 } from '../utils/e2eTestSetup';
+import { withoutTestUserPermission } from '../utils/simpleRoleSetup';
 import { ApiTestClient } from '../utils/apiTestHelpers';
+import { createUserTestData } from '../utils/userTestData';
 import { createClientTestData, createClientLocationTestData } from '../utils/clientTestData';
 import {
   ensureApiServerRunning,
@@ -65,7 +67,6 @@ describe('Clients API E2E Tests', () => {
     it('should reject requests without API key', async () => {
       const client = new ApiTestClient({
         baseUrl: apiBaseUrl,
-        tenantId: env.tenant
       });
       const response = await client.get('/api/v1/clients');
       
@@ -83,7 +84,6 @@ describe('Clients API E2E Tests', () => {
       const client = new ApiTestClient({
         baseUrl: apiBaseUrl,
         apiKey: 'invalid-key',
-        tenantId: env.tenant
       });
       const response = await client.get('/api/v1/clients');
       
@@ -184,12 +184,14 @@ describe('Clients API E2E Tests', () => {
         console.error('Create client failed in delete test:', createResponse.status, JSON.stringify(createResponse.data, null, 2));
       }
       
+      expect(createResponse.status, JSON.stringify(createResponse.data)).toBe(201);
       const clientId = createResponse.data.data.client_id;
+      createdClientIds.push(clientId);
       
       // Delete the client
       const response = await env.apiClient.delete(`/api/v1/clients/${clientId}`);
       
-      expect(response.status).toBe(204);
+      expect(response.status, JSON.stringify(response.data)).toBe(204);
       
       // Verify it's deleted
       const getResponse = await env.apiClient.get(`/api/v1/clients/${clientId}`);
@@ -198,12 +200,10 @@ describe('Clients API E2E Tests', () => {
 
     it('should list clients with pagination', async () => {
       // Create multiple clients
-      const clients = [];
       for (let i = 0; i < 5; i++) {
         const clientData = createClientTestData();
         const response = await env.apiClient.post('/api/v1/clients', clientData);
         if (response.data?.data) {
-          clients.push(response.data.data);
           createdClientIds.push(response.data.data.client_id);
         }
       }
@@ -483,18 +483,18 @@ describe('Clients API E2E Tests', () => {
       const contact2Id = createContact2Response.data.data.contact_name_id;
 
       // Create client portal users for these contacts
-      const user1Data = {
+      const user1Data = createUserTestData({
         contact_id: contact1Id,
         email: contact1Data.email,
         password: 'TestPassword123!',
         user_type: 'client'
-      };
-      const user2Data = {
+      });
+      const user2Data = createUserTestData({
         contact_id: contact2Id,
         email: contact2Data.email,
         password: 'TestPassword123!',
         user_type: 'client'
-      };
+      });
 
       const createUser1Response = await env.apiClient.post('/api/v1/users', user1Data);
       const createUser2Response = await env.apiClient.post('/api/v1/users', user2Data);
@@ -563,12 +563,12 @@ describe('Clients API E2E Tests', () => {
       const contactId = createContactResponse.data.data.contact_name_id;
 
       // Create user for contact
-      const userData = {
+      const userData = createUserTestData({
         contact_id: contactId,
         email: contactData.email,
         password: 'TestPassword123!',
         user_type: 'client'
-      };
+      });
 
       const createUserResponse = await env.apiClient.post('/api/v1/users', userData);
       expect(createUserResponse.status).toBe(201);
@@ -609,7 +609,7 @@ describe('Clients API E2E Tests', () => {
       expect(stillInactiveUserResponse.data.data.is_inactive).toBe(true);
     });
 
-    it('should allow reactivating client and all contacts/users together', async () => {
+    it('supports explicit API reactivation of a client, contacts and users', async () => {
       // Create a test client
       const clientData = createClientTestData();
       const createClientResponse = await env.apiClient.post('/api/v1/clients', clientData);
@@ -630,8 +630,10 @@ describe('Clients API E2E Tests', () => {
         email: `contact2-${Date.now()}@test.com`
       };
 
-      const createContact1Response = await env.apiClient.post('/api/v1/contacts', contact1Data);
-      const createContact2Response = await env.apiClient.post('/api/v1/contacts', contact2Data);
+      const [createContact1Response, createContact2Response] = await Promise.all([
+        env.apiClient.post('/api/v1/contacts', contact1Data),
+        env.apiClient.post('/api/v1/contacts', contact2Data),
+      ]);
 
       expect(createContact1Response.status).toBe(201);
       expect(createContact2Response.status).toBe(201);
@@ -640,21 +642,23 @@ describe('Clients API E2E Tests', () => {
       const contact2Id = createContact2Response.data.data.contact_name_id;
 
       // Create users for contacts
-      const user1Data = {
+      const user1Data = createUserTestData({
         contact_id: contact1Id,
         email: contact1Data.email,
         password: 'TestPassword123!',
         user_type: 'client'
-      };
-      const user2Data = {
+      });
+      const user2Data = createUserTestData({
         contact_id: contact2Id,
         email: contact2Data.email,
         password: 'TestPassword123!',
         user_type: 'client'
-      };
+      });
 
-      const createUser1Response = await env.apiClient.post('/api/v1/users', user1Data);
-      const createUser2Response = await env.apiClient.post('/api/v1/users', user2Data);
+      const [createUser1Response, createUser2Response] = await Promise.all([
+        env.apiClient.post('/api/v1/users', user1Data),
+        env.apiClient.post('/api/v1/users', user2Data),
+      ]);
 
       expect(createUser1Response.status).toBe(201);
       expect(createUser2Response.status).toBe(201);
@@ -668,70 +672,69 @@ describe('Clients API E2E Tests', () => {
       });
 
       // Verify everything is inactive
-      const inactiveContact1 = await env.apiClient.get(`/api/v1/contacts/${contact1Id}`);
-      const inactiveContact2 = await env.apiClient.get(`/api/v1/contacts/${contact2Id}`);
+      const [inactiveContact1, inactiveContact2] = await Promise.all([
+        env.apiClient.get(`/api/v1/contacts/${contact1Id}`),
+        env.apiClient.get(`/api/v1/contacts/${contact2Id}`),
+      ]);
       expect(inactiveContact1.data.data.is_inactive).toBe(true);
       expect(inactiveContact2.data.data.is_inactive).toBe(true);
 
-      // Use the reactivate endpoint to reactivate client and all contacts
-      // This would typically be done via a server action, but for API testing we need an endpoint
-      // For now, we'll test by manually reactivating everything
-      await env.apiClient.put(`/api/v1/clients/${clientId}`, {
-        is_inactive: false
-      });
+      // These API endpoints reactivate individual records. The UI's atomic
+      // client/contact reactivation server action requires separate coverage.
+      const reactivatedClient = await env.apiClient.put(`/api/v1/clients/${clientId}`, { is_inactive: false });
+      expect(reactivatedClient.status).toBe(200);
+      const reactivatedRecords = await Promise.all([
+        env.apiClient.put(`/api/v1/contacts/${contact1Id}`, { is_inactive: false }),
+        env.apiClient.put(`/api/v1/contacts/${contact2Id}`, { is_inactive: false }),
+        env.apiClient.put(`/api/v1/users/${user1Id}`, { is_inactive: false }),
+        env.apiClient.put(`/api/v1/users/${user2Id}`, { is_inactive: false }),
+      ]);
+      expect(reactivatedRecords.map(response => response.status)).toEqual([200, 200, 200, 200]);
 
-      // Manually reactivate contacts (simulating what the server action does)
-      await env.apiClient.put(`/api/v1/contacts/${contact1Id}`, {
-        is_inactive: false
-      });
-      await env.apiClient.put(`/api/v1/contacts/${contact2Id}`, {
-        is_inactive: false
-      });
-
-      // Manually reactivate users (simulating what the server action does)
-      await env.apiClient.put(`/api/v1/users/${user1Id}`, {
-        is_inactive: false
-      });
-      await env.apiClient.put(`/api/v1/users/${user2Id}`, {
-        is_inactive: false
-      });
-
-      // Verify everything is now active
-      const activeClientResponse = await env.apiClient.get(`/api/v1/clients/${clientId}`);
-      expect(activeClientResponse.data.data.is_inactive).toBe(false);
-
-      const activeContact1Response = await env.apiClient.get(`/api/v1/contacts/${contact1Id}`);
-      const activeContact2Response = await env.apiClient.get(`/api/v1/contacts/${contact2Id}`);
-      expect(activeContact1Response.data.data.is_inactive).toBe(false);
-      expect(activeContact2Response.data.data.is_inactive).toBe(false);
-
-      const activeUser1Response = await env.apiClient.get(`/api/v1/users/${user1Id}`);
-      const activeUser2Response = await env.apiClient.get(`/api/v1/users/${user2Id}`);
-      expect(activeUser1Response.data.data.is_inactive).toBe(false);
-      expect(activeUser2Response.data.data.is_inactive).toBe(false);
+      // These independent reads verify the same final state in one request
+      // group; serial groups add avoidable network latency to this long journey.
+      const [activeClientResponse, activeContact1Response, activeContact2Response,
+        activeUser1Response, activeUser2Response] = await Promise.all([
+        env.apiClient.get(`/api/v1/clients/${clientId}`),
+        env.apiClient.get(`/api/v1/contacts/${contact1Id}`),
+        env.apiClient.get(`/api/v1/contacts/${contact2Id}`),
+        env.apiClient.get(`/api/v1/users/${user1Id}`),
+        env.apiClient.get(`/api/v1/users/${user2Id}`),
+      ]);
+      for (const response of [activeClientResponse, activeContact1Response,
+        activeContact2Response, activeUser1Response, activeUser2Response]) {
+        expect(response.status, JSON.stringify(response.data)).toBe(200);
+        expect(response.data.data.is_inactive).toBe(false);
+      }
     });
   });
 
   describe('Permissions', () => {
-    it('should enforce read permissions for listing', async () => {
-      // This test assumes the test user has proper permissions
-      // If permissions are revoked, this should fail
-      const response = await env.apiClient.get('/api/v1/clients');
-      expect(response.status).toBe(200);
+    it('denies listing without client read permission and restores access', async () => {
+      expect((await env.apiClient.get('/api/v1/clients')).status).toBe(200);
+      await withoutTestUserPermission(env.db, env.userId, env.tenant, 'client', 'read', async () => {
+        const denied = await env.apiClient.get('/api/v1/clients');
+        expect(denied.status, JSON.stringify(denied.data)).toBe(403);
+        expect((await env.apiClient.get('/api/v1/projects')).status).toBe(200);
+      });
+      expect((await env.apiClient.get('/api/v1/clients')).status).toBe(200);
     });
 
-    it('should enforce create permissions', async () => {
+    it('denies client creation without a grant and persists it after restoration', async () => {
       const clientData = createClientTestData();
-      const response = await env.apiClient.post('/api/v1/clients', clientData);
-
-      if (response.status === 500) {
-        console.error('Unexpected 500 error in permissions test:', JSON.stringify(response.data, null, 2));
-      }
-
-      expect([201, 403, 500]).toContain(response.status); // Allow 500 for now
-      if (response.status === 201 && response.data?.data?.client_id) {
-        createdClientIds.push(response.data.data.client_id);
-      }
+      const clients = () => env.db('clients').where({ tenant: env.tenant }).orderBy('client_id');
+      await withoutTestUserPermission(env.db, env.userId, env.tenant, 'client', 'create', async () => {
+        const before = await clients();
+        const denied = await env.apiClient.post('/api/v1/clients', clientData);
+        expect(denied.status, JSON.stringify(denied.data)).toBe(403);
+        expect(await clients()).toEqual(before);
+        expect((await env.apiClient.get('/api/v1/clients')).status).toBe(200);
+      });
+      const allowed = await env.apiClient.post('/api/v1/clients', clientData);
+      expect(allowed.status, JSON.stringify(allowed.data)).toBe(201);
+      createdClientIds.push(allowed.data.data.client_id);
+      expect(await env.db('clients').where({ tenant: env.tenant, client_id: allowed.data.data.client_id }).first())
+        .toMatchObject({ client_name: clientData.client_name });
     });
   });
 });

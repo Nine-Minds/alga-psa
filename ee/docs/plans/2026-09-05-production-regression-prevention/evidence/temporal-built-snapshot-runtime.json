@@ -1,0 +1,21 @@
+{
+  "status": "local_real_temporal_execution_passed_ci_wired",
+  "command": "npm run test:temporal-snapshot-runtime",
+  "test": "scripts/temporal-snapshot-runtime-smoke.cjs",
+  "validation": [
+    "Full packaging contract, clean workspace package/worker builds, built-module import smoke and 72 readiness tests passed.",
+    "Built workflow executed through TestWorkflowEnvironment and Worker, including the real Temporal workflow sandbox.",
+    "Completion activity received masked secretRef and declared token pointer values; no raw scopes argument was sent.",
+    "Workflow result preserved original execution payload."
+  ],
+  "ci": "temporal-readiness fast job runs this command after worker compilation; snapshot-runtime.json is included in existing execution artifact upload.",
+  "logs": [
+    "/tmp/alga-snapshot-full-readiness.log",
+    "/tmp/alga-temporal-snapshot-runtime-final.log"
+  ],
+  "limits": [
+    "Activity bodies are test doubles in this smoke; real DB behavior is covered separately.",
+    "This exercises a return step, not full email workflow or failure/replay history compatibility.",
+    "Native CI has not executed this new command yet."
+  ]
+}

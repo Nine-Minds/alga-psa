@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { hasPermission } from '@alga-psa/auth';
+import { applyTriggerPayloadMapping } from '@alga-psa/workflows/runtime';
 
 type RuntimeEventRow = {
   event_id: string;
@@ -132,7 +134,7 @@ vi.mock('@alga-psa/workflows/persistence', () => {
   };
 });
 
-vi.mock('@alga-psa/workflows/runtime', () => ({
+vi.mock('@alga-psa/workflows/runtime', async () => ({
   workflowDefinitionSchema: z.record(z.any()),
   initializeWorkflowRuntimeV2: vi.fn(),
   getActionRegistryV2: vi.fn(() => ({ list: () => [] })),
@@ -149,7 +151,7 @@ vi.mock('@alga-psa/workflows/runtime', () => ({
         : { type: 'object', properties: { ticketId: { type: 'string' } } },
     listRefs: () => ['payload.Workflow.v1', 'payload.Event.v1']
   })),
-  applyRedactions: vi.fn((input) => input),
+  applyRedactions: (await import('../../../../../shared/workflow/runtime/utils/redactionUtils')).applyRedactions,
   isWorkflowEventTrigger: vi.fn((trigger) => trigger?.type === 'event'),
   isWorkflowOneTimeScheduleTrigger: vi.fn(() => false),
   isWorkflowRecurringScheduleTrigger: vi.fn(() => false),
@@ -187,7 +189,7 @@ vi.mock('@alga-psa/workflows/runtime', () => ({
   didYouMean: vi.fn(() => [])
 }));
 
-import { listWorkflowRunStepsAction, simulateWorkflowDefinitionDraftAction } from './workflow-runtime-v2-actions';
+import { exportWorkflowRunDetailAction, listWorkflowRunStepsAction, simulateWorkflowDefinitionDraftAction } from './workflow-runtime-v2-actions';
 
 const definition = {
   id: 'wf-1',
@@ -218,6 +220,7 @@ const eventRow = (overrides: Partial<RuntimeEventRow>): RuntimeEventRow => ({
 
 describe('simulateWorkflowDefinitionDraftAction replay payload resolution', () => {
   beforeEach(() => {
+    vi.mocked(hasPermission).mockResolvedValue(true);
     fixture.tenant = 'tenant-a';
     fixture.events = [];
     fixture.simulatedCalls = [];
@@ -327,6 +330,45 @@ describe('simulateWorkflowDefinitionDraftAction replay payload resolution', () =
     expect(fixture.simulatedCalls).toHaveLength(0);
   });
 
+  it('returns a failed result (not a 500) when the trigger mapping throws during replay', async () => {
+    fixture.events = [eventRow({ event_id: '77777777-7777-4777-8777-777777777777' })];
+    vi.mocked(applyTriggerPayloadMapping).mockRejectedValueOnce(new Error('boom'));
+
+    const result = await simulateWorkflowDefinitionDraftAction({
+      definition,
+      eventId: '77777777-7777-4777-8777-777777777777'
+    }) as any;
+
+    expect(result.status).toBe('failed');
+    expect(result.payloadSource).toBe('replayed-event');
+    expect(result.errors[0]?.message).toContain('Production would skip this event: trigger payload mapping failed: boom');
+    expect(fixture.simulatedCalls).toHaveLength(0);
+  });
+
+  it('fails replay with missing-source-ref when no source schema ref is known, even with a mapping', async () => {
+    fixture.events = [eventRow({
+      event_id: '88888888-8888-4888-8888-888888888888',
+      payload_schema_ref: null
+    })];
+    const noSourceRefDefinition = {
+      ...definition,
+      trigger: {
+        type: 'event',
+        eventName: 'ticket.created',
+        payloadMapping: { ticketId: { $expr: 'event.payload.ticket_id' } }
+      }
+    };
+
+    const result = await simulateWorkflowDefinitionDraftAction({
+      definition: noSourceRefDefinition,
+      eventId: '88888888-8888-4888-8888-888888888888'
+    }) as any;
+
+    expect(result.status).toBe('failed');
+    expect(result.errors[0]?.message).toContain('Production would skip this event: no source payload schema is known');
+    expect(fixture.simulatedCalls).toHaveLength(0);
+  });
+
   it('rejects explicit payload combined with eventId', async () => {
     await expect(simulateWorkflowDefinitionDraftAction({
       definition,
@@ -343,6 +385,47 @@ describe('simulateWorkflowDefinitionDraftAction replay payload resolution', () =
       message: 'payload synthesized from schema; no real event of this type has been validated against this definition — consider useLatestEvent: true'
     });
     expect(result.replayedEvent).toBeNull();
+  });
+
+  it.each([
+    ['run details', listWorkflowRunStepsAction],
+    ['run export', exportWorkflowRunDetailAction],
+  ] as const)('redacts invocation secrets for managers in %s without mutating replay output', async (_name, action) => {
+    const output = { secretRef: 'private-reference', credentials: [{ $secret: 'PRIVATE_KEY' }], apiKey: 'private-value', ticketId: 'ticket-1' };
+    fixture.invocations = [{ invocation_id: 'invocation-1', input_json: output, output_json: output, error_json: { token: 'private-error-token' } }];
+    fixture.snapshots = [{ snapshot_id: 'snapshot-1', envelope_json: { payload: output } }];
+    fixture.run.input_json = output;
+    const result = await action({ runId: 'run-1' }) as any;
+    const expected = { secretRef: '[REDACTED]', credentials: [{ $secret: '[SECRET:REDACTED]' }], apiKey: '[REDACTED]', ticketId: 'ticket-1' };
+    expect(result.invocations[0].input_json).toEqual(expected);
+    expect(result.invocations[0].output_json).toEqual(expected);
+    expect(result.invocations[0].error_json).toEqual({ token: '[REDACTED]' });
+    expect(result.snapshots[0].envelope_json.payload).toEqual(expected);
+    if (action === exportWorkflowRunDetailAction) expect(result.run.input_json).toEqual(expected);
+    expect(output).toEqual({ secretRef: 'private-reference', credentials: [{ $secret: 'PRIVATE_KEY' }], apiKey: 'private-value', ticketId: 'ticket-1' });
+  });
+
+  it.each([
+    ['run details', listWorkflowRunStepsAction],
+    ['run export', exportWorkflowRunDetailAction],
+  ] as const)('withholds free-form invocation errors from restricted viewers in %s', async (_name, action) => {
+    vi.mocked(hasPermission).mockImplementation(async (_user, _resource, permission) => permission === 'read');
+    fixture.invocations = [{ invocation_id: 'invocation-1', input_json: { value: 'private' }, output_json: { value: 'private' },
+      error_message: 'Provider rejected private input', error_json: { category: 'ActionError', code: 'INVALID', message: 'private', details: { value: 'private' } } }];
+    const result = await action({ runId: 'run-1' }) as any;
+    expect(result.invocations[0]).toMatchObject({ input_json: { redacted: true }, output_json: { redacted: true },
+      error_message: null, error_json: { redacted: true, category: 'ActionError', code: 'INVALID' } });
+    expect(JSON.stringify(result.invocations)).not.toContain('private');
+  });
+
+  it.each([
+    ['run details', listWorkflowRunStepsAction, 'tenant-b'],
+    ['run export', exportWorkflowRunDetailAction, 'tenant-b'],
+    ['run details', listWorkflowRunStepsAction, null],
+    ['run export', exportWorkflowRunDetailAction, null],
+  ] as const)('rejects foreign or unowned runs through %s', async (_name, action, runTenant) => {
+    fixture.run.tenant = runTenant;
+    await expect(action({ runId: 'run-1' })).rejects.toThrow('Not found');
   });
 
   it('includes structured invocation error_json in run step details', async () => {

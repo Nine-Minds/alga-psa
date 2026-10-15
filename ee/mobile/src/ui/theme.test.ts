@@ -137,7 +137,8 @@ describe("darkTheme", () => {
   });
 
   it("has a dark background", () => {
-    expect(darkTheme.colors.background).toBe("#000000");
+    // The Alga pair's dark ground, as the web renders it.
+    expect(darkTheme.colors.background).toBe("#0c0a18");
   });
 
   it("has all required color keys matching lightTheme structure", () => {

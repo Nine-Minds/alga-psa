@@ -20,7 +20,7 @@
  */
 
 import { expect, test, type Page } from '@playwright/test';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 

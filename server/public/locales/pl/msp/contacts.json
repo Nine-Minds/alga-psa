@@ -35,6 +35,7 @@
     "title": "Strona kontaktów",
     "description": "Główna strona zarządzania kontaktami z wyszukiwaniem, filtrami, widokiem listy i akcjami zbiorczymi",
     "heading": "Kontakty",
+    "sharedMailbox": "Skrzynka współdzielona",
     "addContact": "+ Dodaj kontakt",
     "actions": "Akcje",
     "searchPlaceholder": "Szukaj kontaktów, notatek i interakcji",
@@ -553,7 +554,11 @@
       "notes": "Notatki:",
       "notesPlaceholder": "Dodaj dodatkowe notatki o kontakcie...",
       "tags": "Tagi:",
-      "emailAddresses": "Adresy e-mail:"
+      "emailAddresses": "Adresy e-mail:",
+      "reportsTo": "Podlega:",
+      "reportsToPlaceholder": "Brak przełożonego",
+      "reportsToClear": "Wyczyść",
+      "reportsToHelp": "Musi to być osoba z tego samego klienta. Używane do widoczności w portalu („mój zespół”) zgłoszeń, urządzeń i projektów."
     },
     "loading": {
       "destinations": "Ładowanie miejsc docelowych..."
@@ -571,7 +576,8 @@
     },
     "empty": {
       "notSet": "Nie ustawiono",
-      "unknownClient": "Nieznany klient"
+      "unknownClient": "Nieznany klient",
+      "noManager": "Brak przełożonego"
     },
     "phoneTypes": {
       "work": "Służbowy",
@@ -594,7 +600,8 @@
       "notes": "Notatki:",
       "tags": "Tagi:",
       "emailAddresses": "Adresy e-mail:",
-      "defaultEmail": "Domyślny"
+      "defaultEmail": "Domyślny",
+      "reportsTo": "Podlega"
     },
     "status": {
       "active": "Aktywny",
@@ -732,6 +739,33 @@
       "visibilityInvalidData": "Podano nieprawidłowe dane grupy widoczności. Sprawdź dane grupy i wybrane tablice.",
       "groupNameRequired": "Nazwa grupy jest wymagana",
       "readPermission": "Odmowa uprawnień: nie można odczytywać kontaktów"
+    }
+  },
+  "portal": {
+    "visibilityGroups": {
+      "scopeLabel": "Widoczność zgłoszeń",
+      "scopeClient": "Wszystkie zgłoszenia tego klienta",
+      "scopeContact": "Tylko własne zgłoszenia",
+      "scopeClientDescription": "Członkowie widzą wszystkie zgłoszenia tego klienta na wybranych tablicach.",
+      "scopeContactDescription": "Członkowie widzą zgłoszenia, w których są kontaktem, zgłoszenia osób im podlegających oraz zgłoszenia, które obserwują. Administratorzy klienta zawsze widzą wszystko na wybranych tablicach, także zgłoszenia bez kontaktu.",
+      "assignmentHelp": "Przypisz grupę, aby ograniczyć tablice oraz zgłoszenia, urządzenia i projekty widoczne dla tej osoby, albo zachowaj pełny dostęp do klienta.",
+      "assetScopeLabel": "Widoczność urządzeń",
+      "assetScopeClient": "Wszystkie urządzenia tego klienta",
+      "assetScopeContact": "Tylko własne urządzenia",
+      "assetScopeClientDescription": "Członkowie widzą wszystkie urządzenia tego klienta, także nieprzypisane.",
+      "assetScopeContactDescription": "Członkowie widzą tylko urządzenia przypisane do nich lub do osób im podlegających. Nieprzypisane urządzenia są ukryte. Administratorzy klienta zawsze widzą wszystko.",
+      "projectScopeLabel": "Widoczność projektów",
+      "projectScopeClient": "Wszystkie projekty tego klienta",
+      "projectScopeContact": "Tylko własne projekty",
+      "projectScopeClientDescription": "Członkowie widzą wszystkie projekty tego klienta.",
+      "projectScopeContactDescription": "Członkowie widzą tylko projekty, w których kontaktem są oni sami lub osoba im podlegająca. Projekty bez kontaktu są ukryte. Administratorzy klienta zawsze widzą wszystko.",
+      "scopeSummary": "Zgłoszenia: {{tickets}} · Urządzenia: {{devices}} · Projekty: {{projects}}",
+      "scopeSummaryAll": "Wszystkie",
+      "scopeSummaryOwn": "Własne",
+      "managerScopeNote_one": "Jego widok obejmuje także dane {{count}} podlegającej mu osoby.",
+      "managerScopeNote_few": "Jego widok obejmuje także dane {{count}} podlegających mu osób.",
+      "managerScopeNote_many": "Jego widok obejmuje także dane {{count}} podlegających mu osób.",
+      "managerScopeNote_other": "Jego widok obejmuje także dane {{count}} podlegających mu osób."
     }
   }
 }

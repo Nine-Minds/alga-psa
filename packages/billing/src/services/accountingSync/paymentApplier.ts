@@ -1,7 +1,12 @@
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
-import type { AccountingExternalChange } from '@alga-psa/types';
+import { toMinorUnits } from '@alga-psa/core';
+import type {
+  AccountingExportAdapter,
+  AccountingExternalChange,
+  NormalizedExternalPaymentPayload
+} from '@alga-psa/types';
 import { SyncMappingLedger } from './syncMappingLedger';
 import {
   recordExternalPayment,
@@ -11,6 +16,7 @@ import {
 } from './recordExternalPayment';
 import type { AccountingSyncCycleStats } from './accountingSync.types';
 import type { SyncExceptionService } from './syncExceptions.types';
+import { isNormalizedPaymentPayload, providerForAdapterType } from './normalizedChange';
 
 /**
  * Applies external Payment changes (create/edit/delete) to Alga AR.
@@ -51,18 +57,36 @@ export interface PaymentApplierDeps {
   ledger: SyncMappingLedger;
   exceptions: SyncExceptionService;
   stats: AccountingSyncCycleStats;
-  /** Payment provider recorded on AR rows (defaults to 'quickbooks') */
+  /** Adapter that reported the change; when absent, legacy QBO semantics apply. */
+  adapter?: AccountingExportAdapter;
+  /** Payment provider recorded on AR rows (defaults from the adapter type) */
   provider?: string;
 }
 
-function toCents(value: unknown): number {
+function toCents(value: unknown, currency: string): number {
   const amount = Number(value);
-  return Number.isFinite(amount) ? Math.round(amount * 100) : 0;
+  return Number.isFinite(amount) ? toMinorUnits(amount, 'en-US', currency) : 0;
+}
+
+/** The payment's own currency (normalized payload first, raw QBO CurrencyRef otherwise). */
+function paymentCurrency(change: AccountingExternalChange): string | undefined {
+  const normalized = isNormalizedPaymentPayload(change.normalized) ? change.normalized : null;
+  if (normalized) {
+    return normalized.currency;
+  }
+  const ref = (change.payload as any)?.CurrencyRef?.value;
+  return typeof ref === 'string' ? String(ref) : undefined;
 }
 
 function paymentReference(payload: Record<string, any> | undefined, externalId: string): string {
   const ref = payload?.PaymentRefNum;
   return typeof ref === 'string' && ref.trim().length > 0 ? ref.trim() : externalId;
+}
+
+/** Reference for a change: provider-neutral when normalized, else legacy QBO. */
+function changeReference(change: AccountingExternalChange): string {
+  const normalized = isNormalizedPaymentPayload(change.normalized) ? change.normalized : null;
+  return normalized ? normalized.reference : paymentReference(change.payload, change.externalId);
 }
 
 /** QBO's TxnDate is the bookkeeping date. Stamping "now" instead shifts every
@@ -90,9 +114,36 @@ async function resolveAllocations(
   deps: PaymentApplierDeps,
   change: AccountingExternalChange
 ): Promise<{ allocations: PaymentAllocation[]; unmappedExternalIds: string[] }> {
+  const normalized = isNormalizedPaymentPayload(change.normalized) ? change.normalized : null;
+
+  if (normalized) {
+    const allocations: PaymentAllocation[] = [];
+    const unmappedExternalIds: string[] = [];
+
+    for (const allocation of normalized.allocations) {
+      const invoiceMapping = await deps.ledger.findByExternalId(
+        'invoice',
+        allocation.externalInvoiceId,
+        deps.targetRealm
+      );
+      if (!invoiceMapping) {
+        unmappedExternalIds.push(allocation.externalInvoiceId);
+        continue;
+      }
+      allocations.push({
+        externalInvoiceId: allocation.externalInvoiceId,
+        invoiceId: invoiceMapping.alga_entity_id,
+        amountCents: allocation.amountCents
+      });
+    }
+
+    return { allocations, unmappedExternalIds };
+  }
+
   const lines = Array.isArray(change.payload?.Line) ? (change.payload!.Line as any[]) : [];
   const allocations: PaymentAllocation[] = [];
   const unmappedExternalIds: string[] = [];
+  const currency = paymentCurrency(change) ?? 'USD';
 
   for (const line of lines) {
     const linkedTxns = Array.isArray(line?.LinkedTxn) ? line.LinkedTxn : [];
@@ -101,7 +152,7 @@ async function resolveAllocations(
       continue; // CreditMemo application lines etc. are not slice-1 payment allocations
     }
 
-    const amountCents = toCents(line.Amount);
+    const amountCents = toCents(line.Amount, currency);
     if (amountCents <= 0) {
       continue;
     }
@@ -130,7 +181,7 @@ async function reverseRecordedAllocations(
   externalPaymentId: string,
   reason: string
 ): Promise<void> {
-  const provider = deps.provider ?? 'quickbooks';
+  const provider = deps.provider ?? providerForAdapterType(deps.adapterType);
   for (const allocation of recorded) {
     const result = await reverseExternalPayment(trx, deps.tenantId, {
       invoiceId: allocation.invoiceId,
@@ -156,14 +207,20 @@ async function applyAllocations(
   change: AccountingExternalChange,
   allocations: PaymentAllocation[]
 ): Promise<RecordedAllocation[]> {
-  const provider = deps.provider ?? 'quickbooks';
-  const reference = paymentReference(change.payload, change.externalId);
-  const currency =
-    typeof (change.payload as any)?.CurrencyRef?.value === 'string'
-      ? String((change.payload as any).CurrencyRef.value)
-      : undefined;
-  const txnDate = paymentTxnDate(change.payload);
-  const creditApplication = isCreditApplicationPayment(change.payload);
+  const provider = deps.provider ?? providerForAdapterType(deps.adapterType);
+  const normalized = isNormalizedPaymentPayload(change.normalized) ? change.normalized : null;
+  const reference = normalized
+    ? normalized.reference
+    : paymentReference(change.payload, change.externalId);
+  const currency = paymentCurrency(change);
+  const txnDate = normalized?.txnDate
+    ? new Date(normalized.txnDate)
+    : paymentTxnDate(change.payload);
+  const currencyOrDateLessTxn = txnDate && !Number.isNaN(txnDate.getTime()) ? txnDate : undefined;
+  const creditApplication = normalized
+    ? normalized.isCreditApplication
+    : isCreditApplicationPayment(change.payload);
+  const providerLabel = provider === 'xero' ? 'Xero' : 'QuickBooks';
 
   const recorded: RecordedAllocation[] = [];
   for (const allocation of allocations) {
@@ -173,14 +230,17 @@ async function applyAllocations(
       provider,
       referenceNumber: reference,
       currency,
-      paymentDate: txnDate,
+      paymentDate: currencyOrDateLessTxn,
       notes: creditApplication
-        ? `QuickBooks credit applied ${reference}`
-        : `QuickBooks payment ${reference}`,
+        ? `${providerLabel} credit applied ${reference}`
+        : `${providerLabel} payment ${reference}`,
       transactionMetadata: {
         external_payment_id: change.externalId,
-        qbo_payment_kind: creditApplication ? 'credit_application' : 'payment',
-        ...(txnDate ? { qbo_txn_date: txnDate.toISOString().slice(0, 10) } : {}),
+        provider,
+        provider_kind: creditApplication ? 'credit_application' : 'payment',
+        ...(creditApplication ? { qbo_payment_kind: 'credit_application' } : { qbo_payment_kind: 'payment' }),
+        ...(currencyOrDateLessTxn ? { qbo_txn_date: currencyOrDateLessTxn.toISOString().slice(0, 10) } : {}),
+        ...(normalized?.providerMetadata ?? {}),
         realm: deps.targetRealm
       }
     });
@@ -227,6 +287,7 @@ export async function applyExternalPaymentChange(
   deps: PaymentApplierDeps,
   change: AccountingExternalChange
 ): Promise<void> {
+  const providerLabel = providerForAdapterType(deps.adapterType) === 'xero' ? 'Xero' : 'QuickBooks';
   // Zero-dollar payments we pushed to link CreditMemo→Invoice echo back through
   // CDC as ordinary payments — the credit is already reflected on the invoice
   // via credit_applied, so applying them as AR would double-count.
@@ -255,7 +316,7 @@ export async function applyExternalPaymentChange(
 
     const recorded: RecordedAllocation[] = existing.metadata?.allocations ?? [];
     await deps.knex.transaction(async (trx) => {
-      await reverseRecordedAllocations(trx, deps, recorded, change.externalId, 'Payment deleted in QuickBooks');
+      await reverseRecordedAllocations(trx, deps, recorded, change.externalId, `Payment deleted in ${providerLabel}`);
       await deps.ledger.withKnex(trx).update(existing.id, {
         syncStatus: 'reversed',
         metadata: { ...(existing.metadata ?? {}), deleted: true, reversed_at: new Date().toISOString() },
@@ -287,10 +348,10 @@ export async function applyExternalPaymentChange(
       type: 'accounting_sync_unmapped_payment',
       entityType: 'external_payment',
       entityId: change.externalId,
-      title: 'QuickBooks payment references an unknown invoice',
+      title: `${providerLabel} payment references an unknown invoice`,
       context: {
         external_payment_id: change.externalId,
-        reference: paymentReference(change.payload, change.externalId),
+        reference: changeReference(change),
         unmapped_external_invoice_ids: unmappedExternalIds,
         total_amount: (change.payload as any)?.TotalAmt ?? null,
         realm: deps.targetRealm
@@ -323,10 +384,10 @@ export async function applyExternalPaymentChange(
       type: 'accounting_sync_unmapped_payment',
       entityType: 'external_payment',
       entityId: change.externalId,
-      title: 'QuickBooks payment targets a non-payable invoice',
+      title: `${providerLabel} payment targets a non-payable invoice`,
       context: {
         external_payment_id: change.externalId,
-        reference: paymentReference(change.payload, change.externalId),
+        reference: changeReference(change),
         reason: 'targets_non_payable_invoice',
         targets: nonPayableTargets.map(({ allocation, invoice }) => ({
           alga_invoice_id: allocation.invoiceId,
@@ -386,10 +447,10 @@ export async function applyExternalPaymentChange(
           type: 'accounting_sync_unmapped_payment',
           entityType: 'external_payment',
           entityId: change.externalId,
-          title: 'QuickBooks payment targets an already-settled invoice',
+          title: `${providerLabel} payment targets an already-settled invoice`,
           context: {
             external_payment_id: change.externalId,
-            reference: paymentReference(change.payload, change.externalId),
+            reference: changeReference(change),
             alga_invoice_id: allocation.invoiceId,
             invoice_status: invoiceRow.status,
             reason: 'over_application',
@@ -419,7 +480,7 @@ export async function applyExternalPaymentChange(
         deps,
         previousAllocations,
         change.externalId,
-        'Payment changed in QuickBooks — reapplying current allocations'
+        `Payment changed in ${providerLabel} — reapplying current allocations`
       );
     }
 
@@ -429,8 +490,9 @@ export async function applyExternalPaymentChange(
       sync_token: change.syncToken ?? null,
       allocations: recorded,
       total_cents: recorded.reduce((sum, allocation) => sum + allocation.amountCents, 0),
-      unapplied_cents: toCents((change.payload as any)?.UnappliedAmt),
-      reference: paymentReference(change.payload, change.externalId)
+      unapplied_cents: toCents((change.payload as any)?.UnappliedAmt, paymentCurrency(change) ?? 'USD'),
+      reference: changeReference(change),
+      ...((isNormalizedPaymentPayload(change.normalized) ? change.normalized.providerMetadata : undefined) ?? {})
     };
 
     const trxLedger = deps.ledger.withKnex(trx);

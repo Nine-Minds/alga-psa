@@ -1,5 +1,10 @@
+import { resolveEvaluatedCollection } from './collectionResolution';
+import { TemplateEvaluationError } from './evaluator';
+import { localizeTimePresentation } from './timePresentationLocalization';
+import type { TemplateLabelTranslator } from './i18nLabels';
 import React from 'react';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import type {
   TemplateAst,
   TemplateFieldBorderStyle,
@@ -7,6 +12,7 @@ import type {
   TemplateNode,
   TemplateNodeStyleRef,
   TemplateStyleDeclaration,
+  TemplateTableColumn,
   TemplateValueExpression,
   TemplateValueFormat,
 } from '@alga-psa/types';
@@ -19,6 +25,7 @@ import type { TemplateEvaluationResult } from './evaluator';
 import { decodeTemplatePathExpression } from './templateInterpolationFilters';
 import { normalizeTemplateAstFieldBorderDefaults } from './normalize';
 import { resolveTemplatePrintSettingsFromAst } from './printSettings';
+import { convertBlockContentToHTML, flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -38,12 +45,25 @@ type RenderScope = {
 };
 
 type RenderContext = {
+  ast: TemplateAst;
   locale: string;
+  /** The recipient country's date shape: digit order, separator and clock. */
+  dateFormat: CountryDateFormat;
   currencyCode: string;
 };
 
 const isRecord = (value: unknown): value is UnknownRecord =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * True when a resolved value is authored structured content (a non-empty
+ * BlockNote block array or a ProseMirror doc). A plain string — the legacy
+ * terms projection — is not structured and renders as pre-line text.
+ */
+const isStructuredBlockContent = (value: unknown): boolean => {
+  if (Array.isArray(value)) return value.length > 0;
+  return isRecord(value) && value.type === 'doc';
+};
 
 /**
  * A display string as it should appear. Key references are normally resolved
@@ -226,7 +246,7 @@ const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ct
     // Shared UTC-pinned formatter: date-only values must not shift with the
     // server process timezone (e.g. YYYY-MM-DD snapshot dates in negative
     // UTC offsets), and preview/PDF must agree with field formatting.
-    return formatTemplateDateValue(String(value), ctx.locale);
+    return formatTemplateDateValue(String(value), ctx.locale, ctx.dateFormat);
   }
 
   if (normalizedFormat === 'currency') {
@@ -252,6 +272,124 @@ const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ct
 
   return String(value);
 };
+
+/**
+ * Table cells may stack lines (e.g. an item name over its description). Drop the
+ * blank lines a missing part leaves behind and keep the remaining line breaks —
+ * same multiline convention field nodes already use.
+ */
+const resolveTableCellText = (text: string): { text: string; multiline: boolean } => {
+  if (!text.includes('\n')) {
+    return { text, multiline: false };
+  }
+
+  const trimmed = text.replace(/^[^\S\n]*\n+/, '').replace(/\n+[^\S\n]*$/, '');
+  return { text: trimmed, multiline: trimmed.includes('\n') };
+};
+
+interface RenderedCellLine {
+  text: string;
+  style?: React.CSSProperties;
+  className?: string | null;
+}
+
+/**
+ * A table column may carry stacked per-line content (`lines`). Each line that
+ * resolves to non-empty text renders on its own styled line inside the cell;
+ * blank lines (missing names, absent descriptions) are dropped. When a column
+ * has no `lines`, or every line resolves empty, the function returns null so
+ * the caller falls back to the flat `value` expression — keeping discount and
+ * custom rows whose name is absent readable.
+ */
+const resolveColumnCellLines = (
+  column: TemplateTableColumn,
+  evaluation: TemplateEvaluationResult,
+  scope: RenderScope,
+  ctx: RenderContext
+): RenderedCellLine[] | null => {
+  if (!Array.isArray(column.lines) || column.lines.length === 0) {
+    return null;
+  }
+
+  const resolveLine = (line: NonNullable<TemplateTableColumn['lines']>[number]): RenderedCellLine => {
+    const raw = resolveExpressionValue(line.value, evaluation, scope, ctx);
+    const { className: lineClassName, style: lineStyle } = resolveStyleRef(line.style);
+    return {
+      text: formatValue(raw ?? '', line.format ?? column.format, ctx),
+      style: lineStyle,
+      className: lineClassName,
+    };
+  };
+  const nonEmpty = (entry: RenderedCellLine): boolean => entry.text.trim().length > 0;
+
+  // Primary lines decide whether the stack replaces the flat value; a
+  // supplemental line (an annotation such as an optional-row marker) only
+  // ever follows what the cell already shows.
+  const primary = column.lines.filter((line) => !line.supplemental).map(resolveLine).filter(nonEmpty);
+  const supplemental = column.lines.filter((line) => line.supplemental).map(resolveLine).filter(nonEmpty);
+
+  if (primary.length > 0) {
+    return [...primary, ...supplemental];
+  }
+  if (supplemental.length > 0) {
+    const value = resolveExpressionValue(column.value, evaluation, scope, ctx);
+    const flat: RenderedCellLine = { text: formatValue(value ?? '', column.format, ctx) };
+    return [...(nonEmpty(flat) ? [flat] : []), ...supplemental];
+  }
+  return null;
+};
+
+/**
+ * Cell content for a table column. Stacked `lines` win when any resolves to
+ * non-empty text; otherwise the column's flat `value` renders exactly as before.
+ */
+const renderTableCellContent = (
+  column: TemplateTableColumn,
+  evaluation: TemplateEvaluationResult,
+  rowScope: RenderScope,
+  ctx: RenderContext
+): React.ReactNode => {
+  const lines = resolveColumnCellLines(column, evaluation, rowScope, ctx);
+  if (lines) {
+    return lines.map((line, index) => {
+      const normalized = resolveTableCellText(line.text);
+      return (
+        <div
+          key={`${column.id}-line-${index}`}
+          className={joinClassNames('ast-table-cell-line', line.className) || undefined}
+          style={{ ...(line.style ?? {}), ...(normalized.multiline ? { whiteSpace: 'pre-line' } : {}) }}
+        >
+          {normalized.text}
+        </div>
+      );
+    });
+  }
+
+  const value = resolveExpressionValue(column.value, evaluation, rowScope, ctx);
+  const cell = resolveTableCellText(formatValue(value ?? '', column.format, ctx));
+  return cell.multiline ? <span style={{ whiteSpace: 'pre-line' }}>{cell.text}</span> : cell.text;
+};
+
+/** A totals value that has nothing to report: absent, blank, or numerically zero. */
+const isZeroOrEmptyTotal = (raw: unknown): boolean => {
+  if (raw === null || raw === undefined) return true;
+  if (typeof raw === 'number') return raw === 0;
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    return trimmed.length === 0 || (Number.isFinite(Number(trimmed)) && Number(trimmed) === 0);
+  }
+  return false;
+};
+
+/**
+ * Collapsed table borders cannot be rounded, so an authored radius would be
+ * silently dropped; a rounded table switches to separate borders with no spacing,
+ * which draws the same lines and honours the corners.
+ */
+const resolveTableStyle = (style: React.CSSProperties | undefined): React.CSSProperties | undefined =>
+  style?.borderRadius !== undefined
+    ? { borderCollapse: 'separate', borderSpacing: 0, overflow: 'hidden', ...style }
+    : style;
 
 const buildAstCss = (ast: TemplateAst): string => {
   const baseCss = `
@@ -281,6 +419,12 @@ const buildAstCss = (ast: TemplateAst): string => {
   padding: 6px 8px;
   vertical-align: top;
 }
+.invoice-template-root .ast-table-cell-line {
+  white-space: pre-line;
+}
+.invoice-template-root .ast-table-cell-line + .ast-table-cell-line {
+  margin-top: 2px;
+}
 .invoice-template-root tbody tr + tr td { border-top: 1px solid #f3f4f6; }
 
 .invoice-template-root .ast-node-type-field {
@@ -293,6 +437,18 @@ const buildAstCss = (ast: TemplateAst): string => {
   justify-content: space-between;
   gap: 16px;
   padding: 2px 0;
+}
+@media print {
+  .invoice-template-root thead { display: table-header-group; }
+  .invoice-template-root tbody tr,
+  .invoice-template-root .ast-node-type-totals { break-inside: avoid; }
+  /* A section heading never sits alone at the foot of a page: the heading
+     may not end a page and whatever follows it may not start one. */
+  .invoice-template-root section > h2 { break-after: avoid; }
+  .invoice-template-root section > h2 + * { break-before: avoid; }
+  /* The stock signature block (every standard quote layout and the tenant
+     clones frozen from them share the id) is signed as one unit. */
+  .invoice-template-root #signature-block { break-inside: avoid; }
 }
 .invoice-template-root .ast-totals-value {
   text-align: right;
@@ -339,7 +495,7 @@ const resolveExpressionValue = (
       const resolvedValue =
         rowValue !== undefined
           ? rowValue
-          : getPathValue(evaluation.bindings.invoice, parsedPath.path);
+          : getPathValue(scope.items, parsedPath.path) ?? getPathValue(evaluation.bindings.invoice, parsedPath.path);
 
       if (resolvedValue === undefined) {
         return undefined;
@@ -367,7 +523,7 @@ const resolveExpressionValue = (
             return String(rowValue);
           }
         }
-        const invoiceValue = getPathValue(evaluation.bindings.invoice, name);
+        const invoiceValue = getPathValue(scope.items, name) ?? getPathValue(evaluation.bindings.invoice, name);
         return String(invoiceValue ?? '');
       });
     }
@@ -392,27 +548,61 @@ const resolveExpressionValue = (
  * identically to before.
  */
 const resolveCollection = (
+  ast: TemplateAst,
   bindingId: string,
   evaluation: TemplateEvaluationResult,
   scope: RenderScope,
 ): UnknownRecord[] => {
-  const scopeItems = scope.items;
-  if (scopeItems && bindingId.includes('.')) {
-    const [head, ...rest] = bindingId.split('.');
-    if (head && Object.prototype.hasOwnProperty.call(scopeItems, head)) {
-      const scoped = getPathValue(scopeItems[head], rest.join('.'));
-      if (Array.isArray(scoped)) {
-        return scoped.filter(isRecord);
-      }
-      return [];
-    }
-  }
+  const { rows, diagnostic } = resolveEvaluatedCollection(ast, evaluation, bindingId, scope.items);
+  if (diagnostic) throw new TemplateEvaluationError('INVALID_SOURCE_COLLECTION', diagnostic);
+  return rows;
+};
 
-  const value = evaluation.bindings[bindingId];
-  if (!Array.isArray(value)) {
-    return [];
+const isBlankText = (value: unknown): boolean =>
+  value === null ||
+  value === undefined ||
+  (typeof value === 'string' && value.trim().length === 0) ||
+  (Array.isArray(value) && value.length === 0);
+
+/**
+ * Whether a node paints anything a reader can see once its bindings resolve.
+ *
+ * Used to decide if a titled `section` has content to head. Leaf text nodes
+ * are visible when their resolved value has non-whitespace text (structured
+ * block content counts by its plain-text projection, so an authored-but-empty
+ * paragraph is still empty); images when their source resolves; containers
+ * when any child does (a repeating stack over an empty collection does not).
+ * Every other node type — fields, tables (which render a header row or their
+ * empty-state text), totals, page breaks — always paints and counts as visible.
+ */
+const nodeHasVisibleContent = (
+  node: TemplateNode,
+  evaluation: TemplateEvaluationResult,
+  scope: RenderScope,
+  ctx: RenderContext,
+): boolean => {
+  switch (node.type) {
+    case 'text':
+      return !isBlankText(resolveExpressionValue(node.content, evaluation, scope, ctx));
+    case 'richText': {
+      const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
+      return isStructuredBlockContent(content)
+        ? !isBlankText(flattenBlockContentToPlainText(content))
+        : !isBlankText(content);
+    }
+    case 'image':
+      return normalizeImageSrc(resolveExpressionValue(node.src, evaluation, scope, ctx)) !== null;
+    case 'section':
+    case 'document':
+      return node.children.some((child) => nodeHasVisibleContent(child, evaluation, scope, ctx));
+    case 'stack':
+      if (node.repeat) {
+        return resolveCollection(ctx.ast, node.repeat.sourceBinding.bindingId, evaluation, scope).length > 0;
+      }
+      return node.children.some((child) => nodeHasVisibleContent(child, evaluation, scope, ctx));
+    default:
+      return true;
   }
-  return value.filter(isRecord);
 };
 
 const renderNode = (
@@ -438,13 +628,22 @@ const renderNode = (
           {node.children.map((child) => renderNode(child, evaluation, scope, ctx))}
         </div>
       );
-    case 'section':
+    case 'section': {
+      const title = displayText(node.title);
+      // A heading with nothing to head is omitted outright — an empty
+      // "Terms & Conditions" or "Notes" section must not leave an orphan title
+      // (and its spacing) on the page. Untitled sections are left alone: they
+      // are layout wrappers whose box may be intentional.
+      if (title && !node.children.some((child) => nodeHasVisibleContent(child, evaluation, scope, ctx))) {
+        return null;
+      }
       return (
         <section key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
-          {displayText(node.title) ? <h2>{displayText(node.title)}</h2> : null}
+          {title ? <h2>{title}</h2> : null}
           {node.children.map((child) => renderNode(child, evaluation, scope, ctx))}
         </section>
       );
+    }
     case 'stack': {
       const defaultStackStyle: React.CSSProperties = {
         display: 'flex',
@@ -455,7 +654,7 @@ const renderNode = (
 
       if (node.repeat) {
         const itemBinding = node.repeat.itemBinding;
-        const repeatRows = resolveCollection(node.repeat.sourceBinding.bindingId, evaluation, scope);
+        const repeatRows = resolveCollection(ctx.ast, node.repeat.sourceBinding.bindingId, evaluation, scope);
         return (
           <div key={node.id} id={node.id} className={elementClassName || undefined} style={mergedStyle}>
             {repeatRows.map((row, index) => {
@@ -481,8 +680,47 @@ const renderNode = (
     }
     case 'text': {
       const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
+      // Preserve authored line breaks for legacy multiline terms. The layout
+      // author's own style still wins via the spread.
       return (
-        <p key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
+        <p
+          key={node.id}
+          id={node.id}
+          className={elementClassName || undefined}
+          style={{ whiteSpace: 'pre-line', ...(style ?? {}) }}
+        >
+          {String(content ?? '')}
+        </p>
+      );
+    }
+    case 'richText': {
+      const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
+
+      if (isStructuredBlockContent(content)) {
+        const html = convertBlockContentToHTML(content);
+        return (
+          <div
+            key={node.id}
+            id={node.id}
+            className={elementClassName || undefined}
+            style={style}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        );
+      }
+
+      // Plain string — including an empty one — falls back to exactly what the
+      // legacy `text` node emits (pre-line whitespace, empty paragraph
+      // preserved). A migrated stock layout therefore reproduces the pre-change
+      // PDF byte-for-byte; the converter's "[No content]" placeholder is never
+      // reached.
+      return (
+        <p
+          key={node.id}
+          id={node.id}
+          className={elementClassName || undefined}
+          style={{ whiteSpace: 'pre-line', ...(style ?? {}) }}
+        >
           {String(content ?? '')}
         </p>
       );
@@ -494,6 +732,7 @@ const renderNode = (
         format: node.format,
         currencyCode: ctx.currencyCode,
         locale: ctx.locale,
+        dateFormat: ctx.dateFormat,
         displayFormat: node.displayFormat,
       });
       const multilineFieldAdjustments: React.CSSProperties | null = formattedValue.multiline
@@ -545,10 +784,10 @@ const renderNode = (
     case 'divider':
       return <hr key={node.id} id={node.id} className={elementClassName || undefined} style={style} />;
     case 'table': {
-      const rows = resolveCollection(node.sourceBinding.bindingId, evaluation, scope);
+      const rows = resolveCollection(ctx.ast, node.sourceBinding.bindingId, evaluation, scope);
       const { style: headerStyle } = resolveStyleRef(node.headerStyle);
       return (
-        <table key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
+        <table key={node.id} id={node.id} className={elementClassName || undefined} style={resolveTableStyle(style)}>
           <thead>
             <tr style={headerStyle}>
               {node.columns.map((column) => {
@@ -575,7 +814,7 @@ const renderNode = (
               rows.map((row, index) => (
                 <tr key={`${node.id}-row-${index}`}>
                   {node.columns.map((column) => {
-                    const value = resolveExpressionValue(column.value, evaluation, { row }, ctx);
+                    const rowScope = { ...scope, row, items: { ...scope.items, [node.rowBinding]: row } };
                     const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                     const alignRight = column.format === 'currency' || column.format === 'number';
                     return (
@@ -584,7 +823,7 @@ const renderNode = (
                         className={colClassName || undefined}
                         style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
                       >
-                        {formatValue(value ?? '', column.format, ctx)}
+                        {renderTableCellContent(column, evaluation, rowScope, ctx)}
                       </td>
                     );
                   })}
@@ -596,10 +835,10 @@ const renderNode = (
       );
     }
     case 'dynamic-table': {
-      const rows = resolveCollection(node.repeat.sourceBinding.bindingId, evaluation, scope);
+      const rows = resolveCollection(ctx.ast, node.repeat.sourceBinding.bindingId, evaluation, scope);
       const { style: dynamicHeaderStyle } = resolveStyleRef(node.headerStyle);
       return (
-        <table key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
+        <table key={node.id} id={node.id} className={elementClassName || undefined} style={resolveTableStyle(style)}>
           <thead>
             <tr style={dynamicHeaderStyle}>
               {node.columns.map((column) => {
@@ -626,7 +865,7 @@ const renderNode = (
               rows.map((row, index) => (
                 <tr key={`${node.id}-row-${index}`}>
                   {node.columns.map((column) => {
-                    const value = resolveExpressionValue(column.value, evaluation, { row }, ctx);
+                    const rowScope = { ...scope, row, items: { ...scope.items, [node.repeat.itemBinding]: row } };
                     const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                     const alignRight = column.format === 'currency' || column.format === 'number';
                     return (
@@ -635,7 +874,7 @@ const renderNode = (
                         className={colClassName || undefined}
                         style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
                       >
-                        {formatValue(value ?? '', column.format, ctx)}
+                        {renderTableCellContent(column, evaluation, rowScope, ctx)}
                       </td>
                     );
                   })}
@@ -653,6 +892,9 @@ const renderNode = (
         <div key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           {node.rows.map((row) => {
             const raw = totals[row.id] ?? resolveExpressionValue(row.value, evaluation, scope, ctx) ?? '';
+            if (row.hideWhenZero && isZeroOrEmptyTotal(raw)) {
+              return null;
+            }
             const { style: rowStyle } = resolveStyleRef(row.style);
             const { className: labelClassName, style: labelStyle } = resolveStyleRef(row.labelStyle);
             const emphasizeStyle = row.emphasize ? { fontWeight: 700 } : undefined;
@@ -684,9 +926,21 @@ export interface TemplateReactRendererProps {
    * currency so formatting never diverges from the language of the labels.
    */
   locale?: string;
+  /**
+   * The recipient country's date shape. Digit order, separator and 12/24h clock
+   * come from WHERE the document is addressed, never from the language it is
+   * written in; omitted, the fixed system default applies.
+   */
+  dateFormat?: CountryDateFormat;
+  t?: TemplateLabelTranslator;
 }
 
-export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({ ast, evaluation, locale: localeOverride }) => {
+export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
+  ast,
+  evaluation,
+  locale: localeOverride,
+  dateFormat,
+}) => {
   const invoiceRecord = isRecord(evaluation.bindings.invoice) ? evaluation.bindings.invoice : {};
   const invoiceRecordUntyped = invoiceRecord as Record<string, unknown>;
   const currencyCode = String(
@@ -697,7 +951,13 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({ ast,
 
   return (
     <div className="invoice-template-root">
-      {renderNode(ast.layout, evaluation, {}, { currencyCode, locale }, rootDocumentStyleOverride)}
+      {renderNode(
+        ast.layout,
+        evaluation,
+        {},
+        { ast, currencyCode, locale, dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT },
+        rootDocumentStyleOverride
+      )}
     </div>
   );
 };
@@ -710,6 +970,9 @@ export interface TemplateRenderOutput {
 export interface TemplateRenderOptions {
   /** The recipient's locale; falls back to `metadata.locale`, then `en-US`. */
   locale?: string;
+  /** The recipient country's date shape; the fixed system default when omitted. */
+  dateFormat?: CountryDateFormat;
+  t?: TemplateLabelTranslator;
 }
 
 export const renderEvaluatedTemplateAst = async (
@@ -723,7 +986,12 @@ export const renderEvaluatedTemplateAst = async (
   const normalizedAst = normalizeTemplateAstFieldBorderDefaults(ast);
   return {
     html: renderToStaticMarkup(
-      <TemplateAstRenderer ast={normalizedAst} evaluation={evaluation} locale={options.locale} />
+      <TemplateAstRenderer
+        ast={normalizedAst}
+        evaluation={localizeTimePresentation(evaluation, options.t)}
+        locale={options.locale}
+        dateFormat={options.dateFormat}
+      />
     ),
     css: buildAstCss(normalizedAst),
   };

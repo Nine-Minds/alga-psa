@@ -25,6 +25,12 @@ export interface GeneratedSdk {
   usageExample: string;
 }
 
+type TypeScriptApi = typeof import('typescript');
+
+// Virtual root for the in-memory declaration emit; keeps module resolution
+// away from any real node_modules tree.
+const SDK_VIRTUAL_ROOT = '/alga-psa-sdk/';
+
 export class SdkGeneratorService {
   /**
    * Generate TypeScript SDK with full HATEOAS support
@@ -83,31 +89,57 @@ export class SdkGeneratorService {
    * Generate JavaScript SDK (compiled from TypeScript)
    */
   static async generateJavaScriptSdk(config: SdkGenerationConfig): Promise<GeneratedSdk> {
+    // Lazy import keeps this module cheap to load for the other languages.
+    const ts = (await import('typescript')).default;
+
     const tsConfig = { ...config, language: 'typescript' as const };
     const tsSdk = await this.generateTypeScriptSdk(tsConfig);
 
-    // Convert TypeScript files to JavaScript (simplified - in reality would use TypeScript compiler)
     const jsFiles: Record<string, string> = {};
-    
-    Object.entries(tsSdk.files).forEach(([path, content]) => {
-      if (path.endsWith('.ts') && !path.endsWith('.d.ts')) {
-        const jsPath = path.replace('.ts', '.js');
-        jsFiles[jsPath] = this.convertTsToJs(content);
-        
-        // Also generate .d.ts files for type definitions
-        if (path.includes('/types/') || path.includes('client.ts')) {
-          jsFiles[path.replace('.ts', '.d.ts')] = this.generateDeclarationFile(content);
-        }
-      } else {
-        jsFiles[path] = content;
+    const tsSources: Record<string, string> = {};
+
+    for (const [filePath, content] of Object.entries(tsSdk.files)) {
+      if (!filePath.endsWith('.ts') || filePath.endsWith('.d.ts')) {
+        jsFiles[filePath] = content;
+        continue;
       }
-    });
+
+      tsSources[filePath] = content;
+
+      const transpiled = ts.transpileModule(content, {
+        fileName: filePath,
+        reportDiagnostics: true,
+        compilerOptions: {
+          module: ts.ModuleKind.CommonJS,
+          target: ts.ScriptTarget.ES2020,
+          esModuleInterop: true
+        }
+      });
+
+      const errors = (transpiled.diagnostics ?? []).filter(
+        diagnostic => diagnostic.category === ts.DiagnosticCategory.Error
+      );
+      if (errors.length > 0) {
+        throw new Error(
+          `Failed to transpile ${filePath} to JavaScript: ${this.formatDiagnostics(ts, errors)}`
+        );
+      }
+
+      jsFiles[filePath.replace(/\.ts$/, '.js')] = transpiled.outputText;
+    }
+
+    const declarationSources = Object.fromEntries(
+      Object.entries(tsSources).filter(([filePath]) => filePath.startsWith('src/'))
+    );
+    Object.assign(jsFiles, this.emitDeclarationFiles(ts, declarationSources));
 
     // Update package.json for JavaScript
     jsFiles['package.json'] = this.generatePackageJson({
       ...config,
       language: 'javascript'
     });
+
+    await this.assertCommonJsParses(jsFiles);
 
     return {
       language: 'javascript',
@@ -124,6 +156,8 @@ export class SdkGeneratorService {
       name: config.packageName,
       version: config.version,
       description: config.description || `${config.language === 'typescript' ? 'TypeScript' : 'JavaScript'} SDK for AlgaPSA API`,
+      // The JavaScript SDK ships transpiled CommonJS, so say so explicitly.
+      ...(config.language === 'javascript' ? { type: 'commonjs' } : {}),
       main: config.language === 'typescript' ? 'dist/index.js' : 'src/index.js',
       types: config.language === 'typescript' ? 'dist/index.d.ts' : 'src/index.d.ts',
       scripts: {
@@ -1249,41 +1283,99 @@ const team = await client.teams.create({
 const members = await team.data.followLink('members');`;
   }
 
-  private static convertTsToJs(tsCode: string): string {
-    // Simplified TypeScript to JavaScript conversion
-    // In a real implementation, you'd use the TypeScript compiler API
-    return tsCode
-      .replace(/: [^=,;{}()]+/g, '') // Remove type annotations
-      .replace(/interface\s+\w+\s*{[^}]*}/g, '') // Remove interfaces
-      .replace(/export\s+interface\s+[^{]+{[^}]*}/g, '') // Remove exported interfaces
-      .replace(/import\s+\{[^}]+\}\s+from\s+'[^']+';/g, match => {
-        // Convert ES6 imports to CommonJS requires
-        const moduleMatch = match.match(/from\s+'([^']+)'/);
-        const importsMatch = match.match(/\{([^}]+)\}/);
-        if (moduleMatch && importsMatch) {
-          const moduleName = moduleMatch[1];
-          const imports = importsMatch[1];
-          return `const { ${imports} } = require('${moduleName}');`;
-        }
-        return match;
-      });
-  }
+  /**
+   * Emit real .d.ts files for the generated sources with an in-memory program.
+   */
+  private static emitDeclarationFiles(
+    ts: TypeScriptApi,
+    tsSources: Record<string, string>
+  ): Record<string, string> {
+    const virtualFiles = new Map(
+      Object.entries(tsSources).map(([filePath, content]) => [SDK_VIRTUAL_ROOT + filePath, content])
+    );
 
-  private static generateDeclarationFile(tsCode: string): string {
-    // Extract type definitions for .d.ts files
-    // This is a simplified version - real implementation would be more sophisticated
-    const lines = tsCode.split('\n');
-    const declarationLines: string[] = [];
+    const options: import('typescript').CompilerOptions = {
+      target: ts.ScriptTarget.ES2020,
+      module: ts.ModuleKind.CommonJS,
+      moduleResolution: ts.ModuleResolutionKind.Node10,
+      esModuleInterop: true,
+      skipLibCheck: true,
+      declaration: true,
+      emitDeclarationOnly: true,
+      types: []
+    };
 
-    for (const line of lines) {
-      if (line.includes('export interface') || 
-          line.includes('export class') || 
-          line.includes('export type') ||
-          line.includes('export declare')) {
-        declarationLines.push(line);
-      }
+    // Default lib comes off disk from the typescript package. If it is not
+    // readable (bundled runtime), drop it: unresolved globals only widen
+    // inferred types, they do not block declaration emit.
+    const defaultLibPath = ts.getDefaultLibFilePath(options);
+    if (!ts.sys?.fileExists?.(defaultLibPath)) {
+      options.noLib = true;
     }
 
-    return declarationLines.join('\n');
+    const emitted: Record<string, string> = {};
+    const host = ts.createCompilerHost(options, true);
+    const hostGetSourceFile = host.getSourceFile.bind(host);
+    const hostReadFile = host.readFile.bind(host);
+    const hostFileExists = host.fileExists.bind(host);
+
+    host.getSourceFile = (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile) => {
+      const virtual = virtualFiles.get(fileName);
+      return virtual === undefined
+        ? hostGetSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile)
+        : ts.createSourceFile(fileName, virtual, languageVersionOrOptions, true);
+    };
+    host.readFile = fileName => virtualFiles.get(fileName) ?? hostReadFile(fileName);
+    host.fileExists = fileName => virtualFiles.has(fileName) || hostFileExists(fileName);
+    host.writeFile = (fileName, text) => {
+      emitted[fileName] = text;
+    };
+
+    const program = ts.createProgram([...virtualFiles.keys()], options, host);
+    const emitResult = program.emit();
+
+    const declarations: Record<string, string> = {};
+    for (const filePath of Object.keys(tsSources)) {
+      const declarationPath = filePath.replace(/\.ts$/, '.d.ts');
+      const text = emitted[SDK_VIRTUAL_ROOT + declarationPath];
+      if (text === undefined) {
+        throw new Error(
+          `Declaration emit produced no output for ${filePath}: ${this.formatDiagnostics(ts, emitResult.diagnostics)}`
+        );
+      }
+      declarations[declarationPath] = text;
+    }
+
+    return declarations;
+  }
+
+  /**
+   * Guard the emitted JavaScript: a script-goal compile rejects any leftover
+   * ESM syntax, which `node --check` would wave through via module detection.
+   */
+  private static async assertCommonJsParses(files: Record<string, string>): Promise<void> {
+    const { Script } = await import('node:vm');
+
+    for (const [filePath, content] of Object.entries(files)) {
+      if (!filePath.endsWith('.js')) {
+        continue;
+      }
+      try {
+        new Script(content, { filename: filePath });
+      } catch (error) {
+        throw new Error(
+          `Generated JavaScript file ${filePath} is not valid CommonJS: ${(error as Error).message}`
+        );
+      }
+    }
+  }
+
+  private static formatDiagnostics(
+    ts: TypeScriptApi,
+    diagnostics: readonly import('typescript').Diagnostic[]
+  ): string {
+    return diagnostics
+      .map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, ' '))
+      .join('; ');
   }
 }

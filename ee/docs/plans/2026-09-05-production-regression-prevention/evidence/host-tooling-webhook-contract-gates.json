@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "suite": "node-tooling",
+  "revision": "9b7431ed9db6126f82b8a30d9b736381c01c13f0",
+  "runtime": "v25.5.0",
+  "status": "passed",
+  "counts": {
+    "tests": 647,
+    "passed": 647,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "source": {
+    "before": {
+      "revision": "9b7431ed9db6126f82b8a30d9b736381c01c13f0",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "9b7431ed9db6126f82b8a30d9b736381c01c13f0",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "failures": [],
+  "requiredFiles": 67,
+  "artifacts": {
+    "evidence.json": {
+      "path": "/Users/roberisaacs/.codex/worktrees/82cc/alga-psa/test-results/node-tooling/evidence.json",
+      "sha256": "00663e311093a47cf7c0108e5890c4dc3efbf63ca3713467334962694f5ca26e"
+    },
+    "discovery.json": {
+      "path": "/Users/roberisaacs/.codex/worktrees/82cc/alga-psa/test-results/node-tooling/discovery.json",
+      "sha256": "e9a8b2d79bf366e0583880ca1f291e6dfb1d30c1e0c022e88efd5ed1e308562c"
+    },
+    "events.jsonl": {
+      "path": "/Users/roberisaacs/.codex/worktrees/82cc/alga-psa/test-results/node-tooling/events.jsonl",
+      "sha256": "5db7ae04b95236c399ea600c990db2208f890af8784030c5b5e1ba0330fdbe20"
+    }
+  },
+  "limitations": [
+    "Native test-tooling evidence only; not current GitHub CI or full application suite validation."
+  ],
+  "priorFailure": "/tmp/alga-tooling-3cb3-failure"
+}

@@ -16,7 +16,8 @@ import {
   saveTimeEntry,
   updateTimeEntryApprovalStatus,
   deleteTimeEntry,
-  getTimeEntryById
+  getTimeEntryById,
+  getTimeEntryBillingMode
 } from './timeEntryCrudActions';
 import { fetchTimeEntryChangeRequestsForTimeSheet } from './timeEntryChangeRequestActions';
 import {
@@ -31,6 +32,7 @@ import {
   fetchScheduleEntryForWorkItem,
   fetchDefaultClientTaxRateInfoForWorkItem // Added export
 } from './timeEntryServices';
+import { resolveDefaultTicketTimeEntryService } from './timeEntryServiceDefaults';
 
 export {
   getClientIdForWorkItem,
@@ -45,6 +47,7 @@ export {
   updateTimeEntryApprovalStatus,
   deleteTimeEntry,
   getTimeEntryById,
+  getTimeEntryBillingMode,
   fetchTimeEntryChangeRequestsForTimeSheet,
   fetchWorkItemsForTimeSheet,
   addWorkItem,
@@ -53,7 +56,8 @@ export {
   fetchClientTaxRateForWorkItem,
   fetchServicesForTimeEntry,
   fetchScheduleEntryForWorkItem,
-  fetchDefaultClientTaxRateInfoForWorkItem // Added export
+  fetchDefaultClientTaxRateInfoForWorkItem, // Added export
+  resolveDefaultTicketTimeEntryService
 };
 
 // Note: Types and schemas previously re-exported from here must now be imported

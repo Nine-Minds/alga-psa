@@ -1,0 +1,30 @@
+{
+  "scope": "Landed browser file floor and Node artifact selection",
+  "baseline": "047f1795e1",
+  "regression": {
+    "before": "Old verifier incorrectly returned passed after inbound-email was removed from both CE/EE collection/results and candidate inventory",
+    "after": "All nineteen landed journey deletions reject both editions; missing file is identified explicitly"
+  },
+  "validation": {
+    "focusedTests": 21,
+    "durationMs": 1139.04875,
+    "failures": 0,
+    "skips": 0,
+    "workflowLint": "passed node-tests.yml and production-regression.yml"
+  },
+  "logs": [
+    {
+      "path": "/tmp/alga-browser-floor-red-final.log",
+      "sha256": "ffc832247ae4941b6bc86d42ea98592553c89dae9c0b0d648e6d3a5914b04544"
+    },
+    {
+      "path": "/tmp/alga-browser-floor-green-final.log",
+      "sha256": "eb60b5740c64f3cf6dd38426087cb63978b2f69bc1866c4f6f992feceacbd855"
+    }
+  ],
+  "limitations": [
+    "File-level floor does not independently pin every assertion identity within a file",
+    "Native workflow execution and effective required-check enforcement remain pending",
+    "No application or Docker builds; complete tooling was last validated at a9f291053c, focused suites cover this change"
+  ]
+}

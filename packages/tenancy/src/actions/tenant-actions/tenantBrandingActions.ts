@@ -18,6 +18,16 @@ export interface TenantBranding {
    * pages). Absent means every surface keeps using `logoUrl`.
    */
   logoDarkUrl?: string;
+  /**
+   * Optional landscape wordmark (usually with the company name in it) for the
+   * expanded MSP side menu and client portal side panel. Enterprise
+   * white-labeling only; every square frame keeps using `logoUrl`.
+   */
+  logoWideUrl?: string;
+  /** Wide wordmark for dark surfaces; falls back to `logoWideUrl`. */
+  logoWideDarkUrl?: string;
+  /** Browser tab icon for this tenant. Enterprise white-labeling only. */
+  faviconUrl?: string;
   primaryColor: string;
   secondaryColor: string;
   clientName: string;
@@ -49,6 +59,18 @@ const tenantSettingsQuery = (knex: Knex, tenant: string) =>
   tenantDb(knex, tenant).table('tenant_settings');
 
 /**
+ * Which image each square mark is re-cut from is bookkeeping for the settings
+ * screens, not branding — and it names a document, so it stays out of a payload
+ * the portal and the sign-in page also read.
+ */
+const withoutMarkProvenance = (branding: TenantBranding): TenantBranding => {
+  const rest = { ...branding } as TenantBranding & Record<string, unknown>;
+  delete rest.logoMarkSource;
+  delete rest.logoDarkMarkSource;
+  return rest;
+};
+
+/**
  * Update tenant's branding settings
  */
 export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, branding: TenantBranding) => {
@@ -68,6 +90,13 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
   // Carry forward optional fields the caller didn't send so an older client or
   // another settings tab can never wipe them.
   const logoDarkUrl = branding.logoDarkUrl ?? existingSettings.branding?.logoDarkUrl;
+  const logoWideUrl = branding.logoWideUrl ?? existingSettings.branding?.logoWideUrl;
+  const logoWideDarkUrl = branding.logoWideDarkUrl ?? existingSettings.branding?.logoWideDarkUrl;
+  const faviconUrl = branding.faviconUrl ?? existingSettings.branding?.faviconUrl;
+  // Written by the logo actions only (which image each square mark is cut from),
+  // so a branding save from another tab must never drop it.
+  const logoMarkSource = existingSettings.branding?.logoMarkSource;
+  const logoDarkMarkSource = existingSettings.branding?.logoDarkMarkSource;
   const portalSidebarStyle = branding.portalSidebarStyle ?? existingSettings.branding?.portalSidebarStyle;
   const portalSidebarColor = branding.portalSidebarColor ?? existingSettings.branding?.portalSidebarColor;
   const portalFollowsTheme = isEnterprise
@@ -95,6 +124,11 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
     branding: {
       logoUrl: branding.logoUrl,
       logoDarkUrl,
+      logoWideUrl,
+      logoWideDarkUrl,
+      faviconUrl,
+      logoMarkSource,
+      logoDarkMarkSource,
       primaryColor: branding.primaryColor,
       secondaryColor: branding.secondaryColor,
       clientName: branding.clientName,
@@ -147,7 +181,7 @@ export const getTenantBrandingAction = withOptionalAuth(async (user: IUserWithRo
   }
 
   return scopeBrandingToEdition({
-    ...tenantSettings.settings.branding,
+    ...withoutMarkProvenance(tenantSettings.settings.branding),
     supportEmail: tenantSettings.settings.supportEmail ?? '',
     supportPhone: tenantSettings.settings.supportPhone ?? '',
   }, isEnterprise);
@@ -167,7 +201,7 @@ export async function getTenantBrandingByIdAction(tenantId: string): Promise<Ten
   }
 
   return scopeBrandingToEdition({
-    ...tenantSettings.settings.branding,
+    ...withoutMarkProvenance(tenantSettings.settings.branding),
     supportEmail: tenantSettings.settings.supportEmail ?? '',
     supportPhone: tenantSettings.settings.supportPhone ?? '',
   }, isEnterprise);

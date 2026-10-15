@@ -1,0 +1,37 @@
+{
+  "status": "passed",
+  "phase": "upgrade-data-retention",
+  "batches": [
+    {
+      "batch": 1,
+      "count": "1028"
+    },
+    {
+      "batch": 2,
+      "count": "31"
+    }
+  ],
+  "tenants": 2,
+  "tickets": 6,
+  "contracts": 2,
+  "usageRecords": 2,
+  "timeEntries": 8,
+  "limitations": [
+    "Business actions and browser behavior not yet executed",
+    "SQL fixture scoping does not prove application tenant isolation"
+  ],
+  "schemaVersion": 1,
+  "baselineCommit": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+  "candidateCommit": "8bc3d1a6142d691401abae0245b6367a83d3a23f",
+  "database": "upgrade_v150_roles_82cc_20260907",
+  "permissionReconciliation": {
+    "reconciled": 2,
+    "skipped": 0,
+    "failed": 0
+  },
+  "logs": {
+    "/tmp/alga-upgrade-roles-baseline.log": "6f2673ec5421689e759604fb054406230ecd874e965d59fc29be053abcc50024",
+    "/tmp/alga-upgrade-roles-seed.log": "5a323b2a2b2d5f27745b473b40d3da5129f21b0a6f2feb557122fa4c80d546ea",
+    "/tmp/alga-upgrade-roles-candidate.log": "6ecbd190dec8b85318f29cab549291253c19faba9f15eb160adaab5c5655edda"
+  }
+}

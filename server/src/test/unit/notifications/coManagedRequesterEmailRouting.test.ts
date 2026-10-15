@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
-const runtime = vi.hoisted(() => ({ settings: vi.fn(), defaultFrom: vi.fn(), connection: vi.fn(), scopes: [] as string[],
+const runtime = vi.hoisted(() => ({ connection: vi.fn(), scopes: [] as string[],
   rows: {} as Record<string, any> }));
 vi.mock('@alga-psa/db', () => ({ getConnection: runtime.connection, tenantDb: (_db: any, tenant: string) => {
   runtime.scopes.push(tenant);
@@ -11,49 +11,39 @@ vi.mock('@alga-psa/db', () => ({ getConnection: runtime.connection, tenantDb: (_
     return query;
   } };
 } }));
-vi.mock('@alga-psa/email', () => ({ TenantEmailService: { getTenantEmailSettings: runtime.settings, getDefaultFromAddress: runtime.defaultFrom } }));
 import { resolveCoManagedRequesterEmailRouting } from '@alga-psa/jobs/handlers/coManagedRequesterEmailRouting';
 import { buildTenantPortalSlug } from '@alga-psa/shared/utils/tenantSlug';
 afterEach(() => vi.unstubAllEnvs());
 const item = () => ({ tenant: randomUUID(), message: { resource: { id: randomUUID() } } } as any);
 beforeEach(() => {
-  runtime.settings.mockReset().mockResolvedValue({}); runtime.defaultFrom.mockReset().mockReturnValue({ email: 'default@example.test' });
   runtime.connection.mockReset().mockResolvedValue({}); runtime.scopes.length = 0; runtime.rows = {};
   vi.stubEnv('NEXTAUTH_URL', 'https://app.example.test');
 });
-it('uses configured ticketing From, provider display name, the originating reply mailbox and a tenant-qualified portal link', async () => {
-  const delivery = item(), providerId = randomUUID();
-  runtime.settings.mockResolvedValue({ ticketingFromEmail: ' helpdesk@example.test ' });
-  runtime.rows.tickets = { board_id: randomUUID(), email_metadata: { providerId } };
-  runtime.rows.email_providers = (where: any) => where.mailbox ? { sender_display_name: 'Customer IT' }
-    : where.id === providerId && where.is_active ? { mailbox: 'intake@example.test', sender_display_name: 'Intake' } : undefined;
+it('routes the sender through the ticket board, replies to the originating intake mailbox and links a tenant-qualified portal', async () => {
+  const delivery = item(), providerId = randomUUID(), boardId = randomUUID();
+  runtime.rows.tickets = { board_id: boardId, email_metadata: { providerId } };
+  runtime.rows.email_providers = (where: any) => where.id === providerId && where.is_active ? { mailbox: 'intake@example.test', sender_display_name: 'Intake' } : undefined;
   expect(await resolveCoManagedRequesterEmailRouting(delivery)).toEqual({
-    from: { email: 'helpdesk@example.test', name: 'Customer IT' }, replyTo: { email: 'intake@example.test', name: 'Intake' },
+    boardId, replyTo: { email: 'intake@example.test', name: 'Intake' },
     url: `https://app.example.test/client-portal/tickets/${delivery.message.resource.id}?tenant=${buildTenantPortalSlug(delivery.tenant)}`,
   });
   expect(new Set(runtime.scopes)).toEqual(new Set([delivery.tenant]));
 });
-it('uses the configured display name with the default sender and preserves an active customer portal host', async () => {
-  runtime.settings.mockResolvedValue({ ticketingFromName: ' Customer support ' });
+it('leaves the reply mailbox to the resolved sender and preserves an active customer portal host', async () => {
   runtime.rows.portal_domains = { status: 'active', domain: 'support.customer.test', canonical_host: 'placeholder.test' };
   const delivery = item(), result = await resolveCoManagedRequesterEmailRouting(delivery);
-  expect(result).toMatchObject({ from: { email: 'default@example.test', name: 'Customer support' }, replyTo: { email: 'default@example.test' } });
+  expect(result.replyTo).toBeUndefined();
   expect(result.url).toBe(`https://support.customer.test/client-portal/tickets/${delivery.message.resource.id}`);
-});
-it('uses the board name when a ticketing address has no configured or provider name', async () => {
-  runtime.settings.mockResolvedValue({ ticketingFromEmail: 'helpdesk@example.test' });
-  runtime.rows.tickets = { board_id: randomUUID() }; runtime.rows.boards = { board_name: 'Client Helpdesk' };
-  expect(await resolveCoManagedRequesterEmailRouting(item())).toMatchObject({ from: { email: 'helpdesk@example.test', name: 'Client Helpdesk' } });
 });
 it.each(['pending_dns', 'disabled'])('ignores the canonical placeholder for a %s portal domain', async status => {
   runtime.rows.portal_domains = { status, domain: 'not-active.customer.test', canonical_host: 'placeholder.portal.test' };
   const delivery = item(), result = await resolveCoManagedRequesterEmailRouting(delivery);
   expect(result.url).toContain('https://app.example.test/client-portal/'); expect(result.url).toContain(`tenant=${buildTenantPortalSlug(delivery.tenant)}`);
-  expect(result.from).toBeUndefined(); expect(result.replyTo).toBeUndefined();
+  expect(result.boardId).toBeUndefined(); expect(result.replyTo).toBeUndefined();
 });
 it('propagates routing lookup failures so a durable delivery retries instead of using a guessed sender', async () => {
-  runtime.settings.mockRejectedValue(new Error('temporary settings failure'));
-  await expect(resolveCoManagedRequesterEmailRouting(item())).rejects.toThrow('temporary settings failure');
+  runtime.connection.mockRejectedValue(new Error('temporary connection failure'));
+  await expect(resolveCoManagedRequesterEmailRouting(item())).rejects.toThrow('temporary connection failure');
 });
 it('rejects a malformed active portal host before it can appear in a requester link', async () => {
   runtime.rows.portal_domains = { status: 'active', domain: 'customer.test/path?tenant=other' };
@@ -66,5 +56,5 @@ it('resolves technician reply mailboxes without consulting a requester portal do
   runtime.rows.tickets = { email_metadata: { providerId } };
   runtime.rows.email_providers = (where: any) => where.id === providerId && where.is_active ? { mailbox: 'inbound@example.test' } : undefined;
   runtime.rows.portal_domains = () => { throw new Error('Technician routing must not use a requester portal domain'); };
-  expect(await resolveCoManagedTicketEmailMailbox(delivery.tenant, delivery.message.resource.id)).toEqual({ from: undefined, replyTo: { email: 'inbound@example.test', name: undefined } });
+  expect(await resolveCoManagedTicketEmailMailbox(delivery.tenant, delivery.message.resource.id)).toEqual({ boardId: undefined, replyTo: { email: 'inbound@example.test', name: undefined } });
 });

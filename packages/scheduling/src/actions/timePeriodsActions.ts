@@ -14,6 +14,7 @@ import {
   ITimePeriodView,
   ITimePeriodSettings
 } from '@alga-psa/types';
+import { ensureTimePeriodCoversDate } from '../lib/timePeriodMaterialization';
 import { endOfConfiguredTimePeriod } from '../lib/timePeriodCadence';
 import { addDays, addMonths, format, differenceInHours, parseISO, startOfDay, formatISO, endOfMonth, AddMonthsOptions, differenceInDays } from 'date-fns';
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
@@ -270,7 +271,12 @@ export const getCurrentTimePeriod = withAuth(async (user, { tenant }): Promise<T
       return period ? { tenant, period_id: period.period_id, start_date: period.start_date, end_date: period.end_date } : null;
     }
 
-    const currentPeriod = await TimePeriod.findByDate(knex, tenant, currentDate);
+    let currentPeriod = await TimePeriod.findByDate(knex, tenant, currentDate);
+    if (!currentPeriod) {
+      // Materialize the current period from the tenant's settings (no-op without settings).
+      await ensureTimePeriodCoversDate(knex, tenant, Temporal.PlainDate.from(currentDate));
+      currentPeriod = await TimePeriod.findByDate(knex, tenant, currentDate);
+    }
     if (!currentPeriod) return null;
 
     // Convert Temporal.PlainDate to string for view type
@@ -289,9 +295,37 @@ export const getCurrentTimePeriod = withAuth(async (user, { tenant }): Promise<T
   }
 });
 
+export const getTimeEntryUserTimeZone = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<string>> => {
+  try {
+    const { knex } = await createTenantKnex();
+    const userId = user?.user_id || null;
+    if (!tenant || !userId) {
+      return 'UTC';
+    }
+    return await resolveUserTimeZone(knex, tenant, userId);
+  } catch (error) {
+    const expected = timePeriodActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error resolving time entry user timezone:', error);
+    throw error;
+  }
+});
+
 // Helper function to get the end of a period based on frequency unit
+// LEVERAGE: pattern period-end-calc — one setting→[start,end) engine should own this
 function getEndOfPeriod(startDate: string, setting: ITimePeriodSettings): Temporal.PlainDate {
-  return endOfConfiguredTimePeriod(toPlainDate(startDate), setting);
+  const start = toPlainDate(startDate);
+  // Manual range generation keeps main's long-standing reading of a monthly
+  // end_day as the stored boundary itself (1st-15th stored as [1st, 15th)); main's
+  // own infrastructure test pins it. The suggester and the nightly job read
+  // end_day as inclusive (#3206) through the shared cadence.
+  if (setting.frequency_unit === 'month' && setting.end_day && Number.isSafeInteger(setting.frequency) && setting.frequency >= 1) {
+    const month = start.add({ months: setting.frequency - 1 });
+    return month.with({ day: Math.min(setting.end_day, month.daysInMonth) });
+  }
+  return endOfConfiguredTimePeriod(start, setting);
 }
 
 // Start of the period that follows the one beginning at currentStart, for
@@ -324,6 +358,7 @@ function getNextPeriodStart(
 }
 
 // Modify the generateTimePeriods function
+// LEVERAGE: pattern period-grid — re-express through periodContaining/cellEnd once the item-3 end-day convention settles
 export async function generateTimePeriods(
   settings: ITimePeriodSettings[],
   startDateStr: ISO8601String,
@@ -408,6 +443,7 @@ export async function generateTimePeriods(
 }
 
 // Helper function to align date to the next occurrence of a weekday
+// LEVERAGE: pattern period-grid — forward-aligning grid; the suggester's periodContaining/cellEnd (lib/timePeriodSuggester.ts) is the second one
 function alignToWeekday(dateStr: string, targetDay: number): string {
   const date = Temporal.PlainDate.from(dateStr);
   const daysToAdd = (targetDay - date.dayOfWeek + 7) % 7;
@@ -415,6 +451,7 @@ function alignToWeekday(dateStr: string, targetDay: number): string {
 }
 
 // Helper function to align date to the specified day of the month
+// LEVERAGE: pattern period-grid — forward-aligning grid; see alignToWeekday
 function alignToMonthDay(dateStr: string, targetDay: number): string {
   const date = Temporal.PlainDate.from(dateStr);
   let alignedDate = date.with({ day: targetDay });

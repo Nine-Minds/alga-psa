@@ -18,8 +18,8 @@ export interface RangeOptions {
 export interface StorageUploadOptions {
     mime_type?: string;
     metadata?: Record<string, string>;
-    /** Exact source byte count for providers that require a streaming length. */
-    content_length?: number;
+    /** Exact source byte count; required for a stream on providers that need a length. */
+    size?: number;
 }
 
 export interface StorageProviderInterface {

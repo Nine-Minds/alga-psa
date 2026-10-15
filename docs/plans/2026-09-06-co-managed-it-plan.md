@@ -1,8 +1,14 @@
 # Co-managed IT implementation plan
 
-## Current implementation and review status — 2026-09-08
+## Current implementation and review status — 2026-09-20
 
-The repository implementation and final coherence fixes are committed. The final source review found no remaining demonstrated implementation gap in the agreed scope. Milestone details follow below. The final requirement review is captured in [T01–T07](co-managed-audit-t01-t07.md), [T08–T15](co-managed-audit-t08-t15.md), and [T16–T22](co-managed-audit-t16-t22.md). These current audits supersede historical checkpoint paragraphs that describe work subsequently completed.
+**Draft implementation; human-review readiness blocked.** The [completion and correction PRD](2026-09-20-co-managed-it-completion/PRD.md) is the current acceptance authority, with synchronized [implementation checklist](2026-09-20-co-managed-it-completion/features.json), [tests](2026-09-20-co-managed-it-completion/tests.json) and [working notes](2026-09-20-co-managed-it-completion/SCRATCHPAD.md). It covers this foundation and both September 11 follow-ons.
+
+At candidate `618019c3e3563f729684163c1abd8f5ad312e5dd`, exact-HEAD CI run 35492001110 failed the requester lifecycle-pause case; customer Email → Open Providers is blocked; customer identity/directory/inbound acceptance and other required journeys remain incomplete. PR #3363 is currently MERGEABLE, but this does not establish readiness. The new plan requires causal repair, full requirement reconciliation and a fail-closed candidate evidence gate before XO review eligibility. A successful bounded smoke or preparation assignment cannot close the whole product.
+
+## Historical implementation and validation — September 8–11
+
+The following checkpoints record implementation and validation at their stated revisions. They do not establish acceptance of the current candidate. The historical source audits are [T01–T07](co-managed-audit-t01-t07.md), [T08–T15](co-managed-audit-t08-t15.md), and [T16–T22](co-managed-audit-t16-t22.md). Their implementation findings remain useful inputs to the current completion inventory.
 
 The user's later instructions authorize implementation and milestone commits, and prioritize focused Node/dev validation while deferring most broader testing. Validation reported here uses fast Node/UI checks and isolated, migrated PostgreSQL journeys. Fresh-install and Citus migration chains, full browser/light/dark/locale journeys, live SMTP/Stripe/Temporal/PG Boss execution, and source-unavailable restore through native screens are **not claimed complete**. Production price configuration and the external self-host signed-capacity issuer remain the deployment dependencies specified below.
 
@@ -370,7 +376,11 @@ These sources informed the separation of visibility, responsibility, licensing, 
 
 ## Completion criteria
 
-### Implementation progress
+The [current correction plan](2026-09-20-co-managed-it-completion/PRD.md#c8--enforce-completion-before-requesting-human-review) defines the required implementation, human-review and production predicates. All foundation T01–T22 and both follow-on checklists must have current implementation/evidence records; required failures, missing artifacts, incomplete flows or stale verification keep review readiness false. The final candidate must have mandatory green CI, matching app/worker/PR provenance, current mergeability and a stable reproducible review environment. External real-provider production prerequisites retain their existing separate scope and must never be reported as simulator passes.
+
+Only the XO/captain controls workflow movement and approval. The milestones below are historical progress, not completion certificates.
+
+### Historical implementation progress
 
 - 2026-09-06: Added signed, sponsor-bound `co_managed_seats` capacity independent of MSP seats. Corrected signature verification to preserve the existing tenant audience claim, with malformed-claim rejection and cached-expiry checks for capacity. Licensing tests pass (39 tests across four files), as does the licensing package typecheck. Provisioning and capacity allocation are not connected yet.
 - 2026-09-06: Added the `co_managed` product/capability registry, session preservation, operational route/API metadata, commercial and unknown-surface denial, and restricted settings. Both customer UI shells use the client-only `release-v1-6-feature` boundary. Focused product/UI regressions pass (135 tests across 20 files, including targeted reruns); types, auth, and server typechecks pass (server needs a 12 GiB Node heap). This is boundary preparation: database product support, provisioning, operational server-action conversion, restricted integration configuration, and sponsorship enforcement are still pending. No customer workspace can be provisioned through this checkpoint.
@@ -1064,7 +1074,7 @@ The evidence is the rows themselves, not the reasoning about them. Dumping `co_m
 
 **Chosen semantic: (c) the fixtures asserted counts the design never promised — corrected the tests, changed no production code.** Three independent layers already enforce exactly-once, which is why there was nothing to fix underneath: `transitionTicket` looks up `co_management_ticket_handoffs` by `operation_id` and returns the immutable original receipt on replay; the request fingerprint refuses a *changed* retry rather than merging it; and PostgreSQL makes duplicates structurally impossible via `co_management_ticket_handoffs` PK `(tenant, operation_id)`, `co_participation_evidence_source_unique` on source identity, and `co_management_event_consumers` PK `(tenant, event_id, consumer)`. Rewriting any of those to satisfy a stale number would have broken a correct contract to preserve a wrong expectation. The rejected alternative was to suppress the `work_archived` row on revocation so the count returned to three: that row is the retained record of *what the MSP could see at the moment access was withdrawn*, which is precisely the evidence a co-managed exit is supposed to seal, and deleting it to fix a test would have destroyed audit history.
 
-Scoped call sites — all in `server/src/test/integration/coManagedBootstrap.integration.test.ts`, no production file touched:
+Scoped call sites — all in `ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts`, no production file touched:
 
 - **`participation evidence retains explicit handoff history…`** — expects 4, and now asserts the *composition* (`source_type:event_type`) rather than a bare number, plus `filter(operation_id === request.operationId)).toHaveLength(1)` to pin the replay directly where it previously only implied it. The fixture's `evidence()` helper gained an `.orderBy('evidence_id')` tiebreak: `access_revoked` and `work_archived` are written under one `clock_timestamp()`, so ordering by `occurred_at` alone left their relative order undefined and the later `toEqual(captured)` re-read latently flaky.
 - **`task events retain metadata-only qualified intent…`** — expects 6, and now asserts the CREATED event's four-consumer fan-out by name, so a future catalog change fails with the reason instead of an opaque count.
@@ -1073,3 +1083,15 @@ Scoped call sites — all in `server/src/test/integration/coManagedBootstrap.int
 Validation: the new case necessarily passes on unmodified production code, so "fails pre-fix" was not available to demonstrate — there is no pre-fix. It was instead **mutation-tested**: replacing the `prior` receipt lookup in `ticketHandoffs.ts::transitionTicket` with `null` makes it fail, and the production file was restored byte-identical. The full file moved from 1395 passed / 5 failed to **1398 passed / 3 failed** of 1401 (1395 + 2 repaired + 1 added) in 267s, introducing none. The three residuals — `recovers committed channels through the scheduled server job handler…`, `revokes requester file access on removal…`, and `retains native deletion invalidation before removing a leaf…` — were each re-run in isolation and on a stashed pristine tree, and fail identically in both. They are therefore **deterministic pre-existing failures, not the order-dependent flakes the earlier rounds recorded**; that characterization should be corrected. The third fails inside `packages/co-managed/dist/chunk-ACJOLR7W.js` with `CO_MANAGED_SHARED_WORK_FORBIDDEN`, i.e. against the built `dist` rather than `src`, so a stale package build is the first thing to rule out. Diagnosing these three was out of scope for this round and they remain open. `server` and `packages/co-managed` `tsc --noEmit` both remain at 0 errors. Backend-only round: row evidence, no UI path touched, and `release-v1-6-feature` remains UI-only.
 
 Still open and explicitly not closed by this round: broad build and whole-suite regression validation, live Stripe price/license deployment dependencies, and Citus-vs-local migration divergence.
+
+## Client-integrated follow-on (2026-09-11)
+
+The follow-on plan at [2026-09-11-co-managed-client-integration](2026-09-11-co-managed-client-integration/PRD.md) moves relationship management onto the client record and makes this page a cross-client overview. Implemented and verified so far:
+
+- The MSP client record composes one stable `co-managed` Service view and a compact status/seat summary through an optional cross-feature seam, with quick view linking to the full client. Authorization, RBAC, redaction, and seat usage come from the same management domain as the global page, and target resolution now uses explicit customer-home/sponsor-client selectors across policy, SLA, delegation, departure, allocation, and setup recovery.
+- Client-fixed setup, provisioning recovery, allocation guard, and the relationship sections replace the global editor; the client shortfall flow reviews an absolute sponsor pool target, freezes the purchase operation, waits for verified entitlement, and retries the allocation without a second charge. The hosted pool editor is shared with Account Management and self-host routes through License Management.
+- The combined ticket queue accepts a sponsor-client filter that matches native MSP tickets and shared work before search, counts, and export.
+- The release flag remains a UI-only boundary (`release-v1-6-feature`); no backend resolution, action, migration, or worker checks it.
+
+Recorded evidence covers migrated-database resolver, overview, and queue cases plus component suites for the client integration, management sections, pool editor, and legacy adapters. Remaining acceptance evidence is explicit and pending: real hosted Stripe test-mode and self-host issuer journeys, Citus migration divergence for any changed lookup, and the full browser boundary/presentation matrix. Historical T01-T22 passes remain historical; the dated addenda in the audit files distinguish them from this follow-on's coverage.
+

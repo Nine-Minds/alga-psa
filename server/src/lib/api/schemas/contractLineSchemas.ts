@@ -139,6 +139,8 @@ export const combinedFixedPlanConfigResponseSchema = z.object({
 // SERVICE CONFIGURATION SCHEMAS
 // ============================================================================
 
+export const pricingBasisSchema = z.enum(['bundle', 'unit']);
+
 // Base service configuration
 export const planServiceConfigurationSchema = z.object({
   config_id: uuidSchema,
@@ -146,7 +148,7 @@ export const planServiceConfigurationSchema = z.object({
   service_id: uuidSchema,
   configuration_type: configurationTypeSchema,
   custom_rate: z.number().min(0).optional(),
-  quantity: z.number().min(1).optional(),
+  quantity: z.number().min(0).optional(),
   instance_name: z.string().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
@@ -157,13 +159,20 @@ export const planServiceConfigurationSchema = z.object({
 export const planServiceFixedConfigSchema = z.object({
   config_id: uuidSchema,
   base_rate: z.number().min(0).optional(),
+  pricing_basis: pricingBasisSchema.nullable().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema
 });
 
+// 'unit': quantity x base_rate (the unit rate, in cents) is billed every
+// period; a null/absent base_rate follows the catalog price in the contract
+// currency. 'bundle' (default): the line total is authoritative and the
+// quantity only allocates a share of it. The basis is chosen when the service
+// is added and cannot be changed by an update.
 export const createPlanServiceFixedConfigSchema = z.object({
-  base_rate: z.number().min(0).optional()
+  base_rate: z.number().min(0).nullable().optional(),
+  pricing_basis: pricingBasisSchema.optional()
 });
 
 // Hourly service configuration
@@ -269,7 +278,9 @@ export const createUserTypeRateSchema = z.object({
 // Add service to plan
 export const addServiceToPlanSchema = z.object({
   service_id: uuidSchema,
-  quantity: z.number().min(1).optional().default(1),
+  // Zero is a legitimate seat count for a per-unit service; bundle services
+  // still require at least 1 (checked by the service, which knows the basis).
+  quantity: z.number().min(0).optional().default(1),
   custom_rate: z.number().min(0).optional(),
   configuration_type: configurationTypeSchema.optional(),
   type_config: z.union([
@@ -282,7 +293,7 @@ export const addServiceToPlanSchema = z.object({
 
 // Update service in plan
 export const updatePlanServiceSchema = z.object({
-  quantity: z.number().min(1).optional(),
+  quantity: z.number().min(0).optional(),
   custom_rate: z.number().min(0).optional(),
   type_config: z.union([
     createPlanServiceFixedConfigSchema.partial(),

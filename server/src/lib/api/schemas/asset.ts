@@ -14,8 +14,8 @@ import {
 } from './common';
 
 // Asset type schema — any registry slug (built-in or custom tenant type), not a
-// fixed enum. Validation against the tenant's asset_type_registry happens in the
-// action layer (resolveWritableAssetType).
+// fixed enum. Validation against the tenant's asset_type_registry happens in
+// the shared asset attribute write layer.
 export const assetTypeSchema = z.string().min(1, 'Asset type is required').max(255);
 
 // Base asset schema
@@ -26,10 +26,12 @@ export const createAssetSchema = z.object({
   name: z.string().min(1, 'Asset name is required').max(255),
   status: z.string().min(1, 'Status is required'),
   location_id: uuidSchema.nullable().optional(),
+  contact_name_id: uuidSchema.nullable().optional(),
   location: z.string().optional(),
   serial_number: z.string().optional(),
   purchase_date: dateSchema.optional(),
-  warranty_end_date: dateSchema.optional()
+  warranty_end_date: dateSchema.optional(),
+  attributes: z.record(z.unknown()).optional()
 });
 
 // Update asset schema (all fields optional)
@@ -116,6 +118,7 @@ export const assetFilterSchema = baseFilterSchema.extend({
   name: z.string().optional(),
   client_id: uuidSchema.optional(),
   location_id: uuidSchema.optional(),
+  contact_name_id: uuidSchema.optional(),
   asset_type: assetTypeSchema.optional(),
   status: z.string().optional(),
   location: z.string().optional(),
@@ -141,6 +144,7 @@ export const assetResponseSchema = z.object({
   name: z.string(),
   status: z.string(),
   location_id: uuidSchema.nullable().optional(),
+  contact_name_id: uuidSchema.nullable().optional(),
   location: z.string().nullable(),
   serial_number: z.string().nullable(),
   purchase_date: dateSchema.nullable(),
@@ -148,6 +152,7 @@ export const assetResponseSchema = z.object({
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
+  attributes: z.record(z.unknown()).nullable().optional(),
   
   // Computed/joined fields
   client_name: z.string().optional(),

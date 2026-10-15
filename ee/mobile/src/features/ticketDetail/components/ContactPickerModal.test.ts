@@ -24,6 +24,7 @@ vi.mock("../../../ui/ThemeContext", () => ({
       border: "#ccc",
       card: "#fafafa",
       danger: "#f00",
+      disabled: { bg: "#eee", text: "#666" },
     },
     spacing: { sm: 4, md: 8, lg: 16, xl: 24 },
     typography: {
@@ -293,5 +294,19 @@ describe("ContactPickerModal", () => {
     await flush();
 
     expect(listContactsMock).not.toHaveBeenCalled();
+  });
+
+  it("starts with a just-created contact selected and listed even before the search catches up", async () => {
+    listContactsMock.mockResolvedValue({ ok: true, data: { data: [] } });
+    const onApply = vi.fn();
+    const renderer = renderModal({ onApply, preselect: { id: "contact-new", name: "Sam Lee", email: "sam@acme.test" } });
+    await flush();
+
+    const row = renderer.root.find((n) => n.props?.accessibilityLabel === "Select Sam Lee");
+    expect(row).toBeTruthy();
+    const apply = renderer.root.find((n) => n.props?.accessibilityLabel === "contactPicker.apply" && typeof n.props.onPress === "function");
+    expect(apply.props.disabled).toBe(false);
+    act(() => apply.props.onPress());
+    expect(onApply).toHaveBeenCalledWith("contact-new", undefined);
   });
 });

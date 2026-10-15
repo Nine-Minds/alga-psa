@@ -46,7 +46,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
 export const REVIEW_FILE = '00-REVIEW.md';
@@ -1652,7 +1652,7 @@ function main() {
 }
 
 const invokedAsScript = process.argv[1]
-  && import.meta.url === pathToFileURL(process.argv[1]).href;
+  && fs.realpathSync(fileURLToPath(import.meta.url)) === fs.realpathSync(process.argv[1]);
 
 if (invokedAsScript) {
   main();

@@ -24,9 +24,9 @@ import {
   isMspUser,
 } from '../../lib/authHelpers';
 import type { IBoard } from '@alga-psa/types';
-import { ContactModel, CreateContactInput, UpdateContactInput } from '@alga-psa/shared/models/contactModel';
+import { assertContactIsNotSharedMailbox, clearContactLinksBeforeDelete, ContactModel, CreateContactInput, UpdateContactInput } from '@alga-psa/shared/models/contactModel';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildContactArchivedPayload,
   buildContactCreatedPayload,
@@ -50,6 +50,7 @@ import {
   normalizePhone,
   parseSubmittedFields
 } from '@alga-psa/validation';
+import { collectReportContactIds } from '../../lib/managerSubtree';
 import { isStructuralFailure, type StructuralResult } from '../../lib/structuralResult';
 
 /**
@@ -462,6 +463,8 @@ export const deleteContact = withAuth(async (
       await tenantScopedTable(trx, 'comments', tenantId).where({ contact_id: contactId }).delete();
       await tenantScopedTable(trx, 'portal_invitations', tenantId).where({ contact_id: contactId }).delete();
 
+      await clearContactLinksBeforeDelete(trx, tenantId, contactId);
+
       // Unlink from any RMM org mapping using this contact as its default
       // notification contact (no FK; Citus rejects ON DELETE SET NULL).
       await tenantScopedTable(trx, 'rmm_organization_mappings', tenantId)
@@ -505,7 +508,7 @@ export const deleteContact = withAuth(async (
 
     if (result.deleted) {
       const occurredAt = new Date().toISOString();
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'CONTACT_DELETED',
         payload: {
           contactId,
@@ -674,11 +677,13 @@ export const addContact = withAuth(async (
       additional_email_addresses: contactData.additional_email_addresses ?? [],
       phone_numbers: contactData.phone_numbers ?? [],
       client_id: contactData.client_id || undefined,
+      manager_contact_id: contactData.manager_contact_id || undefined,
       role: contactData.role ?? undefined,
       notes: contactData.notes || undefined,
       is_inactive: contactData.is_inactive ?? undefined
     };
 
+    // LEVERAGE: pattern contact-create-with-event
     // Use the shared ContactModel to create the contact.
     // The model handles validation and business rules.
     const created = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -885,6 +890,10 @@ export const updateContact = withAuth(async (
       const updated = await ContactModel.updateContact(contactData.contact_name_id!, {
         full_name: contactData.full_name,
         client_id: contactData.client_id === '' ? undefined : contactData.client_id || undefined,
+        // undefined = leave unchanged; null/'' = clear. Validated (same client,
+        // acyclic) and reconciled with client changes inside ContactModel.
+        manager_contact_id:
+          contactData.manager_contact_id === undefined ? undefined : contactData.manager_contact_id || null,
         phone_numbers: contactData.phone_numbers,
         email: contactData.email ?? undefined,
         primary_email_canonical_type: contactData.primary_email_canonical_type ?? undefined,
@@ -1684,6 +1693,10 @@ export const updateContactPortalAdminStatus = withAuth(async (
         'You do not have permission to update client users'
       );
 
+      if (isPortalAdmin) {
+        await assertContactIsNotSharedMailbox(trx, tenant, contactId, 'Shared mailbox contacts cannot be client admins.');
+      }
+
       const updated = await tenantScopedTable(trx, 'contacts', tenant)
         .where({ contact_name_id: contactId })
         .update({
@@ -1773,15 +1786,29 @@ type VisibilityGroupListItem = {
   name: string;
   description: string | null;
   board_count: number;
+  ticket_scope: 'client' | 'contact';
+  asset_scope: 'client' | 'contact';
+  project_scope: 'client' | 'contact';
 };
 
-type VisibilityGroupRow = Pick<VisibilityGroupListItem, 'group_id' | 'name' | 'description'>;
+type VisibilityGroupRow = Pick<VisibilityGroupListItem, 'group_id' | 'name' | 'description' | 'ticket_scope' | 'asset_scope' | 'project_scope'>;
 
 type VisibilityGroupPayload = {
   name: string;
   description?: string | null;
   boardIds?: string[];
+  ticketScope?: 'client' | 'contact';
+  assetScope?: 'client' | 'contact';
+  projectScope?: 'client' | 'contact';
 };
+
+function isVisibilityScope(value: unknown): boolean {
+  return value === undefined || value === 'client' || value === 'contact';
+}
+
+function hasValidVisibilityScopes(input: VisibilityGroupPayload): boolean {
+  return isVisibilityScope(input.ticketScope) && isVisibilityScope(input.assetScope) && isVisibilityScope(input.projectScope);
+}
 
 type VisibilityGroupActionError = ActionMessageError | ActionPermissionError;
 
@@ -1940,7 +1967,7 @@ export const getClientPortalVisibilityGroupsForContact = withAuth(async (
 
       const groups = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
         .where({ client_id: clientId })
-        .select('group_id', 'name', 'description')
+        .select('group_id', 'name', 'description', 'ticket_scope', 'asset_scope', 'project_scope')
         .orderBy('name') as VisibilityGroupRow[];
 
       const boardCounts = groups.length
@@ -1970,6 +1997,35 @@ export const getClientPortalVisibilityGroupsForContact = withAuth(async (
       return expected;
     }
     console.error('[contactActions.getClientPortalVisibilityGroupsForContact]', error);
+    throw error;
+  }
+});
+
+/** Number of people (transitively) reporting to this contact; drives the portal tab's "also sees" note. */
+export const getContactReportCount = withAuth(async (
+  user,
+  { tenant },
+  contactId: string
+): Promise<number | VisibilityGroupActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+
+      const edges = await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ client_id: clientId })
+        .whereNotNull('manager_contact_id')
+        .select('contact_name_id', 'manager_contact_id') as Array<{ contact_name_id: string; manager_contact_id: string | null }>;
+
+      return collectReportContactIds(edges, contactId).size;
+    });
+  } catch (error) {
+    const expected = visibilityGroupActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('[contactActions.getContactReportCount]', error);
     throw error;
   }
 });
@@ -2004,7 +2060,7 @@ export const getClientPortalVisibilityGroupById = withAuth(async (
   { tenant },
   contactId: string,
   groupId: string
-): Promise<{ group_id: string; name: string; description: string | null; board_ids: string[] } | VisibilityGroupActionError> => {
+): Promise<{ group_id: string; name: string; description: string | null; board_ids: string[]; ticket_scope: 'client' | 'contact'; asset_scope: 'client' | 'contact'; project_scope: 'client' | 'contact' } | VisibilityGroupActionError> => {
   try {
     const { knex } = await createTenantKnex();
 
@@ -2013,7 +2069,7 @@ export const getClientPortalVisibilityGroupById = withAuth(async (
 
       const group = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
         .where({ client_id: clientId, group_id: groupId })
-        .first('group_id', 'name', 'description');
+        .first('group_id', 'name', 'description', 'ticket_scope', 'asset_scope', 'project_scope');
 
       if (!group) {
         throw new Error('Visibility group not found');
@@ -2094,6 +2150,9 @@ export const createClientPortalVisibilityGroupForContact = withAuth(async (
   contactId: string,
   input: VisibilityGroupPayload
 ): Promise<{ group_id: string } | VisibilityGroupActionError> => {
+  if (!hasValidVisibilityScopes(input)) {
+    return actionError('Invalid visibility group data provided.', 'msp/contacts:errors.contact.visibilityInvalidData');
+  }
   const name = input.name?.trim();
   if (!name) {
     return actionError('Group name is required', 'msp/contacts:errors.contact.groupNameRequired');
@@ -2114,6 +2173,9 @@ export const createClientPortalVisibilityGroupForContact = withAuth(async (
           client_id: clientId,
           name,
           description: input.description?.trim() || null,
+          ticket_scope: input.ticketScope ?? 'client',
+          asset_scope: input.assetScope ?? 'client',
+          project_scope: input.projectScope ?? 'client',
         })
         .returning('group_id');
 
@@ -2148,6 +2210,9 @@ export const updateClientPortalVisibilityGroupForContact = withAuth(async (
   groupId: string,
   input: VisibilityGroupPayload
 ): Promise<void | VisibilityGroupActionError> => {
+  if (!hasValidVisibilityScopes(input)) {
+    return actionError('Invalid visibility group data provided.', 'msp/contacts:errors.contact.visibilityInvalidData');
+  }
   const name = input.name?.trim();
   if (!name) {
     return actionError('Group name is required', 'msp/contacts:errors.contact.groupNameRequired');
@@ -2175,6 +2240,9 @@ export const updateClientPortalVisibilityGroupForContact = withAuth(async (
         .update({
           name,
           description: input.description?.trim() || null,
+          ...(input.ticketScope !== undefined ? { ticket_scope: input.ticketScope } : {}),
+          ...(input.assetScope !== undefined ? { asset_scope: input.assetScope } : {}),
+          ...(input.projectScope !== undefined ? { project_scope: input.projectScope } : {}),
           updated_at: new Date().toISOString()
         });
 

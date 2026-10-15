@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "incident": "https://github.com/Nine-Minds/alga-psa/issues/3348",
+  "scope": "Calendar grid accessors and drag/resize persistence",
+  "before": {
+    "status": "assertion-failed",
+    "assertion": "Grid start accessor returned UTC midnight rather than local calendar midnight in Berlin."
+  },
+  "after": {
+    "passedPerTimezone": 14,
+    "filesPerTimezone": 3,
+    "timezones": [
+      "UTC",
+      "Europe/Berlin",
+      "America/Los_Angeles"
+    ],
+    "failed": 0,
+    "assertions": [
+      "Grid receives local-midnight start and exclusive end.",
+      "Resize persists UTC date boundaries.",
+      "Drop across Berlin DST retains one calendar day.",
+      "Editor and Teams refresh tests remain green."
+    ]
+  },
+  "sourceSha256": {
+    "packages/scheduling/src/components/schedule/ScheduleCalendar.tsx": "32f9a770660429cb8c55c5de6978e3493a75e75ed81dea948413a9838585717f",
+    "packages/scheduling/tests/scheduleCalendar.teamsMeetingRefresh.test.tsx": "fa7a534cc13e30db1f1ab430e10594cc0ab4809b1af4c9f48e4153d51dc30f38"
+  },
+  "limits": [
+    "Calendar widget and server actions are stubbed: this verifies component callback behavior, not actual pointer gestures or rendered calendar-cell span.",
+    "Real Playwright all-day journey and current-source CI are outstanding.",
+    "Tooltip/detail date formatting and explicit all-day model semantics remain to review."
+  ]
+}

@@ -7,6 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import type { StepProps } from '@alga-psa/types';
 import { ChevronDown, ChevronUp, Trash2, Settings } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -18,7 +19,7 @@ import {
   getTenantServiceTypes,
   createTenantServiceType,
 } from '@alga-psa/onboarding/actions';
-import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
+import { getCurrencySymbol } from '@alga-psa/core';
 import { deleteReferenceDataItem } from '@alga-psa/reference-data/actions';
 import { useSession } from 'next-auth/react';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -187,11 +188,10 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
             defaultValue: 'Default Currency *'
           })}
         </Label>
-        <CustomSelect
+        <CurrencyPicker
           id="default-currency"
           value={data.currencyCode || 'USD'}
           onValueChange={(value) => updateData({ currencyCode: value })}
-          options={CURRENCY_OPTIONS.map((c) => ({ value: c.value, label: c.label }))}
           className="max-w-[200px]"
         />
         <p className="text-sm text-gray-600">

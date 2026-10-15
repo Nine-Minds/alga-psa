@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs';
+import ts from 'typescript';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -31,6 +32,10 @@ const FORBIDDEN_ROOT_IMPORTS = new Set([
   '@alga-psa/integrations',
   '@alga-psa/billing',
   '@alga-psa/ui',
+  // The storage barrel re-exports a validation module that fails under native
+  // node (ERR_MODULE_NOT_FOUND). Runtime code must use the narrow subpaths
+  // (@alga-psa/storage/config/storage, @alga-psa/storage/StorageProviderFactory).
+  '@alga-psa/storage',
 ]);
 
 function readFile(filePath) {
@@ -47,18 +52,21 @@ function findEntry() {
 }
 
 function extractSpecifiers(source) {
+  // Bundled dependencies retain JSDoc import() types and examples. Only
+  // executable module syntax belongs in the runtime dependency graph.
+  const file = ts.createSourceFile('runtime.js', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  if (file.parseDiagnostics.length) throw new Error('Unable to parse runtime JavaScript for import validation');
   const specs = [];
-
-  const staticImportRe = /(?:import|export)\s+(?:[^'"]*?\sfrom\s*)?['"]([^'"]+)['"]/g;
-  const dynamicImportRe = /import\(\s*['"]([^'"]+)['"]\s*\)/g;
-
-  for (const re of [staticImportRe, dynamicImportRe]) {
-    let match;
-    while ((match = re.exec(source)) !== null) {
-      specs.push(match[1]);
+  const visit = node => {
+    if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier
+      && ts.isStringLiteral(node.moduleSpecifier)) specs.push(node.moduleSpecifier.text);
+    if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      const specifier = node.arguments[0];
+      if (specifier && (ts.isStringLiteral(specifier) || ts.isNoSubstitutionTemplateLiteral(specifier))) specs.push(specifier.text);
     }
-  }
-
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
   return specs;
 }
 
@@ -123,6 +131,7 @@ function validate() {
     const current = queue.shift();
     if (!current || visited.has(current)) continue;
     visited.add(current);
+    if (path.extname(current) === '.json') continue;
 
     const source = readFile(current);
     const specifiers = extractSpecifiers(source);

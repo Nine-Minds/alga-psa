@@ -14,6 +14,17 @@ describe('NextAuth MSP SSO contract', () => {
     expect(source).toContain('AzureADProvider({');
   });
 
+  it('Keycloak registers from the four KEYCLOAK_* secrets and resolves users through the shared OAuth mapper', () => {
+    expect(source).toContain('secrets.keycloakClientId &&');
+    expect(source).toContain('buildKeycloakProvider({');
+    expect(source).toContain("provider: 'keycloak',");
+    expect(source).toContain("keycloak: 'keycloak',");
+    // Raw realm claims must never become the session identity (issue #3347).
+    expect(source).not.toContain('tenant: profile.tenant,');
+    expect(source).not.toContain('user_type: profile.user_type,');
+    expect(source).not.toContain('keycloak-credentials');
+  });
+
   it('T047: auth options are rebuilt per request (no stale static cache)', () => {
     expect(source).toContain('export async function getAuthOptions(): Promise<NextAuthConfig> {');
     expect(source).toContain('return buildAuthOptions();');
@@ -48,8 +59,46 @@ describe('NextAuth MSP SSO contract', () => {
   });
 
   it('T059: Microsoft OAuth issuer defaults tenant to common when tenant ID is empty', () => {
-    expect(source).toContain("issuer: `https://login.microsoftonline.com/${secrets.microsoftTenantId || 'common'}/v2.0`");
-    expect(source).toContain("issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_OAUTH_TENANT_ID || 'common'}/v2.0`");
+    // Both option copies pass the authority through buildAzureADProvider, which
+    // builds the production issuer from it unless the simulator gate is on.
+    expect(source).toContain("authority: secrets.microsoftTenantId || 'common',");
+    expect(source).toContain("authority: process.env.MICROSOFT_OAUTH_TENANT_ID || 'common',");
+    expect(source).toContain('issuer: `https://login.microsoftonline.com/${config.authority}/v2.0`');
+  });
+
+  it('Microsoft sign-in only leaves the production authority behind the simulator gate', () => {
+    expect(source).toContain('if (isMicrosoftSsoEmulatorEnabled()) {');
+    expect(source).toContain('getMicrosoftSsoEmulatorEndpoints(config.authority)');
+    // The gate is the only branch; nothing else may read a base-URL override.
+    expect(source).not.toContain('process.env.MICROSOFT_LOGIN_BASE_URL');
+    expect(source).not.toContain('process.env.MICROSOFT_GRAPH_BASE_URL');
+  });
+
+  /**
+   * CF007. `state` binds the callback to the browser that started it and `pkce`
+   * binds the code to the client that requested it, but only `nonce` binds the
+   * ID TOKEN to this authorization request. Auth.js sends and verifies a nonce
+   * only when it is listed in `checks`, and it was absent — the repo had already
+   * measured the consequence ("Observed one token request, zero JWKS requests
+   * and no nonce", ee/docs/plans/2026-09-05-production-regression-prevention/
+   * microsoft-coverage-boundaries.md).
+   *
+   * Both providers are pinned: the env-only fallback declared no `checks` at
+   * all, so which verification posture a deployment ran under depended on which
+   * provider it happened to build.
+   */
+  it('CF007: both Microsoft providers verify pkce, state AND nonce', () => {
+    // Both registrations go through buildAzureADProvider (which also wraps the
+    // Microsoft emulator); the builder must forward their `checks` to Auth.js.
+    // A `checks` belonging to the Playwright fake-Google provider is not a
+    // Microsoft posture.
+    expect(source).toContain('...(config.checks ? { checks: config.checks } : {}),');
+    const azureBlocks = source.split('buildAzureADProvider({').slice(1);
+    expect(azureBlocks.length).toBe(2);
+    for (const block of azureBlocks) {
+      const declaration = block.slice(0, block.indexOf('profile:'));
+      expect(declaration).toContain("checks: ['pkce', 'state', 'nonce']");
+    }
   });
 
   it('T149/T150: Teams auth can build request-scoped Microsoft-only auth options from the tenant-selected Teams profile', () => {

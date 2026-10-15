@@ -1,0 +1,63 @@
+{
+  "scope": "metadata-compatibility-not-linux-execution",
+  "base": "node:22-bookworm",
+  "engines": [
+    {
+      "package": "sebastian-monorepo",
+      "nodeRange": ">=22 <27",
+      "compatible": true
+    },
+    {
+      "package": "temporal-workflows",
+      "nodeRange": ">=20.0.0",
+      "compatible": true
+    },
+    {
+      "package": "@temporalio/core-bridge",
+      "nodeRange": ">= 18.0.0",
+      "compatible": true
+    },
+    {
+      "package": "sharp",
+      "nodeRange": ">=20.9.0",
+      "compatible": true
+    }
+  ],
+  "temporalLinuxTargets": [
+    "x86_64",
+    "aarch64"
+  ],
+  "bookwormGlibc": "2.36",
+  "sharpMinimumGlibc": "2.28",
+  "limitations": [
+    "No Docker build or Linux runtime execution",
+    "Does not verify current apt mirror freshness"
+  ],
+  "schemaVersion": 1,
+  "ciFailure": {
+    "runId": 34273284490,
+    "jobId": 102220267368,
+    "phase": "apt-get update",
+    "reason": "bullseye-security InRelease expired",
+    "exitCode": 100
+  },
+  "officialSources": [
+    "https://raw.githubusercontent.com/docker-library/official-images/master/library/node",
+    "https://www.debian.org/releases/bookworm/",
+    "https://packages.debian.org/bookworm/libc6",
+    "https://sharp.pixelplumbing.com/install/"
+  ],
+  "observedBookwormSecurityMetadata": {
+    "url": "https://deb.debian.org/debian-security/dists/bookworm-security/InRelease",
+    "date": "2026-09-08T13:04:41Z",
+    "validUntil": "2026-09-15T13:04:41Z",
+    "architectures": [
+      "amd64",
+      "arm64",
+      "armhf",
+      "i386",
+      "ppc64el"
+    ],
+    "scope": "Observed public metadata; apt signature verification and image build not executed locally."
+  }
+}

@@ -9,6 +9,23 @@ const ALLOWED_PREFIXES = [EXPO_PREFIX, "alga://"] as const;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Hosted web ticket URLs reach the app through iOS Universal Links / Android
+// App Links (declared in app.json). They are folded into the alga:// shape so
+// the rest of the config has a single ticket route.
+const HOSTED_TICKET_URL_RE =
+  /^https:\/\/algapsa\.com\/msp\/tickets\/([0-9a-f-]{36})(?:[/?#].*)?$/i;
+
+// Web task links point at the project page with the task in the query string.
+const HOSTED_PROJECT_TASK_URL_RE =
+  /^https:\/\/algapsa\.com\/msp\/projects\/[0-9a-f-]{36}\?(?:.*&)?taskId=([0-9a-f-]{36})(?:[&#].*)?$/i;
+
+export function normalizeHostedTicketUrl(rawUrl: string): string {
+  const match = HOSTED_TICKET_URL_RE.exec(rawUrl);
+  if (match) return `alga://ticket/${match[1].toLowerCase()}`;
+  const taskMatch = HOSTED_PROJECT_TASK_URL_RE.exec(rawUrl);
+  return taskMatch ? `alga://project-task/${taskMatch[1].toLowerCase()}` : rawUrl;
+}
+
 function isAllowedPath(path: string): boolean {
   if (path === "signin") return true;
   if (path === "server") return true;
@@ -21,10 +38,13 @@ function isAllowedPath(path: string): boolean {
   if (path === "settings") return true;
   const ticketMatch = /^ticket\/(.+)$/.exec(path);
   if (ticketMatch) return UUID_RE.test(ticketMatch[1] ?? "");
+  const taskMatch = /^project-task\/(.+)$/.exec(path);
+  if (taskMatch) return UUID_RE.test(taskMatch[1] ?? "");
   return false;
 }
 
-function safeDeepLinkUrl(rawUrl: string): string | null {
+function safeDeepLinkUrl(url: string): string | null {
+  const rawUrl = normalizeHostedTicketUrl(url);
   if (!ALLOWED_PREFIXES.some((prefix) => rawUrl.startsWith(prefix))) return null;
 
   try {
@@ -40,19 +60,58 @@ function safeDeepLinkUrl(rawUrl: string): string | null {
   }
 }
 
+// Ticket links need the signed-in navigator. One that arrives while signed
+// out is held here and replayed when the container remounts after sign-in.
+let signedIn = false;
+let pendingUrl: string | null = null;
+let consumedInitialUrl: string | null = null;
+
+export function setDeepLinkSignedIn(next: boolean): void {
+  signedIn = next;
+}
+
+/**
+ * True when the next container mount will be driven by a deep link. React
+ * Navigation never calls `getInitialURL` while an `initialState` is supplied,
+ * so restored navigation state must be skipped in that case or the link is
+ * silently lost and the app opens on the last-visited screen instead.
+ */
+export async function hasPendingDeepLink(): Promise<boolean> {
+  if (pendingUrl) return true;
+  const url = await Linking.getInitialURL();
+  if (!url || url === consumedInitialUrl) return false;
+  return safeDeepLinkUrl(url) !== null;
+}
+
+function requiresSession(url: string): boolean {
+  return url.startsWith("alga://ticket/") || url.startsWith("alga://project-task/");
+}
+
+function rejectUrl(url: string, message: string): void {
+  const parsed = Linking.parse(url);
+  logger.warn(message, { scheme: parsed.scheme, hostname: parsed.hostname, path: parsed.path });
+}
+
 export const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: [EXPO_PREFIX, "alga://"],
+  prefixes: [EXPO_PREFIX, "alga://", "https://algapsa.com"],
   getInitialURL: async () => {
+    if (pendingUrl && signedIn) {
+      const url = pendingUrl;
+      pendingUrl = null;
+      return url;
+    }
     const url = await Linking.getInitialURL();
-    if (!url) return null;
+    // The container remounts on every sign-in/out; the OS keeps answering with
+    // the cold-start URL, which must only ever be followed once.
+    if (!url || url === consumedInitialUrl) return null;
     const safe = safeDeepLinkUrl(url);
     if (!safe) {
-      const parsed = Linking.parse(url);
-      logger.warn("Rejected initial deep link URL", {
-        scheme: parsed.scheme,
-        hostname: parsed.hostname,
-        path: parsed.path,
-      });
+      rejectUrl(url, "Rejected initial deep link URL");
+      return null;
+    }
+    consumedInitialUrl = url;
+    if (requiresSession(safe) && !signedIn) {
+      pendingUrl = safe;
       return null;
     }
     return safe;
@@ -60,15 +119,15 @@ export const linking: LinkingOptions<RootStackParamList> = {
   subscribe: (listener) => {
     const subscription = Linking.addEventListener("url", ({ url }) => {
       const safe = safeDeepLinkUrl(url);
-      if (safe) listener(safe);
-      else {
-        const parsed = Linking.parse(url);
-        logger.warn("Rejected deep link URL", {
-          scheme: parsed.scheme,
-          hostname: parsed.hostname,
-          path: parsed.path,
-        });
+      if (!safe) {
+        rejectUrl(url, "Rejected deep link URL");
+        return;
       }
+      if (requiresSession(safe) && !signedIn) {
+        pendingUrl = safe;
+        return;
+      }
+      listener(safe);
     });
     return () => subscription.remove();
   },
@@ -78,6 +137,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       ServerEntry: "server",
       AuthCallback: "auth/callback",
       TicketDetail: "ticket/:ticketId",
+      ProjectTaskDetail: "project-task/:taskId",
       Tabs: {
         screens: {
           TicketsTab: {

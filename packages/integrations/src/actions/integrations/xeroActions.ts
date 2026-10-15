@@ -15,6 +15,7 @@ import {
 import {
   XeroClientService,
   getXeroConnectionSummaries,
+  getXeroDefaultSelection,
   type XeroConnectionSummary,
   XERO_CLIENT_ID_SECRET_NAME,
   XERO_CLIENT_SECRET_SECRET_NAME,
@@ -168,7 +169,7 @@ export interface XeroConnectionStatus {
    */
   disconnect?: ProviderDisconnectStatusInfo | null;
   error?: string;
-  errorCode?: 'FORBIDDEN' | 'ENTERPRISE_REQUIRED';
+  errorCode?: 'FORBIDDEN' | 'ENTERPRISE_REQUIRED' | 'SCOPE_INSUFFICIENT' | 'SELECTION_AMBIGUOUS';
 }
 
 function xeroConnectionStatusError(
@@ -299,6 +300,35 @@ async function getXeroCatalogConnectionError(
       XERO_CATALOG_KEYS[catalog].verifyFailed,
     );
   }
+}
+
+/**
+ * Resolve the connection a catalog read targets. An explicit connection wins.
+ * Otherwise an ambiguous persisted default (an organisation owned by more than
+ * one connection) fails closed with an actionable error rather than silently
+ * loading another connection's catalog.
+ */
+async function resolveXeroCatalogTarget(
+  tenantId: string,
+  connectionId: string | null | undefined,
+  catalog: XeroCatalog
+): Promise<{ ok: true; connectionId: string | null } | { ok: false; error: XeroCatalogActionError }> {
+  if (connectionId) {
+    return { ok: true, connectionId };
+  }
+  const selection = await getXeroDefaultSelection(tenantId).catch(
+    () => ({ status: 'unknown' as const, persistedRealm: '' })
+  );
+  if (selection.status === 'ambiguous') {
+    return {
+      ok: false,
+      error: actionError(
+        `The saved default Xero organisation is owned by more than one connection, so ${XERO_CATALOG_LABELS[catalog]} cannot be loaded. Choose which connection is the default in the accounting settings.`,
+        'msp/integrations:errors.xero.organisationAmbiguous',
+      ),
+    };
+  }
+  return { ok: true, connectionId: selection.status === 'resolved' ? selection.connectionId : null };
 }
 
 async function getXeroUpdateAccessError(user: IUserWithRoles): Promise<string | null> {
@@ -490,7 +520,20 @@ export const getXeroConnectionStatus = withAuth(async (
     const clientId = typeof storedClientId === 'string' ? storedClientId.trim() : '';
     const clientSecret = typeof storedClientSecret === 'string' ? storedClientSecret.trim() : '';
     const summaries = await getXeroConnectionSummaries(tenant);
-    const defaultConnection = summaries[0];
+    // The persisted provider-scoped selection is authoritative: cycle routing,
+    // catalog reads and mapping all resolve the same connection. An ambiguous
+    // organisation (owned by more than one connection) is surfaced as an
+    // actionable error instead of silently selecting another connection.
+    const selection = await getXeroDefaultSelection(tenant).catch(
+      () => ({ status: 'unknown' as const, persistedRealm: '' })
+    );
+    const defaultConnection =
+      selection.status === 'resolved'
+        ? summaries.find((summary) => summary.connectionId === selection.connectionId)
+        : selection.status === 'ambiguous'
+          ? undefined
+          : summaries[0];
+    const missingScopes = defaultConnection?.missingScopes ?? [];
     const credentials = {
       clientIdConfigured: Boolean(clientId),
       clientSecretConfigured: Boolean(clientSecret),
@@ -505,13 +548,31 @@ export const getXeroConnectionStatus = withAuth(async (
 
     let connected = false;
     let error: string | undefined;
+    let errorCode: XeroConnectionStatus['errorCode'];
 
     if (disconnectBlocking) {
       error = 'Xero is being disconnected. Sync and exports are paused until the disconnect completes.';
     } else if (!credentials.ready) {
       error = 'Add a Xero client ID and client secret before connecting live Xero.';
+    } else if (selection.status === 'ambiguous') {
+      // Do not fall back to the first connection: the saved default names an
+      // organisation that more than one connection owns, so no connection is
+      // the right target without an explicit choice.
+      errorCode = 'SELECTION_AMBIGUOUS';
+      error =
+        `The saved default Xero organisation (${selection.organisationId}) is owned by more than one connection. ` +
+        'Choose which connection is the default in the accounting settings before syncing or configuring mappings.';
     } else if (!defaultConnection) {
       error = 'No live Xero organisation is connected yet. Save credentials, then click Connect Xero.';
+    } else if (missingScopes.length > 0) {
+      // The stored grant predates a required permission (e.g. payment polling).
+      // A token refresh keeps the original grant, so only a fresh
+      // authorization adds it — never present a refresh as gaining a scope.
+      errorCode = 'SCOPE_INSUFFICIENT';
+      error =
+        `This Xero connection (${defaultConnection.tenantName ?? defaultConnection.xeroTenantId}) ` +
+        `is missing ${missingScopes.join(', ')}. Reconnect Xero to grant the updated permissions; ` +
+        'refreshing the existing connection keeps its current permissions and will not add them.';
     } else {
       try {
         await XeroClientService.create(tenant, defaultConnection.connectionId);
@@ -532,7 +593,8 @@ export const getXeroConnectionStatus = withAuth(async (
       scopeOverrideInvalid: scopeConfig.invalidOverrideScopes,
       credentials,
       disconnect,
-      error
+      error,
+      errorCode
     };
   } catch (error) {
     if (error instanceof Error && error.message.startsWith('Forbidden')) {
@@ -559,11 +621,14 @@ export const getXeroAccounts = withAuth(async (
   const accessError = await getXeroCatalogAccessError(user);
   if (accessError) return accessError;
 
-  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'accounts');
+  const target = await resolveXeroCatalogTarget(tenant, connectionId, 'accounts');
+  if (target.ok === false) return target.error;
+  const targetConnectionId = target.connectionId;
+  const connectionError = await getXeroCatalogConnectionError(tenant, targetConnectionId, 'accounts');
   if (connectionError) return connectionError;
 
   try {
-    const client = await XeroClientService.create(tenant, connectionId ?? null);
+    const client = await XeroClientService.create(tenant, targetConnectionId);
     const accounts = await client.listAccounts({ status: 'ACTIVE' });
     return accounts.map((account) => ({
       id: account.accountId,
@@ -585,11 +650,14 @@ export const getXeroItems = withAuth(async (
   const accessError = await getXeroCatalogAccessError(user);
   if (accessError) return accessError;
 
-  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'items');
+  const target = await resolveXeroCatalogTarget(tenant, connectionId, 'items');
+  if (target.ok === false) return target.error;
+  const targetConnectionId = target.connectionId;
+  const connectionError = await getXeroCatalogConnectionError(tenant, targetConnectionId, 'items');
   if (connectionError) return connectionError;
 
   try {
-    const client = await XeroClientService.create(tenant, connectionId ?? null);
+    const client = await XeroClientService.create(tenant, targetConnectionId);
     const items = await client.listItems();
     return items.map((item) => ({
       id: item.itemId,
@@ -611,11 +679,14 @@ export const getXeroTaxRates = withAuth(async (
   const accessError = await getXeroCatalogAccessError(user);
   if (accessError) return accessError;
 
-  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'taxRates');
+  const target = await resolveXeroCatalogTarget(tenant, connectionId, 'taxRates');
+  if (target.ok === false) return target.error;
+  const targetConnectionId = target.connectionId;
+  const connectionError = await getXeroCatalogConnectionError(tenant, targetConnectionId, 'taxRates');
   if (connectionError) return connectionError;
 
   try {
-    const client = await XeroClientService.create(tenant, connectionId ?? null);
+    const client = await XeroClientService.create(tenant, targetConnectionId);
     const rates = await client.listTaxRates();
     return rates.map((rate) => ({
       id: rate.taxRateId,
@@ -639,11 +710,14 @@ export const getXeroTrackingCategories = withAuth(async (
   const accessError = await getXeroCatalogAccessError(user);
   if (accessError) return accessError;
 
-  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'trackingCategories');
+  const target = await resolveXeroCatalogTarget(tenant, connectionId, 'trackingCategories');
+  if (target.ok === false) return target.error;
+  const targetConnectionId = target.connectionId;
+  const connectionError = await getXeroCatalogConnectionError(tenant, targetConnectionId, 'trackingCategories');
   if (connectionError) return connectionError;
 
   try {
-    const client = await XeroClientService.create(tenant, connectionId ?? null);
+    const client = await XeroClientService.create(tenant, targetConnectionId);
     const categories = await client.listTrackingCategories();
     return categories.map((category) => ({
       id: category.trackingCategoryId,

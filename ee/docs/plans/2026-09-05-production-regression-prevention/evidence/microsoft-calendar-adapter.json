@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "kind": "microsoft-calendar-adapter-protocol-foundation",
+  "baseRevision": "a93030d805",
+  "status": "local-passed-native-pending",
+  "coverage": [
+    "Shared and enterprise adapters perform real OAuth authorization URL generation, HTTP token exchange and refresh, primary-calendar CRUD and date-range listing",
+    "403/429/503 failures preserve provider state and a deliberate retry creates one event",
+    "Delegated primary-calendar routes hide other organizers and reject unsupported filters, sorting and non-UTC filtering",
+    "UTC wall-clock values filter correctly on an America/New_York host"
+  ],
+  "defect": {
+    "file": "packages/integrations/src/services/calendar/providers/MicrosoftCalendarAdapter.ts",
+    "before": "getEvent after deletion throws ReferenceError: error is not defined because the catch block omitted its binding",
+    "after": "getEvent preserves the structured 404 / ErrorItemNotFound expected by callers"
+  },
+  "fixtureBoundaries": [
+    "Provider token persistence is mocked",
+    "Enterprise stored Microsoft profile lookup supplies synthetic credentials",
+    "Single delegated emulator mailbox; no claim of Entra principal or permission parity"
+  ],
+  "validation": {
+    "adapterTestsPassed": 10,
+    "adapterTestsFailed": 0,
+    "adapterReportSha256": "d95b94c04f761d67a098a215ca0605840aad869676166d820a20c6a173695fd5",
+    "emulatorFilesPassed": 4,
+    "emulatorTestsPassed": 34,
+    "emulatorLogSha256": "7abd2ae7d69a2707abdc7058de7424ccc99c62ac303bc26928ca781c1d868d80",
+    "emulatorBuild": "passed",
+    "emulatorTypecheck": "passed",
+    "targetedAdapterTypecheck": "passed"
+  },
+  "notYetCovered": [
+    "Browser calendar configuration and real callback execution",
+    "Database credential persistence",
+    "Calendar delta and webhook synchronization",
+    "Real vendor sandbox parity, consent and scope enforcement",
+    "Production Teams journey; preserve its emulator security guard"
+  ],
+  "ci": "Server adapter cases are discovered by full integration; Microsoft emulator suite now runs in candidate emulator image validation. F034 remains incomplete."
+}

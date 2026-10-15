@@ -1,0 +1,81 @@
+{
+  "status": "passed",
+  "counts": {
+    "passed": 126,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "expectedFiles": [
+    "ee/temporal-workflows/src/activities/__tests__/marketing-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/product-upgrade-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/sla-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/tenant-email-ingestion-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/tenant-suspension-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/workflow-runtime-v2-activities.test.ts",
+    "ee/temporal-workflows/src/config/__tests__/startupValidation.test.ts",
+    "ee/temporal-workflows/src/db/__tests__/product-bootstrap-resolver.test.ts",
+    "ee/temporal-workflows/src/db/__tests__/tenant-operations.email-settings.test.ts",
+    "ee/temporal-workflows/src/schedules/__tests__/setupSchedules.entra-tier.test.ts",
+    "ee/temporal-workflows/src/schedules/__tests__/setupSchedules.marketing-fanout.test.ts",
+    "ee/temporal-workflows/src/schedules/__tests__/setupSchedules.ninjaone-backfill.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/generic-job-workflow.temporal.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-simulator-contract.test.ts"
+  ],
+  "executedFiles": [
+    "ee/temporal-workflows/src/activities/__tests__/marketing-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/product-upgrade-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/sla-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/tenant-email-ingestion-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/tenant-suspension-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/workflow-runtime-v2-activities.test.ts",
+    "ee/temporal-workflows/src/config/__tests__/startupValidation.test.ts",
+    "ee/temporal-workflows/src/db/__tests__/product-bootstrap-resolver.test.ts",
+    "ee/temporal-workflows/src/db/__tests__/tenant-operations.email-settings.test.ts",
+    "ee/temporal-workflows/src/schedules/__tests__/setupSchedules.entra-tier.test.ts",
+    "ee/temporal-workflows/src/schedules/__tests__/setupSchedules.marketing-fanout.test.ts",
+    "ee/temporal-workflows/src/schedules/__tests__/setupSchedules.ninjaone-backfill.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/generic-job-workflow.temporal.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-simulator-contract.test.ts"
+  ],
+  "source": {
+    "before": {
+      "revision": "7b776d389bb54d182c6f836839ff3e54148a43cd",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.readiness.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        }
+      ]
+    },
+    "after": {
+      "revision": "7b776d389bb54d182c6f836839ff3e54148a43cd",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.readiness.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        }
+      ]
+    }
+  },
+  "failures": [],
+  "limits": [
+    "Local product-upgrade readiness additions await native CI.",
+    "Subscription mutation is tested through injected Stripe dependencies; this does not prove provider sandbox or previous-release upgrade behavior."
+  ]
+}

@@ -1,0 +1,312 @@
+[
+  {
+    "id": "T001",
+    "description": "Migrated DB: resolve a permitted sponsor-local client to its exact qualified relationship and persisted operation, return status/usage without global-page filtering, and retain customer-home policy behavior.",
+    "implemented": true,
+    "type": "integration",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F005",
+      "F008"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T002",
+    "description": "Migrated DB guard matrix: reject foreign client/operation/relationship combinations, unauthorized local client or escalation-board policy, forged browser identity/API overrides, and revoked sessions without leaking labels or counts; verify redaction of authorized reads.",
+    "implemented": true,
+    "type": "integration",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F005",
+      "F006",
+      "F008"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T003",
+    "description": "Migrated DB: exercise absent, single, multiple, ended, and inconsistent mappings; require explicit selection for ambiguity, retain ended history, and reject a stale write after the selected mapping/relationship changes instead of targeting the new default.",
+    "implemented": true,
+    "type": "integration",
+    "featureIds": [
+      "F003",
+      "F006",
+      "F018"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T004",
+    "description": "Migrated DB concurrency: race client Enable submissions with different operation IDs and prove one current setup; replay the original operation; preserve pre-existing multiple relationships; allow deliberate setup only after acknowledged cleanup or prior relationship closure. Exercise changed locking/index paths on Citus.",
+    "implemented": true,
+    "type": "integration",
+    "featureIds": [
+      "F004",
+      "F014",
+      "F015"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T005",
+    "description": "Action and migrated DB regression: policy read/search/save, SLA read/save, delegation, departure, allocation, retry/cancel/resend resolve the same selected client relationship and preserve independent command identities, revisions, customer grants, and retained-history authority.",
+    "implemented": true,
+    "type": "integration",
+    "featureIds": [
+      "F005",
+      "F006",
+      "F015",
+      "F017",
+      "F018"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T006",
+    "description": "Migrated DB: client usage matches active technician plus distinct unexpired invitation reservation counts; exclude portal contacts/MSP technicians, deny a reduction below commitment, and retain existing allocation/race/lapse guards with expected seats.",
+    "implemented": true,
+    "type": "integration",
+    "featureIds": [
+      "F008",
+      "F016"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T007",
+    "description": "Client composition: verify injected summary and co-managed Service focus view, full drawer tab, and quick-view full-client link. Parameterize original T21 disabled/loading/unknown/error states and unsupported/denied products; assert no feature calls or controls and working ordinary client content. Do not test only the boundary primitive.",
+    "implemented": true,
+    "type": "component",
+    "featureIds": [
+      "F009",
+      "F010",
+      "F011",
+      "F012",
+      "F031"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T008",
+    "description": "Client composition transitions: delayed flag/permission resolution consumes a direct co-managed deep link once; client/relationship switches discard stale responses; simultaneous page/drawer IDs are unique; draft dismissal is guarded. Disable the flag with setup and portaled checkout open, resolve late promises, and prove dialogs/reads do not restart.",
+    "implemented": true,
+    "type": "component",
+    "featureIds": [
+      "F010",
+      "F011",
+      "F012",
+      "F013",
+      "F031"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T009",
+    "description": "Client management journey: fixed-client setup shows reserved progress then pending acceptance, reopens the original operation after failure/reload, distinguishes invitation expiry from delivery failure, and refreshes summary/usage after allocation or recovery. Active settings use embeddable sections and ended state uses retained history.",
+    "implemented": true,
+    "type": "component",
+    "featureIds": [
+      "F010",
+      "F014",
+      "F015",
+      "F016",
+      "F017",
+      "F018"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T010",
+    "description": "Parameterize purchase availability: both permissions, relationship-only, account-only, read-only, ineligible sponsor, hosted missing/invalid configuration, unavailable provider, CE stubs, and valid/missing/expired self-host claims. Assert correct recovery action, no unauthorized billing call/secret, and relationship reads usable despite billing failure.",
+    "implemented": true,
+    "type": "component-and-action",
+    "featureIds": [
+      "F019",
+      "F020",
+      "F025",
+      "F026"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T011",
+    "description": "Purchase review: cover creation and resizing, sufficient capacity with no charge, shortfall converted to an absolute pool target, active-seat floor, provider due-now/recurring totals, changed pool baseline, invalid quantity, and stale preview invalidation. Never pass client allocation or delta as total pool quantity.",
+    "implemented": true,
+    "type": "component-and-action",
+    "featureIds": [
+      "F016",
+      "F021",
+      "F022"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T012",
+    "description": "Migrated DB purchase/allocation recovery: pending purchase from another client blocks growth; repeated/lost responses retain one purchase operation and immutable quantity; success waits for verified entitlement; competing allocation after purchase yields a recoverable client error with seats retained in the pool and no second charge/refund.",
+    "implemented": true,
+    "type": "integration",
+    "featureIds": [
+      "F021",
+      "F022",
+      "F023",
+      "F026"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T013",
+    "description": "Checkout recovery matrix: missing publishable key, SDK failure, embedded error, timeout, decline, user closure, terminal expiry, and delayed reconciliation each preserve the correct draft/pending state. Only acknowledged terminal expiry permits a new operation; disabling UI does not cancel a submitted purchase.",
+    "implemented": true,
+    "type": "component-and-action",
+    "featureIds": [
+      "F022",
+      "F023",
+      "F026",
+      "F031"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T014",
+    "description": "Account/license return: hosted full pool editor and contextual shortfall share recovery logic; self-host shortfalls route to License Management. Validate relative client return targets, session/client draft isolation, expiry/logout cleanup, no stored payment/invitation secrets, and server recovery after reload.",
+    "implemented": true,
+    "type": "component-and-action",
+    "featureIds": [
+      "F024",
+      "F025",
+      "F026"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T015",
+    "description": "Migrated DB plus overview component: authorized client/workspace rows, search/sort/count/pagination, ended/setup exceptions, and redacted usage remain consistent; account-only versus relationship-only readers get independent permitted sections; global actions navigate to the exact client relationship rather than duplicate dialogs.",
+    "implemented": true,
+    "type": "integration-and-component",
+    "featureIds": [
+      "F001",
+      "F008",
+      "F020",
+      "F027",
+      "F028"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T016",
+    "description": "Migrated DB/client Tickets: one sponsor-client filter includes native and permitted shared work before paging/count/export, handles identical ticket IDs/numbers across tenants, excludes siblings/revoked relationships, and preserves working-versus-oversight semantics. Project/task links retain qualified identities; flag-off composition uses native client work only.",
+    "implemented": true,
+    "type": "integration-and-component",
+    "featureIds": [
+      "F029",
+      "F030",
+      "F031"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T017",
+    "description": "Legacy route adapters: authorized operation-based policy/SLA/delegation/departure and client setup links land on the exact canonical client section; invalid/conflicting/foreign selectors reveal no client identity; customer-home and qualified work routes remain valid. T21 unavailable states perform no adapter discovery.",
+    "implemented": true,
+    "type": "route-and-component",
+    "featureIds": [
+      "F007",
+      "F012",
+      "F028",
+      "F031"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T018",
+    "description": "Hosted browser evidence at the implementation revision: client setup, real Stripe test-mode shortfall review/checkout/reconciliation, provisioning, customer-admin acceptance, client seat/settings management, overview return, and independent relationship/account roles. Include actual flag-off direct client/legacy URLs and native-client fallback; keep provider prerequisites explicit if blocked.",
+    "implemented": false,
+    "type": "browser-provider-evidence",
+    "featureIds": [
+      "F010",
+      "F011",
+      "F014",
+      "F015",
+      "F016",
+      "F017",
+      "F021",
+      "F023",
+      "F027",
+      "F028",
+      "F031",
+      "F033"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T019",
+    "description": "Self-host browser evidence: use verified signed capacity, encounter shortfall, open License Management, update entitlement, and return to the preserved client draft; exercise missing/expired claims, ordinary client usability with UI off, and resumed pending work. Record real issuer availability separately from signed-fixture tests.",
+    "implemented": false,
+    "type": "browser-license-evidence",
+    "featureIds": [
+      "F019",
+      "F024",
+      "F025",
+      "F026",
+      "F031",
+      "F033"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T020",
+    "description": "Original T22 regression: while the client UI flag is off, authorized target resolution, management actions, and existing purchase/provisioning/reconciliation operate under normal product/license rules and unauthorized actors remain denied. Pair direct behavioral checks with review of release-key references; no backend flag checks are introduced.",
+    "implemented": true,
+    "type": "integration-and-runtime-evidence",
+    "featureIds": [
+      "F002",
+      "F005",
+      "F006",
+      "F023",
+      "F031",
+      "F033"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  },
+  {
+    "id": "T021",
+    "description": "Affected CE/EE typecheck/build and browser presentation evidence: exercise full-page/drawer/narrow layouts, keyboard/focus return, light/dark and a translated locale; verify independent ordinary account/license surfaces with T21 off. Link executions and artifacts from dated original-plan/flag-doc/audit updates without converting blocked provider/browser cases into passes.",
+    "implemented": false,
+    "type": "build-and-browser-evidence",
+    "featureIds": [
+      "F009",
+      "F011",
+      "F013",
+      "F025",
+      "F031",
+      "F032",
+      "F033"
+    ],
+    "acceptanceStatus": "pending-candidate-verification",
+    "completionPlan": "../2026-09-20-co-managed-it-completion/PRD.md"
+  }
+]

@@ -10,6 +10,11 @@ const boardActions = source('board-actions/boardActions.ts');
 const exportActions = source('ticketExportActions.ts');
 const formActions = source('ticketFormActions.ts');
 const importActions = source('ticketImportActions.ts');
+// seedBoardTicketStatusesFromStandards moved out of boardActions.ts into the
+// shared lib so the co-managed bootstrap can seed boards without a session;
+// the schema/reference reads it owns are still part of this contract.
+const boardTicketDefaults = source('../../../../shared/lib/boardTicketDefaults.ts');
+const boardStatusSeedSurface = `${boardActions}\n${boardTicketDefaults}`;
 const boardStatsStart = boardActions.indexOf('export const getBoardListStats');
 const boardStatsEnd = boardActions.indexOf('\nexport const createBoard', boardStatsStart);
 const boardStatsSource = boardActions.slice(boardStatsStart, boardStatsEnd);
@@ -47,7 +52,7 @@ describe('ticket peripheral action tenant-scoped query contract', () => {
     expect(boardActions).toContain("tenantDb(trx, tenant).table<IBoard>('boards')");
     expect(boardActions).toContain("tenantScopedTable('status_sla_pause_config')");
     expect(exportActions).toContain('const tenantScopedDb = tenantDb(db, tenant)');
-    expect(formActions).toContain('tenantDb(trx, tenant).table<Row>(table)');
+    expect(formActions).toContain("tenantDb(trx, tenant).table<IBoard>('boards')");
     expect(importActions).toContain("tenantScopedTable('boards')");
     expect(importActions).toContain("tenantScopedTable('contacts')");
   });
@@ -67,7 +72,7 @@ describe('ticket peripheral action tenant-scoped query contract', () => {
   });
 
   it('keeps board schema/reference access outside the tenant facade', () => {
-    expect(boardActions).toContain("tenantDb(trx, tenant).table('standard_statuses')");
-    expect(boardActions.match(/tenantDb\(trx, tenant\)\.table\('statuses'\)\.columnInfo\(\)/g)).toHaveLength(2);
+    expect(boardStatusSeedSurface).toContain("tenantDb(trx, tenant).table('standard_statuses')");
+    expect(boardStatusSeedSurface.match(/tenantDb\(trx, tenant\)\.table\('statuses'\)\.columnInfo\(\)/g)).toHaveLength(2);
   });
 });

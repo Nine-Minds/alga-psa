@@ -1,0 +1,26 @@
+{
+  "status": "local_behavior_verified_native_pending",
+  "problem": "Current Temporal activity persisted raw secret references and resolved secret values in invocation input_json",
+  "fix": "Track resolver JSON Pointer paths and redact a separate stored input value, preserving parsed handler arguments and idempotency calculation",
+  "before": {
+    "database_passed": 4,
+    "database_failed": 1,
+    "log": "/tmp/alga-input-redaction-before-valid.log"
+  },
+  "after": {
+    "database_passed": 5,
+    "temporal_readiness_passed": 72,
+    "targeted_typescript": "passed",
+    "logs": [
+      "/tmp/alga-input-redaction-after.log",
+      "/tmp/alga-input-redaction-readiness.log",
+      "/tmp/alga-input-redaction-types.log"
+    ]
+  },
+  "limits": [
+    "Output persistence is also replay state and still requires a design preserving replay semantics while protecting secrets",
+    "Snapshot storage, retention and read-path requirements remain unported",
+    "This does not remove or waive the five skipped redaction integration cases",
+    "Database test uses direct activities, not a live Temporal worker"
+  ]
+}

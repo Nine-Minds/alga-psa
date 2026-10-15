@@ -1,4 +1,4 @@
-const { canCreateDistributedTable, isDistributed } = require('./utils/citusDistribution.cjs');
+const { canCreateDistributedTable, isDistributed, ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
 
 const tables = [
   'billing_semantics_locks',
@@ -10,9 +10,11 @@ const tables = [
   'service_catalog', 'service_prices',
 ];
 exports.up = async function(knex) {
-  await knex.schema.createTable('billing_semantics_locks', table => { table.uuid('tenant').primary(); });
-  const citus = await knex.raw("select exists(select 1 from pg_proc where proname='create_distributed_table') as present");
-  if (citus.rows[0].present) await knex.raw("select create_distributed_table('billing_semantics_locks', 'tenant', colocate_with => 'tenants')");
+  // Without a wrapping transaction, a retry may find earlier steps committed.
+  if (!(await knex.schema.hasTable('billing_semantics_locks'))) {
+    await knex.schema.createTable('billing_semantics_locks', table => { table.uuid('tenant').primary(); });
+  }
+  await ensureTenantDistribution(knex, 'billing_semantics_locks');
   await knex.raw(`CREATE OR REPLACE FUNCTION lock_billing_semantics_mutation() RETURNS trigger
     LANGUAGE plpgsql AS $$ BEGIN
       PERFORM pg_advisory_xact_lock(hashtextextended(COALESCE(NEW.tenant, OLD.tenant)::text || ':billing-semantics', 0));
@@ -31,14 +33,26 @@ exports.up = async function(knex) {
   for (const table of tables) {
     if (await knex.schema.hasTable(table)) {
       if (hasCitus && (await isDistributed(knex, table))) continue;
+      const trigger = await knex.raw(
+        'SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = ?::regclass AND tgname = ?) AS exists',
+        [table, 'billing_semantics_mutation']
+      );
+      if (trigger.rows[0].exists) continue;
       await knex.raw('CREATE TRIGGER billing_semantics_mutation BEFORE INSERT OR UPDATE OR DELETE ON ?? FOR EACH ROW EXECUTE FUNCTION lock_billing_semantics_mutation()', [table]);
     }
   }
 };
 exports.down = async function(knex) {
+  const hasCitus = await canCreateDistributedTable(knex);
   for (const table of tables) {
-    if (await knex.schema.hasTable(table)) await knex.raw('DROP TRIGGER IF EXISTS billing_semantics_mutation ON ??', [table]);
+    if (await knex.schema.hasTable(table)) {
+      if (hasCitus && (await isDistributed(knex, table))) continue;
+      await knex.raw('DROP TRIGGER IF EXISTS billing_semantics_mutation ON ??', [table]);
+    }
   }
   await knex.raw('DROP FUNCTION IF EXISTS lock_billing_semantics_mutation()');
   await knex.schema.dropTableIfExists('billing_semantics_locks');
 };
+// Citus distribution can open parallel worker connections. Function DDL must
+// run after that transaction commits, including when Knex runs a whole batch.
+exports.config = { transaction: false };

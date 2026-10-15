@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "kind": "runtime-subscriber-delivery-repair",
+  "baseRevision": "af96daf0bfe1a905f856249d748241f14bfbe89a",
+  "status": "local-passed-native-pending",
+  "repairs": [
+    {
+      "component": "Legacy server event bus entry point",
+      "before": "Expanded real Redis test delivered three unique events to each package subscriber and zero to the actual legacy server subscriber.",
+      "after": "The legacy entry point re-exports the shared process-wide bus, removing the separate consumer implementation. Package copies and legacy import deliver identical event IDs; close/reopen monitoring remains correct."
+    },
+    {
+      "component": "Calendar and search subscriber identities",
+      "before": "Actual registration functions with equal bundled handler names delivered the calendar sync effect once and omitted search indexing.",
+      "after": "Stable explicit subscriber IDs preserve both effects independently. The regression executes real registration and handler functions through Redis; external calendar service and search persistence are controlled effect probes."
+    }
+  ],
+  "validation": {
+    "redisFilesPassed": 2,
+    "redisTestsPassed": 2,
+    "existingRelatedFilesPassed": 6,
+    "existingRelatedTestsPassed": 25,
+    "skipped": 0,
+    "targetedTypeScript": "passed"
+  },
+  "logs": [
+    {
+      "path": "/tmp/alga-legacy-event-bus-before.log",
+      "sha256": "4b7a879865c708d2902bde6fb3e9ed982f65462386b4465338ef2b7617d3b759"
+    },
+    {
+      "path": "/tmp/alga-legacy-event-bus-after.log",
+      "sha256": "d79368cd183cd27f64696e71d9d02cfee33aae2d2fa612878aef3c7c89ba1e0a"
+    },
+    {
+      "path": "/tmp/alga-subscriber-identities-before.log",
+      "sha256": "c0ad00c2f5a5fbdfb3b2f39ddefb81e55f303d3bb2d5569da4c8ffa115697ea6"
+    },
+    {
+      "path": "/tmp/alga-subscriber-delivery-after.log",
+      "sha256": "496ba67bca94aa81298cda6739a37ee1ca9d214b804a4d472debd22ae73d18ea"
+    },
+    {
+      "path": "/tmp/alga-subscriber-delivery-related-final.log",
+      "sha256": "af59fb1fcc826b08af97e769948e28e53f09f75e4f7cc38eaa1f7c4d4a5df36e"
+    },
+    {
+      "path": "/tmp/alga-subscriber-delivery-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "limits": [
+    "The previous package-only delivery test did not cover the legacy server implementation; this evidence supersedes its broad delivery claim.",
+    "Production browser validation must use a new candidate containing this repair. Current native af96daf0 does not contain it.",
+    "Other subscriber families and cross-process consumer fanout are not proven by the calendar/search identity regression."
+  ]
+}

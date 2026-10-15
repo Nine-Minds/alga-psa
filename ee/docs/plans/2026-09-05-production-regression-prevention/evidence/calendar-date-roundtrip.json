@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "incident": "https://github.com/Nine-Minds/alga-psa/issues/3348",
+  "scope": "Shared provider-to-schedule date mapping",
+  "before": {
+    "failed": 2,
+    "assertion": "Google and Microsoft date-only end 2026-10-26 became 2026-10-26T23:59:59.000Z instead of exclusive midnight."
+  },
+  "after": {
+    "timezones": [
+      "UTC",
+      "Europe/Berlin",
+      "America/Los_Angeles"
+    ],
+    "passedPerTimezone": 3,
+    "roundTripsPerProvider": 3,
+    "failed": 0
+  },
+  "sourceSha256": {
+    "packages/integrations/src/utils/calendar/eventMapping.ts": "36b5884eea5e8836ec012b26c6823190b910762ce4dd5cf20ec8a90c6ed7686f",
+    "packages/integrations/src/utils/calendar/eventMapping.test.ts": "90552f982bf02771de89d9e02d4512b09dcade16d0ecc48aa9e4197704ca9cb9"
+  },
+  "limits": [
+    "No database or browser execution claimed.",
+    "Existing schema infers all-day from exact UTC-midnight boundaries; it cannot distinguish a timed event with those exact same boundaries.",
+    "Historical malformed end values are not migrated by this change.",
+    "Current-source CI and UI editor/display verification remain outstanding."
+  ]
+}

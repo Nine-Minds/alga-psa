@@ -13,14 +13,15 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { translateFieldValidation, validateClientNameField } from '@alga-psa/validation';
 import ClientContactsList from '../contacts/ClientContactsList';
 import QuickAddContact from '../contacts/QuickAddContact';
-import { Flex, Text, Heading } from '@radix-ui/themes';
-import { Switch } from '@alga-psa/ui/components/Switch';
+import { Text, Heading } from '@radix-ui/themes';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import BillingConfiguration from './BillingConfiguration';
 import { getClientById } from '@alga-psa/clients/actions';
 import {
   updateClient,
   uploadClientLogo,
   deleteClientLogo,
+  recropClientLogo,
   deleteClient,
   validateClientDeletion,
   reactivateClientContacts,
@@ -30,6 +31,7 @@ import {
   listClientInboundEmailDomains,
   addClientInboundEmailDomain,
   removeClientInboundEmailDomain,
+  setClientInboundEmailDomainAutoCreateContacts,
   listClientNameAliases,
   addClientNameAlias,
   removeClientNameAlias,
@@ -40,12 +42,14 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
+import type { ClientCoManagedSlots } from '../../context/ClientCrossFeatureContext';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/components/PrintableDetailHeader';
-import { ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
+import { ExternalLink, Merge, RefreshCw, Trash2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import InteractionsFeed from '../interactions/InteractionsFeed';
+import MergeClientsDialog from './MergeClientsDialog';
 import { IInteraction } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
@@ -79,6 +83,7 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { clientWebsiteFieldsForSave } from '../../lib/clientWebsiteUpdate';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
 import {
   formatEntraRunStatusLabel,
@@ -105,45 +110,6 @@ import { ClientEquipmentTab } from './ClientEquipmentTab';
 const EMPTY_CONTACTS: IContact[] = [];
 const EMPTY_DOCUMENTS: IDocument[] = [];
 
-
-const SwitchDetailItem: React.FC<{
-  value: boolean;
-  onEdit: (value: boolean) => void;
-  automationId?: string;
-  statusLabel: string;
-  helperLabel: string;
-  activeLabel: string;
-  inactiveLabel: string;
-}> = ({ value, onEdit, automationId, statusLabel, helperLabel, activeLabel, inactiveLabel }) => {
-  // Register for UI automation with meaningful label
-  const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: automationId,
-    type: 'formField',
-    fieldType: 'checkbox',
-    label: statusLabel,
-    value: value ? activeLabel : inactiveLabel,
-    helperText: helperLabel
-  });
-
-  return (
-    <div className="flex items-center justify-between py-3" {...automationIdProps}>
-      <div>
-        <div className="text-gray-900 font-medium">{statusLabel}</div>
-        <div className="text-sm text-gray-500">{helperLabel}</div>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-700">
-          {value ? activeLabel : inactiveLabel}
-        </span>
-        <Switch
-          checked={value}
-          onCheckedChange={onEdit}
-          className="data-[state=checked]:bg-primary-500"
-        />
-      </div>
-    </div>
-  );
-};
 
 const TextDetailItem: React.FC<{
   label: string;
@@ -240,14 +206,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const { t } = useTranslation('msp/clients');
   // Field messages live under common:clients.validation.*, not this page's namespace.
   const { t: tValidation } = useTranslation('common');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, renderClientRecurringTickets, getSlaPolicies, openTicketDetails, renderClientCoManagedIntegration } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
+  // `client` is a prop and does not advance after this component saves. Keep
+  // the comparison baseline current so a later save is compared to last save.
+  const savedClientRef = useRef(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
   // Bumped after quick-adds so the command center refetches the pulse cards.
   const [pulseRefreshNonce, setPulseRefreshNonce] = useState(0);
+  // In-place tab requests from a header summary action (no server navigation).
+  const [coManagedTabRequest, setCoManagedTabRequest] = useState<{ tabId: string; nonce: number } | null>(null);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [currentUser, setCurrentUser] = useState<IUser | null>(null);
   const [internalUsers, setInternalUsers] = useState<IUser[]>([]);
@@ -281,6 +252,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     users?: IUser[];
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
+  const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
   const [locationsRefreshKey, setLocationsRefreshKey] = useState(0);
   const [tags, setTags] = useState<ITag[]>([]);
   const [defaultContactOptions, setDefaultContactOptions] = useState<IContact[]>(contacts);
@@ -733,6 +705,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           ...latestClientData,
           client_type: latestClientData.client_type || 'company'
         });
+        savedClientRef.current = latestClientData;
         setHasUnsavedChanges(false);
       }
     } catch (error) {
@@ -749,6 +722,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       ...client,
       client_type: client.client_type || 'company'
     });
+    savedClientRef.current = client;
     setHasUnsavedChanges(false);
   }, [client]);
 
@@ -944,7 +918,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
       
       // Compare with original client to determine if there are unsaved changes
-      return JSON.stringify(tempClient) !== JSON.stringify(client);
+      return JSON.stringify(tempClient) !== JSON.stringify(savedClientRef.current);
     });
   };
 
@@ -1000,6 +974,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         properties: restOfEditedClient.properties ? { ...restOfEditedClient.properties } : {},
         account_manager_id: editedClientRef.current.account_manager_id === '' ? null : editedClientRef.current.account_manager_id,
       };
+      const websiteFields = clientWebsiteFieldsForSave(editedClientRef.current, savedClientRef.current);
+      if (!websiteFields.changed) {
+        delete dataToUpdate.url;
+        if (dataToUpdate.properties) delete dataToUpdate.properties.website;
+      } else {
+        // The field handlers keep these copies in sync; submit the user's edit
+        // explicitly so a deliberate empty value clears both stored copies.
+        dataToUpdate.url = websiteFields.url;
+        dataToUpdate.properties = {
+          ...(dataToUpdate.properties ?? {}),
+          website: websiteFields.website,
+        };
+      }
       const updatedClientResult = await updateClient(client.client_id, dataToUpdate);
       if (isClientActionError(updatedClientResult)) {
         handleError(updatedClientResult);
@@ -1007,9 +994,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
 
       const updatedClient = updatedClientResult as IClient;
+      savedClientRef.current = updatedClient;
       setEditedClient(updatedClient);
       setHasUnsavedChanges(false);
       setHasAttemptedSubmit(false);
+      // The record card summarizes fields this form owns (account manager,
+      // default contact, client since). Without this the overview kept the
+      // pre-save values until a full page reload.
+      setPulseRefreshNonce((nonce) => nonce + 1);
       toast.success(t('clientDetails.saveSuccess', {
         defaultValue: 'Client details saved successfully.',
       }));
@@ -1157,11 +1149,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
       (tempClient.properties as any).primary_contact_id = contactId;
       (tempClient.properties as any).primary_contact_name = selectedName;
-      return JSON.stringify(tempClient) !== JSON.stringify(client);
+      return JSON.stringify(tempClient) !== JSON.stringify(savedClientRef.current);
     });
   }, [clientActiveContacts, editedClient, client]);
 
-  const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string }>>([]);
+  const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string; auto_create_contacts: boolean }>>([]);
   const [inboundDomainDraft, setInboundDomainDraft] = useState('');
   const [isInboundDomainBusy, setIsInboundDomainBusy] = useState(false);
   const [inboundDestinationOptions, setInboundDestinationOptions] = useState<SelectOption[]>([]);
@@ -1177,7 +1169,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           toast.error(getErrorMessage(rows));
           return;
         }
-        setInboundEmailDomains((rows ?? []).map((r: any) => ({ id: r.id, domain: r.domain })));
+        setInboundEmailDomains((rows ?? []).map((r: any) => ({ id: r.id, domain: r.domain, auto_create_contacts: Boolean(r.auto_create_contacts) })));
       } catch (error) {
         // Non-blocking; if this fails we don't want to prevent other client edits.
         console.error('Failed to load inbound email domains:', error);
@@ -1238,7 +1230,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         return;
       }
       setInboundEmailDomains((prev) => {
-        const next = [...prev, { id: (created as any).id, domain: (created as any).domain }].filter(
+        const next = [...prev, { id: (created as any).id, domain: (created as any).domain, auto_create_contacts: false }].filter(
           (d, idx, arr) => idx === arr.findIndex((x) => x.id === d.id)
         );
         next.sort((a, b) => a.domain.localeCompare(b.domain));
@@ -1253,6 +1245,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setIsInboundDomainBusy(false);
     }
   }, [addClientInboundEmailDomain, editedClient.client_id, inboundDomainDraft, normalizeInboundDomain]);
+
+  const handleToggleInboundDomainAutoCreate = useCallback(async (domainId: string, enabled: boolean) => {
+    const previous = inboundEmailDomains.find((d) => d.id === domainId)?.auto_create_contacts ?? false;
+    setInboundEmailDomains((rows) => rows.map((d) => d.id === domainId ? { ...d, auto_create_contacts: enabled } : d));
+    try {
+      const result = await setClientInboundEmailDomainAutoCreateContacts(editedClient.client_id, domainId, enabled);
+      if (isClientActionError(result)) throw new Error(getErrorMessage(result));
+      toast.success(t('clientDetails.inboundDomainAutoCreateUpdated'));
+    } catch (error) {
+      setInboundEmailDomains((rows) => rows.map((d) => d.id === domainId ? { ...d, auto_create_contacts: previous } : d));
+      toast.error(t('clientDetails.inboundDomainAutoCreateUpdateFailed'));
+    }
+  }, [editedClient.client_id, inboundEmailDomains, t]);
 
   const handleRemoveInboundDomain = useCallback(async (domainId: string) => {
     if (!domainId) return;
@@ -1382,6 +1387,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           onDefaultContactChange={handleDefaultContactChange}
           onAddInboundDomain={handleAddInboundDomain}
           onRemoveInboundDomain={handleRemoveInboundDomain}
+          onToggleInboundDomainAutoCreate={handleToggleInboundDomainAutoCreate}
           onAddClientNameAlias={handleAddClientNameAlias}
           onRemoveClientNameAlias={handleRemoveClientNameAlias}
           onTagsChange={handleTagsChange}
@@ -1416,6 +1422,15 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         </div>
       )
     },
+    ...(renderClientRecurringTickets ? [{
+      id: 'recurring-tickets',
+      label: t('clientDetails.recurringTickets', { defaultValue: 'Recurring tickets' }),
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          {renderClientRecurringTickets({ clientId: client.client_id })}
+        </div>
+      ),
+    }] : []),
     {
       id: 'assets',
       label: t('clientDetails.assets', { defaultValue: 'Assets' }),
@@ -1470,7 +1485,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <ClientContactsList
             clientId={client.client_id}
-            clients={[client]}
+            client={client}
           />
         </div>
       )
@@ -1543,8 +1558,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             </FieldContainer>
             <TextDetailItem
               label="Tax ID"
-              value={editedClient.properties?.tax_id ?? ""}
-              onEdit={(value) => handleFieldChange('properties.tax_id', value)}
+              value={editedClient.tax_id_number ?? ""}
+              onEdit={(value) => handleFieldChange('tax_id_number', value)}
               automationId="tax-id-field"
             />
             <TextDetailItem
@@ -1618,7 +1633,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             </FieldContainer>
           </div>
           
-          <Flex gap="4" justify="end" align="center">
+          <DrawerFooter className="items-center gap-4">
             {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
               <Text size="2" className="text-red-600 mr-2" role="alert">
                 {t('clientDetails.requiredFields', { defaultValue: 'Please fill in all required fields' })}
@@ -1633,7 +1648,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 ? t('common.actions.saving', { defaultValue: 'Saving...' })
                 : t('clientDetails.saveChanges', { defaultValue: 'Save' })}
             </Button>
-          </Flex>
+          </DrawerFooter>
         </div>
       )
     },
@@ -1765,7 +1780,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     return baseTabContent.filter((tab) => !excludedTabs.has(tab.id));
   }, [baseTabContent, isAlgaDeskMode]);
 
-  return (
+  // The app-owned co-managed integration supplies a summary and a stable
+  // `co-managed` tab once the release flag and client read authority resolve.
+  // Until then (and when unavailable) the ordinary client renders unchanged.
+  const renderClientBody = (coManagedSlots: ClientCoManagedSlots | null) => {
+    // The Tickets tab always shows the native client list; co-managed only adds
+    // an optional callout above it. Shared tickets live in the co-managed tab.
+    const scopedTabs = coManagedSlots?.ticketsCallout
+      ? tabContent.map((tab) => (tab.id === 'tickets'
+        ? { ...tab, content: <>{coManagedSlots.ticketsCallout}{tab.content}</> }
+        : tab))
+      : tabContent;
+    const clientTabs = coManagedSlots?.tab ? [...scopedTabs, coManagedSlots.tab] : scopedTabs;
+    return (
     <ReflectionContainer id={id} label={t('clientDetails.title', { defaultValue: 'Client Details' })}>
       <div className="flex items-center space-x-5 mb-4 pt-2">
         {!quickView && (
@@ -1783,14 +1810,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             entityId={editedClient.client_id}
             entityName={editedClient.client_name}
             imageUrl={editedClient.logoUrl ?? null}
+            wideImageUrl={editedClient.logoWideUrl ?? null}
             uploadAction={uploadClientLogo}
             deleteAction={deleteClientLogo}
-            onImageChange={async (newLogoUrl) => {
+            recropAction={recropClientLogo}
+            cropWideToSquare
+            previewShape="auto"
+            onImageChange={async (newLogoUrl, newWideUrl) => {
               setEditedClient(prev => {
                 if (!prev) return prev;
                 return {
                   ...prev,
-                  logoUrl: newLogoUrl
+                  logoUrl: newLogoUrl,
+                  logoWideUrl: newWideUrl ?? null,
                 };
               });
               
@@ -1822,6 +1854,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           )}
 
           <div className="flex items-center gap-2 mr-8" data-print-hide>
+            {coManagedSlots?.summary}
             {headerActions}
             {showEntraSyncAction && (
               <div className="flex flex-col items-end gap-1">
@@ -1856,6 +1889,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               variant="outline"
               size="sm"
             />
+            <Button
+              id={`${id}-merge-client-button`}
+              onClick={() => setIsMergeDialogOpen(true)}
+              variant="outline"
+              size="sm"
+              className="flex items-center"
+              title={t('clientDetails.mergeClientHelp', {
+                defaultValue: 'Absorb another client into this one as a billing profile',
+              })}
+            >
+              <Merge className="h-4 w-4 mr-2" />
+              {t('clientDetails.mergeClient', { defaultValue: 'Merge' })}
+            </Button>
             <Button
               id={`${id}-delete-client-button`}
               onClick={handleDeleteClient}
@@ -1903,7 +1949,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         </div>
         {(quickView || isInDrawer) ? (
           <CustomTabs
-            tabs={quickView ? [tabContent[0]] : tabContent}
+            tabs={quickView ? [clientTabs[0]] : clientTabs}
             // In quick view we only render the Details tab. Force default to details
             // to avoid a mismatch with the current page's ?tab= query (e.g. "Tickets").
             defaultTab={quickView ? 'details' : searchParams?.get('tab')?.toLowerCase() || 'details'}
@@ -1915,12 +1961,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           <ClientCommandCenter
             idPrefix={`${id}-cc`}
             clientId={client.client_id}
-            tabs={tabContent}
             initialTabId={searchParams?.get('tab')?.toLowerCase() || null}
             onTabUrlChange={handleFocusTabUrlChange}
             hasUnsavedRecordChanges={hasUnsavedChanges}
             onDiscardRecordChanges={() => {
-              setEditedClient(client);
+              setEditedClient(savedClientRef.current);
               setHasUnsavedChanges(false);
             }}
             onNewTicket={() => setIsQuickAddTicketOpen(true)}
@@ -1928,9 +1973,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             onAddContact={() => setIsAddContactOpen(true)}
             onOpenTicketDetails={openTicketDetails ?? null}
             refreshNonce={pulseRefreshNonce}
+            openTabRequest={coManagedTabRequest}
             surveySummary={surveySummary}
             renderSurveySummaryCard={renderSurveySummaryCard}
             isAlgaDeskMode={isAlgaDeskMode}
+            tabs={clientTabs}
             t={t}
           />
         )}
@@ -1945,6 +1992,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             name: editedClient.client_name,
           },
         })}
+
+        <MergeClientsDialog
+          isOpen={isMergeDialogOpen}
+          onClose={() => setIsMergeDialogOpen(false)}
+          targetClientId={client.client_id}
+          clients={allClients.length ? allClients : [client]}
+          onMerged={() => setPulseRefreshNonce((nonce) => nonce + 1)}
+        />
 
         <QuickAddContact
           isOpen={isAddContactOpen}
@@ -2070,7 +2125,21 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         />
       </div>
     </ReflectionContainer>
-  );
+    );
+  };
+
+  if (renderClientCoManagedIntegration) {
+    return renderClientCoManagedIntegration({
+      clientId: client.client_id,
+      clientName: client.client_name,
+      idPrefix: `${id}-co-managed`,
+      relationshipId: searchParams?.get('relationshipId') ?? null,
+      section: searchParams?.get('section') ?? null,
+      onOpenTab: (tabId: string) => setCoManagedTabRequest({ tabId, nonce: Date.now() }),
+      children: renderClientBody,
+    });
+  }
+  return renderClientBody(null);
 };
 
 const FieldContainer: React.FC<{

@@ -56,13 +56,16 @@ describe('DesignerShell panel scrolling layout', () => {
     expect(canvasPanel?.querySelector('[data-automation-id="design-canvas-mock"]')).toBeTruthy();
   });
 
-  it('gives both side panels their own overflow-y-auto scroll containers', () => {
+  it('bounds the palette column (its block list and outline scroll inside it) and scrolls the inspector', () => {
     render(<DesignerShell />);
 
     const palettePanel = document.querySelector('[data-automation-id="designer-shell-palette-panel"]');
     const inspectorPanel = document.querySelector('[data-automation-id="designer-shell-inspector-panel"]');
 
-    expect(palettePanel?.className).toContain('overflow-y-auto');
+    // The palette column is a fixed-height flex column; the palette splits it
+    // between a scrolling block list and a scrolling outline pane.
+    expect(palettePanel?.className).toContain('overflow-hidden');
+    expect(palettePanel?.className).toContain('flex-col');
     expect(palettePanel?.className).toContain('min-h-0');
     expect(palettePanel?.querySelector('[data-automation-id="component-palette-mock"]')).toBeTruthy();
 

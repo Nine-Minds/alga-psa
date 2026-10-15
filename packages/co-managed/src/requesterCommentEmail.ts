@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
-import { getClientContactVisibilityContext } from '@alga-psa/shared/lib/tickets/clientPortalVisibility.server';
-import { VISIBILITY_GROUP_MISMATCH_ERROR, VISIBILITY_GROUP_MISSING_ERROR } from '@alga-psa/shared/lib/tickets/clientPortalVisibility';
+import { getClientContactVisibilityContext } from '@alga-psa/authorization/portal/visibility.server';
+import { VISIBILITY_GROUP_MISMATCH_ERROR, VISIBILITY_GROUP_MISSING_ERROR } from '@alga-psa/authorization/portal/visibility';
 import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
 import type { CoManagedCustomerTicketResource } from './customerCommentNotification';
 import { readLockedTicketCommentNotification, type TicketCommentNotificationContent } from './ticketCommentNotificationContent';

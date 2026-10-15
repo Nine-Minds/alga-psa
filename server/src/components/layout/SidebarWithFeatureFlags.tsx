@@ -23,6 +23,8 @@ import { useProduct } from '@/context/ProductContext';
 import { filterMenuSectionsByProduct } from '@/lib/productSurfaceRegistry';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getCoManagedDelegatedAdministration } from '@/lib/actions/coManagedDelegatedAdministrationActions';
+import { useCoManagedWorkSignals } from '@/components/co-managed/CoManagedWorkSignalsProvider';
 
 export function filterNavigationSectionsBySelfHost(
   sections: readonly NavigationSection[],
@@ -108,6 +110,29 @@ export function filterNavigationSectionsByFeatureAccess(
     .filter((section) => section.items.length > 0);
 }
 
+export function filterMenuItemsByPermission(
+  items: readonly MenuItem[],
+  permissions: readonly string[],
+): MenuItem[] {
+  return items.reduce<MenuItem[]>((visibleItems, item) => {
+    if (item.requiredPermission && !permissions.includes(item.requiredPermission)) {
+      return visibleItems;
+    }
+
+    const filteredSubItems = item.subItems
+      ? filterMenuItemsByPermission(item.subItems, permissions)
+      : undefined;
+
+    // A group whose children were all hidden has nothing left to open.
+    if (item.subItems && filteredSubItems?.length === 0 && !item.href) {
+      return visibleItems;
+    }
+
+    visibleItems.push(filteredSubItems ? { ...item, subItems: filteredSubItems } : item);
+    return visibleItems;
+  }, []);
+}
+
 export function filterNavigationSectionsByPermission(
   sections: readonly NavigationSection[],
   permissions: readonly string[],
@@ -115,9 +140,7 @@ export function filterNavigationSectionsByPermission(
   return sections
     .map((section) => ({
       ...section,
-      items: section.items.filter(
-        (item) => !item.requiredPermission || permissions.includes(item.requiredPermission),
-      ),
+      items: filterMenuItemsByPermission(section.items, permissions),
     }))
     .filter((section) => section.items.length > 0);
 }
@@ -137,11 +160,30 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [selfHostMode, setSelfHostMode] = useState(false);
   const [tenantLicenseScope, setTenantLicenseScope] = useState(false);
+  const [hasDelegationDirectory, setHasDelegationDirectory] = useState(false);
   const { hasFeature, isPro } = useTier();
   // Mirrors the menuConfig tier gate so the vault nav item tracks the tenant tier.
   const credentialsVaultEnabled = hasFeature(TIER_FEATURES.CREDENTIALS);
   const { productCode, edition } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
+  // Customer Tickets / Shared Tasks appear only once the flag resolved on, the tenant
+  // sponsors (PSA Pro) and the reader reports an assigned relationship. Presentation only.
+  const { available: coManagedWorkAvailable } = useCoManagedWorkSignals();
+
+  // In a PSA tenant, Delegated administration shows only for a non-empty directory.
+  const delegationDirectoryCheck = coManagedEnabled && isPro && productCode === 'psa';
+  useEffect(() => {
+    if (!delegationDirectoryCheck) { setHasDelegationDirectory(false); return; }
+    let isMounted = true;
+    getCoManagedDelegatedAdministration()
+      .then((result) => {
+        if (!isMounted) return;
+        const directory = result as { side?: string; workspaces?: unknown[] } | null;
+        setHasDelegationDirectory(directory?.side === 'directory' && (directory.workspaces?.length ?? 0) > 0);
+      })
+      .catch(() => { if (isMounted) setHasDelegationDirectory(false); });
+    return () => { isMounted = false; };
+  }, [delegationDirectoryCheck]);
 
   useEffect(() => {
     let isMounted = true;
@@ -197,12 +239,18 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     const filteredSections = baseSections.map((section) => ({
       ...section,
       items: section.items
-        .filter((item) => !['/msp/co-managed', '/msp/co-management'].includes(item.href ?? '') ||
-          !item.requiredPermission || userPermissions.includes(item.requiredPermission))
-        .filter((item) => item.href !== '/msp/co-managed' || (coManagedEnabled && isPro))
-        .filter((item) => item.href !== '/msp/co-management' || (coManagedEnabled && productCode === 'co_managed'))
-        .filter((item) => item.href !== '/msp/co-management/administration' || (coManagedEnabled &&
-          (productCode === 'co_managed' ? userPermissions.includes('co_management:manage') : isPro)))
+        .map((item) => item.name === 'Co-managed IT' && item.subItems ? {
+          ...item,
+          subItems: item.subItems
+            .filter((sub) => sub.href !== '/msp/co-managed' || (coManagedEnabled && isPro))
+            .filter((sub) => sub.href !== '/msp/co-management' || (coManagedEnabled && productCode === 'co_managed'))
+            .filter((sub) => sub.href !== '/msp/co-management/administration' || (coManagedEnabled &&
+              (productCode === 'co_managed' ? userPermissions.includes('co_management:manage') : isPro && hasDelegationDirectory))),
+        } : item.subItems ? {
+          ...item,
+          subItems: item.subItems.filter((sub) =>
+            (sub.href !== '/msp/tickets/customer' && sub.href !== '/msp/co-management/tasks') || (coManagedWorkAvailable && coManagedEnabled && isPro && productCode === 'psa')),
+        } : item)
         .filter((item) => item.name !== 'Marketing' || marketingEnabled)
         .filter((item) => item.name !== 'Passwords' || credentialsVaultEnabled)
         .map((item) => {
@@ -222,9 +270,12 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
 
     return filterMenuSectionsByProduct(
       productCode,
-      filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
+      filterNavigationSectionsByPermission(
+        filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
+        userPermissions,
+      ),
     );
-  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled, coManagedEnabled, isPro, userPermissions]);
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled, coManagedEnabled, isPro, userPermissions, hasDelegationDirectory, coManagedWorkAvailable]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);

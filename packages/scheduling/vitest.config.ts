@@ -5,7 +5,36 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
+    setupFiles: ['./vitest.setup.ts'],
+    // The older tests/*.test.tsx files predate tsx inclusion here and no
+    // longer collect/pass; they stay dormant until repaired, so the tsx
+    // suites that do pass are listed explicitly instead of globbed.
+    include: [
+      'tests/**/*.test.ts',
+      'src/**/*.test.ts',
+      'tests/AvailabilitySettings.component.test.tsx',
+      'tests/timeEntryProvider.defaultService.test.tsx',
+      'tests/calendarSharePicker.component.test.tsx',
+      'tests/timeEntryDialog.saveFailure.test.tsx',
+      'tests/agentScheduleView.test.tsx',
+      'tests/SchedulePage.accessRetry.test.tsx',
+      'tests/SchedulePage.dialogRestore.test.tsx',
+      'tests/SchedulePage.headerStability.test.tsx',
+      'tests/SchedulePage.requestDeepLink.test.tsx',
+      'tests/AppointmentRequestsPanel.highlight.test.tsx',
+      'tests/entryPopup.slotDraftPersistence.test.tsx',
+      'tests/entryPopup.assigneeOptions.test.tsx',
+      'tests/entryPopup.teamsMeetingRefresh.test.tsx',
+      'tests/scheduleCalendar.teamsMeetingRefresh.test.tsx',
+      'tests/monthScheduleChip.calendarColor.test.tsx',
+      'tests/timeEntryLauncher.test.tsx',
+      'tests/schedulingProjectTaskDetails.activityGroup.test.tsx',
+      'tests/suggestedEntriesSection.test.tsx',
+      'tests/newWorkItemTimeEntry.test.tsx',
+      'tests/stopwatchProvider.test.tsx',
+      'tests/timeEntryDialog.saveLifecycle.test.tsx',
+      'tests/workItemDrawer.adHocAssignees.test.tsx',
+    ],
     // 20s, matching the other heavy action-layer packages (billing, tickets,
     // client-portal, integrations). Mock factories here close over module-level
     // consts, so tests must defer to `await import(...)` inside the test body;
@@ -16,6 +45,11 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      // Lets component tests vi.mock the same specifier the components import.
+      { find: /^@alga-psa\/scheduling\/actions$/, replacement: path.resolve(__dirname, 'src/actions/index.ts') },
+      // EntryPopup/ScheduleCalendar self-import deep component paths the
+      // package's exports map does not publish; resolve those from source.
+      { find: /^@alga-psa\/scheduling\/components\/(.*)$/, replacement: path.resolve(__dirname, 'src/components/$1') },
       // Must precede the @alga-psa/auth alias, whose regex would otherwise
       // swallow "@alga-psa/authorization/..." specifiers.
       { find: /^@alga-psa\/authorization(.*)$/, replacement: path.resolve(__dirname, '../authorization/src$1') },
@@ -27,7 +61,28 @@ export default defineConfig({
       // to resolve @alga-psa/core/server.
       { find: /^@alga-psa\/core\/server$/, replacement: path.resolve(__dirname, '../core/src/server.ts') },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/lib/$1') },
+      // The generic db rule below maps subpaths straight into src, but the
+      // "./tenant" export lives at src/lib/tenant.ts (mirrors the package's
+      // exports map), so it needs resolving before the catch-all.
+      { find: /^@alga-psa\/db\/tenant$/, replacement: path.resolve(__dirname, '../db/src/lib/tenant.ts') },
+      // LEVERAGE: pattern vitest-workspace-src-aliases — 19 vitest configs now
+      // hand-transcribe @alga-psa/db's exports map into src aliases, and each
+      // one rediscovers the lib/ subpaths the hard way when a new import lands.
+      // The map is data the package already publishes; the alias list should be
+      // derived from it, not retyped per package.
+      // Same story for "./admin": @alga-psa/co-managed pulls in
+      // @alga-psa/licensing, whose built lib/license-state.js imports
+      // @alga-psa/db/admin. The catch-all below would rewrite that to the
+      // nonexistent src/admin, so the real src/lib/admin.ts is named here.
+      { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../db/src/lib/admin.ts') },
       { find: /^@alga-psa\/db(.*)$/, replacement: path.resolve(__dirname, '../db/src$1') },
+      // LEVERAGE: pattern vitest-workspace-src-aliases — co-managed and licensing publish some
+      // subpaths only as built dist/ files, which the unit-test job never builds.
+      { find: /^@alga-psa\/co-managed$/, replacement: path.resolve(__dirname, '../co-managed/src/index.ts') },
+      { find: /^@alga-psa\/co-managed\/(.*)$/, replacement: path.resolve(__dirname, '../co-managed/src/$1.ts') },
+      { find: /^@alga-psa\/licensing$/, replacement: path.resolve(__dirname, '../licensing/src/index.ts') },
+      { find: /^@alga-psa\/licensing\/actions$/, replacement: path.resolve(__dirname, '../licensing/src/actions/index.ts') },
+      { find: /^@alga-psa\/licensing\/(.*)$/, replacement: path.resolve(__dirname, '../licensing/src/$1.ts') },
       { find: /^@alga-psa\/types(.*)$/, replacement: path.resolve(__dirname, '../types/src$1') },
       { find: /^@alga-psa\/ui(.*)$/, replacement: path.resolve(__dirname, '../ui/src$1') },
       { find: /^@alga-psa\/validation(.*)$/, replacement: path.resolve(__dirname, '../validation/src$1') },

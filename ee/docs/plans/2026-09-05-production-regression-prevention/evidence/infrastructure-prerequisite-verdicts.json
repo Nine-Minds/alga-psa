@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "scope": "Always-emitted infrastructure verdict and independent skip authorization",
+  "test": "scripts/tests/infrastructure-runner.vitest.test.mjs",
+  "status": "passed",
+  "log": "/tmp/alga-infrastructure-prerequisites.log",
+  "sha256": "26b61bcf98efb93b6db6cd97bb38fff724febf31e88c19be8a4dd369aabb1020",
+  "scenarios": [
+    "Clean documentation-only commit plus successful selector and skipped infrastructure produces not-applicable.",
+    "Failed, cancelled, missing and unexpectedly skipped selector results fail.",
+    "Unavailable base evidence requires full coverage.",
+    "Skipped runtime changes and explicitly requested full coverage fail.",
+    "Scheduled full coverage accepts the intentionally skipped selector.",
+    "Independent required inventory, candidate source and raw shard reconciliation remain enforced."
+  ],
+  "limitations": [
+    "Local actual Git/Vitest behavioral test and workflow syntax validation; not current native CI execution.",
+    "Other workflow/global prerequisite gates and effective GitHub required protections remain open."
+  ]
+}

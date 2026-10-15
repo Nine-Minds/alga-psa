@@ -29,6 +29,16 @@ export default defineConfig({
       { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
       { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
       { find: /^@alga-psa\/ui\/(.*)$/, replacement: path.resolve(__dirname, '../ui/src/$1') },
+      { find: /^@alga-psa\/list-views$/, replacement: path.resolve(__dirname, '../list-views/src/index.ts') },
+      { find: /^@alga-psa\/list-views\/(actions|components|hooks)$/, replacement: path.resolve(__dirname, '../list-views/src/$1/index.ts') },
+      { find: /^@alga-psa\/list-views\/(.*)$/, replacement: path.resolve(__dirname, '../list-views/src/$1') },
+      // LEVERAGE: pattern vitest-workspace-src-aliases — co-managed and licensing publish some
+      // subpaths only as built dist/ files, which the unit-test job never builds.
+      { find: /^@alga-psa\/co-managed$/, replacement: path.resolve(__dirname, '../co-managed/src/index.ts') },
+      { find: /^@alga-psa\/co-managed\/(.*)$/, replacement: path.resolve(__dirname, '../co-managed/src/$1.ts') },
+      { find: /^@alga-psa\/licensing$/, replacement: path.resolve(__dirname, '../licensing/src/index.ts') },
+      { find: /^@alga-psa\/licensing\/actions$/, replacement: path.resolve(__dirname, '../licensing/src/actions/index.ts') },
+      { find: /^@alga-psa\/licensing\/(.*)$/, replacement: path.resolve(__dirname, '../licensing/src/$1.ts') },
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src/index.ts') },
       { find: /^@alga-psa\/types\/(.*)$/, replacement: path.resolve(__dirname, '../types/src/$1') },
       { find: /^@alga-psa\/event-schemas$/, replacement: path.resolve(__dirname, '../event-schemas/src/index.ts') },
@@ -39,6 +49,10 @@ export default defineConfig({
       { find: /^@alga-psa\/db\/reassignTicketResources$/, replacement: path.resolve(__dirname, '../db/src/lib/reassignTicketResources.ts') },
       { find: /^@alga-psa\/db\/models$/, replacement: path.resolve(__dirname, '../db/src/models/index.ts') },
       { find: /^@alga-psa\/db\/models\/(.*)$/, replacement: path.resolve(__dirname, '../db/src/models/$1') },
+      // db/testing is the shared test-double layer and lives at src/testing, not
+      // src/lib. It must precede the catch-all below, which assumes every other
+      // @alga-psa/db subpath is under src/lib and would rewrite it to a missing file.
+      { find: /^@alga-psa\/db\/testing$/, replacement: path.resolve(__dirname, '../db/src/testing/index.ts') },
       { find: /^@alga-psa\/db\/(.*)$/, replacement: path.resolve(__dirname, '../db/src/lib/$1') },
       { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../formatting/src/index.ts') },
       { find: /^@alga-psa\/formatting\/(.*)$/, replacement: path.resolve(__dirname, '../formatting/src/$1') },

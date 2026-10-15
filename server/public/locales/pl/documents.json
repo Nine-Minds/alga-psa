@@ -5,6 +5,15 @@
     "authorizedBy": "Zatwierdzone przez",
     "billTo": "Nabywca",
     "billedTimeByTicket": "Rozliczony czas według zgłoszeń",
+    "cadence": {
+      "annually": "Rocznie",
+      "monthly": "Miesięcznie",
+      "oneTime": "Jednorazowo",
+      "other": "Inne",
+      "quarterly": "Kwartalnie",
+      "semiAnnually": "Półrocznie"
+    },
+    "cadenceTotal": "Suma {{cadence}}",
     "date": "Data",
     "description": "Opis",
     "discounts": "Rabaty",
@@ -27,6 +36,10 @@
     "oneTimeItems": "Pozycje jednorazowe",
     "oneTimeTotal": "Razem jednorazowo",
     "optional": "Opcjonalne",
+    "optionalIncluded": "Opcjonalne (uwzględnione)",
+    "optionalSection": "Opcjonalne (jeśli wybrane)",
+    "optionalSubtotal": "Suma opcjonalna",
+    "optionalTotal": "Opcjonalnie, jeśli wybrane",
     "orderConfirmationTitle": "POTWIERDZENIE ZAMÓWIENIA",
     "orderDate": "Data zamówienia",
     "orderNumber": "Zamówienie nr",
@@ -73,11 +86,13 @@
       "noPhasesDefined": "Nie zdefiniowano faz"
     },
     "note": {
-      "billedTimePortalDetail": "Szczegółowe zestawienie wpisów czasu dla każdego zgłoszenia jest dostępne w portalu klienta.",
+      "billedTimePortalDetail": "Skontaktuj się z dostawcą usług, aby uzyskać zestawienie rozliczonego czasu.",
       "pickedBy": "Pobrał: ____________________     Data: ____________",
       "preTaxTotals": "Podane sumy nie zawierają podatku. Należny podatek jest naliczany na fakturze.",
       "thankYouForOrder": "Dziękujemy za zamówienie."
-    }
+    },
+    "serialNumbers": "Numery seryjne",
+    "allocatedSerialsNote": "Przypisane numery seryjne; mogą ulec zmianie podczas realizacji."
   },
   "errors": {
     "permissions": {
@@ -118,5 +133,20 @@
       "typeNotAllowed": "Ten typ pliku jest niedozwolony.",
       "sessionRequired": "Przesyłanie dokumentów wymaga aktywnej sesji. Zaloguj się ponownie."
     }
+  },
+  "time": {
+    "mixed": "Różne stawki",
+    "unknown": "Stawka niedostępna",
+    "other": "Inny rozliczony czas",
+    "ticket": "Zgłoszenie",
+    "task": "Zadanie projektu",
+    "partial": "Część rozliczonego czasu jest pokazana jako usługi, ponieważ szczegóły zgłoszeń są niedostępne.",
+    "unavailable": "Szczegóły zgłoszeń są niedostępne. Wszystkie opłaty są pokazane poniżej.",
+    "quantityHours": "Ilość / Godziny",
+    "breakdown": "Skontaktuj się z dostawcą usług, aby uzyskać zestawienie rozliczonego czasu.",
+    "detail": "Szczegóły rozliczonego czasu — uwzględnione w opłatach powyżej",
+    "incompleteDetail": "Szczegóły rozliczonego czasu mogą być niekompletne.",
+    "detailPartial": "To zestawienie zawiera tylko dostępne wpisy rozliczonego czasu.",
+    "detailUnavailable": "Szczegóły wpisów rozliczonego czasu nie są dostępne dla tej faktury."
   }
 }

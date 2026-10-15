@@ -69,6 +69,9 @@ const styleDeclarationSchema = z.object({
   fontStyle: z.string().optional(),
   lineHeight: z.union([z.string(), z.number()]).optional(),
   textAlign: z.enum(['left', 'center', 'right', 'justify']).optional(),
+  breakInside: z.enum(['auto', 'avoid', 'avoid-page']).optional(),
+  breakAfter: z.enum(['auto', 'avoid', 'avoid-page', 'page']).optional(),
+  breakBefore: z.enum(['auto', 'avoid', 'avoid-page', 'page']).optional(),
 }).strict();
 
 const nodeStyleRefSchema = z.object({
@@ -102,6 +105,21 @@ type ValueExpressionInput =
   | { type: 'template'; template: string; args?: Record<string, ValueExpressionInput> }
   | { type: 'i18n'; i18nKey: string; defaultValue: string };
 
+type TableColumnLineInput = {
+  id: string;
+  value: ValueExpressionInput;
+  style?: z.infer<typeof nodeStyleRefSchema>;
+};
+
+type TableColumnInput = {
+  id: string;
+  header?: I18nTextInput;
+  value: ValueExpressionInput;
+  format?: z.infer<typeof valueFormatSchema>;
+  style?: z.infer<typeof nodeStyleRefSchema>;
+  lines?: TableColumnLineInput[];
+};
+
 const valueExpressionSchema: z.ZodTypeAny = z.lazy(() =>
   z.discriminatedUnion('type', [
     z.object({
@@ -127,6 +145,32 @@ const valueExpressionSchema: z.ZodTypeAny = z.lazy(() =>
       defaultValue: z.string(),
     }).strict(),
   ])
+);
+
+/** One optional stacked line inside a table cell: its own value expression
+ *  and optional per-line format/style. Lines are additive — columns authored
+ *  before this key existed carry none and validate unchanged. */
+const tableColumnLineSchema: z.ZodTypeAny = z.lazy(() =>
+  z.object({
+    id: z.string().min(1),
+    value: valueExpressionSchema,
+    format: valueFormatSchema.optional(),
+    style: nodeStyleRefSchema.optional(),
+    supplemental: z.boolean().optional(),
+  }).strict()
+);
+
+/** Backward-compatible table column: legacy single `value` stays required and
+ *  keeps its meaning; `lines` (optional stacked lines) is additive. */
+const tableColumnSchema: z.ZodTypeAny = z.lazy(() =>
+  z.object({
+    id: z.string().min(1),
+    header: i18nTextSchema.optional(),
+    value: valueExpressionSchema,
+    format: valueFormatSchema.optional(),
+    style: nodeStyleRefSchema.optional(),
+    lines: z.array(tableColumnLineSchema).optional(),
+  }).strict()
 );
 
 type ComputationExpressionInput =
@@ -294,6 +338,12 @@ type NodeInput =
     }
   | {
       id: string;
+      type: 'richText';
+      style?: z.infer<typeof nodeStyleRefSchema>;
+      content: ValueExpressionInput;
+    }
+  | {
+      id: string;
       type: 'field';
       style?: z.infer<typeof nodeStyleRefSchema>;
       binding: z.infer<typeof bindingRefSchema>;
@@ -323,13 +373,7 @@ type NodeInput =
       style?: z.infer<typeof nodeStyleRefSchema>;
       sourceBinding: z.infer<typeof bindingRefSchema>;
       rowBinding: string;
-      columns: Array<{
-        id: string;
-        header?: I18nTextInput;
-        value: ValueExpressionInput;
-        format?: z.infer<typeof valueFormatSchema>;
-        style?: z.infer<typeof nodeStyleRefSchema>;
-      }>;
+      columns: TableColumnInput[];
       emptyStateText?: I18nTextInput;
     }
   | {
@@ -341,13 +385,7 @@ type NodeInput =
         itemBinding: string;
         keyPath?: string;
       };
-      columns: Array<{
-        id: string;
-        header?: I18nTextInput;
-        value: ValueExpressionInput;
-        format?: z.infer<typeof valueFormatSchema>;
-        style?: z.infer<typeof nodeStyleRefSchema>;
-      }>;
+      columns: TableColumnInput[];
       emptyStateText?: I18nTextInput;
     }
   | {
@@ -365,16 +403,20 @@ type NodeInput =
       }>;
     };
 
+const nodeNameSchema = z.string().min(1).max(200).optional();
+
 const nodeSchema: z.ZodTypeAny = z.lazy(() =>
   z.discriminatedUnion('type', [
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('document'),
       style: nodeStyleRefSchema.optional(),
       children: z.array(nodeSchema),
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('section'),
       title: i18nTextSchema.optional(),
       style: nodeStyleRefSchema.optional(),
@@ -382,6 +424,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('stack'),
       direction: z.enum(['row', 'column']).optional(),
       style: nodeStyleRefSchema.optional(),
@@ -394,12 +437,21 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('text'),
       style: nodeStyleRefSchema.optional(),
       content: valueExpressionSchema,
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
+      type: z.literal('richText'),
+      style: nodeStyleRefSchema.optional(),
+      content: valueExpressionSchema,
+    }).strict(),
+    z.object({
+      id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('field'),
       style: nodeStyleRefSchema.optional(),
       binding: bindingRefSchema,
@@ -413,6 +465,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('image'),
       style: nodeStyleRefSchema.optional(),
       src: valueExpressionSchema,
@@ -420,27 +473,24 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('divider'),
       style: nodeStyleRefSchema.optional(),
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('table'),
       style: nodeStyleRefSchema.optional(),
       headerStyle: nodeStyleRefSchema.optional(),
       sourceBinding: bindingRefSchema,
       rowBinding: z.string().min(1),
-      columns: z.array(z.object({
-        id: z.string().min(1),
-        header: i18nTextSchema.optional(),
-        value: valueExpressionSchema,
-        format: valueFormatSchema.optional(),
-        style: nodeStyleRefSchema.optional(),
-      }).strict()).min(1),
+      columns: z.array(tableColumnSchema).min(1),
       emptyStateText: i18nTextSchema.optional(),
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('dynamic-table'),
       style: nodeStyleRefSchema.optional(),
       headerStyle: nodeStyleRefSchema.optional(),
@@ -449,17 +499,12 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
         itemBinding: z.string().min(1),
         keyPath: z.string().min(1).optional(),
       }).strict(),
-      columns: z.array(z.object({
-        id: z.string().min(1),
-        header: i18nTextSchema.optional(),
-        value: valueExpressionSchema,
-        format: valueFormatSchema.optional(),
-        style: nodeStyleRefSchema.optional(),
-      }).strict()).min(1),
+      columns: z.array(tableColumnSchema).min(1),
       emptyStateText: i18nTextSchema.optional(),
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('totals'),
       style: nodeStyleRefSchema.optional(),
       sourceBinding: bindingRefSchema,
@@ -469,6 +514,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
         value: valueExpressionSchema,
         format: valueFormatSchema.optional(),
         emphasize: z.boolean().optional(),
+        hideWhenZero: z.boolean().optional(),
         style: nodeStyleRefSchema.optional(),
         labelStyle: nodeStyleRefSchema.optional(),
       }).strict()).min(1),

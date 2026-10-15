@@ -8,6 +8,7 @@ import { getCurrentUser, getUserRolesWithPermissions } from '@alga-psa/user-comp
 import { 
   getClientUserById, 
   updateClientUser, 
+  getClientUserManagerOptions,
   resetClientUserPassword,
   getClientPortalRoles,
   getClientUserRoles,
@@ -19,6 +20,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { Eye, EyeOff, ChevronDown, ChevronUp, X } from 'lucide-react';
 import ClientPasswordChangeForm from './ClientPasswordChangeForm';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -32,6 +34,8 @@ interface ClientUserDetailsProps {
   userId: string;
   onUpdate: () => void;
 }
+
+const NO_MANAGER = '__none__';
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -58,6 +62,12 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [isAdminPasswordExpanded, setIsAdminPasswordExpanded] = useState(false);
   
+  // Reports-to (manager) state. Options are same-client contacts, excluding self and own reports.
+  const [managerOptions, setManagerOptions] = useState<Array<{ contact_name_id: string; full_name: string }>>([]);
+  const [managerContactId, setManagerContactId] = useState<string>(NO_MANAGER);
+  const [initialManagerContactId, setInitialManagerContactId] = useState<string>(NO_MANAGER);
+  const [managerEditable, setManagerEditable] = useState(false);
+
   // Role management states
   const [userRoles, setUserRoles] = useState<IRole[]>([]);
   const [availableRoles, setAvailableRoles] = useState<IRole[]>([]);
@@ -116,6 +126,18 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
         setEmail(fetchedUser.email);
         setIsActive(!fetchedUser.is_inactive);
         
+        // Reports-to options (only present when the user is linked to a contact)
+        const managerData = await getClientUserManagerOptions(userId);
+        if (managerData && !isReturnedActionError(managerData) && 'options' in managerData) {
+          setManagerOptions(managerData.options);
+          const current = managerData.managerContactId ?? NO_MANAGER;
+          setManagerContactId(current);
+          setInitialManagerContactId(current);
+          setManagerEditable(managerData.options.length > 0 || managerData.managerContactId !== null);
+        } else {
+          setManagerEditable(false);
+        }
+
         // Fetch user's current roles
         const roles = await getClientUserRoles(userId);
         setUserRoles(roles);
@@ -137,12 +159,16 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
   const handleSave = async () => {
     if (user) {
       try {
-        const updatedUserData: Partial<IUser> = {
+        const updatedUserData: Partial<IUser> & { manager_contact_id?: string | null } = {
           first_name: firstName,
           last_name: lastName,
           email: email,
           is_inactive: !isActive,
         };
+        // Only send the manager when it changed, so unrelated edits never rewrite it.
+        if (managerEditable && managerContactId !== initialManagerContactId) {
+          updatedUserData.manager_contact_id = managerContactId === NO_MANAGER ? null : managerContactId;
+        }
         
         const updatedUser = await updateClientUser(user.user_id, updatedUserData);
         if (isReturnedActionError(updatedUser)) {
@@ -321,6 +347,33 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
           </div>
         </div>
 
+        {managerEditable && (
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              {tProfile('clientSettings.users.reportsTo', 'Reports to')}
+            </label>
+            <CustomSelect
+              id={`user-${userId}-reports-to`}
+              value={managerContactId}
+              onValueChange={setManagerContactId}
+              options={[
+                { value: NO_MANAGER, label: tProfile('clientSettings.users.noManager', 'No manager') },
+                ...managerOptions.map((option): SelectOption => ({
+                  value: option.contact_name_id,
+                  label: option.full_name,
+                })),
+              ]}
+              placeholder={tProfile('clientSettings.users.noManager', 'No manager')}
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              {tProfile(
+                'clientSettings.users.reportsToHelp',
+                "A manager can see the tickets, devices and projects of the people who report to them, when their visibility group is limited to their own records."
+              )}
+            </p>
+          </div>
+        )}
+
         {/* Role Management Section */}
         {canManageRoles && (
           <div className="mt-4 space-y-4">
@@ -452,7 +505,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
         )}
       </div>
 
-      <div className="flex justify-end space-x-2 mt-6">
+      <DrawerFooter>
         <Button
           id="close-button"
           onClick={closeDrawer}
@@ -467,7 +520,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
         >
           {tProfile('clientSettings.messages.saveChanges')}
         </Button>
-      </div>
+      </DrawerFooter>
     </Card>
   );
 };

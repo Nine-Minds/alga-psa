@@ -275,6 +275,126 @@ export async function createLicenseCheckoutSessionAction(
 }
 
 /**
+ * The tenant's current license total: the canonical license subscription's
+ * quantity, falling back to the tenant seat limit for tenants without one.
+ */
+async function getCurrentLicenseQuantity(tenantId: string): Promise<number> {
+  const knex = await getConnection(tenantId);
+  const db = tenantDb(knex, tenantId);
+
+  const subscription = await db.table<IStripeSubscription>('stripe_subscriptions')
+    .whereIn('status', ['active', 'trialing'])
+    .whereRaw("COALESCE(metadata->>'addon_key', '') = ''")
+    .orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
+    .first();
+  if (subscription) {
+    return subscription.quantity;
+  }
+
+  const tenant = await db.table('tenants').first('licensed_user_count');
+  return tenant?.licensed_user_count ?? 0;
+}
+
+function validateLicensesToAdd(additional: number): string | null {
+  if (!Number.isInteger(additional) || additional < 1) {
+    return 'Enter how many licenses to add (minimum 1)';
+  }
+  if (additional > 100000) {
+    return 'License quantity exceeds maximum allowed (100,000)';
+  }
+  return null;
+}
+
+/**
+ * Preview adding `additional` licenses on top of the current total.
+ * The total is computed here, never trusted from the client, so this path
+ * can only ever increase the subscription.
+ */
+export async function getAddLicensesPreviewAction(
+  additional: number
+): Promise<{
+  success: boolean;
+  data?: {
+    currentQuantity: number;
+    newQuantity: number;
+    isIncrease: boolean;
+    amountDue: number;
+    currency: string;
+    currentPeriodEnd: string;
+    prorationAmount: number;
+    remainingAmount: number;
+    isTrialing: boolean;
+    trialEnd: string | null;
+  };
+  error?: string;
+}> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+    if (!(await hasAccountManagementAccess())) {
+      return permissionDenied('You do not have permission to manage billing');
+    }
+
+    const validationError = validateLicensesToAdd(additional);
+    if (validationError) {
+      return { success: false, error: validationError };
+    }
+
+    const current = await getCurrentLicenseQuantity(session.user.tenant);
+    const preview = await getStripeService().getUpcomingInvoicePreview(
+      session.user.tenant,
+      current + additional
+    );
+
+    if (!preview) {
+      return { success: false, error: 'No existing subscription found' };
+    }
+
+    return {
+      success: true,
+      data: {
+        ...preview,
+        currentPeriodEnd: preview.currentPeriodEnd.toISOString(),
+        trialEnd: preview.trialEnd ? preview.trialEnd.toISOString() : null,
+      },
+    };
+  } catch (error) {
+    logger.error('[getAddLicensesPreviewAction] Error getting invoice preview:', error);
+    return { success: false, error: 'Failed to get invoice preview' };
+  }
+}
+
+/**
+ * Add `additional` licenses to the current total. Reductions go through
+ * reduceLicenseCountAction, which enforces the active-user guard.
+ */
+export async function addLicensesAction(
+  additional: number
+): Promise<ReturnType<typeof createLicenseCheckoutSessionAction>> {
+  const session = await getSession();
+  if (!session?.user?.tenant) {
+    return { success: false, error: 'Not authenticated' };
+  }
+  if (!(await hasAccountManagementAccess())) {
+    return permissionDenied('You do not have permission to manage billing');
+  }
+
+  const validationError = validateLicensesToAdd(additional);
+  if (validationError) {
+    return { success: false, error: validationError };
+  }
+
+  const current = await getCurrentLicenseQuantity(session.user.tenant);
+  logger.info(
+    `[addLicensesAction] Adding ${additional} licenses for tenant ${session.user.tenant} (current total ${current})`
+  );
+
+  return createLicenseCheckoutSessionAction(current + additional);
+}
+
+/**
  * Server action to get license pricing information
  * Reads from the tenant's actual subscription in stripe_subscriptions + stripe_prices.
  * Falls back to the STRIPE_PRO_PRICE_ID env var for tenants without a subscription row.

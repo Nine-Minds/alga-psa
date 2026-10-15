@@ -2,8 +2,8 @@ import React from 'react';
 import { describe, expect, test, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { App } from '../src/iframe/App';
 
 const root = path.resolve(__dirname, '..');

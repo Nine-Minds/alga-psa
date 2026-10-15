@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSessionUsable, msUntilExpiry, msUntilRefresh, shouldRefreshOnResume, shouldRunRevocationCheck } from "./bootstrapUtils";
+import { isSessionUsable, msUntilExpiry, msUntilRefresh, shouldRefreshOnResume } from "./bootstrapUtils";
 
 describe("bootstrapUtils", () => {
   it("treats sessions as usable when refresh token exists", () => {
@@ -14,12 +14,9 @@ describe("bootstrapUtils", () => {
     expect(msUntilExpiry(1000, 1500)).toBe(0);
   });
 
-  it("determines resume refresh and revocation throttle behavior", () => {
+  it("refreshes on resume only when the token is near expiry", () => {
     expect(shouldRefreshOnResume(1000, 900, 200)).toBe(true);
     expect(shouldRefreshOnResume(1000, 700, 200)).toBe(false);
-
-    expect(shouldRunRevocationCheck(0, 600_000, 600_000)).toBe(true);
-    expect(shouldRunRevocationCheck(10_000, 600_000, 600_000)).toBe(false);
   });
 });
 

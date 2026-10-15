@@ -6,26 +6,23 @@ import { Knex } from 'knex';
 import { IProject } from '@alga-psa/types';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { applyProjectVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/authorization/portal/visibility';
+import { getPortalVisibilityForUser } from '../../lib/clientAuth';
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
+import { hasClientProjectReadPermission } from './clientProjectPermissions';
 
 /**
- * Get clientId from user's contact - avoids nested withAuth calls
+ * The portal user's visibility context, from the shared resolver - avoids nested
+ * withAuth calls and hand-rolled contact -> client lookups. Project reads are
+ * narrowed by the group's project scope via applyProjectVisibilityFilter.
  */
-async function getClientIdFromUser(
-  knex: Knex | Knex.Transaction,
+async function getVisibilityFromUser(
+  knex: Knex,
   user: IUserWithRoles,
   tenant: string
-): Promise<string | null> {
-  if (!user.contact_id) return null;
-
-  const contact = await tenantDb(knex, tenant).table('contacts')
-    .where({
-      contact_name_id: user.contact_id,
-    })
-    .select('client_id')
-    .first();
-
-  return contact?.client_id || null;
+): Promise<ContactVisibilityContext | null> {
+  return withTransaction(knex, (trx: Knex.Transaction) => getPortalVisibilityForUser(trx, user, tenant));
 }
 
 /**
@@ -41,13 +38,24 @@ export const getClientProjectDetails = withAuth(async (
     const { knex } = await createTenantKnex();
     const scopedDb = tenantDb(knex, tenant);
 
-    const clientId = await getClientIdFromUser(knex, user, tenant);
-    if (!clientId) {
+    const canRead = await hasClientProjectReadPermission(knex, user, tenant);
+    if (!canRead) {
+      return permissionError(
+        'Insufficient permissions to view project details',
+        'common:errors.permissions.projects.readDetails'
+      );
+    }
+
+    const visibility = await getVisibilityFromUser(knex, user, tenant);
+    if (!visibility) {
       throw new Error('Client not found');
     }
 
     // Fetch project with client access verification
-    const projectQuery = scopedDb.table('projects')
+    const projectQuery = applyProjectVisibilityFilter(scopedDb.table('projects'), visibility, {
+      clientColumn: 'projects.client_id',
+      contactColumn: 'projects.contact_name_id',
+    })
       .select([
         'projects.project_id',
         'projects.project_name',
@@ -64,7 +72,6 @@ export const getClientProjectDetails = withAuth(async (
         'projects.client_portal_config'
       ])
       .where('projects.project_id', projectId)
-      .where('projects.client_id', clientId)
       .where('projects.is_inactive', false)
       .first();
     scopedDb.tenantJoin(projectQuery, 'statuses', 'projects.status', 'statuses.status_id', { type: 'left' });
@@ -104,13 +111,22 @@ export const getClientProjects = withAuth(async (
     const { knex } = await createTenantKnex();
     const scopedDb = tenantDb(knex, tenant);
 
-    const clientId = await getClientIdFromUser(knex, user, tenant);
-    if (!clientId) {
-      throw new Error('Client not found');
+    const canRead = await hasClientProjectReadPermission(knex, user, tenant);
+    if (!canRead) {
+      return permissionError(
+        'Insufficient permissions to view projects',
+        'common:errors.permissions.projects.read'
+      );
     }
 
+    const visibility = await getVisibilityFromUser(knex, user, tenant);
+    if (!visibility) {
+      throw new Error('Client not found');
+    }
+    const projectScope = { clientColumn: 'projects.client_id', contactColumn: 'projects.contact_name_id' };
+
   // Set up query with pagination, sorting, filtering
-  const query = scopedDb.table('projects')
+  const query = applyProjectVisibilityFilter(scopedDb.table('projects'), visibility, projectScope)
     .select([
       'projects.project_id',
       'projects.project_name',
@@ -125,7 +141,6 @@ export const getClientProjects = withAuth(async (
       'projects.updated_at',
       'projects.client_portal_config'
     ])
-    .where('projects.client_id', clientId)
     .where('projects.is_inactive', false);
   scopedDb.tenantJoin(query, 'statuses', 'projects.status', 'statuses.status_id', { type: 'left' });
   
@@ -149,9 +164,8 @@ export const getClientProjects = withAuth(async (
   }
   
   // Create a separate count query without the selected columns
-  const countQuery = scopedDb.table('projects')
+  const countQuery = applyProjectVisibilityFilter(scopedDb.table('projects'), visibility, projectScope)
     .count('* as count')
-    .where('projects.client_id', clientId)
     .where('projects.is_inactive', false);
   scopedDb.tenantJoin(countQuery, 'statuses', 'projects.status', 'statuses.status_id', { type: 'left' });
   

@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import fc from 'fast-check';
 import { buildClientCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import {
   createTestDbConnection,
@@ -35,6 +36,12 @@ vi.mock('./invoiceGeneration', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: mocks.publishWorkflowEvent,
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/auth', async (importOriginal) => {
@@ -53,7 +60,7 @@ const TENANT = uuidv4();
 const CLIENT_ID = uuidv4();
 const CONTRACT_ID = uuidv4();
 const CONTRACT_LINE_ID = uuidv4();
-const SCHEDULE_KEY = `schedule:${TENANT}:client_contract_line:${CONTRACT_LINE_ID}:client:arrears`;
+const SCHEDULE_KEY = `schedule:${TENANT}:${CONTRACT_LINE_ID}:client:arrears`;
 const PERIOD_KEY = 'period:2026-09-01:2026-10-01';
 // A calendar-month arrears period [2026-09-01, 2026-10-01) closes at month end
 // on 2026-09-30; its invoice window opens 2026-10-01 (service_period_end).
@@ -89,6 +96,8 @@ async function insertServicePeriodFixture(overrides: {
   duePosition?: 'arrears' | 'advance';
   servicePeriodStart?: string;
   servicePeriodEnd?: string;
+  windowStart?: string;
+  windowEnd?: string;
 } = {}): Promise<void> {
   await db('recurring_service_periods').insert({
     tenant: TENANT,
@@ -96,15 +105,14 @@ async function insertServicePeriodFixture(overrides: {
     period_key: overrides.periodKey ?? PERIOD_KEY,
     revision: 1,
     obligation_id: overrides.obligationId ?? CONTRACT_LINE_ID,
-    obligation_type: 'client_contract_line',
     charge_family: 'fixed',
     cadence_owner: 'client',
     due_position: overrides.duePosition ?? 'arrears',
     lifecycle_state: 'generated',
     service_period_start: overrides.servicePeriodStart ?? SERVICE_PERIOD_START,
     service_period_end: overrides.servicePeriodEnd ?? SERVICE_PERIOD_END,
-    invoice_window_start: WINDOW_START,
-    invoice_window_end: WINDOW_END,
+    invoice_window_start: overrides.windowStart ?? WINDOW_START,
+    invoice_window_end: overrides.windowEnd ?? WINDOW_END,
     provenance_kind: 'generated',
     source_rule_version: '1.0.0',
   });
@@ -166,7 +174,7 @@ beforeAll(async () => {
     tenant: TENANT,
     client_id: CLIENT_ID,
     contract_id: CONTRACT_ID,
-    start_date: '2026-01-01',
+    start_date: '1999-01-01',
     is_active: true,
   });
 });
@@ -181,6 +189,7 @@ beforeEach(() => {
 afterEach(async () => {
   vi.useRealTimers();
   await db('recurring_service_periods').where({ tenant: TENANT }).del();
+  await db('tenant_settings').where({ tenant: TENANT }).del();
   // Per-test extra lines; the shared arrears line from beforeAll stays.
   await db('contract_lines')
     .where({ tenant: TENANT })
@@ -200,6 +209,80 @@ afterAll(async () => {
 });
 
 describe('generateCalendarMonthEndCloseInvoices (DB-backed hydration)', () => {
+  it('matches the tenant calendar across generated month ends, leap years and timezone boundaries', async () => {
+    const scenario = fc.record({
+      year: fc.integer({ min: 2000, max: 2100 }),
+      month: fc.integer({ min: 1, max: 12 }),
+      dayOffset: fc.integer({ min: -1, max: 1 }),
+      hour: fc.integer({ min: 0, max: 23 }),
+      minute: fc.integer({ min: 0, max: 59 }),
+      zone: fc.constantFrom('UTC', 'America/New_York', 'Europe/London', 'Australia/Lord_Howe', 'Pacific/Kiritimati', 'Pacific/Pago_Pago', 'Asia/Kathmandu'),
+    });
+    // Date.UTC and Intl form an independent calendar oracle. Do not reuse the
+    // production Temporal policy to decide whether generation should succeed.
+    const day = (year: number, monthIndex: number, date: number) => new Date(Date.UTC(year, monthIndex, date)).toISOString().slice(0, 10);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    await fc.assert(fc.asyncProperty(scenario, async ({ year, month, dayOffset, hour, minute, zone }) => {
+      await db('recurring_service_periods').where({ tenant: TENANT }).del();
+      await db('tenant_settings').insert({ tenant: TENANT, settings: { timezone: zone } })
+        .onConflict('tenant').merge({ settings: { timezone: zone } });
+      mocks.generateInvoiceForSelectionInputs.mockClear();
+      const start = day(year, month - 1, 1);
+      const end = day(year, month, 1);
+      const windowEnd = day(year, month + 1, 1);
+      const finalDay = day(year, month, 0);
+      const instant = new Date(Date.UTC(year, month, dayOffset, hour, minute));
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' })
+        .formatToParts(instant);
+      const part = (type: string) => parts.find((entry) => entry.type === type)!.value;
+      const tenantDay = `${part('year')}-${part('month')}-${part('day')}`;
+      const periodKey = `period:${start}:${end}`;
+      await insertServicePeriodFixture({ periodKey, servicePeriodStart: start, servicePeriodEnd: end, windowStart: end, windowEnd });
+      const hydrated = await db('recurring_service_periods').where({ tenant: TENANT, period_key: periodKey }).first();
+      expect(hydrated.service_period_start).toBeInstanceOf(Date);
+      expect(hydrated.service_period_end).toBeInstanceOf(Date);
+      vi.setSystemTime(instant);
+      const result = await generateCalendarMonthEndCloseInvoices({ groupedTargets: [{ groupKey: `g1:${end}`, selectorInputs: [
+        buildClientCadenceDueSelectionInput({ clientId: CLIENT_ID, scheduleKey: SCHEDULE_KEY, periodKey, windowStart: end, windowEnd }),
+      ] }] });
+      if (tenantDay === finalDay) {
+        expect(result).toMatchObject({ invoicesCreated: 1, failedCount: 0, failures: [] });
+        expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenCalledExactlyOnceWith(expect.any(Array), expect.objectContaining({ invoiceDate: finalDay }));
+      } else {
+        expect(result).toMatchObject({ messageKey: 'msp/billing:errors.recurringRun.monthEndCloseNotEligible' });
+        expect(mocks.generateInvoiceForSelectionInputs).not.toHaveBeenCalled();
+      }
+    }), {
+      seed: Number(process.env.FC_SEED ?? 20260906),
+      numRuns: 64,
+      ...(process.env.FC_PATH ? { path: process.env.FC_PATH } : {}),
+      // Keep leap/century years and a month-end DST transition represented
+      // even when a developer supplies a different random seed.
+      examples: [
+        [{ year: 2000, month: 2, dayOffset: 0, hour: 12, minute: 0, zone: 'UTC' }],
+        [{ year: 2100, month: 2, dayOffset: 0, hour: 12, minute: 0, zone: 'UTC' }],
+        [{ year: 2024, month: 3, dayOffset: 0, hour: 0, minute: 59, zone: 'Europe/London' }],
+        [{ year: 2024, month: 3, dayOffset: 0, hour: 1, minute: 0, zone: 'Europe/London' }],
+        [{ year: 2026, month: 9, dayOffset: 1, hour: 2, minute: 0, zone: 'America/New_York' }],
+        [{ year: 2026, month: 9, dayOffset: -1, hour: 12, minute: 0, zone: 'Pacific/Kiritimati' }],
+      ],
+    });
+  }, 30000);
+
+  it('rejects invalid invoice-window dates before attempting generation', async () => {
+    await insertServicePeriodFixture();
+    for (const windowStart of ['2026-02-30', 'not-a-date']) {
+      await expect(async () => {
+        const selectorInput = buildClientCadenceDueSelectionInput({
+          clientId: CLIENT_ID, scheduleKey: SCHEDULE_KEY, periodKey: PERIOD_KEY,
+          windowStart, windowEnd: WINDOW_END,
+        });
+        return generateCalendarMonthEndCloseInvoices({ groupedTargets: [{ groupKey: 'invalid-window', selectorInputs: [selectorInput] }] });
+      }).rejects.toThrow();
+      expect(mocks.generateInvoiceForSelectionInputs).not.toHaveBeenCalled();
+    }
+  });
+
   it('generates a month-end arrears invoice from pg-hydrated Date columns on the final calendar day', async () => {
     await insertServicePeriodFixture();
 
@@ -291,7 +374,7 @@ describe('generateCalendarMonthEndCloseInvoices (DB-backed hydration)', () => {
       name: 'Month End Close Advance Line',
     });
     await insertServicePeriodFixture({
-      scheduleKey: `schedule:${TENANT}:client_contract_line:${advanceLineId}:client:advance`,
+      scheduleKey: `schedule:${TENANT}:${advanceLineId}:client:advance`,
       periodKey: 'period:2026-10-01:2026-11-01',
       obligationId: advanceLineId,
       duePosition: 'advance',
@@ -318,7 +401,7 @@ describe('generateCalendarMonthEndCloseInvoices (DB-backed hydration)', () => {
     // NOT select. Generating only part of the canonical window would claim
     // the window's invoice identity and strand the unselected period.
     const secondArrearsLineId = uuidv4();
-    const secondScheduleKey = `schedule:${TENANT}:client_contract_line:${secondArrearsLineId}:client:arrears`;
+    const secondScheduleKey = `schedule:${TENANT}:${secondArrearsLineId}:client:arrears`;
     await insertContractLineFixture({
       contractLineId: secondArrearsLineId,
       billingTiming: 'arrears',

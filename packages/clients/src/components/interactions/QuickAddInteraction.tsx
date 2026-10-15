@@ -1,7 +1,7 @@
 // server/src/components/interactions/QuickAddInteraction.tsx
 'use client'
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -26,11 +26,12 @@ import { IInteraction, IInteractionType } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { useSession } from 'next-auth/react';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import { getCurrentUserPermissions, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
-import { clampDuration } from '../../lib/durationHelpers';
+import { clampDuration, durationFromRange } from '../../lib/durationHelpers';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { IContact } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
@@ -53,6 +54,11 @@ import {
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
 
+// The duration fields cannot represent more than a day, so the date pickers must not
+// accept a range they would have to misreport. Same rule the server reconciles against.
+const END_BEFORE_START_MESSAGE = 'End time must be on or after the start time.';
+const RANGE_TOO_LONG_MESSAGE = "Interactions can't be longer than 24 hours.";
+
 // Keyed by the capability reason the Teams service returns, so the copy under
 // interactions.quickAdd.teams.reason.* stays greppable despite the dynamic key.
 const TEAMS_UNAVAILABLE_REASON_COPY: Record<string, string> = {
@@ -66,8 +72,10 @@ interface QuickAddInteractionProps {
   id?: string; // Made optional to maintain backward compatibility
   /** Omit entityId/entityType for a standalone interaction that selects its client/contact in the form. */
   entityId?: string;
-  entityType?: 'contact' | 'client';
+  entityType?: 'contact' | 'client' | 'opportunity';
   clientId?: string;
+  /** The deal's contact when entityType is 'opportunity'; optional (deals without a contact still log). */
+  contactId?: string;
   ticketId?: string; // Links the new interaction to a ticket (create mode only)
   onInteractionAdded: (newInteraction: IInteraction) => void;
   isOpen: boolean;
@@ -80,6 +88,7 @@ export function QuickAddInteraction({
   entityId,
   entityType,
   clientId,
+  contactId,
   ticketId,
   onInteractionAdded,
   isOpen,
@@ -122,6 +131,12 @@ export function QuickAddInteraction({
   const [clientDefaultEmail, setClientDefaultEmail] = useState<string | null>(null);
   const [clientDefaultName, setClientDefaultName] = useState<string | null>(null);
   const [hasLoadedAttendeeOptions, setHasLoadedAttendeeOptions] = useState(false);
+  const [addToSchedule, setAddToSchedule] = useState(false);
+  const [hasTouchedScheduleToggle, setHasTouchedScheduleToggle] = useState(false);
+  const [canAssignScheduleToOthers, setCanAssignScheduleToOthers] = useState(false);
+  const [scheduleAssignedUserIds, setScheduleAssignedUserIds] = useState<string[]>([]);
+  const [hasTouchedAssignedUser, setHasTouchedAssignedUser] = useState(false);
+  const [hasTouchedScheduleAssignees, setHasTouchedScheduleAssignees] = useState(false);
 
   const isEditMode = !!editingInteraction;
   const isStandaloneCreate = !isEditMode && !entityId;
@@ -143,7 +158,11 @@ export function QuickAddInteraction({
   const meetingContactId = !isEditMode
     ? (isStandaloneCreate
         ? (selectedContactId || null)
-        : (entityType === 'contact' ? (entityId ?? null) : null))
+        : (entityType === 'contact'
+            ? (entityId ?? null)
+            : entityType === 'opportunity'
+              ? (contactId ?? null)
+              : null))
     : null;
   const selectedInteractionType = useMemo(
     () => interactionTypes.find((type) => type.type_id === typeId) ?? null,
@@ -154,6 +173,34 @@ export function QuickAddInteraction({
     && isOnlineMeetingType
     && !!clientCrossFeature?.scheduleTeamsMeeting
     && teamsMeetingCapability?.available === true;
+  // The Teams path always books the calendar itself, so the generic toggle would be a
+  // duplicate control there. Every other interaction type gets it as soon as it has a start.
+  const teamsMeetingWillSchedule = createTeamsMeeting && canCreateTeamsMeeting;
+  const canAddToSchedule = !isEditMode && !!startTime && !teamsMeetingWillSchedule;
+  // Whoever books a calendar block gets to choose whose it is — as long as they may update
+  // other people's schedules. Without the permission the dialog stays "my schedule".
+  const willCreateScheduleEntry = teamsMeetingWillSchedule || (canAddToSchedule && addToSchedule);
+  const canPickScheduleAssignees = !isEditMode && willCreateScheduleEntry && canAssignScheduleToOthers;
+  const isSchedulingForOthers = scheduleAssignedUserIds.some((userId) => userId !== session?.user?.id);
+
+  const resetSchedulingState = useCallback(() => {
+    setAddToSchedule(false);
+    setHasTouchedScheduleToggle(false);
+    setCanAssignScheduleToOthers(false);
+    setScheduleAssignedUserIds([]);
+    setHasTouchedAssignedUser(false);
+    setHasTouchedScheduleAssignees(false);
+  }, []);
+
+  const handleClose = () => {
+    resetSchedulingState();
+    setHasAttemptedSubmit(false);
+    setValidationErrors([]);
+    setLoadErrors([]);
+    setEndTimeError('');
+    setIsQuickAddContactOpen(false);
+    onClose();
+  };
 
   // UI Reflection System Integration
   const { automationIdProps: typeSelectProps } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -293,11 +340,16 @@ export function QuickAddInteraction({
         }
         setStatuses(statusList);
         
+        // Every create path shows the assignee picker, so the user list is always needed.
+        // Edit mode keeps the unfiltered list so an interaction owned by an inactive or
+        // non-internal user still resolves to a name.
+        const usersList = isEditMode
+          ? await getAllUsersBasicAsync()
+          : await getAllUsersBasicAsync(false, 'internal');
+        setUsers(usersList);
+
         // Edit mode and standalone creation both need entity pickers.
         if (isEditMode || isStandaloneCreate) {
-          const usersList = await getAllUsersBasicAsync();
-          setUsers(usersList);
-          
           const clientsList = await getAllClients();
           setClients(clientsList);
           
@@ -306,9 +358,20 @@ export function QuickAddInteraction({
           setContacts(allContacts);
         }
         
-        // Set default status if available (only for new interactions)
-        if (!isEditMode) {
-          const defaultStatus = statusList.find(s => s.is_default);
+        if (isEditMode && editingInteraction) {
+          // A Radix select silently drops a controlled value whose option has not rendered
+          // yet, so the edited interaction's type/status are applied only once both lists
+          // are loaded — otherwise the dialog opens with empty selects.
+          setTypeId(editingInteraction.type_id || '');
+          setStatusId(editingInteraction.status_id || '');
+        } else {
+          // Set default status if available (only for new interactions). A new interaction
+          // must not open in a closed status, so fall back to the first open one when the
+          // tenant has no default configured.
+          const defaultStatus = statusList.find(s => s.is_default && !s.is_closed)
+            ?? statusList.filter(s => !s.is_closed)
+              .sort((a, b) => (a.order_number || 0) - (b.order_number || 0))[0]
+            ?? statusList.find(s => s.is_default);
           if (defaultStatus) {
             setStatusId(defaultStatus.status_id);
           }
@@ -327,21 +390,39 @@ export function QuickAddInteraction({
     // Populate fields if editing
     if (isEditMode && editingInteraction) {
       setTitle(editingInteraction.title || '');
-      setTypeId(editingInteraction.type_id || '');
-      setStatusId(editingInteraction.status_id || '');
+      // type_id / status_id are set from fetchData, once their options exist.
+      const storedStart = editingInteraction.start_time ? new Date(editingInteraction.start_time) : undefined;
+      const storedEnd = editingInteraction.end_time ? new Date(editingInteraction.end_time) : undefined;
       // Convert duration from total minutes to hours and minutes
-      if (editingInteraction.duration) {
+      const storedRange = storedStart && storedEnd ? durationFromRange(storedStart, storedEnd) : null;
+      if (storedRange && !storedRange.exceedsCap && storedRange.totalMinutes >= 0) {
+        // The range is what the server will store, so show that rather than a legacy
+        // duration that disagrees with it and would be rewritten on save.
+        setDurationHours(storedRange.hours > 0 ? storedRange.hours.toString() : '');
+        setDurationMinutes(storedRange.minutes > 0 ? storedRange.minutes.toString() : '');
+      } else if (editingInteraction.duration) {
         const totalMinutes = editingInteraction.duration;
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
+        // A legacy row may carry a duration the fields cannot hold; clamp it so the form
+        // never shows a value it would silently change on save.
+        const { hours, minutes } = clampDuration(
+          Math.floor(totalMinutes / 60).toString(),
+          (totalMinutes % 60).toString(),
+        );
         setDurationHours(hours > 0 ? hours.toString() : '');
         setDurationMinutes(minutes > 0 ? minutes.toString() : '');
       } else {
         setDurationHours('');
         setDurationMinutes('');
       }
-      setStartTime(editingInteraction.start_time ? new Date(editingInteraction.start_time) : undefined);
-      setEndTime(editingInteraction.end_time ? new Date(editingInteraction.end_time) : undefined);
+      setStartTime(storedStart);
+      setEndTime(storedEnd);
+      // Surface a stored range that exceeds the cap so saving the edit forces the user to
+      // reconcile it rather than re-submitting the mismatch.
+      setEndTimeError(
+        storedStart && storedEnd && durationFromRange(storedStart, storedEnd).exceedsCap
+          ? RANGE_TOO_LONG_MESSAGE
+          : '',
+      );
       setSelectedUserId(editingInteraction.user_id || '');
       setSelectedContactId(editingInteraction.contact_name_id || '');
       setSelectedClientId(editingInteraction.client_id || '');
@@ -382,14 +463,57 @@ export function QuickAddInteraction({
       // Mark notes content as ready after processing
       setIsNotesContentReady(true);
     } else if (isOpen && !startTime && !isEditMode) {
-      // Set start time to current time when dialog opens for new interactions
-      setStartTime(new Date());
+      // Set start time to current time when dialog opens for new interactions. The pickers
+      // work in whole minutes, so seed at a whole minute too: an End picked on the very same
+      // minute must not read as "before" a Start that is carrying leftover seconds.
+      const now = new Date();
+      now.setSeconds(0, 0);
+      setStartTime(now);
       setSelectedUserId(session?.user?.id || '');
       setIsNotesContentReady(true); // Mark as ready for new interactions
     }
   }, [isOpen, isEditMode, isStandaloneCreate, editingInteraction, session?.user?.id, t]);
 
-  // Note: ContactPicker handles client filtering internally, 
+  // Booking someone else's calendar is an update of *their* schedule, so the picker only
+  // appears for users who hold that permission. Reopening the dialog resets the choice.
+  useEffect(() => {
+    if (!isOpen || isEditMode) {
+      resetSchedulingState();
+      return;
+    }
+
+    setCanAssignScheduleToOthers(false);
+    setScheduleAssignedUserIds(session?.user?.id ? [session.user.id] : []);
+    setSelectedUserId(session?.user?.id || '');
+    setHasTouchedAssignedUser(false);
+    setHasTouchedScheduleAssignees(false);
+    // A toggle flipped in an abandoned draft must not survive into the next one; clearing the
+    // "touched" flag hands the switch back to the start-time rule below.
+    setHasTouchedScheduleToggle(false);
+
+    let cancelled = false;
+    getCurrentUserPermissions()
+      .then((permissions) => {
+        if (!cancelled) setCanAssignScheduleToOthers(permissions.includes('user_schedule:update'));
+      })
+      .catch((error) => {
+        console.error('Failed to load schedule permissions:', error);
+        if (!cancelled) setCanAssignScheduleToOthers(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, isEditMode, session?.user?.id, resetSchedulingState]);
+
+  // Scheduling something ahead should land on the calendar; logging what already happened
+  // should not. Stops steering once the user has flipped the switch themselves.
+  useEffect(() => {
+    if (!isOpen || isEditMode || hasTouchedScheduleToggle) return;
+    setAddToSchedule(!!startTime && startTime.getTime() > Date.now() + 60000);
+  }, [isOpen, startTime, isEditMode, hasTouchedScheduleToggle]);
+
+  // Note: ContactPicker handles client filtering internally,
   // so we don't need to refetch contacts when client changes
 
   useEffect(() => {
@@ -424,10 +548,11 @@ export function QuickAddInteraction({
     };
   }, [isOpen, isOnlineMeetingType, isEditMode, clientCrossFeature]);
 
-  // Load attendee options (internal users + contacts) only once the Teams meeting toggle is
-  // on (i.e. the attendee picker is actually shown) — avoids running the heavy getAllContacts()
-  // query every time the "Online Meeting" type is merely selected. The `hasLoadedAttendeeOptions`
-  // guard keeps it to a single fetch per dialog session.
+  // Load the attendee contacts only once the Teams meeting toggle is on (i.e. the attendee
+  // picker is actually shown) — avoids running the heavy getAllContacts() query every time the
+  // "Online Meeting" type is merely selected. Internal users already arrive with the dialog's
+  // own fetch, so they are not requested again here. The `hasLoadedAttendeeOptions` guard keeps
+  // this to a single fetch per dialog session.
   useEffect(() => {
     if (!isOpen || isEditMode || !isOnlineMeetingType || !createTeamsMeeting || hasLoadedAttendeeOptions) {
       return;
@@ -436,12 +561,8 @@ export function QuickAddInteraction({
     let cancelled = false;
     (async () => {
       try {
-        const [usersList, contactsList] = await Promise.all([
-          getAllUsersBasicAsync(false, 'internal'),
-          getAllContacts(),
-        ]);
+        const contactsList = await getAllContacts();
         if (cancelled) return;
-        setUsers(usersList);
         setContacts(contactsList);
         setHasLoadedAttendeeOptions(true);
       } catch (error) {
@@ -500,9 +621,20 @@ export function QuickAddInteraction({
     return [];
   }, [meetingContactId, contacts, clientDefaultEmail, clientDefaultName]);
 
-  // Helper to get total duration in minutes from hours and minutes state (max 24h 59m = 1499 minutes)
+  // Helper to get total duration in minutes from hours and minutes state (max 24h = 1440 minutes)
   const getTotalDurationMinutes = (): number => {
     return clampDuration(durationHours, durationMinutes).totalMinutes;
+  };
+
+  // A stored duration is exactly end − start, so the range wins whenever the form holds
+  // both ends of it; the duration fields only speak for themselves when it doesn't.
+  // Submission already rejects an inverted or over-cap range, so this stays within the cap.
+  const getSubmittedDurationMinutes = (): number => {
+    if (startTime && endTime) {
+      const { totalMinutes } = durationFromRange(startTime, endTime);
+      if (totalMinutes >= 0) return totalMinutes;
+    }
+    return getTotalDurationMinutes();
   };
 
   // Handle start time change
@@ -519,17 +651,18 @@ export function QuickAddInteraction({
     }
 
     if (endTime) {
-      const diffMilliseconds = endTime.getTime() - date.getTime();
-      if (diffMilliseconds < 0) {
+      const { hours, minutes, totalMinutes: rangeMinutes, exceedsCap } = durationFromRange(date, endTime);
+      if (rangeMinutes < 0) {
         // Auto-correct: set end time to match start time
         setEndTime(date);
         setEndTimeError(''); // Clear error since we auto-corrected
         setDurationHours('');
         setDurationMinutes('');
+      } else if (exceedsCap) {
+        // The duration fields cannot hold this range, so flag it instead of writing
+        // an out-of-range duration the submit would then clamp away.
+        setEndTimeError(RANGE_TOO_LONG_MESSAGE);
       } else {
-        const totalMinutesFromEnd = Math.round(diffMilliseconds / 60000);
-        const hours = Math.floor(totalMinutesFromEnd / 60);
-        const minutes = totalMinutesFromEnd % 60;
         setDurationHours(hours > 0 ? hours.toString() : '');
         setDurationMinutes(minutes > 0 ? minutes.toString() : '');
         setEndTimeError('');
@@ -539,28 +672,34 @@ export function QuickAddInteraction({
 
   // Handle end time change
   const handleEndTimeChange = (date: Date) => {
-    // Validate: end time must be after or equal to start time
-    if (startTime && date.getTime() < startTime.getTime()) {
-      // Don't allow setting end time before start time
-      setEndTimeError('End time must be on or after the start time.');
-      return;
+    // What the user picked is what the field shows, so it is always kept. An End that lands
+    // before the Start, or beyond the cap the duration fields can represent, is flagged (and
+    // blocks saving) rather than dropped: dropping it left the picker displaying a time the
+    // dialog did not hold, and made it impossible to set End first and then move Start.
+    setEndTime(date);
+
+    if (startTime) {
+      const { totalMinutes, exceedsCap } = durationFromRange(startTime, date);
+      if (totalMinutes < 0) {
+        setEndTimeError(END_BEFORE_START_MESSAGE);
+        // A stale duration would otherwise re-derive End from Start on the next Start pick.
+        setDurationHours('');
+        setDurationMinutes('');
+        return;
+      }
+      if (exceedsCap) {
+        setEndTimeError(RANGE_TOO_LONG_MESSAGE);
+        return;
+      }
     }
 
-    setEndTime(date);
     setEndTimeError('');
 
-    // If we have a start time, calculate and update duration (hours and minutes)
+    // If we have a start time, the duration is exactly the range it spans
     if (startTime) {
-      const diffMilliseconds = date.getTime() - startTime.getTime();
-      const totalMinutes = Math.round(diffMilliseconds / 60000);
-
-      // Only update duration if the difference is positive
-      if (totalMinutes >= 0) {
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-        setDurationHours(hours > 0 ? hours.toString() : '');
-        setDurationMinutes(minutes > 0 ? minutes.toString() : '');
-      }
+      const { hours, minutes } = durationFromRange(startTime, date);
+      setDurationHours(hours > 0 ? hours.toString() : '');
+      setDurationMinutes(minutes > 0 ? minutes.toString() : '');
     }
   };
 
@@ -601,6 +740,25 @@ export function QuickAddInteraction({
     }
   };
 
+  // The record and its calendar block should never disagree about whose work this is, so
+  // each picker seeds the other until the user overrides it by hand. Mirroring an owner
+  // into the schedule only happens when this user may book other people's calendars.
+  const handleAssignedUserChange = (userId: string) => {
+    setSelectedUserId(userId);
+    setHasTouchedAssignedUser(true);
+    if (canAssignScheduleToOthers && !hasTouchedScheduleAssignees) {
+      setScheduleAssignedUserIds(userId ? [userId] : []);
+    }
+  };
+
+  const handleScheduleAssigneesChange = (values: string[]) => {
+    setScheduleAssignedUserIds(values);
+    setHasTouchedScheduleAssignees(true);
+    if (!hasTouchedAssignedUser) {
+      setSelectedUserId(values.length === 1 ? values[0] : (session?.user?.id || ''));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setHasAttemptedSubmit(true);
@@ -623,9 +781,17 @@ export function QuickAddInteraction({
         defaultValue: 'Select a client for this interaction',
       }));
     }
-    if (startTime && endTime && endTime.getTime() < startTime.getTime()) {
-      errors.push('End time must be on or after the start time');
-      setEndTimeError('End time must be on or after the start time.');
+    // No state path may submit a range the duration field cannot represent: the payload
+    // duration below is always exactly end − start.
+    if (startTime && endTime) {
+      const { totalMinutes, exceedsCap } = durationFromRange(startTime, endTime);
+      if (totalMinutes < 0) {
+        errors.push('End time must be on or after the start time');
+        setEndTimeError(END_BEFORE_START_MESSAGE);
+      } else if (exceedsCap) {
+        errors.push(RANGE_TOO_LONG_MESSAGE);
+        setEndTimeError(RANGE_TOO_LONG_MESSAGE);
+      }
     }
     if (createTeamsMeeting && canCreateTeamsMeeting) {
       if (!startTime) {
@@ -652,11 +818,12 @@ export function QuickAddInteraction({
         title,
         notes: JSON.stringify(notesContent),
         type_id: typeId,
-        duration: getTotalDurationMinutes() > 0 ? getTotalDurationMinutes() : null,
+        duration: getSubmittedDurationMinutes() > 0 ? getSubmittedDurationMinutes() : null,
         start_time: startTime,
         end_time: endTime,
         status_id: statusId,
-        user_id: isEditMode ? selectedUserId : session.user.id,
+        // Honour an explicitly chosen owner in both modes; the session user is only the fallback.
+        user_id: selectedUserId || session.user.id,
         tenant: tenant
       };
   
@@ -669,6 +836,12 @@ export function QuickAddInteraction({
         if (entityType === 'contact') {
           interactionData.contact_name_id = entityId;
           interactionData.client_id = clientId;
+        } else if (entityType === 'opportunity') {
+          // The interaction is the substrate for the deal's history: it carries the
+          // opportunity, the deal's client (required by create), and its contact.
+          interactionData.opportunity_id = entityId;
+          interactionData.client_id = clientId;
+          interactionData.contact_name_id = contactId ?? null;
         } else {
           interactionData.client_id = entityId;
         }
@@ -692,16 +865,25 @@ export function QuickAddInteraction({
         resultInteraction = updateResult;
         console.log('Updated interaction received:', resultInteraction);
       } else if (createTeamsMeeting && canCreateTeamsMeeting && startTime && endTime) {
+        // LEVERAGE: pattern cross-feature-interaction-fields — unlike the plain
+        // addInteraction branch below (which forwards the whole interactionData),
+        // the Teams seam enumerates interaction fields by hand, so every new
+        // interaction field must be added here too (opportunity_id/notes were
+        // silently dropped before this fix).
         const scheduleResult = await clientCrossFeature.scheduleTeamsMeeting!({
           subject: title,
           startDateTime: startTime,
           endDateTime: endTime,
           client_id: interactionData.client_id ?? null,
           contact_name_id: interactionData.contact_name_id ?? null,
+          opportunity_id: interactionData.opportunity_id ?? null,
+          notes: interactionData.notes,
           attendees: meetingAttendees,
+          interactionUserId: interactionData.user_id,
           // The scheduled meeting must exist on the AlgaPSA calendar too;
           // the creator is the default assignee server-side.
           createScheduleEntry: true,
+          scheduleAssignedUserIds,
         });
         if (!scheduleResult.success || !scheduleResult.data?.interaction_id) {
           throw new Error(scheduleResult.error || t('interactions.quickAdd.teams.createFailed', {
@@ -713,7 +895,10 @@ export function QuickAddInteraction({
         // Create new interaction
         console.log('Creating new interaction');
         console.log('Create data:', interactionData);
-        const newInteraction = await addInteraction(interactionData as Omit<IInteraction, 'interaction_date'>);
+        const newInteraction = await addInteraction(
+          interactionData as Omit<IInteraction, 'interaction_date'>,
+          { createScheduleEntry: canAddToSchedule && addToSchedule, scheduleAssignedUserIds },
+        );
         if (isReturnedActionError(newInteraction)) {
           throw new Error(getErrorMessage(newInteraction));
         }
@@ -728,8 +913,7 @@ export function QuickAddInteraction({
       }
       
       onInteractionAdded(fullInteraction);
-      setIsQuickAddContactOpen(false);
-      onClose();
+      handleClose();
       
       // Clear form fields only if not editing
       if (!isEditMode) {
@@ -776,12 +960,34 @@ export function QuickAddInteraction({
   };
 
   const typeOptions = useMemo(
-    () => interactionTypes.map((type) => ({
-      value: type.type_id,
-      label: getTypeLabel(type),
-      textValue: type.type_name
-    })),
-    [interactionTypes]
+    () => {
+      const options = interactionTypes.map((type) => ({
+        value: type.type_id,
+        label: getTypeLabel(type),
+        textValue: type.type_name
+      }));
+
+      // Interactions can also reference a *system* interaction type, which this
+      // tenant-only list omits. Keep the edited interaction's own type selectable so the
+      // dialog does not open on a blank (and unsavable) type.
+      const currentTypeId = editingInteraction?.type_id;
+      if (currentTypeId && !options.some((option) => option.value === currentTypeId)) {
+        const typeName = editingInteraction?.type_name ?? '';
+        options.unshift({
+          value: currentTypeId,
+          label: (
+            <div className="flex items-center gap-2">
+              <InteractionIcon icon={editingInteraction?.icon} typeName={typeName} />
+              <span className="capitalize">{typeName}</span>
+            </div>
+          ),
+          textValue: typeName
+        });
+      }
+
+      return options;
+    },
+    [interactionTypes, editingInteraction]
   );
 
   const footer = (
@@ -791,13 +997,7 @@ export function QuickAddInteraction({
         type="button"
         variant="outline"
         className="flex-1"
-        onClick={() => {
-          setHasAttemptedSubmit(false);
-          setValidationErrors([]);
-          setLoadErrors([]);
-          setEndTimeError('');
-          onClose();
-        }}
+        onClick={handleClose}
       >
         Cancel
       </Button>
@@ -817,14 +1017,7 @@ export function QuickAddInteraction({
     <ReflectionContainer id={id} label="Quick Add Interaction">
       <Dialog
         isOpen={isOpen}
-        onClose={() => {
-        setHasAttemptedSubmit(false);
-        setValidationErrors([]);
-        setLoadErrors([]);
-        setEndTimeError('');
-        setIsQuickAddContactOpen(false);
-        onClose();
-      }}
+        onClose={handleClose}
         title={isEditMode ? 'Edit Interaction' : 'Add New Interaction'}
         className="max-w-2xl"
         hideCloseButton={false}
@@ -913,9 +1106,13 @@ export function QuickAddInteraction({
                                       t('interactions.quickAdd.teams.invitesSummaryYou', { defaultValue: 'you (creator)' }),
                                     ].join(', '),
                                   })}{' '}
-                              {t('interactions.quickAdd.teams.scheduleSummary', {
-                                defaultValue: 'A schedule entry will be added to your AlgaPSA calendar.',
-                              })}
+                              {isSchedulingForOthers
+                                ? t('interactions.quickAdd.schedule.addHelpOthers', {
+                                    defaultValue: "A schedule entry will be added to the selected users' AlgaPSA calendars.",
+                                  })
+                                : t('interactions.quickAdd.teams.scheduleSummary', {
+                                    defaultValue: 'A schedule entry will be added to your AlgaPSA calendar.',
+                                  })}
                             </p>
                           </>
                         )}
@@ -1106,18 +1303,43 @@ export function QuickAddInteraction({
                 skipSuccessDialog
               />
               
-              {/* Status for non-edit mode - shown for create mode */}
+              {/* Status and owner for non-edit mode - shown for create mode */}
               {!isEditMode && (
-                <CustomSelect
-                  options={statuses.map((status) => ({ 
-                    value: status.status_id, 
-                    label: status.name 
-                  }))}
-                  value={statusId}
-                  onValueChange={setStatusId}
-                  placeholder="Select Status"
-                  className="w-fit"
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {t('interactions.overall.columns.status', { defaultValue: 'Status' })}
+                    </label>
+                    <CustomSelect
+                      options={statuses.map((status) => ({
+                        value: status.status_id,
+                        label: status.name
+                      }))}
+                      value={statusId}
+                      onValueChange={setStatusId}
+                      placeholder="Select Status"
+                      className="w-fit"
+                    />
+                  </div>
+                  {/* Whose interaction this is, on every create path — a plain field on the
+                      record, so logging a call for a colleague needs no schedule permission. */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {t('interactions.quickAdd.assignedTo.label', { defaultValue: 'Assigned To' })}
+                    </label>
+                    <UserPicker
+                      {...userPickerProps}
+                      users={users}
+                      value={selectedUserId}
+                      onValueChange={handleAssignedUserChange}
+                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                      placeholder={t('interactions.quickAdd.assignedTo.placeholder', {
+                        defaultValue: 'Select user',
+                      })}
+                      buttonWidth="full"
+                    />
+                  </div>
+                </div>
               )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
@@ -1195,6 +1417,51 @@ export function QuickAddInteraction({
                   </div>
                 </div>
               </div>
+              {(canAddToSchedule || canPickScheduleAssignees) && (
+                <div className="space-y-2">
+                  {canAddToSchedule && (
+                    <Switch
+                      id={`${id}-add-to-schedule-toggle`}
+                      checked={addToSchedule}
+                      onCheckedChange={(checked) => {
+                        setHasTouchedScheduleToggle(true);
+                        setAddToSchedule(checked);
+                      }}
+                      label={t('interactions.quickAdd.schedule.addToggle', {
+                        defaultValue: 'Add to schedule',
+                      })}
+                    />
+                  )}
+                  {canPickScheduleAssignees && (
+                    <MultiUserPicker
+                      id={`${id}-schedule-assignees`}
+                      label={t('interactions.quickAdd.schedule.assigneesLabel', {
+                        defaultValue: 'Schedule for',
+                      })}
+                      values={scheduleAssignedUserIds}
+                      onValuesChange={handleScheduleAssigneesChange}
+                      users={users}
+                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                      placeholder={t('interactions.quickAdd.schedule.assigneesPlaceholder', {
+                        defaultValue: 'Select users',
+                      })}
+                      showSearch
+                    />
+                  )}
+                  {/* Only promise a calendar entry when one is actually going to be created. */}
+                  {willCreateScheduleEntry && (
+                    <p className="text-xs text-gray-600">
+                      {isSchedulingForOthers
+                        ? t('interactions.quickAdd.schedule.addHelpOthers', {
+                            defaultValue: "A schedule entry will be added to the selected users' AlgaPSA calendars.",
+                          })
+                        : t('interactions.quickAdd.schedule.addHelp', {
+                            defaultValue: 'A schedule entry will be added to your AlgaPSA calendar.',
+                          })}
+                    </p>
+                  )}
+                </div>
+              )}
             </form>
         </DialogContent>
       </Dialog>

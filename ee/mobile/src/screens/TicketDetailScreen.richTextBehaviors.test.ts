@@ -60,6 +60,10 @@ function parseEditorContent(content: string | null | undefined): unknown {
   }
 }
 
+vi.mock("../capabilities/CapabilitiesContext", () => ({
+  useCapabilities: () => ({ features: { clientsCreate: false, clientsUpdate: false, contactsCreate: false, contactsUpdate: false }, defaultCountry: null, loaded: true, refresh: () => Promise.resolve() }),
+}));
+vi.mock("../features/contacts/components/ContactFormModal", () => ({ ContactFormModal: () => null }));
 vi.mock("../config/appConfig", () => ({
   getAppConfig: () => ({
     ok: true,
@@ -210,6 +214,10 @@ vi.mock("../features/ticketDetail/components/AssetsSection", () => ({
 
 vi.mock("../features/ticketDetail/components/TimeEntriesSection", () => ({
   TimeEntriesSection: (props: Record<string, unknown>) => React.createElement("MockTimeEntriesSection", props),
+}));
+
+vi.mock("../features/ticketDetail/components/CallsEmailsSection", () => ({
+  CallsEmailsSection: (props: Record<string, unknown>) => React.createElement("MockCallsEmailsSection", props),
 }));
 
 vi.mock("../features/ticketDetail/components/TagsSection", () => ({

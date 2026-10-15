@@ -10,10 +10,6 @@ const onboardingBillingStepSource = readFileSync(
   path.resolve(process.cwd(), '../packages/onboarding/src/components/steps/BillingSetupStep.tsx'),
   'utf8',
 );
-const serviceFormSource = readFileSync(
-  path.resolve(process.cwd(), '../packages/billing/src/components/billing-dashboard/ServiceForm.tsx'),
-  'utf8',
-);
 const quickAddServiceSource = readFileSync(
   path.resolve(process.cwd(), '../packages/billing/src/components/settings/billing/QuickAddService.tsx'),
   'utf8',
@@ -32,7 +28,8 @@ describe('onboarding and service settings decouple service type identity from bi
   });
 
   it('T016: service settings forms do not auto-overwrite billing mode when service type changes', () => {
-    expect(serviceFormSource).not.toContain('setBillingMethod(selectedType.billing_method)');
+    // The dead-code ServiceForm.tsx this guard also covered was deleted in the
+    // catalog-price-changes work; QuickAddService is the live surface.
     expect(quickAddServiceSource).not.toContain('billing_method: selectedType?.billing_method');
   });
 });

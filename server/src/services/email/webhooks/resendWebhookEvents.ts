@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import logger from '@alga-psa/core/logger';
+import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import type { WorkflowActor } from 'server/src/lib/eventBus/publishers';
 import {
   buildEmailBouncedPayload,
@@ -14,14 +15,19 @@ type ResendWebhookEvent = {
   data?: Record<string, any>;
 };
 
+type ResendFeedbackEventType = 'EMAIL_DELIVERED' | 'EMAIL_BOUNCED' | 'EMAIL_COMPLAINT_RECEIVED' | 'EMAIL_UNSUBSCRIBED';
+
+/** Discriminated by `eventType` so each variant's payload is branded for exactly that event. */
 export type ResendWorkflowEventToPublish = {
-  eventType: 'EMAIL_DELIVERED' | 'EMAIL_BOUNCED' | 'EMAIL_COMPLAINT_RECEIVED' | 'EMAIL_UNSUBSCRIBED';
-  tenantId: string;
-  correlationId: string;
-  actor: WorkflowActor;
-  idempotencyKey: string;
-  payload: Record<string, unknown>;
-};
+  [E in ResendFeedbackEventType]: {
+    eventType: E;
+    tenantId: string;
+    correlationId: string;
+    actor: WorkflowActor;
+    idempotencyKey: string;
+    payload: BuiltWorkflowPayload<E>;
+  };
+}[ResendFeedbackEventType];
 
 function getFirstHeader(headers: Headers, key: string): string | null {
   for (const [k, v] of headers.entries()) {

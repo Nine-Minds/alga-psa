@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "kind": "native-ci-execution",
+  "revision": "76235f800b56734db1872112ba5a875ecef57909",
+  "job": "https://github.com/Nine-Minds/alga-psa/actions/runs/34060406131/job/101559861578",
+  "conclusion": "success",
+  "completedAt": "2026-09-06T22:22:33Z",
+  "counts": {
+    "filesPassed": 275,
+    "filesSkipped": 4,
+    "testsPassed": 2013,
+    "testsSkipped": 49
+  },
+  "durationSeconds": 3883.52,
+  "logSha256": "d00a5e99e324d61a4e4cabea4c9039b0fb922d40767966657173f27872586503",
+  "limitations": [
+    "The49skipped assertions remain explicitly outstanding; this is not zero-exclusion coverage. New local ticket/financial/calendar/mapping/TLS checkpoints require their own native candidate validation."
+  ]
+}

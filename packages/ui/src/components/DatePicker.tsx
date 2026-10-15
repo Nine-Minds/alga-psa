@@ -20,6 +20,8 @@ interface DatePickerBaseProps {
   minDate?: Date;
   /** Latest selectable date (inclusive). Days after this are disabled, including the "Today" shortcut. */
   maxDate?: Date;
+  /** Per-day rule for gaps inside the range; a disabled day cannot be clicked, typed, or reached via "Today". */
+  isDateDisabled?: (date: Date) => boolean;
   /** Collapse to an icon-only trigger while the component is narrower than 10rem (makes the wrapper a CSS container) */
   collapsible?: boolean;
   /** Ref for the component */
@@ -58,6 +60,7 @@ export function DatePicker({
   displayFormat,
   minDate,
   maxDate,
+  isDateDisabled,
   collapsible = false,
   ref
 }: DatePickerProps) {
@@ -76,6 +79,7 @@ export function DatePicker({
       displayFormat={displayFormat}
       minDate={minDate}
       maxDate={maxDate}
+      isDateDisabled={isDateDisabled}
       collapsible={collapsible}
       ref={ref}
     />

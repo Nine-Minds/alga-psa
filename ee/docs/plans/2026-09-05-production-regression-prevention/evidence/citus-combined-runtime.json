@@ -1,0 +1,134 @@
+{
+  "status": "passed",
+  "revision": "9f52acb7023ecd7c1f884bc8a25fb950513f47f2",
+  "counts": {
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "expectedTests": [
+    {
+      "identity": [
+        "server/src/test/integration/invoiceTicketImmutable.integration.test.ts",
+        "generates immutable ticket presentation from approved source records"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "stores redacted bounded step snapshots with idempotent writes and retention"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "persists one concurrent invocation per tenant key and isolates lookup and updates"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "retries a failed activity on its persisted row and replays success without another action"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "persists one real email comment and ticket response state across activity replay"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "creates one real ticket and initial comment across activity replay"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "redacts secret references in persisted action inputs without changing handler arguments"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "rejects missing or mismatched step completion without modifying either run"
+      ],
+      "count": 1
+    }
+  ],
+  "executedTests": [
+    {
+      "identity": [
+        "server/src/test/integration/invoiceTicketImmutable.integration.test.ts",
+        "generates immutable ticket presentation from approved source records"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "stores redacted bounded step snapshots with idempotent writes and retention"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "persists one concurrent invocation per tenant key and isolates lookup and updates"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "retries a failed activity on its persisted row and replays success without another action"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "persists one real email comment and ticket response state across activity replay"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "creates one real ticket and initial comment across activity replay"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "redacts secret references in persisted action inputs without changing handler arguments"
+      ],
+      "count": 1
+    },
+    {
+      "identity": [
+        "ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
+        "rejects missing or mismatched step completion without modifying either run"
+      ],
+      "count": 1
+    }
+  ],
+  "failures": [],
+  "durationSeconds": 631.5,
+  "log": "/tmp/alga-citus-combined-runtime-gate.log",
+  "limits": [
+    "Local exact CI command passed; native CI still pending.",
+    "Fresh mixed-schema single-node Citus; previous-release upgrade and production topology parity remain unverified."
+  ]
+}

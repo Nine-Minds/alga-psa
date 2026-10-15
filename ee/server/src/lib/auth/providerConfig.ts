@@ -1,7 +1,7 @@
 import logger from "@alga-psa/core/logger";
 
 export interface SsoProviderOption {
-  id: "google" | "azure-ad";
+  id: "google" | "azure-ad" | "keycloak";
   name: string;
   description: string;
   configured: boolean;
@@ -53,9 +53,10 @@ async function isProviderConfigured(
 
 export async function getSsoProviderOptions(tenantId?: string): Promise<SsoProviderOption[]> {
   const resolution = await loadSsoResolution();
-  const [googleConfigured, microsoftConfigured] = await Promise.all([
+  const [googleConfigured, microsoftConfigured, keycloakConfigured] = await Promise.all([
     isProviderConfigured(resolution, "google", tenantId),
     isProviderConfigured(resolution, "azure-ad", tenantId),
+    isProviderConfigured(resolution, "keycloak", tenantId),
   ]);
 
   return [
@@ -70,6 +71,12 @@ export async function getSsoProviderOptions(tenantId?: string): Promise<SsoProvi
       name: "Microsoft 365 (Azure AD)",
       description: "Allow Azure Active Directory accounts to access AlgaPSA.",
       configured: microsoftConfigured,
+    },
+    {
+      id: "keycloak",
+      name: "Keycloak",
+      description: "Sign in through a Keycloak realm or any OpenID Connect identity it federates.",
+      configured: keycloakConfigured,
     },
   ];
 }

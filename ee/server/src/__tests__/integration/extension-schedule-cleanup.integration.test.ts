@@ -16,6 +16,12 @@ const runner = {
   scheduleRecurringJob: vi.fn(async () => ({ jobId: uuidv4(), externalId: `ext-${uuidv4()}` })),
 };
 
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (action: any) => async (...args: any[]) => action({ user_id: 'user-1', user_type: 'internal' }, { tenant: tenantId }, ...args),
+  withOptionalAuth: (action: any) => async (...args: any[]) => action({ user_id: 'user-1', user_type: 'internal' }, { tenant: tenantId }, ...args),
+  hasPermission: vi.fn(async () => true),
+}));
+
 vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => ({ id: 'user-1', user_type: 'internal' })),
 }));

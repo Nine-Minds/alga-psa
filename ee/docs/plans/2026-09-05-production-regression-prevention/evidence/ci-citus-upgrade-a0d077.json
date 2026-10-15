@@ -1,0 +1,267 @@
+{
+  "schemaVersion": 1,
+  "scope": "single-node-citus-supported-upgrade-and-phase-diagnostics",
+  "status": "passed-with-recorded-runtime-warnings",
+  "runId": "34308610232",
+  "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+  "artifacts": {
+    "execution": {
+      "id": 10089004240,
+      "name": "supported-citus-upgrade-execution"
+    },
+    "diagnostics": {
+      "id": 10089004718,
+      "name": "supported-citus-upgrade-diagnostics"
+    }
+  },
+  "baseline": {
+    "schemaVersion": 1,
+    "release": "v1.5.0",
+    "commit": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+    "selection": "Explicitly approved by the user for the supported-upgrade test",
+    "fixtureStatus": "implemented"
+  },
+  "migrations": {
+    "baseline": 1028,
+    "upgradeCount": 34
+  },
+  "source": {
+    "before": {
+      "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "counts": {
+    "passed": 3,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "interrupted": 0,
+    "missing": 0
+  },
+  "tests": [
+    {
+      "file": "retained-invoice.spec.ts",
+      "title": "upgraded billing sources generate a correctly priced invoice without consuming other tenant records",
+      "project": "enterprise-chromium",
+      "status": "expected",
+      "attempts": [
+        {
+          "retry": 0,
+          "status": "passed",
+          "startTime": "2026-09-09T04:55:40.006Z",
+          "durationMs": 17691
+        }
+      ]
+    },
+    {
+      "file": "retained-ticket.spec.ts",
+      "title": "upgraded tenants retain ticket writes and reject other-tenant record access",
+      "project": "enterprise-chromium",
+      "status": "expected",
+      "attempts": [
+        {
+          "retry": 0,
+          "status": "passed",
+          "startTime": "2026-09-09T04:55:57.955Z",
+          "durationMs": 30422
+        }
+      ]
+    },
+    {
+      "file": "retained-usage.spec.ts",
+      "title": "Add Usage after upgrade preserves the old record and uses its existing contract line",
+      "project": "enterprise-chromium",
+      "status": "expected",
+      "attempts": [
+        {
+          "retry": 0,
+          "status": "passed",
+          "startTime": "2026-09-09T04:56:28.403Z",
+          "durationMs": 6727
+        }
+      ]
+    }
+  ],
+  "distribution": {
+    "baseline": [
+      {
+        "table_name": "clients",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "contracts",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "tenants",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "tickets",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "time_entries",
+        "partmethod": null,
+        "distribution_column": null
+      },
+      {
+        "table_name": "usage_tracking",
+        "partmethod": null,
+        "distribution_column": null
+      },
+      {
+        "table_name": "users",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      }
+    ],
+    "upgraded": [
+      {
+        "table_name": "clients",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "contracts",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "tenants",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "tickets",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      },
+      {
+        "table_name": "time_entries",
+        "partmethod": null,
+        "distribution_column": null
+      },
+      {
+        "table_name": "usage_tracking",
+        "partmethod": null,
+        "distribution_column": null
+      },
+      {
+        "table_name": "users",
+        "partmethod": "h",
+        "distribution_column": "tenant"
+      }
+    ]
+  },
+  "diagnostics": {
+    "servicesLogSha256": "2a94f01a1f1f938e9bc6c1a08d2f0671bf27445359df6bf8fb115ef048ffaddf",
+    "retainedFiles": [
+      "upgrade-citus-runtime/services.log",
+      "upgrade-citus-runtime/connection-counts.json"
+    ],
+    "connectionSnapshot": {
+      "max_connections": "100",
+      "connections": [
+        {
+          "datname": "postgres",
+          "usename": "postgres",
+          "backend_type": "Citus Maintenance Daemon: 5/10",
+          "state": null,
+          "count": 1
+        },
+        {
+          "datname": "upgrade_citus_ci",
+          "usename": "app_user",
+          "backend_type": "client backend",
+          "state": "idle",
+          "count": 53
+        },
+        {
+          "datname": "upgrade_citus_ci",
+          "usename": "postgres",
+          "backend_type": "Citus Maintenance Daemon: 17226/10",
+          "state": null,
+          "count": 1
+        },
+        {
+          "datname": null,
+          "usename": null,
+          "backend_type": "checkpointer",
+          "state": null,
+          "count": 1
+        },
+        {
+          "datname": "postgres",
+          "usename": "postgres",
+          "backend_type": "client backend",
+          "state": "active",
+          "count": 1
+        },
+        {
+          "datname": "upgrade_citus_ci",
+          "usename": "postgres",
+          "backend_type": "client backend",
+          "state": "idle",
+          "count": 18
+        },
+        {
+          "datname": null,
+          "usename": null,
+          "backend_type": "autovacuum launcher",
+          "state": null,
+          "count": 1
+        },
+        {
+          "datname": null,
+          "usename": "postgres",
+          "backend_type": "logical replication launcher",
+          "state": null,
+          "count": 1
+        },
+        {
+          "datname": null,
+          "usename": null,
+          "backend_type": "walwriter",
+          "state": null,
+          "count": 1
+        },
+        {
+          "datname": null,
+          "usename": null,
+          "backend_type": "background writer",
+          "state": null,
+          "count": 1
+        }
+      ]
+    },
+    "logPatternCounts": {
+      "connectionExhaustion": 0,
+      "startingUp": 1,
+      "citusViewMetadataWarnings": 4,
+      "migrationConstraints": 3,
+      "unsupportedBucketJoins": 2,
+      "missingTicketLiveTokenSecret": 11,
+      "blockedGeolocation": 4
+    }
+  },
+  "limits": [
+    "Three specified browser journeys and schema gate passed; not all rendered UI/background paths are healthy.",
+    "Bucket-usage display query emitted two unsupported Citus complex-join errors during the passing Add Usage journey (services.log lines642/644).",
+    "Ticket live-token issuance lacks HOCUSPOCUS_JWT_SECRET; collaboration authentication is not proven by these journeys.",
+    "Migration constraints/view metadata warnings and startup readiness refusal are retained; passing schema gate is not evidence of warning-free migration.",
+    "Connection snapshot is one post-phase sample, not a peak or proof that every process pool is bounded. No connection-exhaustion log pattern observed in retained phase log.",
+    "Single-node mixed-distribution Citus; no multi-node/failover or complete production topology claim."
+  ]
+}

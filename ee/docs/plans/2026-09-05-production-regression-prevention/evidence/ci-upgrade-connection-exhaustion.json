@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "runId": "34299806767",
+  "jobId": "102309228309",
+  "testedRevision": "d7d864473db09832671427a71a4220601709376c",
+  "artifactId": "10085757641",
+  "source": "postgres.log lines 407\u2013657",
+  "postgresMaxConnections": 100,
+  "connectionLimitFailures": 237,
+  "firstFailureUtc": "2026-09-09T02:18:26.214Z",
+  "lastFailureUtc": "2026-09-09T02:22:00.027Z",
+  "observedErrors": [
+    "remaining connection slots are reserved",
+    "sorry, too many clients already"
+  ],
+  "interpretation": "PostgreSQL capacity was exhausted during failing invoice, ticket and usage upgrade journeys. Logs do not identify which pools owned the connections.",
+  "limits": [
+    "Application server logs from the PostgreSQL phase were lost during container replacement.",
+    "Citus supported-upgrade browser gate passed on the same candidate.",
+    "Lifecycle and isolated pooler repairs require a subsequent CI run."
+  ]
+}

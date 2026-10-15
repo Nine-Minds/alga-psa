@@ -1,0 +1,57 @@
+Shared standard-template catalog interference (ticket 2354) — status and handling
+
+Symptom in this shared dev database: resolving a quote's document layout to the
+standard "Grouped Quote Template (Standard)" id (08a528dd-6cc5-4c4d-b6c9-cf8bea390a2a)
+returns HTTP 500 because the shared standard_quote_document_templates catalog
+row was overwritten (last updated 2026-08-25) with a ticket-2354 style
+Description column ({ "lines": [ item-name, catalog-description ] }) that this
+branch's invoice-template AST schema does not accept:
+
+  TemplateEvaluationError: Invoice template AST schema validation failed:
+    layout.children.5.columns.0: Unrecognized key(s) in object: 'lines';
+    layout.children.7.columns.0: Unrecognized key(s) in object: 'lines'
+
+This is a cross-branch data/code mismatch in the shared dev catalog, not a
+product defect of this change on its own. The two branches will need to agree
+on the catalog schema/content (likely when ticket 2354's `lines` column support
+lands); until then whichever branch's migration last seeded the catalog decides
+what every branch can render. This ticket does NOT reseed or otherwise overwrite
+that shared row.
+
+Verification performed instead:
+- pdfs/QUO-0003-standard-grouped-isolated-catalog.pdf was produced by
+  temporarily replacing ONLY that shared catalog row (a brief shared-catalog mutation) with this branch's
+  canonical buildStandardQuoteGroupedAst(), pointing QUO-0003 at the standard
+  grouped template id, generating through the app's normal PDF service path,
+  and then restoring the ticket-2354 catalog AST and the quote's original
+  custom template id. Reproduction/restoration procedure (performed once; do not repeat without
+  coordination with ticket 2354, and never leave the shared row modified):
+    1. pg_dump the row: select "templateAst" from standard_quote_document_templates
+       where template_id = (select template_id ... code='standard-quote-grouped')  -> backup.json
+    2. update that row's "templateAst" to this branch's canonical grouped AST
+       (dumped from getStandardQuoteTemplateAstByCode('standard-quote-grouped'))
+    3. update quotes.template_id to the standard grouped template id for QUO-0003
+    4. run the app's normal PDF path (createPDFGenerationService.generatePDF)
+    5. ALWAYS restore step 1's backup and the quote's original custom template id
+       (2353c000-0000-4000-8000-00000000b001) afterwards.
+  This run restored the shared catalog byte-for-byte and returned QUO-0003 to
+  its custom template. The word "isolated" in earlier notes overstated what
+  happened: it was a temporary shared-row swap with restore, not a separate
+  catalog.
+- pdfs/QUO-0003-standard-grouped-code-ast.pdf renders the same quote with
+  getStandardQuoteTemplateAstByCode('standard-quote-grouped') passed
+  explicitly, without touching the catalog.
+- pdfs/QUO-0003-grouped-custom-template.pdf keeps the duplicated/custom
+  template coverage (tenant quote_document_template whose AST is a byte copy of
+  the branch grouped AST).
+
+Pre-fix sign behavior (faithful fixture):
+pdfs/QUO-0003-PRE-FIX-adapter-grouping.pdf and preview/pre-fix-viewmodel.json
+render QUO-0003 through the PRE-FIX adapter (this branch's HEAD^ grouping):
+the two legacy-style discounts were classified by their own cadence fields
+(is_recurring=false) into the one-time group as POSITIVE $5 rows, making the
+one-time group $2,997.97 and leaving Monthly at $60.00. Local rendering
+therefore reproduces the misclassification and sign direction of the old
+adapter but does NOT reproduce the customer's reported "one-time charges
+decrease by $10" subtraction; that discrepancy (a template/document-specific
+sign behavior) remains unresolved by this local evidence and is left open.

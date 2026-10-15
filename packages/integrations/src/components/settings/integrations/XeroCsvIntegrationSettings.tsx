@@ -10,6 +10,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import {
   getXeroCsvSettings,
@@ -24,6 +25,9 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { useAccountingCapabilities } from './useAccountingCapabilities';
 
+/** Sentinel for "no default currency"; the stored setting uses an empty string. */
+const INVOICE_CURRENCY_VALUE = '__INVOICE_CURRENCY__';
+
 /**
  * Xero CSV Integration Settings Component
  *
@@ -37,7 +41,7 @@ const XeroCsvIntegrationSettings: React.FC = () => {
   const { t } = useTranslation('msp/integrations');
   const caps = useAccountingCapabilities();
   const CURRENCY_SELECT_OPTIONS = React.useMemo(() => [
-    { value: '', label: t('integrations.xero.csv.settings.useInvoiceCurrency', { defaultValue: 'Use invoice currency' }) },
+    { value: INVOICE_CURRENCY_VALUE, label: t('integrations.xero.csv.settings.useInvoiceCurrency', { defaultValue: 'Use invoice currency' }) },
     ...CURRENCY_OPTIONS
   ], [t]);
   const [settings, setSettings] = useState<XeroCsvSettingsType | null>(null);
@@ -261,13 +265,14 @@ const XeroCsvIntegrationSettings: React.FC = () => {
               <p className="text-xs text-muted-foreground mb-2">
                 {t('integrations.xero.csv.settings.defaultCurrencyHelp', { defaultValue: 'Leave blank to use invoice currency.' })}
               </p>
-              <CustomSelect
+              <CurrencyPicker
                 id="xero-default-currency"
-                value={settings?.defaultCurrency ?? ''}
-                onValueChange={(value) => handleSave({ defaultCurrency: value })}
+                value={settings?.defaultCurrency || INVOICE_CURRENCY_VALUE}
+                onValueChange={(value) =>
+                  handleSave({ defaultCurrency: value === INVOICE_CURRENCY_VALUE ? '' : value })
+                }
                 options={CURRENCY_SELECT_OPTIONS}
                 placeholder={t('integrations.xero.csv.settings.selectCurrency', { defaultValue: 'Select currency' })}
-                showPlaceholderInDropdown={false}
                 disabled={isSaving || !canManageConnections}
               />
             </div>

@@ -7,6 +7,8 @@ export function getShareUrl(token: string, baseUrl?: string): string {
   return `${base}/share/${token}`;
 }
 
+export { isPreviewableDocumentMimeType } from '@alga-psa/core';
+
 // Link by document id, not file id: generated PDFs are re-rendered in place and
 // the previous file retired, so a file-id link goes stale; the download route
 // resolves a document id to its current file.

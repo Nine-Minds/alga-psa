@@ -11,7 +11,7 @@ const delivery = (): CoManagedEmailDelivery => ({ tenant: randomUUID(), recipien
   message: { resource: { tenant: randomUUID(), relationshipId: randomUUID(), kind: 'ticket', id: randomUUID() }, commentId: randomUUID(), threadId: randomUUID(), audience: 'shared_it',
     ticketNumber: 'T-1', ticketTitle: '<img src=x onerror=alert(1)>', note: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: '<script>private()</script> & current text', styles: {} }], children: [] }]),
     author: { tenant: randomUUID(), id: randomUUID(), kind: 'user', referenceId: null, displayName: 'A < B', organizationName: 'Customer' } } });
-beforeEach(() => { runtime.send.mockReset().mockResolvedValue({ success: true }); runtime.locale.mockReset().mockResolvedValue('en'); runtime.tenant.mockClear(); runtime.routing.mockReset(); runtime.mailbox.mockReset().mockResolvedValue({ from: { email: 'support@example.test' }, replyTo: { email: 'intake@example.test' } }); });
+beforeEach(() => { runtime.send.mockReset().mockResolvedValue({ success: true }); runtime.locale.mockReset().mockResolvedValue('en'); runtime.tenant.mockClear(); runtime.routing.mockReset(); runtime.mailbox.mockReset().mockResolvedValue({ boardId: 'board-1', replyTo: { email: 'intake@example.test' } }); });
 it('renders only supplied authorized fields, escapes content, links the qualified source and retains caller-owned retry and stable identity', async () => {
   const item = delivery(); expect(await sendCoManagedCommentEmail(item)).toEqual({ status: 'delivered' });
   expect(runtime.tenant).toHaveBeenCalledWith(item.tenant);
@@ -49,7 +49,8 @@ it.each(['en', 'en-AU', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'])('
   expect(content.text).not.toContain('/co-management/');
   expect(content.html).toContain('&lt;script&gt;');
   expect(runtime.locale).toHaveBeenCalledWith(item.tenant, { email: item.email, userId: item.recipientUserId, userType: 'internal' });
-  expect(params).toMatchObject({ from: { email: 'support@example.test' }, replyTo: { email: 'intake@example.test' } });
+  expect(params).toMatchObject({ mailClass: 'ticket', boardId: 'board-1', replyTo: { email: 'intake@example.test' } });
+  expect(params).not.toHaveProperty('from');
   expect(params).not.toHaveProperty('replyContext'); expect(params).not.toHaveProperty('entityId');
   const { parseEmailReply } = await import('../../../../../shared/lib/email/replyParser');
   const textReply = parseEmailReply({ text: `Technician answer\n\n${content.text}` });
@@ -68,11 +69,11 @@ it.each(['en', 'en-AU', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'])('
     recipient: { kind: 'requester_contact' as const, tenant: source.tenant, clientId, contactId }, replyToken: `cm1:${'a'.repeat(43)}`,
     message: { ...source.message, audience: 'requester' as const, resource: { tenant: source.tenant, kind: 'ticket' as const, id: source.message.resource.id } } };
   const url = `https://customer.example.test/client-portal/tickets/${item.message.resource.id}`;
-  runtime.routing.mockResolvedValue({ url, from: { email: 'support@example.test', name: 'Support' }, replyTo: { email: 'inbound@example.test' } });
+  runtime.routing.mockResolvedValue({ url, boardId: 'board-1', replyTo: { email: 'inbound@example.test' } });
   expect(await sendCoManagedRequesterCommentEmail(item)).toEqual({ status: 'delivered' });
   const params = runtime.send.mock.calls[0][0], content = await params.templateProcessor.process();
   expect(runtime.locale).toHaveBeenCalledWith(item.tenant, { email: item.email, clientId, userType: 'client' });
-  expect(params).toMatchObject({ to: item.email, retryPolicy: 'caller', from: { email: 'support@example.test' }, replyTo: { email: 'inbound@example.test' }, headers: { 'Message-ID': item.messageId } });
+  expect(params).toMatchObject({ to: item.email, retryPolicy: 'caller', boardId: 'board-1', replyTo: { email: 'inbound@example.test' }, headers: { 'Message-ID': item.messageId } });
   expect(params.userId).toBeUndefined(); expect(params).not.toHaveProperty('replyContext'); expect(params).not.toHaveProperty('entityId');
   expect(content.html).toContain(url); expect(content.html).not.toContain('/msp/'); expect(content.html).toContain('&lt;script&gt;');
   const textReply = parseEmailReply({ text: `Requester answer\n\n${content.text}` });

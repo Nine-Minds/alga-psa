@@ -1,5 +1,8 @@
 'use client';
 
+import { isBilledTimeCollection } from '../utils/billedTimeUi';
+import { INVOICE_COLLECTION_DESCRIPTORS, humanizeCollectionBindingLabel, resolveCollectionDescriptor } from '../../../lib/invoice-template-ast/collectionDescriptors';
+
 import React, { useEffect, useMemo, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { generateUUID } from '@alga-psa/core';
@@ -361,18 +364,26 @@ const TransformsWorkspace: React.FC<Props> = ({
   );
 
   const sourceFieldPaths = useMemo(
-    () => Array.from(discoverFieldPaths(sourceCollection[0] ?? {})).filter((path) => !path.includes('*')).sort(),
-    [sourceCollection]
+    () => resolveCollectionDescriptor(transforms.sourceBindingId, undefined, baseAst)?.fields.map((field) => field.name) ?? Array.from(discoverFieldPaths(sourceCollection[0] ?? {})).filter((path) => !path.includes('*')).sort(),
+    [sourceCollection, transforms.sourceBindingId, baseAst]
   );
 
   const sourceCollectionOptions = useMemo(() => {
     const options: CollectionOption[] = Object.entries(baseAst.bindings?.collections ?? {}).map(([bindingId, binding]) => ({
       value: bindingId,
-      label: `${bindingId} (${binding.path})`,
+      label: `${humanizeCollectionBindingLabel(bindingId, binding.path, t)} (${binding.path})`,
       path: binding.path,
       rowCount: Array.isArray(getPathValue(previewData, binding.path)) ? (getPathValue(previewData, binding.path) as unknown[]).length : null,
       source: 'binding',
     }));
+
+    if (previewDocumentKind === 'invoice') {
+      for (const descriptor of INVOICE_COLLECTION_DESCRIPTORS) {
+        if (options.some((option) => option.path === descriptor.path)) continue;
+        const value = getPathValue(previewData, descriptor.path);
+        options.push({ value: descriptor.id, label: humanizeCollectionBindingLabel(descriptor.id, descriptor.path, t), path: descriptor.path, rowCount: Array.isArray(value) ? value.length : 0, source: 'binding' });
+      }
+    }
 
     discoverCollectionPaths(previewData).forEach((path) => {
       if (options.some((option) => option.path === path || option.value === path)) {
@@ -402,7 +413,7 @@ const TransformsWorkspace: React.FC<Props> = ({
     }
 
     return options.sort((left, right) => left.label.localeCompare(right.label));
-  }, [baseAst, collectionPathById, previewData, sourceCollection.length, transforms.sourceBindingId]);
+  }, [baseAst, collectionPathById, previewData, sourceCollection.length, transforms.sourceBindingId, t, previewDocumentKind]);
 
   const selectedSourceOption = useMemo(
     () => sourceCollectionOptions.find((option) => option.value === transforms.sourceBindingId) ?? null,
@@ -472,9 +483,13 @@ const TransformsWorkspace: React.FC<Props> = ({
           : { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
       );
       const outputRows = Array.isArray(evaluation.output) ? evaluation.output.filter(isRecord) : [];
+      const outputFields = resolveCollectionDescriptor(
+        ast.transforms?.outputBindingId ?? '', ast.transforms, ast,
+      )?.fields.map((field) => field.name) ?? [];
       return {
+        hasOutput: Array.isArray(evaluation.output),
         issues: [] as PreviewIssue[],
-        rowPaths: Array.from(discoverFieldPaths(outputRows[0] ?? {})).filter((path) => !path.includes('*')).sort(),
+        rowPaths: Array.from(new Set([...outputFields, ...discoverFieldPaths(outputRows[0] ?? {})])).filter((path) => !path.includes('*')).sort(),
         groups: evaluation.groups ? (evaluation.groups as unknown as Array<Record<string, unknown>>) : null,
         rows: outputRows,
       };
@@ -686,6 +701,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               {t('invoiceDesigner.transforms.inspector.field', { defaultValue: 'Field' })}
             </label>
             <CustomSelect
+              showPlaceholderInDropdown={false}
               id={`transform-filter-field-${selectedOperation.id}`}
               options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
               value={predicate.path}
@@ -709,6 +725,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               {t('invoiceDesigner.transforms.inspector.operator', { defaultValue: 'Operator' })}
             </label>
             <CustomSelect
+              showPlaceholderInDropdown={false}
               id={`transform-filter-operator-${selectedOperation.id}`}
               options={buildFilterOperatorOptions(t)}
               value={predicate.op}
@@ -807,6 +824,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                   {t('invoiceDesigner.transforms.inspector.field', { defaultValue: 'Field' })}
                 </label>
                 <CustomSelect
+                  showPlaceholderInDropdown={false}
                   id={`transform-sort-field-${selectedOperation.id}-${index}`}
                   options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
                   value={key.path}
@@ -828,6 +846,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                   {t('invoiceDesigner.transforms.inspector.direction', { defaultValue: 'Direction' })}
                 </label>
                 <CustomSelect
+                  showPlaceholderInDropdown={false}
                   id={`transform-sort-direction-${selectedOperation.id}-${index}`}
                   options={buildSortDirectionOptions(t)}
                   value={key.direction ?? 'asc'}
@@ -873,6 +892,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               {t('invoiceDesigner.transforms.inspector.groupField', { defaultValue: 'Group field' })}
             </label>
             <CustomSelect
+              showPlaceholderInDropdown={false}
               id={`transform-group-key-${selectedOperation.id}`}
               options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
               value={selectedOperation.key}
@@ -977,6 +997,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                   {t('invoiceDesigner.transforms.inspector.operation', { defaultValue: 'Operation' })}
                 </label>
                 <CustomSelect
+                  showPlaceholderInDropdown={false}
                   id={`transform-aggregate-op-${selectedOperation.id}-${index}`}
                   options={buildAggregationOptions(t)}
                   value={aggregation.op}
@@ -1005,6 +1026,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                     {t('invoiceDesigner.transforms.inspector.field', { defaultValue: 'Field' })}
                   </label>
                   <CustomSelect
+                    showPlaceholderInDropdown={false}
                     id={`transform-aggregate-path-${selectedOperation.id}-${index}`}
                     options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
                     value={aggregation.path ?? ''}
@@ -1090,6 +1112,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                     {t('invoiceDesigner.transforms.source.sampleScenario', { defaultValue: 'Sample scenario' })}
                   </label>
                   <CustomSelect
+                    showPlaceholderInDropdown={false}
                     id="invoice-designer-transforms-sample-select"
                     options={sampleScenarios.map((scenario) => ({
                       value: scenario.id,
@@ -1142,6 +1165,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               {t('invoiceDesigner.transforms.source.collection', { defaultValue: 'Source collection' })}
             </label>
             <CustomSelect
+              showPlaceholderInDropdown={false}
               id="invoice-designer-transforms-source-binding"
               options={sourceCollectionOptions.map((option) => ({
                 value: option.value,
@@ -1449,7 +1473,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                 </div>
               ))}
             </div>
-          ) : outputPreview.rows.length > 0 ? (
+          ) : outputPreview.hasOutput ? (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
                 <span>

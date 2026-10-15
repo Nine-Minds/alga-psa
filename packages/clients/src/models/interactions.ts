@@ -63,7 +63,7 @@ class InteractionModel {
     );
   }
 
-  static async getForEntity(entityId: string, entityType: 'contact' | 'client' | 'ticket', tenantId: string): Promise<IInteraction[]> {
+  static async getForEntity(entityId: string, entityType: 'contact' | 'client' | 'ticket' | 'opportunity', tenantId: string): Promise<IInteraction[]> {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
     const scopedTenant = tenant ?? tenantId;
     const facade = tenantDb(db, scopedTenant);
@@ -87,6 +87,7 @@ class InteractionModel {
           'interactions.user_id',
           'users.username as user_name',
           'interactions.ticket_id',
+          'interactions.opportunity_id',
           'interactions.duration',
           'interactions.status_id',
           'statuses.name as status_name',
@@ -104,6 +105,8 @@ class InteractionModel {
         query.where('interactions.contact_name_id', entityId);
       } else if (entityType === 'ticket') {
         query.where('interactions.ticket_id', entityId);
+      } else if (entityType === 'opportunity') {
+        query.where('interactions.opportunity_id', entityId);
       } else {
         query.where('interactions.client_id', entityId);
       }
@@ -383,14 +386,18 @@ class InteractionModel {
     }
   }
 
-  static async updateInteraction(interactionId: string, updateData: Partial<IInteraction>, tenantId: string): Promise<IInteraction> {
-    const { knex: db, tenant } = await createTenantKnex(tenantId);
-    const scopedTenant = tenant ?? tenantId;
+  static async updateInteraction(
+    interactionId: string,
+    updateData: Partial<IInteraction>,
+    tenantId: string,
+    trx?: DbOrTransaction,
+  ): Promise<IInteraction> {
+    const { db, tenant } = await resolveDb(tenantId, trx);
 
     try {
       const { tenant: _ignoreTenant, interaction_id: _ignoreId, ...safeUpdateData } = updateData as any;
 
-      const [updatedInteraction] = await tenantScopedTable(db, scopedTenant, 'interactions')
+      const [updatedInteraction] = await tenantScopedTable(db, tenant, 'interactions')
         .where({
           interaction_id: interactionId,
         })
@@ -401,7 +408,7 @@ class InteractionModel {
         throw new Error('Interaction not found');
       }
 
-      const fullInteraction = await this.getById(updatedInteraction.interaction_id, tenantId);
+      const fullInteraction = await this.getById(updatedInteraction.interaction_id, tenantId, db);
       if (!fullInteraction) {
         throw new Error('Updated interaction could not be reloaded after update.');
       }

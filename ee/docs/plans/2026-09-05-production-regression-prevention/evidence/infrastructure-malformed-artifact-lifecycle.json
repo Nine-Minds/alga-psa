@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "scope": "Infrastructure aggregate artifact lifecycle on malformed metadata",
+  "before": {
+    "status": "reproduced",
+    "observation": "A non-array shard inventory caused reconciliation to throw; the process failed but the previous aggregate.json still reported passed.",
+    "log": "/tmp/alga-infrastructure-malformed-before.log"
+  },
+  "after": {
+    "status": "passed",
+    "test": "scripts/tests/infrastructure-runner.vitest.test.mjs",
+    "log": "/tmp/alga-infrastructure-malformed-final.log",
+    "behavior": "Each malformed inventory or file-list case starts with a genuine passing result and verifies replacement with failed aggregate, success=false and incomplete execution."
+  },
+  "hashes": {
+    "alga-infrastructure-malformed-before.log": "38c17afb5243ccceabf492460624fd51c01792f2d3f2a5922710112693900695",
+    "alga-infrastructure-malformed-final.log": "5972be6e533358e1f84e0b7e0a3b0bb5b39b562a9e5e0c92b34255500a57ad41"
+  },
+  "limitations": [
+    "Local actual-runner artifact regression; not native candidate CI or full-plan completion.",
+    "Unreconciled aggregate counts are null rather than presented as trustworthy totals."
+  ]
+}

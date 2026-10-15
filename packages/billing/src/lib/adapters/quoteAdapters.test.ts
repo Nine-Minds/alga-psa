@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IQuote } from '@alga-psa/types';
+import type { IQuote, IQuoteItem } from '@alga-psa/types';
 
 const fetchTenantPartyMock = vi.fn();
 
@@ -8,6 +8,8 @@ vi.mock('./tenantPartyAdapter', () => ({
 }));
 
 import { mapLoadedQuoteToViewModel, toDateOnlyString, toIsoDateString } from './quoteAdapters';
+import { summarizeQuoteTotals } from '../quoteTotals';
+import { calculateDraftQuoteTotals, type DraftQuoteItem } from '../../components/billing-dashboard/quotes/quoteLineItemDraft';
 
 const fakeKnex = {
   schema: {
@@ -254,5 +256,1069 @@ describe('quoteAdapters', () => {
     expect(viewModel.product_subtotal).toBe(0);
     expect(viewModel.product_tax).toBe(0);
     expect(viewModel.product_total).toBe(0);
+  });
+});
+
+const baseQuoteItem = (overrides: Record<string, unknown> = {}): IQuoteItem => ({
+  tenant: 'tenant-1',
+  quote_id: 'quote-1',
+  description: 'Item',
+  quantity: 1,
+  unit_price: 0,
+  total_price: 0,
+  tax_amount: 0,
+  net_amount: 0,
+  display_order: 1,
+  is_optional: false,
+  is_selected: true,
+  is_recurring: false,
+  billing_frequency: null,
+  ...overrides,
+} as IQuoteItem);
+
+describe('quoteAdapters discount group allocation', () => {
+  beforeEach(() => {
+    fetchTenantPartyMock.mockReset();
+    fetchTenantPartyMock.mockResolvedValue({
+      name: 'Northwind MSP',
+      address: '400 SW Main',
+      email: 'billing@example.com',
+      phone: '555-0100',
+      logo_url: null,
+    });
+  });
+
+  const buildDiscountBaselineQuote = (discountOverrides: Record<string, unknown> = {}) => {
+    const twoMonthlyServices = [
+      baseQuoteItem({
+        quote_item_id: 'monthly-a',
+        description: 'Managed Support A',
+        unit_price: 2500,
+        total_price: 2500,
+        is_recurring: true,
+        billing_frequency: 'monthly',
+        service_id: 'svc-a',
+        service_name: 'Managed Support A',
+        service_item_kind: 'service',
+      }),
+      baseQuoteItem({
+        quote_item_id: 'monthly-b',
+        description: 'Managed Support B',
+        unit_price: 3500,
+        total_price: 3500,
+        is_recurring: true,
+        billing_frequency: 'monthly',
+        service_id: 'svc-b',
+        service_name: 'Managed Support B',
+        service_item_kind: 'service',
+      }),
+    ];
+
+    const onetimeBases = [37353, 210863, 5581, 45000].map((cents, index) =>
+      baseQuoteItem({
+        quote_item_id: `onetime-${index}`,
+        description: `One-time charge ${index}`,
+        unit_price: cents,
+        total_price: cents,
+        display_order: 10 + index,
+      })
+    );
+
+    const discounts = [
+      baseQuoteItem({
+        quote_item_id: 'disc-a',
+        description: 'Discount A',
+        unit_price: 500,
+        total_price: 500,
+        is_discount: true,
+        discount_type: 'fixed',
+        applies_to_service_id: 'svc-a',
+        display_order: 20,
+        is_recurring: false,
+        billing_frequency: null,
+        ...discountOverrides,
+      }),
+      baseQuoteItem({
+        quote_item_id: 'disc-b',
+        description: 'Discount B',
+        unit_price: 500,
+        total_price: 500,
+        is_discount: true,
+        discount_type: 'fixed',
+        applies_to_service_id: 'svc-b',
+        display_order: 21,
+        is_recurring: false,
+        billing_frequency: null,
+      }),
+    ];
+
+    const quoteItems = [...twoMonthlyServices, ...discounts, ...onetimeBases];
+
+    return buildQuote({
+      subtotal: 304797,
+      discount_total: 1000,
+      tax: 0,
+      total_amount: 303797,
+      quote_items: quoteItems,
+    });
+  };
+
+  it('T007 reproduces $25 + $35 less $5 + $5 as $50 recurring with one-time unchanged (legacy false/null cadence)', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', buildDiscountBaselineQuote());
+
+    // Recurring group carries the two monthly services plus each discount as a
+    // reduction: $60 base - $5 - $5 = $50.
+    expect(viewModel.recurring_items?.map((item) => item.quote_item_id)).toEqual([
+      'monthly-a',
+      'monthly-b',
+      'disc-a',
+      'disc-b',
+    ]);
+    expect(viewModel.recurring_items?.filter((item) => item.is_discount).map((item) => item.total_price)).toEqual([
+      -500,
+      -500,
+    ]);
+    expect(viewModel.recurring_subtotal).toBe(5000);
+    expect(viewModel.recurring_total).toBe(5000);
+
+    // One-time group only holds the one-time base charges.
+    expect(viewModel.onetime_items?.map((item) => item.quote_item_id)).toEqual([
+      'onetime-0',
+      'onetime-1',
+      'onetime-2',
+      'onetime-3',
+    ]);
+    expect(viewModel.onetime_subtotal).toBe(298797);
+    expect(viewModel.onetime_total).toBe(298797);
+
+    // Overall quote totals remain on the persisted subtotal - discount contract.
+    expect(viewModel.subtotal).toBe(304797);
+    expect(viewModel.discount_total).toBe(1000);
+    expect(viewModel.tax).toBe(0);
+    expect(viewModel.total_amount).toBe(303797);
+
+    // The general line-item collection keeps discount rows positive.
+    expect(viewModel.line_items.filter((item) => item.is_discount).map((item) => item.total_price)).toEqual([500, 500]);
+  });
+
+  it('T008 derives cadence membership from target relationships regardless of persisted discount cadence', async () => {
+    // Persisted discount cadence fields contradict the recurring targets.
+    const viewModel = await mapLoadedQuoteToViewModel(
+      fakeKnex,
+      'tenant-1',
+      buildDiscountBaselineQuote({ is_recurring: true, billing_frequency: 'monthly' })
+    );
+
+    expect(viewModel.recurring_subtotal).toBe(5000);
+    expect(viewModel.onetime_subtotal).toBe(298797);
+    expect(viewModel.discount_total).toBe(1000);
+  });
+
+  it('T008 splits a whole-quote discount across recurring and one-time bases proportionally', async () => {
+    const quote = buildQuote({
+      subtotal: 16000,
+      discount_total: 1000,
+      tax: 0,
+      total_amount: 15000,
+      quote_items: [
+        ...(() => {
+          const base = [
+            baseQuoteItem({
+              quote_item_id: 'monthly-a',
+              description: 'Managed Support',
+              unit_price: 2500,
+              total_price: 2500,
+              is_recurring: true,
+              billing_frequency: 'monthly',
+              service_id: 'svc-a',
+              service_item_kind: 'service',
+            }),
+            baseQuoteItem({
+              quote_item_id: 'monthly-b',
+              description: 'Managed Support B',
+              unit_price: 3500,
+              total_price: 3500,
+              is_recurring: true,
+              billing_frequency: 'monthly',
+              service_id: 'svc-b',
+              service_item_kind: 'service',
+            }),
+            baseQuoteItem({
+              quote_item_id: 'onetime-0',
+              description: 'Onboarding',
+              unit_price: 10000,
+              total_price: 10000,
+            }),
+          ];
+          const discount = baseQuoteItem({
+            quote_item_id: 'disc-whole',
+            description: 'Whole quote discount',
+            unit_price: 1000,
+            total_price: 1000,
+            is_discount: true,
+            discount_type: 'fixed',
+            is_recurring: false,
+            billing_frequency: null,
+          });
+          return [...base, discount];
+        })(),
+      ],
+    });
+
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
+
+    // $10 across a $160 base: $60 recurring / $100 onetime -> 375 / 625 exact.
+    const recurringDiscount = viewModel.recurring_items?.find((item) => item.is_discount);
+    const onetimeDiscount = viewModel.onetime_items?.find((item) => item.is_discount);
+    expect(recurringDiscount?.total_price).toBe(-375);
+    expect(onetimeDiscount?.total_price).toBe(-625);
+    expect(viewModel.recurring_subtotal).toBe(6000 - 375);
+    expect(viewModel.onetime_subtotal).toBe(10000 - 625);
+    // Each allocated cent is counted exactly once across the two cadence groups.
+    expect(viewModel.recurring_subtotal! + viewModel.onetime_subtotal!).toBe(16000 - 1000);
+  });
+
+  it('T008 excludes optional unselected base items from bases and group summaries', async () => {
+    const quote = buildQuote({
+      subtotal: 6000,
+      discount_total: 500,
+      tax: 0,
+      total_amount: 5500,
+      quote_items: [
+        baseQuoteItem({
+          quote_item_id: 'monthly-a',
+          description: 'Managed Support',
+          unit_price: 2500,
+          total_price: 2500,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_id: 'svc-a',
+          service_item_kind: 'service',
+        }),
+        baseQuoteItem({
+          quote_item_id: 'monthly-b',
+          description: 'Managed Support B',
+          unit_price: 3500,
+          total_price: 3500,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_id: 'svc-b',
+          service_item_kind: 'service',
+        }),
+        // Optional but unselected — contributes no base and receives no share.
+        baseQuoteItem({
+          quote_item_id: 'monthly-opt',
+          description: 'Optional service',
+          unit_price: 4000,
+          total_price: 4000,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_id: 'svc-opt',
+          service_item_kind: 'service',
+          is_optional: true,
+          is_selected: false,
+          display_order: 3,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'disc-whole',
+          description: 'Whole quote discount',
+          unit_price: 500,
+          total_price: 500,
+          is_discount: true,
+          discount_type: 'fixed',
+          is_recurring: false,
+          billing_frequency: null,
+          display_order: 4,
+        }),
+      ],
+    });
+
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
+
+    expect(viewModel.recurring_subtotal).toBe(6000 - 500);
+  });
+
+  it('T008 caps a fixed discount at its eligible base so group totals cannot go negative', async () => {
+    const quote = buildQuote({
+      subtotal: 2500,
+      discount_total: 2500,
+      tax: 0,
+      total_amount: 0,
+      quote_items: [
+        baseQuoteItem({
+          quote_item_id: 'monthly-a',
+          description: 'Managed Support',
+          unit_price: 2500,
+          total_price: 2500,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_id: 'svc-a',
+          service_item_kind: 'service',
+        }),
+        baseQuoteItem({
+          quote_item_id: 'disc-a',
+          description: 'Oversized discount',
+          unit_price: 4000,
+          total_price: 4000,
+          is_discount: true,
+          discount_type: 'fixed',
+          applies_to_service_id: 'svc-a',
+          is_recurring: false,
+          billing_frequency: null,
+          display_order: 2,
+        }),
+      ],
+    });
+
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
+
+    expect(viewModel.recurring_subtotal).toBe(0);
+    const discountRow = viewModel.recurring_items?.find((item) => item.is_discount);
+    expect(discountRow?.total_price).toBe(-2500);
+  });
+
+  it('T008 resolves a percentage service discount from target bases with existing rounding', async () => {
+    const quote = buildQuote({
+      subtotal: 6000,
+      discount_total: 600,
+      tax: 0,
+      total_amount: 5400,
+      quote_items: [
+        baseQuoteItem({
+          quote_item_id: 'monthly-a',
+          description: 'Managed Support',
+          unit_price: 2500,
+          total_price: 2500,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_id: 'svc-a',
+          service_item_kind: 'service',
+        }),
+        baseQuoteItem({
+          quote_item_id: 'monthly-b',
+          description: 'Managed Support B',
+          unit_price: 3500,
+          total_price: 3500,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_id: 'svc-a',
+          service_item_kind: 'service',
+        }),
+        baseQuoteItem({
+          quote_item_id: 'disc-a',
+          description: '10% off service',
+          unit_price: 0,
+          total_price: 600,
+          is_discount: true,
+          discount_type: 'percentage',
+          discount_percentage: 10,
+          applies_to_service_id: 'svc-a',
+          is_recurring: false,
+          billing_frequency: null,
+          display_order: 3,
+        }),
+      ],
+    });
+
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
+
+    expect(viewModel.recurring_subtotal).toBe(6000 - 600);
+    const discountRows = viewModel.recurring_items?.filter((item) => item.is_discount) ?? [];
+    expect(discountRows.length).toBe(1);
+    expect(discountRows[0]?.total_price).toBe(-600);
+  });
+
+  it('T210: a required (non-optional) row counts even with is_selected=false, matching draft and recalculation', async () => {
+    const quote = buildQuote({
+      subtotal: 2500,
+      discount_total: 500,
+      tax: 0,
+      total_amount: 2000,
+      quote_items: [
+        baseQuoteItem({
+          quote_item_id: 'monthly-a',
+          description: 'Managed Support A',
+          unit_price: 2500,
+          total_price: 2500,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_id: 'svc-a',
+          service_item_kind: 'service',
+          is_optional: false,
+          is_selected: false,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'monthly-opt',
+          description: 'Optional support',
+          unit_price: 4000,
+          total_price: 4000,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_id: 'svc-opt',
+          service_item_kind: 'service',
+          is_optional: true,
+          is_selected: false,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'disc-a',
+          description: 'Discount on required service',
+          unit_price: 500,
+          total_price: 500,
+          is_discount: true,
+          discount_type: 'fixed',
+          applies_to_service_id: 'svc-a',
+          is_recurring: false,
+          billing_frequency: null,
+        }),
+      ],
+    });
+
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
+
+    // Required row is a base even though is_selected=false; the optional row
+    // stays out of every total (it may still be listed for templates).
+    expect(viewModel.recurring_subtotal).toBe(2500 - 500);
+    expect(viewModel.recurring_total).toBe(2000);
+    const optionalRecurringRow = viewModel.recurring_items?.find((item) => item.quote_item_id === 'monthly-opt');
+    expect(optionalRecurringRow).toBeTruthy();
+    expect(viewModel.discount_total).toBe(500);
+    expect(viewModel.total_amount).toBe(2000);
+  });
+
+  it('T211: legacy oversized discount renders derived $0 grouped total and consistent overall figures', async () => {
+    // A genuinely pre-change quote: saved with discount_total 4000 against a
+    // $25 base, so persisted total_amount was -$15. No recalculation has run.
+    const quote = buildQuote({
+      subtotal: 2500,
+      discount_total: 4000,
+      tax: 0,
+      total_amount: -1500,
+      quote_items: [
+        baseQuoteItem({
+          quote_item_id: 'monthly-a',
+          description: 'Managed Support A',
+          unit_price: 2500,
+          total_price: 2500,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_id: 'svc-a',
+          service_item_kind: 'service',
+        }),
+        baseQuoteItem({
+          quote_item_id: 'disc-a',
+          description: 'Oversized discount',
+          unit_price: 4000,
+          total_price: 4000,
+          net_amount: 4000,
+          is_discount: true,
+          discount_type: 'fixed',
+          applies_to_service_id: 'svc-a',
+          is_recurring: false,
+          billing_frequency: null,
+        }),
+      ],
+    });
+
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
+
+    // Displayed rows, group totals, and overall totals all tell the derived
+    // story: capped $25 discount, $0 group/overall total.
+    expect(viewModel.recurring_subtotal).toBe(0);
+    expect(viewModel.recurring_total).toBe(0);
+    expect(viewModel.discount_total).toBe(2500);
+    expect(viewModel.total_amount).toBe(0);
+    // General collection keeps discount positive but shows the derived amount.
+    const discountLine = viewModel.line_items?.find((item) => item.quote_item_id === 'disc-a');
+    expect(discountLine?.total_price).toBe(2500);
+  });
+
+  it('T212: legacy unmatched-target discount renders zero and never corrupts overall totals', async () => {
+    const quote = buildQuote({
+      subtotal: 2500,
+      discount_total: 2000,
+      tax: 0,
+      total_amount: 500,
+      quote_items: [
+        baseQuoteItem({
+          quote_item_id: 'monthly-a',
+          description: 'Managed Support A',
+          unit_price: 2500,
+          total_price: 2500,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_id: 'svc-a',
+          service_item_kind: 'service',
+        }),
+        baseQuoteItem({
+          quote_item_id: 'disc-orphan',
+          description: 'Orphan discount',
+          unit_price: 2000,
+          total_price: 2000,
+          net_amount: 2000,
+          is_discount: true,
+          discount_type: 'fixed',
+          applies_to_service_id: 'svc-gone',
+          is_recurring: false,
+          billing_frequency: null,
+        }),
+      ],
+    });
+
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
+
+    expect(viewModel.recurring_subtotal).toBe(2500);
+    expect(viewModel.discount_total).toBe(0);
+    expect(viewModel.total_amount).toBe(2500);
+    expect(viewModel.line_items?.find((item) => item.is_discount)?.total_price).toBe(0);
+    expect(viewModel.recurring_items?.some((item) => item.is_discount)).toBe(false);
+  });
+});
+
+describe('quoteAdapters cadence bands and optional add-ons', () => {
+  beforeEach(() => {
+    fetchTenantPartyMock.mockReset();
+    fetchTenantPartyMock.mockResolvedValue({
+      name: 'Northwind MSP',
+      address: '400 SW Main',
+      email: 'billing@example.com',
+      phone: '555-0100',
+      logo_url: null,
+    });
+  });
+
+  // One-time + monthly + one annual ($159) + optional monthly (selected) and
+  // optional annual (not selected), with a fixed discount targeted at the
+  // annual base. Every figure below is asserted so the annual line can never
+  // silently rejoin the monthly band and a pending add-on can never inflate a
+  // total.
+  const mixedCadenceQuote = (overrides: Record<string, unknown> = {}) =>
+    buildQuote({
+      subtotal: 50900,
+      discount_total: 1000,
+      tax: 2800,
+      total_amount: 52700,
+      quote_items: [
+        baseQuoteItem({
+          quote_item_id: 'monthly-req',
+          description: 'Managed Support',
+          unit_price: 10000,
+          total_price: 10000,
+          tax_amount: 800,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          service_item_kind: 'service',
+          display_order: 1,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'annual-req',
+          description: 'Annual Firewall Subscription',
+          unit_price: 15900,
+          total_price: 15900,
+          tax_amount: 0,
+          is_recurring: true,
+          billing_frequency: 'annually',
+          service_item_kind: 'service',
+          display_order: 2,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'onetime-req',
+          description: 'Onboarding',
+          unit_price: 25000,
+          total_price: 25000,
+          tax_amount: 2000,
+          is_recurring: false,
+          billing_frequency: null,
+          display_order: 3,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'monthly-opt',
+          description: 'Optional Endpoint Backup',
+          unit_price: 4000,
+          total_price: 4000,
+          tax_amount: 320,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          is_optional: true,
+          is_selected: true,
+          display_order: 4,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'annual-opt',
+          description: 'Optional Annual Security Review',
+          unit_price: 5000,
+          total_price: 5000,
+          tax_amount: 0,
+          is_recurring: true,
+          billing_frequency: 'annually',
+          is_optional: true,
+          is_selected: false,
+          display_order: 5,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'disc-annual',
+          description: 'Annual discount',
+          unit_price: 1000,
+          total_price: 1000,
+          is_discount: true,
+          discount_type: 'fixed',
+          applies_to_item_id: 'annual-req',
+          is_recurring: false,
+          billing_frequency: null,
+          display_order: 6,
+        }),
+      ],
+      ...overrides,
+    });
+
+  it('groups recurring items by cadence with the annual line in its own band, in canonical order', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', mixedCadenceQuote());
+    const bands = viewModel.groups_by_cadence ?? [];
+
+    // monthly → annually → one-time; empty quarterly/semi-annual bands omitted.
+    expect(bands.map((band) => band.cadence_key)).toEqual(['monthly', 'annually', 'onetime']);
+    expect(bands.every((band) => band.items.length > 0)).toBe(true);
+
+    const monthly = bands.find((band) => band.cadence_key === 'monthly')!;
+    const annual = bands.find((band) => band.cadence_key === 'annually')!;
+    const onetime = bands.find((band) => band.cadence_key === 'onetime')!;
+
+    // The selected optional monthly add-on counts, so it sits in the monthly
+    // band with an "Optional (included)" marker; the pending annual add-on
+    // does not appear in any base band.
+    expect(monthly.items.map((item) => item.quote_item_id)).toEqual(['monthly-req', 'monthly-opt']);
+    expect(monthly.items.map((item) => item.optional_label)).toEqual([null, 'Optional (included)']);
+    expect(annual.items.map((item) => item.quote_item_id)).toEqual(['annual-req', 'disc-annual']);
+    expect(bands.some((band) => band.items.some((item) => item.quote_item_id === 'annual-opt'))).toBe(false);
+    expect(onetime.items.map((item) => item.quote_item_id)).toEqual(['onetime-req']);
+
+    // The annual base never appears in the monthly band.
+    expect(monthly.items.some((item) => item.quote_item_id === 'annual-req')).toBe(false);
+    expect(annual.is_recurring).toBe(true);
+    expect(onetime.is_recurring).toBe(false);
+  });
+
+  it('computes included per-band subtotal/tax/total from the renderer and attributes the discount to the annual band', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', mixedCadenceQuote());
+    const bands = viewModel.groups_by_cadence ?? [];
+    const monthly = bands.find((band) => band.cadence_key === 'monthly')!;
+    const annual = bands.find((band) => band.cadence_key === 'annually')!;
+    const onetime = bands.find((band) => band.cadence_key === 'onetime')!;
+
+    // $100 required + $40 selected optional.
+    expect(monthly.subtotal).toBe(14000);
+    expect(monthly.tax).toBe(1120);
+    expect(monthly.total).toBe(15120);
+
+    // $159 annual less the $10 annual-targeted discount.
+    expect(annual.subtotal).toBe(14900);
+    expect(annual.tax).toBe(0);
+    expect(annual.total).toBe(14900);
+
+    expect(onetime.subtotal).toBe(25000);
+    expect(onetime.tax).toBe(2000);
+    expect(onetime.total).toBe(27000);
+
+    // The band footer label is renderer-computed per cadence.
+    expect(monthly.name).toBe('Monthly');
+    expect(monthly.total_label).toBe('Monthly Total');
+    expect(annual.name).toBe('Annually');
+    expect(annual.total_label).toBe('Annually Total');
+    expect(onetime.total_label).toBe('One-time Total');
+  });
+
+  it('excludes pending (unselected) add-ons from band and overall totals and reports them as optional_*', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', mixedCadenceQuote());
+
+    // Pending rows are absent from every base band's items and subtotal.
+    const bands = viewModel.groups_by_cadence ?? [];
+    for (const band of bands) {
+      expect(band.items.every((item) => !item.is_optional || item.is_selected)).toBe(true);
+    }
+
+    // Only the cadence with a pending add-on gets an "Optional (if selected)" band.
+    const optionalBands = viewModel.groups_by_cadence_with_optionals ?? [];
+    expect(optionalBands.map((band) => band.cadence_key)).toEqual(['annually']);
+    const annualOptional = optionalBands[0]!;
+    expect(annualOptional.optional_items.map((item) => item.quote_item_id)).toEqual(['annual-opt']);
+    expect(annualOptional.optional_items[0]!.optional_label).toBe('Optional (if selected)');
+    expect(annualOptional.optional_subtotal).toBe(5000);
+    expect(annualOptional.optional_tax).toBe(0);
+    expect(annualOptional.optional_total).toBe(5000);
+
+    // Overall totals = required + selected optional; the if-selected bucket
+    // carries only the pending add-on.
+    expect(viewModel.subtotal).toBe(54900);
+    expect(viewModel.discount_total).toBe(1000);
+    expect(viewModel.tax).toBe(3120);
+    expect(viewModel.total_amount).toBe(57020);
+    expect(viewModel.optional_subtotal).toBe(5000);
+    expect(viewModel.optional_tax).toBe(0);
+    expect(viewModel.optional_total).toBe(5000);
+  });
+
+  it('keeps the legacy recurring_*/onetime_* bindings on their all-recurring meaning', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', mixedCadenceQuote());
+
+    // Legacy recurring includes every recurring row (annual too) and the
+    // discount share; the unselected optional is listed but not counted.
+    expect(viewModel.recurring_items?.map((item) => item.quote_item_id)).toEqual([
+      'monthly-req',
+      'annual-req',
+      'monthly-opt',
+      'annual-opt',
+      'disc-annual',
+    ]);
+    expect(viewModel.recurring_subtotal).toBe(10000 + 15900 + 4000 - 1000);
+    expect(viewModel.recurring_tax).toBe(1120);
+    expect(viewModel.recurring_total).toBe(30020);
+
+    expect(viewModel.onetime_items?.map((item) => item.quote_item_id)).toEqual(['onetime-req']);
+    expect(viewModel.onetime_subtotal).toBe(25000);
+    expect(viewModel.onetime_tax).toBe(2000);
+    expect(viewModel.onetime_total).toBe(27000);
+  });
+
+  it('defaults a blank recurring cadence to monthly and gives an unrecognized cadence its own band', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(
+      fakeKnex,
+      'tenant-1',
+      buildQuote({
+        quote_items: [
+          baseQuoteItem({
+            quote_item_id: 'blank-frequency',
+            description: 'Unset frequency',
+            unit_price: 1000,
+            total_price: 1000,
+            is_recurring: true,
+            billing_frequency: null,
+            display_order: 1,
+          }),
+          baseQuoteItem({
+            quote_item_id: 'biweekly',
+            description: 'Biweekly service',
+            unit_price: 2000,
+            total_price: 2000,
+            is_recurring: true,
+            billing_frequency: 'biweekly',
+            display_order: 2,
+          }),
+          baseQuoteItem({
+            quote_item_id: 'onetime',
+            description: 'One time',
+            unit_price: 3000,
+            total_price: 3000,
+            is_recurring: false,
+            billing_frequency: null,
+            display_order: 3,
+          }),
+        ],
+      })
+    );
+
+    const keys = (viewModel.groups_by_cadence ?? []).map((band) => band.cadence_key);
+    // Unknown recurring cadences sort after the canonical ones and before one-time.
+    expect(keys).toEqual(['monthly', 'biweekly', 'onetime']);
+    const monthly = viewModel.groups_by_cadence?.find((band) => band.cadence_key === 'monthly');
+    expect(monthly?.items.map((item) => item.quote_item_id)).toEqual(['blank-frequency']);
+    const biweekly = viewModel.groups_by_cadence?.find((band) => band.cadence_key === 'biweekly');
+    expect(biweekly?.name).toBe('Biweekly');
+    expect(biweekly?.total_label).toBe('Biweekly Total');
+  });
+});
+
+describe('quoteAdapters catalog-description mapping', () => {
+  const catalogItem = (overrides: Record<string, unknown> = {}): never =>
+    ({
+      tenant: 'tenant-1',
+      quote_item_id: 'item-1',
+      quote_id: 'quote-1',
+      description: 'Managed Firewall Service',
+      catalog_description: 'Central management, rule review, and firmware patching for the managed firewall fleet.',
+      service_name: 'Managed Firewall Service',
+      service_sku: null,
+      service_item_kind: 'service',
+      quantity: 1,
+      unit_price: 25000,
+      total_price: 25000,
+      tax_amount: 2000,
+      net_amount: 27000,
+      display_order: 1,
+      is_optional: false,
+      is_selected: true,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      ...overrides,
+    }) as never;
+
+  it('maps catalog_description onto flat and grouped line-item collections with null handling', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(
+      fakeKnex,
+      'tenant-1',
+      buildQuote({
+        quote_items: [
+          catalogItem(),
+          catalogItem({
+            quote_item_id: 'item-2',
+            is_recurring: false,
+            billing_frequency: null,
+            service_item_kind: 'product',
+            service_name: 'Firewall Appliance',
+            description: 'Firewall Appliance',
+            catalog_description: null,
+          }),
+          catalogItem({
+            quote_item_id: 'item-3',
+            is_discount: true,
+            service_name: null,
+            service_sku: null,
+            service_item_kind: null,
+            catalog_description: null,
+            description: 'Discount (10%)',
+            quantity: 1,
+            unit_price: -2500,
+            total_price: -2500,
+            tax_amount: 0,
+            net_amount: -2500,
+          }),
+        ],
+      })
+    );
+
+    const flat = viewModel.line_items;
+    expect(flat[0]?.catalog_description).toBe(
+      'Central management, rule review, and firmware patching for the managed firewall fleet.',
+    );
+    expect(flat[1]?.catalog_description).toBeNull();
+    expect(flat[2]?.catalog_description).toBeNull();
+
+    expect(viewModel.recurring_items?.find((item) => item.quote_item_id === 'item-1')?.catalog_description)
+      .toBe('Central management, rule review, and firmware patching for the managed firewall fleet.');
+    expect(viewModel.onetime_items?.find((item) => item.quote_item_id === 'item-2')?.catalog_description)
+      .toBeNull();
+  });
+});
+
+describe('quoteAdapters optional if-selected tax (alga-2026-0002383 SMOKE-2383-TAX)', () => {
+  beforeEach(() => {
+    fetchTenantPartyMock.mockReset();
+    fetchTenantPartyMock.mockResolvedValue({
+      name: 'Northwind MSP',
+      address: '400 SW Main',
+      email: 'billing@example.com',
+      phone: '555-0100',
+      logo_url: null,
+    });
+  });
+
+  // Required base $759.00 at 6% plus optional monthly $40 (selected) and
+  // optional annual $50 toggled either way. The presented totals must equal
+  // the persisted quote totals in both states ($846.94 / $899.94), and the
+  // pending annual add-on must quote its hypothetical 6% tax ($53.00) from the
+  // tax_rate the recalculation keeps on an unselected row.
+  const taxQuote = (annualSelected: boolean) =>
+    buildQuote({
+      subtotal: annualSelected ? 84900 : 79900,
+      discount_total: 0,
+      tax: annualSelected ? 5094 : 4794,
+      total_amount: annualSelected ? 89994 : 84694,
+      quote_items: [
+        baseQuoteItem({
+          quote_item_id: 'monthly-req',
+          description: 'Managed Support',
+          unit_price: 10000,
+          total_price: 10000,
+          tax_amount: 600,
+          tax_rate: 6,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          display_order: 1,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'annual-req',
+          description: 'Annual Firewall Subscription',
+          unit_price: 15900,
+          total_price: 15900,
+          tax_amount: 954,
+          tax_rate: 6,
+          is_recurring: true,
+          billing_frequency: 'annually',
+          display_order: 2,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'onetime-req',
+          description: 'Onboarding',
+          unit_price: 50000,
+          total_price: 50000,
+          tax_amount: 3000,
+          tax_rate: 6,
+          is_recurring: false,
+          billing_frequency: null,
+          display_order: 3,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'monthly-opt',
+          description: 'Optional Endpoint Backup',
+          unit_price: 4000,
+          total_price: 4000,
+          tax_amount: 240,
+          tax_rate: 6,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          is_optional: true,
+          is_selected: true,
+          display_order: 4,
+        }),
+        baseQuoteItem({
+          quote_item_id: 'annual-opt',
+          description: 'Optional Annual Security Review',
+          unit_price: 5000,
+          total_price: 5000,
+          tax_amount: annualSelected ? 300 : 0,
+          tax_rate: 6,
+          is_recurring: true,
+          billing_frequency: 'annually',
+          is_optional: true,
+          is_selected: annualSelected,
+          display_order: 5,
+        }),
+      ],
+    });
+
+  it.each([
+    ['unselected', false],
+    ['selected', true],
+  ])('presents the persisted total with the annual add-on %s and quotes the pending add-on at $53.00', async (_label, annualSelected) => {
+    const quote = taxQuote(annualSelected);
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
+
+    // PDF total == persisted (list/portal) total in both states.
+    expect(viewModel.subtotal).toBe(quote.subtotal);
+    expect(viewModel.tax).toBe(quote.tax);
+    expect(viewModel.total_amount).toBe(quote.total_amount);
+    expect(viewModel.total_amount).toBe(annualSelected ? 89994 : 84694);
+
+    const optionalBands = viewModel.groups_by_cadence_with_optionals ?? [];
+    if (annualSelected) {
+      expect(viewModel.optional_subtotal).toBe(0);
+      expect(viewModel.optional_tax).toBe(0);
+      expect(viewModel.optional_total).toBe(0);
+      expect(optionalBands).toEqual([]);
+    } else {
+      expect(viewModel.optional_subtotal).toBe(5000);
+      expect(viewModel.optional_tax).toBe(300);
+      expect(viewModel.optional_total).toBe(5300);
+      expect(optionalBands.map((band) => band.cadence_key)).toEqual(['annually']);
+      expect(optionalBands[0]!.optional_tax).toBe(300);
+      expect(optionalBands[0]!.optional_total).toBe(5300);
+    }
+
+    // Base bands carry exactly the persisted tax of included rows (the
+    // selected monthly add-on's $2.40 included), never hypothetical tax.
+    const bands = viewModel.groups_by_cadence ?? [];
+    expect(bands.find((band) => band.cadence_key === 'monthly')!.tax).toBe(840);
+    expect(bands.reduce((sum, band) => sum + band.tax, 0)).toBe(quote.tax);
+  });
+
+  it('does not invent tax for an unselected optional row that is not taxable', async () => {
+    const quote = taxQuote(false);
+    const annualOpt = quote.quote_items!.find((item) => item.quote_item_id === 'annual-opt')!;
+    annualOpt.tax_rate = 0; // recalculation persists rate 0 for non-taxable rows
+
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
+    expect(viewModel.optional_tax).toBe(0);
+    expect(viewModel.optional_total).toBe(5000);
+  });
+});
+
+describe('quoteAdapters one source of truth: PDF view model == editor draft == persisted total (alga-2026-0002383)', () => {
+  beforeEach(() => {
+    fetchTenantPartyMock.mockReset();
+    fetchTenantPartyMock.mockResolvedValue({ name: 'Northwind MSP', address: null, email: null, phone: null, logo_url: null });
+  });
+
+  type Selection = { monthly: boolean; annual: boolean } | null;
+
+  // Rows as `recalculateQuoteFinancials` persists them: tax_rate on every base
+  // row; tax_amount/net_amount only on included rows.
+  const persistedRows = (selection: Selection): IQuoteItem[] => {
+    const rows = [
+      baseQuoteItem({ quote_item_id: 'monthly-req', unit_price: 10000, total_price: 10000, tax_amount: 600, tax_rate: 6, is_recurring: true, billing_frequency: 'monthly', display_order: 1 }),
+      baseQuoteItem({ quote_item_id: 'annual-req', unit_price: 15900, total_price: 15900, tax_amount: 954, tax_rate: 6, is_recurring: true, billing_frequency: 'annually', display_order: 2 }),
+      baseQuoteItem({ quote_item_id: 'onetime-req', unit_price: 50000, total_price: 50000, tax_amount: 3000, tax_rate: 6, is_recurring: false, billing_frequency: null, display_order: 3 }),
+    ];
+    if (selection) {
+      rows.push(
+        baseQuoteItem({ quote_item_id: 'monthly-opt', unit_price: 4000, total_price: 4000, tax_amount: selection.monthly ? 240 : 0, tax_rate: 6, is_recurring: true, billing_frequency: 'monthly', is_optional: true, is_selected: selection.monthly, display_order: 4 }),
+        baseQuoteItem({ quote_item_id: 'annual-opt', unit_price: 5000, total_price: 5000, tax_amount: selection.annual ? 300 : 0, tax_rate: 6, is_recurring: true, billing_frequency: 'annually', is_optional: true, is_selected: selection.annual, display_order: 5 }),
+      );
+    }
+    return rows;
+  };
+
+  const toDraft = (row: IQuoteItem): DraftQuoteItem => ({
+    local_id: row.quote_item_id!,
+    quote_item_id: row.quote_item_id,
+    service_id: row.service_id ?? null,
+    service_item_kind: null,
+    service_name: null,
+    service_sku: null,
+    billing_method: null,
+    description: row.description,
+    catalog_description: null,
+    quantity: Number(row.quantity),
+    unit_price: Number(row.unit_price),
+    unit_of_measure: null,
+    phase: null,
+    is_optional: Boolean(row.is_optional),
+    is_selected: row.is_selected === true,
+    is_recurring: Boolean(row.is_recurring),
+    billing_frequency: row.billing_frequency ?? null,
+    is_discount: false,
+    discount_type: null,
+    discount_percentage: null,
+    applies_to_item_id: null,
+    applies_to_service_id: null,
+    is_taxable: true,
+    tax_region: null,
+    tax_rate: row.tax_rate ?? null,
+    location_id: null,
+  });
+
+  it.each([
+    ['no optional items', null, 80454, 0],
+    ['none selected', { monthly: false, annual: false }, 80454, 9540],
+    ['some selected', { monthly: true, annual: false }, 84694, 5300],
+    ['all selected', { monthly: true, annual: true }, 89994, 0],
+  ] as Array<[string, Selection, number, number]>)('%s: every surface reports the same total', async (_label, selection, expectedTotal, expectedOptional) => {
+    const rows = persistedRows(selection);
+    const quote = buildQuote({ subtotal: 0, tax: 0, total_amount: 0, quote_items: rows });
+
+    // The persisted rule (what the quote list and the portal show).
+    const persisted = summarizeQuoteTotals(rows, {
+      amountOf: (row) => Number(row.total_price),
+      taxOf: (row) => Number(row.tax_amount),
+      discountTotal: 0,
+    });
+    // The document view model (PDF).
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
+    // The editor sidebar.
+    const draft = calculateDraftQuoteTotals(rows.map(toDraft));
+
+    expect(persisted.total_amount).toBe(expectedTotal);
+    expect(viewModel.total_amount).toBe(expectedTotal);
+    expect(draft.total_amount).toBe(expectedTotal);
+    expect(viewModel.subtotal).toBe(persisted.subtotal);
+    expect(viewModel.tax).toBe(persisted.tax);
+    expect(draft.subtotal).toBe(persisted.subtotal);
+    expect(draft.tax).toBe(persisted.tax);
+
+    // Band totals add up to the same total.
+    const bands = viewModel.groups_by_cadence ?? [];
+    expect(bands.reduce((sum, band) => sum + band.total, 0)).toBe(expectedTotal);
+
+    // Pending add-ons agree too, and vanish entirely when nothing is pending.
+    expect(viewModel.optional_total).toBe(expectedOptional);
+    expect(draft.optional_total).toBe(expectedOptional);
+    expect((viewModel.groups_by_cadence_with_optionals ?? []).length > 0).toBe(expectedOptional > 0);
   });
 });

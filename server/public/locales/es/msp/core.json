@@ -69,9 +69,10 @@
       "servicePeriods": "Períodos de servicio",
       "credits": "Créditos",
       "serviceTypes": "Tipos de servicio",
+      "serviceCategories": "Categorías de servicio",
       "serviceCatalog": "Servicios",
       "products": "Productos",
-      "taxRates": "Tasas de impuestos",
+      "taxRates": "Impuestos",
       "usageTracking": "Seguimiento de uso",
       "reports": "Informes",
       "accountingExports": "Exportaciones contables"
@@ -102,9 +103,15 @@
       "channels": "Canales"
     },
     "passwords": "Contraseñas",
+    "ticketsAll": "Todos los tickets",
+    "ticketsRecurring": "Tickets recurrentes",
     "coManaged": "TI cogestionada",
     "coManagedDelegation": "Administración delegada",
-    "coManagedAccess": "Acceso cogestionado"
+    "coManagedAccess": "Acceso cogestionado",
+    "ticketsCustomer": "Tickets de clientes",
+    "projectsSharedTasks": "Tareas compartidas",
+    "coManagedOverview": "Resumen",
+    "ticketsTemplates": "Plantillas de tickets"
   },
   "sidebar": {
     "backToMain": "Volver al inicio",
@@ -117,7 +124,8 @@
     "collapseSidebar": "Contraer barra lateral",
     "collapseSection": "Contraer {{section}}",
     "expandSection": "Expandir {{section}}",
-    "appLogoAlt": "Logotipo de {{appName}}"
+    "appLogoAlt": "Logotipo de {{appName}}",
+    "poweredBy": "Con tecnología de"
   },
   "settings": {
     "sections": {
@@ -238,6 +246,19 @@
       "ariaLabel": "Preguntar a la IA sobre este flujo de trabajo",
       "title": "Preguntar a la IA",
       "shortcutHint": "Abrir Quick Ask para obtener ayuda sobre el flujo de trabajo"
+    },
+    "stopwatch": {
+      "untitled": "Sin título",
+      "ariaLabelPaused": "Cronómetro en pausa: {{label}} a las {{clock}}",
+      "ariaLabelRunning": "Cronómetro en marcha: {{label}} a las {{clock}}",
+      "paused": "Cronómetro en pausa",
+      "running": "Cronómetro en marcha",
+      "resume": "Reanudar",
+      "pause": "Pausar",
+      "stop": "Detener y registrar",
+      "discard": "Descartar",
+      "pausedNoDrawer": "Cronómetro en pausa en {{clock}}. Abre el elemento de trabajo para registrar el tiempo.",
+      "openTicket": "Abrir ticket"
     }
   },
   "dialogs": {

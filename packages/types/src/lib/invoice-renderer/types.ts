@@ -1,3 +1,4 @@
+import type { InvoiceTimeRateKind } from '../../interfaces/billing.interfaces';
 /**
  * Represents the input data provided to the Wasm template engine.
  * This is a placeholder and should be expanded based on actual invoice data needs.
@@ -30,6 +31,8 @@ export interface WasmInvoiceLocationGroup {
 
 export interface WasmInvoiceLineItem {
   id: string;
+  unit_code?: string | null;
+  unit_label?: string | null;
   description: string;
   quantity: number;
   unitPrice: number;
@@ -70,6 +73,7 @@ export type WasmInvoiceTimeWorkItemType = 'ticket' | 'project_task' | 'ad_hoc';
  * never part of the snapshot.
  */
 export interface WasmInvoiceTimeEntry {
+  timePresentation?: true;
   /** Source time-entry id, preserved for traceability. */
   id: string;
   /** Invoice charge (line item) this entry billed under, when known. */
@@ -93,7 +97,11 @@ export interface WasmInvoiceTimeEntry {
   /** billedMinutes / 60, for display. */
   hours: number;
   /** Effective hourly rate in minor currency units. */
-  rate: number;
+  rate: number | null;
+  rateKind: InvoiceTimeRateKind;
+  rateDisplay: number | string | null;
+  label: string;
+  labelKey?: string;
   /** Net (pre-tax) amount in minor currency units. */
   amount: number;
   serviceId: string | null;
@@ -108,6 +116,7 @@ export interface WasmInvoiceTimeEntry {
  * single blended rate.
  */
 export interface WasmInvoiceTicketGroup {
+  timePresentation?: true;
   /** Stable group key (e.g. `ticket:<id>`), deterministic across renders. */
   key: string;
   workItemType: WasmInvoiceTimeWorkItemType | null;
@@ -132,6 +141,8 @@ export interface WasmInvoiceTicketGroup {
   totalAmount: number;
   /** True when entries bill at more than one hourly rate. */
   hasMixedRates: boolean;
+  rateKind: InvoiceTimeRateKind;
+  labelKey?: string;
   /** Uniform hourly rate in minor units, or null when hasMixedRates. */
   rate: number | null;
   /**
@@ -141,9 +152,26 @@ export interface WasmInvoiceTicketGroup {
    * blended figure, and never pre-formatted money (the view model carries no
    * locale).
    */
-  rateDisplay: number | string;
+  rateDisplay: number | string | null;
   entryCount: number;
   entries: WasmInvoiceTimeEntry[];
+}
+
+/** Complete renderer-only charge partition. Contributions are never accounting inputs. */
+export interface InvoiceTicketPresentationRow {
+  timePresentation?: true;
+  id: string;
+  label: string;
+  labelKey?: string;
+  description: string;
+  quantity: number;
+  rate: number | null;
+  rateKind?: InvoiceTimeRateKind;
+  rateDisplay: number | string | null;
+  amount: number;
+  servicePeriodStart?: string | null;
+  servicePeriodEnd?: string | null;
+  contributions: Array<{ itemId: string; entryId: string | null; amount: number }>;
 }
 
 export interface WasmInvoiceViewModel {
@@ -152,6 +180,11 @@ export interface WasmInvoiceViewModel {
   dueDate: string; // Consider using ISO8601String or a specific date format
   currencyCode: string; // Added for multi-currency support
   poNumber?: string | null;
+  /**
+   * Display label of the payment method snapshotted on the invoice when it was
+   * generated (e.g. "Check"); null when none was recorded.
+   */
+  paymentMethod?: string | null;
   projectName?: string | null;
   projectNumber?: string | null;
   recurringServicePeriodStart?: string | null;
@@ -202,6 +235,10 @@ export interface WasmInvoiceViewModel {
    * `timeEntries`. Same legacy caveat: absent when no snapshot data exists.
    */
   ticketGroups?: WasmInvoiceTicketGroup[];
+  ticketPresentationRows?: InvoiceTicketPresentationRow[];
+  ticketCoverageStatus?: 'complete' | 'partial' | 'unavailable' | 'none';
+  ticketCoverageNote?: string;
+  ticketDetailNote?: string;
 }
 
 /**

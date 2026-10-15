@@ -24,7 +24,7 @@ export function readTicketNotificationActor(payload: Record<string, unknown>, te
 
 /** One owner-local lookup for a batch; foreign snapshots never enter the local directory. */
 export async function resolveTicketNotificationActorNames(db: Knex, tenantId: string, actors: readonly TicketNotificationActor[],
-  missingUser: 'System' | 'Someone' | 'userId' = 'System'): Promise<string[]> {
+  missingUser: string = 'System'): Promise<string[]> {
   for (const actor of actors) {
     if (actor.actorReference && (actor.userId || actor.actorReference.ownerTenantId !== tenantId)) {
       throw new Error('Invalid notification actor attribution');
@@ -35,7 +35,7 @@ export async function resolveTicketNotificationActorNames(db: Knex, tenantId: st
     .select('user_id', 'first_name', 'last_name') : [];
   const names = new Map<string, string>(rows.map(row => [row.user_id, `${row.first_name} ${row.last_name}`]));
   return actors.map(actor => actor.actorReference ? formatCollaborationActorName(actor.actorReference)
-    : names.get(actor.userId) || (missingUser === 'userId' ? actor.userId || 'System' : missingUser));
+    : names.get(actor.userId) || missingUser);
 }
 
 /** Accept the legacy old/new and domain previous/new change contracts without losing null. */

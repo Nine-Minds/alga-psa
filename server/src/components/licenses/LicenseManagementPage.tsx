@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import type { TFunction } from "i18next";
@@ -252,12 +253,12 @@ function toneClasses(tone: Tone) {
  * Gated by admin RBAC only — NOT by eeRuntimeEnabled — so an expired install
  * can always navigate here to renew or start a trial.
  */
-export default function LicenseManagementPage() {
+export default function LicenseManagementPage({ returnTo }: { returnTo?: string } = {}) {
   const { data: session } = useSession();
-  return <LicenseManagementContent key={JSON.stringify([session?.user?.tenant, session?.user?.id])} />;
+  return <LicenseManagementContent key={JSON.stringify([session?.user?.tenant, session?.user?.id])} returnTo={returnTo} />;
 }
 
-function LicenseManagementContent() {
+function LicenseManagementContent({ returnTo }: { returnTo?: string } = {}) {
   const { t } = useTranslation("msp/licensing");
   const [status, setStatus] = useState<LicenseStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -460,6 +461,9 @@ function LicenseManagementContent() {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 p-6 text-[rgb(var(--color-text-700))]">
       <header className="space-y-2">
+        {returnTo && <Link id="license-return" href={returnTo} className="text-sm font-medium text-[rgb(var(--color-primary-600))] underline">
+          {t("managementPage.returnToClient", { defaultValue: "Return to client" })}
+        </Link>}
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))]">
           {t("managementPage.eyebrow", { defaultValue: "Appliance licensing" })}
         </p>

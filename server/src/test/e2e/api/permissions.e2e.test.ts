@@ -92,19 +92,10 @@ describe('Permissions API E2E Tests', () => {
       const query = buildQueryString({ page: 1, limit: 10 });
       const response = await env.apiClient.get(`${API_BASE}${query}`);
       
-      // For now, let's see what response we get
-      console.log('List permissions response:', response.status, response.data);
-      
-      if (response.status === 500) {
-        // The permissions API might not be implemented yet
-        console.log('Permissions API returned 500 - may not be implemented');
-        return; // Skip this test for now
-      }
-      
       assertSuccess(response);
 
       expect(response.data.data).toBeInstanceOf(Array);
-      expect(response.data.data.length).toBeGreaterThan(0);
+      expect(response.data.data).toHaveLength(10);
       expect(response.data.pagination).toBeDefined();
       expect(response.data.pagination.page).toBe(1);
       expect(response.data.pagination.limit).toBe(10);
@@ -128,9 +119,23 @@ describe('Permissions API E2E Tests', () => {
       expect(response.data.data.action).toBe('write');
     });
 
-    it('should update a permission', async () => {
-      // Since permissions don't have many updatable fields, skip this test
-      // Permissions are typically immutable once created
+    it('updates a permission through HTTP and preserves its identity and role grant', async () => {
+      const created = await env.apiClient.post(API_BASE, { resource: `update_${uuidv4()}`, action: 'read' });
+      assertSuccess(created, 201);
+      const id = created.data.data.permission_id;
+      createdPermissionIds.push(id);
+      await tenantTable('role_permissions').insert({ tenant: env.tenant, role_id: testRoleId, permission_id: id });
+      const patch = { resource: `updated_${uuidv4()}`, action: 'write' };
+      const updated = await env.apiClient.put(`${API_BASE}/${id}`, patch);
+      assertSuccess(updated);
+      expect(updated.data.data).toMatchObject({ permission_id: id, ...patch });
+      const reopened = await env.apiClient.get(`${API_BASE}/${id}`);
+      assertSuccess(reopened);
+      expect(reopened.data.data).toMatchObject({ permission_id: id, ...patch });
+      expect(await tenantTable('permissions').where({ permission_id: id }).first())
+        .toMatchObject(patch);
+      expect(await tenantTable('role_permissions').where({ role_id: testRoleId, permission_id: id }))
+        .toHaveLength(1);
     });
 
     it('should delete a permission', async () => {
@@ -199,7 +204,6 @@ describe('Permissions API E2E Tests', () => {
       const { ApiTestClient } = await import('../utils/apiTestHelpers');
       const client = new ApiTestClient({
         baseUrl: env.apiClient['config'].baseUrl,
-        tenantId: env.tenant
       });
       const response = await client.get(API_BASE);
       assertError(response, 401);
@@ -238,7 +242,6 @@ describe('Permissions API E2E Tests', () => {
       const restrictedClient = new ApiTestClient({
         baseUrl: env.apiClient['config'].baseUrl,
         apiKey: plaintextKey,
-        tenantId: env.tenant
       });
 
       const response = await restrictedClient.get(API_BASE);
@@ -284,7 +287,7 @@ describe('Permissions API E2E Tests', () => {
   });
 
   describe('Tenant Isolation', () => {
-    it('should not access permissions from other tenants', async () => {
+    it('cannot read, update or delete another tenant permission', async () => {
       // Create another tenant
       const otherTenant = uuidv4();
       await tenantTableFor(otherTenant, 'tenants').insert({
@@ -304,12 +307,17 @@ describe('Permissions API E2E Tests', () => {
       }).returning('*');
 
       // Try to access from our tenant
-      const response = await env.apiClient.get(`${API_BASE}/${otherPermission[0].permission_id}`);
-      assertError(response, 404);
-
-      // Cleanup
-      await tenantTableFor(otherTenant, 'permissions').where('permission_id', otherPermission[0].permission_id).delete();
-      await tenantTableFor(otherTenant, 'tenants').delete();
+      try {
+        const url = `${API_BASE}/${otherPermission[0].permission_id}`;
+        assertError(await env.apiClient.get(url), 404);
+        assertError(await env.apiClient.put(url, { action: 'write' }), 404);
+        assertError(await env.apiClient.delete(url), 404);
+        expect(await tenantTableFor(otherTenant, 'permissions')
+          .where({ permission_id: otherPermission[0].permission_id }).first()).toEqual(otherPermission[0]);
+      } finally {
+        await tenantTableFor(otherTenant, 'permissions').where('permission_id', otherPermission[0].permission_id).delete();
+        await tenantTableFor(otherTenant, 'tenants').delete();
+      }
     });
   });
 
@@ -331,7 +339,8 @@ describe('Permissions API E2E Tests', () => {
       const response = await env.apiClient.get(`${API_BASE}${query}`);
       assertSuccess(response);
 
-      expect(response.data.data.every((p: any) => p.resource === 'filter_user')).toBe(true);
+      expect(response.data.data).toHaveLength(1);
+      expect(response.data.data[0]).toMatchObject({ resource: 'filter_user', action: 'read' });
     });
 
     it('should filter permissions by action', async () => {
@@ -351,7 +360,9 @@ describe('Permissions API E2E Tests', () => {
       const response = await env.apiClient.get(`${API_BASE}${query}`);
       assertSuccess(response);
 
-      expect(response.data.data.some((p: any) => p.action === 'update')).toBe(true);
+      expect(response.data.data.length).toBeGreaterThan(0);
+      expect(response.data.data.every((p: any) => p.action === 'update')).toBe(true);
+      expect(response.data.data.some((p: any) => p.resource === 'action_test')).toBe(true);
     });
   });
 });

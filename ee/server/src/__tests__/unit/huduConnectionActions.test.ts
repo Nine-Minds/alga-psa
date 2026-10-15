@@ -274,7 +274,7 @@ describe('T024: testHuduConnection', () => {
 
     expect(result).toMatchObject({
       success: false,
-      error: expect.stringMatching(/not configured/),
+      error: 'Hudu API key and base URL must be configured before continuing.',
     });
     expect(JSON.stringify(result)).not.toContain(API_KEY);
   });

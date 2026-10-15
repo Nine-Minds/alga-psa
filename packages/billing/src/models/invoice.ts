@@ -24,7 +24,8 @@ import type {
   InvoiceTimeEntrySnapshot,
   InvoiceViewModel,
 } from '@alga-psa/types';
-import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { isValidInvoiceTimeSnapshot } from '../lib/billing/invoiceTimeSnapshot';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 type InvoiceChargeDetailPeriodRow = {
@@ -40,6 +41,8 @@ type InvoiceChargeDisplayRow = IInvoiceCharge & {
 };
 
 type InvoiceTimeEntrySnapshotRow = {
+  invoice_id: string;
+  tenant: string;
   item_id: string | null;
   entry_id: string;
   /** jsonb — parsed object from pg, or a JSON string from some drivers. */
@@ -143,7 +146,7 @@ function sortInvoiceChargesForDisplay(charges: IInvoiceCharge[]): IInvoiceCharge
  * Attach immutable billed-time snapshots (invoice_time_entries.work_item_snapshot)
  * to their invoice charges. Reads only the frozen jsonb column — never the
  * mutable tickets/time_entries tables — so finalized invoices stay stable.
- * Rows without a snapshot (all pre-feature invoices) are simply skipped.
+ * Unavailable links remain coverage evidence; only valid, owned snapshots enter detail.
  */
 function attachTimeEntrySnapshots(
   charges: IInvoiceCharge[],
@@ -153,48 +156,20 @@ function attachTimeEntrySnapshots(
     return charges;
   }
 
-  const snapshotsByItemId = new Map<string, IInvoiceChargeTimeEntrySnapshot[]>();
-  for (const row of snapshotRows) {
-    if (!row.item_id) {
-      continue;
-    }
-    const parsed = typeof row.work_item_snapshot === 'string'
-      ? (() => {
-          try {
-            return JSON.parse(row.work_item_snapshot);
-          } catch {
-            return null;
-          }
-        })()
-      : row.work_item_snapshot;
-    if (!parsed || typeof parsed !== 'object') {
-      continue;
-    }
-    const snapshot: IInvoiceChargeTimeEntrySnapshot = {
-      ...(parsed as InvoiceTimeEntrySnapshot),
-      entryId: row.entry_id,
-    };
-    const existing = snapshotsByItemId.get(row.item_id) ?? [];
-    existing.push(snapshot);
-    snapshotsByItemId.set(row.item_id, existing);
-  }
-
-  if (snapshotsByItemId.size === 0) {
-    return charges;
-  }
-
   return charges.map((charge) => {
-    const snapshots = snapshotsByItemId.get(charge.item_id);
-    if (!snapshots || snapshots.length === 0) {
-      return charge;
-    }
-    const ordered = [...snapshots].sort((left, right) => {
-      if (left.entryDate !== right.entryDate) {
-        return String(left.entryDate ?? '').localeCompare(String(right.entryDate ?? ''));
+    const links = snapshotRows.filter((row) => row.item_id === charge.item_id).map((row) => {
+      let snapshot = row.work_item_snapshot;
+      if (typeof snapshot === 'string') {
+        try { snapshot = JSON.parse(snapshot); } catch { snapshot = null; }
       }
-      return left.entryId.localeCompare(right.entryId);
+      return { itemId: row.item_id!, entryId: row.entry_id, invoiceId: row.invoice_id, tenant: row.tenant, snapshot };
     });
-    return { ...charge, time_entry_snapshots: ordered };
+    return {
+      ...charge,
+      time_entry_links: links,
+      time_entry_snapshots: links.filter((link) => link.invoiceId === charge.invoice_id && link.tenant === charge.tenant && isValidInvoiceTimeSnapshot(link.snapshot))
+        .map((link) => ({ ...(link.snapshot as InvoiceTimeEntrySnapshot), entryId: link.entryId })),
+    };
   });
 }
 
@@ -525,7 +500,7 @@ const Invoice = {
         .select('full_name')
         .where({ client_id: invoice.client_id })
         .first() as unknown as Promise<InvoiceContactRow | undefined>,
-      getClientLogoUrl(invoice.client_id, tenant).catch(() => null),
+      getClientDocumentLogoUrl(invoice.client_id, tenant).catch(() => null),
       tenantClientQuery
         .select(
           'tc.client_id',
@@ -560,6 +535,51 @@ const Invoice = {
       throw new Error(`Customer client details not found for invoice ${invoiceId}`);
     }
 
+    // The profile this invoice bills, and the identity it prints. Only read for
+    // an invoice that carries a profile, so a pre-profile invoice costs nothing
+    // and reads exactly as it always did.
+    const clientBillingProfiles = invoice.billing_profile_id
+      ? await tenantDb(knexOrTrx, tenant)
+        .table('client_billing_profiles')
+        .where({ client_id: invoice.client_id })
+        .select(
+          'billing_profile_id',
+          'name',
+          'bill_to_name',
+          'bill_to_location_id',
+          'is_default',
+        ) as Array<{
+          billing_profile_id: string;
+          name: string;
+          bill_to_name: string | null;
+          bill_to_location_id: string | null;
+          is_default: boolean;
+        }>
+      : [];
+    const billingProfile = clientBillingProfiles.find(
+      (profile) => profile.billing_profile_id === invoice.billing_profile_id,
+    ) ?? null;
+    // A profile's bill-to address is a location of the same client; when the
+    // profile names one, that is the address the invoice is billed to.
+    const billToLocation = billingProfile?.bill_to_location_id
+      ? await tenantScopedTable(knexOrTrx, tenant, 'client_locations')
+        .where({
+          location_id: billingProfile.bill_to_location_id,
+          client_id: invoice.client_id,
+        })
+        .select(
+          knexOrTrx.raw(`CONCAT_WS(', ',
+            NULLIF(address_line1, 'N/A'),
+            address_line2,
+            NULLIF(city, 'N/A'),
+            state_province,
+            postal_code,
+            NULLIF(country_name, 'Unknown')
+          ) as location_address`),
+        )
+        .first() as { location_address?: string | null } | undefined
+      : undefined;
+
     let clientProperties: { logo?: string } = {};
     if (typeof client.properties === 'string') {
       try {
@@ -588,7 +608,7 @@ const Invoice = {
 
     let tenantClient: InvoiceViewModel['tenantClient'] = null;
     if (tenantClientDetails?.client_id) {
-      const tenantLogoUrl = await getClientLogoUrl(tenantClientDetails.client_id, tenant).catch(() => null);
+      const tenantLogoUrl = await getClientDocumentLogoUrl(tenantClientDetails.client_id, tenant).catch(() => null);
       const tenantClientName = asTrimmedString(tenantClientDetails.client_name);
       const tenantClientAddress = asTrimmedString(tenantClientDetails.location_address);
 
@@ -652,12 +672,21 @@ const Invoice = {
       invoice_number: invoice.invoice_number,
       client_id: invoice.client_id,
       po_number: invoice.po_number ?? null,
+      payment_method: invoice.payment_method ?? null,
       client_contract_id: invoice.client_contract_id ?? null,
       client: {
-        name: client.client_name || '',
+        // Bill-to, not the client's own name: a profile that carries its own
+        // billing identity is the customer on this document. NULL inherits the
+        // client name, which is every unsegmented invoice.
+        name: billingProfile?.bill_to_name?.trim() || client.client_name || '',
         logo: logoUrl || clientProperties.logo || '',
-        address: client.location_address || ''
+        address: billToLocation?.location_address || client.location_address || ''
       },
+      billing_profile_id: invoice.billing_profile_id ?? null,
+      billing_profile_name: billingProfile?.name ?? null,
+      // D6 — profile surfaces stay invisible until a client actually holds more
+      // than one profile.
+      client_has_multiple_billing_profiles: clientBillingProfiles.length > 1,
       contact: {
         name: contact?.full_name || '',
         address: ''
@@ -758,6 +787,8 @@ const Invoice = {
         .select(
           'ic.item_id',
           'ic.invoice_id',
+          'ic.tenant',
+          'ic.billing_charge_type',
           'ic.service_id',
           'sc.item_kind as service_item_kind',
           'sc.sku as service_sku',
@@ -765,6 +796,8 @@ const Invoice = {
           'ic.description as name',
           'ic.description',
           'ic.is_discount',
+          'ic.unit_code',
+          'ic.unit_label',
           knexOrTrx.raw('CAST(ic.quantity AS DOUBLE PRECISION) as quantity'),
           knexOrTrx.raw('CAST(ic.unit_price AS BIGINT) as unit_price'),
           knexOrTrx.raw('CAST(ic.total_price AS BIGINT) as total_price'),
@@ -788,16 +821,15 @@ const Invoice = {
             .whereIn('item_id', itemIds)
             .orderBy('service_period_start', 'asc');
 
-      // Frozen billed-time snapshots for ticket-level detail. Snapshot-less
-      // rows (all invoices generated before the feature) are dropped below so
-      // legacy invoices take the no-detail path untouched.
+      // Keep every owned link, including missing snapshots, to prove complete
+      // charge coverage. Only valid snapshots enter optional supporting detail.
       const snapshotRows: InvoiceTimeEntrySnapshotRow[] = itemIds.length === 0
         ? []
         : (
             await tenantScopedTable<InvoiceTimeEntrySnapshotRow>(knexOrTrx, tenant, 'invoice_time_entries')
-              .select('item_id', 'entry_id', 'work_item_snapshot')
+              .select('item_id', 'entry_id', 'invoice_id', 'tenant', 'work_item_snapshot')
               .whereIn('item_id', itemIds)
-          ).filter((row) => row.work_item_snapshot != null);
+          );
 
       return sortInvoiceChargesForDisplay(
         attachTimeEntrySnapshots(
@@ -1030,6 +1062,11 @@ const Invoice = {
       name: insertRecord.name,
       version: insertRecord.version,
       is_default: insertRecord.is_default,
+      // The insert path takes the column default; a conflict-merge must bump it explicitly.
+      // Bound, not now(): Citus rejects non-IMMUTABLE functions in DO UPDATE SET on
+      // distributed tables.
+      // LEVERAGE: pattern citus-upsert-timestamp — every merge that bumps a timestamp hand-binds new Date()
+      updated_at: new Date(),
     };
     if (Object.prototype.hasOwnProperty.call(insertRecord, 'templateAst')) {
       updateRecord.templateAst = insertRecord.templateAst;

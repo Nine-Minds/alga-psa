@@ -51,12 +51,12 @@ describe('assertTierAccess', () => {
       });
     });
 
-    it('does not throw for solo tenant accessing INTEGRATIONS (now unlocked at solo)', async () => {
-      vi.mocked(getSession).mockResolvedValue({
-        user: { plan: 'solo' },
-      } as any);
-
-      await expect(assertTierAccess(TIER_FEATURES.INTEGRATIONS)).resolves.toBeUndefined();
+    it.each(['essentials', 'solo'])('requires Pro for %s tenants accessing paid integrations', async (plan) => {
+      vi.mocked(getSession).mockResolvedValue({ user: { plan } } as any);
+      await expect(assertTierAccess(TIER_FEATURES.INTEGRATIONS)).rejects.toMatchObject({
+        requiredTier: 'pro',
+        currentTier: plan,
+      });
     });
 
     it('does not throw for pro tenant accessing INTEGRATIONS', async () => {
@@ -96,7 +96,7 @@ describe('assertTierAccess', () => {
       });
     });
 
-    it('throws for solo tenants accessing add-on-only TEAMS_INTEGRATION during an active Solo -> Pro trial', async () => {
+    it('allows solo tenants to reach TEAMS_INTEGRATION during an active Solo -> Pro trial', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: {
           plan: 'solo',
@@ -104,7 +104,7 @@ describe('assertTierAccess', () => {
         },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).rejects.toThrow(TierAccessError);
+      await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).resolves.toBeUndefined();
     });
 
     it('allows a NULL plan tenant because the legacy fallback resolves to Pro', async () => {
@@ -123,18 +123,18 @@ describe('assertTierAccess', () => {
         },
       } as any);
 
-      // TEAMS_INTEGRATION remains add-on-only, so the expired trial is still blocked.
+      // TEAMS_INTEGRATION needs Pro, so the expired trial is still blocked.
       await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).rejects.toMatchObject({
         currentTier: 'solo',
       });
     });
 
-    it('throws for pro tenants accessing add-on-only TEAMS_INTEGRATION by tier', async () => {
+    it('allows pro tenants to reach TEAMS_INTEGRATION by tier now the add-on is gone', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: { plan: 'pro' },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).rejects.toThrow(TierAccessError);
+      await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).resolves.toBeUndefined();
     });
   });
 });

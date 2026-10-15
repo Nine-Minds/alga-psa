@@ -72,6 +72,32 @@ describe('CE OAuth profile mapper', () => {
     });
   });
 
+  it('resolves internal user by email for a Keycloak profile and ignores non-standard realm claims', async () => {
+    findUserByEmailAndTypeMock.mockResolvedValue({
+      user_id: 'u-kc',
+      email: 'kc-user@example.com',
+      username: 'kc',
+      hashed_password: 'hashed',
+      tenant: 'tenant-kc',
+      user_type: 'internal',
+      is_inactive: false,
+    });
+
+    const result = await mapCeOAuthProfileToExtendedUser({
+      provider: 'keycloak',
+      email: 'KC-User@example.com',
+      profile: { sub: 'keycloak-uuid', preferred_username: 'kc', tenant: undefined, user_type: undefined },
+    } as any);
+
+    expect(findUserByEmailAndTypeMock).toHaveBeenCalledWith('kc-user@example.com', 'internal');
+    expect(result).toMatchObject({
+      id: 'u-kc',
+      tenant: 'tenant-kc',
+      user_type: 'internal',
+    });
+    expect(result.id).not.toBe('keycloak-uuid');
+  });
+
   it('T055: rejects inactive user accounts', async () => {
     findUserByEmailAndTypeMock.mockResolvedValue({
       user_id: 'u-3',
@@ -82,13 +108,18 @@ describe('CE OAuth profile mapper', () => {
       is_inactive: true,
     });
 
-    await expect(
-      mapCeOAuthProfileToExtendedUser({
-        provider: 'google',
-        email: 'inactive@example.com',
-        profile: {},
-      } as any)
-    ).rejects.toThrow('OAuth user account is inactive');
+    const result = await mapCeOAuthProfileToExtendedUser({
+      provider: 'google',
+      email: 'inactive@example.com',
+      profile: {},
+    } as any);
+
+    expect(result.authFailure).toEqual({
+      code: 'inactive_user',
+      providerEmail: 'inactive@example.com',
+      userType: 'internal',
+    });
+    expect(result.id).toBe('');
   });
 
   it('T056: rejects non-internal user types for MSP OAuth flow', async () => {
@@ -101,24 +132,49 @@ describe('CE OAuth profile mapper', () => {
       is_inactive: false,
     });
 
-    await expect(
-      mapCeOAuthProfileToExtendedUser({
-        provider: 'microsoft',
-        email: 'client@example.com',
-        profile: {},
-      } as any)
-    ).rejects.toThrow('OAuth user is not an internal MSP account');
+    const result = await mapCeOAuthProfileToExtendedUser({
+      provider: 'microsoft',
+      email: 'client@example.com',
+      profile: {},
+    } as any);
+
+    expect(result.authFailure).toEqual({
+      code: 'user_type_mismatch',
+      providerEmail: 'client@example.com',
+      userType: 'internal',
+    });
+    expect(result.id).toBe('');
   });
 
-  it('T045: unknown OAuth users still fail at callback mapping stage with existing generic authorization failure', async () => {
+  it('T045: unknown OAuth users report a no_matching_user sentinel instead of throwing', async () => {
     findUserByEmailAndTypeMock.mockResolvedValueOnce(null);
 
-    await expect(
-      mapCeOAuthProfileToExtendedUser({
-        provider: 'google',
-        email: 'ghost@example.com',
-        profile: {},
-      } as any)
-    ).rejects.toThrow('OAuth user is not authorized for MSP sign-in');
+    const result = await mapCeOAuthProfileToExtendedUser({
+      provider: 'google',
+      email: 'ghost@example.com',
+      profile: {},
+    } as any);
+
+    expect(result.authFailure).toEqual({
+      code: 'no_matching_user',
+      providerEmail: 'ghost@example.com',
+      userType: 'internal',
+    });
+    expect(result.id).toBe('');
+  });
+
+  it('reports missing_email when the provider profile carries no email address', async () => {
+    const result = await mapCeOAuthProfileToExtendedUser({
+      provider: 'microsoft',
+      email: '   ',
+      profile: {},
+    } as any);
+
+    expect(result.authFailure).toEqual({
+      code: 'missing_email',
+      providerEmail: undefined,
+      userType: 'internal',
+    });
+    expect(findUserByEmailAndTypeMock).not.toHaveBeenCalled();
   });
 });

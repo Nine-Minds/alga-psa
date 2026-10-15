@@ -27,6 +27,11 @@ export default defineConfig({
       { find: /^@alga-psa\/types\/(.*)$/, replacement: `${path.resolve(__dirname, '../types/src')}/$1` },
       { find: /^@alga-psa\/user-activities\/(.*)$/, replacement: `${path.resolve(__dirname, 'src')}/$1` },
       { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
+      // @alga-psa/core's i18n exports live under src/lib, like @alga-psa/db's below.
+      {
+        find: /^@alga-psa\/core\/i18n\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/i18n')}/$1`,
+      },
       // @alga-psa/db's exports put tenant/admin/connection under src/lib and
       // models under src/models, so they precede the generic rule below.
       { find: /^@alga-psa\/db\/models$/, replacement: path.resolve(__dirname, '../db/src/models/index.ts') },

@@ -69,7 +69,7 @@ describe('setupTenantDataInDB email settings seed', () => {
     withAdminTransactionMock.mockReset();
 
     const knex = { fn: { now: () => new Date('2026-07-14T00:00:00.000Z') } };
-    const trx = { raw: (sql: string) => sql };
+    const trx = { raw: (sql: string) => sql, transaction: async (callback: (value: unknown) => unknown): Promise<unknown> => callback(trx) };
     getAdminConnectionMock.mockResolvedValue(knex);
     withAdminTransactionMock.mockImplementation(async (callback: (trx: unknown) => unknown) => callback(trx));
   });

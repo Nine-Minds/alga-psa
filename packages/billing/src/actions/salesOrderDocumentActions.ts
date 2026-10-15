@@ -179,6 +179,7 @@ export const emailSalesOrderConfirmation = withAuth(
     });
 
     const result = await TenantEmailService.getInstance(tenant).sendEmail({
+      mailClass: 'sales',
       tenantId: tenant,
       to: recipients,
       subject: content.subject,

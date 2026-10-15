@@ -3,7 +3,10 @@ import type {
   ISO8601String,
   RegeneratedRecurringServicePeriodReasonCode,
 } from '@alga-psa/types';
-import { regenerateRecurringServicePeriods } from './regenerateRecurringServicePeriods';
+import {
+  regenerateRecurringServicePeriods,
+  type IRecurringServicePeriodRegenerationConflict,
+} from './regenerateRecurringServicePeriods';
 
 export interface BackfillRecurringServicePeriodsInput {
   candidateRecords: IRecurringServicePeriodRecord[];
@@ -29,6 +32,12 @@ export interface IRecurringServicePeriodBackfillPlan {
   realignedRecords: IRecurringServicePeriodRecord[];
   supersededRecords: IRecurringServicePeriodRecord[];
   activeRecords: IRecurringServicePeriodRecord[];
+  /**
+   * Override/candidate mismatches surfaced by regeneration. These do not block
+   * the plan (the protected record wins and overlapping candidates are dropped)
+   * but callers must be able to see them instead of having them discarded.
+   */
+  conflicts: IRecurringServicePeriodRegenerationConflict[];
 }
 
 function toDateOnly(value: ISO8601String): ISO8601String {
@@ -198,5 +207,6 @@ export function backfillRecurringServicePeriods(
     realignedRecords: sortRecords(regenerationPlan.regeneratedRecords),
     supersededRecords: sortRecords(regenerationPlan.supersededRecords),
     activeRecords,
+    conflicts: regenerationPlan.conflicts,
   };
 }

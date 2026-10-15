@@ -154,7 +154,7 @@ function storage() {
   const objects = new Map<string, Buffer>();
   const provider = { getCapabilities: () => ({ supportsStreaming: true, supportsBuckets: false, supportsMetadata: true, supportsTags: false, supportsVersioning: false, maxFileSize: 1024 ** 3 }),
     upload: vi.fn(async (stream: any, path: string, options: any) => { const chunks = []; for await (const chunk of stream) chunks.push(chunk); const bytes = Buffer.concat(chunks);
-      expect(options.content_length).toBe(bytes.length);
+      expect(options.size).toBe(bytes.length);
       objects.set(path, bytes); return { path, size: bytes.length, mime_type: options.mime_type }; }),
     delete: vi.fn(async (path: string) => { objects.delete(path); }) };
   return { objects, provider };

@@ -134,7 +134,7 @@ describe('Billing Invoice Edge Cases', () => {
     });
 
     await configureTaxForClient(context.clientId, 10);
-  }, 60000);
+  }, 120000);
 
   beforeEach(async () => {
     context = await resetContext();

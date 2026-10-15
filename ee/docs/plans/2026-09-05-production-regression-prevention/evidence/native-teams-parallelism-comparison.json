@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "scope": "native-teams-webpack-parallelism-comparison",
+  "releaseValidation": false,
+  "source": {
+    "revision": "4fc27bc720f583662deefb6605b30c0253365cf7",
+    "cleanBefore": true,
+    "cleanAfter": true
+  },
+  "environmentChange": {
+    "NEXT_WEBPACK_PARALLELISM": "10",
+    "persisted": false
+  },
+  "execution": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "flaky": 0,
+    "retry": 0,
+    "durationMs": 80244.851,
+    "failure": "Schedule navigation ERR_CONNECTION_REFUSED",
+    "nextMemoryThresholdRestarts": 1,
+    "actualHeapLimitBytes": 13086228480
+  },
+  "cleanup": {
+    "ownedDatabase": "teams_native_1788948430846",
+    "ownedDatabaseAbsent": true,
+    "closedPorts": [
+      54485,
+      54486,
+      54487
+    ]
+  },
+  "privateDirectory": "/tmp/alga-native-teams-KCN8Lr",
+  "conclusion": "No improvement established; configuration change not adopted.",
+  "limitations": [
+    "One native environment comparison, not CI proof or a retry counted as passing.",
+    "Heap limit, assertions, deadlines and original private harness unchanged."
+  ]
+}

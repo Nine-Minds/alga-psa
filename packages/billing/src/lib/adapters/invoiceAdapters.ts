@@ -1,3 +1,5 @@
+import { isValidInvoiceTimeSnapshot, snapshotRate, combineTimeRates } from '../billing/invoiceTimeSnapshot';
+import type { InvoiceTicketPresentationRow } from '@alga-psa/types';
 // Import the source and target types with aliases for clarity
 import type {
   InvoiceViewModel as DbInvoiceViewModel, // Source type from DB/interfaces
@@ -15,6 +17,7 @@ import type {
 } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
+import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
 // toPlainDate is likely not needed here as we format to string for Wasm
 
 // Helper function to convert DateValue (Date or ISO string or Temporal) to ISO string for Wasm
@@ -137,12 +140,16 @@ const resolveTenantClientSnapshot = (source: Record<string, unknown>): WasmInvoi
   };
 };
 
-const recurringServicePeriodDateFormatter = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
+// A NAMED month, so the reading language names and orders it; the country rule
+// governs numeric dates, which this label is not. UTC stays pinned so the
+// written period never shifts with the server timezone.
+const recurringServicePeriodDateFormatter = (locale?: string): Intl.DateTimeFormat =>
+  new Intl.DateTimeFormat(locale || 'en', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 
 const parseRecurringServicePeriodDate = (value: unknown): Date | null => {
   if (value instanceof Date) {
@@ -164,17 +171,18 @@ const parseRecurringServicePeriodDate = (value: unknown): Date | null => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-const buildRecurringServicePeriodLabel = (start: unknown, end: unknown): string | null => {
+const buildRecurringServicePeriodLabel = (start: unknown, end: unknown, locale?: string): string | null => {
   const parsedStart = parseRecurringServicePeriodDate(start);
   const parsedEnd = parseRecurringServicePeriodDate(end);
   if (!parsedStart || !parsedEnd) {
     return null;
   }
 
-  return `${recurringServicePeriodDateFormatter.format(parsedStart)} - ${recurringServicePeriodDateFormatter.format(parsedEnd)}`;
+  const formatter = recurringServicePeriodDateFormatter(locale);
+  return `${formatter.format(parsedStart)} - ${formatter.format(parsedEnd)}`;
 };
 
-const resolveRecurringServicePeriodSummary = (source: Record<string, unknown>) => {
+const resolveRecurringServicePeriodSummary = (source: Record<string, unknown>, locale?: string) => {
   const recurringServicePeriodStart =
     normalizeDateLikeValue(source.recurringServicePeriodStart) ||
     normalizeDateLikeValue(source.recurring_service_period_start) ||
@@ -189,7 +197,7 @@ const resolveRecurringServicePeriodSummary = (source: Record<string, unknown>) =
     recurringServicePeriodEnd,
     recurringServicePeriodLabel:
       recurringServicePeriodStart && recurringServicePeriodEnd
-        ? buildRecurringServicePeriodLabel(recurringServicePeriodStart, recurringServicePeriodEnd)
+        ? buildRecurringServicePeriodLabel(recurringServicePeriodStart, recurringServicePeriodEnd, locale)
         : null,
   };
 };
@@ -254,24 +262,15 @@ export function buildInvoiceLocationGroups(items: WasmInvoiceLineItem[]): WasmIn
   return order.map((key) => grouped.get(key)!);
 }
 
-/** Round minor-unit minutes to display hours (2dp, minutes stay authoritative). */
-const minutesToHours = (minutes: number): number => Math.round((minutes / 60) * 100) / 100;
+/** Round minutes to display hours (6dp, like invoice_charges.quantity; minutes stay authoritative). */
+const minutesToHours = (minutes: number): number => Math.round((minutes / 60) * 1e6) / 1e6;
 
 /** Snapshot input for the billed-time collections: entry + owning charge id. */
 export type InvoiceTimeCollectionSource = IInvoiceChargeTimeEntrySnapshot & {
   itemId?: string | null;
 };
 
-const AD_HOC_GROUP_LABEL = 'Other billed time';
-
-/**
- * Rate-column text for a group billing at more than one hourly rate. A data
- * value, deliberately not localized here: the view model carries no locale
- * (one locale per render, applied by the renderer), so money and labels are
- * formatted downstream. Renderers pass non-numeric strings through currency
- * formatting untouched.
- */
-const MIXED_RATE_DISPLAY = 'Mixed rates';
+const AD_HOC_GROUP_LABEL = '';
 
 /**
  * Build the renderer collections for ticket-level billed-time detail from
@@ -290,8 +289,17 @@ const MIXED_RATE_DISPLAY = 'Mixed rates';
 export function buildInvoiceTimeCollections(
   sources: InvoiceTimeCollectionSource[],
 ): { timeEntries: WasmInvoiceTimeEntry[]; ticketGroups: WasmInvoiceTicketGroup[] } {
-  const timeEntries: WasmInvoiceTimeEntry[] = sources
+  // Segment links of one overtime entry share id and date; order them
+  // regular-then-overtime (then by item) so output never depends on input order.
+  const segmentRank = (source: InvoiceTimeCollectionSource): number =>
+    source.segment === 'regular' ? 0 : source.segment === 'overtime' ? 1 : 2;
+  const timeEntries: WasmInvoiceTimeEntry[] = [...sources]
+    .sort((left, right) =>
+      segmentRank(left) - segmentRank(right) || String(left.itemId ?? '').localeCompare(String(right.itemId ?? ''))
+    )
+    .filter(isValidInvoiceTimeSnapshot)
     .map((source): WasmInvoiceTimeEntry => ({
+      timePresentation: true,
       id: source.entryId,
       itemId: source.itemId ?? null,
       workItemType: source.workItemType ?? null,
@@ -303,7 +311,10 @@ export function buildInvoiceTimeCollections(
       date: source.entryDate ?? null,
       billedMinutes: Math.round(toFiniteNumber(source.billedMinutes)),
       hours: minutesToHours(Math.round(toFiniteNumber(source.billedMinutes))),
-      rate: Math.round(toFiniteNumber(source.rate)),
+      ...snapshotRate(source),
+      rateDisplay: snapshotRate(source).rate,
+      label: [source.ticketNumber, source.title].filter(Boolean).join(' — '),
+      labelKey: !source.ticketNumber && !source.title ? `time.${source.workItemType === 'ticket' ? 'ticket' : source.workItemType === 'project_task' ? 'task' : 'other'}` : undefined,
       amount: Math.round(toFiniteNumber(source.netAmount)),
       serviceId: source.serviceId ?? null,
       serviceName: source.serviceName ?? null,
@@ -341,9 +352,8 @@ export function buildInvoiceTimeCollections(
       const isTask = key.startsWith('task:');
       const totalMinutes = entries.reduce((sum, entry) => sum + entry.billedMinutes, 0);
       const totalAmount = entries.reduce((sum, entry) => sum + entry.amount, 0);
-      const distinctRates = [...new Set(entries.map((entry) => entry.rate))];
-      const hasMixedRates = distinctRates.length > 1;
-      const rate = hasMixedRates ? null : (distinctRates[0] ?? null);
+      const { rateKind, rate } = combineTimeRates(entries);
+      const hasMixedRates = rateKind === 'mixed';
       const dates = entries
         .map((entry) => entry.date)
         .filter((value): value is string => typeof value === 'string' && value.length > 0)
@@ -356,6 +366,7 @@ export function buildInvoiceTimeCollections(
           : AD_HOC_GROUP_LABEL;
 
       return {
+        timePresentation: true,
         key,
         workItemType: isTicket ? 'ticket' : isTask ? 'project_task' : 'ad_hoc',
         workItemId: isTicket || isTask ? first.workItemId : null,
@@ -364,6 +375,8 @@ export function buildInvoiceTimeCollections(
         title: isTicket || isTask ? first.title : null,
         description: isTicket ? first.description : null,
         label,
+        labelKey: !label ? `time.${isTicket ? 'ticket' : isTask ? 'task' : 'other'}` : undefined,
+        rateKind,
         dateStart: dates[0] ?? null,
         dateEnd: dates[dates.length - 1] ?? null,
         totalMinutes,
@@ -371,7 +384,7 @@ export function buildInvoiceTimeCollections(
         totalAmount,
         hasMixedRates,
         rate,
-        rateDisplay: rate !== null ? rate : MIXED_RATE_DISPLAY,
+        rateDisplay: rate,
         entryCount: entries.length,
         entries,
       };
@@ -403,7 +416,7 @@ export function buildInvoiceTimeCollections(
  */
 export function attachInvoiceTimeCollections(
   viewModel: WasmInvoiceViewModel,
-  charges: Array<Pick<IInvoiceCharge, 'item_id' | 'time_entry_snapshots'>>,
+  charges: Array<Pick<IInvoiceCharge, 'item_id' | 'time_entry_snapshots'> & Partial<IInvoiceCharge>>,
 ): WasmInvoiceViewModel {
   const sources: InvoiceTimeCollectionSource[] = charges.flatMap((charge) =>
     (charge.time_entry_snapshots ?? []).map((snapshot) => ({
@@ -412,14 +425,91 @@ export function attachInvoiceTimeCollections(
     })),
   );
 
-  if (sources.length === 0) {
-    return viewModel;
-  }
-
   const { timeEntries, ticketGroups } = buildInvoiceTimeCollections(sources);
-  viewModel.timeEntries = timeEntries;
-  viewModel.ticketGroups = ticketGroups;
+  if (sources.length) {
+    viewModel.timeEntries = timeEntries;
+    viewModel.ticketGroups = ticketGroups;
+  }
+  attachTicketPresentation(viewModel, charges);
   return viewModel;
+}
+
+/**
+ * Atomic replacement: frozen time-only origin + every unique owned link valid +
+ * exact integer net coverage. A failed charge contributes no primary detail.
+ * Conflicting entry ownership invalidates every involved charge. Canonical
+ * rows (including signed and zero rows) retain their original relative order.
+ */
+function attachTicketPresentation(
+  vm: WasmInvoiceViewModel,
+  charges: Array<Pick<IInvoiceCharge, 'item_id' | 'time_entry_snapshots'> & Partial<IInvoiceCharge>>,
+): void {
+  const byId = new Map(charges.map((charge) => [charge.item_id, charge]));
+  const conflicts = new Set<string>();
+  const owners = new Map<string, Array<{ itemId: string; segment: string | null }>>();
+  for (const charge of charges) {
+    for (const link of charge.time_entry_links ?? []) {
+      const prior = owners.get(link.entryId) ?? [];
+      const segment = (link.snapshot as { segment?: unknown } | null)?.segment;
+      prior.push({ itemId: charge.item_id, segment: typeof segment === 'string' ? segment : null });
+      owners.set(link.entryId, prior);
+    }
+  }
+  // An overtime entry is billed as two charges, each linking the entry with
+  // its own segment snapshot (regular + overtime). Anything else claiming one
+  // entry from several charges is a conflict.
+  const isSegmentPair = (links: Array<{ segment: string | null }>): boolean =>
+    links.length === 2 && new Set(links.map((link) => link.segment)).size === 2 && links.every((link) => link.segment !== null);
+  for (const links of owners.values()) {
+    if (links.length > 1 && !isSegmentPair(links)) links.forEach((link) => conflicts.add(link.itemId));
+  }
+  const isTime = (id: string): boolean => {
+    const charge = byId.get(id);
+    return charge?.billing_charge_type != null
+      ? charge.billing_charge_type === 'time'
+      : Boolean(charge?.time_entry_links?.length);
+  };
+  const eligible = new Set<string>();
+  const sources: InvoiceTimeCollectionSource[] = [];
+  const canonicalRow = (item: WasmInvoiceViewModel['items'][number]): InvoiceTicketPresentationRow => ({
+    ...item, timePresentation: true, label: '', rate: isTime(item.id) ? null : item.unitPrice,
+    ...(isTime(item.id) ? { rateKind: 'unknown' as const } : {}),
+    rateDisplay: isTime(item.id) ? null : item.unitPrice, amount: item.total,
+    contributions: [{ itemId: item.id, entryId: null, amount: item.total }],
+  });
+  for (const item of vm.items) {
+    const charge = byId.get(item.id);
+    const links = charge?.time_entry_links ?? [];
+    if (!charge || charge.billing_charge_type !== 'time' || charge.is_discount || conflicts.has(item.id) || links.length === 0) continue;
+    if (!links.every((link) => link.itemId === item.id && link.invoiceId === charge.invoice_id && link.tenant === charge.tenant && Boolean(link.entryId) && isValidInvoiceTimeSnapshot(link.snapshot))) continue;
+    const snapshots = links.map((link) => ({ ...link.snapshot as import('@alga-psa/types').InvoiceTimeEntrySnapshot, entryId: link.entryId, itemId: item.id }));
+    const amount = snapshots.reduce((sum, snapshot) => sum + snapshot.netAmount, 0);
+    if (!Number.isSafeInteger(amount) || !Number.isSafeInteger(item.total) || amount !== item.total || amount !== Number(charge.net_amount)) continue;
+    eligible.add(item.id);
+    sources.push(...snapshots);
+  }
+  const groups = buildInvoiceTimeCollections(sources).ticketGroups;
+  let rows: InvoiceTicketPresentationRow[] = [
+    ...groups.map((group) => ({
+      timePresentation: true as const, id: group.key, label: group.label, labelKey: group.labelKey,
+      description: group.description ?? '', quantity: group.totalHours,
+      rate: group.rate, rateKind: group.rateKind, rateDisplay: group.rate,
+      amount: group.totalAmount,
+      contributions: group.entries.map((entry) => ({ itemId: entry.itemId!, entryId: entry.id, amount: entry.amount })),
+    })),
+    ...vm.items.filter((item) => !eligible.has(item.id)).map(canonicalRow),
+  ];
+  // A projection-wide ambiguity fails closed, without deduplicating money.
+  if (new Set(vm.items.map((item) => item.id)).size !== vm.items.length ||
+      rows.reduce((sum, row) => sum + row.amount, 0) !== vm.items.reduce((sum, item) => sum + item.total, 0)) {
+    eligible.clear();
+    rows = vm.items.map(canonicalRow);
+  }
+  const hasTime = vm.items.some((item) => isTime(item.id));
+  const hasFallback = vm.items.some((item) => isTime(item.id) && !eligible.has(item.id));
+  vm.ticketPresentationRows = rows;
+  vm.ticketCoverageStatus = !hasTime ? 'none' : !hasFallback ? 'complete' : eligible.size ? 'partial' : 'unavailable';
+  vm.ticketDetailNote = '';
 }
 
 /**
@@ -428,6 +518,7 @@ export function attachInvoiceTimeCollections(
  * Derives grouping from existing timing fields — no database migration needed.
  */
 export function enrichWithGroupedItems(vm: WasmInvoiceViewModel): WasmInvoiceViewModel {
+  if (!vm.ticketPresentationRows) attachTicketPresentation(vm, []);
   const recurringItems = vm.items.filter(isRecurringItem);
   const onetimeItems = vm.items.filter((item) => !isRecurringItem(item));
 
@@ -471,7 +562,7 @@ export function enrichWithGroupedItems(vm: WasmInvoiceViewModel): WasmInvoiceVie
  * @returns An InvoiceViewModel suitable for template rendering, or null if input is null.
  */
 // Change input type to 'any' as the actual input structure seems to be WasmInvoiceViewModel based on logs
-export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | WasmInvoiceViewModel | any): WasmInvoiceViewModel | null {
+export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | WasmInvoiceViewModel | any, locale?: string): WasmInvoiceViewModel | null {
   console.log('[mapDbInvoiceToWasmViewModel] Received Data:', JSON.stringify(inputData, null, 2));
 
   if (!inputData) {
@@ -505,6 +596,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         if (!useLegacyMajorUnits) {
           return Math.trunc(numeric);
         }
+        // LEVERAGE: pattern currency-minor-units — local *100 parser assumes a 2-digit currency; should use core toMinorUnits keyed on the invoice currency (alga0002091 follow-up)
         return Math.round(numeric * 100);
       };
 
@@ -537,6 +629,8 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
 
         return {
           id: String(item.item_id ?? ''),
+          unit_code: item.unit_code ?? null,
+          unit_label: item.unit_label ?? null,
           description: String(item.description ?? ''),
           quantity: toFiniteNumber(item.quantity),
           unitPrice: toMinorUnits(item.unit_price),
@@ -561,7 +655,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
       const subtotal = toMinorUnits(rawSubtotal);
       const tax = toMinorUnits(rawTax);
       const total = toMinorUnits(rawTotal);
-      const recurringServicePeriodSummary = resolveRecurringServicePeriodSummary(dbRecord);
+      const recurringServicePeriodSummary = resolveRecurringServicePeriodSummary(dbRecord, locale);
 
       viewModel = {
         invoiceNumber: String(dbData.invoice_number ?? 'N/A'),
@@ -572,6 +666,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           address: String(dbData.client?.address ?? 'N/A'),
         },
         poNumber: (dbData as any).po_number ?? null,
+        paymentMethod: paymentMethodDisplayLabel((dbData as any).payment_method),
         ...((dbData as any).project_name
           ? {
               projectName: String((dbData as any).project_name),
@@ -611,7 +706,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         viewModel.subtotal = Number(viewModel.subtotal ?? 0);
         viewModel.tax = Number(viewModel.tax ?? 0);
         viewModel.total = Number(viewModel.total ?? 0);
-        const recurringServicePeriodSummary = resolveRecurringServicePeriodSummary(wasmRecord);
+        const recurringServicePeriodSummary = resolveRecurringServicePeriodSummary(wasmRecord, locale);
         viewModel.recurringServicePeriodStart = recurringServicePeriodSummary.recurringServicePeriodStart;
         viewModel.recurringServicePeriodEnd = recurringServicePeriodSummary.recurringServicePeriodEnd;
         viewModel.recurringServicePeriodLabel = recurringServicePeriodSummary.recurringServicePeriodLabel;

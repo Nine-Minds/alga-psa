@@ -11,6 +11,11 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth';
 import { MigrationStager } from '@/lib/migrations/MigrationStager';
+import {
+  logMigrationUploadFailure,
+  migrationUploadErrorCode,
+} from '@/lib/migrations/migrationUploadErrors';
+import { spreadsheetImportNamespace } from '@/lib/migrations/spreadsheetNamespace';
 import { AMP_MAX_PACKAGE_BYTES } from '../upload/route';
 
 export const runtime = 'nodejs';
@@ -30,7 +35,12 @@ export async function POST(request: Request) {
   const inputPath = join(directory, name.toLowerCase().endsWith('.xlsx') ? 'source.xlsx' : 'source.csv');
   const outputPath = join(directory, 'converted.amp');
   let bytes = 0;
-  const meter = new Transform({ transform(chunk, _encoding, callback) { bytes += chunk.length; callback(bytes > AMP_MAX_PACKAGE_BYTES ? new Error('AMP_LIMIT_EXCEEDED') : null, chunk); } });
+  // The source hash is captured in the same streaming pass as the size check.
+  // It must come from the uploaded bytes, not `package_sha256`: the converted
+  // package is produced by convertSpreadsheets and its digest depends on the
+  // namespace this hash derives.
+  const sourceDigest = createHash('sha256');
+  const meter = new Transform({ transform(chunk, _encoding, callback) { bytes += chunk.length; sourceDigest.update(chunk); callback(bytes > AMP_MAX_PACKAGE_BYTES ? new Error('AMP_LIMIT_EXCEEDED') : null, chunk); } });
   try {
     // Storage/file-store layers resolve the tenant from AsyncLocalStorage, so
     // the whole ingest runs inside the session user's tenant context.
@@ -40,18 +50,25 @@ export async function POST(request: Request) {
       const { convertSpreadsheets, inferSpreadsheetMapping } = await import('@alga-psa/migration-connectors/csv');
       const mapping = await inferSpreadsheetMapping(inputPath, entityType as never);
       if (Object.keys(mapping).length === 0) throw new Error('AMP_SPREADSHEET_NO_RECOGNIZED_HEADERS');
-      const conversion = await convertSpreadsheets({ outputPath, namespace: `csv:${user.tenant}`, sourceSystem: 'csv-upload', files: [{ entityType: entityType as never, path: inputPath, mapping }] }, directory);
+      const namespace = spreadsheetImportNamespace(user.tenant, sourceDigest.digest('hex'));
+      const conversion = await convertSpreadsheets({ outputPath, namespace, sourceSystem: 'csv-upload', files: [{ entityType: entityType as never, path: inputPath, mapping }] }, directory);
       if (!MigrationStager.hasImportableRecords(outputPath)) throw new Error('AMP_PACKAGE_NO_IMPORTABLE_RECORDS');
       const { size: packageSize } = await stat(outputPath);
       const digest = createHash('sha256'); const storageInput = new PassThrough();
       const packageStream = createReadStream(outputPath); packageStream.on('data', (chunk) => digest.update(chunk));
       // No `metadata` option: external_files has no metadata column; package
       // provenance (source name, sha256) lives on the migration_jobs row.
-      const upload = StorageService.uploadStream(user.tenant, storageInput, `${name}.amp`, { mime_type: 'application/vnd.sqlite3', uploaded_by_id: user.user_id, size: packageSize });
+      const upload = StorageService.uploadStream(user.tenant, storageInput, `${name}.amp`, { mime_type: 'application/vnd.sqlite3', uploaded_by_id: user.user_id, size: packageSize, origin: 'system-artifact' });
       const [stored] = await Promise.all([upload, pipeline(packageStream, storageInput)]); const sha256 = digest.digest('hex');
       const { knex } = await createTenantKnex(user.tenant); const db = tenantDb(knex, user.tenant); const [inserted] = await db.table('migration_jobs').insert({ tenant: user.tenant, owner_user_id: user.user_id, source_file_id: stored.file_id, source_file_name: `${name}.amp`, package_sha256: sha256, state: 'inspecting' }).returning('migration_job_id'); const migrationJobId = inserted.migration_job_id ?? inserted;
       const staged = await new MigrationStager(knex, user.tenant).stage(migrationJobId, outputPath);
       return NextResponse.json({ migrationJobId, state: staged.rejected ? 'rejected' : 'needs_configuration', diagnostics: staged.validation.diagnostics, rowCounts: staged.validation.rowCounts, conversionDiagnostics: conversion.diagnostics }, { status: 201 });
     });
-  } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'AMP_SPREADSHEET_FAILED' }, { status: 400 }); } finally { await rm(directory, { recursive: true, force: true }); }
+  } catch (error) {
+    const code = migrationUploadErrorCode(error, 'AMP_SPREADSHEET_FAILED');
+    if (code === 'AMP_SPREADSHEET_FAILED' || code === 'AMP_STORAGE_REJECTED') {
+      logMigrationUploadFailure('/api/migrations/spreadsheet', user.tenant, error);
+    }
+    return NextResponse.json({ error: code }, { status: 400 });
+  } finally { await rm(directory, { recursive: true, force: true }); }
 }

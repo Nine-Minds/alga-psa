@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "scope": "Teams development clean-source execution gate",
+  "revision": "c68501f94f2bb0d1acb87614f5d3d0dbc0f2ba43",
+  "verdict": {
+    "schemaVersion": 1,
+    "suite": "teams-development-browser",
+    "revision": "c68501f94f2bb0d1acb87614f5d3d0dbc0f2ba43",
+    "status": "passed",
+    "expectedTests": [
+      {
+        "identity": [
+          "e2e-tests/development-tests/teams-profile.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "Teams setup preserves its profile across a Graph credential outage and recovery"
+          ]
+        ],
+        "count": 1
+      }
+    ],
+    "executedTests": [
+      {
+        "identity": [
+          "e2e-tests/development-tests/teams-profile.spec.ts",
+          "enterprise-chromium",
+          "enterprise-chromium",
+          [
+            "Teams setup preserves its profile across a Graph credential outage and recovery"
+          ]
+        ],
+        "count": 1
+      }
+    ],
+    "counts": {
+      "passed": 1,
+      "failed": 0,
+      "flaky": 0,
+      "skipped": 0,
+      "interrupted": 0,
+      "missing": 0
+    },
+    "failures": [],
+    "releaseValidation": false,
+    "configuration": {
+      "edition": "enterprise",
+      "buildFeatureFlags": "release-v1-6-feature:true",
+      "sourceRevision": "c68501f94f2bb0d1acb87614f5d3d0dbc0f2ba43",
+      "authentication": "real-credentials",
+      "serverLifecycle": "externally-started-host-development-server",
+      "releaseValidation": false,
+      "integrationSurface": "teams",
+      "requiredServerNodeEnv": "development"
+    },
+    "selection": {
+      "mode": "full",
+      "filters": []
+    },
+    "source": {
+      "before": {
+        "revision": "c68501f94f2bb0d1acb87614f5d3d0dbc0f2ba43",
+        "dirty": false,
+        "changes": []
+      },
+      "after": {
+        "revision": "c68501f94f2bb0d1acb87614f5d3d0dbc0f2ba43",
+        "dirty": false,
+        "changes": []
+      }
+    },
+    "workingTreeDirty": false
+  },
+  "hashes": {
+    "test-results/teams-development/collected.json": "d85dbfea8eedf6137b7b0f23bdbac9f016cc21b835e0797ae4b188d51f8d1223",
+    "test-results/teams-development/results.json": "929458d360bf2424a913ebb9488886c462d8df6a66eccbc463114fc609a5212d",
+    "test-results/teams-development/discovery.json": "e15038d6edbbd745c8e88c2e0018c58ed2199b2691dec91147b201e9e5e756bb",
+    "test-results/teams-development/evidence.json": "001dee0d1c510e095fa74dbe7cbd366f16e8ad48d0836cf4137c75052646b87e"
+  },
+  "limitations": [
+    "Development app configuration only; not production-image validation.",
+    "Earlier same-revision run failed while the Next development server did not serve its JavaScript assets; archived under /tmp/alga-teams-gate-c68501-assets-failure.",
+    "No Teams meeting/bot journey, SSO account-linking, or native CI execution proof."
+  ]
+}

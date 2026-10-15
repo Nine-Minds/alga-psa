@@ -163,7 +163,8 @@ async function replayMatchesExistingUsage(
     Number(existing.quantity) === Number(data.quantity) &&
     normalizeUsageDayForComparison(existing.usage_date) ===
       normalizeUsageDayForComparison(toCanonicalUsageDateISO(data.usage_date)) &&
-    (existing.contract_line_id ?? null) === (contractLineId ?? null)
+    (existing.contract_line_id ?? null) === (contractLineId ?? null) &&
+    (existing.comments ?? '') === (data.comments ?? '')
   );
 }
 
@@ -286,6 +287,7 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
         client_id: data.client_id,
         service_id: data.service_id,
         quantity: data.quantity,
+        comments: data.comments ?? null,
         usage_date: usageDateISO,
         contract_line_id: contractLineId, // Use determined or provided plan ID
         contract_line_source: contractLineSource,
@@ -426,6 +428,7 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
         ...(data.client_id !== undefined && { client_id: data.client_id }),
         ...(data.service_id !== undefined && { service_id: data.service_id }),
         ...(data.quantity !== undefined && { quantity: data.quantity }),
+        ...(data.comments !== undefined && { comments: data.comments }),
         ...(data.usage_date !== undefined && { usage_date: toCanonicalUsageDateISO(data.usage_date) }),
         contract_line_id: finalContractLineId, // Always update the plan ID based on determination logic
         contract_line_source: finalContractLineSource,

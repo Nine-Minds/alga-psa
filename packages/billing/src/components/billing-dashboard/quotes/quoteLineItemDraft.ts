@@ -1,5 +1,10 @@
 import type { CatalogPickerItem } from '../../../actions/serviceActions';
 import type { IQuoteItem } from '@alga-psa/types';
+import { allocateQuoteDiscounts } from '../../../services/quoteDiscountAllocation';
+import { compareCadenceKeys, cadenceDefaultName, isRecurringCadenceKey, resolveCadenceKey } from '../../../lib/quoteItemCadence';
+import { isPendingOptional } from '../../../lib/quoteItemInclusion';
+import { buildQuoteDiscountAllocationInputs, summarizeQuoteTotals } from '../../../lib/quoteTotals';
+import { hypotheticalTaxAmount } from '../../../lib/quoteItemTax';
 
 export type DraftQuoteItem = {
   local_id: string;
@@ -10,6 +15,10 @@ export type DraftQuoteItem = {
   service_sku?: string | null;
   billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
   description: string;
+  /** Quote-time snapshot of the catalog item's description (null for custom,
+   *  discount, and legacy lines). Carried for immediate draft preview only —
+   *  the server re-resolves the authoritative snapshot on persistence. */
+  catalog_description?: string | null;
   quantity: number;
   unit_price: number;
   /** Product cost snapshot in minor currency units (from service_catalog). */
@@ -19,6 +28,7 @@ export type DraftQuoteItem = {
   /** True when the service has no price in the quote's currency and the user must enter one. */
   needs_price?: boolean;
   unit_of_measure?: string | null;
+  unit_code?: string | null;
   phase?: string | null;
   is_optional: boolean;
   is_selected: boolean;
@@ -40,6 +50,10 @@ export interface DraftQuoteTotals {
   discount_total: number;
   tax: number;
   total_amount: number;
+  /** Optional (if-selected) add-ons, excluded from the base figures above. */
+  optional_subtotal: number;
+  optional_tax: number;
+  optional_total: number;
 }
 
 function buildLocalId(): string {
@@ -60,11 +74,13 @@ export function createDraftQuoteItemFromQuoteItem(item: IQuoteItem): DraftQuoteI
     service_sku: item.service_sku ?? null,
     billing_method: item.billing_method ?? null,
     description: item.description,
+    catalog_description: item.catalog_description ?? null,
     quantity: Number(item.quantity ?? 1),
     unit_price: Number(item.unit_price ?? 0),
     cost: item.cost ?? null,
     cost_currency: item.cost_currency ?? null,
     unit_of_measure: item.unit_of_measure ?? null,
+    unit_code: item.unit_code ?? null,
     phase: item.phase ?? null,
     is_optional: Boolean(item.is_optional),
     is_selected: item.is_selected ?? true,
@@ -97,12 +113,14 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem, quoteCu
     service_sku: item.sku ?? null,
     billing_method: item.billing_method,
     description: item.service_name,
+    catalog_description: item.description && item.description.trim() ? item.description.trim() : null,
     quantity: 1,
     unit_price: needsPrice ? 0 : Number(item.currency_rate ?? item.default_rate ?? 0),
     cost: item.item_kind === 'product' ? (item.cost ?? null) : null,
     cost_currency: item.item_kind === 'product' ? (item.cost_currency ?? null) : null,
     needs_price: needsPrice,
     unit_of_measure: item.unit_of_measure ?? null,
+    unit_code: item.unit_code ?? null,
     phase: null,
     is_optional: false,
     is_selected: true,
@@ -134,6 +152,7 @@ export function createCustomDraftQuoteItem(input: {
     service_sku: null,
     billing_method: null,
     description: input.description,
+    catalog_description: null,
     quantity: Number(input.quantity ?? 1),
     unit_price: Number(input.unit_price ?? 0),
     unit_of_measure: input.unit_of_measure ?? null,
@@ -170,6 +189,7 @@ export function createDraftDiscountQuoteItem(input: {
     service_sku: null,
     billing_method: null,
     description: input.description,
+    catalog_description: null,
     quantity: 1,
     unit_price: input.discount_type === 'fixed' ? Number(input.fixed_amount ?? 0) : 0,
     unit_of_measure: null,
@@ -190,71 +210,130 @@ export function createDraftDiscountQuoteItem(input: {
   };
 }
 
-function included(item: DraftQuoteItem): boolean {
-  return !item.is_optional || item.is_selected !== false;
-}
+const draftBaseItemId = (item: DraftQuoteItem): string => item.quote_item_id ?? item.local_id;
 
-function computeDiscountAmount(item: DraftQuoteItem, baseAmount: number): number {
-  if (item.discount_type === 'percentage') {
-    return Math.round(baseAmount * ((item.discount_percentage ?? 0) / 100));
-  }
-
-  return item.quantity * item.unit_price;
+/**
+ * Allocation inputs shared by the draft totals, the discount amount column and
+ * the cadence summary. Built by the shared `quoteTotals` helper so the editor,
+ * the rendered PDF and the persisted recalculation derive identical
+ * allocations: required rows and selected optional rows are bases, pending
+ * add-ons are not.
+ */
+function buildDraftAllocationInputs(items: DraftQuoteItem[]) {
+  return buildQuoteDiscountAllocationInputs(items, draftBaseItemId);
 }
 
 export function calculateDraftQuoteTotals(items: DraftQuoteItem[]): DraftQuoteTotals {
-  const includedBaseItems = items.filter((item) => !item.is_discount && included(item));
-  const baseSubtotal = includedBaseItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-  const baseItemTotals = new Map(includedBaseItems.map((item) => [item.quote_item_id ?? item.local_id, item.quantity * item.unit_price]));
-  const baseServiceTotals = new Map<string, number>();
+  const { bases, discounts } = buildDraftAllocationInputs(items);
+  const allocation = allocateQuoteDiscounts(bases, discounts);
 
-  for (const item of includedBaseItems) {
-    if (!item.service_id) {
-      continue;
+  // Draft rows carry the persisted rate, so the editor derives tax the same
+  // way the adapter does for pending add-ons (ceil to the cent).
+  return summarizeQuoteTotals(items, {
+    amountOf: (item) => item.quantity * item.unit_price,
+    taxOf: (item) => hypotheticalTaxAmount({ ...item, total_price: item.quantity * item.unit_price }),
+    discountTotal: allocation.totalDiscount,
+  });
+}
+
+/**
+ * Resolve the displayed reduction of every discount row from the current item
+ * state, keyed by the row's stable id. Used by the editor's amount column so
+ * discount rows and the sidebar discount total always agree (both derive from
+ * the shared allocation).
+ */
+export function resolveDraftDiscountAmounts(items: DraftQuoteItem[]): Map<string, number> {
+  const { bases, discounts } = buildDraftAllocationInputs(items);
+  const allocation = allocateQuoteDiscounts(bases, discounts);
+  const byId = new Map<string, number>();
+  for (const result of allocation.discounts) {
+    byId.set(result.discountId, result.resolvedAmount);
+  }
+  return byId;
+}
+
+export interface DraftCadenceSummary {
+  cadence_key: string;
+  name: string;
+  is_recurring: boolean;
+  /** Included net for the band (required + selected optional) after its share of the discount allocation. */
+  net: number;
+  /** Pending (unselected optional) add-on total for the band (if selected). */
+  optional_total: number;
+}
+
+/**
+ * Per-cadence included nets and pending add-on totals for the editor summary.
+ *
+ * Discounts are attributed to a band by the base item they reduce (via the
+ * shared allocation), so the editor's per-cadence figures equal the PDF's
+ * per-band totals on the same quote. Pending (unselected optional) rows are
+ * reported separately and never reduce `net`.
+ */
+export function calculateDraftCadenceSummary(items: DraftQuoteItem[]): DraftCadenceSummary[] {
+  const { bases, discounts } = buildDraftAllocationInputs(items);
+  const allocation = allocateQuoteDiscounts(bases, discounts);
+  const consumedByBase = new Map<string, number>();
+  for (const result of allocation.discounts) {
+    for (const itemAllocation of result.allocations) {
+      consumedByBase.set(
+        itemAllocation.baseItemId,
+        (consumedByBase.get(itemAllocation.baseItemId) ?? 0) + itemAllocation.amount,
+      );
     }
-
-    baseServiceTotals.set(item.service_id, (baseServiceTotals.get(item.service_id) ?? 0) + (item.quantity * item.unit_price));
   }
 
-  let subtotal = 0;
-  let discountTotal = 0;
-  let tax = 0;
+  const byCadence = new Map<string, DraftCadenceSummary>();
+  const ensure = (key: string): DraftCadenceSummary => {
+    let entry = byCadence.get(key);
+    if (!entry) {
+      entry = {
+        cadence_key: key,
+        name: cadenceDefaultName(key),
+        is_recurring: isRecurringCadenceKey(key),
+        net: 0,
+        optional_total: 0,
+      };
+      byCadence.set(key, entry);
+    }
+    return entry;
+  };
 
   for (const item of items) {
-    const totalPrice = item.quantity * item.unit_price;
-    const scopedBaseAmount = item.applies_to_item_id
-      ? (baseItemTotals.get(item.applies_to_item_id) ?? 0)
-      : item.applies_to_service_id
-        ? (baseServiceTotals.get(item.applies_to_service_id) ?? 0)
-        : baseSubtotal;
-    const resolvedTotal = item.is_discount ? computeDiscountAmount(item, scopedBaseAmount) : totalPrice;
-
-    if (!included(item)) {
-      continue;
-    }
-
-    if (item.is_discount) {
-      discountTotal += resolvedTotal;
-      continue;
-    }
-
-    subtotal += resolvedTotal;
-    if (item.is_taxable !== false && item.tax_rate) {
-      tax += Math.round(resolvedTotal * (item.tax_rate / 100));
+    if (item.is_discount) continue;
+    const entry = ensure(resolveCadenceKey(item));
+    const base = item.quantity * item.unit_price;
+    if (isPendingOptional(item)) {
+      entry.optional_total += base;
+    } else {
+      entry.net += Math.max(0, base - (consumedByBase.get(draftBaseItemId(item)) ?? 0));
     }
   }
 
-  return {
-    subtotal,
-    discount_total: discountTotal,
-    tax,
-    total_amount: subtotal - discountTotal + tax,
-  };
+  return Array.from(byCadence.values()).sort((left, right) =>
+    compareCadenceKeys(left.cadence_key, right.cadence_key),
+  );
+}
+
+/**
+ * Recurring monthly net after derived discount allocation, in minor units.
+ *
+ * Feeds the "$X recurring / month" sidebar figure. It starts from the same
+ * per-base allocations as the group subtotals so discounts aimed at recurring
+ * monthly services reduce the figure (two $5 discounts over $25 + $35 monthly
+ * services read $50, not $60). Mixed billing frequencies participate through
+ * their own allocations; only strictly-monthly (or unset-frequency) required
+ * base rows contribute to the per-month figure.
+ */
+export function calculateDraftMonthlyRecurringNet(items: DraftQuoteItem[]): number {
+  const monthly = calculateDraftCadenceSummary(items).find((entry) => entry.cadence_key === 'monthly');
+  return monthly?.net ?? 0;
 }
 
 export function formatDraftQuoteMoney(minorUnits: number, currencyCode: string): string {
   return new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency: currencyCode,
+  // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
   }).format((minorUnits || 0) / 100);
 }

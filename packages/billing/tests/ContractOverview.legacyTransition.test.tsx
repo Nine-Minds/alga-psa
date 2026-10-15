@@ -20,6 +20,10 @@ const actionMocks = vi.hoisted(() => ({
   setUsageMeasurementMode: vi.fn(),
 }));
 
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 vi.mock('@alga-psa/billing/actions/contractActions', () => ({
   getContractOverview: actionMocks.getContractOverview,
 }));

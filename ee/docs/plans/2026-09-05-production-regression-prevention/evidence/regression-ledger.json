@@ -1,0 +1,1115 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-09",
+  "purpose": "Track proven regression boundaries and verification limits; null incident identifiers must not be counted as production escapes.",
+  "records": [
+    {
+      "id": "month-end-postgres-date-hydration",
+      "classification": "behavioral-defect-replay",
+      "incident": null,
+      "journey": "Generate eligible tenant-calendar month-end invoices",
+      "missingBoundary": "PostgreSQL hydrated dates to canonical billing window",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "job": "Workspace database tests"
+      },
+      "evidence": "month-end-hydration-replay.json",
+      "reproduction": {
+        "command": "node scripts/run-workspace-db-tests.mjs calendarMonthEndCloseActions.db.test.ts",
+        "defect": "In a disposable checkout, narrowly restore String(row.<column>).slice(0, 10) for the three date mappings described in the linked replay evidence. Restore the correct implementation before the after run."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Replay proves real migrated PostgreSQL hydration and eligibility; invoice creation and authentication are mocked.",
+        "No production incident identifier was supplied; this is not an attributed incident count."
+      ],
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
+    },
+    {
+      "id": "manual-invoice-optional-sales-order-permission",
+      "classification": "discovered-during-production-build-testing",
+      "incident": null,
+      "journey": "Finance user creates a manual invoice without sales-order permission",
+      "missingBoundary": "Optional sales-order authorization failure to required billing form options",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/src/components/billing-dashboard/invoicing/GenerateTab.test.tsx",
+        "e2e-tests/tests/invoice-generation.spec.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "job": "Server unit suite + coverage",
+        "browserWorkflow": ".github/workflows/e2e-fresh-install-tests.yaml",
+        "browserJob": "Production browser (community/enterprise)"
+      },
+      "baseRevision": "77a9f465f8",
+      "fixRevision": "ecf91e46a3",
+      "reproduction": {
+        "cwd": "server",
+        "command": "node node_modules/vitest/vitest.mjs run ../packages/billing/src/components/billing-dashboard/invoicing/GenerateTab.test.tsx",
+        "defect": "On a disposable checkout of the base revision, copy the permanent test from the fix revision and execute it against the unchanged GenerateTab implementation."
+      },
+      "before": {
+        "status": "assertion-failed",
+        "failures": 3,
+        "assertion": "Authorized Client A and Support options are missing when optional sources reject; a successful refresh retains an old load error.",
+        "browserObservation": "Finance sign-in succeeds, but the manual client picker has no options and displays Failed to load data; production server logs sales_order read permission denial."
+      },
+      "after": {
+        "status": "focused-tests-passed",
+        "passed": 4,
+        "assertion": "Required options remain available with a scoped warning, successful refresh clears the warning, and required client-loading failure remains fatal."
+      },
+      "status": "local-before-and-after-verified-historical-native-after-passed",
+      "limits": [
+        "Focused component tests mock action responses and the child form.",
+        "Historical native Finance manual-invoice flow passes in both editions; it does not independently assert the absence of sales-order permissions.",
+        "No supplied production incident identifier. Historical after-fix evidence does not replace current-candidate CI."
+      ],
+      "nativeAfter": {
+        "evidence": "regression-native-after-audit-d8cf.json",
+        "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+        "headRevision": "d8cf156c731bdfb9414ee6435152a676e0bcecf4",
+        "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34118119011",
+        "editions": [
+          "community",
+          "enterprise"
+        ],
+        "status": "passed-first-attempt",
+        "currentCandidateReadiness": false
+      }
+    },
+    {
+      "id": "manual-invoice-entered-number",
+      "classification": "discovered-during-regression-expansion",
+      "incident": null,
+      "journey": "Create and retry a manually numbered invoice",
+      "missingBoundary": "Entered invoice number through UI request to stored invoice and uniqueness rollback",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "server/src/test/unit/billing/manualInvoiceActions.errors.test.ts",
+        "server/src/test/infrastructure/billing/invoices/manualInvoice.test.ts",
+        "e2e-tests/tests/invoice-generation.spec.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "job": "Server unit suite + coverage",
+        "databaseWorkflow": ".github/workflows/integration-tests.yml",
+        "databaseJob": "Infrastructure shards",
+        "browserWorkflow": ".github/workflows/e2e-fresh-install-tests.yaml"
+      },
+      "baseRevision": "77a9f465f8",
+      "fixRevision": "ecf91e46a3",
+      "reproduction": {
+        "cwd": "server",
+        "command": "node node_modules/vitest/vitest.mjs run src/test/unit/billing/manualInvoiceActions.errors.test.ts",
+        "defect": "On a disposable checkout of the base revision, copy the permanent test from the fix revision and execute it against the unchanged manual invoice action."
+      },
+      "before": {
+        "status": "assertion-failed",
+        "failures": 1,
+        "assertion": "The action allocates an automatic number instead of persisting the supplied trimmed number."
+      },
+      "after": {
+        "status": "focused-and-database-tests-passed",
+        "focusedSuitePassed": 13,
+        "databaseSuitePassed": 16,
+        "assertion": "Custom number persists, blank input still allocates, duplicate-number retry returns INVOICE_NUMBER_CONFLICT and rolls back with identical invoice, charge and transaction rows."
+      },
+      "status": "local-before-and-after-verified-historical-native-after-passed",
+      "limits": [
+        "The before action test uses a database mock; the after duplicate retry additionally uses real migrated PostgreSQL.",
+        "Historical native manual-invoice flow verifies the entered number, finalized download and retry effects in both editions.",
+        "No supplied production incident identifier. Historical after-fix evidence does not replace current-candidate CI."
+      ],
+      "nativeAfter": {
+        "evidence": "regression-native-after-audit-d8cf.json",
+        "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+        "headRevision": "d8cf156c731bdfb9414ee6435152a676e0bcecf4",
+        "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34118119011",
+        "editions": [
+          "community",
+          "enterprise"
+        ],
+        "status": "passed-first-attempt",
+        "currentCandidateReadiness": false
+      },
+      "ciAfter": {
+        "evidence": "ci-manual-invoice-regression-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
+    },
+    {
+      "id": "recurring-invoice-approval-remediation",
+      "classification": "discovered-during-production-build-testing",
+      "incident": null,
+      "journey": "Reject unapproved ticket time with actionable Finance feedback, then approve and invoice once",
+      "missingBoundary": "Typed approval validation through grouped invoice execution to localized browser error",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "e2e-tests/tests/time-approval-invoice.spec.ts",
+        "server/src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts",
+        "server/src/test/unit/billing/recurringBillingRunActions.test.ts",
+        "server/src/test/unit/billing/manualInvoiceErrorTranslation.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "browserWorkflow": ".github/workflows/e2e-fresh-install-tests.yaml"
+      },
+      "before": {
+        "status": "browser-assertion-failed",
+        "imageRevision": "c3a05e14e53690793e10bb17e04c9f3da92b5698",
+        "assertion": "Expected Blocked until approval: 1 unapproved entry.; rendered Failed to generate invoice for this billing cycle. Finance retained a selection made before the technician entered and submitted time."
+      },
+      "after": {
+        "status": "focused-tests-passed",
+        "passed": 47,
+        "files": 4,
+        "assertion": "Generation returns the typed approval key/count; grouped execution preserves its code and identity; UI translation receives a numeric plural count; existing preview cases pass.",
+        "browser": {
+          "status": "passed",
+          "pullRequestHead": "48412024729db14b7f40fc6828f4d8c90c538e44",
+          "runId": 34044016832,
+          "communityJobId": 101521391434,
+          "enterpriseJobId": 101521391417,
+          "assertion": "Both production editions pass rejection before approval, approved billing amounts and persistence, and duplicate generation prevention."
+        }
+      },
+      "reproduction": {
+        "cwd": "e2e-tests",
+        "command": "node node_modules/@playwright/test/cli.js test tests/time-approval-invoice.spec.ts",
+        "requirements": "Isolated migrated production installation with configured E2E credentials and database, as documented in e2e-tests/README.md. For before behavior use the cited pre-fix image; for after use a newly built fix image."
+      },
+      "status": "browser-before-and-after-verified",
+      "limits": [
+        "Focused tests use mocked action/database boundaries; the pre-fix browser submits real ticket time and receives the real server response.",
+        "No production incident identifier was supplied."
+      ]
+    },
+    {
+      "id": "sales-order-tenant-tax-reference-validation",
+      "classification": "discovered-during-database-test-activation",
+      "incident": null,
+      "journey": "Create a sales order, add a line, or change its tax rate",
+      "missingBoundary": "Application action validation for tenant tax references where Citus deliberately omits a database foreign key",
+      "ownerRole": "Inventory maintainers",
+      "testFiles": [
+        "packages/inventory/src/actions/salesOrderGuards.db.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "job": "Workspace database tests"
+      },
+      "fixRevision": "7e11ffc7ba",
+      "before": {
+        "status": "assertion-failed",
+        "assertion": "Create/add/update accepted missing or foreign-tenant tax rates."
+      },
+      "after": {
+        "status": "local-database-tests-passed",
+        "assertion": "Six invalid-reference cases reject without persisting changes; three valid-reference cases accept a tenant rate and allow clearing it. Complete workspace database run: 48 files, 347 passing assertions, zero skipped."
+      },
+      "reproduction": {
+        "command": "node scripts/run-workspace-db-tests.mjs salesOrderGuards.db.test.ts",
+        "requirements": "Owned disposable PostgreSQL test database and Redis; use packages/inventory/TESTING.md."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "No production incident identifier was supplied.",
+        "Latest committed revision CI verification remains pending."
+      ],
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
+    },
+    {
+      "id": "shard-manifest-raw-report-mismatch",
+      "classification": "test-infrastructure-defect",
+      "incident": null,
+      "journey": "Aggregate required test shards into a complete execution result",
+      "missingBoundary": "Manifest partition claims were not compared with independently recomputed raw report identities",
+      "ownerRole": "Test infrastructure maintainers",
+      "testFiles": [
+        "scripts/tests/infrastructure-runner.vitest.test.mjs",
+        "scripts/tests/additional-workspace-runner.test.mjs"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/workspace-tests.yml"
+      },
+      "before": {
+        "status": "assertion-failed",
+        "assertion": "Replacing shard 1 raw reports with internally consistent passing shard 2 reports still returned exit zero and complete execution."
+      },
+      "after": {
+        "status": "local-harness-tests-passed",
+        "assertion": "Infrastructure and enterprise aggregation reject mismatched file/test identities and counts; valid reports pass. Eight framework harness tests pass."
+      },
+      "reproduction": {
+        "command": "node --test scripts/tests/infrastructure-runner.vitest.test.mjs scripts/tests/additional-workspace-runner.test.mjs scripts/tests/test-sharding.test.mjs",
+        "requirements": "Install repository dependencies; harnesses create isolated temporary repositories and execute actual Vitest processes."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Harness fixtures verify test infrastructure, not application behavior.",
+        "Latest committed revision CI verification remains pending."
+      ]
+    },
+    {
+      "id": "solo-flat-price-checkout",
+      "classification": "discovered-during-test-inventory-activation",
+      "incident": null,
+      "journey": "Solo tenant starts a trial checkout",
+      "missingBoundary": "Tier pricing selection to Stripe checkout line items",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "ee/server/src/__tests__/unit/stripeService.tierPricing.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/workspace-tests.yml"
+      },
+      "before": {
+        "status": "assertion-failed",
+        "assertion": "Solo checkout threw Per-seat pricing not configured for solo tier (month), despite its configured flat base price."
+      },
+      "after": {
+        "status": "local-tests-passed",
+        "assertion": "The existing tier line-item builder restores Solo flat pricing; all 20 pricing assertions pass, including Pro per-seat and add-on cases."
+      },
+      "reproduction": {
+        "command": "node scripts/run-additional-workspace-tests.mjs enterprise-unit stripeService.tierPricing.test.ts",
+        "requirements": "Install locked dependencies. Node 25 local runs require NODE_OPTIONS=--no-experimental-webstorage; CI uses Node 22."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Stripe and persistence are mocked here; this does not prove a real Stripe checkout or webhook.",
+        "Latest candidate CI verification remains pending."
+      ]
+    },
+    {
+      "id": "workflow-empty-until-picker",
+      "classification": "discovered-during-test-inventory-activation",
+      "incident": null,
+      "journey": "Author selects a fixed date for a workflow time wait",
+      "missingBoundary": "Empty Until configuration reflected by parent to authoring mode",
+      "ownerRole": "Workflow maintainers",
+      "testFiles": [
+        "ee/server/src/components/workflow-designer/__tests__/WorkflowWaitEditors.test.tsx"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/workspace-tests.yml"
+      },
+      "before": {
+        "status": "assertion-failed",
+        "assertion": "Selecting Until with an empty config reset the date picker to expression mode, so the picker interaction failed."
+      },
+      "after": {
+        "status": "local-tests-passed",
+        "assertion": "Blank Until expressions retain fixed mode; the existing component date-picker round trip passes. Dynamic expression editing also passes."
+      },
+      "reproduction": {
+        "command": "node scripts/run-additional-workspace-tests.mjs enterprise-unit WorkflowWaitEditors.test.tsx",
+        "requirements": "Install locked dependencies. Node 25 local runs require NODE_OPTIONS=--no-experimental-webstorage; CI uses Node 22."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "This is component interaction coverage; workflow execution is a separate boundary.",
+        "Latest candidate CI verification remains pending."
+      ]
+    },
+    {
+      "id": "simulator-hourly-bucket-double-charge",
+      "classification": "discovered-during-test-inventory-activation",
+      "incident": null,
+      "journey": "Compare a contract simulation with its generated invoice when hourly work is covered by a bucket",
+      "missingBoundary": "Simulation obligation selection versus production persisted invoice charges",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "ee/server/src/__tests__/integration/contractSimulator.integration.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/workspace-tests.yml",
+        "suite": "enterprise-integration"
+      },
+      "before": {
+        "status": "assertion-failed",
+        "assertion": "After fixing the obsolete recurring-period fixture identity, simulation contained an extra Engineering hourly charge of 5000 cents plus 500 cents tax for an hour fully covered by the bucket. The production invoice had no such charge.",
+        "localEvidence": "/tmp/alga-enterprise-integration-repaired.log"
+      },
+      "after": {
+        "status": "local-tests-passed",
+        "assertion": "The persisted-invoice parity assertion passes. Three assumed hours with one included hour produce only 2000 cents bucket overage; removing the overlay restores a 15000-cent hourly charge. All eight contract simulator integration cases pass.",
+        "localEvidence": "/tmp/alga-ee-integration-focused-v3.log"
+      },
+      "reproduction": {
+        "command": "node scripts/run-additional-workspace-tests.mjs enterprise-integration contractSimulator.integration.test.ts",
+        "requirements": "Locked dependencies, explicit disposable PostgreSQL admin/application DB_* credentials and REDIS_* endpoint. CI uses Node 22."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "This verifies the represented per-service hourly/bucket overlay. It does not establish every shared-pool, weighted-burn or cadence combination.",
+        "New candidate CI verification remains pending."
+      ]
+    },
+    {
+      "id": "credit-application-ignores-cash-payments",
+      "classification": "discovered-by-real-database-state-model",
+      "incident": null,
+      "journey": "Apply available credit to a partially paid invoice",
+      "missingBoundary": "Credit eligibility and persisted cash payment ledger reconciliation",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/tests/financialStateModel.db.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "job": "Workspace database tests"
+      },
+      "evidence": "financial-state-model.json",
+      "before": {
+        "status": "assertion-failed",
+        "assertion": "A 10000-cent invoice with 6000 cents paid accepted 10000 cents of credit instead of 4000."
+      },
+      "after": {
+        "status": "local-full-lanes-passed",
+        "workspaceDatabase": {
+          "files": 59,
+          "assertions": 425,
+          "skips": 0
+        },
+        "creditInfrastructure": {
+          "files": 17,
+          "assertions": 78,
+          "skips": 0
+        },
+        "assertion": "Credit is capped at unpaid balance under the invoice lock; generated sequences, saved replay, policy/lifecycle cases and concurrent cash/credit checks pass."
+      },
+      "reproduction": {
+        "cwd": "server",
+        "command": "../node_modules/.bin/vitest run --config vitest.workspace-db.config.ts ../packages/billing/tests/financialStateModel.db.test.ts",
+        "defect": "Run the permanent test against the pre-fix credit cap; preserve real migrated database and payment ledger."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "USD manual invoices with unrestricted eligible charges and direct credit grants; this pilot does not exhaust every billing policy or currency.",
+        "Each model example rolls back a real transaction. The separate concurrency suites exercise competing committed connections.",
+        "Authentication, external event delivery and remote notifications are fixture seams.",
+        "No production incident identifier supplied. Native candidate execution remains required."
+      ],
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
+    },
+    {
+      "id": "accounting-mapping-catalog-refresh-erases-draft",
+      "classification": "native-browser-discovered-behavioral-defect",
+      "incident": null,
+      "journey": "Configure an accounting service mapping while a provider catalog reloads",
+      "missingBoundary": "Asynchronous catalog results arriving during user input and pending persistence",
+      "ownerRole": "Integration maintainers",
+      "testFiles": [
+        "packages/integrations/src/components/accounting-mappings/AccountingMappingDialog.targetKind.test.tsx",
+        "e2e-tests/tests/xero-export.spec.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "job": "Server unit suite + coverage",
+        "browserWorkflow": ".github/workflows/e2e-fresh-install-tests.yaml"
+      },
+      "evidence": "accounting-mapping-draft-refresh.json",
+      "before": {
+        "result": "intended-assertion-failure",
+        "assertion": "After real picker selections and a fresh catalog array, Save must submit the selected service/item and metadata. Actual onSubmit calls: 0.",
+        "logSha256": "f64cbc48ae020a4108913aeae465dd7469e9b0126083585cfa9b25bb56a15c9d"
+      },
+      "after": {
+        "status": "local-behavioral-tests-passed",
+        "assertion": "Selections and metadata submit after catalog refresh; removed targets require replacement and pending saves stay disabled."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "No production incident supplied. Native browser revalidation of the fix remains required."
+      ]
+    },
+    {
+      "id": "table-refresh-resets-open-user-menu",
+      "classification": "native-browser-discovered-behavioral-defect",
+      "incident": null,
+      "journey": "Open a user action menu while asynchronously loaded table data refreshes",
+      "missingBoundary": "React component identity across refreshed table render callbacks",
+      "ownerRole": "UI maintainers",
+      "testFiles": [
+        "packages/ui/src/components/DataTable.interaction.test.tsx",
+        "e2e-tests/tests/tenant-identity.spec.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "browserWorkflow": ".github/workflows/e2e-fresh-install-tests.yaml"
+      },
+      "fixRevision": "055e1b19c8",
+      "evidence": "table-interaction-continuity.json",
+      "before": {
+        "status": "intended-assertion-failure",
+        "assertion": "After opening the real dropdown and refreshing columns/rows, Edit is missing."
+      },
+      "after": {
+        "status": "local-behavioral-tests-passed",
+        "assertion": "Edit remains open and invokes the new callback once, never the stale callback. Full UI package: 79 files, 416 tests passed, zero skipped."
+      },
+      "reproduction": {
+        "cwd": "packages/ui",
+        "command": "../../node_modules/.bin/vitest run src/components/DataTable.interaction.test.tsx",
+        "defect": "In an isolated checkout before the fix, copy the permanent interaction test and run it against the original DataTable generated cell renderer."
+      },
+      "status": "local-before-and-after-verified-native-pending",
+      "limits": [
+        "The native trace is consistent with the reproduced reset path; rebuilt native browser acceptance is still required.",
+        "No production incident identifier was supplied; do not count as an attributed production escape."
+      ]
+    },
+    {
+      "id": "calendar-manual-sync-replaces-webhook-identity",
+      "classification": "native-browser-discovered-lifecycle-defect",
+      "incident": null,
+      "journey": "Manually synchronize a Microsoft calendar and then receive a vendor event correction",
+      "missingBoundary": "Subscription identity survives manual sync so incoming notifications retain a resolvable provider",
+      "ownerRole": "Integration maintainers",
+      "testFiles": [
+        "server/src/test/unit/calendar/calendarActions.sync.test.ts",
+        "e2e-tests/tests/microsoft-calendar.spec.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "browserWorkflow": ".github/workflows/e2e-fresh-install-tests.yaml"
+      },
+      "fixRevision": "5f2566f966",
+      "evidence": "calendar-subscription-preservation.json",
+      "before": {
+        "status": "intended-assertion-failure",
+        "assertion": "Existing subscription renewal and renewal-failure expectations failed; manual sync registered a replacement subscription."
+      },
+      "after": {
+        "status": "local-behavioral-tests-passed",
+        "assertion": "All six orchestration tests pass: preserve and renew an existing Microsoft subscription, register the initial one, and surface renewal failure."
+      },
+      "reproduction": {
+        "cwd": "server",
+        "command": "node node_modules/vitest/vitest.mjs run src/test/unit/calendar/calendarActions.sync.test.ts",
+        "defect": "In an isolated checkout before the fix, copy the permanent action test and execute it against the unconditional registration implementation."
+      },
+      "status": "local-before-and-after-verified-historical-native-after-passed",
+      "limits": [
+        "Focused tests mock provider/DB/sync boundaries. Three historical EE native cases additionally verify preserved subscription identity, callback delivery and corrected DB/UI state after outage, permission denial and throttling.",
+        "No production incident identifier was supplied. Historical after-fix evidence does not replace current-candidate CI."
+      ],
+      "nativeAfter": {
+        "evidence": "regression-native-after-audit-d8cf.json",
+        "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+        "headRevision": "d8cf156c731bdfb9414ee6435152a676e0bcecf4",
+        "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34118119011",
+        "editions": [
+          "enterprise"
+        ],
+        "status": "passed-first-attempt",
+        "currentCandidateReadiness": false
+      }
+    },
+    {
+      "id": "tax-compound-base-and-zero-rate",
+      "classification": "discovered-during-regression-audit",
+      "incident": null,
+      "journey": "Calculate and preview composite taxes in the configured sequence",
+      "missingBoundary": "Compound flag semantics and non-positive amounts to service results and UI preview",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/tests/tax/taxService.thresholdsAndComposite.test.ts",
+        "packages/billing/src/components/settings/tax/TaxComponentEditor.preview.test.tsx",
+        "server/src/test/unit/taxService.test.ts",
+        "server/src/test/unit/taxCalculation.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "job": "Server unit suite + coverage"
+      },
+      "evidence": "tax-compound-regression.json",
+      "baseRevision": "a8fd74d09fd762930ac792d118d4a3fb1549c847",
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Local focused validation; no current native CI or release readiness claim.",
+        "13 pre-existing tax TODOs remain; full-suite readiness still fails until omissions are addressed.",
+        "No production incident ID was supplied."
+      ]
+    },
+    {
+      "id": "default-tax-rate-postgres-numeric",
+      "classification": "discovered-during-database-regression-testing",
+      "incident": null,
+      "journey": "Return a numeric effective tax percentage when calculating the default client rate",
+      "missingBoundary": "PostgreSQL numeric hydration to the TaxService result contract",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/src/services/taxService.rateSelection.db.test.ts"
+      ],
+      "baseRevision": "aa29040eb95efeee70de0bec2fff8529a6c7b42a",
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "job": "Workspace database tests",
+        "runner": "scripts/run-workspace-db-tests.mjs",
+        "config": "server/vitest.workspace-db.config.ts"
+      },
+      "evidence": "tax-rate-postgres-regression.json",
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Local focused database run uses the task-owned migrated visual_regression_82cc_test database; it bypasses bootstrap in a temporary config and rolls back every fixture.",
+        "Tenant context and reverse-charge/default-profile provisioning are substituted; rate selection, tenant predicates and PostgreSQL hydration are real.",
+        "Does not verify authentication, international policy selection, invoice orchestration, tax caps or subscription periods.",
+        "Current candidate native CI remains unverified."
+      ],
+      "subsequentCoverage": {
+        "evidence": "tax-settings-postgres.json",
+        "details": "Later tests remove settings/profile mocks; original evidence limits above describe the historical run."
+      },
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
+    },
+    {
+      "id": "tax-open-ended-overlap",
+      "journey": "Create or edit a regional tax rate without an end date",
+      "missingBoundary": "Open-ended interval intersection against persisted equal-start and future rates",
+      "baseRevision": "28735644e3",
+      "fixRevision": "7a3897ff1f",
+      "evidence": "tax-open-ended-overlap.json",
+      "before": {
+        "status": "intended-assertion-failure",
+        "failed": 3,
+        "passed": 23
+      },
+      "after": {
+        "status": "local-behavioral-tests-passed",
+        "passed": 27
+      },
+      "classification": "discovered-during-database-regression-testing",
+      "incident": null,
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/src/services/taxService.rateSelection.db.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "job": "Workspace database tests",
+        "jobId": "workspace-db-tests",
+        "runner": "scripts/run-workspace-db-tests.mjs",
+        "config": "server/vitest.workspace-db.config.ts"
+      },
+      "status": "local-before-and-after-verified",
+      "reproduction": {
+        "cwd": "repository root",
+        "command": "node scripts/run-workspace-db-tests.mjs taxService.rateSelection.db.test.ts",
+        "defect": "Use the permanent database test against the pre-fix TaxService validator, which substitutes startDate for a missing endDate."
+      },
+      "limits": [
+        "Requires disposable PostgreSQL/Redis services for canonical runner; local evidence used the task-owned migrated database with rollback fixtures.",
+        "No production incident identifier was supplied; do not count as an attributed production escape.",
+        "Current candidate native CI remains unverified."
+      ],
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
+    },
+    {
+      "id": "tax-action-asynchronous-error-mapping",
+      "journey": "Receive a usable validation error when creating or updating an overlapping tax rate",
+      "missingBoundary": "Rejected transaction promise to server-action error mapping and database non-mutation",
+      "baseRevision": "7a3897ff1f",
+      "fixRevision": "ed2a23d2b3",
+      "evidence": "tax-action-transaction-errors.json",
+      "before": {
+        "status": "uncaught-validation-rejection",
+        "assertion": "Create action rejects instead of returning its structured actionError response."
+      },
+      "after": {
+        "status": "local-behavioral-tests-passed",
+        "passed": 29
+      },
+      "classification": "discovered-during-database-regression-testing",
+      "incident": null,
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/src/services/taxService.rateSelection.db.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "job": "Workspace database tests",
+        "jobId": "workspace-db-tests",
+        "runner": "scripts/run-workspace-db-tests.mjs",
+        "config": "server/vitest.workspace-db.config.ts"
+      },
+      "status": "local-before-and-after-verified",
+      "reproduction": {
+        "cwd": "repository root",
+        "command": "node scripts/run-workspace-db-tests.mjs taxService.rateSelection.db.test.ts",
+        "defect": "Use the permanent database tests against the pre-fix addTaxRate/updateTaxRate functions, which return withTransaction without awaiting inside try."
+      },
+      "limits": [
+        "Requires disposable PostgreSQL/Redis services for canonical runner; local evidence used the task-owned migrated database with rollback fixtures.",
+        "No production incident identifier was supplied; do not count as an attributed production escape.",
+        "Current candidate native CI remains unverified.",
+        "Auth, RBAC and product-access guards are substituted. Transaction/savepoint, validation and persistence behavior are real."
+      ],
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
+    },
+    {
+      "id": "tax-threshold-minimum-and-gaps",
+      "journey": "Calculate tax using configured threshold bounds",
+      "missingBoundary": "Nonzero first minimum and untaxed gaps between brackets",
+      "baseRevision": "5732b3284c",
+      "evidence": "tax-threshold-boundaries.json",
+      "before": {
+        "failed": 4,
+        "passed": 14
+      },
+      "after": {
+        "unitPassed": 57,
+        "unitTodo": 3,
+        "databasePassed": 30
+      },
+      "classification": "discovered-during-regression-testing",
+      "incident": null,
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/tests/tax/taxService.thresholdsAndComposite.test.ts",
+        "packages/billing/src/services/taxService.rateSelection.db.test.ts"
+      ],
+      "ci": {
+        "unitWorkflow": ".github/workflows/unit-tests.yml",
+        "databaseWorkflow": ".github/workflows/integration-tests.yml",
+        "databaseRunner": "scripts/run-workspace-db-tests.mjs"
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Existing three tax policy TODOs remain unresolved.",
+        "Local focused runs, not full candidate native execution.",
+        "Database fixture substitutes tenant connection context and rolls back each test."
+      ],
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
+    },
+    {
+      "id": "survey-unverified-domain-false-success",
+      "classification": "behavioral-defect-replay",
+      "incident": null,
+      "journey": "Send a survey invitation and retry after sender-domain verification",
+      "missingBoundary": "Failed email transport result to invitation state and lifecycle event publication",
+      "ownerRole": "Surveys and email maintainers",
+      "testFiles": [
+        "server/src/services/surveyResponseActions.db.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "job": "Workspace database tests"
+      },
+      "evidence": "survey-delivery-false-success.json",
+      "reproduction": {
+        "command": "node scripts/run-workspace-db-tests.mjs surveyResponseActions.db.test.ts",
+        "defect": "Restore the pre-fix unverified-domain catch bypass from baseRevision in the evidence; both parameterized sender-domain cases return success instead of rejecting."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Synthetic transport rejection with actual database/template/token behavior.",
+        "No production incident identifier supplied."
+      ],
+      "relocationEvidence": "survey-server-test-relocation.json",
+      "ciAfter": {
+        "evidence": "ci-workspace-db-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
+    },
+    {
+      "id": "work-item-picker-ticket-number-search",
+      "classification": "behavioral-defect-replay",
+      "incident": null,
+      "journey": "Select a ticket by its displayed number while adding billable time",
+      "missingBoundary": "Picker search text to database ticket-number matching",
+      "ownerRole": "Scheduling maintainers",
+      "testFiles": [
+        "server/src/test/integration/workItemPickerSearch.integration.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "job": "Integration shards"
+      },
+      "evidence": "work-item-ticket-number-search.json",
+      "reproduction": {
+        "command": "cd server && npx vitest run src/test/integration/workItemPickerSearch.integration.test.ts",
+        "defect": "Restore the title-only predicate in searchPickerWorkItems; ticket-number lookup fails."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Auth and connection boundary use fixture identity; query and PostgreSQL are real.",
+        "Current-source browser and GitHub CI verification remain pending.",
+        "No production incident identifier supplied."
+      ],
+      "ciAfter": {
+        "evidence": "ci-tier1-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
+    },
+    {
+      "id": "invoice-preview-unfinished-transform",
+      "classification": "behavioral-defect-replay",
+      "incident": null,
+      "journey": "Author a transform and recover from incomplete edits in the invoice designer",
+      "missingBoundary": "Workspace export validation to structured preview diagnostics",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "job": "Server unit suite + coverage"
+      },
+      "evidence": "invoice-preview-unfinished-transform.json",
+      "reproduction": {
+        "command": "cd server && npx vitest run ../packages/billing/src/actions/invoiceTemplatePreview.integration.test.ts",
+        "defect": "Remove the workspace-export error boundary; the unfinished-transform case rejects instead of returning its diagnostic."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Authentication is stubbed; workspace export, AST validation, evaluation and rendering are real.",
+        "Does not establish the cause or resolution of the separate save-navigation failure.",
+        "Current-source GitHub CI verification remains required."
+      ]
+    },
+    {
+      "id": "invoice-designer-preview-save-navigation",
+      "classification": "behavioral-defect-replay",
+      "incident": null,
+      "journey": "Save and reopen an authored invoice template while previews are active",
+      "missingBoundary": "Background preview server actions to editor save/navigation lifecycle",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "e2e-tests/tests/invoice-designer-persistence.spec.ts",
+        "packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/e2e-fresh-install-tests.yaml",
+        "job": "Production browser journeys"
+      },
+      "evidence": "invoice-designer-save-navigation.json",
+      "reproduction": {
+        "command": "cd e2e-tests && npx playwright test --config=playwright.local.config.ts tests/invoice-designer-persistence.spec.ts",
+        "defect": "Remove previewPaused and resume isLoading immediately after a successful save; the editor can remain at templateId=new despite the saved record."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Host development execution is diagnostic evidence, not a production image or current-source GitHub CI attestation.",
+        "The separate CI invoice-generation connection acquisition timeout did not reproduce in two host runs; its resource-exhaustion cause remains unconfirmed."
+      ]
+    },
+    {
+      "id": "microsoft-all-day-calendar-3348",
+      "classification": "reported-production-defect",
+      "incident": "https://github.com/Nine-Minds/alga-psa/issues/3348",
+      "journey": "Synchronize and edit a Microsoft all-day calendar event without changing its dates",
+      "missingBoundary": "Graph input contract and exclusive date-only end through shared schedule mapping",
+      "ownerRole": "Integration and scheduling maintainers",
+      "testFiles": [
+        "packages/emulators/msgraph/tests/calendar.test.ts",
+        "packages/integrations/src/utils/calendar/eventMapping.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "job": "Server unit suite + coverage"
+      },
+      "baseRevision": "5fadade66e",
+      "fixRevision": "9c8184185f (adapter); shared mapping follow-up in this commit",
+      "evidence": [
+        "microsoft-all-day-contract.json",
+        "calendar-date-roundtrip.json"
+      ],
+      "before": {
+        "status": "assertion-failed",
+        "assertion": "Permissive emulator accepted invalid dates; corrected emulator exposed real adapter HTTP 400; shared mapper extended exclusive end by almost a day."
+      },
+      "after": {
+        "status": "native-focused-tests-passed",
+        "assertion": "87 Microsoft HTTP/adapter cases pass; shared mapper passes 3 cases in each of UTC, Berlin, and Los Angeles."
+      },
+      "status": "partial-local-before-and-after-verified",
+      "limits": [
+        "Full incident remains open: browser rendering/editor save, deployed timezone behavior, and current-source CI are not yet proven.",
+        "Owner role is provisional; named operational owner still required."
+      ],
+      "ciAfter": {
+        "evidence": "ci-calendar-temporal-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
+    },
+    {
+      "id": "3338-seeded-board-ticket-lifecycle",
+      "classification": "production-incident-regression",
+      "incident": "https://github.com/Nine-Minds/alga-psa/issues/3338",
+      "journey": "Open and close tickets on fresh demo and ITIL boards",
+      "missingBoundary": "Real seed catalogs to persisted ticket lifecycle",
+      "ownerRole": "Ticketing maintainers (role only; named ownership pending)",
+      "testFiles": [
+        "server/src/test/integration/seededBoardTicketLifecycle.integration.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "selection": "Permanent Tier-1 manifest"
+      },
+      "evidence": "seed-teams-build-record-followup.json",
+      "reproduction": {
+        "historicalSeedRevision": "a58838822228ae17a5c02a7b477d6eb92bddaae5",
+        "defect": "Replay actual 07_statuses.cjs and 85_itil_priorities.cjs seed blobs from the historical parent in a disposable checkout; demo closed status and ITIL default open status assertions fail."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Only issue 3338 defect 3 is covered",
+        "Current-source CI has not run this new regression",
+        "Isolated tenant selection; browser and authentication are outside scope"
+      ],
+      "ciAfter": {
+        "evidence": "ci-tier1-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
+    },
+    {
+      "id": "client-creation-tax-initialization-atomicity",
+      "classification": "discovered-during-incident-audit",
+      "incident": null,
+      "journey": "Create a client when required tax setup cannot complete",
+      "missingBoundary": "Client/profile transaction to default tax initialization",
+      "ownerRole": "Client and billing maintainers (named owner pending)",
+      "testFiles": [
+        "server/src/test/integration/clientCreationAtomicity.integration.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "selection": "Permanent Tier-1 manifest"
+      },
+      "evidence": "worker-inputs-client-atomicity-and-runner-fix.json",
+      "reproduction": {
+        "baseRevision": "defb153935ff976853be09c3fc42375ae548ef2e",
+        "defect": "Run the new regression against the unchanged base action in an isolated migrated test database: absence of active tax rates throws but leaves a persisted client and profile."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Not attributed to the original cause of issue 3338",
+        "Current-source CI remains required",
+        "Auth/session and event publishing are outside this regression"
+      ],
+      "ciAfter": {
+        "evidence": "ci-tier1-regression-mappings-a0d077.json",
+        "runId": "34308610232",
+        "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+        "status": "mapped-assertions-passed",
+        "scope": "Only mapped assertions and boundaries in linked evidence; not all listed tests, full incident closure, deployment proof or latest local source readiness."
+      }
+    },
+    {
+      "classification": "named-exemplar-coverage-mapping",
+      "incident": null,
+      "ownerRole": null,
+      "before": {
+        "status": "unknown",
+        "reason": "No incident-specific pre-fix failure replay is established by this mapping."
+      },
+      "status": "ci-after-verified-incident-and-follow-up-ownership-unknown",
+      "id": "usage-context-exemplar",
+      "journey": "Add usage within the selected service period and preserve the selected contract line",
+      "missingBoundary": "Selected service-period and contract-line context through rendered form state to action arguments",
+      "testFiles": [
+        "packages/billing/tests/UsageTracking.periodContextAndRequestId.test.tsx",
+        "packages/billing/tests/UsageTracking.contractLinePersistence.test.tsx"
+      ],
+      "testIdentities": [
+        [
+          "UsageTracking service-period deep-link context",
+          "loads records scoped to [periodStart, periodEnd) and renders a clearable note"
+        ],
+        [
+          "UsageTracking service-period deep-link context",
+          "defaults the new record date to the period start when today is outside the period"
+        ],
+        [
+          "UsageTracking service-period deep-link context",
+          "keeps today as the default date when it falls inside the period"
+        ],
+        [
+          "UsageTracking add-usage: contract-line persistence and default date",
+          "persists the operator-selected same-named contract line and a canonical default date"
+        ]
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "job": "Nx affected unit tests"
+      },
+      "ciAfter": {
+        "runId": "34330619264",
+        "jobId": "102398085553",
+        "testedRevision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "status": "mapped-files-passed",
+        "logUrl": "https://api.github.com/repos/Nine-Minds/alga-psa/actions/jobs/102398085553/logs",
+        "rawLogSha256": "6db57b5abc778a2f5a780ab3342495782da218be9d15aecd874b641aeba09b67",
+        "fileResults": [
+          {
+            "file": "packages/billing/tests/UsageTracking.periodContextAndRequestId.test.tsx",
+            "passed": 9,
+            "logLine": 25352
+          },
+          {
+            "file": "packages/billing/tests/UsageTracking.contractLinePersistence.test.tsx",
+            "passed": 1,
+            "logLine": 28260
+          }
+        ]
+      },
+      "limits": [
+        "CI reports passing file counts, not individual passing titles; listed identities come from permanent test definitions.",
+        "Component tests mock server actions; this is not independently attributed incident or production deployment proof.",
+        "The Nx job failed two unrelated translation validation cases; mapped file passes do not imply a green job.",
+        "Incident identifier, incident-specific before replay and named follow-up owner remain unknown; T023 is not closed."
+      ]
+    },
+    {
+      "classification": "named-exemplar-coverage-mapping",
+      "incident": null,
+      "ownerRole": null,
+      "before": {
+        "status": "unknown",
+        "reason": "No incident-specific pre-fix failure replay is established by this mapping."
+      },
+      "status": "ci-after-verified-incident-and-follow-up-ownership-unknown",
+      "id": "inbound-email-exemplar",
+      "journey": "Receive MIME email, preserve quotation and attachments, thread replies and deduplicate redelivery",
+      "missingBoundary": "SMTP/IMAP through built email service and application persistence to authenticated browser rendering and outbound reply",
+      "testFiles": [
+        "e2e-tests/tests/inbound-email.spec.ts"
+      ],
+      "evidence": "inbound-email-built-journey.json",
+      "ci": {
+        "workflow": ".github/workflows/e2e-fresh-install-tests.yaml",
+        "job": "Production browser (community/enterprise)"
+      },
+      "ciAfter": {
+        "runId": "34330619264",
+        "runAttempt": 1,
+        "testedRevision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "status": "mapped-assertion-passed-first-attempt",
+        "editions": [
+          {
+            "edition": "community",
+            "evidence": "ci-f3a-community-provider-observations.json",
+            "artifactId": 10097133130,
+            "artifactSha256": "c501ba6e018b67b04d51c58e5459eaea80615196599ea19c03e500820ff496de",
+            "identity": [
+              "e2e-tests/tests/inbound-email.spec.ts",
+              "community-chromium",
+              "community-chromium",
+              [
+                "built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery"
+              ]
+            ],
+            "retry": 0,
+            "providerObservations": [
+              {
+                "provider": "smtp-sink",
+                "mode": "emulator",
+                "supported": true,
+                "complete": true,
+                "requestCount": 5,
+                "dropped": 0,
+                "inFlight": 0
+              }
+            ]
+          },
+          {
+            "edition": "enterprise",
+            "evidence": "ci-f3a-enterprise-provider-observations.json",
+            "artifactId": 10097275264,
+            "artifactSha256": "ced633c92aadb3cf49c4b4bea8dc311d9098b601e2afca6e71ce3c3751c06b80",
+            "identity": [
+              "e2e-tests/tests/inbound-email.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery"
+              ]
+            ],
+            "retry": 0,
+            "providerObservations": [
+              {
+                "provider": "smtp-sink",
+                "mode": "emulator",
+                "supported": true,
+                "complete": true,
+                "requestCount": 5,
+                "dropped": 0,
+                "inFlight": 0
+              }
+            ]
+          }
+        ]
+      },
+      "limits": [
+        "Emulated SMTP/IMAP and disposable candidate-built services; no live email-provider or deployed-production guarantee.",
+        "Historical local built-service evidence is supplemental; current CI proof is separately source-bound.",
+        "Incident identifier, incident-specific before replay and named follow-up owner remain unknown; T023 is not closed."
+      ]
+    }
+  ]
+}

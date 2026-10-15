@@ -121,6 +121,10 @@ export function buildControlApp(host: EmulatorHost): express.Express {
     res.json({ ok: true, result: state ?? null });
   }));
 
+  app.get('/control/:emu/requests', route((req, res) => {
+    res.json({ ok: true, result: host.instance(req.params.emu).requests.snapshot() });
+  }));
+
   app.post('/control/:emu/seed/:name', route(async (req, res) => {
     const result = await host.instance(req.params.emu).controls.runSeeder(req.params.name, req.body);
     host.recordStep({ emulator: req.params.emu, kind: 'seed', name: req.params.name, params: req.body });

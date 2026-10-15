@@ -1,0 +1,43 @@
+{
+  "scope": "Project survey reporting, technician filtering and subject presentation",
+  "baseRevision": "888c9b892b5624c895f95df9e59466b130b021b2",
+  "workingTreeDirty": true,
+  "validation": {
+    "databaseBefore": {
+      "artifact": "/tmp/alga-survey-reporting-db-before.log",
+      "sha256": "ab91fbceaa7a248a585b6deb967be0cf81c69c12e265cc564a201cf4293733c5",
+      "passed": 15,
+      "failed": 2
+    },
+    "databaseAfter": {
+      "artifact": "/tmp/alga-survey-reporting-db.log",
+      "sha256": "56c95546a0309a66edfb75470abdb66f009fb9d629ce4ba278ee2a89c35084ce",
+      "passed": 17,
+      "failed": 0
+    },
+    "componentsBefore": {
+      "artifact": "/tmp/alga-survey-reporting-ui-before.log",
+      "sha256": "b5d751efe93e1e46ca2d065185b9ac8b77760d29478d859af9bba7c90c1d2099",
+      "passed": 4,
+      "failed": 4
+    },
+    "componentsAfter": {
+      "artifact": "/tmp/alga-survey-reporting-ui.log",
+      "sha256": "6573a959be82ebc2a39ffcc8b4fb76ec0dab4e7d37d210920ce84ad9700d01d0",
+      "passed": 8,
+      "failed": 0
+    }
+  },
+  "behavior": [
+    "Response pages and negative feedback retain ticket/project identity and tenant-scoped assigned agent names.",
+    "Technician filtering matches either subject type; filter options require a tenant-owned user rather than exposing a dangling foreign agent ID.",
+    "Recent-response links target project or ticket routes; negative feedback, response details and print reports show the correct subject.",
+    "New labels are supplied in all eight supported languages."
+  ],
+  "limits": [
+    "Database behavior uses actual query execution in transaction-owned schemas; authenticated filter context is substituted.",
+    "UI tests render real report components in jsdom; locale hook and dialog shell are substituted. No browser end-to-end claim.",
+    "Unused legacy server copies of analytics service/types remain unchanged; the active package action path imports the updated package service.",
+    "Native candidate CI remains unverified."
+  ]
+}

@@ -1,37 +1,31 @@
 # E2E API Testing
 
-This directory contains end-to-end tests for the REST API endpoints.
+These HTTP tests exercise a running application with real API keys and persisted tenant data. For release evidence, start the candidate production build and its migrated, isolated database before running the suite. The fixture connects to that database; it does not recreate it, run migrations, or relax application constraints.
 
-## Prerequisites
+## Running the API suite
 
-1. **Node.js**: Version 20.0.0 or higher is required
-2. **Database**: Ensure PostgreSQL is running and properly configured
-3. **Environment**: Set up your `.env` file with test database credentials
-4. **Dependencies**: Install all npm dependencies
-
-## Running E2E Tests
-
-E2E tests require a running API server. Follow these steps:
-
-### Step 1: Start the Development Server (Optional)
-
-When running through Vitest, the E2E suite will try to start `npm run start:express` automatically if it does not detect a local server at `http://127.0.0.1:3000`. Starting the server manually is still recommended for faster feedback when iterating:
+Install the repository dependencies using its pinned Node/npm versions. Configure every variable below explicitly for an owned test stack; do not use a shared deployment database.
 
 ```bash
+export TEST_API_BASE_URL=http://127.0.0.1:3000
+export E2E_DATABASE_ISOLATED=true
+export E2E_DB_HOST=127.0.0.1
+export E2E_DB_PORT=55432
+export E2E_DB_NAME=owned_api_test
+export E2E_DB_USER=fixture_user
+# Set E2E_DB_PASSWORD to the password provisioned for the owned stack.
+
 cd server
-npm run dev
+npx vitest list --config vitest.api-e2e.config.ts --json=api-collected.json
+npx vitest run --config vitest.api-e2e.config.ts \
+  --reporter=default --reporter=json --outputFile.json=api-results.json
 ```
 
-Wait for the server to start (usually at http://localhost:3000)
+The database name must identify a dedicated test database. Ambient `DB_*`, `PGBOUNCER_*`, and `TEST_DB_NAME` settings do not select this fixture's connection. The URL must use HTTP or HTTPS without embedded credentials. The application must report healthy at `/api/health`; these tests will fail instead of starting a replacement Express server when the candidate is unavailable.
 
-### Step 2: Run the E2E Tests
+To narrow a local diagnosis, add a file filter such as `src/test/e2e/api/storage.e2e.test.ts`. A filtered run is not evidence that the full suite passed.
 
-In another terminal, run the tests:
-
-```bash
-cd server
-npm run test:local -- src/test/e2e/api/contacts.e2e.test.ts
-```
+This configuration collects HTTP API files only. `xeroCallbackAccessLog.e2e.test.ts` starts Next.js in development mode and asserts development access logs, so it requires a separate runner. Playwright tests also retain their own configurations. Collection does not establish CI assignment or successful execution; that wiring and the full-suite baseline remain tracked in the production regression prevention plan.
 
 ## Test Structure
 
@@ -86,23 +80,7 @@ The test suite automatically:
 
 ## Troubleshooting
 
-### Tests fail with "ECONNREFUSED"
-- The API server is not running
-- Start the server with `npm run dev` before running tests
-
-### Database connection errors
-- Check your `.env` file has correct database credentials
-- Ensure PostgreSQL is running
-- Verify the test database exists
-
-### API key errors
-- The test setup automatically creates API keys
-- Check the `api_keys` table is properly migrated
-
-## Environment Variables
-
-You can configure the test environment with:
-
-- `TEST_API_BASE_URL`: Override the default API URL (default: http://localhost:3000)
-- `DB_NAME_SERVER`: Test database name
-- `DB_HOST`, `DB_PORT`, `DB_USER_ADMIN`, `DB_PASSWORD_ADMIN`: Database connection
+- If readiness fails, inspect the candidate application's health and logs before rerunning. Do not substitute a different application build.
+- If database connection fails, verify the explicit `E2E_DB_*` settings and that the application uses the same database.
+- If a fixture fails on a constraint, fix its data or prove an application migration defect. Do not alter production constraints in test setup.
+- Test cleanup must remove only the tenant created for that test and close its connection. Add cleanup for new dependent records when introducing fixtures.

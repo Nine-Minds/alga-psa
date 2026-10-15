@@ -45,6 +45,15 @@ export interface EntraManagedTenantRow {
   updated_at: string;
 }
 
+export interface EntraManagedTenantUserFilterRow {
+  tenant: string;
+  managed_tenant_id: string;
+  filter_config: Record<string, unknown>;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface EntraClientTenantMappingRow {
   tenant: string;
   mapping_id: string;

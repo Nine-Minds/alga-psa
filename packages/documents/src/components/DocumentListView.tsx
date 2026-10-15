@@ -146,23 +146,23 @@ export default function DocumentListView({
                   <div className="flex items-center gap-2">
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        doc.is_client_visible
+                        doc.is_client_visible && doc.comment_attachment_is_public !== false
                           ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
                           : 'bg-gray-100 text-gray-700 dark:bg-[rgb(var(--color-border-100))] dark:text-[rgb(var(--color-text-600))]'
                       }`}
                     >
-                      {doc.is_client_visible
+                      {doc.is_client_visible && doc.comment_attachment_is_public !== false
                         ? t('documents.visibility.clientVisible', 'Client visible')
                         : t('documents.visibility.internalOnly', 'Internal')}
                     </span>
                     {onToggleVisibility && (
                       <VisibilityToggle
                         id={`document-visibility-${doc.document_id}`}
-                        isClientVisible={Boolean(doc.is_client_visible)}
+                        isClientVisible={Boolean(doc.is_client_visible && doc.comment_attachment_is_public !== false)}
                         onToggle={(nextValue) => {
                           void onToggleVisibility(doc, nextValue);
                         }}
-                        disabled={visibilityUpdatingIds?.has(doc.document_id)}
+                        disabled={doc.comment_attachment_is_public === false || visibilityUpdatingIds?.has(doc.document_id)}
                       />
                     )}
                   </div>

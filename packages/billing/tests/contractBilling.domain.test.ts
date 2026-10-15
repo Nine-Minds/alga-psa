@@ -42,6 +42,56 @@ const input = (mode: "simulate" | "live"): ContractBillingCalculationInput => ({
 });
 
 describe("calculateContractBilling", () => {
+  it.each(["live", "simulate"] as const)("preserves bucket contributor attribution and tax through normalized %s calculation", (mode) => {
+    const normalized = normalizeResolvedContractCharge({
+      obligationId: "bucket-period",
+      tenantId: "tenant-a",
+      contractLineId: "ccl-1",
+      charge: {
+        kind: "bucket",
+        executionMode: mode,
+        taxContext: TAX_CONTEXT,
+        inputs: {
+          billingPeriod: { startDate: "2026-08-01", endDate: "2026-09-01" },
+          clientContractLine: { ...CONTRACT_LINE, contract_line_type: "Hourly" },
+          client: { client_id: "client-a", is_tax_exempt: false },
+          timing: {
+            servicePeriodRecordId: "august-period",
+            duePosition: "arrears",
+            servicePeriodStart: "2026-08-01", servicePeriodEnd: "2026-08-31",
+            servicePeriodStartExclusive: "2026-08-01", servicePeriodEndExclusive: "2026-09-01",
+            coverageRatio: 1,
+          },
+          config: {
+            config_id: "pool", service_id: "catalog-default", service_name: "Pool",
+            tax_rate_id: "tax-1", total_minutes: 60, overage_rate: 1000,
+          },
+          usageRecords: [{ period_start: new Date("2026-08-01T00:00:00Z"), period_end: new Date("2026-08-31T00:00:00Z"), minutes_used: 180 }],
+          serviceContributions: [{
+            periodStart: "2026-08-01", periodEnd: "2026-08-31",
+            services: [
+              { service_id: "taxable-service", service_name: "Taxable", tax_rate_id: "tax-1", weightedMinutes: 135 },
+              { service_id: "exempt-service", service_name: "Exempt", tax_rate_id: null, weightedMinutes: 45 },
+            ],
+          }],
+          contractCurrency: "USD",
+        },
+      },
+    });
+    const result = calculateContractBilling({
+      ...input(mode),
+      obligations: [normalized.obligation],
+      taxContexts: { [normalized.obligation.taxContextKey]: normalized.taxContext },
+      discountsAndAdjustments: undefined,
+    });
+    expect(result.sourceCharges).toHaveLength(2);
+    expect(result.sourceCharges).toEqual(expect.arrayContaining([
+      expect.objectContaining({ serviceId: "taxable-service", total: 1500, tax_amount: 150, servicePeriodRecordId: "august-period" }),
+      expect.objectContaining({ serviceId: "exempt-service", total: 500, tax_amount: 0, servicePeriodRecordId: "august-period" }),
+    ]));
+    expect(result).toMatchObject({ subtotal: 2000, taxTotal: 150, total: 2150 });
+  });
+
   it("owns dispatch, proration, tax, rounding, and explanations for unpriced obligations", () => {
     const calculate = (mode: "simulate" | "live") =>
       calculateContractBilling({

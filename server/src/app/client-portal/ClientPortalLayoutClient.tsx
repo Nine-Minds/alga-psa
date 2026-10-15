@@ -5,11 +5,12 @@ import { AppSessionProvider } from "@alga-psa/auth/client";
 import { ClientPortalLayout } from "@alga-psa/client-portal/components";
 import { I18nWrapper } from "@alga-psa/tenancy/components";
 import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
-import { CurrencyFormatProvider } from "@alga-psa/ui/lib";
+import { CurrencyFormatProvider, DateFormatProvider } from "@alga-psa/ui/lib";
 import { BrandingProvider } from "@alga-psa/tenancy/components";
 import type { Session } from "next-auth";
 import type { TenantBranding } from "@alga-psa/tenancy/actions";
 import type { SupportedLocale } from "@alga-psa/core/i18n/config";
+import type { CountryDateFormat } from "@alga-psa/core/i18n/countryDateFormat";
 import type { ProductCode } from "@alga-psa/types";
 import { ClientPortalDocumentsProvider } from "./ClientPortalDocumentsProvider";
 import { usePathname } from "next/navigation";
@@ -26,6 +27,8 @@ interface Props {
   appointmentsEnabled?: boolean;
   /** Tenant default currency (default_billing_settings) for CurrencyFormatProvider. */
   currencyCode?: string;
+  /** Date shape resolved from the client's own country, for DateFormatProvider. */
+  dateFormat?: CountryDateFormat | null;
   initialLocale?: SupportedLocale | null;
   initialSidebarCollapsed?: boolean;
 }
@@ -37,6 +40,7 @@ export function ClientPortalLayoutClient({
   productCode,
   appointmentsEnabled = true,
   currencyCode,
+  dateFormat,
   initialLocale,
   initialSidebarCollapsed = false,
 }: Props) {
@@ -49,6 +53,7 @@ export function ClientPortalLayoutClient({
       <PostHogUserIdentifier />
       <I18nWrapper portal="client" initialLocale={initialLocale || undefined}>
         <CurrencyFormatProvider currencyCode={currencyCode || 'USD'}>
+        <DateFormatProvider dateFormat={dateFormat}>
         <BrandingProvider initialBranding={branding}>
           <ClientPortalDocumentsProvider>
           <CoManagedPortalAttachmentsProvider><CoManagedRequesterTaskProvider>
@@ -64,6 +69,7 @@ export function ClientPortalLayoutClient({
           </CoManagedRequesterTaskProvider></CoManagedPortalAttachmentsProvider>
           </ClientPortalDocumentsProvider>
         </BrandingProvider>
+        </DateFormatProvider>
         </CurrencyFormatProvider>
       </I18nWrapper>
       </CoManagedWorkspaceBoundary>

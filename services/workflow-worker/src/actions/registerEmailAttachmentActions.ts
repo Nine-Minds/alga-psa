@@ -415,7 +415,7 @@ async function persistDocumentForBuffer(args: {
   documentId?: string;
   fileId?: string;
 }> {
-  const { StorageProviderFactory, generateStoragePath } = await import('@alga-psa/storage');
+  const { StorageProviderFactory, generateStoragePath } = await import('@alga-psa/storage/StorageProviderFactory');
 
   const safeFileName = sanitizeGeneratedFileName(args.fileName, 'attachment.bin');
   const storageProvider = await StorageProviderFactory.createProvider();

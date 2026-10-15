@@ -5,7 +5,9 @@ import type { TicketComment } from "../../../api/tickets";
 
 // --- Hoisted mock state --------------------------------------------------
 
-const { mutedIds, toggleCommentReactionMock, updateTicketCommentMock } = vi.hoisted(() => ({
+const { mutedIds, toggleCommentReactionMock, updateTicketCommentMock, cancelScheduledTicketCommentMock, alertMock } = vi.hoisted(() => ({
+  cancelScheduledTicketCommentMock: vi.fn(),
+  alertMock: vi.fn(),
   mutedIds: new Set<string>(),
   toggleCommentReactionMock: vi.fn(),
   updateTicketCommentMock: vi.fn(),
@@ -47,7 +49,14 @@ vi.mock("../../../api", () => ({
 vi.mock("../../../api/tickets", () => ({
   toggleCommentReaction: (...args: unknown[]) => toggleCommentReactionMock(...args),
   updateTicketComment: (...args: unknown[]) => updateTicketCommentMock(...args),
+  cancelScheduledTicketComment: (...args: unknown[]) => cancelScheduledTicketCommentMock(...args),
+  isScheduledComment: (c: { publish_state?: string | null }) => c.publish_state === "scheduled",
 }));
+
+vi.mock("react-native", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("react-native");
+  return { ...actual, Alert: { alert: (...args: unknown[]) => alertMock(...args) } };
+});
 
 vi.mock("../../../device/clientMetadata", () => ({
   getClientMetadataHeaders: async () => ({}),
@@ -696,5 +705,40 @@ describe("CommentsSection — threaded rendering", () => {
     // Header comments count badge reflects total comment count (2).
     const badges = renderer.root.findAll((n) => (n.type as string) === "MockBadge");
     expect(badges.some((b) => b.props.label === "2" && b.props.tone === "neutral")).toBe(true);
+  });
+
+  it("T031: a scheduled comment shows the Scheduled badge and a cancel control; published ones do not", () => {
+    const comments: TicketComment[] = [
+      root("c-sched", "t-sched", 1, { publish_state: "scheduled", scheduled_publish_at: "2030-01-01T09:00:00.000Z" }),
+      root("c-now", "t-now", 2, { publish_state: "published" }),
+    ];
+    const renderer = render({ comments });
+
+    const badges = renderer.root.findAll((n) => (n.type as string) === "MockBadge" && n.props.label === "Scheduled");
+    expect(badges).toHaveLength(1);
+    expect(findPressableByLabel(renderer, "Cancel scheduled comment")).toHaveLength(1);
+  });
+
+  it("T032: confirming cancel calls the schedule DELETE endpoint and refreshes", async () => {
+    cancelScheduledTicketCommentMock.mockResolvedValue({ ok: true, data: { data: { comment_id: "c-sched", publish_state: "canceled" } } });
+    const onCommentUpdated = vi.fn();
+    const renderer = render({
+      comments: [root("c-sched", "t-sched", 1, { publish_state: "scheduled", scheduled_publish_at: "2030-01-01T09:00:00.000Z" })],
+      onCommentUpdated,
+    });
+
+    await act(async () => {
+      findPressableByLabel(renderer, "Cancel scheduled comment")[0].props.onPress();
+    });
+    const buttons = alertMock.mock.calls.at(-1)?.[2] as Array<{ text: string; onPress?: () => void }>;
+    const confirm = buttons.find((b) => b.text === "Cancel comment");
+    await act(async () => {
+      confirm?.onPress?.();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(cancelScheduledTicketCommentMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ ticketId: "ticket-1", commentId: "c-sched" }));
+    expect(onCommentUpdated).toHaveBeenCalled();
   });
 });

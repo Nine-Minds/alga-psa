@@ -1,0 +1,19 @@
+{
+  "status": "local_behavior_verified_native_browser_pending",
+  "native_job": 101624201410,
+  "finding": "Parent checkbox click cancellation reverts native checked state after React selection update; three test mocks replaced preventDefault with no-op and concealed this behavior",
+  "change": "Remove click cancellation from parent selection; retain stopPropagation and shift-range handling; replace all three checkbox mocks with real Checkbox",
+  "before": {
+    "failed": 1,
+    "filtered_out": 35,
+    "log": "/tmp/alga-invoice-checkbox-before.log"
+  },
+  "after": {
+    "passed": 50,
+    "failed": 0,
+    "skipped": 0,
+    "log": "/tmp/alga-invoice-checkbox-final.log"
+  },
+  "coverage": "Three AutomaticInvoices suites including new three-parent shift-select and shift-deselect checks; other UI dependencies remain mocked",
+  "remaining": "Native browser invoice journeys and time-approval retry value assertion require rerun"
+}

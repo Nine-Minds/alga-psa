@@ -9,7 +9,7 @@ import { getPortalDomain } from '@alga-psa/auth/lib/PortalDomainModel';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { isValidEmail } from '@alga-psa/core';
 import logger from '@alga-psa/core/logger';
-import { SystemEmailProviderFactory, resolveTenantCompanyName } from '@alga-psa/email';
+import { StaticTemplateProcessor, TenantEmailService, resolveTenantCompanyName } from '@alga-psa/email';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import {
   actionError,
@@ -20,8 +20,6 @@ import {
 import { buildTenantPortalSlug } from '@alga-psa/validation';
 import {
   DEFAULT_CLIENT_PORTAL_CONFIG,
-  type EmailAddress,
-  type EmailMessage,
   type IClientPortalConfig,
 } from '@alga-psa/types';
 
@@ -176,10 +174,6 @@ function portalConfig(project: ProjectRow): IClientPortalConfig {
  */
 async function fetchSenderCompanyName(knex: Knex, tenant: string): Promise<string> {
   return (await resolveTenantCompanyName(knex, tenant)) || 'Your Company';
-}
-
-function senderEmail(): string {
-  return process.env.EMAIL_FROM || 'noreply@example.com';
 }
 
 /** Task and hour metrics, mirroring calculateProjectCompletion's queries. */
@@ -366,6 +360,8 @@ export const getProjectStatusUpdateRecipient = withAuth(
       fetchSenderCompanyName(knex, tenant),
     ]);
 
+    const emailSettings = await TenantEmailService.getTenantEmailSettings(tenant, knex);
+    const defaultFrom = TenantEmailService.getDefaultFromAddress(emailSettings, companyName);
     return {
       projectId: project.project_id,
       projectName: project.project_name,
@@ -384,7 +380,7 @@ export const getProjectStatusUpdateRecipient = withAuth(
       spentHours: Math.round(metrics.spentHours * 10) / 10,
       recentlyCompleted,
       portalUrl,
-      fromEmail: senderEmail(),
+      fromEmail: defaultFrom.email,
       companyName,
     };
   },
@@ -414,14 +410,6 @@ export const sendProjectStatusUpdate = withAuth(
       return actionError(
         'No email address is configured for this project’s client contact.',
         'projects:errors.statusUpdate.noRecipient',
-      );
-    }
-
-    const emailProvider = await SystemEmailProviderFactory.createProvider();
-    if (!emailProvider) {
-      return actionError(
-        'Email is not configured. Please configure email settings in Settings before sending updates.',
-        'projects:errors.statusUpdate.emailNotConfigured',
       );
     }
 
@@ -478,20 +466,21 @@ export const sendProjectStatusUpdate = withAuth(
       const html = Handlebars.compile(template.html_content)(context);
       const text = Handlebars.compile(template.text_content, { noEscape: true })(context);
 
-      const from: EmailAddress = { email: senderEmail(), name: companyName };
-      const message: EmailMessage = {
-        from,
-        to: [{ email: recipientEmail, name: recipientName }],
-        subject,
-        html,
-        text,
-      };
-
       // Keep admission through transport so a concurrent sponsorship change
       // cannot pass the final check and revoke this send before it starts.
-      await withCoManagedOperationalTransaction(knex, tenant, async () => {
-        await emailProvider.sendEmail(message, tenant);
-      });
+      const result = await withCoManagedOperationalTransaction(knex, tenant, () => TenantEmailService.getInstance(tenant).sendEmail({
+        tenantId: tenant,
+        mailClass: 'project',
+        to: { email: recipientEmail, name: recipientName },
+        templateProcessor: new StaticTemplateProcessor(subject, html, text),
+        subject,
+        text,
+        html,
+        entityType: 'project',
+        entityId: projectId,
+        userId: user.user_id,
+      }));
+      if (!result.success || result.queued) throw new Error(result.error || 'Project status update email was not sent.');
 
       logger.info('[projectStatusUpdate] Status update sent', {
         tenant,

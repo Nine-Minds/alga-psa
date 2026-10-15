@@ -1,0 +1,22 @@
+{
+  "scope": "Release test evidence bound to exact manifest; host library and CLI validation",
+  "coverage": [
+    "Canonical SHA256 identity includes all manifest fields and component build/source metadata; component/key ordering and JSON whitespace do not alter identity",
+    "Replacing only server/email/worker digest, source revision or build identity invalidates previous test evidence",
+    "Every required check has an independent manifest binding; changing only evidence wrapper cannot authorize old check results",
+    "Consumer-supplied required checks reject missing/duplicate/skipped/failed/stale/wrong-edition results",
+    "Deployment must match exact tested component set; missing or mutable runtime image rejected",
+    "Non-JSON metadata fails rather than silently disappearing from identity",
+    "CLI consumes serialized policy/manifest/evidence/runtime observations and returns failure status and report for substitution or missing runtime input"
+  ],
+  "log": {
+    "path": "/tmp/alga-release-binding-final.log",
+    "sha256": "a676118ceee688d05fc30828496199d683492ae6dd353a1b2c8c831822b67ab6"
+  },
+  "limitations": [
+    "No real promotion or sandbox deployment performed",
+    "Release producer must attach digest when running actual smoke and preserve trusted per-check verification; digest is identity binding, not cryptographic provenance",
+    "Live runtime readback adapter and release CI wiring remain incomplete",
+    "No Docker builds; targeted host tests only"
+  ]
+}

@@ -7,8 +7,10 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
+import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getUserTimeZone } from '@alga-psa/core';
+import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import { ResponseStateBadge } from '@alga-psa/ui/components/tickets/ResponseStateBadge';
 import type { SlaTimerStatus } from '@alga-psa/types';
 import {
@@ -132,7 +134,7 @@ const REORDERABLE_COLUMN_KEYS: ReadonlySet<string> = new Set(
 );
 
 type TicketingDisplaySettings = {
-  dateTimeFormat?: string;
+  showWeekday?: boolean;
   responseStateTrackingEnabled?: boolean;
   list?: TicketListSettings;
 };
@@ -148,6 +150,7 @@ interface CreateTicketColumnsOptions {
   showTags?: boolean;
   showClient?: boolean;
   onClientClick?: (clientId: string) => void;
+  onContactClick?: (contactNameId: string) => void;
   /**
    * Authoritative status_id → is_closed map. Used to color the status pill
    * (closed = green) from the status definition instead of the per-ticket
@@ -164,6 +167,8 @@ interface CreateTicketColumnsOptions {
   t?: (key: string, fallback: string) => string;
   /** App locale. Without it the Created column formats in the browser's. */
   locale?: string;
+  /** Country date shape. Without it the Created column falls to the system default. */
+  dateFormat?: CountryDateFormat;
   /**
    * On-screen order for the reorderable (optional) columns, resolved through
    * resolveTicketColumnOrder. Absent means catalog declaration order — the
@@ -184,6 +189,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     showTags = true,
     showClient = true,
     onClientClick,
+    onContactClick,
     statusIsClosedById = {},
     additionalAgentAvatarUrls = {},
     teamAvatarUrls = {},
@@ -191,6 +197,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     onToggleBundleExpanded,
     t: _t,
     locale = 'en',
+    dateFormat,
     columnOrder,
   } = options;
 
@@ -202,7 +209,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
   const columnVisibility = resolveTicketColumnVisibility(displaySettings?.list?.columnVisibility);
 
   const showInlineTagsInTitle = columnVisibility.tags && showTags;
-  const dateTimeFormat = displaySettings?.dateTimeFormat || 'MMM d, yyyy h:mm a';
+  const showWeekday = displaySettings?.showWeekday ?? false;
 
   // Internal (MSP) response-state wording for the status-cell badge.
   const responseLabels = {
@@ -304,6 +311,17 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                   Bundle · {record.bundle_child_count}
                 </span>
               )}
+              {showTicketNumberSubtitle &&
+                isBundleMaster &&
+                record.is_closed &&
+                (record.bundle_open_child_count ?? 0) > 0 && (
+                  <span
+                    id={`ticket-bundle-open-children-badge-${record.ticket_id}`}
+                    className="w-fit rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800"
+                  >
+                    {record.bundle_open_child_count} {t('bundle.openChildrenShort', 'open')}
+                  </span>
+                )}
               {showInlineTagsInTitle && ticketTagsRef && onTagsChange && record.ticket_id && (ticketTagsRef.current[record.ticket_id]?.length ?? 0) > 0 && (
                 <div onClick={(e) => e.stopPropagation()}>
                   <TagManager
@@ -476,6 +494,51 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     });
   }
 
+  // Contact
+  if (columnVisibility.contact) {
+    columns.push({
+      key: 'contact',
+      col: {
+        title: t('fields.contact', 'Contact'),
+        dataIndex: 'contact_name',
+        width: '8%',
+        render: (value: string | null, record: ITicketListItem) => {
+          const body = (
+            <span className="flex items-center gap-2 overflow-hidden">
+              {value ? (
+                <ContactAvatar
+                  contactId={record.contact_name_id || value}
+                  contactName={value}
+                  avatarUrl={record.contact_avatar_url ?? null}
+                  size="xs"
+                />
+              ) : (
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white bg-[#cbd5e1]">
+                  —
+                </span>
+              )}
+              <span className="truncate">{value || <span className="text-[rgb(var(--color-text-400))]">—</span>}</span>
+            </span>
+          );
+          if (!onContactClick || !record.contact_name_id) {
+            return <span className="flex text-[rgb(var(--color-text-700))]">{body}</span>;
+          }
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onContactClick(record.contact_name_id!);
+              }}
+              className="bg-transparent border-none p-0 text-left text-[rgb(var(--color-text-700))] hover:[&_.truncate]:text-[rgb(var(--color-primary-700))]"
+            >
+              {body}
+            </button>
+          );
+        },
+      }
+    });
+  }
+
   // Assigned To
   if (columnVisibility.assigned_to) {
     columns.push({
@@ -622,7 +685,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         width: '10%',
         render: (value: string | null) => (
           <div className="text-sm text-gray-500">
-            {value ? formatTicketDateTime(value, dateTimeFormat, locale, getUserTimeZone()) : '-'}
+            {value ? formatTicketDateTime(value, locale, getUserTimeZone(), dateFormat, showWeekday) : '-'}
           </div>
         ),
       }
@@ -637,6 +700,43 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         title: t('fields.createdBy', 'Created By'),
         dataIndex: 'entered_by_name',
         width: '6%',
+      }
+    });
+  }
+
+  // Last Activity (newest of the ticket's own timestamps and its latest comment)
+  if (columnVisibility.last_activity) {
+    columns.push({
+      key: 'last_activity',
+      col: {
+        title: t('fields.lastActivity', 'Last Activity'),
+        dataIndex: 'latest_activity_at',
+        width: '10%',
+        render: (value: string | null, record: ITicketListItem) => {
+          const actor = record.latest_activity_actor;
+          const actorLabel = !actor
+            ? null
+            : actor.kind === 'system'
+              ? t('conversation.systemAuthor', 'System')
+              : actor.name
+                ? t('fields.byName', 'by {{name}}').replace('{{name}}', actor.name)
+                : null;
+          return (
+            <div className="flex flex-col leading-tight">
+              <span className="text-sm text-gray-500">
+                {value ? formatTicketDateTime(value, locale, getUserTimeZone(), dateFormat, showWeekday) : '-'}
+              </span>
+              {actorLabel && (
+                <span
+                  className="text-[11px] text-[rgb(var(--color-text-400))]"
+                  data-testid="last-activity-actor"
+                >
+                  {actorLabel}
+                </span>
+              )}
+            </div>
+          );
+        },
       }
     });
   }

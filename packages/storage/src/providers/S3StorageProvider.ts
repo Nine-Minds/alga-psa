@@ -58,8 +58,18 @@ export class S3StorageProvider extends BaseStorageProvider {
     options?: StorageUploadOptions,
   ) {
     try {
-      const length = options?.content_length ?? (Buffer.isBuffer(file) ? file.length : undefined);
-      if (length !== undefined && (!Number.isSafeInteger(length) || length < 0 || (Buffer.isBuffer(file) && length !== file.length))) {
+      // LEVERAGE: pattern s3-stream-put — identical stream/size/no-retry logic duplicated in the package and EE S3 providers (duplicated provider layer)
+      const isStream = !Buffer.isBuffer(file);
+      let contentLength: number | undefined;
+      if (isStream) {
+        // The SDK cannot measure a stream; without ContentLength it sends an
+        // undefined x-amz-decoded-content-length header and the PUT fails.
+        if (typeof options?.size !== 'number' || !Number.isSafeInteger(options.size) || options.size < 0) {
+          throw new Error('S3 upload of a stream requires options.size (the exact byte length)');
+        }
+        contentLength = options.size;
+      } else if (options?.size !== undefined && options.size !== file.length) {
+        // A declared buffer length is a caller assertion; a mismatch is rejected before any request.
         throw new Error('S3 upload content length is invalid');
       }
       const put = async () => {
@@ -68,7 +78,7 @@ export class S3StorageProvider extends BaseStorageProvider {
             Bucket: this.bucket,
             Key: path,
             Body: file,
-            ContentLength: length,
+            ContentLength: contentLength,
             ContentType: options?.mime_type,
             Metadata: options?.metadata,
           }),
@@ -77,8 +87,8 @@ export class S3StorageProvider extends BaseStorageProvider {
       // Buffers are replayable; a Readable may already be partly or completely
       // consumed after an error. Retrying it can replace an object with a prefix
       // or empty body. The caller can start a new upload with a fresh source.
-      if (Buffer.isBuffer(file)) await this.withRetry(put);
-      else await put();
+      if (isStream) await put();
+      else await this.withRetry(put);
 
       // A failed receipt read must never repeat an already successful PUT.
       const head = await this.withRetry(() => this.client.send(

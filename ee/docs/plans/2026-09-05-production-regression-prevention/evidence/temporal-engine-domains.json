@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "counts": {
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "files": 5,
+  "failures": [],
+  "limits": [
+    "Native engine verification pending.",
+    "Separate SLA integration suite remains under investigation and is not counted among these passes."
+  ]
+}

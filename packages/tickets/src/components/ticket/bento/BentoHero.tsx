@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PartialBlock } from '@blocknote/core';
-import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle } from 'lucide-react';
+import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle, CalendarDays } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -15,6 +15,7 @@ import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@alga-psa/ui/components/Popover';
 import { TagManager } from '@alga-psa/tags/components';
 import type { ITag, ITicket, ITeam, ITicketResource, IUser, IUserWithRoles } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -30,11 +31,14 @@ import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../.
 import { useTicketRichTextUploadSession } from '../useTicketRichTextUploadSession';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getTicketCategoriesByBoard, type BoardCategoryData } from '../../../actions/ticketCategoryActions';
-import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
+import { useRegisterUnsavedChanges, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
+import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
+import { buildTicketAssignmentKey } from '../../../lib/ticketAssignmentKey';
 import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from '../TicketNotificationSuppressionControl';
+import { CategoryPicker } from '../../CategoryPicker';
 
 interface HeroSelectOption {
   value: string;
@@ -110,6 +114,8 @@ interface BentoHeroProps {
   onTagsChange?: (tags: ITag[]) => void;
   /** Rendered create-task / link-task actions (injected node). */
   taskActions?: React.ReactNode;
+  /** Rendered quick-invoice action (injected node). */
+  quickInvoiceActions?: React.ReactNode;
   /** Opens the dedicated resolution-and-close dialog. */
   onResolveAndClose?: () => void;
   resolveAndCloseDisabled?: boolean;
@@ -187,6 +193,7 @@ export function BentoHero({
   tags,
   onTagsChange,
   taskActions,
+  quickInvoiceActions,
   onResolveAndClose,
   resolveAndCloseDisabled = false,
   liveHighlightedFields = [],
@@ -205,6 +212,8 @@ export function BentoHero({
   resolveTicketAttachmentViewUrl,
 }: BentoHeroProps) {
   const { t } = useTranslation('features/tickets');
+  const [additionalAgentsOpen, setAdditionalAgentsOpen] = useState(false);
+  const activityCrossFeature = useOptionalActivityCrossFeature();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -372,6 +381,12 @@ export function BentoHero({
   // The title reflects its pending override while a save is in flight, so the
   // draft (re)opens on whatever is currently shown, not the stale persisted one.
   const displayedTitle = displayValue('title') ?? '';
+
+  // A description or title being edited holds typed text: tell the surrounding
+  // Drawer/Dialog so Escape / overlay click / X ask before throwing it away.
+  useRegisterDismissGuard(
+    hasDescriptionContentChanged || (isEditingTitle && titleDraft.trim() !== displayedTitle.trim()),
+  );
   useEffect(() => {
     if (!isEditingTitle) setTitleDraft(displayedTitle);
   }, [displayedTitle, isEditingTitle]);
@@ -500,6 +515,7 @@ export function BentoHero({
   }, [handlePendingChange, pendingBoardConfig, pendingChanges.board_id, savedBoardConfig]);
 
   const displayedStatusId = displayValue('status_id');
+  const displayedCategoryId = displayValue('subcategory_id') || displayValue('category_id');
   const baseScopedStatusOptions = boardScopedStatusOptions.length > 0
     ? boardScopedStatusOptions
     : statusOptions.filter((option) => option.board_id === effectiveBoardId || option.value === displayedStatusId);
@@ -510,17 +526,6 @@ export function BentoHero({
     displayedStatusId && !baseScopedStatusOptions.some((option) => option.value === displayedStatusId)
       ? [...baseScopedStatusOptions, ...statusOptions.filter((option) => option.value === displayedStatusId)]
       : baseScopedStatusOptions;
-
-  const categoryOptions = useMemo<SelectOption[]>(
-    () =>
-      (boardCategories ?? [])
-        .filter((category) => category.category_id)
-        .map((category) => ({
-          value: category.category_id,
-          label: category.category_name ?? '',
-        })),
-    [boardCategories],
-  );
 
   // Priority options may carry the priority color; render it as a dot. A board
   // only offers the priority family its priority_type declares, so a custom board
@@ -947,6 +952,7 @@ export function BentoHero({
               </span>
             ) : null}
             {taskActions}
+            {quickInvoiceActions}
             {onResolveAndClose ? (
               <Button
                 id={`${id}-resolve-and-close-button`}
@@ -973,6 +979,21 @@ export function BentoHero({
             </Button>
           </div>
         </div>
+
+        {/* Personal "My group" control: under the title row, outside the shared field tiles.
+            Rendered only when a composition layer supplies it (absent in AlgaDesk). */}
+        {ticket.ticket_id && activityCrossFeature?.renderActivityGroupControl ? (
+          <div className="mt-2">
+            {activityCrossFeature.renderActivityGroupControl({
+              id: `${id}-activity-group`,
+              activityType: 'ticket',
+              activityId: ticket.ticket_id,
+              // Built from SAVED state (props), not unsaved hero edits. Same id resolution as
+              // TicketDetails' additionalAgentsForInfo, so the key matches TicketInfo's.
+              assignmentKey: buildTicketAssignmentKey(ticket.assigned_to, additionalAgents?.map((a) => a.additional_user_id || a.assigned_to)),
+            })}
+          </div>
+        ) : null}
 
         {hasUnsavedChanges ? (
           <Alert id={`${id}-unsaved-changes-banner`} variant="warning" className="mt-3">
@@ -1032,13 +1053,31 @@ export function BentoHero({
           </HeroField>
           <HeroField label={t('bento.hero.category', 'Category')}>
             {renderLiveField('category_id', '', (
-              <CustomSelect
+              <CategoryPicker
                 id={`${id}-category-select`}
+                categories={boardCategories}
+                selectedCategories={displayedCategoryId ? [displayedCategoryId] : []}
+                onSelect={(categoryIds) => {
+                  // LEVERAGE: pattern ticket-category-selection — Grid and Entry both stage parent/subcategory IDs.
+                  const selectedId = categoryIds[0];
+                  if (!selectedId || selectedId === 'no-category') {
+                    handlePendingChange('category_id', null);
+                    handlePendingChange('subcategory_id', null);
+                    return;
+                  }
+
+                  const selectedCategory = boardCategories.find((category) => category.category_id === selectedId);
+                  if (selectedCategory?.parent_category) {
+                    handlePendingChange('category_id', selectedCategory.parent_category);
+                    handlePendingChange('subcategory_id', selectedId);
+                  } else {
+                    handlePendingChange('category_id', selectedId);
+                    handlePendingChange('subcategory_id', null);
+                  }
+                }}
                 placeholder={t('bento.hero.category', 'Category')}
-                value={displayValue('category_id') ?? ''}
-                options={categoryOptions}
-                onValueChange={(value: string) => handlePendingChange('category_id', value || null)}
-                disabled={workflowLocked || isFrozen('category_id') || isLoadingBoardConfig}
+                multiSelect={false}
+                disabled={workflowLocked || isFrozen('category_id') || isFrozen('subcategory_id') || isLoadingBoardConfig}
                 className="!w-full"
               />
             ))}
@@ -1063,6 +1102,19 @@ export function BentoHero({
                 placeholder={t('bento.hero.notAssigned', 'Not assigned')}
                 disabled={workflowLocked || isFrozen('assigned_to')}
               />
+              {onAgentClick && ticket.assigned_to ? (
+                <Tooltip content={t('bento.hero.viewSchedule', 'View schedule')}>
+                  <button
+                    id={`${id}-assignee-schedule`}
+                    type="button"
+                    aria-label={t('bento.hero.viewSchedule', 'View schedule')}
+                    className="inline-flex items-center justify-center h-6 w-6 rounded text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
+                    onClick={() => onAgentClick(ticket.assigned_to!)}
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                  </button>
+                </Tooltip>
+              ) : null}
               {assignedTeam ? (
                 <Tooltip content={assignedTeam.team_name}>
                   <Badge variant="info" size="sm" className="gap-1 cursor-help">
@@ -1075,35 +1127,41 @@ export function BentoHero({
                   </Badge>
                 </Tooltip>
               ) : null}
-              {additionalAgentEntries.length > 0 ? (
-                <Tooltip
-                  content={
-                    <div className="text-xs space-y-1.5">
-                      <div className="font-medium text-gray-300 mb-1">
-                        {t('bento.hero.additionalAgentsTooltip', 'Additional agents:')}
-                      </div>
-                      {additionalAgentEntries.map((agent) => (
-                        <div key={agent.userId} className="flex items-center gap-2">
-                          <UserAvatar userId={agent.userId} userName={agent.name} avatarUrl={null} size="xs" />
-                          <span>{agent.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  }
-                >
-                  <Badge
-                    variant="info"
-                    size="sm"
-                    className="cursor-pointer"
-                    onClick={() => {
-                      const first = additionalAgentEntries[0];
-                      if (first) onAgentClick?.(first.userId);
-                    }}
-                  >
-                    +{additionalAgentEntries.length}
-                  </Badge>
-                </Tooltip>
-              ) : null}
+              {additionalAgentEntries.length > 0 && (
+                <Popover open={additionalAgentsOpen} onOpenChange={setAdditionalAgentsOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      id={`${id}-additional-agents`}
+                      type="button"
+                      aria-label={t('bento.hero.additionalAgentsTooltip')}
+                      className="rounded-full px-2 py-1 text-xs font-medium bg-[rgb(var(--color-border-100))] hover:bg-[rgb(var(--color-border-200))] focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-400))]"
+                    >
+                      +{additionalAgentEntries.length}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-64 p-2">
+                    <p className="px-2 py-1 text-xs text-[rgb(var(--color-text-500))]">
+                      {t('bento.hero.additionalAgentsTooltip')}
+                    </p>
+                    {additionalAgentEntries.map((agent, index) => (
+                      <button
+                        key={agent.userId}
+                        id={`${id}-additional-agent-${index}`}
+                        type="button"
+                        disabled={!onAgentClick}
+                        className="flex w-full items-center gap-2 rounded px-2 py-2 text-left hover:bg-[rgb(var(--color-border-100))] focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-400))]"
+                        onClick={() => {
+                          setAdditionalAgentsOpen(false);
+                          onAgentClick?.(agent.userId);
+                        }}
+                      >
+                        <UserAvatar userId={agent.userId} userName={agent.name} avatarUrl={null} size="xs" />
+                        <span className="truncate">{agent.name}</span>
+                      </button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+              )}
               </>
             ))}
           </HeroField>

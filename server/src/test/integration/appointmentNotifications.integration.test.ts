@@ -1,8 +1,8 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import path from 'node:path';
 import { tenantDb } from '@alga-psa/db';
+import { buildAppointmentRequestReviewUrl } from '@alga-psa/core';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createClient, createUser } from '../../../test-utils/testDataFactory';
@@ -64,7 +64,13 @@ vi.mock('@alga-psa/notifications/actions/internal-notification-actions/internalN
 
 // Mock publishEvent to prevent actual event publishing
 vi.mock('server/src/lib/eventBus/publishers', () => ({
-  publishEvent: vi.fn().mockResolvedValue(undefined)
+  publishEvent: vi.fn().mockResolvedValue(undefined),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 // Mock createTenantKnex to use our test db
@@ -141,8 +147,12 @@ describe('Appointment Notification System Integration Tests', () => {
   const HOOK_TIMEOUT = 180_000;
 
   beforeAll(async () => {
+    // createTestDbConnection() already drops, recreates and migrates the test
+    // database. This suite used to follow it by dropping `public` CASCADE and
+    // re-migrating from server/migrations alone; that both threw away the
+    // CE+EE schema the integration lane builds and, at ~580 tables, exhausted
+    // max_locks_per_transaction ("out of shared memory") before it could.
     db = await createTestDbConnection();
-    await runMigrationsAndSeeds(db);
     ({ createAppointmentRequest } = await import('@alga-psa/client-portal/actions'));
     ({ approveAppointmentRequest, declineAppointmentRequest } = await import('@alga-psa/scheduling/actions'));
     ({ runWithTenant } = await import('server/src/lib/db'));
@@ -338,10 +348,13 @@ describe('Appointment Notification System Integration Tests', () => {
         description: 'Staff notification test'
       };
 
+      let appointmentRequestId = '';
       await runWithTenant(tenantId, async () => {
         const result = await createAppointmentRequest(requestData);
         expect(result.success).toBe(true);
+        appointmentRequestId = (result as any).data.appointment_request_id;
       });
+      expect(appointmentRequestId).toBeTruthy();
 
       // Should send to all staff with schedule permissions (2 users)
       expect(sendNewAppointmentRequestMock).toHaveBeenCalledTimes(2);
@@ -362,6 +375,12 @@ describe('Appointment Notification System Integration Tests', () => {
       expect(emailData.contactEmail).toBe('support@testmsp.com');
       expect(emailData.contactPhone).toBe('555-0100');
       expect(call1[2].tenantId).toBe(tenantId);
+
+      // Review & Approve link deep-links to this request
+      for (const call of [call1, call2]) {
+        expect(call[1].approvalLink).toBe(buildAppointmentRequestReviewUrl(appointmentRequestId));
+        expect(call[1].approvalLink.endsWith(`?requestId=${appointmentRequestId}`)).toBe(true);
+      }
     });
 
     it('should send appointment approved email with correct locale', async () => {
@@ -671,8 +690,8 @@ describe('Appointment Notification System Integration Tests', () => {
       // Client approval notifications are produced by the event pipeline now:
       // the action publishes APPOINTMENT_REQUEST_APPROVED and the notification
       // worker renders the internal notification from it.
-      const { publishEvent } = await import('@alga-psa/event-bus/publishers');
-      const approvedEventCall = vi.mocked(publishEvent).mock.calls.find(
+      const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+      const approvedEventCall = vi.mocked(publishWorkflowEvent).mock.calls.find(
         ([event]: any[]) =>
           event.eventType === 'APPOINTMENT_REQUEST_APPROVED' &&
           event.payload.appointmentRequestId === appointmentRequestId!
@@ -681,7 +700,8 @@ describe('Appointment Notification System Integration Tests', () => {
       expect(approvedEventCall).toBeDefined();
 
       const [{ payload }] = approvedEventCall! as any[];
-      expect(payload.tenantId).toBe(tenantId);
+      // The tenant travels in the publish ctx (the publisher stamps it into the payload).
+      expect((approvedEventCall![0] as any).ctx.tenantId).toBe(tenantId);
       expect(payload.clientUserId).toBe(clientUserId);
       expect(payload.serviceName).toBe('Test Service');
       expect(payload.assignedUserId).toBe(staffUserId);
@@ -732,8 +752,8 @@ describe('Appointment Notification System Integration Tests', () => {
       // Client decline notifications are produced by the event pipeline now:
       // the action publishes APPOINTMENT_REQUEST_DECLINED and the notification
       // worker renders the internal notification from it.
-      const { publishEvent } = await import('@alga-psa/event-bus/publishers');
-      const declinedEventCall = vi.mocked(publishEvent).mock.calls.find(
+      const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+      const declinedEventCall = vi.mocked(publishWorkflowEvent).mock.calls.find(
         ([event]: any[]) =>
           event.eventType === 'APPOINTMENT_REQUEST_DECLINED' &&
           event.payload.appointmentRequestId === appointmentRequestId!
@@ -742,7 +762,7 @@ describe('Appointment Notification System Integration Tests', () => {
       expect(declinedEventCall).toBeDefined();
 
       const [{ payload }] = declinedEventCall! as any[];
-      expect(payload.tenantId).toBe(tenantId);
+      expect((declinedEventCall![0] as any).ctx.tenantId).toBe(tenantId);
       expect(payload.clientUserId).toBe(clientUserId);
       expect(payload.serviceName).toBe('Test Service');
       expect(payload.declineReason).toBe(declineReason);
@@ -1197,8 +1217,8 @@ describe('Appointment Notification System Integration Tests', () => {
 
       // Approval notifications now flow through the event pipeline; assert the
       // approval event that drives them was published for this request.
-      const { publishEvent } = await import('@alga-psa/event-bus/publishers');
-      const approvedEventCall = vi.mocked(publishEvent).mock.calls.find(
+      const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+      const approvedEventCall = vi.mocked(publishWorkflowEvent).mock.calls.find(
         ([event]: any[]) =>
           event.eventType === 'APPOINTMENT_REQUEST_APPROVED' &&
           event.payload.appointmentRequestId === appointmentRequestId!
@@ -1351,17 +1371,6 @@ describe('Appointment Notification System Integration Tests', () => {
 });
 
 // Helper functions
-
-async function runMigrationsAndSeeds(connection: Knex): Promise<void> {
-  await connection.raw('DROP SCHEMA IF EXISTS public CASCADE');
-  await connection.raw('CREATE SCHEMA public');
-  await connection.raw('GRANT ALL ON SCHEMA public TO public');
-
-  const migrationDir = path.resolve(__dirname, '../../../migrations');
-  await connection.migrate.latest({
-    directory: migrationDir
-  });
-}
 
 async function createContact(
   db: Knex,

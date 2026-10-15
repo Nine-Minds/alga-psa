@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildRunDisplayError, buildStepDisplayError, getWorkflowErrorCode } from '../workflowRunDisplayError';
+import { buildRunDisplayError, buildStepDisplayError, getWorkflowErrorCode, getWorkflowRunLaunchFailure } from '../workflowRunDisplayError';
 
 const failedStep = {
   step_id: 'step-runtime-1',
@@ -111,5 +111,23 @@ describe('workflow run display errors', () => {
   it('leaves code null when the invocation has no error_json', () => {
     const displayError = buildStepDisplayError(failedStep, [failedInvocation]);
     expect(displayError?.code ?? null).toBeNull();
+  });
+});
+
+describe('getWorkflowRunLaunchFailure', () => {
+  const engineDown = (message: string) => /failed to connect before the deadline/i.test(message);
+
+  it('classifies a launch-stage failure caused by an unreachable engine', () => {
+    expect(getWorkflowRunLaunchFailure(
+      { error_json: { stage: 'launch', message: 'Failed to connect before the deadline' } },
+      engineDown
+    )).toEqual({ reason: 'runtime_unavailable', message: 'Failed to connect before the deadline' });
+  });
+
+  it('classifies other launch-stage failures and ignores runs that reached the engine', () => {
+    expect(getWorkflowRunLaunchFailure({ error_json: { stage: 'launch', message: 'Workflow version missing' } }, engineDown))
+      .toEqual({ reason: 'launch_failed', message: 'Workflow version missing' });
+    expect(getWorkflowRunLaunchFailure({ error_json: { message: 'Step failed' } }, engineDown)).toBeNull();
+    expect(getWorkflowRunLaunchFailure(null, engineDown)).toBeNull();
   });
 });

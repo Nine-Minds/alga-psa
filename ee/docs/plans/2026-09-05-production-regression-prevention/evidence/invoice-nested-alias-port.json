@@ -1,0 +1,28 @@
+{
+  "status": "local_verified_native_pending",
+  "change": "Mandatory isolated nested alias case generates its long invoice, saves a named layout through the supported action and validates persisted bindings",
+  "validation": {
+    "nested_case_passed": 1,
+    "duration_ms": 17415,
+    "shared_long_source_case": "passed after extraction",
+    "targeted_typescript": "passed",
+    "logs": [
+      "/tmp/alga-invoice-nested-verified.log",
+      "/tmp/alga-invoice-nested-final.log",
+      "/tmp/alga-invoice-nested-types-final.log"
+    ],
+    "boundaries": [
+      "Nested collection resolves 72 entries totaling 1102500 cents",
+      "Canvas collection resolution matches production evaluation",
+      "Persisted five-column alias and rate-display sort",
+      "English, unavailable-locale fallback and French preview/PDF",
+      "Multi-page PDF, translated mixed-rate label, invoice totals and no private notes"
+    ]
+  },
+  "pdf_text_method": "Content-stream (-raw) extraction checks wrapped phrases; layout extraction retains pagination and total checks",
+  "limits": [
+    "Does not exercise visual editor interaction; template saved through application action",
+    "Three remaining manual cases still need browser fixture conversion",
+    "Native execution pending"
+  ]
+}

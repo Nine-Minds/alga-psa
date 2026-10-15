@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "runId": "34330619264",
+  "runAttempt": 1,
+  "testedRevision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+  "artifactId": 10097133130,
+  "artifactSha256": "c501ba6e018b67b04d51c58e5459eaea80615196599ea19c03e500820ff496de",
+  "browserCounts": {
+    "passed": 42,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "interrupted": 0,
+    "missing": 0
+  },
+  "providerReplay": {
+    "schemaVersion": 1,
+    "scope": "browser-provider-readiness",
+    "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+    "status": "passed",
+    "failures": [],
+    "configuration": {
+      "edition": "community",
+      "authentication": "real-credentials",
+      "serverLifecycle": "externally-started-production-build"
+    },
+    "observations": [
+      {
+        "identity": [
+          "e2e-tests/tests/inbound-email.spec.ts",
+          "community-chromium",
+          "community-chromium",
+          [
+            "built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery"
+          ]
+        ],
+        "schemaVersion": 1,
+        "status": "observed",
+        "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "runId": "34330619264",
+        "runAttempt": 1,
+        "retry": 0,
+        "artifactContext": "validated-browser-ci-archives",
+        "artifactManifestSha256": "8f856700ee03c79f861b524f9053d99b976a5f19e66267d9fa5491ac5667a5b6",
+        "providers": [
+          {
+            "provider": "smtp-sink",
+            "mode": "emulator",
+            "supported": true,
+            "complete": true,
+            "requestCount": 5,
+            "dropped": 0,
+            "inFlight": 0
+          }
+        ],
+        "limitation": "Fixture observations only; no required-provider completeness, isolation, OAuth, protocol parity or release readiness claim."
+      },
+      {
+        "identity": [
+          "e2e-tests/tests/microsoft-mailbox.spec.ts",
+          "community-chromium",
+          "community-chromium",
+          [
+            "Microsoft mailbox OAuth receives a ticket, sends a UI reply through Graph and deduplicates callbacks"
+          ]
+        ],
+        "schemaVersion": 1,
+        "status": "observed",
+        "revision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+        "runId": "34330619264",
+        "runAttempt": 1,
+        "retry": 0,
+        "artifactContext": "validated-browser-ci-archives",
+        "artifactManifestSha256": "8f856700ee03c79f861b524f9053d99b976a5f19e66267d9fa5491ac5667a5b6",
+        "providers": [
+          {
+            "provider": "msgraph",
+            "mode": "emulator",
+            "supported": true,
+            "complete": true,
+            "requestCount": 33,
+            "dropped": 0,
+            "inFlight": 0
+          }
+        ],
+        "limitation": "Fixture observations only; no required-provider completeness, isolation, OAuth, protocol parity or release readiness claim."
+      }
+    ],
+    "limitation": "Candidate CI archive-backed provider observations only; no OAuth, protocol parity, live-provider or deployment verification claim."
+  },
+  "limitation": "Independent native replay of current CI raw artifacts with the committed provider requirements. Overall CI and its aggregate gate remain pending; no release rollout claim."
+}

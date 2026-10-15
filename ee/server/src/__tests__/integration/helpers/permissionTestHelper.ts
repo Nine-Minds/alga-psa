@@ -5,7 +5,7 @@
  */
 
 import { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 
 function tenantTable(db: Knex, tenantId: string, table: string) {
   return tenantDb(db, tenantId).table(table);

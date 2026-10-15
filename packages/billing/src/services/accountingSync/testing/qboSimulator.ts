@@ -37,6 +37,8 @@
  *   logical clock; fetchChanges(since) replays entity state like QBO CDC.
  */
 
+import { fromMinorUnits, toMinorUnits } from '@alga-psa/core';
+
 export interface QboSimEntity {
   Id: string;
   SyncToken: string;
@@ -62,6 +64,10 @@ export interface QboSimulatorOptions {
   realmId?: string;
   /** Company display name served for CompanyInfo reads. */
   companyName?: string;
+  /** Wire emulators use the host clock; pure tests retain the logical clock. */
+  now?: () => Date;
+  /** Company file home currency; transactions without a CurrencyRef are booked in it. */
+  homeCurrency?: string;
 }
 
 interface ChangeJournalEntry {
@@ -93,13 +99,15 @@ const SUPPORTED_ENTITIES = [
 ] as const;
 type SimEntityType = (typeof SUPPORTED_ENTITIES)[number];
 
-function toCents(amount: unknown): number {
+const DEFAULT_HOME_CURRENCY = 'USD';
+
+function toCents(amount: unknown, currency: string): number {
   const value = Number(amount);
-  return Number.isFinite(value) ? Math.round(value * 100) : 0;
+  return Number.isFinite(value) ? toMinorUnits(value, 'en-US', currency) : 0;
 }
 
-function toAmount(cents: number): number {
-  return Math.round(cents) / 100;
+function toAmount(cents: number, currency: string): number {
+  return fromMinorUnits(Math.round(cents), 'en-US', currency);
 }
 
 export class QboSimulator {
@@ -185,11 +193,11 @@ export class QboSimulator {
 
   /** Current simulator time; use as the `since` cursor between test phases. */
   now(): string {
-    return new Date(this.clockMs).toISOString();
+    return (this.options.now?.() ?? new Date(this.clockMs)).toISOString();
   }
 
   private tick(): string {
-    this.clockMs += 1000;
+    if (!this.options.now) this.clockMs += 1000;
     return this.now();
   }
 
@@ -262,10 +270,16 @@ export class QboSimulator {
     return entity;
   }
 
-  private sumSalesLines(lines: any[]): number {
+  /** The currency a transaction is booked in: its CurrencyRef, else the company home currency. */
+  private currencyOf(entity: Record<string, any> | undefined): string {
+    const value = entity?.CurrencyRef?.value;
+    return typeof value === 'string' && value.length > 0 ? value : this.options.homeCurrency ?? DEFAULT_HOME_CURRENCY;
+  }
+
+  private sumSalesLines(lines: any[], currency: string): number {
     return (Array.isArray(lines) ? lines : [])
       .filter((line) => line?.DetailType !== 'SubTotalLineDetail')
-      .reduce((sum, line) => sum + toCents(line?.Amount), 0);
+      .reduce((sum, line) => sum + toCents(line?.Amount, currency), 0);
   }
 
   /**
@@ -278,7 +292,7 @@ export class QboSimulator {
    * Intuit's 2018 change an absent code means "taxable", not "exempt", which is
    * the trap this simulator exists to catch.
    */
-  private computeAutomatedSalesTax(lines: any[]): { totalCents: number; detail: any } | null {
+  private computeAutomatedSalesTax(lines: any[], currency: string): { totalCents: number; detail: any } | null {
     const ast = this.options.automatedSalesTax;
     if (!ast) return null;
 
@@ -294,11 +308,12 @@ export class QboSimulator {
       const taxCode = this.stores.TaxCode.get(codeId);
       if (!taxCode) continue;
 
-      const lineCents = toCents(line?.Amount);
+      const lineCents = toCents(line?.Amount, currency);
       for (const detail of taxCode.SalesTaxRateList?.TaxRateDetail ?? []) {
         const rateId = detail?.TaxRateRef?.value;
         const rate = rateId ? this.stores.TaxRate.get(String(rateId)) : undefined;
         if (!rate) continue;
+        // RateValue is a percentage; this /100 is the percent scale, not a minor-unit conversion.
         const componentCents = Math.round((lineCents * Number(rate.RateValue)) / 100);
         componentCentsByRateId.set(
           String(rateId),
@@ -312,7 +327,7 @@ export class QboSimulator {
       const rate = this.stores.TaxRate.get(rateId)!;
       return {
         DetailType: 'TaxLineDetail',
-        Amount: toAmount(cents),
+        Amount: toAmount(cents, currency),
         TaxLineDetail: { TaxRateRef: { value: rateId, name: rate.Name }, TaxPercent: rate.RateValue },
         TaxRateRef: { value: rateId, name: rate.Name },
         TaxPercent: rate.RateValue
@@ -322,7 +337,7 @@ export class QboSimulator {
     return {
       totalCents,
       detail: {
-        TotalTax: toAmount(totalCents),
+        TotalTax: toAmount(totalCents, currency),
         // AST overwrites whatever transaction-level code was sent with its own.
         TxnTaxCodeRef: { value: ast.defaultTaxCodeId },
         TaxLine: taxLines
@@ -330,12 +345,36 @@ export class QboSimulator {
     };
   }
 
+  /**
+   * Intuit rejects a sales line whose Qty × UnitPrice does not round to its
+   * Amount (error 6070). Alga stores hours rounded while the amount comes from
+   * whole minutes, which is exactly the trap this check exists to catch.
+   */
+  private assertLineAmountsReconcile(lines: any[], currency: string): void {
+    for (const line of lines) {
+      if (line?.DetailType !== 'SalesItemLineDetail') continue;
+      const detail = line.SalesItemLineDetail ?? {};
+      if (detail.Qty == null || detail.UnitPrice == null) continue;
+      const qty = Number(detail.Qty);
+      const unitPrice = Number(detail.UnitPrice);
+      if (!Number.isFinite(qty) || !Number.isFinite(unitPrice)) continue;
+      if (toMinorUnits(qty * unitPrice, 'en-US', currency) !== toCents(line.Amount, currency)) {
+        throw new QboSimError(
+          '6070',
+          `Amount calculation incorrect in the request. Amount is not equal to UnitPrice * Qty. Supplied value:${line.Amount}`
+        );
+      }
+    }
+  }
+
   private createTransactionDocument(type: 'Invoice' | 'CreditMemo', data: any): QboSimEntity {
     const lines = Array.isArray(data.Line) ? data.Line : [];
-    const astTax = type === 'Invoice' ? this.computeAutomatedSalesTax(lines) : null;
+    const currency = this.currencyOf(data);
+    this.assertLineAmountsReconcile(lines, currency);
+    const astTax = type === 'Invoice' ? this.computeAutomatedSalesTax(lines, currency) : null;
     // QBO computes the total from lines; the caller's TotalAmt is not trusted.
     const totalCents =
-      this.sumSalesLines(lines) +
+      this.sumSalesLines(lines, currency) +
       (type === 'Invoice' ? (this.options.taxAdjustmentCents ?? 0) : 0) +
       (astTax?.totalCents ?? 0);
     const entity: QboSimEntity = {
@@ -344,8 +383,8 @@ export class QboSimulator {
       ...data,
       Line: lines,
       ...(astTax ? { TxnTaxDetail: astTax.detail } : {}),
-      TotalAmt: toAmount(totalCents),
-      Balance: toAmount(totalCents),
+      TotalAmt: toAmount(totalCents, currency),
+      Balance: toAmount(totalCents, currency),
       TxnDate: data.TxnDate ?? this.now().slice(0, 10)
     };
     this.getStore(type).set(entity.Id, entity);
@@ -359,10 +398,11 @@ export class QboSimulator {
 
   private createPayment(data: any): QboSimEntity {
     const lines = Array.isArray(data.Line) ? data.Line : [];
+    const currency = this.currencyOf(data);
     for (const line of lines) {
       const linked = Array.isArray(line?.LinkedTxn) ? line.LinkedTxn : [];
       for (const txn of linked) {
-        this.applyPaymentAllocation(String(txn?.TxnType), String(txn?.TxnId), toCents(line?.Amount));
+        this.applyPaymentAllocation(String(txn?.TxnType), String(txn?.TxnId), toCents(line?.Amount, currency));
       }
     }
     const entity: QboSimEntity = {
@@ -386,14 +426,15 @@ export class QboSimulator {
     if (!target) {
       throw new QboSimError('610', `Object Not Found: ${txnType} ${txnId}`);
     }
-    const remaining = toCents(target.Balance) - amountCents;
+    const currency = this.currencyOf(target);
+    const remaining = toCents(target.Balance, currency) - amountCents;
     if (remaining < 0) {
       throw new QboSimError(
         '6210',
-        `Amount received (${toAmount(amountCents)}) exceeds open balance on ${txnType} ${txnId}`
+        `Amount received (${toAmount(amountCents, currency)}) exceeds open balance on ${txnType} ${txnId}`
       );
     }
-    target.Balance = toAmount(remaining);
+    target.Balance = toAmount(remaining, currency);
     // Balance movement bumps the token and journals a change, like real QBO.
     target.SyncToken = String(Number(target.SyncToken) + 1);
     this.journalChange(txnType, target.Id);
@@ -409,19 +450,24 @@ export class QboSimulator {
       if (cm.deleted || cm.CustomerRef?.value !== customerId) {
         continue;
       }
-      const cmBalance = toCents(cm.Balance);
-      const invoiceBalance = toCents(invoice.Balance);
+      const currency = this.currencyOf(invoice);
+      if (this.currencyOf(cm) !== currency) {
+        continue;
+      }
+      const cmBalance = toCents(cm.Balance, currency);
+      const invoiceBalance = toCents(invoice.Balance, currency);
       if (cmBalance <= 0 || invoiceBalance <= 0) {
         continue;
       }
       const applied = Math.min(cmBalance, invoiceBalance);
       this.createPayment({
         CustomerRef: { value: customerId },
+        ...(invoice.CurrencyRef ? { CurrencyRef: invoice.CurrencyRef } : {}),
         TotalAmt: 0,
         PrivateNote: 'Automatically applied credit',
         Line: [
-          { Amount: toAmount(applied), LinkedTxn: [{ TxnType: 'Invoice', TxnId: invoice.Id }] },
-          { Amount: toAmount(applied), LinkedTxn: [{ TxnType: 'CreditMemo', TxnId: cm.Id }] }
+          { Amount: toAmount(applied, currency), LinkedTxn: [{ TxnType: 'Invoice', TxnId: invoice.Id }] },
+          { Amount: toAmount(applied, currency), LinkedTxn: [{ TxnType: 'CreditMemo', TxnId: cm.Id }] }
         ]
       });
     }
@@ -438,10 +484,11 @@ export class QboSimulator {
     const { Id: _id, SyncToken: _token, ...sparse } = data;
     Object.assign(entity, sparse);
     if (sparse.Line && (entityType === 'Invoice' || entityType === 'CreditMemo')) {
-      const totalCents = this.sumSalesLines(sparse.Line);
-      entity.TotalAmt = toAmount(totalCents);
+      const currency = this.currencyOf(entity);
+      const totalCents = this.sumSalesLines(sparse.Line, currency);
+      entity.TotalAmt = toAmount(totalCents, currency);
       // Sparse updates reset the open balance like QBO recalculating the doc.
-      entity.Balance = toAmount(totalCents);
+      entity.Balance = toAmount(totalCents, currency);
     }
     entity.SyncToken = String(Number(entity.SyncToken) + 1);
     this.journalChange(entityType, entity.Id);
@@ -572,10 +619,10 @@ export class QboSimulator {
     }
 
     const invoicePage = selectQuery.match(
-      /^SELECT\s+Id,\s*DocNumber,\s*TotalAmt,\s*SyncToken,\s*CustomerRef\s+FROM\s+Invoice(?:\s+WHERE\s+TxnDate\s*>=\s*'([^']*)')?\s+STARTPOSITION\s+(\d+)\s+MAXRESULTS\s+(\d+)$/i
+      /^SELECT\s+Id,\s*DocNumber,\s*TotalAmt,\s*SyncToken,\s*CustomerRef(,\s*CurrencyRef)?\s+FROM\s+Invoice(?:\s+WHERE\s+TxnDate\s*>=\s*'([^']*)')?\s+STARTPOSITION\s+(\d+)\s+MAXRESULTS\s+(\d+)$/i
     );
     if (invoicePage) {
-      const windowStart = invoicePage[1];
+      const [, currencyProjection, windowStart, startPosition, maxResults] = invoicePage;
       const rows = Array.from(this.stores.Invoice.values())
         .filter((invoice) => !invoice.deleted)
         .filter((invoice) => !windowStart || String(invoice.TxnDate ?? '') >= windowStart)
@@ -584,9 +631,12 @@ export class QboSimulator {
           DocNumber: invoice.DocNumber,
           TotalAmt: invoice.TotalAmt,
           SyncToken: invoice.SyncToken,
-          CustomerRef: invoice.CustomerRef ? { ...invoice.CustomerRef } : invoice.CustomerRef
+          CustomerRef: invoice.CustomerRef ? { ...invoice.CustomerRef } : invoice.CustomerRef,
+          ...(currencyProjection ? {
+            CurrencyRef: invoice.CurrencyRef ? { ...invoice.CurrencyRef } : invoice.CurrencyRef
+          } : {})
         }));
-      return this.page(rows, invoicePage[2], invoicePage[3]);
+      return this.page(rows, startPosition, maxResults);
     }
 
     const paymentByCustomer = selectQuery.match(
@@ -654,15 +704,23 @@ export class QboSimulator {
     return entity;
   }
 
-  seedInvoice(params: { customerId: string; amountCents: number; docNumber?: string; txnDate?: string }): QboSimEntity {
+  seedInvoice(params: {
+    customerId: string;
+    amountCents: number;
+    docNumber?: string;
+    txnDate?: string;
+    currency?: string;
+  }): QboSimEntity {
+    const currency = params.currency ?? this.currencyOf(undefined);
     return this.createEntity('Invoice', {
       CustomerRef: { value: params.customerId },
+      ...(params.currency ? { CurrencyRef: { value: params.currency } } : {}),
       DocNumber: params.docNumber,
       ...(params.txnDate ? { TxnDate: params.txnDate } : {}),
       Line: [
         {
           DetailType: 'SalesItemLineDetail',
-          Amount: toAmount(params.amountCents),
+          Amount: toAmount(params.amountCents, currency),
           SalesItemLineDetail: { ItemRef: { value: 'item-sim' } }
         }
       ]
@@ -808,14 +866,16 @@ export class QboSimulator {
     return entity;
   }
 
-  seedCreditMemo(params: { customerId: string; amountCents: number; docNumber?: string }): QboSimEntity {
+  seedCreditMemo(params: { customerId: string; amountCents: number; docNumber?: string; currency?: string }): QboSimEntity {
+    const currency = params.currency ?? this.currencyOf(undefined);
     return this.createEntity('CreditMemo', {
       CustomerRef: { value: params.customerId },
+      ...(params.currency ? { CurrencyRef: { value: params.currency } } : {}),
       DocNumber: params.docNumber,
       Line: [
         {
           DetailType: 'SalesItemLineDetail',
-          Amount: toAmount(params.amountCents),
+          Amount: toAmount(params.amountCents, currency),
           SalesItemLineDetail: { ItemRef: { value: 'item-sim' } }
         }
       ]
@@ -829,12 +889,14 @@ export class QboSimulator {
     if (!cm || !invoice) {
       throw new QboSimError('610', 'Object Not Found: credit application target');
     }
+    const currency = this.currencyOf(invoice);
     return this.createPayment({
       CustomerRef: invoice.CustomerRef,
+      ...(invoice.CurrencyRef ? { CurrencyRef: invoice.CurrencyRef } : {}),
       TotalAmt: 0,
       Line: [
-        { Amount: toAmount(params.amountCents), LinkedTxn: [{ TxnType: 'Invoice', TxnId: params.invoiceId }] },
-        { Amount: toAmount(params.amountCents), LinkedTxn: [{ TxnType: 'CreditMemo', TxnId: params.creditMemoId }] }
+        { Amount: toAmount(params.amountCents, currency), LinkedTxn: [{ TxnType: 'Invoice', TxnId: params.invoiceId }] },
+        { Amount: toAmount(params.amountCents, currency), LinkedTxn: [{ TxnType: 'CreditMemo', TxnId: params.creditMemoId }] }
       ]
     });
   }
@@ -850,13 +912,15 @@ export class QboSimulator {
     if (!invoice) {
       throw new QboSimError('610', `Object Not Found: Invoice ${params.invoiceId}`);
     }
+    const currency = this.currencyOf(invoice);
     return this.createPayment({
       CustomerRef: invoice.CustomerRef,
-      TotalAmt: toAmount(params.amountCents),
+      ...(invoice.CurrencyRef ? { CurrencyRef: invoice.CurrencyRef } : {}),
+      TotalAmt: toAmount(params.amountCents, currency),
       PaymentRefNum: params.referenceNumber,
       TxnDate: params.txnDate,
       Line: [
-        { Amount: toAmount(params.amountCents), LinkedTxn: [{ TxnType: 'Invoice', TxnId: params.invoiceId }] }
+        { Amount: toAmount(params.amountCents, currency), LinkedTxn: [{ TxnType: 'Invoice', TxnId: params.invoiceId }] }
       ]
     });
   }

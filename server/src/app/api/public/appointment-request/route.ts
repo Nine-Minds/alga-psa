@@ -15,6 +15,7 @@ import {
   formatDate,
   formatTime
 } from '@alga-psa/scheduling/actions';
+import { buildAppointmentRequestReviewUrl } from '@alga-psa/core';
 import { resolveAppointmentApproverUserIds } from '@alga-psa/msp-composition/scheduling/appointmentApprovers';
 import logger from '@alga-psa/core/logger';
 import { z } from 'zod';
@@ -385,7 +386,7 @@ export async function POST(req: NextRequest) {
             referenceNumber: referenceNumber,
             submittedAt: new Date().toISOString(),
             isAuthenticated: false,
-            approvalLink: `${process.env.NEXT_PUBLIC_APP_URL}/msp/schedule`,
+            approvalLink: buildAppointmentRequestReviewUrl(appointmentRequestId),
             contactEmail: tenantSettings.contactEmail,
             contactPhone: tenantSettings.contactPhone
           }, {

@@ -1,0 +1,22 @@
+{
+  "scope": "Temporal packaged permission catalog and duplicate tenant fixture removal",
+  "validation": {
+    "readinessFiles": 31,
+    "readinessTestsPassed": 219
+  },
+  "packaging": "The copied runtime resolver compiles a Technician grant from the packaged permission catalog, excludes another product and portal grants, and preserves Admin all-MSP semantics",
+  "existingGuard": "Existing Dockerfile copy assertions retained; no new source-text assertions added",
+  "removedSuite": {
+    "file": "ee/temporal-workflows/src/activities/__tests__/tenant-activities-simple.test.ts",
+    "reason": "Local copied implementation; actual tenant behavior covered by tenant-activities.test.ts in the database lane",
+    "mapping": [
+      "Basic tenant/client creation, no-client behavior, company fallback and duplicate names map to real creation cases",
+      "Setup maps to persisted email/onboarding/client-association and retry cases; role/status creation belongs to onboarding seeds",
+      "Former validation case only asserted invalid-email acceptance in copied helper; it did not verify production validation"
+    ]
+  },
+  "limits": [
+    "Global runner inventory remains incomplete",
+    "Full native verification of queued commits remains pending"
+  ]
+}

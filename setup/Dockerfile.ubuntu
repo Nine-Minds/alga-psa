@@ -58,6 +58,7 @@ WORKDIR /app
 COPY server/setup/create_database.js ./server/setup/
 COPY server/knexfile.cjs ./server/
 COPY server/migrations ./server/migrations
+COPY ee/server/migrations ./ee/server/migrations
 COPY server/seeds ./server/seeds
 COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 

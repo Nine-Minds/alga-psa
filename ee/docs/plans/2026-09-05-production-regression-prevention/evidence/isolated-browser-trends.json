@@ -1,0 +1,94 @@
+{
+  "scope": "isolated-native-google-sheets-browser-trends",
+  "spreadsheetId": "1v7rjj0_8tMOGbibDghxcjmSgN1Ejvyvjkyz0jOUHl7I",
+  "sheetId": 9060806,
+  "sheet": "validation_browser_trends",
+  "source": "scripts/record-browser-metrics.mjs at e67fdb4584",
+  "inputs": "A1:T16",
+  "queries": "V2,V8,V14",
+  "status": "passed",
+  "queryReadback": [
+    [
+      "ISOLATED pr — synthetic validation"
+    ],
+    [
+      "run_kind",
+      "lane_status",
+      "collected",
+      "executed"
+    ],
+    [
+      "pr",
+      "passed",
+      1,
+      1
+    ],
+    [
+      "pr",
+      "failed",
+      1,
+      1
+    ],
+    [
+      "pr",
+      "incomplete"
+    ],
+    [],
+    [
+      "ISOLATED main — synthetic validation"
+    ],
+    [
+      "run_kind",
+      "lane_status",
+      "collected",
+      "executed"
+    ],
+    [
+      "main",
+      "passed",
+      1,
+      1
+    ],
+    [
+      "main",
+      "failed",
+      1,
+      1
+    ],
+    [
+      "main",
+      "incomplete"
+    ],
+    [],
+    [
+      "ISOLATED nightly — synthetic validation"
+    ],
+    [
+      "run_kind",
+      "lane_status",
+      "collected",
+      "executed"
+    ],
+    [
+      "nightly",
+      "passed",
+      1,
+      1
+    ],
+    [
+      "nightly",
+      "failed",
+      1,
+      1
+    ],
+    [
+      "nightly",
+      "incomplete"
+    ]
+  ],
+  "limitations": [
+    "Synthetic exporter rows only, not real current-source browser execution.",
+    "Existing history and original workbook were not edited.",
+    "Native UI opened at100% and reported saved; screenshot-based fit verification remains unperformed."
+  ]
+}

@@ -5,15 +5,15 @@ exports.seed = async function (knex) {
     if (!context) return;
 
     const { tenantId, db } = context;
-    const projectId = (projectName) => db.table('projects')
+    const projectId = async (projectName) => (await db.table('projects')
         .where({ project_name: projectName })
         .select('project_id')
-        .first();
+        .first())?.project_id ?? null;
 
     return db.table('project_phases').insert([
         {
             tenant: tenantId,
-            project_id: projectId('Wonderland Expansion'),
+            project_id: await projectId('Wonderland Expansion'),
             phase_name: 'Territory Survey',
             description: 'Surveying new areas for expansion',
             start_date: knex.raw("CURRENT_DATE - INTERVAL '2 months'"),
@@ -24,7 +24,7 @@ exports.seed = async function (knex) {
         },
         {
             tenant: tenantId,
-            project_id: projectId('Wonderland Expansion'),
+            project_id: await projectId('Wonderland Expansion'),
             phase_name: 'Infrastructure Planning',
             description: 'Planning new infrastructure for expanded areas',
             start_date: knex.raw("CURRENT_DATE - INTERVAL '1 month'"),
@@ -35,7 +35,7 @@ exports.seed = async function (knex) {
         },
         {
             tenant: tenantId,
-            project_id: projectId('Emerald City Beautification'),
+            project_id: await projectId('Emerald City Beautification'),
             phase_name: 'Green Space Enhancement',
             description: 'Improving parks and gardens in Emerald City',
             start_date: knex.raw("CURRENT_DATE - INTERVAL '1 month'"),

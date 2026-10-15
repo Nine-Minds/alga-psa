@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import type { ExternalEntityMapping } from '@alga-psa/integrations/actions';
@@ -34,6 +35,12 @@ type AccountingMappingDialogProps = {
   existingMapping?: DisplayMapping | null;
   algaEntities: AccountingMappingEntityOption[];
   externalEntities: AccountingMappingEntityOption[];
+  /**
+   * Alga entity ids that already have a mapping in the loaded (realm-scoped)
+   * mappings. In add mode they are HIDDEN from the Alga picker; in edit mode
+   * the mapping's own entity stays visible, other mapped ones are hidden.
+   */
+  mappedAlgaIds?: ReadonlySet<string>;
   realmLabel?: string;
 };
 
@@ -46,6 +53,7 @@ export function AccountingMappingDialog({
   existingMapping,
   algaEntities,
   externalEntities,
+  mappedAlgaIds,
   realmLabel
 }: AccountingMappingDialogProps) {
   const { t } = useTranslation('msp/integrations');
@@ -61,11 +69,28 @@ export function AccountingMappingDialog({
   const [metadataInput, setMetadataInput] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const initializedDraft = useRef<string | null>(null);
+  const draftIdentity = JSON.stringify([module.id, context.realmId, context.connectionId, existingMapping?.id]);
 
   useEffect(() => {
     if (!isOpen) {
+      initializedDraft.current = null;
       return;
     }
+    // Catalog refreshes and new prop object identities must not erase work in
+    // progress (or re-enable Save while its request is still pending).
+    if (initializedDraft.current === draftIdentity) {
+      const available = !targetConfig || !selectedExternalId || externalEntities.some(entity =>
+        entity.id === selectedExternalId && (!entity.kind || entity.kind === selectedKindId)
+      );
+      if (!available) {
+        // Preserve the rest of the draft, but never submit a removed catalog item.
+        setSelectedExternalId('');
+        setStaleTarget(true);
+      }
+      return;
+    }
+    initializedDraft.current = draftIdentity;
     if (existingMapping) {
       setSelectedAlgaId(existingMapping.alga_entity_id ?? '');
       if (targetConfig) {
@@ -98,7 +123,7 @@ export function AccountingMappingDialog({
     }
     setError(null);
     setIsSaving(false);
-  }, [isOpen, existingMapping, module.metadata, targetConfig, externalEntities]);
+  }, [isOpen, draftIdentity, existingMapping, module.metadata, targetConfig, externalEntities, selectedExternalId, selectedKindId]);
 
   const dialogTitle = useMemo(
     () =>
@@ -111,9 +136,17 @@ export function AccountingMappingDialog({
   const cancelButtonId = `${dialogId}-cancel-button`;
   const saveButtonId = `${dialogId}-save-button`;
 
+  const ownAlgaId = existingMapping?.alga_entity_id;
   const algaOptions = useMemo(
-    () => algaEntities.map((entity) => ({ value: entity.id, label: entity.name })),
-    [algaEntities]
+    () =>
+      algaEntities
+        .filter(
+          (entity) =>
+            !mappedAlgaIds?.has(entity.id) ||
+            (isEditing && entity.id === ownAlgaId)
+        )
+        .map((entity) => ({ value: entity.id, label: entity.name })),
+    [algaEntities, mappedAlgaIds, isEditing, ownAlgaId]
   );
 
   const externalOptions = useMemo(
@@ -228,14 +261,15 @@ export function AccountingMappingDialog({
             <Label htmlFor={`${module.id}-alga-select`} className="text-sm font-medium text-foreground">
               {module.labels.dialog.algaField}
             </Label>
-            <CustomSelect
+            <SearchableSelect
               id={`${module.id}-alga-select`}
               options={algaOptions}
               value={selectedAlgaId}
-              onValueChange={(value: string) => setSelectedAlgaId(value || '')}
+              onChange={(value: string) => setSelectedAlgaId(value || '')}
               placeholder={t('integrations.accounting.dialog.selectPlaceholder', { defaultValue: 'Select {{field}}...', field: module.labels.dialog.algaField })}
               required
               className="w-full"
+              dropdownMode="overlay"
             />
           </div>
 
@@ -269,14 +303,18 @@ export function AccountingMappingDialog({
               // With a multi-catalog target config the picker is catalog-backed
               // only — no free-text fallback, so an arbitrary string, display
               // name, or other-organisation code can never be submitted.
-              <CustomSelect
+              <SearchableSelect
                 id={`${module.id}-external-select`}
                 options={externalOptions}
                 value={selectedExternalId}
-                onValueChange={(value: string) => setSelectedExternalId(value || '')}
+                onChange={(value: string) => {
+                  setSelectedExternalId(value || '');
+                  if (value) setStaleTarget(false);
+                }}
                 placeholder={t('integrations.accounting.dialog.selectPlaceholder', { defaultValue: 'Select {{field}}...', field: module.labels.dialog.externalField })}
                 required
                 className="w-full"
+                dropdownMode="overlay"
               />
             ) : (
               <Input

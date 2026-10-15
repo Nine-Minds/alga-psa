@@ -60,6 +60,14 @@ type IapSubscriptionContext = {
 
 const SOLO_PRO_TRIAL_DAYS = 30;
 
+/** Webhook events that can change an appliance subscription's licensing state. */
+const APPLIANCE_LIFECYCLE_EVENT_TYPES = new Set<string>([
+  'customer.subscription.created',
+  'customer.subscription.updated',
+  'customer.subscription.deleted',
+  'invoice.payment_failed',
+]);
+
 /**
  * Stripe embedded checkout requires an https return URL.
  * In local dev NEXTAUTH_URL is typically http://localhost:3000,
@@ -307,10 +315,36 @@ export class StripeService {
 
   private async initialize() {
     this.config = await getStripeConfig();
-    this.stripe = new Stripe(this.config.secretKey, {
+    const clientOptions: Stripe.StripeConfig = {
       apiVersion: '2024-12-18.acacia' as any,
       typescript: true,
-    });
+    };
+    // Test-only endpoint override: an explicit STRIPE_API_BASE_URL points the
+    // Stripe SDK at the local emulator, matching the payment provider path.
+    //
+    // Enforced test-only. This redirects requests that carry the live secret
+    // key, so it is ignored outside development/test, and cleartext http is
+    // confined to loopback even there. A production deployment that sets the
+    // variable gets real Stripe, not a silent exfiltration path.
+    const apiBaseUrl = process.env.NODE_ENV === 'production' ? undefined : process.env.STRIPE_API_BASE_URL;
+    if (apiBaseUrl) {
+      let parsed: URL;
+      try {
+        parsed = new URL(apiBaseUrl);
+      } catch {
+        throw new Error(`Invalid STRIPE_API_BASE_URL: ${apiBaseUrl}`);
+      }
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new Error(`Invalid STRIPE_API_BASE_URL protocol: ${parsed.protocol}`);
+      }
+      if (parsed.protocol === 'http:' && !['localhost', '127.0.0.1', '[::1]', '::1'].includes(parsed.hostname)) {
+        throw new Error(`STRIPE_API_BASE_URL must use https outside loopback: ${apiBaseUrl}`);
+      }
+      clientOptions.host = parsed.hostname;
+      if (parsed.port) clientOptions.port = Number(parsed.port);
+      clientOptions.protocol = parsed.protocol === 'https:' ? 'https' : 'http';
+    }
+    this.stripe = new Stripe(this.config.secretKey, clientOptions);
     await this.cleanupRetiredPremiumSchedules();
   }
 
@@ -802,6 +836,8 @@ export class StripeService {
     currentPeriodEnd: Date;
     prorationAmount: number;
     remainingAmount: number;
+    isTrialing: boolean;
+    trialEnd: Date | null;
   } | null> {
     await this.ensureInitialized();
     logger.info(`[StripeService] Getting invoice preview for tenant ${tenantId}, new quantity: ${newQuantity}`);
@@ -809,9 +845,12 @@ export class StripeService {
     const knex = await getConnection(tenantId);
     const customer = await this.getOrImportCustomer(tenantId);
 
-    // Get existing license subscription (add-on subscriptions previewed separately)
-    const existingSubscription = await licenseSubscriptions(knex, tenantId, ['active'])
+    // Get existing license subscription (add-on subscriptions previewed separately).
+    // Trialing subscriptions preview too: during a trial nothing is charged now and
+    // the new quantity simply becomes the first invoice at trial end.
+    const existingSubscription = await licenseSubscriptions(knex, tenantId, ['active', 'trialing'])
       .where({ stripe_customer_id: customer.stripe_customer_id })
+      .orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
       .first();
 
     if (!existingSubscription || !existingSubscription.stripe_subscription_item_id) {
@@ -820,6 +859,7 @@ export class StripeService {
 
     const currentQuantity = existingSubscription.quantity;
     const isIncrease = newQuantity > currentQuantity;
+    const isTrialing = existingSubscription.status === 'trialing';
 
     // `newQuantity` is the user-facing total. For multi-item subscriptions
     // the per-user line item only carries the billable portion; preview must
@@ -846,7 +886,7 @@ export class StripeService {
             quantity: previewPerUserQuantity,
           },
         ],
-        proration_behavior: isIncrease ? 'always_invoice' : 'none',
+        proration_behavior: isIncrease && !isTrialing ? 'always_invoice' : 'none',
       },
     });
 
@@ -855,16 +895,29 @@ export class StripeService {
       .filter(line => (line as any).proration)
       .reduce((sum, line) => sum + line.amount, 0);
 
+    const currentPeriodEnd = existingSubscription.current_period_end || new Date();
+
     return {
       currentQuantity,
       newQuantity,
       isIncrease,
-      amountDue: upcomingInvoice.amount_due / 100, // Convert cents to dollars
+      amountDue: isTrialing ? 0 : upcomingInvoice.amount_due / 100, // Convert cents to dollars
       currency: upcomingInvoice.currency,
-      currentPeriodEnd: existingSubscription.current_period_end || new Date(),
-      prorationAmount: prorationAmount / 100,
+      currentPeriodEnd,
+      prorationAmount: isTrialing ? 0 : prorationAmount / 100,
       remainingAmount: upcomingInvoice.amount_remaining / 100,
+      isTrialing,
+      // A trialing subscription's current period is the trial itself
+      trialEnd: isTrialing ? currentPeriodEnd : null,
     };
+  }
+
+  private async countActiveInternalUsers(knex: Knex, tenantId: string): Promise<number> {
+    const row = await tenantScopedTable(knex, 'users', tenantId)
+      .where({ user_type: 'internal', is_inactive: false })
+      .count('user_id as count')
+      .first();
+    return parseInt(String(row?.count ?? '0'), 10);
   }
 
   /**
@@ -874,7 +927,10 @@ export class StripeService {
    * - Increase (active): Immediate change with prorated charge
    * - Increase (trialing): Immediate change, no charge — billing starts at the
    *   new quantity when the trial converts
-   * - Decrease: Scheduled for end of billing period (no immediate credit)
+   * - Decrease (trialing): Immediate change in place, no charge. A schedule
+   *   would end the trial, so trials never get one.
+   * - Decrease (active): Scheduled for end of billing period (no immediate credit)
+   * - Any decrease below the active internal user count is refused.
    *
    * Returns either an updated subscription or checkout session details
    */
@@ -923,16 +979,27 @@ export class StripeService {
         `${isIncrease ? 'increasing' : 'decreasing'} from ${currentQuantity} to ${quantity}`
       );
 
-      if (isIncrease) {
+      if (!isIncrease) {
+        const activeUsers = await this.countActiveInternalUsers(knex, tenantId);
+        if (quantity < activeUsers) {
+          throw new Error(
+            `Cannot reduce to ${quantity} licenses: tenant has ${activeUsers} active users`
+          );
+        }
+      }
+
+      if (isIncrease || isTrialing) {
         // INCREASE: Immediate change with prorated charge.
         // IMPORTANT: payment_behavior: 'error_if_incomplete' ensures the API call fails
         // if payment cannot be collected immediately, preventing license count updates
         // when payment fails (e.g., insufficient funds, expired card)
         //
-        // Trialing subscriptions increase in place with NO invoice: the seats are
-        // usable immediately and billing simply starts at the new quantity when the
-        // trial converts. Paying mid-trial is only for tier upgrades (upgradeTier),
-        // never for adding seats on the current plan.
+        // Trialing subscriptions change in place with NO invoice, in both
+        // directions: the seats are usable immediately and billing simply starts
+        // at the new quantity when the trial converts. Paying mid-trial is only
+        // for tier upgrades (upgradeTier), never for seats on the current plan.
+        // A decrease must not go through a schedule while trialing: a schedule
+        // phase without a trial ends the trial and bills the customer at once.
 
         // `quantity` is the user-facing total. For multi-item subscriptions
         // (platform fee + per-user line), the per-user line only carries the
@@ -983,7 +1050,10 @@ export class StripeService {
             updated_at: knex.fn.now(),
           });
 
-        logger.info(`[StripeService] Immediately increased subscription to ${quantity} licenses`);
+        logger.info(
+          `[StripeService] Immediately ${isIncrease ? 'increased' : 'decreased'} subscription to ${quantity} licenses` +
+          (isTrialing ? ' (trialing, no charge)' : '')
+        );
 
         return {
           type: 'updated',
@@ -991,7 +1061,7 @@ export class StripeService {
           scheduledChange: false,
         };
       } else {
-        // DECREASE: Schedule change for end of billing period
+        // DECREASE (active): Schedule change for end of billing period
         // Use subscription schedule to delay the change
         const currentPeriodEnd = existingSubscription.current_period_end;
 
@@ -1155,12 +1225,14 @@ export class StripeService {
       line_items = [{ price: algadeskPriceId, quantity }];
       logger.info(`[StripeService] Using AlgaDesk per-user-only checkout (interval: ${interval})`);
     } else {
-      const perSeatPriceId = tenant?.plan ? this.getTierPerSeatPriceId(tenant.plan, interval) : null;
-      if (!perSeatPriceId) {
-        throw new Error(`Per-seat pricing not configured for ${tenant?.plan || 'unknown'} tier (${interval})`);
+      const tierItems = tenant?.plan
+        ? this.buildSubscriptionLineItemsForTier(tenant.plan, quantity, interval)
+        : null;
+      if (!tierItems) {
+        throw new Error(`Pricing not configured for ${tenant?.plan || 'unknown'} tier (${interval})`);
       }
-      line_items = [{ price: perSeatPriceId, quantity }];
-      logger.info(`[StripeService] Using per-seat checkout (tier: ${tenant.plan}, interval: ${interval})`);
+      line_items = tierItems;
+      logger.info(`[StripeService] Using tier checkout (tier: ${tenant.plan}, interval: ${interval})`);
     }
 
     // Create checkout session in embedded mode
@@ -1205,6 +1277,13 @@ export class StripeService {
   async handleWebhookEvent(event: Stripe.Event, tenantId?: string): Promise<void> {
     await this.ensureInitialized();
     logger.info(`[StripeService] Processing webhook event: ${event.type} (${event.id})`);
+
+    // Appliance (self-hosted) subscriptions are minted by nm-store and have no
+    // hosted tenant; their lifecycle is mirrored into the alga-license service
+    // instead of the tenant tables. Hand them off before tenant resolution.
+    if (!tenantId && (await this.handleApplianceLifecycleEvent(event))) {
+      return;
+    }
 
     // For most events, we need to determine the tenant from the event data
     const eventTenantId = tenantId || (await this.getTenantIdFromEvent(event));
@@ -1308,6 +1387,49 @@ export class StripeService {
           processing_error: error instanceof Error ? error.message : String(error),
         });
 
+      throw error;
+    }
+  }
+
+  /**
+   * Route an appliance-subscription event to the alga-license lifecycle mirror.
+   * Returns true when the event belonged to an appliance subscription (handled
+   * here, whether or not it required a C4 write), false to continue hosted processing.
+   */
+  private async handleApplianceLifecycleEvent(event: Stripe.Event): Promise<boolean> {
+    if (!APPLIANCE_LIFECYCLE_EVENT_TYPES.has(event.type)) return false;
+    try {
+      const { handleApplianceSubscriptionEvent } = await import('@ee/lib/applianceConsole/applianceSubscriptionLifecycle');
+      const masterTenantId = process.env.MASTER_BILLING_TENANT_ID;
+      const outcome = await handleApplianceSubscriptionEvent(event, this.stripe, {
+        revoke: async (stripeSubId) => {
+          const { revokeApplianceEntitlement } = await import('@ee/lib/applianceConsole/algaLicenseAdminClient');
+          return revokeApplianceEntitlement(stripeSubId);
+        },
+        syncSeats: async (applianceTenantId, seats) => {
+          const { updateApplianceEntitlementSeats } = await import('@ee/lib/applianceConsole/algaLicenseAdminClient');
+          return updateApplianceEntitlementSeats(applianceTenantId, seats);
+        },
+        audit: masterTenantId
+          ? async (details) => {
+              const { PlatformReportAuditService } = await import('@ee/lib/platformReports');
+              await new PlatformReportAuditService(masterTenantId).logEvent({
+                eventType: 'appliance.lifecycle.webhook',
+                resourceType: 'appliance',
+                resourceId: typeof details.tenant_id === 'string' ? details.tenant_id : null,
+                status: 'completed',
+                details,
+              });
+            }
+          : undefined,
+      });
+      if (outcome.handled) {
+        logger.info(`[StripeService] Appliance lifecycle handled ${event.type} for ${outcome.subscriptionId} (${outcome.action})`);
+      }
+      return outcome.handled;
+    } catch (error) {
+      // A C4 failure must surface as a webhook failure so Stripe retries it.
+      logger.error(`[StripeService] Appliance lifecycle handling failed for ${event.id}:`, error);
       throw error;
     }
   }
@@ -1740,19 +1862,24 @@ export class StripeService {
         updatedMetadata[RETIRED_PREMIUM_SCHEDULE_SOURCE_KEY] = retiredPremiumScheduleSource;
       }
     }
+    // Stripe's subscription metadata never carries our pending-reduction marker,
+    // so carry it over from the local row until the schedule activates (quantity
+    // reaches the scheduled value) or disappears from the subscription.
     if (existingSubscription?.metadata?.scheduled_quantity) {
-      const scheduledQuantity = existingSubscription.metadata.scheduled_quantity;
+      const scheduledQuantity = Number(existingSubscription.metadata.scheduled_quantity);
 
-      // If the quantity now matches the scheduled quantity, the schedule has activated
       if (quantity === scheduledQuantity) {
         logger.info(
           `[StripeService] Scheduled license change activated for subscription ${subscription.id}: ` +
           `${existingSubscription.quantity} -> ${quantity}`
         );
-
-        // Clear the scheduled change metadata
-        const { scheduled_quantity, schedule_id, ...remainingMetadata } = existingSubscription.metadata;
-        updatedMetadata = remainingMetadata;
+      } else if (!subscription.schedule) {
+        logger.info(
+          `[StripeService] Schedule released for subscription ${subscription.id}; clearing pending change to ${scheduledQuantity}`
+        );
+      } else {
+        updatedMetadata.scheduled_quantity = existingSubscription.metadata.scheduled_quantity;
+        updatedMetadata.schedule_id = existingSubscription.metadata.schedule_id;
       }
     }
 

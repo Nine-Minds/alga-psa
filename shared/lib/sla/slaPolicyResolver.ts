@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { ISlaPolicy, ISlaPolicyTarget, IBusinessHoursScheduleWithEntries } from '@alga-psa/types';
+import { normalizeHolidayRows } from './holidayRows';
 
 export type ResolvedSlaPolicy = ISlaPolicy & { targets: ISlaPolicyTarget[] };
 
@@ -121,7 +122,7 @@ export async function getBusinessHoursSchedule(
       return {
         ...schedule,
         entries,
-        holidays
+        holidays: normalizeHolidayRows(holidays)
       };
     }
   }
@@ -144,7 +145,7 @@ export async function getBusinessHoursSchedule(
     return {
       ...defaultSchedule,
       entries,
-      holidays
+      holidays: normalizeHolidayRows(holidays)
     };
   }
 

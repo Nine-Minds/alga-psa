@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "baseRevision": "6bc64e4407",
+  "workingTreeDirty": true,
+  "checks": [
+    {
+      "scope": "Issue 3338 defect 3: actual board seed ticket lifecycle",
+      "testFile": "server/src/test/integration/seededBoardTicketLifecycle.integration.test.ts",
+      "historicalBase": "a58838822228ae17a5c02a7b477d6eb92bddaae5",
+      "historicalSeedReplayFailed": 2,
+      "freshMigratedDatabasePassed": 2,
+      "durationSeconds": 15.23,
+      "disposableDatabasesRemaining": 0,
+      "tier1CollectedFiles": 95,
+      "assertions": [
+        "Actual demo boards have open and closed statuses",
+        "Actual ITIL board has open and closed statuses",
+        "Ticket model persists transition to board-specific closed status"
+      ],
+      "limits": [
+        "Only defect 3 of issue 3338 is covered",
+        "Tenant selection is isolated; authentication and browser are outside this test",
+        "Established database helper provisions the shared app role"
+      ]
+    },
+    {
+      "scope": "Teams organizer provider boundary",
+      "passed": 37,
+      "testFiles": [
+        "packages/integrations/src/actions/integrations/teamsActions.test.ts",
+        "packages/emulators/msgraph/tests/smoke.test.ts",
+        "packages/emulators/msgraph/tests/teamsOrganizerRouting.test.ts"
+      ],
+      "assertions": [
+        "Both action implementations call real emulator token and Graph HTTP endpoints",
+        "Resolved organizer object ID persists in mocked storage",
+        "Graph user lookup accepts ID and case-insensitive UPN",
+        "Unknown Graph users remain rejected",
+        "Workspace and enterprise ignore overrides unless explicit Teams emulator mode is enabled outside production"
+      ],
+      "limits": [
+        "Persistence is mocked in Teams action tests",
+        "No current production browser pass established"
+      ],
+      "existingEnterpriseGatePassed": 8,
+      "fullServerTypecheck": "passed",
+      "canonicalNewHttpCasesCollected": 2,
+      "acyclicFocusedBuildTasks": 37,
+      "acyclicFullServerBuildTasks": 58
+    },
+    {
+      "scope": "CI Docker archive build record",
+      "passed": 9,
+      "workflowLint": "passed",
+      "assertions": [
+        "Compressed archive bytes hashed",
+        "Gzip integrity verified",
+        "Build action identities cross-checked against metadata",
+        "Rejected builds remove stale record"
+      ],
+      "limits": [
+        "Workflow execution remains unverified",
+        "Does not inspect Docker tar contents",
+        "Does not prove registry publication or deployed identity"
+      ]
+    }
+  ],
+  "ci": {
+    "runId": 34256378317,
+    "testedRevision": "e0bc8af8aa1c5aaacfbb4bf456812fefde2da768",
+    "statusAtReview": "in_progress",
+    "remainingRunningJob": "Server unit suite + coverage",
+    "knownFailure": "Calendar Nx dependency cycle fixed locally in 6bc64e4407; not yet validated by CI"
+  }
+}

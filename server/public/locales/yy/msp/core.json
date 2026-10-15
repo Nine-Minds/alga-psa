@@ -80,9 +80,10 @@
       "servicePeriods": "〖Şḗřṽīƈḗ Ƥḗřīȯḓş ······〗",
       "credits": "〖Ƈřḗḓīŧş ···〗",
       "serviceTypes": "〖Şḗřṽīƈḗ Ŧẏƥḗş ······〗",
+      "serviceCategories": "〖Şḗřṽīƈḗ Ƈȧŧḗɠȯřīḗş ········〗",
       "serviceCatalog": "〖Şḗřṽīƈḗş ····〗",
       "products": "〖Ƥřȯḓŭƈŧş ····〗",
-      "taxRates": "〖Ŧȧẋ Řȧŧḗş ····〗",
+      "taxRates": "〖Ŧȧẋ ··〗",
       "usageTracking": "〖Ŭşȧɠḗ Ŧřȧƈķīƞɠ ······〗",
       "reports": "〖Řḗƥȯřŧş ···〗",
       "accountingExports": "〖Ȧƈƈȯŭƞŧīƞɠ Ḗẋƥȯřŧş ········〗"
@@ -102,9 +103,15 @@
     "jobs": "〖Ĵȯƀş ··〗",
     "emailLogs": "〖Ḗḿȧīŀ Ŀȯɠş ····〗",
     "extensions": "〖Ḗẋŧḗƞşīȯƞş ····〗",
+    "ticketsAll": "〖Ȧŀŀ Ŧīƈķḗŧş ·····〗",
+    "ticketsRecurring": "〖Řḗƈŭřřīƞɠ Ŧīƈķḗŧş ·······〗",
     "coManaged": "〖Ƈȯ-ḿȧƞȧɠḗḓ ĪŦ ······〗",
     "coManagedDelegation": "〖Ḓḗŀḗɠȧŧḗḓ ȧḓḿīƞīşŧřȧŧīȯƞ ··········〗",
-    "coManagedAccess": "〖Ƈȯ-ḿȧƞȧɠḗḓ ȧƈƈḗşş ·······〗"
+    "coManagedAccess": "〖Ƈȯ-ḿȧƞȧɠḗḓ ȧƈƈḗşş ·······〗",
+    "ticketsCustomer": "〖Ƈŭşŧȯḿḗř Ŧīƈķḗŧş ·······〗",
+    "projectsSharedTasks": "〖Şħȧřḗḓ Ŧȧşķş ·····〗",
+    "coManagedOverview": "〖Ȯṽḗřṽīḗẇ ····〗",
+    "ticketsTemplates": "〖Ŧīƈķḗŧ Ŧḗḿƥŀȧŧḗş ·······〗"
   },
   "marketing": {
     "dialogs": {
@@ -469,7 +476,8 @@
     "collapseSidebar": "〖Ƈȯŀŀȧƥşḗ şīḓḗƀȧř ·······〗",
     "collapseSection": "〖Ƈȯŀŀȧƥşḗ {{section}} ········〗",
     "expandSection": "〖Ḗẋƥȧƞḓ {{section}} ········〗",
-    "appLogoAlt": "〖{{appName}} Ŀȯɠȯ ·······〗"
+    "appLogoAlt": "〖{{appName}} Ŀȯɠȯ ·······〗",
+    "poweredBy": "〖Ƥȯẇḗřḗḓ ƀẏ ····〗"
   },
   "settings": {
     "sections": {
@@ -590,7 +598,20 @@
       "system": "〖Şẏşŧḗḿ ···〗",
       "selected": "〖Şḗŀḗƈŧḗḓ ····〗"
     },
-    "openUserMenu": "〖Ȯƥḗƞ ŭşḗř ḿḗƞŭ ······〗"
+    "openUserMenu": "〖Ȯƥḗƞ ŭşḗř ḿḗƞŭ ······〗",
+    "stopwatch": {
+      "untitled": "〖Ŭƞŧīŧŀḗḓ ····〗",
+      "ariaLabelPaused": "〖Şŧȯƥẇȧŧƈħ ƥȧŭşḗḓ: {{label}} ȧŧ {{clock}} ················〗",
+      "ariaLabelRunning": "〖Şŧȯƥẇȧŧƈħ řŭƞƞīƞɠ: {{label}} ȧŧ {{clock}} ·················〗",
+      "paused": "〖Şŧȯƥẇȧŧƈħ ƥȧŭşḗḓ ·······〗",
+      "running": "〖Şŧȯƥẇȧŧƈħ řŭƞƞīƞɠ ·······〗",
+      "resume": "〖Řḗşŭḿḗ ···〗",
+      "pause": "〖Ƥȧŭşḗ ··〗",
+      "stop": "〖Şŧȯƥ ȧƞḓ ŀȯɠ ·····〗",
+      "discard": "〖Ḓīşƈȧřḓ ···〗",
+      "pausedNoDrawer": "〖Şŧȯƥẇȧŧƈħ ƥȧŭşḗḓ ȧŧ {{clock}}. Ȯƥḗƞ ŧħḗ ẇȯřķ īŧḗḿ ŧȯ ŀȯɠ ŧħḗ ŧīḿḗ. ···························〗",
+      "openTicket": "〖Ȯƥḗƞ ŧīƈķḗŧ ·····〗"
+    }
   },
   "dialogs": {
     "aiInterrupt": {

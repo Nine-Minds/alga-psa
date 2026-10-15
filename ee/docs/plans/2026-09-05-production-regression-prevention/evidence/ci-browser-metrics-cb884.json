@@ -1,0 +1,47 @@
+{
+  "scope": "current-ci-browser-metrics-and-live-sheets-readback",
+  "status": "passed",
+  "runId": "34304828149",
+  "runAttempt": 1,
+  "testedRevision": "f71e845a2c5d66fb634a01daa39161c82dd3e4ff",
+  "publishedHead": "cb88424b6c4e4b9ecf98ded3a791a0b45d00e24b",
+  "editions": {
+    "community": {
+      "jobId": 102324221156,
+      "artifactId": 10087305089,
+      "journeys": 42,
+      "exportedRows": 43,
+      "artifactComponents": 8,
+      "manifestCharacters": 11571,
+      "firstAttemptPassed": 42
+    },
+    "enterprise": {
+      "jobId": 102324221161,
+      "artifactId": 10087346381,
+      "journeys": 47,
+      "exportedRows": 48,
+      "artifactComponents": 9,
+      "manifestCharacters": 13049,
+      "firstAttemptPassed": 47
+    }
+  },
+  "verification": [
+    "Both primary browser steps and metrics recorder steps succeeded.",
+    "Clean execution artifacts retain all required first-attempt journey identities, zero retries/skips/missing cases.",
+    "Actual candidate archive manifests validate run/attempt/revision and8CE/9EE component inventories; metrics manifests equal sanitized artifact manifests.",
+    "Live original Sheets readback equals browserRows projection across all25columns and91rows, normalizing only native number/boolean cell representation.",
+    "Original562 historical data rows compare unchanged against prior read-only snapshot; first20headercells unchanged, only5additiveheadings appended."
+  ],
+  "spreadsheetId": "1eKcgRVSwd3bDBSbbwyj-WYb8jhqSEDOG8FPO9--O21M",
+  "historyVerificationRange": "browser_readiness!A1:Y563",
+  "runtimeConfiguration": {
+    "authentication": "real-credentials",
+    "serverLifecycle": "externally-started-production-build"
+  },
+  "limitations": [
+    "Only primary browser execution/metrics accepted; API, upgrade, Teams and full workflow completion remain separate.",
+    "Per-replica topology records are not in primary browser artifacts; final container artifact review pending.",
+    "Candidate archive evidence does not establish registry publication/deployment identity.",
+    "Workbook writes were performed by the existing authorized CI recorder; coordinator readback did not edit the workbook."
+  ]
+}

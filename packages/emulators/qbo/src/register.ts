@@ -139,6 +139,24 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
   });
 
   reg.action({
+    name: 'rename-invoice',
+    description: 'A bookkeeper changing an invoice number inside QBO (bumps SyncToken and appears in CDC)',
+    params: z.object({
+      invoiceId: z.string().min(1),
+      docNumber: z.string().min(1),
+      ...realmParam,
+    }),
+    run: async ({ realmId, invoiceId, docNumber }) => {
+      const client = core.simFor(realmId).client;
+      const invoice = await client.read<{ Id: string; SyncToken: string }>('Invoice', invoiceId);
+      if (!invoice) throw new Error(`Invoice ${invoiceId} was not found`);
+      return client.update('Invoice', {
+        Id: invoice.Id, SyncToken: invoice.SyncToken, DocNumber: docNumber, sparse: true,
+      });
+    },
+  });
+
+  reg.action({
     name: 'receive-payment',
     description: 'A customer payment arriving inside QBO against an invoice (bumps SyncToken, reduces Balance)',
     params: z.object({

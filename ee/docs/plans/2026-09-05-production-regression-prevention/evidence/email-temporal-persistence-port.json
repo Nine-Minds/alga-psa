@@ -1,0 +1,52 @@
+{
+  "scope": "Shipped email workflow on real Temporal with actual activity persistence",
+  "baseRevision": "71cca88edeece33c0ef418afb13c1a55418713ad",
+  "workingTreeDirty": true,
+  "validation": {
+    "artifact": "/tmp/alga-email-engine-persistence-final.log",
+    "sha256": "5e61bcb049a12a0a41bd777f771908d976e979d96b3c27b77fb55ee24aae5a60",
+    "passed": 24,
+    "failed": 0,
+    "newTemporalDatabaseScenarios": 6
+  },
+  "portedRetiredAssertions": [
+    "Email workflow stores processedAt in vars. Mocks: non-target dependencies.",
+    "Existing ticket resolution runs before branching. Mocks: non-target dependencies.",
+    "Existing ticket path creates comment with author_type=contact. Mocks: non-target dependencies.",
+    "Existing ticket path processes attachments with per-item error continue. Mocks: non-target dependencies.",
+    "Existing ticket path returns early without creating new ticket. Mocks: non-target dependencies.",
+    "Attachment processing uses idempotency keys derived from message id and attachment id. Mocks: non-target dependencies.",
+    "Comment creation uses idempotency key derived from message id and ticket id. Mocks: non-target dependencies.",
+    "Workflow preserves parsedEmail metadata for downstream actions. Mocks: non-target dependencies.",
+    "Existing ticket path does not populate ticket context. Mocks: non-target dependencies.",
+    "Matched contact stored as matchedClient in vars.ticketContext. Mocks: non-target dependencies.",
+    "Resolve inbound ticket context by tenantId+providerId+senderEmail. Mocks: non-target dependencies.",
+    "Ticket defaults override logic matches legacy behavior. Mocks: non-target dependencies.",
+    "create_ticket_with_initial_comment is called with computed defaults. Mocks: non-target dependencies.",
+    "create_ticket_with_initial_comment stores ticket_id into vars.createdTicket. Mocks: non-target dependencies.",
+    "New ticket path processes attachments with per-item error continue. Mocks: non-target dependencies.",
+    "send_ticket_acknowledgement_email runs only when matchedClient exists. Mocks: non-target dependencies.",
+    "send_ticket_acknowledgement_email errors do not fail the workflow (onError=continue). Mocks: non-target dependencies.",
+    "Workflow sets EMAIL_PROCESSED state on success. Mocks: non-target dependencies.",
+    "Ticket creation uses idempotency key derived from provider id and message id. Mocks: non-target dependencies.",
+    "Workflow preserves parsedEmail metadata for ticket creation. Mocks: non-target dependencies.",
+    "New ticket path persists ticketDefaults and createdTicket together. Mocks: non-target dependencies.",
+    "If ticket defaults missing, state set to ERROR_NO_TICKET_DEFAULTS and workflow returns. Mocks: non-target dependencies.",
+    "Outer catch sets ERROR_PROCESSING_EMAIL and AWAITING_MANUAL_RESOLUTION. Mocks: non-target dependencies.",
+    "Outer catch creates human task with failure context and payload snapshot. Mocks: non-target dependencies."
+  ],
+  "behavior": [
+    "Six scenarios cover new ticket, existing-ticket reply, missing defaults, acknowledgement failure, attachment failure and unrecoverable resolution failure.",
+    "Real Temporal workflow execution invokes actual node/action activities, output schemas, idempotency persistence, encrypted retry storage, snapshot projection and run completion.",
+    "Persisted snapshots verify original payload, processedAt, parsed metadata, context/defaults/location, created ticket identity and final business state.",
+    "Invocation rows prove tenant-prefixed message/provider/ticket idempotency keys and persisted failures; handler assertions verify mapped contact authorship and tenant/provider/sender inputs.",
+    "Manual resolution preserves failure context and the intermediate error state in actual snapshots."
+  ],
+  "limits": [
+    "Pinned-definition loading and step-start insertion are fixture seams; application start authorization, pinned-version loading and quota reservation are not proved here.",
+    "External effects and context/ticket resolution use synthetic registered action handlers; provider delivery, actual ticket creation and real context/thread lookup require their own coverage.",
+    "Retired outer-catch cases threw the parser, which now has intentional fallback behavior. The active catch regression injects an unrecoverable resolution failure to verify the same manual-resolution behavior.",
+    "Two retired cases remain: application-action email start and real threading lookup.",
+    "Local candidate evidence only, not updated native CI success."
+  ]
+}

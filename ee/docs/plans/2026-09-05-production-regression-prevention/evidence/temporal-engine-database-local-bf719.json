@@ -1,0 +1,57 @@
+{
+  "scope": "Complete local Temporal engine and database lanes; not native CI or previous-release upgrade evidence",
+  "lanes": [
+    {
+      "suite": "temporal-engine",
+      "revision": "bf719bcbb13e1af52718ddbf6b897fd520fbaab9",
+      "status": "passed",
+      "counts": {
+        "passed": 36,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "executedFileCount": 8,
+      "source": {
+        "before": {
+          "revision": "bf719bcbb13e1af52718ddbf6b897fd520fbaab9",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "bf719bcbb13e1af52718ddbf6b897fd520fbaab9",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "sha256": "890643e9558305034787ef58827a548123a9e7a9579df13cea1072ebfa559c0b"
+    },
+    {
+      "suite": "temporal-database",
+      "revision": "bf719bcbb13e1af52718ddbf6b897fd520fbaab9",
+      "status": "passed",
+      "counts": {
+        "passed": 26,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "executedFileCount": 5,
+      "source": {
+        "before": {
+          "revision": "bf719bcbb13e1af52718ddbf6b897fd520fbaab9",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "bf719bcbb13e1af52718ddbf6b897fd520fbaab9",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "sha256": "634a8df14486cec0c979ee6d7e6310e6cc34c84c25009dcdcdbcd7d7a7318f02"
+    }
+  ]
+}

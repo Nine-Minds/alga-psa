@@ -9,6 +9,8 @@
  * §19 - Mapping Editor UX Enhancements
  */
 
+import { collectWorkflowConditionFields } from '../workflowConditionFields';
+import type { DataContext as DataContextForConditions, JsonSchema as JsonSchemaForConditions } from '../workflowDataContext';
 import React, { useMemo } from 'react';
 import { type DataTreeContext, type DataField } from './SourceDataTree';
 import { InputMappingEditor, type ActionInputField } from './InputMappingEditor';
@@ -62,6 +64,8 @@ export interface WorkflowDataContext {
     itemVar: string;
     indexVar: string;
     itemType?: string;
+    /** The loop's items expression, used to preview with its first item. */
+    itemsExpr?: string;
   };
   inCatchBlock?: boolean;
 }
@@ -146,6 +150,24 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
     () => buildWorkflowReferenceSourceTypeLookup(dataContext, payloadRootPath),
     [dataContext, payloadRootPath]
   );
+  // Entity kinds of source fields (from schema metadata), so suggestions only pair the same kind
+  // of record, e.g. a contact id with a contact input.
+  const sourceKindMap = useMemo(() => {
+    const kinds = new Map<string, string>();
+    const fields = collectWorkflowConditionFields(
+      (dataContext.payloadSchema ?? null) as JsonSchemaForConditions | null,
+      dataContext as unknown as DataContextForConditions,
+      { trigger: '' }
+    );
+    for (const field of fields) {
+      if (!field.pickerKind) continue;
+      const path = payloadRootPath !== 'payload' && field.path.startsWith('payload.')
+        ? `${payloadRootPath}${field.path.slice('payload'.length)}`
+        : field.path;
+      kinds.set(path, field.pickerKind);
+    }
+    return kinds;
+  }, [dataContext, payloadRootPath]);
 
   const expressionContext = useMemo(() => {
     const ctx =
@@ -171,6 +193,7 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
         stepId={stepId}
         actionId={actionId}
         sourceTypeMap={sourceTypeMap}
+        sourceKindMap={sourceKindMap}
         disabled={disabled}
         expressionContext={expressionContext}
         referenceBrowseContext={treeContext}

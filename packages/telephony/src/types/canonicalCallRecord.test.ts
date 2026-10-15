@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { canonicalCallRecordSchema } from './index';
+import { canonicalCallRecordSchema, TELEPHONY_PROVIDERS } from './index';
 
 describe('canonicalCallRecordSchema', () => {
   const valid = {
@@ -35,6 +35,13 @@ describe('canonicalCallRecordSchema', () => {
 
   it('T014: rejects an unknown direction', () => {
     expect(canonicalCallRecordSchema.safeParse({ ...valid, direction: 'sideways' }).success).toBe(false);
+  });
+
+  it('T013: accepts provider 3cx and lists it in TELEPHONY_PROVIDERS', () => {
+    expect(TELEPHONY_PROVIDERS).toContain('3cx');
+    expect(
+      canonicalCallRecordSchema.safeParse({ ...valid, provider: '3cx' }).success,
+    ).toBe(true);
   });
 });
 

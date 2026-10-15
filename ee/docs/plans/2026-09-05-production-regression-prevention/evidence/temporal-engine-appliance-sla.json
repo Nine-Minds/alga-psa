@@ -1,0 +1,26 @@
+{
+  "status": "passed",
+  "counts": {
+    "passed": 16,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "expectedFiles": [
+    "ee/temporal-workflows/src/workflows/__tests__/sla-ticket-workflow.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/tenant-creation-appliance.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/tenant-product-upgrade-workflow.test.ts"
+  ],
+  "executedFiles": [
+    "ee/temporal-workflows/src/workflows/__tests__/sla-ticket-workflow.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/tenant-creation-appliance.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/tenant-product-upgrade-workflow.test.ts"
+  ],
+  "failures": [],
+  "runtime": "Ephemeral Temporal servers with stubbed application activities",
+  "limits": [
+    "Native expanded engine CI verification pending.",
+    "These workflow orchestration tests do not verify real tenant database provisioning or live application deployment."
+  ]
+}

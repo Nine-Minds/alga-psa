@@ -1,3 +1,4 @@
+import { persistCommentPublication, resolveCommentAuthorDisplay } from '../lib/ticketCommentAttachments';
 /**
  * Shared Ticket Model - Core business logic for ticket operations
  * This model contains the essential ticket business logic extracted from
@@ -5,20 +6,31 @@
  */
 
 import { attachNativeRootToConversation } from '../lib/tickets/namedConversations';
+import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
+import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
-import { assertCommentThreadAudience } from '../lib/commentAudience';
+import { assertCommentThreadAudience, resolveCommentAudience } from '../lib/commentAudience';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
+import { resolveTicketEventActor } from '@alga-psa/event-schemas';
+import { isSilentTicketCreation, isTicketCreationWithPayloadExtras, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
+import { ticketStatusClockPatch } from '../lib/ticketStatusClock';
+import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipients';
+import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
+import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
+import { buildTicketCommentAddedPayload, buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
 
+// LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
 const TICKET_ORIGINS = {
   INTERNAL: 'internal',
   CLIENT_PORTAL: 'client_portal',
   INBOUND_EMAIL: 'inbound_email',
   API: 'api',
+  RECURRING: 'recurring',
 } as const;
 
 // =============================================================================
@@ -61,6 +73,12 @@ export const ticketSchema = z.object({
   ticket_number: z.string(),
   title: z.string(),
   url: z.string().nullable(),
+  // Optional classification references. Nullable so a create that omits them
+  // still validates; retained here so the shared create parse cannot silently
+  // strip supplied values before the insert.
+  severity_id: z.string().uuid().nullable().optional(),
+  urgency_id: z.string().uuid().nullable().optional(),
+  impact_id: z.string().uuid().nullable().optional(),
   board_id: z.string().uuid(),
   client_id: z.string().uuid(),
   location_id: z.string().uuid().nullable().optional(),
@@ -89,16 +107,27 @@ export const ticketSchema = z.object({
   itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
   itil_priority_level: z.number().int().min(1).max(5).nullable().optional(),
   itil_category: z.string().nullable().optional(),
-  itil_subcategory: z.string().nullable().optional()
+  itil_subcategory: z.string().nullable().optional(),
+  // Provenance for a ticket created via "Duplicate". Create-only; no FK.
+  duplicated_from_ticket_id: z.string().uuid().nullable().optional(),
+  // Provenance for a ticket created from a ticket template. Create-only; no FK.
+  created_from_template_id: z.string().uuid().nullable().optional()
 });
 
-// Ticket update schema
+// Ticket update schema. Classification references (severity/urgency/impact)
+// are create-only in this model: they are declared on `ticketSchema` so create
+// parsing retains them, but update must keep its existing accepted-request set.
 export const ticketUpdateSchema = ticketSchema.partial().omit({
   tenant: true,
   ticket_id: true,
   ticket_number: true,
   entered_by: true,
-  entered_at: true
+  entered_at: true,
+  severity_id: true,
+  urgency_id: true,
+  impact_id: true,
+  duplicated_from_ticket_id: true,
+  created_from_template_id: true,
 });
 
 // Comment validation schema
@@ -110,10 +139,15 @@ export const createCommentSchema = z.object({
   collaboration_audience: z.enum(['requester', 'shared_it', 'organization_private']).optional(),
   conversation_id: z.string().uuid().optional(),
   is_resolution: z.boolean().optional(),
+  is_system_generated: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
   author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
   contact_id: z.string().uuid('Contact ID must be a valid UUID').optional(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.unknown()).optional(),
+  emailRecipients: z.object({
+    cc: z.array(z.string()).optional(),
+    bcc: z.array(z.string()).optional(),
+  }).optional(),
 });
 
 // =============================================================================
@@ -157,6 +191,10 @@ export interface CreateTicketInput {
   closed_at?: string;
   is_closed?: boolean;
   due_date?: string;
+  /** Source ticket this one was duplicated from (provenance, create-only). */
+  duplicated_from_ticket_id?: string;
+  /** Ticket template this one was created from (provenance, create-only). */
+  created_from_template_id?: string;
 }
 
 export interface CreateTicketFromAssetInput {
@@ -217,6 +255,7 @@ export interface CreateCommentValidationInput {
   conversation_id?: string;
   is_internal?: boolean;
   is_resolution?: boolean;
+  is_system_generated?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
   contact_id?: string;
@@ -231,6 +270,10 @@ export interface CreateTicketOutput {
   status_id?: string;
   priority_id?: string;
   board_id?: string;
+  url?: string | null;
+  severity_id?: string | null;
+  urgency_id?: string | null;
+  impact_id?: string | null;
   entered_at: string;
   tenant: string;
 }
@@ -243,10 +286,16 @@ export interface CreateCommentInput {
   is_internal?: boolean;
   collaboration_audience?: 'requester' | 'shared_it' | 'organization_private';
   is_resolution?: boolean;
+  is_system_generated?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
   contact_id?: string;
   metadata?: Record<string, any>;
+  /**
+   * One-off Cc/Bcc for this comment's outbound email. Persisted into
+   * `metadata.email_recipients`; rejected on internal comments.
+   */
+  emailRecipients?: { cc?: string[]; bcc?: string[] };
 }
 
 export interface CreateCommentOutput {
@@ -375,6 +424,177 @@ export function cleanNullableFields(data: Record<string, any>): Record<string, a
   }
   
   return cleaned;
+}
+
+// =============================================================================
+// CREATE ROW FIELD HANDLING
+// =============================================================================
+
+/**
+ * Columns `TicketModel.createTicket` derives from `CreateTicketInput`.
+ *
+ * Generated identity/timestamp columns (`ticket_id`, `tenant`,
+ * `ticket_number`, `entered_at`, `updated_at`) are deliberately absent: they
+ * stay under model control and no input key can target them.
+ */
+export const INPUT_DRIVEN_TICKET_COLUMNS = [
+  'title',
+  'url',
+  'client_id',
+  'contact_name_id',
+  'location_id',
+  'billing_profile_id',
+  'status_id',
+  'assigned_to',
+  'assigned_team_id',
+  'priority_id',
+  'category_id',
+  'subcategory_id',
+  'board_id',
+  'source',
+  'ticket_origin',
+  'entered_by',
+  'email_metadata',
+  'attributes',
+  'severity_id',
+  'urgency_id',
+  'impact_id',
+  'itil_impact',
+  'itil_urgency',
+  'due_date',
+  'duplicated_from_ticket_id',
+  'created_from_template_id',
+] as const;
+
+type InputDrivenTicketColumn = (typeof INPUT_DRIVEN_TICKET_COLUMNS)[number];
+
+/** Everything a resolver may read while assembling an input-driven row. */
+type TicketCreateRowContext = {
+  cleanedInput: CreateTicketInput;
+  resolvedBillingProfileId: string | null;
+  attributes: Record<string, unknown> | null;
+};
+
+/**
+ * How one `CreateTicketInput` key becomes (or deliberately does not become) a
+ * ticket column: `column` copies the key straight through, `resolve` derives
+ * one or more columns, and `excluded` records an intentional non-persisted
+ * field together with the reason.
+ */
+type TicketCreateFieldHandling =
+  | {
+      kind: 'column';
+      column: InputDrivenTicketColumn;
+      /**
+       * When true, only `null`/`undefined` become SQL NULL (`??`); an empty
+       * string is preserved so it reaches validation and the insert exactly
+       * as supplied. The default keeps the model's existing `||` "unset"
+       * semantics for the other nullable string columns.
+       */
+      nullish?: boolean;
+    }
+  | {
+      kind: 'resolve';
+      build: (ctx: TicketCreateRowContext) => Partial<Record<InputDrivenTicketColumn, unknown>>;
+    }
+  | { kind: 'excluded'; reason: string };
+
+/**
+ * Exhaustive field-handling declaration for `CreateTicketInput`.
+ *
+ * The `-?` modifier removes the optionality carried by `CreateTicketInput`'s
+ * optional keys, so every key must have an explicit entry and a newly added
+ * input key is a compile error until it is classified, rather than an entry
+ * that may silently be omitted. This declaration drives row construction in
+ * `buildTicketCreateRow`; it is not a detached list of names.
+ */
+const CREATE_TICKET_FIELD_HANDLING: { [K in keyof CreateTicketInput]-?: TicketCreateFieldHandling } = {
+  title: { kind: 'column', column: 'title' },
+  description: { kind: 'excluded', reason: 'merged into attributes.description' },
+  client_id: { kind: 'column', column: 'client_id' },
+  contact_id: {
+    kind: 'resolve',
+    build: ({ cleanedInput }) => ({ contact_name_id: cleanedInput.contact_id || null }),
+  },
+  location_id: { kind: 'column', column: 'location_id' },
+  billing_profile_id: {
+    kind: 'resolve',
+    build: ({ resolvedBillingProfileId }) => ({ billing_profile_id: resolvedBillingProfileId }),
+  },
+  status_id: { kind: 'column', column: 'status_id' },
+  assigned_to: { kind: 'column', column: 'assigned_to' },
+  assigned_team_id: { kind: 'column', column: 'assigned_team_id' },
+  priority_id: { kind: 'column', column: 'priority_id' },
+  category_id: { kind: 'column', column: 'category_id' },
+  subcategory_id: { kind: 'column', column: 'subcategory_id' },
+  board_id: { kind: 'column', column: 'board_id' },
+  source: { kind: 'column', column: 'source' },
+  ticket_origin: {
+    kind: 'resolve',
+    build: ({ cleanedInput }) => ({ ticket_origin: cleanedInput.ticket_origin || TICKET_ORIGINS.INTERNAL }),
+  },
+  entered_by: { kind: 'column', column: 'entered_by' },
+  email_metadata: {
+    kind: 'resolve',
+    build: ({ cleanedInput }) => ({
+      email_metadata: cleanedInput.email_metadata ? JSON.stringify(cleanedInput.email_metadata) : null,
+    }),
+  },
+  attributes: { kind: 'resolve', build: ({ attributes }) => ({ attributes }) },
+  url: { kind: 'column', column: 'url', nullish: true },
+  severity_id: { kind: 'column', column: 'severity_id', nullish: true },
+  urgency_id: { kind: 'column', column: 'urgency_id', nullish: true },
+  impact_id: { kind: 'column', column: 'impact_id', nullish: true },
+  updated_by: { kind: 'excluded', reason: 'create leaves updated_by unset; set on update' },
+  closed_by: { kind: 'excluded', reason: 'tickets are created open' },
+  itil_impact: { kind: 'column', column: 'itil_impact' },
+  itil_urgency: { kind: 'column', column: 'itil_urgency' },
+  closed_at: { kind: 'excluded', reason: 'tickets are created open' },
+  is_closed: { kind: 'excluded', reason: 'tickets are created open' },
+  due_date: { kind: 'column', column: 'due_date' },
+  duplicated_from_ticket_id: { kind: 'column', column: 'duplicated_from_ticket_id', nullish: true },
+  created_from_template_id: { kind: 'column', column: 'created_from_template_id', nullish: true },
+};
+
+type TicketCreateRowBase = {
+  ticket_id: string;
+  tenant: string;
+  ticket_number: string;
+  entered_at: string;
+  updated_at: string;
+};
+
+/**
+ * Assembles the insert row from the generated base columns plus every
+ * input-driven column named by `CREATE_TICKET_FIELD_HANDLING`. Columns use
+ * `|| null` by default so an empty string keeps the model's existing "unset"
+ * semantics; the `nullish` flag switches a column to `?? null`, preserving a
+ * supplied empty string so final validation (UUID, etc.) can reject it
+ * instead of silently turning it into NULL.
+ */
+export function buildTicketCreateRow(
+  base: TicketCreateRowBase,
+  ctx: TicketCreateRowContext,
+): Record<string, unknown> {
+  const row: Record<string, unknown> = { ...base };
+
+  for (const key of Object.keys(CREATE_TICKET_FIELD_HANDLING) as (keyof CreateTicketInput)[]) {
+    const handling = CREATE_TICKET_FIELD_HANDLING[key];
+    switch (handling.kind) {
+      case 'column':
+        row[handling.column] = handling.nullish
+          ? ctx.cleanedInput[key] ?? null
+          : ctx.cleanedInput[key] || null;
+        break;
+      case 'resolve':
+        Object.assign(row, handling.build(ctx));
+        break;
+      case 'excluded':
+        break;
+    }
+  }
+
+  return row;
 }
 
 // =============================================================================
@@ -621,8 +841,8 @@ export class TicketModel {
     input: CreateTicketInput,
     tenant: string,
     trx: Knex.Transaction,
-    validationOptions: ValidationOptions = {},
-    eventPublisher?: IEventPublisher,
+    validationOptions: ValidationOptions,
+    eventPublisher: TicketCreationEvents,
     analyticsTracker?: IAnalyticsTracker,
     userId?: string,
     maxRetries: number = 3
@@ -685,11 +905,16 @@ export class TicketModel {
     input: CreateTicketInput,
     tenant: string,
     trx: Knex.Transaction,
-    validationOptions: ValidationOptions = {},
-    eventPublisher?: IEventPublisher,
+    validationOptions: ValidationOptions,
+    eventPublisher: TicketCreationEvents,
     analyticsTracker?: IAnalyticsTracker,
     userId?: string
   ): Promise<CreateTicketOutput> {
+    if (!eventPublisher) {
+      throw new Error(
+        'TicketModel.createTicket requires an eventPublisher (or silentTicketCreation(reason)); refusing to create a ticket that would never publish TICKET_CREATED'
+      );
+    }
     // Validate required tenant
     if (!tenant) {
       throw new Error('Tenant is required');
@@ -747,47 +972,36 @@ export class TicketModel {
     );
 
     // Prepare attributes object - description goes into attributes.description
-    const attributes = { ...cleanedInput.attributes };
+    const baseAttributes = { ...cleanedInput.attributes };
     if (cleanedInput.description) {
-      attributes.description = cleanedInput.description;
+      baseAttributes.description = cleanedInput.description;
     }
+    // Board default watchers are seeded in the creating transaction so the
+    // watch list exists before TICKET_CREATED is published. Existing entries
+    // (e.g. inbound To/Cc watchers) win over the defaults.
+    const attributes: Record<string, unknown> =
+      (await applyBoardDefaultWatchers(trx, tenant, cleanedInput.board_id, baseAttributes)) ?? {};
 
-    // Prepare ticket data
-    const ticketData = {
-      ticket_id: ticketId,
-      tenant,
-      title: cleanedInput.title,
-      ticket_number: ticketNumber,
-      client_id: cleanedInput.client_id || null,
-      contact_name_id: cleanedInput.contact_id || null, // Map contact_id to contact_name_id
-      location_id: cleanedInput.location_id || null,
-      billing_profile_id: resolvedBillingProfileId,
-      status_id: cleanedInput.status_id || null,
-      assigned_to: cleanedInput.assigned_to || null,
-      assigned_team_id: cleanedInput.assigned_team_id || null,
-      priority_id: cleanedInput.priority_id || null,
-      category_id: cleanedInput.category_id || null,
-      subcategory_id: cleanedInput.subcategory_id || null,
-      board_id: cleanedInput.board_id || null,
-      source: cleanedInput.source || null,
-      ticket_origin: cleanedInput.ticket_origin || TICKET_ORIGINS.INTERNAL,
-      entered_by: cleanedInput.entered_by || null,
-      entered_at: now.toISOString(),
-      updated_at: now.toISOString(),
-      due_date: cleanedInput.due_date || null,
-      // ITIL-specific fields (for priority calculation)
-      itil_impact: cleanedInput.itil_impact || null,
-      itil_urgency: cleanedInput.itil_urgency || null,
-      // Store attributes and email_metadata as JSON
-      attributes: Object.keys(attributes).length > 0 ? JSON.stringify(attributes) : null,
-      email_metadata: cleanedInput.email_metadata ? JSON.stringify(cleanedInput.email_metadata) : null
-    };
+    // Assemble the insert row through the exhaustive field-handling map so
+    // every CreateTicketInput key is either persisted, transformed, or
+    // explicitly excluded. Generated identity/timestamp columns stay here.
+    const ticketData = buildTicketCreateRow(
+      {
+        ticket_id: ticketId,
+        tenant,
+        ticket_number: ticketNumber,
+        entered_at: now.toISOString(),
+        updated_at: now.toISOString(),
+      },
+      {
+        cleanedInput,
+        resolvedBillingProfileId,
+        attributes: Object.keys(attributes).length > 0 ? attributes : null,
+      },
+    );
 
-    // Create validation data with object attributes
-    const validationData = {
-      ...ticketData,
-      attributes: Object.keys(attributes).length > 0 ? attributes : null
-    };
+    // Validation data uses the object attributes form; the insert stringifies.
+    const validationData = { ...ticketData };
 
     // Custom validation: priority_id is required for all tickets (unified system)
     if (!validationData.priority_id) {
@@ -822,24 +1036,41 @@ export class TicketModel {
     }
 
     // Publish event if publisher provided
-    if (eventPublisher) {
+    if (!isSilentTicketCreation(eventPublisher)) {
+      const createdPublisher = isTicketCreationWithPayloadExtras(eventPublisher)
+        ? eventPublisher.publisher
+        : eventPublisher;
+      const payloadExtras = isTicketCreationWithPayloadExtras(eventPublisher) ? eventPublisher.payloadExtras : {};
+      const creationActor = isTicketCreationWithPayloadExtras(eventPublisher) ? eventPublisher.actor : undefined;
       try {
-        await eventPublisher.publishTicketCreated({
+        // Tickets from inbound email or the portal often have no contact or
+        // client. Carry real names plus the sender email so a workflow title
+        // like "New ticket from ..." never has to fall back to an id or "".
+        const requester = await loadTicketRequesterIdentity(trx, tenant, cleanedInput);
+        const requesterName = resolveTicketRequesterLabel(requester);
+        await createdPublisher.publishTicketCreated({
           tenantId: tenant,
           ticketId: ticketId,
           userId: userId,
+          // Only a contact/system actor is passed explicitly; otherwise the publisher derives it from userId.
+          ...(creationActor && !userId ? { actor: creationActor } : {}),
           metadata: {
             source: cleanedInput.source,
             board_id: cleanedInput.board_id,
             priority_id: cleanedInput.priority_id,
-            client_id: cleanedInput.client_id
+            client_id: cleanedInput.client_id,
+            ...(requester.clientName ? { clientName: requester.clientName } : {}),
+            ...(requester.contactName ? { contactName: requester.contactName } : {}),
+            ...(requester.senderEmail ? { senderEmail: requester.senderEmail } : {}),
+            ...(requesterName ? { requesterName } : {}),
+            ...payloadExtras
           }
         });
       } catch (error) {
         console.error('Failed to publish ticket created event:', error);
         // The transactional outbox adapter (durable inbound path) must
         // propagate so an outbox insert failure rolls back the core transaction.
-        if (eventPublisher && (eventPublisher as any).__inboundOutboxPublisher === true) {
+        if ((createdPublisher as any).__inboundOutboxPublisher === true) {
           throw error;
         }
         // Don't throw - event publishing failure shouldn't break ticket creation
@@ -881,6 +1112,10 @@ export class TicketModel {
       status_id: cleanedInput.status_id,
       priority_id: cleanedInput.priority_id,
       board_id: cleanedInput.board_id,
+      url: cleanedInput.url ?? null,
+      severity_id: cleanedInput.severity_id ?? null,
+      urgency_id: cleanedInput.urgency_id ?? null,
+      impact_id: cleanedInput.impact_id ?? null,
       entered_at: now.toISOString(),
       tenant
     };
@@ -894,7 +1129,7 @@ export class TicketModel {
     enteredBy: string,
     tenant: string,
     trx: Knex.Transaction,
-    eventPublisher?: IEventPublisher,
+    eventPublisher: TicketCreationEvents,
     analyticsTracker?: IAnalyticsTracker
   ): Promise<CreateTicketOutput> {
     // Validate input data
@@ -1059,7 +1294,8 @@ export class TicketModel {
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
-        updated_at: new Date()
+        ...ticketStatusClockPatch(trx, updateData.status_id),
+        ...ticketUpdateStamp(trx, input.updated_by ?? userId ?? null)
       })
       .returning('*');
 
@@ -1074,7 +1310,7 @@ export class TicketModel {
           tenantId: tenant,
           ticketId: ticketId,
           userId: userId,
-          changes: updateData,
+          changes: buildTicketModelChanges(currentTicket, updateData),
           metadata: {
             updated_fields: Object.keys(updateData)
           }
@@ -1183,7 +1419,8 @@ export class TicketModel {
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
-        updated_at: new Date()
+        ...ticketStatusClockPatch(trx, updateData.status_id),
+        ...ticketUpdateStamp(trx, updateData.updated_by ?? null)
       })
       .returning('*');
       
@@ -1222,7 +1459,11 @@ export class TicketModel {
     trx: Knex.Transaction,
     eventPublisher?: IEventPublisher,
     analyticsTracker?: IAnalyticsTracker,
-    userId?: string
+    userId?: string,
+    // Retention-only publisher: used when `eventPublisher` is absent so a
+    // silent caller (workflow comment without Cc/Bcc) keeps its co-managed
+    // outbox, admission and redaction chain without publishing for others.
+    silentRetentionPublisher?: IEventPublisher
   ): Promise<CreateCommentOutput> {
     if (!trx?.isTransaction) throw new Error('Comment creation requires the owning transaction');
 
@@ -1322,6 +1563,17 @@ export class TicketModel {
       commentIsInternal = Boolean(parent.thread_is_internal);
     }
 
+    // One-off Cc/Bcc ride along in metadata. Visibility is resolved above, so a
+    // reply inheriting an internal thread is rejected here too.
+    const emailRecipients = await prepareCommentEmailRecipients(trx, tenant, {
+      cc: validatedData.emailRecipients?.cc,
+      bcc: validatedData.emailRecipients?.bcc,
+      isInternal: commentIsInternal,
+    });
+    const commentMetadata = emailRecipients
+      ? { ...(validatedData.metadata ?? {}), email_recipients: emailRecipients }
+      : validatedData.metadata;
+
     const baseCommentData: any = {
       comment_id: commentId,
       tenant,
@@ -1329,10 +1581,11 @@ export class TicketModel {
       note: validatedData.content,
       is_internal: commentIsInternal,
       is_resolution: validatedData.is_resolution || false,
+      is_system_generated: validatedData.is_system_generated ?? false,
       author_type: dbAuthorType as any,
       user_id: validatedData.author_id || null,
       contact_id: validatedData.contact_id || null,
-      metadata: validatedData.metadata ? JSON.stringify(validatedData.metadata) : null,
+      metadata: commentMetadata ? JSON.stringify(commentMetadata) : null,
       thread_id: threadId,
       parent_comment_id: parentCommentId,
       created_at: now,
@@ -1355,10 +1608,16 @@ export class TicketModel {
       });
     }
 
-    const currentAudience = await assertCommentThreadAudience(trx, tenant, threadId, { ticketId: validatedData.ticket_id, isInternal: commentIsInternal, parentCommentId });
+    // A root comment creates its own thread in this transaction: the row is not
+    // yet visible to anyone else, so there is nothing to lock or re-read. Only
+    // replies join an existing (lockable, possibly co-managed) thread.
+    const currentAudience = parentCommentId
+      ? await assertCommentThreadAudience(trx, tenant, threadId, { ticketId: validatedData.ticket_id, isInternal: commentIsInternal, parentCommentId })
+      : resolveCommentAudience({ collaboration_audience: validatedData.collaboration_audience, is_internal: commentIsInternal });
     if (validatedData.collaboration_audience && currentAudience !== validatedData.collaboration_audience) throw new Error('Reply audience changed');
     await db.table('comments').insert(baseCommentData);
     await attachNativeRootToConversation({ trx, ticket: { tenant, ticketId: validatedData.ticket_id }, storeTenant: tenant }, threadId, validatedData.conversation_id);
+    await reconcileCommentAttachments(trx, tenant, commentId, userId || validatedData.author_id || '');
 
     if (parentCommentId) {
       await db.table('comment_threads')
@@ -1377,6 +1636,7 @@ export class TicketModel {
       const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
 
       if (responseStateEnabled) {
+        // LEVERAGE: pattern response-state-from-comment — inbound-email/model comment path sets awaiting_internal directly and emits no TICKET_RESPONSE_STATE_CHANGED; use applyCommentResponseState (shared/lib/tickets/responseState.ts) once the model can emit after-commit events.
         await db.table('tickets')
           .where({
             ticket_id: validatedData.ticket_id,
@@ -1388,29 +1648,31 @@ export class TicketModel {
     }
 
     // Publish comment event if publisher provided
-    if (eventPublisher) {
+    const commentPublisher = eventPublisher ?? silentRetentionPublisher;
+    if (commentPublisher) {
       try {
         // Resolve a display name so notification templates render the author/body.
-        let authorName: string | undefined;
-        if (validatedData.contact_id) {
-          const c = await db.table('contacts')
-            .select('full_name')
-            .where({ contact_name_id: validatedData.contact_id })
-            .first();
-          authorName = c?.full_name || undefined;
-        } else if (validatedData.author_id) {
-          const u = await db.table('users')
-            .select('first_name', 'last_name')
-            .where({ user_id: validatedData.author_id })
-            .first();
-          authorName = u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || undefined : undefined;
-        }
+        // Inbound-email comments frequently match no contact and no user; the
+        // shared resolver falls back to the stored sender identity, never to a
+        // placeholder, and never leaves the schema-required field empty.
+        const authorName = await resolveCommentAuthorDisplay(trx, tenant, {
+          contact_id: validatedData.contact_id,
+          user_id: validatedData.author_id,
+          metadata: validatedData.metadata,
+        });
+        // Never substitute a non-user id: a user-less comment is published as a CONTACT
+        // (matched sender) or SYSTEM actor with no payload.userId.
+        const actor = resolveTicketEventActor({
+          userId: userId || validatedData.author_id,
+          contactId: validatedData.contact_id,
+        });
 
-        await eventPublisher.publishCommentCreated({
+        const event = {
           tenantId: tenant,
           ticketId: validatedData.ticket_id,
           commentId: commentId,
-          userId: userId,
+          userId: userId || validatedData.author_id || undefined,
+          actor,
           metadata: {
             author_type: dbAuthorType,
             is_internal: validatedData.is_internal,
@@ -1419,10 +1681,31 @@ export class TicketModel {
             content: validatedData.content,
             author: authorName
           }
-        });
+        };
+        // Both markers mean the same thing: this publisher owns the comment
+        // event inside the caller's transaction and must be the one to raise
+        // it. `__inboundOutboxPublisher` writes durable outbox rows for the
+        // inbound-email pipeline; `transactionalCommentEvents` runs the
+        // workflow publisher, whose publishCommentCreated carries the
+        // co-managed retention chain -- licence state, executing run and
+        // version authority, field-redaction policy and actor identity.
+        // Testing only the first marker sent every workflow-authored comment
+        // down persistCommentPublication instead, which stamps the row and
+        // returns: no event, no outbox row, and none of those checks. The
+        // catch below already treats the two markers as equivalent.
+        if ((commentPublisher as any).__inboundOutboxPublisher === true
+          || (commentPublisher as any).transactionalCommentEvents === true) {
+          await commentPublisher.publishCommentCreated(event);
+        } else {
+          await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: buildTicketCommentAddedPayload({
+            tenantId: tenant, occurredAt: new Date().toISOString(), ticketId: validatedData.ticket_id, commentId, actor,
+            comment: { content: validatedData.content, author: authorName,
+              isInternal: commentIsInternal, authorType: dbAuthorType },
+          }) });
+        }
       } catch (error) {
         console.error('Failed to publish comment created event:', error);
-        if (eventPublisher.transactionalCommentEvents || (eventPublisher as any).__inboundOutboxPublisher === true) {
+        if (commentPublisher.transactionalCommentEvents || (commentPublisher as any).__inboundOutboxPublisher === true) {
           throw error;
         }
       }

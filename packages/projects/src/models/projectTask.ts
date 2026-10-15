@@ -9,6 +9,7 @@ import type {
   ITicketLinkedTask,
 } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { billableTicketProjectsQuery } from '@alga-psa/shared/billingClients/ticketProjectAttribution';
 import { withCoManagedOperationalTransaction } from '@alga-psa/licensing';
 import ProjectModel from './project';
 
@@ -87,6 +88,7 @@ const ProjectTaskModel = {
           'description_rich_text',
           'assigned_to',
           'estimated_hours',
+          'start_date',
           'due_date',
           'wbs_code',
           'project_status_mapping_id',
@@ -112,9 +114,15 @@ const ProjectTaskModel = {
               case 'priority_id':
                 finalTaskData[typedKey] = value === '' ? null : value as string | null;
                 break;
-              case 'task_name':
               case 'description':
               case 'description_rich_text':
+                // The editor sends null for an emptied description; writing it is
+                // how clearing a description sticks.
+                if (typeof value === 'string' || value === null) {
+                  finalTaskData[typedKey] = value as string | null;
+                }
+                break;
+              case 'task_name':
               case 'wbs_code':
               case 'project_status_mapping_id':
               case 'order_key':
@@ -128,6 +136,7 @@ const ProjectTaskModel = {
                   finalTaskData[typedKey] = value;
                 }
                 break;
+              case 'start_date':
               case 'due_date':
                 // Convert string to Date if needed
                 if (typeof value === 'string') {
@@ -521,7 +530,7 @@ const ProjectTaskModel = {
   },
 
   // Task Ticket Links Methods
-  addTaskTicketLink: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, projectId: string, taskId: string | null, ticketId: string, phaseId: string): Promise<IProjectTicketLink> => {
+  addTaskTicketLink: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, projectId: string, taskId: string | null, ticketId: string, phaseId: string, billUnderProject: boolean = true): Promise<IProjectTicketLink> => {
     return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
       try {
         if (!tenant) {
@@ -548,6 +557,7 @@ const ProjectTaskModel = {
             phase_id: phaseId,
             task_id: taskId,
             ticket_id: ticketId,
+            bill_under_project: billUnderProject,
             tenant,
             created_at: trx.fn.now()
           })
@@ -558,6 +568,30 @@ const ProjectTaskModel = {
         throw error;
       }
     });
+  },
+
+  /**
+   * Flips whether the linked ticket's time bills as project time. Invoiced
+   * time is untouched either way: the billing engine only ever reads
+   * `invoiced = false` entries.
+   */
+  setTicketLinkBilling: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, linkId: string, billUnderProject: boolean): Promise<void> => {
+    try {
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
+
+      const updated = await tenantScopedTable(knexOrTrx, 'project_ticket_links', tenant)
+        .where('link_id', linkId)
+        .update({ bill_under_project: billUnderProject });
+
+      if (updated === 0) {
+        throw new Error('Ticket link not found');
+      }
+    } catch (error) {
+      console.error('Error updating ticket link billing:', error);
+      throw error;
+    }
   },
 
   getTaskTicketLinks: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, taskId: string): Promise<IProjectTicketLinkWithDetails[]> => {
@@ -762,6 +796,7 @@ const ProjectTaskModel = {
         .whereNotNull('project_ticket_links.task_id')
         .select(
           'project_ticket_links.link_id',
+          'project_ticket_links.bill_under_project',
           'project_tasks.task_id',
           'project_tasks.task_name',
           'projects.project_id',
@@ -771,7 +806,20 @@ const ProjectTaskModel = {
           knexOrTrx.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
           knexOrTrx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
         );
-      return links;
+      if (links.length === 0) {
+        return links;
+      }
+      // The flag alone is not where time bills: the resolver drops a ticket
+      // flagged into two projects, and a link into another client's project.
+      const billable = await knexOrTrx.raw(billableTicketProjectsQuery(), [tenant, ticketId]);
+      const billableProjectIds: string[] = (billable.rows ?? []).map(
+        (row: { project_id: string }) => row.project_id,
+      );
+      const billingProjectId = billableProjectIds.length === 1 ? billableProjectIds[0] : null;
+      return links.map((link: ITicketLinkedTask) => ({
+        ...link,
+        bills_as_project_time: link.bill_under_project && link.project_id === billingProjectId,
+      }));
     } catch (error) {
       console.error('Error getting linked tasks for ticket:', error);
       throw error;

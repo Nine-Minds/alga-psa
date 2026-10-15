@@ -57,56 +57,55 @@
     "confirmation": {
       "title": "Licentie-update bevestigen",
       "increaseDescription": "Controleer de details van uw licentie-uitbreiding voordat u bevestigt.",
-      "decreaseDescription": "Controleer de details van uw licentievermindering. De wijzigingen gaan in aan het einde van uw factureringsperiode.",
       "currentMonthlyCost": "Huidige maandelijkse kosten",
       "currentLicenseCount": "Huidig aantal licenties",
       "newMonthlyCost": "Nieuwe maandelijkse kosten",
       "newLicenseCount": "Nieuw aantal licenties",
       "monthlyIncrease": "Maandelijkse toename",
-      "monthlySavings": "Maandelijkse besparing",
       "paymentMethod": "Betaalmethode",
       "changePaymentMethod": "Wijzigen",
       "immediateChargeTitle": "Directe afschrijving",
       "immediateChargeDescription": "Er wordt nu {{amountDue}} in rekening gebracht voor het naar rato berekende bedrag.",
       "prorationDescription": "Naar rato: {{amount}} voor de rest van deze factureringsperiode",
-      "scheduledTitle": "Ingepland voor einde van de periode",
-      "scheduledDescription": "De licentievermindering gaat op {{date}} in aan het einde van uw huidige factureringsperiode.",
-      "scheduledKeepAccess": "U behoudt tot die tijd toegang tot alle {{count}} licenties.",
       "cancel": "Annuleren",
       "confirmPayNow": "Bevestigen en nu betalen",
-      "confirmSchedule": "Planning bevestigen"
+      "confirm": "Bevestigen",
+      "trialTitle": "Geen kosten tijdens uw proefperiode",
+      "trialDescription": "Uw proefperiode loopt ongewijzigd door. De facturering begint op {{date}} met {{amount}}."
     },
     "usage": {
       "title": "Huidig licentiegebruik",
       "licensesUsed": "gebruikte licenties"
     },
     "fields": {
-      "totalLicenseCount": "Totaal aantal licenties"
+      "licensesToAdd": "Toe te voegen licenties"
     },
     "help": {
-      "totalLicenseCount": "Voer het nieuwe totale aantal licenties in (minimum: {{minimum}}). Huidig: {{current}}",
-      "reduceViaAccount": "Ga naar accountbeheer om licenties te verminderen",
-      "quantityWarning": "Waarschuwing: u heeft {{used}} gebruikers, maar stelt het totaal in op {{quantity}}"
+      "licensesToAdd": "Voer in hoeveel licenties u wilt toevoegen. Uw nieuwe totaal wordt hieronder bijgewerkt."
     },
     "pricing": {
       "pricePerLicense": "Prijs per licentie:",
-      "quantity": "Aantal:",
-      "total": "Totaal:"
+      "addedCost": "Extra kosten:",
+      "newTotal": "Nieuw totaal:"
     },
     "actions": {
       "creatingCheckout": "Checkout wordt aangemaakt...",
-      "noChange": "Geen wijziging",
-      "updateToTotal": "Bijwerken naar totaal {{quantity}} ({{difference}} {{licenseLabel}})"
+      "addLicenses": "{{count}} {{licenseLabel}} toevoegen"
     },
     "info": {
-      "totalQuantity": "Hiermee stelt u het totale abonnementsaantal in (geen toevoeging aan huidige licenties)",
       "increasingImmediate": "Licenties verhogen: directe toegang met een naar rato berekende kostenpost",
-      "billedMonthly": "Licenties worden maandelijks gefactureerd en kunnen op elk moment worden opgezegd"
+      "billedMonthly": "Licenties worden maandelijks gefactureerd en kunnen op elk moment worden opgezegd",
+      "addsToTotal": "Licenties worden toegevoegd aan uw huidige totaal. Ga naar Accountbeheer om licenties te verminderen."
     },
     "solo": {
       "title": "Solo omvat één gebruiker",
       "description": "Het Solo-abonnement is ontworpen voor één gebruiker en ondersteunt het toevoegen van licenties niet. Upgrade naar Pro om meer gebruikers aan uw team toe te voegen.",
       "upgradeCta": "Upgraden naar Pro"
+    },
+    "summary": {
+      "currentLicenses": "Huidige licenties",
+      "licensesToAdd": "Toe te voegen licenties",
+      "newTotal": "Nieuw totaal"
     }
   },
   "removalModal": {
@@ -352,7 +351,8 @@
       "activateClaimCode": "Kan de activeringscode niet activeren.",
       "startTrial": "Kan de proefperiode niet starten.",
       "refreshLicense": "Kan de licentie niet vernieuwen."
-    }
+    },
+    "returnToClient": "Terug naar klant"
   },
   "errors": {
     "notSignedIn": "Niet geautoriseerd. Meld u aan om licenties te beheren.",
@@ -361,6 +361,7 @@
   "coManaged": {
     "title": "Gezamenlijk beheerde IT",
     "description": "Beheer de technicusplaatsen die beschikbaar zijn voor de werkruimten van uw klanten.",
+    "sharedWork": "Gedeeld werk",
     "capacity": "Gekochte plaatsen",
     "allocated": "Toegewezen aan klanten",
     "available": "Beschikbare plaatsen",
@@ -568,7 +569,7 @@
     },
     "queue": {
       "title": "Wachtrijen voor gezamenlijk beheerde tickets",
-      "workingDescription": "MSP-tickets en klanttickets die uw team momenteel behandelt.",
+      "workingDescription": "Gedeelde tickets waarvoor uw team verantwoordelijk of toegewezen is.",
       "oversightDescription": "Klanttickets binnen uw goedgekeurde toegang, inclusief werk van de IT-afdeling van de klant.",
       "view": "Weergave",
       "working": "Werkwachtrij",
@@ -587,6 +588,8 @@
       "loadError": "Tickets kunnen niet worden geladen. Vernieuw om uw toegang te controleren.",
       "counts": "{{total}} tickets · {{open}} open · {{closed}} gesloten",
       "empty": "Geen toegankelijke tickets komen overeen met deze filters.",
+      "emptyUnfiltered": "Er zijn nog geen klanttickets om te tonen.",
+      "retry": "Opnieuw proberen",
       "page": "Pagina {{page}}",
       "sortFields": {
         "updated": "Laatst bijgewerkt",
@@ -598,6 +601,7 @@
         "ticket": "Ticket",
         "workspace": "Werkruimte",
         "state": "Status",
+        "status": "Status",
         "priority": "Prioriteit",
         "responsibility": "Verantwoordelijke organisatie",
         "updated": "Bijgewerkt"
@@ -615,8 +619,14 @@
         "returned": "Teruggegeven aan de IT-afdeling van de klant",
         "forbidden": "Toegang geweigerd",
         "changed": "Het ticket is gewijzigd. Vernieuw voordat u het opnieuw probeert.",
-        "invalid": "Ongeldige selectie"
-      }
+        "invalid": "Ongeldige selectie",
+        "selected": "{{count}} geselecteerde ticket(s) worden geretourneerd.",
+        "resume": "Een terugzetting naar de klant-IT is onderbroken. Hervat om het resultaat te bevestigen.",
+        "noReloadRecovery": "Herstel na herladen is niet beschikbaar in deze browser; u kunt het in deze sessie nog steeds opnieuw proberen."
+      },
+      "scopeUnavailable": "Ticketlijst wordt geopend…",
+      "searchPlaceholder": "Zoeken op nummer of titel",
+      "mspAlsoAssigned": "MSP ook toegewezen"
     },
     "conversation": {
       "title": "Gesprek",
@@ -749,7 +759,8 @@
         "unknownOutcome": "We konden niet bevestigen of de wijziging is opgeslagen. Probeer hetzelfde verzoek opnieuw of verwerp uw wijzigingen en vernieuw."
       },
       "loadError": "Dit project of deze taak kon niet worden geladen.",
-      "discard": "Wijzigingen verwerpen en opnieuw laden"
+      "discard": "Wijzigingen verwerpen en opnieuw laden",
+      "title": "Projecten"
     },
     "sla": {
       "title": "SLA-prioriteiten voor gezamenlijk beheer",
@@ -916,6 +927,105 @@
       "loadError": "Met uw huidige rechten kunt u deze werkruimte niet exporteren.",
       "lengthError": "Gebruik een wachtzin van 16 tot 1024 UTF-8-bytes.",
       "matchError": "De herstelwachtzinnen moeten overeenkomen."
+    },
+    "accountTitle": "Gezamenlijk beheerde IT",
+    "checkoutUnavailable": "De ingebedde afrekening is niet beschikbaar. Probeer het opnieuw nadat de betalingsconfiguratie is hersteld.",
+    "pendingCapacity": "Een aankoop van {{quantity}} plaatsen is in behandeling.",
+    "previewError": "Deze wijziging kon niet worden geprijsd. Vernieuw en probeer het opnieuw.",
+    "purchaseNeedsAdmin": "Een accountbeheerder moet gezamenlijk beheerde capaciteit toevoegen.",
+    "purchaseProviderUnconfigured": "De betalingsprovider is niet geconfigureerd.",
+    "purchaseUnavailable": "Gehoste gezamenlijk beheerde aankoop is niet beschikbaar in deze implementatie.",
+    "client": {
+      "awaitingAcceptance": "De klantbeheerder moet accepteren voordat toegang wordt verleend.",
+      "capacity": "Capaciteit",
+      "chooseRelationship": "Relatie kiezen",
+      "endedHint": "Deze relatie is beëindigd. Bewaarde geschiedenis en archieven blijven beschikbaar.",
+      "forClient": "Gezamenlijk beheerde IT voor {{name}}",
+      "history": "Relatiegeschiedenis",
+      "invitation": "Beheerdersuitnodiging",
+      "notEnabled": "Gezamenlijk beheerde IT niet ingeschakeld",
+      "progress": "Voortgang van instelling",
+      "provisioningHint": "Gereserveerde plaatsen blijven gereserveerd tot de instelling is voltooid of de opschoning is bevestigd.",
+      "relationship": "Relatie",
+      "seatAllocation": "{{allocated}} toegewezen technicusplaatsen",
+      "seatUsage": "{{used}} van {{allocated}} technicusplaatsen",
+      "selectionRequired": "Meerdere gezamenlijk beheerde relaties",
+      "setupHint": "Schakel gezamenlijk beheerde IT in vanaf deze klant om klanttechnici te reserveren en een beheerder uit te nodigen.",
+      "tab": "Gezamenlijk beheerde IT",
+      "viewHistory": "Geschiedenis bekijken",
+      "work": "Werk",
+      "workHint": "Klantprojecten en gedeelde taakwachtrijen blijven in de MSP-shell met hun gekwalificeerde identiteiten.",
+      "workspace": "Klantwerkruimte",
+      "sharedTickets": "Gedeelde tickets",
+      "openCustomerTickets": "Openen in Klanttickets"
+    },
+    "overview": {
+      "clients": "Gezamenlijk beheerde klanten",
+      "allClients": "Alle klanten",
+      "empty": "Geen gezamenlijk beheerde klanten komen overeen met deze zoekopdracht.",
+      "loadError": "Gezamenlijk beheerde klanten konden niet worden geladen.",
+      "search": "Klanten zoeken",
+      "unnamed": "Klant",
+      "client": "Klant",
+      "workspace": "Werkruimte",
+      "status": "Status",
+      "seats": "Plaatsen",
+      "actions": "Acties"
+    },
+    "shortfall": {
+      "baselineChanged": "De pool is gewijzigd sinds deze prijsopgave. Controleer het tekort opnieuw.",
+      "confirming": "De gekochte capaciteit wordt geverifieerd. Vernieuw en sla de toewijzing opnieuw op.",
+      "ineligible": "De sponsorwerkruimte komt niet in aanmerking voor meer gezamenlijk beheerde capaciteit.",
+      "needsAdmin": "Deze toewijzing heeft meer poolcapaciteit nodig. Een accountbeheerder moet deze toevoegen.",
+      "pending": "Er wordt al een gezamenlijk beheerde aankoop voorbereid of afgerond. Hervat deze voordat u de capaciteit wijzigt.",
+      "pool": "Pool: {{capacity}} gekocht, {{allocated}} toegewezen, {{available}} beschikbaar",
+      "provider": "De betalingsprovider is niet geconfigureerd. Een beheerder moet de factureringsconfiguratie voltooien.",
+      "raceRetry": "De plaatsen zitten in de pool. De toewijzing kon nog niet worden opgeslagen; probeer het opnieuw.",
+      "review": "Voeg {{additional}} plaatsen toe aan de sponsorpool (nieuw totaal {{total}}).",
+      "selfHost": "Deze toewijzing overschrijdt de geverifieerde self-host-capaciteit. Werk de ondertekende licentie bij en vernieuw.",
+      "unavailable": "Gehoste gezamenlijk beheerde aankoop is niet beschikbaar in deze implementatie."
+    },
+    "unavailable": "Deze link voor gezamenlijk beheerde IT is niet beschikbaar.",
+    "directory": {
+      "prompt": "Selecteer de co-managed werkruimte die u wilt beheren.",
+      "empty": "Er zijn geen co-managed werkruimtes beschikbaar om te beheren."
+    },
+    "customerTickets": {
+      "title": "Klanttickets",
+      "view": "Weergave",
+      "columns": "Kolommen",
+      "density": "Dichtheid",
+      "filters": "Filters",
+      "client": "Klant",
+      "allClients": "Alle klanten",
+      "share": "Delen",
+      "clearSignal": "Wissen",
+      "unavailable": "Deze weergave is nog niet beschikbaar voor uw account.",
+      "allTickets": "Alle tickets",
+      "signals": {
+        "escalatedUnassigned": "Geëscaleerd, niet toegewezen",
+        "awaitingReply": "Wacht op uw antwoord"
+      }
+    },
+    "callout": {
+      "title": "Klanttickets hebben u nodig",
+      "escalatedUnassigned_one": "{{count}} geëscaleerd ticket, niet toegewezen",
+      "escalatedUnassigned_other": "{{count}} geëscaleerde tickets, niet toegewezen",
+      "awaitingReply_one": "{{count}} ticket wacht op uw antwoord",
+      "awaitingReply_other": "{{count}} tickets wachten op uw antwoord",
+      "dismiss": "Sluiten"
     }
-  }
+  },
+  "actions": {
+    "cancel": "Annuleren"
+  },
+  "common": {
+    "actions": {
+      "cancel": "Annuleren"
+    }
+  },
+  "dashboard": {
+    "title": "Ticketdashboard"
+  },
+  "resetFilters": "Resetten"
 }

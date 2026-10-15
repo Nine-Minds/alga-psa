@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '@alga-psa/workflow-streams/workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   ticketCustomerRepliedEventPayloadSchema,
   ticketInternalNoteAddedEventPayloadSchema,
   ticketMessageAddedEventPayloadSchema,
-} from '@alga-psa/shared/workflow/runtime/schemas/ticketEventSchemas';
+} from '@alga-psa/event-schemas';
 import { buildTicketCommunicationWorkflowEvents } from '../workflowTicketCommunicationEvents';
 
 const TENANT_ID = '00000000-0000-0000-0000-000000000000';

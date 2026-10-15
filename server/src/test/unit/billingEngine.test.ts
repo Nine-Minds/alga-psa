@@ -54,6 +54,8 @@ vi.mock("@alga-psa/db", () => ({
   ),
   tenantDb: (conn: any, _tenant: string) => ({
     table: (t: string) => conn(t),
+    // These tests supply already-priced rows; SQL price selection has its own DB coverage.
+    tenantJoinFirstMatching: (q: any) => q,
     tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
       o?.type === "left"
         ? (q.leftJoin?.(t, () => {}) ?? q)
@@ -134,6 +136,7 @@ describe("BillingEngine", () => {
       whereBetween: vi.fn().mockReturnThis(),
       join: vi.fn().mockReturnThis(),
       leftJoin: vi.fn().mockReturnThis(),
+      joinRaw: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
       first: vi.fn().mockResolvedValue(null),
       raw: vi.fn().mockReturnThis(),
@@ -301,6 +304,7 @@ describe("BillingEngine", () => {
 
     builder.join = vi.fn().mockImplementation(() => builder);
     builder.leftJoin = vi.fn().mockImplementation(() => builder);
+    builder.joinRaw = vi.fn().mockImplementation(() => builder);
     builder.where = vi.fn().mockImplementation(handleWhere);
     builder.andWhere = vi.fn().mockImplementation(handleWhere);
     builder.orWhere = vi.fn().mockImplementation(handleWhere);
@@ -1346,17 +1350,20 @@ describe("BillingEngine", () => {
       expect(clientContractsBuilder.where).toHaveBeenCalledWith(
         expect.objectContaining({
           "cc.client_id": preservedClientId,
-          "cc.is_active": true,
           "cc.tenant": mockTenant,
         }),
       );
       expect(clientContractsBuilder.where).toHaveBeenCalledWith(
         expect.objectContaining({
           "cc.client_id": clonedClientId,
-          "cc.is_active": true,
           "cc.tenant": mockTenant,
         }),
       );
+      // Liveness (assignment, contract header and line all active) is applied by the
+      // shared scope helper rather than inline in the client/tenant predicate.
+      expect(clientContractsBuilder.where).toHaveBeenCalledWith("cc.is_active", true);
+      expect(clientContractsBuilder.where).toHaveBeenCalledWith("c.is_active", true);
+      expect(clientContractsBuilder.where).toHaveBeenCalledWith("cl.is_active", true);
     });
   });
 
@@ -2603,3 +2610,15 @@ describe("BillingEngine", () => {
     });
   });
 });
+
+// These fixtures characterize orchestration with no pending contract events.
+// Database settlement and discount lifecycle are covered by the invoice integration suite.
+vi.mock('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments', async importOriginal => ({
+  ...(await importOriginal<typeof import('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments')>()),
+  resolveContractChangeChargesForWindow: vi.fn(async () => []),
+  releaseOrphanedContractAdjustments: vi.fn(async () => undefined),
+  reconcileContractChangeAdjustmentsForInvoice: vi.fn(async () => ({ changed: false, settledInvoiceId: null, amountCents: 0 })),
+}));
+vi.mock('@alga-psa/billing/lib/billing/reconcileAutomaticInvoiceDiscounts', () => ({
+  reconcileAutomaticInvoiceAdjustments: vi.fn(async () => 0),
+}));

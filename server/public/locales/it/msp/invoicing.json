@@ -317,14 +317,16 @@
       "client": "Cliente",
       "invoiceNumber": "Numero della fattura",
       "invoiceNumberOptional": "Numero fattura (facoltativo)",
-      "sourceSalesOrder": "Ordine di vendita di origine (opzionale)"
+      "sourceSalesOrder": "Ordine di vendita di origine (opzionale)",
+      "billingProfile": "Profilo di fatturazione"
     },
     "placeholders": {
       "selectClient": "Seleziona un cliente",
       "invoiceNumberOptional": "Lascia vuoto per generare automaticamente",
       "sourceSalesOrder": "Seleziona un ordine di vendita evaso o fatturabile manualmente",
       "searchSalesOrders": "Cerca ordini di vendita…",
-      "noInvoiceableSalesOrders": "Nessun ordine di vendita fatturabile trovato."
+      "noInvoiceableSalesOrders": "Nessun ordine di vendita fatturabile trovato.",
+      "selectBillingProfile": "Seleziona un profilo di fatturazione"
     },
     "automatedItems": {
       "title": "Elementi pubblicitari automatizzati",
@@ -346,7 +348,8 @@
       "clearSalesOrderSource": "Cancella ordine di vendita di origine"
     },
     "labels": {
-      "total": "Totale"
+      "total": "Totale",
+      "defaultBillingProfile": "{{name}} (predefinito)"
     },
     "prepayment": {
       "label": "Questa è una fattura di pagamento anticipato (crea credito)",
@@ -381,7 +384,17 @@
       "salesOrderNotInvoiceable": "Questo ordine di vendita non è più disponibile per la fatturazione.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Questa finestra di fatturazione contiene addebiti fatturabili, ma {{services}} non ha utilizzo registrato per il periodo di servizio dal {{periodStart}} al {{periodEnd}}. Registra prima l'utilizzo oppure conferma esplicitamente la generazione senza di esso: i servizi non registrati resteranno fatturabili in seguito.",
       "USAGE_PERIOD_TOTAL_STALE": "L'anteprima non è aggiornata: {{details}}. Riesegui l'anteprima per vedere i valori attuali, poi genera di nuovo.",
-      "USAGE_CALCULATION_ERROR": "L'utilizzo di {{services}} nel periodo di servizio dal {{periodStart}} al {{periodEnd}} è registrato ma non è stato possibile prezzarlo. Correggi i prezzi del servizio (prezzo di listino nella valuta del contratto, una tariffa personalizzata o scaglioni tariffari) e riprova. Non registrare utilizzo sostitutivo."
+      "USAGE_CALCULATION_ERROR": "L'utilizzo di {{services}} nel periodo di servizio dal {{periodStart}} al {{periodEnd}} è registrato ma non è stato possibile prezzarlo. Correggi i prezzi del servizio (prezzo di listino nella valuta del contratto, una tariffa personalizzata o scaglioni tariffari) e riprova. Non registrare utilizzo sostitutivo.",
+      "RECURRING_PERIODS_NOT_MATERIALIZED": "I periodi di servizio per questa finestra di fatturazione non sono ancora stati generati. Usa Correggi tutto nella pagina delle fatture automatiche oppure rigenerali in Fatturazione > Periodi di servizio, poi ripeti l'anteprima.",
+      "NO_ACTIVE_CONTRACT_LINES": "Nessuna riga del contratto è attiva in questo periodo di fatturazione. Controlla le date di inizio e fine del contratto e che il contratto sia attivo.",
+      "NOTHING_TO_BILL": "Per questa finestra non c'è nulla pronto da fatturare. Le righe fatturate a posticipo possono essere fatturate solo dopo la fine del periodo di servizio: controlla la tempistica di fatturazione e le date.",
+      "FIXED_LINE_RATE_UNRESOLVED": "La linea a tariffa fissa {{lines}} non ha una tariffa. Imposta una tariffa sulla linea di contratto (o un prezzo per i suoi servizi nella valuta del contratto) e riprova.",
+      "FIXED_LINE_NO_SERVICES": "La riga a tariffa fissa {{lines}} ha una tariffa ma nessun servizio su cui fatturarla. Aggiungi un servizio alla riga del contratto e riprova.",
+      "SOURCE_ALREADY_BILLED": "Alcuni elementi selezionati non sono più fatturabili (già fatturati, non approvati o rimossi). Aggiorna e riprova.",
+      "SOURCE_NOT_ELIGIBLE": "Un elemento selezionato non appartiene a questo ticket o non è più idoneo. Aggiorna e riprova.",
+      "SOURCE_CURRENCY_MISMATCH": "Alcuni prodotti selezionati sono prezzati in una valuta diversa da quella di fatturazione di questo cliente e non possono essere aggiunti. Fatturali separatamente nella loro valuta.",
+      "RECURRING_PRICING_STALE": "L'anteprima non è aggiornata: {{details}}. Esegui di nuovo l'anteprima per vedere i valori attuali, quindi genera di nuovo.",
+      "BILLING_PROFILE_NOT_FOUND": "Il profilo di fatturazione selezionato non è disponibile per questo cliente. Aggiorna la pagina e riprova."
     },
     "warnings": {
       "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita prima di generare la fattura."
@@ -392,6 +405,30 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} articoli pronti per la fatturazione da {{lineCount}} righe. Questa bozza verrà collegata all'ordine di vendita."
+    },
+    "hints": {
+      "billingProfile": "La fattura e le sue righe vengono fatturate a questo profilo."
+    }
+  },
+  "quickInvoice": {
+    "currencyExcluded": "{{count}} prodotto/i esclusi perché la loro valuta è diversa da {{currency}}.",
+    "action": "Fattura rapida",
+    "title": "Fattura rapida per questo ticket",
+    "loading": "Caricamento elementi fatturabili…",
+    "empty": "Non ci sono elementi non fatturati su questo ticket.",
+    "billableTime": "Tempo fatturabile",
+    "products": "Prodotti",
+    "selectedTotal": "Totale selezionato",
+    "create": "Crea fattura",
+    "creating": "Creazione…",
+    "done": "Fatto",
+    "viewInvoice": "Visualizza fattura",
+    "created": "Fattura creata",
+    "createdDetail": "La fattura è stata creata e collegata a questo ticket.",
+    "existingInvoices": "Fatture per questo ticket",
+    "unknownService": "Elemento fatturabile",
+    "errors": {
+      "ticketNotFound": "Questo ticket non esiste più."
     }
   },
   "draftsTab": {
@@ -465,7 +502,8 @@
       "finalizedDate": "Data definitiva",
       "status": "Stato",
       "actions": "Azioni",
-      "quickbooks": "QuickBooks"
+      "quickbooks": "QuickBooks",
+      "autopay": "Pagamento automatico"
     },
     "actions": {
       "downloadPdfs": "Scarica PDF",
@@ -497,6 +535,9 @@
         "selectedCount": "{{count}} selezionati",
         "clear": "Annulla selezione"
       }
+    },
+    "autopay": {
+      "scheduled": "Pagamento automatico {{status}}"
     }
   },
   "recurringServicePeriods": {
@@ -701,7 +742,9 @@
     "title": "Anteprima della fattura",
     "templatePlaceholder": "Seleziona il modello di fattura...",
     "labels": {
-      "standard": "(Standard)"
+      "standard": "(Standard)",
+      "billingProfile": "Profilo di fatturazione: {{name}}",
+      "billingProfileDefault": "il profilo predefinito del cliente"
     },
     "actions": {
       "finalizeInvoice": "Finalizza fattura",
@@ -716,7 +759,8 @@
       "driftReexport": "Riesporta in QuickBooks",
       "syncNow": "Sincronizza con QuickBooks",
       "viewInQbo": "Visualizza in QuickBooks",
-      "voidInvoice": "Annulla fattura"
+      "voidInvoice": "Annulla fattura",
+      "viewInXero": "Visualizza in Xero"
     },
     "loading": "Caricamento anteprima...",
     "empty": "Seleziona una fattura per visualizzarne l'anteprima",
@@ -752,7 +796,8 @@
       "back": "Torna ai layout di fattura",
       "cancel": "Annulla",
       "save": "Salva modello",
-      "saving": "Salvataggio..."
+      "saving": "Salvataggio...",
+      "close": "Chiudi"
     },
     "titles": {
       "create": "Crea un nuovo layout di fattura",
@@ -762,7 +807,9 @@
       "templateName": "Nome del modello",
       "templateAst": "Modello AST (JSON)",
       "created": "Creato",
-      "lastUpdated": "Ultimo aggiornamento"
+      "lastUpdated": "Ultimo aggiornamento",
+      "savedAt": "Salvato {{time}}",
+      "notSaved": "Non ancora salvato"
     },
     "tabs": {
       "visual": "Visivo",
@@ -778,6 +825,9 @@
       "templateNameRequired": "Il nome del modello è obbligatorio",
       "astExportFailed": "Impossibile esportare il modello AST dall'area di lavoro visiva: {{message}}",
       "unknownAstExport": "Errore di esportazione AST sconosciuto"
+    },
+    "toast": {
+      "saved": "Layout \"{{name}}\" salvato."
     }
   },
   "templates": {
@@ -955,12 +1005,17 @@
       "billingEmail": "E-mail di fatturazione",
       "clientEmail": "Email cliente",
       "noEmailFound": "Nessuna e-mail trovata",
-      "notConfigured": "Nessun indirizzo email è configurato per questo client."
+      "notConfigured": "Nessun indirizzo email è configurato per questo client.",
+      "billingProfile": "Profilo di fatturazione",
+      "billingProfileNamed": "Profilo di fatturazione: {{name}}",
+      "billingProfileDefault": "il profilo predefinito del cliente"
     },
     "fields": {
       "due": "Scadenza",
       "additionalMessage": "Messaggio aggiuntivo",
-      "additionalMessagePlaceholder": "Aggiungi una nota personale da includere nell'e-mail..."
+      "additionalMessagePlaceholder": "Aggiungi una nota personale da includere nell'e-mail...",
+      "from": "Da",
+      "useDefault": "Usa mittente predefinito"
     },
     "preview": "Le e-mail verranno inviate da {{fromEmail}} per conto di {{companyName}}. Ogni fattura verrà allegata in formato PDF.",
     "values": {
@@ -1004,7 +1059,8 @@
     },
     "messages": {
       "success": "Fattura generata con successo!",
-      "loadFailed": "Impossibile caricare i dati"
+      "loadFailed": "Impossibile caricare i dati",
+      "salesOrderSourcesUnavailable": "Impossibile caricare gli ordini di vendita di origine. È comunque possibile inserire manualmente le voci della fattura."
     }
   },
   "prepayment": {
@@ -1070,7 +1126,9 @@
     "tooltip": {
       "qboNumberPrefix": "QBO #",
       "lastSynced": "Ultima sincronizzazione:",
-      "viewInQuickBooks": "Visualizza in QuickBooks"
+      "viewInQuickBooks": "Visualizza in QuickBooks",
+      "viewInXero": "Visualizza in Xero",
+      "xeroNumberPrefix": "N. Xero "
     }
   },
   "templateManager": {
@@ -1166,7 +1224,10 @@
         "drags": "Trascinamenti: {{count}}",
         "success": "Riusciti: {{count}}",
         "invalid": "Non validi: {{count}}"
-      }
+      },
+      "zoomOut": "Riduci",
+      "zoomIn": "Ingrandisci",
+      "zoomFit": "Adatta"
     },
     "palette": {
       "tabs": {
@@ -1207,6 +1268,15 @@
         "content": "Contenuto",
         "media": "Contenuti multimediali",
         "dynamic": "Dinamico"
+      },
+      "insertTarget": {
+        "page": "I nuovi blocchi vanno alla fine della pagina.",
+        "inside": "I nuovi blocchi vanno dentro {{name}}.",
+        "after": "I nuovi blocchi vanno subito dopo {{name}}.",
+        "label": "Dove vanno i nuovi blocchi",
+        "insideOption": "Dentro",
+        "afterOption": "Dopo",
+        "shiftHint": "Shift+click su + per aggiungerlo invece dopo."
       }
     },
     "inspector": {
@@ -1226,7 +1296,70 @@
       "fitSectionToContents": "Adatta sezione al contenuto",
       "sectionNoChildContent": "La sezione non ha contenuti da adattare.",
       "apply": "Applica",
-      "emptyHelp": "Seleziona un componente per modificarne le proprietà."
+      "emptyHelp": "Seleziona un componente per modificarne le proprietà.",
+      "size": "Dimensioni",
+      "width": "Larghezza",
+      "widthValue": "Valore larghezza",
+      "minWidth": "Larghezza min.",
+      "maxWidth": "Larghezza max.",
+      "height": "Altezza",
+      "heightValue": "Valore altezza",
+      "minHeight": "Altezza min.",
+      "maxHeight": "Altezza max.",
+      "mediaSource": "Origine immagine",
+      "mediaSourceLogo": "Logo aziendale",
+      "mediaSourceCustom": "Immagine personalizzata",
+      "mediaSourceLogoHint": "Mostra su ogni documento il logo delle impostazioni di branding della tua azienda.",
+      "mediaSourceUrl": "URL di origine",
+      "renameInner": "Rinominare anche {{count}} livelli interni ({{from}} → {{to}}…)?",
+      "renameInnerApply": "Rinomina",
+      "renameInnerDismiss": "No",
+      "tabsLabel": "Sezioni dell'ispettore",
+      "insertDataField": "+ Inserisci campo dati…",
+      "searchDataFields": "Cerca campi dati…",
+      "dataFields": "Campi dati",
+      "box": {
+        "top": "Sopra",
+        "right": "Destra",
+        "bottom": "Sotto",
+        "left": "Sinistra",
+        "all": "Tutti i lati",
+        "sameOnAllSides": "Uguale su tutti i lati",
+        "unit": "Unità",
+        "customValue": "Valore CSS personalizzato mantenuto finché non modifichi un lato: {{value}}"
+      },
+      "examplePlaceholder": "es. {{value}}",
+      "setCount": "{{count}} impostati",
+      "overrides": {
+        "none": "Usa solo i valori predefiniti.",
+        "jump": "Modifica nella scheda {{tab}}",
+        "title": "Impostato su questo blocco ({{count}}):"
+      },
+      "tabs": {
+        "content": "Contenuto",
+        "style": "Stile",
+        "layout": "Layout e dimensioni"
+      },
+      "sizeModes": {
+        "auto": {
+          "label": "Auto",
+          "widthTooltip": "Lascia decidere al contenitore (si allunga in una pila verticale)",
+          "heightTooltip": "Cresce con il contenuto"
+        },
+        "fill": {
+          "label": "Riempi",
+          "widthTooltip": "Occupa tutta la larghezza del contenitore"
+        },
+        "fit": {
+          "label": "Adatta",
+          "widthTooltip": "Riduci per adattarsi al contenuto"
+        },
+        "fixed": {
+          "label": "Fisso",
+          "widthTooltip": "Usa la larghezza esatta inserita sotto",
+          "heightTooltip": "Usa l'altezza esatta inserita sotto"
+        }
+      }
     },
     "shell": {
       "selectedLabel": "Selezionato:",
@@ -1412,6 +1545,14 @@
       "modern-invoice-complete": {
         "label": "Modello fattura moderno",
         "description": "Layout completo con intestazione, info fatturazione, tabella voci e piè di pagina."
+      },
+      "billed-time-entries": {
+        "label": "Dettaglio delle registrazioni di tempo fatturato",
+        "description": "Aggiungere una tabella informativa con date, attività, ore, tariffe e importi."
+      },
+      "billed-time-by-ticket": {
+        "label": "Dettaglio del tempo fatturato per ticket",
+        "description": "Ripetere un’intestazione e la relativa tabella delle registrazioni per ogni ticket o attività."
       }
     },
     "schema": {
@@ -1510,6 +1651,12 @@
             },
             "margin": {
               "label": "Margine"
+            },
+            "padding": {
+              "label": "Riempimento"
+            },
+            "containerPadding": {
+              "label": "Riempimento"
             }
           }
         },
@@ -1592,6 +1739,87 @@
             },
             "att-1": {
               "label": "Contratto.pdf"
+            }
+          }
+        },
+        "totals-rows": {
+          "title": "Righe totali"
+        },
+        "typography": {
+          "title": "Tipografia",
+          "fields": {
+            "fontSize": {
+              "label": "Dimensioni"
+            },
+            "fontWeight": {
+              "label": "Spessore",
+              "options": {
+                "400": "Normale (400)",
+                "500": "Medio (500)",
+                "600": "Semigrassetto (600)",
+                "700": "Grassetto (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Interlinea"
+            },
+            "textAlign": {
+              "label": "Allineamento",
+              "options": {
+                "left": "Sinistra",
+                "center": "Centro",
+                "right": "Destra",
+                "justify": "Giustificato"
+              }
+            },
+            "fontStyle": {
+              "label": "Stile",
+              "options": {
+                "normal": "Normale",
+                "italic": "Corsivo"
+              }
+            },
+            "color": {
+              "label": "Colore"
+            }
+          }
+        },
+        "value-typography": {
+          "title": "Testo valore",
+          "fields": {
+            "fontSize": {
+              "label": "Dimensioni"
+            },
+            "fontWeight": {
+              "label": "Spessore",
+              "options": {
+                "400": "Normale (400)",
+                "500": "Medio (500)",
+                "600": "Semigrassetto (600)",
+                "700": "Grassetto (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Interlinea"
+            },
+            "textAlign": {
+              "label": "Allineamento",
+              "options": {
+                "left": "Sinistra",
+                "center": "Centro",
+                "right": "Destra",
+                "justify": "Giustificato"
+              }
+            },
+            "fontStyle": {
+              "label": "Stile",
+              "options": {
+                "normal": "Normale",
+                "italic": "Corsivo"
+              }
+            },
+            "color": {
+              "label": "Colore"
             }
           }
         }
@@ -1693,10 +1921,80 @@
     },
     "canvas": {
       "templateBoundary": "Limite del modello",
-      "translatableHint": "Tradotto automaticamente nella lingua del destinatario. Se modifichi il testo, verrà usato il tuo testo fisso."
+      "translatableHint": "Tradotto automaticamente nella lingua del destinatario. Se modifichi il testo, verrà usato il tuo testo fisso.",
+      "noLineItems": "Nessuna voce",
+      "moreRows": "+{{count}} altre righe",
+      "subtotal": "Subtotale",
+      "tax": "Imposta",
+      "total": "Totale",
+      "buttonLabel": "Pulsante",
+      "signatureLabel": "Firma",
+      "attachmentsLabel": "Allegati",
+      "spacerLabel": "Spaziatore",
+      "companyLogo": "Logo aziendale",
+      "insertionMarker": "Il prossimo blocco che aggiungi andrà qui",
+      "emptyContainer": "Vuoto — selezionalo e aggiungi blocchi dal pannello a sinistra",
+      "localeChip": "Etichette tradotte mostrate in {{language}} (Lingua di anteprima)",
+      "badgeDragHint": "Trascina per spostare questo blocco"
     },
     "dragOverlay": {
       "component": "Componente"
+    },
+    "arrange": {
+      "up": "Su",
+      "upHint": "Sposta prima nel suo contenitore (↑)",
+      "down": "Giù",
+      "downHint": "Sposta dopo nel suo contenitore (↓)",
+      "out": "Fuori",
+      "outHint": "Sposta fuori dal contenitore, subito dopo di esso (Alt+←)",
+      "into": "Dentro",
+      "intoHint": "Sposta nel contenitore immediatamente precedente (Alt+→)",
+      "copy": "Copia",
+      "copyHint": "Copia (Ctrl/⌘+C). Seleziona dove inserirlo e incolla con Ctrl/⌘+V.",
+      "paste": "Incolla",
+      "pasteHint": "Incolla nel contenitore selezionato o dopo il blocco selezionato (Ctrl/⌘+V)",
+      "duplicate": "Duplica",
+      "duplicateHint": "Duplica subito dopo l'originale (Ctrl/⌘+D)",
+      "copyStyle": "Copia stile",
+      "copyStyleHint": "Copia colori, bordi, spaziatura e stile del testo (Ctrl/⌘+Alt+C)",
+      "pasteStyle": "Incolla stile",
+      "pasteStyleHint": "Applica lo stile copiato a questo blocco (Ctrl/⌘+Alt+V)",
+      "delete": "Elimina",
+      "deleteHint": "Elimina (tasto Canc)",
+      "title": "Disponi"
+    },
+    "feedback": {
+      "cannotInsert": "Impossibile aggiungere {{block}} qui.",
+      "insertedOnPage": "{{block}} aggiunto alla pagina.",
+      "insertedInto": "{{block}} aggiunto a {{parent}}.",
+      "fieldRebound": "{{name}} ora mostra {{path}}."
+    },
+    "translation": {
+      "translatedAs": "Etichetta standard \"{{name}}\", tradotta per ogni destinatario",
+      "useFixedText": "Usa testo fisso",
+      "pickStandardLabel": "Testo fisso. Traduci automaticamente…",
+      "searchStandardLabels": "Cerca etichette standard…",
+      "standardLabels": "Etichette standard",
+      "noMatches": "Nessuna etichetta standard trovata.",
+      "cancel": "Annulla"
+    },
+    "outline": {
+      "collapse": "Comprimi {{name}}",
+      "expand": "Espandi {{name}}",
+      "title": "Struttura"
+    },
+    "dragPreview": {
+      "noTarget": "Fuori dalla pagina: rilascia per annullare",
+      "noChange": "Resta dov'è",
+      "before": "Prima di {{block}}",
+      "after": "Dopo {{block}}",
+      "inside": "Dentro {{container}}",
+      "dropOnPage": "Rilascia sulla pagina per aggiungere questo blocco.",
+      "cancelled": "Non spostato: rilascia sopra la pagina o la Struttura per posizionarlo."
+    },
+    "resize": {
+      "handleHint": "Trascina per ridimensionare · doppio clic per adattare al contenuto",
+      "autoValue": "Automatico ({{value}})"
     }
   },
   "projectBilling": {
@@ -1762,7 +2060,8 @@
         "selectedCount": "{{count}} selezionati",
         "clear": "Annulla selezione"
       }
-    }
+    },
+    "emptyTimeHint": "Ore e materiali approvati non vengono mai messi in coda qui: vengono fatturati con la normale generazione fatture o con il pulsante Genera fattura di progetto."
   },
   "invoiceDesigner": {
     "transforms": {
@@ -1867,7 +2166,8 @@
         "transformsSource": "{{binding}} (origine trasformazioni)",
         "transformsOutput": "{{binding}} (output trasformazioni)",
         "ticketGroups": "Tempo fatturato per ticket",
-        "timeEntries": "Inserimenti ore fatturati"
+        "timeEntries": "Inserimenti ore fatturati",
+        "ticketPresentationRows": "Addebiti per ticket"
       },
       "presets": {
         "description": {
@@ -1945,7 +2245,14 @@
         "headerPlaceholder": "Etichetta intestazione",
         "bindingKey": "Chiave di associazione",
         "type": "Tipo",
-        "width": "Larghezza"
+        "width": "Larghezza",
+        "stackedLines": "Righe impilate",
+        "addLine": "+ Riga",
+        "clearLines": "Riga singola",
+        "stackedLinesHint": "Ogni riga non vuota viene visualizzata su una riga propria. Quando tutte le righe sono vuote, viene mostrata la chiave di associazione della colonna indicata sopra.",
+        "removeLine": "Rimuovi la riga {{index}}",
+        "align": "Allineamento",
+        "widthPlaceholder": "auto | 50% | 120px"
       },
       "columnTypes": {
         "text": "Testo",
@@ -1980,6 +2287,12 @@
         "groupedRowKey": "Chiave della riga raggruppata",
         "groupedRowItems": "Elementi della riga raggruppata",
         "availableBinding": "Associazione disponibile"
+      },
+      "columnAlign": {
+        "default": "Predefinito",
+        "left": "Sinistra",
+        "center": "Centro",
+        "right": "Destra"
       }
     },
     "imagePicker": {
@@ -1990,6 +2303,22 @@
       "visibleInPortal": "Visibile nel portale clienti",
       "dialogTitle": "Seleziona immagine",
       "dialogDescription": "Scegli un'immagine dai tuoi documenti da usare in questo modello."
+    },
+    "totalsRowsEditor": {
+      "rowBackground": "Sfondo riga",
+      "rowTextColor": "Colore del testo",
+      "resetColors": "Ripristina colori",
+      "clearRowBackground": "Cancella colore di sfondo riga",
+      "clearRowTextColor": "Cancella colore del testo riga",
+      "labelColorOverrideNote": "Questa etichetta mantiene il proprio colore salvato e non eredita il colore del testo della riga impostato sopra. L’importo segue comunque il colore del testo della riga.",
+      "noRows": "Questo blocco totali non ha ancora righe salvate. Salva il modello e riaprilo per modificare i colori delle righe.",
+      "addRow": "Aggiungi riga:",
+      "empty": "Ancora nessuna riga. Aggiungine una qui sotto.",
+      "moveUp": "Sposta {{row}} verso l'alto",
+      "moveDown": "Sposta {{row}} verso il basso",
+      "remove": "Rimuovi {{row}}",
+      "label": "Etichetta",
+      "emphasize": "Evidenzia (stile del totale complessivo)"
     }
   },
   "draftInvoiceDetails": {
@@ -2001,6 +2330,13 @@
     "errors": {
       "invoiceNumberRequired": "Il numero della fattura è obbligatorio.",
       "invoiceDateRequired": "La data della fattura è obbligatoria."
+    },
+    "labels": {
+      "billingProfile": "Profilo di fatturazione",
+      "billingProfileDefault": "Il profilo predefinito del cliente"
+    },
+    "hints": {
+      "billingProfile": "La fattura, le sue righe e la copia inviata via e-mail seguono questo profilo."
     }
   },
   "documentTemplates": {
@@ -2111,7 +2447,8 @@
       "referenceMissing": "La fattura, il cliente, il contratto o il record di fatturazione selezionato non esiste più. Aggiornare la pagina e riprovare.",
       "duplicate": "Esiste già una fattura in conflitto. Aggiornare la pagina e riprovare.",
       "missingField": "Manca un campo obbligatorio della fattura.",
-      "missingFieldNamed": "Manca un campo obbligatorio della fattura: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio della fattura: {{field}}.",
+      "billingProfileUnavailable": "Il profilo di fatturazione selezionato non è disponibile per questo cliente."
     },
     "billingCycle": {
       "notFoundRefresh": "Ciclo di fatturazione non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
@@ -2136,7 +2473,8 @@
       "referenceMissing": "Il modello di fattura o il cliente selezionato non esiste più. Aggiornare la pagina e riprovare.",
       "duplicate": "Esiste già un modello di fattura con queste impostazioni.",
       "missingField": "Manca un campo obbligatorio del modello di fattura.",
-      "missingFieldNamed": "Manca un campo obbligatorio del modello di fattura: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio del modello di fattura: {{field}}.",
+      "evaluationFailed": "Associazione dei dati del modello non riuscita: {{details}}"
     }
   },
   "periodTotal": {

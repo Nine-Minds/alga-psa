@@ -1,0 +1,62 @@
+[
+  {
+    "id": "T001",
+    "description": "QuotesTab: a quotes-tab deep link carrying a source template id renders QuoteForm with that id present in initialContext.",
+    "featureIds": ["F001", "F002", "F003"],
+    "implemented": false
+  },
+  {
+    "id": "T002",
+    "description": "QuoteForm: mounting with a source template id in initialContext prefills terms and conditions, client notes, description, PO number, currency and line items from that template.",
+    "featureIds": ["F005", "F006", "F007", "F008", "F009", "F010"],
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "description": "QuoteForm: submitting a deep-linked create calls createQuoteFromTemplate with the source template id rather than createQuote, and does not re-persist the server-created line items.",
+    "featureIds": ["F012", "F013"],
+    "implemented": false
+  },
+  {
+    "id": "T004",
+    "description": "QuoteForm: editing an existing quote leaves the source-template field empty while still round-tripping the layout id through quotes.template_id, and a blank title no longer passes the title-required guard on the strength of an assigned layout.",
+    "featureIds": ["F015", "F016", "F017", "F019"],
+    "implemented": false
+  },
+  {
+    "id": "T005",
+    "description": "QuoteForm: a deep link naming a missing or inaccessible template renders a blank new quote without throwing and remains submittable through createQuote.",
+    "featureIds": ["F014"],
+    "implemented": false
+  },
+  {
+    "id": "T006",
+    "description": "QuoteForm: a title seeded from an opportunity context survives template prefill instead of being overwritten by the template's title.",
+    "featureIds": ["F011"],
+    "implemented": false
+  },
+  {
+    "id": "T007",
+    "description": "QuoteForm: the \"+ From template\" picker still prefills correctly after the rename, confirming deep link and picker share one prefill path.",
+    "featureIds": ["F006", "F018"],
+    "implemented": false
+  },
+  {
+    "id": "T008",
+    "description": "quoteActions: createQuoteFromTemplate carries terms_and_conditions and the other template-owned fields through to Quote.create. Closes the gap where the existing fixture defines template terms that no test asserts on.",
+    "featureIds": ["F008", "F009"],
+    "implemented": false
+  },
+  {
+    "id": "T009",
+    "description": "Renderer: a text node whose content contains newlines renders preserving those breaks, and a text node with an explicit whiteSpace in its own style keeps that author value.",
+    "featureIds": ["F021", "F022"],
+    "implemented": false
+  },
+  {
+    "id": "T010",
+    "description": "BillingDashboard: the \"Create Quote from Template\" row action navigates with the same param name QuotesTab consumes. Guards against producer and consumer being renamed out of sync, which would silently restore the original bug.",
+    "featureIds": ["F004"],
+    "implemented": false
+  }
+]

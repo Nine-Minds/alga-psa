@@ -2,7 +2,7 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 

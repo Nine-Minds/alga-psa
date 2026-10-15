@@ -1,6 +1,19 @@
+import {
+  SYSTEM_DATE_FORMAT,
+  type CountryDateFormat,
+  type DateFieldPart,
+} from '@alga-psa/core/i18n/countryDateFormat';
+
 /**
- * Locale-aware date formatting shared by the client formatter hook
+ * Country-aware date formatting shared by the client formatter hook
  * (`useFormatters` in ./client.tsx) and the server formatter (./serverOnly.ts).
+ *
+ * Two inputs, two jobs. The COUNTRY decides digit order, separator and whether
+ * the clock is 12- or 24-hour; the LANGUAGE decides names — months, weekdays,
+ * AM/PM wording, numerals. Intl bundles both into one locale tag and would let
+ * the language reorder the digits (a French UI writing 22/11 where the tenant's
+ * country writes 11/22), so the numeric parts are re-assembled afterwards in the
+ * country's order and the hour cycle is forced from the country.
  *
  * Date-only strings (`YYYY-MM-DD`) are CALENDAR DATES, not instants: passing
  * one through `new Date()` parses it as midnight UTC, which
@@ -14,25 +27,119 @@
 
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+const DATE_PART_TYPES: ReadonlySet<string> = new Set<DateFieldPart>(['day', 'month', 'year']);
+
+/**
+ * Parts the country pattern writes two digits wide (`dd`, `MM`).
+ *
+ * Digit width travels with the order: an AU tenant's pattern is dd/MM/yyyy, so
+ * a table must read 30/09/2026 exactly as the date picker beside it does, even
+ * though English would have written 30/9/2026 and German 30.9.2026. The year is
+ * deliberately excluded — `year: '2-digit'` is a caller's density choice for a
+ * cramped column, not a property of where the tenant is.
+ */
+const TWO_DIGIT_PARTS: ReadonlySet<string> = new Set<DateFieldPart>(['day', 'month']);
+
 export function isDateOnlyString(value: unknown): value is string {
   return typeof value === 'string' && DATE_ONLY_PATTERN.test(value);
+}
+
+/**
+ * Intl options with the clock forced to the country's.
+ *
+ * `hourCycle` is dropped because it silently wins over `hour12` when both are
+ * present, which would let a caller reintroduce the language's clock.
+ */
+function withCountryClock(
+  options: Intl.DateTimeFormatOptions | undefined,
+  dateFormat: CountryDateFormat,
+): Intl.DateTimeFormatOptions {
+  const resolved: Intl.DateTimeFormatOptions = { ...options, hour12: dateFormat.hour12 };
+  delete resolved.hourCycle;
+  return resolved;
+}
+
+/**
+ * Re-assemble a formatted date in the country's order, separator and digit width.
+ *
+ * Only applies when day and month came out as digits: once Intl has written a
+ * month or weekday NAME the order is part of the language's grammar ("22 août
+ * 2025"), and reshuffling it would produce something no language writes. Parts
+ * outside the date group (weekday, time, timezone) are left exactly where the
+ * language put them.
+ */
+function applyCountryOrder(
+  parts: Intl.DateTimeFormatPart[],
+  dateFormat: CountryDateFormat,
+): string {
+  const indexed = parts
+    .map((part, index) => ({ part, index }))
+    .filter(({ part }) => DATE_PART_TYPES.has(part.type));
+
+  if (indexed.length < 2) {
+    return parts.map((part) => part.value).join('');
+  }
+
+  const numeric = indexed.every(({ part }) => /^\d+$/.test(part.value));
+  if (!numeric) {
+    return parts.map((part) => part.value).join('');
+  }
+
+  const byType = new Map(indexed.map(({ part }) => [part.type, part.value]));
+  const first = indexed[0].index;
+  const last = indexed[indexed.length - 1].index;
+
+  const reordered = dateFormat.order
+    .filter((type) => byType.has(type))
+    .map((type) => {
+      const value = byType.get(type) as string;
+      return TWO_DIGIT_PARTS.has(type) ? value.padStart(2, '0') : value;
+    })
+    .join(dateFormat.separator);
+
+  const head = parts.slice(0, first).map((part) => part.value).join('');
+  const tail = parts.slice(last + 1).map((part) => part.value).join('');
+
+  return `${head}${reordered}${tail}`;
+}
+
+function formatWithCountry(
+  date: Date,
+  locale: string,
+  options: Intl.DateTimeFormatOptions | undefined,
+  dateFormat: CountryDateFormat,
+): string {
+  const resolved = withCountryClock(options, dateFormat);
+
+  try {
+    const formatter = new Intl.DateTimeFormat(locale, resolved);
+    return applyCountryOrder(formatter.formatToParts(date), dateFormat);
+  } catch {
+    // An option combination Intl rejects (or a locale it cannot build) must not
+    // take the page down: fall back to the caller's own options untouched.
+    return new Intl.DateTimeFormat(locale, options).format(date);
+  }
 }
 
 export function formatDateValue(
   date: Date | string,
   locale: string,
   options?: Intl.DateTimeFormatOptions,
+  dateFormat: CountryDateFormat = SYSTEM_DATE_FORMAT,
 ): string {
   if (isDateOnlyString(date)) {
     const [year, month, day] = date.split('-').map(Number);
     // Force UTC AFTER spreading options: any caller-supplied timeZone would
     // reintroduce the day shift, and a timezone is meaningless for a value
     // that never carried one.
-    return new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' }).format(
+    return formatWithCountry(
       new Date(Date.UTC(year, month - 1, day)),
+      locale,
+      { ...options, timeZone: 'UTC' },
+      dateFormat,
     );
   }
 
   const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return new Intl.DateTimeFormat(locale, options).format(dateObj);
+  return formatWithCountry(dateObj, locale, options, dateFormat);
 }

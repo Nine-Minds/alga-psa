@@ -1,19 +1,25 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { Readable } from 'node:stream';
+import { coManagedLifecycleMock } from '@alga-psa/db/testing';
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   createTenantKnex: vi.fn(),
-  runWithTenant: (_tenant: string, work: () => Promise<unknown>) => work(),
 }));
 
-vi.mock('@alga-psa/licensing', () => ({
-  CoManagedLifecycleError: class extends Error {},
-  getCoManagedOperationalState: async () => ({ state: 'independent', canWrite: true, graceEndsAt: null }),
-  withCoManagedOperationalTransaction: (db: unknown, _tenant: string, work: (trx: unknown) => Promise<unknown>) => work(db),
+vi.mock('@alga-psa/licensing', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  ...coManagedLifecycleMock({ fn: vi.fn }),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('../src/config/storage', () => ({
@@ -128,9 +134,9 @@ describe('StorageService.uploadFile workflow events', () => {
 
   it('passes a verified stream length to transport and removes a mismatched receipt before persisting', async () => {
     createTenantKnexMock.mockResolvedValue({ knex: {} } as any);
-    const upload = vi.fn(async (stream: Readable, path: string, options: { content_length: number }) => {
+    const upload = vi.fn(async (stream: Readable, path: string, options: { size: number }) => {
       const chunks: Buffer[] = []; for await (const chunk of stream) chunks.push(Buffer.from(chunk));
-      expect(options.content_length).toBe(Buffer.concat(chunks).length);
+      expect(options.size).toBe(Buffer.concat(chunks).length);
       return { path, size: 3, mime_type: 'text/plain' };
     }), remove = vi.fn();
     createProviderMock.mockResolvedValue({ upload, delete: remove } as any);
@@ -187,6 +193,54 @@ describe('StorageService.uploadFile workflow events', () => {
         ctx: expect.objectContaining({ tenantId: 'tenant-1' }),
       })
     );
+  });
+
+  // Regression: the comment-attachment sweep locks external_files FOR UPDATE in
+  // its own transaction and then calls deleteFile(fileId, actor, trx). If
+  // deleteFile issues its findById/softDelete/provider.delete on a fresh pool
+  // connection instead of that trx, the second connection blocks on the caller's
+  // row lock and the request self-deadlocks with no lock timeout (the port-3374
+  // startup wedge). deleteFile must run every read and write on the passed trx.
+  it('runs findById and softDelete on the caller-supplied transaction, not a fresh pool connection', async () => {
+    getStorageConfigMock.mockResolvedValue({ defaultProvider: 'local' } as any);
+    getProviderConfigMock.mockResolvedValue({ type: 'local' } as any);
+
+    const providerDelete = vi.fn(async () => {});
+    createProviderMock.mockResolvedValue({ delete: providerDelete } as any);
+
+    // The withCoManagedOperationalTransaction mock passes its db argument straight
+    // through as the work's trx, so whatever deleteFile hands it is what the model
+    // methods receive. A distinct sentinel for each proves which one is used.
+    const poolKnex = { __handle: 'fresh-pool-connection' };
+    const callerTrx = { __handle: 'caller-held-transaction', isTransaction: true };
+    createTenantKnexMock.mockResolvedValue({ knex: poolKnex, tenant: 'tenant-1' } as any);
+
+    fileFindByIdMock.mockResolvedValueOnce({
+      file_id: '14f1fbf4-17d6-4bdc-8d4b-0b2a2ff8f26a',
+      storage_path: 'tenant-1/files/sample.txt',
+    } as any);
+    fileSoftDeleteMock.mockResolvedValue({
+      file_id: '14f1fbf4-17d6-4bdc-8d4b-0b2a2ff8f26a',
+      deleted_at: '2026-01-24T12:30:00.000Z',
+    } as any);
+
+    await StorageService.deleteFile(
+      '14f1fbf4-17d6-4bdc-8d4b-0b2a2ff8f26a',
+      'a836a8b5-3df5-47b1-b49b-9a78f2b1a8a0',
+      callerTrx as any
+    );
+
+    // Reads and writes go to the caller's transaction...
+    expect(fileFindByIdMock).toHaveBeenCalledWith(callerTrx, '14f1fbf4-17d6-4bdc-8d4b-0b2a2ff8f26a');
+    expect(fileSoftDeleteMock).toHaveBeenCalledWith(
+      callerTrx,
+      '14f1fbf4-17d6-4bdc-8d4b-0b2a2ff8f26a',
+      'a836a8b5-3df5-47b1-b49b-9a78f2b1a8a0'
+    );
+    // ...never to a second pool connection that would deadlock on the held lock.
+    expect(fileFindByIdMock).not.toHaveBeenCalledWith(poolKnex, expect.anything());
+    expect(fileSoftDeleteMock).not.toHaveBeenCalledWith(poolKnex, expect.anything(), expect.anything());
+    expect(providerDelete).toHaveBeenCalledWith('tenant-1/files/sample.txt');
   });
 });
 

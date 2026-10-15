@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-08",
+  "classification": "local-behavioral-regression",
+  "ciDiscovery": {
+    "runId": "34226006210",
+    "jobId": "102070296645",
+    "journey": "invoice-designer-persistence retry1"
+  },
+  "diagnosis": "Save succeeds, but background preview actions overlap navigation from the new-template URL. Keep previews paused from save start until the editor unmounts; resume if saving fails.",
+  "validation": {
+    "before": {
+      "report": "/tmp/alga-debug-designer-453-matched-results.json",
+      "designer": "failed waiting 90 seconds for navigation after a successful save response",
+      "invoiceGeneration": "both journeys passed"
+    },
+    "after": {
+      "report": "/tmp/alga-debug-designer-paused-results.json",
+      "designer": "entire journey passed in 1.5 minutes with no retries",
+      "components": {
+        "report": "/tmp/alga-designer-navigation-components.json",
+        "passed": 55,
+        "failed": 0,
+        "files": 3
+      }
+    }
+  },
+  "runtime": {
+    "server": "host-run Next development server on port 53017",
+    "database": "host_ee_test_82cc on existing PostgreSQL port 55432",
+    "featureFlags": "release-v1-6-feature:true",
+    "authentication": "real credentials",
+    "imageBuilds": 0
+  },
+  "limits": [
+    "Host development execution is diagnostic evidence, not a production image or current-source GitHub CI attestation.",
+    "The separate CI invoice-generation connection acquisition timeout did not reproduce in two host runs; its resource-exhaustion cause remains unconfirmed."
+  ]
+}

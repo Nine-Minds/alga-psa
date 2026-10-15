@@ -4,6 +4,7 @@ import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 const SETTING_NAME = 'dashboardMobileAppCardDismissed';
+// LEVERAGE: pattern dashboard-card-dismissal — shared shape with the onboarding section preference.
 
 export const getDashboardMobileAppCardDismissedAction = withAuth(async (
   user,

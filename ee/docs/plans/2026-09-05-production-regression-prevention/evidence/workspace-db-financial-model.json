@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "kind": "local-execution",
+  "revision": "f2209bc1bead1439369b8c3ffa5e4693faa0e852",
+  "dirty": true,
+  "status": "passed",
+  "selection": {
+    "mode": "full",
+    "filters": []
+  },
+  "filesPassed": 59,
+  "counts": {
+    "passed": 425,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "seed": 20260610,
+  "durationSeconds": 328.11,
+  "reportSha256": "6706b4243cc445dc2ee3e7b1562d1f82735478e5e1830bbd3f7cfa62c1466da9",
+  "executionEvidenceSha256": "d0b4614ada2074f316e4645d07f0ac6d44a4ac423ca700dea4448db5c84d6816",
+  "model": {
+    "testsPassed": 4,
+    "generatedRuns": 100,
+    "maxGeneratedOperations": 25,
+    "propertySeed": 20260906,
+    "savedCounterexampleExecuted": true
+  },
+  "limits": [
+    "Local dirty-checkout validation; new native candidate required.",
+    "Model auth and remote delivery are seams; concurrency is checked separately."
+  ]
+}

@@ -22,8 +22,8 @@ function expectNoDirectTenantRoot(section: string): void {
 describe('StripeService top billing paths tenant-scoped query contract', () => {
   it('centralizes tenant-scoped query construction for migrated Stripe roots', () => {
     expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
-    expect(source).toContain('function tenantScopedTable(conn: Knex, table: string, tenant: string): Knex.QueryBuilder');
-    expect(source).toContain('tenantDb(conn, tenant).table(table)');
+    expect(source).toContain('function tenantScopedTable<Row extends object = Record<string, any>>(');
+    expect(source).toContain('tenantDb(conn, tenant).table<Row>(table)');
     expect(source).not.toContain('createTenantScopedQuery');
   });
 

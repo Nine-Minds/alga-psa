@@ -9,6 +9,7 @@ import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { assertInternalApiUser } from '@/lib/api/middleware/apiMiddleware';
 import { runWithTenant } from 'server/src/lib/db';
 import { getAuthorizedDocumentByFileId } from '@alga-psa/documents/actions/documentActions';
+import { isPreviewableDocumentMimeType } from '@alga-psa/core';
 
 const TENANT_LOGO_DISCOVERY_TENANT = 'tenant-logo-file-discovery';
 const TENANT_LOGO_DISCOVERY_REASON = 'public tenant logo file lookup before tenant is known';
@@ -59,7 +60,8 @@ export async function GET(
           })
           .first();
 
-        if (tenantLogoAssoc) {
+        const commentAttachment = await tenantScopedAdminDb.table('ticket_comment_attachments').where({ document_id: documentRecord.document_id }).first();
+        if (tenantLogoAssoc && !commentAttachment) {
           isTenantLogo = true;
           // Public access granted for tenant logo
         }
@@ -147,13 +149,9 @@ export async function GET(
       }
     }
 
-    // Check if it's a viewable file type (images, videos, PDFs)
-    const isViewableType = fileRecord.mime_type?.startsWith('image/') || 
-                          fileRecord.mime_type?.startsWith('video/') || 
-                          fileRecord.mime_type === 'application/pdf' ||
-                          fileRecord.mime_type === 'image/svg+xml';
-    
-    if (!isViewableType) {
+    // Only inline-previewable types (images, videos, PDFs) are served here; the
+    // same predicate drives which documents link to /view vs /download.
+    if (!isPreviewableDocumentMimeType(fileRecord.mime_type)) {
         return new NextResponse('File type not supported for viewing', { status: 400 });
     }
 
@@ -193,7 +191,7 @@ export async function GET(
       headers.set('Accept-Ranges', 'bytes');
       headers.set('Content-Range', `bytes ${start}-${end}/${fileSize}`);
       headers.set('Content-Length', contentLength.toString());
-      headers.set('Cache-Control', 'public, max-age=3600');
+      headers.set('Cache-Control', 'private, no-store');
 
       // Return partial content (206)
       return new NextResponse(stream as any, {
@@ -215,7 +213,7 @@ export async function GET(
       }
       
       // Cache for 1 hour (adjust as needed)
-      headers.set('Cache-Control', 'public, max-age=3600');
+      headers.set('Cache-Control', 'private, no-store');
 
       // Return the full stream response
       return new NextResponse(stream as any, {

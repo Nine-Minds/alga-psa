@@ -4,6 +4,7 @@ import type {
   RmmActiveAlertFetcher,
 } from '@alga-psa/shared/rmm/alerts';
 import { createNinjaOneClient } from '../ninjaOneClient';
+import { enrichMissingDeviceDetails } from './deviceDetailsEnrichment';
 import {
   NinjaOneAlert,
   NinjaOneAlertSeverity,
@@ -15,12 +16,19 @@ import {
  * space: the alerts API returns condition uids, while webhooks carry activity
  * ids — the reconciliation core only trusts poller-ingested ids for staleness,
  * and per-device+condition dedup absorbs cross-source near-duplicates.
+ *
+ * Real polled payloads commonly carry `deviceId` without an embedded `device`
+ * object, so normalization cannot read an organization or device name off the
+ * device. Those alerts are batch-enriched from the tenant's local device
+ * mappings before the shared pipeline evaluates rules or creates tickets
+ * (see enrichMissingDeviceDetails).
  */
 export const ninjaOneAlertFetcher: RmmActiveAlertFetcher = {
   async fetchActiveAlerts({ tenantId, integrationId }) {
     const client = await createNinjaOneClient(tenantId);
     const alerts = await client.getAlerts();
-    return alerts.map((alert) => mapAlertToEvent(alert, tenantId, integrationId));
+    const events = alerts.map((alert) => mapAlertToEvent(alert, tenantId, integrationId));
+    return enrichMissingDeviceDetails(events, tenantId);
   },
 };
 

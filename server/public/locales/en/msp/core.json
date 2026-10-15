@@ -80,9 +80,10 @@
       "servicePeriods": "Service Periods",
       "credits": "Credits",
       "serviceTypes": "Service Types",
+      "serviceCategories": "Service Categories",
       "serviceCatalog": "Services",
       "products": "Products",
-      "taxRates": "Tax Rates",
+      "taxRates": "Tax",
       "usageTracking": "Usage Tracking",
       "reports": "Reports",
       "accountingExports": "Accounting Exports"
@@ -102,9 +103,15 @@
     "jobs": "Jobs",
     "emailLogs": "Email Logs",
     "extensions": "Extensions",
+    "ticketsAll": "All Tickets",
+    "ticketsRecurring": "Recurring Tickets",
     "coManaged": "Co-managed IT",
     "coManagedDelegation": "Delegated administration",
-    "coManagedAccess": "Co-managed access"
+    "coManagedAccess": "Co-managed access",
+    "ticketsCustomer": "Customer Tickets",
+    "projectsSharedTasks": "Shared Tasks",
+    "coManagedOverview": "Overview",
+    "ticketsTemplates": "Ticket Templates"
   },
   "marketing": {
     "dialogs": {
@@ -469,7 +476,8 @@
     "collapseSidebar": "Collapse sidebar",
     "collapseSection": "Collapse {{section}}",
     "expandSection": "Expand {{section}}",
-    "appLogoAlt": "{{appName}} Logo"
+    "appLogoAlt": "{{appName}} Logo",
+    "poweredBy": "Powered by"
   },
   "settings": {
     "sections": {
@@ -590,7 +598,20 @@
       "system": "System",
       "selected": "Selected"
     },
-    "openUserMenu": "Open user menu"
+    "openUserMenu": "Open user menu",
+    "stopwatch": {
+      "untitled": "Untitled",
+      "ariaLabelPaused": "Stopwatch paused: {{label}} at {{clock}}",
+      "ariaLabelRunning": "Stopwatch running: {{label}} at {{clock}}",
+      "paused": "Stopwatch paused",
+      "running": "Stopwatch running",
+      "resume": "Resume",
+      "pause": "Pause",
+      "stop": "Stop and log",
+      "discard": "Discard",
+      "pausedNoDrawer": "Stopwatch paused at {{clock}}. Open the work item to log the time.",
+      "openTicket": "Open ticket"
+    }
   },
   "dialogs": {
     "aiInterrupt": {

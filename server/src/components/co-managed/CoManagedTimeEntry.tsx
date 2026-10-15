@@ -4,9 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CoManagedSharedResource } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { prepareTimeEntryForWorkItem, TimeEntryDialog } from '@alga-psa/scheduling/lib/timeEntryLauncher';
-import { saveTimeEntry } from '@alga-psa/scheduling/actions/timeEntryActions';
+import { prepareTimeEntryForWorkItem, NewWorkItemTimeEntry } from '@alga-psa/scheduling/lib/timeEntryLauncher';
 import { registerSharedTimeWorkAction } from '@/lib/actions/coManagedTimeActions';
 import { CoManagedFeatureBoundary } from './CoManagedFeatureBoundary';
 import CoManagedTimeBillingProfile from './CoManagedTimeBillingProfile';
@@ -42,11 +40,7 @@ function TimeEntry({ resource, onSaved }: Pick<Props, 'resource' | 'onSaved'>) {
     <CoManagedTimeBillingProfile resource={target.current} disabled={busy || !!prepared} onBusyChange={setProfileBusy} />
     <Button id="co-shared-log-time" variant="outline" disabled={busy || profileBusy || !!prepared} onClick={() => void open()}>{t(busy ? 'coManaged.loading' : 'coManaged.time.log')}</Button>
     {error && <p role="alert">{t('coManaged.time.unavailable')}</p>}
-    {prepared && <TimeEntryDialog {...prepared} id="co-shared-time-entry" isOpen isEditable onClose={() => setPrepared(null)}
-      onSave={async entry => {
-        const saved = await saveTimeEntry(entry);
-        if (isActionMessageError(saved) || isActionPermissionError(saved)) throw new Error(getErrorMessage(saved));
-        if (mounted.current) onSaved?.();
-      }} />}
+    {prepared && <div id="co-shared-time-entry"><NewWorkItemTimeEntry {...prepared} closeDrawer={() => setPrepared(null)}
+      onComplete={() => { if (mounted.current) { setPrepared(null); onSaved?.(); } }} /></div>}
   </div>;
 }

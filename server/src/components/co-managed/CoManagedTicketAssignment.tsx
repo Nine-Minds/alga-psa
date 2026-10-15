@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getSharedTicketAssignmentAction, listSharedTicketAssigneesAction, assignSharedTicketAction } from '@/lib/actions/coManagedTicketAssignmentActions';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 type Props = { resource: CoManagedSharedResource; onSaved: () => void; onUnavailable: () => void; onReload: () => void };
 type State = Awaited<ReturnType<typeof getSharedTicketAssignmentAction>>;
@@ -59,7 +60,7 @@ function Assignment({ resource, onSaved, onUnavailable, onReload }: Props) {
   }
   async function save(assignee: CoManagedTicketAssignee | null) {
     if (!state?.canEdit || state.revision === undefined || inFlight.current) return;
-    const request = pending ?? { operationId: crypto.randomUUID(), expectedRevision: state.revision, assignee };
+    const request = pending ?? { operationId: newCoManagedOperationId(), expectedRevision: state.revision, assignee };
     inFlight.current = true; setPending(request); setBusy(true); setError(null);
     try {
       const result = await assignSharedTicketAction(target.current, request);

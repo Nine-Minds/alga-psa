@@ -33,6 +33,22 @@ vi.mock('../../src/services/accountingExportService', () => ({
   },
 }));
 
+const getXeroDefaultSelectionMock = vi.hoisted(() => vi.fn());
+const getStoredXeroConnectionsMock = vi.hoisted(() => vi.fn(async () => ({})));
+
+vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
+  getXeroDefaultSelection: getXeroDefaultSelectionMock,
+  getStoredXeroConnections: getStoredXeroConnectionsMock,
+}));
+
+vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
+  getDefaultQboRealmId: async () => 'realm-1',
+  // The explicit realm-1 target used by the empty-batch case must be a
+  // connected QBO company so target validation passes and the empty-batch
+  // guard is what surfaces.
+  getStoredQboCredentialsMap: async () => ({ 'realm-1': { realmId: 'realm-1' } })
+}));
+
 import { AccountingExportInvoiceSelector } from '../../src/services/accountingExportInvoiceSelector';
 import { AppError } from '@alga-psa/core';
 
@@ -348,5 +364,21 @@ describe('AccountingExportInvoiceSelector.createBatchFromFilters', () => {
       constructor: AppError,
       code: 'ACCOUNTING_EXPORT_EMPTY_BATCH',
     });
+  });
+
+  it('fails closed with an actionable error when the persisted Xero organisation is ambiguous', async () => {
+    getXeroDefaultSelectionMock.mockResolvedValueOnce({ status: 'ambiguous', organisationId: 'org-shared' });
+    const { selector } = makeSelector({});
+
+    await expect(
+      selector.createBatchFromFilters({
+        adapterType: 'xero',
+        filters: { invoiceStatuses: ['sent'] },
+      })
+    ).rejects.toMatchObject({
+      constructor: AppError,
+      code: 'ACCOUNTING_EXPORT_XERO_SELECTION_AMBIGUOUS',
+    });
+    expect(getXeroDefaultSelectionMock).toHaveBeenCalled();
   });
 });

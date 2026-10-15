@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { MantineProvider } from '@mantine/core';
 import { Theme } from '@radix-ui/themes';
 import { useTheme } from 'next-themes';
+import { usePathname } from 'next/navigation';
 
 type ThemeBridgeProps = {
   children: ReactNode;
@@ -12,6 +13,8 @@ type ThemeBridgeProps = {
 
 export function ThemeBridge({ children }: ThemeBridgeProps) {
   const { resolvedTheme } = useTheme();
+  const pathname = usePathname();
+  const isMspSignIn = pathname === '/auth/msp/signin';
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -30,7 +33,7 @@ export function ThemeBridge({ children }: ThemeBridgeProps) {
   // Until next-themes has resolved, hide content to prevent light-mode flash.
   // The body background is handled by CSS vars that next-themes' blocking script
   // already set via the .dark/.light class on <html>.
-  if (!mounted) {
+  if (!mounted && !isMspSignIn) {
     return (
       <div style={{ visibility: 'hidden' }}>
         <MantineProvider forceColorScheme="light">

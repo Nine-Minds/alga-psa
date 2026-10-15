@@ -14,20 +14,31 @@ const eventTypes = ['TICKET_COMMENT_ADDED', 'TICKET_COMMENT_UPDATED', 'TICKET_CO
   'PROJECT_TASK_COMMENT_CREATED', 'PROJECT_TASK_COMMENT_UPDATED', 'PROJECT_TASK_COMMENT_DELETED'];
 const instant = (value: string | Date | null) => value ? new Date(value).toISOString() : null;
 
+/** A writer that removes its source row outright has to capture the evidence
+ * while the row is still readable, so the capture necessarily runs before the
+ * deletion rather than after it. Such a writer says so with this intent; it is
+ * a code-level constant of the deleting command, never derived from a request,
+ * and it is honoured only for a `_DELETED` capture. Without it, a `_DELETED`
+ * capture of a row that carries no `deleted_at` is still refused. */
+export interface CoManagedCaptureIntent { precedesSourceRemoval?: boolean }
+
 /** Only called for a newly retained canonical event inside its admitted writer.
  * Capture the actual source while sharing is effective, never a publication body
  * or a delayed dispatch projection. MSP policy still applies at archive read time.
  * Published ticket files are retained through their separate byte archive. */
-export async function retainCoManagedConversationParticipation(trx: Knex.Transaction, tenant: string, eventId: string): Promise<void> {
+export async function retainCoManagedConversationParticipation(trx: Knex.Transaction, tenant: string, eventId: string, intent: CoManagedCaptureIntent = {}): Promise<void> {
   if (!trx.isTransaction || ![tenant, eventId].every(isCoManagedUuid)) throw new CoManagedSharedWorkError();
   const owner = tenantDb(trx, tenant);
   const event = await owner.table('co_management_event_outbox').where('event_id', eventId).forShare().first();
   if (!event) throw new CoManagedSharedWorkError();
+  if (intent.precedesSourceRemoval !== undefined && typeof intent.precedesSourceRemoval !== 'boolean') throw new CoManagedSharedWorkError();
+  if (intent.precedesSourceRemoval && !event.event_type.endsWith('_DELETED')) throw new CoManagedSharedWorkError();
   if (!eventTypes.includes(event.event_type) || event.publication.kind !== 'event') return;
   const task = event.resource_type === 'project_task';
   if ((!task && event.resource_type !== 'ticket') || task !== event.event_type.startsWith('PROJECT_TASK_')) throw new CoManagedSharedWorkError();
   await captureSharedConversation(trx, { tenant, kind: task ? 'project_task' : 'ticket', id: event.resource_id },
-    event.comment_id, event.thread_id, { sourceId: eventId, operationId: eventId, eventType: event.event_type, occurredAt: event.created_at });
+    event.comment_id, event.thread_id, { sourceId: eventId, operationId: eventId, eventType: event.event_type, occurredAt: event.created_at,
+      precedesSourceRemoval: intent.precedesSourceRemoval === true });
 }
 
 /** Called only inside a sharing reduction that already retains the relationship
@@ -53,7 +64,7 @@ export async function retainCoManagedSharedConversationBeforeReduction(trx: Knex
 
 async function captureSharedConversation(trx: Knex.Transaction,
   input: { tenant: string; kind: 'ticket' | 'project_task' | 'project'; id: string; relationshipId?: string }, commentId: string, threadId: string,
-  capture: { sourceId: string; operationId: string; eventType: string; occurredAt: string | Date }): Promise<void> {
+  capture: { sourceId: string; operationId: string; eventType: string; occurredAt: string | Date; precedesSourceRemoval?: boolean }): Promise<void> {
   const { tenant } = input, task = input.kind === 'project_task', owner = tenantDb(trx, tenant);
   const relationship = await owner.table('co_management_relationships').where('state', 'active').whereNull('ended_at')
     .modify(q => { if (input.relationshipId) q.where('relationship_id', input.relationshipId); }).forShare()
@@ -79,7 +90,11 @@ async function captureSharedConversation(trx: Knex.Transaction,
     ...(task ? ['c.collaboration_revision'] : ['c.contact_id', 'c.is_system_generated']), { parent_comment_id: task ? 'parent.task_comment_id' : trx.raw("CASE WHEN parent.publish_state = 'published' AND ? IN ('requester', 'shared_it') THEN parent.comment_id ELSE NULL END", [commentAudienceSql(trx, 't', 'root', 'parent')]),
     audience: task ? projectTaskAudienceSql(trx, 't') : commentAudienceSql(trx, 't', 'root', 'c') }).first();
   if (!comment || !['requester', 'shared_it'].includes(comment.audience)) return;
-  const deleted = Boolean(comment.deleted_at);
+  // A removal that takes the row with it leaves nothing to read afterwards, so
+  // its writer captures first and declares that here. Anything else claiming a
+  // deletion must carry the tombstone the source already wrote.
+  const removing = capture.precedesSourceRemoval === true && capture.eventType.endsWith('_DELETED');
+  const deleted = Boolean(comment.deleted_at) || removing;
   if (capture.eventType.endsWith('_DELETED') && !deleted) throw new CoManagedSharedWorkError();
   // Disclosure invalidates existing tombstones as updates; retain their empty
   // identity without treating them as newly created content.
@@ -114,7 +129,7 @@ async function captureSharedConversation(trx: Knex.Transaction,
     actor_name: name, actor_organization: organizationName, occurred_at: instant(capture.occurredAt)!,
     payload: { resourceTitle: source?.title ?? source?.task_name ?? null, ticketNumber: source?.ticket_number ?? null, commentId: commentId, threadId: threadId, parentCommentId: comment.parent_comment_id, audience: comment.audience,
       revision: task ? comment.collaboration_revision : null, createdAt: instant(comment.created_at),
-      updatedAt: instant(comment.updated_at), deletedAt: instant(comment.deleted_at), deleted,
+      updatedAt: instant(comment.updated_at), deletedAt: instant(comment.deleted_at) ?? (removing ? instant(capture.occurredAt) : null), deleted,
       ...(deleted ? {} : { note: comment.note, markdown: comment.markdown_content }) },
   };
   await appendParticipationEvidence(trx, { tenant: relationship.sponsor_tenant, ...workKey, source_type: 'conversation', source_id: capture.sourceId }, content);

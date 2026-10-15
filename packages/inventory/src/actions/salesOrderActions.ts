@@ -1,5 +1,6 @@
 'use server';
 
+import { buildInventorySalesOrderPayload, buildInventoryPurchaseOrderPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -49,6 +50,16 @@ const ALLOCATION_MODES: SalesOrderAllocationMode[] = ['soft', 'hard'];
 const FULFILLMENT_TYPES: SalesOrderLineFulfillmentType[] = ['from_stock', 'drop_ship'];
 type StockUnitSearchTouch = { unit_id: string; service_id?: string };
 
+class InvalidSalesOrderReference extends Error {}
+
+// Sales-order tax references are logical because the legacy single-column FK
+// cannot be installed on the distributed schema. Validate at each write boundary.
+async function assertSalesOrderTaxRate(trx: Knex.Transaction, tenant: string, taxRateId?: string | null): Promise<void> {
+  if (taxRateId == null) return;
+  const rate = await trx('tax_rates').where({ tenant, tax_rate_id: taxRateId }).select('tax_rate_id').first();
+  if (!rate) throw new InvalidSalesOrderReference('Tax rate not found for this tenant');
+}
+
 function normalizeSalesOrderUnitPrice(value: unknown, fieldName = 'unit_price'): number {
   const price = Number(value);
   if (!Number.isFinite(price) || price < 0) {
@@ -95,6 +106,9 @@ async function requireSoPerm(user: any, action: 'create' | 'read' | 'update' | '
 type SalesOrderActionError = ActionMessageError | ActionPermissionError;
 
 function salesOrderActionErrorFrom(error: unknown): SalesOrderActionError | null {
+  if (error instanceof InvalidSalesOrderReference) {
+    return actionError('One of the selected sales order records is no longer valid. Please refresh and try again.', 'features/inventory:errors.salesOrders.recordInvalid');
+  }
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
       return permissionError(error.message);
@@ -267,9 +281,10 @@ async function allocateLine(
       .forUpdate()
       .skipLocked()
       .limit(remaining);
+    // LEVERAGE: pattern fifo-unit-order — allocation, fulfillment candidates, and this pick list share FIFO ordering.
     const units = preferred
-      ? ((await q.orderByRaw('CASE WHEN location_id = ? THEN 0 ELSE 1 END ASC, received_at ASC NULLS LAST', [preferred])) as any[])
-      : ((await q.orderByRaw('received_at ASC NULLS LAST')) as any[]);
+      ? ((await q.orderByRaw('CASE WHEN location_id = ? THEN 0 ELSE 1 END ASC, received_at ASC NULLS LAST, unit_id ASC', [preferred])) as any[])
+      : ((await q.orderByRaw('received_at ASC NULLS LAST, unit_id ASC')) as any[]);
 
     const touched = new Set<string>();
     const stockUnitTouches: StockUnitSearchTouch[] = [];
@@ -545,6 +560,9 @@ export const createSalesOrder = withAuth(
 
       const { knex: db } = await createTenantKnex();
       const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        for (const line of input.lines ?? []) {
+          await assertSalesOrderTaxRate(trx, tenant, line.tax_rate_id);
+        }
         const soNumber = await SharedNumberingService.getNextNumber('SALES_ORDER', { knex: trx, tenant });
 
         const [so] = await trx('sales_orders')
@@ -613,11 +631,7 @@ export const createSalesOrder = withAuth(
         return { ...(so as ISalesOrder), lines };
       });
 
-      await publishInventoryEvent('INVENTORY_SALES_ORDER_CREATED', timestampPayload({
-        tenant,
-        so_id: result.so_id,
-        user_id: user.user_id,
-      }));
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_CREATED', buildInventorySalesOrderPayload({ tenant, soId: result.so_id, userId: user.user_id }));
 
       return result;
     });
@@ -654,6 +668,7 @@ export const addSoLine = withAuth(
         const fulfillmentType: SalesOrderLineFulfillmentType = input.fulfillment_type ?? 'from_stock';
         if (!FULFILLMENT_TYPES.includes(fulfillmentType)) throw new Error(`Invalid fulfillment_type: ${fulfillmentType}`);
 
+        await assertSalesOrderTaxRate(trx, tenant, input.tax_rate_id);
         const meta = await getProductMeta(trx, tenant, input.service_id);
         if (meta.is_kit) {
           const kitUnitPrice = await resolveKitSalesOrderUnitPrice(
@@ -687,12 +702,7 @@ export const addSoLine = withAuth(
         return row as ISalesOrderLine;
       });
 
-      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-        tenant,
-        so_id: soId,
-        user_id: user.user_id,
-        changed_fields: ['lines'],
-      }));
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', buildInventorySalesOrderPayload({ tenant, soId: soId, userId: user.user_id, changedFields: ['lines'] }));
 
       return result;
     });
@@ -732,6 +742,7 @@ export const updateSoLine = withAuth(
           throw new Error('quantity_ordered must be greater than 0');
         }
 
+        if ('tax_rate_id' in patch) await assertSalesOrderTaxRate(trx, tenant, patch.tax_rate_id);
         const update: Record<string, unknown> = { updated_at: trx.fn.now() };
         for (const k of ['quantity_ordered', 'unit_price', 'tax_rate_id', 'fulfillment_type'] as const) {
           if (k in patch) update[k] = (patch as any)[k];
@@ -740,12 +751,7 @@ export const updateSoLine = withAuth(
         return row as ISalesOrderLine;
       });
 
-      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-        tenant,
-        so_id: result.so_id,
-        user_id: user.user_id,
-        changed_fields: Object.keys(patch),
-      }));
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', buildInventorySalesOrderPayload({ tenant, soId: result.so_id, userId: user.user_id, changedFields: Object.keys(patch) }));
 
       return result;
     });
@@ -771,12 +777,7 @@ export const removeSoLine = withAuth(
         return { removed: true, so_id: so.so_id };
       });
 
-      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-        tenant,
-        so_id: result.so_id,
-        user_id: user.user_id,
-        changed_fields: ['lines'],
-      }));
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', buildInventorySalesOrderPayload({ tenant, soId: result.so_id, userId: user.user_id, changedFields: ['lines'] }));
 
       return { removed: result.removed };
     });
@@ -793,11 +794,7 @@ export const deleteSalesOrder = withAuth(
         if (salesOrder.status !== 'draft') throw new Error('Only draft sales orders can be deleted');
         await trx('sales_orders').where({ tenant, so_id: soId }).del();
       });
-      await publishInventoryEvent('INVENTORY_SALES_ORDER_DELETED', timestampPayload({
-        tenant,
-        so_id: soId,
-        user_id: user.user_id,
-      }));
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_DELETED', buildInventorySalesOrderPayload({ tenant, soId: soId, userId: user.user_id }));
       return { deleted: true };
     });
   },
@@ -829,12 +826,7 @@ export const confirmSalesOrder = withAuth(
         return { ...(updated as ISalesOrder), lines: finalLines, stockUnitTouches };
       });
 
-      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-        tenant,
-        so_id: soId,
-        user_id: user.user_id,
-        changed_fields: ['status', 'allocation'],
-      }));
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', buildInventorySalesOrderPayload({ tenant, soId: soId, userId: user.user_id, changedFields: ['status', 'allocation'] }));
       for (const unit of result.stockUnitTouches) {
         await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
           tenant,
@@ -863,12 +855,7 @@ export const releaseSalesOrderAllocation = withAuth(
         return { released: true, stockUnitTouches };
       });
 
-      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-        tenant,
-        so_id: soId,
-        user_id: user.user_id,
-        changed_fields: ['allocation'],
-      }));
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', buildInventorySalesOrderPayload({ tenant, soId: soId, userId: user.user_id, changedFields: ['allocation'] }));
       for (const unit of result.stockUnitTouches) {
         await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
           tenant,
@@ -911,12 +898,7 @@ export const reopenSalesOrder = withAuth(
         return { ...(updated as ISalesOrder), lines: await loadLines(trx, tenant, soId), stockUnitTouches };
       });
 
-      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-        tenant,
-        so_id: soId,
-        user_id: user.user_id,
-        changed_fields: ['status', 'allocation'],
-      }));
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', buildInventorySalesOrderPayload({ tenant, soId: soId, userId: user.user_id, changedFields: ['status', 'allocation'] }));
       for (const unit of result.stockUnitTouches) {
         await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
           tenant,
@@ -1024,12 +1006,7 @@ export const cancelSalesOrder = withAuth(
         return { so: updated as ISalesOrder, stockUnitTouches };
       });
 
-      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-        tenant,
-        so_id: soId,
-        user_id: user.user_id,
-        changed_fields: ['status', 'allocation'],
-      }));
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', buildInventorySalesOrderPayload({ tenant, soId: soId, userId: user.user_id, changedFields: ['status', 'allocation'] }));
       for (const unit of result.stockUnitTouches) {
         await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
           tenant,
@@ -1140,11 +1117,7 @@ export const suggestPoFromBackorder = withAuth(
       });
 
       for (const po of result.purchaseOrders) {
-        await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_CREATED', timestampPayload({
-          tenant,
-          po_id: po.po_id,
-          user_id: user.user_id,
-        }));
+        await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_CREATED', buildInventoryPurchaseOrderPayload({ tenant, poId: po.po_id, userId: user.user_id }));
       }
 
       return result;

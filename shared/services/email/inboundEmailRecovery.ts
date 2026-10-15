@@ -859,12 +859,14 @@ export async function mirrorTenantTerminalInbox(tenant: string, limit: number = 
         metadata: JSON.stringify(metadata),
       })
       .onConflict(['message_id', 'provider_id', 'tenant'])
+      // Citus rejects STABLE functions (db.fn.now() → CURRENT_TIMESTAMP) inside
+      // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
       .merge({
         processing_status: status,
         ticket_id: inbox.ticket_id,
         error_message: inbox.status === 'terminal_failed' ? (inbox.last_error ?? inbox.outcome_reason ?? null) : null,
         metadata: JSON.stringify(metadata),
-        processed_at: db.fn.now(),
+        processed_at: new Date().toISOString(),
       });
     mirrored += 1;
   }

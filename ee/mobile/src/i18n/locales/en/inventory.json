@@ -192,6 +192,7 @@
     "nameLabel": "Product name",
     "namePlaceholder": "e.g. HP 26A Toner Cartridge",
     "skuLabel": "SKU (optional)",
+    "unitLabel": "Unit of measure",
     "typeLabel": "Service type",
     "typeLine": "Service type: {{name}}",
     "typesError": "Couldn't load service types.",
@@ -226,5 +227,17 @@
     "error": "Couldn't register the asset.",
     "submit": "Register asset",
     "success": "Asset registered"
+  },
+  "unitOfMeasure": {
+    "labels": {
+      "each": "Each",
+      "piece": "Piece",
+      "box": "Box",
+      "seat": "Seat",
+      "license": "License",
+      "device": "Device",
+      "user": "User",
+      "kit": "Kit"
+    }
   }
 }

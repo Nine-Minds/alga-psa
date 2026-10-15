@@ -13,11 +13,13 @@ import { formatElapsedClock } from "../timerLogic";
 export function HeaderTimerChip() {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("timeEntries");
-  const { status, session, openStopModal } = useTimer();
+  const { status, session, openStopModal, pause, resume, mutating } = useTimer();
   const elapsedMs = useTimerElapsedMs();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  if (status !== "running" || !session || elapsedMs === null) return null;
+  if ((status !== "running" && status !== "paused") || !session || elapsedMs === null) return null;
+
+  const paused = status === "paused";
 
   const ticketId = session.work_item_type === "ticket" ? session.work_item_id : null;
   const title = session.work_item_title ?? t("timer.banner.untitled");
@@ -29,12 +31,12 @@ export function HeaderTimerChip() {
         alignItems: "center",
         borderRadius: 999,
         borderWidth: 1,
-        borderColor: colors.primary,
+        borderColor: paused ? colors.border : colors.primary,
         backgroundColor: colors.card,
         paddingLeft: spacing.sm,
       }}
       accessibilityRole="summary"
-      accessibilityLabel={t("timer.banner.accessibility", { title })}
+      accessibilityLabel={t(paused ? "timer.banner.accessibilityPaused" : "timer.banner.accessibility", { title })}
     >
       <Pressable
         onPress={ticketId ? () => navigation.navigate("TicketDetail", { ticketId }) : undefined}
@@ -50,10 +52,28 @@ export function HeaderTimerChip() {
           opacity: pressed ? 0.7 : 1,
         })}
       >
-        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary }} />
-        <Text style={{ ...typography.caption, color: colors.text, fontWeight: "700", fontVariant: ["tabular-nums"] }}>
+        {paused ? (
+          <Feather name="pause" size={10} color={colors.textSecondary} />
+        ) : (
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary }} />
+        )}
+        <Text style={{ ...typography.caption, color: paused ? colors.textSecondary : colors.text, fontWeight: "700", fontVariant: ["tabular-nums"] }}>
           {formatElapsedClock(elapsedMs)}
         </Text>
+      </Pressable>
+      <Pressable
+        onPress={() => void (paused ? resume() : pause())}
+        disabled={mutating}
+        accessibilityRole="button"
+        accessibilityLabel={t(paused ? "timer.banner.resume" : "timer.banner.pause")}
+        hitSlop={hitSlop}
+        style={({ pressed }) => ({
+          paddingHorizontal: spacing.xs,
+          paddingVertical: 4,
+          opacity: mutating ? 0.5 : pressed ? 0.7 : 1,
+        })}
+      >
+        <Feather name={paused ? "play" : "pause"} size={16} color={colors.primary} />
       </Pressable>
       <Pressable
         onPress={() => openStopModal()}

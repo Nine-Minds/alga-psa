@@ -15,7 +15,7 @@ vi.mock('@alga-psa/db/admin', () => ({
 }));
 
 const installConfigByInstallId = vi.fn(async (_installId: string) => null);
-vi.mock('@ee/lib/extensions/installConfig', () => ({
+vi.mock('@enterprise/lib/extensions/installConfig', () => ({
   getInstallConfigByInstallId: vi.fn((installId: string) => installConfigByInstallId(installId)),
 }));
 

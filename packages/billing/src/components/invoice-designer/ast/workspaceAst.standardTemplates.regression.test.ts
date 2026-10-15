@@ -61,7 +61,7 @@ describe('workspaceAst standard template regression coverage', () => {
     ['standard-detailed', ['issuer-logo', 'party-blocks', 'bill-to-card', 'totals-wrap']] as const,
     ['standard-grouped', ['issuer-logo', 'recurring-items', 'onetime-items', 'notes-totals-row']] as const,
     ['standard-invoice-by-location', ['location-bands', 'location-band-header', 'location-band-items', 'location-band-subtotal', 'totals-wrap']] as const,
-    ['standard-invoice-by-ticket', ['line-items', 'billed-time-heading', 'ticket-time-summary', 'billed-time-portal-note', 'totals-wrap']] as const,
+    ['standard-invoice-by-ticket', ['invoice-number', 'ticket-coverage-note', 'ticket-time-summary', 'billed-time-portal-note', 'totals-wrap']] as const,
   ])('keeps invoice template %s structurally stable across designer import/export', (templateCode, criticalNodeIds) => {
     const source = getStandardTemplateAstByCode(templateCode);
     expect(source).toBeTruthy();
@@ -73,7 +73,7 @@ describe('workspaceAst standard template regression coverage', () => {
   it.each([
     ['standard-quote-default', ['quote-number', 'line-items', 'totals', 'signature-block']] as const,
     ['standard-quote-detailed', ['phase-summary', 'line-items-detailed', 'version', 'signature-block']] as const,
-    ['standard-quote-grouped', ['monthly-items', 'onetime-items', 'terms-section', 'signature-block']] as const,
+    ['standard-quote-grouped', ['cadence-bands', 'cadence-band-items', 'cadence-optional-bands', 'terms-section', 'signature-block']] as const,
     ['standard-quote-by-location', ['location-bands', 'location-band-header', 'location-band-items', 'location-band-subtotal', 'totals', 'signature-block']] as const,
   ])('keeps quote template %s structurally stable across designer import/export', (templateCode, criticalNodeIds) => {
     const source = getStandardQuoteTemplateAstByCode(templateCode);

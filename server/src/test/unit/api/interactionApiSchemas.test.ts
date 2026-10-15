@@ -2,9 +2,34 @@ import { describe, expect, it } from 'vitest';
 import {
   createInteractionApiSchema,
   interactionListQuerySchema,
+  updateInteractionApiSchema,
 } from '../../../lib/api/schemas/interactionSchemas';
 
 describe('interaction REST schemas', () => {
+  const scheduleInput = {
+    type_id: '11111111-1111-4111-8111-111111111111',
+    client_id: '22222222-2222-4222-8222-222222222222',
+    create_schedule_entry: true,
+    start_time: '2026-10-01T12:00:00.000Z',
+  };
+
+  it('preserves opt-in scheduling and validated calendar assignees', () => {
+    const input = { ...scheduleInput, schedule_assigned_user_ids: ['33333333-3333-4333-8333-333333333333'] };
+    expect(createInteractionApiSchema.parse(input)).toEqual(input);
+    expect(createInteractionApiSchema.parse({ ...input, schedule_assigned_user_ids: [] }).schedule_assigned_user_ids).toEqual([]);
+  });
+
+  it.each([
+    { start_time: undefined },
+    { start_time: 'tomorrow' },
+    { end_time: '2026-10-01T11:00:00.000Z' },
+    { schedule_assigned_user_ids: ['invalid'] },
+    { schedule_assigned_user_ids: '33333333-3333-4333-8333-333333333333' },
+    { create_schedule_entry: 'true' },
+  ])('rejects invalid schedule input: %j', (override) => {
+    expect(createInteractionApiSchema.safeParse({ ...scheduleInput, ...override }).success).toBe(false);
+  });
+
   it('T010: accepts a Call payload linked to an opportunity, client, and contact', () => {
     expect(createInteractionApiSchema.parse({
       type_id: '11111111-1111-4111-8111-111111111111',
@@ -66,5 +91,17 @@ describe('interaction REST schemas', () => {
       page: 2,
       page_size: 100,
     });
+  });
+
+  it('parses the is_closed query flag and the status/notes update body', () => {
+    expect(interactionListQuerySchema.parse({ is_closed: 'false' }).is_closed).toBe(false);
+    expect(interactionListQuerySchema.parse({ is_closed: 'true' }).is_closed).toBe(true);
+    expect(interactionListQuerySchema.parse({}).is_closed).toBeUndefined();
+    expect(interactionListQuerySchema.safeParse({ is_closed: 'maybe' }).success).toBe(false);
+
+    expect(updateInteractionApiSchema.safeParse({ status_id: '11111111-1111-4111-8111-111111111111' }).success).toBe(true);
+    expect(updateInteractionApiSchema.safeParse({ notes: 'called back' }).success).toBe(true);
+    expect(updateInteractionApiSchema.safeParse({}).success).toBe(false);
+    expect(updateInteractionApiSchema.safeParse({ title: 'nope' }).success).toBe(false);
   });
 });

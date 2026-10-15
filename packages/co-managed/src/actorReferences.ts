@@ -20,11 +20,15 @@ export async function ensureCoManagedActorReference(context: CoManagedSharedWork
   const displayName = [user.first_name?.trim(), user.last_name?.trim()].filter(Boolean).join(' ') || user.email || actor.userId;
   await assertCoManagedSessionUnexpired(trx, { ...actor, kind: 'session', sessionId: context.sessionId });
   await assertCoManagedOperationalWrite(trx, ownerTenant);
+  // Citus rejects non-IMMUTABLE functions in the DO UPDATE SET clause of an upsert on a
+  // distributed table, so `trx.fn.now()` here fails at runtime. Bind the instant from Node.
+  const now = new Date().toISOString();
+  const organizationName = organization.client_name || actor.tenant;
   const [reference] = await tenantDb(trx, ownerTenant).table('collaboration_actor_references').insert({
     tenant: ownerTenant, actor_reference_id: randomUUID(), actor_tenant: actor.tenant, actor_user_id: actor.userId,
-    display_name: displayName, organization_name: organization.client_name || actor.tenant,
+    display_name: displayName, organization_name: organizationName,
   }).onConflict(['tenant', 'actor_tenant', 'actor_user_id']).merge({
-    display_name: displayName, organization_name: organization.client_name || actor.tenant, updated_at: trx.fn.now(),
+    display_name: displayName, organization_name: organizationName, updated_at: now,
   }).returning('actor_reference_id');
   return reference.actor_reference_id;
 }

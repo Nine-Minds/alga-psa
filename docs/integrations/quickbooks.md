@@ -25,23 +25,46 @@ Accounting Exports**.
 You can keep CSV configured while you use QuickBooks Online. They store their
 mappings separately and do not interfere.
 
+## Which Intuit app you connect through
+
+AlgaPSA reaches QuickBooks through an **Intuit app**. That is a developer
+registration on [developer.intuit.com](https://developer.intuit.com/), not a
+setting inside QuickBooks and not something you install in AlgaPSA. The app has
+a **client ID** and a **client secret**, and Intuit only lets AlgaPSA sign you
+in through an app whose keys it holds. Whether you need to deal with any of
+this depends on how AlgaPSA is deployed:
+
+| You are on | Who provides the Intuit app | What you do |
+| --- | --- | --- |
+| **Nine Minds hosted AlgaPSA** | Nine Minds. The app is registered and maintained for every hosted tenant. | Nothing. The Intuit App card says **No credentials needed**. Click **Connect QuickBooks** and sign in. |
+| **Self-hosted, deployment-wide app** | You, once, for the whole installation, via the `QBO_CLIENT_ID` and `QBO_CLIENT_SECRET` app secrets. | Register one Intuit app, set the two secrets, restart. Every tenant then sees **No credentials needed**. |
+| **Self-hosted, no app configured** | Nobody yet. | The Intuit App card shows numbered registration steps. Follow **Register your own Intuit app** below and paste the keys into the card. |
+| **Any deployment, a tenant that wants its own app** | The tenant admin. | Expand **Use your own Intuit app instead (advanced)** on the card and paste the tenant's keys. A tenant-owned app always wins over a shared one. |
+
+Only the tenant-owned path uses the client ID and client secret fields in the
+AlgaPSA UI. The other two never ask for them.
+
+Open **Settings → Integrations → Accounting → QuickBooks Online** and read the
+**Intuit App** card. It always states which case you are in:
+
+- **No credentials needed.** A shared app exists. Skip the card.
+- **This tenant connects through its own Intuit app.** Keys are stored for
+  this tenant; paste new values and save to rotate them.
+- **No Intuit app is available yet.** Register one before you can connect.
+
 ## Connect your QuickBooks company
 
-Open **Settings → Integrations → Accounting → QuickBooks Online**. The
-credentials card tells you which Intuit app this tenant will connect through:
+Once an Intuit app is in place, the **Live QuickBooks Connection** card's
+**Connect QuickBooks** button is enabled.
 
-- **A shared app is available.** Your deployment already provides one, so click
-  **Connect QuickBooks** and skip the credential fields entirely.
-- **This tenant has its own app.** AlgaPSA uses the client ID and secret stored
-  for this tenant.
-- **No app is available yet.** Register one with Intuit first, as described in
-  the next section.
+1. Click **Connect QuickBooks**. AlgaPSA sends you to Intuit.
+2. Sign in with your QuickBooks login and pick the company to authorize.
+3. Intuit returns you to the settings page, which shows the connected company
+   and its realm ID.
 
-Click **Connect QuickBooks**, sign in to Intuit, and choose the company to
-authorize. AlgaPSA returns to the settings page and shows the connected company
-with its realm ID. **Reconnect** repeats the flow, for example after an expired
-authorization. **Disconnect** removes the stored access tokens and keeps the
-tenant's Intuit app credentials in place.
+**Reconnect** repeats the flow, for example after an expired authorization.
+**Disconnect** removes the stored access tokens and keeps any tenant-owned
+Intuit app credentials in place.
 
 Once a company is connected, a setup wizard walks you through matching your
 AlgaPSA clients to QuickBooks customers, reviewing invoice history, and going
@@ -49,30 +72,52 @@ live.
 
 ## Register your own Intuit app
 
-Do this only when your deployment has no shared app, or when you want this tenant
-to connect through an Intuit app you control.
+Do this when you self-host and have not configured a deployment-wide app, or
+when a tenant should connect through an Intuit app it controls. Every step
+happens on the Intuit side except the last two.
 
-1. Sign in at [developer.intuit.com](https://developer.intuit.com/) and create an
-   app for QuickBooks Online accounting. Grant it the
-   `com.intuit.quickbooks.accounting` scope. The settings page lists the scopes
-   AlgaPSA requests under **Required Scopes**.
-2. Copy the **Redirect URI** shown on the settings page and add it to your app's
-   redirect URI list in the Intuit portal. Intuit matches it exactly, so paste it
-   rather than retyping it.
-3. Intuit issues a separate set of keys for sandbox and for production. The
-   settings page shows which one AlgaPSA is calling under **Intuit Environment**,
-   set by the `QBO_ENVIRONMENT` variable on your deployment. Use the keys that
-   match it.
-4. Paste the client ID and client secret into the settings fields and save.
-   AlgaPSA stores them as the tenant secrets `qbo_client_id` and
-   `qbo_client_secret` and never returns them to the browser, so the form shows
-   only a masked value afterwards. To rotate a key, paste the new one and save.
+1. Go to [developer.intuit.com](https://developer.intuit.com/) and sign in. The
+   same Intuit account you use for QuickBooks Online works; there is no separate
+   developer signup.
+2. Open the **App dashboard** (under **My Hub**) and click **Create an app**.
+   Choose **QuickBooks Online and Payments**, give the app any name, and select
+   the **Accounting** scope. AlgaPSA requests exactly
+   `com.intuit.quickbooks.accounting`; the settings page lists it under
+   **Required Scopes**.
+3. On the new app's page, open **Keys & credentials**. Intuit issues two
+   separate sets of keys:
+   - **Development** keys, which only work against Intuit sandbox companies.
+   - **Production** keys, which work against real QuickBooks companies. Intuit
+     shows them on the Production tab after you complete its app assessment
+     questionnaire.
 
-Save both keys together. If only one of the two is stored, connecting fails with
-a message that the client ID and secret were not fully configured, and AlgaPSA
-does **not** fall back to the deployment's shared app. That is deliberate: a
-half-configured tenant must never authorize against an Intuit app it did not
-mean to use.
+   The settings page shows which one AlgaPSA is calling under **Intuit
+   Environment**, set by the `QBO_ENVIRONMENT` variable on your deployment. Use
+   the matching keys; a Development key against Production fails at sign-in.
+4. On the same **Keys & credentials** page, find **Redirect URIs** and add the
+   **Redirect URI** shown on the AlgaPSA settings page. Intuit matches it
+   character for character, so copy and paste rather than retyping. Save the
+   Intuit page.
+5. Copy the **Client ID** and **Client Secret** from that page into the
+   **QuickBooks Client ID** and **QuickBooks Client Secret** fields in AlgaPSA
+   and click **Save QuickBooks Credentials**. AlgaPSA stores them as the tenant
+   secrets `qbo_client_id` and `qbo_client_secret` and never returns them to the
+   browser, so the form shows only a masked value afterwards. To rotate a key,
+   paste the new one and save.
+6. Click **Connect QuickBooks** and continue with the section above.
+
+To make the same app serve every tenant on a self-hosted deployment instead,
+set it as the app-level secrets `QBO_CLIENT_ID` and `QBO_CLIENT_SECRET`
+(environment variables or your secret provider's app secrets, `qbo_client_id`
+and `qbo_client_secret` are accepted too) rather than pasting it into a tenant's
+card. Optionally set `QBO_REDIRECT_URI` if the public callback URL differs from
+`NEXT_PUBLIC_BASE_URL` plus `/api/integrations/qbo/callback`.
+
+Save both tenant keys together. If only one of the two is stored, connecting
+fails with a message that the client ID and secret were not fully configured,
+and AlgaPSA does **not** fall back to the deployment's shared app. That is
+deliberate: a half-configured tenant must never authorize against an Intuit app
+it did not mean to use.
 
 ## Map items, tax codes, and payment terms
 

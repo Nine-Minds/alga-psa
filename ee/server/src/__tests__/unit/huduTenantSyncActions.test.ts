@@ -14,7 +14,6 @@ const assertTierAccessMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const runHuduTenantSyncMock = vi.fn();
 const mergeHuduSettingsMock = vi.fn();
-const scheduleHuduAutoSyncJobMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth:
@@ -30,9 +29,6 @@ vi.mock('@ee/lib/integrations/hudu/tenantSync', () => ({ runHuduTenantSync: runH
 vi.mock('@ee/lib/integrations/hudu/huduIntegrationRepository', async (importOriginal) => ({
   ...((await importOriginal()) as Record<string, unknown>),
   mergeHuduSettings: mergeHuduSettingsMock,
-}));
-vi.mock('server/src/lib/jobs/handlers/huduAutoSyncHandler', () => ({
-  scheduleHuduAutoSyncJob: scheduleHuduAutoSyncJobMock,
 }));
 
 async function loadActions() {
@@ -91,7 +87,6 @@ describe('setHuduAutoSync', () => {
     expect(mergeHuduSettingsMock).toHaveBeenCalledWith({}, TENANT, {
       autoSync: { enabled: true, cadence: 'daily' },
     });
-    expect(scheduleHuduAutoSyncJobMock).toHaveBeenCalledWith(TENANT);
     expect(result).toEqual({ success: true, data: { enabled: true, cadence: 'daily' } });
   });
 

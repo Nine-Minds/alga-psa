@@ -16,6 +16,14 @@ vi.mock('@alga-psa/core/secrets', () => ({
   }),
 }));
 
+// Model dotenv's default precedence: a file fills absent variables only.
+vi.mock('dotenv', () => ({
+  config: vi.fn(() => {
+    process.env.DB_NAME_SERVER ??= 'local_file_database';
+    return { parsed: { DB_NAME_SERVER: 'local_file_database' } };
+  }),
+}));
+
 const ENV_KEYS = [
   'DB_HOST', 'DB_PORT', 'DB_USER_SERVER', 'DB_NAME_SERVER', 'DB_PASSWORD_SERVER',
   'DB_HOST_ADMIN', 'DB_PORT_ADMIN', 'DB_USER_ADMIN', 'DB_PASSWORD_ADMIN',
@@ -45,6 +53,17 @@ describe('knexfile', () => {
     process.env.DB_PORT_ADMIN = '5440';
     process.env.DB_USER_ADMIN = 'postgres';
     process.env.DB_PASSWORD_ADMIN = 'admin_pw';
+  });
+
+  it('preserves an explicit database when a test env file supplies another database', async () => {
+    const { getKnexConfig } = await import('./knexfile');
+    expect((await getKnexConfig('test')).connection.database).toBe('server_db');
+  });
+
+  it('uses the test env file database when no database was supplied', async () => {
+    delete process.env.DB_NAME_SERVER;
+    const { getKnexConfig } = await import('./knexfile');
+    expect((await getKnexConfig('test')).connection.database).toBe('local_file_database');
   });
 
   it('getKnexConfig returns development config derived from env vars', async () => {

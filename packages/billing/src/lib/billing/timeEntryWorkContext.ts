@@ -1,16 +1,24 @@
 import type { Knex } from 'knex';
+import { ticketProjectAttributionByTicketJoin } from '@alga-psa/shared/billingClients/ticketProjectAttribution';
 
 /** One work row per owner/type/id. Native work and retained MSP evidence use
  * identical billing columns, without reading another tenant during invoicing.
- * This is a billing loader, not authorization to browse the live source. */
+ * This is a billing loader, not authorization to browse the live source.
+ *
+ * Ticket rows carry the project a flagged project-ticket link bills them under
+ * (alga-2026-0002622), and the ticket's billing profile falling back to that
+ * project's, exactly as the time-entry loaders resolve it. */
 export function joinTimeEntryBillingWorkContext(db: Knex, tenant: string, query: Knex.QueryBuilder, entryAlias = 'time_entries') {
   const work = db.raw(`(
     SELECT t.tenant, t.ticket_id AS work_item_id, 'ticket'::text AS work_item_type,
-      t.client_id, t.billing_profile_id, t.ticket_number::text, t.title AS ticket_title,
+      t.client_id, COALESCE(t.billing_profile_id, linked_project.billing_profile_id) AS billing_profile_id, t.ticket_number::text, t.title AS ticket_title,
       t.attributes->>'description' AS ticket_description, NULL::text AS project_task_name,
-      NULL::uuid AS project_phase_id, NULL::uuid AS project_id, t.title AS work_item_name,
+      NULL::uuid AS project_phase_id, ticket_project.project_id AS project_id, t.title AS work_item_name,
       t.tenant AS source_tenant, 'ticket'::text AS source_kind, t.ticket_id AS source_id, NULL::uuid AS relationship_id
-    FROM tickets t WHERE t.tenant = ?
+    FROM tickets t
+      ${ticketProjectAttributionByTicketJoin('t')}
+      LEFT JOIN projects linked_project ON linked_project.tenant = ticket_project.tenant AND linked_project.project_id = ticket_project.project_id
+    WHERE t.tenant = ?
     UNION ALL
     SELECT task.tenant, task.task_id, 'project_task', p.client_id, p.billing_profile_id,
       NULL::text, NULL::text, NULL::text, task.task_name, phase.phase_id, p.project_id, task.task_name,

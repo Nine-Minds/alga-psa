@@ -1,6 +1,7 @@
 import { TenantEntity } from './index';
 import type { ISO8601String } from '../lib/temporal';
 import type { CadenceOwner } from './recurringTiming.interfaces';
+import type { FixedPricingBasis } from './contractLineServiceConfiguration.interfaces';
 
 export interface IBillingPeriod extends TenantEntity {
   startDate: ISO8601String;
@@ -118,8 +119,13 @@ export interface IFixedPriceCharge extends IBillingCharge, TenantEntity {
  * Customer-visibility rule: only the ticket's own title and description are
  * captured. Internal comments and time-entry notes are never included.
  */
-export interface InvoiceTimeEntrySnapshot {
-  version: 1;
+export type InvoiceTimeRateKind = 'uniform' | 'mixed' | 'unknown';
+export type InvoiceTimeEntrySnapshot = InvoiceTimeEntrySnapshotData & (
+  | { version: 1 }
+  | { version: 2; rateKind: InvoiceTimeRateKind; uniformRate: number | null }
+);
+
+export interface InvoiceTimeEntrySnapshotData {
   /** 'ticket' | 'project_task' | 'ad_hoc' provenance of the billed time. */
   workItemType: 'ticket' | 'project_task' | 'ad_hoc' | null;
   /** Ticket id or project-task id, preserved for traceability. */
@@ -137,12 +143,18 @@ export interface InvoiceTimeEntrySnapshot {
   entryDate: string | null;
   /** Billed duration in whole minutes, after minimum/rounding rules. */
   billedMinutes: number;
-  /** Effective hourly rate in minor currency units. */
+  /** Historical base rate; never proof of a uniform effective rate. */
   rate: number;
   /** Net (pre-tax) amount in minor currency units. */
   netAmount: number;
   serviceId: string | null;
   serviceName: string | null;
+  /**
+   * Present when the entry was billed as two lines (regular hours at the
+   * base rate, overtime hours at the overtime rate). Each line links the
+   * entry with its own snapshot; this names the segment that line covers.
+   */
+  segment?: 'regular' | 'overtime';
 }
 
 export interface ITimeBasedCharge extends IBillingCharge, TenantEntity {
@@ -154,6 +166,11 @@ export interface ITimeBasedCharge extends IBillingCharge, TenantEntity {
   total: number;
   type: 'time';
   entryId: string; // Added field for source time entry ID
+  /**
+   * Set when an overtime entry is billed as two lines (regular hours at the
+   * base rate, overtime hours at the overtime rate); both share `entryId`.
+   */
+  timeSegment?: 'regular' | 'overtime';
   /**
    * Work-item snapshot persisted to `invoice_time_entries.work_item_snapshot`
    * when this charge is invoiced. Renderer-only metadata: it must never feed
@@ -189,6 +206,8 @@ export interface IRecurringChargeDetailPeriod {
   billingTiming?: 'arrears' | 'advance' | null;
 }
 export interface IBillingCharge extends TenantEntity {
+  unit_code?: string | null;
+  unit_label?: string | null;
   type: ChargeType;
   serviceId?: string;
   config_id?: string;
@@ -225,6 +244,54 @@ export interface IBillingCharge extends TenantEntity {
   servicePeriodRecordId?: string | null;
   billingTiming?: 'arrears' | 'advance';
   recurringDetailPeriods?: IRecurringChargeDetailPeriod[];
+  /**
+   * Effective recurring pricing provenance for a charge priced by a scheduled
+   * quantity/price revision (product, license or unit-priced service). Present
+   * only when a revision applied. Carried through preview, persisted on the
+   * invoice detail, and used to reject generation after the reviewed revision or
+   * its catalog source changed.
+   */
+  recurringPricingSource?: IRecurringPricingSource | null;
+  /**
+   * Set on the one-time mid-period quantity true-up line. Carries the companion
+   * provenance contract (source kind, revision id + version, affected period and
+   * reason) so generation can persist a source-linked row and reconcile it
+   * instead of duplicating on regeneration.
+   */
+  contractChangeAdjustment?: IContractChangeAdjustmentSource | null;
+}
+
+export interface IContractChangeAdjustmentSource {
+  adjustmentId: string;
+  sourceKind: 'contract_change';
+  revisionId: string;
+  /** Revision version at time of settlement; generation rejects a changed source. */
+  revisionVersion: number;
+  /** Affected canonical period, half-open [start, end). */
+  periodStart: string;
+  periodEnd: string;
+  /** Signed minor units: positive charge, negative credit. */
+  amountCents: number;
+  reason: string;
+  /** Standing quantity that begins at the next boundary. */
+  newQuantity: number;
+  previousQuantity: number;
+  quantityDelta: number;
+  unitRateCents: number;
+  coveredDays: number;
+  fullPeriodDays: number;
+}
+
+export interface IRecurringPricingSource {
+  revisionId: string;
+  version: number;
+  pricePolicy: 'override' | 'catalog';
+  unitRateCents: number | null;
+  /** Canonical service-period boundary the revision took effect at. */
+  effectivePeriodStart: string;
+  /** `service_prices` row that supplied a catalog-policy rate, when applicable. */
+  catalogPriceId?: string | null;
+  catalogEffectiveDate?: string | null;
 }
 
 export interface IDiscount extends TenantEntity {
@@ -312,6 +379,30 @@ export interface IBillingResult extends TenantEntity {
    * record and from calculation errors.
    */
   usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+  /**
+   * Fixed-fee contract lines that could not be priced (no resolvable rate, or
+   * a rate with no service to bill it on). A line listed here is NOT billed by
+   * this result, and previewing/generating from it must be refused with the
+   * blocker's coded reason (FIXED_LINE_RATE_UNRESOLVED / FIXED_LINE_NO_SERVICES) — never
+   * shortened silently. A line whose rate legitimately resolves to zero is not
+   * listed.
+   */
+  fixedLineBlockers?: IFixedLineBlocker[];
+}
+
+export type FixedLineBlockerCode =
+  | 'FIXED_LINE_RATE_UNRESOLVED'
+  | 'FIXED_LINE_NO_SERVICES';
+
+export interface IFixedLineBlocker {
+  /**
+   * FIXED_LINE_RATE_UNRESOLVED: the line has no resolvable rate.
+   * FIXED_LINE_NO_SERVICES: the line has a rate but no service to bill it on.
+   */
+  code: FixedLineBlockerCode;
+  message: string;
+  contractLineId: string;
+  contractLineName: string;
 }
 
 export interface IClientContractLine extends TenantEntity {
@@ -419,6 +510,10 @@ export interface IServicePrice extends TenantEntity {
   service_id: string;
   currency_code: string; // ISO 4217 code (e.g., 'USD', 'EUR', 'GBP')
   rate: number; // Amount in minor units (cents)
+  /** Calendar date (`YYYY-MM-DD`) the price takes effect; the epoch when untagged. */
+  effective_date?: string | null;
+  /** Explicit primary order within the price's window; 0 is the primary price. */
+  display_order?: number;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }
@@ -431,6 +526,7 @@ export interface IService extends TenantEntity {
   default_rate: number; // Convenience field: primary rate (typically first/USD price)
   category_id: string | null;
   unit_of_measure: string;
+  unit_code?: string | null;
   item_kind?: 'service' | 'product'; // Catalog kind (Products are a filtered subset)
   is_active?: boolean;
   sku?: string | null;
@@ -447,7 +543,9 @@ export interface IService extends TenantEntity {
   description?: string | null; // Added: Description field from the database
   service_type_name?: string; // Added: Name of the service type (from custom)
   // Multi-currency pricing
-  prices?: IServicePrice[]; // All currency/rate pairs for this service
+  prices?: IServicePrice[]; // Current price per currency (latest effective on/before today)
+  /** Future-dated prices scheduled to take effect later; not yet the billed price. */
+  scheduled_prices?: IServicePrice[];
 }
 
 // New interface for standard service types (cross-tenant)
@@ -557,8 +655,15 @@ export interface IContractLinePresetService extends TenantEntity {
   preset_id: string;
   service_id: string;
   quantity?: number;
+  /**
+   * Hourly/Usage: the service rate. Fixed 'unit' services: the optional default
+   * unit rate in minor units (null follows the catalog in the contract currency).
+   */
   custom_rate?: number | null;
+  /** Fixed services only. Absent/null/'bundle' = quantity allocates a share of the line total. */
+  pricing_basis?: FixedPricingBasis | null;
   unit_of_measure?: string;
+  unit_code?: string | null;
   // Bucket overlay fields - recommended bucket configuration
   bucket_total_minutes?: number;
   bucket_overage_rate?: number;
@@ -603,6 +708,8 @@ export interface IBucketUsage extends TenantEntity {
 export interface PaymentMethod extends TenantEntity {
   payment_method_id: string;
   client_id: string;
+  /** The billing profile this saved method belongs to (never shared across profiles). */
+  billing_profile_id: string;
   type: 'credit_card' | 'bank_account';
   last4: string;
   exp_month?: string;
@@ -775,6 +882,11 @@ export interface ITaxRate extends TenantEntity {
   is_active?: boolean;
   conditions?: Record<string, any>;
   name?: string;
+  /** Safe integer tax cap in rate-currency minor units; null is uncapped, zero is intentional.
+   * Applied per rate contribution/per period segment, not to component-based composite totals. */
+  cap_amount?: number | null;
+  /** Explicit invoice currency, or null for a universal rate. */
+  currency_code?: string | null;
 }
 
 export interface IClientTaxRate extends TenantEntity {
@@ -791,6 +903,8 @@ export interface IDefaultBillingSettings extends TenantEntity {
   enable_credit_expiration: boolean;
   credit_expiration_days: number;
   credit_expiration_notification_days: number[];
+  default_notice_period_days?: number;
+  default_quote_validity_days?: number;
   default_recurring_cadence_owner?: CadenceOwner;
   recurring_cadence_rollout_state?: 'mixed_enabled';
   recurring_cadence_rollout_message?: string;

@@ -1,3 +1,5 @@
+import type { ProjectCapContext, ProjectCapThresholdCrossing } from './projectCapAdjustments';
+import type { TimeBasedPhaseRateOverride, TimeBasedProjectChargeConfig } from '../compute/computeTimeBasedCharges';
 import type {
   ChargeExplanation,
   IAdjustment,
@@ -95,6 +97,11 @@ export type ResolvedContractBillingChargeFacts =
         serviceId: string;
         serviceName: string;
         defaultRate: number | string | null;
+        /**
+         * Effective `service_prices.rate` in the contract currency; preferred
+         * over the currency-untagged `defaultRate` when present.
+         */
+        currencyRate?: number | string | null;
         taxRateId: string | null;
         configurationId: string;
         serviceQuantity?: number | string | null;
@@ -113,6 +120,8 @@ export type ResolvedContractBillingChargeFacts =
         taxRateId: string | null;
         configurationId: string;
       } | null;
+      /** Every member is a product/license billed by its own charge family. */
+      hasProductMembers?: boolean;
     })
   | (ContractChargeFactsBase & {
       kind: "hourly";
@@ -141,6 +150,16 @@ export type ResolvedContractBillingChargeFacts =
         customRate?: number | null;
         currencyRate?: number | string | null;
         billableMinutes: number;
+        workItemId?: string | null;
+        workItemType?: string | null;
+        ticketNumber?: string | null;
+        ticketTitle?: string | null;
+        ticketDescription?: string | null;
+        projectTaskName?: string | null;
+        projectId?: string | null;
+        projectPhaseId?: string | null;
+        phaseRateOverride?: TimeBasedPhaseRateOverride | null;
+        projectChargeConfig?: TimeBasedProjectChargeConfig;
         billingProfileId?: string | null;
         /** Retained work evidence for the immutable invoice receipt. */
         workItem?: {
@@ -199,6 +218,18 @@ export type ResolvedContractBillingChargeFacts =
         allowRollover?: boolean | null;
         weighted?: boolean | null;
       };
+      periodContributions?: Array<{
+        start: string;
+        end: string;
+        services: Array<{
+          serviceId: string;
+          serviceName?: string;
+          taxRateId?: string | null;
+          unitOfMeasure?: string | null;
+          billingMethod?: string | null;
+          weightedMinutes: number;
+        }>;
+      }>;
       periods: Array<{
         start?: string | null;
         end?: string | null;
@@ -222,6 +253,19 @@ export type ResolvedContractBillingChargeFacts =
         configurationQuantity?: number | string | null;
         configurationCustomRate?: number | string | null;
         priceRate?: number | string | null;
+        /**
+         * Effective scheduled revision for the covered service period. Carried
+         * through the domain facts boundary so billing computes the same
+         * quantity/rate the resolver selected; never a delta.
+         */
+        effectivePricing?: {
+          quantity: number;
+          pricePolicy: "override" | "catalog";
+          unitRateCents: number | null;
+          revisionId: string;
+          version: number;
+          effectivePeriodStart: string;
+        } | null;
       }>;
     });
 
@@ -310,11 +354,20 @@ export interface ContractBillingCalculationInput {
   taxContexts: Record<string, ResolvedChargeTaxPolicy>;
   /** Explicit non-contract carve-out (materials/projects/manual activity). */
   supplementalCharges?: IBillingCharge[];
+  projectCaps?: ProjectCapContext;
   discountsAndAdjustments?: {
     billingPeriod: IBillingPeriod;
     discountCandidates: DiscountComputeCandidate[];
     adjustments: IAdjustment[];
   };
+}
+
+export interface CalculationDiagnostic {
+  code: string;
+  message: string;
+  /** Present for line-scoped diagnostics. */
+  contractLineId?: string;
+  contractLineName?: string;
 }
 
 export interface ContractBillingCalculationResult {
@@ -329,9 +382,16 @@ export interface ContractBillingCalculationResult {
   subtotal: number;
   taxTotal: number;
   total: number;
-  diagnostics: { code: string; message: string }[];
+  /**
+   * Coded, non-throwing findings of the calculation (e.g.
+   * FIXED_LINE_RATE_UNRESOLVED). Live callers refuse to preview/generate when
+   * a blocking diagnostic is present instead of billing a silently short
+   * document.
+   */
+  diagnostics: CalculationDiagnostic[];
   /** Rich compute results used only by the guarded production commit adapter. */
   sourceCharges: IBillingCharge[];
+  projectCapThresholdCrossings?: ProjectCapThresholdCrossing[];
 }
 
 export type LiveContractBillingCalculationResult =

@@ -15,6 +15,8 @@ exports.seed = async function(knex) {
   }
 
   const { tenantId, db } = context;
+  // Resolve database time before upserts: Citus requires immutable SET expressions.
+  const { seedTime } = await knex.select({ seedTime: knex.fn.now() }).first();
 
   console.log('Seeding notification categories and subtypes (non-destructive)...');
 
@@ -65,7 +67,7 @@ exports.seed = async function(knex) {
       .onConflict('name')
       .merge({
         description: category.description,
-        updated_at: knex.fn.now()
+        updated_at: seedTime
       });
   }
   console.log(`  ✓ Upserted ${categoriesToUpsert.length} notification categories`);
@@ -136,7 +138,7 @@ exports.seed = async function(knex) {
       .onConflict(['category_id', 'name'])
       .merge({
         description: subtype.description,
-        updated_at: knex.fn.now()
+        updated_at: seedTime
       });
     subtypeCount++;
   }
@@ -155,7 +157,7 @@ exports.seed = async function(knex) {
     });
   } else {
     await db.table('notification_settings')
-      .update({ updated_at: knex.fn.now() });
+      .update({ updated_at: seedTime });
   }
   console.log(`  ✓ Ensured notification settings exist for tenant`);
 

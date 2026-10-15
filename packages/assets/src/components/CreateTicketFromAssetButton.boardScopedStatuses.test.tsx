@@ -162,6 +162,13 @@ describe('CreateTicketFromAssetButton board-scoped statuses', () => {
           openTicketDetailsDrawer: vi.fn(),
           createTicketFromAsset: mockCreateTicketFromAsset,
           getAllBoards: mockGetAllBoards,
+          rmm: {
+            getAssetRmmData: vi.fn(),
+            refreshAssetRmmData: vi.fn(),
+            triggerRmmReboot: vi.fn(),
+            getAssetRemoteControlTypes: vi.fn(async () => []),
+            getAssetRemoteControlUrl: vi.fn(async () => null),
+          },
         }}
       >
         <CreateTicketFromAssetButton

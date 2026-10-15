@@ -30,5 +30,6 @@ export type {
   GraphTeam,
   GraphTeamChannel,
   InboundBotActivityInput,
+  SignedInUser,
 } from './core';
 export { BOT_FRAMEWORK_ISSUER } from './botFramework';

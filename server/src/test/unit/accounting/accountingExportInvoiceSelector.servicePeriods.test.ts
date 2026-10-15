@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
+// Explicit manual export targets are validated against the tenant's connected
+// integrations, so the realm-1 QBO company used below must be "connected".
+vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
+  getDefaultQboRealmId: async () => 'realm-1',
+  getStoredQboCredentialsMap: async () => ({ 'realm-1': { realmId: 'realm-1' } })
+}));
+
 import { AccountingExportInvoiceSelector, AccountingExportService } from '@alga-psa/billing/services';
 
 function buildThenableQuery(result: any[]) {

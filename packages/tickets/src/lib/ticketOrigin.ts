@@ -1,4 +1,5 @@
 import { TICKET_ORIGINS, type TicketOriginDisplay } from '@alga-psa/types';
+import { findBuiltInExternalSystem } from './externalSystems';
 
 export const TICKET_ORIGIN_OTHER = 'other' as const;
 export type ResolvedTicketOrigin = TicketOriginDisplay;
@@ -10,6 +11,8 @@ export interface TicketOriginResolverInput {
   creator_user_type?: string | null;
   entered_by_user_type?: string | null;
   user_type?: string | null;
+  /** Registry key of the origin external link, when one exists. */
+  origin_link_system?: string | null;
 }
 
 const SOURCE_HINT_TO_ORIGIN: Readonly<Record<string, Exclude<ResolvedTicketOrigin, 'other'>>> = {
@@ -18,6 +21,7 @@ const SOURCE_HINT_TO_ORIGIN: Readonly<Record<string, Exclude<ResolvedTicketOrigi
   email: TICKET_ORIGINS.INBOUND_EMAIL,
   inbound_email: TICKET_ORIGINS.INBOUND_EMAIL,
   manual: TICKET_ORIGINS.INTERNAL,
+  recurring_ticket: TICKET_ORIGINS.RECURRING,
   web_app: TICKET_ORIGINS.INTERNAL,
   worker: TICKET_ORIGINS.INTERNAL,
   workflow: TICKET_ORIGINS.INTERNAL,
@@ -75,6 +79,10 @@ function normalizeStoredOrigin(origin: unknown): ResolvedTicketOrigin | null {
     return TICKET_ORIGINS.API;
   }
 
+  if (normalized === TICKET_ORIGINS.RECURRING) {
+    return TICKET_ORIGINS.RECURRING;
+  }
+
   return TICKET_ORIGIN_OTHER;
 }
 
@@ -102,6 +110,18 @@ export function getTicketOrigin(
 ): ResolvedTicketOrigin {
   if (!ticket) {
     return TICKET_ORIGINS.INTERNAL;
+  }
+
+  // A structured origin link is authoritative for how the ticket arrived.
+  if (ticket.origin_link_system) {
+    const definition = findBuiltInExternalSystem(ticket.origin_link_system);
+    if (definition) {
+      return definition.originCategory;
+    }
+    // Tenant custom systems always categorize as 'other'.
+    if (ticket.origin_link_system.startsWith('custom:')) {
+      return TICKET_ORIGIN_OTHER;
+    }
   }
 
   const storedOrigin = normalizeStoredOrigin(ticket.ticket_origin);

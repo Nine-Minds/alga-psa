@@ -4,6 +4,7 @@ import { getSessionCookieName } from './lib/auth/sessionCookies';
 import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
 import { resolveRequestHost, detectForwardedHostRewrite } from './lib/deployment/requestHost';
+import { MIGRATED_SETTINGS_TAB_IDS } from './components/settings/settingsTabsRegistry';
 
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
@@ -49,6 +50,7 @@ function corsPreflightResponse(origin: string | null): NextResponse {
 // =============================================================================
 const protectedPrefix = '/msp';
 const clientPortalPrefix = '/client-portal';
+const publicPagePaths = new Set(['/payment-methods/setup-complete']);
 
 export interface ClientPortalThemeRequestContext {
   isClientPortal: boolean;
@@ -112,6 +114,7 @@ const apiKeySkipPaths = [
   '/api/teams/message-extension/',
   '/api/teams/webhooks/',  // Microsoft Graph change notifications; authenticated via clientState secret in the route
   '/api/telephony/webhooks/',  // Microsoft Graph callRecords notifications; authenticated via clientState secret in the route
+  '/api/telephony/3cx/',  // 3CX CRM template calls; authenticated via per-tenant Bearer ApiKey verified in the route
   '/api/teams/package/download',
   '/api/online-meetings/recordings/',
   '/api/client-portal/domain-session',
@@ -138,6 +141,9 @@ const apiKeySkipPaths = [
   '/api/integrations/entra/',
   // AI chat endpoints are session-authenticated (MSP UI)
   '/api/chat/',
+  // Smart ticket search stream (MSP Tickets page): session-authenticated in-route
+  // via getCurrentUser + ticket:read, then streams SSE.
+  '/api/smart-search/',
   // AMP migration workspace uploads (MSP UI): session-authenticated in-route
   // via getCurrentUser + import_export permission checks.
   '/api/migrations/',
@@ -187,14 +193,50 @@ const apiKeySkipPaths = [
   '/api/internal/ext-services/', // Runner service read host API uses x-runner-auth token
 ];
 
+/**
+ * Routes exempted from the x-api-key check with exact, path-boundary matching
+ * only (never as a prefix). Joined alongside the apiKeySkipPaths entries above
+ * because they are exempt by the same rule — in-route authentication — but the
+ * prefix entries also exempt every deeper '/'-child, and Level.io has no deeper
+ * routes to exempt. Exempting exactly this single POST route keeps prefixed
+ * siblings like `/api/webhooks/levelioevil` and any future deeper route behind
+ * the API-key gate.
+ */
+const exactApiKeySkipPaths = [
+  // Level.io alert webhooks: single POST route that authenticates the tenant +
+  // X-Alga-Webhook-Secret in the route handler (no x-api-key). Same intent as
+  // the ninjaone/tacticalrmm entries, but Level has no sub-routes.
+  '/api/webhooks/levelio',
+  '/api/webhooks/levelio/',
+  // Notification live-stream token: the MSP shell and the client portal both
+  // mint a short-lived Hocuspocus token from their browser session (no
+  // x-api-key). The route re-checks the session and the session id itself, and
+  // `/api/notifications` has no other route to exempt.
+  '/api/notifications/live-token',
+];
+
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
-  return apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
+  return pathname === '/api/ticket-comment-attachments/download' ||
     // These browser routes enforce tracked sessions and qualified content access in-handler.
     pathname === '/api/tickets/conversation-synthesis' || pathname === '/api/tickets/conversation-ai' ||
     /^\/api\/(?:tickets\/(?:conversation-attachments|conversation-editor-files)|client-portal\/conversation-attachments)\/[^/]+\/?$/.test(pathname) ||
+    // Client portal document handlers authenticate the portal session and run
+    // the shared tenant/client visibility resolver before serving content.
+    /^\/api\/client-portal\/documents\/[^/]+\/(?:file|export)$/.test(pathname) ||
+    exactApiKeySkipPaths.includes(pathname) ||
+    apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
     // These co-managed browser routes bind and revalidate the tracked home session in-handler.
     pathname === '/api/co-management/export' ||
     /^\/api\/co-management\/(attachments|archive-files)\/[^/]+$/.test(pathname) ||
+    // Co-managed portal attachment downloads: plain browser <a download> links
+    // that require a `client` session in-handler. One dynamic id, no deeper
+    // route, so the pattern is anchored the same way as the co-management
+    // attachment routes above.
+    /^\/api\/client-portal\/conversation-attachments\/[^/]+$/.test(pathname) ||
+    // Meeting recording/transcript downloads: the handler resolves either an
+    // x-api-key actor or a browser-session actor, so it must be reachable
+    // without the header for the session branch to exist at all.
+    /^\/api\/online-meetings\/artifacts\/[^/]+$/.test(pathname) ||
     (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||
     (pathname.startsWith('/api/documents/') &&
       (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview') ||
@@ -398,7 +440,9 @@ const _middleware = auth((request) => {
     // full validation happens in API route handlers (Node runtime)
     if (!apiKey) {
       const errorResponse = NextResponse.json(
-        { error: 'Unauthorized: API key missing' },
+        pathname.startsWith('/api/v1/')
+          ? { error: { code: 'UNAUTHORIZED', message: 'API key required' } }
+          : { error: 'Unauthorized: API key missing' },
         { status: 401 }
       );
       return applyCorsHeaders(errorResponse, origin);
@@ -407,6 +451,11 @@ const _middleware = auth((request) => {
 
   // Skip auth pages to prevent redirect loops
   const isAuthPage = pathname.startsWith('/auth/');
+
+  // Public Stripe Checkout return page verifies its opaque session context itself.
+  if (publicPagePaths.has(pathname)) {
+    return applyCorsHeaders(response, origin);
+  }
 
   // Redirect vanity domains to canonical for client portal signin (before auth check)
   if (pathname === '/auth/client-portal/signin') {
@@ -504,6 +553,22 @@ const _middleware = auth((request) => {
       redirectResponse.headers.set('x-pathname', redirectTarget.pathname);
       return redirectResponse;
     }
+  }
+
+  // Resolve legacy settings bookmarks/OAuth returns before rendering the MSP
+  // shell. A streamed page redirect can race its client-side server actions and
+  // leave the App Router in an inconsistent render. Preserve repeated query
+  // values, but never redirect a POST carrying a server action.
+  const legacySettingsTabs = request.nextUrl.searchParams.getAll('tab');
+  if (request.method === 'GET' && pathname === '/msp/settings'
+    && legacySettingsTabs.length === 1
+    && MIGRATED_SETTINGS_TAB_IDS.has(legacySettingsTabs[0].toLowerCase())) {
+    const target = request.nextUrl.clone();
+    target.pathname = `/msp/settings/${legacySettingsTabs[0].toLowerCase()}`;
+    target.searchParams.delete('tab');
+    const redirectResponse = NextResponse.redirect(target);
+    redirectResponse.headers.set('x-pathname', target.pathname);
+    return applyCorsHeaders(redirectResponse, origin);
   }
 
   // Protect Client Portal routes: validate user type (but not auth pages)

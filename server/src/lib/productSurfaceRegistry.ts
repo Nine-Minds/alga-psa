@@ -130,6 +130,14 @@ export const PORTAL_ROUTE_RULES: readonly RouteRule[] = [
 
 export const API_RULES: readonly ApiRule[] = [
   {
+    // Authenticated app-internal stream used by ticket and project list smart
+    // search. It is not part of the public v1 metadata surface.
+    group: 'api_smart_search',
+    staticPrefixes: ['/api/smart-search'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
+  },
+  {
     group: 'api_operational_workspace',
     staticPrefixes: [
       '/api/v1/tickets/from-asset', '/api/v1/projects', '/api/v1/project',
@@ -158,16 +166,30 @@ export const API_RULES: readonly ApiRule[] = [
     visibleInMetadataByProduct: { psa: true, algadesk: false, co_managed: false },
   },
   {
+    // Notification settings are PSA-only in the UI (/msp/settings/notifications),
+    // so editing the same templates over the API follows them.
+    group: 'api_email_templates_psa_only',
+    staticPrefixes: [
+      '/api/v1/email/templates',
+    ],
+    // co_managed matches the adjacent PSA-only API rules: a co-managed tenant
+    // does not administer the sponsoring MSP's notification templates.
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
+    visibleInMetadataByProduct: { psa: true, algadesk: false, co_managed: false },
+  },
+  {
     group: 'api_helpdesk_allowed',
     staticPrefixes: [
       '/api/v1/meta',
       '/api/v1/tickets',
       '/api/v1/comments',
+      '/api/ticket-comment-attachments',
       '/api/v1/clients',
       '/api/v1/contacts',
       '/api/v1/boards',
       '/api/v1/statuses',
       '/api/v1/priorities',
+      '/api/v1/countries',
       '/api/v1/tags',
       '/api/v1/knowledge-base',
       '/api/v1/kb-articles',
@@ -178,6 +200,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/teams',
       '/api/v1/interactions',
       '/api/v1/interaction-types',
+      '/api/v1/interaction-statuses',
       '/api/v1/mobile/me/capabilities',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
@@ -191,6 +214,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/projects',
       '/api/v1/assets',
       '/api/v1/time-entries',
+      '/api/v1/stopwatch',
       '/api/v1/workflows',
       '/api/v1/extensions',
       '/api/v1/surveys',

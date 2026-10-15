@@ -15,6 +15,11 @@ const getInvoiceForRenderingMock = vi.fn();
 const mapDbInvoiceToWasmViewModelMock = vi.fn();
 const runAuthoritativeInvoiceTemplatePreviewMock = vi.fn();
 
+// Exercise the existing feature behavior with the release flag enabled.
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
   useSearchParams: () => ({ toString: () => '', get: () => null }),
@@ -235,6 +240,77 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
       version: 1,
     });
     expect(JSON.stringify(payload.templateAst)).toContain('field-flow');
+    // Saving keeps the author in the editor: no navigation, and editing (with
+    // its live preview) carries on.
+    await waitFor(() =>
+      expect((document.getElementById('save-template-button') as HTMLButtonElement).disabled).toBe(false)
+    );
+    expect(pushMock).not.toHaveBeenCalled();
+    const callsAfterSave = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
+    await act(async () => {
+      useInvoiceDesignerStore.getState().loadWorkspace(createWorkspaceWithField('field-after-save'));
+    });
+    await waitFor(() =>
+      expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(callsAfterSave)
+    , { timeout: 2500 });
+  });
+
+  it('turns a new layout into the saved one on first save, so saving again updates it instead of duplicating', async () => {
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
+    // After the first save the editor reloads the layout by its new id.
+    getInvoiceTemplateMock.mockImplementation(async (id: string) => ({
+      template_id: id,
+      name: 'Fresh Layout',
+      templateAst: { kind: 'invoice-template-ast', version: 1, layout: { id: 'root', type: 'document', children: [] } },
+      isStandard: false,
+    }));
+    saveInvoiceTemplateMock.mockResolvedValue({
+      success: true,
+      template: { template_id: 'tpl-new', name: 'Fresh Layout', updated_at: '2026-09-30T12:00:00.000Z' },
+    });
+
+    render(<InvoiceTemplateEditor templateId={null} />);
+    fireEvent.change(document.getElementById('templateName') as HTMLInputElement, { target: { value: 'Fresh Layout' } });
+
+    const save = await screen.findByRole('button', { name: 'Save Template' }) as HTMLButtonElement;
+    fireEvent.click(save);
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(1));
+    expect(saveInvoiceTemplateMock.mock.calls[0][0].template_id).toBeUndefined();
+
+    await waitFor(() => expect(screen.getByText('Edit Layout: Fresh Layout')).toBeTruthy());
+    expect(String(replaceStateSpy.mock.calls.at(-1)?.[2])).toContain('templateId=tpl-new');
+    expect(pushMock).not.toHaveBeenCalled();
+
+    await waitFor(() => expect(save.disabled).toBe(false));
+    fireEvent.click(save);
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(2));
+    expect(saveInvoiceTemplateMock.mock.calls[1][0].template_id).toBe('tpl-new');
+  });
+
+  it('resumes editing and preview when saving fails', async () => {
+    const loadedTemplate = await getInvoiceTemplateMock();
+    let finishLoad!: (result: unknown) => void;
+    getInvoiceTemplateMock.mockImplementationOnce(() => new Promise(resolve => { finishLoad = resolve; }));
+    let finishSave!: (result: unknown) => void;
+    saveInvoiceTemplateMock.mockImplementationOnce(() => new Promise(resolve => { finishSave = resolve; }));
+    render(<InvoiceTemplateEditor templateId="tpl-flow" />);
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    // Preview can dispatch before the separate template load completes. Its
+    // invocation is not a signal that Save is ready (the CI race).
+    expect(screen.queryByRole('button', { name: 'Save Template' })).toBeNull();
+    expect((screen.getByRole('button', { name: 'Saving...' }) as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => { finishLoad(loadedTemplate); });
+    const save = await screen.findByRole('button', { name: 'Save Template' }) as HTMLButtonElement;
+    await waitFor(() => expect(save.disabled).toBe(false));
+    fireEvent.click(save);
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(1));
+    expect(save.disabled).toBe(true);
+    const previewCalls = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length;
+    await act(async () => { finishSave({ success: false, error: 'Please try saving again.' }); });
+    await waitFor(() => expect(save.disabled).toBe(false));
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(previewCalls));
+    expect(screen.getByText('Please try saving again.')).toBeTruthy();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('updates authoritative preview when switching to existing invoice data', async () => {

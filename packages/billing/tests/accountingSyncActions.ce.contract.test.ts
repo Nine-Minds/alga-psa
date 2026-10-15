@@ -28,14 +28,14 @@ describe('CE invoice sync-status capability probe', () => {
     expect(hookSource).toContain('setHidden(true)');
   });
 
-  it('returns no statuses when QuickBooks is not connected', () => {
+  it('returns no statuses when no accounting provider is connected', () => {
     const statusAction = actionSource.slice(
       actionSource.indexOf('export const getInvoiceSyncStatuses'),
       actionSource.indexOf('export interface AccountingSyncRealmInfo'),
     );
 
-    expect(statusAction).toContain('const realm = await resolveDefaultRealm(knex, tenant).catch(() => null);');
-    expect(statusAction).toContain('if (!realm)');
-    expect(statusAction.indexOf('if (!realm)')).toBeLessThan(statusAction.indexOf("table('tenant_external_entity_mappings')"));
+    expect(statusAction).toContain('const target = await resolveSyncTarget(knex, tenant).catch(() => null);');
+    expect(statusAction).toContain('if (!target)');
+    expect(statusAction.indexOf('if (!target)')).toBeLessThan(statusAction.indexOf("table('tenant_external_entity_mappings')"));
   });
 });

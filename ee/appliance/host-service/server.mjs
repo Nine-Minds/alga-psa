@@ -8,6 +8,15 @@ import { URL } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { collectStatusSnapshotAsync } from './status-engine.mjs';
 import { createKubectlQueue } from './kubectl-queue.mjs';
+import { createClusterReader } from './cluster-reader.mjs';
+import { hostCapabilities, createDiskLatencyMonitor } from './host-capabilities.mjs';
+import { createSetupRetry, installStateRunning } from './setup-retry.mjs';
+import { createSetupEngineLog, DEFAULT_SETUP_ENGINE_LOG_MAX_BYTES } from './setup-engine-log.mjs';
+import { createDnsReconciler } from './dns-reconcile-runner.mjs';
+import { classifySetupRecovery } from './setup-recovery.mjs';
+import { dnsBlockerMessage } from './dns-launch-gate.mjs';
+import { ensureRequestedDnsActive, evaluateDnsAdmission } from './setup-admission.mjs';
+import { dnsConfigurationFingerprint } from './dns-config.mjs';
 import { persistSetupInputs, validateSetupInputs, runNetworkChecks, resolveReleaseManifest } from './setup-engine.mjs';
 import { generateSupportBundle } from './support-bundle.mjs';
 import { createNativeKubernetesAdapter } from './kubernetes-client-adapter.mjs';
@@ -16,9 +25,11 @@ import { PortForwardManager } from './port-forward-manager.mjs';
 import { ensurePodAccessRbac } from './pod-access-rbac.mjs';
 import { accessError, PodAccessError, requestHasSameOrigin } from './pod-access-common.mjs';
 import { createUpdateCoordinator } from './update-controller.mjs';
-import { DEFAULT_UPDATE_OWNER_MAX_AGE_MS } from './update-ownership.mjs';
+import { DEFAULT_UPDATE_OWNER_MAX_AGE_MS, isPidAlive, isUpdateInProgressStatus } from './update-ownership.mjs';
+import { createReleaseAutoRecovery, summarizeAutoRecoveryRecord } from './release-auto-recovery.mjs';
 import {
   collectManageStatus,
+  createLicenseStatusCache,
   readLicenseStatus,
   applyLicense,
   redeemClaimCode,
@@ -28,6 +39,7 @@ import {
 import { SupportControlClient } from './support-control-client.mjs';
 import { SupportSessionError, SupportSessionManager } from './support-session-manager.mjs';
 import { supportErrorPayload } from './support-api-errors.mjs';
+import { APPLIANCE_HELM_RELEASES, APPLIANCE_HELM_RELEASE_NAMESPACE, recoverAppRelease, recoverStalledReleases, setHelmReleasesSuspended } from './helm-release-recovery.mjs';
 import {
   readInitialAdminIdentity,
   runInitialAdminPasswordReset,
@@ -57,7 +69,7 @@ const updateHistoryFile = process.env.ALGA_APPLIANCE_UPDATE_HISTORY_FILE || '/va
 const hostAgentSocket = process.env.ALGA_APPLIANCE_HOST_AGENT_SOCKET || '/run/alga-appliance/host-agent.sock';
 const STATUS_CACHE_TTL_MS = Number(process.env.ALGA_APPLIANCE_STATUS_CACHE_TTL_MS || 10_000);
 const KUBECTL_REQUEST_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_REQUEST_TIMEOUT_MS || 20_000);
-const KUBECTL_STATUS_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_STATUS_TIMEOUT_MS || 20_000);
+const CLUSTER_STATUS_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_CLUSTER_STATUS_TIMEOUT_MS || 15_000);
 const KUBECTL_API_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_API_TIMEOUT_MS || 30_000);
 const KUBECTL_LOG_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_LOG_TIMEOUT_MS || 60_000);
 const NETWORK_PROBE_TTL_MS = Number(process.env.ALGA_APPLIANCE_NETWORK_PROBE_TTL_MS || 20_000);
@@ -68,7 +80,19 @@ const UPDATE_OWNER_MAX_AGE_MS = Number(
 if (!Number.isFinite(UPDATE_OWNER_MAX_AGE_MS) || UPDATE_OWNER_MAX_AGE_MS <= 0) {
   throw new Error('ALGA_APPLIANCE_UPDATE_OWNER_MAX_AGE_MS must be a positive number.');
 }
-const kubectlQueue = createKubectlQueue({ name: 'host-service-kubectl' });
+const kubectlQueue = createKubectlQueue({
+  name: 'host-service-kubectl',
+  // The queue is serial: one slow command delays every caller behind it. Log
+  // the slow ones so a sluggish UI can be traced to the command that held it.
+  onSlowCommand: ({ command, queuedMs, durationMs, status }) => {
+    console.warn(`[kubectl-queue] slow command (queued ${queuedMs}ms, ran ${durationMs}ms, exit ${status}): ${command.replace(/--kubeconfig \S+ /, '')}`);
+  }
+});
+// Reads for the status UI (Overview, Deployments, Pods, Logs) use the API
+// directly and concurrently; see cluster-reader.mjs. kubectl remains for
+// mutations, in-pod execs, and the diagnostics bundle.
+const clusterReader = createClusterReader({ kubeconfigPath });
+const diskLatencyMonitor = createDiskLatencyMonitor();
 const podAccessAdapter = createNativeKubernetesAdapter({ kubeconfigPath });
 const podExecManager = new PodExecManager({ adapter: podAccessAdapter });
 const portForwardManager = new PortForwardManager({ adapter: podAccessAdapter });
@@ -90,6 +114,8 @@ ensurePodAccessRbac(podAccessAdapter).then((result) => {
 });
 let cachedStatusSnapshot = null;
 let cachedStatusSnapshotAt = 0;
+let statusSnapshotInFlight = null;
+let statusSnapshotGeneration = 0;
 let cachedNetworkProbe = null;
 let cachedNetworkProbeAt = 0;
 let networkProbeConsecutiveFailures = 0;
@@ -101,6 +127,34 @@ function readInstallStateSafe() {
   } catch {
     return null;
   }
+}
+
+// The current persisted setup inputs. Read fresh for every admission check so a
+// submission that replaced the file is never admitted against the old values.
+function readPersistedSetupInputs() {
+  try {
+    if (!fs.existsSync(setupInputsFile)) return null;
+    const parsed = JSON.parse(fs.readFileSync(setupInputsFile, 'utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+// The timestamp of the current persisted setup inputs (`validateSetupInputs`
+// stamps it). DNS admission compares it to the activation's submittedAt so a
+// result produced for earlier inputs can never authorize setup.
+function setupInputsSubmittedAt() {
+  return readPersistedSetupInputs()?.submittedAt || null;
+}
+
+// Resolver-configuration identity of the persisted setup inputs, computed by the
+// same function the host helper mirrors. Admission requires the completed
+// activation's fingerprint to equal this value, so an activation submitted for
+// one configuration can never release the gate after the inputs changed.
+function setupInputsDnsFingerprint() {
+  const inputs = readPersistedSetupInputs();
+  return inputs ? dnsConfigurationFingerprint(inputs) : null;
 }
 
 // Only spend outbound network egress on the live probe when a network-class
@@ -185,98 +239,140 @@ const AUTO_RETRY_MAX_ATTEMPTS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX
 const AUTO_RETRY_BASE_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_BASE_MS || 15_000);
 const AUTO_RETRY_MAX_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX_MS || 300_000);
 const RECONCILE_INTERVAL_MS = Number(process.env.ALGA_APPLIANCE_RECONCILE_INTERVAL_MS || 15_000);
-const NETWORK_CLASS_PHASES = ['network', 'dns', 'registry-release-source'];
 const retryStateFile = path.join(path.dirname(stateFile), 'auto-retry-state.json');
-let reconcileRunning = false;
+const setupRunOwnerFile = process.env.ALGA_APPLIANCE_SETUP_RUN_OWNER_FILE
+  || path.join(path.dirname(stateFile), 'setup-run-owner.json');
+const SETUP_RUN_OWNER_MAX_AGE_MS = Number(process.env.ALGA_APPLIANCE_SETUP_RUN_OWNER_MAX_AGE_MS || 30 * 60 * 1000);
+const setupEngineLogFile = process.env.ALGA_APPLIANCE_SETUP_ENGINE_LOG
+  || path.join(path.dirname(stateFile), 'setup-engine.log');
+const SETUP_ENGINE_LOG_MAX_BYTES = Number(process.env.ALGA_APPLIANCE_SETUP_ENGINE_LOG_MAX_BYTES || DEFAULT_SETUP_ENGINE_LOG_MAX_BYTES);
+const setupEngineLog = createSetupEngineLog({ logFile: setupEngineLogFile, maxBytes: SETUP_ENGINE_LOG_MAX_BYTES });
 
-function installStateBlocked(state) {
-  const isAppUpdate = state?.update?.scope === 'application-only';
-  return !isAppUpdate
-    && Boolean(state?.failure)
-    && state.failure.retrySafe !== false
-    && String(state.status || '').includes('blocked');
+function appendSetupEngineLog(line) {
+  setupEngineLog.append(line);
 }
 
-function installStateRunning(state) {
-  const status = String(state?.status || '');
-  return status === 'setup-queued' || status.endsWith('-running');
+function openSetupEngineLog() {
+  return setupEngineLog.open();
 }
 
-function failureCategory(state) {
-  const phase = String(state?.failure?.phase || state?.phase || '').toLowerCase();
-  return NETWORK_CLASS_PHASES.find((candidate) => phase.includes(candidate)) || phase;
-}
-
-function backoffMs(attempts) {
-  return Math.min(AUTO_RETRY_MAX_MS, AUTO_RETRY_BASE_MS * 2 ** Math.max(0, attempts - 1));
-}
-
-function readRetryState() {
+// Durable ownership for a detached setup run. The engine can be killed by a
+// k3s restart (DNS activation) or a control-plane replacement; a *-running
+// status is only trusted while this owner is alive.
+function readSetupRunOwner() {
   try {
-    return fs.existsSync(retryStateFile) ? JSON.parse(fs.readFileSync(retryStateFile, 'utf8')) : {};
+    const parsed = JSON.parse(fs.readFileSync(setupRunOwnerFile, 'utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : null;
   } catch {
-    return {};
+    return null;
   }
 }
 
-function writeRetryState(value) {
+function writeSetupRunOwner(pid) {
   try {
-    fs.mkdirSync(path.dirname(retryStateFile), { recursive: true });
-    fs.writeFileSync(retryStateFile, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
-  } catch { /* best effort */ }
+    fs.mkdirSync(path.dirname(setupRunOwnerFile), { recursive: true, mode: 0o750 });
+    fs.writeFileSync(setupRunOwnerFile, `${JSON.stringify({ pid, startedAt: new Date().toISOString() })}\n`, { mode: 0o600 });
+  } catch (error) {
+    appendSetupEngineLog(`[${new Date().toISOString()}] could not record setup run owner: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
-function clearRetryState() {
+function clearSetupRunOwner(pid) {
   try {
-    if (fs.existsSync(retryStateFile)) fs.unlinkSync(retryStateFile);
-  } catch { /* best effort */ }
+    const owner = readSetupRunOwner();
+    if (owner && owner.pid === pid && fs.existsSync(setupRunOwnerFile)) fs.unlinkSync(setupRunOwnerFile);
+  } catch {
+    /* best effort */
+  }
 }
 
-// Summary used by the status snapshot so the UI shows "retrying automatically"
-// instead of a dead-end "re-run setup" instruction.
+function setupWorkflowOwnerAlive(state) {
+  const owner = readSetupRunOwner();
+  if (owner && Number.isInteger(owner.pid) && owner.pid > 0) {
+    return isPidAlive(owner.pid);
+  }
+  // No owner recorded: only abandon once the running state itself is stale, so
+  // the window between the status write and the owner write cannot trigger a
+  // duplicate launch.
+  const updatedAt = Date.parse(state?.updatedAt || '');
+  if (Number.isFinite(updatedAt)) return Date.now() - updatedAt <= SETUP_RUN_OWNER_MAX_AGE_MS;
+  return true;
+}
+
+// The retry lifecycle lives in setup-retry.mjs so it is testable with an
+// injectable clock, probe and launcher. server.mjs only supplies the real ones.
+const retryController = createSetupRetry({
+  stateFile,
+  retryStateFile,
+  maxAttempts: AUTO_RETRY_MAX_ATTEMPTS,
+  baseMs: AUTO_RETRY_BASE_MS,
+  maxMs: AUTO_RETRY_MAX_MS,
+  disable: AUTO_RETRY_DISABLED,
+  readInstallState: () => readInstallStateSafe(),
+  workflowOwnerAlive: (state) => setupWorkflowOwnerAlive(state),
+  probe: () => getNetworkProbe(),
+  // A pending/failed/unverified DNS configuration defers (does not consume) an
+  // automatic retry: the launch is not attempted until the cluster resolver is
+  // verified active for the *currently requested* configuration. A stale success
+  // or an ancient pending record never authorizes a launch.
+  readyBeforeLaunch: () => {
+    const decision = evaluateDnsAdmission({
+      requestedAt: setupInputsSubmittedAt(),
+      requestedFingerprint: setupInputsDnsFingerprint(),
+      result: dnsReconciler.readResult()
+    });
+    if (decision.ok) return { ok: true };
+    return { ok: false, pending: Boolean(decision.pending), reason: decision.error };
+  },
+  launch: () => queueSetupWorkflow(),
+  logger: console
+});
+
 function computeAutoRetrySummary(state) {
-  if (AUTO_RETRY_DISABLED || !installStateBlocked(state)) return undefined;
-  const retry = readRetryState();
-  const attempts = Number(retry.attempts || 0);
-  if (attempts >= AUTO_RETRY_MAX_ATTEMPTS) {
-    return { willRetry: false, exhausted: true, attempts, maxAttempts: AUTO_RETRY_MAX_ATTEMPTS };
-  }
-  const nextAttemptInSeconds = retry.nextAttemptAt ? Math.max(0, Math.round((retry.nextAttemptAt - Date.now()) / 1000)) : 0;
-  return { willRetry: true, exhausted: false, attempts, maxAttempts: AUTO_RETRY_MAX_ATTEMPTS, nextAttemptInSeconds };
+  return retryController.computeAutoRetrySummary(state);
 }
 
-async function reconcileBlockedSetup() {
-  if (AUTO_RETRY_DISABLED || reconcileRunning) return;
-  reconcileRunning = true;
-  try {
+// Owns cluster-DNS activation independently of the setup retry budget: it must
+// still run when setup is blocked/exhausted, and it must never fire while a
+// setup run owns the host (the activation restarts k3s).
+const dnsReconcileScript = process.env.ALGA_APPLIANCE_DNS_RECONCILE_SCRIPT
+  || path.resolve(import.meta.dirname, '..', 'scripts', 'reconcile-k3s-dns.sh');
+const dnsReconciler = createDnsReconciler({
+  scriptPath: dnsReconcileScript,
+  kubeconfigPath,
+  stateFile,
+  disabled: process.env.ALGA_APPLIANCE_DISABLE_DNS_RECONCILE === '1',
+  configFingerprint: () => setupInputsDnsFingerprint(),
+  intervalMs: Number(process.env.ALGA_APPLIANCE_DNS_RECONCILE_INTERVAL_MS || 5 * 60 * 1000),
+  startupDelayMs: Number(process.env.ALGA_APPLIANCE_DNS_RECONCILE_STARTUP_DELAY_MS ?? 10 * 1000),
+  shouldSkip: () => {
     const state = readInstallStateSafe();
-    if (!state || !installStateBlocked(state)) {
-      clearRetryState();
-      return;
-    }
-    if (installStateRunning(state)) return;
+    return installStateRunning(state) && setupWorkflowOwnerAlive(state);
+  },
+  logger: console
+});
 
-    const retry = readRetryState();
-    const attempts = Number(retry.attempts || 0);
-    if (attempts >= AUTO_RETRY_MAX_ATTEMPTS) return; // exhausted; leave for manual action
-    const now = Date.now();
-    if (retry.nextAttemptAt && now < retry.nextAttemptAt) return; // still in backoff window
-
-    if (NETWORK_CLASS_PHASES.includes(failureCategory(state))) {
-      const probe = await getNetworkProbe();
-      if (!probe.ok) {
-        writeRetryState({ attempts, nextAttemptAt: now + backoffMs(attempts || 1), lastReason: 'network still unhealthy' });
-        return;
-      }
-    }
-
-    const nextAttempts = attempts + 1;
-    writeRetryState({ attempts: nextAttempts, lastAttemptAt: new Date(now).toISOString(), nextAttemptAt: now + backoffMs(nextAttempts) });
-    queueSetupWorkflow();
-  } finally {
-    reconcileRunning = false;
-  }
-}
+// Re-runs HelmReleases that stalled on a rollout timeout once their workloads
+// are healthy (release-auto-recovery.mjs). It stands down while setup or an app
+// update owns the releases: those drive and judge the releases themselves.
+const releaseAutoRecovery = createReleaseAutoRecovery({
+  clusterReader,
+  runKubectl: (args) => runQueuedKubectl(kubectlCommand(args, KUBECTL_API_TIMEOUT_MS), { timeoutMs: KUBECTL_API_TIMEOUT_MS }),
+  stateFile,
+  disabled: process.env.ALGA_APPLIANCE_DISABLE_RELEASE_AUTO_RECOVERY === '1',
+  intervalMs: Number(process.env.ALGA_APPLIANCE_RELEASE_AUTO_RECOVERY_INTERVAL_MS || 0) || undefined,
+  startupDelayMs: process.env.ALGA_APPLIANCE_RELEASE_AUTO_RECOVERY_STARTUP_DELAY_MS !== undefined
+    ? Number(process.env.ALGA_APPLIANCE_RELEASE_AUTO_RECOVERY_STARTUP_DELAY_MS)
+    : undefined,
+  shouldSkip: () => {
+    const state = readInstallStateSafe();
+    if (isUpdateInProgressStatus(state?.status)) return `an app update is in progress (${state.status})`;
+    if (installStateRunning(state)) return `setup is running (${state.status})`;
+    return null;
+  },
+  onChange: () => invalidateStatusSnapshot(),
+  logger: console
+});
 
 function currentMode() {
   if (!fs.existsSync(stateFile)) {
@@ -294,19 +390,28 @@ function currentMode() {
   }
 }
 
-// True when setup is blocked on an operator-correctable input — specifically a
-// bad/expired/used install code (failure.step === 'redeem-install-code'). In
-// that state we keep GET /setup and POST /api/setup OPEN so the operator can
-// re-enter a re-issued code, instead of permanently locking them into the
-// status view. Any other submitted state stays locked (status mode) as before.
-function setupReEditable() {
+// Live classification of a blocked install-code redemption, read from the raw
+// state file (not the cached status snapshot) so the status UI always sees the
+// current recovery advice. Returns null when setup is not blocked on
+// `redeem-install-code`.
+function readSetupRecovery() {
   try {
-    if (!fs.existsSync(stateFile)) return false;
+    if (!fs.existsSync(stateFile)) return null;
     const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-    return state?.failure?.step === 'redeem-install-code';
+    return classifySetupRecovery(state);
   } catch {
-    return false;
+    return null;
   }
+}
+
+// True when setup is blocked on an install-code redemption the operator can act
+// on — a bad/expired/used code OR a network/DNS/TLS failure while redeeming. In
+// that state we keep GET /setup and POST /api/setup OPEN so the operator can
+// re-enter a re-issued code or retry after fixing connectivity, instead of
+// permanently locking them into the status view. Any other submitted state stays
+// locked (status mode) as before.
+function setupReEditable() {
+  return readSetupRecovery()?.reEditable === true;
 }
 
 function readRequestBody(req) {
@@ -567,24 +672,152 @@ function systemNetworkSummary() {
   return { addresses, resolvers };
 }
 
+// Launch the detached setup engine, appending both its stdout and stderr to
+// <state-dir>/setup-engine.log (0600). The log is rotated between launches so
+// a repeated retry cannot grow unbounded. If the log cannot be opened we still
+// run setup (availability), but the error is retained and surfaced rather than
+// silently reverting to stdio: 'ignore'.
+// Cluster DNS must be verified for the *currently requested* configuration
+// before a setup run redeems or pulls through a resolver that still leaks the
+// customer search suffix. Admission requires a fresh active reconcile that
+// post-dates the current setup inputs; a stale success or an ancient pending
+// record is never enough (see setup-admission.mjs).
+
+// A setup request refused because DNS is not ready must not look accepted: write
+// a retry-safe blocked state so the retry controller (or the operator) resumes
+// the workflow once activation completes, and the overview shows the blocker.
+function recordSetupBlocker({ step, phase, message, retrySafe = true }) {
+  fs.mkdirSync(path.dirname(stateFile), { recursive: true, mode: 0o750 });
+  fs.writeFileSync(stateFile, `${JSON.stringify({
+    status: 'setup-blocked',
+    phase,
+    lastAction: message,
+    failure: { step, phase, message, details: message, retrySafe },
+    updatedAt: new Date().toISOString()
+  }, null, 2)}\n`, { mode: 0o600 });
+}
+
 function queueSetupWorkflow() {
   if (process.env.ALGA_APPLIANCE_DISABLE_SETUP_QUEUE === '1') {
-    return;
+    return { ok: false, error: 'Setup queue is disabled.' };
   }
 
-  const child = spawn(process.execPath, [
-    new URL('./setup-engine.mjs', import.meta.url).pathname,
-    'run',
-    '--setup-inputs', setupInputsFile,
-    '--state-file', stateFile,
-    '--release-selection-file', releaseSelectionFile,
-    '--kubeconfig', kubeconfigPath
-  ], {
-    detached: true,
-    stdio: 'ignore',
-    env: process.env
+  const admission = evaluateDnsAdmission({
+    requestedAt: setupInputsSubmittedAt(),
+    requestedFingerprint: setupInputsDnsFingerprint(),
+    result: dnsReconciler.readResult()
+  });
+  if (!admission.ok) {
+    return {
+      ok: false,
+      dnsBlocked: true,
+      dnsPending: Boolean(admission.pending),
+      error: dnsBlockerMessage(admission)
+    };
+  }
+
+  const opened = openSetupEngineLog();
+  appendSetupEngineLog(`[${new Date().toISOString()}] launching setup engine (parent pid ${process.pid})`);
+  // If the log cannot be opened, inherit the service journal rather than
+  // silently discarding engine output; the open error is surfaced separately.
+  const stdio = typeof opened.fd === 'number' ? ['ignore', opened.fd, opened.fd] : 'inherit';
+
+  let child;
+  try {
+    child = spawn(process.execPath, [
+      new URL('./setup-engine.mjs', import.meta.url).pathname,
+      'run',
+      '--setup-inputs', setupInputsFile,
+      '--state-file', stateFile,
+      '--release-selection-file', releaseSelectionFile,
+      '--kubeconfig', kubeconfigPath
+    ], {
+      detached: true,
+      stdio,
+      env: process.env
+    });
+  } catch (error) {
+    if (typeof opened.fd === 'number') {
+      try { fs.closeSync(opened.fd); } catch { /* best effort */ }
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    appendSetupEngineLog(`[${new Date().toISOString()}] spawn error: ${message}`);
+    return { ok: false, error: message, logFile: setupEngineLogFile, logError: opened.error || null };
+  }
+  if (typeof opened.fd === 'number') {
+    try { fs.closeSync(opened.fd); } catch { /* best effort */ }
+  }
+
+  child.on('error', (error) => {
+    appendSetupEngineLog(`[${new Date().toISOString()}] child ${child.pid} error: ${error instanceof Error ? error.message : String(error)}`);
+    clearSetupRunOwner(child.pid);
+  });
+  child.on('exit', (code, signal) => {
+    appendSetupEngineLog(`[${new Date().toISOString()}] child ${child.pid} exited code=${code ?? 'null'} signal=${signal || 'none'}`);
+    clearSetupRunOwner(child.pid);
   });
   child.unref();
+  writeSetupRunOwner(child.pid);
+  appendSetupEngineLog(`[${new Date().toISOString()}] launched child pid ${child.pid}`);
+  return { ok: true, pid: child.pid, logFile: setupEngineLogFile, logError: opened.error || null };
+}
+
+// Shared admission path for both setup submission routes. It requests a host
+// reconcile for the currently persisted DNS configuration, requires a fresh
+// verified activation of that configuration, records a durable retry-safe
+// blocker instead of a misleading `setup-queued`, and only then accepts.
+async function beginSetupWorkflow(setupInputs) {
+  // A manual submission resets the active retry budget but keeps prior history as
+  // evidence; this also lets a DNS restart resume through the retry loop.
+  retryController.reset('manual-setup');
+
+  const requestedAt = setupInputs?.submittedAt || new Date().toISOString();
+  const pendingMessage = 'Verifying the cluster resolver for the requested DNS configuration before setup.';
+  recordSetupBlocker({ step: 'reconcile-cluster-dns', phase: 'dns', message: pendingMessage });
+
+  // A k3s restart triggered by the reconcile can replace this control plane
+  // before admission returns; the blocker above makes that resumable.
+  const admission = await ensureRequestedDnsActive({
+    requestedAt,
+    requestedFingerprint: dnsConfigurationFingerprint(setupInputs || {}),
+    reconcileOnce: () => dnsReconciler.submit('setup-inputs'),
+    readResult: () => dnsReconciler.readResult(),
+    logger: console
+  });
+  if (!admission.ok) {
+    const message = dnsBlockerMessage(admission);
+    recordSetupBlocker({ step: 'reconcile-cluster-dns', phase: 'dns', message });
+    return { ok: false, statusCode: 409, dnsPending: Boolean(admission.pending), error: message };
+  }
+
+  fs.mkdirSync(path.dirname(stateFile), { recursive: true, mode: 0o750 });
+  fs.writeFileSync(stateFile, `${JSON.stringify({
+    status: 'setup-queued',
+    phase: 'setup',
+    lastAction: 'Setup accepted; background workflow is starting',
+    updatedAt: new Date().toISOString()
+  }, null, 2)}\n`, { mode: 0o600 });
+  // Fresh submit (incl. re-entering a corrected install code): reset the
+  // auto-retry counter so the new attempt is not gated by the prior code's
+  // exhausted retries. Prior history is marked resolved, not deleted.
+  retryController.reset('manual-setup');
+
+  const queued = queueSetupWorkflow();
+  // Only a DNS blocker rejects the submission. Other queue failures (queue
+  // disabled, spawn error) keep the long-standing behavior: the submission is
+  // accepted and the queue error is surfaced alongside it.
+  if (!queued.ok && queued.dnsBlocked) {
+    const message = queued.error || 'Cluster DNS is not ready.';
+    recordSetupBlocker({ step: 'reconcile-cluster-dns', phase: 'dns', message });
+    return { ok: false, statusCode: 409, dnsPending: Boolean(queued.dnsPending), error: message };
+  }
+  return {
+    ok: true,
+    pid: queued.pid,
+    logFile: queued.logFile,
+    logError: queued.logError || null,
+    queueError: queued.ok ? null : (queued.error || 'Setup workflow could not be queued.')
+  };
 }
 
 // LEVERAGE: pattern detached-engine-workflow — queueSetupWorkflow and
@@ -623,7 +856,19 @@ const updateCoordinator = createUpdateCoordinator({
   stateFile,
   historyFile: updateHistoryFile,
   maxAgeMs: UPDATE_OWNER_MAX_AGE_MS,
-  spawnUpdate: queueUpdateWorkflow
+  spawnUpdate: queueUpdateWorkflow,
+  // A hard-killed update engine leaves the application HelmReleases suspended
+  // (see helm-release-recovery.mjs); resume them whenever an update is found
+  // dead so the box never sits frozen waiting for a manual Recover.
+  onInterrupted: async () => {
+    const resumed = await setHelmReleasesSuspended({
+      runKubectl: (args) => runQueuedKubectl(kubectlCommand(args, KUBECTL_API_TIMEOUT_MS), { timeoutMs: KUBECTL_API_TIMEOUT_MS }),
+      names: APPLIANCE_HELM_RELEASES.map((r) => r.name),
+      suspended: false
+    });
+    if (!resumed.ok) console.warn(`Could not resume HelmReleases after an interrupted update: ${resumed.failures.map((f) => `${f.name}: ${f.error}`).join('; ')}`);
+    else console.warn('Resumed the application HelmReleases after an interrupted update.');
+  }
 });
 updateCoordinator.reconcile();
 
@@ -654,6 +899,64 @@ async function runKubectlJson(args, timeoutMs = KUBECTL_API_TIMEOUT_MS, signal) 
   } catch (error) {
     return { ...result, ok: false, status: 1, value: null, stderr: error instanceof Error ? error.message : 'Invalid JSON from kubectl.' };
   }
+}
+
+function statusSnapshotOptions() {
+  const installStateForProbe = readInstallStateSafe();
+  return {
+    stateFile,
+    setupInputsFile,
+    releaseSelectionFile,
+    kubeconfigPath,
+    clusterReader,
+    clusterTimeoutMs: CLUSTER_STATUS_TIMEOUT_MS,
+    networkProbe: networkProbeRelevant(installStateForProbe) ? () => getNetworkProbe() : undefined,
+    autoRetry: computeAutoRetrySummary(installStateForProbe),
+    setupEngineLog: { file: setupEngineLogFile, error: setupEngineLog.error },
+    dnsReconcile: dnsReconciler.readResult(),
+    releaseAutoRecovery: () => summarizeAutoRecoveryRecord(releaseAutoRecovery.readRecord()),
+    hostHealth: () => ({ cpu: hostCapabilities(), disk: diskLatencyMonitor.sample() })
+  };
+}
+
+// One status collection serves every viewer: concurrent requests (several
+// tabs, or a poll overlapping a slow collection) join the in-flight one, and a
+// fresh result is reused for STATUS_CACHE_TTL_MS. The shared collection is not
+// tied to any single request's abort signal; its reads carry their own
+// timeouts. The diagnostics bundle is per-request and never cached.
+function readStatusSnapshot({ includeDiagnostics = false, signal } = {}) {
+  if (includeDiagnostics) {
+    return collectStatusSnapshotAsync({
+      ...statusSnapshotOptions(),
+      includeDiagnostics: true,
+      runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_API_TIMEOUT_MS, signal })
+    });
+  }
+  if (cachedStatusSnapshot && Date.now() - cachedStatusSnapshotAt < STATUS_CACHE_TTL_MS) {
+    return Promise.resolve(cachedStatusSnapshot);
+  }
+  if (!statusSnapshotInFlight) {
+    const generation = statusSnapshotGeneration;
+    const flight = collectStatusSnapshotAsync(statusSnapshotOptions())
+      .then((snapshot) => {
+        if (generation === statusSnapshotGeneration) {
+          cachedStatusSnapshot = snapshot;
+          cachedStatusSnapshotAt = Date.now();
+        }
+        return snapshot;
+      })
+      .finally(() => { if (statusSnapshotInFlight === flight) statusSnapshotInFlight = null; });
+    statusSnapshotInFlight = flight;
+  }
+  return statusSnapshotInFlight;
+}
+
+// After an action that changes cluster state, the next poll must collect
+// afresh rather than reuse (or join) a snapshot taken before the change.
+function invalidateStatusSnapshot() {
+  statusSnapshotGeneration += 1;
+  cachedStatusSnapshot = null;
+  statusSnapshotInFlight = null;
 }
 
 // kubectl adapter for manage-engine: json/run/apply/quote backed by the queue.
@@ -758,10 +1061,13 @@ try {
   // authenticated appliance management UI from starting.
   supportControlClient = new SupportControlClient({ baseUrl: undefined });
 }
+const licenseStatusCache = createLicenseStatusCache({
+  read: () => readLicenseStatus({ kube: manageKube, namespace: 'msp', secretName: 'appliance-license-seed' })
+});
 const supportSessionManager = new SupportSessionManager({
   central: supportControlClient,
   kube: manageKube,
-  getLicense: () => readLicenseStatus({ kube: manageKube, namespace: 'msp', secretName: 'appliance-license-seed' }),
+  getLicense: () => licenseStatusCache.get(),
   getCredential: readSupportApplianceCredential,
   getSupportAgentImage: async () => {
     const selection = readJsonFileForSupport(releaseSelectionFile) || {};
@@ -797,10 +1103,11 @@ function validContainerName(value) {
   return typeof value === 'string' && /^[A-Za-z0-9_.-]+$/.test(value);
 }
 
-function namespaceFlag(namespace) {
-  if (!namespace || namespace === 'all' || namespace === '_all') return '-A';
+// { namespace } for one namespace, {} for all, null when invalid.
+function namespaceScope(namespace) {
+  if (!namespace || namespace === 'all' || namespace === '_all') return {};
   if (!validKubeName(namespace)) return null;
-  return `-n ${shellQuote(namespace)}`;
+  return { namespace };
 }
 
 function summarizeDeployment(item, replicaSets = []) {
@@ -1049,18 +1356,14 @@ const server = http.createServer(async (req, res) => {
         licenseKey: rawLicenseKey || null
       });
       persistSetupInputs(setupInputs, setupInputsFile);
-      fs.mkdirSync(path.dirname(stateFile), { recursive: true, mode: 0o750 });
-      fs.writeFileSync(stateFile, `${JSON.stringify({
-        status: 'setup-queued',
-        phase: 'setup',
-        lastAction: 'Setup accepted; background workflow is starting',
-        updatedAt: new Date().toISOString()
-      }, null, 2)}\n`, { mode: 0o600 });
-      // Fresh submit (incl. re-entering a corrected install code): reset the
-      // auto-retry counter so the new attempt is not gated by the prior code's
-      // exhausted retries.
-      clearRetryState();
-      queueSetupWorkflow();
+      const started = await beginSetupWorkflow(setupInputs);
+      if (!started.ok) {
+        jsonResponse(res, started.statusCode || 500, {
+          error: started.error,
+          dnsPending: Boolean(started.dnsPending)
+        });
+        return;
+      }
       jsonResponse(res, 202, {
         ok: true,
         redirectTo: '/',
@@ -1085,47 +1388,28 @@ const server = http.createServer(async (req, res) => {
 
     const signal = requestAbortSignal(req, res);
     const includeDiagnostics = url.searchParams.get('diagnostics') === '1';
-    const now = Date.now();
-    const cacheUsable = !includeDiagnostics && cachedStatusSnapshot && now - cachedStatusSnapshotAt < STATUS_CACHE_TTL_MS;
-    const installStateForProbe = readInstallStateSafe();
-    const wantNetworkProbe = networkProbeRelevant(installStateForProbe);
-    const snapshot = cacheUsable
-      ? cachedStatusSnapshot
-      : await collectStatusSnapshotAsync({
-        stateFile,
-        setupInputsFile,
-        releaseSelectionFile,
-        kubeconfigPath,
-        includeDiagnostics,
-        kubectlTimeoutMs: KUBECTL_STATUS_TIMEOUT_MS,
-        kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
-        networkProbe: wantNetworkProbe ? () => getNetworkProbe() : undefined,
-        autoRetry: computeAutoRetrySummary(installStateForProbe),
-        runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_STATUS_TIMEOUT_MS, signal })
-      });
-    if (!includeDiagnostics && !cacheUsable) {
-      cachedStatusSnapshot = snapshot;
-      cachedStatusSnapshotAt = now;
-    }
+    const snapshot = await readStatusSnapshot({ includeDiagnostics, signal });
     if (res.destroyed || res.writableEnded) return;
     res.writeHead(200, { 'content-type': 'application/json' });
-    // setupReEditable is computed live (not from the cached snapshot) so the
-    // status UI can offer a "re-enter your install code" action while setup is
-    // blocked on a correctable (bad/used/expired) install code.
-    res.end(JSON.stringify({ ...snapshot, setupReEditable: setupReEditable() }));
+    // setupReEditable / setupRecovery are computed live (not from the cached
+    // snapshot) so the status UI can offer a "re-enter your install code" action
+    // while setup is blocked on redemption, and can tell a confirmed code error
+    // apart from a network/DNS/TLS failure.
+    const recovery = readSetupRecovery();
+    res.end(JSON.stringify({ ...snapshot, setupReEditable: recovery?.reEditable === true, setupRecovery: recovery }));
     return;
   }
 
   if (url.pathname === '/api/k8s/namespaces') {
     if (!requireAuth(req, res)) return;
     const signal = requestAbortSignal(req, res);
-    const result = await runKubectlJson('get namespaces', KUBECTL_API_TIMEOUT_MS, signal);
+    const result = await clusterReader.listNamespaces({ signal, timeoutMs: KUBECTL_API_TIMEOUT_MS });
     if (!result.ok) {
-      jsonResponse(res, 502, { error: result.stderr || result.stdout || 'Unable to list namespaces.' });
+      if (!res.writableEnded) jsonResponse(res, 502, { error: result.error || 'Unable to list namespaces.' });
       return;
     }
     jsonResponse(res, 200, {
-      namespaces: (result.value?.items || []).map((item) => ({
+      namespaces: result.items.map((item) => ({
         name: item.metadata?.name || 'unknown',
         phase: item.status?.phase || 'Unknown',
         createdAt: item.metadata?.creationTimestamp || null
@@ -1136,21 +1420,23 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === '/api/k8s/deployments') {
     if (!requireAuth(req, res)) return;
-    const nsFlag = namespaceFlag(url.searchParams.get('namespace') || 'msp');
-    if (!nsFlag) {
+    const scope = namespaceScope(url.searchParams.get('namespace') || 'msp');
+    if (!scope) {
       jsonResponse(res, 400, { error: 'Invalid namespace.' });
       return;
     }
     const signal = requestAbortSignal(req, res);
-    const deployments = await runKubectlJson(`${nsFlag} get deployments`, KUBECTL_API_TIMEOUT_MS, signal);
-    const replicaSets = await runKubectlJson(`${nsFlag} get replicasets`, KUBECTL_API_TIMEOUT_MS, signal);
+    const [deployments, replicaSets] = await Promise.all([
+      clusterReader.listDeployments({ ...scope, signal, timeoutMs: KUBECTL_API_TIMEOUT_MS }),
+      clusterReader.listReplicaSets({ ...scope, signal, timeoutMs: KUBECTL_API_TIMEOUT_MS })
+    ]);
     if (!deployments.ok) {
-      jsonResponse(res, 502, { error: deployments.stderr || deployments.stdout || 'Unable to list deployments.' });
+      if (!res.writableEnded) jsonResponse(res, 502, { error: deployments.error || 'Unable to list deployments.' });
       return;
     }
     jsonResponse(res, 200, {
       namespace: url.searchParams.get('namespace') || 'msp',
-      deployments: (deployments.value?.items || []).map((item) => summarizeDeployment(item, replicaSets.value?.items || []))
+      deployments: deployments.items.map((item) => summarizeDeployment(item, replicaSets.ok ? replicaSets.items : []))
         .sort((a, b) => `${a.namespace}/${a.name}`.localeCompare(`${b.namespace}/${b.name}`))
     });
     return;
@@ -1158,20 +1444,20 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === '/api/k8s/pods') {
     if (!requireAuth(req, res)) return;
-    const nsFlag = namespaceFlag(url.searchParams.get('namespace') || 'msp');
-    if (!nsFlag) {
+    const scope = namespaceScope(url.searchParams.get('namespace') || 'msp');
+    if (!scope) {
       jsonResponse(res, 400, { error: 'Invalid namespace.' });
       return;
     }
     const signal = requestAbortSignal(req, res);
-    const pods = await runKubectlJson(`${nsFlag} get pods`, KUBECTL_API_TIMEOUT_MS, signal);
+    const pods = await clusterReader.listPods({ ...scope, signal, timeoutMs: KUBECTL_API_TIMEOUT_MS });
     if (!pods.ok) {
-      jsonResponse(res, 502, { error: pods.stderr || pods.stdout || 'Unable to list pods.' });
+      if (!res.writableEnded) jsonResponse(res, 502, { error: pods.error || 'Unable to list pods.' });
       return;
     }
     jsonResponse(res, 200, {
       namespace: url.searchParams.get('namespace') || 'msp',
-      pods: (pods.value?.items || []).map(summarizePod)
+      pods: pods.items.map(summarizePod)
         .sort((a, b) => `${a.namespace}/${a.name}`.localeCompare(`${b.namespace}/${b.name}`))
     });
     return;
@@ -1188,15 +1474,13 @@ const server = http.createServer(async (req, res) => {
       jsonResponse(res, 400, { error: 'Invalid namespace, pod, or container.' });
       return;
     }
-    const containerArg = container ? ` -c ${shellQuote(container)}` : '';
-    const previousArg = previous ? ' --previous' : '';
     const signal = requestAbortSignal(req, res);
-    const result = await runQueuedKubectl(kubectlCommand(`-n ${shellQuote(namespace)} logs ${shellQuote(pod)}${containerArg} --tail=${tail}${previousArg}`, KUBECTL_LOG_TIMEOUT_MS), { timeoutMs: KUBECTL_LOG_TIMEOUT_MS, signal });
+    const result = await clusterReader.readPodLog({ namespace, pod, container: container || undefined, tailLines: tail, previous, signal, timeoutMs: KUBECTL_LOG_TIMEOUT_MS });
     if (!result.ok) {
-      jsonResponse(res, 502, { error: result.stderr || result.stdout || 'Unable to read logs.' });
+      if (!res.writableEnded) jsonResponse(res, 502, { error: result.error || 'Unable to read logs.' });
       return;
     }
-    const lines = result.stdout.split(/\r?\n/);
+    const lines = result.text.split(/\r?\n/);
     if (lines.at(-1) === '') lines.pop();
     jsonResponse(res, 200, { namespace, pod, container: container || null, tail, previous, lines });
     return;
@@ -1338,40 +1622,83 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // Force a Flux reconcile of the alga-core HelmRelease (same as
-    // `flux reconcile helmrelease alga-core --force`): bumping requestedAt and
-    // forceAt to the same value makes the helm-controller run a forced upgrade,
-    // which creates a fresh bootstrap Job. That job re-runs migrations,
-    // onboarding seeds, and creates the initial tenant/admin if no users exist.
-    const namespace = 'alga-system';
-    const name = 'alga-core';
-    const requestedAt = new Date().toISOString();
+    // Recover the application release without SSH. Equivalent to
+    // `flux resume hr --all && kubectl delete job alga-core-sebastian-bootstrap
+    // && flux reconcile helmrelease alga-core --force --reset`: resume anything
+    // an interrupted update left suspended, remove a leftover bootstrap Job
+    // (its immutable spec makes the next upgrade's apply of it fail),
+    // then force + reset the reconcile so even a Stalled/RetriesExceeded
+    // release runs a fresh upgrade. That upgrade's bootstrap Job re-runs
+    // migrations, onboarding seeds, and creates the initial tenant/admin if no
+    // users exist.
     const signal = requestAbortSignal(req, res);
-    const command = kubectlCommand(`-n ${shellQuote(namespace)} annotate helmrelease ${shellQuote(name)} reconcile.fluxcd.io/requestedAt=${shellQuote(requestedAt)} reconcile.fluxcd.io/forceAt=${shellQuote(requestedAt)} --overwrite`, KUBECTL_API_TIMEOUT_MS);
-    const result = await runQueuedKubectl(command, { timeoutMs: KUBECTL_API_TIMEOUT_MS, signal });
+    const result = await recoverAppRelease({
+      runKubectl: (args) => runQueuedKubectl(kubectlCommand(args, KUBECTL_API_TIMEOUT_MS), { timeoutMs: KUBECTL_API_TIMEOUT_MS, signal })
+    });
+    invalidateStatusSnapshot();
+    const helmRelease = `${APPLIANCE_HELM_RELEASE_NAMESPACE}/${APPLIANCE_HELM_RELEASES[0].name}`;
     if (!result.ok) {
-      jsonResponse(res, 502, { error: result.stderr || result.stdout || 'Failed to trigger reconcile.', helmRelease: `${namespace}/${name}` });
+      jsonResponse(res, 502, { error: result.error || 'Failed to trigger reconcile.', step: result.step, helmRelease });
       return;
     }
     jsonResponse(res, 200, {
       ok: true,
-      helmRelease: `${namespace}/${name}`,
-      requestedAt,
-      message: 'Forced a Flux reconcile of alga-core. A fresh bootstrap job will run migrations and onboarding seeds, and create the initial tenant/admin if it is missing. This usually takes about a minute.'
+      helmRelease,
+      requestedAt: result.at,
+      clearedBootstrapJob: result.clearedBootstrapJob,
+      message: 'Forced a Flux reconcile of alga-core (reset + force). A fresh bootstrap Job will run migrations and onboarding seeds, and create the initial tenant/admin if it is missing. This usually takes a few minutes.'
+    });
+    return;
+  }
+
+  // Re-run only the HelmReleases stuck in a terminal failure (see
+  // recoverStalledReleases). Offered by the Overview when a release blocker is
+  // shown; unlike /api/recover it does not re-run the app bootstrap.
+  if (url.pathname === '/api/recover-releases') {
+    if (!requireAuth(req, res)) return;
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const result = await recoverStalledReleases({
+      runKubectl: (args) => runQueuedKubectl(kubectlCommand(args, KUBECTL_API_TIMEOUT_MS), { timeoutMs: KUBECTL_API_TIMEOUT_MS })
+    });
+    invalidateStatusSnapshot();
+    if (!result.ok) {
+      jsonResponse(res, 502, { error: result.error || 'Failed to recover releases.', step: result.step, recovered: result.recovered });
+      return;
+    }
+    jsonResponse(res, 200, {
+      ok: true,
+      recovered: result.recovered,
+      requestedAt: result.at,
+      message: result.recovered.length
+        ? `Re-running ${result.recovered.join(', ')}. Flux upgrades each release again; this usually takes a few minutes.`
+        : 'No releases are stuck; nothing to recover.'
     });
     return;
   }
 
   if (url.pathname === '/api/manage/status') {
     if (!requireAuth(req, res)) return;
+    // scope=updates is the Overview's "update available" banner: release and
+    // control-plane availability only, without the license, admin-identity,
+    // and Support Mode reads the Manage view needs.
+    const updatesOnly = url.searchParams.get('scope') === 'updates';
     const status = await collectManageStatus({
       kube: manageKube,
       releaseSelectionFile,
       installStateFile: stateFile,
       cpUpgradeStatusFile,
       resolveControlPlaneRef,
-      resolveReleaseManifest: resolveReleaseManifestCached
+      resolveReleaseManifest: resolveReleaseManifestCached,
+      readLicense: () => licenseStatusCache.get(),
+      includeLicense: !updatesOnly
     });
+    if (updatesOnly) {
+      jsonResponse(res, 200, { app: status.app, controlPlane: status.controlPlane });
+      return;
+    }
     try {
       const identity = await readInitialAdminIdentity(manageKube);
       status.adminPasswordReset = {
@@ -1439,6 +1766,7 @@ const server = http.createServer(async (req, res) => {
     }
     const payload = await readJsonBody(req);
     const result = await applyLicense({ licenseKey: payload?.licenseKey, kube: manageKube });
+    licenseStatusCache.invalidate();
     if (result.ok) jsonResponse(res, 200, { ok: true });
     else jsonResponse(res, result.status || 400, { error: result.error });
     return;
@@ -1452,6 +1780,7 @@ const server = http.createServer(async (req, res) => {
     }
     const payload = await readJsonBody(req);
     const result = await redeemClaimCode({ claimCode: payload?.claimCode, kube: manageKube });
+    licenseStatusCache.invalidate();
     if (result.ok) jsonResponse(res, 200, { ok: true, result: result.result });
     else jsonResponse(res, result.status || 400, { error: result.error });
     return;
@@ -1469,7 +1798,8 @@ const server = http.createServer(async (req, res) => {
       dnsMode: payload?.dnsMode,
       dnsServers: payload?.dnsServers,
       kube: manageKube,
-      releaseSelectionFile
+      releaseSelectionFile,
+      setupInputsFile
     });
     if (result.ok) jsonResponse(res, 200, { ok: true });
     else jsonResponse(res, result.status || 400, { error: result.error });
@@ -1590,14 +1920,12 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      fs.mkdirSync(path.dirname(stateFile), { recursive: true, mode: 0o750 });
-      fs.writeFileSync(stateFile, `${JSON.stringify({
-        status: 'setup-queued',
-        phase: 'setup',
-        lastAction: 'Setup accepted; background workflow is starting',
-        updatedAt: new Date().toISOString()
-      }, null, 2)}\n`, { mode: 0o600 });
-      queueSetupWorkflow();
+      const started = await beginSetupWorkflow(setupInputs);
+      if (!started.ok) {
+        res.writeHead(started.statusCode || 500, { 'content-type': 'text/plain; charset=utf-8' });
+        res.end(started.error || 'Setup could not be started.');
+        return;
+      }
 
       res.writeHead(303, { location: '/' });
       res.end();
@@ -1684,23 +2012,32 @@ const server = http.createServer(async (req, res) => {
 
   if (mode === 'status') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    const signal = requestAbortSignal(req, res);
-    const installStateForProbe = readInstallStateSafe();
-    const wantNetworkProbe = networkProbeRelevant(installStateForProbe);
-    const snapshot = await collectStatusSnapshotAsync({
-      stateFile,
-      setupInputsFile,
-      releaseSelectionFile,
-        kubeconfigPath,
-      kubectlTimeoutMs: KUBECTL_STATUS_TIMEOUT_MS,
-      kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
-      networkProbe: wantNetworkProbe ? () => getNetworkProbe() : undefined,
-      autoRetry: computeAutoRetrySummary(installStateForProbe),
-      runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_STATUS_TIMEOUT_MS, signal })
-    });
+    const snapshot = await readStatusSnapshot();
     const failureItems = (snapshot.failures || [])
-      .map((failure) => `<li><strong>${escapeHtml(failure.category)}</strong>: ${escapeHtml(failure.suspectedCause)}<br/><em>Next:</em> ${escapeHtml(failure.suggestedNextStep)}<br/><em>Retry safe:</em> ${failure.retrySafe ? 'yes' : 'no'}${failure.logs?.length ? `<br/><em>Useful commands:</em><pre>${escapeHtml(failure.logs.join('\n'))}</pre>` : ''}</li>`)
+      .map((failure) => {
+        const retryLine = failure.autoRetry
+          ? `<br/><em>Retry:</em> ${failure.autoRetry.exhausted ? 'exhausted' : 'in progress'} — attempt ${failure.autoRetry.attempts} of ${failure.autoRetry.maxAttempts}`
+          : '';
+        const stepLine = failure.step ? `<br/><em>Failed step:</em> ${escapeHtml(failure.step)}` : '';
+        const detailLine = failure.details ? `<br/><em>Details:</em> ${escapeHtml(failure.details)}` : '';
+        const logLine = failure.logs?.length ? `<br/><em>Useful commands:</em><pre>${escapeHtml(failure.logs.join('\n'))}</pre>` : '';
+        return `<li><strong>${escapeHtml(failure.category)}</strong>: ${escapeHtml(failure.suspectedCause)}${stepLine}${detailLine}<br/><em>Next:</em> ${escapeHtml(failure.suggestedNextStep)}${retryLine}<br/><em>Retry safe:</em> ${failure.retrySafe ? 'yes' : 'no'}${logLine}</li>`;
+      })
       .join('');
+    const engineLogLine = snapshot.engineLog
+      ? `<p><strong>Setup engine log:</strong> <code>${escapeHtml(snapshot.engineLog.file || 'unknown')}</code>${snapshot.engineLog.error ? ` <span style="color:#b00">(unavailable: ${escapeHtml(snapshot.engineLog.error)})</span>` : ''}</p>`
+      : '';
+    const dnsReconcile = snapshot.dnsReconcile;
+    const dnsReconcileState = dnsReconcile
+      ? dnsReconcile.ok === true
+        ? 'active'
+        : (dnsReconcile.state === 'submitted'
+          ? 'pending — host activation still running (setup is gated until it completes)'
+          : `failed — ${escapeHtml(dnsReconcile.error || 'unknown error')}`)
+      : null;
+    const dnsReconcileLine = dnsReconcile
+      ? `<p><strong>Cluster DNS reconcile:</strong> ${dnsReconcileState}${dnsReconcile.at ? ` <small>(${escapeHtml(dnsReconcile.at)})</small>` : ''}${dnsReconcile.logFile ? ` <small>log: <code>${escapeHtml(dnsReconcile.logFile)}</code></small>` : ''}</p>`
+      : '';
     const installerOutput = snapshot.installState?.installerOutput
       ? `${renderPreBlock('Installer stdout', snapshot.installState.installerOutput.stdout || '')}${renderPreBlock('Installer stderr', snapshot.installState.installerOutput.stderr || '')}`
       : '<p>No installer output recorded for the current phase.</p>';
@@ -1718,6 +2055,8 @@ const server = http.createServer(async (req, res) => {
       <p><strong>Current phase:</strong> ${escapeHtml(snapshot.currentPhase || 'unknown')}</p>
       <p><strong>Status:</strong> ${escapeHtml(snapshot.status || 'unknown')}</p>
       <p><strong>Last action:</strong> ${escapeHtml(snapshot.installState?.lastAction || 'n/a')}</p>
+      ${engineLogLine}
+      ${dnsReconcileLine}
       <h2>Readiness</h2>
       <p>platform=${snapshot.tiers.platformReady} core=${snapshot.tiers.coreReady} bootstrap=${snapshot.tiers.bootstrapReady} login=${snapshot.tiers.loginReady} background=${snapshot.tiers.backgroundReady} fullyHealthy=${snapshot.tiers.fullyHealthy}</p>
       <h2>Failures</h2>
@@ -1797,6 +2136,8 @@ function shutdownControlPlane(signal) {
   process.stdout.write(`alga-appliance host service shutting down (${signal})\n`);
   podExecManager.shutdown();
   portForwardManager.shutdown();
+  dnsReconciler.shutdown();
+  releaseAutoRecovery.shutdown();
   execWebSocketServer.close();
   server.close(() => process.exit(0));
   const forceExit = setTimeout(() => process.exit(0), 5_000);
@@ -1807,7 +2148,11 @@ process.once('SIGTERM', () => shutdownControlPlane('SIGTERM'));
 process.once('SIGINT', () => shutdownControlPlane('SIGINT'));
 
 if (!AUTO_RETRY_DISABLED) {
-  const reconcileTimer = setInterval(() => { reconcileBlockedSetup().catch(() => {}); }, RECONCILE_INTERVAL_MS);
+  const reconcileTimer = setInterval(() => { retryController.reconcile().catch(() => {}); }, RECONCILE_INTERVAL_MS);
   reconcileTimer.unref();
   process.stdout.write(`alga-appliance auto-retry reconciler enabled (every ${RECONCILE_INTERVAL_MS}ms, max ${AUTO_RETRY_MAX_ATTEMPTS} attempts)\n`);
 }
+
+dnsReconciler.start();
+releaseAutoRecovery.start();
+

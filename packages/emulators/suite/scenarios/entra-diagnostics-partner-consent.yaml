@@ -1,0 +1,9 @@
+name: entra-diagnostics-partner-consent
+description: Entra diagnostic fault; apply after the green fixture is connected
+steps:
+  - disarm: msgraph/operation-fault
+  - arm: msgraph/operation-fault
+    params:
+      operation: "GET /tenantRelationships/managedTenants/tenants"
+      status: 403
+      body: { error: { code: Authorization_RequestDenied, message: Partner consent missing } }

@@ -50,12 +50,17 @@ test('central client rejects non-TLS relay and an expiry beyond the requested la
 
 test('create retries one transport loss, abandons a hash-only replay, and creates fresh authority', async () => {
   const requests = []; let call = 0;
+  // Both ends of the window come off one clock reading: a ladder window is
+  // valid only up to exactly the requested duration, so two separate readings
+  // describe a window one millisecond too long whenever the clock ticks
+  // between them.
+  const issuedAt = Date.now();
   const client = new SupportControlClient({ baseUrl: 'https://support.example', fetchImpl: async (url, options) => {
     requests.push({ url: String(url), method: options.method, body: options.body && JSON.parse(options.body) }); call += 1;
     if (call === 1) throw new TypeError('connection reset');
     if (call === 2) return response({ sessionId: SESSION_ID, state: 'pending_ack', replayed: true });
     if (call === 3) return response({ ok: true });
-    return response({ sessionId: '44444444-4444-4444-8444-444444444444', shareCode: 'ABCDE-FGHJK', connectorToken: 'connector-token-123456', applianceToken: 'appliance-token-123456', resumeGrant: 'resume-grant-123456', statusUrl: 'https://support.example/status', relayUrl: 'wss://relay.example/v1/sessions/44444444-4444-4444-8444-444444444444', activatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 3600000).toISOString() });
+    return response({ sessionId: '44444444-4444-4444-8444-444444444444', shareCode: 'ABCDE-FGHJK', connectorToken: 'connector-token-123456', applianceToken: 'appliance-token-123456', resumeGrant: 'resume-grant-123456', statusUrl: 'https://support.example/status', relayUrl: 'wss://relay.example/v1/sessions/44444444-4444-4444-8444-444444444444', activatedAt: new Date(issuedAt).toISOString(), expiresAt: new Date(issuedAt + 3600000).toISOString() });
   }});
   const created = await client.createSession({ durationHours: 1, credential: 'long-lived-appliance-credential', clientRequestId: '55555555-5555-4555-8555-555555555555' });
   assert.equal(created.sessionId, '44444444-4444-4444-8444-444444444444');
@@ -63,4 +68,25 @@ test('create retries one transport loss, abandons a hash-only replay, and create
   assert.equal(requests[1].body.clientRequestId, requests[0].body.clientRequestId);
   assert.notEqual(requests[3].body.clientRequestId, requests[0].body.clientRequestId);
   assert.deepEqual(requests[2].body, { credential: 'long-lived-appliance-credential', clientRequestId: '55555555-5555-4555-8555-555555555555' });
+});
+
+test('the ladder window boundary is exact: a window equal to the requested duration is kept, one millisecond more is refused', async () => {
+  const issuedAt = Date.now();
+  const clientReturning = (expiresAtMs) => new SupportControlClient({ baseUrl: 'https://support.example', fetchImpl: async () => response({
+    sessionId: SESSION_ID,
+    shareCode: 'ABCDE-FGHJK',
+    connectorToken: 'connector-token-123456',
+    applianceToken: 'appliance-token-123456',
+    resumeGrant: 'resume-grant-123456',
+    statusUrl: 'https://support.example/status',
+    relayUrl: 'wss://relay.example/v1/sessions/33333333-3333-4333-8333-333333333333',
+    activatedAt: new Date(issuedAt).toISOString(),
+    expiresAt: new Date(expiresAtMs).toISOString(),
+  }) });
+  const created = await clientReturning(issuedAt + 3600000).createSession({ durationHours: 1, credential: 'long-lived-appliance-credential' });
+  assert.equal(created.sessionId, SESSION_ID);
+  await assert.rejects(
+    () => clientReturning(issuedAt + 3600000 + 1).createSession({ durationHours: 1, credential: 'long-lived-appliance-credential' }),
+    (error) => error instanceof SupportControlError && error.code === 'central_invalid_response',
+  );
 });

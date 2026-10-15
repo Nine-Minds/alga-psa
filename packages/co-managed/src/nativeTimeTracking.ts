@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction, computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from '@alga-psa/db';
+import { toCalendarDateString } from '@alga-psa/core';
 import { productTimeEntryMode, type TimeEntryBillingMode } from '@alga-psa/types';
 import { getCoManagedOperationalState, assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { lockCoManagedLocalAuthentication, snapshotCoManagedAuthenticatedActor, type CoManagedAuthenticatedActor } from './localAuthentication';
@@ -77,7 +78,7 @@ async function presentClock(trx: Knex.Transaction, clock: any, access: CoManaged
   const service = clock.service_id && serviceVisible ? await tenantDb(trx, clock.tenant).table('service_catalog').where('service_id', clock.service_id).forShare().first('service_name') : null;
   return { session_id: clock.session_id, entry_id: clock.session_id, tenant: clock.tenant, user_id: clock.user_id, billing_mode: clock.billing_mode,
     work_item_id: clock.work_item_id, work_item_type: clock.work_item_type, start_time: clock.start_time,
-    work_date: clock.work_date instanceof Date ? clock.work_date.toISOString().slice(0, 10) : clock.work_date, work_timezone: clock.work_timezone,
+    work_date: toCalendarDateString(clock.work_date), work_timezone: clock.work_timezone,
     notes: hidden(['notes']) ? '' : clock.notes, service_id: serviceVisible ? clock.service_id : null, service_name: service?.service_name,
     created_at: clock.created_at, status: 'active', elapsed_minutes: Math.max(0, Math.round((current.getTime() - new Date(clock.start_time).getTime()) / 60000)),
     work_item_title: hidden(['work_item', 'work_item_title']) ? '' : access.workItem.name };
@@ -101,6 +102,12 @@ export async function startNativeTimeTracking(db: Knex, actor: CoManagedAuthenti
     const access = await admitCoManagedNativeTimeSource(trx, home, source(fields), 'create');
     assertCoManagedTimeSaveFields(access, fields.work_item_type);
     const [clock] = await owner.table(TABLE).insert(fields).returning('*');
+    // A DATE is a calendar date, not an instant: pg hydrates the returned column
+    // into a Date in the Node process timezone, which can shift the day. Overwrite
+    // it with the timezone-local 'YYYY-MM-DD' string computed above. (Citus also
+    // rejects non-IMMUTABLE functions such as to_char in a distributed table's
+    // RETURNING clause, so normalizing in SQL is not an option.)
+    clock.work_date = fields.work_date;
     const result = await presentClock(trx, clock, access); await access.assertCurrent(); return result;
   });
 }

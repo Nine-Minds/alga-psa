@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ManualInvoiceError } from '../../../../../packages/billing/src/errors/manualInvoiceErrors';
 
+// Manual invoices read terms and payment method from the client's default
+// billing profile; these suites mock knex, so the identity is stubbed.
+vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfileSettingsModuleStub(importOriginal as any));
+
 const mocks = vi.hoisted(() => {
   const warn = vi.fn();
   const error = vi.fn();
@@ -184,6 +189,30 @@ describe('generateManualInvoice structured errors', () => {
       code: 'NO_TAX_RATE',
       params: { region: 'US-PA', date: '2026-07-14' },
     });
+  });
+
+  it('persists the entered invoice number instead of allocating an automatic number', async () => {
+    const result = await generateManualInvoice({ ...request, invoiceNumber: '  MAN-042  ' });
+    expect(result.success).toBe(true);
+    expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ invoice_number: 'MAN-042' }));
+  });
+
+  it.each([undefined, '', '   '])('allocates a number when the optional number is blank: %s', async invoiceNumber => {
+    const result = await generateManualInvoice({ ...request, invoiceNumber });
+    expect(result.success).toBe(true);
+    expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ invoice_number: 'INV-001' }));
+  });
+
+  it('persists the ticket association when the manual invoice is raised from a ticket', async () => {
+    const result = await generateManualInvoice({ ...request, ticket_id: 'ticket-9' });
+    expect(result.success).toBe(true);
+    expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ ticket_id: 'ticket-9' }));
+  });
+
+  it('leaves the ticket association null for ordinary manual invoices', async () => {
+    const result = await generateManualInvoice(request);
+    expect(result.success).toBe(true);
+    expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ ticket_id: null }));
   });
 
   it('maps the invoice-number unique constraint to INVOICE_NUMBER_CONFLICT', async () => {

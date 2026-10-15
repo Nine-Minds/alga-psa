@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "suite": "node-tooling",
+  "revision": "5c479b245cb643563463927d5d3345241da3118f",
+  "status": "passed",
+  "counts": {
+    "tests": 494,
+    "passed": 494,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "source": {
+    "before": {
+      "revision": "5c479b245cb643563463927d5d3345241da3118f",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "5c479b245cb643563463927d5d3345241da3118f",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "workingTreeDirty": false,
+  "failures": [],
+  "exclusions": [
+    {
+      "file": "tools/i18n/tests/baseline.test.mjs",
+      "owner": "Localization maintainers",
+      "reason": "Optional local comparison against gitignored baseline.json files. The existing validate-translations workflow explicitly replaces these baselines with zero-regression glossary, placeholder and parity gates; its three mandatory tooling suites also run in node-tooling. This file provides no CI execution coverage and must remain visible as a manual exclusion.",
+      "issue": "https://github.com/Nine-Minds/alga-psa/pull/3343",
+      "expires": "2026-12-06"
+    }
+  ],
+  "expectedFiles": 49,
+  "executedFiles": 49,
+  "discovery": "passed",
+  "hashes": {
+    "events.jsonl": "cb36bb5d2bd031cbceb51c5b934b03a338ace3b09db062098481880d690f99ed",
+    "runner.log": "faec197dc43c28e539abbc1dd1ace1baf148f666d2e2849353e4376948ca9907",
+    "evidence.json": "500dbdad390f821e93831d1a2632277a3560db91316fe9d7ec2beb301f305086",
+    "discovery.json": "564359b2b1528710db890483e29018da4ca74793cfb15b2b77ce07c17f0bc334"
+  },
+  "log": "/tmp/alga-node-tooling-infrastructure-verdicts.log",
+  "limitations": [
+    "Local full tooling lane; current native PR head remains d8cf156c731bdfb9414ee6435152a676e0bcecf4.",
+    "Does not establish product-suite or full-plan readiness."
+  ]
+}

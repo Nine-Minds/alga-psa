@@ -1,0 +1,77 @@
+{
+  "status": "local behavioral verification complete; repaired production image and native CI verification pending",
+  "publishedHead": "3464c562eedd90cccb39a7d57c3a30e64903e9e1",
+  "passwordErrors": {
+    "repair": "Replace bare Error aliases and permission denial with typed 400/403/404 errors in the package UserService; keep server imports out of the package.",
+    "database": "user_password_errors_82cc",
+    "test": "server/src/test/integration/api/userPasswordErrors.integration.test.ts",
+    "before": {
+      "failed": 5,
+      "passed": 1,
+      "logLocal": "/tmp/alga-user-password-errors-before.log"
+    },
+    "after": {
+      "passed": 6,
+      "durationSeconds": 15.42,
+      "logLocal": "/tmp/alga-user-password-errors-after.log"
+    },
+    "boundaries": "Real PostgreSQL, role-permission queries, PBKDF2 hashes and transaction writes. getKnex supplies the isolated DB transaction and a synthetic secret is used. handleApiError maps the real service exceptions. No password or permission operation is mocked.",
+    "assertions": [
+      "Missing update permission and missing admin permission return 403 without changing the target hash",
+      "Missing/incorrect current password returns 400 and preserves the hash",
+      "Missing tenant-scoped target returns 404",
+      "Self-service change persists a replacement hash; new password verifies and old password fails"
+    ]
+  },
+  "clientDeletion": {
+    "repair": "Delete tenant/client-scoped billing profiles after their referencing locations and before the client, inside the existing validated transaction.",
+    "database": "client_profile_delete_82cc",
+    "test": "server/src/test/integration/api/clientService.defaultCurrency.integration.test.ts",
+    "builtBefore": {
+      "logLocal": "/tmp/alga-client-delete-built-before.log",
+      "error": "400 BAD_REQUEST Invalid reference: client_billing_profiles still references client"
+    },
+    "before": {
+      "failed": 1,
+      "passed": 5,
+      "logLocal": "/tmp/alga-client-profile-delete-before.log"
+    },
+    "after": {
+      "passed": 6,
+      "durationSeconds": 18.48,
+      "logLocal": "/tmp/alga-client-profile-delete-after.log"
+    },
+    "assertions": [
+      "A new client with its automatically provisioned billing profile can be deleted",
+      "Neighboring client and profile remain unchanged",
+      "Contact dependency blocks deletion and preserves client, contact and profile"
+    ],
+    "parity": "The existing UI deletion action already cleans up client_billing_profiles; this repairs API parity."
+  },
+  "apiFixtures": {
+    "repair": "Use complete client-user payloads; replace nominal password-success test with actual owner-key password changes; preserve denied-request hashes; clean owned billing profiles during teardown. Use explicit test client URL and constructor; remove unused temporary arrays and ignored tenantId config fields.",
+    "passed": 4,
+    "failed": 0,
+    "filtered": 44,
+    "cases": [
+      "Deactivate client and linked contacts/users",
+      "Reactivate only client",
+      "Reactivate client and linked contacts/users",
+      "Change own password twice, proving the persisted replacement is accepted"
+    ],
+    "logLocal": "/tmp/alga-client-user-fixture-repairs-final.log",
+    "reportLocal": "/tmp/alga-client-user-fixture-repairs-final.json",
+    "applicationRevision": "9b12c5 (older owned build); successful repaired 400/403 and client-delete HTTP checks still require a new image"
+  },
+  "relatedUnits": {
+    "files": 2,
+    "passed": 14,
+    "logLocal": "/tmp/alga-user-password-related-unit.log"
+  },
+  "types": {
+    "status": "passed",
+    "logLocal": "/tmp/alga-user-password-errors-types.log",
+    "note": "Focused config uses strictNullChecks=true as server/tsconfig.json does. Fixed case-sensitive UserService import and stale test typings. Private payment-link finder return annotation now matches Knex first(): undefined when absent; runtime unchanged."
+  },
+  "remaining": "Full native integration remains live; do not push over this run. API E2E runner assignment, rebuilt HTTP acceptance and remaining plan requirements are not complete."
+}

@@ -1,3 +1,6 @@
+import { encryptActionReplay, decryptActionReplay } from '@alga-psa/shared/workflow/runtime/utils/actionReplayCipher';
+import { loadWorkflowReplayKeys, workflowReplayKey } from './workflow-action-replay-keys';
+import { buildWorkflowDiagnosticSnapshot } from '@alga-psa/workflows/runtime/utils/redactionUtils';
 import { getAdminConnection, retryOnAdminReadOnly } from '@alga-psa/db/admin';
 import { getFormValidationService } from '@shared/task-inbox';
 import { tenantDb } from '@alga-psa/db';
@@ -13,6 +16,7 @@ import {
   createSecretResolverFromProvider,
   applyRedactions,
   safeSerialize,
+  enforceSnapshotSize,
   type Envelope,
   type InputMapping,
   type SecretResolver,
@@ -29,6 +33,7 @@ import {
   WorkflowDefinitionModelV2,
   WorkflowDefinitionVersionModelV2,
   WorkflowRunStepModelV2,
+  WorkflowRunSnapshotModelV2,
   WorkflowRunModelV2,
   WorkflowRunWaitModelV2,
   WorkflowTaskModel,
@@ -223,41 +228,82 @@ export async function projectWorkflowRuntimeV2StepCompletion(input: {
   stepPath: string;
   status: 'SUCCEEDED' | 'FAILED' | 'CANCELED';
   errorMessage?: string;
+  scopes?: WorkflowRuntimeV2ScopeState;
+  snapshot?: Record<string, unknown>;
 }): Promise<void> {
   return retryOnAdminReadOnly(
     async () => {
       const knex = await getAdminConnection();
-      const now = new Date().toISOString();
-      const step = await tenantDb(knex, '__workflow_step_completion_discovery__')
-        .unscoped<{ step_id: string; started_at?: string | null; tenant?: string | null }>(
-          'workflow_run_steps',
-          'workflow step completion resolves the tenant and duration from step_id before updating'
-        )
-        .where({ step_id: input.stepId })
-        .first();
-      const tenant = step?.tenant ?? null;
-      const startedAt = step?.started_at ? new Date(step.started_at).getTime() : Date.now();
-      const durationMs = Math.max(Date.now() - startedAt, 0);
+      return knex.transaction(async (trx) => {
+        const now = new Date().toISOString();
+        const run = await WorkflowRunModelV2.getById(trx, input.runId);
+        if (!run) {
+          throw new Error(`Step ${input.stepId} does not belong to run ${input.runId} at ${input.stepPath}`);
+        }
+        const tenant = run.tenant ?? null;
+        // Citus row locks must route to one tenant shard. Discover the run
+        // first, then verify and lock the step within that run's tenant.
+        const step = await tenantDb(trx, '__workflow_step_completion_discovery__')
+          .unscoped<{ step_id: string; run_id: string; step_path: string; started_at?: string | null; tenant?: string | null; snapshot_id?: string | null }>(
+            'workflow_run_steps',
+            'workflow step completion locks the matching step in the verified run tenant'
+          )
+          .where({ tenant, step_id: input.stepId, run_id: input.runId, step_path: input.stepPath })
+          .forUpdate()
+          .first();
+        if (!step) {
+          throw new Error(`Step ${input.stepId} does not belong to run ${input.runId} at ${input.stepPath}`);
+        }
+        const startedAt = step?.started_at ? new Date(step.started_at).getTime() : Date.now();
+        const durationMs = Math.max(Date.now() - startedAt, 0);
 
-      await WorkflowRunStepModelV2.update(knex, input.stepId, {
-        status: input.status,
-        duration_ms: durationMs,
-        completed_at: now,
-        error_json: input.status === 'FAILED' && input.errorMessage
-          ? { message: input.errorMessage }
-          : null,
-      }, tenant);
+        let snapshotId = step.snapshot_id;
+        if ((input.snapshot || input.scopes) && !snapshotId) {
+          const configuredDays = Number(process.env.WORKFLOW_SNAPSHOT_RETENTION_DAYS ?? 30);
+          if (!Number.isFinite(configuredDays) || configuredDays <= 0) throw new Error('Invalid workflow snapshot retention');
+          const diagnostic = input.snapshot ?? buildWorkflowDiagnosticSnapshot(input.scopes!);
+          const bounded = enforceSnapshotSize(applyRedactions(safeSerialize(diagnostic)), 256 * 1024) as Record<string, unknown>;
+          const snapshot = await WorkflowRunSnapshotModelV2.create(trx, {
+            tenant, run_id: input.runId, step_path: input.stepPath, envelope_json: bounded,
+            size_bytes: Buffer.byteLength(JSON.stringify(bounded), 'utf8'),
+          });
+          snapshotId = snapshot.snapshot_id;
+          // Only prune this run's diagnostic history; completion in one tenant
+          // must never remove another tenant's snapshots.
+          const expired = await tenantDb(trx, tenant ?? '__legacy_workflow_snapshot_retention__')
+            .unscoped('workflow_run_snapshots', 'retention is restricted to the verified run and its tenant')
+            .where({ run_id: input.runId, tenant })
+            .where('created_at', '<', new Date(Date.now() - configuredDays * 86400000).toISOString())
+            .delete().returning('snapshot_id');
+          if (expired.length) {
+            await tenantDb(trx, tenant ?? '__legacy_workflow_snapshot_retention__')
+              .unscoped('workflow_run_steps', 'clear expired snapshot references only in the verified run and tenant')
+              .where({ run_id: input.runId, tenant }).whereIn('snapshot_id', expired.map(row => row.snapshot_id))
+              .update({ snapshot_id: null });
+          }
+        }
 
-      await WorkflowRunModelV2.update(knex, input.runId, {
-        status: input.status === 'FAILED'
-          ? 'FAILED'
-          : input.status === 'CANCELED'
-            ? 'CANCELED'
-            : 'RUNNING',
-        error_json: input.status === 'FAILED' && input.errorMessage
-          ? { message: input.errorMessage, nodePath: input.stepPath }
-          : null,
-      }, tenant);
+        await WorkflowRunStepModelV2.update(trx, input.stepId, {
+          ...(snapshotId ? { snapshot_id: snapshotId } : {}),
+          status: input.status,
+          duration_ms: durationMs,
+          completed_at: now,
+          error_json: input.status === 'FAILED' && input.errorMessage
+            ? { message: input.errorMessage }
+            : null,
+        }, tenant);
+
+        await WorkflowRunModelV2.update(trx, input.runId, {
+          status: input.status === 'FAILED'
+            ? 'FAILED'
+            : input.status === 'CANCELED'
+              ? 'CANCELED'
+              : 'RUNNING',
+          error_json: input.status === 'FAILED' && input.errorMessage
+            ? { message: input.errorMessage, nodePath: input.stepPath }
+            : null,
+        }, tenant);
+      });
     },
     { logLabel: 'projectWorkflowRuntimeV2StepCompletion' }
   );
@@ -623,12 +669,14 @@ export async function executeWorkflowRuntimeV2ActionStep(input: {
   const expressionContext = buildWorkflowRuntimeV2ExpressionContext(input.scopes);
   const secretResolver = buildWorkflowRuntimeV2SecretResolver(knex, input.tenantId);
 
+  const inputRedactionPaths: string[] = [];
   const resolvedInput = await resolveInputMapping(
     (config.inputMapping ?? {}) as InputMapping,
     {
       expressionContext,
       secretResolver,
       workflowRunId: input.runId,
+      redactionPaths: inputRedactionPaths,
     }
   ) ?? {};
 
@@ -643,6 +691,7 @@ export async function executeWorkflowRuntimeV2ActionStep(input: {
     actionId: config.actionId,
     version: config.version,
     args: resolvedInput,
+    inputRedactionPaths,
     expressionContext,
     // Preserve the authored action config for handlers that read action-specific
     // configuration outside inputMapping, such as transform.compose_text outputs.
@@ -833,6 +882,7 @@ async function executeActionInvocation(input: {
   actionId: string;
   version: number;
   args: unknown;
+  inputRedactionPaths?: string[];
   expressionContext: Record<string, unknown>;
   stepConfig?: unknown;
   idempotencyKey?: string;
@@ -863,10 +913,26 @@ async function executeActionInvocation(input: {
     input.tenantId
   );
   if (existing?.status === 'SUCCEEDED') {
+    if (existing.replay_output_encrypted) {
+      const keys = await loadWorkflowReplayKeys();
+      return action.outputSchema.parse(decryptActionReplay(existing.replay_output_encrypted,
+        workflowReplayKey(keys, existing.replay_output_encrypted.keyId),
+        { tenantId: existing.tenant ?? null, invocationId: existing.invocation_id }));
+    }
     return action.outputSchema.parse(existing.output_json ?? {});
   }
 
-  const invocation = await WorkflowActionInvocationModelV2.create(input.knex, {
+  // Fail before effects if the deployment cannot durably store/replay results.
+  const replayKeys = await loadWorkflowReplayKeys();
+  if (!(await input.knex.schema.hasColumn('workflow_action_invocations', 'replay_output_encrypted'))) {
+    throw new Error('Workflow replay storage migration is required before executing an action');
+  }
+
+  // Reuse a failed invocation under its stable key. The conditional update
+  // allows only one retry to own it; an in-flight invocation is never stolen.
+  const invocation = existing
+    ? await WorkflowActionInvocationModelV2.claimFailed(input.knex, existing.invocation_id, input.tenantId)
+    : await WorkflowActionInvocationModelV2.create(input.knex, {
     run_id: input.runId,
     tenant: input.tenantId ?? undefined,
     step_path: input.stepPath,
@@ -875,9 +941,12 @@ async function executeActionInvocation(input: {
     idempotency_key: idempotencyKey,
     status: 'STARTED',
     attempt: 1,
-    input_json: parsedInput as Record<string, unknown>,
+    input_json: applyRedactions(parsedInput, input.inputRedactionPaths) as Record<string, unknown>,
     started_at: new Date().toISOString(),
   });
+  if (!invocation) {
+    throw new Error(`Workflow action invocation ${existing?.invocation_id} is already in progress`);
+  }
 
   try {
     const output = await action.handler(parsedInput, {
@@ -895,8 +964,17 @@ async function executeActionInvocation(input: {
     const parsedOutput = action.outputSchema.parse(output);
     await WorkflowActionInvocationModelV2.update(input.knex, invocation.invocation_id, {
       status: 'SUCCEEDED',
-      output_json: parsedOutput as Record<string, unknown>,
+      output_json: applyRedactions(parsedOutput) as Record<string, unknown>,
+      replay_output_encrypted: {
+        ...encryptActionReplay(parsedOutput, workflowReplayKey(replayKeys, replayKeys.activeKeyId),
+          { tenantId: input.tenantId ?? null, invocationId: invocation.invocation_id }),
+        keyId: replayKeys.activeKeyId,
+      },
       completed_at: new Date().toISOString(),
+      // A recovered invocation must not retain its previous failure. Only
+      // write the optional column when the fetched row proves it exists,
+      // preserving workers deployed before the error_json migration.
+      ...(existing?.error_json != null ? { error_json: null } : {}),
     }, input.tenantId);
     return parsedOutput;
   } catch (error) {

@@ -7,8 +7,23 @@ import { closeCoManagedRelationship } from './relationshipClosure';
 import { finalizeCoManagedArchive } from './archiveFinalization';
 
 /** Discovery never accepts a foreign tenant from the browser. MSP selectors are
- * provisioning operations owned by the authenticated home workspace. */
-async function resolveDepartureTarget(db: Knex, actor: CoManagedSessionActor, provisioningOperationId?: string) {
+ * provisioning operations owned by the authenticated home workspace, or an
+ * explicit qualified target already resolved from a customer/sponsor selector. */
+export interface CoManagedDepartureQualifiedTarget {
+  side: 'customer' | 'sponsor';
+  customerTenant: string;
+  relationshipId: string;
+  sponsorTenant: string;
+}
+
+async function resolveDepartureTarget(db: Knex, actor: CoManagedSessionActor, provisioningOperationId?: string,
+  qualified?: CoManagedDepartureQualifiedTarget) {
+  if (qualified) {
+    if (![qualified.customerTenant, qualified.relationshipId, qualified.sponsorTenant].every(isCoManagedUuid) ||
+        !['customer', 'sponsor'].includes(qualified.side)) throw new CoManagedSharedWorkError();
+    return { side: qualified.side, customerTenant: qualified.customerTenant, relationshipId: qualified.relationshipId,
+      sponsorTenant: qualified.sponsorTenant };
+  }
   const own = tenantDb(db, actor.tenant);
   const owner = await own.table('tenants').first('product_code');
   if (owner?.product_code === 'co_managed' && provisioningOperationId === undefined) {
@@ -28,10 +43,11 @@ async function resolveDepartureTarget(db: Knex, actor: CoManagedSessionActor, pr
 
 /** Advisory review remains available after license lapse and closure. Mutation
  * always independently rechecks current authority and the reviewed revision. */
-export async function getCoManagedDepartureScreen(db: Knex, inputActor: CoManagedSessionActor, provisioningOperationId?: string) {
+export async function getCoManagedDepartureScreen(db: Knex, inputActor: CoManagedSessionActor, provisioningOperationId?: string,
+  qualified?: CoManagedDepartureQualifiedTarget) {
   const actor = snapshotCoManagedSessionActor(inputActor);
   return withTransaction(db, async trx => {
-    const target = await resolveDepartureTarget(trx, actor, provisioningOperationId);
+    const target = await resolveDepartureTarget(trx, actor, provisioningOperationId, qualified);
     const relationship = await tenantDb(trx, target.customerTenant).table('co_management_relationships')
       .where({ relationship_id: target.relationshipId, sponsor_tenant: target.sponsorTenant }).forShare()
       .first('state', 'revision', 'ended_at');
@@ -58,12 +74,13 @@ export interface CoManagedDepartureRequest {
   relationshipId: string;
 }
 
-export async function departCoManagedRelationship(db: Knex, inputActor: CoManagedSessionActor, input: CoManagedDepartureRequest) {
+export async function departCoManagedRelationship(db: Knex, inputActor: CoManagedSessionActor, input: CoManagedDepartureRequest,
+  qualified?: CoManagedDepartureQualifiedTarget) {
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!input || !isCoManagedUuid(input.relationshipId)) throw new CoManagedSharedWorkError();
   const request = { provisioningOperationId: input.provisioningOperationId, operationId: input.operationId,
     expectedRevision: input.expectedRevision, relationshipId: input.relationshipId };
-  const target = await resolveDepartureTarget(db, actor, request.provisioningOperationId);
+  const target = await resolveDepartureTarget(db, actor, request.provisioningOperationId, qualified);
   if (target.relationshipId !== request.relationshipId) throw new CoManagedSharedWorkError();
   return closeCoManagedRelationship(db, actor, target, { operationId: request.operationId,
     expectedRevision: request.expectedRevision, reason: 'departure' }, finalizeCoManagedArchive);

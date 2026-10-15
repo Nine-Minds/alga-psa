@@ -1,0 +1,43 @@
+{
+  "scope": "Remaining native test failures after successful browser run",
+  "publishedHead": "7b170294a755dfebba34cb8bbfc1069b6d8ba8bc",
+  "jobs": [
+    {
+      "name": "shard2",
+      "url": "https://github.com/Nine-Minds/alga-psa/actions/runs/34151013496/job/101833204369",
+      "passed": 569,
+      "omitted": 5,
+      "detail": "Workflow redaction/snapshot tests target a retired server interpreter; port storage-time assertions to Temporal activities.",
+      "logSha256": "ff1e39b682004486503d949f5cbcfa3d93e1a0b4fb9212182768b08add6da84f"
+    },
+    {
+      "name": "shard3",
+      "url": "https://github.com/Nine-Minds/alga-psa/actions/runs/34151013496/job/101833204233",
+      "passed": 485,
+      "omitted": 29,
+      "detail": "Email workflow tests target retired execution; port to current Temporal workflow behavior.",
+      "logSha256": "28e0496d8b2df91a81883ee2fdc26739dd25b75a6011e0fd17f9f706e428a1c0"
+    },
+    {
+      "name": "shard4",
+      "url": "https://github.com/Nine-Minds/alga-psa/actions/runs/34151013496/job/101833204283",
+      "passed": 432,
+      "omitted": 3,
+      "detail": "Invoice production cases require actual authenticated app/browser inputs; wire production fixtures rather than silently skip.",
+      "logSha256": "70c51f437ddcf12df48a44943d3290dbae862ab5ba61348bd12421b9cc64b68c"
+    },
+    {
+      "name": "unit",
+      "url": "https://github.com/Nine-Minds/alga-psa/actions/runs/34151013414/job/101833124834",
+      "passed": 14607,
+      "omitted": 3,
+      "detail": "All collected unit files passed assertions but three TODO cases remain; job then failed reading Sheets with HTTP 503.",
+      "logSha256": "2ff41d1f1b5c73a96ca0b4c7767395f2eecb6acd7e51c17bea010d8237f94139"
+    }
+  ],
+  "limits": [
+    "Do not remove skips without porting their behavioral assertions to the actual current runtime.",
+    "Three unit TODO cases still require product-policy decisions; a Sheets outage is a distinct reporting failure.",
+    "Existing local Temporal/Citus alias and survey dispatch fixes have not yet run on this native candidate."
+  ]
+}

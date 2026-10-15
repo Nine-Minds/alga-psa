@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
@@ -97,6 +97,11 @@ vi.mock('@alga-psa/validation', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(),
   publishWorkflowEvent: vi.fn(),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus', () => ({
@@ -112,7 +117,7 @@ vi.mock('@alga-psa/event-bus/events', () => ({
   TicketResponseStateChangedEvent: class {},
 }));
 
-vi.mock('../lib/adapters/TicketModelEventPublisher', () => ({
+vi.mock('@alga-psa/shared/services/tickets/ticketModelEventPublisher', () => ({
   TicketModelEventPublisher: class {},
 }));
 
@@ -132,7 +137,7 @@ vi.mock('../lib/ticketOrigin', () => ({
   getTicketOrigin: vi.fn(),
 }));
 
-vi.mock('../lib/workflowTicketSlaStageEvents', () => ({
+vi.mock('@alga-psa/shared/services/tickets/ticketSlaStageEvents', () => ({
   buildTicketResolutionSlaStageCompletionEvent: vi.fn(),
   buildTicketResolutionSlaStageEnteredEvent: vi.fn(),
 }));
@@ -179,6 +184,13 @@ function createMockTrx(tickets: Map<string, Record<string, any>>) {
 }
 
 describe('ticketActions moveTicketsToBoard', () => {
+  // ticketActions statically pulls in @alga-psa/co-managed and @alga-psa/licensing. The first
+  // dynamic import pays that transform cost; under Nx parallel load in CI it exceeded the
+  // per-test timeout and failed T009 (the first test). Pay it once here with its own budget.
+  beforeAll(async () => {
+    await import('./ticketActions');
+  }, 120_000);
+
   beforeEach(() => {
     vi.clearAllMocks();
     createTenantKnexMock.mockResolvedValue({ knex: {} });

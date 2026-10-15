@@ -57,56 +57,55 @@
     "confirmation": {
       "title": "Confirmer la mise à jour des licences",
       "increaseDescription": "Vérifiez les détails de votre augmentation de licences avant de confirmer.",
-      "decreaseDescription": "Vérifiez les détails de votre diminution de licences. Les changements prendront effet à la fin de votre période de facturation.",
       "currentMonthlyCost": "Coût mensuel actuel",
       "currentLicenseCount": "Nombre actuel de licences",
       "newMonthlyCost": "Nouveau coût mensuel",
       "newLicenseCount": "Nouveau nombre de licences",
       "monthlyIncrease": "Augmentation mensuelle",
-      "monthlySavings": "Économie mensuelle",
       "paymentMethod": "Moyen de paiement",
       "changePaymentMethod": "Modifier",
       "immediateChargeTitle": "Débit immédiat",
       "immediateChargeDescription": "Un montant de {{amountDue}} vous sera facturé maintenant au prorata.",
       "prorationDescription": "Prorata : {{amount}} pour le reste de cette période de facturation",
-      "scheduledTitle": "Planifié pour la fin de période",
-      "scheduledDescription": "La diminution de licences prendra effet le {{date}} à la fin de votre période de facturation actuelle.",
-      "scheduledKeepAccess": "Vous conserverez l'accès aux {{count}} licences jusque-là.",
       "cancel": "Annuler",
       "confirmPayNow": "Confirmer et payer maintenant",
-      "confirmSchedule": "Confirmer la planification"
+      "confirm": "Confirmer",
+      "trialTitle": "Aucun frais pendant votre essai",
+      "trialDescription": "Votre essai se poursuit sans changement. La facturation commencera à {{amount}} le {{date}}."
     },
     "usage": {
       "title": "Utilisation actuelle des licences",
       "licensesUsed": "licences utilisées"
     },
     "fields": {
-      "totalLicenseCount": "Nombre total de licences"
+      "licensesToAdd": "Licences à ajouter"
     },
     "help": {
-      "totalLicenseCount": "Saisissez le nouveau nombre total de licences (minimum : {{minimum}}). Actuel : {{current}}",
-      "reduceViaAccount": "Pour réduire les licences, accédez à la gestion du compte",
-      "quantityWarning": "Avertissement : vous avez {{used}} utilisateurs, mais vous définissez le total à {{quantity}}"
+      "licensesToAdd": "Indiquez le nombre de licences à ajouter. Votre nouveau total se met à jour ci-dessous."
     },
     "pricing": {
       "pricePerLicense": "Prix par licence :",
-      "quantity": "Quantité :",
-      "total": "Total :"
+      "addedCost": "Coût ajouté :",
+      "newTotal": "Nouveau total :"
     },
     "actions": {
       "creatingCheckout": "Création du paiement...",
-      "noChange": "Aucun changement",
-      "updateToTotal": "Mettre à jour à {{quantity}} au total ({{difference}} {{licenseLabel}})"
+      "addLicenses": "Ajouter {{count}} {{licenseLabel}}"
     },
     "info": {
-      "totalQuantity": "Cela définit la quantité totale de votre abonnement (et non un ajout aux licences actuelles)",
       "increasingImmediate": "Augmentation de licences : accès immédiat avec facturation au prorata",
-      "billedMonthly": "Les licences sont facturées mensuellement et peuvent être résiliées à tout moment"
+      "billedMonthly": "Les licences sont facturées mensuellement et peuvent être résiliées à tout moment",
+      "addsToTotal": "Les licences s'ajoutent à votre total actuel. Pour réduire le nombre de licences, rendez-vous dans la gestion du compte."
     },
     "solo": {
       "title": "Solo inclut un utilisateur",
       "description": "Le plan Solo est conçu pour un utilisateur unique et ne permet pas d'ajouter des licences. Passez à Pro pour ajouter plus d'utilisateurs à votre équipe.",
       "upgradeCta": "Passer à Pro"
+    },
+    "summary": {
+      "currentLicenses": "Licences actuelles",
+      "licensesToAdd": "Licences à ajouter",
+      "newTotal": "Nouveau total"
     }
   },
   "removalModal": {
@@ -354,7 +353,8 @@
       "activateClaimCode": "Impossible d’activer le code d’activation.",
       "startTrial": "Impossible de démarrer l’essai.",
       "refreshLicense": "Impossible d’actualiser la licence."
-    }
+    },
+    "returnToClient": "Retour au client"
   },
   "errors": {
     "notSignedIn": "Non autorisé. Connectez-vous pour gérer les licences.",
@@ -363,6 +363,7 @@
   "coManaged": {
     "title": "Informatique cogérée",
     "description": "Gérez les postes de technicien mis à la disposition des espaces de travail de vos clients.",
+    "sharedWork": "Travail partagé",
     "capacity": "Postes achetés",
     "allocated": "Attribués aux clients",
     "available": "Postes disponibles",
@@ -570,7 +571,7 @@
     },
     "queue": {
       "title": "Files de tickets cogérés",
-      "workingDescription": "Tickets du MSP et tickets clients actuellement pris en charge par votre équipe.",
+      "workingDescription": "Tickets partagés dont votre équipe est responsable ou auxquels elle est affectée.",
       "oversightDescription": "Tickets clients accessibles selon les autorisations accordées, y compris ceux traités par leur équipe informatique.",
       "view": "Vue",
       "working": "File de travail",
@@ -589,6 +590,8 @@
       "loadError": "Impossible de charger les tickets. Actualisez pour vérifier votre accès.",
       "counts": "{{total}} tickets · {{open}} ouverts · {{closed}} fermés",
       "empty": "Aucun ticket autorisé ne correspond à ces filtres.",
+      "emptyUnfiltered": "Aucun ticket client à afficher pour le moment.",
+      "retry": "Réessayer",
       "page": "Page {{page}}",
       "sortFields": {
         "updated": "Dernière modification",
@@ -600,6 +603,7 @@
         "ticket": "Ticket",
         "workspace": "Espace de travail",
         "state": "Statut",
+        "status": "Statut",
         "priority": "Priorité",
         "responsibility": "Organisation responsable",
         "updated": "Modification"
@@ -617,8 +621,14 @@
         "returned": "Renvoyé à l’équipe informatique du client",
         "forbidden": "Accès refusé",
         "changed": "Le ticket a changé. Actualisez avant de réessayer.",
-        "invalid": "Sélection non valide"
-      }
+        "invalid": "Sélection non valide",
+        "selected": "{{count}} ticket(s) sélectionné(s) seront renvoyés.",
+        "resume": "Un renvoi vers l'IT client a été interrompu. Reprenez-le pour confirmer le résultat.",
+        "noReloadRecovery": "La récupération après rechargement n'est pas disponible dans ce navigateur ; vous pouvez toujours réessayer dans cette session."
+      },
+      "scopeUnavailable": "Ouverture de la liste des tickets…",
+      "searchPlaceholder": "Rechercher par numéro ou titre",
+      "mspAlsoAssigned": "MSP également assigné"
     },
     "conversation": {
       "title": "Conversation",
@@ -751,7 +761,8 @@
         "unknownOutcome": "Nous n’avons pas pu confirmer l’enregistrement. Réessayez avec la même demande ou abandonnez vos modifications et rechargez."
       },
       "loadError": "Impossible de charger ce projet ou cette tâche.",
-      "discard": "Abandonner les modifications et recharger"
+      "discard": "Abandonner les modifications et recharger",
+      "title": "Projets"
     },
     "sla": {
       "title": "Priorités SLA de la cogestion",
@@ -918,6 +929,105 @@
       "loadError": "Vos droits actuels ne permettent pas d’exporter cet espace.",
       "lengthError": "Utilisez une phrase secrète de 16 à 1024 octets UTF-8.",
       "matchError": "Les phrases secrètes doivent être identiques."
+    },
+    "accountTitle": "Informatique cogérée",
+    "checkoutUnavailable": "Le paiement intégré n'est pas disponible. Réessayez après la réparation de la configuration de paiement.",
+    "pendingCapacity": "Un achat de {{quantity}} sièges est en attente.",
+    "previewError": "Impossible de chiffrer cette modification. Actualisez et réessayez.",
+    "purchaseNeedsAdmin": "Un administrateur de compte doit ajouter de la capacité cogérée.",
+    "purchaseProviderUnconfigured": "Le fournisseur de paiement n'est pas configuré.",
+    "purchaseUnavailable": "L'achat cogéré hébergé n'est pas disponible dans ce déploiement.",
+    "client": {
+      "awaitingAcceptance": "L'administrateur client doit accepter avant que l'accès soit accordé.",
+      "capacity": "Capacité",
+      "chooseRelationship": "Choisir la relation",
+      "endedHint": "Cette relation est terminée. L'historique conservé et les archives restent disponibles.",
+      "forClient": "Informatique cogérée pour {{name}}",
+      "history": "Historique de la relation",
+      "invitation": "Invitation de l'administrateur",
+      "notEnabled": "Informatique cogérée non activée",
+      "progress": "Progression de la configuration",
+      "provisioningHint": "Les sièges réservés restent retenus jusqu'à la fin de la configuration ou la confirmation du nettoyage.",
+      "relationship": "Relation",
+      "seatAllocation": "{{allocated}} sièges de technicien attribués",
+      "seatUsage": "{{used}} sur {{allocated}} sièges de technicien",
+      "selectionRequired": "Plusieurs relations cogérées",
+      "setupHint": "Activez l'informatique cogérée depuis ce client pour réserver des techniciens du client et inviter un administrateur.",
+      "tab": "Informatique cogérée",
+      "viewHistory": "Voir l'historique",
+      "work": "Travail",
+      "workHint": "Les projets clients et les files de tâches partagées restent dans le shell MSP avec leurs identités qualifiées.",
+      "workspace": "Espace de travail client",
+      "sharedTickets": "Tickets partagés",
+      "openCustomerTickets": "Ouvrir dans Tickets clients"
+    },
+    "overview": {
+      "clients": "Clients cogérés",
+      "allClients": "Tous les clients",
+      "empty": "Aucun client cogéré ne correspond à cette recherche.",
+      "loadError": "Impossible de charger les clients cogérés.",
+      "search": "Rechercher des clients",
+      "unnamed": "Client",
+      "client": "Client",
+      "workspace": "Espace de travail",
+      "status": "Statut",
+      "seats": "Sièges",
+      "actions": "Actions"
+    },
+    "shortfall": {
+      "baselineChanged": "Le pool a changé depuis ce devis. Vérifiez à nouveau le déficit.",
+      "confirming": "La capacité achetée est en cours de vérification. Actualisez, puis enregistrez à nouveau l'attribution.",
+      "ineligible": "L'espace de travail sponsor n'est pas éligible à davantage de capacité cogérée.",
+      "needsAdmin": "Cette attribution nécessite plus de capacité du pool. Un administrateur de compte doit l'ajouter.",
+      "pending": "Un achat cogéré est déjà en préparation ou en cours. Reprenez-le avant de modifier la capacité.",
+      "pool": "Pool : {{capacity}} achetés, {{allocated}} attribués, {{available}} disponibles",
+      "provider": "Le fournisseur de paiement n'est pas configuré. Un administrateur doit terminer la configuration de facturation.",
+      "raceRetry": "Les sièges sont dans le pool. L'attribution n'a pas encore pu être enregistrée ; réessayez.",
+      "review": "Ajoutez {{additional}} sièges au pool du sponsor (nouveau total {{total}}).",
+      "selfHost": "Cette attribution dépasse la capacité auto-hébergée vérifiée. Mettez à jour la licence signée, puis actualisez.",
+      "unavailable": "L'achat cogéré hébergé n'est pas disponible dans ce déploiement."
+    },
+    "unavailable": "Ce lien d'informatique cogérée n'est pas disponible.",
+    "directory": {
+      "prompt": "Sélectionnez l'espace de travail cogéré à gérer.",
+      "empty": "Aucun espace de travail cogéré n'est disponible pour la gestion."
+    },
+    "customerTickets": {
+      "title": "Tickets clients",
+      "view": "Affichage",
+      "columns": "Colonnes",
+      "density": "Densité",
+      "filters": "Filtres",
+      "client": "Client",
+      "allClients": "Tous les clients",
+      "share": "Partager",
+      "clearSignal": "Effacer",
+      "unavailable": "Cette vue n'est pas encore disponible pour votre compte.",
+      "allTickets": "Tous les tickets",
+      "signals": {
+        "escalatedUnassigned": "Escaladés, non assignés",
+        "awaitingReply": "En attente de votre réponse"
+      }
+    },
+    "callout": {
+      "title": "Des tickets clients ont besoin de vous",
+      "escalatedUnassigned_one": "{{count}} ticket escaladé, non assigné",
+      "escalatedUnassigned_other": "{{count}} tickets escaladés, non assignés",
+      "awaitingReply_one": "{{count}} ticket en attente de votre réponse",
+      "awaitingReply_other": "{{count}} tickets en attente de votre réponse",
+      "dismiss": "Ignorer"
     }
-  }
+  },
+  "actions": {
+    "cancel": "Annuler"
+  },
+  "common": {
+    "actions": {
+      "cancel": "Annuler"
+    }
+  },
+  "dashboard": {
+    "title": "Tableau de bord des tickets"
+  },
+  "resetFilters": "Réinitialiser"
 }

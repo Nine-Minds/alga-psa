@@ -3,7 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Mail, User, Building, AlertCircle, CheckCircle, Loader2, FileText } from 'lucide-react';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from '@alga-psa/email/senderSelection';
+import { listSelectableSenders } from '@alga-psa/email/senderActions';
+import { Mail, User, Building, AlertCircle, CheckCircle, Loader2, FileText, Layers } from 'lucide-react';
 import {
   getInvoiceEmailRecipientAction,
   InvoiceEmailRecipientInfo,
@@ -37,9 +40,18 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
   const [recipients, setRecipients] = useState<InvoiceEmailRecipientInfo[]>([]);
   const [errors, setErrors] = useState<Array<{ invoiceId: string; error: string; messageKey?: string }>>([]);
   const [customMessage, setCustomMessage] = useState('');
+  const [senders, setSenders] = useState<Array<{ sender_id: string; email_address: string; display_name: string | null }>>([]);
+  const [effectiveSenderAddress, setEffectiveSenderAddress] = useState('');
+  const [senderId, setSenderId] = useState(DEFAULT_SENDER_SELECTION);
 
   const getRecipientSourceLabel = (source: InvoiceEmailRecipientInfo['recipientSource']) => {
     switch (source) {
+      // A segmented client's invoice goes to the profile's own AP identity —
+      // saying so is the difference between a right address and a suspicious one.
+      case 'profile_billing_contact':
+      case 'profile_billing_email':
+      case 'profile_location':
+        return t('sendEmail.recipients.billingProfile', { defaultValue: 'Billing Profile' });
       case 'billing_contact':
         return t('sendEmail.recipients.billingContact', { defaultValue: 'Billing Contact' });
       case 'billing_email':
@@ -71,6 +83,10 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
       }
       setRecipients(result.recipients);
       setErrors(result.errors);
+      const selectable = await listSelectableSenders({ mailClass: 'billing' });
+      setSenders(selectable.senders);
+      setEffectiveSenderAddress(selectable.effectiveSenderAddress);
+      setSenderId(DEFAULT_SENDER_SELECTION);
     } catch (error) {
       const fallbackError = t('sendEmail.errors.loadRecipients', { defaultValue: 'Failed to load recipient info' });
       handleError(error, fallbackError);
@@ -99,7 +115,8 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
     try {
       const result = await sendInvoiceEmailAction(
         validRecipients.map(r => r.invoiceId),
-        customMessage.trim() || undefined
+        customMessage.trim() || undefined,
+        senderIdForSend(senderId)
       );
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result), { id: toastId });
@@ -143,6 +160,9 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
 
   const validRecipientCount = recipients.filter(r => r.recipientEmail).length;
   const invalidRecipientCount = recipients.filter(r => !r.recipientEmail).length;
+  const resolvedFromEmail = senderId === DEFAULT_SENDER_SELECTION
+    ? effectiveSenderAddress || recipients[0]?.fromEmail
+    : senders.find(sender => sender.sender_id === senderId)?.email_address || recipients[0]?.fromEmail;
 
   return (
     <Dialog
@@ -204,6 +224,19 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
         </div>
       ) : (
         <div className="space-y-6">
+          {senders.length > 1 && (
+            <div className="space-y-2">
+              <label htmlFor="invoice-email-sender-select" className="text-sm font-medium">
+                {t('sendEmail.fields.from', { defaultValue: 'From' })}
+              </label>
+              <CustomSelect
+                id="invoice-email-sender-select"
+                value={senderId}
+                onValueChange={setSenderId}
+                options={buildSenderOptions(senders, effectiveSenderAddress, t('sendEmail.fields.useDefault', { defaultValue: 'Use default' }))}
+              />
+            </div>
+          )}
           {/* Summary */}
           <div className="bg-muted rounded-lg p-4">
             <div className="flex items-center gap-4">
@@ -274,6 +307,28 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
                         <Building className="h-4 w-4 text-muted-foreground" />
                         <span>{recipient.clientName}</span>
                       </div>
+
+                      {/* Which profile this invoice bills. The address below is
+                          the profile's when it carries one, so naming the
+                          profile is what makes a surprising address legible.
+                          Hidden for an unsegmented client (D6). */}
+                      {recipient.clientHasMultipleBillingProfiles ? (
+                        <div
+                          className="flex items-center gap-2 text-sm text-muted-foreground mb-1"
+                          data-automation-id={`send-invoice-billing-profile-${recipient.invoiceId}`}
+                        >
+                          <Layers className="h-4 w-4 text-muted-foreground" />
+                          <span>
+                            {t('sendEmail.recipients.billingProfileNamed', {
+                              defaultValue: 'Billing profile: {{name}}',
+                              name: recipient.billingProfileName
+                                || t('sendEmail.recipients.billingProfileDefault', {
+                                  defaultValue: "the client's default profile",
+                                }),
+                            })}
+                          </span>
+                        </div>
+                      ) : null}
 
                       {/* Recipient */}
                       {recipient.recipientEmail ? (
@@ -348,9 +403,9 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
               <Mail className="h-4 w-4 mt-0.5 text-blue-500" />
               <span>
                 {t('sendEmail.preview', {
-                  fromEmail: recipients[0]?.fromEmail || t('sendEmail.values.defaultFromEmail', { defaultValue: 'noreply@example.com' }),
+                  fromEmail: resolvedFromEmail || t('sendEmail.values.defaultFromEmail', { defaultValue: 'noreply@example.com' }),
                   companyName: recipients[0]?.companyName || t('sendEmail.values.defaultCompanyName', { defaultValue: 'Your Company' }),
-                  defaultValue: `Emails will be sent from ${recipients[0]?.fromEmail || 'noreply@example.com'} on behalf of ${recipients[0]?.companyName || 'Your Company'}. Each invoice will be attached as a PDF.`,
+                  defaultValue: `Emails will be sent from ${resolvedFromEmail || 'noreply@example.com'} on behalf of ${recipients[0]?.companyName || 'Your Company'}. Each invoice will be attached as a PDF.`,
                 })}
               </span>
             </p>

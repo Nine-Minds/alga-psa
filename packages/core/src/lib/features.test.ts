@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
 describe('isFeatureFlagEnabled', () => {
   const ORIGINAL_DISABLE = process.env.DISABLE_FEATURE_FLAGS;
   const ORIGINAL_PUBLIC_DISABLE = process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS;

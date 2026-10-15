@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "scope": "native-compiled-workflow-worker-startup",
+  "status": "passed",
+  "feature": "F031",
+  "source": {
+    "revision": "890ec575f5a6a0847313b0b5e153cdfb0c477d37",
+    "entrypoint": "services/workflow-worker/dist/services/workflow-worker/src/index.js",
+    "compiledFrom": "services/workflow-worker/src/index.ts",
+    "revisionCapturedAfterRun": true,
+    "limitation": "No before/after clean-worktree snapshot was captured. This is bounded native startup evidence, not exact-artifact release certification."
+  },
+  "commands": [
+    {
+      "cwd": "services/workflow-worker",
+      "command": "PATH=/opt/homebrew/opt/node@25/bin:$PATH npm run build",
+      "exitCode": 0,
+      "checks": [
+        "TypeScript compilation",
+        "tsc-alias resolution",
+        "relative import extension normalization",
+        "runtime import validation"
+      ]
+    },
+    {
+      "cwd": "services/workflow-worker",
+      "command": "node dist/services/workflow-worker/src/index.js",
+      "nodeVersionFamily": "25",
+      "environment": "Explicit isolated service environment; no inherited provider credentials"
+    }
+  ],
+  "readiness": {
+    "request": "GET http://127.0.0.1:63822/readyz",
+    "httpStatus": 200,
+    "response": {
+      "ready": true,
+      "startedAt": "2026-09-08T19:25:42.488Z",
+      "workers": {
+        "temporal": true,
+        "eventStream": true,
+        "dataStoreSweep": true
+      }
+    }
+  },
+  "topology": {
+    "database": {
+      "host": "127.0.0.1",
+      "port": 55432,
+      "name": "worker_ready_test_906c8e0d434a41838d649d9852abc2d7",
+      "schema": "Fresh database, actual CE migrations overlaid with EE migrations; no tenant seeds",
+      "authentication": "Existing local admin credential supplied privately; both worker admin/application roles used that local admin identity"
+    },
+    "redis": {
+      "host": "127.0.0.1",
+      "port": 63821,
+      "isolated": true,
+      "persistence": false
+    },
+    "temporal": {
+      "address": "127.0.0.1:63823",
+      "namespace": "default",
+      "implementation": "TestWorkflowEnvironment.createTimeSkipping native ephemeral server",
+      "taskQueue": "workflow-runtime-v2"
+    },
+    "runtime": {
+      "NODE_ENV": "production",
+      "APP_ENV": "production",
+      "WORKFLOW_RUNTIME_V2_TEMPORAL_USE_SOURCE_PATHS": "false",
+      "EMAIL_PROVIDER": "mock"
+    }
+  },
+  "resourceLifecycle": {
+    "existingDatabaseClone": "Rejected because source database had active sessions; no sessions interrupted and no source reset",
+    "ownedDatabaseCreatedAndMigrated": true,
+    "compiledWorkerStarted": true,
+    "ownedRedisStarted": true,
+    "ownedTemporalStarted": true,
+    "cleanupCompleted": true,
+    "postCleanupDatabaseCount": 0,
+    "postCleanupClosedPorts": [
+      63821,
+      63822,
+      63823
+    ],
+    "shutdown": "Temporal worker logged STOPPED. Redis consumer logged client-closed during teardown. Harness sent SIGTERM then allowed 10 seconds before SIGKILL fallback; child final exit signals were not recorded, so graceful shutdown is not established."
+  },
+  "limitations": [
+    "Reused installed native dependencies and pre-existing compiled Temporal/package artifacts; only the workflow-worker build was rerun.",
+    "No Docker build, clean dependency installation, Node 22 Linux runtime, or registry artifact verification was performed.",
+    "Empty migrated database and Redis stream prove startup/readiness, not tenant job execution, live provider integration, or queue processing outcomes.",
+    "No live provider credentials were supplied.",
+    "The readiness endpoint was observed once; sustained health and graceful shutdown were not certified."
+  ],
+  "localEvidenceLogs": [
+    "/tmp/alga-workflow-worker-native-build.log",
+    "/tmp/alga-native-workflow-worker-proof.log",
+    "/tmp/alga-native-worker-compiled.log"
+  ]
+}

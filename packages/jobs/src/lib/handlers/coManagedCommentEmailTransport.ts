@@ -60,7 +60,7 @@ export async function sendCoManagedRequesterCommentEmail(delivery: CoManagedRequ
 /** Delivery adapters supply only current, admitted content and their own
  * navigation target. Rendering and caller-owned transport completion are shared. */
 async function sendAuthorizedCommentEmail(delivery: CoManagedEmailDelivery | CoManagedCustomerEmailDelivery | CoManagedRequesterEmailDelivery | CoManagedRequesterTaskEmailDelivery, path: string,
-  subjectKey: 'subject' | 'customerSubject', routing?: { from?: { email: string; name?: string }; replyTo?: { email: string; name?: string } }): Promise<CoManagedEmailDeliveryResult> {
+  subjectKey: 'subject' | 'customerSubject', routing?: { boardId?: string; replyTo?: { email: string; name?: string } }): Promise<CoManagedEmailDeliveryResult> {
   const requester = 'recipient' in delivery;
   const locale = await resolveEmailLocale(delivery.tenant, requester
     ? { email: delivery.email, clientId: delivery.recipient.clientId, userType: 'client',
@@ -85,8 +85,8 @@ async function sendAuthorizedCommentEmail(delivery: CoManagedEmailDelivery | CoM
     html = `<div data-alga-reply-boundary="true"></div>${html}<div style="display:none" data-alga-reply-token="${delivery.replyToken}"></div>`;
     text = `--- Please reply above this line ---\n\n${text}\n\n[ALGA-REPLY-TOKEN ${delivery.replyToken}]`;
   }
-  const result = await TenantEmailService.getInstance(delivery.tenant).sendEmail({ tenantId: delivery.tenant, to: delivery.email,
-    userId: requester ? (delivery.recipient.kind === 'requester_task_user' ? delivery.recipient.userId : undefined) : delivery.recipientUserId, from: routing?.from, replyTo: routing?.replyTo, notificationSubtypeId: delivery.subtypeId, locale, retryPolicy: 'caller',
+  const result = await TenantEmailService.getInstance(delivery.tenant).sendEmail({ tenantId: delivery.tenant, mailClass: 'ticket', to: delivery.email,
+    userId: requester ? (delivery.recipient.kind === 'requester_task_user' ? delivery.recipient.userId : undefined) : delivery.recipientUserId, boardId: routing?.boardId, replyTo: routing?.replyTo, notificationSubtypeId: delivery.subtypeId, locale, retryPolicy: 'caller',
     templateProcessor: new StaticTemplateProcessor(subject, html, text),
     headers: { ...AUTO_GENERATED_MAIL_HEADERS, 'Message-ID': delivery.messageId },
   });

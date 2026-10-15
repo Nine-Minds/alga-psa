@@ -28,14 +28,14 @@ it('never retries a consumed stream after a retryable PUT failure', async () => 
     for await (const chunk of command.input.Body) received.push(Buffer.from(chunk));
     throw reset();
   });
-  await expect(new S3StorageProvider(config()).upload(source, 'restore/object')).rejects.toMatchObject({ operation: 'upload', code: 'ECONNRESET' });
+  await expect(new S3StorageProvider(config()).upload(source, 'restore/object', { size: 14 })).rejects.toMatchObject({ operation: 'upload', code: 'ECONNRESET' });
   expect(Buffer.concat(received).toString()).toBe('customer bytes');
   expect(send).toHaveBeenCalledTimes(1);
 });
 it('rejects invalid or mismatched declared buffer lengths before any provider request', async () => {
   const send = vi.spyOn(S3Client.prototype, 'send'), provider = new S3StorageProvider(config());
-  for (const content_length of [-1, NaN, 2]) {
-    await expect(provider.upload(Buffer.from('hello'), 'restore/object', { content_length })).rejects.toThrow('content length is invalid');
+  for (const size of [-1, NaN, 2]) {
+    await expect(provider.upload(Buffer.from('hello'), 'restore/object', { size })).rejects.toThrow('content length is invalid');
   }
   expect(send).not.toHaveBeenCalled();
 });
@@ -50,7 +50,7 @@ it('retries a failed receipt read without repeating the successful streaming PUT
     if (++heads === 1) throw reset();
     return { ContentLength: 5, ContentType: 'text/plain' };
   });
-  const result = new S3StorageProvider(config()).upload(Readable.from([Buffer.from('hello')]), 'restore/object');
+  const result = new S3StorageProvider(config()).upload(Readable.from([Buffer.from('hello')]), 'restore/object', { size: 5 });
   await vi.runAllTimersAsync();
   expect(await result).toMatchObject({ path: 'restore/object', size: 5, mime_type: 'text/plain' });
   expect(puts).toBe(1); expect(heads).toBe(2);

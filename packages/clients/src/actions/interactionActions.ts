@@ -14,12 +14,20 @@ import { IInteractionType, IInteraction } from '@alga-psa/types'
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { withAuth } from '@alga-psa/auth';
 import {
+  createInteractionScheduleEntry,
   createInteractionWithSideEffects,
+  deleteInteractionScheduleEntries,
   publishInteractionSearchEvent,
+  resolveScheduleAssignees,
+  syncInteractionScheduleEntries,
 } from './interactionCreateHelper';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { assertMspPermission } from '../lib/authHelpers';
+import { assertMspPermission, hasPermissionAsync } from '../lib/authHelpers';
+import {
+  reconcileInteractionDuration,
+  type InteractionDurationRejectionReason,
+} from '../lib/durationHelpers';
 import {
   actionError,
   permissionError,
@@ -28,6 +36,27 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 type InteractionActionError = ActionMessageError | ActionPermissionError;
+
+const DURATION_REJECTION_MESSAGES: Record<InteractionDurationRejectionReason, string> = {
+  end_before_start: 'End time must be on or after the start time.',
+  range_exceeds_cap: "Interactions can't be longer than 24 hours.",
+};
+
+/**
+ * A stored duration must always equal end − start, so a payload that disagrees is
+ * normalised to the range it was submitted with — or refused when the range itself is
+ * impossible. Thrown so the surrounding transaction rolls back; the catch turns it back
+ * into the action error the caller sees.
+ */
+class InteractionDurationRejection extends Error {
+  constructor(readonly reason: InteractionDurationRejectionReason) {
+    super(DURATION_REJECTION_MESSAGES[reason]);
+    this.name = 'InteractionDurationRejection';
+  }
+}
+
+const durationRejectionError = (reason: InteractionDurationRejectionReason): ActionMessageError =>
+  actionError(DURATION_REJECTION_MESSAGES[reason]);
 
 export type { InteractionPageFilters, InteractionPageResult } from '../models/interactions';
 
@@ -48,6 +77,13 @@ function interactionActionErrorFrom(error: unknown): InteractionActionError | nu
       error.message === 'Interaction not found or could not be deleted'
     ) {
       return actionError(error.message);
+    }
+    // Raised by ScheduleEntry.create when a requested assignee is not in this tenant.
+    if (/^Users .+ not found/.test(error.message)) {
+      return actionError(
+        'One or more assigned users could not be found.',
+        'msp/clients:errors.interaction.scheduleUsersMissing',
+      );
     }
   }
 
@@ -73,10 +109,18 @@ function interactionActionErrorFrom(error: unknown): InteractionActionError | nu
   return null;
 }
 
+export interface AddInteractionOptions {
+  /** Also place the interaction on an AlgaPSA calendar. */
+  createScheduleEntry?: boolean;
+  /** Whose calendar to book. Defaults to the creator; anyone else needs `user_schedule:update`. */
+  scheduleAssignedUserIds?: string[];
+}
+
 export const addInteraction = withAuth(async (
   user,
   { tenant },
-  interactionData: Omit<IInteraction, 'interaction_date'>
+  interactionData: Omit<IInteraction, 'interaction_date'>,
+  options: AddInteractionOptions = {}
 ): Promise<IInteraction | InteractionActionError> => {
   try {
     await assertMspPermission(user, 'interaction', 'create', 'Permission denied: Cannot create interactions');
@@ -88,7 +132,7 @@ export const addInteraction = withAuth(async (
 
   try {
     const { knex: db } = await createTenantKnex();
-    const admitted = await createCoManagedNativeInteraction(db, tenant, interactionData, () => resolveInteractionBrowserActor(user, tenant), publishEvent);
+    const admitted = await createCoManagedNativeInteraction(db, tenant, interactionData, () => resolveInteractionBrowserActor(user, tenant), event => publishEvent(event));
     if (admitted.handled) {
       revalidatePath('/msp/interactions');
       revalidatePath('/msp/contacts/[id]', 'page');
@@ -106,20 +150,55 @@ export const addInteraction = withAuth(async (
       throw new Error('Either client_id or contact_name_id must be provided');
     }
 
+    const reconciled = reconcileInteractionDuration(interactionData);
+    if (reconciled.ok === false) {
+      return durationRejectionError(reconciled.reason);
+    }
+    const normalizedData = reconciled.duration === (interactionData.duration ?? null)
+      ? interactionData
+      : { ...interactionData, duration: reconciled.duration };
+
+    const scheduleAssignedUserIds = resolveScheduleAssignees(user.user_id, options.scheduleAssignedUserIds);
+    if (options.createScheduleEntry && scheduleAssignedUserIds.some((id) => id !== user.user_id)) {
+      // Same gate addScheduleEntry applies: booking someone else's calendar is an update
+      // of their schedule, not of your own.
+      const canAssignOthers = await hasPermissionAsync(user, 'user_schedule', 'update', db);
+      if (!canAssignOthers) {
+        return permissionError(
+          'Permission denied to assign schedule entries to other users.',
+          'msp/clients:errors.interaction.scheduleAssignDenied',
+        );
+      }
+    }
+
     let publishSideEffects: (() => Promise<void>) | undefined;
+    let publishScheduleEntryCreated: (() => Promise<void>) | undefined;
     const newInteraction = await withTransaction(db, async (trx: Knex.Transaction) => {
       const result = await createInteractionWithSideEffects({
         tenant,
         trx,
         user,
-        interactionData,
+        interactionData: normalizedData,
       });
       publishSideEffects = result.publishSideEffects;
+
+      if (options.createScheduleEntry) {
+        const scheduled = await createInteractionScheduleEntry({
+          tenant,
+          trx,
+          interaction: result.interaction,
+          assignedUserIds: scheduleAssignedUserIds,
+          assignedByUserId: user.user_id,
+        });
+        publishScheduleEntryCreated = scheduled?.publishScheduleEntryCreated;
+      }
+
       return result.interaction;
     });
 
     console.log('New interaction created:', newInteraction);
     await publishSideEffects?.();
+    await publishScheduleEntryCreated?.();
     return newInteraction;
   } catch (error) {
     if (error instanceof NativeInteractionCommandError) return actionError(error.message);
@@ -151,14 +230,18 @@ export const getInteractionsForEntity = withAuth(async (
   user,
   { tenant },
   entityId: string,
-  entityType: 'contact' | 'client' | 'ticket'
+  entityType: 'contact' | 'client' | 'ticket' | 'opportunity'
 ): Promise<IInteraction[] | InteractionActionError> => {
   try {
     await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
 
     const { knex } = await createTenantKnex();
-    const admitted = await readCoManagedNativeInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { entity: { id: entityId, type: entityType } });
-    if (admitted.handled) return admitted.interactions;
+    // Co-managed admission covers client, contact and ticket interactions;
+    // opportunities are not shared work.
+    if (entityType !== 'opportunity') {
+      const admitted = await readCoManagedNativeInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { entity: { id: entityId, type: entityType } });
+      if (admitted.handled) return admitted.interactions;
+    }
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await InteractionModel.getForEntity(entityId, entityType, tenant);
     });
@@ -236,13 +319,44 @@ export const updateInteraction = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
-    const admitted = await updateCoManagedNativeInteraction(knex, tenant, interactionId, updateData, () => resolveInteractionBrowserActor(user, tenant), publishEvent);
+    const admitted = await updateCoManagedNativeInteraction(knex, tenant, interactionId, updateData, () => resolveInteractionBrowserActor(user, tenant), event => publishEvent(event));
     if (admitted.handled) {
       revalidatePath('/msp/interactions/[id]', 'page');
       return admitted.interaction;
     }
+    const touchesScheduleEntry = (['start_time', 'end_time', 'duration', 'title'] as const)
+      .some((field) => updateData[field] !== undefined);
+    const touchesDurationWindow = (['start_time', 'end_time', 'duration'] as const)
+      .some((field) => updateData[field] !== undefined);
     const updatedInteraction = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.updateInteraction(interactionId, updateData, tenant);
+      // A partial update only carries the fields that changed, so the rule is applied to
+      // the stored row merged with them — otherwise an end-time-only edit would leave the
+      // old duration (and the calendar block it sizes) behind.
+      let effectiveUpdate = updateData;
+      if (touchesDurationWindow) {
+        const current = await InteractionModel.getById(interactionId, tenant, trx);
+        if (!current) {
+          throw new Error('Interaction not found');
+        }
+        const merged = {
+          start_time: updateData.start_time !== undefined ? updateData.start_time : current.start_time,
+          end_time: updateData.end_time !== undefined ? updateData.end_time : current.end_time,
+          duration: updateData.duration !== undefined ? updateData.duration : current.duration,
+        };
+        const reconciled = reconcileInteractionDuration(merged);
+        if (reconciled.ok === false) {
+          throw new InteractionDurationRejection(reconciled.reason);
+        }
+        if (reconciled.duration !== (merged.duration ?? null)) {
+          effectiveUpdate = { ...updateData, duration: reconciled.duration };
+        }
+      }
+      const interaction = await InteractionModel.updateInteraction(interactionId, effectiveUpdate, tenant, trx);
+      // Keep the calendar block in step with the interaction it represents.
+      if (touchesScheduleEntry) {
+        await syncInteractionScheduleEntries(trx, tenant, interaction);
+      }
+      return interaction;
     });
     await publishInteractionSearchEvent('INTERACTION_UPDATED', tenant, interactionId, {
       clientId: updatedInteraction.client_id,
@@ -256,6 +370,9 @@ export const updateInteraction = withAuth(async (
     if (error instanceof NativeInteractionCommandError) return actionError(error.message);
     if (error instanceof CoManagedSharedWorkError) return permissionError('Permission denied: Cannot update this interaction.');
     console.error('Error updating interaction:', error);
+    if (error instanceof InteractionDurationRejection) {
+      return durationRejectionError(error.reason);
+    }
     const expected = interactionActionErrorFrom(error);
     if (expected) return expected;
     throw error;
@@ -335,7 +452,7 @@ export const deleteInteraction = withAuth(async (user, { tenant }, interactionId
   try {
     const { knex } = await createTenantKnex();
 
-    const admitted = await deleteCoManagedNativeInteraction(knex, tenant, interactionId, () => resolveInteractionBrowserActor(user, tenant), publishEvent);
+    const admitted = await deleteCoManagedNativeInteraction(knex, tenant, interactionId, () => resolveInteractionBrowserActor(user, tenant), event => publishEvent(event));
     if (admitted.handled) {
       revalidatePath('/');
       return;
@@ -353,6 +470,9 @@ export const deleteInteraction = withAuth(async (user, { tenant }, interactionId
 
       // Cascade-delete the linked online meeting, its artifacts, and transcript documents.
       const fileIds = await cleanupInteractionOnlineMeetings(trx, tenant, interactionId);
+
+      // ...and the calendar block the interaction put on the assignees' schedule.
+      await deleteInteractionScheduleEntries(trx, tenant, interactionId);
 
       // Delete the interaction
       const deletedCount = await db.table('interactions')

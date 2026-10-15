@@ -1,9 +1,10 @@
 exports.seed = function (knex) {
     return knex('time_period_types').del()
-        .then(() => {
+        .then(async () => {
+            const tenant = await knex('tenants').select('tenant').first();
             return knex('time_period_types').insert([
-                { tenant: knex('tenants').select('tenant').first(), type_name: 'Weekly', description: 'Weekly time tracking period' },
-                { tenant: knex('tenants').select('tenant').first(), type_name: 'Monthly', description: 'Monthly time tracking period' }
+                { tenant: tenant?.tenant ?? null, type_name: 'Weekly', description: 'Weekly time tracking period' },
+                { tenant: tenant?.tenant ?? null, type_name: 'Monthly', description: 'Monthly time tracking period' }
             ]);
         });
 };

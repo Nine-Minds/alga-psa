@@ -1,5 +1,7 @@
 # Co-managed IT requirement audit: T08–T15
 
+> Current status, 2026-09-20: this is historical source/validation evidence. The [completion and correction PRD](2026-09-20-co-managed-it-completion/PRD.md) requires current-candidate acceptance for every T01–T22 contract and both UI follow-ons. “Implemented” below does not certify current CI or complete browser/provider/runtime journeys. Human-review readiness remains blocked.
+
 Reviewed 2026-09-08 against the approved opening requirements and behavioral table in `2026-09-06-co-managed-it-plan.md`; updated after the routing, billing, requester portal/email and task disclosure follow-ups. Evidence below combines source review with focused Node and isolated migrated-PG runs. No full build, complete suite, live provider send or browser journey is claimed.
 
 The previously identified routing notification, billing-profile selection, actual invoice-generation, requester task portal/email and posted task attachment gaps are closed. Explicit task disclosure is committed in `a29642ce49`, with seven task PG journeys, five ticket regressions and 51 UI/action checks passing. Remaining release validation includes browser journeys and actual scheduler execution; it does not indicate a newly discovered implementation defect.
@@ -80,3 +82,13 @@ The previously identified routing notification, billing-profile selection, actua
 **Existing validation:** `coManagedOrganizationSlaClock.test.ts` covers holiday/DST calendars, partial minutes, repeated pauses, qualifying authors/audiences, and breach persistence. PG cases cover mapped escalation, pre-escalation display, close/reopen rollback, simultaneous observers, threshold retries, requester portal/email, API/workflow/bundle writers, and independent awaiting-client behavior. Maintenance fanout and SLA transport have focused unit coverage.
 
 **Remaining:** No concrete missing independent-clock transition found in the inspected paths. Actual end-to-end scheduler execution on both backends remains required evidence; source registrations and shared reducer tests alone do not prove deployment scheduling. Queue SLA columns/polling and policy-change reconciliation are not automatically release blockers: current detail display and retained obligation semantics already implement the approved independence contract.
+
+## Client-scoped combined work addendum (2026-09-11)
+
+The [2026-09-11 follow-on plan](2026-09-11-co-managed-client-integration/PRD.md) adds client-scoped work discovery. This addendum records the added coverage without revising the historical results above.
+
+- The combined ticket queue accepts a `clientId` selector that matches native MSP tickets by `tickets.client_id` and shared work by the relationship's `sponsor_client_id`, applied inside the authorized relation before search, counts, and pagination. A migrated-database case asserts the filter returns native plus permitted shared work and excludes a sibling client; the existing same-number/same-UUID and handback/oversight cases still pass.
+- The MSP client record replaces its Tickets tab with that scoped combined queue when a relationship exists; a flag-off client keeps the native ticket list. Client-context project and shared-task entry points stay in the MSP shell with their qualified identities.
+
+Remaining evidence: an end-to-end client Tickets browser journey against a migrated environment that includes CSV export and identical ticket numbers across tenants.
+

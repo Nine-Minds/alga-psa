@@ -12,10 +12,11 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, "node_modules"),
 ];
 
-// `decode-uri-component@0.2.2` (pulled in by @react-navigation/core → query-string)
-// ships without a `main` field. Metro's resolver doesn't fall back to `index.js`
-// for this case and fails bundling — redirect it explicitly.
-const decodeUriComponentEntry = require.resolve("decode-uri-component/index.js", {
+// `decode-uri-component` (pulled in by @react-navigation/core → query-string)
+// shipped 0.2.x without a `main` field, which Metro can't resolve; 0.5.x adds an
+// `exports` map that forbids the `./index.js` subpath. Resolving the bare name
+// works for both, so redirect Metro to whatever Node picks.
+const decodeUriComponentEntry = require.resolve("decode-uri-component", {
   paths: [
     path.resolve(projectRoot, "node_modules"),
     path.resolve(workspaceRoot, "node_modules"),

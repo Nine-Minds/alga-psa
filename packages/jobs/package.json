@@ -36,6 +36,11 @@
       "import": "./dist/lib/handlers/*.mjs",
       "require": "./dist/lib/handlers/*.js"
     },
+    "./date-triggers": {
+      "types": "./src/lib/dateTriggers/index.ts",
+      "import": "./dist/lib/dateTriggers/index.mjs",
+      "require": "./dist/lib/dateTriggers/index.js"
+    },
     "./runners/*": {
       "types": "./src/lib/jobs/runners/*.ts",
       "import": "./dist/lib/jobs/runners/*.mjs",
@@ -71,6 +76,7 @@
     "@alga-psa/db": "*",
     "@alga-psa/email": "*",
     "@alga-psa/event-bus": "*",
+    "@alga-psa/event-schemas": "*",
     "@alga-psa/integrations": "*",
     "@alga-psa/licensing": "*",
     "@alga-psa/notifications": "*",
@@ -82,6 +88,7 @@
     "@alga-psa/ui": "*",
     "@alga-psa/types": "*",
     "@alga-psa/validation": "*",
+    "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "@temporalio/client": "~1.14.1",
     "@js-temporal/polyfill": "^0.4.4",

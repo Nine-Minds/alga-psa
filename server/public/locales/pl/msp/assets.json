@@ -126,7 +126,8 @@
       "location": "Lokalizacja",
       "actions": "Działania",
       "patching": "Poprawki",
-      "coverage": "Zakres"
+      "coverage": "Zakres",
+      "assignedTo": "Przypisano do"
     },
     "metrics": {
       "totalAssets": {
@@ -414,11 +415,17 @@
       "refreshing": "Odświeżanie...",
       "refreshData": "Odśwież dane",
       "rebootDevice": "Uruchom ponownie urządzenie",
+      "rebooting": "Ponowne uruchamianie...",
       "editAsset": "Edytuj zasób",
       "deleteAsset": "Usuń zasób"
     },
     "values": {
       "unknownClient": "Nieznany klient"
+    },
+    "reboot": {
+      "title": "Uruchomić ponownie urządzenie?",
+      "message": "{{name}} zostanie natychmiast uruchomione ponownie przez {{provider}}. Zalogowani użytkownicy utracą niezapisaną pracę.",
+      "confirm": "Uruchom ponownie teraz"
     }
   },
   "assetDetailTabs": {
@@ -448,6 +455,12 @@
       "client": "Klient",
       "status": "Status",
       "location": "Lokalizacja"
+    }
+  },
+  "documentsTab": {
+    "errors": {
+      "title": "Dokumenty niedostępne",
+      "loadFailed": "Nie udało się załadować powiązanych dokumentów. Odśwież stronę lub spróbuj ponownie później."
     }
   },
   "assetDetails": {
@@ -559,7 +572,8 @@
       "clientsLoadFailed": "Nie można załadować klientów",
       "locationsLoadFailed": "Nie można załadować lokalizacji dla tego klienta",
       "updateFailed": "Nie udało się zaktualizować zasobu",
-      "validation": "Popraw wyróżnione pola przed zapisaniem."
+      "validation": "Popraw wyróżnione pola przed zapisaniem.",
+      "contactsLoadFailed": "Nie można załadować kontaktów tego klienta"
     },
     "actions": {
       "viewClient": "Zobacz klienta",
@@ -612,7 +626,8 @@
       "status": "Status",
       "purchaseDate": "Data zakupu",
       "warrantyEndDate": "Data zakończenia gwarancji",
-      "assetType": "Typ"
+      "assetType": "Typ",
+      "assignedTo": "Przypisano do"
     },
     "placeholders": {
       "loadingClients": "Ładowanie klientów…",
@@ -622,7 +637,9 @@
       "selectClientFirst": "Najpierw wybierz klienta",
       "customLocation": "Wprowadź niestandardową lokalizację lub obszar",
       "selectPurchaseDate": "Wybierz datę zakupu",
-      "selectWarrantyEndDate": "Wybierz datę zakończenia gwarancji"
+      "selectWarrantyEndDate": "Wybierz datę zakończenia gwarancji",
+      "loadingContacts": "Ładowanie kontaktów…",
+      "selectContact": "Wybierz kontakt"
     },
     "statusOptions": {
       "active": "Aktywny",
@@ -657,6 +674,10 @@
       "mobileDevice": "Szczegóły urządzenia mobilnego",
       "printer": "Szczegóły drukarki",
       "custom": "Szczegóły: {{typeName}}"
+    },
+    "additionalFields": "Pola dodatkowe",
+    "help": {
+      "assignedTo": "W portalu klienta osoby z ograniczoną widocznością widzą to urządzenie tylko wtedy, gdy jest przypisane do nich lub do osoby im podlegającej."
     }
   },
   "assetFormClient": {
@@ -735,6 +756,11 @@
     "more": "+{{count}} więcej"
   },
   "remoteAccess": {
+    "connectionTypes": {
+      "teamviewer": "TeamViewer",
+      "vnc": "VNC",
+      "rdp": "RDP"
+    },
     "remoteDesktop": "Pulpit zdalny",
     "remoteShell": "Powłoka zdalna",
     "remoteAccess": "Dostęp zdalny",
@@ -742,13 +768,52 @@
     "deviceOffline": "Urządzenie jest offline",
     "errors": {
       "urlFetchFailed": "Nie udało się pobrać adresu URL dostępu zdalnego",
-      "initiateFailed": "Nie udało się zainicjować dostępu zdalnego"
+      "initiateFailed": "Nie udało się rozpocząć dostępu zdalnego",
+      "managePermission": "Brak uprawnień: nie można zarządzać ustawieniami zasobów.",
+      "readPermission": "Brak uprawnień: nie można odczytać zasobów."
     },
     "indicator": {
       "online": "Online",
       "offline": "Offline",
       "available": "Dostęp zdalny dostępny",
       "deviceOffline": "Urządzenie offline"
+    },
+    "links": {
+      "title": "Łącza dostępu zdalnego",
+      "description": "Skonfiguruj szablony adresów URL dla ScreenConnect i innych narzędzi dostępu zdalnego.",
+      "errors": {
+        "load": "Nie udało się wczytać łączy dostępu zdalnego.",
+        "save": "Nie udało się zapisać łącza dostępu zdalnego.",
+        "delete": "Nie udało się usunąć łącza dostępu zdalnego.",
+        "templateHttp": "Szablon musi zaczynać się od http:// lub https:// i zawierać dosłowną nazwę hosta.",
+        "templatePlaceholder": "Szablon zawiera nieobsługiwany symbol zastępczy.",
+        "templateUrl": "Szablon musi tworzyć prawidłowy adres URL http lub https.",
+        "required": "Etykieta i szablon adresu URL są wymagane.",
+        "partialDelete": "Nie udało się usunąć {{count}} zaznaczonych łączy."
+      },
+      "noneAvailable": "Brak dostępnych opcji dostępu zdalnego.",
+      "confirmDeleteTitle": "Usunąć łącze dostępu zdalnego?",
+      "confirmDeleteMessage": "Czy na pewno usunąć „{{label}}”? Tej czynności nie można cofnąć.",
+      "openMenu": "Otwórz menu",
+      "selectLabel": "Wybierz {{label}}",
+      "confirmBulkDeleteTitle": "Usunąć zaznaczone łącza?",
+      "confirmBulkDeleteMessage": "Usunąć {{count}} zaznaczonych łączy dostępu zdalnego?",
+      "selectedCount": "Wybrano: {{count}}",
+      "add": "Dodaj łącze",
+      "empty": "Nie skonfigurowano łączy dostępu zdalnego.",
+      "edit": "Edytuj",
+      "delete": "Usuń",
+      "addTitle": "Dodaj łącze dostępu zdalnego",
+      "editTitle": "Edytuj łącze dostępu zdalnego",
+      "cancel": "Anuluj",
+      "save": "Zapisz",
+      "label": "Etykieta przycisku",
+      "template": "Szablon adresu URL",
+      "tokens": "Użyj {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} i {field.<key>} z kluczami pól niestandardowych z Ustawienia → Zasoby → Typy zasobów.",
+      "loading": "Wczytywanie opcji dostępu zdalnego…",
+      "unavailable": "Niedostępne dla tego zasobu",
+      "actions": "Działania",
+      "selectAll": "Zaznacz wszystkie łącza"
     }
   },
   "assetListErrors": {
@@ -927,7 +992,8 @@
       "status": "Status",
       "serialNumber": "Numer seryjny",
       "customLocationOption": "Niestandardowa lokalizacja",
-      "location": "Lokalizacja"
+      "location": "Lokalizacja",
+      "assignedTo": "Przypisano do"
     },
     "placeholders": {
       "workstationOsType": "np. Windows, macOS, Linux",
@@ -947,7 +1013,9 @@
       "customLocation": "Wprowadź niestandardową lokalizację lub obszar",
       "loadingLocations": "Ładowanie lokalizacji...",
       "selectClientFirst": "Najpierw wybierz klienta",
-      "selectLocation": "Wybierz lokalizację"
+      "selectLocation": "Wybierz lokalizację",
+      "loadingContacts": "Ładowanie kontaktów...",
+      "selectContact": "Wybierz kontakt"
     },
     "sections": {
       "typeSpecificDetails": "Szczegóły specyficzne dla typu"
@@ -1009,7 +1077,8 @@
       "model": "Model",
       "serialNumber": "Numer seryjny",
       "purchaseDate": "Data zakupu",
-      "warrantyEnd": "Koniec gwarancji"
+      "warrantyEnd": "Koniec gwarancji",
+      "assignedTo": "Przypisano do"
     },
     "values": {
       "unknownClient": "Nieznany klient",
@@ -1530,8 +1599,7 @@
       "manageAssetTypes": "Odmowa uprawnień: nie można zarządzać typami zasobów",
       "readDocuments": "Odmowa uprawnień: nie można odczytywać dokumentów zasobu",
       "associateDocuments": "Odmowa uprawnień: nie można powiązać dokumentów z zasobami",
-      "removeDocuments": "Odmowa uprawnień: nie można usuwać dokumentów z zasobów",
-      "updateDocumentNotes": "Odmowa uprawnień: nie można aktualizować notatek dokumentów zasobu"
+      "removeDocuments": "Odmowa uprawnień: nie można usuwać dokumentów z zasobów"
     },
     "asset": {
       "notFoundRefresh": "Nie znaleziono zasobu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
@@ -1550,7 +1618,18 @@
       "conflict": "Ta zmiana zasobu jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
       "notAllowed": "Jedna z wartości zasobu jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola zasobu.",
-      "missingFieldNamed": "Brakuje wymaganego pola zasobu: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola zasobu: {{field}}.",
+      "contactUnavailable": "Wybrany kontakt jest niedostępny dla tego klienta."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Nie udało się wczytać zasobów"
+    },
+    "placeholder": "Dodaj zasób...",
+    "searchPlaceholder": "Szukaj zasobów",
+    "empty": "Brak pasujących zasobów dla tego klienta",
+    "loading": "Ładowanie...",
+    "remove": "Usuń zasób"
   }
 }

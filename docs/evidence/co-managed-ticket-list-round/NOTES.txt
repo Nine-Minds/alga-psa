@@ -1,0 +1,48 @@
+post-login-url: http://localhost:3374/msp/dashboard
+tickets-url: http://localhost:3374/msp/tickets
+board-tabs-present: 0
+scope-bar-present: 1
+rows: 6
+control:Search: false
+control:Filter: true
+control:Share: false
+control:View: true
+Share-button: NOT FOUND
+row-click-from: http://localhost:3374/msp/tickets
+row-click-to: http://localhost:3374/msp/tickets/a9e9bdb2-3804-46e2-8002-67ece33d87fe
+client-tab-url: http://localhost:3374/msp/clients/14049873-b642-4632-b6d2-3fd890e8cf20?tab=co-managed
+client-tab-mentions-co-managed: false
+after-refresh-url: http://localhost:3374/msp/clients/14049873-b642-4632-b6d2-3fd890e8cf20?tab=co-managed
+after-refresh-mentions-co-managed: false
+overview-url: http://localhost:3374/msp/co-managed
+overview-has-manage-link: true
+overview-text-head: AlgaPSA Home User Activities Tickets Service Requests Surveys Projects Clients Co-managed IT Delegated administration Opportunities Contacts Interactions Documents Assets Passwords Inventory Reports Time Management Billing Schedule Technician Dispatch Workflows System Monitoring Extensions Settings Support v1.5.4 Home Co-managed IT 569e72fc-52d9-4ce2-838e-a34ea8cf2f9f Quick Create GG Co-managed IT
+legacy-co-management-final-url: http://localhost:3374/msp/co-management
+legacy-co-managed-tickets-final-url: http://localhost:3374/msp/tickets?queueView=working&workspace=all
+qualified-url: http://localhost:3374/msp/tickets?queueView=oversight&workspace=all
+qualified-text-head: AlgaPSA Home User Activities Tickets Service Requests Surveys Projects Clients Co-managed IT Delegated administration Opportunities Contacts Interactions Documents Assets Passwords Inventory Reports Time Management Billing Schedule Technician Dispatch Workflows System Monitoring Extensions Settings Support v1.5.4 Home Tickets 569e72fc-52d9-4ce2-838e-a34ea8cf2f9f Quick Create GG Ticketing Dashboard
+page-errors: Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 401 (Unauthorized)
+
+--- client proof ---
+white-rabbit-provisioning-url: http://localhost:3374/msp/clients/4320b23c-e022-44d4-b811-32b1c85873a2?tab=co-managed
+white-rabbit-provisioning-404: false
+white-rabbit-provisioning-mentions-co-managed: true
+white-rabbit-provisioning-tab-list: Co-managed IT ~ co-managed IT ~ Co-managed IT
+white-rabbit-provisioning-after-refresh-url: http://localhost:3374/msp/clients/4320b23c-e022-44d4-b811-32b1c85873a2?tab=co-managed
+white-rabbit-provisioning-after-refresh-mentions: true
+white-rabbit-provisioning-tickets-rows: 0
+emerald-city-terminated-url: http://localhost:3374/msp/clients/1af8811b-24ce-4036-bf2b-0846948ac1d2?tab=co-managed
+emerald-city-terminated-404: false
+emerald-city-terminated-mentions-co-managed: true
+emerald-city-terminated-tab-list: Co-managed IT ~ co-managed IT ~ Co-managed IT
+emerald-city-terminated-after-refresh-url: http://localhost:3374/msp/clients/1af8811b-24ce-4036-bf2b-0846948ac1d2?tab=co-managed
+emerald-city-terminated-after-refresh-mentions: true
+emerald-city-terminated-tickets-rows: 3
+
+--- legacy adapter proof ---
+legacy-op-access-from: /msp/co-management?operationId=b0c3823d-9271-4bab-911d-bf93e99e631e
+legacy-op-access-final-url: http://localhost:3374/msp/clients/1af8811b-24ce-4036-bf2b-0846948ac1d2?tab=co-managed&relationshipId=3559d6b5-5e51-4766-b891-014d85f31429&section=access
+legacy-op-sla-from: /msp/co-management/sla?operationId=b0c3823d-9271-4bab-911d-bf93e99e631e
+legacy-op-sla-final-url: http://localhost:3374/msp/clients/1af8811b-24ce-4036-bf2b-0846948ac1d2?tab=co-managed&relationshipId=3559d6b5-5e51-4766-b891-014d85f31429&section=sla
+legacy-clientid-overview-from: /msp/co-managed?clientId=4320b23c-e022-44d4-b811-32b1c85873a2
+legacy-clientid-overview-final-url: http://localhost:3374/msp/clients/4320b23c-e022-44d4-b811-32b1c85873a2?tab=co-managed

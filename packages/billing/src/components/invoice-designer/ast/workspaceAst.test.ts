@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { evaluateTemplateAst } from '../../../lib/invoice-template-ast/evaluator';
+import { renderEvaluatedTemplateAst } from '../../../lib/invoice-template-ast/react-renderer';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import type { DesignerWorkspaceSnapshot } from '../state/designerStore';
 import {
@@ -83,6 +85,21 @@ const createWorkspaceWithTransforms = (): DesignerWorkspaceSnapshot => ({
 });
 
 describe('exportWorkspaceToTemplateAst', () => {
+  it('renders default line-item amounts as currency after workspace export', async () => {
+    const workspace = createWorkspaceWithFieldAndDynamicTable();
+    workspace.nodesById['ast-table-1'].type = 'table';
+    workspace.nodesById['ast-table-1'].props.metadata = {};
+    const ast = exportWorkspaceToTemplateAst(workspace);
+    const evaluation = evaluateTemplateAst(ast, {
+      invoiceNumber: 'INV-HISTORICAL', currencyCode: 'USD',
+      items: [{ id: 'charge', description: 'Frozen service charge', quantity: 2, total: 37500 }],
+    });
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+    expect(rendered.html).toContain('Frozen service charge');
+    expect(rendered.html).toContain('$375.00');
+    expect(rendered.html).not.toContain('>37500<');
+  });
+
   it('exports designer workspace to a versioned AST document', () => {
     const workspace = createWorkspaceWithFieldAndDynamicTable();
     const ast = exportWorkspaceToTemplateAst(workspace);
@@ -111,7 +128,9 @@ describe('exportWorkspaceToTemplateAst', () => {
       return;
     }
 
-    expect(dynamicTable.repeat.sourceBinding.bindingId).toContain('collection');
+    // Known collections bind under the document catalog's id, like shipped templates.
+    expect(dynamicTable.repeat.sourceBinding.bindingId).toBe('lineItems');
+    expect(ast.bindings?.collections?.lineItems).toEqual({ id: 'lineItems', kind: 'collection', path: 'items' });
     expect(dynamicTable.repeat.itemBinding).toBe('item');
     expect(dynamicTable.columns.length).toBeGreaterThan(0);
     expect(json).toContain('"dynamic-table"');
@@ -469,7 +488,7 @@ describe('exportWorkspaceToTemplateAst', () => {
     const hydrated = importTemplateAstToWorkspace(sourceAst);
     const hydratedLogo = hydrated.nodesById['issuer-logo'];
 
-    expect(hydratedLogo?.type).toBe('image');
+    expect(hydratedLogo?.type).toBe('logo'); // bound to the company logo
     expect((hydratedLogo?.props as any)?.style).toMatchObject({
       width: '180px',
       maxHeight: '72px',

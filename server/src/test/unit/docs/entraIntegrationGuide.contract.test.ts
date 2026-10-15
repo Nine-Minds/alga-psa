@@ -36,7 +36,6 @@ describe('Entra integration guide contracts', () => {
 
   it('T138: docs include the rollout order for pilot tenants', () => {
     expect(guide).toContain('## Rollout Order (Recommended)');
-    expect(guide).toContain('entra-integration-cipp');
     expect(guide).toContain('entra-integration-client-sync-action');
   });
 
@@ -48,5 +47,15 @@ describe('Entra integration guide contracts', () => {
     expect(guide).toContain('assertTierAccess(TIER_FEATURES.ENTRA_SYNC)');
     expect(guide).not.toContain('Enable `entra-integration-field-sync`');
     expect(guide).not.toContain('Enable `entra-integration-ui`');
+
+    // CIPP is gated by tier alone. The guide lists its flag as retired and
+    // must not send operators to enable it.
+    const retiredParagraph = guide.slice(guide.indexOf('Retired flags.')).split('\n\n')[0];
+    expect(retiredParagraph).toContain('`entra-integration-cipp`');
+    expect(retiredParagraph).toContain('no longer exist');
+    expect(guide).toContain('TIER_FEATURES.CIPP');
+    expect(guide).not.toContain('enable `entra-integration-cipp`');
+    expect(guide).not.toContain('Enable `entra-integration-cipp`');
+    expect(guide).not.toContain('when the `entra-integration-cipp` flag is enabled');
   });
 });

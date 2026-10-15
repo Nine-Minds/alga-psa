@@ -21,7 +21,22 @@ import type {
   CreateScheduleEntryOptions,
 } from '@alga-psa/types';
 import { v4 as uuidv4, validate as isUuid } from 'uuid';
+import { toCalendarDateString } from '@alga-psa/core';
 import { generateOccurrences } from '../utils/recurrenceUtils';
+
+/** All-day dates use UTC-midnight boundaries and an exclusive end date. */
+export function validateAllDayInterval(entry: Pick<IScheduleEntry, 'is_all_day' | 'scheduled_start' | 'scheduled_end'>): void {
+  if (!entry.is_all_day) return;
+  if (entry.scheduled_start == null || entry.scheduled_end == null) {
+    throw new Error('All-day schedule entries require both date boundaries');
+  }
+  const start = new Date(entry.scheduled_start).getTime();
+  const end = new Date(entry.scheduled_end).getTime();
+  const dayMs = 24 * 60 * 60 * 1000;
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start % dayMs !== 0 || end % dayMs !== 0 || end <= start) {
+    throw new Error('All-day schedule entries require UTC-midnight boundaries and an exclusive end after the start');
+  }
+}
 
 function tenantScopedTable(
   knexOrTrx: Knex | Knex.Transaction,
@@ -29,6 +44,62 @@ function tenantScopedTable(
   tenant: string
 ): Knex.QueryBuilder {
   return tenantDb(knexOrTrx, tenant).table(table);
+}
+
+/**
+ * Optional SQL visibility filter for schedule entry reads. When supplied, only
+ * entries assigned to one of `userIds`, placed on one of `calendarIds`, or
+ * (optionally) unassigned appointment requests are returned. Entries placed on
+ * `excludeCalendarIds` (e.g. archived group calendars) are always dropped.
+ * Omitting the filter returns every entry in the tenant (admin view).
+ */
+export interface ScheduleEntryVisibilityFilter {
+  userIds: string[];
+  calendarIds: string[];
+  includeUnassignedAppointmentRequests: boolean;
+  excludeCalendarIds?: string[];
+}
+
+function applyVisibilityFilter(
+  knexOrTrx: Knex | Knex.Transaction,
+  query: Knex.QueryBuilder,
+  tenant: string,
+  filter: ScheduleEntryVisibilityFilter | undefined
+): Knex.QueryBuilder {
+  const excluded = filter?.excludeCalendarIds ?? [];
+  if (excluded.length > 0) {
+    query.where(function () {
+      this.whereNull('schedule_entries.calendar_id')
+        .orWhereNotIn('schedule_entries.calendar_id', excluded);
+    });
+  }
+  if (!filter) return query;
+
+  const db = tenantDb(knexOrTrx, tenant);
+  const assigneeSubquery = (alias: string) => {
+    const sub = db.subquery(`schedule_entry_assignees as ${alias}`)
+      .select(knexOrTrx.raw('1'))
+      .whereRaw('?? = ??', [`${alias}.entry_id`, 'schedule_entries.entry_id']);
+    db.tenantWhereColumn(sub, `${alias}.tenant`, 'schedule_entries.tenant');
+    return sub;
+  };
+
+  return query.where(function () {
+    // Always a valid predicate even when every list is empty.
+    this.whereRaw('false');
+    if (filter.userIds.length > 0) {
+      this.orWhereExists(assigneeSubquery('sea_visible').whereIn('sea_visible.user_id', filter.userIds));
+    }
+    if (filter.calendarIds.length > 0) {
+      this.orWhereIn('schedule_entries.calendar_id', filter.calendarIds);
+    }
+    if (filter.includeUnassignedAppointmentRequests) {
+      this.orWhere(function () {
+        this.where('schedule_entries.work_item_type', 'appointment_request')
+          .whereNotExists(assigneeSubquery('sea_any'));
+      });
+    }
+  });
 }
 
 /**
@@ -149,7 +220,8 @@ const ScheduleEntry = {
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
     start: Date,
-    end: Date
+    end: Date,
+    visibility?: ScheduleEntryVisibilityFilter
   ): Promise<IScheduleEntry[]> => {
     if (!tenant) {
       throw new Error('Tenant context is required for getting recurring entries');
@@ -161,19 +233,31 @@ const ScheduleEntry = {
     const endDateStr = end.toISOString().split('T')[0];
     let holidays: IHoliday[] = [];
     try {
-      holidays = await tenantScopedTable(knexOrTrx, 'holidays', tenant)
+      const holidayRows = await tenantScopedTable(knexOrTrx, 'holidays', tenant)
         .whereNull('schedule_id') // Only global holidays (not schedule-specific SLA holidays)
         .where(function () {
           this.whereBetween('holiday_date', [startDateStr, endDateStr])
             .orWhere('is_recurring', true);
         })
-        .select('*') as IHoliday[];
+        .select('*') as Array<Omit<IHoliday, 'holiday_date'> & { holiday_date: string | Date }>;
+      holidays = holidayRows.flatMap((holiday) => {
+        let holidayDate: string | null;
+        try {
+          holidayDate = toCalendarDateString(holiday.holiday_date);
+        } catch {
+          holidayDate = null;
+        }
+        // LEVERAGE: pattern holiday-date-normalize — schedule-entry loader keeps the same DB boundary conversion.
+        return holidayDate ? [{ ...holiday, holiday_date: holidayDate } as IHoliday] : [];
+      });
     } catch {
       // holidays table may not exist yet — proceed without holiday filtering
     }
 
     // Get master recurring entries that might have occurrences in the range
-    const masterEntries = await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+    const masterQuery = tenantScopedTable(knexOrTrx, 'schedule_entries', tenant);
+    applyVisibilityFilter(knexOrTrx, masterQuery, tenant, visibility);
+    const masterEntries = await masterQuery
       .where('is_recurring', true)
       .whereNotNull('recurrence_pattern')
       .whereNull('original_entry_id')
@@ -218,7 +302,8 @@ const ScheduleEntry = {
           if (!pattern || Object.keys(pattern).length === 0) continue;
 
           pattern.startDate = new Date(pattern.startDate);
-          pattern.startDate.setHours(0, 0, 0, 0);
+          if (entry.is_all_day) pattern.startDate.setUTCHours(0, 0, 0, 0);
+          else pattern.startDate.setHours(0, 0, 0, 0);
 
           if (pattern.endDate) {
             pattern.endDate = new Date(pattern.endDate);
@@ -279,7 +364,8 @@ const ScheduleEntry = {
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
     start: Date,
-    end: Date
+    end: Date,
+    visibility?: ScheduleEntryVisibilityFilter
   ): Promise<IScheduleEntry[]> => {
     if (!tenant) {
       throw new Error('Tenant context is required for getting schedule entries');
@@ -289,7 +375,9 @@ const ScheduleEntry = {
     // Recurring masters are excluded here because they are represented
     // by the virtual instances generated below — including them would
     // cause a duplicate on the first occurrence day.
-    const regularEntries = (await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant)
+    const regularQuery = tenantScopedTable(knexOrTrx, 'schedule_entries', tenant);
+    applyVisibilityFilter(knexOrTrx, regularQuery, tenant, visibility);
+    const regularEntries = (await regularQuery
       .whereNull('original_entry_id')
       .andWhere(function () {
         this.where('is_recurring', false).orWhereNull('is_recurring');
@@ -308,7 +396,8 @@ const ScheduleEntry = {
       knexOrTrx,
       tenant,
       start,
-      end
+      end,
+      visibility
     );
 
     const allEntries = [...regularEntries, ...virtualEntries];
@@ -402,6 +491,7 @@ const ScheduleEntry = {
       throw new Error('Tenant context is required for creating schedule entry');
     }
 
+    validateAllDayInterval(entry);
     if (options.entryId !== undefined && !isUuid(options.entryId)) throw new Error('Invalid reserved schedule entry ID');
     const entry_id = options.entryId ?? uuidv4();
 
@@ -427,7 +517,10 @@ const ScheduleEntry = {
         typeof entry.recurrence_pattern === 'object' &&
         Object.keys(entry.recurrence_pattern).length > 0
       ),
-      is_private: entry.is_private || false,
+      // Group calendar entries are never private.
+      is_private: entry.calendar_id ? false : (entry.is_private || false),
+      is_all_day: entry.is_all_day ?? false,
+      calendar_id: entry.calendar_id ?? null,
     };
 
     // Create main entry
@@ -480,6 +573,22 @@ const ScheduleEntry = {
       return undefined;
     }
 
+    const isFutureSplit = updateType === 'future' && originalEntry.recurrence_pattern && virtualTimestamp;
+    const futureStart = entry.scheduled_start !== undefined ? entry.scheduled_start : virtualTimestamp;
+    const futureEnd = entry.scheduled_end !== undefined ? entry.scheduled_end :
+      (isFutureSplit && futureStart != null
+        ? new Date(new Date(futureStart).getTime() +
+          new Date(originalEntry.scheduled_end).getTime() - new Date(originalEntry.scheduled_start).getTime())
+        : originalEntry.scheduled_end);
+
+    validateAllDayInterval({
+      is_all_day: entry.is_all_day ?? originalEntry.is_all_day,
+      scheduled_start: entry.scheduled_start !== undefined ? entry.scheduled_start :
+        (isFutureSplit ? virtualTimestamp : originalEntry.scheduled_start),
+      scheduled_end: isFutureSplit ? futureEnd :
+        (entry.scheduled_end !== undefined ? entry.scheduled_end : originalEntry.scheduled_end),
+    });
+
     // Handle recurring entries with scope
     if (originalEntry.recurrence_pattern && updateType && !(updateType === 'all' && entry.recurrence_pattern === null)) {
       const originalPattern = ScheduleEntry.parseRecurrencePattern(originalEntry.recurrence_pattern);
@@ -509,6 +618,8 @@ const ScheduleEntry = {
               original_entry_id: null,
               recurrence_pattern: null,
               is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
+              is_all_day: entry.is_all_day ?? originalEntry.is_all_day,
+              calendar_id: entry.calendar_id !== undefined ? entry.calendar_id : (originalEntry.calendar_id ?? null),
             });
 
             // Copy assignments from master to standalone entry
@@ -552,6 +663,8 @@ const ScheduleEntry = {
               is_recurring: false,
               original_entry_id: null,
               is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
+              is_all_day: entry.is_all_day ?? originalEntry.is_all_day,
+              calendar_id: entry.calendar_id !== undefined ? entry.calendar_id : (originalEntry.calendar_id ?? null),
               assigned_user_ids: entry.assigned_user_ids || assignedUserIds[masterEntryId] || [],
             };
           }
@@ -566,8 +679,13 @@ const ScheduleEntry = {
 
             // Truncate original master to end before the current instance
             const originalEndDate = new Date(virtualTimestamp);
-            originalEndDate.setDate(originalEndDate.getDate() - 1);
-            originalEndDate.setHours(23, 59, 59, 999);
+            if (originalEntry.is_all_day) {
+              originalEndDate.setUTCDate(originalEndDate.getUTCDate() - 1);
+              originalEndDate.setUTCHours(23, 59, 59, 999);
+            } else {
+              originalEndDate.setDate(originalEndDate.getDate() - 1);
+              originalEndDate.setHours(23, 59, 59, 999);
+            }
 
             const futureOriginalPattern = {
               ...originalPattern,
@@ -621,6 +739,8 @@ const ScheduleEntry = {
               is_recurring: !!newPattern,
               original_entry_id: null,
               is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
+              is_all_day: entry.is_all_day ?? originalEntry.is_all_day,
+              calendar_id: entry.calendar_id !== undefined ? entry.calendar_id : (originalEntry.calendar_id ?? null),
             };
 
             await tenantScopedTable(knexOrTrx, 'schedule_entries', tenant).insert(newMasterEntry);
@@ -662,6 +782,8 @@ const ScheduleEntry = {
                 work_item_type: entry.work_item_type ?? originalEntry.work_item_type,
                 recurrence_pattern: JSON.stringify(allUpdatePattern),
                 is_recurring: true,
+                is_all_day: entry.is_all_day ?? originalEntry.is_all_day,
+                calendar_id: entry.calendar_id !== undefined ? entry.calendar_id : (originalEntry.calendar_id ?? null),
                 is_private: entry.is_private ?? originalEntry.is_private,
                 updated_at: new Date(),
               })
@@ -698,6 +820,8 @@ const ScheduleEntry = {
       (!entry.recurrence_pattern || Object.keys(entry.recurrence_pattern).length === 0);
 
     // Build update data
+    // Calendar sync uses this version to detect edits that still need exporting,
+    // including retries after a provider write fails. Never reuse a UI timestamp.
     const updateData: Record<string, unknown> = { updated_at: new Date() };
 
     if (isRemovingRecurrence) {
@@ -713,6 +837,12 @@ const ScheduleEntry = {
     if (entry.work_item_id !== undefined) updateData.work_item_id = entry.work_item_id;
     if (entry.work_item_type !== undefined) updateData.work_item_type = entry.work_item_type;
     if (entry.is_private !== undefined) updateData.is_private = entry.is_private;
+    if (entry.is_all_day !== undefined) updateData.is_all_day = entry.is_all_day;
+    if (entry.calendar_id !== undefined) updateData.calendar_id = entry.calendar_id;
+    if (updateData.calendar_id || (updateData.calendar_id === undefined && originalEntry.calendar_id)) {
+      // Group calendar entries are never private.
+      if (updateData.is_private) updateData.is_private = false;
+    }
 
     if (entry.recurrence_pattern !== undefined && !isRemovingRecurrence) {
       updateData.recurrence_pattern =
@@ -855,6 +985,8 @@ const ScheduleEntry = {
                   recurrence_pattern: JSON.stringify(newPattern),
                   is_recurring: true,
                   is_private: originalEntry.is_private,
+                  calendar_id: originalEntry.calendar_id ?? null,
+                  is_all_day: originalEntry.is_all_day,
                 });
 
                 // Copy assignees to new master
@@ -888,8 +1020,13 @@ const ScheduleEntry = {
             if (virtualTimestamp) {
               // Truncate series to end before this instance
               const endDate = new Date(virtualTimestamp);
-              endDate.setDate(endDate.getDate() - 1);
-              endDate.setHours(23, 59, 59, 999);
+              if (originalEntry.is_all_day) {
+                endDate.setUTCDate(endDate.getUTCDate() - 1);
+                endDate.setUTCHours(23, 59, 59, 999);
+              } else {
+                endDate.setDate(endDate.getDate() - 1);
+                endDate.setHours(23, 59, 59, 999);
+              }
 
               const updatedPattern = {
                 ...originalPattern,

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '@alga-psa/workflow-streams/workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   invoiceDueDateChangedEventPayloadSchema,
   invoiceOverdueEventPayloadSchema,
   invoiceSentEventPayloadSchema,
   invoiceStatusChangedEventPayloadSchema,
   invoiceWrittenOffEventPayloadSchema,
-} from '@alga-psa/workflows/runtime/schemas/billingEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildInvoiceDueDateChangedPayload,
   buildInvoiceOverduePayload,

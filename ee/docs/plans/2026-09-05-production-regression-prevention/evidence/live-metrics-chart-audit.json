@@ -1,0 +1,610 @@
+{
+  "observedAt": "2026-09-08",
+  "readback": {
+    "spreadsheetId": "1eKcgRVSwd3bDBSbbwyj-WYb8jhqSEDOG8FPO9--O21M",
+    "spreadsheetUrl": "https://docs.google.com/spreadsheets/d/1eKcgRVSwd3bDBSbbwyj-WYb8jhqSEDOG8FPO9--O21M/edit?ouid=108330435670522534361",
+    "properties": {
+      "title": "Alga Test Metrics",
+      "locale": "en_US",
+      "timeZone": "America/New_York"
+    },
+    "sheets": [
+      {
+        "properties": {
+          "sheetId": 1594196073,
+          "title": "charts",
+          "index": 1,
+          "sheetType": "GRID",
+          "gridProperties": {
+            "rowCount": 1000,
+            "columnCount": 26,
+            "frozenRowCount": 1
+          }
+        },
+        "data": [
+          {
+            "rowData": [
+              {
+                "values": [
+                  {
+                    "formattedValue": "Suite",
+                    "userEnteredValue": {
+                      "stringValue": "Suite"
+                    }
+                  },
+                  {
+                    "formattedValue": "Last run (UTC)",
+                    "userEnteredValue": {
+                      "stringValue": "Last run (UTC)"
+                    }
+                  },
+                  {
+                    "formattedValue": "Passed",
+                    "userEnteredValue": {
+                      "stringValue": "Passed"
+                    }
+                  },
+                  {
+                    "formattedValue": "Failed",
+                    "userEnteredValue": {
+                      "stringValue": "Failed"
+                    }
+                  },
+                  {
+                    "formattedValue": "Skipped",
+                    "userEnteredValue": {
+                      "stringValue": "Skipped"
+                    }
+                  },
+                  {
+                    "formattedValue": "Pass %",
+                    "userEnteredValue": {
+                      "stringValue": "Pass %"
+                    }
+                  },
+                  {
+                    "formattedValue": "Lines %",
+                    "userEnteredValue": {
+                      "stringValue": "Lines %"
+                    }
+                  },
+                  {
+                    "formattedValue": "Duration s",
+                    "userEnteredValue": {
+                      "stringValue": "Duration s"
+                    }
+                  }
+                ]
+              },
+              {
+                "values": [
+                  {
+                    "formattedValue": "unit-coverage",
+                    "userEnteredValue": {
+                      "stringValue": "unit-coverage"
+                    }
+                  },
+                  {
+                    "formattedValue": "2026-09-07T12:44:12.952Z",
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(metrics!A2:P,\"select A, E, F, G, J, K, O where B='unit-coverage' order by A desc limit 1\",0),\"no runs yet\")"
+                    }
+                  }
+                ]
+              },
+              {
+                "values": [
+                  {
+                    "formattedValue": "integration-full",
+                    "userEnteredValue": {
+                      "stringValue": "integration-full"
+                    }
+                  },
+                  {
+                    "formattedValue": "2026-09-08T05:44:34.309Z",
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(metrics!A2:P,\"select A, E, F, G, J, K, O where B='integration-full' order by A desc limit 1\",0),\"no runs yet\")"
+                    }
+                  },
+                  {
+                    "formattedValue": "1915"
+                  },
+                  {
+                    "formattedValue": "0"
+                  },
+                  {
+                    "formattedValue": "146"
+                  },
+                  {
+                    "formattedValue": "100"
+                  },
+                  {},
+                  {
+                    "formattedValue": "3850"
+                  }
+                ]
+              },
+              {
+                "values": [
+                  {
+                    "formattedValue": "integration-tier1",
+                    "userEnteredValue": {
+                      "stringValue": "integration-tier1"
+                    }
+                  },
+                  {
+                    "formattedValue": "2026-09-07T05:03:46.730Z",
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(metrics!A2:P,\"select A, E, F, G, J, K, O where B='integration-tier1' order by A desc limit 1\",0),\"no runs yet\")"
+                    }
+                  },
+                  {
+                    "formattedValue": "1915"
+                  },
+                  {
+                    "formattedValue": "0"
+                  },
+                  {
+                    "formattedValue": "146"
+                  },
+                  {
+                    "formattedValue": "100"
+                  },
+                  {},
+                  {
+                    "formattedValue": "3663"
+                  }
+                ]
+              },
+              {
+                "values": [
+                  {
+                    "formattedValue": "infrastructure-full",
+                    "userEnteredValue": {
+                      "stringValue": "infrastructure-full"
+                    }
+                  },
+                  {
+                    "formattedValue": "2026-09-08T04:58:16.649Z",
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(metrics!A2:P,\"select A, E, F, G, J, K, O where B='infrastructure-full' order by A desc limit 1\",0),\"no runs yet\")"
+                    }
+                  },
+                  {
+                    "formattedValue": "478"
+                  },
+                  {
+                    "formattedValue": "5"
+                  },
+                  {
+                    "formattedValue": "0"
+                  },
+                  {
+                    "formattedValue": "98.96"
+                  },
+                  {},
+                  {
+                    "formattedValue": "1073"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "properties": {
+          "sheetId": 1628688994,
+          "title": "chart_data",
+          "index": 3,
+          "sheetType": "GRID",
+          "gridProperties": {
+            "rowCount": 1501,
+            "columnCount": 40,
+            "frozenRowCount": 1
+          }
+        },
+        "data": [
+          {
+            "rowData": [
+              {
+                "values": [
+                  {
+                    "formattedValue": "unit-coverage — timestamp",
+                    "userEnteredValue": {
+                      "stringValue": "unit-coverage — timestamp"
+                    }
+                  },
+                  {
+                    "formattedValue": "pass %",
+                    "userEnteredValue": {
+                      "stringValue": "pass %"
+                    }
+                  },
+                  {
+                    "formattedValue": "lines %",
+                    "userEnteredValue": {
+                      "stringValue": "lines %"
+                    }
+                  },
+                  {
+                    "formattedValue": "statements %",
+                    "userEnteredValue": {
+                      "stringValue": "statements %"
+                    }
+                  },
+                  {
+                    "formattedValue": "branches %",
+                    "userEnteredValue": {
+                      "stringValue": "branches %"
+                    }
+                  },
+                  {
+                    "formattedValue": "functions %",
+                    "userEnteredValue": {
+                      "stringValue": "functions %"
+                    }
+                  },
+                  {
+                    "formattedValue": "total tests",
+                    "userEnteredValue": {
+                      "stringValue": "total tests"
+                    }
+                  },
+                  {
+                    "formattedValue": "duration s",
+                    "userEnteredValue": {
+                      "stringValue": "duration s"
+                    }
+                  },
+                  {
+                    "formattedValue": "run time",
+                    "userEnteredValue": {
+                      "stringValue": "run time"
+                    }
+                  },
+                  {},
+                  {
+                    "formattedValue": "integration-full — timestamp",
+                    "userEnteredValue": {
+                      "stringValue": "integration-full — timestamp"
+                    }
+                  },
+                  {
+                    "formattedValue": "pass %",
+                    "userEnteredValue": {
+                      "stringValue": "pass %"
+                    }
+                  },
+                  {
+                    "formattedValue": "passed",
+                    "userEnteredValue": {
+                      "stringValue": "passed"
+                    }
+                  },
+                  {
+                    "formattedValue": "failed",
+                    "userEnteredValue": {
+                      "stringValue": "failed"
+                    }
+                  },
+                  {
+                    "formattedValue": "skipped",
+                    "userEnteredValue": {
+                      "stringValue": "skipped"
+                    }
+                  },
+                  {
+                    "formattedValue": "total tests",
+                    "userEnteredValue": {
+                      "stringValue": "total tests"
+                    }
+                  },
+                  {
+                    "formattedValue": "run time",
+                    "userEnteredValue": {
+                      "stringValue": "run time"
+                    }
+                  },
+                  {},
+                  {
+                    "formattedValue": "integration-tier1 — timestamp",
+                    "userEnteredValue": {
+                      "stringValue": "integration-tier1 — timestamp"
+                    }
+                  },
+                  {
+                    "formattedValue": "pass %",
+                    "userEnteredValue": {
+                      "stringValue": "pass %"
+                    }
+                  },
+                  {
+                    "formattedValue": "duration s",
+                    "userEnteredValue": {
+                      "stringValue": "duration s"
+                    }
+                  },
+                  {
+                    "formattedValue": "run time",
+                    "userEnteredValue": {
+                      "stringValue": "run time"
+                    }
+                  },
+                  {},
+                  {
+                    "formattedValue": "infrastructure-full — timestamp",
+                    "userEnteredValue": {
+                      "stringValue": "infrastructure-full — timestamp"
+                    }
+                  },
+                  {
+                    "formattedValue": "pass %",
+                    "userEnteredValue": {
+                      "stringValue": "pass %"
+                    }
+                  },
+                  {
+                    "formattedValue": "run time",
+                    "userEnteredValue": {
+                      "stringValue": "run time"
+                    }
+                  },
+                  {},
+                  {
+                    "formattedValue": "unit-coverage — skipped",
+                    "userEnteredValue": {
+                      "stringValue": "unit-coverage — skipped"
+                    }
+                  },
+                  {
+                    "formattedValue": "integration-full — skipped",
+                    "userEnteredValue": {
+                      "stringValue": "integration-full — skipped"
+                    }
+                  },
+                  {},
+                  {
+                    "formattedValue": "latest coverage run",
+                    "userEnteredValue": {
+                      "stringValue": "latest coverage run"
+                    }
+                  },
+                  {
+                    "formattedValue": "directory",
+                    "userEnteredValue": {
+                      "stringValue": "directory"
+                    }
+                  },
+                  {
+                    "formattedValue": "lines %",
+                    "userEnteredValue": {
+                      "stringValue": "lines %"
+                    }
+                  }
+                ]
+              },
+              {
+                "values": [
+                  {
+                    "formattedValue": "2026-07-07T13:42:52Z",
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(metrics!A2:P,\"select A, J, K, L, M, N, I, O where B='unit-coverage' order by A\",0),)"
+                    }
+                  },
+                  {
+                    "formattedValue": "99.97"
+                  },
+                  {},
+                  {},
+                  {},
+                  {},
+                  {
+                    "formattedValue": "3989"
+                  },
+                  {
+                    "formattedValue": "274"
+                  },
+                  {
+                    "formattedValue": "07-07 13:42",
+                    "userEnteredValue": {
+                      "formulaValue": "=ARRAYFORMULA(IF(A2:A=\"\",,DATE(LEFT(A2:A,4),MID(A2:A,6,2),MID(A2:A,9,2))+TIME(MID(A2:A,12,2),MID(A2:A,15,2),MID(A2:A,18,2))))"
+                    }
+                  },
+                  {},
+                  {
+                    "formattedValue": "2026-06-12T06:03:38Z",
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(metrics!A2:P,\"select A, J, E, F, G, I where B='integration-full' order by A\",0),)"
+                    }
+                  },
+                  {
+                    "formattedValue": "50.98"
+                  },
+                  {
+                    "formattedValue": "130"
+                  },
+                  {
+                    "formattedValue": "125"
+                  },
+                  {
+                    "formattedValue": "942"
+                  },
+                  {
+                    "formattedValue": "1197"
+                  },
+                  {
+                    "formattedValue": "06-12 06:03",
+                    "userEnteredValue": {
+                      "formulaValue": "=ARRAYFORMULA(IF(K2:K=\"\",,DATE(LEFT(K2:K,4),MID(K2:K,6,2),MID(K2:K,9,2))+TIME(MID(K2:K,12,2),MID(K2:K,15,2),MID(K2:K,18,2))))"
+                    }
+                  },
+                  {},
+                  {
+                    "formattedValue": "2026-07-14T19:43:40.788Z",
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(metrics!A2:P,\"select A, J, O where B='integration-tier1' order by A\",0),)"
+                    }
+                  },
+                  {
+                    "formattedValue": "100"
+                  },
+                  {
+                    "formattedValue": "999"
+                  },
+                  {
+                    "formattedValue": "07-14 19:43",
+                    "userEnteredValue": {
+                      "formulaValue": "=ARRAYFORMULA(IF(S2:S=\"\",,DATE(LEFT(S2:S,4),MID(S2:S,6,2),MID(S2:S,9,2))+TIME(MID(S2:S,12,2),MID(S2:S,15,2),MID(S2:S,18,2))))"
+                    }
+                  },
+                  {},
+                  {
+                    "formattedValue": "2026-07-15T06:30:11.281Z",
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(metrics!A2:P,\"select A, J where B='infrastructure-full' order by A\",0),)"
+                    }
+                  },
+                  {
+                    "formattedValue": "50.35"
+                  },
+                  {
+                    "formattedValue": "07-15 06:30",
+                    "userEnteredValue": {
+                      "formulaValue": "=ARRAYFORMULA(IF(X2:X=\"\",,DATE(LEFT(X2:X,4),MID(X2:X,6,2),MID(X2:X,9,2))+TIME(MID(X2:X,12,2),MID(X2:X,15,2),MID(X2:X,18,2))))"
+                    }
+                  },
+                  {},
+                  {
+                    "formattedValue": "16",
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(metrics!A2:P,\"select G where B='unit-coverage' order by A\",0),)"
+                    }
+                  },
+                  {
+                    "formattedValue": "942",
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(metrics!A2:P,\"select G where B='integration-full' order by A\",0),)"
+                    }
+                  },
+                  {},
+                  {
+                    "formattedValue": "2026-09-07T10:04:37.073Z",
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(INDEX(QUERY(coverage_by_dir!A2:M,\"select A order by A desc limit 1\",0),1,1),)"
+                    }
+                  },
+                  {
+                    "formattedValue": "server/src/bin",
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(coverage_by_dir!A2:M,\"select D, E where A = '\"&AE2&\"' and E is not null order by E asc, D asc limit 25\",0),)"
+                    }
+                  },
+                  {
+                    "formattedValue": "0"
+                  }
+                ]
+              },
+              {
+                "values": [
+                  {
+                    "formattedValue": "2026-07-07T13:44:36Z"
+                  },
+                  {
+                    "formattedValue": "100"
+                  },
+                  {
+                    "formattedValue": "15.4"
+                  },
+                  {
+                    "formattedValue": "15.4"
+                  },
+                  {
+                    "formattedValue": "65.83"
+                  },
+                  {
+                    "formattedValue": "47.94"
+                  },
+                  {
+                    "formattedValue": "3989"
+                  },
+                  {
+                    "formattedValue": "272"
+                  },
+                  {
+                    "formattedValue": "07-07 13:44"
+                  },
+                  {},
+                  {
+                    "formattedValue": "2026-06-13T05:59:40Z"
+                  },
+                  {
+                    "formattedValue": "50.98"
+                  },
+                  {
+                    "formattedValue": "130"
+                  },
+                  {
+                    "formattedValue": "125"
+                  },
+                  {
+                    "formattedValue": "942"
+                  },
+                  {
+                    "formattedValue": "1197"
+                  },
+                  {
+                    "formattedValue": "06-13 05:59"
+                  },
+                  {},
+                  {
+                    "formattedValue": "2026-07-14T20:55:46.591Z"
+                  },
+                  {
+                    "formattedValue": "100"
+                  },
+                  {
+                    "formattedValue": "312"
+                  },
+                  {
+                    "formattedValue": "07-14 20:55"
+                  },
+                  {},
+                  {
+                    "formattedValue": "2026-07-16T06:27:12.656Z"
+                  },
+                  {
+                    "formattedValue": "53.17"
+                  },
+                  {
+                    "formattedValue": "07-16 06:27"
+                  },
+                  {},
+                  {
+                    "formattedValue": "16"
+                  },
+                  {
+                    "formattedValue": "942"
+                  },
+                  {},
+                  {},
+                  {
+                    "formattedValue": "server/src/interfaces"
+                  },
+                  {
+                    "formattedValue": "0"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "conclusion": "Observed legacy charts query A:P by suite only, omitting run_kind, execution_gate_status, and coverage_methodology.",
+  "limitations": [
+    "Bounded formula inspection; no workbook cells modified.",
+    "Proposed replacement formulas have not executed in an isolated workbook; copy approval remains pending."
+  ]
+}

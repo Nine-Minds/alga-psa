@@ -1,0 +1,43 @@
+{
+  "applicationRevision": "c5938cdad5",
+  "application": "Reused host EE production build; no rebuild",
+  "session": 22722,
+  "stats": {
+    "startTime": "2026-09-08T00:53:33.412Z",
+    "duration": 40960.468,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "coverage": [
+    "Disclosed persisted legacy shapes: ad_hoc missing identity/title, unnamed project task and unnamed ticket",
+    "Preserves real mixed overtime snapshot while non-mixed legacy v1 snapshots show unknown rates",
+    "English/French/unsupported-locale fallback PDFs show localized other-work and project-task labels, mixed and unavailable rates",
+    "Eight flat/nested dates, $375 charge and unchanged authoritative invoice total; no private content",
+    "Snapshots and invoice charges unchanged after every PDF; fixture snapshot/locale fields restored",
+    "Current/v1/partial/none history, long multi-tax pagination, task identities and prepaid allocation also execute in the same journey"
+  ],
+  "pdfArtifacts": [
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-fallbacks-zz-unavailable.pdf",
+      "bytes": 98849,
+      "sha256": "ddb868dfef374af220fc873c2ef03089635954b06453433e89c9c558177df2b9"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-fallbacks-fr.pdf",
+      "bytes": 103086,
+      "sha256": "8f124c26ec4e3049ac4a47cda119815f13e8f3724a62da7d587909e0f54b5f9c"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-fallbacks-en.pdf",
+      "bytes": 98849,
+      "sha256": "9f98254a7797592f927623db9f90d4229bbd4f3238e2e5c647856054c976ab7b"
+    }
+  ],
+  "limitations": [
+    "Explicit historical fixture mutation does not establish support for creating orphan work today",
+    "Authored Description column binds title; description is preserved in snapshots, not substituted into the column",
+    "Authoritative preview/canvas parity and native CI remain unverified for this extension"
+  ]
+}

@@ -95,6 +95,13 @@ const MspSsoAdvancedSection = dynamic(
   { ssr: false },
 );
 
+// Tenant-owned Keycloak / OpenID Connect realm; the only SSO provider on CE and an
+// option alongside Google / Microsoft on EE and the appliance.
+const KeycloakSsoSettings = dynamic(
+  () => import('@alga-psa/integrations/components/settings/integrations/KeycloakSsoSettings'),
+  { ssr: false },
+);
+
 function SessionsLoading() {
   const { t } = useTranslation('msp/profile');
   return <SettingsTabSkeleton title={t('security.tabs.sessions', { defaultValue: 'Sessions' })} description={t('security.loading.sessions', { defaultValue: 'Loading active sessions...' })} showTable={true} />;
@@ -194,6 +201,9 @@ const SecuritySettingsPage = (): React.JSX.Element => {
           <Suspense fallback={<SsoLoading />}>
             <SsoBulkAssignment />
           </Suspense>
+          <div className="mt-6">
+            <KeycloakSsoSettings />
+          </div>
           <MspSsoAdvancedSection />
         </>
       ),

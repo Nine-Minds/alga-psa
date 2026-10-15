@@ -113,7 +113,12 @@
           "title": "⟦Ɋŭȯŧḗ Ḓḗŧȧīŀş⟧"
         }
       },
-      "title": "⟦Ɓīŀŀīƞɠ⟧"
+      "title": "⟦Ɓīŀŀīƞɠ⟧",
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "⟦Ƈȧřḓ Şḗŧŭƥ⟧"
+        }
+      }
     },
     "clientSettings": {
       "description": "⟦Ḿȧƞȧɠḗ ẏȯŭř ƈȯḿƥȧƞẏ şḗŧŧīƞɠş ȧƞḓ ƈȯƞƒīɠŭřȧŧīȯƞş⟧",
@@ -239,6 +244,9 @@
       }
     },
     "coManagement": {
+      "providers": {
+        "title": "⟦Ḗḿȧīŀ ȧƞḓ Īḓḗƞŧīŧẏ Ƥřȯṽīḓḗřş⟧"
+      },
       "title": "⟦Ƈȯ-Ḿȧƞȧɠḗḓ Ȧƈƈḗşş⟧",
       "administration": {
         "title": "⟦Ḓḗŀḗɠȧŧḗḓ Ȧḓḿīƞīşŧřȧŧīȯƞ⟧"
@@ -587,6 +595,12 @@
       "detail": {
         "title": "⟦Ŧīƈķḗŧ #{{ticketNumber}} - {{ticketTitle}}⟧",
         "fallbackTitle": "⟦Ŧīƈķḗŧ Ḓḗŧȧīŀş⟧"
+      },
+      "recurring": {
+        "title": "⟦Řḗƈŭřřīƞɠ ŧīƈķḗŧş⟧"
+      },
+      "templates": {
+        "title": "⟦Ŧīƈķḗŧ ŧḗḿƥŀȧŧḗş⟧"
       }
     },
     "timeEntry": {
@@ -627,6 +641,9 @@
     },
     "layout": {
       "defaultTitle": "⟦Ḓȧşħƀȯȧřḓ | ȦŀɠȧƤŞȦ⟧"
+    },
+    "customerTickets": {
+      "title": "⟦Ƈŭşŧȯḿḗř Ŧīƈķḗŧş⟧"
     }
   },
   "share": {
@@ -659,6 +676,11 @@
     },
     "tab": {
       "title": "⟦Ŧḗȧḿş⟧"
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "⟦Ƈȧřḓ Şḗŧŭƥ⟧"
     }
   }
 }

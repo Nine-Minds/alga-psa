@@ -1,0 +1,21 @@
+{
+  "status": "fixture repaired; native rerun pending",
+  "nativeBefore": {
+    "runId": 34074426026,
+    "workflow": "Node tooling tests",
+    "passed": 238,
+    "failed": 1,
+    "file": "ee/appliance/host-service/tests/support-session.test.mjs",
+    "case": "startup reconciliation expires stale state and prunes only closed recordings",
+    "error": "central_invalid_response: Central support service returned an invalid session authority.",
+    "logLocal": "/tmp/alga-node-tooling-3464.log"
+  },
+  "cause": "fakeCentral sampled activation and expiry from separate wall-clock reads. If the clock ticked, expiresAt exceeded activatedAt + durationHours, correctly rejected by support authority validation.",
+  "repair": "Derive expiry from the single activation timestamp and supply the manager test clock to its fake central service. Keep production duration validation and assertions intact.",
+  "after": {
+    "passed": 16,
+    "failed": 0,
+    "skipped": 0,
+    "logLocal": "/tmp/alga-support-session-clock-after.log"
+  }
+}

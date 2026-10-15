@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "scope": "Native isolated Teams warmup before/after, not CI image proof",
+  "sourceHead": "561a6f1f1c009a09ec06a58b77c657c21f2bd255",
+  "sourceDirty": true,
+  "sourceHashes": {
+    "e2e-tests/harness/warm-teams-dashboard.mjs": "0332d2cad9a2a8d448cd5cb5e51cc402cea38730b4c787c05999aea53dd33ec7",
+    "scripts/tests/teams-dashboard-warmup.test.mjs": "f19e5d1b9cca75df8e95bc5959078623dbd592c428b8e73212867aea5ca90774"
+  },
+  "before": {
+    "httpStatus": 200,
+    "htmlLength": 409661,
+    "dashboardMarkerPresent": false,
+    "errorSentinelPresent": false,
+    "failureCode": "dashboard-marker-missing",
+    "documentTitle": "Dashboard | AlgaPSA",
+    "visibleBodyCategory": "Loading translations...",
+    "tenantProduct": "psa",
+    "actualChromiumFollowup": {
+      "sameAuthenticatedSession": true,
+      "dashboardVisible": true
+    }
+  },
+  "cause": {
+    "file": "packages/ui/src/lib/i18n/client.tsx",
+    "lines": [
+      232,
+      305
+    ],
+    "behavior": "I18nProvider initializes state false and returns translation-loading fallback until client effect runs. HTTP-only dashboard marker assertion rejects this legitimate SSR response."
+  },
+  "after": {
+    "actualAppResult": {
+      "schemaVersion": 1,
+      "scope": "teams-development-dashboard-warmup",
+      "status": "passed",
+      "authenticated": true
+    },
+    "checks": [
+      "Original CSRF and credential protocol plus session email identity",
+      "HTTP compile warmup and error sentinel rejection",
+      "Real Chromium hydration using authenticated storageState",
+      "Exact dashboard URL and HTTP200",
+      "Visible dashboard-main and absence of error UI",
+      "Same fixed240-second total deadline"
+    ],
+    "tests": {
+      "passed": 16,
+      "failed": 0,
+      "command": "node --test scripts/tests/teams-dashboard-warmup.test.mjs",
+      "log": "/tmp/alga-teams-hydration-tests-final.log"
+    }
+  },
+  "isolation": {
+    "sourceDatabase": "host_ee_test_82cc",
+    "sourceOperations": "pg_dump read only; no connection termination, reset or migrations",
+    "ownedFinalDatabase": "teams_native_1788931118509",
+    "ownedDatabaseDropped": true,
+    "ownedNativeProcessesStopped": true,
+    "serverPort": 58076,
+    "redisPort": 58077,
+    "temporalPort": 58078,
+    "cache": "server/.next/teams-development",
+    "privateRuntimeDirectory": "/tmp/alga-native-teams-y6vIag",
+    "dumpAndRuntimeFilesRemoved": true,
+    "client": "Homebrew keg-only libpq18.6, explicit binary paths; no PostgreSQL service or global PATH relink",
+    "restoreCompatibility": "Removed only SET transaction_timeout=0 emitted by newer client before restoring with ON_ERROR_STOP=1 into PostgreSQL16"
+  },
+  "limitations": [
+    "Local source and reused native dependencies/cache, not clean CI candidate container.",
+    "Native provider URLs disabled at loopback; this proves auth/dashboard warmup, not Teams provider journey.",
+    "CI failure had no HTML capture; identical native missing-marker condition is explained, but exact historical CI predicate cannot be independently recovered.",
+    "Private raw HTML and service logs retained locally; no credentials/cookies/raw HTML included here."
+  ],
+  "fixtureReview": {
+    "sourceHash": "abffebf59b8ed213423ce12527a10d583baead06d31c658960a592f1c2dc82fa",
+    "passed": 15,
+    "failed": 0,
+    "log": "/tmp/alga-teams-hydration-fixture-final.log",
+    "budgetsMs": {
+      "positiveAndOrdinaryNegative": 15000,
+      "missingMarker": 10000,
+      "hungHttp": 150
+    },
+    "improvements": [
+      "Actual client script creates error UI after DOMContentLoaded; raw HTTP sentinel does not shortcut browser assertion",
+      "Client error and redirect require exact hydration stage and fixed failure codes",
+      "Removed duplicate generic missing-marker case; dedicated timed diagnostic case retained"
+    ],
+    "scope": "Fixture-only followup; actual app proof above unchanged"
+  }
+}

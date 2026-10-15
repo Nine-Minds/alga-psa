@@ -124,3 +124,25 @@ export const buildRunDisplayError = (
 
   return null;
 };
+
+export type WorkflowRunLaunchFailure = {
+  reason: 'runtime_unavailable' | 'launch_failed';
+  message: string;
+};
+
+/**
+ * A run whose launch failed before the workflow engine took it (the launcher records
+ * error_json.stage = 'launch'). Classified the same way the Run dialog classifies a failed start,
+ * so Run Studio can show the same plain-language explanation instead of a raw socket error.
+ */
+export const getWorkflowRunLaunchFailure = (
+  run: WorkflowRunLike | null | undefined,
+  isEngineUnavailableMessage: (message: string) => boolean
+): WorkflowRunLaunchFailure | null => {
+  if (run?.error_json?.stage !== 'launch') return null;
+  const message = getErrorJsonMessage(run.error_json) ?? '';
+  return {
+    reason: message && isEngineUnavailableMessage(message) ? 'runtime_unavailable' : 'launch_failed',
+    message,
+  };
+};

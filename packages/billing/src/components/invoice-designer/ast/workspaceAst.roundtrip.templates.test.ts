@@ -1,7 +1,7 @@
-import type { TemplateNode, TemplateTableColumn } from '@alga-psa/types';
+import type { TemplateAst, TemplateNode, TemplateTableColumn } from '@alga-psa/types';
 import { describe, expect, it } from 'vitest';
 import { STANDARD_INVOICE_TEMPLATE_ASTS, getStandardTemplateAstByCode } from '../../../lib/invoice-template-ast/standardTemplates';
-import { exportImportExportAst, roundTripAst } from './workspaceAst.roundtrip.helpers';
+import { createAstDocument, exportImportExportAst, roundTripAst } from './workspaceAst.roundtrip.helpers';
 
 const hasOwn = (value: object, key: string): boolean => Object.prototype.hasOwnProperty.call(value, key);
 
@@ -17,6 +17,12 @@ const assertColumnSemantics = (source: TemplateTableColumn, roundTripped: Templa
   }
   if (source.style?.inline) {
     expect(roundTripped.style?.inline).toMatchObject(source.style.inline);
+  }
+  if (hasOwn(source, 'lines')) {
+    expect(Array.isArray(roundTripped.lines)).toBe(true);
+    expect(roundTripped.lines).toEqual(source.lines);
+  } else {
+    expect(roundTripped.lines).toBeUndefined();
   }
 };
 
@@ -154,4 +160,109 @@ describe('workspaceAst standard template roundtrip coverage', () => {
     const astTwice = exportImportExportAst(source);
     expect(astTwice).toEqual(astOnce);
   });
+});
+
+describe('workspaceAst roundtrip preserves stacked table-cell lines', () => {
+  const linesFixture = [
+    {
+      id: 'item-name',
+      value: { type: 'path', path: 'service_name' },
+      style: { tokenIds: ['line-strong'], inline: { fontWeight: 600, lineHeight: 1.3 } },
+    },
+    {
+      id: 'catalog-description',
+      value: { type: 'path', path: 'catalog_description' },
+      format: 'text',
+      style: { inline: { color: '#4b5563', fontSize: '12px' } },
+    },
+  ];
+
+  const buildAst = (nodeType: 'dynamic-table' | 'table') => {
+    const tableNode: TemplateNode =
+      nodeType === 'table'
+        ? {
+            id: 'items-table',
+            type: 'table',
+            sourceBinding: { bindingId: 'lineItems' },
+            rowBinding: 'row',
+            columns: [
+              {
+                id: 'description',
+                header: 'Description',
+                value: { type: 'path', path: 'description' },
+                lines: JSON.parse(JSON.stringify(linesFixture)),
+              },
+              { id: 'amount', header: 'Amount', value: { type: 'path', path: 'total_price' }, format: 'currency' },
+            ],
+          }
+        : {
+            id: 'items-table',
+            type: 'dynamic-table',
+            repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
+            columns: [
+              {
+                id: 'description',
+                header: 'Description',
+                value: { type: 'path', path: 'description' },
+                lines: JSON.parse(JSON.stringify(linesFixture)),
+              },
+              { id: 'amount', header: 'Amount', value: { type: 'path', path: 'total_price' }, format: 'currency' },
+            ],
+          };
+    return {
+      ast: createAstDocument([tableNode], {
+        bindings: {
+          values: {},
+          collections: { lineItems: { id: 'lineItems', kind: 'collection', path: 'items' } },
+        },
+      }),
+      tableNode,
+    };
+  };
+
+  const renderHtml = async (ast: TemplateAst) => {
+    const { renderEvaluatedTemplateAst } = await import('../../../lib/invoice-template-ast/react-renderer');
+    const { evaluateTemplateAst } = await import('../../../lib/invoice-template-ast/evaluator');
+    const evaluation = evaluateTemplateAst(ast, {
+      items: [
+        { service_name: 'Managed Support', catalog_description: 'Full-service support', description: 'fallback', total_price: 2500 },
+        { service_name: null, catalog_description: null, description: 'Discount', total_price: -500 },
+      ],
+    });
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+    return rendered.html;
+  };
+
+  it.each(['dynamic-table', 'table'] as const)(
+    'preserves lines ids, expressions, formats and styles after a %s roundtrip',
+    (nodeType) => {
+      const { ast } = buildAst(nodeType);
+      const roundTripped = roundTripAst(ast);
+
+      const sourceTable = ast.layout.children?.[0];
+      const roundTable = roundTripped.layout.children?.[0];
+      if (!sourceTable || !roundTable || !('columns' in sourceTable) || !('columns' in roundTable)) {
+        throw new Error('Expected a table node');
+      }
+      expect(roundTable.columns[0]?.lines).toEqual(sourceTable.columns[0]?.lines);
+      // Deterministic after further cycles.
+      expect(exportImportExportAst(ast)).toEqual(roundTripped);
+    }
+  );
+
+  it.each(['dynamic-table', 'table'] as const)(
+    'renders the stacked lines after a %s roundtrip',
+    async (nodeType) => {
+      const { ast } = buildAst(nodeType);
+      const roundTripped = roundTripAst(ast);
+      const html = await renderHtml(roundTripped);
+
+      expect(html).toContain('Managed Support');
+      expect(html).toContain('Full-service support');
+      expect(html).toContain('class="ast-table-cell-line ast-line-strong"');
+      expect(html).toContain('>Discount</td>');
+      expect(html).toContain('$25.00');
+      expect(html).toContain('-$5.00');
+    }
+  );
 });

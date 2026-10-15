@@ -1,0 +1,84 @@
+{
+  "scope": "read-only-real-remote-snapshot-browser-metrics-reconciliation",
+  "status": "validated-non-green",
+  "runId": 34299806767,
+  "runAttempt": 1,
+  "runHeadSha": "b413842a9a402ed6730bddcc059e8de73287a231",
+  "mutablePrHeadShaAtRead": "cb88424b6c4e4b9ecf98ded3a791a0b45d00e24b",
+  "mutablePrBaseShaAtRead": "1ea8c942f6e18386f57a84b8091c6e9b91247ec6",
+  "suppliedTestedRevision": "d7d864473db09832671427a71a4220601709376c",
+  "mergeParents": [
+    "f03ef01f9a614fd84b51e8539318fe8739225686",
+    "b413842a9a402ed6730bddcc059e8de73287a231"
+  ],
+  "sourceSpreadsheetId": "1eKcgRVSwd3bDBSbbwyj-WYb8jhqSEDOG8FPO9--O21M",
+  "readRange": "browser_readiness!A1:Y1000",
+  "populatedRowsIncludingHeader": 563,
+  "headerColumns": 20,
+  "matchingLegacyRunRows": 2,
+  "report": {
+    "schemaVersion": 1,
+    "scope": "observed-browser-execution-export-reconciliation",
+    "status": "incomplete",
+    "records": [
+      {
+        "key": "nine-minds/alga-psa:d7d864473db09832671427a71a4220601709376c:34299806767:1:community",
+        "repository": "nine-minds/alga-psa",
+        "revision": "d7d864473db09832671427a71a4220601709376c",
+        "runId": "34299806767",
+        "runAttempt": 1,
+        "edition": "community",
+        "eventName": "pull_request",
+        "runStatus": "completed",
+        "conclusion": "failure",
+        "recorderStatus": "completed",
+        "recorderConclusion": "success",
+        "status": "failed",
+        "exportStatus": "missing-export",
+        "legacyRunExportCount": 1,
+        "runExportCount": 0,
+        "journeyExportCount": 0,
+        "staleAttempts": [],
+        "issues": [
+          "legacy-export-unverified",
+          "export-attempted-but-missing"
+        ]
+      },
+      {
+        "key": "nine-minds/alga-psa:d7d864473db09832671427a71a4220601709376c:34299806767:1:enterprise",
+        "repository": "nine-minds/alga-psa",
+        "revision": "d7d864473db09832671427a71a4220601709376c",
+        "runId": "34299806767",
+        "runAttempt": 1,
+        "edition": "enterprise",
+        "eventName": "pull_request",
+        "runStatus": "completed",
+        "conclusion": "failure",
+        "recorderStatus": "completed",
+        "recorderConclusion": "success",
+        "status": "failed",
+        "exportStatus": "missing-export",
+        "legacyRunExportCount": 1,
+        "runExportCount": 0,
+        "journeyExportCount": 0,
+        "staleAttempts": [],
+        "issues": [
+          "legacy-export-unverified",
+          "export-attempted-but-missing"
+        ]
+      }
+    ],
+    "limitations": [
+      "Observed executions only; never-created workflows require explicit expectations.",
+      "Operator-supplied tested revision may have validated merge relationships; this does not prove the actual checkout.",
+      "An observed metrics pass is not independent artifact, deployment or release-readiness verification."
+    ]
+  },
+  "nativeTests": 86,
+  "limits": [
+    "GitHub data fetched with gh; Sheets metadata/cells fetched read-only with connected Google Drive. Captured responses were replayed through collector and reconciler; this does not verify standalone OAuth credentials or GitHub workflow execution.",
+    "Only matching run rows were retained in the local replay fixture; the full observed sheet read established the row count and legacy schema.",
+    "Original workbook was not modified.",
+    "Supplied tested source is known from prior attempt artifacts; parent validation alone is not independent checkout proof."
+  ]
+}

@@ -5,7 +5,7 @@
 
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
-import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
+import { assertCoManagedOperationalWrite, isCoManagedWorkspaceNotFoundError } from '@alga-psa/licensing';
 import { 
   IProject, 
   IProjectPhase, 
@@ -15,7 +15,13 @@ import {
   IProjectTicketLink,
   ProjectStatus
 } from 'server/src/interfaces/project.interfaces';
-import { 
+import type { ProjectServiceSource } from '@alga-psa/types';
+import {
+  effectiveServiceIdSql,
+  effectiveServiceNameSql,
+  effectiveServiceSourceSql,
+} from '@alga-psa/core';
+import {
   CreateProjectData,
   UpdateProjectData,
   ProjectFilterData,
@@ -24,18 +30,24 @@ import {
   CreateProjectTaskData,
   UpdateProjectTaskData,
   CreateTaskChecklistItemData,
+  UpdateTaskChecklistItemData,
   CreateProjectTicketLinkData,
   ProjectSearchData,
   ProjectExportQuery
 } from '../schemas/project';
 import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
-import { ProjectModel } from '@alga-psa/projects/models';
+import { ProjectModel, ProjectTaskModel } from '@alga-psa/projects/models';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import { projectKanbanHiddenStatusesKey } from '@alga-psa/projects/lib/kanbanPreferences';
+import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { OrderingService } from 'server/src/lib/services/orderingService';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import {
+  buildProjectCreatedPayload,
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
+  buildProjectAssignedPayload,
 } from '@alga-psa/workflow-streams';
 import {
   buildProjectTaskAssignedPayload,
@@ -48,10 +60,41 @@ type InternalUpdateProjectTaskData = UpdateProjectTaskData & {
   description_rich_text?: string | null;
 };
 
+type DeferredTaskEventType =
+  | 'PROJECT_TASK_CREATED'
+  | 'PROJECT_TASK_ASSIGNED'
+  | 'PROJECT_TASK_STATUS_CHANGED'
+  | 'PROJECT_TASK_COMPLETED';
+
 type DeferredWorkflowEvent = {
-  eventType: Parameters<typeof publishWorkflowEvent>[0]['eventType'];
-  payload: Record<string, unknown>;
-};
+  [T in DeferredTaskEventType]: { eventType: T; payload: BuiltWorkflowPayload<T> };
+}[DeferredTaskEventType];
+
+// LEVERAGE: friction correlated-event-payload — BuiltWorkflowPayload<T> is contravariant, so a union of
+// {eventType, payload} pairs cannot be passed to the generic publishWorkflowEvent without narrowing per case.
+async function publishDeferredWorkflowEvent(
+  event: DeferredWorkflowEvent,
+  ctx: Parameters<typeof publishWorkflowEvent>[0]['ctx'],
+): Promise<void> {
+  switch (event.eventType) {
+    case 'PROJECT_TASK_CREATED':
+      await publishWorkflowEvent({ eventType: event.eventType, payload: event.payload, ctx });
+      return;
+    case 'PROJECT_TASK_ASSIGNED':
+      await publishWorkflowEvent({ eventType: event.eventType, payload: event.payload, ctx });
+      return;
+    case 'PROJECT_TASK_STATUS_CHANGED':
+      await publishWorkflowEvent({ eventType: event.eventType, payload: event.payload, ctx });
+      return;
+    case 'PROJECT_TASK_COMPLETED':
+      await publishWorkflowEvent({ eventType: event.eventType, payload: event.payload, ctx });
+      return;
+  }
+}
+
+/** Hierarchy and `service_catalog` aliases used by `getTaskById`'s service fallback. */
+const TASK_SERVICE_ALIASES = { task: 'project_tasks', phase: 'project_phases', project: 'projects' };
+const TASK_SERVICE_CATALOG_ALIASES = { task: 'task_service', phase: 'phase_service', project: 'project_service' };
 
 function scopedTable<Row extends object = Record<string, any>>(
   conn: Knex | Knex.Transaction,
@@ -104,10 +147,22 @@ async function resolveProjectStatusInfo(
   return { status: row.status_name, isClosed: Boolean(row.is_closed) };
 }
 
+/** Lifecycle admission, plus the one admission failure that carries an HTTP
+ * meaning of its own: a workspace that does not exist holds no project to act
+ * on, which is a 404 rather than a server fault. */
+async function admitOperationalWrite(trx: Knex.Transaction, tenant: string): Promise<void> {
+  try {
+    await assertCoManagedOperationalWrite(trx, tenant);
+  } catch (error) {
+    if (isCoManagedWorkspaceNotFoundError(error)) throw new NotFoundError('Project not found');
+    throw error;
+  }
+}
+
 export class ProjectService extends BaseService<IProject> {
   constructor() {
     super({
-      mutationGuard: (trx, context) => assertCoManagedOperationalWrite(trx, context.tenant),
+      mutationGuard: (trx, context) => admitOperationalWrite(trx, context.tenant),
       tableName: 'projects',
       primaryKey: 'project_id',
       tenantColumn: 'tenant',
@@ -266,7 +321,7 @@ export class ProjectService extends BaseService<IProject> {
     const knex = await this.getDbForContext(context);
     
     const project = await withTransaction(knex, async (trx) => {
-      await assertCoManagedOperationalWrite(trx, context.tenant);
+      await admitOperationalWrite(trx, context.tenant);
       const db = tenantDb(trx, context.tenant);
       const projectNumber = data.project_number ?? await SharedNumberingService.getNextNumber('PROJECT', { knex: trx, tenant: context.tenant });
 
@@ -303,6 +358,9 @@ export class ProjectService extends BaseService<IProject> {
       };
 
       const [project] = await db.table(this.tableName).insert(projectData).returning('*');
+      // Runs in this transaction so a project is never persisted without the
+      // task-status mappings its board depends on.
+      await this.setupDefaultStatusMappings(project.project_id, context, trx);
 
       // Create initial phase if needed
       if (data.create_default_phase) {
@@ -323,17 +381,22 @@ export class ProjectService extends BaseService<IProject> {
         });
       }
 
+      const createdAt = new Date();
       registerAfterCommit(trx, async () => {
-        await publishEvent({
+        await publishWorkflowEvent({
           eventType: 'PROJECT_CREATED',
-          payload: {
+          ctx: {
             tenantId: context.tenant,
+            occurredAt: createdAt,
+            actor: { actorType: 'USER', actorUserId: context.userId },
+          },
+          payload: buildProjectCreatedPayload({
             projectId: project.project_id,
             projectName: project.project_name,
             clientId: project.client_id,
-            userId: context.userId,
-            timestamp: new Date().toISOString()
-          }
+            createdByUserId: context.userId,
+            createdAt,
+          }),
         });
       }, `PROJECT_CREATED tenant=${context.tenant} project=${project.project_id}`);
       return project;
@@ -353,7 +416,7 @@ export class ProjectService extends BaseService<IProject> {
       const knex = await this.getDbForContext(context);
       
       const result = await withTransaction(knex, async (trx) => {
-        await assertCoManagedOperationalWrite(trx, context.tenant);
+        await admitOperationalWrite(trx, context.tenant);
         const db = tenantDb(trx, context.tenant);
         const beforeProject = await db.table(this.tableName)
           .where({ [this.primaryKey]: id })
@@ -383,11 +446,6 @@ export class ProjectService extends BaseService<IProject> {
           throw new NotFoundError('Project not found');
         }
         
-        // If status is requested in response, resolve it back to the expected format
-        if (data.status && !this.isUUID(data.status)) {
-          project.status = data.status;
-        }
-  
         const mutation = { beforeProject, project, occurredAt: updateData.updated_at };
         registerAfterCommit(trx, async () => {
           const occurredAt = mutation.occurredAt instanceof Date ? mutation.occurredAt : new Date();
@@ -402,15 +460,15 @@ export class ProjectService extends BaseService<IProject> {
             mutation.beforeProject.assigned_to !== mutation.project.assigned_to &&
             mutation.project.assigned_to
           ) {
-            await publishEvent({
+            await publishWorkflowEvent({
               eventType: 'PROJECT_ASSIGNED',
-              payload: {
-                tenantId: context.tenant,
+              ctx,
+              payload: buildProjectAssignedPayload({
                 projectId: id,
-                userId: context.userId,
-                assignedTo: mutation.project.assigned_to,
-                timestamp: new Date().toISOString()
-              }
+                assignedToId: mutation.project.assigned_to,
+                assignedByUserId: context.userId,
+                assignedAt: occurredAt,
+              }),
             });
           }
 
@@ -442,41 +500,51 @@ export class ProjectService extends BaseService<IProject> {
         return mutation;
       });
 
-      return result.project as IProject;
+      // Events keep the persisted UUID (see the payloads above); a named API
+      // input only retains its response compatibility, and must not reach them.
+      return {
+        ...result.project,
+        ...(data.status && !this.isUUID(data.status) ? { status: data.status } : {}),
+      } as IProject;
     }
 
 
-  // TODO: This bare DELETE has the same gap that was fixed for tickets — it
-  // skips dependency validation and child-row cleanup. A project with blocking
-  // records (phases, ticket links, interactions, materials, asset associations)
-  // will FK-crash (500) instead of returning a clean 409, and there's no
-  // safeguard against the API force-deleting a project that shouldn't be deleted.
-  // Mirror TicketService.delete: route through deleteEntityWithValidation('project', ...)
-  // (config already exists in @alga-psa/core), clean up child rows, and throw
-  // ConflictError when blocking dependencies exist.
+  /** Dependency-validated delete: blocking records yield a 409 rather than an
+   * FK crash, and the child rows that are safe to remove are cleaned up in the
+   * same transaction. The co-managed write guard runs inside that transaction
+   * so a paused or read-only relationship cannot delete through the API. */
   async delete(id: string, context: ServiceContext): Promise<void> {
       const knex = await this.getDbForContext(context);
-
+      // Lifecycle admission runs before anything else. A paused, expired or
+      // not-yet-accepted co-managed relationship must be refused outright, not
+      // told whether the project exists — so this cannot sit behind the
+      // existence probe or behind dependency validation.
       await withTransaction(knex, async (trx) => {
-        await assertCoManagedOperationalWrite(trx, context.tenant);
-        const result = await scopedTable(trx, context.tenant, this.tableName)
-          .where({ [this.primaryKey]: id })
-          .del();
+        await admitOperationalWrite(trx, context.tenant);
+        const project = await scopedTable(trx, context.tenant, this.tableName)
+          .where({ [this.primaryKey]: id }).first(this.primaryKey);
+        if (!project) throw new NotFoundError('Project not found');
+      });
 
-        if (result === 0) {
-          throw new NotFoundError('Project not found');
-        }
-        registerAfterCommit(trx, async () => {
-          await publishEvent({
-            eventType: 'PROJECT_DELETED',
-            payload: {
-              tenantId: context.tenant,
-              projectId: id,
-              userId: context.userId,
-              timestamp: new Date().toISOString()
-            }
-          });
-        }, `PROJECT_DELETED tenant=${context.tenant} project=${id}`);
+      const result = await deleteEntityWithValidation('project', id, knex, context.tenant, async (trx, tenant) => {
+        await admitOperationalWrite(trx, tenant);
+        const db = tenantDb(trx, tenant);
+        const phaseIds = db.table('project_phases').where({ project_id: id }).select('phase_id');
+        const taskIds = db.table('project_tasks').whereIn('phase_id', phaseIds).select('task_id');
+        await db.table('tag_mappings').where({ tagged_type: 'project_task' }).whereIn('tagged_id', taskIds).delete();
+        await db.table('tag_mappings').where({ tagged_type: 'project', tagged_id: id }).delete();
+        await db.table('project_ticket_links').where({ project_id: id }).delete();
+        await db.table('email_reply_tokens').where({ project_id: id }).delete();
+        await db.table('user_preferences').where({ setting_name: projectKanbanHiddenStatusesKey(id) }).delete();
+        await ProjectModel.delete(trx, tenant, id);
+      });
+      if (!result.deleted) {
+        throw new ConflictError(result.message ?? 'Project has blocking dependencies', { dependencies: result.dependencies });
+      }
+
+      await publishEvent({
+        eventType: 'PROJECT_DELETED',
+        payload: { tenantId: context.tenant, projectId: id, userId: context.userId, timestamp: new Date().toISOString() },
       });
     }
 
@@ -498,7 +566,7 @@ export class ProjectService extends BaseService<IProject> {
       const knex = await this.getDbForContext(context);
       
       return withTransaction(knex, async (trx) => {
-        await assertCoManagedOperationalWrite(trx, context.tenant);
+        await admitOperationalWrite(trx, context.tenant);
         const project = await this.getById(projectId, { ...context, db: trx });
         if (!project) {
           throw new NotFoundError('Project not found');
@@ -558,7 +626,7 @@ export class ProjectService extends BaseService<IProject> {
       const knex = await this.getDbForContext(context);
       
       return withTransaction(knex, async (trx) => {
-        await assertCoManagedOperationalWrite(trx, context.tenant);
+        await admitOperationalWrite(trx, context.tenant);
         const updateData = {
           ...data,
           updated_at: new Date()
@@ -581,7 +649,7 @@ export class ProjectService extends BaseService<IProject> {
   async deletePhase(phaseId: string, context: ServiceContext): Promise<void> {
       const knex = await this.getDbForContext(context);
       return withTransaction(knex, async (trx) => {
-        await assertCoManagedOperationalWrite(trx, context.tenant);
+        await admitOperationalWrite(trx, context.tenant);
 
         const result = await scopedTable(trx, context.tenant, 'project_phases')
           .where({ phase_id: phaseId })
@@ -633,7 +701,7 @@ export class ProjectService extends BaseService<IProject> {
       const knex = await this.getDbForContext(context);
       
       const result = await withTransaction(knex, async (trx) => {
-        await assertCoManagedOperationalWrite(trx, context.tenant);
+        await admitOperationalWrite(trx, context.tenant);
         const db = tenantDb(trx, context.tenant);
         const phase = await db.table('project_phases')
           .where({ phase_id: phaseId })
@@ -752,11 +820,7 @@ export class ProjectService extends BaseService<IProject> {
         const mutation = { task, ctx, workflowEvents };
         registerAfterCommit(trx, async () => {
           for (const event of mutation.workflowEvents) {
-            await publishWorkflowEvent({
-              eventType: event.eventType,
-              ctx: mutation.ctx,
-              payload: event.payload,
-            });
+            await publishDeferredWorkflowEvent(event, mutation.ctx);
           }
         }, `PROJECT_TASK_EVENTS tenant=${context.tenant} task=${task.task_id}`);
         return mutation;
@@ -770,7 +834,7 @@ export class ProjectService extends BaseService<IProject> {
       const knex = await this.getDbForContext(context);
       
       const result = await withTransaction(knex, async (trx) => {
-        await assertCoManagedOperationalWrite(trx, context.tenant);
+        await admitOperationalWrite(trx, context.tenant);
         const db = tenantDb(trx, context.tenant);
         const beforeTask = await db.table('project_tasks')
           .where({ task_id: taskId })
@@ -866,11 +930,7 @@ export class ProjectService extends BaseService<IProject> {
         registerAfterCommit(trx, async () => {
           if (mutation.ctx) {
             for (const event of mutation.workflowEvents) {
-              await publishWorkflowEvent({
-                eventType: event.eventType,
-                ctx: mutation.ctx,
-                payload: event.payload,
-              });
+              await publishDeferredWorkflowEvent(event, mutation.ctx);
             }
           }
         }, `PROJECT_TASK_EVENTS tenant=${context.tenant} task=${task.task_id}`);
@@ -884,7 +944,7 @@ export class ProjectService extends BaseService<IProject> {
   async deleteTask(taskId: string, context: ServiceContext): Promise<void> {
       const knex = await this.getDbForContext(context);
       return withTransaction(knex, async (trx) => {
-        await assertCoManagedOperationalWrite(trx, context.tenant);
+        await admitOperationalWrite(trx, context.tenant);
 
         const result = await scopedTable(trx, context.tenant, 'project_tasks')
           .where({ task_id: taskId })
@@ -911,12 +971,13 @@ export class ProjectService extends BaseService<IProject> {
       const knex = await this.getDbForContext(context);
       
       return withTransaction(knex, async (trx) => {
-        await assertCoManagedOperationalWrite(trx, context.tenant);
+        await admitOperationalWrite(trx, context.tenant);
         const items = await this.getTaskChecklistItems(taskId, { ...context, db: trx });
         const nextOrderNumber = data.order_number ?? items.length + 1;
   
         const itemData = {
           ...data,
+          due_date: data.due_date ? new Date(data.due_date) : null,
           task_id: taskId,
           order_number: nextOrderNumber,
           tenant: context.tenant,
@@ -931,6 +992,45 @@ export class ProjectService extends BaseService<IProject> {
         return item;
       });
     }
+
+  /** Update one checklist item; the item must belong to the task in the path. */
+  async updateChecklistItem(
+    taskId: string,
+    checklistItemId: string,
+    data: UpdateTaskChecklistItemData,
+    context: ServiceContext
+  ): Promise<ITaskChecklistItem> {
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      const existing = await scopedTable<ITaskChecklistItem>(trx, context.tenant, 'task_checklist_items')
+        .where({ task_id: taskId, checklist_item_id: checklistItemId })
+        .first();
+      if (!existing) {
+        throw new NotFoundError('Checklist item not found');
+      }
+
+      const { due_date, ...rest } = data;
+      const updates: Partial<ITaskChecklistItem> = { ...rest };
+      if (due_date !== undefined) updates.due_date = due_date ? new Date(due_date) : null;
+
+      return ProjectTaskModel.updateChecklistItem(trx, context.tenant, checklistItemId, updates);
+    });
+  }
+
+  async deleteChecklistItem(taskId: string, checklistItemId: string, context: ServiceContext): Promise<void> {
+    const { knex } = await this.getKnex();
+
+    await withTransaction(knex, async (trx) => {
+      const existing = await scopedTable<ITaskChecklistItem>(trx, context.tenant, 'task_checklist_items')
+        .where({ task_id: taskId, checklist_item_id: checklistItemId })
+        .first();
+      if (!existing) {
+        throw new NotFoundError('Checklist item not found');
+      }
+      await ProjectTaskModel.deleteChecklistItem(trx, context.tenant, checklistItemId);
+    });
+  }
 
 
   // Project ticket links
@@ -958,16 +1058,61 @@ export class ProjectService extends BaseService<IProject> {
   async createTicketLink(projectId: string, data: CreateProjectTicketLinkData, context: ServiceContext): Promise<IProjectTicketLink> {
       const knex = await this.getDbForContext(context);
       return withTransaction(knex, async (trx) => {
-        await assertCoManagedOperationalWrite(trx, context.tenant);
+        await admitOperationalWrite(trx, context.tenant);
+        const db = tenantDb(trx, context.tenant);
 
         const linkData = {
-          ...data,
           project_id: projectId,
+          phase_id: data.phase_id ?? null,
+          task_id: data.task_id ?? null,
+          ticket_id: data.ticket_id,
+          // Default true, like every other link path: ticket time bills as
+          // project time unless the caller opts out (alga-2026-0002622).
+          bill_under_project: data.bill_under_project ?? true,
           tenant: context.tenant,
           created_at: new Date()
         };
 
-        const [link] = await tenantDb(trx, context.tenant).table('project_ticket_links')
+        // The resolver bills by the link's project, so a phase or task from
+        // another project would leave a link that says one thing and bills another.
+        if (linkData.phase_id) {
+          const phase = await db.table('project_phases')
+            .where({ phase_id: linkData.phase_id, project_id: projectId })
+            .first('phase_id');
+          if (!phase) {
+            throw new ValidationError('Phase does not belong to this project');
+          }
+        }
+        if (linkData.task_id) {
+          const taskQuery = db.table('project_tasks');
+          db.tenantJoin(taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+          const task = await taskQuery
+            .where({ 'project_tasks.task_id': linkData.task_id, 'project_phases.project_id': projectId })
+            .modify((query) => {
+              if (linkData.phase_id) query.where('project_tasks.phase_id', linkData.phase_id);
+            })
+            .first('project_tasks.task_id');
+          if (!task) {
+            throw new ValidationError('Task does not belong to this project');
+          }
+        }
+
+        // Same guard the model applies on the UI path. The table is unique only
+        // on (tenant, link_id), so without it one ticket collects duplicate
+        // links and the biller has to clean them up by hand.
+        const existing = await db.table('project_ticket_links')
+          .where({
+            project_id: linkData.project_id,
+            phase_id: linkData.phase_id,
+            task_id: linkData.task_id,
+            ticket_id: linkData.ticket_id
+          })
+          .first();
+        if (existing) {
+          throw new ConflictError('This ticket is already linked to this project task');
+        }
+
+        const [link] = await db.table('project_ticket_links')
           .insert(linkData)
           .returning('*');
 
@@ -1152,29 +1297,27 @@ export class ProjectService extends BaseService<IProject> {
   }
 
 
-  private async setupDefaultStatusMappings(projectId: string, context: ServiceContext): Promise<void> {
-      const knex = await this.getDbForContext(context);
-      
-      await withTransaction(knex, async (trx) => {
-        await assertCoManagedOperationalWrite(trx, context.tenant);
-        const db = tenantDb(trx, context.tenant);
-        const standardStatuses = await db.table('standard_statuses')
-          .where({ item_type: 'project_task' })
-          .orderBy('display_order');
+  /** Prefers the tenant's own project-task statuses and only falls back to the
+   * standard catalog, so a tenant that curated its statuses does not get the
+   * generic set. Takes the caller's transaction: the mappings must land with
+   * the project row or not at all. */
+  private async setupDefaultStatusMappings(
+    projectId: string,
+    context: ServiceContext,
+    trx: Knex.Transaction,
+  ): Promise<void> {
+    const customStatuses = await ProjectModel.getStatusesByType(trx, context.tenant, 'project_task');
+    const mappings = customStatuses.length
+      ? customStatuses.map(status => ({ status_id: status.status_id, is_standard: false }))
+      : (await ProjectModel.getStandardStatusesByType(trx, context.tenant, 'project_task'))
+          .map(status => ({ standard_status_id: status.standard_status_id, is_standard: true }));
 
-        for (const status of standardStatuses) {
-          await db.table('project_status_mappings').insert({
-            project_id: projectId,
-            standard_status_id: status.standard_status_id,
-            is_standard: true,
-            custom_name: null,
-            display_order: status.display_order,
-            is_visible: true,
-            tenant: context.tenant
-          });
-        }
+    for (const [index, mapping] of mappings.entries()) {
+      await ProjectModel.addProjectStatusMapping(trx, context.tenant, projectId, {
+        ...mapping, custom_name: null, display_order: index + 1, is_visible: true,
       });
     }
+  }
 
 
   private async getProjectStatistics(projectId: string, context: ServiceContext): Promise<any> {
@@ -1419,7 +1562,7 @@ export class ProjectService extends BaseService<IProject> {
     const knex = await this.getDbForContext(context);
     
     return withTransaction(knex, async (trx) => {
-      await assertCoManagedOperationalWrite(trx, context.tenant);
+      await admitOperationalWrite(trx, context.tenant);
       const results: IProject[] = [];
       
       for (const projectId of projectIds) {
@@ -1473,13 +1616,56 @@ export class ProjectService extends BaseService<IProject> {
   /**
    * Get task by ID
    */
-  async getTaskById(taskId: string, context: ServiceContext): Promise<IProjectTask | null> {
+  /**
+   * One task with the names a detail view needs: phase and project, the
+   * resolved status (custom mapping name, then project status, then standard),
+   * and the assignee. Mobile opens tasks by id from pushes and deep links, so
+   * the row has to stand on its own.
+   */
+  async getTaskById(taskId: string, context: ServiceContext): Promise<(IProjectTask & {
+    phase_name?: string | null;
+    project_id?: string | null;
+    project_name?: string | null;
+    client_id?: string | null;
+    status_name?: string | null;
+    is_closed?: boolean;
+    assigned_user_name?: string | null;
+    effective_service_id?: string | null;
+    service_source?: ProjectServiceSource | null;
+    service_name?: string | null;
+  }) | null> {
     const knex = await this.getDbForContext(context);
-    
-    const task = await scopedTable<IProjectTask>(knex, context.tenant, 'project_tasks')
-      .where({
-        task_id: taskId
-      })
+    const db = tenantDb(knex, context.tenant);
+
+    const query = scopedTable(knex, context.tenant, 'project_tasks');
+    db.tenantJoin(query, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id', { type: 'left' });
+    db.tenantJoin(query, 'projects', 'project_phases.project_id', 'projects.project_id', { type: 'left' });
+    db.tenantJoin(query, 'project_status_mappings as psm', 'project_tasks.project_status_mapping_id', 'psm.project_status_mapping_id', { type: 'left' });
+    db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+    db.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+    db.tenantJoin(query, 'users as assignee', 'project_tasks.assigned_to', 'assignee.user_id', { type: 'left' });
+    // One catalog join per level so the name matches the id the COALESCE picked.
+    db.tenantJoin(query, 'service_catalog as task_service', 'project_tasks.service_id', 'task_service.service_id', { type: 'left' });
+    db.tenantJoin(query, 'service_catalog as phase_service', 'project_phases.service_id', 'phase_service.service_id', { type: 'left' });
+    db.tenantJoin(query, 'service_catalog as project_service', 'projects.service_id', 'project_service.service_id', { type: 'left' });
+
+    const task = await query
+      .where('project_tasks.task_id', taskId)
+      .select(
+        'project_tasks.*',
+        'project_phases.phase_name',
+        'projects.project_id',
+        'projects.project_name',
+        'projects.client_id',
+        knex.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
+        knex.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
+        knex.raw("NULLIF(TRIM(CONCAT(assignee.first_name, ' ', assignee.last_name)), '') as assigned_user_name"),
+        // The task's own service_id stays in `project_tasks.*`; these three say
+        // which service a time entry should actually prefill, and from where.
+        knex.raw(`${effectiveServiceIdSql(TASK_SERVICE_ALIASES)} as effective_service_id`),
+        knex.raw(`${effectiveServiceSourceSql(TASK_SERVICE_ALIASES)} as service_source`),
+        knex.raw(`${effectiveServiceNameSql(TASK_SERVICE_CATALOG_ALIASES)} as service_name`),
+      )
       .first();
 
     return task || null;

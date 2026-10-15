@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "runId": "34299806767",
+  "unitJobId": "102304102871",
+  "publishedRevision": "b413842a9a402ed6730bddcc059e8de73287a231",
+  "testedRevision": "d7d864473db09832671427a71a4220601709376c",
+  "runStatus": "completed",
+  "runConclusion": "failure",
+  "unitFilesPassed": 2746,
+  "unitCasesPassed": 14986,
+  "todoCases": 3,
+  "assertionFailures": 0,
+  "remainingTodoCases": [
+    "international transactions",
+    "tax caps",
+    "subscriptions spanning multiple tax periods"
+  ],
+  "limits": [
+    "Completeness gate fails the three TODOs; whole-run readiness is not green.",
+    "Browser provider topology, PostgreSQL upgrade and Teams failures have reviewed follow-up repairs outside this published revision.",
+    "Two-worker collection completed; measured pre-execution interval is observational and CI memory was not instrumented."
+  ],
+  "updatedAt": "2026-09-09T02:48:57Z"
+}

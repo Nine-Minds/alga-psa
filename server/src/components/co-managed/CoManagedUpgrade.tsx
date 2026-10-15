@@ -13,6 +13,7 @@ import { getCoManagedUpgradeScreenAction, startCoManagedUpgradeAction } from '@e
 
 import CoManagedUpgradeBilling from './CoManagedUpgradeBilling';
 import CoManagedUpgradePurchase from './CoManagedUpgradePurchase';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 type Screen = Awaited<ReturnType<typeof getCoManagedUpgradeScreenAction>>;
 type Request = Parameters<typeof startCoManagedUpgradeAction>[0];
@@ -58,7 +59,7 @@ function UpgradeContent() {
   }, [screen, reload]);
   const start = async () => {
     if (busy || screen?.state !== 'eligible' || !screen.entitlementReady) return;
-    command.current ??= { relationshipId: screen.relationshipId, expectedRevision: screen.revision, operationId: crypto.randomUUID() };
+    command.current ??= { relationshipId: screen.relationshipId, expectedRevision: screen.revision, operationId: newCoManagedOperationId() };
     setBusy(true); setError(null);
     try {
       const result = await startCoManagedUpgradeAction(command.current);

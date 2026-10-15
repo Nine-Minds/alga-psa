@@ -3,6 +3,7 @@
 import type { CoManagedSharedResource, CoManagedConversationDraftRequest, CoManagedCommentReference } from '@alga-psa/co-managed';
 import { snapshotConversationDocument, type CoManagedRichTextDocument } from '@alga-psa/co-managed/conversationRichText';
 import { beginCoManagedConversationDraftAction, uploadCoManagedDraftAttachmentAction, publishCoManagedConversationDraftAction } from '@/lib/actions/coManagedConversationDraftActions';
+import { newCoManagedOperationId } from './coManagedOperationId';
 type Audience = NonNullable<CoManagedConversationDraftRequest['audience']>;
 export interface PreparedConversationDraft {
   resource: CoManagedSharedResource; storeTenant: string; request: CoManagedConversationDraftRequest;
@@ -15,7 +16,7 @@ export async function prepareConversationDraft(input: { resource: CoManagedShare
   const resource = { ...input.resource }, operationId = input.operationId, audience = input.audience;
   const content = { document: snapshotConversationDocument(input.document) }, parent = input.parent ? { ...input.parent } : undefined;
   const storeTenant = parent?.storeTenant ?? (audience === 'organization_private' && input.actorTenant !== resource.tenant ? input.actorTenant : resource.tenant);
-  const files = input.files.map(file => ({ file, attachmentId: crypto.randomUUID() }));
+  const files = input.files.map(file => ({ file, attachmentId: newCoManagedOperationId() }));
   const manifest: CoManagedConversationDraftRequest['files'] = [];
   for (const { file, attachmentId } of files) {
     const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());

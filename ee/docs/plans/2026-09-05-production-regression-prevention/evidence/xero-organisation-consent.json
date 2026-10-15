@@ -1,0 +1,22 @@
+{
+  "scope": "Xero emulator per-application organisation consent",
+  "test": "packages/emulators/xero/tests/smoke.test.ts",
+  "before": "New regression failed: /connections exposed a newly seeded organisation without consent",
+  "after": {
+    "testsPassed": 13,
+    "typecheck": "passed",
+    "browserCollection": "enterprise Xero export case collected",
+    "checks": [
+      "Unconsented organisation omitted from connections",
+      "Unconsented reads and writes rejected with403 and no stored contact changes",
+      "Changes to another application do not alter existing access",
+      "Invalid consent changes are atomic",
+      "Revocation and restoration apply to existing access tokens",
+      "Browser fixture explicitly grants both connected organisations"
+    ]
+  },
+  "limits": [
+    "Updated browser fixture has not yet run in native CI",
+    "This validates emulator behavior, not live-provider parity"
+  ]
+}

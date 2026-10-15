@@ -5,7 +5,7 @@
 
 import type { Knex } from 'knex';
 import { expect } from '@playwright/test';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 
 export interface TenantVerificationData {
   tenantId: string;

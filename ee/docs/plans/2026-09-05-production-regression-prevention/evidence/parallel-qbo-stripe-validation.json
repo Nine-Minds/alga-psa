@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "organization": "coordinator plus three agents",
+  "qbo": {
+    "beforeFailures": 2,
+    "afterPassed": 17,
+    "typecheck": "passed",
+    "scope": "Refresh validity follows advertised TTL; reauthorization, renewal, failed client authentication."
+  },
+  "stripe": {
+    "beforeFailures": 2,
+    "afterPassed": 24,
+    "typecheck": "passed",
+    "scope": "Deep immutable resource snapshot and signed webhook replay after payment recovery."
+  },
+  "coordinatorCombinedValidation": {
+    "passed": 41,
+    "files": 5,
+    "workers": 2,
+    "durationSeconds": 2.22,
+    "failed": 0
+  },
+  "limits": [
+    "No complete QBO rotation-grace parity claim.",
+    "Stripe replay control does not prove automatic retry scheduling or app callback processing.",
+    "Current-source CI remains required."
+  ]
+}

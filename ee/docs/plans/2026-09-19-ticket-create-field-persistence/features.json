@@ -1,0 +1,74 @@
+[
+  {
+    "id": "F001",
+    "description": "Persist url in shared ticket creation and preserve it through final schema parsing.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#r1--shared-persistence-and-field-handling"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Persist nullable severity_id, urgency_id, and impact_id in shared ticket creation and retain them in shared row validation.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#r1--shared-persistence-and-field-handling"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Drive shared create-row construction with a typed field-handling declaration exhaustive over CreateTicketInput, including explicit transformations and intentional exclusions.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#r1--shared-persistence-and-field-handling"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Accept optional classification UUIDs in REST create validation and forward them through TicketService to the shared model.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#r2--rest-contract-and-forwarding"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Return all four stored fields through create and detail responses and align ticket response schemas and relevant types.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#r2--rest-contract-and-forwarding"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Document the four optional create fields, their formats, and same-tenant reference requirements in the active OpenAPI create contract.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#r2--rest-contract-and-forwarding"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Preserve successful creation with omitted optional fields, null storage, and existing cleaning, defaults, aliases, and transformed attributes.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#r3--integrity-and-compatibility"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Reject malformed classification values and preserve tenant-qualified foreign-key enforcement and transactional rollback for invalid references.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#r3--integrity-and-compatibility"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Preserve existing update request acceptance despite create/row schema inheritance, including working URL updates.",
+    "implemented": true,
+    "prdRefs": [
+      "PRD.md#r2--rest-contract-and-forwarding"
+    ]
+  }
+]

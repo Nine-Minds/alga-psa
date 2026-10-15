@@ -1,0 +1,442 @@
+[
+  {
+    "id": "F001",
+    "description": "MobileCapabilitiesService.getMyCapabilities returns a theme block { pairId, label, light, dark, version } alongside features",
+    "implemented": true,
+    "commitGroup": "server-theme-api",
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Predefined pair: light/dark token sets are taken from CUSTOM_THEME_PRESETS for the tenant's pairId",
+    "implemented": true,
+    "commitGroup": "server-theme-api",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Custom pair (Enterprise): light/dark token sets are the tenant's saved custom tokens",
+    "implemented": true,
+    "commitGroup": "server-theme-api",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Custom pair with tokens failing findInvalidCustomThemeTokens falls back to the Alga preset and reports pairId 'alga'",
+    "implemented": true,
+    "commitGroup": "server-theme-api",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Tenant with no saved theme resolves to the default pair (alga) rather than omitting the block",
+    "implemented": true,
+    "commitGroup": "server-theme-api",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "theme.label is the pair's English label from THEME_PAIRS ('Custom' for custom)",
+    "implemented": true,
+    "commitGroup": "server-theme-api",
+    "prdRefs": [
+      "FR1",
+      "FR17"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "theme.version is a stable hash of pairId plus both token sets (same input → same hash, any token change → new hash)",
+    "implemented": true,
+    "commitGroup": "server-theme-api",
+    "prdRefs": [
+      "FR3"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "OpenAPI entry for /api/v1/mobile/me/capabilities documents the theme block and a MobileThemeSeedTokens schema with the 15 keys",
+    "implemented": true,
+    "commitGroup": "server-theme-api",
+    "prdRefs": [
+      "FR4",
+      "FR5"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "ee/mobile/src/ui/themeMath.ts ports hexToRgb, mix, rampFromStops and brandRamp with the same signatures and numeric behaviour as packages/tenancy customTheme.ts",
+    "implemented": true,
+    "commitGroup": "theme-math",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "themeMath exports rgbToHex and contrastRatio (WCAG relative luminance) for textInverse selection",
+    "implemented": true,
+    "commitGroup": "theme-math",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "A committed fixture (themeMath.fixture.json) holds ramp outputs generated from the web implementation for all nine presets in both modes",
+    "implemented": true,
+    "commitGroup": "theme-math",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "ui/themeTokens.ts defines MobileThemeSeedTokens (15 keys), MobileTheme { pairId, label, light, dark, version } and a parse/guard for untrusted input",
+    "implemented": true,
+    "commitGroup": "theme-engine",
+    "prdRefs": [
+      "FR5",
+      "FR9"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "buildTheme(tokens, mode, { pairId }) returns a complete Theme with spacing, radii, shadows and typography unchanged from the current file",
+    "implemented": true,
+    "commitGroup": "theme-engine",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "buildTheme maps background, card, text, textSecondary, placeholder, border and borderLight from the seed tokens and the neutral ramp per FR7",
+    "implemented": true,
+    "commitGroup": "theme-engine",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "buildTheme maps primary, primaryLight, primaryDark from the primary brand ramp per FR7",
+    "implemented": true,
+    "commitGroup": "theme-engine",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "buildTheme maps secondary, cyan and accent from the secondary and accent brand ramps per FR7",
+    "implemented": true,
+    "commitGroup": "theme-engine",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "buildTheme picks textInverse as white when white reaches 4.5:1 on primary, otherwise textPrimary",
+    "implemented": true,
+    "commitGroup": "theme-engine",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "buildTheme uses fixed per-mode status colours (danger, warning, success, info, orange, indigo) matching the web base tokens",
+    "implemented": true,
+    "commitGroup": "theme-engine",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "buildTheme derives badge sets (info, success, warning, danger, neutral) by mixing each status colour with the card colour at the documented per-mode ratios",
+    "implemented": true,
+    "commitGroup": "theme-engine",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "buildTheme derives toast sets (info, success, error) from the same status/card mixing",
+    "implemented": true,
+    "commitGroup": "theme-engine",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "buildTheme substitutes the built-in Alga value for any individual token that fails to parse and logs once per version",
+    "implemented": true,
+    "commitGroup": "theme-engine",
+    "prdRefs": [
+      "FR9"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "lightTheme and darkTheme exports in ui/themes.ts are produced by buildTheme from the embedded Alga preset and remain the fallback",
+    "implemented": true,
+    "commitGroup": "theme-engine",
+    "prdRefs": [
+      "FR10"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "The embedded Alga preset in the app is the only palette shipped in the binary; no other pair's tokens are hard-coded",
+    "implemented": true,
+    "commitGroup": "theme-engine",
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "api/capabilities.ts MyCapabilities gains an optional theme field typed as MobileTheme",
+    "implemented": true,
+    "commitGroup": "theme-delivery",
+    "prdRefs": [
+      "FR11"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "CapabilitiesProvider exposes theme (or null) and refreshes it on the same triggers as features (sign-in, resume, focus)",
+    "implemented": true,
+    "commitGroup": "theme-delivery",
+    "prdRefs": [
+      "FR11",
+      "FR14"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "ThemeProvider builds the active theme from the capabilities theme block, memoised per (version, mode), and falls back to the Alga pair when absent",
+    "implemented": true,
+    "commitGroup": "theme-delivery",
+    "prdRefs": [
+      "FR11"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "ThemeProvider caches the theme block in secure storage under alga.mobile.theme.tokens.<baseUrl>.<tenantId> whenever a new version arrives",
+    "implemented": true,
+    "commitGroup": "theme-delivery",
+    "prdRefs": [
+      "FR12",
+      "FR14"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "On launch ThemeProvider reads the cached block for the current server+tenant before the first themed frame so warm launches show the tenant pair, not Alga",
+    "implemented": true,
+    "commitGroup": "theme-delivery",
+    "prdRefs": [
+      "FR12"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Signing out or changing the server host clears the cached theme block and reverts to Alga",
+    "implemented": true,
+    "commitGroup": "theme-delivery",
+    "prdRefs": [
+      "FR13"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "The light/dark/system preference continues to select which half of the pair renders and keeps its existing storage key",
+    "implemented": true,
+    "commitGroup": "theme-delivery",
+    "prdRefs": [
+      "FR15"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "ThemeContext exposes the active pairId and label for the Settings row",
+    "implemented": true,
+    "commitGroup": "theme-delivery",
+    "prdRefs": [
+      "FR17"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Settings gains an Appearance section with a row cycling System → Light → Dark bound to useThemePreference",
+    "implemented": true,
+    "commitGroup": "settings-appearance",
+    "prdRefs": [
+      "FR16"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Settings shows a read-only Theme row with the pair label and the hint 'Set by your administrator in AlgaPSA settings', or 'Default' when no theme was sent",
+    "implemented": true,
+    "commitGroup": "settings-appearance",
+    "prdRefs": [
+      "FR17"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "settings.json gains the appearance and theme strings; no hard-coded English in the rows",
+    "implemented": true,
+    "commitGroup": "settings-appearance",
+    "prdRefs": [
+      "FR16",
+      "FR17"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "DocumentsSection preview overlay uses theme tokens for its text and controls; the black scrim stays literal",
+    "implemented": true,
+    "commitGroup": "color-sweep",
+    "prdRefs": [
+      "FR18"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "ScanView chrome, SignInScreen, MentionSuggestionList and MaterialsSection replace hex literals with theme tokens",
+    "implemented": true,
+    "commitGroup": "color-sweep",
+    "prdRefs": [
+      "FR18"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "ESLint restricts hex colour literals under src/** with an allow-list for themes.ts, colors.ts, tagColors.ts, Avatar.tsx and generatedEditorHtml.ts",
+    "implemented": true,
+    "commitGroup": "color-sweep",
+    "prdRefs": [
+      "FR19"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "The generated editor HTML declares CSS variables for background, text, secondary text, link, mention background and mention text with the current light defaults",
+    "implemented": true,
+    "commitGroup": "editor-theme",
+    "prdRefs": [
+      "FR20"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "bridge.ts gains a setTheme message that updates those CSS variables at runtime",
+    "implemented": true,
+    "commitGroup": "editor-theme",
+    "prdRefs": [
+      "FR20"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "TicketRichTextEditor sends setTheme on load and whenever the active theme changes (editable and read-only)",
+    "implemented": true,
+    "commitGroup": "editor-theme",
+    "prdRefs": [
+      "FR20",
+      "FR21"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "CommentsSection, DescriptionSection and ExpandableComment render through the themed editor so comment bodies match the card",
+    "implemented": true,
+    "commitGroup": "editor-theme",
+    "prdRefs": [
+      "FR21"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Theme carries a contrast flag derived from pairId === 'high-contrast'",
+    "implemented": true,
+    "commitGroup": "high-contrast",
+    "prdRefs": [
+      "FR22"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Card, KeyValue and list rows use the strong border token when the contrast flag is set",
+    "implemented": true,
+    "commitGroup": "high-contrast",
+    "prdRefs": [
+      "FR22"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Badge draws a one-pixel border in its status colour when the contrast flag is set",
+    "implemented": true,
+    "commitGroup": "high-contrast",
+    "prdRefs": [
+      "FR22"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "A mobile test builds all nine presets in both modes from the committed fixture and asserts the mapped tokens match expected values",
+    "implemented": true,
+    "commitGroup": "verification",
+    "prdRefs": [
+      "Acceptance"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "A mobile test runs the ported contrast checks over all nine built themes and asserts no failures",
+    "implemented": true,
+    "commitGroup": "verification",
+    "prdRefs": [
+      "NFR"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "A server test pins the theme block for each predefined pair to CUSTOM_THEME_PRESETS and asserts the custom fallback path",
+    "implemented": true,
+    "commitGroup": "verification",
+    "prdRefs": [
+      "FR2",
+      "FR4"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Device pass checklist in SCRATCHPAD.md completed for Alga, Forest, Vice, High contrast and one custom pair, light and dark",
+    "implemented": false,
+    "commitGroup": "verification",
+    "prdRefs": [
+      "Acceptance"
+    ]
+  }
+]

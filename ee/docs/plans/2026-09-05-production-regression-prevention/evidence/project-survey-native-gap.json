@@ -1,0 +1,32 @@
+{
+  "scope": "Native integration shard 1 failure classification",
+  "nativeRun": 34151013496,
+  "nativeJob": 101833204291,
+  "publishedHead": "7b170294a755dfebba34cb8bbfc1069b6d8ba8bc",
+  "runtime": {
+    "passed": 602,
+    "skipped": 1,
+    "files": 73
+  },
+  "failure": "Mandatory execution reconciliation rejects the skipped project-completion survey test.",
+  "test": "server/src/test/integration/surveyTriggerDispatch.integration.test.ts",
+  "rootCause": "Project subscriber supplies ticketId: projectId; invitation service only loads tickets and both invitation/response paths are ticket-specific.",
+  "requiredRepair": [
+    "Add tenant-scoped project subject support to invitation and response storage, preserving ticket invitations.",
+    "Send project-specific invitation content and carry project identity through token validation and response submission.",
+    "Include project responses in analytics and render valid project links instead of assuming a ticket.",
+    "Exercise project closure through the actual invitation service with captured test email and real persistence; verify tenant isolation and response submission before removing the skip.",
+    "Retain ticket survey regression coverage and validate migrations on PostgreSQL and Citus."
+  ],
+  "artifacts": [
+    {
+      "path": "/tmp/alga-integration-shard1-7b170.log",
+      "sha256": "e2c698d4f5f19e30c13d225171fb8190dd35eec392e586f20993dfdc0f011239"
+    }
+  ],
+  "limits": [
+    "The skipped test mocks the invitation service; simply unskipping or renaming its payload would not prove a working project survey.",
+    "No quarantine or execution-policy relaxation applied.",
+    "Repair not yet implemented."
+  ]
+}

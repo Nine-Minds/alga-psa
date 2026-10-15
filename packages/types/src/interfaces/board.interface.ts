@@ -90,6 +90,10 @@ export interface IBoard extends TenantEntity {
   // inbound_reply_reopen_enabled switch is also on.
   inbound_reply_reopen_side_conversations_enabled?: boolean;
 
-  // Controls live timer + tracked intervals visibility in ticket details
+  // Show the stopwatch on tickets in this board (null/undefined resolves to enabled; see boardLiveTicketTimer.ts)
   enable_live_ticket_timer?: boolean;
+
+  // When false the board is hidden from every client portal surface,
+  // regardless of visibility group membership. Defaults to true.
+  client_portal_visible?: boolean;
 }

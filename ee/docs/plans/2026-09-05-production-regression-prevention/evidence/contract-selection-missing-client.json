@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "baseRevision": "01eb681343cd0196c49152c064d9cabe5de72769",
+  "scope": "Missing-client input handling in legacy, billing and scheduling eligibility helpers",
+  "before": {
+    "passed": 8,
+    "failed": 12,
+    "log": "/tmp/alga-contract-selection-all-before.log"
+  },
+  "after": {
+    "passed": 52,
+    "failed": 0,
+    "skipped": 0,
+    "files": 5,
+    "log": "/tmp/alga-contract-selection-final.log"
+  },
+  "behavior": [
+    "Empty, whitespace-only, null and undefined client IDs return no candidates without database queries.",
+    "The legacy UI wrapper still rejects missing tenant context, including when the client ID is empty.",
+    "Existing deterministic selection, profile narrowing and projection cases remain passing."
+  ],
+  "testFiles": [
+    "server/src/test/unit/billingPlanSelection.test.ts",
+    "server/src/test/unit/contractLineDisambiguation.test.ts",
+    "packages/billing/tests/contractLineDisambiguation.profileNarrowing.test.ts",
+    "packages/billing/tests/contractLineDisambiguation.defaultFallback.test.ts",
+    "packages/scheduling/tests/contractLineDisambiguation.defaultFallback.test.ts"
+  ],
+  "hashes": {
+    "alga-contract-selection-all-before.log": "24d477ad2309df7b7f99f461461b44f777b3ffafd763d3b9530869a281877667",
+    "alga-contract-selection-final.log": "14338fae3216c8cdb91d9ce43df04a11d9db0feb69e11b613493ce6d5f7f540a"
+  },
+  "limitations": [
+    "Database I/O is substituted; this proves early input handling, not SQL eligibility or tenant isolation in a live database.",
+    "Local focused evidence; current native CI remains unverified.",
+    "No production incident or data exposure claim."
+  ]
+}

@@ -74,3 +74,32 @@ it('ignores an old in-flight response after the authenticated user context chang
   await act(async () => { resolve(inbox('Previous user secret')); await pending; });
   await waitFor(() => expect(result.current.notifications[0]?.message).toBe('Other home user'));
 });
+
+it('delivers a telephony ring to the card over the same authenticated signal channel', async () => {
+  const { result } = renderHook(() => useInternalNotifications({ tenant, userId }));
+  await waitFor(() => expect(result.current.isConnected).toBe(true));
+  const provider = mocks.providers[0];
+  const call = { callId: 'call-1', participantId: 'p-1', dn: '101', contact: null };
+  const ring = (event: string, receivedAt = new Date().toISOString()) => act(async () => {
+    provider.options.onStateless({ payload: JSON.stringify({ type: 'telephony.incoming_call', entry: { event, call, receivedAt } }) });
+  });
+
+  expect(result.current.incomingCall).toBeNull();
+  await ring('ringing');
+  expect(result.current.incomingCall).toMatchObject({ event: 'ringing', call });
+  // The transport carries the ring; the document it happens to own never caches it.
+  expect(provider.options.document.getMap('incomingCall').get('data')).toBeUndefined();
+  expect(result.current.notifications[0].message).toBe('Current authorized content');
+
+  act(() => { result.current.dismissIncomingCall(); });
+  expect(result.current.incomingCall).toBeNull();
+
+  // reduceIncomingCall still owns the fold: connected/ended clears the same call.
+  await ring('ringing');
+  await ring('ended');
+  expect(result.current.incomingCall).toBeNull();
+
+  // A ring older than the reducer's freshness window never reaches the card.
+  await ring('ringing', new Date(Date.now() - 120_000).toISOString());
+  expect(result.current.incomingCall).toBeNull();
+});

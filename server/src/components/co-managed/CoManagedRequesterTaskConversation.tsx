@@ -8,6 +8,7 @@ import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { CoManagedFeatureBoundary } from './CoManagedFeatureBoundary';
 import { getRequesterTaskConversationAction, createRequesterTaskCommentAction } from '@/lib/actions/coManagedRequesterTaskActions';
 import { conversationText } from './conversationText';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 type Screen = Awaited<ReturnType<typeof getRequesterTaskConversationAction>>;
 type Request = Parameters<typeof createRequesterTaskCommentAction>[1];
@@ -59,7 +60,7 @@ function Messages({ tenant, userId, ...target }: RequesterTaskConversationProps 
   async function send() {
     if (saving.current || !screen?.canWrite) return;
     saving.current = true; setBusy(true); setSendError(false);
-    const request = pending.current ?? { operationId: crypto.randomUUID(), text, ...(parent ? { parent } : {}) };
+    const request = pending.current ?? { operationId: newCoManagedOperationId(), text, ...(parent ? { parent } : {}) };
     pending.current = request;
     try {
       await createRequesterTaskCommentAction(target, request);

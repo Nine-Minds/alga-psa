@@ -25,6 +25,7 @@ export const namedConversationEmailTransport: NamedConversationEmailTransport = 
     const { note } = encodeConversationContent(content);
     const text = extractTicketRichTextPlainText(note);
     const payload = { from: { email: mailbox.email, ...(mailbox.name ? { name: mailbox.name } : {}) }, replyTo: { email: mailbox.email },
+      mailClass: 'ticket' as const,
       ...envelope, headers, ...(files.length ? { files } : {}),
       html: `<div data-alga-reply-boundary="true"></div>${convertBlockNoteToHTML(note)}<div style="display:none" data-alga-reply-token="${replyToken}"></div>`,
       text: `--- Please reply above this line ---\n\n${text}\n\n[ALGA-REPLY-TOKEN ${replyToken}]` };
@@ -32,10 +33,10 @@ export const namedConversationEmailTransport: NamedConversationEmailTransport = 
     return { payload, review };
   },
   async recheck(payload, mailbox) {
-    return TenantEmailService.getInstance(mailbox.tenant).prepareReviewedEmail({ ...payload, attachments: await emailFiles(payload.files), tenantId: mailbox.tenant, threading: 'conversation' });
+    return TenantEmailService.getInstance(mailbox.tenant).prepareReviewedEmail({ ...payload, mailClass: 'ticket', attachments: await emailFiles(payload.files), tenantId: mailbox.tenant, threading: 'conversation' });
   },
   async send(payload, review, mailbox) {
-    return TenantEmailService.getInstance(mailbox.tenant).sendEmail({ ...payload, attachments: await emailFiles(payload.files), tenantId: mailbox.tenant,
+    return TenantEmailService.getInstance(mailbox.tenant).sendEmail({ ...payload, mailClass: 'ticket', attachments: await emailFiles(payload.files), tenantId: mailbox.tenant,
       threading: 'conversation', retryPolicy: 'caller', reviewed: review });
   },
 };

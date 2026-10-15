@@ -4,6 +4,11 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import ManagedDomainList from '@ee/components/settings/email/ManagedDomainList';
 
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { createLocaleTranslationMock } = await import('@ee/__tests__/utils/localeTranslationMock');
+  return createLocaleTranslationMock('msp/email-providers');
+});
+
 vi.mock('@alga-psa/ui/components/Card', () => ({
   Card: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
   CardHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

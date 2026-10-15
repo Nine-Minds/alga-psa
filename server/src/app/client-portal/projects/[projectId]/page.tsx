@@ -4,7 +4,12 @@ import { getClientProjectDetails } from '@alga-psa/client-portal/actions';
 import { ProjectDetailsContainer } from '@alga-psa/client-portal/components';
 import logger from '@alga-psa/core/logger';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  userFacingErrorMessage,
+} from '@alga-psa/ui/lib/errorHandling';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
@@ -85,12 +90,10 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     return (
       <Alert id="project-error-message" variant="destructive">
         <AlertDescription>
-          {t('messages.errorWithMessage', {
-            message: error instanceof Error
-              ? error.message
-              : t('messages.loadError', { defaultValue: 'Failed to load project details' }),
-            defaultValue: 'Error: {{message}}',
-          })}
+          {userFacingErrorMessage(
+            error,
+            t('messages.loadError', { defaultValue: 'Failed to load project details' }),
+          )}
         </AlertDescription>
       </Alert>
     );

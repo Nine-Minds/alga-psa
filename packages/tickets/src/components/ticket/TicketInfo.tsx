@@ -15,6 +15,7 @@ import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { buildTicketAssignmentKey } from '../../lib/ticketAssignmentKey';
 import { CategoryPicker } from '../CategoryPicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { TagManager } from '@alga-psa/tags/components';
@@ -31,7 +32,8 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import QuickAddCategory from '../QuickAddCategory';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
+import { useRegisterUnsavedChanges, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
+import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { SlaTimerStatus } from '@alga-psa/types';
 import { SlaStatusBadge } from '@alga-psa/ui/components/sla';
@@ -90,6 +92,8 @@ interface TicketInfoProps {
   itilCategory?: string;
   itilSubcategory?: string;
   renderProjectTaskActions?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
+  /** Injected quick-invoice-a-ticket action (billing package). */
+  renderQuickInvoiceActions?: (args: { ticket: ITicket }) => React.ReactNode;
   onResolveAndClose?: () => void;
   resolveAndCloseDisabled?: boolean;
   additionalAgents?: { user_id: string; name: string }[];
@@ -145,6 +149,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   itilCategory,
   itilSubcategory,
   renderProjectTaskActions,
+  renderQuickInvoiceActions,
   onResolveAndClose,
   resolveAndCloseDisabled = false,
   additionalAgents,
@@ -197,6 +202,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     suppressInternalNotifications: false,
   });
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const activityCrossFeature = useOptionalActivityCrossFeature();
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
   const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
@@ -324,6 +330,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
   // Register unsaved changes with the context
   useRegisterUnsavedChanges(`ticket-info-${id}`, hasUnsavedChanges);
+  // Typed description/title text must survive Escape / overlay click on the hosting Drawer or Dialog.
+  useRegisterDismissGuard(hasDescriptionContentChanged || (isEditingTitle && titleValue !== ticket.title));
 
   // Initialize form when ticket loads
   useEffect(() => {
@@ -481,6 +489,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   // Fetch board config when pending board changes
   useEffect(() => {
     const boardIdToFetch = pendingChanges.board_id;
+    // The ref below survives unmount, so it alone cannot tell a superseded
+    // fetch from one whose component is gone; this flag can.
+    let cancelled = false;
 
     const fetchPendingBoardConfig = async () => {
       if (boardIdToFetch && boardIdToFetch !== ticket.board_id) {
@@ -492,7 +503,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         try {
           const data = await getTicketCategoriesByBoard(boardIdToFetch);
 
-          if (fetchingBoardIdRef.current === boardIdToFetch) {
+          if (!cancelled && fetchingBoardIdRef.current === boardIdToFetch) {
             if (isReturnedActionError(data)) {
               console.warn('Failed to fetch pending board config:', getErrorMessage(data));
               setPendingCategories([]);
@@ -521,7 +532,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             setIsLoadingBoardConfig(false);
           }
         } catch (error) {
-          if (fetchingBoardIdRef.current === boardIdToFetch) {
+          if (!cancelled && fetchingBoardIdRef.current === boardIdToFetch) {
             console.error('Failed to fetch pending board config:', error);
             setIsLoadingBoardConfig(false);
           }
@@ -535,6 +546,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     };
 
     fetchPendingBoardConfig();
+
+    return () => {
+      cancelled = true;
+    };
   }, [pendingChanges.board_id, ticket.board_id]);
 
   // Get ITIL categories from props (now includes both custom and ITIL)
@@ -593,11 +608,18 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
   // Separate useEffect for fetching categories based on board
   useEffect(() => {
+    // A board switch — or an unmount — supersedes whatever is still in flight.
+    // Without this guard a slow response for the previous board lands on the
+    // board the user has since selected, and a response that arrives after the
+    // component is gone updates a tree React has already discarded.
+    let cancelled = false;
+
     const fetchCategories = async () => {
       try {
         if (ticket.board_id) {
           // Fetch categories for the specific board
           const data = await getTicketCategoriesByBoard(ticket.board_id);
+          if (cancelled) return;
           if (isReturnedActionError(data)) {
             console.warn('Failed to fetch ticket categories:', getErrorMessage(data));
             setCategories([]);
@@ -630,6 +652,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         } else {
           // If no board, fetch all categories and use custom categories
           const fetchedCategories = await getTicketCategories();
+          if (cancelled) return;
           if (isReturnedActionError(fetchedCategories)) {
             console.warn('Failed to fetch ticket categories:', getErrorMessage(fetchedCategories));
             setCategories([]);
@@ -656,6 +679,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           });
         }
       } catch (error) {
+        if (cancelled) return;
         console.error('Failed to fetch categories:', error);
         // Set empty defaults on error
         setCategories([]);
@@ -669,6 +693,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     };
 
     fetchCategories();
+
+    return () => {
+      cancelled = true;
+    };
   }, [ticket.board_id]); // Re-fetch when board changes
 
   useEffect(() => {
@@ -836,7 +864,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       case 'category_id': {
         const categoryLookup = effectiveCategories.find((category) => category.category_id === ticket.subcategory_id)
           ?? effectiveCategories.find((category) => category.category_id === ticket.category_id);
-        return categoryLookup?.category_name ?? t('properties.notAvailable', 'N/A');
+        const parentLookup = categoryLookup?.parent_category
+          ? effectiveCategories.find((category) => category.category_id === categoryLookup.parent_category)
+          : undefined;
+        return categoryLookup
+          ? <>{parentLookup && <><strong className="font-semibold">{parentLookup.category_name}</strong> → </>}{categoryLookup.category_name}</>
+          : t('properties.notAvailable', 'N/A');
       }
       case 'priority_id':
         return priorityOptions.find((option) => option.value === ticket.priority_id)?.label ?? t('properties.notAvailable', 'N/A');
@@ -1077,6 +1110,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   }, [handleDiscardChanges]);
 
   const handleCategoryChange = (categoryIds: string[]) => {
+    // LEVERAGE: pattern ticket-category-selection — Grid and Entry both stage parent/subcategory IDs.
     if (categoryIds.length === 0 || categoryIds[0] === 'no-category' || categoryIds[0] === '') {
       handlePendingChange('category_id', null);
       handlePendingChange('subcategory_id', null);
@@ -1290,6 +1324,18 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               />
             ) : null}
           </div>
+          {/* Personal "My group" control: sits under the title row, outside the shared field grid.
+              Rendered only when a composition layer supplies it (absent in AlgaDesk). */}
+          {ticket.ticket_id && activityCrossFeature?.renderActivityGroupControl
+            ? activityCrossFeature.renderActivityGroupControl({
+                id: `${id}-activity-group`,
+                activityType: 'ticket',
+                activityId: ticket.ticket_id,
+                // Built from SAVED state (props), not unsaved form edits.
+                assignmentKey: buildTicketAssignmentKey(ticket.assigned_to, additionalAgents?.map((a) => a.user_id)),
+              })
+            : null}
+
           {/* Unsaved changes alert banner */}
           {hasUnsavedChanges && (
             <Alert variant="warning" className="mb-4">
@@ -1997,6 +2043,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           {/* Save Changes Button - matching contracts behavior */}
           <div className="flex flex-wrap items-center gap-3 mt-6 pt-4 border-t border-gray-200">
             {renderProjectTaskActions?.({ ticket, additionalAgents })}
+            {renderQuickInvoiceActions?.({ ticket })}
             {onResolveAndClose ? (
               <Button
                 id={`${id}-resolve-and-close-button`}

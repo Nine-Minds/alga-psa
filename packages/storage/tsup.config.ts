@@ -5,6 +5,7 @@ export default defineConfig({
     index: 'src/index.ts',
     StorageService: 'src/StorageService.ts',
     StorageProviderFactory: 'src/StorageProviderFactory.ts',
+    'models/storage': 'src/models/storage.ts',
     'types/storage': 'src/types/storage.ts',
     'providers/StorageProvider': 'src/providers/StorageProvider.ts',
     'config/storage': 'src/config/storage.ts',

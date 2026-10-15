@@ -9,19 +9,8 @@ function readRepoFile(relativePath: string): string {
 }
 
 describe('Teams integration meeting settings contracts', () => {
-  it('T072: resolves and persists the organizer object id when Teams settings are saved', () => {
-    const actionsSource = readRepoFile('ee/packages/microsoft-teams/src/lib/actions/integrations/teamsActions.ts');
-    const contractsSource = readRepoFile('ee/packages/microsoft-teams/src/lib/teams/teamsContracts.ts');
-
-    expect(contractsSource).toContain('defaultMeetingOrganizerUpn?: string | null');
-    expect(contractsSource).toContain('defaultMeetingOrganizerObjectId: string | null');
-    expect(actionsSource).toContain('resolveOrganizerObjectId');
-    expect(actionsSource).toContain('fetchMicrosoftGraphAppToken');
-    expect(actionsSource).toContain("https://graph.microsoft.com/v1.0/users/${encodeURIComponent(organizerUpn)}");
-    expect(actionsSource).toContain('const objectId = normalizeNullableString(payload.id)');
-    expect(actionsSource).toContain('default_meeting_organizer_upn: defaultMeetingOrganizerUpn');
-    expect(actionsSource).toContain('default_meeting_organizer_object_id: defaultMeetingOrganizerObjectId');
-  });
+  // Organizer resolution/persistence (T072) is exercised through both real
+  // save actions and Graph HTTP in packages/emulators/msgraph/tests/teamsOrganizerRouting.test.ts.
 
   it('T073: persists recording download and client-portal visibility toggles from Teams settings', () => {
     const actionsSource = readRepoFile('ee/packages/microsoft-teams/src/lib/actions/integrations/teamsActions.ts');

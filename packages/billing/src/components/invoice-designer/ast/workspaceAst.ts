@@ -1,6 +1,7 @@
 import type {
   TemplateAst,
   TemplateFieldBorderStyle,
+  TemplateImageNode,
   TemplateNode,
   TemplatePrintSettings,
   TemplateNodeStyleRef,
@@ -8,6 +9,7 @@ import type {
   TemplateI18nRef,
   TemplateI18nText,
   TemplateTableColumn,
+  TemplateTableColumnLine,
   TemplateTotalsRow,
   TemplateValueExpression,
   TemplateValueFormat,
@@ -32,11 +34,15 @@ import type {
 import { createEmptyDesignerTransformWorkspace, DOCUMENT_NODE_ID } from '../state/designerStore';
 import {
   getDocumentTokenPaths,
+  isDocumentLogoRenderPath,
+  resolveDocumentCanonicalBindings,
   resolveDocumentDisplayPath,
+  resolveDocumentLogoRenderPath,
   resolveDocumentRenderPath,
 } from '../fields/documentBindingCatalog';
 import { resolveDocumentKindFromBindingCatalog, type DesignerDocumentKind } from '../utils/documentKind';
 import { getDefinition } from '../constants/componentCatalog';
+import { createPageLayout } from '../schema/componentSchema';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
 import { resolveMediaFrameSize } from '../utils/mediaSizing';
 import {
@@ -342,6 +348,7 @@ const resolveCollectionPath = (node: WorkspaceNode, documentKind: DesignerDocume
     asTrimmedString(metadata.bindingKey) ||
     asTrimmedString(metadata.path);
   const normalized = normalizeInvoiceBindingPath(rawPath, documentKind);
+  if (asTrimmedString(metadata.collectionBindingKey) || asTrimmedString(metadata.collectionPath)) return normalized;
   return normalized.length > 0 && normalized !== 'invoiceNumber' ? normalized : 'items';
 };
 
@@ -823,9 +830,81 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
   return Object.keys(style).length > 0 ? style : undefined;
 };
 
+/**
+ * Designer table columns may carry stacked per-line content (`lines`) that the
+ * runtime schema understands but the designer's simple column model does not.
+ * Preserve each line's id, value expression, format and style (including token
+ * ids) verbatim so a duplicated/custom template never loses its stacked cell on
+ * save. Both `value` (the runtime key imported from an AST) and
+ * `valueExpression` (the designer's usual expression slot) are accepted.
+ */
+const mapWorkspaceColumnLines = (
+  value: unknown,
+  resolveLineValue?: (entry: Record<string, unknown>, lineId: string) => TemplateValueExpression | null,
+): TemplateTableColumn['lines'] => {
+  if (!Array.isArray(value) || value.length === 0) {
+    return undefined;
+  }
+
+  const mapped: NonNullable<TemplateTableColumn['lines']> = [];
+
+  for (const [index, entry] of value.entries()) {
+    if (!isRecord(entry)) {
+      continue;
+    }
+    const id = sanitizeId(asTrimmedString(entry.id)) || `line-${index + 1}`;
+    const preserved = isTemplateValueExpression(entry.valueExpression)
+      ? entry.valueExpression
+      : isTemplateValueExpression(entry.value)
+        ? entry.value
+        : null;
+    // A designer-authored line carries an editable binding key; a line imported
+    // straight from an AST carries only its expression. Let the caller resolve
+    // the former (so an edited key wins, exactly as it does for the column
+    // itself) and fall back to the preserved expression for the latter.
+    const valueExpression = resolveLineValue?.(entry, id) ?? preserved;
+    if (!valueExpression) {
+      continue;
+    }
+    const line: TemplateTableColumnLine = {
+      id,
+      value: valueExpression,
+    };
+    const format = parseTemplateValueFormat(entry.format ?? entry.type);
+    if (format) {
+      line.format = format;
+    }
+    const style = mapTemplateNodeStyleRef(entry.style);
+    if (style) {
+      line.style = style;
+    }
+    if (entry.supplemental === true) {
+      line.supplemental = true;
+    }
+    mapped.push(line);
+  }
+
+  return mapped.length > 0 ? mapped : undefined;
+};
+
 const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind): TemplateTableColumn[] => {
   const metadata = getWorkspaceNodeMetadata(node);
   const columns = Array.isArray(metadata.columns) ? metadata.columns : [];
+
+  const resolveColumnValue = (
+    key: string,
+    preservedExpression: TemplateValueExpression | null,
+    fallbackId: string,
+  ): TemplateValueExpression => {
+    const placeholderKey = sanitizeId(fallbackId);
+    if (preservedExpression?.type === 'path') {
+      return { type: 'path' as const, path: key.length > 0 ? key : 'description' };
+    }
+    if (key.length > 0 && key !== placeholderKey) {
+      return { type: 'path' as const, path: key };
+    }
+    return preservedExpression ?? { type: 'path' as const, path: key.length > 0 ? key : 'description' };
+  };
 
   const mappedColumns = columns
     .map((column, index): TemplateTableColumn | null => {
@@ -842,13 +921,7 @@ const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind
         ? column.valueExpression
         : null;
       const parsedFormat = parseTemplateValueFormat(column.format ?? column.type);
-      const placeholderKey = sanitizeId(id);
-      const resolvedValue =
-        preservedExpression?.type === 'path'
-          ? { type: 'path' as const, path: key.length > 0 ? key : 'description' }
-          : key.length > 0 && key !== placeholderKey
-            ? { type: 'path' as const, path: key }
-            : preservedExpression ?? { type: 'path' as const, path: key.length > 0 ? key : 'description' };
+      const resolvedValue = resolveColumnValue(key, preservedExpression, id);
 
       const mapped: TemplateTableColumn = {
         id: sanitizeId(id),
@@ -858,6 +931,23 @@ const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind
       const style = mapTemplateNodeStyleRef(column.style);
       if (style) {
         mapped.style = style;
+      }
+      const lines = mapWorkspaceColumnLines(column.lines, (entry, lineId) => {
+        const lineKey = normalizeInvoiceBindingPath(
+          asTrimmedString(entry.key) || asTrimmedString(entry.path) || asTrimmedString(entry.bindingKey),
+          documentKind
+        );
+        const lineExpression = isTemplateValueExpression(entry.valueExpression)
+          ? entry.valueExpression
+          : isTemplateValueExpression(entry.value)
+            ? entry.value
+            : null;
+        return lineKey.length > 0 || lineExpression
+          ? resolveColumnValue(lineKey, lineExpression, lineId)
+          : null;
+      });
+      if (lines) {
+        mapped.lines = lines;
       }
       if (parsedFormat) {
         mapped.format = parsedFormat;
@@ -872,8 +962,8 @@ const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind
 
   return [
     { id: 'description', header: 'Description', value: { type: 'path', path: 'description' } },
-    { id: 'quantity', header: 'Qty', value: { type: 'path', path: 'quantity' } },
-    { id: 'total', header: 'Amount', value: { type: 'path', path: 'total' } },
+    { id: 'quantity', header: 'Qty', value: { type: 'path', path: 'quantity' }, format: 'number' },
+    { id: 'total', header: 'Amount', value: { type: 'path', path: 'total' }, format: 'currency' },
   ];
 };
 
@@ -883,10 +973,27 @@ const getAstNodeId = (node: WorkspaceNode): string => {
   return originalId.length > 0 ? originalId : node.id;
 };
 
-const createBaseNode = (node: WorkspaceNode): Pick<TemplateNode, 'id' | 'style'> => ({
-  id: getAstNodeId(node),
-  style: createNodeStyle(node),
-});
+// The layer name travels only when it says something the id does not; imported
+// nodes are named after their id, so unrenamed layers export byte-identically.
+const resolveAstNodeName = (node: WorkspaceNode, astId: string): string | undefined => {
+  // Document and page names are designer scaffolding, not authored layers.
+  if (node.type === 'document' || node.type === 'page') {
+    return undefined;
+  }
+  const props = isRecord(node.props) ? node.props : {};
+  const name = asTrimmedString(props.name);
+  return name.length > 0 && name !== astId ? name.slice(0, 200) : undefined;
+};
+
+const createBaseNode = (node: WorkspaceNode): Pick<TemplateNode, 'id' | 'name' | 'style'> => {
+  const id = getAstNodeId(node);
+  const name = resolveAstNodeName(node, id);
+  return {
+    id,
+    ...(name ? { name } : {}),
+    style: createNodeStyle(node),
+  };
+};
 
 const getWorkspaceNodeSize = (node: WorkspaceNode | undefined): { width?: number; height?: number } => {
   if (!node || !isRecord(node.props)) {
@@ -1018,8 +1125,8 @@ const mapDesignerNodeToAstNode = (
 	        // repeat its children once per item in a source collection. This
 	        // was added alongside `dynamic-table.repeat` as a compound-block
 	        // primitive for per-location (or other grouped) bands. Imported
-	        // AST nodes stash the original `repeat` on metadata; designer-
-	        // authored stacks simply omit it.
+	        // AST nodes retain the original repeat; visual presets author a
+	        // collection path which is registered like a table source.
 	        const metadata = getWorkspaceNodeMetadata(node);
 	        const importedRepeat = isRecord(metadata.__astStackRepeat)
 	          ? (metadata.__astStackRepeat as Record<string, unknown>)
@@ -1037,7 +1144,11 @@ const mapDesignerNodeToAstNode = (
 	          importedRepeat && typeof importedRepeat.keyPath === 'string' && importedRepeat.keyPath.trim().length > 0
 	            ? importedRepeat.keyPath.trim()
 	            : undefined;
-	        const repeat =
+	        const authoredRepeatSource = asTrimmedString(metadata.repeatCollectionBindingKey);
+	        const repeat = authoredRepeatSource
+	          ? { sourceBinding: { bindingId: resolveCollectionSourceBindingId(authoredRepeatSource, registerCollectionBinding, documentKind, transformOutputBindingId) },
+	              itemBinding: asTrimmedString(metadata.repeatItemBinding) || 'group' }
+	          :
 	          importedSourceBindingId.length > 0 && importedItemBinding.length > 0
 	            ? {
 	                sourceBinding: { bindingId: importedSourceBindingId },
@@ -1058,6 +1169,13 @@ const mapDesignerNodeToAstNode = (
       return {
         ...createBaseNode(node),
         type: 'text',
+        content: resolveTextNodeContentExpression(node, documentKind),
+      };
+    }
+    case 'richText': {
+      return {
+        ...createBaseNode(node),
+        type: 'richText',
         content: resolveTextNodeContentExpression(node, documentKind),
       };
     }
@@ -1150,7 +1268,7 @@ const mapDesignerNodeToAstNode = (
         type: 'dynamic-table',
         repeat: {
           sourceBinding: { bindingId: sourceBindingId },
-          itemBinding: 'item',
+          itemBinding: asTrimmedString(metadata.__astTableItemBinding) || 'item',
         },
         columns: mapTableColumns(node, documentKind),
         headerStyle,
@@ -1281,10 +1399,20 @@ const mapDesignerNodeToAstNode = (
           })()
         : false;
 
+      // A logo-bound image keeps its imported binding verbatim, or binds the
+      // document's logo path when it was authored in the designer.
+      const boundToLogo = metadata.srcBinding === 'tenantLogo';
+      const logoSrcExpression: TemplateValueExpression | null = boundToLogo
+        ? preservedSrcExpression && preservedSrcExpression.type !== 'literal'
+          ? preservedSrcExpression
+          : { type: 'path', path: resolveDocumentLogoRenderPath(documentKind) }
+        : null;
+
       return {
         ...createBaseNode(node),
         type: 'image',
-        src: (!srcChanged && preservedSrcExpression) ? preservedSrcExpression : { type: 'literal', value: src },
+        src: logoSrcExpression
+          ?? ((!srcChanged && preservedSrcExpression) ? preservedSrcExpression : { type: 'literal', value: src }),
         alt: (!altChanged && preservedAltExpression) ? preservedAltExpression : { type: 'literal', value: alt },
       };
     }
@@ -1399,11 +1527,32 @@ export const exportWorkspaceToTemplateAst = (
     return `${preferredId}_${index}`;
   };
 
+  // New bindings take the document catalog's id (and fallback) for a known path, so
+  // a designed layout binds exactly like a shipped one.
+  const canonicalBindings = resolveDocumentCanonicalBindings(documentKind);
+  const canonicalValueByPath = new Map(
+    Object.values(canonicalBindings.values ?? {}).map((binding) => [binding.path, binding] as const)
+  );
+  const canonicalCollectionByPath = new Map(
+    Object.values(canonicalBindings.collections ?? {}).map((binding) => [binding.path, binding] as const)
+  );
+
   const registerValueBinding = (path: string): string => {
     const normalizedPath = normalizeInvoiceBindingPath(path, documentKind);
     const existingBindingId = valueBindingPathToId.get(normalizedPath);
     if (existingBindingId) {
       return existingBindingId;
+    }
+    const canonical = canonicalValueByPath.get(normalizedPath);
+    if (canonical && !valueBindings[canonical.id]) {
+      valueBindings[canonical.id] = {
+        id: canonical.id,
+        kind: 'value',
+        path: canonical.path,
+        ...(Object.prototype.hasOwnProperty.call(canonical, 'fallback') ? { fallback: canonical.fallback } : {}),
+      };
+      valueBindingPathToId.set(normalizedPath, canonical.id);
+      return canonical.id;
     }
     const preferredBindingId = sanitizeId(`value.${normalizedPath}`) || `value.${Object.keys(valueBindings).length + 1}`;
     const bindingId = createUniqueBindingId(preferredBindingId, valueBindings);
@@ -1423,6 +1572,12 @@ export const exportWorkspaceToTemplateAst = (
     const existingBindingId = collectionBindingPathToId.get(normalizedPath);
     if (existingBindingId) {
       return existingBindingId;
+    }
+    const canonical = canonicalCollectionByPath.get(normalizedPath);
+    if (canonical && !collectionBindings[canonical.id]) {
+      collectionBindings[canonical.id] = { id: canonical.id, kind: 'collection', path: canonical.path };
+      collectionBindingPathToId.set(normalizedPath, canonical.id);
+      return canonical.id;
     }
     const preferredBindingId =
       sanitizeId(`collection.${normalizedPath}`) || `collection.${Object.keys(collectionBindings).length + 1}`;
@@ -1645,14 +1800,7 @@ export const importTemplateAstToWorkspace = (
       // Always materialize a page node as the canvas root so sizing/margins are stable and consistent.
       // If the AST uses a single top-level section wrapper, treat it as the page node.
       const pageLayoutBase =
-        coerceContainerLayoutFromInlineStyle(pageSectionInline) ?? {
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '32px',
-          padding: '40px',
-          justifyContent: 'flex-start',
-          alignItems: 'stretch',
-        };
+        coerceContainerLayoutFromInlineStyle(pageSectionInline) ?? createPageLayout('40px');
       const pageLayout =
         resolvedPrintSettings.source === 'legacy-unresolved'
           ? pageLayoutBase
@@ -1720,14 +1868,7 @@ export const importTemplateAstToWorkspace = (
         const isFixedFrame = designerType === 'document' || designerType === 'page';
         const defaultContainerLayout: DesignerContainerLayout | undefined =
           designerType === 'page'
-            ? {
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '32px',
-                padding: '40px',
-                justifyContent: 'flex-start',
-                alignItems: 'stretch',
-              }
+            ? createPageLayout('40px')
             : designerType === 'document'
               ? {
                   display: 'flex',
@@ -1773,7 +1914,7 @@ export const importTemplateAstToWorkspace = (
           id: inputNode.id,
           type: designerType,
           props: {
-            name: inputNode.id,
+            name: typeof inputNode.name === 'string' && inputNode.name.trim().length > 0 ? inputNode.name : inputNode.id,
             metadata: { ...(def?.defaultMetadata ?? {}) },
             layout: resolvedLayout,
             style: styleFromInline,
@@ -1795,6 +1936,7 @@ export const importTemplateAstToWorkspace = (
           section: 'section',
           stack: 'container',
           text: 'text',
+          richText: 'richText',
           field: 'field',
           image: 'image',
           divider: 'divider',
@@ -1803,8 +1945,25 @@ export const importTemplateAstToWorkspace = (
           totals: 'totals',
         };
 
-        const designerType = typeMap[inputNode.type];
-        if (!designerType) return;
+        // An image bound to the company logo is what the designer calls a Logo block,
+        // so it reopens as the block it was built from.
+        const resolveImageSrcPath = (node: TemplateImageNode): string =>
+          node.src.type === 'path'
+            ? node.src.path
+            : node.src.type === 'binding'
+              ? astInput.bindings?.values?.[node.src.bindingId]?.path ?? ''
+              : '';
+        const designerType =
+          inputNode.type === 'image' && isDocumentLogoRenderPath(resolveImageSrcPath(inputNode))
+            ? 'logo'
+            : typeMap[inputNode.type];
+        if (!designerType) {
+          // Fail loudly: silently dropping an unrecognized node would delete
+          // content when a layout is opened and saved in the designer.
+          throw new Error(
+            `Unsupported template node type "${String(inputNode.type)}" (node id "${String((inputNode as { id?: unknown }).id ?? 'unknown')}")`,
+          );
+        }
 
         const nextNode = buildWorkspaceNode(inputNode, designerType, depthIndex, depth);
 
@@ -1820,7 +1979,7 @@ export const importTemplateAstToWorkspace = (
           ? inputNode.style.tokenIds.filter((tokenId): tokenId is string => typeof tokenId === 'string' && tokenId.trim().length > 0)
           : undefined;
 
-        if (inputNode.type === 'text') {
+        if (inputNode.type === 'text' || inputNode.type === 'richText') {
           metadata.astContentExpression = inputNode.content;
           const resolvedText = resolveExpressionPreviewText(inputNode.content, astInput, documentKind);
           metadata.text = resolvedText;
@@ -1846,7 +2005,11 @@ export const importTemplateAstToWorkspace = (
           } else {
             metadata.fieldBorderStyle = 'none';
           }
+          // The label is exactly what the AST says: a new field's default label must
+          // not appear on a field that was saved without one.
           const importedLabel = importI18nText(inputNode.label);
+          delete metadata.label;
+          delete metadata.__astLabelI18n;
           if (importedLabel.text) {
             metadata.label = importedLabel.text;
           }
@@ -1863,6 +2026,8 @@ export const importTemplateAstToWorkspace = (
             metadata.placeholder = inputNode.placeholder;
           }
         } else if (inputNode.type === 'dynamic-table' || inputNode.type === 'table') {
+          const rowBinding = inputNode.type === 'dynamic-table' ? inputNode.repeat.itemBinding : inputNode.rowBinding;
+          metadata.__astTableItemBinding = rowBinding;
           const rawBindingId =
             inputNode.type === 'dynamic-table'
               ? inputNode.repeat.sourceBinding.bindingId
@@ -1870,21 +2035,17 @@ export const importTemplateAstToWorkspace = (
           // Preserve the raw source bindingId so scope-resolved bindings
           // (e.g. `group.items` inside a repeating stack) round-trip back
           // without being replaced by a synthesized `collection.*` id.
-          const isResolvableGlobalBinding =
-            Boolean(astInput.bindings?.collections?.[rawBindingId]) ||
-            normalizeInvoiceBindingPath(asTrimmedString(astInput.transforms?.outputBindingId), documentKind) ===
-              normalizeInvoiceBindingPath(rawBindingId, documentKind);
-          if (!isResolvableGlobalBinding) {
-            metadata.__astTableSourceBindingId = rawBindingId;
-          }
+          metadata.__astTableSourceBindingId = rawBindingId;
           const collectionPath = resolveImportedCollectionBindingPath(astInput, rawBindingId, documentKind);
           metadata.collectionBindingKey = denormalizeBindingPath(collectionPath, documentKind);
-          metadata.columns = inputNode.columns.map((column) => {
+            metadata.columns = inputNode.columns.map((column) => {
             const importedHeader = importI18nText(column.header);
             const mappedColumn: Record<string, unknown> = {
               id: column.id,
               header: importedHeader.text,
-              key: column.value.type === 'path' ? `item.${column.value.path}` : column.id,
+              key: column.value.type === 'path'
+                ? column.value.path.startsWith(`${rowBinding}.`) ? column.value.path : `item.${column.value.path}`
+                : column.id,
               valueExpression: column.value,
               ...(importedHeader.ref ? { __astHeaderI18n: importedHeader.ref } : {}),
             };
@@ -1895,6 +2056,32 @@ export const importTemplateAstToWorkspace = (
             }
             if (column.style) {
               mappedColumn.style = { ...column.style } as Record<string, unknown>;
+            }
+            if (Array.isArray(column.lines) && column.lines.length > 0) {
+              // Stacked per-line content has to survive a designer roundtrip
+              // intact: `key` is what the line editor binds to, while
+              // `valueExpression`, `format` and `style` carry the parts the
+              // editor does not model, so re-exporting the template
+              // (duplicate / save-as) neither flattens nor downgrades the cell.
+              mappedColumn.lines = column.lines.map((line) => {
+                const mappedLine: Record<string, unknown> = {
+                  id: line.id,
+                  key: line.value.type === 'path'
+                    ? line.value.path.startsWith(`${rowBinding}.`) ? line.value.path : `item.${line.value.path}`
+                    : line.id,
+                  valueExpression: line.value,
+                };
+                if (line.format) {
+                  mappedLine.format = line.format;
+                }
+                if (line.style) {
+                  mappedLine.style = { ...line.style } as Record<string, unknown>;
+                }
+                if (line.supplemental) {
+                  mappedLine.supplemental = true;
+                }
+                return mappedLine;
+              });
             }
 
             return mappedColumn;
@@ -1946,6 +2133,9 @@ export const importTemplateAstToWorkspace = (
             // record an empty sentinel so the export can detect when the user
             // replaces the dynamic expression with a typed URL.
             metadata.__astSrcPreviewValue = '';
+            if (designerType === 'logo') {
+              metadata.srcBinding = 'tenantLogo';
+            }
           }
           if (inputNode.alt) {
             metadata.astAltExpression = inputNode.alt;

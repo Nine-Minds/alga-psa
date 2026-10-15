@@ -104,6 +104,8 @@ export abstract class BaseService<T = any> {
   /**
    * Get database connection for a context (backward compatibility)
    */
+  // LEVERAGE: pattern comanaged-trx-threading — the same choose-the-caller's-handle rule
+  // as StorageService.deleteFile and the cleanupExpiredTokens services, spelled a third way.
   protected async getDbForContext(context: ServiceContext): Promise<Knex> {
     if (context.db) {
       return context.db;

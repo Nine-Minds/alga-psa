@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   integrationTokenExpiringEventPayloadSchema,
   integrationTokenRefreshFailedEventPayloadSchema,
-} from '../../../runtime/schemas/integrationEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildIntegrationTokenExpiringPayload,
   buildIntegrationTokenRefreshFailedPayload,

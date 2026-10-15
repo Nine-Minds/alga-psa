@@ -265,7 +265,8 @@
         "technician": "Técnico",
         "ticket": "Ticket",
         "rating": "Valoración",
-        "comment": "Comentario"
+        "comment": "Comentario",
+        "project": "Proyecto"
       },
       "fallbacks": {
         "unknown": "Desconocido",
@@ -312,7 +313,8 @@
         "technician": "Técnico",
         "rating": "Valoración",
         "comment": "Comentario",
-        "ticket": "Ticket"
+        "ticket": "Ticket",
+        "subject": "Ticket / Proyecto"
       },
       "fallbacks": {
         "unknownClient": "Cliente desconocido",
@@ -342,7 +344,8 @@
         "unknownClient": "Cliente desconocido",
         "ticket": "Ticket {{ticket}}",
         "noComment": "No dejó comentarios.",
-        "assignedTo": "Asignado a: {{name}}"
+        "assignedTo": "Asignado a: {{name}}",
+        "project": "Proyecto {{project}}"
       }
     }
   },
@@ -439,7 +442,8 @@
       "agent": "Agente",
       "technician": "Técnico",
       "submitted": "Enviado",
-      "comment": "Comentario"
+      "comment": "Comentario",
+      "subject": "Ticket / Proyecto"
     },
     "metrics": {
       "averageRating": "Valoración media",

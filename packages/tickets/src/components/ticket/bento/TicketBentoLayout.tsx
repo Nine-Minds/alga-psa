@@ -2,10 +2,9 @@
 
 import React, { Suspense, useRef } from 'react';
 import type { PartialBlock } from '@blocknote/core';
-import { User, Play, Pause, StopCircle, Clock, Users, Pencil } from 'lucide-react';
+import { User, Clock, Users, Pencil } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
-import { Label } from '@alga-psa/ui/components/Label';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
@@ -26,13 +25,17 @@ import type {
   ITeam,
 } from '@alga-psa/types';
 import type { CommentUserAuthor, CommentContactAuthor } from '../../../lib/commentAuthorResolution';
+import type { ITicketExternalLinkView } from '../../../actions/externalLinks/externalLinkActions';
 import TicketChecklistSection from './../TicketChecklistSection';
 import { TicketCredentialsSection } from './../TicketCredentialsSection';
+import { TicketExternalLinksSection } from './../TicketExternalLinksSection';
 import { DocumentsTile } from './DocumentsTile';
 import type { TicketScreenBootstrap } from '../../../lib/ticketScreenBootstrap';
 import TicketTimeEntries from './../TicketTimeEntries';
+import { TicketStopwatchControls } from '../TicketStopwatchControls';
 import TicketMaterialsCard from './../TicketMaterialsCard';
 import TicketWatchListCard from './../TicketWatchListCard';
+import type { CommentEmailRecipientsPayload } from '../CommentEmailRecipientsControl';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { useQuickAddClient } from '@alga-psa/ui/context';
@@ -41,21 +44,14 @@ import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from '@alga-psa/ui/compo
 import { BentoHero } from './BentoHero';
 import { BentoTimelineTile } from './BentoTimelineTile';
 import { SlaClocksTile } from './SlaClocksTile';
-import { NextVisitTile, AppointmentRequestsTile, CallsEmailsTile, BillingTile } from './dataTiles';
+import { ScheduledWorkTile, AppointmentRequestsTile, CallsEmailsTile, BillingTile } from './dataTiles';
 import { TimeLoggedSummary } from './TimeLoggedSummary';
 import { useTeamAvatarUrl } from './useTeamAvatarUrl';
 import { resolveTicketCallPhone } from './ticketCallPhone';
 import type { TicketSlaFields } from './slaClocks';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
 import type { TicketNotificationSuppressionValue } from '../TicketNotificationSuppressionControl';
-
-function formatElapsed(totalSeconds: number): string {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-}
+import { resolveBoardStopwatchEnabled } from '../../../lib/boardLiveTicketTimer';
 
 export interface TicketBentoLayoutProps {
   id: string;
@@ -85,13 +81,15 @@ export interface TicketBentoLayoutProps {
   hideSlaStatus?: boolean;
   /** Hides the billing rollup tile (AlgaDesk has no billing surface). */
   hideBilling?: boolean;
-  /** Hides the Next visit / Appointment requests tiles (AlgaDesk has no scheduling surface). */
+  /** Hides the Scheduled work / Appointment requests tiles (AlgaDesk has no scheduling surface). */
   hideScheduling?: boolean;
   workflowLocked?: boolean;
   onOpenAllFields: () => void;
   tags?: any[];
   onTagsChange?: (tags: any[]) => void;
   taskActions?: React.ReactNode;
+  /** Injected quick-invoice-a-ticket action (billing package). */
+  quickInvoiceActions?: React.ReactNode;
   onResolveAndClose?: () => void;
   resolveAndCloseDisabled?: boolean;
   liveHighlightedFields?: string[];
@@ -113,9 +111,11 @@ export interface TicketBentoLayoutProps {
     phone?: string | null;
   }[];
   /** Opens the scheduler drawer pre-scoped to this ticket (global drawer system). */
-  onScheduleVisit?: () => void;
-  /** Bumped by the parent after a visit is scheduled so the "Next visit" tile refetches. */
-  nextVisitRefreshKey?: number;
+  onScheduleWork?: () => void;
+  /** Opens an existing schedule entry linked to this ticket for editing. */
+  onOpenScheduleEntry?: (entryId: string) => void;
+  /** Bumped by the parent after scheduled work changes so the "Scheduled work" tile refetches. */
+  scheduleRefreshKey?: number;
   conversationNavigator?: React.ReactNode;
   conversationPanel?: React.ReactNode;
   // Timeline
@@ -131,7 +131,9 @@ export interface TicketBentoLayoutProps {
     isInternal: boolean,
     isResolution: boolean,
     closeStatusId?: string | null,
-    options?: TicketNotificationSuppressionValue
+    options?: TicketNotificationSuppressionValue,
+    schedule?: { publishAt: string; timeZone: string } | null,
+    emailRecipients?: CommentEmailRecipientsPayload,
   ) => Promise<boolean>;
   closedStatusOptions?: { value: string; label: string }[];
   // Comment affordances on timeline nodes (reactions, edit, delete).
@@ -156,7 +158,12 @@ export interface TicketBentoLayoutProps {
   }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   /** Threaded reply pipeline (same handler the conversation view gets). */
-  onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
+  onAddReplyComment?: (
+    content: PartialBlock[],
+    parentCommentId: string,
+    isInternal: boolean,
+    emailRecipients?: CommentEmailRecipientsPayload,
+  ) => Promise<boolean>;
   /**
    * Server-started data promises from the RSC page. Tiles resolve them via
    * React use() behind <Suspense> skeletons — zero fetch-on-mount requests.
@@ -177,24 +184,24 @@ export interface TicketBentoLayoutProps {
   // Checklist
   checklistItems: any[];
   onChecklistItemsChanged: (items: any[]) => void;
+  // External system links
+  externalLinks?: ITicketExternalLinkView[];
+  onExternalLinksChanged?: (links: ITicketExternalLinkView[]) => void;
   // Timer / time entries
   hideTimeEntry?: boolean;
   isLiveTicketTimerEnabled?: boolean;
-  elapsedTime: number;
-  isRunning: boolean;
-  isTimerLocked?: boolean;
   timeDescription: string;
   onTimeDescriptionChange: (value: string) => void;
-  onStart: () => void;
-  onPause: () => void;
-  onStop: () => void;
+  /** Called after a stopwatch Stop saved its time entry, so the time list refreshes. */
+  onTimeEntryLogged?: () => void;
   onAddTimeEntry: () => void;
+  /** True while the time-entry launch chain is in flight; disables the button. */
+  isLaunchingTimeEntry?: boolean;
   userId?: string;
-  dateTimeFormat?: string;
+  showWeekday?: boolean;
   timeEntriesRefreshKey?: number;
   onEditTimeEntry?: (entry: any) => void;
   onDeleteTimeEntry?: (entry: any) => void;
-  renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
   // Team & watchers
   additionalAgents: ITicketResource[];
   availableAgents: IUserWithRoles[];
@@ -562,19 +569,20 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
 
       {!props.hideScheduling ? (
         <>
-          <Suspense fallback={<BentoTileSkeleton id={`${id}-next-visit-tile-loading`} title={t('bento.tiles.nextVisit', 'Next visit')} />}>
-            <NextVisitTile
-              id={`${id}-next-visit-tile`}
+          <Suspense fallback={<BentoTileSkeleton id={`${id}-scheduled-work-tile-loading`} title={t('bento.tiles.scheduledWork', 'Scheduled work')} />}>
+            <ScheduledWorkTile
+              id={`${id}-scheduled-work-tile`}
               ticketId={ticketId}
-              refreshKey={props.nextVisitRefreshKey}
+              refreshKey={props.scheduleRefreshKey}
               initialData={props.bentoStreams?.scheduleEntries}
-              onScheduleVisit={props.onScheduleVisit}
+              onSchedule={props.onScheduleWork}
+              onOpenEntry={props.onOpenScheduleEntry}
             />
           </Suspense>
           <AppointmentRequestsTile
             id={`${id}-appointment-requests-tile`}
             ticketId={ticketId}
-            refreshKey={props.nextVisitRefreshKey}
+            refreshKey={props.scheduleRefreshKey}
           />
         </>
       ) : null}
@@ -625,44 +633,17 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           initialSummary={props.bentoStreams?.timeEntries}
         />
       </Suspense>
-      {props.isLiveTicketTimerEnabled ? (
-        <div className="mb-3">
-          <div className="flex items-center justify-between rounded-md bg-[rgb(var(--color-border-100))] px-3 py-2 font-mono text-xl text-[rgb(var(--color-text-900))]">
-            <span id={`${id}-timer-clock`}>{formatElapsed(props.elapsedTime)}</span>
-            <div className="flex items-center gap-1">
-              {!props.isRunning ? (
-                <Button
-                  {...withDataAutomationId({ id: `${id}-timer-start` })}
-                  variant="ghost"
-                  size="sm"
-                  onClick={props.onStart}
-                  aria-label={t('bento.tiles.startTimer', 'Start timer')}
-                  title={props.isTimerLocked ? t('bento.tiles.timerLockedHint', 'Another timer is already running') : undefined}
-                  className={props.isTimerLocked ? 'opacity-60' : ''}
-                >
-                  <Play className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button {...withDataAutomationId({ id: `${id}-timer-pause` })} variant="ghost" size="sm" onClick={props.onPause}>
-                  <Pause className="h-4 w-4" />
-                </Button>
-              )}
-              <Button {...withDataAutomationId({ id: `${id}-timer-stop` })} variant="ghost" size="sm" onClick={props.onStop}>
-                <StopCircle className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <div className="mt-2">
-            <Label htmlFor={`${id}-timer-description`}>{t('bento.tiles.workDescription', 'Work description')}</Label>
-            <Input
-              id={`${id}-timer-description`}
-              value={props.timeDescription}
-              onChange={(event) => props.onTimeDescriptionChange(event.target.value)}
-              placeholder={t('bento.tiles.whatAreYouWorkingOn', 'What are you working on?')}
-              containerClassName="mb-0"
-            />
-          </div>
-        </div>
+      {ticketId ? (
+        <TicketStopwatchControls
+          id={`${id}-timer`}
+          ticketId={ticketId}
+          variant="tile"
+          enabled={resolveBoardStopwatchEnabled(props.isLiveTicketTimerEnabled)}
+          timeDescription={props.timeDescription}
+          onTimeDescriptionChange={props.onTimeDescriptionChange}
+          masterTicketId={ticket.master_ticket_id ?? null}
+          onTimeEntryLogged={props.onTimeEntryLogged}
+        />
       ) : null}
 
       <Button
@@ -670,7 +651,11 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         type="button"
         className="w-full mb-3"
         onClick={props.onAddTimeEntry}
+        disabled={props.isLaunchingTimeEntry}
       >
+        {props.isLaunchingTimeEntry ? (
+          <Spinner size="button" variant="inverted" className="mr-2" />
+        ) : null}
         {t('bento.tiles.addTimeEntry', 'Add time entry')}
       </Button>
 
@@ -687,7 +672,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             id={`${id}-time-entries`}
             ticketId={ticketId}
             currentUserId={props.userId}
-            dateTimeFormat={props.dateTimeFormat}
+            showWeekday={props.showWeekday}
             refreshKey={props.timeEntriesRefreshKey}
             onEditEntry={props.onEditTimeEntry}
             onDeleteEntry={props.onDeleteTimeEntry}
@@ -696,12 +681,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         </Suspense>
       ) : null}
 
-      {props.isLiveTicketTimerEnabled && ticketId && props.userId && props.renderIntervalManagement ? (
-        <div className="mt-2 border-t border-[rgb(var(--color-border-100))] pt-3" {...withDataAutomationId({ id: `${id}-interval-management` })}>
-          <h4 className="text-xs font-semibold text-[rgb(var(--color-text-500))] mb-2">{t('bento.tiles.trackedIntervals', 'Tracked intervals')}</h4>
-          {props.renderIntervalManagement({ ticketId, userId: props.userId })}
-        </div>
-      ) : null}
     </BentoTile>
   ) : null;
 
@@ -781,6 +760,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           size="sm"
           placeholder={t('bento.tiles.addAgentsOrTeam', 'Add agents or a team…')}
           onUserClick={props.onAgentClick}
+          userClickLabel={t('bento.hero.viewSchedule', 'View schedule')}
         />
       </div>
 
@@ -848,6 +828,13 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       {/* Flag-gated; adapts to the bento variant via useContentCardVariant.
           Mirrors the Entry view's placement after Documents. */}
       <TicketCredentialsSection ticketId={ticketId} clientId={ticket.client_id ?? null} />
+
+      <TicketExternalLinksSection
+        id={`${id}-external-links-section`}
+        ticketId={ticketId}
+        initialLinks={props.externalLinks}
+        onLinksChanged={props.onExternalLinksChanged}
+      />
     </div>
   );
 
@@ -883,6 +870,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           tags={props.tags}
           onTagsChange={props.onTagsChange}
           taskActions={props.taskActions}
+          quickInvoiceActions={props.quickInvoiceActions}
           onResolveAndClose={props.onResolveAndClose}
           resolveAndCloseDisabled={props.resolveAndCloseDisabled}
           liveHighlightedFields={props.liveHighlightedFields}
@@ -951,6 +939,8 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             resolveTicketAttachmentViewUrl={props.resolveTicketAttachmentViewUrl}
             initialEntries={props.bentoStreams?.timelineEntries}
             initialReactions={props.bentoStreams?.commentReactions}
+            allowEmailRecipients
+            clientId={ticket.client_id ?? null}
           />
           </Suspense>}
         </div>

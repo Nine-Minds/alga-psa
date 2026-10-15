@@ -2,7 +2,8 @@ export type TelephonyAvailabilityDisabledReason =
   | 'ce_unavailable'
   | 'tenant_not_configured'
   | 'feature_disabled'
-  | 'product_unavailable';
+  | 'product_unavailable'
+  | 'tier_required';
 
 export type TelephonyAvailability =
   | {
@@ -31,6 +32,7 @@ export const TELEPHONY_AVAILABILITY_MESSAGES: Record<TelephonyAvailabilityDisabl
   tenant_not_configured: 'Telephony integrations require tenant context.',
   feature_disabled: 'Telephony integrations are not enabled for this tenant.',
   product_unavailable: 'Telephony integrations are not available for this product.',
+  tier_required: 'This telephony provider requires the Pro plan.',
 };
 
 type TelephonyEditionEnv = {

@@ -23,3 +23,14 @@ export const useInsideDialog = () => React.useContext(InsideDialogContext);
 export const InsideDrawerContext = React.createContext(false);
 
 export const useInsideDrawer = () => React.useContext(InsideDrawerContext);
+
+/**
+ * Opt-in context for subtrees that should render their dialogs as true
+ * top-level modals even while nested inside a Drawer/Dialog. A Dialog reads
+ * this when deciding whether to use the inline nested variant; setting it true
+ * around a component also covers the dialogs it renders as siblings (e.g. an
+ * unsaved-changes confirmation next to a wizard dialog).
+ */
+export const ForceModalContext = React.createContext(false);
+
+export const useForceModal = () => React.useContext(ForceModalContext);

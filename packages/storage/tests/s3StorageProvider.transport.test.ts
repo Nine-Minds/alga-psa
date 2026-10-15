@@ -18,7 +18,7 @@ it('streams through the installed AWS SDK and Node HTTP transport to a loopback 
   try {
     const provider = new S3StorageProvider({ type: 's3', region: 'us-east-1', bucket: 'fixture', accessKey: 'fixture', secretKey: 'fixture',
       endpoint: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, maxFileSize: 1024, allowedMimeTypes: ['*/*'], retentionDays: 30 });
-    const result = await provider.upload(Readable.from([Buffer.from('hello')]), 'portable-restores/file', { mime_type: 'text/plain', content_length: 5 });
+    const result = await provider.upload(Readable.from([Buffer.from('hello')]), 'portable-restores/file', { mime_type: 'text/plain', size: 5 });
     expect(result).toMatchObject({ path: 'portable-restores/file', size: 5, mime_type: 'text/plain' });
     expect(requests.map(request => request.method)).toEqual(['PUT', 'HEAD']);
     expect(requests[0].path.split('?')[0]).toBe('/fixture/portable-restores/file');

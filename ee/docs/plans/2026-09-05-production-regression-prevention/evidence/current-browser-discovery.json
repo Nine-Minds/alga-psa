@@ -1,0 +1,129 @@
+{
+  "revision": "39401169edecc723a29a3123bf10a61daacd7b22",
+  "status": "passed",
+  "executionVerified": false,
+  "sourceBefore": {
+    "revision": "39401169edecc723a29a3123bf10a61daacd7b22",
+    "dirty": false,
+    "changes": []
+  },
+  "sourceAfter": {
+    "revision": "39401169edecc723a29a3123bf10a61daacd7b22",
+    "dirty": false,
+    "changes": []
+  },
+  "browserFiles": 88,
+  "unmatched": [],
+  "collections": [
+    {
+      "runner": "server-legacy",
+      "files": 15,
+      "tests": 32,
+      "disabled": 3,
+      "artifact": "test-results/browser-discovery/server-legacy.json",
+      "sha256": "acd199721f016f49dbd1e2add5debbd6a337e129de2e18e8d2867bd703d0480e"
+    },
+    {
+      "runner": "enterprise-legacy",
+      "files": 53,
+      "tests": 411,
+      "disabled": 2,
+      "artifact": "test-results/browser-discovery/enterprise-legacy.json",
+      "sha256": "b688af57c95d3b7571fb8b8886aab81302a754148c203fe838887faba2169b94"
+    },
+    {
+      "runner": "enterprise-deploy",
+      "files": 1,
+      "tests": 2,
+      "disabled": 2,
+      "artifact": "test-results/browser-discovery/enterprise-deploy.json",
+      "sha256": "a34d8a27b5d334fa2cbbcceb049f1bf01c1da87d6ad68b9f7ada286dc5084219"
+    },
+    {
+      "runner": "production-community",
+      "files": 19,
+      "tests": 38,
+      "disabled": 0,
+      "artifact": "test-results/browser-discovery/production-community.json",
+      "sha256": "6513669f2f542bf965935db579fe27bea3436fdaf8ad76877ede226949170f40"
+    },
+    {
+      "runner": "production-enterprise",
+      "files": 19,
+      "tests": 42,
+      "disabled": 0,
+      "artifact": "test-results/browser-discovery/production-enterprise.json",
+      "sha256": "ce1374c07b52078a592cd30bbe06aea05aa97c62cf4774e44bed3137afa0b44c"
+    }
+  ],
+  "disabled": [
+    {
+      "runner": "server-legacy",
+      "file": "server/src/test/e2e/invoice-payment-links.playwright.test.ts",
+      "title": "Pay Now opens hosted Checkout, hosted Pay settles the invoice through the signed webhook, and the success page renders",
+      "expectedStatus": "skipped"
+    },
+    {
+      "runner": "server-legacy",
+      "file": "server/src/test/e2e/invoice-payment-links.playwright.test.ts",
+      "title": "Checkout creation failure shows the flagged failure state, and Try again opens Checkout after the fault clears",
+      "expectedStatus": "skipped"
+    },
+    {
+      "runner": "server-legacy",
+      "file": "server/src/test/e2e/invoice-payment-links.playwright.test.ts",
+      "title": "an already-paid invoice redirects to the billing invoices tab instead of starting a payment",
+      "expectedStatus": "skipped"
+    },
+    {
+      "runner": "enterprise-legacy",
+      "file": "ee/server/src/__tests__/integration/client-portal-handoff.playwright.test.ts",
+      "title": "redirects to canonical return path after successful OTT exchange",
+      "expectedStatus": "skipped"
+    },
+    {
+      "runner": "enterprise-legacy",
+      "file": "ee/server/src/__tests__/integration/client-portal-handoff.playwright.test.ts",
+      "title": "shows recovery action when OTT exchange fails",
+      "expectedStatus": "skipped"
+    },
+    {
+      "runner": "enterprise-deploy",
+      "file": "ee/server/src/__tests__/deploy/workflows-ee-deploy-no-stub.playwright.test.ts",
+      "title": "does not show the CE workflows stub message",
+      "expectedStatus": "skipped"
+    },
+    {
+      "runner": "enterprise-deploy",
+      "file": "ee/server/src/__tests__/deploy/workflows-ee-deploy-no-stub.playwright.test.ts",
+      "title": "workflow designer surface renders",
+      "expectedStatus": "skipped"
+    }
+  ],
+  "tooling": {
+    "revision": "39401169edecc723a29a3123bf10a61daacd7b22",
+    "status": "passed",
+    "counts": {
+      "tests": 510,
+      "passed": 510,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "cancelled": 0
+    },
+    "requiredFiles": 54,
+    "durationSeconds": 148.159972958
+  },
+  "focusedTests": {
+    "passed": 15,
+    "durationSeconds": 4.743,
+    "log": "/tmp/alga-browser-discovery-focused.log"
+  },
+  "actionlint": "passed",
+  "limitations": [
+    "Local CI-mode collection; new GitHub job has not run on a published candidate.",
+    "Legacy/deployment execution remains unverified and is not promoted by discovery success.",
+    "Global all-test discovery and effective required protections remain incomplete.",
+    "Scope uses browser naming conventions; this is not a classifier for arbitrary test files."
+  ]
+}

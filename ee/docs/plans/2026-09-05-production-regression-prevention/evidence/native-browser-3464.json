@@ -1,0 +1,26 @@
+{
+  "status": "passed",
+  "revision": "3464c562eedd90cccb39a7d57c3a30e64903e9e1",
+  "runId": 34074426154,
+  "url": "https://github.com/Nine-Minds/alga-psa/actions/runs/34074426154",
+  "community": {
+    "jobId": 101601381552,
+    "passed": 22,
+    "failed": 0,
+    "durationMinutes": 5.4,
+    "logLocal": "/tmp/alga-browser-ce-3464.log"
+  },
+  "enterprise": {
+    "jobId": 101601381575,
+    "passed": 24,
+    "failed": 0,
+    "durationMinutes": 7.4,
+    "logLocal": "/tmp/alga-browser-ee-3464.log"
+  },
+  "aggregateJobId": 101603863787,
+  "limitations": [
+    "Does not validate subsequent local user/client/project API or support-clock/legacy-bus repairs",
+    "Full integration run 34074426143 was still in progress when observed",
+    "Not evidence of full plan completion"
+  ]
+}

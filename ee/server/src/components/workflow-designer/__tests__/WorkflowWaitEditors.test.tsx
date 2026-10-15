@@ -12,6 +12,11 @@ const {
   getEventCatalogEntryByEventTypeMock: vi.fn(),
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { createLocaleTranslationMock } = await import('@ee/__tests__/utils/localeTranslationMock');
+  return createLocaleTranslationMock('msp/workflows');
+});
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   useSearchParams: () => ({ get: () => null, toString: () => '' }),

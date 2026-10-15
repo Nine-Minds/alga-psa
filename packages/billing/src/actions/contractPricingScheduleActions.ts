@@ -10,6 +10,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 
 type PricingScheduleActionError = ActionMessageError | ActionPermissionError;
 type PricingScheduleMutationResult = IContractPricingSchedule | PricingScheduleActionError;
@@ -136,6 +137,46 @@ function calculateEndDateFromDuration(
 }
 
 /**
+ * Find an existing schedule on the same contract and line scope whose
+ * half-open `[effective_date, end_date)` interval overlaps the candidate.
+ *
+ * This is the only overlap guard: an EXCLUDE constraint needs btree_gist,
+ * which hosted Postgres lacks, and Citus refuses triggers on distributed
+ * tables. Callers run it and the write in one transaction under
+ * lockTenantBilling so two concurrent saves cannot both pass.
+ * NULL `contract_line_id` means contract-wide and only conflicts with another
+ * contract-wide row — a line-scoped override intentionally coexists with it.
+ */
+async function findOverlappingPricingSchedule(
+  db: any,
+  contractId: string,
+  contractLineId: string | null,
+  effectiveDate: string,
+  endDate: string | null | undefined,
+  excludeScheduleId?: string,
+): Promise<IContractPricingSchedule | undefined> {
+  const query = db.table('contract_pricing_schedules')
+    .where({ contract_id: contractId });
+  if (contractLineId === null || contractLineId === undefined) {
+    query.whereNull('contract_line_id');
+  } else {
+    query.where('contract_line_id', contractLineId);
+  }
+  // existing.start < new.end (an unbounded new end imposes no upper bound)
+  if (endDate) {
+    query.where('effective_date', '<', endDate);
+  }
+  // existing.end > new.start, with NULL meaning unbounded
+  query.where(function (this: any) {
+    this.whereNull('end_date').orWhere('end_date', '>', effectiveDate);
+  });
+  if (excludeScheduleId) {
+    query.whereNot('schedule_id', excludeScheduleId);
+  }
+  return query.first();
+}
+
+/**
  * Create a new pricing schedule
  * @param scheduleData The pricing schedule data
  * @returns The created pricing schedule
@@ -162,8 +203,6 @@ export const createPricingSchedule = withAuth(async (
   if (customRateError) {
     return actionError(customRateError);
   }
-  const db = tenantDb(knex, tenant);
-
   // Calculate end_date from duration if provided
   let endDate = scheduleData.end_date;
   if (scheduleData.duration_value && scheduleData.duration_unit) {
@@ -179,47 +218,35 @@ export const createPricingSchedule = withAuth(async (
     return actionError('End date must be after effective date', 'msp/contracts:errors.pricingSchedule.endAfterEffective');
   }
 
-  // Check for overlapping schedules
-  const overlapping = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
-    .where({
-      contract_id: scheduleData.contract_id
-    })
-    .where(function() {
-      this.where(function() {
-        // New schedule starts during an existing schedule
-        this.where('effective_date', '<=', scheduleData.effective_date)
-          .andWhere(function() {
-            this.whereNull('end_date')
-              .orWhere('end_date', '>', scheduleData.effective_date);
-          });
-      }).orWhere(function() {
-        // New schedule ends during an existing schedule (if it has an end date)
-        if (endDate) {
-          this.where('effective_date', '<', endDate)
-            .andWhere(function() {
-              this.whereNull('end_date')
-                .orWhere('end_date', '>', scheduleData.effective_date);
-            });
-        }
-      });
-    })
-    .first();
+  return knex.transaction(async (trx) => {
+    await lockTenantBilling(trx, tenant);
+    const db = tenantDb(trx, tenant);
 
-  if (overlapping) {
-    return actionError('This schedule overlaps with an existing pricing schedule', 'msp/contracts:errors.pricingSchedule.overlaps');
-  }
+    // Check for overlapping schedules in the same line scope
+    const overlapping = await findOverlappingPricingSchedule(
+      db,
+      scheduleData.contract_id,
+      scheduleData.contract_line_id ?? null,
+      scheduleData.effective_date,
+      endDate,
+    );
 
-  const [schedule] = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
-    .insert({
-      ...scheduleData,
-      end_date: endDate,
-      tenant,
-      created_by: user.user_id,
-      updated_by: user.user_id
-    })
-    .returning('*');
+    if (overlapping) {
+      return actionError('This schedule overlaps with an existing pricing schedule', 'msp/contracts:errors.pricingSchedule.overlaps');
+    }
 
-  return schedule;
+    const [schedule] = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
+      .insert({
+        ...scheduleData,
+        end_date: endDate,
+        tenant,
+        created_by: user.user_id,
+        updated_by: user.user_id
+      })
+      .returning('*');
+
+    return schedule;
+  });
 });
 
 /**
@@ -280,50 +307,44 @@ export const updatePricingSchedule = withAuth(async (
     return actionError('End date must be after effective date', 'msp/contracts:errors.pricingSchedule.endAfterEffective');
   }
 
-  // Check for overlapping schedules (excluding current schedule)
-  const overlapping = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
-    .where({
-      contract_id: existingSchedule.contract_id
-    })
-    .whereNot('schedule_id', scheduleId)
-    .where(function() {
-      this.where(function() {
-        // Updated schedule starts during an existing schedule
-        this.where('effective_date', '<=', effectiveDate)
-          .andWhere(function() {
-            this.whereNull('end_date')
-              .orWhere('end_date', '>', effectiveDate);
-          });
-      }).orWhere(function() {
-        // Updated schedule ends during an existing schedule (if it has an end date)
-        if (endDate) {
-          this.where('effective_date', '<', endDate)
-            .andWhere(function() {
-              this.whereNull('end_date')
-                .orWhere('end_date', '>', effectiveDate);
-            });
-        }
-      });
-    })
-    .first();
+  // Check for overlapping schedules (excluding current schedule) in the same
+  // line scope; an update may move a schedule between scopes.
+  const nextLineScope =
+    scheduleData.contract_line_id !== undefined
+      ? scheduleData.contract_line_id
+      : existingSchedule.contract_line_id ?? null;
 
-  if (overlapping) {
-    return actionError('This schedule would overlap with an existing pricing schedule', 'msp/contracts:errors.pricingSchedule.wouldOverlap');
-  }
+  return knex.transaction(async (trx) => {
+    await lockTenantBilling(trx, tenant);
+    const txDb = tenantDb(trx, tenant);
 
-  const [schedule] = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
-    .where({
-      schedule_id: scheduleId
-    })
-    .update({
-      ...scheduleData,
-      end_date: endDate,
-      updated_by: user.user_id,
-      updated_at: knex.fn.now()
-    })
-    .returning('*');
+    const overlapping = await findOverlappingPricingSchedule(
+      txDb,
+      existingSchedule.contract_id,
+      nextLineScope ?? null,
+      effectiveDate,
+      endDate,
+      scheduleId,
+    );
 
-  return schedule;
+    if (overlapping) {
+      return actionError('This schedule would overlap with an existing pricing schedule', 'msp/contracts:errors.pricingSchedule.wouldOverlap');
+    }
+
+    const [schedule] = await txDb.table<IContractPricingSchedule>('contract_pricing_schedules')
+      .where({
+        schedule_id: scheduleId
+      })
+      .update({
+        ...scheduleData,
+        end_date: endDate,
+        updated_by: user.user_id,
+        updated_at: trx.fn.now()
+      })
+      .returning('*');
+
+    return schedule;
+  });
 });
 
 /**
@@ -364,43 +385,4 @@ export const deletePricingSchedule = withAuth(async (
     .delete();
 
   return { success: true };
-});
-
-/**
- * Get the active pricing schedule for a contract at a specific date
- * @param contractId The contract ID
- * @param date The date to check (defaults to current date)
- * @returns The active pricing schedule or null if none found
- */
-export const getActivePricingScheduleByContract = withAuth(async (
-  user,
-  { tenant },
-  contractId: string,
-  date?: Date
-): Promise<IContractPricingSchedule | null | PricingScheduleActionError> => {
-  if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
-  }
-  const { knex } = await createTenantKnex();
-
-  if (!tenant) {
-    return actionError('Tenant not found', 'msp/billing:errors.context.tenantNotFound');
-  }
-
-  const checkDate = date || new Date();
-
-  const db = tenantDb(knex, tenant);
-  const schedule = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
-    .where({
-      contract_id: contractId
-    })
-    .where('effective_date', '<=', checkDate.toISOString())
-    .where(function() {
-      this.whereNull('end_date')
-        .orWhere('end_date', '>', checkDate.toISOString());
-    })
-    .orderBy('effective_date', 'desc')
-    .first();
-
-  return schedule || null;
 });

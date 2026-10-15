@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "scope": "Remaining bucket units query semantics and CI registration",
+  "native": {
+    "backend": "PostgreSQL",
+    "passed": 4,
+    "failed": 0,
+    "durationMs": 12240,
+    "reportingTypecheck": "passed",
+    "runtime": "Node 25 / Vitest 4.1.10",
+    "log": "/tmp/alga-bucket-summary-collision-native.log",
+    "databaseIsolation": "Suite creates a UUID-named bucket_units_test database on the existing native PostgreSQL service and drops only that database during teardown."
+  },
+  "files": [
+    "packages/reporting/src/actions/report-actions/getRemainingBucketUnits.ts",
+    "server/src/test/integration/remainingBucketUnits.integration.test.ts"
+  ],
+  "behaviors": [
+    "Tenant isolation and real weighted usage plus rollover totals",
+    "Deterministic first-member label, unused/catch-all pools",
+    "Exclusive period/contract end, template preference, inactive/future assignments",
+    "Identical contract, line, bucket and service UUIDs in two tenants retain separate labels, limits, weighted usage and rollover results."
+  ],
+  "ciRequirements": [
+    "Tier-1 manifest floor",
+    "Citus runtime producer and independent consumer"
+  ],
+  "limits": [
+    "Pre-fix unsupported query observed in actual Citus upgrade diagnostics; native PostgreSQL verification proves semantics, not Citus planner recovery.",
+    "Eight tenant-scoped reads retain default transaction isolation and may observe intervening concurrent edits, unlike a single SQL statement.",
+    "Authentication wrapper is mocked; SQL and tenant-scoped access execute against a private migrated database."
+  ]
+}

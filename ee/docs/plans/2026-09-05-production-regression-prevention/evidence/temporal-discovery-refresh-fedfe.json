@@ -1,0 +1,65 @@
+{
+  "scope": "Clean local Temporal execution and mixed-revision discovery refresh; not release readiness",
+  "lanes": [
+    {
+      "suite": "temporal-readiness",
+      "revision": "fedfeffee8fe412ab2a3c3911c7f9e86da5796e7",
+      "counts": {
+        "passed": 263,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "fileCount": 42,
+      "source": {
+        "before": {
+          "revision": "fedfeffee8fe412ab2a3c3911c7f9e86da5796e7",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "fedfeffee8fe412ab2a3c3911c7f9e86da5796e7",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "sha256": "b552b37791bfbfc38d9e9b0bb4cf5d6c967f5e1852eb96a26cfcebdd0b75cbdf"
+    },
+    {
+      "suite": "temporal-engine",
+      "revision": "fedfeffee8fe412ab2a3c3911c7f9e86da5796e7",
+      "counts": {
+        "passed": 38,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "fileCount": 9,
+      "source": {
+        "before": {
+          "revision": "fedfeffee8fe412ab2a3c3911c7f9e86da5796e7",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "fedfeffee8fe412ab2a3c3911c7f9e86da5796e7",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "sha256": "1ae8742c221369677f8eb98939823be9bbda43db29135da3634997d6f355b172"
+    }
+  ],
+  "discovery": {
+    "status": "failed",
+    "mixedArtifactUnmatchedCount": 100,
+    "unmatchedTemporalFiles": [
+      "ee/temporal-workflows/src/__tests__/e2e/email-only.e2e.test.ts",
+      "ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts"
+    ],
+    "limitation": "Other lanes retain older collections, so unmatched count includes newly assigned tests absent from stale reports. It is not the count of actual current CI orphans.",
+    "report": "/tmp/alga-inventory-after-temporal-result.json"
+  }
+}

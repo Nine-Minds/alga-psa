@@ -22,6 +22,7 @@ import { createBlockDocument, getBlockContent, updateBlockContent } from '@alga-
 import { downloadDocumentInBrowser } from '@alga-psa/documents/actions/document-download';
 import DocumentSelector from '@alga-psa/documents/components/DocumentSelector';
 import Documents from '@alga-psa/documents/components/Documents';
+import { DocumentViewer } from '@alga-psa/documents/components/DocumentViewer';
 import DocumentUpload from '@alga-psa/documents/components/DocumentUpload';
 import FolderSelectorModal from '@alga-psa/documents/components/FolderSelectorModal';
 import { DocumentStorageCard } from '@alga-psa/documents/components';
@@ -56,6 +57,7 @@ export function ClientPortalDocumentsProvider({ children }: { children: ReactNod
   const value = useMemo<DocumentsCrossFeatureCallbacks>(
     () => ({
       renderDocuments,
+      renderDocumentViewer: ({ content }: { content: unknown }) => <DocumentViewer content={content} />,
       renderDocumentUpload,
       renderDocumentSelector,
       renderFolderSelectorModal,

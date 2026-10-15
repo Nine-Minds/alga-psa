@@ -11,35 +11,33 @@ export interface IChatHistoryItem extends IChat {
 
 type TenantDbConnection = Parameters<typeof tenantDb>[0];
 
-const CHAT_MODEL_NO_TENANT_CONTEXT = '__chat_model_no_tenant_context__';
-const LEGACY_NO_TENANT_REASON = 'Preserve legacy chat model behavior when no tenant context is available';
+const requireTenant = (tenant: string | null | undefined): string => {
+  if (!tenant) {
+    throw new Error('Missing tenant for chat model');
+  }
+  return tenant;
+};
 
 const chatsTable = <Row extends object>(
   db: TenantDbConnection,
   tenant: string | null | undefined
 ): Knex.QueryBuilder<Row, Row[]> =>
-  tenant
-    ? tenantDb(db, tenant).table<Row>('chats')
-    : tenantDb(db, CHAT_MODEL_NO_TENANT_CONTEXT).unscoped<Row>('chats', LEGACY_NO_TENANT_REASON);
+  tenantDb(db, requireTenant(tenant)).table<Row>('chats');
 
 const messagesTable = <Row extends object>(
   db: TenantDbConnection,
   tenant: string | null | undefined
 ): Knex.QueryBuilder<Row, Row[]> =>
-  tenant
-    ? tenantDb(db, tenant).table<Row>('messages')
-    : tenantDb(db, CHAT_MODEL_NO_TENANT_CONTEXT).unscoped<Row>('messages', LEGACY_NO_TENANT_REASON);
+  tenantDb(db, requireTenant(tenant)).table<Row>('messages');
 
 const correlatedMessagesTable = <Row extends object>(
   db: TenantDbConnection,
   tenant: string | null | undefined,
   alias: string
 ): { facade: ReturnType<typeof tenantDb>; query: Knex.QueryBuilder<Row, Row[]> } => {
-  const facade = tenantDb(db, tenant ?? CHAT_MODEL_NO_TENANT_CONTEXT);
+  const facade = tenantDb(db, requireTenant(tenant));
   const tableExpression = `messages as ${alias}`;
-  const query = tenant
-    ? facade.table<Row>(tableExpression)
-    : facade.unscoped<Row>(tableExpression, LEGACY_NO_TENANT_REASON);
+  const query = facade.table<Row>(tableExpression);
 
   return { facade, query };
 };
@@ -126,11 +124,10 @@ const Chat = {
 
   getRecentByUser: async (userId: string, limit = 20, tenant?: string): Promise<IChatHistoryItem[]> => {
     try {
-      const { knex: db } = await createTenantKnex();
-      const chatsRoot = tenant
-        ? tenantDb(db, tenant).table<IChatHistoryItem>('chats')
-        : chatsTable<IChatHistoryItem>(db, undefined);
-      const previewText = rawSubqueryAs(db, latestMessageContentQuery(db, tenant, 'm'), 'preview_text');
+      const { knex: db, tenant: connectionTenant } = await createTenantKnex();
+      const scopedTenant = requireTenant(tenant ?? connectionTenant);
+      const chatsRoot = tenantDb(db, scopedTenant).table<IChatHistoryItem>('chats');
+      const previewText = rawSubqueryAs(db, latestMessageContentQuery(db, scopedTenant, 'm'), 'preview_text');
       const chats = await chatsRoot
         .select(
           'chats.*',
@@ -150,16 +147,15 @@ const Chat = {
 
   searchByUser: async (userId: string, query: string, limit = 20, tenant?: string): Promise<IChatHistoryItem[]> => {
     try {
-      const { knex: db } = await createTenantKnex();
-      const chatsRoot = tenant
-        ? tenantDb(db, tenant).table<IChat>('chats')
-        : chatsTable<IChat>(db, undefined);
+      const { knex: db, tenant: connectionTenant } = await createTenantKnex();
+      const scopedTenant = requireTenant(tenant ?? connectionTenant);
+      const chatsRoot = tenantDb(db, scopedTenant).table<IChat>('chats');
       const chatsRootSql = chatsRoot
         .select('chats.*')
         .where({ user_id: userId })
         .toSQL();
-      const latestMessageSql = latestMessageContentQuery(db, tenant, 'm_latest').toSQL();
-      const aggregateMessagesSql = aggregateMessageIndexQuery(db, tenant, 'm_aggregate').toSQL();
+      const latestMessageSql = latestMessageContentQuery(db, scopedTenant, 'm_latest').toSQL();
+      const aggregateMessagesSql = aggregateMessageIndexQuery(db, scopedTenant, 'm_aggregate').toSQL();
 
       // Search at the chat scope so multi-term queries can match across the title
       // and multiple persisted messages, not just within a single indexed field.

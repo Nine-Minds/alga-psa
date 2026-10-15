@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "scope": "Correct non-executed Vitest TODO/skip diagnostics while preserving failure and all identities",
+  "files": [
+    "scripts/lib/test-execution-evidence.mjs",
+    "scripts/tests/test-execution-evidence.test.mjs"
+  ],
+  "native": {
+    "passed": 19,
+    "failed": 0,
+    "realVitestListRunFixture": true,
+    "redLog": "/tmp/alga-todo-evidence-red.log",
+    "greenLog": "/tmp/alga-todo-evidence-green.log"
+  },
+  "historicalArtifactReplay": {
+    "runId": "34308610232",
+    "revision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+    "beforeStatus": "failed",
+    "afterStatus": "failed",
+    "counts": {
+      "passed": 15010,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 3,
+      "pending": 0
+    },
+    "beforeFailures": [
+      "todo: server/src/test/unit/taxService.test.ts > TaxService should apply the correct tax rate for international transactions",
+      "todo: server/src/test/unit/taxService.test.ts > TaxService should apply tax caps correctly when present",
+      "todo: server/src/test/unit/taxService.test.ts > TaxService should handle tax calculation for subscriptions spanning multiple tax periods",
+      "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should apply the correct tax rate for international transactions\"]",
+      "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should apply tax caps correctly when present\"]",
+      "Unexpected executed test: [\"server/src/test/unit/taxService.test.ts\",\"TaxService > should handle tax calculation for subscriptions spanning multiple tax periods\"]"
+    ],
+    "afterFailures": [
+      "todo: server/src/test/unit/taxService.test.ts > TaxService should apply the correct tax rate for international transactions",
+      "todo: server/src/test/unit/taxService.test.ts > TaxService should apply tax caps correctly when present",
+      "todo: server/src/test/unit/taxService.test.ts > TaxService should handle tax calculation for subscriptions spanning multiple tax periods"
+    ],
+    "allExpectedAndReportedIdentitiesUnchanged": true
+  },
+  "limits": [
+    "This is reporter interpretation repair, not implementation of tax policy or permission to skip required tests.",
+    "TODO and skipped/pending statuses still fail required readiness; genuinely uncollected passed or failed assertions still reject.",
+    "Historical raw CI artifacts were replayed locally; this does not replace a current-source CI execution."
+  ]
+}

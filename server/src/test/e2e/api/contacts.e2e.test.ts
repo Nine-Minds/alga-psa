@@ -79,7 +79,7 @@ describe('Contact API E2E Tests', () => {
         expect(response.data.data).toMatchObject({
           full_name: newContact.full_name,
           email: newContact.email,
-          default_phone_number: newContact.phone_numbers[0].phone_number,
+          default_phone_number: '+15551234567',
           client_id: env.clientId,
           role: newContact.role,
           notes: newContact.notes,
@@ -88,7 +88,7 @@ describe('Contact API E2E Tests', () => {
         });
         expect(response.data.data.phone_numbers).toEqual([
           expect.objectContaining({
-            phone_number: newContact.phone_numbers[0].phone_number,
+            phone_number: '+15551234567',
             canonical_type: 'work',
             is_default: true,
             display_order: 0,
@@ -276,7 +276,13 @@ describe('Contact API E2E Tests', () => {
       assertSuccess(response);
 
       const names = response.data.data.map((c: any) => c.full_name);
-      const sortedNames = [...names].sort();
+      // The API orders in SQL, so the expectation has to use the database
+      // collation instead of JavaScript's code-unit ordering.
+      const { rows } = await env.db.raw(
+        'SELECT value FROM json_array_elements_text(?::json) AS value ORDER BY value',
+        [JSON.stringify(names)]
+      );
+      const sortedNames = rows.map((row: any) => row.value);
       expect(names).toEqual(sortedNames);
     });
   });

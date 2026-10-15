@@ -304,6 +304,7 @@ interface ContactPhoneRowProps {
   index: number;
   row: EditablePhoneRow;
   customTypeSuggestions: string[];
+  defaultCountryCode?: string;
   disabled?: boolean;
   canMoveUp: boolean;
   canMoveDown: boolean;
@@ -322,6 +323,7 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
   index,
   row,
   customTypeSuggestions,
+  defaultCountryCode,
   disabled = false,
   canMoveUp,
   canMoveDown,
@@ -338,6 +340,9 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
   // Field messages live under common:clients.validation.*, not this page's namespace.
   const { t: tValidation } = useTranslation('common');
   const rowKey = row.contact_phone_number_id ?? row._localId ?? `${index}`;
+  // A stored international number keeps its own country, and the decision is taken
+  // once: flipping the formatter's country mid-entry reformats under the caret.
+  const [startedInternational] = useState(() => (row.phone_number ?? '').trim().startsWith('+'));
   // Plausibility only; the row still saves.
   const phoneWarnings = useMemo(
     () => translateFieldValidation(validatePhoneNumberField(row.phone_number ?? ''), tValidation).warnings,
@@ -479,6 +484,7 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
               defaultValue: 'Extension',
             })}
             onBlur={onBlur}
+            countryCode={startedInternational ? undefined : defaultCountryCode}
             allowExtensions={true}
             disabled={disabled}
             className="w-full"
@@ -562,6 +568,8 @@ interface ContactPhoneNumbersEditorProps {
   onChange: (rows: ContactPhoneNumberInput[]) => void;
   countries: ICountry[];
   customTypeSuggestions?: string[];
+  /** Dial country for rows typed in national format; usually the tenant's own. */
+  defaultCountryCode?: string;
   disabled?: boolean;
   errorMessages?: string[];
   onValidationChange?: (errors: string[]) => void;
@@ -575,6 +583,7 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
   value,
   onChange,
   customTypeSuggestions = [],
+  defaultCountryCode,
   disabled = false,
   errorMessages,
   onValidationChange,
@@ -809,6 +818,7 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
               index={index}
               row={row}
               customTypeSuggestions={customTypeSuggestions}
+              defaultCountryCode={defaultCountryCode}
               disabled={disabled}
               canMoveUp={index > 0}
               canMoveDown={index < draftRows.length - 1}

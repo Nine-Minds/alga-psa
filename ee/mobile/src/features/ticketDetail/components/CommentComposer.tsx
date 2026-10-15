@@ -14,6 +14,9 @@ import {
   serializeRichEditorJson,
 } from "../../ticketRichText/helpers";
 import { ActionChip } from "./ActionChip";
+import { CommentEmailRecipients, type CommentRecipientSearch } from "./CommentEmailRecipients";
+import { ScheduleCommentModal } from "./ScheduleCommentModal";
+import { formatDateTimeWithRelative } from "../../../ui/formatters/dateTime";
 import { MAX_COMMENT_LENGTH } from "../types";
 import type { TicketNotificationSuppressionOptions, TicketStatus } from "../../../api/tickets";
 import {
@@ -43,6 +46,14 @@ export function CommentComposer({
   onMentionSearch,
   mentionBaseUrl,
   mentionAuthToken,
+  scheduleAt,
+  onChangeScheduleAt,
+  cc,
+  bcc,
+  onChangeCc,
+  onChangeBcc,
+  onSearchRecipients,
+  variant = "ticket",
 }: {
   draftContent: string;
   draftPlainText: string;
@@ -64,10 +75,31 @@ export function CommentComposer({
   onMentionSearch?: (query: string, signal: AbortSignal) => Promise<MentionSuggestionItem[]>;
   mentionBaseUrl?: string | null;
   mentionAuthToken?: string;
+  /** Withhold the (client-visible) comment until this instant. */
+  scheduleAt?: Date | null;
+  /** One-off Cc/Bcc for this comment's email (public ticket comments only). */
+  cc?: string[];
+  bcc?: string[];
+  onChangeCc?: (next: string[]) => void;
+  onChangeBcc?: (next: string[]) => void;
+  /** Contact lookup behind the Cc/Bcc suggestion list. */
+  onSearchRecipients?: CommentRecipientSearch;
+  /** Task comments are always internal and never scheduled, so those controls are hidden. */
+  variant?: "ticket" | "task";
+  onChangeScheduleAt?: (value: Date | null) => void;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
   const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const canSchedule = variant === "ticket" && (Boolean(onChangeScheduleAt));
+  const isScheduled = Boolean(scheduleAt);
+
+  // Only client-visible comments can be withheld: switching to Internal drops
+  // a pending schedule rather than sending a hidden comment "later".
+  useEffect(() => {
+    if (isInternal && scheduleAt && onChangeScheduleAt) onChangeScheduleAt(null);
+  }, [isInternal, onChangeScheduleAt, scheduleAt]);
 
   useEffect(() => {
     if (!isResolution || !closeStatusId) {
@@ -134,15 +166,46 @@ export function CommentComposer({
           </Text>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm, gap: spacing.sm }}>
-            <ActionChip label={isInternal ? t("comments.internalChecked") : t("comments.internal")} onPress={() => onChangeIsInternal(true)} />
-            <ActionChip label={!isInternal ? t("comments.clientChecked") : t("comments.client")} onPress={() => onChangeIsInternal(false)} />
+            {variant === "ticket" ? (
+              <>
+                <ActionChip label={isInternal ? t("comments.internalChecked") : t("comments.internal")} onPress={() => onChangeIsInternal(true)} />
+                <ActionChip label={!isInternal ? t("comments.clientChecked") : t("comments.client")} onPress={() => onChangeIsInternal(false)} />
+              </>
+            ) : null}
             {onChangeIsResolution ? (
               <ActionChip
                 label={isResolution ? t("comments.resolutionChecked") : t("comments.resolution")}
                 onPress={() => onChangeIsResolution(!isResolution)}
               />
             ) : null}
+            {canSchedule ? (
+              <ActionChip
+                label={isScheduled ? `${t("comments.scheduledForShort")} \u2713` : t("comments.sendLater")}
+                disabled={isInternal || sending}
+                onPress={() => setScheduleOpen(true)}
+              />
+            ) : null}
           </View>
+          {variant === "ticket" && onChangeCc && onChangeBcc ? (
+            <CommentEmailRecipients
+              isInternal={isInternal}
+              cc={cc ?? []}
+              bcc={bcc ?? []}
+              onChangeCc={onChangeCc}
+              onChangeBcc={onChangeBcc}
+              searchRecipients={onSearchRecipients}
+            />
+          ) : null}
+          {canSchedule && isInternal ? (
+            <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
+              {t("comments.scheduleInternalBlocked")}
+            </Text>
+          ) : null}
+          {scheduleAt ? (
+            <Text testID="comment-schedule-summary" style={{ ...typography.caption, color: colors.primary, marginTop: spacing.xs }}>
+              {t("comments.scheduledFor", { when: formatDateTimeWithRelative(scheduleAt.toISOString()) })}
+            </Text>
+          ) : null}
           {isResolution && onChangeCloseStatusId && closedStatuses && closedStatuses.length > 0 ? (
             <View style={{ marginTop: spacing.sm }}>
               <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: 4 }}>
@@ -191,11 +254,20 @@ export function CommentComposer({
               disabled={sending || offline || draftPlainText.trim().length === 0 || draftPlainText.length > MAX_COMMENT_LENGTH}
               accessibilityLabel={t("comments.sendComment")}
             >
-              {sending ? t("comments.sending") : t("comments.send")}
+              {sending ? t("comments.sending") : isScheduled ? t("comments.scheduleConfirm") : t("comments.send")}
             </PrimaryButton>
           </View>
         </>
       )}
+      {canSchedule ? (
+        <ScheduleCommentModal
+          visible={scheduleOpen}
+          initialValue={scheduleAt ?? null}
+          onConfirm={(when) => { onChangeScheduleAt?.(when); setScheduleOpen(false); }}
+          onClear={() => { onChangeScheduleAt?.(null); setScheduleOpen(false); }}
+          onClose={() => setScheduleOpen(false)}
+        />
+      ) : null}
     </View>
   );
 }

@@ -1,0 +1,23 @@
+{
+  "status": "local_real_activity_database_verified",
+  "database": "workflow_invocation_82cc",
+  "result": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0
+  },
+  "log": "/tmp/alga-workflow-activity-db-final.log",
+  "execution": "Real executeWorkflowRuntimeV2ActionStep, mapping/expression functions and persisted invocation models. Registered handler is a deterministic failure/success fixture; DB connection and registration initialization injected.",
+  "verified": [
+    "First activity attempt persists FAILED",
+    "Second attempt claims same invocation and persists SUCCEEDED with attempt 2",
+    "Third call returns persisted output with no additional handler call",
+    "Only one persisted row, stable tenant-prefixed key and original resolved input"
+  ],
+  "remaining": [
+    "Real email action side effects",
+    "Worker-loss STARTED recovery",
+    "Live Temporal workflow execution",
+    "Legacy skipped suite replacement"
+  ]
+}

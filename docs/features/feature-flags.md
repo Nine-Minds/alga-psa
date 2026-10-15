@@ -37,6 +37,19 @@ MSP authorization without checking the release flag.
 Export and assignment actions apply current ticket access independently of the flag.
 Ordinary PSA and AlgaDesk workspaces do not depend on this flag.
 
+The client record composes one stable `co-managed` Service view and a compact
+summary through an optional cross-feature seam. The app-owned integration
+evaluates this same flag and, while it is not enabled, resolved, and error-free,
+supplies no summary, tab, rail entry, or Tickets override and starts no feature
+read; the ordinary client stays mounted. Disabling the flag with setup, a
+shortfall review, or embedded checkout open removes those controls and stops UI
+polling without revoking a submitted purchase. Legacy `/msp/co-managed?clientId=`,
+`/msp/co-management?operationId=`, SLA, delegated-administration, and departure
+links resolve through the same boundary; while unavailable they perform no
+adapter discovery. The hosted sponsor pool editor inside Account Management and
+the client shortfall purchase UI are wrapped by this boundary, so ordinary
+account and subscription controls remain available with the flag off.
+
 This is a UI-only release switch. Routes remain registered. APIs, server actions,
 provisioning, intake, licensing, billing, and background work must not check it.
 Product, authorization, and license restrictions apply independently. Local overrides
@@ -242,25 +255,21 @@ Controls discovery of the Contract Simulator while it is being rolled out.
 - Simulator routes, APIs, server actions, and all other entry points remain unchanged. This
   flag controls only the Contract Details tab and is not an authorization boundary.
 
-### 14. `service-request-store-only`
-Gates newly authoring/selecting the store-only execution provider for service request definitions (server-side).
+### 14. `release-v2-0-feature`
+Gates the project Timeline (Gantt) view while the 2.0 release is prepared.
 
 **Affected Areas:**
 - **MSP Portal:**
-  - Service Request definition editor at `/msp/service-requests/:definitionId` — the
-    execution provider dropdown
-- **Server actions:** `getServiceRequestDefinitionEditorDataAction` (filters the selectable
-  providers) / `updateServiceRequestExecutionProviderAction` (rejects the selection)
+  - Project Details → view switcher → Timeline
 
 **Behavior:**
-- When disabled (default): "Store Only" is filtered out of the editor's execution provider
-  options, and the server action rejects an attempt to select it with a 403 error.
-  Definitions that already use store-only keep the provider visible in their editor so the
-  current selection renders faithfully.
-- When enabled: Store-only is selectable exactly as before.
-- Existing published store-only definitions remain fully functional regardless of flag
-  state: portal catalog listing, submission execution, migrations, and historical
-  submission reads are not gated.
+- When disabled (default): The Timeline option is not offered in the project view switcher.
+  A saved Timeline preference or a `?view=gantt` link falls back to the Kanban view; the
+  preference itself is left untouched, so it applies again once the flag is on.
+- When enabled: The Timeline option is available alongside Kanban, List and Billing.
+- Task start dates, the dependency warnings, CSV, API, templates, mobile and client portal
+  changes that shipped with the timeline are not gated. This flag controls only the view's
+  entry point and is not an authorization boundary.
 
 ## Implementation Details
 

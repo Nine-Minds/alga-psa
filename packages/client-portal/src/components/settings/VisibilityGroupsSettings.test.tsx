@@ -24,7 +24,11 @@ vi.mock('@alga-psa/ui', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: string) => fallback ?? _key,
+    t: (_key: string, fallback?: string | { defaultValue?: string; [option: string]: unknown }) => {
+      if (typeof fallback === 'string' || fallback === undefined) return fallback ?? _key;
+      // i18next-style options: interpolate {{name}} into the default value.
+      return (fallback.defaultValue ?? _key).replace(/\{\{(\w+)\}\}/g, (_m, name) => String(fallback[name] ?? ''));
+    },
   }),
 }));
 
@@ -194,7 +198,7 @@ describe('VisibilityGroupsSettings behavior', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('0 boards · 0 assigned contacts')).toBeInTheDocument();
+      expect(screen.getByText(/0 boards · 0 assigned contacts/)).toBeInTheDocument();
     });
 
     expect(toastMock).toHaveBeenCalledWith({
@@ -235,4 +239,23 @@ describe('VisibilityGroupsSettings behavior', () => {
     });
     expect(getClientPortalVisibilityGroupsMock).toHaveBeenCalledTimes(2);
   });
+  it('defaults to client scope, submits contact scope, resets, and hydrates an edited group', async () => {
+    getClientPortalVisibilityGroupsMock.mockResolvedValue([group]);
+    getClientPortalVisibilityGroupMock.mockResolvedValue({ ...group, ticket_scope: 'contact', board_ids: [] });
+    createClientPortalVisibilityGroupMock.mockResolvedValue({ group_id: 'new' });
+    updateClientPortalVisibilityGroupMock.mockResolvedValue(undefined);
+    render(<VisibilityGroupsSettings />);
+    const clientOption = await screen.findByRole('radio', { name: /clientSettings.visibilityGroups.scopeClient$/ });
+    expect(clientOption).toBeChecked();
+    fireEvent.click(screen.getByRole('radio', { name: /clientSettings.visibilityGroups.scopeContact$/ }));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Private tickets' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create group' }));
+    await waitFor(() => expect(createClientPortalVisibilityGroupMock).toHaveBeenCalledWith(expect.objectContaining({ ticketScope: 'contact' })));
+    await waitFor(() => expect(clientOption).toBeChecked());
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    await waitFor(() => expect(screen.getByRole('radio', { name: /clientSettings.visibilityGroups.scopeContact$/ })).toBeChecked());
+    fireEvent.click(screen.getByRole('button', { name: 'Save group' }));
+    await waitFor(() => expect(updateClientPortalVisibilityGroupMock).toHaveBeenCalledWith('group-1', expect.objectContaining({ ticketScope: 'contact' })));
+  });
+
 });

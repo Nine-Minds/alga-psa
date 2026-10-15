@@ -1,9 +1,11 @@
 import {
+  AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY,
   AMP_ENTITY_REFERENCES,
   AMP_LIMITS,
   AMP_TABLE_COLUMNS,
   type AmpEntityType,
   type AmpRecord,
+  type AmpCustomFieldValueRecord,
 } from '@alga-psa/migration-spec';
 import { normalizeBooleanFlag, normalizeDateOnly, normalizeTimestamp } from './values';
 
@@ -45,11 +47,21 @@ export interface EntityRowsInput {
 
 export interface BuiltEntityRows {
   entityRows: Partial<Record<AmpEntityType, AmpRecord[]>>;
+  customFieldValues: AmpCustomFieldValueRecord[];
   rowCounts: Record<string, number>;
 }
 
 /** Columns the converter derives itself; mapping onto them is a config error. */
 const DERIVED_COLUMNS = ['package_record_id', 'external_identifier_namespace', 'extension_json'];
+
+/**
+ * Mapping targets the engine derives from source data rather than copying
+ * verbatim. They are not AMP columns, so they are valid only where the engine
+ * knows how to expand them.
+ */
+export const FULL_NAME_COLUMN = 'full_name';
+export const CLIENT_NAME_COLUMN = 'client_name';
+const SPECIAL_MAPPING_TARGETS: ReadonlySet<string> = new Set([FULL_NAME_COLUMN, CLIENT_NAME_COLUMN]);
 
 const TIMESTAMP_COLUMNS = ['created_at', 'updated_at', 'closed_at'];
 
@@ -61,10 +73,17 @@ const TIMESTAMP_COLUMNS = ['created_at', 'updated_at', 'closed_at'];
 const REQUIRED_TEXT_COLUMNS: Record<AmpEntityType, readonly string[]> = {
   organizations: ['name'],
   locations: ['name'],
-  contacts: [],
+  // Contacts must be applicable: email is always required, and at least one
+  // name column is required via REQUIRED_ANY_OF_COLUMNS below.
+  contacts: ['email'],
   tickets: ['title'],
   ticket_comments: ['body'],
   assets: ['name'],
+};
+
+/** When declared, at least one of these columns must be non-empty. */
+const REQUIRED_ANY_OF_COLUMNS: Partial<Record<AmpEntityType, readonly string[]>> = {
+  contacts: ['first_name', 'last_name'],
 };
 
 interface BuiltRecord {
@@ -78,6 +97,36 @@ function requiredColumns(entityType: AmpEntityType): string[] {
     .filter((reference) => reference.required)
     .map((reference) => reference.column);
   return [...REQUIRED_TEXT_COLUMNS[entityType], ...references];
+}
+
+function isEmptyValue(value: unknown): boolean {
+  return value === undefined || value === null || value === '';
+}
+
+/**
+ * Split a single full-name column into first and last name. Handles
+ * "First Last" and "Last, First"; a single token becomes the first name so the
+ * row stays usable.
+ */
+function splitFullName(value: string): { firstName: string; lastName: string } | null {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+  const commaIndex = trimmed.indexOf(',');
+  if (commaIndex >= 0) {
+    const lastName = trimmed.slice(0, commaIndex).trim();
+    const firstName = trimmed.slice(commaIndex + 1).trim();
+    if (!firstName && !lastName) {
+      return null;
+    }
+    return { firstName, lastName };
+  }
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: '' };
+  }
+  return { firstName: parts.slice(0, -1).join(' '), lastName: parts[parts.length - 1] };
 }
 
 /**
@@ -98,6 +147,8 @@ export function buildEntityRows(
 ): BuiltEntityRows {
   const built = new Map<AmpEntityType, BuiltRecord[]>();
   const idsByEntity = new Map<AmpEntityType, Set<string>>();
+  const customFieldValues: AmpCustomFieldValueRecord[] = [];
+  let customFieldId = 0;
 
   for (const input of inputs) {
     validateMapping(input);
@@ -107,6 +158,20 @@ export function buildEntityRows(
     built.set(entityType, records);
     const ids = idsByEntity.get(entityType) ?? new Set<string>();
     idsByEntity.set(entityType, ids);
+
+    // Name every header that did not map, once per file, so the operator can
+    // see a dropped client column before apply instead of after.
+    for (const header of input.headers) {
+      if (Object.prototype.hasOwnProperty.call(mapping, header)) {
+        continue;
+      }
+      diagnostics.push({
+        severity: 'info',
+        code: 'CSV_UNMAPPED_COLUMN',
+        message: `${label}: column "${header}" was preserved as a custom field value and can be mapped to an asset-type field during configuration.`,
+        entityType,
+      });
+    }
 
     let derivedRowIds = 0;
 
@@ -124,7 +189,7 @@ export function buildEntityRows(
 
       const values = new Map<string, string>();
       for (const header of input.headers) {
-        const raw = row[header];
+        const raw = Object.prototype.hasOwnProperty.call(row, header) ? row[header] : undefined;
         if (typeof raw !== 'string') {
           continue;
         }
@@ -139,11 +204,33 @@ export function buildEntityRows(
       }
 
       const record: Record<string, unknown> = {};
-      const leftover: Record<string, string> = {};
+      const leftover = new Map<string, string>();
+      let carriedClientName: string | undefined;
       for (const [header, value] of values) {
-        const target = mapping[header];
+        const target = Object.prototype.hasOwnProperty.call(mapping, header) ? mapping[header] : undefined;
         if (!target) {
-          leftover[header] = value;
+          leftover.set(header, value);
+          continue;
+        }
+        if (target === FULL_NAME_COLUMN) {
+          const split = splitFullName(value);
+          if (!split) {
+            warn(
+              'CSV_INVALID_NAME',
+              `"${value}" in column "${header}" could not be read as a name; the value was dropped.`
+            );
+            continue;
+          }
+          if (split.firstName && !record.first_name) {
+            record.first_name = split.firstName;
+          }
+          if (split.lastName && !record.last_name) {
+            record.last_name = split.lastName;
+          }
+          continue;
+        }
+        if (target === CLIENT_NAME_COLUMN) {
+          carriedClientName = value;
           continue;
         }
         const transformed = input.transformValue
@@ -187,6 +274,10 @@ export function buildEntityRows(
         }
       }
 
+      if (carriedClientName !== undefined) {
+        leftover.set(AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY, carriedClientName);
+      }
+
       let sourceRecordId = record.source_record_id;
       if (typeof sourceRecordId !== 'string' || sourceRecordId.length === 0) {
         sourceRecordId = `row-${sourceRow}`;
@@ -194,14 +285,14 @@ export function buildEntityRows(
         derivedRowIds += 1;
       }
 
-      const missing = requiredColumns(entityType).filter((column) => {
-        const value = record[column];
-        return value === undefined || value === '';
-      });
-      if (missing.length > 0) {
+      const missing = requiredColumns(entityType).filter((column) => isEmptyValue(record[column]));
+      const anyOf = REQUIRED_ANY_OF_COLUMNS[entityType];
+      const anyOfMissing = anyOf !== undefined && anyOf.every((column) => isEmptyValue(record[column]));
+      if (missing.length > 0 || anyOfMissing) {
+        const missingColumns = anyOfMissing && anyOf ? [...missing, ...anyOf] : missing;
         warn(
           'CSV_MISSING_REQUIRED',
-          `required column(s) ${missing.join(', ')} are missing; the row was skipped.`
+          `required column(s) ${missingColumns.join(', ')} are missing; the row was skipped.`
         );
         return;
       }
@@ -218,9 +309,24 @@ export function buildEntityRows(
       record.package_record_id = packageRecordId;
       record.external_identifier_namespace = namespace;
 
-      const leftoverKeys = Object.keys(leftover);
-      if (leftoverKeys.length > 0) {
-        const json = JSON.stringify(leftover);
+      for (const [header, value] of leftover) {
+        if (header === AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY) continue;
+        const valueJson = JSON.stringify(value);
+        if (Buffer.byteLength(valueJson, 'utf8') > AMP_LIMITS.extensionJsonBytes) {
+          warn('CSV_CUSTOM_FIELD_TOO_LARGE', `unmapped column "${header}" exceeds the ${AMP_LIMITS.extensionJsonBytes}-byte custom field value limit and was dropped.`);
+          continue;
+        }
+        customFieldValues.push({
+          package_record_id: `cfv-${++customFieldId}`,
+          entity_type: entityType,
+          entity_package_record_id: packageRecordId,
+          field_name: header,
+          value_json: valueJson,
+        });
+      }
+      const extensionValues = new Map([...leftover].filter(([key]) => key === AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY));
+      if (extensionValues.size > 0) {
+        const json = JSON.stringify(Object.fromEntries(extensionValues));
         const bytes = Buffer.byteLength(json, 'utf8');
         if (bytes > AMP_LIMITS.extensionJsonBytes) {
           warn(
@@ -255,27 +361,35 @@ export function buildEntityRows(
     entityRows[entityType] = records.map((built) => built.record as AmpRecord);
     rowCounts[entityType] = records.length;
   }
-  return { entityRows, rowCounts };
+  return { entityRows, customFieldValues, rowCounts };
 }
 
 function validateMapping(input: EntityRowsInput): void {
   const { entityType, label, mapping } = input;
   const allowedColumns = AMP_TABLE_COLUMNS[entityType];
   for (const [header, target] of Object.entries(mapping)) {
+    if (!input.headers.includes(header)) {
+      throw new Error(
+        `${label}: mapped source column "${header}" is not present in the file header (${input.headers.join(', ')}).`
+      );
+    }
     if (DERIVED_COLUMNS.includes(target)) {
       throw new Error(
         `${label}: mapping target "${target}" is derived by the converter and cannot be mapped from source column "${header}".`
       );
     }
+    if (SPECIAL_MAPPING_TARGETS.has(target)) {
+      if (entityType !== 'contacts') {
+        throw new Error(
+          `${label}: mapping target "${target}" is only valid for contacts.`
+        );
+      }
+      continue;
+    }
     if (!allowedColumns.includes(target)) {
       throw new Error(
         `${label}: mapping target "${target}" is not a column of AMP entity "${entityType}". ` +
           `Allowed targets: ${allowedColumns.join(', ')}.`
-      );
-    }
-    if (!input.headers.includes(header)) {
-      throw new Error(
-        `${label}: mapped source column "${header}" is not present in the file header (${input.headers.join(', ')}).`
       );
     }
   }

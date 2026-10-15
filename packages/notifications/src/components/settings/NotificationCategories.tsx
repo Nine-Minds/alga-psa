@@ -599,6 +599,7 @@ function NotificationCategoriesContent({
 
       <DataTable
         id="notification-categories-table"
+        persistPageSize={false}
         data={flatList}
         columns={columns}
         pagination={true}

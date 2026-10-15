@@ -107,6 +107,67 @@ describe('resolveCommentAuthor', () => {
     expect(resolved.avatarKind).toBe('unknown');
     expect(resolved.email).toBeUndefined();
   });
+
+  it('resolves an authorless system-generated comment to the system kind', () => {
+    const resolved = resolveCommentAuthor(
+      {
+        user_id: null,
+        contact_id: null,
+        is_system_generated: true,
+      } as Pick<IComment, 'user_id' | 'contact_id' | 'is_system_generated'>,
+      {
+        userMap: {},
+        contactMap: {},
+      }
+    );
+
+    expect(resolved.source).toBe('system');
+    expect(resolved.displayName).toBe('System');
+    expect(resolved.avatarKind).toBe('system');
+    expect(resolved.avatarUrl).toBeNull();
+  });
+
+  it('keeps the unknown kind for an authorless non-system comment', () => {
+    const resolved = resolveCommentAuthor(
+      {
+        user_id: null,
+        contact_id: null,
+        is_system_generated: false,
+      } as Pick<IComment, 'user_id' | 'contact_id' | 'is_system_generated'>,
+      {
+        userMap: {},
+        contactMap: {},
+      }
+    );
+
+    expect(resolved.source).toBe('unknown');
+    expect(resolved.avatarKind).toBe('unknown');
+  });
+
+  it('never lets the system flag override a resolvable user author', () => {
+    const resolved = resolveCommentAuthor(
+      {
+        user_id: 'user-1',
+        contact_id: null,
+        is_system_generated: true,
+      } as Pick<IComment, 'user_id' | 'contact_id' | 'is_system_generated'>,
+      {
+        userMap: {
+          'user-1': {
+            user_id: 'user-1',
+            first_name: 'Pat',
+            last_name: 'Agent',
+            user_type: 'internal',
+            avatarUrl: null,
+          },
+        },
+        contactMap: {},
+      }
+    );
+
+    expect(resolved.source).toBe('user');
+    expect(resolved.avatarKind).toBe('user');
+  });
 });
 
 it('uses saved foreign labels and initials without a local directory or avatar identity', () => {

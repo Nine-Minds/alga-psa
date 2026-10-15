@@ -1,0 +1,47 @@
+{
+  "scope": "Worker encrypted action replay and diagnostic output separation",
+  "baseRevision": "768e8c7a325ad6936fed9d565528803cb0be49c8",
+  "workingTreeDirty": true,
+  "validation": {
+    "before": {
+      "artifact": "/tmp/alga-protected-workflow-output-before.log",
+      "sha256": "a1a68a4cc1efef688ed1cef1e3fb87d2630b13c38ce9f70b07d1378700c07596",
+      "passed": 9,
+      "failed": 4
+    },
+    "after": {
+      "artifact": "/tmp/alga-protected-workflow-output.log",
+      "sha256": "093e9210a950efb846139c6776037ce706105aabc63070d58a784be87df4fce3",
+      "passed": 13,
+      "failed": 0
+    },
+    "activityUnit": {
+      "artifact": "/tmp/alga-protected-output-worker-unit.log",
+      "sha256": "cba12b13b6f3a0901b208ad712a5c55c37f832952936bf39c4f5ea166b5faa73",
+      "passed": 13,
+      "failed": 0
+    },
+    "temporalEngine": {
+      "artifact": "/tmp/alga-replay-worker-engine.log",
+      "sha256": "c0bd324fe0ad43ed65fa3c88359999c5ce8ab4619755e46df55081157a63588d",
+      "passed": 44,
+      "failed": 0,
+      "files": 10,
+      "scope": "Existing engine suite with activity stubs; compatibility evidence, not encrypted worker database coverage."
+    }
+  },
+  "behavior": [
+    "Real activity persists masked secret-reference diagnostics and encrypted original output, returns original output, and replays without repeating effects.",
+    "Missing keys, malformed key rings and missing replay storage fail before invocation reservation or handler execution.",
+    "Rotation retains replay with an old key, writes new invocations with the active key, and rejects retired-key replay without repeating the handler.",
+    "Legacy successful rows retain replay compatibility without encryption configuration.",
+    "All five retired redaction-suite assertions now have active database-backed coverage: nested snapshots, byte bounds, retention, history reads and invocation input/output diagnostics."
+  ],
+  "limits": [
+    "Local PostgreSQL/activity and unit evidence; not a native CI candidate pass.",
+    "Authentication/permission and connection boundaries are substituted. No live authorization policy or Temporal scheduling claim from the database suite.",
+    "Only configured secret-reference redactions are asserted; arbitrary output secrets are not universally masked.",
+    "Old workers must be drained before new writers begin. Deployment/drain rehearsal remains unverified; see workflow-replay-rollout.md.",
+    "Historical legacy output rows are preserved, not bulk encrypted."
+  ]
+}

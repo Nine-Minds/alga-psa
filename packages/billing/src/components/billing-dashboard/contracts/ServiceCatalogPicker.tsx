@@ -141,6 +141,7 @@ export function ServiceCatalogPicker({
         label: item.item_kind === 'product' && item.sku
           ? `${item.service_name} (${item.sku})`
           : item.service_name,
+        secondaryLabel: item.product_category || undefined,
         badge: item.item_kind === 'product'
           ? {
             text: t('servicePicker.catalog.badges.product', { defaultValue: 'Product' }),
@@ -178,6 +179,7 @@ export function ServiceCatalogPicker({
           item_kind: item.item_kind,
           sku: item.sku ?? null,
           default_rate: Number(item.default_rate ?? 0),
+          description: item.description ?? null,
         });
         return;
       }
@@ -190,6 +192,7 @@ export function ServiceCatalogPicker({
         item_kind: 'service',
         sku: null,
         default_rate: 0,
+        description: null,
       });
     },
     [onSelect, selectedLabel]

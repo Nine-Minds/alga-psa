@@ -18,7 +18,9 @@ describe('opportunities v1 OpenAPI registration', () => {
       'GET /api/v1/opportunities/{id}/steps',
       'POST /api/v1/opportunities/{id}/steps/{stepId}/complete',
       'PUT /api/v1/opportunities/{id}',
+      'PATCH /api/v1/opportunities/{id}',
       'DELETE /api/v1/opportunities/{id}',
+      'POST /api/v1/opportunities/{id}/stage',
       'POST /api/v1/opportunities/{id}/win',
       'POST /api/v1/opportunities/{id}/lose',
       'POST /api/v1/opportunities/{id}/complete-action',
@@ -60,6 +62,9 @@ describe('opportunities v1 OpenAPI registration', () => {
     expect(document.paths?.['/api/v1/opportunities/{id}/steps/{stepId}/complete']?.post).toBeDefined();
     expect(document.paths?.['/api/v1/opportunities/{id}/complete-action']?.post).toBeDefined();
     expect(document.paths?.['/api/v1/opportunities/suggestions/{id}/accept']?.post).toBeDefined();
+    // PATCH shares the PUT contract; /stage is the documented home for open-stage moves.
+    expect(document.paths?.['/api/v1/opportunities/{id}']?.patch).toBeDefined();
+    expect(document.paths?.['/api/v1/opportunities/{id}/stage']?.post).toBeDefined();
 
     const baseDocument = generateBaseDocument({
       title: 'Alga API Test',
@@ -72,6 +77,7 @@ describe('opportunities v1 OpenAPI registration', () => {
       '/api/v1/interactions',
       '/api/v1/interactions/{id}',
       '/api/v1/interaction-types',
+      '/api/v1/interaction-statuses',
       '/api/v1/inventory/lookup',
       '/api/v1/inventory/stock',
       '/api/v1/inventory/stock-locations',
@@ -95,6 +101,8 @@ describe('opportunities v1 OpenAPI registration', () => {
     }
     expect(baseDocument.paths?.['/api/v1/interactions']?.get).toBeDefined();
     expect(baseDocument.paths?.['/api/v1/interactions']?.post).toBeDefined();
+    expect(baseDocument.paths?.['/api/v1/interactions/{id}']?.put).toBeDefined();
+    expect(baseDocument.paths?.['/api/v1/interaction-statuses']?.get).toBeDefined();
     expect(baseDocument.paths?.['/api/v1/inventory/counts']?.get).toBeDefined();
     expect(baseDocument.paths?.['/api/v1/inventory/counts']?.post).toBeDefined();
   });

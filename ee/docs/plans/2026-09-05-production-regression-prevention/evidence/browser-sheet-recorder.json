@@ -1,0 +1,29 @@
+{
+  "status": "code and local dry-run verified; no live Sheet writes/readback yet",
+  "tab": "browser_readiness",
+  "schemaVersion": 2,
+  "behavior": "One run row contains totals; journey rows contain identity, first attempt, retry and outcome without duplicating totals. Missing/stale/wrong-edition evidence is incomplete with unknown counts blank. Existing metrics tabs remain unchanged.",
+  "validation": {
+    "combinedTests": 8,
+    "failed": 0,
+    "skipped": 0,
+    "log": "/tmp/alga-browser-sheet-final.log",
+    "actionlint": "passed",
+    "historicalReportDryRun": {
+      "file": "/tmp/alga-browser-sheet-dry-run-final.json",
+      "rows": 25,
+      "runRows": 1,
+      "journeyRows": 24,
+      "flakyJourneys": 2,
+      "laneStatus": "failed",
+      "testedMergeRevision": "48a6b45a38b427b854d70889443c3598370238e8",
+      "branchHeadWasRejected": "df9b92815621dbfe2bfe71c141df459f218cb67a"
+    }
+  },
+  "remaining": [
+    "Native publication and live workbook readback",
+    "Retry/run attempt deduplication and cancelled-before-recorder reconciliation",
+    "Immutable artifact identity and global readiness presentation"
+  ],
+  "planStatus": "F024/F025 remain incomplete"
+}

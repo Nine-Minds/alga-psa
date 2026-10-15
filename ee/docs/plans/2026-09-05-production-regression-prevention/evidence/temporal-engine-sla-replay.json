@@ -1,0 +1,63 @@
+{
+  "status": "passed",
+  "counts": {
+    "passed": 29,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "failures": [],
+  "files": 6,
+  "command": "node scripts/run-additional-workspace-tests.mjs temporal-engine",
+  "source": {
+    "before": {
+      "revision": "71dc839f7346b3b352a9e60a6a5e70bd0026b2b2",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/docs/plans/2026-09-05-production-regression-prevention/SCRATCHPAD.md"
+        },
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/src/workflows/__tests__/sla-ticket-workflow.integration.test.ts"
+        },
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.engine.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        }
+      ]
+    },
+    "after": {
+      "revision": "71dc839f7346b3b352a9e60a6a5e70bd0026b2b2",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/docs/plans/2026-09-05-production-regression-prevention/SCRATCHPAD.md"
+        },
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/src/workflows/__tests__/sla-ticket-workflow.integration.test.ts"
+        },
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.engine.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        }
+      ]
+    }
+  },
+  "limits": [
+    "Local worktree execution; native PR engine verification remains pending.",
+    "Application activities are stubbed; these tests verify real Temporal orchestration and cold replay, not provider or database parity."
+  ]
+}

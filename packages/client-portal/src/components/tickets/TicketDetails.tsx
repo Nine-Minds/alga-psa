@@ -11,10 +11,12 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { RichTextViewer } from '@alga-psa/ui/editor';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Card } from '@alga-psa/ui/components/Card';
 import { TicketDocumentsSection, TicketConversation, TicketAppointmentRequests, TicketOriginBadge, type ITicketAppointmentRequest } from '@alga-psa/tickets/components';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Link2 } from 'lucide-react';
+import { PortalTicketExternalLinks } from './PortalTicketExternalLinks';
 import { AssetDetails } from '../assets/AssetDetails';
 import { getClientAssetById } from '@alga-psa/client-portal/actions';
 import type { Asset, ProductCode } from '@alga-psa/types';
@@ -44,6 +46,7 @@ import { PartialBlock } from '@blocknote/core';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { IStatus } from '@alga-psa/types';
+import { derivePortalStatusOptions } from './portalStatusOptions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
 import {
@@ -126,6 +129,13 @@ function TicketDetailsContent({
   // Local overrides for comments to ensure immediate UI reflection
   const [commentOverrides, setCommentOverrides] = useState<Record<string, { note?: string; updated_at?: string }>>({});
   const [statusOptions] = useState<IStatus[]>(initialStatusOptions);
+  // Re-derive on every current-status change: the server seeds the initial list
+  // with the ticket's current restricted status, but once the ticket moves the
+  // restricted status must stop being offered as a target without a reload.
+  const portalStatusOptions = useMemo(
+    () => derivePortalStatusOptions(statusOptions, ticket.status_id),
+    [statusOptions, ticket.status_id]
+  );
   const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
   const [ticketToUpdateStatus, setTicketToUpdateStatus] = useState<{ ticketId: string; newStatusId: string; currentStatusName: string; newStatusName: string; } | null>(null);
   const [linkedAssetPreview, setLinkedAssetPreview] = useState<{
@@ -133,6 +143,13 @@ function TicketDetailsContent({
     loading: boolean;
     error: string | null;
     fallbackName: string;
+    /**
+     * What the ticket itself says about the asset. Shown when the viewer is not
+     * allowed to open the device (a contact-scoped user sees a ticket's linked
+     * devices even when they are assigned to someone else), so the pill never
+     * dead-ends on "Asset not found".
+     */
+    summary?: { name: string; asset_tag: string | null; asset_type: string | null } | null;
   } | null>(null);
   const handleReturnedActionError = useCallback((result: unknown) => {
     const message = getErrorMessage(result);
@@ -190,6 +207,7 @@ function TicketDetailsContent({
     clientPortal: t('origin.clientPortal', 'Created via Client Portal'),
     inboundEmail: t('origin.inboundEmail', 'Created via Inbound Email'),
     api: t('origin.api', 'Created via API'),
+    recurring: t('origin.recurring', 'Created by Recurring Schedule'),
     other: t('origin.other', 'Created via Other'),
   }), [t]);
 
@@ -375,6 +393,26 @@ function TicketDetailsContent({
       handleError(error, t('messages.commentError', 'Failed to add comment'));
       return false;
     } finally { endConversationRequest(); }
+  };
+
+  const handleAddReplyComment = async (content: PartialBlock[], parentCommentId: string): Promise<boolean> => {
+    try {
+      const result = await addClientTicketComment(ticketId, JSON.stringify(content), false, false, ticket.selectedConversationId, parentCommentId);
+      if (isReturnedActionError(result)) {
+        handleReturnedActionError(result);
+        return false;
+      }
+      const details = await getClientTicketDetails(ticketId);
+      if (isReturnedActionError(details)) {
+        handleReturnedActionError(details);
+        return false;
+      }
+      setTicket(details);
+      return true;
+    } catch (error) {
+      handleError(error, t('messages.commentError', 'Failed to add comment'));
+      return false;
+    }
   };
 
   const handleEdit = (comment: IComment) => {
@@ -626,13 +664,13 @@ function TicketDetailsContent({
               <div className="flex items-center gap-3">
                 <CustomSelect
                   value={ticket.status_id || ''}
-                  options={statusOptions.map((status) => ({
+                  options={portalStatusOptions.map((status) => ({
                     value: status.status_id || '',
                     label: status.name || ''
                   }))}
                   onValueChange={(value) => {
                     if (ticket.status_id !== value) {
-                      const selectedStatus = statusOptions.find(s => s.status_id === value);
+                      const selectedStatus = portalStatusOptions.find(s => s.status_id === value);
                       if (selectedStatus) {
                         setTicketToUpdateStatus({
                           ticketId: ticket.ticket_id!,
@@ -755,7 +793,7 @@ function TicketDetailsContent({
             {/* Linked assets — populated from asset_associations on the server. */}
             {(() => {
               const linkedAssets = (ticket as ITicketWithDetails & {
-                linkedAssets?: Array<{ asset_id: string; name: string; asset_tag: string | null }>;
+                linkedAssets?: Array<{ asset_id: string; name: string; asset_tag: string | null; asset_type?: string | null }>;
               }).linkedAssets;
               if (!linkedAssets || linkedAssets.length === 0) return null;
 
@@ -763,7 +801,11 @@ function TicketDetailsContent({
                 assetId: string,
                 fallbackName: string,
               ) => {
-                setLinkedAssetPreview({ asset: null, loading: true, error: null, fallbackName });
+                const linked = linkedAssets.find((candidate) => candidate.asset_id === assetId);
+                const summary = linked
+                  ? { name: linked.name, asset_tag: linked.asset_tag ?? null, asset_type: linked.asset_type ?? null }
+                  : null;
+                setLinkedAssetPreview({ asset: null, loading: true, error: null, fallbackName, summary });
                 try {
                   const asset = await getClientAssetById(assetId);
                   if (isReturnedActionError(asset)) {
@@ -772,14 +814,18 @@ function TicketDetailsContent({
                       loading: false,
                       error: getErrorMessage(asset),
                       fallbackName,
+                      summary,
                     });
                     return;
                   }
                   setLinkedAssetPreview({
                     asset,
                     loading: false,
-                    error: asset ? null : t('messages.assetNotFound', 'Asset not found'),
+                    // No full record means the device is not one this user may open;
+                    // the ticket's own summary of it is shown instead of an error.
+                    error: asset || summary ? null : t('messages.assetNotFound', 'Asset not found'),
                     fallbackName,
+                    summary,
                   });
                 } catch (err) {
                   console.error('Failed to load linked asset', err);
@@ -788,6 +834,7 @@ function TicketDetailsContent({
                     loading: false,
                     error: t('messages.assetLoadFailed', 'Failed to load asset details'),
                     fallbackName,
+                    summary,
                   });
                 }
               };
@@ -881,9 +928,13 @@ function TicketDetailsContent({
             </div>
           </div>
 
+          <PortalTicketExternalLinks links={ticket.portalExternalLinks ?? []} />
+
           {/* Comments Section */}
           {ticket.conversations && (
             <div>
+              {currentUser ? (
+                <>
               {namedConversationsEnabled && (ticket.requesterConversations?.length ?? 0) > 1 && <div className="mb-4 space-y-2">
                 <CustomSelect id="portal-ticket-conversation" label={t('namedConversations.portalSelector', 'Conversation')}
                   value={ticket.selectedConversationId ?? ''}
@@ -915,6 +966,7 @@ function TicketDetailsContent({
                 editorKey={editorKey}
                 onNewCommentContentChange={handleNewCommentContentChange}
                 onAddNewComment={handleAddNewComment}
+                onAddReplyComment={handleAddReplyComment}
                 onTabChange={(tab) => {
                   if (tab !== 'internal') {
                     setActiveTab(tab);
@@ -930,6 +982,8 @@ function TicketDetailsContent({
                 defaultNewestFirst
               />
               </fieldset>
+                </>
+              ) : <LoadingIndicator text={t('common.loading', 'Loading...')} />}
             </div>
           )}
 
@@ -996,6 +1050,26 @@ function TicketDetailsContent({
       )}
       {linkedAssetPreview?.asset && !linkedAssetPreview.loading && (
         <AssetDetails asset={linkedAssetPreview.asset} />
+      )}
+      {linkedAssetPreview && !linkedAssetPreview.loading && !linkedAssetPreview.asset && !linkedAssetPreview.error && linkedAssetPreview.summary && (
+        <dl className="p-6 text-sm space-y-2" data-testid="ticket-linked-asset-summary">
+          <div>
+            <dt className="font-bold text-gray-900">{t('fields.assetName', 'Name')}</dt>
+            <dd className="text-gray-700">{linkedAssetPreview.summary.name}</dd>
+          </div>
+          {linkedAssetPreview.summary.asset_tag && (
+            <div>
+              <dt className="font-bold text-gray-900">{t('fields.assetTag', 'Asset tag')}</dt>
+              <dd className="text-gray-700">{linkedAssetPreview.summary.asset_tag}</dd>
+            </div>
+          )}
+          {linkedAssetPreview.summary.asset_type && (
+            <div>
+              <dt className="font-bold text-gray-900">{t('fields.assetType', 'Type')}</dt>
+              <dd className="text-gray-700">{linkedAssetPreview.summary.asset_type}</dd>
+            </div>
+          )}
+        </dl>
       )}
     </Dialog>
   );

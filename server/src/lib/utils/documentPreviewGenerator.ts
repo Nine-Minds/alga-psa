@@ -267,6 +267,7 @@ async function generateImagePreviews(
           mime_type: 'image/jpeg',
           uploaded_by_id: document.created_by,
           isDerivedArtifact: true,
+          origin: 'system-artifact',
           metadata: {
             context: 'document_thumbnail',
             source_document_id: document.document_id,
@@ -306,6 +307,7 @@ async function generateImagePreviews(
             mime_type: 'image/jpeg',
             uploaded_by_id: document.created_by,
             isDerivedArtifact: true,
+            origin: 'system-artifact',
             metadata: {
               context: 'document_preview',
               source_document_id: document.document_id,
@@ -408,6 +410,7 @@ async function generatePdfPreviews(
           mime_type: 'image/jpeg',
           uploaded_by_id: document.created_by,
           isDerivedArtifact: true,
+          origin: 'system-artifact',
           metadata: {
             context: 'document_thumbnail',
             source_document_id: document.document_id,
@@ -440,6 +443,7 @@ async function generatePdfPreviews(
           mime_type: 'image/jpeg',
           uploaded_by_id: document.created_by,
           isDerivedArtifact: true,
+          origin: 'system-artifact',
           metadata: {
             context: 'document_preview',
             source_document_id: document.document_id,
@@ -596,6 +600,7 @@ async function generateVideoPreviews(
           mime_type: 'image/jpeg',
           uploaded_by_id: document.created_by,
           isDerivedArtifact: true,
+          origin: 'system-artifact',
           metadata: {
             context: 'document_thumbnail',
             source_document_id: document.document_id,
@@ -629,6 +634,7 @@ async function generateVideoPreviews(
           mime_type: 'image/jpeg',
           uploaded_by_id: document.created_by,
           isDerivedArtifact: true,
+          origin: 'system-artifact',
           metadata: {
             context: 'document_preview',
             source_document_id: document.document_id,

@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { toBrowserDate } from './dateUtils';
 import type { AppointmentSummary } from './types';
 
@@ -66,6 +66,9 @@ export function AppointmentsCalendar({
   onCreateOnDate,
 }: AppointmentsCalendarProps) {
   const { t, i18n } = useTranslation('features/appointments');
+  // Weekday and month labels below are NAMES, so they stay on the language.
+  // The appointment clock is a pattern and takes 12/24h from the country.
+  const { formatDate } = useFormatters();
   const locale = i18n.language || undefined;
   const [cursor, setCursor] = useState<Date>(() => startOfMonth(new Date()));
   const [openDayKey, setOpenDayKey] = useState<string | null>(null);
@@ -144,10 +147,10 @@ export function AppointmentsCalendar({
         statusColor(apt.status),
       ].join(' ')}
       title={apt.service_name}
-      aria-label={`${apt.service_name}${dt ? ` at ${dt.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })}` : ''}`}
+      aria-label={`${apt.service_name}${dt ? ` at ${formatDate(dt, { hour: 'numeric', minute: '2-digit' })}` : ''}`}
     >
       {dt
-        ? `${dt.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })} · `
+        ? `${formatDate(dt, { hour: 'numeric', minute: '2-digit' })} · `
         : ''}
       {apt.service_name}
     </button>

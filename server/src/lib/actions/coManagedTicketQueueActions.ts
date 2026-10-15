@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCoManagedTicketQueue, exportCoManagedTicketQueue, bulkHandBackCoManagedTickets, type CoManagedBulkHandbackRequest, type CoManagedTicketQueueRequest } from '@alga-psa/co-managed';
+import { getCoManagedTicketQueue, exportCoManagedTicketQueue, bulkHandBackCoManagedTickets, type CoManagedBulkHandbackRequest, type CoManagedTicketQueueRequest, type CoManagedWorkSignals } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { unparseCSV } from '../utils/csvParser';
 
@@ -10,6 +10,19 @@ export const getCoManagedTicketQueueAction = withAuth(async (user, { tenant }, r
   const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   return getCoManagedTicketQueue(knex, actor, request);
+});
+
+/**
+ * The callout/badge read. It is the ordinary authorized queue read narrowed to
+ * a one-row page, so counts carry the same authorization and redaction as the
+ * list; only counts and the relationship tally leave the server, never rows.
+ * Release-flag gating is presentation and lives in the callers, not here.
+ */
+export const getCoManagedWorkSignalsAction = withAuth(async (user, { tenant }, request: { clientId?: string } = {}): Promise<CoManagedWorkSignals> => {
+  const actor = await coManagedBrowserActor(user, tenant);
+  const { knex } = await createTenantKnex(tenant);
+  const page = await getCoManagedTicketQueue(knex, actor, { view: 'working', state: 'open', page: 1, pageSize: 1, ...(request?.clientId ? { clientId: request.clientId } : {}) });
+  return { assignedRelationshipCount: page.assignedRelationshipCount, signals: page.signals };
 });
 
 export const bulkHandBackCoManagedTicketsAction = withAuth(async (user, { tenant }, request: CoManagedBulkHandbackRequest) => {

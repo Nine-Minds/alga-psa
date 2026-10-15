@@ -19,8 +19,8 @@ import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { coManagedConversationAuthorSources } from './conversationPolicy';
 import { rememberNamedConversationCorrespondents } from '@alga-psa/shared/services/email/namedConversationCorrespondents';
 import type { CoManagedConversationItem } from './ticketConversation';
-import { getClientContactVisibilityContext } from '@alga-psa/shared/lib/tickets/clientPortalVisibility.server';
-import { VISIBILITY_GROUP_MISMATCH_ERROR, VISIBILITY_GROUP_MISSING_ERROR } from '@alga-psa/shared/lib/tickets/clientPortalVisibility';
+import { getClientContactVisibilityContext } from '@alga-psa/authorization/portal/visibility.server';
+import { VISIBILITY_GROUP_MISMATCH_ERROR, VISIBILITY_GROUP_MISSING_ERROR } from '@alga-psa/authorization/portal/visibility';
 
 export interface NamedConversationEmailRequest { operationId: string; expectedDraftRevision: number; expectedConversationRevision: number }
 export interface ConversationEmailPayload {

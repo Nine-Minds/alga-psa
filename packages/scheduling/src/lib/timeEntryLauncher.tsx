@@ -4,10 +4,25 @@ import React from 'react';
 import { toast } from 'react-hot-toast';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { getCurrentTimePeriod } from '../actions/timePeriodsActions';
-import { fetchOrCreateTimeSheet, saveTimeEntry, getTimeEntryById } from '../actions/timeEntryActions';
-import type { IExtendedWorkItem, ITimeEntryWithWorkItem, TimeEntryWorkItemContext } from '@alga-psa/types';
+import { useFormatters, translate } from '@alga-psa/ui/lib/i18n/client';
+import { getTimeEntryUserTimeZone } from '../actions/timePeriodsActions';
+import { fetchTimePeriods, getTimeEntryById } from '../actions/timeEntryActions';
+import { fetchTimeSheet } from '../actions/timeSheetActions';
+import {
+  isEditableSheetStatus,
+  dateOnlyToLocalDate,
+  periodLastInclusiveDay,
+  resolveEntryDefaults,
+} from './timeEntryPeriodSelection';
+import { createTimeEntrySaveHandler } from './timeEntrySaveAdapter';
+import type {
+  IExtendedWorkItem,
+  ITimeEntryWithWorkItem,
+  ITimeSheetView,
+  TimeEntryWorkItemContext,
+} from '@alga-psa/types';
 import TimeEntryDialog from '../components/time-management/time-entry/time-sheet/TimeEntryDialog';
+import NewWorkItemTimeEntry from '../components/time-management/time-entry/time-sheet/NewWorkItemTimeEntry';
 import type { OpenDrawerFn } from '@alga-psa/ui/context';
 
 interface LaunchTimeEntryParams {
@@ -25,7 +40,11 @@ const launchBlockedToast = (message: string) => {
   toast.error(message, { id: 'time-entry-launch-blocked', duration: 10000 });
 };
 
-const NO_TIME_PERIOD_MESSAGE = 'No time period covers today, so time can’t be entered yet. Ask an administrator to create time periods under Settings → Time Entry.';
+// Launcher failures fire outside a React tree, so they translate through the
+// module-level helper; the English default keeps them readable before the
+// namespace loads.
+const launchMessage = (key: string, fallback: string): string =>
+  translate('msp/time-entry', `launch.${key}`, { defaultValue: fallback });
 
 const buildWorkItem = (context: TimeEntryWorkItemContext): Omit<IExtendedWorkItem, 'tenant'> => {
   return {
@@ -45,95 +64,206 @@ const buildWorkItem = (context: TimeEntryWorkItemContext): Omit<IExtendedWorkIte
     task_name: context.taskName,
     service_id: context.serviceId,
     service_name: context.serviceName,
+    service_source: context.serviceSource,
   };
 };
 
-const deriveDefaultTimes = (context: TimeEntryWorkItemContext) => {
-  if (context.startTime || context.endTime) {
-    return {
-      defaultStartTime: context.startTime,
-      defaultEndTime: context.endTime,
-    };
-  }
+const saveAndComplete = createTimeEntrySaveHandler;
 
-  if (context.elapsedTime && context.elapsedTime > 0) {
-    const defaultEndTime = new Date();
-    const defaultStartTime = new Date(defaultEndTime.getTime() - context.elapsedTime * 1000);
-    return { defaultStartTime, defaultEndTime };
-  }
-
-  return { defaultStartTime: undefined, defaultEndTime: undefined };
-};
-
-// Preparation is shared by drawer launchers and resource-scoped dialogs.
-export async function prepareTimeEntryForWorkItem(context: TimeEntryWorkItemContext, existingEntryId?: string) {
-  try {
-    const user = await getCurrentUser();
-    if (!user?.user_id) {
-      launchBlockedToast('Unable to load current user for time entry.');
-      return;
-    }
-
-    let existingEntry: ITimeEntryWithWorkItem | null = null;
-    if (existingEntryId) {
-      existingEntry = await getTimeEntryById(existingEntryId);
-      if (isActionMessageError(existingEntry) || isActionPermissionError(existingEntry)) {
-        launchBlockedToast(getErrorMessage(existingEntry));
-        return;
-      }
-      if (!existingEntry) {
-        launchBlockedToast('Time entry not found.');
-        return;
-      }
-    }
-
-    const currentTimePeriod = await getCurrentTimePeriod();
-    if (isActionMessageError(currentTimePeriod) || isActionPermissionError(currentTimePeriod)) {
-      launchBlockedToast(getErrorMessage(currentTimePeriod));
-      return;
-    }
-    if (!currentTimePeriod) {
-      launchBlockedToast(NO_TIME_PERIOD_MESSAGE);
-      return;
-    }
-
-    let timeSheetId = existingEntry?.time_sheet_id;
-    if (!timeSheetId) {
-      const timeSheet = await fetchOrCreateTimeSheet(user.user_id, currentTimePeriod.period_id);
-      if (isActionMessageError(timeSheet) || isActionPermissionError(timeSheet)) {
-        launchBlockedToast(getErrorMessage(timeSheet));
-        return;
-      }
-      timeSheetId = timeSheet.id;
-    }
-
-    const workItem = buildWorkItem(context);
-    const { defaultStartTime, defaultEndTime } = deriveDefaultTimes(context);
-    const baseDate = existingEntry?.start_time
-      ? new Date(existingEntry.start_time)
-      : context.startTime || defaultStartTime || new Date();
-
-    return { workItem, date: baseDate, existingEntries: existingEntry ? [existingEntry] : undefined,
-      timePeriod: currentTimePeriod, defaultStartTime, defaultEndTime, timeSheetId };
-
-  } catch (error) {
-    console.error('Failed to launch time entry dialog:', error);
-    toast.error('An error occurred while preparing the time entry. Please try again.');
-  }
+interface AnchoredTimeEntryDialogProps {
+  existingEntry: ITimeEntryWithWorkItem;
+  savedSheet: ITimeSheetView;
+  workItem: Omit<IExtendedWorkItem, 'tenant'>;
+  onClose: () => void;
+  onComplete?: () => void;
+  workTimeZone?: string;
 }
 
-export { TimeEntryDialog };
+/**
+ * An existing entry is edited against its own saved sheet: the sheet's actual
+ * period bounds the date field and its status decides editability. A small
+ * component so the period context label uses the application formatter.
+ */
+function AnchoredTimeEntryDialog({
+  existingEntry,
+  savedSheet,
+  workItem,
+  onClose,
+  onComplete,
+  workTimeZone,
+}: AnchoredTimeEntryDialogProps): React.JSX.Element {
+  const { formatDate } = useFormatters();
+  const timePeriod = savedSheet.time_period!;
+  const periodContextLabel = `${formatDate(dateOnlyToLocalDate(timePeriod.start_date), {
+    dateStyle: 'medium',
+  })} – ${formatDate(dateOnlyToLocalDate(periodLastInclusiveDay(timePeriod.end_date)), {
+    dateStyle: 'medium',
+  })}`;
+
+  return (
+    <TimeEntryDialog
+      isOpen={true}
+      onClose={onClose}
+      onSave={saveAndComplete(onComplete)}
+      workItem={workItem}
+      date={new Date(existingEntry.start_time)}
+      existingEntries={[existingEntry]}
+      timePeriod={timePeriod}
+      isEditable={isEditableSheetStatus(savedSheet.approval_status)}
+      timeSheetId={savedSheet.id}
+      inDrawer={true}
+      periodContextLabel={periodContextLabel}
+      workTimeZone={workTimeZone}
+    />
+  );
+}
+
+async function launchExistingEntry(params: {
+  existingEntryId: string;
+  openDrawer: OpenDrawerFn;
+  closeDrawer: () => void;
+  context: TimeEntryWorkItemContext;
+  onComplete?: () => void;
+}): Promise<void> {
+  const { existingEntryId, openDrawer, closeDrawer, context, onComplete } = params;
+
+  const existingEntry = await getTimeEntryById(existingEntryId);
+  if (isActionMessageError(existingEntry) || isActionPermissionError(existingEntry)) {
+    launchBlockedToast(getErrorMessage(existingEntry));
+    return;
+  }
+  if (!existingEntry) {
+    launchBlockedToast(launchMessage('entryNotFound', 'Time entry not found.'));
+    return;
+  }
+  if (!existingEntry.time_sheet_id) {
+    launchBlockedToast(
+      launchMessage(
+        'entryMissingSheet',
+        'This time entry is not attached to a time sheet, so it can’t be edited here.',
+      ),
+    );
+    return;
+  }
+
+  const savedSheet = await fetchTimeSheet(existingEntry.time_sheet_id);
+  if (isActionMessageError(savedSheet) || isActionPermissionError(savedSheet)) {
+    launchBlockedToast(getErrorMessage(savedSheet));
+    return;
+  }
+  if (!savedSheet.time_period) {
+    launchBlockedToast(
+      launchMessage(
+        'entryMissingPeriod',
+        'The time sheet for this entry is missing its period and can’t be opened.',
+      ),
+    );
+    return;
+  }
+
+  openDrawer(
+    <AnchoredTimeEntryDialog
+      existingEntry={existingEntry as ITimeEntryWithWorkItem}
+      savedSheet={savedSheet}
+      workItem={buildWorkItem(context)}
+      onClose={closeDrawer}
+      onComplete={onComplete}
+      workTimeZone={existingEntry.work_timezone ?? undefined}
+    />,
+    undefined,
+    undefined,
+    '900px',
+  );
+}
+
+export type PreparedNewTimeEntry = Omit<React.ComponentProps<typeof NewWorkItemTimeEntry>, 'closeDrawer' | 'onComplete'>;
+
+/**
+ * Everything a new entry for this work item needs, or undefined after telling
+ * the user why time can't be entered. Shared by the drawer launcher and screens
+ * that host the form themselves (co-managed shared work).
+ */
+export async function prepareTimeEntryForWorkItem(context: TimeEntryWorkItemContext): Promise<PreparedNewTimeEntry | undefined> {
+  const user = await getCurrentUser();
+  if (!user?.user_id) {
+    launchBlockedToast(launchMessage('noUser', 'Unable to load current user for time entry.'));
+    return undefined;
+  }
+
+  const [periods, userTimeZone] = await Promise.all([
+    fetchTimePeriods(user.user_id),
+    getTimeEntryUserTimeZone(),
+  ]);
+
+  if (isActionMessageError(periods) || isActionPermissionError(periods)) {
+    launchBlockedToast(getErrorMessage(periods));
+    return undefined;
+  }
+  if (isActionMessageError(userTimeZone) || isActionPermissionError(userTimeZone)) {
+    launchBlockedToast(getErrorMessage(userTimeZone));
+    return undefined;
+  }
+
+  if (!periods.length) {
+    launchBlockedToast(
+      launchMessage(
+        'noPeriods',
+        'No time periods are set up yet, so time can’t be entered. Ask an administrator to create time periods under Settings → Time Entry.',
+      ),
+    );
+    return undefined;
+  }
+
+  const timeZone = typeof userTimeZone === 'string' ? userTimeZone : 'UTC';
+  const defaults = resolveEntryDefaults({ context, periods, timeZone });
+  if (!defaults) {
+    launchBlockedToast(
+      launchMessage(
+        'noEditablePeriods',
+        'Every time sheet is submitted or approved, so there is no day to add time to. Ask an approver to reopen a sheet, or an administrator to add a time period.',
+      ),
+    );
+    return undefined;
+  }
+
+  return {
+    workItem: buildWorkItem(context),
+    userId: user.user_id,
+    userTimeZone: timeZone,
+    periods,
+    defaults,
+    contextNotice: context.notice,
+    stopwatchSessionId: context.stopwatchSessionId,
+  };
+}
+
+export { NewWorkItemTimeEntry };
 
 export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, context, onComplete, existingEntryId }: LaunchTimeEntryParams): Promise<void> {
-  const prepared = await prepareTimeEntryForWorkItem(context, existingEntryId);
-  if (!prepared) return;
-  openDrawer(
-    <TimeEntryDialog {...prepared} isOpen={true} onClose={closeDrawer} isEditable={true} inDrawer={true}
-      onSave={async timeEntry => {
-        const savedEntry = await saveTimeEntry(timeEntry);
-        if (isActionMessageError(savedEntry) || isActionPermissionError(savedEntry)) throw new Error(getErrorMessage(savedEntry));
-        closeDrawer(); onComplete?.();
-      }} />,
-    undefined, undefined, '900px'
-  );
+  try {
+    if (existingEntryId) {
+      const user = await getCurrentUser();
+      if (!user?.user_id) {
+        launchBlockedToast(launchMessage('noUser', 'Unable to load current user for time entry.'));
+        return;
+      }
+      await launchExistingEntry({ existingEntryId, openDrawer, closeDrawer, context, onComplete });
+      return;
+    }
+
+    const prepared = await prepareTimeEntryForWorkItem(context);
+    if (!prepared) return;
+
+    openDrawer(
+      <NewWorkItemTimeEntry {...prepared} closeDrawer={closeDrawer} onComplete={onComplete} />,
+      undefined,
+      undefined,
+      '900px',
+    );
+  } catch (error) {
+    console.error('Failed to launch time entry dialog:', error);
+    toast.error(
+      launchMessage('prepareFailed', 'An error occurred while preparing the time entry. Please try again.'),
+    );
+  }
 }

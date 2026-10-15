@@ -1,21 +1,23 @@
 import { createTenantKnex } from '../lib/db';
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import { IMessage } from '../interfaces/message.interface';
+import { IMessage, pickMessageUpdates } from '../interfaces/message.interface';
+import { ChatAccessDeniedError } from '../lib/chat-actions/errors';
 
 type TenantDbConnection = Parameters<typeof tenantDb>[0];
 
-const MESSAGE_MODEL_NO_TENANT_CONTEXT = '__message_model_no_tenant_context__';
-const LEGACY_NO_TENANT_REASON = 'Preserve legacy message model behavior when no tenant context is available';
+const requireTenant = (tenant: string | null | undefined): string => {
+  if (!tenant) {
+    throw new Error('Missing tenant for message model');
+  }
+  return tenant;
+};
 
 const messagesTable = <Row extends object>(
   db: TenantDbConnection,
   tenant: string | null | undefined
 ): Knex.QueryBuilder<Row, Row[]> =>
-  tenant
-    ? tenantDb(db, tenant).table<Row>('messages')
-    : tenantDb(db, MESSAGE_MODEL_NO_TENANT_CONTEXT)
-      .unscoped<Row>('messages', LEGACY_NO_TENANT_REASON);
+  tenantDb(db, requireTenant(tenant)).table<Row>('messages');
 
 const requireTenantForInsert = (tenant: string | null | undefined): string => {
   if (!tenant) {
@@ -50,6 +52,37 @@ const Message = {
     }
   },
 
+  getByChatIdForUser: async (chatId: string, userId: string): Promise<IMessage[]> => {
+    try {
+      const {knex: db, tenant} = await createTenantKnex();
+      const scopedTenant = requireTenant(tenant);
+      const facade = tenantDb(db, scopedTenant);
+
+      // A supplied chat_id is not authorization: the chat must belong to the
+      // caller inside the authenticated tenant before any message is read.
+      const ownedChat = await facade.table<{ id?: string }>('chats')
+        .select('id')
+        .where({ id: chatId, user_id: userId })
+        .first();
+      if (!ownedChat) {
+        throw new ChatAccessDeniedError();
+      }
+
+      const query = facade.table<IMessage>('messages as m');
+      facade.tenantJoin(query, 'chats as c', 'c.id', 'm.chat_id', { rootTenantColumn: 'm.tenant' });
+
+      const messages = await query
+        .select('m.*')
+        .where('m.chat_id', chatId)
+        .where('c.user_id', userId)
+        .orderBy([{ column: 'm.message_order', order: 'asc' }, { column: 'm.id', order: 'asc' }]);
+      return messages;
+    } catch (error) {
+      console.error(`Error getting messages for chat_id ${chatId}:`, error);
+      throw error;
+    }
+  },
+
   get: async (id: string): Promise<IMessage | undefined> => {
     try {
       const {knex: db, tenant} = await createTenantKnex();
@@ -75,10 +108,29 @@ const Message = {
     }
   },
 
-  update: async (id: string, message: Partial<IMessage>): Promise<void> => {
+  update: async (id: string, message: Partial<IMessage>, userId: string): Promise<number> => {
     try {
       const {knex: db, tenant} = await createTenantKnex();
-      await messagesTable<IMessage>(db, tenant).where({ id }).update(message);
+      const scopedTenant = requireTenant(tenant);
+
+      // Never forward an arbitrary payload: only the allowlisted mutable
+      // columns may reach the database.
+      const updates = pickMessageUpdates(message);
+      if (Object.keys(updates).length === 0) {
+        return 0;
+      }
+
+      const facade = tenantDb(db, scopedTenant);
+      const ownedChat = facade.table<{ id?: string }>('chats as c')
+        .select(db.raw('1'))
+        .where('c.user_id', userId)
+        .whereRaw('?? = ??', ['c.id', 'messages.chat_id']);
+
+      const updated = await facade.table<IMessage>('messages')
+        .where({ id })
+        .whereExists(ownedChat)
+        .update(updates);
+      return updated;
     } catch (error) {
       console.error(`Error updating message with id ${id}:`, error);
       throw error;

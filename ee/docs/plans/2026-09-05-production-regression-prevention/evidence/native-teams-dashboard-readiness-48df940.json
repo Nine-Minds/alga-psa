@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "scope": "native-teams-dashboard-readiness",
+  "releaseValidation": false,
+  "source": {
+    "before": {
+      "revision": "48df94026c47a8a141050184ac113b63e522262b",
+      "dirty": false
+    },
+    "after": {
+      "revision": "48df94026c47a8a141050184ac113b63e522262b",
+      "dirty": false
+    }
+  },
+  "execution": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "flaky": 0,
+    "retry": 0,
+    "durationMs": 76971.975,
+    "dashboardPrerequisitePassed": true,
+    "initialSettingsCompleted": true,
+    "failure": "spec line65 navigation to /msp/schedule failed ERR_CONNECTION_REFUSED",
+    "nextMemoryThresholdRestarts": 1,
+    "heapCapMiB": 12288,
+    "actualHeapLimitBytes": 13086228480
+  },
+  "staticResponses": {
+    "http200Complete": 3,
+    "gzipAndSyntaxPassed": 3,
+    "http304NoBody": 2,
+    "aborted": 0,
+    "malformed": 0
+  },
+  "cleanup": {
+    "ownedDatabase": "teams_native_1788948103059",
+    "ownedDatabaseAbsent": true,
+    "closedPorts": [
+      54012,
+      54013,
+      54014
+    ],
+    "sourceDatabaseChanged": false,
+    "sharedRolesChanged": false
+  },
+  "privateArtifacts": [
+    {
+      "path": "/tmp/alga-native-teams-oOgwsU/lifecycle.log",
+      "sha256": "a1d976b8e00fc2465e6382d0c990f8482538043f18aeb28aca88bcc3ca71f475"
+    },
+    {
+      "path": "/tmp/alga-native-teams-oOgwsU/server.log",
+      "sha256": "2a38179e05becab1426050ac46753082889e34372ea48841f6264d3b691869b4"
+    },
+    {
+      "path": "/tmp/alga-native-teams-oOgwsU/layout-analysis.json",
+      "sha256": "38fc993ad953e5ac2aa1e1eccbcb711aacdcbec27b54eb972eea2d35b0c5bee9"
+    }
+  ],
+  "limitations": [
+    "One failed native Mac/Node25 execution, not candidate CI proof.",
+    "Dashboard sequencing improved in this attempt; later memory restart remains unresolved.",
+    "Wrapper exit status is not used as the browser verdict; counts come from actual Playwright JSON."
+  ]
+}

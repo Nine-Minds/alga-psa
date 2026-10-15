@@ -59,6 +59,25 @@ export async function getBoardCloseRulesRow(
 }
 
 /**
+ * Count of open children hanging off a bundle master. "Open" is defined as
+ * `closed_at IS NULL` (not the child status's is_closed flag) so the count is
+ * stable while a child sits in a closed status but has not been stamped as
+ * closed. This is the single definition shared by the require_no_open_children
+ * close gate and the closed-master add policy — do not re-derive it inline.
+ */
+export async function openBundleChildrenCount(
+  trx: Knex.Transaction | Knex,
+  tenant: string,
+  masterTicketId: string
+): Promise<number> {
+  const [row] = await tenantScopedTable(trx, 'tickets', tenant)
+    .where({ master_ticket_id: masterTicketId })
+    .whereNull('closed_at')
+    .count<{ count: string }[]>('* as count');
+  return Number(row?.count ?? 0);
+}
+
+/**
  * When the board has enabled close gates, records that an exempt automation
  * path closed the ticket without evaluating them. No-op on ungated boards so
  * the audit timeline stays quiet for tenants not using close rules.

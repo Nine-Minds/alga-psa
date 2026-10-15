@@ -6,15 +6,16 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { createAsset } from '../actions/assetActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
-import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
+import { isBuiltinAssetTypeSlug, pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
-import type { CreateAssetRequest, IClient, IClientLocation } from '@alga-psa/types';
+import type { CreateAssetRequest, IClient, IClientLocation, IContact } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
+import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -38,6 +39,7 @@ interface FormData {
   status: AssetStatus;
   serial_number: string;
   location_id: string | null;
+  contact_name_id: string | null;
   location: string;
   workstation: {
     os_type: string;
@@ -78,6 +80,8 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [clientLocations, setClientLocations] = useState<IClientLocation[]>([]);
   const [locationsLoading, setLocationsLoading] = useState(false);
+  const [clientContacts, setClientContacts] = useState<IContact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
   const [attributeErrors, setAttributeErrors] = useState<Record<string, string>>({});
   const statusOptions: SelectOption[] = STATUS_OPTION_VALUES.map((value) => ({
     value,
@@ -103,6 +107,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     status: 'active',
     serial_number: '',
     location_id: null,
+    contact_name_id: null,
     location: '',
     // Type-specific fields will be added conditionally
     workstation: {
@@ -128,9 +133,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     attributes: {}
   });
 
-  // F309: registry entry for the selected slug when it is a custom type.
-  const selectedCustomType = findCustomAssetType(registryEntries, formData.asset_type);
-  const customTypeFields = selectedCustomType?.fields_schema ?? [];
+  // Built-in entries may also define tenant-specific additional fields.
+  const selectedTypeEntry = registryEntries?.find((entry) => entry.slug === formData.asset_type) ?? null;
+  const customTypeFields = selectedTypeEntry?.fields_schema ?? [];
 
   useEffect(() => {
     if (defaultOpen) {
@@ -185,6 +190,32 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     };
   }, [open, effectiveClientId]);
 
+  useEffect(() => {
+    if (!open || !effectiveClientId) {
+      setClientContacts([]);
+      return;
+    }
+
+    let isMounted = true;
+    setContactsLoading(true);
+    (async () => {
+      try {
+        const contacts = await getClientContactsForAssets(effectiveClientId);
+        if (!isMounted) return;
+        setClientContacts(contacts);
+      } catch (error) {
+        console.error('Error fetching client contacts:', error);
+        if (isMounted) setClientContacts([]);
+      } finally {
+        if (isMounted) setContactsLoading(false);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [open, effectiveClientId]);
+
   const locationOptions: SelectOption[] = [
     ...clientLocations.map((location) => ({
       value: location.location_id,
@@ -231,7 +262,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     setHasAttemptedSubmit(true);
 
     // F309: required enforcement for custom-type schema fields.
-    const attributeIssues = selectedCustomType
+    const attributeIssues = customTypeFields.length > 0
       ? validateAttributesAgainstSchema(customTypeFields, formData.attributes, { requireAll: true })
       : [];
     setAttributeErrors(Object.fromEntries(attributeIssues.map((issue) => [issue.key, issue.message])));
@@ -263,26 +294,28 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         name: formData.name,
         status: formData.status,
         location_id: formData.location_id,
+        contact_name_id: formData.contact_name_id,
         location: formData.location.trim() || undefined,
         serial_number: formData.serial_number || undefined
       };
 
       // F309: custom-type schema values land in payload.attributes.
-      if (selectedCustomType) {
+      if (customTypeFields.length > 0) {
         assetData.attributes = pickSchemaAttributes(customTypeFields, formData.attributes);
       }
 
-      // Add type-specific data based on the selected type
+      // Add type-specific data based on the selected type. Quick Add doesn't ask
+      // for hardware numbers, so they are unknown (null), not 0 (alga0002283).
       switch (formData.asset_type) {
         case 'workstation':
           assetData.workstation = {
             os_type: formData.workstation.os_type,
             os_version: formData.workstation.os_version,
             cpu_model: '',
-            cpu_cores: 0,
-            ram_gb: 0,
+            cpu_cores: null,
+            ram_gb: null,
             storage_type: '',
-            storage_capacity_gb: 0,
+            storage_capacity_gb: null,
             installed_software: []
           };
           break;
@@ -290,10 +323,10 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
           assetData.network_device = {
             device_type: formData.network_device.device_type,
             management_ip: formData.network_device.management_ip,
-            port_count: 0,
+            port_count: null,
             firmware_version: '',
             supports_poe: false,
-            power_draw_watts: 0,
+            power_draw_watts: null,
             vlan_config: {},
             port_config: {}
           };
@@ -303,8 +336,8 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
             os_type: formData.server.os_type,
             os_version: formData.server.os_version,
             cpu_model: '',
-            cpu_cores: 0,
-            ram_gb: 0,
+            cpu_cores: null,
+            ram_gb: null,
             storage_config: [],
             is_virtual: false,
             network_interfaces: [],
@@ -343,6 +376,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         status: 'active',
         serial_number: '',
         location_id: null,
+        contact_name_id: null,
         location: '',
         workstation: { os_type: '', os_version: '' },
         network_device: { device_type: 'switch', management_ip: '' },
@@ -371,7 +405,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
 
     // F309: custom types render their fields_schema instead of the built-in
     // extension panels; values read/write formData.attributes[key].
-    if (selectedCustomType) {
+    if (selectedTypeEntry && !selectedTypeEntry.is_builtin) {
       return (
         <CustomTypeFieldsPanel
           fields={customTypeFields}
@@ -647,7 +681,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                     selectedClientId={selectedClientId}
                     onSelect={(id) => {
                       setSelectedClientId(id);
-                      setFormData(prev => ({ ...prev, location_id: null, location: '' }));
+                      setFormData(prev => ({ ...prev, location_id: null, contact_name_id: null, location: '' }));
                       clearErrorIfSubmitted();
                     }}
                     filterState={clientFilterState}
@@ -691,6 +725,27 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   })}
                 />
               )}
+            </div>
+
+            <div {...withDataAutomationId({ id: 'asset-contact-container' })}>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.assignedTo', { defaultValue: 'Assigned to' })}
+              </label>
+              <ContactPicker
+                id="asset-contact-picker"
+                label={t('quickAddAsset.fields.assignedTo', { defaultValue: 'Assigned to' })}
+                contacts={clientContacts}
+                value={formData.contact_name_id ?? ''}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, contact_name_id: value || null }))}
+                clientId={effectiveClientId || undefined}
+                placeholder={effectiveClientId
+                  ? (contactsLoading
+                    ? t('quickAddAsset.placeholders.loadingContacts', { defaultValue: 'Loading contacts...' })
+                    : t('quickAddAsset.placeholders.selectContact', { defaultValue: 'Select contact' }))
+                  : t('quickAddAsset.placeholders.selectClientFirst', { defaultValue: 'Select a client first' })}
+                disabled={!effectiveClientId || contactsLoading}
+                buttonWidth="full"
+              />
             </div>
 
             <div {...withDataAutomationId({ id: 'asset-name-container' })}>
@@ -785,7 +840,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
               />
             </div>
 
-            {formData.asset_type && (!selectedCustomType || customTypeFields.length > 0) && (
+            {formData.asset_type && (isBuiltinAssetTypeSlug(formData.asset_type) || (!selectedTypeEntry?.is_builtin && customTypeFields.length > 0)) && (
               <div {...withDataAutomationId({ id: 'type-specific-details' })} className="border-t pt-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-4">
                   {t('quickAddAsset.sections.typeSpecificDetails', {
@@ -793,6 +848,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   })}
                 </h3>
                 {renderTypeSpecificFields()}
+                {selectedTypeEntry?.is_builtin && customTypeFields.length > 0 && <CustomTypeFieldsPanel fields={customTypeFields} values={formData.attributes} errors={attributeErrors} onChange={(key, value) => setFormData((prev) => ({ ...prev, attributes: { ...prev.attributes, [key]: value } }))} idPrefix="quick-add-asset-additional" />}
               </div>
             )}
           </form>
@@ -805,7 +861,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         onClientAdded: (newClient) => {
           setClients(prev => [...prev, newClient]);
           setSelectedClientId(newClient.client_id);
-          setFormData(prev => ({ ...prev, location_id: null, location: '' }));
+          setFormData(prev => ({ ...prev, location_id: null, contact_name_id: null, location: '' }));
         },
         skipSuccessDialog: true,
       })}

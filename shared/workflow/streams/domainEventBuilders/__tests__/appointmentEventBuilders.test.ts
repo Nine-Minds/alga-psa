@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   appointmentAssignedEventPayloadSchema,
   appointmentCanceledEventPayloadSchema,
@@ -7,7 +7,7 @@ import {
   appointmentCreatedEventPayloadSchema,
   appointmentNoShowEventPayloadSchema,
   appointmentRescheduledEventPayloadSchema,
-} from '../../../runtime/schemas/schedulingEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildAppointmentAssignedPayload,
   buildAppointmentCanceledPayload,

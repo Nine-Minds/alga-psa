@@ -57,7 +57,7 @@ export const TenantSchema = z.object({
 ### Authorization
 The API enforces role-based access control through our RBAC system:
 - Required role: "partner-admin"
-- Permission: "tenant:create"
+- Caller must belong to the master billing tenant (internal user with the `system_settings:update` permission, or a master-tenant API key)
 - JWT must include proper role claims
 - Middleware validates permissions before processing requests
 

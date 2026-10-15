@@ -26,7 +26,10 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
 }));
 
-vi.mock('@alga-psa/ui/lib/errorHandling', () => ({ handleError: vi.fn() }));
+vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
+  handleError: vi.fn(),
+  isActionPermissionError: vi.fn(() => false),
+}));
 vi.mock('react-hot-toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@alga-psa/ui/components/EntityImageUpload', () => ({
   default: () => <div data-testid="entity-image-upload" />,
@@ -42,9 +45,16 @@ vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions', () => ({
 vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantBrandingActions', () => ({
   getTenantBrandingAction: vi.fn(async () => null),
 }));
+vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/dashboardWelcomeActions', () => ({
+  getDashboardWelcomeSettingsAction: vi.fn(async () => ({ useCompanyName: false, companyName: 'Nine Minds' })),
+  setDashboardWelcomeUseCompanyNameAction: vi.fn(async () => undefined),
+}));
 vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions', () => ({
   uploadTenantLogo: vi.fn(),
   deleteTenantLogo: vi.fn(),
+  recropTenantLogo: vi.fn(),
+  linkDocumentAsTenantLogo: vi.fn(),
+  getTenantLogoInfoAction: vi.fn(async () => null),
 }));
 vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
   getCurrentUser: vi.fn(async () => ({ user_id: 'user-1', tenant: 'tenant-1' })),

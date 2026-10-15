@@ -17,6 +17,10 @@ import { approvalStatusSchema, timeEntryResponseSchema } from './timeEntry';
 const timeSheetCalendarDateSchema = z.union([z.string().date(), z.string().datetime()]);
 
 // Time period frequency schema
+// Time periods are half-open [start_date, end_date).
+const TIME_PERIOD_END_DATE_DESCRIPTION =
+  'Exclusive end of the period: the first day after the period. A period covering Aug 16–22 has end_date 2026-08-23.';
+
 export const timePeriodFrequencySchema = z.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']);
 
 // Create time sheet schema
@@ -93,7 +97,7 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
   time_period: z.object({
     period_id: uuidSchema,
     start_date: timeSheetCalendarDateSchema,
-    end_date: timeSheetCalendarDateSchema,
+    end_date: timeSheetCalendarDateSchema.describe(TIME_PERIOD_END_DATE_DESCRIPTION),
     is_current: z.boolean().optional()
   }).optional(),
   
@@ -121,7 +125,7 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
 // Time period schemas
 export const createTimePeriodSchema = z.object({
   start_date: timeSheetCalendarDateSchema,
-  end_date: timeSheetCalendarDateSchema,
+  end_date: timeSheetCalendarDateSchema.describe(TIME_PERIOD_END_DATE_DESCRIPTION),
   is_current: z.boolean().optional().default(false)
 });
 
@@ -130,7 +134,7 @@ export const updateTimePeriodSchema = createUpdateSchema(createTimePeriodSchema)
 export const timePeriodResponseSchema = z.object({
   period_id: uuidSchema,
   start_date: timeSheetCalendarDateSchema,
-  end_date: timeSheetCalendarDateSchema,
+  end_date: timeSheetCalendarDateSchema.describe(TIME_PERIOD_END_DATE_DESCRIPTION),
   is_current: z.boolean().optional(),
   created_at: z.string().datetime().optional(),
   updated_at: z.string().datetime().optional(),
@@ -278,7 +282,7 @@ export const timeSheetExportQuerySchema = z.object({
 // Time period generation
 export const generateTimePeriodsSchema = z.object({
   start_date: timeSheetCalendarDateSchema,
-  end_date: timeSheetCalendarDateSchema,
+  end_date: timeSheetCalendarDateSchema.describe(TIME_PERIOD_END_DATE_DESCRIPTION),
   frequency: timePeriodFrequencySchema,
   frequency_unit: z.number().int().min(1).optional().default(1)
 });
@@ -293,6 +297,7 @@ const baseScheduleEntrySchema = z.object({
   assigned_user_ids: z.array(uuidSchema).optional(),
   notes: z.string().nullable().optional(),
   is_private: z.boolean().optional().default(false),
+  is_all_day: z.boolean().optional(),
   recurrence_pattern: z.union([z.string(), z.record(z.unknown())]).nullable().optional()
 });
 
@@ -323,6 +328,7 @@ export const scheduleEntryResponseSchema = z.object({
   work_item_type: z.string().nullable(),
   notes: z.string().nullable(),
   is_private: z.boolean(),
+  is_all_day: z.boolean(),
   status: z.string(),
   recurrence_pattern: z.union([z.string(), z.record(z.unknown())]).nullable(),
   created_by: uuidSchema.optional(),

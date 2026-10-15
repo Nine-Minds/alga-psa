@@ -9,6 +9,7 @@ import Header from "./Header";
 import Body from "./Body";
 import RightSidebar from "./RightSidebar";
 import { DrawerProvider } from "@alga-psa/ui";
+import { StopwatchProvider } from '@alga-psa/scheduling/providers/StopwatchProvider';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { savePreference } from '@alga-psa/ui/lib';
@@ -25,6 +26,7 @@ import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions/tenant-s
 import { useTier } from 'server/src/context/TierContext';
 import { useCatalogShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { StaleActionBanner } from '@alga-psa/ui/components/StaleActionBanner';
+import { armNavigationCommitWatchdog } from './navigationCommitWatchdog';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -76,13 +78,27 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   // set the override to the target mode immediately.
   // For different-path clicks, leave the override alone - the useEffect
   // will handle the mode switch when the URL changes.
+  const cancelNavWatchdogRef = useRef<(() => void) | null>(null);
+
+  // Cancel any pending re-push once a navigation actually commits (and on unmount).
+  useEffect(() => () => {
+    cancelNavWatchdogRef.current?.();
+    cancelNavWatchdogRef.current = null;
+  }, [pathname]);
+
   const handleMenuItemClick = (href?: string) => {
     if (!href) return;
 
     const [targetPath] = href.split('?');
 
-    // Different pathname → real navigation will happen → useEffect handles it
-    if (pathname !== targetPath) return;
+    // Different pathname → the Link's router.push should commit, but pending
+    // navigations can be dropped by concurrent server-action responses; watch
+    // the URL and re-push until it moves (see navigationCommitWatchdog).
+    if (pathname !== targetPath) {
+      cancelNavWatchdogRef.current?.();
+      cancelNavWatchdogRef.current = armNavigationCommitWatchdog(href, (target) => router.push(target));
+      return;
+    }
 
     // Same pathname → URL may not change → set override manually
     const targetMode = modeForPath(targetPath);
@@ -418,6 +434,8 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   return (
     <MspClientTagsProvider>
     <DrawerProvider>
+      {/* Mounted in the shell (not the per-route workspace stack): the header indicator sits above it. */}
+      <StopwatchProvider>
       <div className="fixed inset-0 flex overflow-hidden app-shell-ground">
         <SidebarWithFeatureFlags
           sidebarOpen={sidebarOpen}
@@ -519,6 +537,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
           }
         />
       )}
+      </StopwatchProvider>
     </DrawerProvider>
     </MspClientTagsProvider>
   );

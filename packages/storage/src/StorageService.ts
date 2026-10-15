@@ -15,17 +15,33 @@ import { v4 as uuidv4 } from 'uuid';
 import { StorageProviderFactory, generateStoragePath } from './StorageProviderFactory';
 import { FileStoreModel } from './models/storage';
 import type { FileStore } from './types/storage';
+import { renderSquareMark, type LogoCropRect } from './imageCrop';
 import { StorageError, type StorageProviderInterface } from './providers/StorageProvider';
 import fs from 'fs';
+import type { Knex } from 'knex';
 
 import {
     getProviderConfig,
     getStorageConfig,
-    validateFileUpload as validateFileConfig
+    validateFileUpload as validateFileConfig,
+    validateSystemArtifact,
+    type StorageArtifactOrigin,
 } from './config/storage';
+
+/**
+ * Run the attachment validator for user uploads, or the size-only validator
+ * for product-generated artifacts. Omitting `origin` keeps the user-upload
+ * allowlist, so a call site that forgets to declare provenance fails closed.
+ */
+async function validateUpload(origin: StorageArtifactOrigin | undefined, mimeType: string, fileSize: number): Promise<void> {
+    if ((origin ?? 'user-upload') === 'system-artifact') {
+        await validateSystemArtifact(fileSize);
+        return;
+    }
+    await validateFileConfig(mimeType, fileSize);
+}
 import { LocalProviderConfig, S3ProviderConfig } from './types/storage';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
-import type { Knex } from 'knex';
 import { CoManagedLifecycleError, getCoManagedOperationalState, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { isValidUUID } from '@alga-psa/validation';
@@ -44,6 +60,9 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
     stream.on('end', () => resolve(Buffer.concat(chunks as any)));
   });
 }
+
+/** Square canvas every raster favicon is rendered onto. */
+const FAVICON_DIMENSION = 32;
 
 async function assertUploadAdmission(db: Knex, tenant: string): Promise<void> {
   const lifecycle = await getCoManagedOperationalState(db, tenant);
@@ -124,15 +143,23 @@ export class StorageService {
       tenant: string,
       stream: Readable,
       originalName: string,
-      options: { mime_type?: string; uploaded_by_id: string; size: number; metadata?: Record<string, any> }
+      options: {
+        mime_type?: string;
+        uploaded_by_id: string;
+        size: number;
+        metadata?: Record<string, any>;
+        /** Who chose the MIME type. Defaults to `'user-upload'`. */
+        // LEVERAGE: friction storage-artifact-origin — 'system-artifact' skips the allowlist but nothing forces mime_type to be a code-chosen literal; a typed narrowing would make a header-derived MIME a compile error
+        origin?: StorageArtifactOrigin;
+      }
     ): Promise<FileStore> {
       if (!options.uploaded_by_id) throw new Error('uploaded_by_id is required');
       const { knex } = await createTenantKnex(tenant);
       await assertUploadAdmission(knex, tenant);
-      await validateFileConfig(options.mime_type || 'application/octet-stream', options.size);
+      await validateUpload(options.origin, options.mime_type || 'application/octet-stream', options.size);
       const provider = await StorageProviderFactory.createProvider();
       const storagePath = generateStoragePath(tenant, '', originalName);
-      const uploaded = await provider.upload(stream, storagePath, { mime_type: options.mime_type || 'application/octet-stream', content_length: options.size });
+      const uploaded = await provider.upload(stream, storagePath, { mime_type: options.mime_type || 'application/octet-stream', size: options.size });
       if (uploaded.size !== options.size) {
         await provider.delete(uploaded.path);
         throw new Error('Uploaded stream size did not match the declared size');
@@ -154,6 +181,13 @@ export class StorageService {
       metadata?: Record<string, any>;
       isImageAvatar?: boolean;
       isEntityLogo?: boolean;
+      // Browser tab icon: raster input is flattened to a 32x32 PNG, SVG/ICO are
+      // stored untouched. Takes precedence over isEntityLogo.
+      isFavicon?: boolean;
+      // Square mark cut from a logo: the chosen zone (fractions of the source)
+      // rendered at avatar size. SVG sources are rasterized for this. Takes
+      // precedence over every other image branch.
+      cropRect?: LogoCropRect;
       // Derived artifacts (e.g. preview/thumbnail regenerations) are not
       // first-class documents. Set this to skip DOCUMENT_UPLOADED /
       // MEDIA_PROCESSING_SUCCEEDED so a preview upload can't re-trigger the
@@ -163,6 +197,8 @@ export class StorageService {
        * Workflow events publish only after this callback and the transaction
        * succeed. Do not perform transport or other external effects here. */
       persistRelatedRecords?: (trx: Knex.Transaction, file: FileStore) => Promise<void>;
+      /** Who chose the MIME type. Defaults to `'user-upload'`. */
+      origin?: StorageArtifactOrigin;
     }
   ) {
     try {
@@ -188,7 +224,7 @@ export class StorageService {
       }
 
       const originalMimeType = options.mime_type || 'application/octet-stream';
-      await validateFileConfig(originalMimeType, fileSize);
+      await validateUpload(options.origin, originalMimeType, fileSize);
 
       let processedBuffer = fileBuffer;
       let processedMimeType = originalMimeType;
@@ -206,11 +242,54 @@ export class StorageService {
         const isSvg = originalName.toLowerCase().endsWith('.svg') ||
           options.mime_type === 'image/svg+xml';
 
-        if (isSvg) {
+        if (options.cropRect) {
+          if (!isSvg) {
+            const detectedType = await fileTypeFromBuffer(new Uint8Array(fileBuffer));
+            if (!detectedType || !['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(detectedType.mime)) {
+              throw new Error('Invalid file format. Only JPEG, PNG, GIF, WebP, SVG are allowed for avatars/logos.');
+            }
+          }
+          const sharp = await loadSharp();
+          processedBuffer = await renderSquareMark(sharp, fileBuffer, options.cropRect, isSvg);
+          processedMimeType = 'image/webp';
+          processedFileSize = processedBuffer.length;
+          processedOriginalName = changeFileExtension(originalName, 'webp');
+        } else if (isSvg) {
           // SVGs are vector and don't need raster processing — store as-is
           processedBuffer = fileBuffer;
           processedMimeType = 'image/svg+xml';
           processedFileSize = fileBuffer.length;
+        } else if (options.isFavicon) {
+          const detectedType = await fileTypeFromBuffer(new Uint8Array(fileBuffer));
+          const icoMimeTypes = ['image/x-icon', 'image/vnd.microsoft.icon'];
+
+          if (detectedType && icoMimeTypes.includes(detectedType.mime)) {
+            // An .ico is already an icon container at the sizes its author chose.
+            processedBuffer = fileBuffer;
+            processedMimeType = detectedType.mime;
+            processedFileSize = fileBuffer.length;
+          } else {
+            const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+            if (!detectedType || !allowedMimeTypes.includes(detectedType.mime)) {
+              throw new Error('Invalid file format. Only PNG, ICO, SVG, JPEG, GIF, WebP are allowed for favicons.');
+            }
+
+            const sharp = await loadSharp();
+            // Browsers accept PNG favicons, so a single 32x32 PNG is enough and
+            // keeps every raster source (including a wide one) uncropped.
+            processedBuffer = await sharp(fileBuffer)
+              .resize(FAVICON_DIMENSION, FAVICON_DIMENSION, {
+                fit: 'contain',
+                background: { r: 0, g: 0, b: 0, alpha: 0 },
+              })
+              .png()
+              .toBuffer();
+
+            processedMimeType = 'image/png';
+            processedFileSize = processedBuffer.length;
+            processedOriginalName = changeFileExtension(originalName, 'png');
+          }
         } else {
           const detectedType = await fileTypeFromBuffer(new Uint8Array(fileBuffer));
           const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -228,13 +307,16 @@ export class StorageService {
           // center-cropped to a 256px-wide square (alga0002162). Avatars keep the
           // square cover-crop so they fill circular/framed slots cleanly.
           const LOGO_MAX_DIMENSION = 1024;
+          // A logo also has to survive an email: Outlook renders no WebP, so a
+          // logo is stored as PNG (alpha preserved) and needs no transcode at
+          // send time. Avatars never leave the browser, so they stay WebP.
           processedBuffer = options.isEntityLogo
             ? await sharp(fileBuffer)
                 .resize(LOGO_MAX_DIMENSION, LOGO_MAX_DIMENSION, {
                   fit: 'inside',
                   withoutEnlargement: true,
                 })
-                .webp({ quality: 85 })
+                .png()
                 .toBuffer()
             : await sharp(fileBuffer)
                 .resize(256, 256, {
@@ -244,10 +326,10 @@ export class StorageService {
                 .webp({ quality: 85 })
                 .toBuffer();
 
-          processedMimeType = 'image/webp';
+          processedMimeType = options.isEntityLogo ? 'image/png' : 'image/webp';
           processedFileSize = processedBuffer.length;
 
-          processedOriginalName = changeFileExtension(originalName, 'webp');
+          processedOriginalName = changeFileExtension(originalName, options.isEntityLogo ? 'png' : 'webp');
         }
       }
       // --- End Image Processing Logic ---
@@ -412,12 +494,23 @@ export class StorageService {
         }
     }
 
-    static async deleteFile(file_id: string, deleted_by_id: string): Promise<void> {
+    static async deleteFile(file_id: string, deleted_by_id: string, transaction?: Knex.Transaction): Promise<void> {
         try {
             // Get file record
             const { knex, tenant } = await createTenantKnex();
             if (!tenant) throw new Error('Tenant is required');
-            const { fileRecord, deletedRecord } = await withCoManagedOperationalTransaction(knex, tenant, async trx => {
+            // A caller may already hold operational row locks (e.g. the comment-
+            // attachment sweep locks external_files FOR UPDATE before deleting).
+            // Reuse that transaction rather than opening a second one on a fresh
+            // pool connection, which would block on the caller's own lock and
+            // self-deadlock. withCoManagedOperationalTransaction -> withTransaction
+            // reuses a supplied trx as a nested frame; a bare pool handle owns a
+            // new transaction as before.
+            // LEVERAGE: pattern comanaged-trx-threading — "use the caller's handle if there is one"
+            // is re-derived at ~15 sites in three dialects (`?? knex`, `context.db ??`,
+            // `trx ? work(trx) : withTransaction(knex, work)`). See docs/evidence/co-managed-transaction-audit.md.
+            const db = transaction ?? knex;
+            const { fileRecord, deletedRecord } = await withCoManagedOperationalTransaction(db, tenant, async trx => {
               const fileRecord = await FileStoreModel.findById(trx, file_id);
               if (!fileRecord) throw new Error('File not found');
               const config = await getStorageConfig();

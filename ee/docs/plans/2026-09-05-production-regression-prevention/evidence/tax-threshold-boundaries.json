@@ -1,0 +1,34 @@
+{
+  "scope": "Honor tax threshold minima and gaps",
+  "baseRevision": "5732b3284c",
+  "workingTreeDirty": true,
+  "before": {
+    "failed": 4,
+    "passed": 14
+  },
+  "after": {
+    "unitPassed": 57,
+    "unitTodo": 3,
+    "databasePassed": 30
+  },
+  "behavior": "Calculate each bracket from its intersection with the original amount; do not tax below its minimum or consume gaps as taxable amounts.",
+  "artifacts": [
+    {
+      "path": "/tmp/alga-tax-bracket-before.log",
+      "sha256": "626e691285d5e42e975ceb6aabc50f68903290d59d71194488d7cd30301a3a88"
+    },
+    {
+      "path": "/tmp/alga-tax-bracket-after.log",
+      "sha256": "af0cbd51a9307f6f4df41bded3b2f76fb4877a488c9ce48fd4a8ceecbfff3b4a"
+    },
+    {
+      "path": "/tmp/alga-tax-bracket-db.log",
+      "sha256": "6ba54fca1e03694ec4171d905b33483ee17b05892c4f642466a9f39bd7ac5a0e"
+    }
+  ],
+  "limits": [
+    "Existing three tax policy TODOs remain unresolved.",
+    "Local focused runs, not full candidate native execution.",
+    "Database fixture substitutes tenant connection context and rolls back each test."
+  ]
+}

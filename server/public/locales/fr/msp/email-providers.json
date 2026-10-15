@@ -748,7 +748,7 @@
       "domainRemovalScheduledWithClear": "Suppression du domaine planifiée et adresse d'expéditeur de ticket effacée",
       "removeDomainFailed": "Échec de la suppression du domaine",
       "testOutboundFailed": "Échec du test de l'e-mail sortant",
-      "senderIdentitiesUpdated": "Identités d'expéditeur mises à jour."
+      "senderSettingsUpdated": "Identités d'expéditeur mises à jour."
     },
     "tabs": {
       "inboundEmail": "E-mail entrant",
@@ -803,7 +803,8 @@
           "recipientPlaceholder": "vous@exemple.com",
           "testingButton": "Test en cours...",
           "runButton": "Tester la connexion"
-        }
+        },
+        "ticketIdentityRequired": "Choisissez une identité de messagerie des tickets ci-dessous pour définir le domaine d’envoi."
       },
       "ticketingFrom": {
         "title": "Adresse d'expéditeur de ticket",
@@ -843,39 +844,17 @@
         "loadFailed": "Impossible de charger les boîtes aux lettres Microsoft 365.",
         "saved": "Boîte aux lettres d'envoi mise à jour."
       },
-      "senderIdentities": {
-        "ticket": {
-          "title": "Identité e-mail des tickets",
-          "description": "Les réponses aux e-mails des tickets doivent revenir à cette adresse afin de pouvoir être associées et ajoutées au ticket. Utilisez une boîte de réception connectée et surveillée.",
-          "connectedInboxLabel": "Boîte de réception connectée",
-          "connectedInboxHelp": "Une boîte de réception connectée conserve les réponses du client dans la conversation du ticket.",
-          "customAddressOption": "Utiliser une autre adresse",
-          "addressLabel": "Adresse d'expéditeur",
-          "addressPlaceholder": "support@example.com",
-          "addressHelp": "Cette adresse détermine le routage des réponses uniquement pour les e-mails des tickets.",
-          "microsoftAddressHelp": "Microsoft 365 exige que l'adresse e-mail des tickets utilise la boîte aux lettres d'envoi sélectionnée ({{mailbox}}).",
-          "nameLabel": "Nom d'affichage de l'expéditeur",
-          "namePlaceholder": "Support",
-          "nameHelp": "Laissez ce champ vide pour utiliser le nom de la boîte aux lettres connectée ou celui du tableau de tickets."
-        },
-        "notification": {
-          "title": "Identité e-mail pour tous les autres messages",
-          "description": "Personnalisez les invitations au portail, les réinitialisations de mot de passe, les factures, les mises à jour de projet et les notifications générales indépendamment du routage des tickets.",
-          "addressLabel": "Adresse d'expéditeur",
-          "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Définie par l'adresse d'expéditeur dans la configuration SMTP ci-dessus. Tous les e-mails hors tickets sont envoyés depuis cette adresse.",
-          "lockedAddressHelp": "Cette adresse est déterminée par le domaine géré actif ou la boîte aux lettres Microsoft 365 sélectionnée.",
-          "nameLabel": "Nom d'affichage de l'expéditeur",
-          "namePlaceholder": "Nom de votre entreprise",
-          "nameHelp": "Laissez ce champ vide pour utiliser automatiquement {{company}}.",
-          "companyFallback": "votre entreprise"
-        },
-        "warningTitle": "Vérifiez le routage des réponses",
-        "errorTitle": "Corrigez l'identité e-mail des tickets",
-        "clearButton": "Effacer l'identité des tickets",
-        "savingButton": "Enregistrement…",
-        "saveButton": "Enregistrer les identités d'expéditeur"
-      }
+      "diagnosticsButton": "Exécuter le diagnostic des e-mails sortants",
+      "saveSettings": "Enregistrer les paramètres d’envoi",
+      "discardChanges": "Abandonner les modifications",
+      "unsaved": "Modifications non enregistrées",
+      "noPendingChanges": "Aucune modification non enregistrée",
+      "saving": "Enregistrement des paramètres d’envoi…",
+      "saved": "Paramètres d’envoi enregistrés.",
+      "saveFailed": "Impossible d’enregistrer les paramètres d’envoi. Vos modifications sont toujours présentes. Réessayez.",
+      "diagnosticsSaveHelp": "Enregistrez ou abandonnez vos modifications avant de vérifier les paramètres d’envoi.",
+      "saveBeforeDomainRemoval": "Enregistrez ou abandonnez vos modifications des paramètres d’envoi avant de supprimer un domaine.",
+      "senderAddressAfterSave": "Affiché après l’enregistrement."
     },
     "inbound": {
       "intro": "Configurez le routage des e-mails entrants et l'automatisation spécifique au fournisseur."
@@ -1032,7 +1011,12 @@
       "saving": "Enregistrement…",
       "startDelimiter": "Délimiteur de début",
       "update": "Mettre à jour la règle",
-      "valuePlaceholder": "Valeur"
+      "valuePlaceholder": "Valeur",
+      "matchTargets": "Comparer la valeur extraite à",
+      "matchClientName": "Nom ou alias du client",
+      "matchContactEmail": "E-mail du contact",
+      "matchAssetName": "Nom de l’appareil (actif)",
+      "matchTargetRequired": "Sélectionnez au moins une cible."
     },
     "header": {
       "description": "Faites correspondre les e-mails entrants par expéditeur ou objet pour ignorer le bruit, attribuer le bon client ou acheminer vers une destination. Les règles s'exécutent dans l'ordre ; la première correspondance l'emporte.",
@@ -1090,7 +1074,10 @@
       "running": "Test en cours…",
       "subject": "Objet",
       "title": "Tester cette règle",
-      "to": "À"
+      "to": "À",
+      "contactEmail": "e-mail du contact",
+      "deviceName": "nom de l’appareil",
+      "ambiguous": "{{target}} correspond à {{count}} clients — aucune attribution"
     }
   },
   "errors": {

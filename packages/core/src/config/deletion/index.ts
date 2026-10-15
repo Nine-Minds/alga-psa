@@ -8,6 +8,23 @@ import type { Knex } from 'knex';
 const tenantScopedTable = (trx: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder =>
   trx(table).where(`${table}.tenant`, tenant);
 
+const countProjectTaskWorkItems = (table: 'schedule_entries' | 'time_entries') => {
+  return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
+    const taskIds = trx('project_tasks')
+      .where('project_tasks.tenant', options.tenant)
+      .join('project_phases', function () {
+        this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+          .andOn('project_phases.tenant', '=', 'project_tasks.tenant');
+      })
+      .where({ 'project_phases.project_id': options.entityId })
+      .select('project_tasks.task_id');
+    const result = await tenantScopedTable(trx, options.tenant, table)
+      .where({ work_item_type: 'project_task' }).whereIn('work_item_id', taskIds)
+      .count<{ count: string }>('* as count').first();
+    return Number(result?.count ?? 0);
+  };
+};
+
 const countDocumentAssociations = (entityType: string) => {
   return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
     const result = await tenantScopedTable(trx, options.tenant, 'document_associations')
@@ -286,23 +303,11 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         type: 'schedule_entry',
         table: 'schedule_entries',
         label: 'schedule entry',
-        countQuery: async (trx, options) => {
-          const taskIds = await trx('project_tasks')
-            .where('project_tasks.tenant', options.tenant)
-            .join('project_phases', function () {
-              this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
-                .andOn('project_phases.tenant', '=', 'project_tasks.tenant');
-            })
-            .where({ 'project_phases.project_id': options.entityId })
-            .pluck('project_tasks.task_id');
-          if (taskIds.length === 0) return 0;
-          const result = await tenantScopedTable(trx, options.tenant, 'schedule_entries')
-            .where({ work_item_type: 'project_task' })
-            .whereIn('work_item_id', taskIds)
-            .count<{ count: string }>('* as count')
-            .first();
-          return Number(result?.count ?? 0);
-        }
+        countQuery: countProjectTaskWorkItems('schedule_entries')
+      },
+      {
+        type: 'time_entry', table: 'time_entries', label: 'time entry',
+        countQuery: countProjectTaskWorkItems('time_entries')
       },
       { type: 'project_material', table: 'project_materials', foreignKey: 'project_id', label: 'material' },
       {
@@ -370,6 +375,12 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'interactions',
         label: 'interaction',
         countQuery: countStatusUsage('interaction', 'interactions', 'status_id')
+      },
+      {
+        type: 'board_notification_status',
+        table: 'board_notification_rule_statuses',
+        foreignKey: 'status_id',
+        label: 'board notification rule'
       }
     ]
   },
@@ -378,11 +389,19 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     supportsInactive: false,
     supportsArchive: false,
     dependencies: [
-      { type: 'member', table: 'team_members', foreignKey: 'team_id', label: 'team member' },
+      // team_members is intentionally not a blocker: a team lead is optional (teams.manager_id
+      // is nullable), so a team can have any number of members, including none. Member rows
+      // are owned by the team; Team.delete removes them inside the deletion transaction.
       { type: 'ticket', table: 'tickets', foreignKey: 'assigned_team_id', label: 'assigned ticket' },
       { type: 'project_task', table: 'project_tasks', foreignKey: 'assigned_team_id', label: 'assigned project task' },
       { type: 'project_template_task', table: 'project_template_tasks', foreignKey: 'assigned_team_id', label: 'project template task' },
-      { type: 'board', table: 'boards', foreignKey: 'default_assigned_team_id', label: 'board default team' }
+      { type: 'board', table: 'boards', foreignKey: 'default_assigned_team_id', label: 'board default team' },
+      {
+        type: 'board_notification_recipient',
+        table: 'board_notification_rule_recipients',
+        foreignKey: 'team_id',
+        label: 'board notification rule'
+      }
     ]
   },
   user: {
@@ -393,6 +412,20 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
       { type: 'ticket', table: 'tickets', foreignKey: 'assigned_to', label: 'assigned ticket' },
       { type: 'time_entry', table: 'time_entries', foreignKey: 'user_id', label: 'time entry' },
       { type: 'time_sheet', table: 'time_sheets', foreignKey: 'user_id', label: 'time sheet' },
+      // native_time_tracking_sessions.native_timer_user_fk references users(tenant, user_id)
+      // with no ON DELETE, and the row outlives the clock: stopNativeTimeTracking stamps
+      // completed_entry_id/stopped_at rather than deleting, and the
+      // preserve_native_time_tracking_session trigger makes that receipt immutable. Without
+      // this entry a user who ever ran a timer passes validation and then dies on the final
+      // users DELETE with a raw 23503, surfacing as "Failed to delete user" with no
+      // dependencies listed. Blocking is the right semantic -- the receipt is deliberate
+      // evidence, so it must be refused the way time_entries already is, not cascaded away.
+      {
+        type: 'time_tracking_session',
+        table: 'native_time_tracking_sessions',
+        foreignKey: 'user_id',
+        label: 'time tracking session'
+      },
       { type: 'comment', table: 'comments', foreignKey: 'user_id', label: 'comment' },
       { type: 'interaction', table: 'interactions', foreignKey: 'user_id', label: 'interaction' },
       { type: 'project_task', table: 'project_tasks', foreignKey: 'assigned_to', label: 'assigned project task' },

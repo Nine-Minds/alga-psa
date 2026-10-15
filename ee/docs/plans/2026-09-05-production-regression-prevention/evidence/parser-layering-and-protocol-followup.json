@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "baseRevision": "e0bc8af8aa1c5aaacfbb4bf456812fefde2da768",
+  "workingTreeDirty": true,
+  "checks": [
+    {
+      "scope": "Parser layering",
+      "ciBefore": "Nx affected tests and CE/EE builds rejected ee-calendar -> integrations -> ee-calendar cycle",
+      "fix": "Move parser and licensed timezone data to core",
+      "nativeCoreBuild": "passed",
+      "fullServerTypecheck": "passed",
+      "mapperCasesPerTimezone": 32,
+      "timezones": [
+        "Europe/Berlin",
+        "America/Los_Angeles"
+      ],
+      "acyclicBuildTasks": 58,
+      "acyclicAffectedTestTasks": 114,
+      "newProjectCycles": 0
+    },
+    {
+      "scope": "Stripe webhook redirects",
+      "beforeFailed": 2,
+      "afterPassed": 26,
+      "files": 4,
+      "assertions": [
+        "302/307 statuses retained",
+        "redirect destination never contacted",
+        "healthy callback continues",
+        "real SDK signature verification"
+      ]
+    },
+    {
+      "scope": "Rendered release binding",
+      "afterPassed": 53,
+      "files": 4,
+      "assertions": [
+        "complete rendered artifact required",
+        "worker omission rejected even if all declarations omit it",
+        "init container omission rejected",
+        "target workload and namespace match",
+        "rendered image equals manifest",
+        "runtime collector envelope remains accepted"
+      ]
+    }
+  ],
+  "limitations": [
+    "Current GitHub run still tests prior source and cannot validate the parser move.",
+    "Release pipeline wiring and real deployed readback remain open; fixture tests do not establish F020 completion.",
+    "Stripe automatic retries/live-provider drift remain separate capabilities."
+  ]
+}

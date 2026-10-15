@@ -12,13 +12,14 @@ export function Separator({
 }) {
   const theme = useTheme();
   const size = spacing ?? theme.spacing.sm;
+  const lineColor = theme.highContrast ? theme.colors.borderStrong : theme.colors.border;
 
   if (orientation === "vertical") {
     return (
       <View
         style={
           line
-            ? { width: 1, backgroundColor: theme.colors.border, marginHorizontal: size }
+            ? { width: 1, backgroundColor: lineColor, marginHorizontal: size }
             : { width: size }
         }
       />
@@ -29,7 +30,7 @@ export function Separator({
     <View
       style={
         line
-          ? { height: 1, backgroundColor: theme.colors.border, marginVertical: size }
+          ? { height: 1, backgroundColor: lineColor, marginVertical: size }
           : { height: size }
       }
     />

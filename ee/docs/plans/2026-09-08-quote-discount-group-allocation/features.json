@@ -1,0 +1,92 @@
+[
+  {
+    "id": "F001",
+    "description": "Provide one pure deterministic quote-discount allocation model shared across runtime consumers.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Allocate item-targeted discounts only to the matching selected base item.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Allocate service-targeted discounts across every selected matching service item.",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Allocate whole-quote discounts across every selected base item.",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Split mixed-cadence allocations proportionally by non-negative base amount.",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Conserve integer cents with deterministic largest-remainder rounding and display-order tie-breaking.",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Exclude optional unselected items from discount bases and allocations.",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "Resolve removed, unmatched, and zero-value targets to a zero allocation.",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Cap resolved discounts at their eligible base so grouped totals cannot become negative.",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Keep persisted discount amounts positive and preserve quote-level subtraction semantics.",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "Use shared allocation semantics for live draft/editor totals and target edits.",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Use shared allocation semantics when recalculating and saving quote financials.",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "Derive allocations for existing persisted discounts with false or null cadence fields.",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "description": "Subtract allocated reductions from recurring and one-time adapter summaries exactly once.",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "description": "Preserve service, product, location, phase, and general line-item consumer compatibility.",
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "description": "Render corrected grouped totals through standard Grouped Quote preview and PDF.",
+    "implemented": true
+  },
+  {
+    "id": "F017",
+    "description": "Render corrected grouped totals through duplicated or custom equivalent template ASTs without rewriting them.",
+    "implemented": true
+  },
+  {
+    "id": "F018",
+    "description": "Document rendered evidence and the prior positive-discount group-sum discrepancy.",
+    "implemented": true
+  }
+]

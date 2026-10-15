@@ -2,11 +2,13 @@ import type { Knex } from 'knex';
 import type { TenantScopedQuery } from '@alga-psa/db';
 import type {
   AuthorizationEvaluationInput,
+  ContactVisibilityScope,
   AuthorizationSubject,
   RelationshipRule,
   RelationshipTemplateKey,
 } from './contracts';
 import type { BundleNarrowingRule } from './providers/bundleProvider';
+import { applyTicketVisibilityFilter, ticketMatchesVisibility } from '../portal/visibility';
 
 // ---------------------------------------------------------------------------
 // Shared relationship-template definitions.
@@ -48,6 +50,18 @@ export interface RelationshipSqlAdapter {
   ownerColumn: string;
   clientColumn: string;
   boardColumn: string;
+  contactColumn?: string;
+  /**
+   * Column holding the ticket's billing profile. When omitted, billing-profile
+   * grants cannot widen `contact_visibility` (narrower, fail-closed).
+   */
+  billingProfileColumn?: string;
+  /**
+   * JSONB column holding the resource's `attributes` object (the watch list is
+   * its `watch_list` array). When omitted, the watcher grant cannot widen
+   * `contact_visibility` (narrower, fail-closed).
+   */
+  watchListColumn?: string;
   teamColumn: string;
   /**
    * Column holding a boolean client-visibility flag. When omitted, the
@@ -65,6 +79,7 @@ export interface RelationshipSqlAdapter {
 }
 
 export interface RelationshipSqlContext {
+  contactVisibility?: ContactVisibilityScope | null;
   subject: AuthorizationSubject;
   selectedClientIds?: string[];
   selectedBoardIds?: string[];
@@ -176,6 +191,38 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     matches: (input) => hasIntersection(input.record?.teamIds, input.subject.teamIds),
     compileSql: (builder, ctx) => {
       whereInOrDeny(builder, ctx.adapter.teamColumn, ctx.subject.teamIds);
+    },
+  },
+  // One rule intersects client, board, and contact restrictions. Built-in rules
+  // otherwise compose with OR, which would leak sibling tickets if split up.
+  contact_visibility: {
+    matches: ({ record, contactVisibility: scope }) => ticketMatchesVisibility(record, scope),
+    compileSql: (builder, ctx) => {
+      const scope = ctx.contactVisibility;
+      if (!scope || !scope.clientId) {
+        deny(builder);
+        return;
+      }
+      builder.where(ctx.adapter.clientColumn, scope.clientId);
+      if (scope.effectiveTicketScope === 'contact' && !ctx.adapter.contactColumn) {
+        // Contact scope without a contact column cannot be expressed: deny.
+        if (scope.visibleBoardIds !== null) {
+          whereInOrDeny(builder, ctx.adapter.boardColumn, scope.visibleBoardIds);
+        }
+        deny(builder);
+        return;
+      }
+      if (scope.effectiveTicketScope !== 'client' && scope.effectiveTicketScope !== 'contact') {
+        deny(builder);
+        return;
+      }
+      applyTicketVisibilityFilter(builder, scope, {
+        boardColumn: ctx.adapter.boardColumn,
+        // Only read under contact scope, which returned above when it is absent.
+        contactColumn: ctx.adapter.contactColumn ?? '',
+        billingProfileColumn: ctx.adapter.billingProfileColumn,
+        watchListColumn: ctx.adapter.watchListColumn,
+      });
     },
   },
   selected_boards: {

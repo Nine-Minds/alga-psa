@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "scope": "host-microsoft-mailbox-real-worker",
+  "applicationRevision": "c5938cdad5",
+  "emailWorkerSourceRevision": "56e6a7e01c",
+  "edition": "enterprise",
+  "status": "passed",
+  "browser": {
+    "startTime": "2026-09-08T03:02:22.304Z",
+    "duration": 11402.666,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "services": {
+    "application": "Existing production build on host53010; callback target53011",
+    "emailWorker": "Actual TypeScript build and node dist/services/email-service/src/index.js on53080",
+    "redis": "Dedicated password-protected loopback native instance53079; no persistence",
+    "graph": "Isolated host emulator52620/control52621",
+    "callback": "Trusted local HTTPS proxy52622"
+  },
+  "verified": [
+    "UI Microsoft profile and mailbox OAuth configuration",
+    "Graph seed delivered through actual webhook and email worker to one ticket",
+    "Correct client/contact/default routing and visible message body",
+    "Expired token recovery and UI reply captured as Graph MIME email",
+    "Duplicate callback processing drains queues without duplicate tickets/comments/messages/replies"
+  ],
+  "artifacts": {
+    "alga-mailbox-host-worker.json": "0c4c79a5a509ba458fd16ce38c24bbaf9c7444c4daab3844902a9a82066065a9",
+    "alga-email-host-build.log": "9d2b904761a9dd5ebe32ddb059322982d502dc1efe5ad5a01933d310df0ad986"
+  },
+  "limits": [
+    "Host development evidence with existing application build, not current-source native CI or immutable deployment evidence",
+    "No Temporal workflow worker or Microsoft Teams/SSO coverage",
+    "Only this Graph mailbox scenario; SMTP, other providers and fault matrices remain separate",
+    "No Docker builds or publication"
+  ]
+}

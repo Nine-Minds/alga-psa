@@ -1,3 +1,5 @@
+import { prepareCommentAttachmentEmail, claimCommentEmailDelivery, finishCommentEmailDelivery, recipientCanReceiveCommentFiles } from './ticketCommentAttachmentEmail';
+import { isPublicAttachmentComment } from '@shared/lib/ticketCommentAttachments';
 import { randomUUID } from 'node:crypto';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
@@ -7,6 +9,7 @@ import logger from '@alga-psa/core/logger';
 import { TenantEmailService } from '@alga-psa/email';
 import { StaticTemplateProcessor } from '@alga-psa/email';
 import { EmailProviderError } from '@alga-psa/types';
+import type { OutboundMailClass } from '@alga-psa/types';
 import { getUserInfoForEmail, resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { SupportedLocale } from '@alga-psa/core/i18n/config';
 import Handlebars from 'handlebars';
@@ -22,6 +25,27 @@ function isEmailServiceDisabledErrorMessage(message: unknown): boolean {
   return message.includes(EMAIL_SERVICE_DISABLED_MESSAGE) || message.includes('disabled or not configured');
 }
 
+/**
+ * Extract provider failure identifiers for the notification failure log.
+ * EmailProviderError stores its provider code in errorCode (not code) and
+ * carries provider status/request-id on metadata; ordinary Error and non-Error
+ * throws must not throw here.
+ */
+export function extractProviderErrorLogFields(error: unknown): {
+  errorCode?: string;
+  status?: number;
+  requestId?: string;
+} {
+  const providerError = (error ?? undefined) as
+    | { errorCode?: unknown; metadata?: Record<string, unknown> | undefined }
+    | undefined;
+  const errorCode = typeof providerError?.errorCode === 'string' ? providerError.errorCode : undefined;
+  const metadata = providerError?.metadata;
+  const status = metadata && Number.isFinite(Number(metadata.status)) ? Number(metadata.status) : undefined;
+  const requestId = typeof metadata?.requestId === 'string' ? metadata.requestId : undefined;
+  return { errorCode, status, requestId };
+}
+
 interface ReplyMarkerPayload {
   token: string;
   ticketId?: string;
@@ -31,6 +55,9 @@ interface ReplyMarkerPayload {
 }
 
 export interface SendEmailParams {
+  mailClass: OutboundMailClass;
+  boardId?: string;
+  senderId?: string;
   tenantId: string;
   to: string;
   subject: string;
@@ -49,6 +76,8 @@ export interface SendEmailParams {
    * Optional notification subtype association (links to notification_subtypes.id).
    */
   notificationSubtypeId?: number;
+  /** Source publication when a bundle notification replies to a different ticket. */
+  commentSource?: { ticketId: string; commentId: string };
   replyContext?: {
     ticketId?: string;
     projectId?: string;
@@ -87,6 +116,13 @@ export interface SendEmailParams {
    * If provided, the system will attempt to use this provider instead of the tenant default.
    */
   providerId?: string;
+  /**
+   * Optional: real Cc/Bcc headers on this one message. Used by per-comment
+   * one-off recipients; every layer below (TenantEmailService, the providers
+   * and the email log) already understands them.
+   */
+  cc?: EmailAddress[];
+  bcc?: EmailAddress[];
   /** Retry authority stays with a caller that must revalidate access. */
   retryPolicy?: 'queue' | 'caller';
 }
@@ -177,6 +213,34 @@ async function persistReplyToken(
 
 //
 // Template lookup and sending are handled below using DatabaseTemplateProcessor
+
+/**
+ * Append an outbound RFC Message-ID to a ticket's `email_metadata.references`.
+ *
+ * Deliberately writes neither `updated_at` nor `updated_by`: email_metadata is
+ * bookkeeping, and bumping `updated_at` here would make the ticket UI credit the
+ * previous editor for activity (e.g. a public comment) that this write follows.
+ */
+export async function appendOutboundMessageIdReference(
+  db: { table: (name: string) => any },
+  knex: { raw: (sql: string, bindings?: any[]) => any },
+  ticketId: string,
+  rfcMessageId: string
+): Promise<void> {
+  // Raw query to append to the JSONB array safely
+  await db.table('tickets')
+    .where({ ticket_id: ticketId })
+    .update({
+      email_metadata: knex.raw(
+        `jsonb_set(
+          COALESCE(email_metadata, '{}'::jsonb),
+          '{references}',
+          (COALESCE(email_metadata->'references', '[]'::jsonb) || to_jsonb(?::text))
+        )`,
+        [rfcMessageId]
+      )
+    });
+}
 
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
   await sendEventEmailWithOutcome(params);
@@ -387,6 +451,61 @@ export async function sendEventEmailWithOutcome(params: SendEmailParams): Promis
     // correct for the HTML body only.
     const subjectTemplate = Handlebars.compile(emailSubject, { noEscape: true });
 
+    const attachmentCommentId = params.template === 'ticket-comment-added'
+      ? params.commentSource?.commentId || params.replyContext?.commentId : undefined;
+    const attachmentTicketId = params.commentSource?.ticketId || params.replyContext?.ticketId;
+    if (params.template === 'ticket-comment-added' && params.commentSource) {
+      const destinationTicketId = params.replyContext?.ticketId;
+      // Bundling shares public updates, not document permissions. Recheck the
+      // destination and source on every retry before preparing source files.
+      const child = destinationTicketId && await db.table('tickets').where({
+        ticket_id: destinationTicketId, master_ticket_id: attachmentTicketId,
+      }).first();
+      if (!child || !await isPublicAttachmentComment(knex, params.tenantId, attachmentCommentId!, attachmentTicketId!) ||
+        !await recipientCanReceiveCommentFiles(knex, params.tenantId, destinationTicketId!, params.to)) return 'skipped';
+
+      const mirror = await db.table('ticket_bundle_mirrors').where({
+        source_comment_id: attachmentCommentId!, child_ticket_id: destinationTicketId!,
+      }).first();
+      if (mirror && !await isPublicAttachmentComment(knex, params.tenantId, mirror.child_comment_id, destinationTicketId!)) return 'skipped';
+      if (params.replyContext?.commentId && params.replyContext.commentId !== mirror?.child_comment_id) return 'skipped';
+      // Link-only bundles have no child comment. Never persist a master comment
+      // under a child's reply token; incoming replies still target that ticket.
+      params = { ...params, replyContext: { ...params.replyContext, commentId: mirror?.child_comment_id } };
+    }
+    let managedCommentDelivery = false;
+    let attachmentDownloadText = '';
+    if (attachmentCommentId && attachmentTicketId) {
+      managedCommentDelivery = Boolean(await db.table('ticket_comment_attachments').where({ comment_id: attachmentCommentId }).first());
+      if (managedCommentDelivery) {
+        // Recheck persisted visibility on each queued attempt, never trust an old event payload.
+        if (!await isPublicAttachmentComment(knex, params.tenantId, attachmentCommentId, attachmentTicketId)) {
+          const current = await db.table('comments').where({ comment_id: attachmentCommentId, ticket_id: attachmentTicketId }).first();
+          const staffRecipient = await db.table('users').where({ user_type: 'internal', is_inactive: false })
+            .whereRaw('lower(email) = ?', [params.to.trim().toLowerCase()]).first();
+          // Preserve staff text notifications; never send private files or stale
+          // public-event content to a customer after a visibility change.
+          if (!current || current.deleted_at || current.publish_state !== 'published' || !staffRecipient) return 'skipped';
+        }
+        const service = TenantEmailService.getInstance(params.tenantId);
+        const capabilities = await service.getAttachmentCapabilities();
+        const prepared = await prepareCommentAttachmentEmail({
+          db: knex, tenant: params.tenantId, ticketId: attachmentTicketId,
+          commentId: attachmentCommentId, recipient: params.to,
+          supportsAttachments: capabilities.supportsAttachments,
+          blockedAttachmentExtensions: capabilities.blockedAttachmentExtensions,
+          maxAttachmentBytes: capabilities.maxAttachmentSize || 0,
+          baseUrl: process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '',
+        });
+        if (prepared.downloadLinks.length) attachmentDownloadText = '\nDownload attachments within one hour (verify the recipient email; no portal account required):\n' + prepared.downloadLinks.join('\n');
+        params = { ...params, attachments: prepared.attachments, context: {
+          ...params.context,
+          comment: { ...(params.context.comment as Record<string, unknown> || {}),
+            content: prepared.html, html: prepared.html, text: prepared.text, plainText: prepared.text },
+        } };
+      }
+    }
+
     let html = htmlTemplate(params.context);
     let subject = subjectTemplate(params.context).replace(/[\r\n]+/g, ' ').trim();
 
@@ -420,6 +539,8 @@ export async function sendEventEmailWithOutcome(params: SendEmailParams): Promis
       .replace(/\s+/g, ' ')
       .trim();
 
+    text += attachmentDownloadText;
+
     let replyPayload: ReplyMarkerPayload | null = null;
     let effectiveReplyContext = params.replyContext;
     if (params.replyContext?.ticketId || params.replyContext?.projectId) {
@@ -443,8 +564,23 @@ export async function sendEventEmailWithOutcome(params: SendEmailParams): Promis
     // Send via TenantEmailService (handles tenant provider and EE fallback)
     const service = TenantEmailService.getInstance(params.tenantId);
     const processor = new StaticTemplateProcessor(subject, html, text);
+    if (managedCommentDelivery && !await claimCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to)) {
+      const delivery = await tenantDb(knex, params.tenantId).table('ticket_comment_email_deliveries')
+        .where({ comment_id: attachmentCommentId!, recipient: params.to.trim().toLowerCase() }).first();
+      // Another attempt already delivered this comment email; report the real
+      // outcome rather than a fresh send.
+      if (delivery?.state === 'sent') return 'sent';
+      throw new EmailProviderError('Comment email has an unresolved provider outcome; reconcile before retrying.',
+        'unknown', 'unknown', false, 'COMMENT_DELIVERY_RECONCILIATION_REQUIRED', { requiresReconciliation: true });
+    }
     const result = await service.sendEmail({
+      mailClass: params.mailClass,
+      boardId: params.boardId,
+      senderId: params.senderId,
+      revalidateCommentOnRetry: managedCommentDelivery,
       to: params.to,
+      ...(params.cc?.length ? { cc: params.cc } : {}),
+      ...(params.bcc?.length ? { bcc: params.bcc } : {}),
       tenantId: params.tenantId,
       entityType: params.entityType,
       entityId: params.entityId,
@@ -460,7 +596,29 @@ export async function sendEventEmailWithOutcome(params: SendEmailParams): Promis
       retryPolicy: params.retryPolicy,
       from: params.from,
       userId: params.recipientUserId  // For rate limiting
+    }).catch(async (error: unknown) => {
+      if (!managedCommentDelivery) throw error;
+      const providerError = error as { message?: string; errorCode?: string; metadata?: Record<string, unknown>; isRetryable?: boolean };
+      const notSent = providerError.metadata?.definitelyNotSent === true;
+      await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, notSent ? 'failed' : 'sending', {
+        error: providerError.message || 'Email service failed with an unknown outcome', errorCode: providerError.errorCode || 'OUTCOME_UNKNOWN',
+      });
+      throw new EmailProviderError(providerError.message || 'Email delivery requires reconciliation', 'unknown', 'unknown',
+        notSent && providerError.isRetryable === true, providerError.errorCode || 'OUTCOME_UNKNOWN',
+        { ...providerError.metadata, requiresReconciliation: !notSent });
     });
+
+    if (managedCommentDelivery) {
+      if (result.success && !result.queued) {
+        // Record success before ancillary reply-token/log writes can fail.
+        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'sent');
+      } else if (result.metadata?.definitelyNotSent === true ||
+        Number(result.metadata?.status) === 429) {
+        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'failed', { error: result.error, errorCode: String(result.metadata?.errorCode || 'NOT_SENT') });
+      } else {
+        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'sending', { error: result.error || 'Provider outcome is unknown', errorCode: String(result.metadata?.errorCode || 'OUTCOME_UNKNOWN') });
+      }
+    }
 
     if (!result.success) {
       // If email delivery is intentionally disabled/unconfigured, treat as an informational skip (common in dev/test).
@@ -477,7 +635,8 @@ export async function sendEventEmailWithOutcome(params: SendEmailParams): Promis
 
       const providerId = result.providerId || params.providerId || 'unknown';
       const providerType = result.providerType || 'unknown';
-      const isRetryable = result.metadata?.retryable === true;
+      const isRetryable = result.metadata?.retryable === true && (!managedCommentDelivery ||
+        result.metadata?.definitelyNotSent === true || Number(result.metadata?.status) === 429);
       const errorCode = typeof result.metadata?.errorCode === 'string' ? result.metadata.errorCode : undefined;
 
       throw new EmailProviderError(
@@ -505,20 +664,7 @@ export async function sendEventEmailWithOutcome(params: SendEmailParams): Promis
     const outboundRfcMessageId = result.rfcMessageId ?? result.messageId;
     if (result.success && outboundRfcMessageId && params.replyContext?.ticketId) {
       try {
-        // We use a raw query to append to the JSONB array safely
-        await db.table('tickets')
-          .where({ ticket_id: params.replyContext.ticketId })
-          .update({
-            email_metadata: knex.raw(
-              `jsonb_set(
-                COALESCE(email_metadata, '{}'::jsonb),
-                '{references}',
-                (COALESCE(email_metadata->'references', '[]'::jsonb) || to_jsonb(?::text))
-              )`,
-              [outboundRfcMessageId]
-            ),
-            updated_at: new Date() // Good practice to touch updated_at
-          });
+        await appendOutboundMessageIdReference(db, knex, params.replyContext.ticketId, outboundRfcMessageId);
 
         logger.debug('[SendEventEmail] Linked outbound Message-ID to ticket:', {
           ticketId: params.replyContext.ticketId,
@@ -553,6 +699,12 @@ export async function sendEventEmailWithOutcome(params: SendEmailParams): Promis
       return 'skipped';
     }
 
+    // EmailProviderError stores its provider code in errorCode (not code) and
+    // carries provider status/request-id on metadata. Log them explicitly so
+    // the logger does not depend on serializing the raw error's non-enumerable
+    // provider-specific properties.
+    const { errorCode, status: providerStatus, requestId } = extractProviderErrorLogFields(error);
+
     logger.error('[SendEventEmail] Failed to publish email event:', {
       error,
       to: params.to,
@@ -560,6 +712,9 @@ export async function sendEventEmailWithOutcome(params: SendEmailParams): Promis
       tenantId: params.tenantId,
       template: params.template,
       errorMessage,
+      errorCode,
+      status: providerStatus,
+      requestId,
       errorStack: error instanceof Error ? error.stack : undefined
     });
     throw error;

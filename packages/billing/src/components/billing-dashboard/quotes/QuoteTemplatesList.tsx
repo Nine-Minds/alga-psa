@@ -192,7 +192,7 @@ const QuoteTemplatesList: React.FC<QuoteTemplatesListProps> = ({ onEdit, onCreat
           })}
         </div>
       ) : (
-        <DataTable
+        <DataTable id="quote-templates-table"
           data={templates}
           columns={columns}
           pagination

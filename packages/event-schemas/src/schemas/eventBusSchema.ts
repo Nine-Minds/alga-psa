@@ -62,6 +62,7 @@ import {
   recurringBillingRunStartedEventPayloadSchema,
 } from './domain/billingEventSchemas';
 import {
+  clientAnniversaryUpcomingEventPayloadSchema,
   clientArchivedEventPayloadSchema,
   clientCreatedEventPayloadSchema,
   clientDeletedEventPayloadSchema,
@@ -155,6 +156,7 @@ import {
   ticketCreatedEventPayloadSchema,
   ticketCustomerRepliedEventPayloadSchema,
   ticketEscalatedEventPayloadSchema,
+  ticketExternalLinkEventPayloadSchema,
   ticketInternalNoteAddedEventPayloadSchema,
   ticketMergedEventPayloadSchema,
   ticketMessageAddedEventPayloadSchema,
@@ -232,6 +234,9 @@ export const EVENT_TYPES = [
   'TICKET_APPROVAL_REQUESTED',
   'TICKET_APPROVAL_GRANTED',
   'TICKET_APPROVAL_REJECTED',
+  'TICKET_EXTERNAL_LINK_ADDED',
+  'TICKET_EXTERNAL_LINK_UPDATED',
+  'TICKET_EXTERNAL_LINK_REMOVED',
 
   // Scheduling (legacy requests)
   'APPOINTMENT_REQUEST_CREATED',
@@ -243,6 +248,9 @@ export const EVENT_TYPES = [
   'SCHEDULE_ENTRY_CREATED',
   'SCHEDULE_ENTRY_UPDATED',
   'SCHEDULE_ENTRY_DELETED',
+
+  // Scheduling (shared calendars)
+  'CALENDAR_SHARE_GRANTED',
 
   // Scheduling (domain expansion)
   'APPOINTMENT_CREATED',
@@ -350,6 +358,7 @@ export const EVENT_TYPES = [
   'RECURRING_BILLING_RUN_FAILED',
 
   // CRM (domain expansion)
+  'CLIENT_ANNIVERSARY_UPCOMING',
   'CLIENT_CREATED',
   'CLIENT_UPDATED',
   'CLIENT_STATUS_CHANGED',
@@ -554,9 +563,18 @@ export const BaseEventSchema = z.object({
 // Ticket event payload schema
 export const TicketEventPayloadSchema = BasePayloadSchema.extend({
   ticketId: z.string().uuid(),
-  userId: z.string().uuid(), // The user being assigned to the ticket
+  // Acting user. Present only when a user acted; see actorType. Never a substitute id.
+  // (TICKET_ASSIGNED requires it and means the assignee: TicketAssignedLegacyPayloadSchema.)
+  userId: z.string().uuid().optional(),
   assignedByUserId: z.string().uuid().optional(), // The user who performed the action
+  // Declared so the legacy branch keeps them: consumers receive the parsed object.
+  actorType: actorTypeSchema.optional(),
+  actorUserId: z.string().uuid().optional(),
+  actorContactId: z.string().uuid().optional(),
+  occurredAt: z.string().optional(),
+  commentId: z.string().uuid().optional(),
   changes: z.record(z.unknown()).optional(),
+  externalLinks: z.array(z.record(z.unknown())).optional(),
   ...TicketNotificationSuppressionSchema,
   comment: z.object({
     id: z.string().uuid(),
@@ -586,7 +604,8 @@ export const TicketCommentAddedPayloadSchema = TicketEventPayloadSchema.extend({
 }).superRefine((payload, context) => {
   const fail = (message: string) => context.addIssue({ code: z.ZodIssueCode.custom, message });
   const foreign = payload.actorType === 'COLLABORATOR';
-  if (!foreign && !payload.userId && !payload.actorUserId) fail('A local comment event requires its local author');
+  // SYSTEM and CONTACT actors (workflow, inbound email) legitimately carry no user id.
+  if ((payload.actorType === undefined || payload.actorType === 'USER') && !payload.userId && !payload.actorUserId) fail('A local comment event requires its local author');
   const comment = payload.comment;
   if (foreign && (!comment || !comment.audience || comment.authorType !== 'internal' || comment.audience === 'organization_private')) {
     fail('A foreign comment requires an explicit requester or shared IT audience');
@@ -772,7 +791,7 @@ const ticketCommentMutationSchema = z.object({
 function validateTicketCommentMutation(payload: any, ctx: z.RefinementCtx, kind: 'edit' | 'delete') {
   const mutation = payload.collaborationMutation;
   if (!mutation) {
-    if (payload.actorReference || payload.actorType === 'COLLABORATOR' || (kind === 'edit' && !payload.userId)) {
+    if (payload.actorReference || payload.actorType === 'COLLABORATOR' || (kind === 'edit' && (payload.actorType === undefined || payload.actorType === 'USER') && !payload.userId && !payload.actorUserId)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Comment mutations require a qualified reference or local user.' });
     }
     return;
@@ -1025,6 +1044,18 @@ export const AccountingExportEventPayloadSchema = BasePayloadSchema.extend({
 });
 
 // Schedule entry event payload schema
+// Shared calendars: a user or team was granted (or had changed) access to a calendar.
+export const CalendarShareGrantedPayloadSchema = BasePayloadSchema.extend({
+  calendarId: z.string().uuid(),
+  calendarType: z.enum(['personal', 'group']),
+  ownerUserId: z.string().uuid().nullable(),
+  calendarName: z.string().nullable().optional(),
+  granteeType: z.enum(['user', 'team']),
+  granteeId: z.string().uuid(),
+  accessLevel: z.enum(['free_busy', 'read', 'edit', 'manage']),
+  grantedByUserId: z.string().uuid(),
+});
+
 export const ScheduleEntryEventPayloadSchema = BasePayloadSchema.extend({
   entryId: z.string().uuid(),
   userId: z.string().uuid(),
@@ -1097,23 +1128,30 @@ export const SurveyInvitationSentPayloadSchema = BasePayloadSchema.extend({
 
 export const SurveyResponseSubmittedPayloadSchema = BasePayloadSchema.extend({
   responseId: z.string().uuid(),
-  ticketId: z.string().uuid(),
+  ticketId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
   companyId: z.string().uuid().optional(),
   rating: z.number(),
   hasComment: z.boolean(),
-});
+}).refine(value => Boolean(value.ticketId) !== Boolean(value.projectId), { message: 'Exactly one survey subject is required' });
 
 export const SurveyNegativeResponsePayloadSchema = BasePayloadSchema.extend({
   responseId: z.string().uuid(),
-  ticketId: z.string().uuid(),
-  ticketNumber: z.string(),
+  ticketId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
+  ticketNumber: z.string().optional(),
+  projectNumber: z.string().optional(),
   companyId: z.string().uuid().optional(),
   companyName: z.string().optional(),
   contactName: z.string().optional(),
   rating: z.number(),
   comment: z.string().optional(),
   assignedTo: z.string().uuid().optional(),
-});
+}).refine(value => Boolean(value.ticketId) !== Boolean(value.projectId), { message: 'Exactly one survey subject is required' })
+  .refine(value => value.projectId
+    ? value.projectNumber !== undefined && value.ticketNumber === undefined
+    : value.ticketNumber !== undefined && value.projectNumber === undefined,
+  { message: 'Survey subject number must match its subject type' });
 
 export const TicketResponseStateChangedPayloadSchema = BasePayloadSchema.extend({
   ticketId: z.string().uuid(),
@@ -1231,13 +1269,21 @@ export const RmmWebhookEventPayloadSchema = BasePayloadSchema.extend({
   rawPayload: z.record(z.unknown()), // Full webhook payload for processing
 });
 
-const TicketCreatedPayloadSchema = z.union([TicketEventPayloadSchema, ticketCreatedEventPayloadSchema]);
-const TicketUpdatedPayloadSchema = z.union([TicketEventPayloadSchema, ticketUpdatedEventPayloadSchema]);
-const TicketClosedPayloadSchema = z.union([TicketEventPayloadSchema, ticketClosedEventPayloadSchema]);
-const TicketAutoCloseWarningPayloadSchema = z.union([TicketEventPayloadSchema, ticketAutoCloseWarningEventPayloadSchema]);
+// The legacy branch parses first and strips unknown keys, and with `userId` optional it matches
+// domain payloads too. Give it the domain fields as optional extras (legacy definitions win on
+// shared keys) so a domain payload parsed by it keeps fields like contactNameId or closedAt.
+function legacyTicketUnion<D extends z.AnyZodObject>(domainSchema: D) {
+  return z.union([domainSchema.partial().merge(TicketEventPayloadSchema), domainSchema]);
+}
+const TicketCreatedPayloadSchema = legacyTicketUnion(ticketCreatedEventPayloadSchema);
+const TicketUpdatedPayloadSchema = legacyTicketUnion(ticketUpdatedEventPayloadSchema);
+const TicketClosedPayloadSchema = legacyTicketUnion(ticketClosedEventPayloadSchema);
+const TicketAutoCloseWarningPayloadSchema = legacyTicketUnion(ticketAutoCloseWarningEventPayloadSchema);
 const MaintenanceJobRequestedPayloadSchema = maintenanceJobRequestedEventPayloadSchema;
 const InboundEmailProviderAutoPausedPayloadSchema = inboundEmailProviderAutoPausedEventPayloadSchema;
-const TicketAssignedPayloadSchema = z.union([TicketEventPayloadSchema, ticketAssignedEventPayloadSchema]);
+// On TICKET_ASSIGNED `userId` is the assignee (the notification recipient), so it stays required.
+export const TicketAssignedLegacyPayloadSchema = TicketEventPayloadSchema.extend({ userId: z.string().uuid() });
+const TicketAssignedPayloadSchema = z.union([TicketAssignedLegacyPayloadSchema, ticketAssignedEventPayloadSchema]);
 const TicketResponseStateChangedPayloadSchemaV2 = z.union([
   TicketResponseStateChangedPayloadSchema,
   ticketResponseStateChangedEventPayloadSchema,
@@ -1296,6 +1342,9 @@ export const EventPayloadSchemas = {
   TICKET_APPROVAL_REQUESTED: ticketApprovalRequestedEventPayloadSchema,
   TICKET_APPROVAL_GRANTED: ticketApprovalGrantedEventPayloadSchema,
   TICKET_APPROVAL_REJECTED: ticketApprovalRejectedEventPayloadSchema,
+  TICKET_EXTERNAL_LINK_ADDED: ticketExternalLinkEventPayloadSchema,
+  TICKET_EXTERNAL_LINK_UPDATED: ticketExternalLinkEventPayloadSchema,
+  TICKET_EXTERNAL_LINK_REMOVED: ticketExternalLinkEventPayloadSchema,
 
   // Scheduling (legacy requests)
   APPOINTMENT_REQUEST_CREATED: AppointmentRequestEventPayloadSchema,
@@ -1307,6 +1356,7 @@ export const EventPayloadSchemas = {
   SCHEDULE_ENTRY_CREATED: ScheduleEntryEventPayloadSchema,
   SCHEDULE_ENTRY_UPDATED: ScheduleEntryEventPayloadSchema,
   SCHEDULE_ENTRY_DELETED: ScheduleEntryEventPayloadSchema,
+  CALENDAR_SHARE_GRANTED: CalendarShareGrantedPayloadSchema,
 
   // Scheduling (domain expansion)
   APPOINTMENT_CREATED: appointmentCreatedEventPayloadSchema,
@@ -1414,6 +1464,7 @@ export const EventPayloadSchemas = {
   RECURRING_BILLING_RUN_FAILED: recurringBillingRunFailedEventPayloadSchema,
 
   // CRM (domain expansion)
+  CLIENT_ANNIVERSARY_UPCOMING: clientAnniversaryUpcomingEventPayloadSchema,
   CLIENT_CREATED: clientCreatedEventPayloadSchema,
   CLIENT_UPDATED: clientUpdatedEventPayloadSchema,
   CLIENT_STATUS_CHANGED: clientStatusChangedEventPayloadSchema,
@@ -1666,6 +1717,7 @@ export type AccountingExportFailedEvent = z.infer<typeof EventSchemas.ACCOUNTING
 export type ScheduleEntryCreatedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_CREATED>;
 export type ScheduleEntryUpdatedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_UPDATED>;
 export type ScheduleEntryDeletedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_DELETED>;
+export type CalendarShareGrantedEvent = z.infer<typeof EventSchemas.CALENDAR_SHARE_GRANTED>;
 export type BoardCreatedEvent = z.infer<typeof EventSchemas.BOARD_CREATED>;
 export type BoardUpdatedEvent = z.infer<typeof EventSchemas.BOARD_UPDATED>;
 export type BoardDeletedEvent = z.infer<typeof EventSchemas.BOARD_DELETED>;
@@ -1736,6 +1788,18 @@ export type WorkflowPublishHooks = {
  * This ensures compatibility between the event bus and workflow systems
  */
 export function convertToWorkflowEvent(event: Event, hooks?: WorkflowPublishHooks): any {
+  // Workflow trigger payload schemas (BaseDomainEventPayloadSchema) require
+  // `occurredAt`. Publishers that hand publishEvent a raw payload (inbound
+  // email, legacy call sites) never stamp it, and the worker then skips every
+  // matching workflow at payload validation. Default it at the stream boundary
+  // so no publisher can silently opt out of workflow triggers (alga-2026-0002379).
+  // LEVERAGE: friction workflow-payload-occurred-at — publishers should build payloads with
+  // buildWorkflowPayload; this default is the backstop for the raw publishEvent callers.
+  const rawPayload = event.payload as Record<string, unknown> | undefined;
+  const payload =
+    rawPayload && typeof rawPayload === 'object' && typeof rawPayload.occurredAt !== 'string'
+      ? { ...rawPayload, occurredAt: event.timestamp }
+      : event.payload;
   return {
     event_id: event.id,
     execution_id: hooks?.executionId,
@@ -1747,6 +1811,6 @@ export function convertToWorkflowEvent(event: Event, hooks?: WorkflowPublishHook
     from_state: hooks?.fromState,
     to_state: hooks?.toState,
     user_id: event.payload?.actorUserId ?? event.payload?.userId,
-    payload: event.payload
+    payload
   };
 }

@@ -5,6 +5,15 @@
     "authorizedBy": "Autorizado por",
     "billTo": "Faturar para",
     "billedTimeByTicket": "Tempo faturado por ticket",
+    "cadence": {
+      "annually": "Anual",
+      "monthly": "Mensal",
+      "oneTime": "Único",
+      "other": "Outro",
+      "quarterly": "Trimestral",
+      "semiAnnually": "Semestral"
+    },
+    "cadenceTotal": "Total {{cadence}}",
     "date": "Data",
     "description": "Descrição",
     "discounts": "Descontos",
@@ -27,6 +36,10 @@
     "oneTimeItems": "Itens avulsos",
     "oneTimeTotal": "Total avulso",
     "optional": "Opcional",
+    "optionalIncluded": "Opcional (incluído)",
+    "optionalSection": "Opcional (se selecionado)",
+    "optionalSubtotal": "Subtotal opcional",
+    "optionalTotal": "Opcional se selecionado",
     "orderConfirmationTitle": "CONFIRMAÇÃO DE PEDIDO",
     "orderDate": "Data do pedido",
     "orderNumber": "Pedido nº",
@@ -73,11 +86,13 @@
       "noPhasesDefined": "Nenhuma fase definida"
     },
     "note": {
-      "billedTimePortalDetail": "Um detalhamento dos lançamentos de horas de cada ticket está disponível no portal do cliente.",
+      "billedTimePortalDetail": "Contacte o seu prestador para obter uma discriminação do tempo faturado.",
       "pickedBy": "Separado por: ____________________     Data: ____________",
       "preTaxTotals": "Os totais exibidos não incluem impostos. O imposto aplicável é calculado na sua fatura.",
       "thankYouForOrder": "Obrigado pelo seu pedido."
-    }
+    },
+    "serialNumbers": "Números de série",
+    "allocatedSerialsNote": "Números de série alocados; sujeitos a alteração no atendimento."
   },
   "errors": {
     "permissions": {
@@ -118,5 +133,20 @@
       "typeNotAllowed": "Este tipo de arquivo não é permitido.",
       "sessionRequired": "Sua sessão é necessária para enviar documentos. Entre novamente."
     }
+  },
+  "time": {
+    "mixed": "Tarifas variadas",
+    "unknown": "Tarifa indisponível",
+    "other": "Outro tempo faturado",
+    "ticket": "Ticket",
+    "task": "Tarefa do projeto",
+    "partial": "Parte do tempo faturado aparece como serviços porque os detalhes dos tickets estão indisponíveis.",
+    "unavailable": "Os detalhes dos tickets estão indisponíveis. Todas as cobranças aparecem abaixo.",
+    "quantityHours": "Qtd. / Horas",
+    "breakdown": "Contacte o seu prestador para obter uma discriminação do tempo faturado.",
+    "detail": "Detalhes do tempo faturado — incluídos nas cobranças acima",
+    "incompleteDetail": "Os detalhes do tempo faturado podem estar incompletos.",
+    "detailPartial": "Estes detalhes incluem apenas os registros de tempo faturado disponíveis.",
+    "detailUnavailable": "Os detalhes dos registros de tempo faturado não estão disponíveis para esta fatura."
   }
 }

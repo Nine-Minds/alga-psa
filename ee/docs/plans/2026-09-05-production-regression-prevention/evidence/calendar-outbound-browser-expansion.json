@@ -1,0 +1,23 @@
+{
+  "status": "implemented browser assertions; types and collection passed; execution pending",
+  "scope": "UI creation and deletion added before the existing vendor import/UI edit/failure recovery/vendor correction/deletion journey.",
+  "assertions": [
+    "Create an ad-hoc entry from a current-day calendar slot using the shipped dialog",
+    "Exactly one tenant-scoped schedule row and provider mapping",
+    "Vendor state contains the mapped event with matching title",
+    "Event survives browser reload",
+    "Delete through the shipped validation/confirmation dialog",
+    "Schedule row, mapping, vendor event and reloaded UI event are absent",
+    "Provider history contains successful POST and DELETE requests"
+  ],
+  "validation": {
+    "types": "/tmp/alga-mscalendar-outbound-types.log, exit 0",
+    "collection": "/tmp/alga-mscalendar-outbound-collection-final.log, exit 0",
+    "initialCollectionIssue": "Root Playwright binary conflicted with the nested e2e dependency. Corrected command to e2e-tests/node_modules/.bin/playwright without changing dependencies."
+  },
+  "limits": [
+    "No browser execution claimed for the expanded journey.",
+    "Native candidate 2de93c8492 predates this expansion.",
+    "F034 remains incomplete, including Teams/SSO scope and actual execution."
+  ]
+}

@@ -9,7 +9,8 @@ export type PortalDomainEdition = 'ce' | 'ee';
  * How custom portal domains are provisioned in this deployment.
  * - `temporal`: hosted/cloud — DNS verification + cert issuance + Istio routing.
  * - `direct`: appliance — trust-on-submit; the operator owns DNS/TLS/routing.
- * Optional so the CE stub (which never sets it) remains type-compatible.
+ * Optional for older or unrecognized status implementations; known deployment
+ * status formatters should always provide it.
  */
 export type PortalDomainMode = 'temporal' | 'direct';
 

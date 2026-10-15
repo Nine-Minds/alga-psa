@@ -5,37 +5,37 @@ exports.seed = async function (knex) {
     if (!context) return;
 
     const { tenantId, db } = context;
-    const projectId = (projectName) => db.table('projects')
+    const projectId = async (projectName) => (await db.table('projects')
         .where({ project_name: projectName })
         .select('project_id')
-        .first();
-    const phaseId = (phaseName) => db.table('project_phases')
+        .first())?.project_id ?? null;
+    const phaseId = async (phaseName) => (await db.table('project_phases')
         .where({ phase_name: phaseName })
         .select('phase_id')
-        .first();
-    const taskId = (taskName) => db.table('project_tasks')
+        .first())?.phase_id ?? null;
+    const taskId = async (taskName) => (await db.table('project_tasks')
         .where({ task_name: taskName })
         .select('task_id')
-        .first();
-    const ticketId = (title) => db.table('tickets')
+        .first())?.task_id ?? null;
+    const ticketId = async (title) => (await db.table('tickets')
         .where({ title })
         .select('ticket_id')
-        .first();
+        .first())?.ticket_id ?? null;
 
     return db.table('project_ticket_links').insert([
         {
             tenant: tenantId,
-            project_id: projectId('Wonderland Expansion'),
-            phase_id: phaseId('Territory Survey'),
-            task_id: taskId('Map New Areas'),
-            ticket_id: ticketId('Survey Uncharted Areas in Wonderland')
+            project_id: await projectId('Wonderland Expansion'),
+            phase_id: await phaseId('Territory Survey'),
+            task_id: await taskId('Map New Areas'),
+            ticket_id: await ticketId('Survey Uncharted Areas in Wonderland')
         },
         {
             tenant: tenantId,
-            project_id: projectId('Emerald City Beautification'),
-            phase_id: phaseId('Green Space Enhancement'),
-            task_id: taskId('Plant Magical Flowers'),
-            ticket_id: ticketId('Enhance Emerald City Gardens')
+            project_id: await projectId('Emerald City Beautification'),
+            phase_id: await phaseId('Green Space Enhancement'),
+            task_id: await taskId('Plant Magical Flowers'),
+            ticket_id: await ticketId('Enhance Emerald City Gardens')
         }
     ]);
 };

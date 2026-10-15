@@ -1,0 +1,4 @@
+   × F006 — the address bar wins when Back restores the route as first rendered > adopts the applied filters from the URL instead of the stale server-rendered presentation 10038ms
+     → expected { Object (view, state, ...) } to match object { search: 'Printer', state: 'closed' }
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 1 passed | 11 skipped (13)

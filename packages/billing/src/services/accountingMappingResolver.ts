@@ -5,12 +5,18 @@ import {
   CompanyAccountingSyncService,
   NormalizedCompanyPayload
 } from './companySync';
+import { resolveXeroRealmAliases } from './accountingSync/xeroRealmIdentity';
+import {
+  AUTOMATIC_DISCOUNT_MAPPING_ID,
+  DISCOUNT_MAPPING_ENTITY_TYPE
+} from '@alga-psa/types';
 
 export interface MappingResolution {
   external_entity_id: string;
   metadata?: Record<string, any> | null;
-  source: 'service' | 'service_category' | 'fallback' | 'tax_code' | 'payment_term' | 'company';
+  source: 'service' | 'service_category' | 'fallback' | 'tax_code' | 'payment_term' | 'company' | 'discount';
 }
+
 
 interface ResolveParams {
   tenantId?: string;
@@ -108,6 +114,17 @@ export class AccountingMappingResolver {
       entityType: 'payment_term',
       entityId: params.paymentTermId,
       source: 'payment_term',
+      targetRealm: params.targetRealm ?? null
+    });
+  }
+
+  async resolveDiscountMapping(params: { tenantId?: string; adapterType: string; targetRealm?: string | null }): Promise<MappingResolution | null> {
+    return this.resolveGenericMapping({
+      adapterType: params.adapterType,
+      tenantId: params.tenantId,
+      entityType: DISCOUNT_MAPPING_ENTITY_TYPE,
+      entityId: AUTOMATIC_DISCOUNT_MAPPING_ID,
+      source: 'discount',
       targetRealm: params.targetRealm ?? null
     });
   }
@@ -234,10 +251,28 @@ export class AccountingMappingResolver {
     // (CSV imports and pre-realm data), and stays a legitimate fallback for any
     // realm. Prefer an exact realm match over the NULL-realm default.
     if (targetRealm) {
+      // A Xero target realm is the connection id; accept the organisation id it
+      // uniquely owns as a historical alias so pre-unification mappings still
+      // resolve — never a different organisation or tenant.
+      const realmIds =
+        adapterType === 'xero'
+          ? await resolveXeroRealmAliases(tenantId, targetRealm)
+          : [targetRealm];
+      const accepted = realmIds.length > 0 ? realmIds : [targetRealm];
+
       query.andWhere((builder) => {
-        builder.where('external_realm_id', targetRealm).orWhereNull('external_realm_id');
+        builder.whereIn('external_realm_id', accepted).orWhereNull('external_realm_id');
       });
-      query.orderByRaw('CASE WHEN external_realm_id IS NOT NULL THEN 0 ELSE 1 END');
+      if (accepted.length > 1) {
+        // Exact connection id first, then the historical organisation alias,
+        // then the tenant-wide NULL-realm default.
+        query.orderByRaw(
+          'CASE WHEN external_realm_id = ? THEN 0 WHEN external_realm_id IS NOT NULL THEN 1 ELSE 2 END',
+          [targetRealm]
+        );
+      } else {
+        query.orderByRaw('CASE WHEN external_realm_id IS NOT NULL THEN 0 ELSE 1 END');
+      }
     } else {
       query.whereNull('external_realm_id');
     }

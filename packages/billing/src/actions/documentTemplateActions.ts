@@ -34,6 +34,7 @@ import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/serve
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
 import { overlaySalesOrderSampleTenant } from '../components/invoice-designer/preview/tenantBrandingOverlay';
+import { createPDFGenerationService } from '../services/pdfGenerationService';
 
 /**
  * Generic, document-type-keyed template management (Approach C). One set of actions serves every
@@ -291,10 +292,16 @@ export const runAuthoritativeTemplatePreview = withAuth(
     const evaluation = evaluateTemplateAst(templateAst, previewModel, {
       bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES,
     });
+    // Same seam the PDF path uses: a real document is dated by its recipient's
+    // country, a sample by the tenant's default.
+    const dateFormat = await createPDFGenerationService(tenant).resolveRenderCountry(
+      existingDocumentId ? { salesOrderId: existingDocumentId } : {}
+    );
     const html = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
       title: 'Preview',
       knex,
       locale: normalizeLocale(locale) ?? undefined,
+      dateFormat,
     });
     return { html };
   },

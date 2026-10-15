@@ -25,7 +25,8 @@ export function Card({
         {
           backgroundColor: theme.colors.card,
           borderWidth: 1,
-          borderColor: theme.colors.border,
+          // The high-contrast pair asks for emphasised chrome, as on the web.
+          borderColor: theme.highContrast ? theme.colors.borderStrong : theme.colors.border,
           borderRadius: theme.borderRadius.lg,
           padding: theme.spacing.md,
         },

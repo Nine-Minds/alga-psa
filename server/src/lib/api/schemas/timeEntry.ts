@@ -21,12 +21,18 @@ export const approvalStatusSchema = z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'C
 
 // Base time entry schema (without refinements)
 const baseTimeEntrySchema = z.object({
-  work_item_id: uuidSchema.optional(),
+  work_item_id: uuidSchema.optional().describe(
+    'Required when work_item_type is ticket or project_task (the ticket must exist). Not required for other work item types.'
+  ),
   work_item_type: workItemTypeSchema,
-  start_time: z.string().datetime(),
-  end_time: z.string().datetime(),
+  start_time: z.string().datetime().describe(
+    'ISO 8601 datetime. Duration is computed from start_time and end_time and cannot be submitted.'
+  ),
+  end_time: z.string().datetime().describe(
+    'ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted.'
+  ),
   notes: z.string().optional(),
-  service_id: uuidSchema.optional(),
+  service_id: uuidSchema.optional().describe('Required on create for commercial (PSA) time entries, where it drives billing; operational co-managed entries carry no service. Cannot be cleared on update.'),
   tax_region: z.string().optional(),
   contract_line_id: uuidSchema.nullable().optional(),
   is_billable: z.boolean().optional().default(true)

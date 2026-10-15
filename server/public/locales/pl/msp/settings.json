@@ -1,4 +1,11 @@
 {
+  "coManaged": {
+    "providers": {
+      "title": "Dostawcy poczty e-mail i tożsamości",
+      "description": "Zarejestruj własną aplikację Google lub Microsoft do poczty przychodzącej, logowania pracowników i konfiguracji katalogu. Te poświadczenia należą do Twojego obszaru roboczego.",
+      "backToEmail": "Powrót do ustawień poczty e-mail"
+    }
+  },
   "escalationManager": {
     "unsavedChanges_one": "{{count}} niezapisana zmiana",
     "unsavedChanges_few": "{{count}} niezapisane zmiany",
@@ -60,8 +67,22 @@
     },
     "clients": {
       "title": "Państwa firma",
-      "help": "Klient oznaczony jako Państwa firma reprezentuje Państwa własną organizację. Jego nazwa, adres i logo pojawiają się na fakturach, ofertach oraz w komunikacji z klientami.",
+      "help": "Klient oznaczony jako Państwa firma reprezentuje Państwa własną organizację. Jego nazwa, adres i logo pojawiają się na fakturach, ofertach oraz w komunikacji z klientami, a kraj jego lokalizacji określa format daty i kraj wstępnie wybierany w nowych rekordach.",
       "currentDefault": "Państwa firmą jest obecnie {{name}}.",
+      "defaults": {
+        "title": "Co określa Państwa firma",
+        "intro": "Kraj lokalizacji {{name}} określa poniższe ustawienia dla całej aplikacji MSP:",
+        "country": "Nowi klienci, kontakty i lokalizacje mają wstępnie wybrany kraj {{country}}.",
+        "countryMissing": "Nowi klienci, kontakty i lokalizacje nie mają wstępnie wybranego kraju.",
+        "phoneCode": "Numery telefonów zaczynają się od numeru kierunkowego {{code}}.",
+        "phoneCodeMissing": "Numery telefonów zaczynają się bez numeru kierunkowego.",
+        "dateFormat": "Daty są zapisywane jako {{pattern}} — {{example}} — w formacie {{clock}}.",
+        "clock12": "12-godzinnym",
+        "clock24": "24-godzinnym",
+        "noCountry": "{{name}} nie ma kraju w lokalizacji, więc wszystkie trzy wracają do domyślnego formatu {{pattern}}. Aby je zmienić, proszę dodać do {{name}} lokalizację z krajem — nie ma osobnego ustawienia formatu daty.",
+        "portalNote": "W portalu klienta daty są wyświetlane w formacie właściwym dla danego klienta, wynikającym z kraju jego lokalizacji, a nie Państwa.",
+        "changeIntro": "Przełączenie na {{name}} zmienia także te ustawienia domyślne:"
+      },
       "yourCompanyBadge": "Państwa firma",
       "table": {
         "name": "Nazwa",
@@ -99,6 +120,18 @@
         "setDefaultClient": "Nie udało się ustawić domyślnego klienta",
         "loadClients": "Nie udało się załadować klientów"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Używaj nazwy firmy w powitaniu na pulpicie",
+    "help": "Domyślnie wyłączone: pulpit MSP wyświetla „Witamy w centrum dowodzenia MSP”. Po włączeniu pojawia się nazwa klienta oznaczonego jako Państwa firma. Ten przełącznik zapisuje się natychmiast i niezależnie.",
+    "noCompany": "Żaden klient nie jest jeszcze oznaczony jako Państwa firma. Proszę wybrać go w Ustawienia → Ogólne, aby jego nazwa mogła się tu pojawić.",
+    "previewLabel": "Państwa zespół zobaczy:",
+    "preview": "Witamy w centrum dowodzenia {{companyName}}",
+    "previewDefault": "Witamy w centrum dowodzenia MSP",
+    "messages": {
+      "saved": "Zaktualizowano powitanie na pulpicie",
+      "saveFailed": "Nie udało się zaktualizować powitania na pulpicie"
     }
   },
   "experimentalFeatures": {
@@ -367,6 +400,7 @@
         "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
         "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
         "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
+        "invalidTimezone": "Wybierz strefę czasową powiązaną z miastem, np. America/New_York.",
         "permissionDenied": "Nie masz uprawnień do zmiany ról użytkowników.",
         "invalidCapacity": "Tygodniowa wydajność musi być liczbą dodatnią.",
         "invalidWorkSchedule": "Godziny pracy muszą być prawidłowymi przedziałami kończącymi się po rozpoczęciu."
@@ -398,7 +432,8 @@
       "placeholders": {
         "teamName": "Wprowadź nazwę zespołu",
         "selectTeamLead": "Wybierz lidera zespołu",
-        "selectUserToAdd": "Wybierz użytkownika do dodania"
+        "selectUserToAdd": "Wybierz użytkownika do dodania",
+        "noTeamLead": "Nieprzypisany"
       },
       "alert": {
         "unsavedChanges": "Mają Państwo niezapisane zmiany"
@@ -445,7 +480,8 @@
       "boards": "Tablice",
       "priorities": "Priorytety",
       "categories": "Kategorie",
-      "checklistTemplates": "Szablony list kontrolnych"
+      "checklistTemplates": "Szablony list kontrolnych",
+      "externalSystems": "Systemy zewnętrzne"
     },
     "numbering": {
       "title": "Format numeru",
@@ -553,7 +589,8 @@
       },
       "statusLabels": {
         "active": "Aktywna",
-        "inactive": "Nieaktywna"
+        "inactive": "Nieaktywna",
+        "hiddenFromPortal": "Ukryta w portalu"
       },
       "actions": {
         "addBoard": "Dodaj tablicę",
@@ -633,7 +670,8 @@
           "loading": "Ładowanie statusów zgłoszeń tablicy…",
           "statusName": "Nazwa statusu",
           "closed": "Zamknięte",
-          "default": "Domyślne"
+          "default": "Domyślne",
+          "portalSelectable": "Użytkownicy portalu klienta mogą wybrać ten status"
         },
         "inboundReplyReopen": {
           "enabledLabel": "Otwórz ponownie zamknięte zgłoszenia przy przychodzących odpowiedziach",
@@ -647,8 +685,12 @@
           "suppressAiHelp": "Tylko dodatek Enterprise AI Assistant. Jeśli niedostępny, odpowiedzi otwierają zgłoszenia normalnie."
         },
         "liveTimer": {
-          "label": "Włącz stoper zgłoszeń na żywo",
-          "help": "Pokazuje stoper na żywo i rejestrowane interwały na zgłoszeniach tej tablicy. Ręczne wprowadzanie czasu pozostaje dostępne."
+          "label": "Pokaż stoper przy zgłoszeniach",
+          "help": "Pokazuje elementy sterujące stoperem przy zgłoszeniach tej tablicy. Wyłącz, aby ukryć tutaj stoper; ręczne wprowadzanie czasu pozostaje dostępne. Już uruchomiony stoper działa dalej."
+        },
+        "clientPortalVisible": {
+          "label": "Widoczna w portalu klienta",
+          "help": "Gdy wyłączone, ta tablica i jej zgłoszenia są ukryte przed wszystkimi użytkownikami portalu klienta, niezależnie od grup widoczności."
         },
         "defaultBoard": {
           "label": "Domyślna tablica dla zgłoszeń z portalu klienta",
@@ -791,6 +833,27 @@
           "appearanceHelp": "Przypinanie karty i domyślny widok listy tablicy",
           "assignment": "Przypisanie i SLA",
           "assignmentHelp": "Domyślne kierowanie, SLA i menedżer tablicy",
+          "notifications": "Powiadomienia",
+          "notificationsHelp": "Powiadamiaj techników o nowych zgłoszeniach i zmianach statusu oraz ustaw domyślnych obserwatorów",
+          "notificationsRulesLabel": "Reguły powiadomień",
+          "notificationsRulesHelp": "Odbiorcy otrzymują jedno powiadomienie na zdarzenie. Nie są dodawani jako obserwatorzy.",
+          "notificationsAddRule": "Dodaj regułę",
+          "notificationsRuleTitle": "Reguła {{number}}",
+          "notificationsRuleEnabled": "Włączona",
+          "notificationsRemoveRule": "Usuń regułę",
+          "notificationsOnCreate": "Gdy zgłoszenie zostanie utworzone na tej tablicy",
+          "notificationsOnStatus": "Gdy zgłoszenie przechodzi do statusu",
+          "notificationsNoStatuses": "Statusy można wybrać po zapisaniu tablicy.",
+          "notificationsRecipients": "Powiadom",
+          "notificationsRecipientsPlaceholder": "Wybierz użytkowników i zespoły...",
+          "notificationsRecipientsHelp": "Członkowie zespołu są ustalani przy każdym wysłaniu powiadomienia.",
+          "notificationsDefaultWatchers": "Domyślni obserwatorzy",
+          "notificationsDefaultWatchersPlaceholder": "Wybierz użytkowników...",
+          "notificationsDefaultWatchersHelp": "Dodawani do listy obserwatorów każdego nowego zgłoszenia na tej tablicy i powiadamiani o każdej późniejszej aktualizacji.",
+          "notificationsTriggerRequired": "Każda reguła powiadomień wymaga co najmniej jednego wyzwalacza: utworzenia zgłoszenia lub statusu.",
+          "notificationsRecipientRequired": "Każda reguła powiadomień wymaga co najmniej jednego użytkownika lub zespołu do powiadomienia.",
+          "notificationsFetchFailed": "Nie udało się wczytać ustawień powiadomień",
+          "notificationsStatusRemapFailed": "Tablica została utworzona, ale nie udało się dopasować statusu reguły powiadomień do nowej tablicy. Dodaj reguły powiadomień ponownie.",
           "inbound": "E-mail i odpowiedzi przychodzące",
           "inboundHelp": "Ponownie otwieraj zgłoszenia, gdy klienci odpowiadają e-mailem",
           "close": "Reguły zamykania",
@@ -800,7 +863,7 @@
           "statuses": "Priorytety i statusy",
           "statusesHelp": "Domyślny priorytet oraz statusy zgłoszeń dla tej tablicy",
           "display": "Wyświetlanie i zachowanie",
-          "displayHelp": "Licznik na żywo i typ tablicy"
+          "displayHelp": "Stoper i typ tablicy"
         },
         "saveChanges": "Zapisz zmiany",
         "unsaved": "Niezapisane",
@@ -827,7 +890,17 @@
         }
       },
       "empty": "Nie znaleziono tablic.",
-      "searchPlaceholder": "Szukaj tablic…"
+      "searchPlaceholder": "Szukaj tablic…",
+      "emailSender": {
+        "useDefault": "Użyj nadawcy domyślnego zgłoszenia",
+        "duplicateRoute": "Ta trasa nadawcy już istnieje.",
+        "saveFailed": "Nie można zapisać nadawcy zgłoszenia. Spróbuj ponownie.",
+        "label": "Nadawca wiadomości wychodzących",
+        "inboundWarning": "Ten nadawca jest używany do wychodzących wiadomości e-mail dotyczących zgłoszeń. Ustawienia poczty przychodzącej pozostają bez zmian.",
+        "displayName": "Nazwa wyświetlana",
+        "save": "Zapisz nadawcę",
+        "saved": "Zapisano nadawcę"
+      }
     },
     "priorities": {
       "title": {
@@ -991,6 +1064,47 @@
           "ruleSaveFailed": "Nie udało się zapisać reguły automatycznego stosowania"
         }
       }
+    },
+    "externalSystems": {
+      "title": "Systemy zewnętrzne",
+      "subtitle": "Dodaj niestandardowe systemy zewnętrzne, aby zgłoszenia mogły odwoływać się do rekordów spoza wbudowanego katalogu.",
+      "addButton": "Dodaj system",
+      "builtInTitle": "Systemy wbudowane",
+      "builtInSubtitle": "Dostępne dla każdej organizacji; ich adresy URL są generowane na podstawie szablonu systemu.",
+      "table": {
+        "label": "Etykieta",
+        "key": "Klucz",
+        "urlTemplate": "Szablon adresu URL",
+        "actions": "Działania"
+      },
+      "actions": {
+        "edit": "Edytuj",
+        "delete": "Usuń",
+        "cancel": "Anuluj",
+        "save": "Zapisz"
+      },
+      "fields": {
+        "key": "Klucz",
+        "keyHint": "Musi być zgodny z custom:<slug> przy użyciu małych liter, cyfr lub podkreśleń.",
+        "label": "Etykieta",
+        "urlTemplate": "Szablon adresu URL",
+        "urlTemplateHint": "Opcjonalne. Użyj symboli zastępczych {realm} i {external_id}."
+      },
+      "dialog": {
+        "addTitle": "Dodaj system zewnętrzny",
+        "editTitle": "Edytuj system zewnętrzny"
+      },
+      "deleteDialog": {
+        "title": "Usuń system zewnętrzny",
+        "message": "Usunąć \"{{label}}\"? Systemy nadal używane przez łącza nie mogą zostać usunięte."
+      },
+      "messages": {
+        "success": {
+          "created": "Utworzono system zewnętrzny.",
+          "updated": "Zaktualizowano system zewnętrzny.",
+          "deleted": "Usunięto system zewnętrzny."
+        }
+      }
     }
   },
   "interactions": {
@@ -1057,7 +1171,8 @@
         "name": "Nazwa",
         "status": "Status",
         "order": "Kolejność",
-        "actions": "Akcje"
+        "actions": "Akcje",
+        "default": "Domyślny"
       },
       "statusLabels": {
         "closedHelp": "Interakcje z tym statusem zostaną oznaczone jako zamknięte",
@@ -1073,14 +1188,21 @@
         "success": {
           "updated": "Status został zaktualizowany pomyślnie",
           "deleted": "Status został usunięty pomyślnie",
-          "imported": "Pomyślnie zaimportowano {{count}} statusów"
+          "imported": "Pomyślnie zaimportowano {{count}} statusów",
+          "defaultUpdated": "Zaktualizowano domyślny status interakcji"
         },
         "error": {
           "lastClosed": "Co najmniej jeden status musi pozostać oznaczony jako zamknięty",
           "deleteLastClosed": "Nie można usunąć ostatniego zamkniętego statusu dla tego typu.",
           "skipped": "Pominięto {{count}} statusów ({{reason}})",
-          "importFailed": "Nie udało się zaimportować statusów"
+          "importFailed": "Nie udało się zaimportować statusów",
+          "defaultRequired": "Jeden status musi pozostać domyślny — ustaw jako domyślny inny status.",
+          "closedCannotBeDefault": "Status zamknięty nie może być domyślny dla nowych interakcji."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Domyślny dla nowych interakcji",
+        "setDefault": "Ustaw jako domyślny"
       }
     },
     "quickAdd": {
@@ -1138,6 +1260,8 @@
         "companyName": "Nazwa firmy",
         "companyLogo": "Logo firmy",
         "companyLogoDark": "Logo na ciemne tło",
+        "companyLogoWide": "Szerokie logo (opcjonalnie)",
+        "companyLogoWideDark": "Szerokie logo na ciemne tła (opcjonalnie)",
         "colorPalette": "Paleta kolorów",
         "primaryColor": "Kolor główny",
         "secondaryColor": "Kolor dodatkowy",
@@ -1154,6 +1278,8 @@
         "companyLogo": "Zalecane: PNG lub SVG, maks. 2 MB, przezroczyste tło",
         "companyLogoMsp": "To logo zastępuje również znak Alga w menu bocznym MSP.",
         "companyLogoDark": "Opcjonalnie. Używane w panelu bocznym portalu i w trybie ciemnym. Gdy pole jest puste, używane jest logo firmy.",
+        "companyLogoWide": "Wyświetlane u góry rozwiniętego panelu bocznego portalu, o wysokości 32 px. Umieść nazwę firmy na obrazie — panel przestanie wypisywać ją osobno.",
+        "companyLogoWideDark": "Opcjonalne. Używane, dopóki tło panelu bocznego jest ciemne. W razie braku używane jest szerokie logo.",
         "primaryColor": "Używany dla przycisków, linków i wyróżnień",
         "secondaryColor": "Używany dla akcentów i akcji dodatkowych",
         "supportEmail": "Wyświetlany klientom w potwierdzeniach wizyt i innych wychodzących wiadomościach e-mail jako adres kontaktowy do uzyskania pomocy.",
@@ -1164,6 +1290,8 @@
         "followTheme": "Gdy włączone, portal klienta używa motywu wybranego w Ustawienia → Wygląd. Gdy wyłączone, kolory poniżej go zastępują.",
         "followThemeActive": "Kolory poniżej pozostają zapisane, ale nie są stosowane, dopóki portal podąża za motywem organizacji."
       },
+      "cropHelp": "Przeciągaj i powiększaj, aby wybrać część widoczną w panelu bocznym portalu i w każdej okrągłej ramce. Szerokie logo pozostaje bez zmian.",
+      "cropHelpFromSquare": "Przeciągaj i powiększaj, aby wybrać część widoczną w panelu bocznym portalu i w każdej okrągłej ramce. Zmienia się tylko znak, więc możesz go później ponownie dostosować.",
       "heroGradient": {
         "primaryShades": "Kolor główny do odcienia głównego",
         "primarySecondary": "Kolor główny do koloru dodatkowego"
@@ -1183,7 +1311,11 @@
         "previewSignIn": "Podgląd strony logowania",
         "hideSignIn": "Ukryj stronę logowania"
       },
-      "customDomainRequired": "Wymagana jest konfiguracja domeny niestandardowej"
+      "customDomainRequired": "Wymagana jest konfiguracja domeny niestandardowej",
+      "warnings": {
+        "expectSquare": "Ten obraz jest znacznie szerszy niż wyższy. To miejsce wypełnia przestrzenie kwadratowe — prawdopodobnie chodzi o miejsce na szerokie logo.",
+        "expectWide": "Ten obraz jest niemal kwadratowy. Miejsce na szerokie logo oczekuje logo poziomego — znak kwadratowy należy do miejsca powyżej."
+      }
     },
     "dashboardPreview": {
       "title": "Państwa portal klienta",
@@ -1254,7 +1386,7 @@
     },
     "domain": {
       "title": "Domena niestandardowa",
-      "description": "Skonfiguruj firmową nazwę hosta dla portalu klienta. Po zweryfikowaniu DNS automatycznie wystawimy certyfikaty TLS.",
+      "description": "Skonfiguruj firmową nazwę hosta dla portalu klienta.",
       "currentStatus": "Aktualny status",
       "noDomainConfigured": "Nie skonfigurowano domeny niestandardowej",
       "defaultStatusMessage": "Nie zarejestrowano jeszcze żadnej domeny niestandardowej.",
@@ -1296,7 +1428,8 @@
         "step3": "Uzyskaj i utrzymuj certyfikat TLS dla domeny na swoim proxy.",
         "step4": "Zapisz domenę tutaj — aktywuje się natychmiast. Najpierw skonfiguruj DNS i proxy, ponieważ linki portalu od razu przełączą się na tę domenę.",
         "docLinkText": "Przewodnik konfiguracji i rozwiązywania problemów z reverse proxy",
-        "neverSeenWarning": "Żadne żądania nie dotarły jeszcze do {{domain}}. Sprawdź, czy Twój reverse proxy przekazuje oryginalny nagłówek Host."
+        "neverSeenWarning": "Żadne żądania nie dotarły jeszcze do {{domain}}. Sprawdź, czy Twój reverse proxy przekazuje oryginalny nagłówek Host.",
+        "tlsNote": "TLS kończy się na Twoim reverse proxy, który przechowuje certyfikat."
       },
       "badges": {
         "pending_dns": "Oczekuje na DNS",
@@ -1321,7 +1454,8 @@
         "refreshFailed": "Nie udało się odświeżyć statusu domeny.",
         "retryFailed": "Ponowienie nie powiodło się.",
         "disableFailed": "Nie udało się wyłączyć domeny niestandardowej."
-      }
+      },
+      "hostedTlsNote": "Po zweryfikowaniu DNS automatycznie wystawimy certyfikaty TLS."
     },
     "yourCompanyName": "Nazwa Twojej firmy",
     "brandingPreviewMode": "Tryb motywu podglądu marki",
@@ -1429,10 +1563,30 @@
     "whiteLabel": {
       "title": "Własna marka w aplikacji MSP",
       "description": "Prześlij swoje logo jeden raz. Zastępuje ono znak Alga w menu bocznym MSP, a portal klienta korzysta z tych samych obrazów.",
-      "logoHelp": "Menu boczne MSP jest ciemne w obu motywach, dlatego używa logo na ciemne tła, jeśli je prześlesz, a w przeciwnym razie logo głównego.",
+      "logoHelp": "Kwadratowy znak jest używany wszędzie tam, gdzie miejsce jest kwadratowe: w zwiniętym menu bocznym i w okrągłych ramkach. Wrzuć szerokie logo do kwadratowego pola i wybierz, która część stanie się znakiem; po przesłaniu szerokiego logo możesz też wyciąć znak bezpośrednio z niego. Opcjonalne szerokie logo zastępuje znak i nazwę w rozwiniętym menu bocznym, prześlij więc takie, które zawiera już nazwę Twojej firmy. Menu boczne dopasowuje się do własnego tła: przy ciemnym menu używa wariantów na ciemne tła, przy jasnym — jasnych, a jeśli pasującego brakuje, sięga po ten, który przesłano.",
+      "cropHelp": "Przeciągaj i powiększaj, aby wybrać część widoczną w zwiniętym menu bocznym i w każdej okrągłej ramce. Szerokie logo pozostaje bez zmian.",
+      "cropHelpFromSquare": "Przeciągaj i powiększaj, aby wybrać część widoczną w zwiniętym menu bocznym i w każdej okrągłej ramce. Zmienia się tylko znak, więc możesz go później ponownie dostosować.",
+      "linkDocument": {
+        "title": "Użyj przesłanego obrazu",
+        "description": "Wybierz obraz przesłany wcześniej do sekcji Dokumenty. Sam dokument pozostaje bez zmian."
+      },
       "fields": {
-        "logo": "Logo",
-        "logoDark": "Logo na ciemne tła"
+        "mark": "Znak kwadratowy",
+        "markDark": "Znak kwadratowy na ciemne tła",
+        "wide": "Szerokie logo (opcjonalnie)",
+        "wideDark": "Szerokie logo na ciemne tła (opcjonalnie)",
+        "favicon": "Ikona przeglądarki (favicon)"
+      },
+      "hints": {
+        "mark": "Używany w zwiniętym menu bocznym i w każdej okrągłej ramce. Najlepiej sprawdza się format kwadratowy.",
+        "markDark": "Opcjonalne. W razie braku używany jest znak kwadratowy.",
+        "wide": "Wyświetlane tylko w rozwiniętym menu bocznym, o wysokości 32 px. Umieść nazwę firmy na obrazie.",
+        "wideDark": "Opcjonalne. Używane, dopóki tło menu bocznego jest ciemne, tak jak we wszystkich dostarczonych motywach.",
+        "favicon": "PNG, SVG lub ICO. Obrazy rastrowe są zmniejszane do 32x32. Dotyczy aplikacji MSP i portalu klienta Twojej organizacji."
+      },
+      "warnings": {
+        "expectSquare": "Ten obraz jest znacznie szerszy niż wyższy. Miejsce na znak kwadratowy służy do przestrzeni kwadratowych — prawdopodobnie chodzi o miejsce na szerokie logo.",
+        "expectWide": "Ten obraz jest niemal kwadratowy. Miejsce na szerokie logo oczekuje logo poziomego — prawdopodobnie chodzi o miejsce na znak kwadratowy."
       },
       "colors": {
         "label": "Używaj kolorów swojej marki w aplikacji MSP",
@@ -1449,6 +1603,9 @@
       "notice": "Oglądasz podgląd niezapisanego motywu. Pozostali widzą zapisany motyw, dopóki go nie zastosujesz.",
       "save": "Zastosuj dla wszystkich",
       "discard": "Odrzuć"
+    },
+    "upgrade": {
+      "pitch": "Pary motywów dla całej organizacji, edytor własnej palety kolorów oraz white-labeling aplikacji MSP są częścią edycji Enterprise."
     }
   },
   "mspLanguage": {
@@ -1476,6 +1633,7 @@
     "emailTabs": {
       "settings": "Ustawienia",
       "emailTemplates": "Szablony e-mail",
+      "emailBranding": "Branding e-maili",
       "categories": "Kategorie",
       "telemetry": "Telemetria"
     },
@@ -1532,7 +1690,8 @@
       "preview": {
         "subjectLabel": "Podgląd tematu",
         "iframeTitle": "Podgląd szablonu e-maila",
-        "sampleDataNote": "Podgląd korzysta z przykładowych danych. Rzeczywiste e-maile będą zawierać prawdziwe wartości."
+        "sampleDataNote": "Podgląd korzysta z przykładowych danych. Rzeczywiste e-maile będą zawierać prawdziwe wartości.",
+        "sourceSyncNote": "Kliknij element w podglądzie, aby zaznaczyć odpowiadający mu kod; przesunięcie kursora w kodzie obrysowuje ten element tutaj."
       },
       "errors": {
         "loadFailed": "Nie udało się załadować szablonów"
@@ -1581,7 +1740,8 @@
       },
       "tabs": {
         "source": "Kod źródłowy",
-        "preview": "Podgląd"
+        "preview": "Podgląd",
+        "variables": "Zmienne"
       },
       "common": {
         "notAvailable": "Nd."
@@ -1598,6 +1758,116 @@
         "it": "Włoski",
         "pl": "Polski",
         "pt": "Portugalski"
+      }
+    },
+    "emailBranding": {
+      "title": "Branding e-maili",
+      "description": "Nadaj wszystkim wychodzącym e-mailom swoje kolory. Zobacz tutaj podgląd, a następnie wybierz szablony, do których je zastosować.",
+      "unsavedHint": "Zapisz paletę przed jej zastosowaniem.",
+      "source": {
+        "saved": "Zapisana",
+        "custom-theme": "Z motywu niestandardowego",
+        "theme-pair": "Z wybranego motywu",
+        "portal-branding": "Z brandingu portalu klienta",
+        "default": "Domyślne AlgaPSA"
+      },
+      "fields": {
+        "primary": "Kolor podstawowy",
+        "secondary": "Kolor dodatkowy",
+        "singleColor": "Jeden kolor (gradient wyprowadzony z koloru podstawowego)"
+      },
+      "tokens": {
+        "dark": "Ciemny akcent",
+        "outerBg": "Tło zewnętrzne",
+        "footerBg": "Tło stopki",
+        "cardBorder": "Obramowanie karty",
+        "infoBoxBg": "Tło ramki informacyjnej",
+        "infoBoxBorder": "Obramowanie ramki informacyjnej"
+      },
+      "preview": {
+        "title": "Podgląd"
+      },
+      "actions": {
+        "save": "Zapisz paletę",
+        "saving": "Zapisywanie...",
+        "useSuggested": "Użyj sugerowanych kolorów",
+        "adjust": "Dostosuj kolory pochodne",
+        "apply": "Zastosuj do szablonów",
+        "applying": "Stosowanie...",
+        "applyCount": "Zastosuj do {{count}} szablonów",
+        "applyToTemplate": "Zastosuj moją paletę",
+        "remove": "Usuń branding ze wszystkich szablonów",
+        "removing": "Usuwanie...",
+        "cancel": "Anuluj",
+        "done": "Gotowe"
+      },
+      "apply": {
+        "title": "Zastosuj branding do szablonów",
+        "languages": "Języki",
+        "selectAll": "Zaznacz wszystkie",
+        "selectNone": "Odznacz wszystkie",
+        "differs": "Różni się: {{parts}}",
+        "differsParts": {
+          "colors": "kolory",
+          "text": "tekst",
+          "subject": "temat"
+        },
+        "overwrite": "Nadpisz",
+        "overwriteHint": "Nadpisanie odtwarza szablon na podstawie standardowego z Twoją paletą i usuwa Twoje zmiany.",
+        "preview": {
+          "open": "Zobacz podgląd wyniku",
+          "title": "Podgląd: {{name}}",
+          "loading": "Tworzenie podglądu...",
+          "captions": {
+            "create": "Ze standardowego szablonu powstanie kopia w Państwa kolorystyce.",
+            "update": "Państwa kopia zostanie zbudowana na nowo ze standardowego szablonu z zapisaną paletą.",
+            "customized": "Państwa zmiany pozostają słowo w słowo. Zamieniane są tylko kolory standardowe, które jeszcze zostały w tym szablonie.",
+            "overwrite": "Twoje zmiany w tym szablonie zostaną usunięte. Szablon zostanie odtworzony na podstawie standardowego z Twoją paletą.",
+            "skipped": "Nic nie zostanie zapisane — {{reason}}. Tak wygląda ten szablon dzisiaj."
+          }
+        },
+        "summary": "{{written}} z brandingiem, {{skipped}} pominiętych, {{failed}} nieudanych",
+        "groups": {
+          "system": {
+            "title": "Niedostosowane",
+            "action": "Utwórz kopię z brandingiem"
+          },
+          "branded": {
+            "title": "Z Twoim brandingiem",
+            "action": "Zaktualizuj kolory"
+          },
+          "customized": {
+            "title": "Dostosowane",
+            "action": "Zamień tylko pozostałe kolory standardowe"
+          },
+          "no-stock-colors": {
+            "title": "Brak kolorów standardowych",
+            "action": "Nie ma czego zamienić"
+          }
+        },
+        "skipReasons": {
+          "customized": "Dostosowany — niezaznaczony",
+          "nothing-to-replace": "Nie ma czego zamienić",
+          "unchanged": "Już aktualny"
+        }
+      },
+      "newTemplates": {
+        "message": "Od ostatniego zastosowania palety dodano {{count}} szablonów.",
+        "action": "Zastosuj paletę do nowych szablonów",
+        "dismiss": "Odrzuć"
+      },
+      "enterprise": {
+        "useLogo": "Używaj mojego logo w nagłówku e-maili",
+        "logoWide": "Szerokie logo",
+        "logoDefault": "Kwadratowe logo",
+        "logoArtwork": "Wersja logo",
+        "logoArtworkAuto": "Dopasuj do nagłówka",
+        "logoArtworkLight": "Logo na jasne tło",
+        "logoArtworkDark": "Logo na ciemne tło",
+        "logoArtworkAutoDark": "Tryb automatyczny uznaje ten nagłówek za ciemny i używa logo na ciemne tło.",
+        "logoArtworkAutoLight": "Tryb automatyczny uznaje ten nagłówek za jasny i używa logo na jasne tło.",
+        "noLogo": "Prześlij logo w Ustawienia → Portal klienta → Branding, aby użyć go tutaj.",
+        "showAttribution": "Pokazuj „Powered by AlgaPSA” w stopce"
       }
     },
     "categoriesUi": {
@@ -1693,6 +1963,11 @@
         "high": "Wysoki",
         "normal": "Normalny",
         "low": "Niski"
+      }
+    },
+    "emailTemplates": {
+      "editor": {
+        "inlineLogoHint": "Twoje logo jest osadzane w wiadomości podczas wysyłki. Pozostaw odwołanie src=\"cid:{{cid}}\" bez zmian — zastąpienie go adresem URL sprawi, że odbiorcy będą musieli najpierw zezwolić na pobranie obrazu."
       }
     }
   },
@@ -1796,7 +2071,7 @@
       "openMenu": "Otwórz menu",
       "columns": {
         "startDate": "Data początkowa",
-        "endDate": "Data końcowa",
+        "endDate": "Ostatni dzień",
         "actions": "Akcje"
       },
       "form": {
@@ -1808,7 +2083,8 @@
         "startDate": "Data początkowa",
         "startDatePlaceholder": "Wybierz datę początkową",
         "noEndDate": "Bez daty końcowej",
-        "endDate": "Data końcowa",
+        "endDate": "Ostatni dzień okresu",
+        "endDateHelp": "Okres obejmuje ten dzień.",
         "endDatePlaceholder": "Wybierz datę końcową",
         "deletePeriod": "Usuń okres",
         "confirmDeleteTitle": "Potwierdź usunięcie",
@@ -1822,7 +2098,7 @@
         "noSettings": "Brak dostępnych ustawień okresów rozliczeniowych. Nie można utworzyć nowego okresu.",
         "settingsRequired": "Bez ustawień nie można zarządzać okresem.",
         "startDateRequired": "Należy podać datę początkową.",
-        "startBeforeEnd": "Data początkowa musi być wcześniejsza niż data końcowa.",
+        "startBeforeEnd": "Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.",
         "overlap": "Okres nakłada się na istniejący okres.",
         "overlapRetry": "Ten okres nakłada się na istniejący. Wybierz inne daty.",
         "create": "Nie udało się utworzyć okresu.",
@@ -1990,12 +2266,36 @@
       "comingSoon": "Szablony mapowania i zaplanowane importy będą dostępne tutaj. Zapisuj mapowania kolumn, udostępniaj je zespołowi i konfiguruj powtarzające się zadania."
     },
     "migration": {
+      "customFields": {
+        "required": "wymagane",
+        "title": "Pola dla {{name}}",
+        "mapping": "Mapowanie pól niestandardowych",
+        "description": "Przypisz zachowane kolumny CSV do pól tego typu zasobu.",
+        "empty": "Nie zachowano kolumn niestandardowych dla tego typu zasobu.",
+        "samples_one": "{{sample}} · {{count}} rekord",
+        "samples_other": "{{sample}} · {{count}} rekordów",
+        "noSample": "Brak przykładu",
+        "missingRequired": "Nieprzypisane pola wymagane: {{fields}}",
+        "duplicate": "Pole niestandardowe jest przypisane więcej niż raz. Wybierz unikalne pole docelowe dla każdego źródła.",
+        "samples_few": "{{sample}} · {{count}} rekordy",
+        "samples_many": "{{sample}} · {{count}} rekordów"
+      },
       "actions": {
         "back": "Powrót do migracji",
         "upload": "Prześlij pakiet"
       },
       "errors": {
-        "noImportableRecords": "Ten pakiet nie zawierał rekordów możliwych do zaimportowania."
+        "noImportableRecords": "Ten pakiet nie zawierał rekordów możliwych do zaimportowania.",
+        "permissionDenied": "Nie masz uprawnień do importowania lub eksportowania danych.",
+        "invalidSpreadsheet": "Nie udało się odczytać tego arkusza. Sprawdź, czy to prawidłowy plik CSV lub XLSX, i spróbuj ponownie.",
+        "notAmpPackage": "Ten plik nie jest pakietem AMP. Prześlij plik .amp lub .sqlite.",
+        "tooLarge": "To przesłanie przekracza maksymalny dozwolony rozmiar.",
+        "sizeMismatch": "Przesyłanie nie zostało ukończone. Spróbuj ponownie.",
+        "noRecognizedHeaders": "Nie rozpoznano żadnej z kolumn tego arkusza. Sprawdź wiersz nagłówka i spróbuj ponownie.",
+        "storageRejected": "Serwer odrzucił to przesłanie. Poproś administratora o sprawdzenie konfiguracji typów plików magazynu.",
+        "spreadsheetFailed": "Nie udało się zaimportować arkusza. Spróbuj ponownie.",
+        "uploadFailed": "Nie udało się przesłać pakietu. Spróbuj ponownie.",
+        "unknown": "Przesyłanie nie powiodło się. Spróbuj ponownie."
       },
       "preflight": {
         "title": "Kontrola wstępna"
@@ -2003,6 +2303,19 @@
       "run": {
         "queued": "Migracja w kolejce",
         "applying": "Migracja w toku"
+      },
+      "badges": {
+        "nothingImported": "Nic nie zaimportowano"
+      },
+      "results": {
+        "skippedSamePackage": "Pominięte rekordy zostały już zmigrowane przez poprzednie uruchomienie tego samego pakietu.",
+        "skippedOtherPackage": "Pominięte rekordy dopasowano do encji utworzonych przez wcześniejszą migrację innego pakietu: {{packages}}.",
+        "skippedExistingEntity": "Pominięte rekordy dopasowano do istniejących encji.",
+        "nothingImportedTitle": "Nic nie zaimportowano",
+        "nothingImportedBody": "To uruchomienie nie utworzyło żadnych nowych rekordów. Każdy wiersz odpowiadał czemuś, co już istniało, więc nic nie zmieniono.",
+        "claimedBySamePackage": "Już zmigrowane przez ten pakiet",
+        "claimedByOtherPackage": "Już zmigrowane przez {{file}}",
+        "claimedByExistingEntity": "Dopasowano do istniejącej encji"
       }
     },
     "jobDetails": {
@@ -2123,6 +2436,11 @@
       "updateFailed": "Nie udało się zaktualizować roli",
       "validateDeletionFailed": "Nie udało się sprawdzić możliwości usunięcia. Spróbuj ponownie.",
       "deleteFailed": "Nie udało się usunąć roli"
+    },
+    "editDialog": {
+      "title": "Edytuj rolę",
+      "builtInNameLocked": "Nazw wbudowanych ról nie można zmienić, ponieważ system z nich korzysta.",
+      "portalLocked": "Dostępu do portalu nie można zmienić po utworzeniu roli."
     }
   },
   "security": {
@@ -2865,7 +3183,7 @@
     "assetTypes": {
       "tab": "Zasoby",
       "title": "Typy zasobów",
-      "description": "Zarządzaj typami zasobów dostępnymi w module zasobów. Typy niestandardowe mają schemat pól, który steruje ich formularzami tworzenia/edycji.",
+      "description": "Typy niestandardowe używają schematu pól w formularzach; typy wbudowane również obsługują pola dodatkowe.",
       "loading": "Ładowanie typów zasobów...",
       "table": {
         "name": "Nazwa",
@@ -2874,7 +3192,8 @@
         "fieldCount": "Pola",
         "order": "Kolejność",
         "actions": "Akcje",
-        "openMenu": "Otwórz menu"
+        "openMenu": "Otwórz menu",
+        "searchPlaceholder": "Szukaj typów zasobów…"
       },
       "actions": {
         "addType": "Dodaj typ zasobu",
@@ -2892,7 +3211,7 @@
         "namePlaceholder": "np. Firewall",
         "displayOrderLabel": "Kolejność wyświetlania",
         "iconLabel": "Ikona",
-        "builtinSchemaHint": "Typy wbudowane używają stałych formularzy zarządzanych przez AlgaPSA, więc ich schematu pól nie można edytować. Nadal możesz zmienić nazwę typu lub jego ikonę."
+        "builtinSchemaHint": "Standardowy wbudowany formularz pozostaje niezmienny. Te dodatkowe pola są definiowane dla danego tenanta."
       },
       "deleteDialog": {
         "title": "Usuń typ zasobu",
@@ -2950,7 +3269,8 @@
           "invalidOptions": "Opcje nie mogą być puste.",
           "invalidField": "To pole jest nieprawidłowe."
         }
-      }
+      },
+      "additionalFields": "Pola dodatkowe"
     }
   },
   "mcpServer": {
@@ -3169,7 +3489,9 @@
       "nameRequired": "Nazwa statusu jest wymagana",
       "nameEmpty": "Nazwa statusu nie może być pusta",
       "idRequired": "Identyfikator statusu jest wymagany",
-      "manageFromBoard": "Statusami zgłoszeń zarządza się w ustawieniach tablicy"
+      "manageFromBoard": "Statusami zgłoszeń zarządza się w ustawieniach tablicy",
+      "closedCannotBeDefault": "Status zamknięty nie może być statusem domyślnym",
+      "defaultMustStayOpen": "Ustaw inny status jako domyślny przed zamknięciem tego"
     },
     "priority": {
       "notFound": "Nie znaleziono priorytetu.",
@@ -3195,7 +3517,10 @@
       "duplicate": "Ten użytkownik ma już wybraną rolę.",
       "changePermission": "Odmowa uprawnień: brak uprawnień do zmiany ról użytkowników.",
       "missingField": "Brakuje wymaganego pola roli użytkownika.",
-      "missingFieldNamed": "Brakuje wymaganego pola roli użytkownika: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola roli użytkownika: {{field}}.",
+      "nameRequired": "Nazwa roli jest wymagana.",
+      "builtInRename": "Nie można zmieniać nazw wbudowanych ról.",
+      "duplicateName": "Rola o nazwie „{{name}}” już istnieje dla tego portalu."
     },
     "secrets": {
       "tenantContextMissing": "Brak kontekstu organizacji. Odśwież stronę i spróbuj ponownie.",
@@ -3220,6 +3545,7 @@
       "missingField": "Brakuje wymaganego pola ustawień organizacji.",
       "missingFieldNamed": "Brakuje wymaganego pola ustawień organizacji: {{field}}.",
       "invalidTimezone": "Nieprawidłowa strefa czasowa: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} nie jest strefą czasową powiązaną z miastem. Wybierz strefę, np. America/New_York.",
       "permissions": {
         "clearOnboarding": "Odmowa uprawnień: tylko administratorzy mogą usuwać dane onboardingu.",
         "update": "Odmowa uprawnień: nie można zaktualizować ustawień",
@@ -3268,5 +3594,8 @@
       "nothingToRetry": "Brak nieudanej rejestracji domeny niestandardowej do ponowienia.",
       "retryOnlyAfterFailure": "Ponowienie jest dostępne tylko po nieudanej rejestracji."
     }
+  },
+  "common": {
+    "saving": "Zapisywanie…"
   }
 }

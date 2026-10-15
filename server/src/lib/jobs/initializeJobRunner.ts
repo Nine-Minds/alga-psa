@@ -11,6 +11,14 @@ import { isEnterprise } from '../features';
 // without importing the server-bound factory.
 registerJobRunnerAccessor(() => getJobRunner());
 
+interface RunnerInitialization {
+  promise?: Promise<IJobRunner>;
+  registeredHandlers: Set<string>;
+}
+
+// Follow the factory's runner lifetime, including replacement after a reset.
+const initializations = new WeakMap<IJobRunner, RunnerInitialization>();
+
 /**
  * Initialize the job runner and register all job handlers
  *
@@ -20,10 +28,24 @@ registerJobRunnerAccessor(() => getJobRunner());
  * @returns The initialized job runner instance
  */
 export async function initializeJobRunner(): Promise<IJobRunner> {
-  logger.info('Initializing job runner...');
-
-  // Get or create the job runner
   const runner = await getJobRunner();
+  let state = initializations.get(runner);
+  if (!state) {
+    state = { registeredHandlers: new Set() };
+    initializations.set(runner, state);
+  }
+  // Share both in-flight and successful initialization across all callers.
+  // A failed attempt remains retryable, retaining completed registrations.
+  const initialization = state;
+  initialization.promise ??= initializeRunner(runner, initialization).catch(error => {
+    initialization.promise = undefined;
+    throw error;
+  });
+  return initialization.promise;
+}
+
+async function initializeRunner(runner: IJobRunner, state: RunnerInitialization): Promise<IJobRunner> {
+  logger.info('Initializing job runner...');
 
   // Create services needed by some handlers
   const jobService = await JobService.create();
@@ -42,7 +64,9 @@ export async function initializeJobRunner(): Promise<IJobRunner> {
   // The runner uses its own internal handler map for execution
   const { JobHandlerRegistry } = await import('./jobHandlerRegistry');
   for (const [name, registered] of JobHandlerRegistry.getAll()) {
-    runner.registerHandler(registered.config);
+    if (state.registeredHandlers.has(name)) continue;
+    await runner.registerHandler(registered.config);
+    state.registeredHandlers.add(name);
   }
 
   // Start the runner
@@ -72,6 +96,7 @@ export async function stopJobRunner(): Promise<void> {
   const runner = getJobRunnerInstance();
   if (runner) {
     await runner.stop();
+    initializations.delete(runner);
     logger.info('Job runner stopped');
   }
 }

@@ -1,3 +1,4 @@
+import { applyProjectCapAdjustments } from './projectCapAdjustments';
 import type { ChargeExplanation, IBillingResult } from "@alga-psa/types";
 import {
   calculateNormalizedContractCharge,
@@ -5,6 +6,7 @@ import {
 } from "./calculateContractCharge";
 import type {
   CalculatedBillingLine,
+  CalculationDiagnostic,
   ContractBillingCalculationInput,
   ContractBillingCalculationResult,
   LiveContractBillingCalculationResult,
@@ -35,6 +37,7 @@ export function calculateContractBilling(
 
   const sourceCharges: ContractBillingCalculationResult["sourceCharges"] = [];
   const lines: CalculatedBillingLine[] = [];
+  const diagnostics: CalculationDiagnostic[] = [];
   for (const obligation of input.obligations) {
     if (obligation.tenantId !== input.execution.tenantId)
       throw new Error(`Cross-tenant obligation ${obligation.obligationId}`);
@@ -58,6 +61,9 @@ export function calculateContractBilling(
       input.execution.mode,
       taxContext,
     );
+    if (calculated.kind === "fixed" && calculated.blockers) {
+      diagnostics.push(...calculated.blockers);
+    }
     for (const { charge, explanation } of calculated.chargeExplanations) {
       const netAmount = charge.total ?? 0;
       const taxAmount = charge.tax_amount ?? 0;
@@ -133,6 +139,19 @@ export function calculateContractBilling(
       explanation: null,
       markers: [],
       billingProfileId: charge.billing_profile_id ?? null,
+    });
+  }
+
+  const capResult = input.projectCaps
+    ? applyProjectCapAdjustments(sourceCharges, input.projectCaps)
+    : undefined;
+  if (capResult) {
+    // Lines and persistence charges retain the same order and financial truth.
+    sourceCharges.forEach((charge, index) => {
+      const line = lines[index];
+      line.netAmount = charge.total;
+      line.taxAmount = charge.tax_amount ?? 0;
+      line.grossAmount = line.netAmount + line.taxAmount;
     });
   }
 
@@ -218,8 +237,9 @@ export function calculateContractBilling(
     subtotal,
     taxTotal,
     total: subtotal + taxTotal,
-    diagnostics: [],
+    diagnostics,
     sourceCharges,
+    ...(capResult ? { projectCapThresholdCrossings: capResult.thresholdCrossings } : {}),
   };
 }
 

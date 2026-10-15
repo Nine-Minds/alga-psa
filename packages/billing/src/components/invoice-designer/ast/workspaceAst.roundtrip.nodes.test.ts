@@ -289,7 +289,7 @@ describe('workspaceAst roundtrip node/property matrix', () => {
     if (!table || table.type !== 'dynamic-table') return;
 
     expect(table.repeat.sourceBinding.bindingId).toBe('lineItems');
-    expect(table.repeat.itemBinding).toBe('item');
+    expect(table.repeat.itemBinding).toBe('line');
     expect(table.emptyStateText).toBe('No line items');
     expect(table.columns).toHaveLength(3);
     expect(table.columns[1]).toMatchObject({

@@ -53,6 +53,20 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const [reverseOrder, setReverseOrder] = useState(false);
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
+  // These loaders await server actions and then set state. Nothing cancelled them
+  // on unmount, so a late resolution reached React after teardown -- which surfaced
+  // in CI as an unhandled "window is not defined" rejection from setIsLoading in the
+  // finally below. It is a race, so it failed intermittently rather than every run.
+  // LEVERAGE: pattern unguarded-async-load -- 169 components carry the same
+  // load-then-setIsLoading(false)-in-finally shape with no unmount guard. Each is
+  // a latent intermittent failure once readiness is a required check. The answer
+  // is a loader hook that makes cancellation the default, not this guard repeated
+  // 169 times.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   const loadSequence = useRef(0);
   const loadComments = async () => {
@@ -96,6 +110,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       const user = await getCurrentUser();
       if (user) {
         const avatarUrl = await getCurrentUserAvatarUrl();
+        if (!mounted.current) return;
 
         setCurrentUser({
           user_id: user.user_id,

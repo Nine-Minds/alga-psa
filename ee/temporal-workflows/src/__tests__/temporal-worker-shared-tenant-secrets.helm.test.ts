@@ -1,5 +1,4 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { loadAll } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
@@ -10,8 +9,7 @@ const applianceValuesPath = path.join(
   repositoryRoot,
   'ee/appliance/flux/profiles/single-node/values/temporal-worker.single-node.yaml'
 );
-const helmPath = process.env.HELM_BIN || '/snap/bin/helm';
-const helmAvailable = existsSync(helmPath);
+const helmPath = process.env.HELM_BIN || 'helm';
 
 function renderDeployment(args: string[] = []): Record<string, any> {
   const rendered = execFileSync(helmPath, ['template', 'temporal-worker', chartPath, ...args], {
@@ -31,7 +29,7 @@ function sharedTenantSecrets(deployment: Record<string, any>) {
   };
 }
 
-describe.skipIf(!helmAvailable)('temporal-worker shared tenant secrets Helm rendering', () => {
+describe('temporal-worker shared tenant secrets Helm rendering', () => {
   it('keeps the hosted selector at two labels while the appliance retains its legacy component label', () => {
     expect(renderDeployment().spec.selector.matchLabels).toEqual({
       'app.kubernetes.io/name': 'temporal-worker',
@@ -101,9 +99,3 @@ describe.skipIf(!helmAvailable)('temporal-worker shared tenant secrets Helm rend
     expect(container.securityContext).toEqual({ runAsUser: 0, runAsGroup: 0 });
   });
 });
-
-if (!helmAvailable) {
-  // Vitest surfaces this clear message beside the skipped suite in environments
-  // that do not install Helm (for example a minimal unit-test image).
-  console.warn(`Skipping temporal-worker Helm render tests: Helm was not found at ${helmPath}`);
-}

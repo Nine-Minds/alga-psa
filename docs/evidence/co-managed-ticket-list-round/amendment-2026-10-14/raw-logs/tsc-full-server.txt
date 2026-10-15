@@ -1,0 +1,2 @@
+# cd server && NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit  (full output below; empty = no diagnostics)
+exit 0

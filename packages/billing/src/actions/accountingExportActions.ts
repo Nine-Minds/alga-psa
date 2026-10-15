@@ -21,6 +21,11 @@ import {
   AccountingExportInvoiceSelector,
   type InvoiceSelectionFilters
 } from '../services/accountingExportInvoiceSelector';
+import {
+  resolveAccountingConnections,
+  type AccountingConnectionsView,
+  type ConnectedAccountingAdapterType
+} from '../services/accountingSync/connectedAccountingIntegration';
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -178,6 +183,26 @@ export const createAccountingExportBatch = withAuth(async (
   } catch (error) {
     return toAccountingExportActionError(error, 'create');
   }
+});
+
+/**
+ * Provider-scoped connection choices for the manual-export dialog.
+ *
+ * Authorized by the same `exports_execute` capability as the rest of the
+ * export surface (not `catalog_read`), and deliberately returns only the
+ * connected organisations and resolved default — never settings, cycle
+ * history, operation counts or exception data. Export operators can therefore
+ * select a company without holding the broader accounting-catalog permission.
+ */
+export const getAccountingExportConnections = withAuth(async (
+  user,
+  { tenant },
+  adapterType: ConnectedAccountingAdapterType
+): Promise<AccountingConnectionsView | ActionPermissionError> => {
+  const denied = await checkAccountingExportPermission(user, 'read');
+  if (denied) return denied;
+  const { knex } = await createTenantKnex();
+  return resolveAccountingConnections(knex, tenant, adapterType);
 });
 
 export const appendAccountingExportLines = withAuth(async (

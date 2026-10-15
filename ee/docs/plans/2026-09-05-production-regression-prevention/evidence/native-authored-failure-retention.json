@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "scope": "native-compiled-authored-workflow",
+  "status": "passed",
+  "revision": "beb79b951a82c3526598e3fd61b43d3813735b5b",
+  "nodeVersion": "v25.5.0",
+  "harnessSha256": "8690af1147bbcdf8b3ad6087819ddac3bb5ff04949018146f78efa8217e7ebae",
+  "shutdown": {
+    "worker": {
+      "code": 0,
+      "signal": null
+    },
+    "redis": {
+      "code": 0,
+      "signal": null
+    }
+  },
+  "limitations": [
+    "Reuses installed dependencies and existing compiled artifacts; no Docker or clean build proof.",
+    "Runs one authored state node with real persistence; no provider actions or Redis event dispatch are exercised.",
+    "Failure-retention scenario validated natively only; current candidate image build and browser CI are not green."
+  ],
+  "readiness": {
+    "ready": true,
+    "startedAt": "2026-09-08T20:18:42.979Z",
+    "workers": {
+      "temporal": true,
+      "eventStream": true,
+      "dataStoreSweep": true
+    }
+  },
+  "execution": {
+    "temporalStatus": "COMPLETED",
+    "runStatus": "SUCCEEDED",
+    "persistedSteps": [
+      {
+        "definitionStepId": "mark_ready",
+        "status": "SUCCEEDED"
+      },
+      {
+        "definitionStepId": "finish",
+        "status": "SUCCEEDED"
+      }
+    ],
+    "state": "native-ready"
+  },
+  "candidateScenario": {
+    "status": "passed",
+    "unrelatedFixturePreserved": true,
+    "noAdditionalTenantRemains": true
+  },
+  "failureRetention": {
+    "status": "passed",
+    "ownExecutionTerminated": true,
+    "fixtureRowsRetained": true,
+    "unrelatedFixturePreserved": true
+  },
+  "databaseDropped": true,
+  "scriptHashes": {
+    "services/workflow-worker/scripts/check-authored-workflow.mjs": "b89abdd841bbb0df6d4d7c578f9a5e927cecc82b3991dafd4828f4b10a03c2e1",
+    "services/workflow-worker/scripts/native-authored-workflow-retention.mjs": "c6e497092f89ff03fe2ea532e229c1686030d2eb5b768d0bbf21cd6b391c22b4",
+    "services/workflow-worker/scripts/native-authored-workflow-proof.mjs": "8690af1147bbcdf8b3ad6087819ddac3bb5ff04949018146f78efa8217e7ebae"
+  }
+}

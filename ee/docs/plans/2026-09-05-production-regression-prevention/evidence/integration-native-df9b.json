@@ -1,0 +1,60 @@
+{
+  "run": 34078331083,
+  "job": 101608767833,
+  "revision": "df9b92815621dbfe2bfe71c141df459f218cb67a",
+  "status": "failed",
+  "passed": 2059,
+  "skipped": 51,
+  "nonPassingSuites": [
+    {
+      "file": "src/test/integration/invoiceTicketProduction.integration.test.ts",
+      "suiteStatus": "passed",
+      "assertions": {
+        "skipped": 12
+      }
+    },
+    {
+      "file": "src/test/integration/surveyTriggerDispatch.integration.test.ts",
+      "suiteStatus": "passed",
+      "assertions": {
+        "passed": 2,
+        "skipped": 1
+      }
+    },
+    {
+      "file": "src/test/integration/ticketCommentAttachmentsSmtpSmoke.test.ts",
+      "suiteStatus": "passed",
+      "assertions": {
+        "skipped": 2
+      }
+    },
+    {
+      "file": "src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "suiteStatus": "passed",
+      "assertions": {
+        "skipped": 29
+      }
+    },
+    {
+      "file": "src/test/integration/workflowRuntimeV2.redaction.integration.test.ts",
+      "suiteStatus": "passed",
+      "assertions": {
+        "skipped": 5
+      }
+    },
+    {
+      "file": "src/test/integration/internal-notifications/mentionNotifications.integration.test.ts",
+      "suiteStatus": "failed",
+      "assertions": {
+        "skipped": 2
+      }
+    }
+  ],
+  "classification": "49 opt-in assertions plus 2 mention assertions not executed because suite module loading failed. SMTP and mention fixes have been pushed; 47 opt-in assertions still need replacement.",
+  "candidate": "2de93c8492c6d7bac3792ecf2d5be94247606bc4",
+  "candidateIntegrationRun": 34082555507,
+  "candidateIntegrationJob": 101620543698,
+  "candidateStatusAtObservation": "in_progress",
+  "candidateBrowserRun": 34082555492,
+  "candidateUnitRun": 34082555455
+}

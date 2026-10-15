@@ -1,0 +1,26 @@
+{
+  "status": "passed",
+  "nativeMobile": {
+    "run": "https://github.com/Nine-Minds/alga-psa/actions/runs/34104450446",
+    "artifact": "mobile-execution",
+    "collectedFiles": 134,
+    "passedTests": 901,
+    "skipped": 0,
+    "missing": 0,
+    "verification": "Recomputed reconcileExecution from raw collected.json, collected-tests.json and results.json; no failures."
+  },
+  "localTemporal": {
+    "files": 12,
+    "passedTests": 106,
+    "durationSeconds": 4.09,
+    "fixed": "Three schedule Client mocks now support construction under Vitest 4.",
+    "addedToReadiness": [
+      "schedule setup suites",
+      "tenant suspension activities"
+    ]
+  },
+  "limits": [
+    "Expanded Temporal suite native verification pending.",
+    "Other Temporal and legacy browser runner assignments remain incomplete."
+  ]
+}

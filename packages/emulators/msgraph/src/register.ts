@@ -3,6 +3,7 @@ import type { ControlRegistry } from '@alga-psa/emulator-host';
 import type { MsGraphCore } from './core';
 import {
   deliverCallRecordNotifications,
+  deliverCalendarNotifications,
   deliverInboundBotActivity,
   deliverMeetingArtifactNotifications,
   deliverNotifications,
@@ -24,6 +25,49 @@ const directoryUserParams = {
 };
 
 export function register(reg: ControlRegistry, core: MsGraphCore): void {
+  reg.seeder({
+    name: 'mailbox-folder-permission',
+    description: 'Set delegated mailbox access for an OAuth client, with full access or specific folder ids/well-known names',
+    params: z.object({ mailbox: z.string(), delegate: z.string(), fullAccess: z.boolean().default(false), folders: z.array(z.string()).default([]) }),
+    run: ({ mailbox, delegate, fullAccess, folders }) => {
+      core.setMailboxFolderPermissions(mailbox, delegate, { fullAccess, folders });
+      return { mailbox, delegate, fullAccess, folders };
+    },
+  });
+  reg.seeder({
+    name: 'directory-group',
+    description: 'Add an Entra group and its membership for read-only access diagnostics',
+    params: z.object({ id: z.string(), displayName: z.string(),
+      securityEnabled: z.boolean().default(true), memberIds: z.array(z.string()).default([]) }),
+    run: (group) => { core.directoryGroups.set(group.id, group); return group; },
+  });
+  reg.action({
+    name: 'deliver-message',
+    description: 'Redeliver an existing mailbox message notification and report each callback outcome without creating another message',
+    params: z.object({ messageId: z.string() }),
+    run: async ({ messageId }) => {
+      const message = core.getMessage(messageId);
+      return { message, deliveries: await deliverNotifications(core, message, core.env) };
+    },
+  });
+  reg.action({
+    name: 'calendar-change',
+    description: 'Create, update or delete a vendor calendar event and deliver matching change notifications',
+    params: z.object({
+      changeType: z.enum(['created', 'updated', 'deleted']),
+      eventId: z.string().optional(),
+      organizerUserId: z.string().default('emulated-user'),
+      event: z.record(z.string(), z.unknown()).default({}),
+    }),
+    run: async ({ changeType, eventId, organizerUserId, event: input }) => {
+      if (changeType !== 'created' && !eventId) throw new Error('eventId is required for updates and deletions');
+      const event = changeType === 'created' ? core.createCalendarEvent(organizerUserId, input)
+        : changeType === 'updated' ? core.updateCalendarEvent(eventId!, input) : core.getCalendarEvent(eventId!);
+      if (changeType === 'deleted') core.deleteCalendarEvent(event.id);
+      const deliveries = await deliverCalendarNotifications(core, event, changeType, core.env);
+      return { event, deliveries };
+    },
+  });
   reg.seeder({
     name: 'client',
     description:
@@ -49,6 +93,7 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
       from: z.string().optional(),
       to: z.string().optional(),
       receivedDateTime: z.string().optional(),
+      authenticationResults: z.string().regex(/^[^\r\n]*$/).optional(),
     }),
     run: async (input) => {
       const message = core.addMessage(input);
@@ -73,6 +118,19 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
     description: 'Add an Entra directory user returned by Graph /users',
     params: z.object(directoryUserParams),
     run: (input) => core.addDirectoryUser(input),
+  });
+
+  reg.seeder({
+    name: 'signed-in-user',
+    description:
+      'Set the identity Graph /me reports for the signed-in account. Seed mail and userPrincipalName apart to emulate the Entra account whose mail is an .onmicrosoft.com address while the app login is a vanity domain',
+    params: z.object({
+      id: z.string().optional(),
+      mail: z.string().optional(),
+      userPrincipalName: z.string().optional(),
+      displayName: z.string().optional(),
+    }),
+    run: (input) => core.setSignedInUser(input),
   });
 
   reg.seeder({
@@ -457,10 +515,11 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
 
   reg.stateView({
     name: 'config',
-    description: 'Token behavior and inbound bot activity configuration',
+    description: 'Token behavior, signed-in identity and inbound bot activity configuration',
     get: () => ({
       accessTokenTtlSeconds: core.accessTokenTtlSeconds,
       rotateRefreshTokens: core.rotateRefreshTokens,
+      signedInUser: { ...core.signedInUser },
       bot: { ...core.botConfig },
       defaultActor: { ...core.defaultActor },
     }),

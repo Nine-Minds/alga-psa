@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "scope": "native-teams-12gib-google-icon-comparison",
+  "releaseValidation": false,
+  "source": {
+    "before": {
+      "revision": "2bf61d38755e3782cfe57a4d2e88e6a1e93b0af7",
+      "dirty": false
+    },
+    "after": {
+      "revision": "2bf61d38755e3782cfe57a4d2e88e6a1e93b0af7",
+      "dirty": false
+    }
+  },
+  "execution": {
+    "command": "/opt/homebrew/opt/node@25/bin/node /tmp/alga-native-teams-ciheap-fresh.cjs",
+    "session": 95220,
+    "firstAttempt": true,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "durationMs": 179396.643,
+    "playwrightRetries": 0,
+    "assertionsChanged": false,
+    "timeoutChanges": false,
+    "extraPrewarming": false,
+    "warmup": "Current committed warmTeamsDashboard passed before the unchanged Teams development spec.",
+    "configuration": "Native Next development with webpack and Node source maps disabled; fresh uniquely owned NEXT_DIST_DIR; existing local installed dependencies.",
+    "heapCapMiB": 12288,
+    "observedNextHeapLimitBytes": 13086228480,
+    "nodeVersion": "v25.5.0",
+    "nextMemoryRestarts": 1,
+    "recoveredAfterRestart": true
+  },
+  "layoutComparison": {
+    "baselinePrivateDirectory": "/tmp/alga-native-teams-SBSqsk",
+    "baselineRevision": "70926ee1831fcfb5e2666131a9a47fd23a4430a3",
+    "baselineCompleteDecodedBytes": 81713912,
+    "currentCompleteDecodedBytes": 67297132,
+    "decodedReductionPercent": 17.643,
+    "baselineCompleteGzipBytes": 19009715,
+    "currentCompleteGzipBytes": 14336779,
+    "gzipReductionPercent": 24.5818,
+    "simpleIconsBarrelPresentInCompleteCurrentResponses": false,
+    "completedResponses": 9,
+    "completedResponsesSyntaxPassed": 9,
+    "abortedResponses": 2,
+    "abortedResponsesCountedValid": false,
+    "verification": "Each completed captured gzip response decompressed and passed node --check. The two explicitly aborted gzip responses were incomplete and excluded from valid response counts.",
+    "representativeCompleteWireSha256": "55817cc74aec017b541c41eedead0652567b93a7634228bb9b93828f9722d206"
+  },
+  "cleanup": {
+    "ownedDatabase": "teams_native_1788942944315",
+    "ownedDatabaseDropped": true,
+    "portsClosedAfterCleanup": {
+      "next": 62618,
+      "redis": 62619,
+      "temporal": 62620
+    },
+    "sourceDatabaseResetOrMutated": false,
+    "sharedRolesModified": false,
+    "existingCachesRemoved": false,
+    "ownedDist": ".next/teams-ciheap-teams_native_1788942944315"
+  },
+  "privateArtifacts": [
+    {
+      "path": "/tmp/alga-native-teams-jUTW1g/lifecycle.log",
+      "sha256": "43557ae16d8863575eff3ca32c548ae28e0d8460fb6ac363dd8b0125e55e83e0"
+    },
+    {
+      "path": "/tmp/alga-native-teams-jUTW1g/server.log",
+      "sha256": "6e8320bcdb6b6863e02ddc0ca4a18337760aae61c0ad0a84aef47797b52ded26"
+    },
+    {
+      "path": "/tmp/alga-native-teams-jUTW1g/layout-analysis.json",
+      "sha256": "824fe95c2e7f4b2d90e59b866f8c93fc84a83a2f5e409304376435191ebd1b62"
+    }
+  ],
+  "limitations": [
+    "The full scenario passed after one real Next memory-threshold restart and recovery; the memory/restart defect is not resolved.",
+    "This is one native Mac/Node25 comparison with local dependencies and a fresh output directory, not Linux/Node22 CI or production-artifact proof.",
+    "The observer captured only the static app/msp/layout.js response, not authentication/API bodies. It adds some buffering overhead.",
+    "The earlier baseline run failed and emitted truncated completed JavaScript. This comparison does not establish cold-start or repeated-run stability, nor explain every CI chunk failure."
+  ]
+}

@@ -10,12 +10,14 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { TicketModel } from '../../models/ticketModel';
 import { SharedNumberingService } from '../../services/numberingService';
+import { applyBoardDefaultWatchers } from '../../lib/tickets/boardDefaultWatchers';
 import type {
   NormalizedRmmAlertEvent,
   NormalizedRmmAlertSeverity,
   RmmAlertRuleActions,
 } from './contracts';
 import { resolveRmmTicketContactId } from './resolveContact';
+import { associateAssetWithTicket } from '../../services/assets/assetTicketAssociation';
 
 export interface CreateAlertTicketParams {
   event: NormalizedRmmAlertEvent;
@@ -67,6 +69,12 @@ export async function createTicketForAlert(
   const now = new Date().toISOString();
   const db = tenantDb(trx, tenantId);
 
+  // LEVERAGE: pattern ticket-create-composition — raw ticket insert bypasses TicketModel.createTicket, so board default watchers must be seeded by hand
+  const attributes = await applyBoardDefaultWatchers(trx, tenantId, boardId, {
+    description,
+    source_reference: event.externalAlertId,
+  });
+
   const [ticket] = await db.table('tickets')
     .insert({
       tenant: tenantId,
@@ -78,10 +86,7 @@ export async function createTicketForAlert(
       priority_id: priorityId ?? null,
       board_id: boardId,
       assigned_to: actions.assignToUserId ?? null,
-      attributes: JSON.stringify({
-        description,
-        source_reference: event.externalAlertId,
-      }),
+      attributes: JSON.stringify(attributes),
       source: event.provider,
       entered_at: now,
       updated_at: now,
@@ -89,7 +94,7 @@ export async function createTicketForAlert(
     .returning(['ticket_id', 'ticket_number']);
 
   if (params.assetId) {
-    await associateAsset(trx, tenantId, params.assetId, ticket.ticket_id, now);
+    await associateAssetWithTicket(trx, tenantId, params.assetId, ticket.ticket_id, now);
   }
 
   await addAlertInternalNote(trx, tenantId, ticket.ticket_id, initialNote(event));
@@ -136,30 +141,6 @@ export async function addAlertInternalNote(
     is_internal: true,
     is_resolution: false,
     is_system_generated: true,
-    created_at: now,
-  });
-}
-
-async function associateAsset(
-  trx: Knex.Transaction,
-  tenantId: string,
-  assetId: string,
-  ticketId: string,
-  now: string
-): Promise<void> {
-  const db = tenantDb(trx, tenantId);
-
-  // asset_associations.created_by is NOT NULL with an FK to users; attribute
-  // system-created links to the tenant's earliest user (Huntress convention).
-  const auditUser = await db.table('users').orderBy('created_at', 'asc').first('user_id');
-  if (!auditUser) return;
-  await db.table('asset_associations').insert({
-    tenant: tenantId,
-    asset_id: assetId,
-    entity_id: ticketId,
-    entity_type: 'ticket',
-    relationship_type: 'related',
-    created_by: auditUser.user_id,
     created_at: now,
   });
 }

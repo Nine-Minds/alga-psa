@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "baseRevision": "defb153935ff976853be09c3fc42375ae548ef2e",
+  "workingTreeDirty": true,
+  "checks": [
+    {
+      "scope": "Teams actual package runner",
+      "ciJob": 102197336684,
+      "before": "Enterprise organizer case loads unrelated NextAuth runtime and fails to resolve next/server",
+      "fix": "Isolate unused SSO registry import at auth barrel in the test harness",
+      "graphPackagePassed": 90,
+      "canonicalOrganizerPassed": 2,
+      "limits": [
+        "Auth seams remain mocked; actual action and provider HTTP execute",
+        "Current CI has not tested this harness fix"
+      ]
+    },
+    {
+      "scope": "Workflow-worker build input validation",
+      "beforeWorkspaceManifests": 17,
+      "requiredWorkspaceManifests": 43,
+      "afterWorkspaceManifests": 43,
+      "npmSelectorsResolved": 19,
+      "command": "npm run check:build-workspaces --workspace=workflow-worker",
+      "baseImages": "node:22-bookworm-slim for builder and runtime",
+      "ciRegistration": ".github/workflows/unit-tests.yml: Nx affected unit job preflight",
+      "limits": [
+        "Native checker materializes manifest inputs and runs npm resolution; it does not install dependencies",
+        "Offline install simulation stopped at uncached uuid metadata",
+        "No clean image build or running worker validation"
+      ]
+    },
+    {
+      "scope": "Client creation atomicity",
+      "beforeFailed": 1,
+      "baselinePassed": 2,
+      "afterFocusedAndNeighborPassed": 31,
+      "newDatabaseCases": 3,
+      "clientsTypecheck": "passed",
+      "canonicalCollection": "new integration file collected",
+      "permanentTier1": true,
+      "testFile": "server/src/test/integration/clientCreationAtomicity.integration.test.ts",
+      "assertions": [
+        "Real no-active-tax failure leaves no persisted client, billing profile or tax settings",
+        "Valid rate persists related client/profile/tax records together",
+        "AlgaDesk creation remains exempt from tax setup"
+      ],
+      "limits": [
+        "Auth, event publication and Next cache seams are mocked",
+        "Newly discovered during issue 3338 review, not a verified cause of that incident"
+      ],
+      "fullServerTypecheck": "passed"
+    },
+    {
+      "scope": "Actual CI archive record producer",
+      "runId": 34266401070,
+      "service": "redis",
+      "artifact": "fresh-install-build-record-redis",
+      "buildRevision": "0e0e9ab576f7623cc4dca30e0e90bbc9d387983b",
+      "result": "Completed job produced config ID, distinct build-reported digest, archive size and SHA256",
+      "limits": [
+        "Build revision is GitHub pull-request merge revision; PR head is recorded separately",
+        "Loaded-image consumer and real production promotion remain unverified"
+      ]
+    }
+  ]
+}

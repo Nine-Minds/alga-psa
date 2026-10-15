@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fakeTable, type FakeTenantDbOptions } from '@alga-psa/db/testing';
 import { getClientContactVisibilityContext } from '../../../../tickets/src/lib/clientPortalVisibility.server';
 
 // Integration-style flow tests: comfortably sub-second locally, but loaded CI
@@ -49,6 +50,7 @@ type VisibilityState = {
     portal_visibility_group_id: string | null;
   }>;
   groups: Array<{
+    ticket_scope: 'client' | 'contact';
     tenant: string;
     group_id: string;
     client_id: string;
@@ -65,76 +67,30 @@ type VisibilityState = {
   }>;
 };
 
-function pickFields<T extends Record<string, any>>(row: T | undefined, columns?: string[]) {
-  if (!row) {
-    return undefined;
-  }
-
-  if (!columns?.length) {
-    return row;
-  }
-
-  return columns.reduce<Record<string, any>>((acc, column) => {
-    const key = column.includes('.') ? column.split('.').pop()! : column;
-    acc[key] = row[key];
-    return acc;
-  }, {});
-}
-
-function matchesFilters(row: Record<string, any>, filters: Record<string, any>) {
-  return Object.entries(filters).every(([key, value]) => row[key] === value);
-}
-
 function createVisibilityTrx(state: VisibilityState) {
-  return ((table: string) => {
-    if (table === 'contacts') {
-      return {
-        where: (filters: Record<string, any>) => {
-          const matches = state.contacts.filter((row) => matchesFilters(row, filters));
-          return {
-            first: async (...columns: string[]) => pickFields(matches[0], columns),
-            update: async (updates: Record<string, any>) => {
-              matches.forEach((row) => Object.assign(row, updates));
-              return matches.length;
-            },
-          };
+  const tables: FakeTenantDbOptions = {
+    tables: {
+      contacts: state.contacts,
+      client_portal_visibility_groups: state.groups,
+      boards: state.boards,
+      client_portal_visibility_group_boards: state.groupBoards,
+    },
+    perTable: {
+      contacts: {
+        // The reassignment has to be visible to the next read on the same
+        // transaction, which is the whole point of this test.
+        onUpdate: (patch, selected) => {
+          selected.forEach((row) => Object.assign(row, patch));
+          return selected.length;
         },
-      };
-    }
+      },
+    },
+  };
 
-    if (table === 'client_portal_visibility_groups') {
-      return {
-        where: (filters: Record<string, any>) => {
-          const matches = state.groups.filter((row) => matchesFilters(row, filters));
-          return {
-            first: async (...columns: string[]) => pickFields(matches[0], columns),
-          };
-        },
-      };
-    }
-
-    if (table === 'client_portal_visibility_group_boards as cvgb') {
-      return {
-        join: () => ({
-          where: (filters: Record<string, any>) => ({
-            select: async () =>
-              state.groupBoards
-                .filter((row) => {
-                  const board = state.boards.find((candidate) => candidate.board_id === row.board_id);
-                  return (
-                    (!filters['cvgb.tenant'] || row.tenant === filters['cvgb.tenant']) &&
-                    row.group_id === filters['cvgb.group_id'] &&
-                    (!filters['cvgb.tenant'] || board?.tenant === filters['cvgb.tenant'])
-                  );
-                })
-                .map((row) => ({ board_id: row.board_id })),
-          }),
-        }),
-      };
-    }
-
-    throw new Error(`Unexpected table: ${table}`);
-  }) as any;
+  const trx = ((table: string) => fakeTable(tables, 'tenant-1', table.split(' ')[0])) as any;
+  trx.isTransaction = true;
+  trx.fn = { now: () => 'now()' };
+  return trx;
 }
 
 describe('contactActions visibility group integration', () => {
@@ -154,8 +110,8 @@ describe('contactActions visibility group integration', () => {
         },
       ],
       groups: [
-        { tenant: 'tenant-1', group_id: 'group-1', client_id: 'client-a' },
-        { tenant: 'tenant-1', group_id: 'group-2', client_id: 'client-a' },
+        { tenant: 'tenant-1', group_id: 'group-1', client_id: 'client-a', ticket_scope: 'client' },
+        { tenant: 'tenant-1', group_id: 'group-2', client_id: 'client-a', ticket_scope: 'contact' },
       ],
       boards: [
         { tenant: 'tenant-1', board_id: 'board-1' },
@@ -181,6 +137,7 @@ describe('contactActions visibility group integration', () => {
     const updatedVisibility = await getClientContactVisibilityContext(trx, 'tenant-1', 'contact-1');
     expect(updatedVisibility.visibilityGroupId).toBe('group-2');
     expect(updatedVisibility.visibleBoardIds).toEqual(['board-2']);
+    expect(updatedVisibility.effectiveTicketScope).toBe('contact');
   }, 15_000);
 
   it('T001: MSP board loading returns active tenant boards without requiring board client ownership', async () => {

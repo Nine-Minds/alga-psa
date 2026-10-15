@@ -4,6 +4,8 @@ import { formatCallNumber } from './phoneNumbers';
 
 /** The system interaction type every captured call is filed under. */
 export const CALL_INTERACTION_TYPE_NAME = 'Call';
+/** The system interaction type every journaled live chat is filed under. */
+export const CHAT_INTERACTION_TYPE_NAME = 'Chat';
 
 export interface CallTitleInput {
   direction: CallDirection;
@@ -54,8 +56,16 @@ export function formatDuration(seconds: number): string {
 }
 
 export async function resolveCallInteractionTypeId(knex: any, tenantId: string): Promise<string | null> {
+  return resolveSystemInteractionTypeId(knex, tenantId, CALL_INTERACTION_TYPE_NAME);
+}
+
+export async function resolveChatInteractionTypeId(knex: any, tenantId: string): Promise<string | null> {
+  return resolveSystemInteractionTypeId(knex, tenantId, CHAT_INTERACTION_TYPE_NAME);
+}
+
+async function resolveSystemInteractionTypeId(knex: any, tenantId: string, typeName: string): Promise<string | null> {
   const row = await tenantDb(knex, tenantId).table('system_interaction_types')
-    .where({ type_name: CALL_INTERACTION_TYPE_NAME })
+    .where({ type_name: typeName })
     .first('type_id');
 
   return row?.type_id ?? null;

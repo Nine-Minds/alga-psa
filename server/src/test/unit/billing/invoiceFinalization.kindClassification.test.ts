@@ -116,6 +116,12 @@ vi.mock('../../../../../packages/billing/src/actions/taxSourceActions', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: mocks.publishWorkflowEvent,
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/billing/models/invoice', () => ({
@@ -220,8 +226,15 @@ describe('invoice finalization kind classification', () => {
       'utf8',
     );
 
-    expect(source).toContain('function classifyInvoiceCreditHandling(');
-    expect(source).toContain('invoice?.is_prepayment');
+    const classifierSource = fs.readFileSync(
+      path.join(process.cwd(), '../packages/billing/src/services/prepaidReplenishmentSettlement.ts'),
+      'utf8',
+    );
+
+    expect(source).toContain('classifyInvoiceCreditHandling(invoice)');
+    expect(classifierSource).toContain('function classifyInvoiceCreditHandling(');
+    expect(classifierSource).toContain('invoice?.is_prepayment');
     expect(source).not.toContain('if (invoice && !invoice.billing_cycle_id)');
+    expect(classifierSource).not.toContain('if (invoice && !invoice.billing_cycle_id)');
   });
 });

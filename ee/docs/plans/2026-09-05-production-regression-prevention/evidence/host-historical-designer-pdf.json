@@ -1,0 +1,137 @@
+{
+  "applicationBaseRevision": "d31721e165",
+  "applicationChange": "packages/billing/src/lib/invoice-template-ast/evaluator.ts",
+  "applicationChangeSha256": "9c871bc012ff014230367f769fcdee042a605ebcce0c0ea83e1decf92c6986ac",
+  "preFixBrowser": {
+    "startTime": "2026-09-07T23:33:32.387Z",
+    "duration": 107078.269,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  },
+  "regression": "An absent historical timeEntries collection referenced directly by a UI-authored sort caused MISSING_BINDING and blocked PDF download.",
+  "focusedRed": {
+    "failed": 3,
+    "passed": 15,
+    "log": "/tmp/alga-history-evaluator-red.log"
+  },
+  "unitRegression": {
+    "files": 5,
+    "passed": 86,
+    "durationSeconds": 1.37,
+    "log": "/tmp/alga-historical-full-unit.log"
+  },
+  "hostBuild": {
+    "session": 94726,
+    "log": "/tmp/alga-host-history-currency-build.log",
+    "exitCode": 0,
+    "buildId": "build-1788824611620",
+    "typeValidation": "Skipped by Next configuration; no typecheck claim"
+  },
+  "postFixBrowser": {
+    "session": 45254,
+    "stats": {
+      "startTime": "2026-09-07T23:47:56.774Z",
+      "duration": 20193.034,
+      "expected": 1,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "log": "/tmp/alga-host-history-final.log",
+    "retries": 0,
+    "headed": true,
+    "serverSession": 44735,
+    "serverLog": "/tmp/alga-host-history-currency-server.log"
+  },
+  "limitations": [
+    "Host validation does not prove native CI or container packaging.",
+    "Historical mutations are explicit synthetic fixtures after real invoice generation, not a producer or migration backfill test.",
+    "Task/ad-hoc, hour-block and long multi-tax layout matrix remain incomplete."
+  ],
+  "additionalRegression": "Default fallback line-item columns omitted currency formatting, rendering 37500 instead of $375.00. Detail-table amounts had masked the primary-table defect.",
+  "additionalApplicationChange": {
+    "path": "packages/billing/src/components/invoice-designer/ast/workspaceAst.ts",
+    "sha256": "41569ac62e70d08134e3cb13c9727d25a9dc783a40679e43e12a1508bedcccd4"
+  },
+  "currencyRed": {
+    "failed": 1,
+    "passed": 19,
+    "log": "/tmp/alga-default-currency-red.log"
+  },
+  "firstHostBuild": {
+    "session": 79445,
+    "exitCode": 0,
+    "log": "/tmp/alga-host-history-build.log"
+  },
+  "pdfArtifacts": [
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-current-fr.pdf",
+      "bytes": 103059,
+      "sha256": "1922de1e605ba3d728fcf1f72a52f129f16f4876a1c9563f371f01a43eff5551"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-current-zz-unavailable.pdf",
+      "bytes": 98610,
+      "sha256": "ffee218f37bb8a0e863700688279b23f119242e72eb07ac2ece6dc6885ca3b32"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-none-en.pdf",
+      "bytes": 75035,
+      "sha256": "5be6a73ded108ab4db774d2aea1a8c2df848b76d5e4931bfa30214d180e22fa3"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-none-fr.pdf",
+      "bytes": 79303,
+      "sha256": "8171cb2ffc22359d68290059d014a27b97d46fead54427ce6419daaedb99db76"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-none-zz-unavailable.pdf",
+      "bytes": 75035,
+      "sha256": "66b5ef31a6e681a77bbd7327ddf23bb4cdcca192d0cb88da93ff5f3a32467bbc"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-partial-en.pdf",
+      "bytes": 95563,
+      "sha256": "09cd877a2b84dd9d4a241d8040a70ac106d5280ef22fb101c038f85fe412a14b"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-partial-fr.pdf",
+      "bytes": 100552,
+      "sha256": "5e97e25616717b1b7635ec49869dfbc1d98db3252c2fb7f99b0a0a38402aba30"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-partial-zz-unavailable.pdf",
+      "bytes": 95563,
+      "sha256": "d5edb3b4900ba67f16170ecc7a62a90b17c7bc4d9bf95aa6a4193f327f716bbf"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-v1-en.pdf",
+      "bytes": 98410,
+      "sha256": "ba3c59e3a2b7c88deb0aa00a0ced5d17c4316ca51e4e01e5a551a0b6cd5d3123"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-v1-fr.pdf",
+      "bytes": 102884,
+      "sha256": "35004768d97ba20633ff543e7d8a2cef434e8608b2c3f317a2de2126ef6d2c67"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001-v1-zz-unavailable.pdf",
+      "bytes": 98410,
+      "sha256": "8fa08bd3aec03735a79342a4f19feeb7cff456d3b536204736987d253a72b45f"
+    },
+    {
+      "file": "e2e-tests/test-results/host-production/invoice-designer-persisten-63b85-ts-persisted-invoice-layout-enterprise-chromium/INV-000001.pdf",
+      "bytes": 98610,
+      "sha256": "d69caeb3ebc786783eafe532ed795f2511e5c8b6e5247964992a2adf33e12c05"
+    }
+  ],
+  "coverage": [
+    "Real UI layout authoring, transform persistence, generated invoice and UI download",
+    "Current, v1, partial and missing snapshots in English, French and unsupported-locale fallback: 12 PDFs",
+    "Primary currency amounts and invoice total retained without historical detail",
+    "Localized rate and missing-detail labels; exact available flat/nested date counts",
+    "Private data exclusion; unchanged invoice snapshots and charges; fixture snapshot/locale restoration"
+  ]
+}

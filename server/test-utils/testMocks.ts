@@ -85,6 +85,11 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(async () => undefined),
   publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 /**
@@ -167,8 +172,8 @@ export function mockRBAC(
     (user) => user.roles?.some(role => role.role_name.toLowerCase() === 'admin') ?? true
 ) {
   permissionCheckRef.fn = permissionCheck;
-  vi.mocked(hasPermission).mockImplementation((user: IUserWithRoles, resource?: string, action?: string) =>
-    Promise.resolve(permissionCheckRef.fn(user, resource, action))
+  vi.mocked(hasPermission).mockImplementation((user, resource, action) =>
+    Promise.resolve(permissionCheckRef.fn(user as IUserWithRoles, resource, action))
   );
 }
 

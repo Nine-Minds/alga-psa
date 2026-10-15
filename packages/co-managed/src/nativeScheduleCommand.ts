@@ -3,7 +3,7 @@ import { tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { createAuthorizationKernel, BuiltinAuthorizationKernelProvider, BundleAuthorizationKernelProvider, resolveBundleNarrowingRulesForEvaluation,
   type AuthorizationRecord, type AuthorizationSubject } from '@alga-psa/authorization';
-import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
+import ScheduleEntry, { validateAllDayInterval } from '@alga-psa/shared/models/scheduleEntry';
 import { generateOccurrences } from '@alga-psa/shared/utils/recurrenceUtils';
 import type { IEditScope } from '@alga-psa/types';
 import { retainCoManagedTimeCalendar } from './nativeTimePeriod';
@@ -19,7 +19,7 @@ export class NativeScheduleError extends Error {
     this.name = 'NativeScheduleError';
   }
 }
-const writable = ['title', 'notes', 'scheduled_start', 'scheduled_end', 'status', 'work_item_id', 'work_item_type', 'assigned_user_ids', 'is_private', 'recurrence_pattern'] as const;
+const writable = ['title', 'notes', 'scheduled_start', 'scheduled_end', 'status', 'work_item_id', 'work_item_type', 'assigned_user_ids', 'is_private', 'is_all_day', 'recurrence_pattern'] as const;
 const invalid = () => { throw new NativeScheduleError('SCHEDULE_INVALID'); };
 function instant(value: unknown) {
   if (!(typeof value === 'string' || value instanceof Date)) return invalid();
@@ -43,10 +43,15 @@ function recurrence(value: unknown) {
 }
 function normalize(input: Record<string, any>, existing: any, actor: CoManagedAuthenticatedActor) {
   const fields: Record<string, any> = Object.fromEntries(writable.filter(key => input[key] !== undefined).map(key => [key, input[key]]));
-  const merged = { title: '', notes: '', status: 'scheduled', work_item_type: 'ad_hoc', work_item_id: null, assigned_user_ids: [actor.userId], is_private: false, recurrence_pattern: null, ...existing, ...fields };
-  if (typeof merged.title !== 'string' || !merged.title.trim() || typeof merged.status !== 'string' || !merged.status.trim() || (merged.notes != null && typeof merged.notes !== 'string') || typeof merged.is_private !== 'boolean') return invalid();
+  const merged = { title: '', notes: '', status: 'scheduled', work_item_type: 'ad_hoc', work_item_id: null, assigned_user_ids: [actor.userId], is_private: false, is_all_day: false, recurrence_pattern: null, ...existing, ...fields };
+  if (typeof merged.title !== 'string' || !merged.title.trim() || typeof merged.status !== 'string' || !merged.status.trim() || (merged.notes != null && typeof merged.notes !== 'string') || typeof merged.is_private !== 'boolean' || typeof merged.is_all_day !== 'boolean') return invalid();
   merged.notes ??= ''; merged.scheduled_start = instant(merged.scheduled_start); merged.scheduled_end = instant(merged.scheduled_end);
   if (merged.scheduled_end <= merged.scheduled_start) return invalid();
+  // All-day entries carry UTC-midnight boundaries with an exclusive end. Reuse the shared
+  // model's rule rather than restating it here, and let its message through unwrapped: it
+  // names the constraint, which a generic SCHEDULE_INVALID does not. A partial date update
+  // is validated against the merged row, so the existing flag still governs.
+  validateAllDayInterval(merged);
   if (['meeting', 'break', 'other'].includes(merged.work_item_type)) merged.work_item_type = 'ad_hoc';
   if (!['ad_hoc', 'ticket', 'project_task', 'interaction', 'non_billable_category', 'appointment_request'].includes(merged.work_item_type)) return invalid();
   if (['ad_hoc', 'non_billable_category'].includes(merged.work_item_type)) merged.work_item_id = null;

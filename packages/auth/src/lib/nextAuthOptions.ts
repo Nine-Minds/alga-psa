@@ -24,14 +24,27 @@ import { isEnterprise } from "@alga-psa/core/features";
 import { getTenantSelfHostLicenseState, resolveTenantTier } from "@alga-psa/licensing";
 import { getSSORegistry, registerSSOProvider } from "./sso/registry";
 import { loadEnterpriseSsoProviderRegistryImpl } from "./sso/enterpriseRegistryEntry";
-import type { OAuthProfileMappingInput, OAuthProfileMappingResult, OAuthLinkProvider } from "./sso/types";
-import { OAuthAccountLinkConflictError } from "./sso/types";
+import type {
+    OAuthProfileMappingInput,
+    OAuthProfileMappingResult,
+    OAuthLinkProvider,
+    OAuthMappingFailure,
+} from "./sso/types";
+import { isOAuthMappingFailure, OAuthAccountLinkConflictError } from "./sso/types";
+import { SSO_LINK_STATE_COOKIE, SSO_PROFILE_TAB_URL } from "./sso/linkStateCookie";
+import {
+    getMicrosoftSsoEmulatorEndpoints,
+    isMicrosoftSsoEmulatorEnabled,
+} from "./sso/microsoftSsoEmulator";
 import { mapCeOAuthProfileToExtendedUser } from "./sso/ceOAuthProfileMapper";
 import { cookies } from "next/headers.js";
 import {
     MSP_SSO_RESOLUTION_COOKIE,
     getMspSsoSigningSecret,
     parseAndVerifyMspSsoResolutionCookie,
+    buildKeycloakIssuer,
+    readTenantKeycloakConfig,
+    type MspSsoProviderId,
 } from "./sso/mspSsoResolution";
 import {
     CLIENT_PORTAL_SSO_DISCOVERY_COOKIE,
@@ -127,12 +140,24 @@ async function isKnownClientPortalHandoffRedirect(url: string, baseUrl: string):
 const SESSION_MAX_AGE = getSessionMaxAge();
 const SESSION_COOKIE = getSessionCookieConfig();
 
-async function rejectRevokedOrUnverifiableSession(
+/**
+ * What the sessions table had to say about a token.
+ *
+ * `unverified` is deliberately separate from `revoked`: returning null from the
+ * jwt callback does not merely deny a request, it deletes the session cookie,
+ * and a connection-pool timeout on this one lookup would then sign a working
+ * tenant out of the product. Authorization is unaffected by keeping the token —
+ * requireLiveSession and the express session gate each repeat this lookup and
+ * deny the request when it fails, so an unverified session reaches nothing.
+ */
+type TrackedSessionVerdict = 'live' | 'revoked' | 'unverified';
+
+async function checkTrackedSession(
     tenant: unknown,
     sessionId: unknown,
     userId: unknown,
     userType: unknown,
-): Promise<boolean> {
+): Promise<TrackedSessionVerdict> {
     if (
         typeof tenant !== 'string'
         || tenant.length === 0
@@ -143,17 +168,18 @@ async function rejectRevokedOrUnverifiableSession(
         || (userType !== 'internal' && userType !== 'client')
     ) {
         console.error('[auth] Tracked session is missing required identity claims.');
-        return true;
+        return 'revoked';
     }
 
     try {
-        return await UserSession.isRevokedOrIdentityMismatch(tenant, sessionId, {
+        const revoked = await UserSession.isRevokedOrIdentityMismatch(tenant, sessionId, {
             userId,
             userType,
         });
+        return revoked ? 'revoked' : 'live';
     } catch (error) {
-        console.error('[auth] Session revocation check failed closed:', error);
-        return true;
+        console.error('[auth] Session revocation check could not be completed:', error);
+        return 'unverified';
     }
 }
 
@@ -250,7 +276,7 @@ const NEXTAUTH_COOKIE_PREFIX = NEXTAUTH_SECURE_COOKIES ? '__Secure-' : '';
 const PLAYWRIGHT_FAKE_GOOGLE_OAUTH_ENABLED = process.env.PLAYWRIGHT_FAKE_GOOGLE_OAUTH === 'true';
 
 async function getClientPortalSsoProfileHints(
-    provider: 'google' | 'azure-ad',
+    provider: MspSsoProviderId,
 ): Promise<{ tenantHint?: string; userTypeHint?: 'client' } | null> {
     try {
         const signingSecret = await getMspSsoSigningSecret();
@@ -389,6 +415,55 @@ function buildGoogleProvider(clientId: string, clientSecret: string) {
         clientId,
         clientSecret,
         profile: mapGoogleProfile,
+    });
+}
+
+/**
+ * Microsoft sign-in, against Entra or — when the simulator gate is on — against
+ * the algasim Microsoft simulator. The simulator issues no signed id_token, so
+ * that branch runs as plain OAuth2 and resolves the account from Graph `/me`,
+ * which carries the same `mail`/`userPrincipalName` pair `profile()` reads.
+ */
+function buildAzureADProvider(config: {
+    clientId: string;
+    clientSecret: string;
+    authority: string;
+    checks?: Array<'pkce' | 'state' | 'nonce'>;
+    profile: (profile: Record<string, any>) => Promise<ExtendedUser>;
+}) {
+    if (isMicrosoftSsoEmulatorEnabled()) {
+        const endpoints = getMicrosoftSsoEmulatorEndpoints(config.authority);
+        return {
+            id: 'azure-ad',
+            name: 'Microsoft',
+            type: 'oauth' as const,
+            clientId: config.clientId,
+            clientSecret: config.clientSecret,
+            // The emulator is plain OAuth with a userinfo endpoint and no ID
+            // token, so there is no nonce for Auth.js to verify.
+            checks: (config.checks ?? ['pkce', 'state']).filter((check) => check !== 'nonce') as Array<'pkce' | 'state'>,
+            authorization: {
+                url: endpoints.authorization,
+                params: {
+                    scope: 'openid email profile https://graph.microsoft.com/User.Read',
+                },
+            },
+            token: {
+                url: endpoints.token,
+            },
+            userinfo: {
+                url: endpoints.userinfo,
+            },
+            profile: config.profile,
+        };
+    }
+
+    return AzureADProvider({
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        issuer: `https://login.microsoftonline.com/${config.authority}/v2.0`,
+        ...(config.checks ? { checks: config.checks } : {}),
+        profile: config.profile,
     });
 }
 
@@ -611,6 +686,7 @@ interface ExtendedUser {
     user_type: string;
     clientId?: string;
     contactId?: string;
+    authFailure?: OAuthMappingFailure;
     plan?: string;
     product_code?: ProductCode;
     deviceInfo?: {
@@ -654,7 +730,43 @@ const OAUTH_PROVIDER_ALIASES: Record<string, OAuthLinkProvider> = {
     google: 'google',
     'azure-ad': 'microsoft',
     microsoft: 'microsoft',
+    keycloak: 'keycloak',
 };
+
+// Keycloak (or any OIDC realm fronted by it) resolves the AlgaPSA user by email,
+// exactly like Google and Microsoft. Standard realms emit no tenant/user_type
+// claims, so anything beyond email is a hint, never the source of truth.
+async function mapKeycloakProfile(profile: Record<string, any>): Promise<ExtendedUser> {
+    const clientPortalHints = await getClientPortalSsoProfileHints('keycloak');
+    const tenantHint =
+        clientPortalHints?.tenantHint ??
+        (typeof profile.tenant === 'string' ? profile.tenant : undefined);
+    const userTypeHint =
+        clientPortalHints?.userTypeHint ??
+        (typeof profile.user_type === 'string' ? profile.user_type : undefined);
+    return mapOAuthProfileToExtendedUser({
+        provider: 'keycloak',
+        email: typeof profile.email === 'string' ? profile.email : undefined,
+        image: profile.picture ?? undefined,
+        profile,
+        tenantHint,
+        userTypeHint,
+    });
+}
+
+function buildKeycloakProvider(config: {
+    clientId: string;
+    clientSecret: string;
+    url: string;
+    realm: string;
+}) {
+    return KeycloakProvider({
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        issuer: buildKeycloakIssuer(config.url, config.realm),
+        profile: mapKeycloakProfile,
+    });
+}
 
 function normalizeOAuthProvider(providerId?: string | null): OAuthLinkProvider | null {
     if (!providerId) {
@@ -746,7 +858,7 @@ function parseStateValue(rawState: unknown, key: string): string | undefined {
 }
 
 const LINK_SIGNATURE_TTL_MS = 5 * 60 * 1000;
-const LINK_STATE_COOKIE = 'sso-link-state';
+const LINK_STATE_COOKIE = SSO_LINK_STATE_COOKIE;
 
 // Recompute the client-issued signature so we can validate the callback payload without reaching for shared code.
 function computeLinkSignature(secret: string, userId: string, nonce: string, issuedAt: number): string {
@@ -1009,6 +1121,34 @@ async function finalizePendingRememberedEmailCookie(): Promise<void> {
     }
 }
 
+// The client-portal sign-in page falls back to the tenant-discovery form when no
+// tenant is named, and that form shows no error — a mapping failure redirected
+// there without a tenant loses its message. The still-live SSO resolution cookie
+// names the tenant, so recover the public slug from it before it is cleared.
+async function readClientPortalSsoTenantSlug(): Promise<string | undefined> {
+    try {
+        const signingSecret = await getMspSsoSigningSecret();
+        if (!signingSecret) {
+            return undefined;
+        }
+
+        const store = await cookies();
+        const resolution = parseAndVerifyClientPortalSsoResolutionCookie({
+            value: store.get(CLIENT_PORTAL_SSO_RESOLUTION_COOKIE)?.value,
+            secret: signingSecret,
+        });
+        if (!resolution?.tenantId) {
+            return undefined;
+        }
+
+        const slug = buildTenantPortalSlug(resolution.tenantId);
+        return isValidTenantSlug(slug) ? slug : undefined;
+    } catch (error) {
+        console.warn('[client-portal-sso] failed to read tenant from resolution cookie', { error });
+        return undefined;
+    }
+}
+
 async function clearClientPortalSsoStateCookies(): Promise<void> {
     try {
         const store = await cookies();
@@ -1021,6 +1161,73 @@ async function clearClientPortalSsoStateCookies(): Promise<void> {
     } catch (error) {
         console.warn('[client-portal-sso] failed to clear state cookies', { error });
     }
+}
+
+// Auth.js swallows anything thrown from `profile()` into the unreadable
+// `error=Configuration` page, but it honours a string returned from
+// `callbacks.signIn` as a redirect target. Expected mapping failures therefore
+// arrive as a sentinel user and leave on an app page that can name the email the
+// provider presented.
+async function resolveOAuthFailureRedirect(
+    user: ExtendedUser | undefined,
+    providerId?: string | null,
+): Promise<string | null> {
+    if (!providerId || providerId === 'credentials' || !isOAuthMappingFailure(user)) {
+        return null;
+    }
+
+    const { code, providerEmail, userType } = user.authFailure;
+    // Reading the cookie also deletes it, so a failed attempt cannot reuse the
+    // signed link authorization; its presence is what marks profile link mode.
+    const linkState = await consumeLinkStateCookie(undefined);
+    const clientPortalTenantSlug =
+        userType === 'client' ? await readClientPortalSsoTenantSlug() : undefined;
+    await clearClientPortalSsoStateCookies();
+
+    console.warn('[auth] OAuth profile did not resolve to an AlgaPSA user', {
+        providerId,
+        code,
+        providerEmail,
+        userType,
+        linkMode: Boolean(linkState),
+    });
+
+    if (linkState) {
+        const linkParams = new URLSearchParams({ linkError: code });
+        if (providerEmail) {
+            linkParams.set('providerEmail', providerEmail);
+        }
+        // `tab` must be the tab *id* resolveUserProfileTab() knows; a label like
+        // "Single Sign-On" silently falls back to the Profile tab and the banner
+        // below never renders.
+        return `${SSO_PROFILE_TAB_URL}&${linkParams.toString()}`;
+    }
+
+    const params = new URLSearchParams({ error: 'AccessDenied', reason: code });
+    if (providerEmail) {
+        params.set('providerEmail', providerEmail);
+    }
+    // Without the slug the portal page renders tenant discovery instead of the
+    // branded sign-in form that carries the message.
+    if (clientPortalTenantSlug) {
+        params.set('tenant', clientPortalTenantSlug);
+    }
+
+    // Target the concrete sign-in pages rather than the /auth/signin dispatcher
+    // so the params survive the redirect chain.
+    const signInPath = userType === 'client' ? '/auth/client-portal/signin' : '/auth/msp/signin';
+    return `${signInPath}?${params.toString()}`;
+}
+
+// Defense in depth for the jwt callback: returning a redirect string from
+// `callbacks.signIn` already stops Auth.js before it mints a token, so a
+// sentinel user (or any user without an AlgaPSA id) reaching this point must
+// never become a session.
+function isUnresolvedOAuthUser(user: ExtendedUser | null | undefined): boolean {
+    if (!user) {
+        return false;
+    }
+    return isOAuthMappingFailure(user) || typeof user.id !== 'string' || user.id.length === 0;
 }
 
 function extractProviderAccountId(
@@ -1303,6 +1510,16 @@ async function getOAuthSecrets(context?: BuildAuthOptionsContext) {
                 resolved.microsoftTenantId = tenantMicrosoft.microsoftTenantId || 'common';
             }
         }
+
+        if (resolution.provider === 'keycloak') {
+            const tenantKeycloak = await readTenantKeycloakConfig(resolution.tenantId);
+            if (tenantKeycloak) {
+                resolved.keycloakUrl = tenantKeycloak.url;
+                resolved.keycloakRealm = tenantKeycloak.realm;
+                resolved.keycloakClientId = tenantKeycloak.clientId;
+                resolved.keycloakClientSecret = tenantKeycloak.clientSecret;
+            }
+        }
     } catch (error) {
         console.warn('[oauth] failed to resolve tenant-scoped OAuth credentials', error);
     }
@@ -1326,11 +1543,22 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             : []),
         ...(secrets.microsoftClientId && secrets.microsoftClientSecret
             ? [
-                AzureADProvider({
+                buildAzureADProvider({
                     clientId: secrets.microsoftClientId,
                     clientSecret: secrets.microsoftClientSecret,
-                    issuer: `https://login.microsoftonline.com/${secrets.microsoftTenantId || 'common'}/v2.0`,
-                    checks: ['pkce', 'state'],
+                    authority: secrets.microsoftTenantId || 'common',
+                    // `nonce` is load-bearing, not belt-and-braces. `state` binds the
+                    // callback to the browser that started it; `pkce` binds the code to
+                    // the client that requested it; only `nonce` binds the *ID token*
+                    // to this authorization request, which is what stops a token minted
+                    // for another request being replayed into this session.
+                    //
+                    // It was absent, and the repo had already measured the consequence:
+                    // ee/docs/plans/2026-09-05-production-regression-prevention/microsoft-coverage-boundaries.md
+                    // records "Observed one token request, zero JWKS requests and no
+                    // nonce" against a real callback run. Auth.js only sends and
+                    // verifies a nonce when it is listed here.
+                    checks: ['pkce', 'state', 'nonce'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const clientPortalHints = await getClientPortalSsoProfileHints('azure-ad');
                         const emailCandidate =
@@ -1375,6 +1603,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 twoFactorCode: { label: "2FA Code", type: "text" },
                 userType: { label: "User Type", type: "text" },
                 tenant: { label: "Tenant", type: "text" },
+                portalDomain: { label: "Portal Domain", type: "text" },
                 captchaToken: { label: "Captcha Token", type: "text" },
             },
             async authorize(credentials, request): Promise<ExtendedUser | null> {
@@ -1397,6 +1626,12 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 try {
                     const tenantSlug = typeof credentials?.tenant === 'string'
                         ? credentials.tenant.trim().toLowerCase()
+                        : undefined;
+                    // Vanity sign-in that round-tripped through the query string has
+                    // the portal host but no slug; authenticateUser resolves the
+                    // tenant from it so the lookup is never unscoped.
+                    const portalDomainHint = typeof credentials?.portalDomain === 'string'
+                        ? credentials.portalDomain.trim().toLowerCase() || undefined
                         : undefined;
 
                     if (tenantSlug && !isValidTenantSlug(tenantSlug)) {
@@ -1441,6 +1676,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         credentials.userType as string,
                         {
                             tenantSlug,
+                            portalDomain: portalDomainHint,
                             requireTenantMatch: Boolean(tenantSlug),
                         }
                     );
@@ -1628,98 +1864,21 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
         secrets.keycloakUrl &&
         secrets.keycloakRealm
             ? [
-                KeycloakProvider({
+                buildKeycloakProvider({
                     clientId: secrets.keycloakClientId,
                     clientSecret: secrets.keycloakClientSecret,
-                    issuer: `${secrets.keycloakUrl}/realms/${secrets.keycloakRealm}`,
-                    profile: async (profile): Promise<ExtendedUser> => {
-                        const logger = (await import('@alga-psa/core/logger')).default;
-                        logger.info("Starting Keycloak OAuth");
-                        return {
-                            id: profile.sub,
-                            name: profile.name ?? profile.preferred_username,
-                            email: profile.email,
-                            image: profile.picture,
-                            username: profile.preferred_username,
-                            proToken: '',
-                            tenant: profile.tenant,
-                            user_type: profile.user_type,
-                            clientId: profile.clientId,
-                        };
-                    },
+                    url: secrets.keycloakUrl,
+                    realm: secrets.keycloakRealm,
                 }),
             ]
             : []),
-        // CredentialsProvider({
-        //     id: "keycloak-credentials",
-        //     name: "Keycloak-credentials",
-        //     credentials: {
-        //         email: { label: "Email", type: "email" },
-        //         password: { label: "Password", type: "password" },
-        //         twoFactorCode: { label: "2FA Code", type: "text" },
-        //     },
-        //     async authorize(credentials): Promise<ExtendedUser | null> {
-        //         logger.info("Starting Keycloak Credentials OAuth")
-        //         if (!credentials?.email || !credentials.password) {
-        //             throw new Error("Missing username or password");
-        //         }
-        //         const user = await User.findUserByEmail(credentials.email);
-        //         if (!user || !user.user_id) {
-        //             logger.warn("User not found with email", credentials.email);
-        //             throw new Error("User not found");
-        //         }
-        //         if (!user) { return null; }
-        //         if (user.two_factor_enabled) {
-        //             if (!credentials.twoFactorCode) {
-        //                 logger.warn("2FA code required for email", credentials.email);
-        //                 return null;
-        //             }
-        //             if (!user.two_factor_secret) {
-        //                 logger.warn("2FA secret not found for email", credentials.email);
-        //                 return null;
-        //             }
-        //             const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode, user.two_factor_secret);
-        //             if (!isValid2FA) {
-        //                 logger.warn("Invalid 2FA code for email", credentials.email);
-        //                 return null;
-        //             }
-        //         }
-
-        //         try {
-        //             // Get token from Keycloak
-        //             const tokenData = await getKeycloakToken(user.username, credentials.password);
-        //             logger.info("Token Data:", tokenData);
-        //             if (!tokenData || !tokenData.access_token) {
-        //                 return null;
-        //             }
-        //             const tokenInfo = decodeToken(tokenData.access_token);
-        //             if (!tokenInfo) {
-        //                 return null;
-        //             }
-
-        //             if (tokenInfo.email !== credentials.email) {
-        //                 return null;
-        //             }
-        //             return {
-        //                 id: user.user_id.toString(),
-        //                 email: user.email,
-        //                 username: user.username,
-        //                 image: user.icon || '/image/avatar-purple-big.png',
-        //                 name: `${user.first_name} ${user.last_name}`,
-        //                 proToken: tokenData.access_token,
-        //                 tenant: user.tenant,
-        //                 user_type: user.user_type
-        //             };
-        //         } catch (error) {
-        //             logger.error("Failed to authenticate with Keycloak:", error);
-        //             return null;
-        //         }
-        //     },
-        // }),
     ],
     pages: {
         signIn: '/auth/signin', // This will redirect to the appropriate page
         signOut: '/auth/signin', // After sign out, go to the redirect page
+        // Keep residual non-client-safe failures (error=Configuration) on an
+        // app-styled page instead of the raw Auth.js error page.
+        error: '/auth/signin',
     },
     session: {
         strategy: "jwt",
@@ -1731,6 +1890,11 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             const providerId = account?.provider;
             const extendedUser = user as ExtendedUser | undefined;
             const request = (context as any).request; // NextAuth v5 runtime provides request
+
+            const failureRedirect = await resolveOAuthFailureRedirect(extendedUser, providerId);
+            if (failureRedirect) {
+                return failureRedirect;
+            }
 
             if (extendedUser && providerId && providerId !== 'credentials') {
                 // NextAuth v5 can sometimes override the user.id with a random UUID.
@@ -1922,6 +2086,14 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 	                hasUser: !!user
 	            });
 
+            if (isUnresolvedOAuthUser(user as ExtendedUser | undefined)) {
+                console.warn('[auth] refusing to mint a token for an unresolved OAuth profile', {
+                    email: (user as ExtendedUser)?.email,
+                    code: (user as ExtendedUser)?.authFailure?.code,
+                });
+                return token;
+            }
+
 	            if (user) {
 	                const extendedUser = user as ExtendedUser;
 	                console.log('JWT callback - new user login:', {
@@ -1983,6 +2155,19 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     // Determine login method - use captured provider from signIn, or default to credentials
                     const loginMethod = extendedUser.loginMethod || (token.login_method as string | undefined) || 'credentials';
 
+                    // sessions.tenant / user_id are NOT NULL FKs: an OAuth profile that never
+                    // resolved to an AlgaPSA user fails here, and the fail-closed check below
+                    // then reports only "missing identity claims". Name the real gap first.
+                    if (typeof token.tenant !== 'string' || typeof token.id !== 'string') {
+                        console.error('[auth] Cannot create session record: OAuth profile did not resolve to an AlgaPSA user', {
+                            loginMethod,
+                            email: token.email,
+                            hasTenant: typeof token.tenant === 'string',
+                            hasUserId: typeof token.id === 'string',
+                            userType: token.user_type,
+                        });
+                    }
+
                     const sessionId = await UserSession.create({
                         tenant: token.tenant as string,
                         user_id: token.id as string,
@@ -2017,20 +2202,32 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         delete extendedUser.deviceInfo;
                     }
                 } catch (error) {
-                    console.error('[auth] Failed to create session record:', error);
+                    console.error('[auth] Failed to create session record:', {
+                        loginMethod: token.login_method,
+                        email: token.email,
+                        tenant: token.tenant,
+                        userId: token.id,
+                        error,
+                    });
                 }
             }
 
             // Check durable revocation and canonical identity state on every
             // authenticated request. Missing, untracked, or mismatched sessions
-            // fail closed.
-            if (await rejectRevokedOrUnverifiableSession(
+            // fail closed. A lookup that could not be completed leaves the
+            // cookie alone and skips the writes below; the request itself is
+            // still denied downstream, where the same check is repeated.
+            const trackedSession = await checkTrackedSession(
                 token.tenant,
                 token.session_id,
                 token.id || token.sub,
                 token.user_type,
-            )) {
+            );
+            if (trackedSession === 'revoked') {
                 return null;
+            }
+            if (trackedSession === 'unverified') {
+                return token;
             }
 
             // Slide the DB session expiry to track the rolling JWT so an active session
@@ -2109,6 +2306,19 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
         async session({ session, token }: any) {
             if (token.error === "TokenValidationError") {
                 // If there was an error during token validation, return a special session
+                return { expires: "0" };
+            }
+
+            // A token with no AlgaPSA user id never belonged to a resolved user
+            // (e.g. an OAuth profile that matched nobody); present it as signed out
+            // instead of a session whose user.id is an empty string.
+            const tokenUserId = typeof token.id === 'string' && token.id.length > 0
+                ? token.id
+                : typeof token.sub === 'string' && token.sub.length > 0
+                    ? token.sub
+                    : '';
+            if (!tokenUserId) {
+                console.warn('[auth] session requested for a token without a user id; treating as unauthenticated');
                 return { expires: "0" };
             }
 
@@ -2205,10 +2415,15 @@ export const options: NextAuthConfig = {
         ...(process.env.MICROSOFT_OAUTH_CLIENT_ID &&
         process.env.MICROSOFT_OAUTH_CLIENT_SECRET
             ? [
-                AzureADProvider({
+                buildAzureADProvider({
                     clientId: process.env.MICROSOFT_OAUTH_CLIENT_ID as string,
                     clientSecret: process.env.MICROSOFT_OAUTH_CLIENT_SECRET as string,
-                    issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_OAUTH_TENANT_ID || 'common'}/v2.0`,
+                    authority: process.env.MICROSOFT_OAUTH_TENANT_ID || 'common',
+                    // Same checks as the async provider above. This env-only fallback
+                    // previously declared none at all, so the two Microsoft providers in
+                    // this file ran with different verification postures depending on
+                    // which one a deployment happened to build.
+                    checks: ['pkce', 'state', 'nonce'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const emailCandidate =
                             profile.email ??
@@ -2250,6 +2465,7 @@ export const options: NextAuthConfig = {
                 twoFactorCode: { label: "2FA Code", type: "text" },
                 userType: { label: "User Type", type: "text" },
                 tenant: { label: "Tenant", type: "text" },
+                portalDomain: { label: "Portal Domain", type: "text" },
                 captchaToken: { label: "Captcha Token", type: "text" },
             },
             async authorize(credentials, request): Promise<ExtendedUser | null> {
@@ -2272,6 +2488,12 @@ export const options: NextAuthConfig = {
                 try {
                     const tenantSlug = typeof credentials?.tenant === 'string'
                         ? credentials.tenant.trim().toLowerCase()
+                        : undefined;
+                    // Vanity sign-in that round-tripped through the query string has
+                    // the portal host but no slug; authenticateUser resolves the
+                    // tenant from it so the lookup is never unscoped.
+                    const portalDomainHint = typeof credentials?.portalDomain === 'string'
+                        ? credentials.portalDomain.trim().toLowerCase() || undefined
                         : undefined;
 
                     if (tenantSlug && !isValidTenantSlug(tenantSlug)) {
@@ -2313,6 +2535,7 @@ export const options: NextAuthConfig = {
                         credentials.userType as string,
                         {
                             tenantSlug,
+                            portalDomain: portalDomainHint,
                             requireTenantMatch: Boolean(tenantSlug),
                         }
                     );
@@ -2500,96 +2723,21 @@ export const options: NextAuthConfig = {
         process.env.KEYCLOAK_URL &&
         process.env.KEYCLOAK_REALM
             ? [
-                KeycloakProvider({
-                    clientId: process.env.KEYCLOAK_CLIENT_ID as string,
-                    clientSecret: process.env.KEYCLOAK_CLIENT_SECRET as string,
-                    issuer: `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}`,
-                    profile: async (profile): Promise<ExtendedUser> => {
-                        return {
-                            id: (profile as any).sub || (profile as any).email,
-                            name: (profile as any).name || (profile as any).preferred_username,
-                            email: (profile as any).email,
-                            image: (profile as any).picture,
-                            username: (profile as any).preferred_username || '',
-                            proToken: '',
-                            tenant: (profile as any).tenant,
-                            user_type: (profile as any).user_type ?? 'internal',
-                            clientId: (profile as any).clientId,
-                        };
-                    },
+                buildKeycloakProvider({
+                    clientId: process.env.KEYCLOAK_CLIENT_ID,
+                    clientSecret: process.env.KEYCLOAK_CLIENT_SECRET,
+                    url: process.env.KEYCLOAK_URL,
+                    realm: process.env.KEYCLOAK_REALM,
                 }),
             ]
             : []),
-        // CredentialsProvider({
-        //     id: "keycloak-credentials",
-        //     name: "Keycloak-credentials",
-        //     credentials: {
-        //         email: { label: "Email", type: "email" },
-        //         password: { label: "Password", type: "password" },
-        //         twoFactorCode: { label: "2FA Code", type: "text" },
-        //     },
-        //     async authorize(credentials): Promise<ExtendedUser | null> {
-        //         logger.info("Starting Keycloak Credentials OAuth")
-        //         if (!credentials?.email || !credentials.password) {
-        //             throw new Error("Missing username or password");
-        //         }
-        //         const user = await User.findUserByEmail(credentials.email);
-        //         if (!user || !user.user_id) {
-        //             logger.warn("User not found with email", credentials.email);
-        //             throw new Error("User not found");
-        //         }
-        //         if (!user) { return null; }
-        //         if (user.two_factor_enabled) {
-        //             if (!credentials.twoFactorCode) {
-        //                 logger.warn("2FA code required for email", credentials.email);
-        //                 return null;
-        //             }
-        //             if (!user.two_factor_secret) {
-        //                 logger.warn("2FA secret not found for email", credentials.email);
-        //                 return null;
-        //             }
-        //             const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode, user.two_factor_secret);
-        //             if (!isValid2FA) {
-        //                 logger.warn("Invalid 2FA code for email", credentials.email);
-        //                 return null;
-        //             }
-        //         }
-
-        //         try {
-        //             // Get token from Keycloak
-        //             const tokenData = await getKeycloakToken(user.username, credentials.password);
-        //             logger.info("Token Data:", tokenData);
-        //             if (!tokenData || !tokenData.access_token) {
-        //                 return null;
-        //             }
-        //             const tokenInfo = decodeToken(tokenData.access_token);
-        //             if (!tokenInfo) {
-        //                 return null;
-        //             }
-
-        //             if (tokenInfo.email !== credentials.email) {
-        //                 return null;
-        //             }
-        //             return {
-        //                 id: user.user_id.toString(),
-        //                 email: user.email,
-        //                 username: user.username,
-        //                 image: user.icon || '/image/avatar-purple-big.png',
-        //                 name: `${user.first_name} ${user.last_name}`,
-        //                 proToken: tokenData.access_token,
-        //                 tenant: user.tenant,
-        //                 user_type: user.user_type
-        //             };
-        //         } catch (error) {
-        //             logger.error("Failed to authenticate with Keycloak:", error);
-        //             return null;
-        //         }
-        //     },
-        // }),
     ],
     pages: {
         signIn: '/auth/signin', // This will redirect to the appropriate page
         signOut: '/auth/signin', // After sign out, go to the redirect page
+        // Keep residual non-client-safe failures (error=Configuration) on an
+        // app-styled page instead of the raw Auth.js error page.
+        error: '/auth/signin',
     },
     session: {
         strategy: "jwt",
@@ -2608,6 +2756,11 @@ export const options: NextAuthConfig = {
             // }, extendedUser.id);
             const providerId = account?.provider;
             const extendedUser = user as ExtendedUser | undefined;
+
+            const failureRedirect = await resolveOAuthFailureRedirect(extendedUser, providerId);
+            if (failureRedirect) {
+                return failureRedirect;
+            }
 
             if (extendedUser && providerId && providerId !== 'credentials') {
                 if (account?.providerAccountId) {
@@ -2748,6 +2901,14 @@ export const options: NextAuthConfig = {
                 hasUser: !!user
             });
 
+            if (isUnresolvedOAuthUser(user as ExtendedUser | undefined)) {
+                console.warn('[auth] refusing to mint a token for an unresolved OAuth profile', {
+                    email: (user as ExtendedUser)?.email,
+                    code: (user as ExtendedUser)?.authFailure?.code,
+                });
+                return token;
+            }
+
 	            if (user) {
 	                const extendedUser = user as ExtendedUser;
 	                console.log('JWT callback - new user login:', {
@@ -2809,6 +2970,19 @@ export const options: NextAuthConfig = {
                     // Determine login method - use captured provider from signIn, or default to credentials
                     const loginMethod = extendedUser.loginMethod || (token.login_method as string | undefined) || 'credentials';
 
+                    // sessions.tenant / user_id are NOT NULL FKs: an OAuth profile that never
+                    // resolved to an AlgaPSA user fails here, and the fail-closed check below
+                    // then reports only "missing identity claims". Name the real gap first.
+                    if (typeof token.tenant !== 'string' || typeof token.id !== 'string') {
+                        console.error('[auth] Cannot create session record: OAuth profile did not resolve to an AlgaPSA user', {
+                            loginMethod,
+                            email: token.email,
+                            hasTenant: typeof token.tenant === 'string',
+                            hasUserId: typeof token.id === 'string',
+                            userType: token.user_type,
+                        });
+                    }
+
                     const sessionId = await UserSession.create({
                         tenant: token.tenant as string,
                         user_id: token.id as string,
@@ -2843,20 +3017,32 @@ export const options: NextAuthConfig = {
                         delete extendedUser.deviceInfo;
                     }
                 } catch (error) {
-                    console.error('[auth] Failed to create session record:', error);
+                    console.error('[auth] Failed to create session record:', {
+                        loginMethod: token.login_method,
+                        email: token.email,
+                        tenant: token.tenant,
+                        userId: token.id,
+                        error,
+                    });
                 }
             }
 
             // Check durable revocation and canonical identity state on every
             // authenticated request. Missing, untracked, or mismatched sessions
-            // fail closed.
-            if (await rejectRevokedOrUnverifiableSession(
+            // fail closed. A lookup that could not be completed leaves the
+            // cookie alone and skips the writes below; the request itself is
+            // still denied downstream, where the same check is repeated.
+            const trackedSession = await checkTrackedSession(
                 token.tenant,
                 token.session_id,
                 token.id || token.sub,
                 token.user_type,
-            )) {
+            );
+            if (trackedSession === 'revoked') {
                 return null;
+            }
+            if (trackedSession === 'unverified') {
+                return token;
             }
 
             // Slide the DB session expiry to track the rolling JWT so an active session
@@ -2934,6 +3120,19 @@ export const options: NextAuthConfig = {
         async session({ session, token }: any) {
             if (token.error === "TokenValidationError") {
                 // If there was an error during token validation, return a special session
+                return { expires: "0" };
+            }
+
+            // A token with no AlgaPSA user id never belonged to a resolved user
+            // (e.g. an OAuth profile that matched nobody); present it as signed out
+            // instead of a session whose user.id is an empty string.
+            const tokenUserId = typeof token.id === 'string' && token.id.length > 0
+                ? token.id
+                : typeof token.sub === 'string' && token.sub.length > 0
+                    ? token.sub
+                    : '';
+            if (!tokenUserId) {
+                console.warn('[auth] session requested for a token without a user id; treating as unauthenticated');
                 return { expires: "0" };
             }
 

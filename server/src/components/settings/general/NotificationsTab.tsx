@@ -8,6 +8,7 @@ import { CustomTabs } from "@alga-psa/ui/components/CustomTabs";
 import ViewSwitcher, { ViewSwitcherOption } from "@alga-psa/ui/components/ViewSwitcher";
 import { NotificationSettings } from "@alga-psa/notifications/components/settings/NotificationSettings";
 import { EmailTemplates } from "@alga-psa/notifications/components/settings/EmailTemplates";
+import { EmailBrandingTab } from "@alga-psa/notifications/components/settings/EmailBrandingTab";
 import { NotificationCategories } from "@alga-psa/notifications/components/settings/NotificationCategories";
 import { InternalNotificationCategories } from "@alga-psa/notifications/components/settings/InternalNotificationCategories";
 import { TelemetrySettings } from "@alga-psa/ui/components/settings/telemetry/TelemetrySettings";
@@ -43,8 +44,9 @@ function NotificationsTabContent() {
   // Determine initial tab based on URL parameter and view
   const getInitialTab = (view: NotificationView): string => {
     const requestedTab = sectionParam?.toLowerCase();
+    const emailTabIds = isAlgaDesk ? ALGA_DESK_EMAIL_TAB_IDS : EMAIL_NOTIFICATION_TAB_IDS;
     const validTabs: readonly string[] = view === 'email'
-      ? (isAlgaDesk ? ALGA_DESK_EMAIL_TAB_IDS : EMAIL_NOTIFICATION_TAB_IDS)
+      ? [...emailTabIds, ...(isAlgaDesk ? [] : ['email-branding'])]
       : INTERNAL_NOTIFICATION_TAB_IDS;
     const defaultTab = view === 'email' ? 'settings' : 'categories';
 
@@ -160,6 +162,12 @@ function NotificationsTabContent() {
           </CardContent>
         </Card>
       ),
+    }]),
+    // The branding panel is its own card; no extra header wrapper needed.
+    ...(isAlgaDesk ? [] : [{
+      id: 'email-branding',
+      label: t('notifications.emailTabs.emailBranding'),
+      content: <EmailBrandingTab />,
     }]),
     {
       id: 'categories',

@@ -64,7 +64,13 @@ export function isScheduleFieldHidden(fields: readonly string[], names: readonly
 
 export function scheduleView(row: any, assignments: string[], actor: CoManagedAuthenticatedActor, fields: readonly string[], source: ScheduleSource) {
   const hidden = (...names: string[]) => isScheduleFieldHidden(fields, names);
-  if (hidden('tenant', 'entry_id', 'scheduled_start', 'scheduled_end', 'assigned_user_ids', 'assigned_users', 'is_private')) throw new CoManagedSharedWorkError();
+  // `is_all_day` belongs with the timestamps, not with content: it says how
+  // scheduled_start/scheduled_end are to be read (exclusive UTC-midnight
+  // boundaries, per hasAllDayDates), so projecting the pair without it turns
+  // an all-day entry into a timed one. It is also required by
+  // scheduleEntryResponseSchema, so omitting it makes the API response fail
+  // its own contract.
+  if (hidden('tenant', 'entry_id', 'scheduled_start', 'scheduled_end', 'is_all_day', 'assigned_user_ids', 'assigned_users', 'is_private')) throw new CoManagedSharedWorkError();
   const privateBusy = row.is_private && !assignments.includes(actor.userId);
   const contentHidden = privateBusy || source.fields.length > 0;
   const start = new Date(row.scheduled_start).toISOString(), end = new Date(row.scheduled_end).toISOString();
@@ -76,6 +82,7 @@ export function scheduleView(row: any, assignments: string[], actor: CoManagedAu
     work_item_type: contentHidden || hidden('work_item_type', 'work_item') ? 'ad_hoc' : row.work_item_type,
     work_item: contentHidden || hidden('work_item', 'work_item_id', 'work_item_type') ? null : source.workItem,
     is_private: !!row.is_private,
+    is_all_day: !!row.is_all_day,
     status: privateBusy || hidden('status') ? '' : row.status,
     recurrence_pattern: contentHidden || hidden('recurrence_pattern') ? null : row.recurrence_pattern ?? null };
   for (const field of ['created_by', 'original_entry_id', 'is_recurring']) if (!contentHidden && !hidden(field) && row[field] != null) view[field] = row[field];

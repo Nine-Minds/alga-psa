@@ -4,6 +4,7 @@ import smtpSink from '@alga-psa/emulator-smtp-sink';
 import webhookSink from '@alga-psa/emulator-webhook-sink';
 import stripe from '@alga-psa/emulator-stripe';
 import xero from '@alga-psa/emulator-xero';
+import threecx from '@alga-psa/emulator-threecx';
 import type { EmulatorPackage } from '@alga-psa/emulator-host';
 
 /** Every emulator in the suite. New emulators register here. */
@@ -14,4 +15,5 @@ export const SUITE_EMULATORS: EmulatorPackage[] = [
   smtpSink as EmulatorPackage,
   stripe as EmulatorPackage,
   xero as EmulatorPackage,
+  threecx as EmulatorPackage,
 ];

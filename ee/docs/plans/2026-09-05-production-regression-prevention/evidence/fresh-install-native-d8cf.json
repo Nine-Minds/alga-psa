@@ -1,0 +1,68 @@
+{
+  "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34118119011",
+  "headRevision": "d8cf156c731bdfb9414ee6435152a676e0bcecf4",
+  "results": [
+    {
+      "suite": "api-e2e",
+      "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "status": "passed",
+      "counts": {
+        "passed": 335,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "failures": [],
+      "artifact": "fresh-install-api-community",
+      "sha256": "c9f824cad8b88a1f06f2be243f5975c4f9bb3e43f57735b6f03654b19f6db495"
+    },
+    {
+      "suite": "api-e2e",
+      "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "status": "passed",
+      "counts": {
+        "passed": 335,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "failures": [],
+      "artifact": "fresh-install-api-enterprise",
+      "sha256": "c9f824cad8b88a1f06f2be243f5975c4f9bb3e43f57735b6f03654b19f6db495"
+    },
+    {
+      "suite": "production-browser",
+      "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "status": "passed",
+      "counts": {
+        "passed": 27,
+        "failed": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "interrupted": 0,
+        "missing": 0
+      },
+      "failures": [],
+      "artifact": "fresh-install-playwright-enterprise",
+      "sha256": "98d036a3050c91d993fbe279afd9a9d7bb8b0605dd8109d9e2809873eaddc7bb"
+    },
+    {
+      "suite": "production-browser",
+      "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "status": "passed",
+      "counts": {
+        "passed": 23,
+        "failed": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "interrupted": 0,
+        "missing": 0
+      },
+      "failures": [],
+      "artifact": "fresh-install-playwright-community",
+      "sha256": "4303bdd6f68b0f4e8f985eaacabd6536f376aa4a9a3fd3a5076de1b040496ff2"
+    }
+  ]
+}

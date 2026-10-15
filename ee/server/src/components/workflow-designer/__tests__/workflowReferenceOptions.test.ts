@@ -102,7 +102,9 @@ describe('workflow reference options', () => {
     expect(normalValues).not.toContain('error.message');
     expect(catchValues).toContain('error');
     expect(catchValues).toContain('error.message');
-    expect(catchValues).toContain('error.stack');
+    // Only fields the runtime sets on a caught error; it has no stack.
+    expect(catchValues).toContain('error.code');
+    expect(catchValues).not.toContain('error.stack');
   });
 
   it('T145/T316: adds loop item and index variables when the current step is inside a forEach block', () => {
@@ -281,5 +283,49 @@ describe('workflow reference options', () => {
 
     expect(options.find((option) => option.value === 'vars.composed.prompt')?.label).toContain('Prompt');
     expect(options.find((option) => option.value === 'vars.composed.email_body')?.label).toContain('Email Body');
+  });
+
+  it('names the source of fields that share a label', () => {
+    const options = buildWorkflowReferenceFieldOptions(null, {
+      ...baseDataContext,
+      steps: ['firstTicket', 'secondTicket'].map((saveAs) => ({
+        stepId: saveAs,
+        stepName: saveAs,
+        saveAs,
+        outputSchema: { type: 'object', properties: { url: { type: 'string' } } },
+        fields: [],
+      })),
+    } as DataContext);
+    const urlLabels = options.filter((option) => option.value.endsWith('.url')).map((option) => option.label);
+    expect(urlLabels).toEqual([
+      'URL (vars.firstTicket.url)',
+      'URL (vars.secondTicket.url)',
+    ]);
+  });
+
+  it('gives fields without a description a plain-language name, like described ones', () => {
+    const options = buildWorkflowReferenceFieldOptions(null, {
+      ...baseDataContext,
+      steps: [{
+        stepId: 's1',
+        stepName: 'Find Client',
+        saveAs: 'client',
+        outputSchema: {
+          type: 'object',
+          properties: {
+            client_name: { type: 'string', description: 'Client name' },
+            clientName: { type: 'string' },
+            ticket_number: { type: 'string' },
+            contact_id: { type: 'string' },
+          },
+        },
+        fields: [],
+      }],
+    } as DataContext);
+    const labelOf = (value: string) => options.find((option) => option.value === value)?.label;
+    expect(labelOf('vars.client.client_name')).toBe('Client name (client_name)');
+    expect(labelOf('vars.client.clientName')).toBe('Client name (clientName)');
+    expect(labelOf('vars.client.ticket_number')).toBe('Ticket number (ticket_number)');
+    expect(labelOf('vars.client.contact_id')).toBe('Contact ID (contact_id)');
   });
 });

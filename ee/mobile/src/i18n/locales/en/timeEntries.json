@@ -38,19 +38,30 @@
     "stoppedToastNoDuration": "Time entry saved",
     "errors": {
       "start": "Unable to start the timer.",
-      "stop": "Unable to stop the timer.",
-      "permission": "Your account does not have permission to log time."
+      "stop": "Unable to log the timer.",
+      "permission": "Your account does not have permission to log time.",
+      "pause": "Unable to pause the timer.",
+      "resume": "Unable to resume the timer.",
+      "discard": "Unable to discard the timer.",
+      "alreadyOpen": "You already have a timer open. Stop or discard it first.",
+      "sheetLocked": "This time sheet is submitted or approved, so time can't be added. The timer is paused with your time intact."
     },
     "chip": {
       "start": "Start timer",
       "stop": "Stop timer · {{elapsed}}",
-      "switchHere": "Timer running elsewhere"
+      "switchHere": "Timer open elsewhere",
+      "pause": "Pause",
+      "resume": "Resume · {{elapsed}}",
+      "stopPaused": "Stop"
     },
     "banner": {
       "stop": "Stop",
       "untitled": "Time tracking",
       "accessibility": "Timer running on {{title}}",
-      "openWorkItem": "Open {{title}}"
+      "openWorkItem": "Open {{title}}",
+      "pause": "Pause timer",
+      "resume": "Resume timer",
+      "accessibilityPaused": "Timer paused on {{title}}"
     },
     "servicePicker": {
       "title": "Pick a service",
@@ -80,7 +91,11 @@
         "invalidEnd": "Enter a valid end time.",
         "endBeforeStart": "End time must be after the timer started.",
         "endInFuture": "End time can be at most 15 minutes ahead."
-      }
+      },
+      "pausedNotice_one": "Tracked {{tracked}} across {{count}} segment (paused {{paused}})",
+      "pausedNotice_other": "Tracked {{tracked}} across {{count}} segments (paused {{paused}})",
+      "keepPaused": "Keep paused",
+      "discard": "Discard timer"
     },
     "notifications": {
       "ongoingChannelName": "Time tracking",
@@ -90,6 +105,13 @@
       "reminderTitle": "Timer still running",
       "reminderBody": "You have been tracking time on {{workItem}} for {{hours}}h.",
       "genericWorkItem": "a work item"
+    },
+    "discardedToast": "Timer discarded",
+    "discard": {
+      "title": "Discard timer?",
+      "message": "The tracked time will be deleted and no time entry will be created.",
+      "confirm": "Discard",
+      "cancel": "Cancel"
     }
   }
 }

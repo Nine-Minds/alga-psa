@@ -12,6 +12,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { CoManagedDelegatedOperation, CoManagedDelegatedCommand } from '@alga-psa/co-managed';
 import { getCoManagedDelegatedAdministration, searchCoManagedDelegatedAdministration, grantCoManagedDelegatedAdministration,
   revokeCoManagedDelegatedAdministration, runCoManagedDelegatedAdministration } from '@/lib/actions/coManagedDelegatedAdministrationActions';
+import { newCoManagedOperationId } from './coManagedOperationId';
 
 type Option = { id: string; name: string; kind?: 'user' | 'team' };
 type Grant = { grantId: string; operation: CoManagedDelegatedOperation; label?: string; principalName?: string; available: boolean;
@@ -55,7 +56,7 @@ function Approval({ revision, disabled, onSaved }: { revision: number; disabled:
   const [uncertain,setUncertain] = useState(false);
   const save = async () => {
     if (!principal?.kind || !target) return;
-    pending.current ??= { revision, grant: { grantId: crypto.randomUUID(), operation, targetId: target.id, principalType: principal.kind, principalId: principal.id } };
+    pending.current ??= { revision, grant: { grantId: newCoManagedOperationId(), operation, targetId: target.id, principalType: principal.kind, principalId: principal.id } };
     setBusy(true); setError(false);
     try { await grantCoManagedDelegatedAdministration(pending.current); await onSaved(); }
     catch { setError(true); setUncertain(true); } finally { setBusy(false); }
@@ -81,7 +82,7 @@ function GrantedOperation({ grant, operationId, disabled, revision, customer, on
       if (customer) await revokeCoManagedDelegatedAdministration({ revision,grantId:grant.grantId });
       else {
         if (!operationId || !grant.version) return;
-        pending.current ??= { operationId:crypto.randomUUID(),grantId:grant.grantId,expectedVersion:grant.version,
+        pending.current ??= { operationId:newCoManagedOperationId(),grantId:grant.grantId,expectedVersion:grant.version,
           ...(grant.operation === 'invitation_resend' ? {} : { patch:Object.fromEntries(Object.entries(values).filter(([field,value]) => value !== grant.values?.[field])) }) };
         await runCoManagedDelegatedAdministration({ operationId,command:pending.current });
       }

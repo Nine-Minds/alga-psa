@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "revision": "58aa45fc957650d49e2d3eec79e94b3d0741fd95",
+  "counts": {
+    "passed": 3,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "interrupted": 0,
+    "missing": 0
+  },
+  "source": {
+    "before": {
+      "revision": "58aa45fc957650d49e2d3eec79e94b3d0741fd95",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "58aa45fc957650d49e2d3eec79e94b3d0741fd95",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "build": {
+    "mode": "native Next webpack enterprise",
+    "directory": "server/.next/upgrade-current",
+    "exitCode": 0,
+    "typeValidation": "skipped by repository build configuration",
+    "warnings": [
+      "Workflow inference export warning and dynamic dependency warnings; not validated by these billing/ticket journeys"
+    ]
+  },
+  "schemaDatabase": "upgrade_current_82cc_20260908",
+  "logs": {
+    "/tmp/alga-upgrade-current-build.log": "c63be6cc01646f7ff1f934ff678118b6a0dbb2985d9e47d612a149201aee5b71",
+    "/tmp/alga-upgrade-current-schema.log": "817aa8025f384642fb1b183e52e6306fc68298e4ffd724829f1b8072e4be501a",
+    "/tmp/alga-upgrade-current-browser.log": "f4ef0e843b84ee0ef8eb3ce58ae42eaac98c245f6d75517f4698cd63c7744a48",
+    "test-results/supported-upgrade/evidence.json": "ebf7cbf0e4f1763abd840f65cdc78f32c2bc66b91bfd23429d3965d92952bedc",
+    "test-results/supported-upgrade/collected.json": "6b1c3af465606bfc31cbe0c959ac35e9f84b186b09c60212d991623511f30623",
+    "test-results/supported-upgrade/results.json": "f6604e72a9f34481a63634592c85700446edf073230bb42c0ab558859c7c7e89"
+  },
+  "limitations": [
+    "Host execution, not native GitHub CI",
+    "PostgreSQL only; Citus upgrade remains outstanding",
+    "Full plan and effective release protections incomplete"
+  ]
+}

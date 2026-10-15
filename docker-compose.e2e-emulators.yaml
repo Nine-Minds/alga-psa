@@ -1,0 +1,267 @@
+# Disposable provider infrastructure for the production browser stack. No
+# persistent state volume: each edition/job owns this emulator instance.
+x-provider-environment: &provider-environment
+  # The login base is used for both browser authorization and server token
+  # exchange. CI maps this name on the host; Docker resolves the network alias.
+  MICROSOFT_LOGIN_BASE_URL: http://algasim.test:4010
+  MICROSOFT_GRAPH_BASE_URL: http://algasim:4010/v1.0
+  CALENDAR_MICROSOFT_WEBHOOK_BASE_URL: https://calendar-callback:3443
+  # Email lifecycle and background renewal resolve their callback from this
+  # canonical variable. Browser OAuth continues to use NEXT_PUBLIC_BASE_URL.
+  APPLICATION_URL: https://calendar-callback:3443
+  QBO_OAUTH_AUTHORIZE_URL: http://localhost:4020/connect/oauth2
+  QBO_OAUTH_TOKEN_URL: http://algasim:4020/oauth2/v1/tokens/bearer
+  QBO_OAUTH_REVOKE_URL: http://algasim:4020/v2/oauth2/tokens/revoke
+  QBO_API_BASE_URL: http://algasim:4020/v3/company
+  XERO_OAUTH_AUTHORIZE_URL: http://localhost:4060/identity/connect/authorize
+  XERO_OAUTH_TOKEN_URL: http://algasim:4060/connect/token
+  XERO_OAUTH_REVOKE_URL: http://algasim:4060/connect/revocation
+  XERO_REVOCATION_URL: http://algasim:4060/connect/revocation
+  XERO_CONNECTIONS_URL: http://algasim:4060/connections
+  XERO_API_BASE_URL: http://algasim:4060/api.xro/2.0
+  STRIPE_API_BASE_URL: http://algasim:4050
+  STRIPE_SECRET_KEY: sk_test_algasim
+  # EnvSecretProvider reads app-secret names verbatim. The payment provider
+  # requests this lowercase name and has no uppercase webhook fallback.
+  stripe_payment_webhook_secret: whsec_algasim
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_algasim
+
+# Shared only by this disposable CI stack; never use this value in deployments.
+x-hocuspocus-jwt-secret: &hocuspocus-jwt-secret regression-hocuspocus-jwt-only-20260909
+
+services:
+  hocuspocus:
+    environment:
+      HOCUSPOCUS_JWT_SECRET: *hocuspocus-jwt-secret
+  worker-test-state:
+    image: alga-e2e-test-algasim:latest
+    user: '0:0'
+    entrypoint: ['node', '/init-worker-test-state.mjs']
+    command: []
+    volumes:
+      - ./e2e-tests/harness/init-worker-test-state.mjs:/init-worker-test-state.mjs:ro
+      - email_test_tenant_secrets:/data/secrets
+      - files_data:/data/files
+    secrets:
+      - postgres_password
+      - db_password_server
+      - db_password_hocuspocus
+      - redis_password
+      - alga_auth_key
+      - crypto_key
+      - token_secret_key
+      - nextauth_secret
+      - credential_encryption_key
+      - email_password
+      - google_oauth_client_id
+      - google_oauth_client_secret
+    networks:
+      - app-network
+  algasim:
+    image: alga-e2e-test-algasim:latest
+    init: true
+    environment:
+      ALGASIM_SEED: '20260906'
+      NODE_EXTRA_CA_CERTS: /calendar-certificate.pem
+    volumes:
+      - ${E2E_CALLBACK_TLS_DIR:?Generate callback TLS files and set E2E_CALLBACK_TLS_DIR}/certificate.pem:/calendar-certificate.pem:ro
+    networks:
+      app-network:
+        aliases:
+          - algasim.test
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:9500/control/catalog']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  test-ingress:
+    image: alga-e2e-test-algasim:latest
+    init: true
+    entrypoint: ['node', '/provider-ingress.mjs']
+    environment:
+      E2E_CALENDAR_CALLBACK_TLS: 'true'
+      NODE_EXTRA_CA_CERTS: /calendar-tls/certificate.pem
+    healthcheck:
+      test: ['CMD', 'node', '--input-type=module', '-e', 'const r = await fetch("https://localhost:3443/probe"); process.exit(r.status === 404 ? 0 : 1)']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - ./e2e-tests/harness/provider-ingress.mjs:/provider-ingress.mjs:ro
+      - ./e2e-tests/harness/calendar-callback-proxy.mjs:/calendar-callback-proxy.mjs:ro
+      - ${E2E_CALLBACK_TLS_DIR:?Generate callback TLS files and set E2E_CALLBACK_TLS_DIR}:/calendar-tls:ro
+    ports:
+      - '127.0.0.1:3000:3000'
+      - '127.0.0.1:5432:5432'
+      - '127.0.0.1:55433:55433'
+      - '127.0.0.1:3025:3025'
+      - '127.0.0.1:6379:6379'
+      - '127.0.0.1:4010:4010'
+      - '127.0.0.1:4020:4020'
+      - '127.0.0.1:4030:4030'
+      - '127.0.0.1:4040:4040'
+      - '127.0.0.1:4050:4050'
+      - '127.0.0.1:4060:4060'
+      - '127.0.0.1:9500:9500'
+    networks:
+      app-network:
+        aliases:
+          - calendar-callback
+      test-ingress-network: {}
+  server:
+    user: '1000:1000'
+    ports: !reset []
+    environment:
+      <<: *provider-environment
+      HOCUSPOCUS_JWT_SECRET: *hocuspocus-jwt-secret
+      TEMPORAL_ADDRESS: temporal-dev:7233
+      TEMPORAL_NAMESPACE: default
+      IMAP_WEBHOOK_SECRET: regression-imap-only
+      SECRET_FS_BASE_PATH: /data/secrets
+      HOME: /tmp
+      npm_config_cache: /tmp/npm-cache
+      STORAGE_LOCAL_BASE_PATH: /data/files
+    volumes:
+      - email_test_tenant_secrets:/data/secrets
+  email-service:
+    user: '1000:1000'
+    environment:
+      <<: *provider-environment
+      IMAP_WEBHOOK_SECRET: regression-imap-only
+      IMAP_WEBHOOK_URL: http://server:3000/api/email/webhooks/imap
+      IMAP_PROVIDER_REFRESH_MS: '1000'
+      IMAP_POLL_INTERVAL_MS: '1000'
+      SECRET_FS_BASE_PATH: /data/secrets
+      HOME: /tmp
+      npm_config_cache: /tmp/npm-cache
+      STORAGE_LOCAL_BASE_PATH: /data/files
+    volumes:
+      - email_test_tenant_secrets:/data/secrets
+      - files_data:/data/files
+  imap-test-server:
+    image: greenmail/standalone:2.1.8
+    # The runner reaches SMTP through the fixed ingress proxy. Each scenario
+    # gets a distinct mailbox; the emulator creates it at first authentication.
+    ports: !reset []
+    environment:
+      GREENMAIL_OPTS: >-
+        -Dgreenmail.setup.test.all
+        -Dgreenmail.hostname=0.0.0.0
+        -Dgreenmail.auth.disabled
+  redis:
+    ports: !reset []
+  postgres:
+    ports: !reset []
+  # This frontend owns separate Temporal schemas in this job's disposable
+  # PostgreSQL instance. It has no host ports or live provider access.
+  temporal-dev:
+    image: temporalio/auto-setup:1.24.2
+    environment:
+      DB: postgres12
+      DB_PORT: '5432'
+      POSTGRES_SEEDS: postgres
+      POSTGRES_USER: postgres
+    entrypoint: ['/bin/sh']
+    command:
+      - -c
+      - |
+        export POSTGRES_PWD=$$(cat /run/secrets/postgres_password)
+        exec /etc/temporal/entrypoint.sh autosetup
+    secrets:
+      - postgres_password
+    healthcheck:
+      test: ['CMD', 'tctl', '--address', 'temporal-dev:7233', '--namespace', 'default', 'namespace', 'describe']
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+    networks:
+      - app-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+  workflow-worker:
+    user: '1000:1000'
+    image: alga-e2e-test-workflow-worker:latest
+    init: true
+    ports: !reset []
+    environment:
+      <<: *provider-environment
+      NODE_ENV: production
+      DEV_MODE: 'false'
+      TEMPORAL_ADDRESS: temporal-dev:7233
+      TEMPORAL_NAMESPACE: default
+      SECRET_FS_BASE_PATH: /data/secrets
+      HOME: /tmp
+      npm_config_cache: /tmp/npm-cache
+      STORAGE_LOCAL_BASE_PATH: /data/files
+      PORT: '4000'
+    # Exercise the candidate image's entrypoint, not a checkout bind mount.
+    volumes: !override
+      - email_test_tenant_secrets:/data/secrets
+      - files_data:/data/files
+    depends_on:
+      temporal-dev:
+        condition: service_healthy
+  # Explicitly started only in the EE job. Authored workflows belong to the
+  # workflow-worker; this worker also adds its existing SLA queue internally.
+  temporal-worker:
+    user: '1000:1000'
+    profiles: ['enterprise']
+    image: alga-e2e-test-temporal-worker:latest
+    init: true
+    environment:
+      <<: *provider-environment
+      NODE_ENV: production
+      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:?Set NEXT_PUBLIC_BASE_URL to the public application URL}
+      EDITION: enterprise
+      SECRET_READ_CHAIN: env,filesystem
+      SECRET_WRITE_PROVIDER: filesystem
+      SECRET_FS_BASE_PATH: /data/secrets
+      HOME: /tmp
+      npm_config_cache: /tmp/npm-cache
+      STORAGE_LOCAL_BASE_PATH: /data/files
+      DB_HOST: pgbouncer
+      DB_PORT: '6432'
+      DB_NAME_SERVER: server
+      DB_USER_SERVER: app_user
+      DB_USER_ADMIN: postgres
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      TEMPORAL_ADDRESS: temporal-dev:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: alga-jobs
+      TEMPORAL_TASK_QUEUES: tenant-workflows,portal-domain-workflows,email-domain-workflows,alga-jobs
+      ENABLE_HEALTH_CHECK: 'true'
+      HEALTH_CHECK_PORT: '8080'
+    secrets:
+      - db_password_server
+      - source: postgres_password
+        target: DB_PASSWORD_ADMIN
+      - alga_auth_key
+      - nextauth_secret
+      - redis_password
+      - crypto_key
+      - credential_encryption_key
+    volumes:
+      - email_test_tenant_secrets:/data/secrets
+      - files_data:/data/files
+    networks:
+      - app-network
+    depends_on:
+      temporal-dev:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+
+# Provider clients cannot fall back to live vendor endpoints. Only test-ingress
+# has a routable network; it forwards published ports to fixed internal targets.
+networks:
+  app-network:
+    internal: true
+  test-ingress-network: {}
+
+volumes:
+  email_test_tenant_secrets:

@@ -6,6 +6,7 @@ import type {
   ForEachBlock,
   TryCatchBlock,
 } from '@alga-psa/workflows/runtime/client';
+import { WORKFLOW_CAUGHT_ERROR_FIELDS, WORKFLOW_CAUGHT_ERROR_SCHEMA } from '@alga-psa/workflows/authoring';
 import {
   isWorkflowAiInferAction,
   resolveWorkflowAiSchemaFromConfig,
@@ -86,12 +87,14 @@ export type DataContext = {
     itemVar: string;
     indexVar: string;
     itemType?: string;
+    /** The loop's items expression, used to preview with its first item. */
+    itemsExpr?: string;
   };
   inCatchBlock?: boolean;
 };
 
 type BlockContext = {
-  forEach?: { itemVar: string; indexVar: string; itemType?: string };
+  forEach?: { itemVar: string; indexVar: string; itemType?: string; itemsExpr?: string };
   inCatchBlock?: boolean;
 };
 
@@ -104,15 +107,10 @@ const metaGlobalSchema: JsonSchema = {
   }
 };
 
-const errorGlobalSchema: JsonSchema = {
-  type: 'object',
-  properties: {
-    name: { type: 'string', description: 'Error name' },
-    message: { type: 'string', description: 'Error message' },
-    stack: { type: 'string', description: 'Stack trace' },
-    nodePath: { type: 'string', description: 'Error location in workflow' }
-  }
-};
+const errorGlobalSchema = WORKFLOW_CAUGHT_ERROR_SCHEMA as unknown as JsonSchema;
+
+/** Label for the caught error in step-result lists (shown as the source of vars.<captureErrorAs>). */
+export const CAUGHT_ERROR_STEP_NAME = 'Error caught by this Try/Catch';
 
 const resolveSchema = (schema: JsonSchema, root?: JsonSchema, seenRefs = new Set<string>()): JsonSchema => {
   const rootSchema = root ?? schema;
@@ -383,12 +381,13 @@ export const buildDataContext = (
         { name: 'traceId', type: 'string', required: false, nullable: true, description: 'Trace ID' },
         { name: 'tags', type: 'object', required: false, nullable: true, description: 'Workflow tags' }
       ],
-      error: [
-        { name: 'name', type: 'string', required: false, nullable: true, description: 'Error name' },
-        { name: 'message', type: 'string', required: false, nullable: true, description: 'Error message' },
-        { name: 'stack', type: 'string', required: false, nullable: true, description: 'Stack trace' },
-        { name: 'nodePath', type: 'string', required: false, nullable: true, description: 'Error location' }
-      ]
+      error: WORKFLOW_CAUGHT_ERROR_FIELDS.map((field) => ({
+        name: field.name,
+        type: field.type,
+        required: field.alwaysPresent,
+        nullable: !field.alwaysPresent,
+        description: field.description,
+      }))
     }
   };
 
@@ -416,7 +415,7 @@ export const buildDataContext = (
     if (!rootName) return;
 
     const nodeStep = step as NodeStep;
-    const defaultName = step.type === 'transform.assign' ? 'Assign' : step.type;
+    const defaultName = step.type === 'transform.assign' ? 'Set variables' : step.type;
     const stepName = nodeStep.name || defaultName;
 
     const existing = assignedVars.get(rootName) ?? {
@@ -603,6 +602,39 @@ export const buildDataContext = (
     return fallbackOutputSchema;
   };
 
+  // Reachability: which earlier results a step can read. This walk is the one place it's decided;
+  // the reference model, Insert field, the value-source chooser, condition fields and suggestions
+  // all read the context it builds.
+  type ReachableSnapshot = {
+    stepCount: number;
+    assigned: Map<string, { lastStepId: string; lastStepName: string; nestedPaths: string[][] }>;
+  };
+  const cloneAssigned = () =>
+    new Map(Array.from(assignedVars.entries()).map(([key, value]) => [key, { ...value, nestedPaths: [...value.nestedPaths] }]));
+  const snapshotReachable = (): ReachableSnapshot => ({ stepCount: context.steps.length, assigned: cloneAssigned() });
+  const takeResultsSince = (snapshot: ReachableSnapshot) => ({
+    steps: context.steps.slice(snapshot.stepCount),
+    assigned: cloneAssigned(),
+  });
+  const restoreReachable = (snapshot: ReachableSnapshot) => {
+    context.steps.splice(snapshot.stepCount);
+    assignedVars.clear();
+    for (const [key, value] of snapshot.assigned) assignedVars.set(key, value);
+  };
+  const mergeResults = (snapshot: ReachableSnapshot, branch: ReturnType<typeof takeResultsSince>) => {
+    const laterSteps = context.steps.splice(snapshot.stepCount);
+    context.steps.push(...branch.steps, ...laterSteps);
+    for (const [key, value] of branch.assigned) {
+      const existing = assignedVars.get(key);
+      if (!existing) {
+        assignedVars.set(key, value);
+      } else {
+        const known = new Set(existing.nestedPaths.map((path) => path.join('.')));
+        existing.nestedPaths.push(...value.nestedPaths.filter((path) => !known.has(path.join('.'))));
+      }
+    }
+  };
+
   const walkSteps = (steps: Step[], stopAtId: string, blockCtx: BlockContext): BlockContext | null => {
     for (const step of steps) {
       if (step.id === stopAtId) {
@@ -670,31 +702,60 @@ export const buildDataContext = (
 
       if (step.type === 'control.if') {
         const ifBlock = step as IfBlock;
+        const beforeBranches = snapshotReachable();
         const found = walkSteps(ifBlock.then, stopAtId, blockCtx);
         if (found) return found;
+        // Then and Else never both run: a step in Else can't read what Then saved.
+        const thenResults = takeResultsSince(beforeBranches);
+        restoreReachable(beforeBranches);
         if (ifBlock.else) {
           const foundElse = walkSteps(ifBlock.else, stopAtId, blockCtx);
           if (foundElse) return foundElse;
         }
+        // After the If, either branch's results may exist.
+        mergeResults(beforeBranches, thenResults);
       } else if (step.type === 'control.forEach') {
         const forEachBlock = step as ForEachBlock;
         const forEachCtx: BlockContext = {
           ...blockCtx,
           forEach: {
             itemVar: forEachBlock.itemVar,
-            indexVar: '$index',
-            itemType: 'any'
+            // The runtime exposes the loop position as the bare local `index` (also `local.index`).
+            indexVar: 'index',
+            itemType: 'any',
+            itemsExpr: forEachBlock.items?.$expr,
           }
         };
+        const stepCountBeforeBody = context.steps.length;
         const found = walkSteps(forEachBlock.body, stopAtId, forEachCtx);
         if (found) return found;
+        // Results saved inside the loop body only hold the last item's result once the loop ends,
+        // so steps after the loop aren't offered them.
+        context.steps.splice(stepCountBeforeBody);
       } else if (step.type === 'control.tryCatch') {
         const tryCatchBlock = step as TryCatchBlock;
         const foundTry = walkSteps(tryCatchBlock.try, stopAtId, blockCtx);
         if (foundTry) return foundTry;
         const catchCtx: BlockContext = { ...blockCtx, inCatchBlock: true };
+        // Inside the Catch, the runtime binds the caught error to `error` and, when named, to
+        // vars.<captureErrorAs>; list the named one first so it's the obvious choice there.
+        const captureAs = tryCatchBlock.captureErrorAs?.trim();
+        const captureEntry = captureAs
+          ? {
+              stepId: `${tryCatchBlock.id}:caught-error`,
+              stepName: CAUGHT_ERROR_STEP_NAME,
+              saveAs: captureAs,
+              outputSchema: errorGlobalSchema,
+              fields: extractSchemaFields(errorGlobalSchema, errorGlobalSchema),
+            }
+          : null;
+        if (captureEntry) context.steps.unshift(captureEntry);
         const foundCatch = walkSteps(tryCatchBlock.catch, stopAtId, catchCtx);
         if (foundCatch) return foundCatch;
+        // After the Catch the named error is only set when the Try failed, so it isn't offered there.
+        if (captureEntry) {
+          context.steps.splice(context.steps.indexOf(captureEntry), 1);
+        }
       }
     }
     return null;

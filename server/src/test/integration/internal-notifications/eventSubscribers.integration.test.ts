@@ -117,6 +117,7 @@ vi.mock('@alga-psa/shared/services/email/inboundEmailConsumerDedupe', () => ({
     'TICKET_ASSIGNED',
     'TICKET_UPDATED',
     'TICKET_CLOSED',
+    'TICKET_STATUS_CHANGED',
     'TICKET_COMMENT_ADDED',
   ]),
   reserveInboundOutboxEventForConsumer: reserveInboundOutboxEventForConsumerMock,
@@ -227,17 +228,23 @@ function createConnectionStub(responses: Record<string, any | any[]>) {
 
 // Mirrors the subscription list in internalNotificationSubscriber's
 // registerInternalNotificationSubscriber (additional-agent split 81a4a60b09,
-// appointment requests a58b44ab3e, comment-update events 65c688f47a).
+// appointment requests a58b44ab3e, comment-update events 65c688f47a,
+// calendar sharing 2df11875a8).
 const expectedEventTypes = [
   'TICKET_CREATED',
   'TICKET_ASSIGNED',
   'TICKET_ADDITIONAL_AGENT_ASSIGNED',
   'TICKET_UPDATED',
   'TICKET_CLOSED',
+  'TICKET_STATUS_CHANGED',
   'TICKET_COMMENT_ADDED',
   'TICKET_COMMENT_UPDATED',
   'TASK_COMMENT_ADDED',
   'TASK_COMMENT_UPDATED',
+  // Co-managed task-comment notifications: handled in
+  // internalNotificationSubscriber.ts, which branches on this event type and
+  // persists cross-organization task-comment notifications.
+  'PROJECT_TASK_COMMENT_CREATED',
   'PROJECT_CREATED',
   'PROJECT_ASSIGNED',
   'PROJECT_TASK_ASSIGNED',
@@ -251,7 +258,8 @@ const expectedEventTypes = [
   'APPOINTMENT_REQUEST_CREATED',
   'APPOINTMENT_REQUEST_APPROVED',
   'APPOINTMENT_REQUEST_DECLINED',
-  'APPOINTMENT_REQUEST_CANCELLED'
+  'APPOINTMENT_REQUEST_CANCELLED',
+  'CALENDAR_SHARE_GRANTED'
 ];
 
 let registerInternalNotificationSubscriber: typeof import('server/src/lib/eventBus/subscribers/internalNotificationSubscriber').registerInternalNotificationSubscriber;
@@ -526,6 +534,57 @@ describe('internal notification event handling', () => {
     expect(getCallByTemplate('ticket-created-client')?.user_id).toBe(contactUserId);
 
     await unregisterInternalNotificationSubscriber();
+  });
+
+  const publishSuppressedTicketCreated = async (suppression: Record<string, boolean>) => {
+    await registerInternalNotificationSubscriber();
+
+    const tenantId = uuidv4();
+    const ticketId = uuidv4();
+    const assignedUserId = uuidv4();
+    const contactUserId = uuidv4();
+
+    const knexStub = createConnectionStub({
+      'tickets as t': [
+        {
+          ticket_id: ticketId,
+          ticket_number: 'T-510',
+          title: 'Suppression check',
+          assigned_to: assignedUserId,
+          contact_name_id: uuidv4(),
+          client_id: 'client-1',
+          client_name: 'Acme Inc'
+        }
+      ],
+      users: [{ user_id: contactUserId, user_type: 'client' }]
+    });
+    getConnectionMock.mockResolvedValue(knexStub);
+    createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
+    createNotificationFromTemplateInternalMock.mockClear();
+
+    await eventBus.publish({
+      id: uuidv4(),
+      eventType: 'TICKET_CREATED' as const,
+      timestamp: new Date().toISOString(),
+      payload: { tenantId, ticketId, userId: uuidv4(), ...suppression }
+    }, { channel: 'internal-notifications' });
+
+    await unregisterInternalNotificationSubscriber();
+    return { assignedUserId, contactUserId };
+  };
+
+  it('TICKET_CREATED with suppressInternalNotifications skips the assignee but still notifies the portal contact', async () => {
+    const { contactUserId } = await publishSuppressedTicketCreated({ suppressInternalNotifications: true });
+
+    expect(getCallByTemplate('ticket-created')).toBeUndefined();
+    expect(getCallByTemplate('ticket-created-client')?.user_id).toBe(contactUserId);
+  });
+
+  it('TICKET_CREATED with suppressContactNotifications notifies the assignee but not the portal contact', async () => {
+    const { assignedUserId } = await publishSuppressedTicketCreated({ suppressContactNotifications: true });
+
+    expect(getCallByTemplate('ticket-created')?.user_id).toBe(assignedUserId);
+    expect(getCallByTemplate('ticket-created-client')).toBeUndefined();
   });
 
   it('skips a second delivery of the same inbound outbox event id (consumer idempotency gate)', async () => {

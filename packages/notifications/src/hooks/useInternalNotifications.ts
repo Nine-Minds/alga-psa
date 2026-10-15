@@ -6,19 +6,35 @@ import { HocuspocusProvider } from '@hocuspocus/provider';
 import { useActionPolling } from '@alga-psa/ui/hooks';
 import type { InternalNotification } from '../types/internalNotification';
 import { getNotificationsAction, markAsReadAction, markAllAsReadAction } from '../actions/internal-notification-actions/internalNotificationActions';
+import { reduceIncomingCall, type IncomingCallEntry } from './incomingCall';
 
-function getHocuspocusUrl(): string | null {
+// Choose the Hocuspocus URL from the build environment, never the hostname, so a
+// dev server reached over a LAN/tailnet address still targets the configured
+// local Hocuspocus instance instead of deriving a same-origin URL.
+// Development: NEXT_PUBLIC_HOCUSPOCUS_URL, defaulting to ws://localhost:1234.
+// Production: NEXT_PUBLIC_HOCUSPOCUS_URL, otherwise ws(s)://{host}/hocuspocus.
+export function getHocuspocusUrl(): string | null {
   const configured = process.env.NEXT_PUBLIC_HOCUSPOCUS_URL;
-  if (typeof window === 'undefined') return configured || null;
+  if (process.env.NODE_ENV !== 'production') return configured || 'ws://localhost:1234';
+  if (configured) return configured;
+  // This hook can be rendered on the server as part of Client Component SSR.
+  // The connection is only opened from a client effect, so the SSR fallback is
+  // never baked into the HTML.
+  if (typeof window === 'undefined') return null;
   const { protocol, host } = window.location;
-  return !host.includes('localhost') ? `${protocol === 'https:' ? 'wss:' : 'ws:'}//${host}/hocuspocus` : configured || null;
+  return `${protocol === 'https:' ? 'wss:' : 'ws:'}//${host}/hocuspocus`;
 }
 
 interface UseInternalNotificationsOptions { tenant: string; userId: string; limit?: number; enablePolling?: boolean }
 interface UseInternalNotificationsReturn {
+  // `highUnreadCount` is the unread count of `high`-priority notifications, for
+  // the priority-aware bell badge.
   notifications: InternalNotification[]; unreadCount: number; highUnreadCount: number;
   isConnected: boolean; isLoading: boolean; error: string | null;
   markAsRead: (notificationId: string) => Promise<void>; markAllAsRead: () => Promise<void>; refresh: () => Promise<void>;
+  /** Latest ringing call for this user, until connected/ended, dismiss, or expiry. */
+  incomingCall: IncomingCallEntry | null;
+  dismissIncomingCall: () => void;
 }
 const EMPTY = { notifications: [] as InternalNotification[], unreadCount: 0, highUnreadCount: 0 };
 
@@ -33,6 +49,7 @@ export function useInternalNotifications(options: UseInternalNotificationsOption
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [incomingCall, setIncomingCall] = useState<IncomingCallEntry | null>(null);
 
   const fetchNotifications = useCallback(async () => {
     const id = ++requestId.current;
@@ -74,6 +91,8 @@ export function useInternalNotifications(options: UseInternalNotificationsOption
   useEffect(() => {
     const url = getHocuspocusUrl();
     setIsConnected(false);
+    // A ring belongs to one identity's socket; never let it outlive that socket.
+    setIncomingCall(null);
     if (!url || !tenant || !userId) return;
     let disposed = false, generation = 0, delay = 1000;
     let provider: HocuspocusProvider | undefined;
@@ -110,7 +129,17 @@ export function useInternalNotifications(options: UseInternalNotificationsOption
           onDisconnect: () => { if (!disposed && provider === next) { setIsConnected(false); schedule(delay); delay = Math.min(30000, delay * 2); } },
           onStateless: ({ payload }) => {
             if (disposed || provider !== next) return;
-            try { if (JSON.parse(payload)?.type === 'notifications.changed') void refresh(); } catch { /* Ignore malformed hints. */ }
+            let signal: { type?: string; entry?: unknown } | null = null;
+            try { signal = JSON.parse(payload); } catch { return; /* Ignore malformed hints. */ }
+            if (signal?.type === 'notifications.changed') { void refresh(); return; }
+            // The ring is transient UI state carried by the same per-connection
+            // filtered stateless channel. It is never merged into the inbox and
+            // never read back out of a document, so no later connection can
+            // replay it; reduceIncomingCall still owns the fold (fresh ring
+            // shows, connected/ended clears).
+            if (signal?.type === 'telephony.incoming_call') {
+              setIncomingCall(current => reduceIncomingCall(current, signal!.entry));
+            }
           },
         });
         provider = next;
@@ -133,7 +162,9 @@ export function useInternalNotifications(options: UseInternalNotificationsOption
     await markAllAsReadAction(tenant, userId); await refresh();
   }, [tenant, userId, refresh]);
 
+  const dismissIncomingCall = useCallback(() => setIncomingCall(null), []);
+
   const visible = inbox.scope === scope ? inbox : EMPTY;
   return { notifications: visible.notifications, unreadCount: visible.unreadCount, highUnreadCount: visible.highUnreadCount,
-    isConnected, isLoading, error, markAsRead, markAllAsRead, refresh };
+    isConnected, isLoading, error, markAsRead, markAllAsRead, refresh, incomingCall, dismissIncomingCall };
 }

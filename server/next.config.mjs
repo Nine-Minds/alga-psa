@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import fs from 'fs';
 import os from 'os';
+import { getAllowedDevOrigins } from './src/lib/http/devAllowedOrigins.mjs';
 // build-trigger: update to force CI rebuild
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -179,18 +180,58 @@ const hostParallelism = (os.availableParallelism?.() ?? os.cpus().length) || 8;
 const buildCpus = parsePositiveInt(process.env.NEXT_BUILD_CPUS) ?? Math.min(4, hostParallelism);
 const memoryBasedWorkersCount = truthyEnv(process.env.NEXT_BUILD_MEMORY_BASED_WORKERS_COUNT);
 
+const devAllowedOrigins = getAllowedDevOrigins();
+
+/**
+ * Next silently 403s /_next/* HMR, font and RSC requests from an origin it does
+ * not recognise. The page still returns 200 to curl, so a curl-only check
+ * passes while the browser hangs at "Loading translations...". Serving a dev
+ * server on a LAN/tailnet address without listing it is therefore a
+ * configuration error we can detect, and the only way a reviewer finds out
+ * otherwise is a blank page.
+ *
+ * Only non-loopback hosts are checked: a plain `next dev` on localhost needs no
+ * DEV_ALLOWED_ORIGINS and must keep working untouched.
+ */
+function assertDevOriginsCoverAdvertisedHost() {
+  if (process.env.NODE_ENV === 'production') return;
+
+  const advertised = [process.env.HOST, process.env.NEXTAUTH_URL]
+    .filter(Boolean)
+    .map((value) => {
+      try {
+        return new URL(value.includes('://') ? value : `http://${value}`).hostname;
+      } catch {
+        return null;
+      }
+    })
+    .filter((hostname) => hostname && !['localhost', '127.0.0.1', '::1', '0.0.0.0'].includes(hostname));
+
+  const uncovered = [...new Set(advertised)].filter((hostname) => !devAllowedOrigins.includes(hostname));
+  if (uncovered.length === 0) return;
+
+  throw new Error(
+    `This dev server advertises itself at ${uncovered.join(', ')} but DEV_ALLOWED_ORIGINS=` +
+      `"${process.env.DEV_ALLOWED_ORIGINS ?? ''}" does not list ${uncovered.length > 1 ? 'those hosts' : 'that host'}. ` +
+      'Next would 403 every /_next/* HMR, font and RSC request from a browser on that address and the page would ' +
+      'stall at "Loading translations..." while curl still returned 200. ' +
+      `Set DEV_ALLOWED_ORIGINS=${uncovered.join(',')} (see scripts/dev/run-co-managed-dev-server.sh).`,
+  );
+}
+
+assertDevOriginsCoverAdvertisedHost();
+
 const nextConfig = {
-  // Permit isolated dev/test servers to coexist with the normal worktree server.
-  // Production and ordinary development retain Next's default `.next` directory.
+  // Keep development output out of the production `.next` directory. A build
+  // can clear `.next` while the board-managed dev server is running; separating
+  // the outputs prevents its route manifests and compiled pages from diverging.
+  // Isolated dev/test servers may override this with their own directory.
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   // Dev-only (ignored in production builds): Next blocks /_next/* asset, HMR,
   // and RSC requests from origins it does not recognize, which stalls
   // hydration when a phone/tablet loads the dev server by LAN IP.
   // Comma-separated hostnames, e.g. DEV_ALLOWED_ORIGINS=192.168.1.20,my-mac.local
-  allowedDevOrigins: (process.env.DEV_ALLOWED_ORIGINS ?? '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean),
+  allowedDevOrigins: devAllowedOrigins,
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || appVersion,
     // Propagate edition to client-side code
@@ -228,7 +269,7 @@ const nextConfig = {
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
-        : '../packages/ee/src/components/auth/SsoProviderButtons.tsx',
+        : '../packages/auth/src/components/SsoProviderButtons.tsx',
       // Notifications package
       '@alga-psa/notifications': '../packages/notifications/src',
       '@alga-psa/notifications/': '../packages/notifications/src/',
@@ -263,6 +304,8 @@ const nextConfig = {
       '@alga-psa/ee-calendar/': '../ee/packages/calendar/src/',
       '@alga-psa/ee-microsoft-teams': isEE ? '../ee/packages/microsoft-teams/src/index.ts' : '../packages/ee/src/index.ts',
       '@alga-psa/ee-microsoft-teams/': isEE ? '../ee/packages/microsoft-teams/src/' : '../packages/ee/src/',
+      '@alga-psa/ee-threecx': isEE ? '../ee/packages/threecx/src/index.ts' : '../packages/ee/src/index.ts',
+      '@alga-psa/ee-threecx/': isEE ? '../ee/packages/threecx/src/' : '../packages/ee/src/',
       '@alga-psa/ee-stubs': isEE ? '../ee/server/src' : '../packages/ee/src',
       '@alga-psa/ee-stubs/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       '@alga-psa/tags': '../packages/tags/src',
@@ -276,6 +319,10 @@ const nextConfig = {
       '@alga-psa/teams/': '../packages/teams/src/',
       '@alga-psa/telephony': '../packages/telephony/src',
       '@alga-psa/telephony/': '../packages/telephony/src/',
+      '@alga-psa/marketing': '../packages/marketing/src',
+      '@alga-psa/marketing/': '../packages/marketing/src/',
+      '@alga-psa/opportunities': '../packages/opportunities/src',
+      '@alga-psa/opportunities/': '../packages/opportunities/src/',
       '@alga-psa/tenancy': '../packages/tenancy/src',
       '@alga-psa/tenancy/': '../packages/tenancy/src/',
       '@alga-psa/event-schemas': '../packages/event-schemas/src',
@@ -339,6 +386,11 @@ const nextConfig = {
       '@alga-psa/db/models/tenant': '../packages/db/src/models/tenant.ts',
       '@alga-psa/db/models/UserSession': '../packages/db/src/models/UserSession.ts',
       // Surveys package
+      '@alga-psa/list-views': '../packages/list-views/src',
+      '@alga-psa/list-views/': '../packages/list-views/src/',
+      '@alga-psa/list-views/actions': '../packages/list-views/src/actions/index.ts',
+      '@alga-psa/list-views/components': '../packages/list-views/src/components/index.ts',
+      '@alga-psa/list-views/hooks': '../packages/list-views/src/hooks/index.ts',
       '@alga-psa/surveys': '../packages/surveys/src',
       '@alga-psa/surveys/': '../packages/surveys/src/',
       '@alga-psa/surveys/actions': '../packages/surveys/src/actions/index.ts',
@@ -501,6 +553,7 @@ const nextConfig = {
     '@alga-psa/user-composition',
     '@alga-psa/user-activities',
     '@alga-psa/projects',
+    '@alga-psa/list-views',
     '@alga-psa/surveys',
     '@alga-psa/tickets',
     // Product feature packages (only those needed in this app)
@@ -536,14 +589,26 @@ const nextConfig = {
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
   webpack: (config, { isServer, dev }) => {
+    if (dev && isServer) {
+      // Named action-entry IDs embed the entire loader query. Repeating those
+      // IDs for every action made the dev manifest exceed V8's string limit
+      // when billing compiled. Compact IDs retain all actions and source maps.
+      config.optimization = { ...config.optimization, moduleIds: 'deterministic' };
+    }
     // Filesystem cache: persists across builds (even after `rm -rf .next`)
     // so the second cold build reuses module compilation work. Stored under
     // node_modules/.cache/webpack so it survives `.next` clears.
+    // Keep Next's cache version and dev memory policy. Replacing this object
+    // discarded maxMemoryGenerations: 0 (Next manages its own memory cache)
+    // and the version metadata that invalidates incompatible cached builds.
+    const nextCache = typeof config.cache === 'object' && config.cache !== null ? config.cache : {};
     config.cache = {
+      ...nextCache,
       type: 'filesystem',
       cacheDirectory: path.join(__dirname, 'node_modules/.cache/webpack'),
       buildDependencies: {
-        config: [__filename],
+        ...nextCache.buildDependencies,
+        config: [...new Set([...(nextCache.buildDependencies?.config ?? []), __filename])],
       },
       // Snapshot all node_modules as immutable by mtime — avoids hash-stat on
       // every file (huge in this monorepo).
@@ -614,6 +679,10 @@ const nextConfig = {
       '@alga-psa/tags/': `${prebuiltDirAbs('tags')}/`,
       '@alga-psa/telephony': prebuiltDirAbs('telephony'),
       '@alga-psa/telephony/': `${prebuiltDirAbs('telephony')}/`,
+      '@alga-psa/marketing': prebuiltDirAbs('marketing'),
+      '@alga-psa/marketing/': `${prebuiltDirAbs('marketing')}/`,
+      '@alga-psa/opportunities': prebuiltDirAbs('opportunities'),
+      '@alga-psa/opportunities/': `${prebuiltDirAbs('opportunities')}/`,
       // Source-transpiled packages
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
       // @alga-psa/jobs + /search: source-transpiled. jobs' export names do NOT
@@ -641,8 +710,12 @@ const nextConfig = {
       '@alga-psa/ee-microsoft-teams': isEE
         ? path.join(__dirname, '../ee/packages/microsoft-teams/src')
         : path.join(__dirname, '../packages/ee/src'),
+      '@alga-psa/ee-threecx': isEE
+        ? path.join(__dirname, '../ee/packages/threecx/src')
+        : path.join(__dirname, '../packages/ee/src'),
       '@alga-psa/users': path.join(__dirname, '../packages/users/src'),
       '@alga-psa/teams': path.join(__dirname, '../packages/teams/src'),
+      '@alga-psa/list-views': path.join(__dirname, '../packages/list-views/src'),
       '@alga-psa/surveys': path.join(__dirname, '../packages/surveys/src'),
       '@alga-psa/client-portal': path.join(__dirname, '../packages/client-portal/src'),
       '@alga-psa/portal-shared': path.join(__dirname, '../packages/portal-shared/src'),
@@ -687,7 +760,7 @@ const nextConfig = {
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
-        : path.join(__dirname, '../packages/ee/src/components/auth/SsoProviderButtons.tsx'),
+        : path.join(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx'),
       '@alga-psa/ee-stubs': isEE
         ? path.join(__dirname, '../ee/server/src')
         : path.join(__dirname, '../packages/ee/src'),
@@ -1271,6 +1344,9 @@ const nextConfig = {
     'handlebars',
     'jsdom',
     'monaco-editor',
+    // The SDK generator transpiles with the compiler API at runtime; keep it
+    // on disk so `ts.sys` can still read the default lib .d.ts files.
+    'typescript',
     '@js-temporal/polyfill',
     'pdfkit',
     'sharp',

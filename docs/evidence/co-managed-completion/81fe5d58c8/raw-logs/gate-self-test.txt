@@ -1,0 +1,58 @@
+# CF030 / CT026 — the gate's own self-test, run at the final candidate
+# Collected 2026-09-21T01:40:59Z
+
+## node --test scripts/tests/co-managed-completion.test.mjs
+  duration_ms: 0.198622
+  type: 'test'
+  ...
+1..64
+# tests 64
+# suites 0
+# pass 64
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 51.646064
+
+## node scripts/verify-co-managed-completion.mjs (against the committed manifest)
+  - T19: implemented-unverified — not accepted on this candidate
+  - T20: implemented-unverified — not accepted on this candidate
+  - T21: implemented-unverified — not accepted on this candidate
+  - T22: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F001: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F002: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F003: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F004: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F005: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F006: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F007: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F008: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F009: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F010: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F011: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F012: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F013: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F014: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F015: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F016: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F017: implemented-unverified — not accepted on this candidate
+  - clientIntegration:F018: implemented-unverified — not accepted on this candidate
+  … and 156 more
+
+humanReviewReady: false
+  - manifest candidate 353786ce91 is not the current HEAD 14a266bb91 (8 file(s) changed outside docs/evidence/co-managed-completion/81fe5d58c8)
+  - implementationReady is false
+  - running app revision missing is not the candidate
+  - running worker revision missing is not the candidate
+  - review environment is not recorded stable
+  - review environment observation is shorter than the required 30 minutes
+  - review environment healed an unrecorded number of times
+
+productionReady: false
+  - manifest candidate 353786ce91 is not the current HEAD 14a266bb91 (8 file(s) changed outside docs/evidence/co-managed-completion/81fe5d58c8)
+  - humanReviewReady is false
+  - stripe-recurring-1149: not accepted by the release owner
+  - external-license-issuance: not accepted by the release owner
+  - microsoft-real-application: not accepted by the release owner
+  - deployed-storage-and-migrations: not accepted by the release owner

@@ -1,5 +1,6 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
+import { INBOUND_MIME_PARSE_OPTIONS } from './inboundMimeParseOptions';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import type {
@@ -13,6 +14,10 @@ import {
   processInboundEmailInApp,
   type ProcessInboundEmailInAppDiagnostics,
 } from '@alga-psa/shared/services/email/processInboundEmailInApp';
+import {
+  recordImapOauthAuthRetry,
+  recordMessageOutcome,
+} from './inboundEmailMetrics';
 import { GmailAdapter } from '@alga-psa/shared/services/email/providers/GmailAdapter';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { resolveInboundHeaders } from '@alga-psa/shared/lib/email/inboundHeaderBag';
@@ -435,7 +440,7 @@ export async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQu
   await assertMicrosoftMessageInMonitoredFolders(adapter, job.pointer.messageId, config.provider_config?.folder_filters);
 
   const parsed: any = await withTimeout(
-    simpleParser(rawMimeBuffer),
+    simpleParser(rawMimeBuffer, INBOUND_MIME_PARSE_OPTIONS),
     parseTimeoutMs,
     'microsoft_mime_parse'
   );
@@ -614,7 +619,7 @@ export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJo
           ? fetched.source
           : Buffer.from(fetched.source);
         const parsed: any = await withTimeout(
-          simpleParser(rawMimeBuffer),
+          simpleParser(rawMimeBuffer, INBOUND_MIME_PARSE_OPTIONS),
           parseTimeoutMs,
           'imap_mime_parse'
         );
@@ -644,6 +649,7 @@ export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJo
           message: error?.message || String(error),
           code: error?.code || null,
         });
+        recordImapOauthAuthRetry();
         accessToken = await refreshImapAccessToken({
           provider,
           db,
@@ -861,6 +867,11 @@ export async function processUnifiedInboundEmailQueueJob(
       provider: job.provider,
       reason: gateReason,
     });
+    recordMessageOutcome({
+      providerType: job.provider,
+      outcome: 'skipped',
+      reason: `provider_${gateReason}`,
+    });
     return {
       outcome: 'skipped',
       processedCount: 0,
@@ -915,6 +926,11 @@ export async function processUnifiedInboundEmailQueueJob(
           }),
         });
       }
+      recordMessageOutcome({
+        providerType: job.provider,
+        outcome: 'skipped',
+        reason: `source_unavailable:${error.reason}`,
+      });
       return {
         outcome: 'skipped',
         processedCount: 0,
@@ -979,6 +995,11 @@ export async function processUnifiedInboundEmailQueueJob(
   }
 
   if (payloads.length === 0) {
+    recordMessageOutcome({
+      providerType: job.provider,
+      outcome: 'skipped',
+      reason: 'no_messages_from_pointer',
+    });
     return {
       outcome: 'skipped',
       processedCount: 0,
@@ -1006,6 +1027,11 @@ export async function processUnifiedInboundEmailQueueJob(
     });
     if (!inserted) {
       dedupedCount += 1;
+      recordMessageOutcome({
+        providerType: job.provider,
+        outcome: 'deduped',
+        reason: 'processing_record_exists',
+      });
       continue;
     }
 
@@ -1038,7 +1064,14 @@ export async function processUnifiedInboundEmailQueueJob(
         }),
       });
       processedCount += 1;
+      // LEVERAGE: pattern inbound-message-outcome-metric — same shape in inboundEmailCoreProcessor.ts
+      recordMessageOutcome({
+        providerType: job.provider,
+        outcome: result.outcome,
+        reason: 'reason' in result ? result.reason : undefined,
+      });
     } catch (error: any) {
+      recordMessageOutcome({ providerType: job.provider, outcome: 'failed', reason: 'error' });
       await updateProcessingRecord({
         job,
         externalIdentity,

@@ -6,7 +6,7 @@ import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfa
 import type { IEventPublisher } from '@alga-psa/types';
 import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailWorkflowActions';
 import { createHash, randomUUID } from 'node:crypto';
-import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
+import { ticketStatusClockPatch } from '../../lib/ticketStatusClock';
 import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
 import {
   detectAutomatedInboundMessage,
@@ -17,10 +17,11 @@ import {
   checkInboundReopenRateLimit,
   type InboundReopenRateLimitResult,
 } from './inboundReopenRateLimiter';
+import { processInboundEmailArtifactsBestEffort } from './processInboundEmailArtifacts';
 import {
-  processInboundEmailArtifactsBestEffort,
-  type ProcessInboundEmailArtifactsResult,
-} from './processInboundEmailArtifacts';
+  applyEmbeddedImageUrlMappingsToStoredBodies,
+  blocksFromEmailBody,
+} from './inboundEmbeddedImageUrlRewrite';
 import {
   buildInboundWatchListRecipients,
   getActiveWatchListEmails,
@@ -28,12 +29,20 @@ import {
   setTicketWatchListOnAttributes,
   type TicketWatchListRecipientInput,
 } from '../../lib/tickets/watchList';
+import { getTicketOneOffRecipients } from '../../lib/tickets/commentEmailRecipients';
 import {
   resolveInboundReplyAcknowledgementDecider,
   type InboundReplyAckDeciderResult,
 } from './inboundReplyAcknowledgementDecider';
 import { evaluateInboundEmailRules } from './inboundEmailRules';
 import { normalizeRfc822MessageId } from './inboundEmailIdentity';
+import { captureTicketTransitionSnapshot, publishTicketTransitionsAfterCommit } from '../../lib/tickets/ticketLifecycleEvents';
+import { withTenantAdminTransaction } from './tenantAdminTransaction';
+import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
+import {
+  detectOutboundNotificationLoop,
+  type NotificationLoopDetectionResult,
+} from './notificationLoopDetection';
 import {
   allowsContactSenderAttribution,
   allowsInternalSenderAttribution,
@@ -94,11 +103,16 @@ export interface ProcessInboundEmailInAppOptions {
     eventPublishers?: {
       ticket?: IEventPublisher;
       comment?: IEventPublisher;
+      contact?: IEventPublisher;
     };
   };
 }
 
 export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unknown> {
+  senderResolution?: {
+    autoCreatedContactId: string | null;
+    autoCreateSkipReason: 'auto_create_disabled' | 'auth_not_aligned' | 'automated' | 'provider_mailbox' | 'exists_elsewhere' | 'client_inactive' | 'error' | null;
+  };
   parser: {
     confidence: number | null;
     strategy: string | null;
@@ -140,12 +154,20 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
       | 'invalid_email_data'
       | 'missing_defaults'
       | 'self_notification'
+      | 'notification_loop'
       | 'rule_skip'
       | 'new_ticket_created'
       | 'deduped'
       | 'quarantined'
       | null;
   };
+  /**
+   * Present only when `outcome.reason === 'notification_loop'`: the composite
+   * evidence that decided this was our own outbound notification looping back
+   * through a different connected mailbox, not genuine correspondence. See
+   * `notificationLoopDetection.ts` for what each field means.
+   */
+  notificationLoop?: NotificationLoopDetectionResult;
   outcome?: {
     kind: 'skipped' | 'deduped' | 'replied' | 'created' | 'quarantined';
     matchedBy?: 'reply_token' | 'thread_headers' | 'correspondent' | 'manual_review';
@@ -153,7 +175,7 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
     ticketNumber?: string;
     commentId?: string;
     dedupeKey?: string;
-    reason?: 'missing_defaults' | 'invalid_email_data' | 'self_notification' | 'rule_skip';
+    reason?: 'missing_defaults' | 'invalid_email_data' | 'self_notification' | 'notification_loop' | 'rule_skip';
     rule?: { ruleId: string; ruleName: string };
   };
 }
@@ -161,7 +183,7 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
 type ProcessInboundEmailInAppBaseResult =
   | {
       outcome: 'skipped';
-      reason: 'missing_defaults' | 'invalid_email_data' | 'self_notification' | 'rule_skip';
+      reason: 'missing_defaults' | 'invalid_email_data' | 'self_notification' | 'notification_loop' | 'rule_skip';
       rule?: { ruleId: string; ruleName: string };
     }
   | {
@@ -414,15 +436,6 @@ function toIsoOrNull(value: unknown): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-async function withTenantAdminTransaction<T>(
-  tenantId: string,
-  callback: (trx: any, db: any) => Promise<T>,
-  existingConnection?: any
-): Promise<T> {
-  const { withAdminTransaction, tenantDb } = await import('@alga-psa/db');
-  return withAdminTransaction(async (trx: any) => callback(trx, tenantDb(trx, tenantId)), existingConnection);
-}
-
 export function isClosedTicketBeyondReopenCutoff(params: {
   closedAt: string | null;
   receivedAt?: string;
@@ -440,6 +453,26 @@ export function isClosedTicketBeyondReopenCutoff(params: {
 
   const cutoffMs = params.cutoffHours * 60 * 60 * 1000;
   return (receivedAtMs - closedAtMs) > cutoffMs;
+}
+
+/**
+ * The addresses an agent Cc'd or Bcc'd on one of this ticket's comments. They
+ * were deliberately looped in for a single reply, so a reply from one of them
+ * is trusted but never promoted to the ticket watch list.
+ */
+async function loadTicketOneOffRecipients(tenantId: string, ticketId: string): Promise<Set<string>> {
+  try {
+    return await withTenantAdminTransaction(tenantId, async (trx: any) =>
+      getTicketOneOffRecipients(trx, tenantId, ticketId)
+    );
+  } catch (error) {
+    console.warn('processInboundEmailInApp: one-off recipient lookup failed (continuing)', {
+      tenantId,
+      ticketId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return new Set<string>();
+  }
 }
 
 export async function loadInboundReplyPolicyContext(params: {
@@ -553,6 +586,8 @@ export async function applyInboundReplyReopenTransition(params: {
   statusId: string;
   updatedByUserId?: string;
   existingConnection?: any;
+  /** Durable-path outbox publisher; the status event is enqueued in the same transaction. */
+  eventPublisher?: IEventPublisher;
 }): Promise<void> {
   const {
     writeTicketActivity,
@@ -569,11 +604,14 @@ export async function applyInboundReplyReopenTransition(params: {
       .select('status_id')
       .where({ ticket_id: params.ticketId })
       .first();
+    const beforeSnapshot = await captureTicketTransitionSnapshot(trx, params.tenantId, params.ticketId);
 
     await db.table('tickets')
       .where({ ticket_id: params.ticketId })
+      // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
       .update({
         status_id: params.statusId,
+        ...ticketStatusClockPatch(trx, params.statusId),
         is_closed: false,
         closed_at: null,
         closed_by: null,
@@ -602,6 +640,15 @@ export async function applyInboundReplyReopenTransition(params: {
         reopen_trigger: 'inbound_email_reply',
       },
     });
+
+    if (beforeSnapshot) {
+      await publishTicketTransitionsAfterCommit(trx, {
+        tenant: params.tenantId,
+        before: beforeSnapshot,
+        actorUserId: params.updatedByUserId,
+        publisher: params.eventPublisher,
+      });
+    }
   },
     params.existingConnection
   );
@@ -609,43 +656,6 @@ export async function applyInboundReplyReopenTransition(params: {
 
 function buildDedupeKey(input: ProcessInboundEmailInAppInput): string {
   return `inbound-email:${input.tenantId}:${input.providerId}:${input.emailData.id}`;
-}
-
-function blocksFallbackFromText(text: string) {
-  return [
-    {
-      type: 'paragraph',
-      content: [{ type: 'text', text, styles: {} }],
-    },
-  ];
-}
-
-async function blocksFromEmailBody(params: {
-  html?: string;
-  text?: string;
-}): Promise<unknown[]> {
-  const html = params.html?.trim();
-  const text = params.text?.trim();
-
-  if (html) {
-    try {
-      const blocks = await convertHtmlToBlockNote(html, { flattenTables: true });
-      return blocks.length ? blocks : blocksFallbackFromText(text ?? '');
-    } catch {
-      return blocksFallbackFromText(text ?? '');
-    }
-  }
-
-  if (text) {
-    try {
-      const blocks = convertMarkdownToBlocks(text);
-      return blocks.length ? blocks : blocksFallbackFromText(text);
-    } catch {
-      return blocksFallbackFromText(text);
-    }
-  }
-
-  return blocksFallbackFromText('');
 }
 
 /**
@@ -882,134 +892,6 @@ async function resolveReplyTargetFromProviderThreadId(params: {
     : null;
 }
 
-function normalizeEmbeddedContentId(value: string | undefined | null): string {
-  if (!value) return '';
-  return String(value).trim().replace(/^cid:/i, '').replace(/^<|>$/g, '').toLowerCase();
-}
-
-function rewriteEmbeddedImageSourcesInHtml(
-  html: string,
-  embeddedMappings: ProcessInboundEmailArtifactsResult['embeddedImageUrlMappings']
-): string {
-  if (!html || !embeddedMappings.length) return html;
-
-  const dataUrlMap = new Map<string, string>();
-  const cidMap = new Map<string, string>();
-
-  for (const mapping of embeddedMappings) {
-    if (mapping.source === 'data-url') {
-      dataUrlMap.set(mapping.reference, mapping.url);
-      continue;
-    }
-
-    if (mapping.source === 'cid') {
-      const normalized = normalizeEmbeddedContentId(mapping.reference);
-      if (normalized) {
-        cidMap.set(normalized, mapping.url);
-      }
-    }
-  }
-
-  let rewritten = html;
-
-  if (dataUrlMap.size > 0) {
-    rewritten = rewritten.replace(
-      /data:(image\/[a-z0-9.+-]+);base64,([^"'<>]+)/gim,
-      (fullMatch: string, contentType: string, base64: string) => {
-        const normalized = `data:${String(contentType).toLowerCase()};base64,${String(base64).replace(/\s+/g, '')}`;
-        return dataUrlMap.get(normalized) || fullMatch;
-      }
-    );
-  }
-
-  if (cidMap.size > 0) {
-    rewritten = rewritten.replace(/\bcid:([^"'<>\s)]+)/gim, (fullMatch: string, cid: string) => {
-      const normalized = normalizeEmbeddedContentId(cid);
-      return cidMap.get(normalized) || fullMatch;
-    });
-  }
-
-  return rewritten;
-}
-
-function preserveEmbeddedImageUrlBlocks(
-  blocks: unknown[],
-  embeddedMappings: ProcessInboundEmailArtifactsResult['embeddedImageUrlMappings']
-): unknown[] {
-  if (!embeddedMappings.length) {
-    return blocks;
-  }
-
-  const serializedBlocks = JSON.stringify(blocks);
-  const missingMappings = embeddedMappings.filter((mapping) => (
-    mapping.url && !serializedBlocks.includes(mapping.url)
-  ));
-
-  if (!missingMappings.length) {
-    return blocks;
-  }
-
-  return [
-    ...blocks,
-    ...missingMappings.map((mapping) => ({
-      type: 'image',
-      props: {
-        url: mapping.url,
-        name: mapping.fileId || mapping.documentId || 'embedded-image',
-        caption: '',
-      },
-    })),
-  ];
-}
-
-async function maybeRewriteCommentWithEmbeddedAttachmentUrls(args: {
-  tenantId: string;
-  commentId: string;
-  html?: string;
-  text?: string;
-  originalCommentContent: string;
-  artifactsResult?: ProcessInboundEmailArtifactsResult;
-}): Promise<void> {
-  const embeddedMappings = args.artifactsResult?.embeddedImageUrlMappings ?? [];
-  if (!args.html || embeddedMappings.length === 0) {
-    return;
-  }
-
-  const rewrittenHtml = rewriteEmbeddedImageSourcesInHtml(args.html, embeddedMappings);
-  if (!rewrittenHtml || rewrittenHtml === args.html) {
-    return;
-  }
-
-  const rewrittenBlocks = preserveEmbeddedImageUrlBlocks(
-    await blocksFromEmailBody({
-      html: rewrittenHtml,
-      text: args.text,
-    }),
-    embeddedMappings
-  );
-  const rewrittenContent = JSON.stringify(rewrittenBlocks);
-  if (rewrittenContent === args.originalCommentContent) {
-    return;
-  }
-
-  try {
-    await withTenantAdminTransaction(args.tenantId, async (_trx: any, db: any) => {
-      await db.table('comments as c')
-        .where('c.comment_id', args.commentId)
-        .update({
-          note: rewrittenContent,
-          updated_at: new Date(),
-        });
-    });
-  } catch (error) {
-    console.warn('processInboundEmailInApp: embedded image comment rewrite failed (continuing)', {
-      tenantId: args.tenantId,
-      commentId: args.commentId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-}
-
 export async function processInboundEmailInApp(
   input: ProcessInboundEmailInAppInput,
   options: ProcessInboundEmailInAppOptions = {}
@@ -1079,7 +961,8 @@ export async function processInboundEmailInApp(
     resolveInboundTicketDefaults,
     resolveEffectiveInboundTicketDefaults,
     findContactByEmail,
-    findClientIdByInboundEmailDomain,
+    findInboundEmailDomainMapping,
+    createContactForInboundSender,
     findValidClientPrimaryContactId,
     findEmailProviderMailboxAddress,
     upsertTicketWatchListRecipients,
@@ -1128,6 +1011,12 @@ export async function processInboundEmailInApp(
       return null;
     }
     if (allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite) return matched;
+    console.warn('processInboundEmailInApp: sender auth not aligned; discarding contact match', {
+      tenantId, providerId, emailId: emailData.id, senderEmail,
+      contactId: matched.contact_id ?? null,
+      contactClientId: matched.client_id ?? null,
+      authResults: senderAuthResults,
+    });
     return null;
   };
 
@@ -1170,6 +1059,55 @@ export async function processInboundEmailInApp(
         conversationToken,
       })
     : undefined;
+
+  // Cross-mailbox notification-loop guard: runs before the narrower
+  // single-mailbox self_notification heuristics below (and before any
+  // ticket/comment/watch-list mutation) because it is the most authoritative
+  // signal available — a tenant-scoped ledger correlation, not a sender-string
+  // heuristic. See notificationLoopDetection.ts for the full predicate and why
+  // it cannot fire on genuine replies (including replies that legitimately
+  // thread via In-Reply-To/References into our own outbound Message-ID, or
+  // that quote the same reply token).
+  let loopDetection: NotificationLoopDetectionResult | null = null;
+  try {
+    loopDetection = await detectOutboundNotificationLoop({
+      tenantId,
+      emailData,
+      senderEmail,
+      providerMailboxEmail,
+      conversationToken,
+    });
+  } catch (error) {
+    console.warn('processInboundEmailInApp: notification-loop detection failed (continuing)', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  if (diagnostics && loopDetection) {
+    // Attached whether or not it suppressed: "we checked and here's why we
+    // did/didn't" is useful forensic signal either way.
+    diagnostics.notificationLoop = loopDetection;
+  }
+
+  if (loopDetection?.isLoop) {
+    console.info('processInboundEmailInApp: skipping outbound-notification loop redelivery', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      senderEmail,
+      providerMailboxEmail,
+      tier: loopDetection.tier,
+      matchedEntityType: loopDetection.matchedEntityType,
+      matchedEntityId: loopDetection.matchedEntityId,
+    });
+    if (diagnostics) {
+      diagnostics.threading.failureReason = 'notification_loop';
+    }
+    return withDiagnostics({ outcome: 'skipped', reason: 'notification_loop' }, diagnostics);
+  }
 
   if (conversationToken && !hasNamedConversationReplyHint(emailData) && !hasSubstantiveReplyContent(parsedEmail, emailData)) {
     console.info('processInboundEmailInApp: skipping token-only inbound email with no reply content', {
@@ -1236,8 +1174,17 @@ export async function processInboundEmailInApp(
     authResults: senderAuthResults,
   });
 
-  const buildUnmatchedSenderWatchListRecipients = (matchedContactId?: string | null) => {
+  const buildUnmatchedSenderWatchListRecipients = (
+    matchedContactId?: string | null,
+    oneOffRecipients?: Set<string>
+  ) => {
     if (matchedContactId || !senderEmail || senderIsProviderMailbox) {
+      return [] as TicketWatchListRecipientInput[];
+    }
+
+    // A one-off Cc/Bcc recipient was looped in for a single comment. Replying
+    // must not turn them into a watcher that receives every later comment.
+    if (oneOffRecipients?.has(normalizeEmailAddress(senderEmail) ?? '')) {
       return [] as TicketWatchListRecipientInput[];
     }
 
@@ -1326,6 +1273,8 @@ export async function processInboundEmailInApp(
       }, diagnostics);
     }
 
+    const oneOffRecipients = await loadTicketOneOffRecipients(tenantId, params.ticketId);
+
     const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
     const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
     const blocks = await blocksFromEmailBody({
@@ -1371,8 +1320,18 @@ export async function processInboundEmailInApp(
       const senderIsActiveWatcher = Boolean(
         senderEmail && policyContext && getActiveWatchListEmails(policyContext.attributes).includes(senderEmail)
       );
+      // An agent explicitly Cc'd or Bcc'd this address on a comment of this
+      // ticket, so it is an allowed sender here exactly like an active watcher.
+      const senderIsOneOffRecipient = Boolean(
+        senderEmail && oneOffRecipients.has(normalizeEmailAddress(senderEmail) ?? '')
+      );
 
-      if (!senderIsTicketClientContact && !matchedSenderIsInternalUser && !senderIsActiveWatcher) {
+      if (
+        !senderIsTicketClientContact
+        && !matchedSenderIsInternalUser
+        && !senderIsActiveWatcher
+        && !senderIsOneOffRecipient
+      ) {
         // Keep this a structured security log rather than creating a ticket by default.
         // Operations can route this event through their log/audit pipeline without giving
         // an untrusted sender another ticket-creation side effect.
@@ -1389,6 +1348,7 @@ export async function processInboundEmailInApp(
             senderIsTicketClientContact,
             senderIsInternalUser: Boolean(matchedSenderIsInternalUser),
             senderIsActiveWatcher,
+            senderIsOneOffRecipient,
           },
           securityBoardTicketHookEnabled:
             process.env.INBOUND_THREAD_HEADER_QUARANTINE_CREATE_SECURITY_TICKET === 'true',
@@ -1544,6 +1504,7 @@ export async function processInboundEmailInApp(
           statusId: reopenTarget.statusId,
           updatedByUserId: matchedSenderIsInternalUser ? matchedSenderContact?.user_id : undefined,
           existingConnection: durableExecution?.trx,
+          eventPublisher: durableExecution?.eventPublishers?.comment ?? durableExecution?.eventPublishers?.ticket,
         });
         decisionMetadata.action = 'reopen';
         decisionMetadata.reopenTargetSource = reopenTarget.source;
@@ -1551,17 +1512,26 @@ export async function processInboundEmailInApp(
       }
     }
 
+    // Reply-all from the requester (or from a copied address) carries the
+    // one-off Cc list in its own To/Cc. Those addresses were loaned to a single
+    // comment, so they are excluded from the watch-list additions here. A
+    // genuinely new address on the reply is still picked up as before.
+    const withoutOneOffRecipients = (recipients: TicketWatchListRecipientInput[]) =>
+      recipients.filter(
+        (recipient) => !oneOffRecipients.has(normalizeEmailAddress(recipient.email) ?? '')
+      );
+    // A qualified (co-managed) reply never widens the watch list.
     const watchListRecipients = params.qualifiedReply ? [] : params.matchedBy === 'thread_headers'
-      ? buildInboundWatchListRecipients({
+      ? withoutOneOffRecipients(buildInboundWatchListRecipients({
           to: emailData.to,
           cc: emailData.cc,
           senderEmail: emailData.from?.email,
           providerMailboxEmail,
           requireMatchedContact: true,
-        })
+        }))
       : mergeTicketWatchListRecipients(
-          inboundWatchListRecipients,
-          buildUnmatchedSenderWatchListRecipients(matchedSenderContactId ?? null)
+          withoutOneOffRecipients(inboundWatchListRecipients),
+          buildUnmatchedSenderWatchListRecipients(matchedSenderContactId ?? null, oneOffRecipients)
         );
     const commentId = await createCommentFromEmail(
       {
@@ -1625,13 +1595,14 @@ export async function processInboundEmailInApp(
           && matchedSenderContact.client_id === policyContext.clientId
         ),
       });
-      await maybeRewriteCommentWithEmbeddedAttachmentUrls({
+      await applyEmbeddedImageUrlMappingsToStoredBodies({
         tenantId,
-        commentId,
         html: parsedHtml,
         text: parsedText,
-        originalCommentContent: serializedBlocks,
-        artifactsResult,
+        mappings: artifactsResult?.embeddedImageUrlMappings ?? [],
+        targets: [
+          { kind: 'comment', id: commentId, originalContent: serializedBlocks },
+        ],
       });
     }
 
@@ -1691,6 +1662,8 @@ export async function processInboundEmailInApp(
   }
 
   const ruleAssignedClientId = ruleOutcome.kind === 'assign_client' ? ruleOutcome.clientId : null;
+  const ruleAssignedContactIdFromMatch = ruleOutcome.kind === 'assign_client' ? ruleOutcome.contactId ?? null : null;
+  const ruleAssignedAssetId = ruleOutcome.kind === 'assign_client' ? ruleOutcome.assetId ?? null : null;
   const ruleDestinationDefaults =
     ruleOutcome.kind === 'set_destination' || ruleOutcome.kind === 'fallback_destination'
       ? (ruleOutcome.defaults as any)
@@ -1722,11 +1695,14 @@ export async function processInboundEmailInApp(
   });
 
   let domainMatchedClientId: string | null = null;
+  let domainAutoCreateContacts = false;
   let domainMatchedContactId: string | null = null;
   if (!ruleAssignedClientId && !matchedSenderContact && senderEmail) {
     const senderDomain = extractEmailDomain(senderEmail);
     if (senderDomain) {
-      domainMatchedClientId = await findClientIdByInboundEmailDomain(senderDomain, tenantId);
+      const mapping = await findInboundEmailDomainMapping(senderDomain, tenantId);
+      domainMatchedClientId = mapping?.clientId ?? null;
+      domainAutoCreateContacts = mapping?.autoCreateContacts ?? false;
       if (domainMatchedClientId) {
         domainMatchedContactId = await findValidClientPrimaryContactId(domainMatchedClientId, tenantId);
       }
@@ -1746,9 +1722,9 @@ export async function processInboundEmailInApp(
   );
   let ruleAssignedContactId: string | null = null;
   if (ruleAssignedClientId && !qualifiedReply) {
-    ruleAssignedContactId = senderContactInRuleClient
+    ruleAssignedContactId = ruleAssignedContactIdFromMatch ?? (senderContactInRuleClient
       ? matchedSenderContactId ?? null
-      : await findValidClientPrimaryContactId(ruleAssignedClientId, tenantId);
+      : await findValidClientPrimaryContactId(ruleAssignedClientId, tenantId));
   }
 
   // Rule destination defaults (set_destination / non-match fallback) sit above
@@ -1767,12 +1743,14 @@ export async function processInboundEmailInApp(
       providerId,
       providerDefaults,
       matchedContactId: ruleAssignedClientId
-        ? senderContactInRuleClient
+        ? ruleAssignedContactIdFromMatch ?? (senderContactInRuleClient
           ? matchedSenderContactId ?? null
-          : null
+          : null)
         : matchedSenderContactId ?? null,
       matchedContactClientId: ruleAssignedClientId
-        ? senderContactInRuleClient
+        ? ruleAssignedContactIdFromMatch
+          ? ruleAssignedClientId
+          : senderContactInRuleClient
           ? ruleAssignedClientId
           : null
         : matchedSenderClientId ?? null,
@@ -1829,12 +1807,13 @@ export async function processInboundEmailInApp(
   // email match that is consistent with the ticket's client.
   const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
   const senderContactUsableAsAuthor = Boolean(qualifiedReply) || !ruleAssignedClientId || senderContactInRuleClient;
-  const commentAuthorContactId =
+  // LEVERAGE: friction inbound-sender-resolution
+  let commentAuthorContactId =
     matchedSenderIsInternalUser || !senderContactUsableAsAuthor ? undefined : matchedSenderContactId;
   const commentAuthorUserId = senderContactUsableAsAuthor
     ? matchedSenderContact?.user_id ?? null
     : null;
-  const commentAuthorType = matchedSenderIsInternalUser ? 'internal' : 'contact';
+  let commentAuthorType = matchedSenderIsInternalUser ? 'internal' : 'contact';
 
   const clientMatchSource =
     ruleOutcome.kind === 'assign_client'
@@ -1879,6 +1858,38 @@ export async function processInboundEmailInApp(
     }, diagnostics);
   }
 
+  let autoCreatedContactId: string | undefined;
+  let autoCreateSkipReason: NonNullable<ProcessInboundEmailInAppDiagnostics['senderResolution']>['autoCreateSkipReason'] = null;
+  const autoCreateEligible = Boolean(!ruleAssignedClientId && !matchedSenderContact && domainMatchedClientId && domainAutoCreateContacts && senderEmail && targetClientId === domainMatchedClientId);
+  if (autoCreateEligible) {
+    const automated = detectAutomatedInboundMessage(emailData).isAutomated;
+    if (senderIsProviderMailbox) autoCreateSkipReason = 'provider_mailbox';
+    else if (automated) autoCreateSkipReason = 'automated';
+    else if (!(allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite)) autoCreateSkipReason = 'auth_not_aligned';
+    else {
+      const created = await createContactForInboundSender({ email: senderEmail!, name: senderName, clientId: domainMatchedClientId! }, tenantId, {
+        existingConnection: options.durableExecution?.trx,
+        inboxId: options.durableExecution?.inboxId,
+        contactEventPublisher: options.durableExecution?.eventPublishers?.contact,
+        providerId,
+        emailId: emailData.id,
+        onSkip: (reason) => { autoCreateSkipReason = reason; },
+      });
+      autoCreatedContactId = created?.contactId;
+      if (!created) {
+        if (!autoCreateSkipReason) autoCreateSkipReason = 'error';
+      } else if (created.created) {
+        console.info('processInboundEmailInApp: auto-created contact for domain-matched sender', { tenantId, providerId, emailId: emailData.id, clientId: domainMatchedClientId, contactId: created.contactId });
+      }
+    }
+  } else if (domainMatchedClientId && !domainAutoCreateContacts) autoCreateSkipReason = 'auto_create_disabled';
+  if (autoCreatedContactId) {
+    targetContactId = autoCreatedContactId;
+    commentAuthorContactId = autoCreatedContactId;
+    commentAuthorType = 'contact';
+  }
+  if (diagnostics) diagnostics.senderResolution = { autoCreatedContactId: autoCreatedContactId ?? null, autoCreateSkipReason };
+
   const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
   const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
   const blocks = await blocksFromEmailBody({
@@ -1917,8 +1928,10 @@ export async function processInboundEmailInApp(
         providerId,
         authResults: senderAuthResults,
         clientMatchSource,
+        ...(autoCreatedContactId ? { autoCreatedContactId } : {}),
         ...(appliedRule
-          ? { appliedRuleId: appliedRule.ruleId, appliedRuleName: appliedRule.ruleName }
+          ? { appliedRuleId: appliedRule.ruleId, appliedRuleName: appliedRule.ruleName,
+              ...(ruleOutcome.kind === 'assign_client' ? { ruleClientMatchedBy: ruleOutcome.matchedBy } : {}) }
           : {}),
       },
       attributes: seededAttributes ?? undefined,
@@ -1930,6 +1943,19 @@ export async function processInboundEmailInApp(
   const followupConversation = qualifiedReply?.prepareFollowupConversation
     ? await qualifiedReply.prepareFollowupConversation({ ticketId: ticketResult.ticket_id, clientId: targetClientId!, boardId: defaults.board_id })
     : undefined;
+
+  if (ruleAssignedAssetId) {
+    try {
+      await withTenantAdminTransaction(tenantId, async (trx: any) => {
+        await associateAssetWithTicket(trx, tenantId, ruleAssignedAssetId, ticketResult.ticket_id, new Date().toISOString());
+      });
+    } catch (error) {
+      console.warn('processInboundEmailInApp: failed to associate rule-matched asset with ticket', {
+        tenantId, ticketId: ticketResult.ticket_id, assetId: ruleAssignedAssetId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   const commentId = await createCommentFromEmail(
     {
@@ -1958,7 +1984,7 @@ export async function processInboundEmailInApp(
           heuristics: parsedEmail?.appliedHeuristics,
           warnings: parsedEmail?.warnings,
         },
-        unmatchedSender: !matchedSenderContact,
+        unmatchedSender: !matchedSenderContact && !autoCreatedContactId,
         inboundReopenDecision: rerouteReasonMetadata ?? undefined,
       },
     },
@@ -1975,17 +2001,18 @@ export async function processInboundEmailInApp(
       scopeLabel: 'new-ticket',
       clientVisibleAttachments: Boolean(
         !matchedSenderIsInternalUser
-        && matchedSenderContact?.client_id
-        && matchedSenderContact.client_id === targetClientId
+        && ((matchedSenderContact?.client_id && matchedSenderContact.client_id === targetClientId) || Boolean(autoCreatedContactId))
       ),
     });
-    await maybeRewriteCommentWithEmbeddedAttachmentUrls({
+    await applyEmbeddedImageUrlMappingsToStoredBodies({
       tenantId,
-      commentId,
       html: parsedHtml,
       text: parsedText,
-      originalCommentContent: serializedBlocks,
-      artifactsResult,
+      mappings: artifactsResult?.embeddedImageUrlMappings ?? [],
+      targets: [
+        { kind: 'comment', id: commentId, originalContent: serializedBlocks },
+        { kind: 'ticket-description', id: ticketResult.ticket_id, originalContent: serializedBlocks },
+      ],
     });
   }
 

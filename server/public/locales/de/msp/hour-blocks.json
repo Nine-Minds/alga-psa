@@ -154,5 +154,16 @@
       "missingField": "Ein erforderliches Feld des Stundenblocks fehlt. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
       "referenceMissing": "Der ausgewählte Kunde, Dienst oder die Rechnung existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
     }
+  },
+  "coverage": {
+    "oneLine": "Zeit für {{service}} wird über {{contract}} / {{line}} abgerechnet und bucht nicht von diesem Stundenblock ab.",
+    "manyLines": "Zeit für {{service}}, die einer Vertragslinie zugeordnet ist, bucht nicht von diesem Stundenblock ab.",
+    "linesLabel": "Vertragslinien, die {{service}} abdecken:",
+    "unscopedIntro": "Dieser Stundenblock gilt für alle Arbeitszeit, aber Zeit für diese Services wird über eine Vertragslinie abgerechnet und bucht nicht davon ab:",
+    "unscopedService": "{{service}} — {{contract}} / {{line}}",
+    "unscopedServiceAssigned": "{{service}} — wenn einer Vertragslinie zugeordnet",
+    "more": "und {{count}} weitere",
+    "badge": "Vertragsüberschneidung",
+    "viewContract": "Vertrag anzeigen"
   }
 }

@@ -26,9 +26,21 @@ import {
   CreateScheduleEntryData,
   UpdateScheduleEntryData
 } from '../schemas/timeSheet';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildScheduleEntryCreatedPayload, buildScheduleEntryDeletedPayload, buildScheduleEntryUpdatedPayload } from '@alga-psa/workflow-streams';
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
+import { publishNativeEvent } from '@alga-psa/scheduling/lib/nativeEventPublication';
+import { ensureTimePeriodCoversDate } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
+import { Temporal } from '@js-temporal/polyfill';
+import { assertCanActOnBehalf } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 import { hasPermission } from '../../auth/rbac';
+import {
+  buildVisibilityFilter,
+  evaluateEntryAccess,
+  resolveCalendarAccess,
+  type CalendarAccess,
+} from '@alga-psa/scheduling/lib/calendarAccess';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../middleware/apiMiddleware';
 import { NativeScheduleRelationError, commandCoManagedNativeSchedule, NativeScheduleError, readCoManagedNativeSchedules, NativeTimePeriodSettingsError, readCoManagedNativeTimePeriodSettings, commandCoManagedNativeTimePeriodSettings, readCoManagedNativeTimePeriods, commandCoManagedNativeTimePeriods, generateTimePeriodCalendar, NativeTimeSheetError, createCoManagedNativeTimeSheet, editCoManagedNativeTimeSheet, CoManagedSharedWorkError, NativeTimeReviewError, readCoManagedNativeTimeSheet, listCoManagedNativeTimeSheets, commandCoManagedNativeTimeSheets, deleteCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
@@ -127,7 +139,7 @@ export class TimeSheetService extends BaseService<any> {
     // Keep command, private feedback and response admission in one transaction.
     // A failure to disclose the result must also roll back the mutation/events.
     return this.withSheetErrors(() => withTransaction(knex, async trx => {
-      const current = await commandCoManagedNativeTimeSheets(trx, context.tenant, { sheetIds: [id], command, reason: note }, async () => this.sheetActor(context), event => publishEvent(event));
+      const current = await commandCoManagedNativeTimeSheets(trx, context.tenant, { sheetIds: [id], command, reason: note }, async () => this.sheetActor(context), publishNativeEvent);
       if (!current.handled) return current;
       if (note?.trim() && command !== 'reverse') await addCoManagedNativeTimeSheetComment(trx, context.tenant,
         { sheetId: id, userId: context.userId, comment: note }, async () => this.sheetActor(context));
@@ -328,15 +340,31 @@ export class TimeSheetService extends BaseService<any> {
         return response;
       }));
       if (current.handled) return current.sheet;
-      
+
+      // Declining the co-managed path hands this request to the native one, so
+      // the native one has to carry the same delegation authority the
+      // co-managed path would have applied (admitCoManagedNativeTimeOwner:
+      // approve plus read_all-or-manager). update() and delete() below already
+      // refuse another user's sheet; creation did not, and without this a
+      // sponsor workspace falling through would gain a sheet it could not
+      // create a moment earlier.
+      const subjectUserId = data.user_id || context.userId;
+      if (subjectUserId !== context.userId) {
+        if (!context.user) throw new ForbiddenError('Permission denied: Cannot create a time sheet for another user');
+        try { await assertCanActOnBehalf(context.user, context.tenant, subjectUserId, knex); }
+        catch (error) { throw new ForbiddenError(error instanceof Error ? error.message : 'Permission denied: Cannot create a time sheet for another user'); }
+      }
+
       const created = await withTransaction(knex, async (trx) => {
+        // time_sheets carries no created_at/updated_at columns; writing them
+        // made every native creation fail on an undefined column. That only
+        // became reachable for a sponsor workspace once this path started
+        // owning its empty sheets.
         const timeSheetData = {
           ...data,
-          user_id: data.user_id || context.userId,
+          user_id: subjectUserId,
           approval_status: 'DRAFT',
-          tenant: context.tenant,
-          created_at: new Date(),
-          updated_at: new Date()
+          tenant: context.tenant
         };
 
         const [timeSheet] = await tenantDb(trx, context.tenant).table(this.tableName)
@@ -346,7 +374,8 @@ export class TimeSheetService extends BaseService<any> {
         return timeSheet;
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_CREATED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_CREATED',
         payload: {
           tenantId: context.tenant,
@@ -366,7 +395,7 @@ export class TimeSheetService extends BaseService<any> {
   async update(id: string, data: UpdateTimeSheetData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       const current = await this.withSheetErrors(() => withTransaction(knex, async trx => {
-        if (!await editCoManagedNativeTimeSheet(trx, context.tenant, id, data, async () => this.sheetActor(context), event => publishEvent(event))) return { handled: false as const };
+        if (!await editCoManagedNativeTimeSheet(trx, context.tenant, id, data, async () => this.sheetActor(context), publishNativeEvent)) return { handled: false as const };
         const response = await this.currentSheet(trx, id, context);
         if (!response.handled) throw new CoManagedSharedWorkError();
         return response;
@@ -389,10 +418,7 @@ export class TimeSheetService extends BaseService<any> {
           throw new ConflictError('Cannot modify approved time sheets');
         }
   
-        const updateData = {
-          ...data,
-          updated_at: new Date()
-        };
+        const updateData = { ...data };
   
         await this.buildTenantScopedQuery(trx, context)
           .where({ [this.primaryKey]: id })
@@ -400,7 +426,8 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_UPDATED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_UPDATED',
         payload: {
           tenantId: context.tenant,
@@ -442,7 +469,8 @@ export class TimeSheetService extends BaseService<any> {
           .del();
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_DELETED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_DELETED',
         payload: {
           tenantId: context.tenant,
@@ -493,7 +521,8 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_SUBMITTED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_SUBMITTED',
         payload: {
           tenantId: context.tenant,
@@ -552,7 +581,8 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_APPROVED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_APPROVED',
         payload: {
           tenantId: context.tenant,
@@ -605,7 +635,8 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_CHANGES_REQUESTED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_CHANGES_REQUESTED',
         payload: {
           tenantId: context.tenant,
@@ -695,7 +726,8 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_APPROVAL_REVERSED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_APPROVAL_REVERSED',
         payload: {
           tenantId: context.tenant,
@@ -786,8 +818,15 @@ export class TimeSheetService extends BaseService<any> {
       const current = await this.withSheetErrors(() => readCoManagedNativeTimePeriods(knex, context.tenant, async () => this.sheetActor(context), { date: date ?? new Date().toISOString().slice(0, 10) }));
       if (current.handled) return current.periods[0] ?? null;
 
-      const targetDate = date ?? new Date().toISOString().slice(0, 10);
-      const period = await TimePeriod.findByDate(knex, context.tenant, targetDate);
+      const today = new Date().toISOString().slice(0, 10);
+      const targetDate = date ?? today;
+      let period = await TimePeriod.findByDate(knex, context.tenant, targetDate);
+
+      // Materialize the current period from the tenant's settings, but never for other dates.
+      if (!period && targetDate === today) {
+        await ensureTimePeriodCoversDate(knex, context.tenant, Temporal.PlainDate.from(today));
+        period = await TimePeriod.findByDate(knex, context.tenant, targetDate);
+      }
 
       return period ? this.getTimePeriod(period.period_id, context) : null;
     }
@@ -1107,18 +1146,36 @@ export class TimeSheetService extends BaseService<any> {
           .where('schedule_entry_assignees.user_id', filters.user_id);
       }
   
-      // Check permissions for private entries
-      if (!await this.canViewAllSchedules(context)) {
-        const userId = context.userId;
-        const assigneeVisibilityQuery = tenantDb(knex, context.tenant).table('schedule_entry_assignees as sea')
-          .select('sea.user_id')
-          .whereRaw('sea.entry_id = schedule_entries.entry_id')
-          .where('sea.user_id', userId);
+      // Visibility comes from the shared-calendar resolver: own entries,
+      // shared personal calendars, group calendars, or everything for
+      // user_schedule:update holders. Filtered in SQL, then masked per entry.
+      const access = await resolveCalendarAccess(
+        knex,
+        context.tenant,
+        { user_id: context.userId },
+        await this.canViewAllSchedules(context)
+      );
+      const visibility = buildVisibilityFilter(access);
+      if (visibility) {
+        const visibleUserIds = visibility.userIds;
+        const visibleCalendarIds = visibility.calendarIds;
+        const assigneeVisibilityQuery = db.subquery('schedule_entry_assignees as sea')
+          .select(knex.raw('1'))
+          .whereRaw('?? = ??', ['sea.entry_id', 'schedule_entries.entry_id'])
+          .whereIn('sea.user_id', visibleUserIds);
+        db.tenantWhereColumn(assigneeVisibilityQuery, 'sea.tenant', 'schedule_entries.tenant');
 
         query = query.where(function() {
-          this.where('is_private', false)
-            .orWhere('created_by', userId)
-            .orWhereExists(assigneeVisibilityQuery);
+          this.whereExists(assigneeVisibilityQuery);
+          if (visibleCalendarIds.length > 0) {
+            this.orWhereIn('schedule_entries.calendar_id', visibleCalendarIds);
+          }
+        });
+      }
+      if (access.hiddenCalendarIds.length > 0) {
+        query = query.where(function() {
+          this.whereNull('schedule_entries.calendar_id')
+            .orWhereNotIn('schedule_entries.calendar_id', access.hiddenCalendarIds);
         });
       }
 
@@ -1128,44 +1185,47 @@ export class TimeSheetService extends BaseService<any> {
         .orderBy('scheduled_start');
 
       // Get assigned users for each entry
-      return Promise.all(entries.map(async entry => {
+      const results = await Promise.all(entries.map(async entry => {
         const assignedUsers = await this.getScheduleAssignees(entry.entry_id, context);
-        const workItem = entry.work_item_id ? await this.getWorkItemForSchedule(entry.work_item_id, entry.work_item_type, context) : null;
+        const decision = evaluateEntryAccess(
+          { ...entry, assigned_user_ids: assignedUsers.map((u: any) => u.user_id) },
+          access
+        );
+        if (decision.access === 'none') {
+          return null;
+        }
 
         const startTime = entry.scheduled_start ? new Date(entry.scheduled_start) : new Date();
         const endTime = entry.scheduled_end ? new Date(entry.scheduled_end) : new Date();
         const durationMs = endTime.getTime() - startTime.getTime();
         const durationHours = durationMs / (1000 * 60 * 60);
-
-        const result = {
-          ...entry,
-          assigned_users: assignedUsers,
-          work_item: workItem,
+        const timing = {
           duration_hours: Math.round(durationHours * 100) / 100,
-          is_current: startTime <= new Date() && endTime >= new Date()
+          is_current: startTime <= new Date() && endTime >= new Date(),
         };
 
-        // Private entries are masked for anyone who is not the creator or an assignee
-        const isOwnEntry = entry.created_by === context.userId ||
-          assignedUsers.some((u: any) => u.user_id === context.userId);
-        if (entry.is_private && !isOwnEntry) {
-          return {
-            ...result,
-            title: 'Busy',
-            notes: '',
-            work_item_id: null,
-            work_item: null
-          };
+        if (decision.access === 'busy') {
+          return maskApiScheduleEntry({ ...entry, ...timing }, assignedUsers, access);
         }
 
-        return result;
+        const workItem = entry.work_item_id ? await this.getWorkItemForSchedule(entry.work_item_id, entry.work_item_type, context) : null;
+        return {
+          ...entry,
+          ...timing,
+          assigned_users: assignedUsers,
+          work_item: workItem,
+          access: 'full',
+          can_edit: decision.canEdit,
+        };
       }));
+
+      return results.filter((entry) => entry !== null);
     }
 
 
   async createScheduleEntry(data: CreateScheduleEntryData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
-      const current = await this.withSheetErrors(() => commandCoManagedNativeSchedule(knex, context.tenant, { action: 'create', data }, async () => this.sheetActor(context), event => publishEvent(event)), 'schedule');
+      const current = await this.withSheetErrors(() => commandCoManagedNativeSchedule(knex, context.tenant, { action: 'create', data }, async () => this.sheetActor(context), publishNativeEvent), 'schedule');
       if (current.handled) return current.entry;
       const ScheduleEntry = (await import('@alga-psa/shared/models/scheduleEntry')).default;
 
@@ -1188,6 +1248,10 @@ export class TimeSheetService extends BaseService<any> {
           work_item_type: workItemType,
           notes: data.notes ?? undefined,
           is_private: data.is_private,
+          // baseScheduleEntrySchema accepts is_all_day, so dropping it here would take the
+          // field from the caller and silently create a timed entry. ScheduleEntry.create
+          // validates the UTC-midnight boundaries.
+          is_all_day: data.is_all_day ?? false,
           recurrence_pattern: typeof data.recurrence_pattern === 'string' ? JSON.parse(data.recurrence_pattern) : data.recurrence_pattern ?? null,
           assigned_user_ids: data.assigned_user_ids || [],
           status: 'scheduled'
@@ -1199,18 +1263,10 @@ export class TimeSheetService extends BaseService<any> {
         return entry;
       });
 
-      await publishEvent({
-        eventType: 'SCHEDULE_ENTRY_CREATED',
-        payload: {
-          tenantId: context.tenant,
-          userId: context.userId,
-          entryId: entry.entry_id,
-          changes: {
+      await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: buildScheduleEntryCreatedPayload({ userId: context.userId, entryId: entry.entry_id, changes: {
             after: entry,
             assignedUserIds: data.assigned_user_ids || [],
-          },
-        },
-      });
+          } }), ctx: { tenantId: context.tenant, actor: { actorType: 'USER', actorUserId: context.userId } } });
 
       // Re-fetch after commit: getScheduleEntry runs on a pooled
       // (non-transaction) connection and must read the row post-commit.
@@ -1220,7 +1276,7 @@ export class TimeSheetService extends BaseService<any> {
 
   async updateScheduleEntry(id: string, data: UpdateScheduleEntryData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
-      const current = await this.withSheetErrors(() => commandCoManagedNativeSchedule(knex, context.tenant, { action: 'update', id, data }, async () => this.sheetActor(context), event => publishEvent(event)), 'schedule');
+      const current = await this.withSheetErrors(() => commandCoManagedNativeSchedule(knex, context.tenant, { action: 'update', id, data }, async () => this.sheetActor(context), publishNativeEvent), 'schedule');
       if (current.handled) return current.entry;
       
       const result = await withTransaction(knex, async (trx) => {
@@ -1257,6 +1313,14 @@ export class TimeSheetService extends BaseService<any> {
           updated_at: new Date()
         };
   
+
+        const { validateAllDayInterval } = await import('@alga-psa/shared/models/scheduleEntry');
+        validateAllDayInterval({
+          is_all_day: data.is_all_day ?? existing.is_all_day,
+          scheduled_start: data.scheduled_start === undefined ? existing.scheduled_start : new Date(data.scheduled_start),
+          scheduled_end: data.scheduled_end === undefined ? existing.scheduled_end : new Date(data.scheduled_end),
+        });
+
         await tenantDb(trx, context.tenant).table('schedule_entries')
           .where({ entry_id: id })
           .update(updateData);
@@ -1288,19 +1352,11 @@ export class TimeSheetService extends BaseService<any> {
         };
       });
 
-      await publishEvent({
-        eventType: 'SCHEDULE_ENTRY_UPDATED',
-        payload: {
-          tenantId: context.tenant,
-          userId: context.userId,
-          entryId: id,
-          changes: {
+      await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: buildScheduleEntryUpdatedPayload({ userId: context.userId, entryId: id, changes: {
             before: result.existing,
             after: result.updated,
             assignedUserIds: data.assigned_user_ids,
-          },
-        },
-      });
+          } }), ctx: { tenantId: context.tenant, actor: { actorType: 'USER', actorUserId: context.userId } } });
 
       // Re-fetch after commit: getScheduleEntry runs on a pooled
       // (non-transaction) connection and must read the row post-commit.
@@ -1310,7 +1366,7 @@ export class TimeSheetService extends BaseService<any> {
 
   async deleteScheduleEntry(id: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();
-      const current = await this.withSheetErrors(() => commandCoManagedNativeSchedule(knex, context.tenant, { action: 'delete', id }, async () => this.sheetActor(context), event => publishEvent(event)), 'schedule');
+      const current = await this.withSheetErrors(() => commandCoManagedNativeSchedule(knex, context.tenant, { action: 'delete', id }, async () => this.sheetActor(context), publishNativeEvent), 'schedule');
       if (current.handled) return;
       
       const existing = await withTransaction(knex, async (trx) => {
@@ -1344,17 +1400,9 @@ export class TimeSheetService extends BaseService<any> {
         return existing;
       });
 
-      await publishEvent({
-        eventType: 'SCHEDULE_ENTRY_DELETED',
-        payload: {
-          tenantId: context.tenant,
-          userId: context.userId,
-          entryId: id,
-          changes: {
+      await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_DELETED', payload: buildScheduleEntryDeletedPayload({ userId: context.userId, entryId: id, changes: {
             before: existing,
-          },
-        },
-      });
+          } }), ctx: { tenantId: context.tenant, actor: { actorType: 'USER', actorUserId: context.userId } } });
     }
 
 
@@ -1569,6 +1617,34 @@ export class TimeSheetService extends BaseService<any> {
       if (!entry) return null;
   
       const assignedUsers = await this.getScheduleAssignees(id, context);
+
+      // Internal callers (e.g. update/delete permission lookups) pass no user;
+      // REST reads always carry one and go through the shared-calendar resolver.
+      if (context.user) {
+        const access = await resolveCalendarAccess(
+          knex,
+          context.tenant,
+          { user_id: context.userId },
+          await this.canViewAllSchedules(context)
+        );
+        const decision = evaluateEntryAccess(
+          { ...entry, assigned_user_ids: assignedUsers.map((u: any) => u.user_id) },
+          access
+        );
+        if (decision.access === 'none') return null;
+        if (decision.access === 'busy') {
+          return maskApiScheduleEntry(entry, assignedUsers, access);
+        }
+        const workItem = entry.work_item_id ? await this.getWorkItemForSchedule(entry.work_item_id, entry.work_item_type, context) : null;
+        return {
+          ...entry,
+          assigned_users: assignedUsers,
+          work_item: workItem,
+          access: 'full',
+          can_edit: decision.canEdit,
+        };
+      }
+
       const workItem = entry.work_item_id ? await this.getWorkItemForSchedule(entry.work_item_id, entry.work_item_type, context) : null;
   
       return {
@@ -1629,4 +1705,25 @@ export class TimeSheetService extends BaseService<any> {
     
     return endDate;
   }
+}
+
+/**
+ * Busy view of a schedule entry for REST responses: timing only, with
+ * assignees narrowed to calendars the viewer can see.
+ */
+function maskApiScheduleEntry(entry: any, assignedUsers: any[], access: CalendarAccess): any {
+  return {
+    ...entry,
+    title: 'Busy',
+    notes: '',
+    work_item_id: null,
+    work_item_type: 'ad_hoc',
+    work_item: null,
+    recurrence_pattern: null,
+    assigned_users: assignedUsers.filter(
+      (u: any) => u.user_id === access.viewerUserId || access.canViewAll || access.userLevels.has(u.user_id)
+    ),
+    access: 'busy',
+    can_edit: false,
+  };
 }

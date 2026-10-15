@@ -1,0 +1,19 @@
+{
+  "scope": "native-observed-browser-metric-export-reconciliation",
+  "status": "passed",
+  "tests": 83,
+  "files": 2,
+  "failed": 0,
+  "skipped": 0,
+  "todo": 0,
+  "durationMs": 266.857875,
+  "command": "node --test scripts/tests/browser-metric-execution-collection.test.mjs scripts/tests/browser-metric-execution-reconciliation.test.mjs",
+  "node": "25.5.0",
+  "logSha256": "85c4be6b695a22c6dea198b8f32e9e13ec49442f8eab2edaa6a71530c5f4bc79",
+  "limitations": [
+    "Injected HTTP responses validate API and schema behavior, not live Google credentials or workflow execution.",
+    "Read-only manual workflow is authored and actionlint passes; not yet executed in CI.",
+    "Automatic cancelled-run scorecard publication and never-created workflow detection remain incomplete.",
+    "PR merge-parent validation does not independently establish the actual checkout."
+  ]
+}

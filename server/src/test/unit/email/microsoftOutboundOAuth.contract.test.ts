@@ -14,6 +14,7 @@ describe('Microsoft outbound OAuth contract', () => {
     expect(authUrl.origin).toBe('https://login.microsoftonline.com');
     expect(authUrl.pathname).toBe('/common/oauth2/v2.0/authorize');
     expect(authUrl.searchParams.get('redirect_uri')).toBe(redirectUri);
+    expect(authUrl.searchParams.get('prompt')).toBe('select_account');
     expect(new Set(authUrl.searchParams.get('scope')?.split(' '))).toEqual(new Set([
       'https://graph.microsoft.com/Mail.Read',
       'https://graph.microsoft.com/Mail.Read.Shared',

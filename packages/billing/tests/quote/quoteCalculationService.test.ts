@@ -341,4 +341,53 @@ describe('quoteCalculationService – recalculateQuoteFinancials', () => {
     expect(q.tax).toBe(0);
     expect(q.total_amount).toBe(0);
   });
+
+  it('T215: baseline — $25 + $35 monthly services with service-targeted $5 discounts keep one-time base unchanged', async () => {
+    const { knex, getUpdatedQuote, getUpdatedItems } = buildMockKnex({
+      quote: { quote_id: quoteId, client_id: null, quote_date: '2026-01-01', currency_code: 'USD', tax_source: 'internal' },
+      items: [
+        { quote_item_id: 'i1', quantity: 1, unit_price: 2500, is_discount: false, is_optional: false, service_id: 'svc-a', is_recurring: true, billing_frequency: 'monthly' },
+        { quote_item_id: 'i2', quantity: 1, unit_price: 3500, is_discount: false, is_optional: false, service_id: 'svc-b', is_recurring: true, billing_frequency: 'monthly' },
+        // Legacy discounts persisted with false/null cadence fields.
+        { quote_item_id: 'd1', quantity: 1, unit_price: 500, is_discount: true, discount_type: 'fixed', applies_to_service_id: 'svc-a', is_optional: false, is_recurring: false, billing_frequency: null },
+        { quote_item_id: 'd2', quantity: 1, unit_price: 500, is_discount: true, discount_type: 'fixed', applies_to_service_id: 'svc-b', is_optional: false, is_recurring: false, billing_frequency: null },
+        { quote_item_id: 'o1', quantity: 1, unit_price: 37353, is_discount: false, is_optional: false, is_recurring: false },
+        { quote_item_id: 'o2', quantity: 1, unit_price: 210863, is_discount: false, is_optional: false, is_recurring: false },
+        { quote_item_id: 'o3', quantity: 1, unit_price: 5581, is_discount: false, is_optional: false, is_recurring: false },
+        { quote_item_id: 'o4', quantity: 1, unit_price: 45000, is_discount: false, is_optional: false, is_recurring: false },
+      ],
+    });
+
+    await recalculateQuoteFinancials(knex, tenantStub, quoteId);
+
+    const q = getUpdatedQuote()!;
+    expect(q.subtotal).toBe(304797); // 2500 + 3500 + 37353 + 210863 + 5581 + 45000
+    expect(q.discount_total).toBe(1000); // two $5 service-targeted discounts
+    expect(q.tax).toBe(0);
+    expect(q.total_amount).toBe(303797);
+
+    // Each discount row keeps a positive resolved total equal to its share.
+    expect(getUpdatedItems().get('d1')!.total_price).toBe(500);
+    expect(getUpdatedItems().get('d2')!.total_price).toBe(500);
+    // Base rows keep their own amounts.
+    expect(getUpdatedItems().get('o1')!.total_price).toBe(37353);
+  });
+
+  it('T215: oversized fixed discounts are capped at the eligible base', async () => {
+    const { knex, getUpdatedQuote, getUpdatedItems } = buildMockKnex({
+      quote: { quote_id: quoteId, client_id: null, quote_date: '2026-01-01', currency_code: 'USD', tax_source: 'internal' },
+      items: [
+        { quote_item_id: 'i1', quantity: 1, unit_price: 2500, is_discount: false, is_optional: false },
+        { quote_item_id: 'd1', quantity: 1, unit_price: 4000, is_discount: true, discount_type: 'fixed', is_optional: false },
+      ],
+    });
+
+    await recalculateQuoteFinancials(knex, tenantStub, quoteId);
+
+    const q = getUpdatedQuote()!;
+    expect(q.subtotal).toBe(2500);
+    expect(q.discount_total).toBe(2500);
+    expect(q.total_amount).toBe(0);
+    expect(getUpdatedItems().get('d1')!.total_price).toBe(2500);
+  });
 });

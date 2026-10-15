@@ -12,10 +12,11 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { CURRENCY_OPTIONS, toMinorUnits } from '@alga-psa/core';
+import { toMinorUnits } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
@@ -723,13 +724,12 @@ export function PurchaseOrdersManager({
           />
 
           <div className="grid grid-cols-2 gap-3">
-            <CustomSelect
+            <CurrencyPicker
               id="purchase-order-currency"
               label={t('purchaseOrders.fields.currency', 'Currency')}
               required
               value={form.currency_code}
               onValueChange={(value) => setForm({ ...form, currency_code: value })}
-              options={CURRENCY_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
             />
             <div>
               <Label className="block mb-1" htmlFor="purchase-order-expected-date">

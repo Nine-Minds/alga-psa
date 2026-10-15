@@ -5,13 +5,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@alga-psa/auth';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { ADD_ON_LABELS, ADD_ONS, type AddOnKey } from '@alga-psa/types';
-import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { observabilityLogger } from '@/lib/observability/logging';
 import { tenantManagementRouteError } from '../../../tenantManagementRouteErrors';
+import { assertMasterTenantAccess } from '@ee/lib/auth/masterTenantAccess';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,60 +21,13 @@ type RouteContext = {
   params: Promise<{ tenantId: string }>;
 };
 
-function getInternalUserInfo(request: NextRequest): { user_id: string; tenant: string; email?: string } | null {
-  const internalRequest = request.headers.get('x-internal-request');
-  if (internalRequest !== 'ext-proxy-prefetch') return null;
-
-  const userId = request.headers.get('x-internal-user-id');
-  const tenant = request.headers.get('x-internal-user-tenant');
-  const email = request.headers.get('x-internal-user-email') || undefined;
-
-  if (!userId || !tenant) return null;
-  return { user_id: userId, tenant, email };
-}
-
-async function getAuthorizedUser(request: NextRequest): Promise<{ userId: string; userEmail?: string }> {
-  if (!MASTER_BILLING_TENANT_ID) {
-    throw new Error('MASTER_BILLING_TENANT_ID not configured');
-  }
-
-  const internalUser = getInternalUserInfo(request);
-  if (internalUser) {
-    if (internalUser.tenant !== MASTER_BILLING_TENANT_ID) throw new Error('Forbidden');
-    return { userId: internalUser.user_id, userEmail: internalUser.email };
-  }
-
-  const apiKey = request.headers.get('x-api-key');
-  if (apiKey) {
-    const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-    if (!keyRecord) throw new Error('Invalid API key');
-    if (keyRecord.tenant !== MASTER_BILLING_TENANT_ID) throw new Error('Forbidden');
-
-    const extensionId = request.headers.get('x-alga-extension');
-    const headerUserId = request.headers.get('x-user-id');
-    const headerUserEmail = request.headers.get('x-user-email');
-
-    return {
-      userId: headerUserId || (extensionId ? `extension:${extensionId}` : keyRecord.user_id),
-      userEmail: headerUserEmail || undefined,
-    };
-  }
-
-  const session = await getSession();
-  const user = session?.user as { tenant?: string; user_id?: string; email?: string } | undefined;
-  if (!user?.user_id) throw new Error('Unauthorized');
-  if (user.tenant !== MASTER_BILLING_TENANT_ID) throw new Error('Forbidden');
-
-  return { userId: user.user_id, userEmail: user.email };
-}
-
 function isValidAddOnKey(addonKey: unknown): addonKey is AddOnKey {
   return typeof addonKey === 'string' && Object.values(ADD_ONS).includes(addonKey as ADD_ONS);
 }
 
 export async function POST(request: NextRequest, context: RouteContext): Promise<NextResponse> {
   try {
-    const { userId, userEmail } = await getAuthorizedUser(request);
+    const { userId, userEmail } = await assertMasterTenantAccess(request);
     const { tenantId } = await context.params;
     const body = await request.json();
     const action = body?.action;

@@ -3,6 +3,7 @@
  */
 
 import { randomBytes } from 'crypto';
+import { getMicrosoftAuthorizeUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import type { CalendarOAuthState } from '@alga-psa/types';
 
 export async function generateGoogleCalendarAuthUrl(params: {
@@ -32,6 +33,7 @@ export async function generateMicrosoftCalendarAuthUrl(params: {
 }): Promise<string> {
   const scopes = [
     'https://graph.microsoft.com/Calendars.ReadWrite',
+    'https://graph.microsoft.com/MailboxSettings.ReadWrite',
     'https://graph.microsoft.com/Mail.Read',
     'offline_access',
   ].join(' ');
@@ -46,7 +48,7 @@ export async function generateMicrosoftCalendarAuthUrl(params: {
   });
 
   const tenant = params.tenantId || 'common';
-  return `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize?${queryParams.toString()}`;
+  return `${getMicrosoftAuthorizeUrl(tenant)}?${queryParams.toString()}`;
 }
 
 export function encodeCalendarState(state: CalendarOAuthState): string {

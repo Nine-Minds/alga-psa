@@ -1,0 +1,22 @@
+{
+  "revision": "2de93c8492c6d7bac3792ecf2d5be94247606bc4",
+  "server_unit": {
+    "job": 101620481292,
+    "conclusion": "success",
+    "files_passed": 2689,
+    "passed": 14519,
+    "skipped": 2,
+    "todo": 15
+  },
+  "full_integration": {
+    "job": 101620543698,
+    "conclusion": "failure",
+    "files_passed": 282,
+    "files_skipped": 3,
+    "passed": 2063,
+    "skipped": 47,
+    "reason": "Required execution reconciliation rejects skipped tests",
+    "log": "/tmp/alga-full-integration-2de93-final.log"
+  },
+  "remaining": "47 integration opt-ins still require implementation; local fixes need next native candidate"
+}

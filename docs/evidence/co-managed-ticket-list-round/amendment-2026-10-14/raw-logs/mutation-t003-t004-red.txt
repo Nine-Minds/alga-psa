@@ -1,0 +1,8 @@
+   × T003 working is responsibility OR assignment on one relation: assignment-only stays, unassigned customer work leaves, and client narrowing scopes the workspace options 629ms
+   × T004 a redacted assignment is omitted rather than false and leaks neither membership nor signal; sibling-client and revoked rows stay out 122ms
+   ✓ T014 bulk handback: one receipt per success, stale and forbidden items reported per item, exact retry replays, and working/oversight are re-queried  342ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > T003 working is responsibility OR assignment on one relation: assignment-only stays, unassigned customer work leaves, and client narrowing scopes the workspace options
+AssertionError: expected [] to deeply equal [ Array(1) ]
+ FAIL  |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > T004 a redacted assignment is omitted rather than false and leaks neither membership nor signal; sibling-client and revoked rows stay out
+      Tests  2 failed | 1 passed | 1427 skipped (1430)

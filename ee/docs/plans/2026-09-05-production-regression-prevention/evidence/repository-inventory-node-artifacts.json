@@ -1,0 +1,28 @@
+{
+  "status": "incomplete",
+  "candidateCount": 3944,
+  "accountedFor": 660,
+  "unmatchedCount": 3284,
+  "runnerArtifactCount": 16,
+  "sourceMergeRevision": "df2c988ca0742d4d19d7048353dc4416703c4063",
+  "runs": [
+    34102126267,
+    34102126321,
+    34102126260
+  ],
+  "validation": {
+    "node": "25.5.0",
+    "passed": 15,
+    "failed": 0,
+    "durationSeconds": 3.99
+  },
+  "limits": [
+    "Partial input: unmatched does not establish orphaned tests.",
+    "Current local inventory is newer than source artifacts; not a final candidate readiness result.",
+    "Individual owner assignments and remaining runner artifacts are outstanding."
+  ],
+  "nativeResults": {
+    "workspaceDatabasePassed": 425,
+    "infrastructurePassed": 496
+  }
+}

@@ -5,7 +5,7 @@ import { AUTO_GENERATED_MAIL_HEADERS } from '@alga-psa/shared/lib/email/automate
 /** The durable command owns retries; the generic queue must not retain an
  * address/body that bypasses current workflow and requester admission. */
 export async function sendCoManagedWorkflowTicketEmail(delivery: CoManagedWorkflowTicketEmail): Promise<CoManagedEmailDeliveryResult> {
-  const result = await TenantEmailService.getInstance(delivery.tenant).sendEmail({ tenantId: delivery.tenant,
+  const result = await TenantEmailService.getInstance(delivery.tenant).sendEmail({ tenantId: delivery.tenant, mailClass: 'ticket',
     to: delivery.email, notificationSubtypeId: delivery.subtypeId, retryPolicy: 'caller',
     templateProcessor: new StaticTemplateProcessor(delivery.subject, delivery.html, delivery.text),
     headers: { ...AUTO_GENERATED_MAIL_HEADERS, 'Message-ID': delivery.messageId },

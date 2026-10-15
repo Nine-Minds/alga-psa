@@ -15,7 +15,10 @@ const APP_ID = 'emulated-teams-bot-app-id';
 
 let server: http.Server;
 let baseUrl: string;
-let signToken: (claims: Record<string, unknown>) => Promise<string>;
+let signToken: (
+  claims: Record<string, unknown>,
+  options?: { issuer?: string; expiration?: string }
+) => Promise<string>;
 
 beforeAll(async () => {
   const { privateKey, publicKey } = await generateKeyPair('RS256');
@@ -38,13 +41,13 @@ beforeAll(async () => {
   await new Promise<void>((resolve) => server.once('listening', resolve));
   baseUrl = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 
-  signToken = (claims) =>
+  signToken = (claims, options = {}) =>
     new SignJWT(claims)
       .setProtectedHeader({ alg: 'RS256', kid: 'emulator-key' })
-      .setIssuer(ISSUER)
+      .setIssuer(options.issuer ?? ISSUER)
       .setAudience(APP_ID)
       .setIssuedAt()
-      .setExpirationTime('1h')
+      .setExpirationTime(options.expiration ?? '1h')
       .sign(privateKey);
 });
 
@@ -99,6 +102,20 @@ describe('verifyTeamsBotRequest with TEAMS_BOT_OPENID_CONFIG_URL', () => {
     const result = await verifyTeamsBotRequest(
       `Bearer ${header}.${payload}.${signature.slice(0, -3)}abc`
     );
+    expect(result.status).toBe('rejected');
+  });
+
+  it.each([
+    ['an issuer different from discovery', { issuer: 'https://untrusted.example.invalid' }],
+    ['an expired token', { expiration: '-1h' }],
+  ])('rejects %s even with a valid signature and audience', async (_label, options) => {
+    configureBot();
+    // Establish that discovery, signing key and bot configuration work before
+    // varying one claim; an unavailable identity provider cannot satisfy this.
+    expect((await verifyTeamsBotRequest(`Bearer ${await signToken({ oid: 'guest-1' })}`)).status)
+      .toBe('verified');
+
+    const result = await verifyTeamsBotRequest(`Bearer ${await signToken({ oid: 'guest-1' }, options)}`);
     expect(result.status).toBe('rejected');
   });
 

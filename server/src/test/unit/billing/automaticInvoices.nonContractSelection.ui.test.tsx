@@ -18,6 +18,11 @@ import type { IRecurringDueWorkInvoiceCandidate } from '@alga-psa/types';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
+// Exercise the existing feature behavior with the release flag enabled.
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
@@ -94,7 +99,6 @@ function createContractMember() {
       sourceObligation: {
         tenant: 'tenant-1',
         obligationId: 'line-1',
-        obligationType: 'contract_line',
         chargeFamily: 'fixed',
       },
       invoiceWindow: {
@@ -160,7 +164,6 @@ function createSystemManagedDefaultMember() {
       sourceObligation: {
         tenant: 'tenant-1',
         obligationId: 'line-default',
-        obligationType: 'contract_line',
         chargeFamily: 'fixed',
       },
       invoiceWindow: {

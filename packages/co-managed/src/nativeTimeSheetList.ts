@@ -1,9 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
-import { productTimeEntryMode } from '@alga-psa/types';
 import { toCalendarDateString } from '@alga-psa/core';
-import { getCoManagedOperationalState } from '@alga-psa/licensing';
-import { hasCoManagedConversationOwnership } from './nativeConversationEvents';
+import { dispatchCoManagedNativeTime } from './nativeTimeDispatch';
 import { lockCoManagedLocalAuthentication, snapshotCoManagedAuthenticatedActor, type CoManagedAuthenticatedActor } from './localAuthentication';
 import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
 import { admitCoManagedNativeTimeOwner, isNativeTimeFieldHidden } from './nativeTimeEntryAccess';
@@ -19,11 +17,11 @@ export async function listCoManagedNativeTimeSheets(db: Knex, tenant: string,
   const { userId, approval, includeApproved, periods: includePeriods, details } = options;
   if (!isCoManagedUuid(tenant) || (userId && !isCoManagedUuid(userId)) || (includePeriods && !userId)) throw new CoManagedSharedWorkError();
   return withTransaction(db, async trx => {
-    await getCoManagedOperationalState(trx, tenant);
-    const owner = tenantDb(trx, tenant), workspace = await owner.table('tenants').forShare().first('product_code', 'suspended_at');
-    const operational = await owner.table('time_entries').where(q => q.where('billing_mode', 'operational').orWhere('work_item_type', 'co_managed')).first('entry_id');
-    if (workspace?.product_code !== 'co_managed' && !operational && !await hasCoManagedConversationOwnership(trx, tenant)) return { handled: false };
-    if (!workspace || workspace.suspended_at || !productTimeEntryMode(workspace.product_code)) throw new CoManagedSharedWorkError();
+    // A sheet collection spans the workspace, so it dispatches on the
+    // workspace. Its members then inherit that decision: re-deciding per sheet
+    // would silently drop this tenant's native sheets out of its own list.
+    if (!await dispatchCoManagedNativeTime(trx, tenant, { kind: 'tenant' })) return { handled: false };
+    const owner = tenantDb(trx, tenant);
     const actor = snapshotCoManagedAuthenticatedActor(await identify());
     if (actor.tenant !== tenant) throw new CoManagedSharedWorkError();
     const credential = await lockCoManagedLocalAuthentication(trx, actor);
@@ -40,7 +38,7 @@ export async function listCoManagedNativeTimeSheets(db: Knex, tenant: string,
     const admitted = new Map<string, Extract<Awaited<ReturnType<typeof readCoManagedNativeTimeSheet>>, { handled: true }>>();
     for (const hint of hints) {
       try {
-        const current = await readCoManagedNativeTimeSheet(trx, tenant, hint.id, async () => actor, { view: true, comments: !!approval || details, approval, employee: !!approval || details, summary: details });
+        const current = await readCoManagedNativeTimeSheet(trx, tenant, hint.id, async () => actor, { view: true, comments: !!approval || details, approval, employee: !!approval || details, summary: details, inheritDispatch: true });
         if (current.handled) admitted.set(hint.id, current);
       } catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; }
     }

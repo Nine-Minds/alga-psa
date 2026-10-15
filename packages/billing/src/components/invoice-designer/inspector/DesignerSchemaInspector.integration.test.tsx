@@ -60,18 +60,23 @@ describe('DesignerSchemaInspector (schema-driven integration)', () => {
     render(<Wrapper />);
 
     // Schema-driven panels are present.
-    expect(screen.getByText('Sizing (CSS)')).toBeTruthy();
+    expect(screen.getByText('Appearance')).toBeTruthy();
 
     // Updating a field writes through the store patch API and updates unified props.
     // Note: the shared <Input> component does not currently forward `id` to the native input,
     // so label->control association isn't reliable in tests. Use the field placeholder instead.
-    const widthInput = screen.getByPlaceholderText('auto | 320px | 50% | 10rem') as HTMLInputElement;
-    expect(widthInput.getAttribute('data-template-insert-target')).toBeNull();
-    fireEvent.change(widthInput, { target: { value: '123' } });
+    const borderInput = screen.getByPlaceholderText('e.g. 1px solid #e5e7eb') as HTMLInputElement;
+    expect(borderInput.getAttribute('data-template-insert-target')).toBeNull();
+    fireEvent.change(borderInput, { target: { value: '1px solid #000' } });
 
     const updated = useInvoiceDesignerStore.getState().nodesById['section-1'];
-    const width = (updated.props as any)?.style?.width;
-    expect(width).toBe('123px');
+    expect((updated.props as any)?.style?.border).toBe('1px solid #000');
+
+    // Emptying a field while typing keeps it empty rather than restoring a default.
+    fireEvent.change(borderInput, { target: { value: '' } });
+    expect((useInvoiceDesignerStore.getState().nodesById['section-1'].props as any)?.style?.border).toBe('');
+    fireEvent.blur(borderInput, { target: { value: '' } });
+    expect((useInvoiceDesignerStore.getState().nodesById['section-1'].props as any)?.style?.border).toBeUndefined();
   });
 
   it('edits text node content through metadata.text without mutating layer name', () => {

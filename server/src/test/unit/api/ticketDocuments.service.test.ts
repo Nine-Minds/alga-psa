@@ -38,6 +38,12 @@ describe('TicketService.getTicketDocuments', () => {
         return createDocumentsBuilder(rows);
       }
 
+      if (table === 'ticket_comment_attachments') {
+        // Standalone ticket documents have no lifecycle row and keep their original policy.
+        const builder: any = { where: vi.fn(() => builder), first: vi.fn(async () => undefined) };
+        return builder;
+      }
+
       throw new Error(`Unexpected table ${table}`);
     }), {
       raw: vi.fn((value: string) => value),

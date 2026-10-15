@@ -7,29 +7,29 @@ exports.seed = async function (knex) {
     if (!context) return;
 
     const { tenantId, db } = context;
-    const invoiceId = (invoiceNumber) => db.table('invoices')
+    const invoiceId = async (invoiceNumber) => (await db.table('invoices')
         .where({ invoice_number: invoiceNumber })
         .select('invoice_id')
-        .first();
-    const userId = (username) => db.table('users')
+        .first())?.invoice_id ?? null;
+    const userId = async (username) => (await db.table('users')
         .where({ username })
         .select('user_id')
-        .first();
+        .first())?.user_id ?? null;
 
     return db.table('invoice_annotations').insert([
         {
             tenant: tenantId,
             annotation_id: knex.raw('gen_random_uuid()'),
-            invoice_id: invoiceId('INV-003'),
-            user_id: userId('glinda'),
+            invoice_id: await invoiceId('INV-003'),
+            user_id: await userId('glinda'),
             content: 'Customer requested itemized breakdown of Rabbit Tracking hours.',
             is_internal: true
         },
         {
             tenant: tenantId,
             annotation_id: knex.raw('gen_random_uuid()'),
-            invoice_id: invoiceId('INV-004'),
-            user_id: userId('dorothy'),
+            invoice_id: await invoiceId('INV-004'),
+            user_id: await userId('dorothy'),
             content: 'Applied 5% discount as per agreement.',
             is_internal: false
         }

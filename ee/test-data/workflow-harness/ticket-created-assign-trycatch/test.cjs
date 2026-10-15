@@ -3,7 +3,7 @@ const {
   deleteTenantRows,
   pickTenantOne,
   selectTenantRows
-} = require('./_lib/tenant-sql.cjs');
+} = require('../_lib/tenant-sql.cjs');
 
 function getApiKey() {
   return process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';

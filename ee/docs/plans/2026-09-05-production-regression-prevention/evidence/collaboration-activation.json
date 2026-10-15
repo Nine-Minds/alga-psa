@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-06",
+  "kind": "local-execution",
+  "revision": "c0c9784fe2d73316fcb11b5ad6662973e3ad08d4",
+  "dirty": true,
+  "status": "passed",
+  "files": [
+    "server/src/test/integration/collaborativeEditing.integration.test.ts"
+  ],
+  "counts": {
+    "passed": 18,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "reportSha256": "5934be0dd6fd3e3209d6ce3914469a531ebe811c298e093058f5bd6969c6fc06",
+  "assertionStrength": {
+    "experiment": "Temporarily remove the production persistence extension from the owned test server, then select the disconnect/eviction case.",
+    "observed": "The persistence assertion failed because edited content was absent from PostgreSQL, after successful fixture setup and WebSocket synchronization.",
+    "counts": {
+      "failed": 1,
+      "intentionallyUnselected": 17
+    },
+    "reportSha256": "8bbcb9515c323286122ccfdc42d4387da6270776c461441072c38ae4f4e1a4c0",
+    "logSha256": "ad322ec5dc4529b277c130ee5a612aeeea24a922e308aafeb988b9fdc4508d76",
+    "restored": "The final source restores the extension; the complete 18-case run passes without skips."
+  },
+  "ciWorkflow": ".github/workflows/integration-tests.yml",
+  "limits": [
+    "Native CI verification awaits publication; this is a focused local suite, not a full server integration result.",
+    "Hocuspocus uses its service lockfile and real room validator/persistence extension. HTTP forwards to the real persistence route and actual database writes.",
+    "Browser/session authentication and database routing remain fixture seams. Redis fanout and the built service container are not covered here.",
+    "The experiment proves assertion sensitivity to absent persistence, not a replay of a particular historical production incident."
+  ]
+}

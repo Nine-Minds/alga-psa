@@ -6,6 +6,24 @@ import {
 } from './invoiceAdapters';
 
 describe('mapDbInvoiceToWasmViewModel', () => {
+  it('maps the payment-method snapshot to its label, and a missing one to null', () => {
+    const base = {
+      invoice_number: 'INV-600',
+      invoice_date: '2026-02-01',
+      due_date: '2026-02-01',
+      client: { name: 'Acme', address: '123 Main' },
+      invoice_charges: [],
+      subtotal: '0',
+      tax: '0',
+      total: '0',
+    };
+
+    expect(mapDbInvoiceToWasmViewModel({ ...base, payment_method: 'check' })?.paymentMethod).toBe('Check');
+    expect(mapDbInvoiceToWasmViewModel({ ...base, payment_method: null })?.paymentMethod).toBeNull();
+    // Invoices generated before the snapshot existed carry no column value.
+    expect(mapDbInvoiceToWasmViewModel(base)?.paymentMethod).toBeNull();
+  });
+
   it('maps db invoice payload numeric and string fields into wasm preview model', () => {
     const mapped = mapDbInvoiceToWasmViewModel({
       invoice_number: 'INV-500',
@@ -428,7 +446,9 @@ describe('mapDbInvoiceToWasmViewModel', () => {
 const snapshotSource = (
   overrides: Partial<InvoiceTimeCollectionSource> = {},
 ): InvoiceTimeCollectionSource => ({
-  version: 1,
+  version: 2,
+  rateKind: 'uniform',
+  uniformRate: overrides.rate ?? 15000,
   entryId: 'entry-1',
   itemId: 'item-1',
   workItemType: 'ticket',
@@ -443,7 +463,7 @@ const snapshotSource = (
   serviceId: 'svc-h',
   serviceName: 'Remote Support',
   ...overrides,
-});
+} as InvoiceTimeCollectionSource);
 
 describe('buildInvoiceTimeCollections', () => {
   it('aggregates multiple entries on one ticket with integer minute/minor-unit sums', () => {
@@ -485,7 +505,8 @@ describe('buildInvoiceTimeCollections', () => {
     expect(ticketGroups[0]).toMatchObject({
       hasMixedRates: true,
       rate: null,
-      rateDisplay: 'Mixed rates',
+      rateKind: 'mixed',
+      rateDisplay: null,
       totalMinutes: 150,
       totalAmount: 32500,
     });
@@ -521,7 +542,7 @@ describe('buildInvoiceTimeCollections', () => {
       'ad_hoc',
     ]);
     expect(ticketGroups[1].label).toBe('Data sync validation');
-    expect(ticketGroups[2].label).toBe('Other billed time');
+    expect(ticketGroups[2].labelKey).toBe('time.other');
   });
 
   it('orders tickets deterministically by ticket number', () => {

@@ -35,6 +35,10 @@ export async function persistCoManagedRoutingNotifications(db: Knex, tenant: str
     });
     processed++;
   } catch (error) { failures.push(error); }
-  if (failures.length) throw new AggregateError(failures, 'Routing notification creation remains pending');
+  // Name the causes in the message. An AggregateError's members are not shown
+  // by most reporters (vitest and the worker logs among them), so a bare
+  // summary message makes a pending stage undiagnosable from CI output alone.
+  if (failures.length) throw new AggregateError(failures, `Routing notification creation remains pending: ${
+    failures.map(failure => failure instanceof Error ? `${failure.name}: ${failure.message}` : String(failure)).join('; ')}`);
   return { examined: rows.length, processed };
 }

@@ -1,0 +1,23 @@
+{
+  "scope": "Tenant activity runtime recovery and input validation on migrated single-node Citus",
+  "suite": "ee/temporal-workflows/src/activities/__tests__/tenant-activities.test.ts",
+  "before": "Repaired legacy activity regression observed successful persistence for an empty tenant name",
+  "changes": [
+    "Use MockActivityEnvironment to invoke real activities against migrated DB instead of starting an unused worker",
+    "Replace obsolete role and status expectations with actual email/onboarding/client association outcomes",
+    "Replace empty database failure case with a real rejected client write and transaction rollback assertions",
+    "Reject blank tenant names as non-retryable ValidationError",
+    "Assign existing suite to temporal-database runner and independent discovery selector"
+  ],
+  "validation": {
+    "databaseFiles": 3,
+    "databaseTestsPassed": 20,
+    "readinessFiles": 30,
+    "readinessTestsPassed": 216,
+    "discoveryTestsPassed": 6
+  },
+  "limits": [
+    "Local verification; updated candidate must still pass native CI",
+    "Single-node Citus does not demonstrate distributed multi-worker topology"
+  ]
+}

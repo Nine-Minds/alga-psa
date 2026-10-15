@@ -12,12 +12,14 @@ import {
   type SnapshotCapableCore,
 } from './statePersistence';
 import type { EmulatorCore, EmulatorPackage, EmulatorServer, HostEnv } from './types';
+import { VendorRequestHistory } from './requestHistory';
 
 export interface EmulatorInstance {
   pkg: EmulatorPackage;
   core: EmulatorCore;
   controls: EmulatorControls;
   transport: TransportFaultState;
+  requests: VendorRequestHistory;
   /** Actual bound port of the vendor surface (known after start()). */
   port: number;
 }
@@ -36,6 +38,8 @@ export interface HostOptions {
   stateFile?: string;
   /** Capture control calls into a replayable scenario document. */
   recordScenario?: boolean;
+  /** Maximum completed HTTP requests retained per provider; default 1000. */
+  requestHistoryLimit?: number;
   log?: HostEnv['log'];
 }
 
@@ -53,7 +57,7 @@ function defaultLog(message: string, extra?: Record<string, unknown>): void {
 
 function listen(app: express.Express, port: number): Promise<Server> {
   return new Promise((resolve, reject) => {
-    const server = app.listen(port, () => resolve(server));
+    const server = app.listen(port, (error?: Error) => error ? reject(error) : resolve(server));
     server.on('error', reject);
   });
 }
@@ -108,7 +112,8 @@ export class EmulatorHost {
         registerTransportFaults(controls, transport);
       }
       pkg.register(controls, core);
-      this.instances.set(pkg.id, { pkg, core, controls, transport, port: 0 });
+      const requests = new VendorRequestHistory(Boolean(pkg.wire) || pkg.requestHistoryProtocol === 'smtp', options.requestHistoryLimit);
+      this.instances.set(pkg.id, { pkg, core, controls, transport, requests, port: 0 });
     }
     for (const scenario of options.scenarios ?? []) {
       if (this.scenarios.has(scenario.name)) {
@@ -200,37 +205,52 @@ export class EmulatorHost {
     await instance.controls.disarmAll();
     instance.transport.clear();
     instance.core.reset();
+    instance.requests.reset();
   }
 
   async start(): Promise<{ controlPort: number; ports: Record<string, number> }> {
     if (this.servers.length > 0) {
       throw new Error('EmulatorHost is already started');
     }
-    const ports: Record<string, number> = {};
-    for (const instance of this.instances.values()) {
-      const requestedPort = this.options.ports?.[instance.pkg.id] ?? instance.pkg.defaultPort;
-      if (instance.pkg.wire) {
-        const app = express();
-        app.use(transportFaultMiddleware(instance.transport, this.env.rng));
-        const router = express.Router();
-        instance.pkg.wire(router, instance.core, this.env);
-        app.use(router);
-        const server = await listen(app, requestedPort);
-        this.servers.push(server);
-        instance.port = boundPort(server);
-      } else {
-        const server = await instance.pkg.serve!(instance.core, requestedPort, this.env);
-        this.customServers.push(server);
-        instance.port = server.port;
+    try {
+      const ports: Record<string, number> = {};
+      for (const instance of this.instances.values()) {
+        const requestedPort = this.options.ports?.[instance.pkg.id] ?? instance.pkg.defaultPort;
+        if (instance.pkg.wire) {
+          const app = express();
+          app.use(instance.requests.middleware(this.clock));
+          app.use(transportFaultMiddleware(instance.transport, this.env.rng));
+          const router = express.Router();
+          instance.pkg.wire(router, instance.core, this.env);
+          app.use(router);
+          const server = await listen(app, requestedPort);
+          this.servers.push(server);
+          instance.port = boundPort(server);
+        } else {
+          const server = await instance.pkg.serve!(instance.core, requestedPort, this.env, {
+            begin: () => instance.requests.beginSmtp(this.env.clock),
+          });
+          this.customServers.push(server);
+          instance.port = server.port;
+        }
+        ports[instance.pkg.id] = instance.port;
+        this.env.log(`${instance.pkg.id} vendor surface listening`, { port: instance.port });
       }
-      ports[instance.pkg.id] = instance.port;
-      this.env.log(`${instance.pkg.id} vendor surface listening`, { port: instance.port });
+      const controlServer = await listen(buildControlApp(this), this.options.controlPort ?? 9500);
+      this.servers.push(controlServer);
+      this.controlPort = boundPort(controlServer);
+      this.env.log('control API listening', { port: this.controlPort });
+      return { controlPort: this.controlPort, ports };
+    } catch (startupError) {
+      try {
+        await this.stop();
+      } catch (cleanupError) {
+        throw new AggregateError([startupError, cleanupError], 'Emulator startup failed and partial-start cleanup failed');
+      }
+      this.controlPort = 0;
+      for (const instance of this.instances.values()) instance.port = 0;
+      throw startupError;
     }
-    const controlServer = await listen(buildControlApp(this), this.options.controlPort ?? 9500);
-    this.servers.push(controlServer);
-    this.controlPort = boundPort(controlServer);
-    this.env.log('control API listening', { port: this.controlPort });
-    return { controlPort: this.controlPort, ports };
   }
 
   async stop(): Promise<void> {

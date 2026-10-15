@@ -16,7 +16,8 @@ type InvitationDetailRow = {
   invitation_id: string;
   tenant: string;
   template_id: string;
-  ticket_id: string;
+  ticket_id: string | null;
+  project_id: string | null;
   client_id: string | null;
   contact_id: string | null;
   token_expires_at: Date | string;
@@ -35,7 +36,8 @@ export interface SurveyInvitationDetails {
   invitationId: string;
   tenant: string;
   templateId: string;
-  ticketId: string;
+  ticketId?: string;
+  projectId?: string;
   clientId: string | null;
   contactId: string | null;
   tokenExpiresAt: Date;
@@ -105,6 +107,7 @@ export async function resolveSurveyTenantFromToken(token: string): Promise<Resol
         `${SURVEY_INVITATIONS_TABLE}.tenant`,
         `${SURVEY_INVITATIONS_TABLE}.template_id`,
         `${SURVEY_INVITATIONS_TABLE}.ticket_id`,
+        `${SURVEY_INVITATIONS_TABLE}.project_id`,
         `${SURVEY_INVITATIONS_TABLE}.client_id`,
         `${SURVEY_INVITATIONS_TABLE}.contact_id`,
         `${SURVEY_INVITATIONS_TABLE}.token_expires_at`,
@@ -140,14 +143,15 @@ export async function resolveSurveyTenantFromToken(token: string): Promise<Resol
   if (Number.isNaN(tokenExpiresAt.getTime()) || tokenExpiresAt.getTime() <= Date.now()) {
     try {
       const expiredAt = tokenExpiresAt.toISOString();
-      const recipientId = invitationRow.contact_id ?? invitationRow.ticket_id;
+      const recipientId = invitationRow.contact_id ?? invitationRow.ticket_id ?? invitationRow.project_id ?? invitationRow.invitation_id;
 
       await publishWorkflowEvent({
         eventType: 'SURVEY_EXPIRED',
         payload: buildSurveyExpiredPayload({
           surveyId: invitationRow.invitation_id,
           recipientId,
-          ticketId: invitationRow.ticket_id,
+          ticketId: invitationRow.ticket_id ?? undefined,
+          projectId: invitationRow.project_id ?? undefined,
           expiredAt,
         }),
         ctx: {
@@ -185,7 +189,8 @@ function mapInvitation(row: InvitationDetailRow): SurveyInvitationDetails {
     invitationId: row.invitation_id,
     tenant: row.tenant,
     templateId: row.template_id,
-    ticketId: row.ticket_id,
+    ...(row.ticket_id ? { ticketId: row.ticket_id } : {}),
+    ...(row.project_id ? { projectId: row.project_id } : {}),
     clientId: row.client_id ?? null,
     contactId: row.contact_id ?? null,
     tokenExpiresAt,

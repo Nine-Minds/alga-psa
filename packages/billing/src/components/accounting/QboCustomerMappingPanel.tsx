@@ -277,8 +277,13 @@ export function QboCustomerMappingPanel() {
   const [error, setError] = React.useState<string | null>(null);
   const [bulkWorking, setBulkWorking] = React.useState(false);
   const [bulkFeedback, setBulkFeedback] = React.useState<string | null>(null);
+  const mounted = React.useRef(false);
+  const loadVersion = React.useRef(0);
 
   const load = React.useCallback(async () => {
+    if (!mounted.current) return;
+    const version = ++loadVersion.current;
+    const isCurrentLoad = () => mounted.current && version === loadVersion.current;
     setLoading(true);
     setError(null);
     try {
@@ -286,6 +291,7 @@ export function QboCustomerMappingPanel() {
         getCustomerMatchCandidates(),
         getQboCustomers(),
       ]);
+      if (!isCurrentLoad()) return;
       if (candidates.error) {
         setError(candidates.error);
       }
@@ -297,15 +303,23 @@ export function QboCustomerMappingPanel() {
       }
       setRows(candidates.rows);
     } catch (err) {
+      if (!isCurrentLoad()) return;
       console.error('Failed to load customer mappings:', err);
       setError('Failed to load customer mappings.');
     } finally {
-      setLoading(false);
+      if (isCurrentLoad()) setLoading(false);
     }
   }, []);
 
   React.useEffect(() => {
+    mounted.current = true;
     void load();
+    return () => {
+      mounted.current = false;
+      // Server actions cannot be cancelled. Ignore their results after cleanup,
+      // including when StrictMode starts a fresh effect on this same instance.
+      ++loadVersion.current;
+    };
   }, [load]);
 
   const exactCount = rows.filter((r) => !r.mappedExternalId && r.suggestion?.exact).length;

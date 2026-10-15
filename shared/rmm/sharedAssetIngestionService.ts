@@ -277,6 +277,11 @@ export async function ingestNormalizedRmmDeviceSnapshot(
 
       if (resolvedClientId) {
         assetPatch.client_id = resolvedClientId;
+        if (existingAsset.client_id && existingAsset.client_id !== resolvedClientId) {
+          // The assignee is a contact of the previous client; moving the
+          // device to another client leaves it unassigned.
+          assetPatch.contact_name_id = null;
+        }
       }
 
       await db.table('assets')

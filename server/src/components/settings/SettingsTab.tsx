@@ -65,7 +65,9 @@ export function SettingsTab({ tabId, children }: SettingsTabProps): React.JSX.El
       dialogMessage={t('unsavedChanges.message')}
     >
       <div className="h-full overflow-y-auto p-6">
-        <h1 className="text-3xl font-bold mb-6">{t('page.title')}</h1>
+        <h1 className="text-3xl font-bold mb-6">
+          {meta ? t(meta.labelKey, { defaultValue: meta.title }) : t('page.title')}
+        </h1>
         {body}
       </div>
     </UnsavedChangesProvider>

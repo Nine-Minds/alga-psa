@@ -1,0 +1,29 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-correct-recurring-quote-discount-allocation-and/server
+      Running tests with seed "1788922070488"
+
+Environment file path: /home/robert/alga-copies/feature-correct-recurring-quote-discount-allocation-and/.env.localtest
+ ✓ ../packages/billing/src/services/quoteDiscountAllocation.test.ts (13 tests) 5ms 13 MB heap used
+2:48:05 AM [vite] (ssr) warning: Duplicate member "get" in class body
+97 |    // included. Reparse the Set-Cookie headers rather than caching state so
+98 |    // cookies written straight onto the headers are visible too.
+99 |    get(name: string): StubCookieObjectForm | undefined {
+   |    ^
+100|      const matches = this.getAll().filter((cookie) => cookie.name === name);
+101|      return matches.length === 0 ? undefined : matches[matches.length - 1];
+
+  Plugin: vite:esbuild
+  File: /home/robert/alga-copies/feature-correct-recurring-quote-discount-allocation-and/server/src/test/stubs/next-server.ts
+ ✓ src/test/infrastructure/billing/quotes/quoteInfrastructure.test.ts (90 tests) 15056ms 199 MB heap used
+   ✓ Quote infrastructure > T206: copy helper keeps item/service precedence for removed targets (duplication/template flows)  2261ms
+ ✓ ../packages/billing/tests/quote/quoteActions.test.ts (42 tests) 112ms 220 MB heap used
+ ✓ ../packages/billing/src/lib/adapters/quoteAdapters.test.ts (15 tests) 5ms 229 MB heap used
+ ✓ src/test/infrastructure/billing/quotes/quoteConversion.test.ts (24 tests) 10861ms 253 MB heap used
+ ✓ ../packages/billing/src/services/quoteConversionService.preview.test.ts (5 tests) 3ms 260 MB heap used
+ ✓ ../packages/billing/tests/quote/quoteCalculationService.test.ts (17 tests) 17ms 260 MB heap used
+ ✓ ../packages/billing/src/components/billing-dashboard/quotes/quoteLineItemDraft.test.ts (9 tests) 2ms 266 MB heap used
+
+ Test Files  8 passed (8)
+      Tests  215 passed (215)
+   Start at  02:47:50
+   Duration  28.76s (transform 2.45s, setup 83ms, collect 2.11s, tests 26.06s, environment 0ms, prepare 33ms)

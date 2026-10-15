@@ -3,6 +3,7 @@ import type { TemplateAst } from '@alga-psa/types';
 import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 const resolveRenderLocaleMock = vi.fn();
+const resolveRenderCountryMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn,
@@ -27,13 +28,17 @@ vi.mock('@alga-psa/billing/models/invoice', () => ({
 }));
 
 // The preview resolves the recipient through the PDF service's seam; the render
-// under test is the same one the PDF path uses, so only the lookup is stubbed.
+// under test is the same one the PDF path uses, so only the lookups are stubbed.
+// There are two of them, and they answer different questions: the language the
+// document is written in, and the country whose date shape it is dated in.
 vi.mock('../services/pdfGenerationService', () => ({
   createPDFGenerationService: () => ({
     resolveRenderLocale: (...args: unknown[]) => resolveRenderLocaleMock(...args),
+    resolveRenderCountry: (...args: unknown[]) => resolveRenderCountryMock(...args),
   }),
 }));
 
+import { countryDateFormat, SYSTEM_DATE_FORMAT } from '@alga-psa/core/i18n/countryDateFormat';
 import { renderTemplateOnServer } from './invoiceTemplates';
 
 const invoiceData = {
@@ -102,29 +107,42 @@ const render = (options: Record<string, unknown>) =>
 describe('renderTemplateOnServer recipient locale', () => {
   beforeEach(() => {
     resolveRenderLocaleMock.mockReset();
+    resolveRenderCountryMock.mockReset();
+    resolveRenderCountryMock.mockResolvedValue(SYSTEM_DATE_FORMAT);
   });
 
   it('previews a real invoice in its recipient locale', async () => {
     resolveRenderLocaleMock.mockResolvedValue('de');
+    // A German-language invoice addressed to the UK: the language names the
+    // labels, the country numbers the date. Pairing a language with a country
+    // that disagrees is what makes this assertion prove which one won.
+    resolveRenderCountryMock.mockResolvedValue(countryDateFormat('GB'));
 
     const result = await render({ templateAst: standardAst, invoiceId: 'inv-1' });
 
     expect(resolveRenderLocaleMock).toHaveBeenCalledWith({ invoiceId: 'inv-1' });
+    expect(resolveRenderCountryMock).toHaveBeenCalledWith({ invoiceId: 'inv-1' });
     expect(result.html).toContain('Rechnungsdatum');
     expect(result.html).toContain('Zwischensumme');
-    // The on-screen preview must not diverge from the PDF: one locale formats
-    // dates and currency as well as labels.
-    expect(result.html).toContain('4.3.2026');
+    // The on-screen preview must not diverge from the PDF: the same seam
+    // supplies both, and the date follows GB rather than the German dots.
+    expect(result.html).toContain('04/03/2026');
     expect(result.html).toContain('1.234,56');
   });
 
   it('leaves sample-data previews in the authored labels', async () => {
+    // No invoice to address, so there is no recipient language to ask for --
+    // but the tenant default still dates the sample, which is what an unsent
+    // document would be dated in.
+    resolveRenderCountryMock.mockResolvedValue(countryDateFormat('GB'));
+
     const result = await render({ templateAst: standardAst });
 
     expect(resolveRenderLocaleMock).not.toHaveBeenCalled();
+    expect(resolveRenderCountryMock).toHaveBeenCalledWith({});
     expect(result.html).toContain('Issue Date');
     expect(result.html).toContain('Subtotal');
-    expect(result.html).toContain('3/4/2026');
+    expect(result.html).toContain('04/03/2026');
   });
 
   it('falls back to English rather than failing when no recipient locale resolves', async () => {
@@ -134,5 +152,8 @@ describe('renderTemplateOnServer recipient locale', () => {
 
     expect(result.html).toContain('Issue Date');
     expect(result.html).toContain('Subtotal');
+    // An unplaceable country leaves the fixed system default, not a shape
+    // inferred from the English fallback.
+    expect(result.html).toContain('03/04/2026');
   });
 });

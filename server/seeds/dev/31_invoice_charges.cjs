@@ -9,12 +9,12 @@ exports.seed = async function (knex) {
     await db.table('invoice_charges').insert([
                 {
                     tenant: tenantId,
-                    invoice_id: db.table('invoices').where({
-                        invoice_number: 'INV-003' 
-                    }).select('invoice_id').first(),
-                    service_id: db.table('service_catalog').where({
-                        service_name: 'Rabbit Tracking' 
-                    }).select('service_id').first(),
+                    invoice_id: (await db.table('invoices').where({
+                        invoice_number: 'INV-003'
+                    }).select('invoice_id').first())?.invoice_id ?? null,
+                    service_id: (await db.table('service_catalog').where({
+                        service_name: 'Rabbit Tracking'
+                    }).select('service_id').first())?.service_id ?? null,
                     description: 'Advanced Rabbit Tracking Services',
                     quantity: 40,
                     unit_price: 100.00,
@@ -24,12 +24,12 @@ exports.seed = async function (knex) {
                 },
                 {
                     tenant: tenantId,
-                    invoice_id: db.table('invoices').where({
-                        invoice_number: 'INV-003' 
-                    }).select('invoice_id').first(),
-                    service_id: db.table('service_catalog').where({
-                        service_name: 'Looking Glass Maintenance' 
-                    }).select('service_id').first(),
+                    invoice_id: (await db.table('invoices').where({
+                        invoice_number: 'INV-003'
+                    }).select('invoice_id').first())?.invoice_id ?? null,
+                    service_id: (await db.table('service_catalog').where({
+                        service_name: 'Looking Glass Maintenance'
+                    }).select('service_id').first())?.service_id ?? null,
                     description: 'Emergency Looking Glass Repair',
                     quantity: 1,
                     unit_price: 1000.00,
@@ -39,12 +39,12 @@ exports.seed = async function (knex) {
                 },
                 {
                     tenant: tenantId,
-                    invoice_id: db.table('invoices').where({
-                        invoice_number: 'INV-004' 
-                    }).select('invoice_id').first(),
-                    service_id: db.table('service_catalog').where({
-                        service_name: 'Yellow Brick Road Repair' 
-                    }).select('service_id').first(),
+                    invoice_id: (await db.table('invoices').where({
+                        invoice_number: 'INV-004'
+                    }).select('invoice_id').first())?.invoice_id ?? null,
+                    service_id: (await db.table('service_catalog').where({
+                        service_name: 'Yellow Brick Road Repair'
+                    }).select('service_id').first())?.service_id ?? null,
                     description: 'Major Yellow Brick Road Overhaul',
                     quantity: 1,
                     unit_price: 10000.00,
@@ -54,12 +54,12 @@ exports.seed = async function (knex) {
                 },
                 {
                     tenant: tenantId,
-                    invoice_id: db.table('invoices').where({
-                        invoice_number: 'INV-004' 
-                    }).select('invoice_id').first(),
-                    service_id: db.table('service_catalog').where({
-                        service_name: 'Emerald City Security' 
-                    }).select('service_id').first(),
+                    invoice_id: (await db.table('invoices').where({
+                        invoice_number: 'INV-004'
+                    }).select('invoice_id').first())?.invoice_id ?? null,
+                    service_id: (await db.table('service_catalog').where({
+                        service_name: 'Emerald City Security'
+                    }).select('service_id').first())?.service_id ?? null,
                     description: 'Enhanced Security Package',
                     quantity: 1,
                     unit_price: 2000.00,
@@ -69,12 +69,12 @@ exports.seed = async function (knex) {
                 },
                 {
                     tenant: tenantId,
-                    invoice_id: db.table('invoices').where({
-                        invoice_number: 'INV-005' 
-                    }).select('invoice_id').first(),
-                    service_id: db.table('service_catalog').where({
-                        service_name: 'Rabbit Tracking' 
-                    }).select('service_id').first(),
+                    invoice_id: (await db.table('invoices').where({
+                        invoice_number: 'INV-005'
+                    }).select('invoice_id').first())?.invoice_id ?? null,
+                    service_id: (await db.table('service_catalog').where({
+                        service_name: 'Rabbit Tracking'
+                    }).select('service_id').first())?.service_id ?? null,
                     description: 'Premium Rabbit Tracking Services',
                     quantity: 50,
                     unit_price: 125.00,
@@ -84,12 +84,12 @@ exports.seed = async function (knex) {
                 },
                 {
                     tenant: tenantId,
-                    invoice_id: db.table('invoices').where({
-                        invoice_number: 'INV-005' 
-                    }).select('invoice_id').first(),
-                    service_id: db.table('service_catalog').where({
-                        service_name: 'Looking Glass Maintenance' 
-                    }).select('service_id').first(),
+                    invoice_id: (await db.table('invoices').where({
+                        invoice_number: 'INV-005'
+                    }).select('invoice_id').first())?.invoice_id ?? null,
+                    service_id: (await db.table('service_catalog').where({
+                        service_name: 'Looking Glass Maintenance'
+                    }).select('service_id').first())?.service_id ?? null,
                     description: 'Monthly Looking Glass Maintenance',
                     quantity: 1,
                     unit_price: 1250.00,

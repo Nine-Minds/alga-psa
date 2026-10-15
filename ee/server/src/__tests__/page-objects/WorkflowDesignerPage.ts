@@ -81,6 +81,22 @@ export class WorkflowDesignerPage {
     this.emptyPipeline = page.locator('[data-testid="empty-pipeline"]');
   }
 
+  /**
+   * Clicks Publish. The first publish of a workflow asks for confirmation (it starts reacting to
+   * live events); confirm it when it appears.
+   */
+  async publish(): Promise<void> {
+    await this.publishButton.click();
+    const confirmButton = this.page.locator('#workflow-designer-first-publish-dialog-confirm');
+    const appeared = await confirmButton
+      .waitFor({ state: 'visible', timeout: 1500 })
+      .then(() => true)
+      .catch(() => false);
+    if (appeared) {
+      await confirmButton.click();
+    }
+  }
+
   async goto(baseUrl?: string): Promise<void> {
     const targetBaseUrl = baseUrl ?? resolvePlaywrightBaseUrl();
     const url = `${targetBaseUrl}/msp/workflow-editor`;

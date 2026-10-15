@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { promises as fs } from 'node:fs';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 
 import { E2ETestContext } from '../utils/test-context-e2e';
 import {

@@ -637,12 +637,12 @@ function DocumentStorageCardComponent({
                                 <div className="mt-2 flex items-center gap-2">
                                     <span
                                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                                            document.is_client_visible
+                                            document.is_client_visible && document.comment_attachment_is_public !== false
                                                 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
                                                 : 'bg-gray-100 text-gray-700 dark:bg-[rgb(var(--color-border-100))] dark:text-[rgb(var(--color-text-600))]'
                                         }`}
                                     >
-                                        {document.is_client_visible
+                                        {document.is_client_visible && document.comment_attachment_is_public !== false
                                             ? t('documents.visibility.clientVisible', 'Client visible')
                                             : t('documents.visibility.internalOnly', 'Internal')}
                                     </span>
@@ -650,11 +650,11 @@ function DocumentStorageCardComponent({
                                         <div onClick={(e) => e.stopPropagation()}>
                                             <VisibilityToggle
                                                 id={`document-card-visibility-${document.document_id}`}
-                                                isClientVisible={Boolean(document.is_client_visible)}
+                                                isClientVisible={Boolean(document.is_client_visible && document.comment_attachment_is_public !== false)}
                                                 onToggle={(nextValue) => {
                                                     void onToggleVisibility(document, nextValue);
                                                 }}
-                                                disabled={isVisibilityUpdating || isLoading}
+                                                disabled={document.comment_attachment_is_public === false || isVisibilityUpdating || isLoading}
                                             />
                                         </div>
                                     )}
@@ -1007,6 +1007,7 @@ const DocumentStorageCard = memo(DocumentStorageCardComponent, (prevProps, nextP
         prevProps.showVisibilityControls === nextProps.showVisibilityControls &&
         prevProps.onToggleVisibility === nextProps.onToggleVisibility &&
         prevProps.isVisibilityUpdating === nextProps.isVisibilityUpdating &&
+        prevProps.document.comment_attachment_is_public === nextProps.document.comment_attachment_is_public &&
         prevProps.document.is_client_visible === nextProps.document.is_client_visible
     );
 });

@@ -84,6 +84,7 @@ describe('MyRequestDetailPage', () => {
           },
         ],
       },
+      audit_events: [],
       attachments: [
         {
           submission_attachment_id: 'attachment-1',
