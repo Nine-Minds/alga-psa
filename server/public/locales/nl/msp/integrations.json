@@ -4091,7 +4091,12 @@
           "salesTaxPayableAccount": "Rekening te betalen omzetbelasting",
           "salesTaxPayableAccountHelp": "De rekening waarop de omzetbelastingregel wordt geboekt.",
           "defaultSalesTaxItem": "Standaard omzetbelastingartikel",
-          "defaultSalesTaxItemHelp": "Omzetbelastingartikel of -groep voor belaste facturen waarvan de belastingcodekoppeling geen \"qbdSalesTaxItem\"-metadata heeft."
+          "defaultSalesTaxItemHelp": "Omzetbelastingartikel of -groep voor belaste facturen waarvan de belastingcodekoppeling geen \"qbdSalesTaxItem\"-metadata heeft.",
+          "newProductItemType": "Artikeltype voor nieuwe producten",
+          "inventoryWarning": "Voorraadontvangsten uit Alga worden niet geëxporteerd, dus de voorraad in QuickBooks wordt negatief tenzij u de voorraad ook in QuickBooks invoert.",
+          "nonInventoryHelp": "Aanbevolen: Alga blijft het leidende voorraadsysteem en QuickBooks registreert alleen de verkoop.",
+          "inventoryAssetAccount": "Rekening voorraadactiva",
+          "cogsAccount": "Rekening kostprijs verkopen"
         },
         "mappings": {
           "title": "QuickBooks-koppelingen",
@@ -4099,6 +4104,14 @@
         },
         "exports": {
           "description": "Maak een QuickBooks Desktop-exportbatch aan, voer deze uit en het IIF-bestand wordt automatisch gedownload."
+        },
+        "newItems": {
+          "title": "Door exports aangemaakte artikelen",
+          "description": "Wanneer een export een nieuw QuickBooks-artikel aanmaakt voor een Alga-product, wordt dit artikeltype gebruikt. Diensten worden altijd als dienstartikel aangemaakt."
+        },
+        "itemTypes": {
+          "nonInventory": "Niet-voorraadartikel",
+          "inventory": "Voorraadartikel"
         }
       }
     }

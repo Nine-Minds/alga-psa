@@ -4091,7 +4091,12 @@
           "salesTaxPayableAccount": "Cuenta de impuesto sobre ventas por pagar",
           "salesTaxPayableAccountHelp": "La cuenta en la que se registra la línea de impuesto sobre ventas.",
           "defaultSalesTaxItem": "Artículo de impuesto sobre ventas predeterminado",
-          "defaultSalesTaxItemHelp": "Artículo o grupo de impuesto sobre ventas para facturas con impuestos cuya asignación de código de impuesto no tiene metadatos \"qbdSalesTaxItem\"."
+          "defaultSalesTaxItemHelp": "Artículo o grupo de impuesto sobre ventas para facturas con impuestos cuya asignación de código de impuesto no tiene metadatos \"qbdSalesTaxItem\".",
+          "newProductItemType": "Tipo de artículo para productos nuevos",
+          "inventoryWarning": "Las recepciones de existencias de Alga no se exportan, por lo que las cantidades disponibles en QuickBooks quedarán en negativo a menos que también registre las existencias en QuickBooks.",
+          "nonInventoryHelp": "Recomendado: Alga sigue siendo el sistema de referencia del inventario y QuickBooks solo registra la venta.",
+          "inventoryAssetAccount": "Cuenta de activo de inventario",
+          "cogsAccount": "Cuenta de costo de bienes vendidos"
         },
         "mappings": {
           "title": "Asignaciones de QuickBooks",
@@ -4099,6 +4104,14 @@
         },
         "exports": {
           "description": "Cree un lote de exportación de QuickBooks Desktop, ejecútelo y el archivo IIF se descargará automáticamente."
+        },
+        "newItems": {
+          "title": "Artículos creados por exportaciones",
+          "description": "Cuando una exportación crea un artículo nuevo de QuickBooks para un producto de Alga, usa este tipo de artículo. Los servicios siempre se crean como artículos de servicio."
+        },
+        "itemTypes": {
+          "nonInventory": "Pieza sin inventario",
+          "inventory": "Pieza de inventario"
         }
       }
     }

@@ -4091,7 +4091,12 @@
           "salesTaxPayableAccount": "Konto för utgående försäljningsskatt",
           "salesTaxPayableAccountHelp": "Kontot som raden för försäljningsskatt bokförs på.",
           "defaultSalesTaxItem": "Standardartikel för försäljningsskatt",
-          "defaultSalesTaxItemHelp": "Artikel eller grupp för försäljningsskatt för beskattade fakturor vars skattekodsmappning saknar \"qbdSalesTaxItem\"-metadata."
+          "defaultSalesTaxItemHelp": "Artikel eller grupp för försäljningsskatt för beskattade fakturor vars skattekodsmappning saknar \"qbdSalesTaxItem\"-metadata.",
+          "newProductItemType": "Artikeltyp för nya produkter",
+          "inventoryWarning": "Lagerinleveranser i Alga exporteras inte, så saldona i QuickBooks blir negativa om du inte också registrerar lagret i QuickBooks.",
+          "nonInventoryHelp": "Rekommenderas: Alga förblir lagrets huvudsystem och QuickBooks registrerar bara försäljningen.",
+          "inventoryAssetAccount": "Konto för lagertillgångar",
+          "cogsAccount": "Konto för kostnad sålda varor"
         },
         "mappings": {
           "title": "QuickBooks-mappningar",
@@ -4099,6 +4104,14 @@
         },
         "exports": {
           "description": "Skapa en exportbatch för QuickBooks Desktop, kör den så laddas IIF-filen ned automatiskt."
+        },
+        "newItems": {
+          "title": "Artiklar som skapas av exporter",
+          "description": "När en export skapar en ny QuickBooks-artikel för en Alga-produkt används den här artikeltypen. Tjänster skapas alltid som tjänsteartiklar."
+        },
+        "itemTypes": {
+          "nonInventory": "Icke-lagerförd artikel",
+          "inventory": "Lagerförd artikel"
         }
       }
     }

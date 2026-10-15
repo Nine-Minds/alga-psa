@@ -4091,7 +4091,12 @@
           "salesTaxPayableAccount": "Conto debiti per imposta sulle vendite",
           "salesTaxPayableAccountHelp": "Il conto su cui viene registrata la riga dell'imposta sulle vendite.",
           "defaultSalesTaxItem": "Articolo imposta sulle vendite predefinito",
-          "defaultSalesTaxItemHelp": "Articolo o gruppo di imposta sulle vendite per fatture tassate la cui mappatura del codice fiscale non ha metadati \"qbdSalesTaxItem\"."
+          "defaultSalesTaxItemHelp": "Articolo o gruppo di imposta sulle vendite per fatture tassate la cui mappatura del codice fiscale non ha metadati \"qbdSalesTaxItem\".",
+          "newProductItemType": "Tipo di articolo per i nuovi prodotti",
+          "inventoryWarning": "I carichi di magazzino di Alga non vengono esportati, quindi le giacenze in QuickBooks diventeranno negative a meno che tu non registri le scorte anche in QuickBooks.",
+          "nonInventoryHelp": "Consigliato: Alga resta il sistema di riferimento per il magazzino e QuickBooks registra solo la vendita.",
+          "inventoryAssetAccount": "Conto attività di magazzino",
+          "cogsAccount": "Conto costo del venduto"
         },
         "mappings": {
           "title": "Mappature QuickBooks",
@@ -4099,6 +4104,14 @@
         },
         "exports": {
           "description": "Crea un batch di esportazione QuickBooks Desktop, eseguilo e il file IIF verrà scaricato automaticamente."
+        },
+        "newItems": {
+          "title": "Articoli creati dalle esportazioni",
+          "description": "Quando un'esportazione crea un nuovo articolo QuickBooks per un prodotto Alga, usa questo tipo di articolo. I servizi vengono sempre creati come articoli di servizio."
+        },
+        "itemTypes": {
+          "nonInventory": "Articolo non di magazzino",
+          "inventory": "Articolo di magazzino"
         }
       }
     }

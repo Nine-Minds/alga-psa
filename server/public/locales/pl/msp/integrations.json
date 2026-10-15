@@ -4091,7 +4091,12 @@
           "salesTaxPayableAccount": "Konto zobowiązań z tytułu podatku od sprzedaży",
           "salesTaxPayableAccountHelp": "Konto, na które księgowana jest linia podatku od sprzedaży.",
           "defaultSalesTaxItem": "Domyślna pozycja podatku od sprzedaży",
-          "defaultSalesTaxItemHelp": "Pozycja lub grupa podatku od sprzedaży dla opodatkowanych faktur, których mapowanie kodu podatkowego nie ma metadanych \"qbdSalesTaxItem\"."
+          "defaultSalesTaxItemHelp": "Pozycja lub grupa podatku od sprzedaży dla opodatkowanych faktur, których mapowanie kodu podatkowego nie ma metadanych \"qbdSalesTaxItem\".",
+          "newProductItemType": "Typ pozycji dla nowych produktów",
+          "inventoryWarning": "Przyjęcia magazynowe z Alga nie są eksportowane, więc stany w QuickBooks staną się ujemne, chyba że wprowadzisz stany również w QuickBooks.",
+          "nonInventoryHelp": "Zalecane: Alga pozostaje głównym systemem magazynowym, a QuickBooks rejestruje tylko sprzedaż.",
+          "inventoryAssetAccount": "Konto aktywów magazynowych",
+          "cogsAccount": "Konto kosztu sprzedanych towarów"
         },
         "mappings": {
           "title": "Mapowania QuickBooks",
@@ -4099,6 +4104,14 @@
         },
         "exports": {
           "description": "Utwórz partię eksportu QuickBooks Desktop, uruchom ją, a plik IIF pobierze się automatycznie."
+        },
+        "newItems": {
+          "title": "Pozycje tworzone przez eksporty",
+          "description": "Gdy eksport tworzy nową pozycję QuickBooks dla produktu Alga, używa tego typu pozycji. Usługi są zawsze tworzone jako pozycje usługowe."
+        },
+        "itemTypes": {
+          "nonInventory": "Część niemagazynowa",
+          "inventory": "Część magazynowa"
         }
       }
     }

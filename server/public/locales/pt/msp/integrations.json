@@ -4091,7 +4091,12 @@
           "salesTaxPayableAccount": "Conta de imposto sobre vendas a pagar",
           "salesTaxPayableAccountHelp": "A conta em que a linha de imposto sobre vendas é lançada.",
           "defaultSalesTaxItem": "Item de imposto sobre vendas padrão",
-          "defaultSalesTaxItemHelp": "Item ou grupo de imposto sobre vendas para faturas tributadas cujo mapeamento de código de imposto não tem metadados \"qbdSalesTaxItem\"."
+          "defaultSalesTaxItemHelp": "Item ou grupo de imposto sobre vendas para faturas tributadas cujo mapeamento de código de imposto não tem metadados \"qbdSalesTaxItem\".",
+          "newProductItemType": "Tipo de item para produtos novos",
+          "inventoryWarning": "Os recebimentos de estoque do Alga não são exportados, então as quantidades em estoque no QuickBooks ficarão negativas, a menos que você também registre o estoque no QuickBooks.",
+          "nonInventoryHelp": "Recomendado: o Alga continua como sistema de referência do estoque e o QuickBooks registra apenas a venda.",
+          "inventoryAssetAccount": "Conta de ativo de estoque",
+          "cogsAccount": "Conta de custo das mercadorias vendidas"
         },
         "mappings": {
           "title": "Mapeamentos do QuickBooks",
@@ -4099,6 +4104,14 @@
         },
         "exports": {
           "description": "Crie um lote de exportação do QuickBooks Desktop, execute-o e o arquivo IIF será baixado automaticamente."
+        },
+        "newItems": {
+          "title": "Itens criados pelas exportações",
+          "description": "Quando uma exportação cria um item novo no QuickBooks para um produto do Alga, usa este tipo de item. Serviços são sempre criados como itens de serviço."
+        },
+        "itemTypes": {
+          "nonInventory": "Peça sem estoque",
+          "inventory": "Peça de estoque"
         }
       }
     }

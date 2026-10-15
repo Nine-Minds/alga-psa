@@ -8,6 +8,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import {
   DEFAULT_QUICKBOOKS_DESKTOP_SETTINGS,
   normalizeQuickBooksDesktopSettings,
+  type QuickBooksDesktopProductItemType,
   type QuickBooksDesktopSettings,
 } from './lib/quickBooksDesktopSettings';
 
@@ -15,6 +16,7 @@ export { GmailAdapter } from './services/email/providers/GmailAdapter';
 export {
   DEFAULT_QUICKBOOKS_DESKTOP_SETTINGS,
   normalizeQuickBooksDesktopSettings,
+  type QuickBooksDesktopProductItemType,
   type QuickBooksDesktopSettings,
 };
 

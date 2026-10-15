@@ -4,11 +4,19 @@
  * names; IIF imports create any name QuickBooks does not recognise, so these
  * must match the company file exactly.
  */
+export type QuickBooksDesktopProductItemType = 'NONINVENTORY' | 'INVENTORY';
+
 export interface QuickBooksDesktopSettings {
   arAccount: string;
   defaultIncomeAccount: string;
   salesTaxPayableAccount: string;
   defaultSalesTaxItem: string;
+  /** Item type used when an export creates a new product in QuickBooks. */
+  newProductItemType: QuickBooksDesktopProductItemType;
+  /** Required for new Inventory Part items. */
+  inventoryAssetAccount: string;
+  /** Required for new Inventory Part items. */
+  cogsAccount: string;
 }
 
 export const DEFAULT_QUICKBOOKS_DESKTOP_SETTINGS: QuickBooksDesktopSettings = {
@@ -16,6 +24,9 @@ export const DEFAULT_QUICKBOOKS_DESKTOP_SETTINGS: QuickBooksDesktopSettings = {
   defaultIncomeAccount: '',
   salesTaxPayableAccount: 'Sales Tax Payable',
   defaultSalesTaxItem: '',
+  newProductItemType: 'NONINVENTORY',
+  inventoryAssetAccount: 'Inventory Asset',
+  cogsAccount: 'Cost of Goods Sold',
 };
 
 export function normalizeQuickBooksDesktopSettings(raw: unknown): QuickBooksDesktopSettings {
@@ -29,5 +40,8 @@ export function normalizeQuickBooksDesktopSettings(raw: unknown): QuickBooksDesk
     defaultIncomeAccount: pick('defaultIncomeAccount'),
     salesTaxPayableAccount: pick('salesTaxPayableAccount') || DEFAULT_QUICKBOOKS_DESKTOP_SETTINGS.salesTaxPayableAccount,
     defaultSalesTaxItem: pick('defaultSalesTaxItem'),
+    newProductItemType: pick('newProductItemType') === 'INVENTORY' ? 'INVENTORY' : 'NONINVENTORY',
+    inventoryAssetAccount: pick('inventoryAssetAccount') || DEFAULT_QUICKBOOKS_DESKTOP_SETTINGS.inventoryAssetAccount,
+    cogsAccount: pick('cogsAccount') || DEFAULT_QUICKBOOKS_DESKTOP_SETTINGS.cogsAccount,
   };
 }

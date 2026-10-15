@@ -4091,7 +4091,12 @@
           "salesTaxPayableAccount": "Compte de taxe de vente à payer",
           "salesTaxPayableAccountHelp": "Le compte sur lequel la ligne de taxe de vente est comptabilisée.",
           "defaultSalesTaxItem": "Article de taxe de vente par défaut",
-          "defaultSalesTaxItemHelp": "Article ou groupe de taxe de vente pour les factures taxées dont la correspondance de code de taxe n'a pas de métadonnée \"qbdSalesTaxItem\"."
+          "defaultSalesTaxItemHelp": "Article ou groupe de taxe de vente pour les factures taxées dont la correspondance de code de taxe n'a pas de métadonnée \"qbdSalesTaxItem\".",
+          "newProductItemType": "Type d'article pour les nouveaux produits",
+          "inventoryWarning": "Les réceptions de stock d'Alga ne sont pas exportées : les quantités en stock dans QuickBooks deviendront négatives, sauf si vous saisissez aussi le stock dans QuickBooks.",
+          "nonInventoryHelp": "Recommandé : Alga reste le système de référence pour le stock et QuickBooks n'enregistre que la vente.",
+          "inventoryAssetAccount": "Compte d'actif de stock",
+          "cogsAccount": "Compte de coût des marchandises vendues"
         },
         "mappings": {
           "title": "Correspondances QuickBooks",
@@ -4099,6 +4104,14 @@
         },
         "exports": {
           "description": "Créez un lot d'export QuickBooks Desktop, exécutez-le et le fichier IIF se télécharge automatiquement."
+        },
+        "newItems": {
+          "title": "Articles créés par les exports",
+          "description": "Lorsqu'un export crée un nouvel article QuickBooks pour un produit Alga, il utilise ce type d'article. Les services sont toujours créés comme articles de service."
+        },
+        "itemTypes": {
+          "nonInventory": "Pièce hors stock",
+          "inventory": "Pièce en stock"
         }
       }
     }

@@ -4091,7 +4091,12 @@
           "salesTaxPayableAccount": "Umsatzsteuer-Verbindlichkeitskonto",
           "salesTaxPayableAccountHelp": "Das Konto, auf das die Umsatzsteuerzeile gebucht wird.",
           "defaultSalesTaxItem": "Standard-Umsatzsteuerartikel",
-          "defaultSalesTaxItemHelp": "Umsatzsteuerartikel oder -gruppe für besteuerte Rechnungen, deren Steuercode-Zuordnung keine \"qbdSalesTaxItem\"-Metadaten enthält."
+          "defaultSalesTaxItemHelp": "Umsatzsteuerartikel oder -gruppe für besteuerte Rechnungen, deren Steuercode-Zuordnung keine \"qbdSalesTaxItem\"-Metadaten enthält.",
+          "newProductItemType": "Artikeltyp für neue Produkte",
+          "inventoryWarning": "Wareneingänge aus Alga werden nicht exportiert, daher werden die Bestände in QuickBooks negativ, sofern Sie den Bestand nicht auch in QuickBooks erfassen.",
+          "nonInventoryHelp": "Empfohlen: Alga bleibt das führende System für den Lagerbestand, und QuickBooks erfasst nur den Verkauf.",
+          "inventoryAssetAccount": "Lagerbestandskonto",
+          "cogsAccount": "Wareneinsatzkonto"
         },
         "mappings": {
           "title": "QuickBooks-Zuordnungen",
@@ -4099,6 +4104,14 @@
         },
         "exports": {
           "description": "Erstellen Sie einen QuickBooks Desktop-Exportstapel und führen Sie ihn aus – die IIF-Datei wird automatisch heruntergeladen."
+        },
+        "newItems": {
+          "title": "Durch Exporte angelegte Artikel",
+          "description": "Wenn ein Export für ein Alga-Produkt einen neuen QuickBooks-Artikel anlegt, wird dieser Artikeltyp verwendet. Leistungen werden immer als Dienstleistungsartikel angelegt."
+        },
+        "itemTypes": {
+          "nonInventory": "Nicht-Lagerartikel",
+          "inventory": "Lagerartikel"
         }
       }
     }

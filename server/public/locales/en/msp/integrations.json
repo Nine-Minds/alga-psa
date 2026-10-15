@@ -4091,7 +4091,12 @@
           "salesTaxPayableAccount": "Sales tax liability account",
           "salesTaxPayableAccountHelp": "The account the sales tax line posts to.",
           "defaultSalesTaxItem": "Default sales tax item",
-          "defaultSalesTaxItemHelp": "Sales tax item or group for taxed invoices whose tax code mapping has no \"qbdSalesTaxItem\" metadata."
+          "defaultSalesTaxItemHelp": "Sales tax item or group for taxed invoices whose tax code mapping has no \"qbdSalesTaxItem\" metadata.",
+          "newProductItemType": "New product item type",
+          "inventoryWarning": "Alga stock receipts are not exported, so QuickBooks on-hand quantities will go negative unless you also enter stock in QuickBooks.",
+          "nonInventoryHelp": "Recommended: Alga stays the inventory system of record and QuickBooks only records the sale.",
+          "inventoryAssetAccount": "Inventory asset account",
+          "cogsAccount": "Cost of goods sold account"
         },
         "mappings": {
           "title": "QuickBooks Mappings",
@@ -4099,6 +4104,14 @@
         },
         "exports": {
           "description": "Create a QuickBooks Desktop export batch, execute it, and the IIF file downloads automatically."
+        },
+        "newItems": {
+          "title": "Items created by exports",
+          "description": "When an export creates a new QuickBooks item for an Alga product, it uses this item type. Services are always created as Service items."
+        },
+        "itemTypes": {
+          "nonInventory": "Non-inventory Part",
+          "inventory": "Inventory Part"
         }
       }
     }
