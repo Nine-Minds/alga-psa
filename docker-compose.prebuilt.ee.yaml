@@ -30,6 +30,9 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
+      # LEVERAGE: pattern pgbouncer-admin-direct — DB_HOST_ADMIN/DB_PORT_ADMIN (+ depends_on postgres) repeated per pooled service across overlays; a shared fragment would remove the drift risk (guarded by scripts/tests/compose-pgbouncer-auth.test.mjs)
+      DB_HOST_ADMIN: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT_ADMIN: ${DB_PORT_ADMIN:-5432}
       REQUIRE_HOCUSPOCUS: ${REQUIRE_HOCUSPOCUS:-false}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
@@ -181,6 +184,8 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
+      DB_HOST_ADMIN: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT_ADMIN: ${DB_PORT_ADMIN:-5432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
@@ -253,6 +258,8 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
+      DB_HOST_ADMIN: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT_ADMIN: ${DB_PORT_ADMIN:-5432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
@@ -320,8 +327,11 @@ services:
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
-      DB_PORT: ${PGBOUNCER_PORT:-6432}
+      # Hocuspocus uses its own database and role, which PgBouncer does not route.
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME_HOCUSPOCUS: ${DB_NAME_HOCUSPOCUS:-hocuspocus}
+      DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS:-hocuspocus_user}
     secrets:
       - db_password_hocuspocus
       - redis_password

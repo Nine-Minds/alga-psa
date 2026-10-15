@@ -5,10 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    environment:
-      - POSTGRES_USER=postgres
     secrets:
-      - postgres_password
       - db_password_server
     networks:
       - app-network
