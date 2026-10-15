@@ -3801,5 +3801,16 @@
         "configuration": "Systemkonfiguration (anonymisiert)"
       }
     }
+  },
+  "dialogs": {
+    "statusImport": {
+      "title": "Standardstatus importieren",
+      "description": "Wählen Sie die Standardstatus aus, die Sie importieren möchten",
+      "selectAll": "Alle auswählen ({{selected}}/{{total}})",
+      "closed": "Geschlossen",
+      "default": "Standard",
+      "empty": "Keine Standardstatus zum Importieren verfügbar",
+      "importSelected": "Ausgewählte importieren ({{count}})"
+    }
   }
 }

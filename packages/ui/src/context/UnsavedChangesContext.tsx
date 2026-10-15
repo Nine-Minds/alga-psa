@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useCallback, useRef, useEff
 import { useRouter } from 'next/navigation';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
 import { useLeaveGuard } from '../lib/leaveGuard';
+import { useTranslation } from '../lib/i18n/client';
 
 interface UnsavedChangesContextType {
   /**
@@ -48,9 +49,10 @@ interface UnsavedChangesProviderProps {
 
 export function UnsavedChangesProvider({
   children,
-  dialogTitle = 'Unsaved Changes',
-  dialogMessage = 'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.',
+  dialogTitle,
+  dialogMessage,
 }: UnsavedChangesProviderProps) {
+  const { t } = useTranslation('common');
   // Use ref to track unsaved components without causing re-renders
   const unsavedComponentsRef = useRef<Set<string>>(new Set());
 
@@ -178,10 +180,10 @@ export function UnsavedChangesProvider({
         isOpen={showDialog}
         onClose={handleClose}
         onConfirm={handleConfirm}
-        title={dialogTitle}
-        message={dialogMessage}
-        confirmLabel="Leave Without Saving"
-        cancelLabel="Stay"
+        title={dialogTitle ?? t('dialogs.unsavedChanges.title')}
+        message={dialogMessage ?? t('dialogs.unsavedChanges.message')}
+        confirmLabel={t('dialogs.unsavedChanges.confirm')}
+        cancelLabel={t('dialogs.unsavedChanges.cancel')}
       />
     </UnsavedChangesContext>
   );

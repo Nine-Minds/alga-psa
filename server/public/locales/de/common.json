@@ -1742,7 +1742,13 @@
   "editor": {
     "attachFiles": "Dateien anhängen",
     "uploadingFiles": "Dateien werden hochgeladen…",
-    "fileUploadFailed": "Datei konnte nicht hochgeladen werden."
+    "fileUploadFailed": "Datei konnte nicht hochgeladen werden.",
+    "mentions": {
+      "everyone": "Alle",
+      "aiAssistant": "Alga AI-Assistent",
+      "noUsername": "kein Benutzername",
+      "userTitle": "{{displayName}} ({{username}})"
+    }
   },
   "emailPreferences": {
     "loading": "E-Mail-Einstellungen werden geladen…",
@@ -1933,7 +1939,17 @@
       "select": "Auswählen",
       "searchPlaceholder": "Nach Name, E-Mail oder Telefon suchen..."
     },
-    "defaultTitle": "Dialog"
+    "defaultTitle": "Dialog",
+    "confirmDelete": {
+      "title": "{{itemType}} löschen",
+      "message": "Möchten Sie „{{itemName}}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+    },
+    "unsavedChanges": {
+      "title": "Ungespeicherte Änderungen",
+      "message": "Sie haben ungespeicherte Änderungen. Möchten Sie die Seite wirklich verlassen? Ihre Änderungen gehen verloren.",
+      "confirm": "Ohne Speichern verlassen",
+      "cancel": "Bleiben"
+    }
   },
   "viewDensity": {
     "compact": {
@@ -1987,5 +2003,13 @@
     "searchPlaceholder": "Länder suchen...",
     "otherCountries": "Andere Länder",
     "empty": "Keine Länder gefunden"
+  },
+  "input": {
+    "actions": {
+      "typeIntoLabel": "Geben Sie Text in das Feld {{label}} ein",
+      "type": "Geben Sie Text in dieses Feld ein",
+      "focus": "Fokussieren Sie dieses Eingabefeld",
+      "clear": "Löschen Sie den aktuellen Text"
+    }
   }
 }

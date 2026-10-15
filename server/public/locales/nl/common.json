@@ -1742,7 +1742,13 @@
   "editor": {
     "attachFiles": "Bestanden bijvoegen",
     "uploadingFiles": "Bestanden uploaden…",
-    "fileUploadFailed": "Bestand uploaden mislukt."
+    "fileUploadFailed": "Bestand uploaden mislukt.",
+    "mentions": {
+      "everyone": "Iedereen",
+      "aiAssistant": "Alga AI-assistent",
+      "noUsername": "geen gebruikersnaam",
+      "userTitle": "{{displayName}} ({{username}})"
+    }
   },
   "emailPreferences": {
     "loading": "E-mailvoorkeuren laden…",
@@ -1933,7 +1939,17 @@
       "select": "Selecteren",
       "searchPlaceholder": "Zoeken op naam, e-mail of telefoon..."
     },
-    "defaultTitle": "Dialoogvenster"
+    "defaultTitle": "Dialoogvenster",
+    "confirmDelete": {
+      "title": "{{itemType}} verwijderen",
+      "message": "Weet u zeker dat u \"{{itemName}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+    },
+    "unsavedChanges": {
+      "title": "Niet-opgeslagen wijzigingen",
+      "message": "U hebt niet-opgeslagen wijzigingen. Weet u zeker dat u wilt vertrekken? Uw wijzigingen gaan verloren.",
+      "confirm": "Verlaten zonder opslaan",
+      "cancel": "Blijven"
+    }
   },
   "viewDensity": {
     "compact": {
@@ -1987,5 +2003,13 @@
     "searchPlaceholder": "Landen zoeken...",
     "otherCountries": "Andere landen",
     "empty": "Geen landen gevonden"
+  },
+  "input": {
+    "actions": {
+      "typeIntoLabel": "Voer tekst in het veld {{label}} in",
+      "type": "Voer tekst in dit veld in",
+      "focus": "Geef dit invoerveld de focus",
+      "clear": "Wis de huidige tekst"
+    }
   }
 }

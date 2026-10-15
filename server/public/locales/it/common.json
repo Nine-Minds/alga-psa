@@ -1742,7 +1742,13 @@
   "editor": {
     "attachFiles": "Allega file",
     "uploadingFiles": "Caricamento dei file…",
-    "fileUploadFailed": "Caricamento del file non riuscito."
+    "fileUploadFailed": "Caricamento del file non riuscito.",
+    "mentions": {
+      "everyone": "Tutti",
+      "aiAssistant": "Assistente Alga AI",
+      "noUsername": "nessun nome utente",
+      "userTitle": "{{displayName}} ({{username}})"
+    }
   },
   "emailPreferences": {
     "loading": "Caricamento delle preferenze email…",
@@ -1933,7 +1939,17 @@
       "select": "Seleziona",
       "searchPlaceholder": "Cerca per nome, email o telefono..."
     },
-    "defaultTitle": "Finestra di dialogo"
+    "defaultTitle": "Finestra di dialogo",
+    "confirmDelete": {
+      "title": "Elimina {{itemType}}",
+      "message": "Vuoi davvero eliminare \"{{itemName}}\"? Questa azione non può essere annullata."
+    },
+    "unsavedChanges": {
+      "title": "Modifiche non salvate",
+      "message": "Hai modifiche non salvate. Vuoi davvero uscire? Le modifiche andranno perse.",
+      "confirm": "Esci senza salvare",
+      "cancel": "Rimani"
+    }
   },
   "viewDensity": {
     "compact": {
@@ -1987,5 +2003,13 @@
     "searchPlaceholder": "Cerca paesi...",
     "otherCountries": "Altri paesi",
     "empty": "Nessun paese trovato"
+  },
+  "input": {
+    "actions": {
+      "typeIntoLabel": "Inserisci testo nel campo {{label}}",
+      "type": "Inserisci testo in questo campo",
+      "focus": "Porta il focus su questo campo di input",
+      "clear": "Cancella il testo attuale"
+    }
   }
 }

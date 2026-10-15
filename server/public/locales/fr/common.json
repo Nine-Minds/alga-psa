@@ -1742,7 +1742,13 @@
   "editor": {
     "attachFiles": "Joindre des fichiers",
     "uploadingFiles": "Envoi des fichiers…",
-    "fileUploadFailed": "Échec de l’envoi du fichier."
+    "fileUploadFailed": "Échec de l’envoi du fichier.",
+    "mentions": {
+      "everyone": "Tout le monde",
+      "aiAssistant": "Assistant Alga AI",
+      "noUsername": "aucun nom d’utilisateur",
+      "userTitle": "{{displayName}} ({{username}})"
+    }
   },
   "emailPreferences": {
     "loading": "Chargement des préférences e-mail…",
@@ -1933,7 +1939,17 @@
       "select": "Sélectionner",
       "searchPlaceholder": "Rechercher par nom, e-mail ou téléphone..."
     },
-    "defaultTitle": "Boîte de dialogue"
+    "defaultTitle": "Boîte de dialogue",
+    "confirmDelete": {
+      "title": "Supprimer {{itemType}}",
+      "message": "Voulez-vous vraiment supprimer « {{itemName}} » ? Cette action est irréversible."
+    },
+    "unsavedChanges": {
+      "title": "Modifications non enregistrées",
+      "message": "Vous avez des modifications non enregistrées. Voulez-vous vraiment quitter cette page ? Vos modifications seront perdues.",
+      "confirm": "Quitter sans enregistrer",
+      "cancel": "Rester"
+    }
   },
   "viewDensity": {
     "compact": {
@@ -1987,5 +2003,13 @@
     "searchPlaceholder": "Rechercher des pays...",
     "otherCountries": "Autres pays",
     "empty": "Aucun pays trouvé"
+  },
+  "input": {
+    "actions": {
+      "typeIntoLabel": "Saisir du texte dans le champ {{label}}",
+      "type": "Saisir du texte dans ce champ",
+      "focus": "Placer le curseur dans ce champ de saisie",
+      "clear": "Effacer le texte actuel"
+    }
   }
 }

@@ -1742,7 +1742,13 @@
   "editor": {
     "attachFiles": "Adjuntar archivos",
     "uploadingFiles": "Subiendo archivos…",
-    "fileUploadFailed": "No se pudo subir el archivo."
+    "fileUploadFailed": "No se pudo subir el archivo.",
+    "mentions": {
+      "everyone": "Todos",
+      "aiAssistant": "Asistente de Alga AI",
+      "noUsername": "sin nombre de usuario",
+      "userTitle": "{{displayName}} ({{username}})"
+    }
   },
   "emailPreferences": {
     "loading": "Cargando preferencias de correo…",
@@ -1933,7 +1939,17 @@
       "select": "Seleccionar",
       "searchPlaceholder": "Buscar por nombre, correo electrónico o teléfono..."
     },
-    "defaultTitle": "Diálogo"
+    "defaultTitle": "Diálogo",
+    "confirmDelete": {
+      "title": "Eliminar {{itemType}}",
+      "message": "¿Está seguro de que desea eliminar «{{itemName}}»? Esta acción no se puede deshacer."
+    },
+    "unsavedChanges": {
+      "title": "Cambios sin guardar",
+      "message": "Tiene cambios sin guardar. ¿Está seguro de que desea salir? Sus cambios se perderán.",
+      "confirm": "Salir sin guardar",
+      "cancel": "Permanecer"
+    }
   },
   "viewDensity": {
     "compact": {
@@ -1987,5 +2003,13 @@
     "searchPlaceholder": "Buscar países...",
     "otherCountries": "Otros países",
     "empty": "No se encontraron países"
+  },
+  "input": {
+    "actions": {
+      "typeIntoLabel": "Ingrese texto en el campo {{label}}",
+      "type": "Ingrese texto en este campo",
+      "focus": "Enfoque este campo de entrada",
+      "clear": "Borre el texto actual"
+    }
   }
 }

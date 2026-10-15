@@ -3801,5 +3801,16 @@
         "configuration": "Configurazione del sistema (anonimizzata)"
       }
     }
+  },
+  "dialogs": {
+    "statusImport": {
+      "title": "Importa stati standard",
+      "description": "Seleziona gli stati standard che vuoi importare",
+      "selectAll": "Seleziona tutto ({{selected}}/{{total}})",
+      "closed": "Chiuso",
+      "default": "Predefinito",
+      "empty": "Nessuno stato standard disponibile per l’importazione",
+      "importSelected": "Importa selezionati ({{count}})"
+    }
   }
 }

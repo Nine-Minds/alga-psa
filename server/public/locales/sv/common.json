@@ -1742,7 +1742,13 @@
   "editor": {
     "attachFiles": "Bifoga filer",
     "uploadingFiles": "Laddar upp filer…",
-    "fileUploadFailed": "Filuppladdningen misslyckades."
+    "fileUploadFailed": "Filuppladdningen misslyckades.",
+    "mentions": {
+      "everyone": "Alla",
+      "aiAssistant": "Alga AI-assistent",
+      "noUsername": "inget användarnamn",
+      "userTitle": "{{displayName}} ({{username}})"
+    }
   },
   "listViews": {
     "defaultView": "Standardvy",
@@ -1933,7 +1939,17 @@
       "select": "Välj",
       "searchPlaceholder": "Sök efter namn, e-post eller telefon…"
     },
-    "defaultTitle": "Dialogruta"
+    "defaultTitle": "Dialogruta",
+    "confirmDelete": {
+      "title": "Radera {{itemType}}",
+      "message": "Vill du verkligen radera ”{{itemName}}”? Den här åtgärden kan inte ångras."
+    },
+    "unsavedChanges": {
+      "title": "Osparade ändringar",
+      "message": "Du har osparade ändringar. Vill du verkligen lämna sidan? Dina ändringar går förlorade.",
+      "confirm": "Lämna utan att spara",
+      "cancel": "Stanna"
+    }
   },
   "viewDensity": {
     "compact": {
@@ -1987,5 +2003,13 @@
     "searchPlaceholder": "Sök länder…",
     "otherCountries": "Andra länder",
     "empty": "Inga länder hittades"
+  },
+  "input": {
+    "actions": {
+      "typeIntoLabel": "Skriv text i fältet {{label}}",
+      "type": "Skriv text i det här fältet",
+      "focus": "Sätt fokus på det här inmatningsfältet",
+      "clear": "Rensa den aktuella texten"
+    }
   }
 }

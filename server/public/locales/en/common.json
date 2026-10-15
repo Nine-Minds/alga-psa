@@ -1742,7 +1742,13 @@
   "editor": {
     "attachFiles": "Attach files",
     "uploadingFiles": "Uploading files…",
-    "fileUploadFailed": "File upload failed."
+    "fileUploadFailed": "File upload failed.",
+    "mentions": {
+      "everyone": "Everyone",
+      "aiAssistant": "Alga AI Assistant",
+      "noUsername": "no username",
+      "userTitle": "{{displayName}} ({{username}})"
+    }
   },
   "emailPreferences": {
     "loading": "Loading email preferences…",
@@ -1933,7 +1939,17 @@
       "select": "Select",
       "searchPlaceholder": "Search by name, email, or phone..."
     },
-    "defaultTitle": "Dialog"
+    "defaultTitle": "Dialog",
+    "confirmDelete": {
+      "title": "Delete {{itemType}}",
+      "message": "Are you sure you want to delete \"{{itemName}}\"? This action cannot be undone."
+    },
+    "unsavedChanges": {
+      "title": "Unsaved Changes",
+      "message": "You have unsaved changes. Are you sure you want to leave? Your changes will be lost.",
+      "confirm": "Leave Without Saving",
+      "cancel": "Stay"
+    }
   },
   "viewDensity": {
     "compact": {
@@ -1987,5 +2003,13 @@
     "searchPlaceholder": "Search countries...",
     "otherCountries": "Other Countries",
     "empty": "No countries found"
+  },
+  "input": {
+    "actions": {
+      "typeIntoLabel": "Type text into {{label}} field",
+      "type": "Type text into this field",
+      "focus": "Focus this input field",
+      "clear": "Clear the current text"
+    }
   }
 }

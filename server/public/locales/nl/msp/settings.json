@@ -3801,5 +3801,16 @@
         "configuration": "Systeemconfiguratie (geanonimiseerd)"
       }
     }
+  },
+  "dialogs": {
+    "statusImport": {
+      "title": "Standaardstatussen importeren",
+      "description": "Selecteer de standaardstatussen die u wilt importeren",
+      "selectAll": "Alles selecteren ({{selected}}/{{total}})",
+      "closed": "Gesloten",
+      "default": "Standaard",
+      "empty": "Geen standaardstatussen beschikbaar om te importeren",
+      "importSelected": "Selectie importeren ({{count}})"
+    }
   }
 }
