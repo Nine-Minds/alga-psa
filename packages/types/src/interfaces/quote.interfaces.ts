@@ -282,6 +282,12 @@ export interface QuoteViewModelCadenceGroup {
   /** Localized band label; English fallback is emitted by the adapter. */
   name?: string | null;
   /**
+   * Set when `name` came from the quote's own `recurring_section_title` /
+   * `onetime_section_title` instead of the cadence vocabulary, so the document
+   * label localization leaves the author's wording alone.
+   */
+  name_is_custom?: boolean;
+  /**
    * Localized "{{cadence}} Total" band-footer label (e.g. "Monthly Total").
    * English fallback (`${name} Total`) is emitted by the adapter and replaced
    * with the localized template by the PDF service.

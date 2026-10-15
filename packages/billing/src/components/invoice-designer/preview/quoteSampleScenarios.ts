@@ -121,9 +121,8 @@ const createBaseQuote = (): QuoteViewModel => ({
   status: 'sent',
   version: 1,
   po_number: null,
-  // Unset like po_number: the grouped layout's heading bindings resolve to null
-  // and the preview shows their localized "Monthly Items" / "One-time Items"
-  // fallbacks, which is what a quote without custom titles renders.
+  // Unset like po_number: the designer samples a quote with no custom section
+  // titles, so the grouped cadence bands keep their vocabulary names.
   recurring_section_title: null,
   onetime_section_title: null,
   currency_code: 'USD',

@@ -1,4 +1,3 @@
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { TemplateAst } from '@alga-psa/types';
 import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
@@ -7,23 +6,6 @@ import { evaluateTemplateAst } from './evaluator';
 import { formatTemplateFieldValue } from './fieldFormatting';
 import { renderEvaluatedTemplateAst } from './react-renderer';
 import { resolveTemplateAstI18n } from './i18nLabels';
-
-// Reaching into server/migrations from a package test uses the repo's runtime
-// dynamic-import pattern (see standardTemplateI18n.test.ts): a static require
-// is a project reference Nx resolves into a billing -> server cycle.
-const loadGroupedCatalogTransform = async (): Promise<(ast: unknown, direction: 'up' | 'down') => unknown> => {
-  const migration = await import(
-    /* @vite-ignore */ path.resolve(
-      __dirname,
-      '../../../../../server/migrations/20260923110000_add_quote_section_title_bindings_to_grouped_catalog.cjs'
-    )
-  );
-  const transform = (migration as any).__transformAst ?? (migration as any).default?.__transformAst;
-  if (typeof transform !== 'function') {
-    throw new Error('grouped catalog migration is missing its __transformAst export');
-  }
-  return transform;
-};
 
 const invoiceFixture = {
   invoiceNumber: 'INV-1001',
@@ -54,46 +36,19 @@ describe('renderEvaluatedTemplateAst', () => {
     }
   );
 
-  it('resolves quote section titles through the evaluator path used by PDF generation', async () => {
+  it('resolves an optional binding through the evaluator path used by document generation', async () => {
     const ast: TemplateAst = {
       kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION,
-      bindings: { values: { recurringSectionTitle: { id: 'recurringSectionTitle', kind: 'value', path: 'recurring_section_title' } }, collections: {} },
+      bindings: { values: { sectionHeading: { id: 'sectionHeading', kind: 'value', path: 'section_heading' } }, collections: {} },
       layout: { id: 'root', type: 'document', children: [{
-        id: 'heading', type: 'text', content: { type: 'binding', bindingId: 'recurringSectionTitle', fallback: { i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' } },
+        id: 'heading', type: 'text', content: { type: 'binding', bindingId: 'sectionHeading', fallback: { i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' } },
       }] },
     };
     const localizedAst = resolveTemplateAstI18n(ast, () => 'Localized Monthly');
-    const evaluation = evaluateTemplateAst(localizedAst, { recurring_section_title: 'Custom heading' });
+    const evaluation = evaluateTemplateAst(localizedAst, { section_heading: 'Custom heading' });
     const rendered = await renderEvaluatedTemplateAst(localizedAst, evaluation);
     expect(rendered.html).toContain('Custom heading');
     expect(rendered.html).not.toContain('Localized Monthly');
-  });
-
-  it.each([
-    ['Retainer', 'Retainer'],
-    [null, 'Localized Monthly'],
-    ['', 'Localized Monthly'],
-    ['   ', 'Localized Monthly'],
-  ] as const)('renders a migrated catalog AST with section title %s', async (title, expected) => {
-    // This fixture represents the shipped catalog AST before migration, not the code-authored template.
-    const preMigrationCatalogAst = {
-      kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION,
-      bindings: { values: {}, collections: {} },
-      layout: { id: 'root', type: 'document', children: [
-        { id: 'monthly-section-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' } },
-        { id: 'onetime-section-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.oneTimeItems', defaultValue: 'One-time Items' } },
-      ] },
-    };
-    const transformGroupedCatalogAst = await loadGroupedCatalogTransform();
-    const migratedAst = transformGroupedCatalogAst(preMigrationCatalogAst, 'up') as TemplateAst;
-    const localizedAst = resolveTemplateAstI18n(migratedAst, () => 'Localized Monthly');
-    const evaluation = evaluateTemplateAst(localizedAst, {
-      recurring_section_title: title,
-      onetime_section_title: null,
-    });
-    const rendered = await renderEvaluatedTemplateAst(localizedAst, evaluation);
-    expect(rendered.html).toContain(expected);
-    expect(rendered.html).toContain('Localized Monthly');
   });
 
   it('uses authored default text if a binding fallback reaches the renderer without localization', async () => {

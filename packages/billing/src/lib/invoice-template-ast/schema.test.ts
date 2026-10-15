@@ -72,7 +72,7 @@ describe('templateAstSchema', () => {
       ...createMinimalAst(),
       layout: { id: 'root', type: 'document', children: [{
         id: 'monthly-title', type: 'text',
-        content: { type: 'binding', bindingId: 'recurringSectionTitle', fallback: { i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' } },
+        content: { type: 'binding', bindingId: 'sectionHeading', fallback: { i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' } },
       }] },
     });
     expect(result.success).toBe(true);
