@@ -58,7 +58,7 @@ export function listNamedConversationMailboxes(db: Knex, actor: CoManagedSession
     await assertCoManagedOperationalWrite(context.trx, owner);
     const rows = await tenantDb(context.trx, owner).table('email_providers').where({ is_active: true, status: 'connected' }).select('id');
     const allowed = context.actor.tenant === owner ? null : context.ticket.relationshipId
-      ? new Set((await grants(context, owner).where({ grantee_tenant: context.actor.tenant, grantee_user_id: context.actor.userId }).select('mailbox_id')).map(row => row.mailbox_id)) : new Set();
+      ? new Set((await grants(context, owner).where({ grantee_tenant: context.actor.tenant, grantee_user_id: context.actor.userId }).select<{ mailbox_id: string }[]>('mailbox_id')).map(row => row.mailbox_id)) : new Set<string>();
     const result: ConversationMailbox[] = [];
     for (const row of rows) if (!allowed || allowed.has(row.id)) result.push(await authorizeMailbox(context, owner, row.id));
     return result;

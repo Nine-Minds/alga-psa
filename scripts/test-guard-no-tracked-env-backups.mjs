@@ -63,6 +63,24 @@ const main = () => {
   run('git', ['add', offender], { cwd: badRepo });
   run('git', ['commit', '-m', 'add offender'], { cwd: badRepo });
   expectFail(badRepo, ['Tracked env-backup files detected', offender]);
+
+  // Large indexes must be scanned completely, even past execFileSync's default
+  // 1 MiB output limit. Populate the index without creating thousands of files.
+  const largeRepo = initRepo();
+  const blob = run('git', ['hash-object', '-w', '--stdin'], { cwd: largeRepo, input: '' }).trim();
+  const entries = Array.from({ length: 16000 }, (_, index) =>
+    `100644 ${blob}\tfiles/${String(index).padStart(5, '0')}-${'x'.repeat(90)}.txt\n`).join('');
+  run('git', ['update-index', '--index-info'], { cwd: largeRepo, input: entries });
+  expectPass(largeRepo);
+  const lateOffender = 'zzz/.env.production.bak';
+  run('git', ['update-index', '--index-info'], {
+    cwd: largeRepo, input: `100644 ${blob}\t${lateOffender}\n`,
+  });
+  expectFail(largeRepo, ['Tracked env-backup files detected', lateOffender]);
+
+  // A failed Git invocation must never be interpreted as a clean index.
+  const nonRepo = mkdtempSync(join(tmpdir(), 'alga-env-backup-non-repo-'));
+  expectFail(nonRepo, ['Unable to scan tracked files']);
 };
 
 main();

@@ -6,6 +6,9 @@ export interface ConversationEditorFileReference { attachmentId: string }
 export interface ConversationEditorFile extends ConversationEditorFileReference {
   fileName: string; mimeType: string; size: number; contentHash: string;
 }
+interface ConversationEditorFileRow {
+  attachment_id: string; file_name: string; mime_type: string; file_size: number; content_hash: string;
+}
 export function snapshotConversationEditorFiles(value: unknown): ConversationEditorFileReference[] {
   if (!Array.isArray(value) || value.length > 20) throw new TicketConversationError('CONVERSATION_INVALID');
   const result = value.map(file => {
@@ -28,14 +31,18 @@ export function conversationEditorFileQuery(scope: EditorDraftStoreScope) {
     .whereNull('comment_id').whereNull('thread_id').whereNull('draft_operation_id').whereNull('external_author_email')
     .whereNull('discarded_at').whereNull('purged_at');
 }
-export function conversationEditorFileView(row: any): ConversationEditorFile {
+export function conversationEditorFileView(row: ConversationEditorFileRow): ConversationEditorFile {
   return { attachmentId: row.attachment_id, fileName: row.file_name, mimeType: row.mime_type, size: row.file_size, contentHash: row.content_hash };
 }
 export async function selectConversationEditorFiles(scope: EditorDraftStoreScope, files: ConversationEditorFileReference[]): Promise<ConversationEditorFile[]> {
   if (!files.length) return [];
-  const rows = await conversationEditorFileQuery(scope).where('status', 'ready').whereIn('attachment_id', files.map(f => f.attachmentId)).forShare();
+  const rows: ConversationEditorFileRow[] = await conversationEditorFileQuery(scope).where('status', 'ready').whereIn('attachment_id', files.map(f => f.attachmentId)).forShare();
   if (rows.length !== files.length) throw new TicketConversationError('CONVERSATION_FORBIDDEN');
-  const selected = files.map(f => conversationEditorFileView(rows.find(row => row.attachment_id === f.attachmentId)));
+  const selected = files.map(f => {
+    const row = rows.find(row => row.attachment_id === f.attachmentId);
+    if (!row) throw new TicketConversationError('CONVERSATION_FORBIDDEN');
+    return conversationEditorFileView(row);
+  });
   if (selected.reduce((sum, f) => sum + f.size, 0) > 26214400) throw new TicketConversationError('CONVERSATION_INVALID');
   return selected;
 }

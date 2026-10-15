@@ -16,7 +16,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const query = request.nextUrl.searchParams, { attachmentId } = await params;
     const conversationId = query.get('conversationId');
     // The store always comes from the verified requester session, never a URL tenant.
-    if ([...query.keys()].some(key => !['ticketId', 'taskId', 'projectId', 'threadId', 'commentId'].includes(key) || query.getAll(key).length !== 1) ||
+    if ([...query.keys()].some(key => !['ticketId', 'taskId', 'projectId', 'threadId', 'commentId', 'conversationId'].includes(key) || query.getAll(key).length !== 1) ||
+        (query.has('conversationId') && (!query.has('ticketId') || !conversationId)) ||
         (query.has('ticketId') ? query.has('taskId') || query.has('projectId') : !query.has('taskId') || !query.has('projectId'))) throw new CoManagedSharedWorkError();
     const result = query.has('taskId') ? await downloadRequesterTaskAttachment(await getConnection(session.user.tenant),
       { kind: 'session', tenant: session.user.tenant, userId: session.user.id, sessionId: session.session_id },
