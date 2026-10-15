@@ -1131,7 +1131,10 @@
       "duplicateShortName": "Esiste già una configurazione con questo nome breve",
       "createFailed": "Impossibile creare i valori predefiniti dei ticket in entrata. Riprovare.",
       "notFound": "Configurazione dei valori predefiniti non trovata",
-      "updateFailed": "Impossibile aggiornare i valori predefiniti dei ticket in entrata. Riprovare."
+      "updateFailed": "Impossibile aggiornare i valori predefiniti dei ticket in entrata. Riprovare.",
+      "locationRequiresClient": "Seleziona un cliente prima di selezionare una posizione",
+      "locationClientMismatch": "La posizione selezionata non appartiene al cliente selezionato",
+      "referencedByProviders": "Questa configurazione è ancora usata dai seguenti provider email: {{providers}}. Seleziona altri valori predefiniti dei ticket in entrata per quei provider prima di eliminarla."
     },
     "ticketFieldOptions": {
       "permissionDenied": "Autorizzazione negata: impossibile leggere le opzioni dei campi del ticket",

@@ -356,4 +356,63 @@ describe('InboundTicketDefaultsForm', () => {
 
     expect(screen.queryByRole('option', { name: 'New (Default)' })).not.toBeInTheDocument();
   });
+
+  it('submits location_id as null (not undefined) after the client changes so a stale location is cleared', async () => {
+    const user = userEvent.setup();
+
+    mockGetTicketFieldOptions.mockResolvedValue({
+      options: {
+        ...sampleFieldOptions,
+        clients: [
+          { id: 'client-1', name: 'Acme Corp' },
+          { id: 'client-2', name: 'Unmatched senders' },
+        ],
+        locations: [{ id: 'loc-1', name: 'Acme HQ', client_id: 'client-1' }],
+      },
+    });
+    mockGetIntegrationClients.mockResolvedValue([
+      ...sampleClients,
+      { client_id: 'client-2', client_name: 'Unmatched senders', is_inactive: false },
+    ]);
+    mockUpdateInboundTicketDefaults.mockResolvedValue({
+      defaults: { id: 'defaults-1', client_id: 'client-2', location_id: null },
+    });
+
+    renderWithProviders(
+      <InboundTicketDefaultsForm
+        defaults={{
+          id: 'defaults-1',
+          tenant: 'tenant-1',
+          short_name: 'catch-all',
+          display_name: 'Catch All Defaults',
+          board_id: 'board-1',
+          status_id: 'status-1',
+          priority_id: 'priority-1',
+          client_id: 'client-1',
+          location_id: 'loc-1',
+          is_active: true,
+          created_at: '2026-01-01T00:00:00.000Z',
+          updated_at: '2026-01-01T00:00:00.000Z',
+        } as any}
+        onSuccess={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await waitFor(() => expect(mockGetTicketFieldOptions).toHaveBeenCalled());
+
+    const locationSelect = (await screen.findByTestId('location_id-select')) as HTMLSelectElement;
+    await waitFor(() => expect(locationSelect.value).toBe('loc-1'));
+
+    await user.selectOptions(screen.getByTestId('client-picker'), 'client-2');
+    expect(locationSelect.value).toBe('');
+
+    await waitFor(() => expect(screen.getByLabelText('Status *')).not.toBeDisabled());
+    await user.click(screen.getByRole('button', { name: 'Update Defaults' }));
+
+    await waitFor(() => expect(mockUpdateInboundTicketDefaults).toHaveBeenCalled());
+    const [, payload] = mockUpdateInboundTicketDefaults.mock.calls[0];
+    expect(payload.client_id).toBe('client-2');
+    expect(payload).toHaveProperty('location_id', null);
+  });
 });

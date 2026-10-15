@@ -1131,7 +1131,10 @@
       "duplicateShortName": "Konfiguracja o tej krótkiej nazwie już istnieje",
       "createFailed": "Nie udało się utworzyć ustawień domyślnych zgłoszeń przychodzących. Spróbuj ponownie.",
       "notFound": "Nie znaleziono konfiguracji ustawień domyślnych",
-      "updateFailed": "Nie udało się zaktualizować ustawień domyślnych zgłoszeń przychodzących. Spróbuj ponownie."
+      "updateFailed": "Nie udało się zaktualizować ustawień domyślnych zgłoszeń przychodzących. Spróbuj ponownie.",
+      "locationRequiresClient": "Wybierz firmę, zanim wybierzesz lokalizację",
+      "locationClientMismatch": "Wybrana lokalizacja nie należy do wybranej firmy",
+      "referencedByProviders": "Ta konfiguracja jest nadal używana przez następujących dostawców poczty e-mail: {{providers}}. Wybierz inne domyślne ustawienia zgłoszeń przychodzących dla tych dostawców, zanim ją usuniesz."
     },
     "ticketFieldOptions": {
       "permissionDenied": "Odmowa uprawnień: nie można odczytać opcji pól zgłoszenia",

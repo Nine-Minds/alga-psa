@@ -1131,7 +1131,10 @@
       "duplicateShortName": "Ya existe una configuración con este nombre corto",
       "createFailed": "No se pudieron crear los valores predeterminados de tickets entrantes. Inténtelo de nuevo.",
       "notFound": "No se encontró la configuración de valores predeterminados",
-      "updateFailed": "No se pudieron actualizar los valores predeterminados de tickets entrantes. Inténtelo de nuevo."
+      "updateFailed": "No se pudieron actualizar los valores predeterminados de tickets entrantes. Inténtelo de nuevo.",
+      "locationRequiresClient": "Seleccione una empresa antes de seleccionar una ubicación",
+      "locationClientMismatch": "La ubicación seleccionada no pertenece a la empresa seleccionada",
+      "referencedByProviders": "Esta configuración todavía la usan los siguientes proveedores de correo electrónico: {{providers}}. Seleccione otros valores predeterminados de tickets entrantes en esos proveedores antes de eliminarla."
     },
     "ticketFieldOptions": {
       "permissionDenied": "Permiso denegado: no se pueden leer las opciones de campo de ticket",
