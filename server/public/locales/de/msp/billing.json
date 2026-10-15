@@ -416,7 +416,8 @@
       "createBatch": "Stapel erstellen",
       "creating": "Erstellen...",
       "cancelBatch": "Stapel stornieren",
-      "retry": "Erneut versuchen"
+      "retry": "Erneut versuchen",
+      "resolveUnmapped": "Nicht zugeordnete Einträge auflösen"
     },
     "states": {
       "loadingBatches": "Stapel werden geladen...",
@@ -491,6 +492,33 @@
       "download": "Herunterladen",
       "unavailable": "Für diesen historischen Stapel ist keine Datei gespeichert. Sie kann nur durch einen neuen Export wiederhergestellt werden.",
       "storageFallback": "In einer Datenbanksicherung gespeichert"
+    },
+    "unmapped": {
+      "title": "Nicht zugeordnete QuickBooks-Einträge",
+      "descriptionDesktop": "Für diese Einträge gibt es noch keine QuickBooks-Zuordnung. Legen Sie sie neu an (die IIF-Datei fügt sie zu QuickBooks Desktop hinzu) oder verknüpfen Sie sie mit einem vorhandenen QuickBooks-Eintrag mit genau demselben Namen. Ihre Auswahl wird als Zuordnung gespeichert, damit künftige Exporte nicht erneut fragen.",
+      "descriptionCsv": "Für diese Einträge gibt es noch keine QuickBooks-Zuordnung. Exportieren Sie sie unter dem unten stehenden Namen (QuickBooks legt neue Namen beim CSV-Import an) oder verknüpfen Sie sie mit einem vorhandenen QuickBooks-Eintrag mit genau demselben Namen. Ihre Auswahl wird als Zuordnung gespeichert, damit künftige Exporte nicht erneut fragen.",
+      "permissionNotice": "Zum Speichern von QuickBooks-Zuordnungen ist die Berechtigung zum Verwalten von Zuordnungen erforderlich. Wenden Sie sich an einen Administrator oder ordnen Sie diese Einträge in den QuickBooks-Einstellungen zu.",
+      "kinds": {
+        "client": "Kunde",
+        "service": "Leistung",
+        "product": "Produkt",
+        "discount": "Rabatt"
+      },
+      "modes": {
+        "create": "Neu anlegen",
+        "existing": "Bereits in QuickBooks"
+      },
+      "nameAria": "QuickBooks-Name für {{name}}",
+      "desktopNote": "Neue Produkte verwenden den in den QuickBooks Desktop-Einstellungen gewählten Artikeltyp. Wählen Sie „Bereits in QuickBooks\" für alles, was in Ihrer Firmendatei existiert, damit dessen Angaben nicht überschrieben werden.",
+      "actions": {
+        "cancel": "Abbrechen",
+        "goToMappings": "Zu den QuickBooks-Zuordnungen",
+        "save": "Zuordnungen speichern und exportieren"
+      },
+      "toast": {
+        "saved": "QuickBooks-Zuordnungen gespeichert",
+        "saveError": "QuickBooks-Zuordnungen konnten nicht gespeichert werden"
+      }
     }
   },
   "templateRenderer": {
@@ -728,7 +756,8 @@
         "create": "Berechtigung verweigert: Buchhaltungsexport-Stapel können nicht erstellt werden",
         "read": "Berechtigung verweigert: Auf Buchhaltungsexport-Stapel kann nicht zugegriffen werden",
         "update": "Berechtigung verweigert: Buchhaltungsexport-Stapel können nicht geändert werden",
-        "execute": "Berechtigung verweigert: Buchhaltungsexport-Stapel können nicht ausgeführt werden"
+        "execute": "Berechtigung verweigert: Buchhaltungsexport-Stapel können nicht ausgeführt werden",
+        "createMappings": "Zum Anlegen von QuickBooks-Zuordnungen aus einem Export sind die Berechtigungen für Exporte und das Verwalten von Zuordnungen erforderlich"
       }
     },
     "vendorBill": {

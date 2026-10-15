@@ -55,11 +55,35 @@ const SPL_FIELDS = [
 type TrnsRow = Record<(typeof TRNS_FIELDS)[number], string>;
 type SplRow = Record<(typeof SPL_FIELDS)[number], string>;
 
+// List records that create a customer or item in QuickBooks before the
+// transactions that reference it. Emitted only for mappings created by the
+// export prompt for this batch (metadata.qbdCreateInBatch === batch_id), never
+// for names that may already exist in the company file.
+const CUST_FIELDS = [
+  'NAME', 'BADDR1', 'BADDR2', 'BADDR3', 'BADDR4', 'BADDR5', 'PHONE1', 'EMAIL', 'TERMS'
+] as const;
+const INVITEM_FIELDS = [
+  'NAME', 'INVITEMTYPE', 'DESC', 'ACCNT', 'ASSETACCNT', 'COGSACCNT', 'PRICE', 'COST', 'TAXABLE'
+] as const;
+
+type CustRow = Record<(typeof CUST_FIELDS)[number], string>;
+type InvItemRow = Record<(typeof INVITEM_FIELDS)[number], string>;
+
+export type QuickBooksDesktopProductItemType = 'NONINVENTORY' | 'INVENTORY';
+
 export interface QuickBooksDesktopAdapterSettings {
   arAccount: string;
   defaultIncomeAccount: string;
   salesTaxPayableAccount: string;
   defaultSalesTaxItem: string;
+  newProductItemType: QuickBooksDesktopProductItemType;
+  inventoryAssetAccount: string;
+  cogsAccount: string;
+}
+
+interface IifListRecords {
+  customers: Record<string, string>;
+  items: Record<string, string>;
 }
 
 type DbInvoice = {
@@ -95,7 +119,34 @@ type DbClient = {
   client_id: string;
   client_name: string;
   payment_terms?: string | null;
+  billing_email?: string | null;
 };
+
+type DbClientLocation = {
+  client_id?: string;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  state_province?: string | null;
+  postal_code?: string | null;
+  country_name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  is_billing_address?: boolean | null;
+  is_default?: boolean | null;
+};
+
+type DbService = {
+  service_id: string;
+  service_name: string;
+  description?: string | null;
+  default_rate?: number | null;
+  item_kind?: string | null;
+};
+
+function uniqueRows(names: string[], rowsByName: Record<string, string>): string[] {
+  return Array.from(new Set(names)).map((name) => rowsByName[name]).filter((row): row is string => Boolean(row));
+}
 
 interface InvoiceDocumentPayload {
   invoiceId: string;
@@ -104,6 +155,8 @@ interface InvoiceDocumentPayload {
   currency: string;
   /** IIF rows for this invoice: TRNS, SPL…, ENDTRNS. */
   iifRows: string[];
+  /** Customer and item names whose list records this invoice depends on. */
+  listRecordNames?: { customers: string[]; items: string[] };
   totals: {
     amountCents: number;
     taxCents: number;
@@ -208,6 +261,7 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
     }
 
     const documents: AccountingExportDocument[] = [];
+    const listRecords: IifListRecords = { customers: {}, items: {} };
 
     for (const [invoiceId, exportLines] of linesByInvoice.entries()) {
       const invoice = invoicesById.get(invoiceId);
@@ -245,6 +299,25 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
         : null;
       // Unmapped terms stay blank: an Alga term id would be created as a new QuickBooks term.
       const terms = nonEmptyString(termMapping?.external_entity_id) ?? '';
+
+      const invoiceListNames = { customers: [] as string[], items: [] as string[] };
+      if (this.isCreatedInBatch(customerMapping?.metadata, context)) {
+        if (!listRecords.customers[customerName]) {
+          const contact = await this.loadClientContact(knex, tenantId, clientId);
+          listRecords.customers[customerName] = serializeRow('CUST', CUST_FIELDS, {
+            NAME: customerName,
+            BADDR1: client.client_name,
+            BADDR2: contact?.address_line1 ?? '',
+            BADDR3: contact?.address_line2 ?? '',
+            BADDR4: [contact?.city, contact?.state_province, contact?.postal_code].filter(Boolean).join(' '),
+            BADDR5: contact?.country_name ?? '',
+            PHONE1: contact?.phone ?? '',
+            EMAIL: contact?.email ?? client.billing_email ?? '',
+            TERMS: terms
+          });
+        }
+        invoiceListNames.customers.push(customerName);
+      }
 
       const currency = invoice.currency_code ?? exportLines.find((line) => line.currency_code)?.currency_code ?? 'USD';
       const excludeTax = invoice.tax_source === 'external' || invoice.tax_source === 'pending_external';
@@ -311,6 +384,15 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
         }
         this.assertListName(incomeAccount, MAX_ACCOUNT_NAME_LENGTH, 'account', invoiceNumber,
           'Use the exact QuickBooks Desktop income account name.');
+
+        if (this.isCreatedInBatch(itemMapping.metadata, context)) {
+          if (!listRecords.items[itemName]) {
+            listRecords.items[itemName] = await this.buildItemRecord(
+              knex, tenantId, itemName, incomeAccount, isServicelessDiscount ? null : charge.service_id!, charge, settings, invoiceNumber, currency
+            );
+          }
+          invoiceListNames.items.push(itemName);
+        }
 
         const lineAmount = toCents(charge.net_amount ?? charge.total_price);
         const { quantity, unitPriceCents } = reconcileExportLineQuantity({
@@ -418,6 +500,7 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
         customerName,
         currency,
         iifRows,
+        listRecordNames: invoiceListNames,
         totals: { amountCents: totalCents, taxCents }
       };
 
@@ -428,12 +511,14 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
       });
     }
 
-    const file = documents.length > 0 ? this.buildFile(context, documents) : null;
+    const file = documents.length > 0 ? this.buildFile(context, documents, listRecords) : null;
 
     logger.info('[QuickBooksDesktopAdapter] Transform completed', {
       tenant: tenantId,
       batchId: context.batch.batch_id,
-      invoices: documents.length
+      invoices: documents.length,
+      newCustomers: Object.keys(listRecords.customers).length,
+      newItems: Object.keys(listRecords.items).length
     });
 
     return {
@@ -443,7 +528,8 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
         adapter: this.type,
         invoices: documents.length,
         lines: context.lines.length,
-        fileSize: file?.content.length ?? 0
+        fileSize: file?.content.length ?? 0,
+        listRecords
       }
     };
   }
@@ -504,8 +590,9 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
       }
     }
 
+    const listRecords = (transformResult.metadata?.listRecords as IifListRecords | undefined) ?? { customers: {}, items: {} };
     const files: AccountingExportFileAttachment[] =
-      deliveredDocuments.length > 0 ? [this.buildFile(context, deliveredDocuments)] : [];
+      deliveredDocuments.length > 0 ? [this.buildFile(context, deliveredDocuments, listRecords)] : [];
 
     logger.info('[QuickBooksDesktopAdapter] Delivery completed', {
       tenant: tenantId,
@@ -537,8 +624,84 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
       arAccount: text('arAccount') || 'Accounts Receivable',
       defaultIncomeAccount: text('defaultIncomeAccount'),
       salesTaxPayableAccount: text('salesTaxPayableAccount') || 'Sales Tax Payable',
-      defaultSalesTaxItem: text('defaultSalesTaxItem')
+      defaultSalesTaxItem: text('defaultSalesTaxItem'),
+      newProductItemType: text('newProductItemType') === 'INVENTORY' ? 'INVENTORY' : 'NONINVENTORY',
+      inventoryAssetAccount: text('inventoryAssetAccount') || 'Inventory Asset',
+      cogsAccount: text('cogsAccount') || 'Cost of Goods Sold'
     };
+  }
+
+  private isCreatedInBatch(metadata: Record<string, unknown> | null | undefined, context: AccountingExportAdapterContext): boolean {
+    return Boolean(metadata) && metadata!.qbdCreateInBatch === context.batch.batch_id;
+  }
+
+  private async buildItemRecord(
+    knex: Knex,
+    tenantId: string,
+    itemName: string,
+    incomeAccount: string,
+    serviceId: string | null,
+    charge: DbCharge,
+    settings: QuickBooksDesktopAdapterSettings,
+    invoiceNumber: string,
+    currency: string
+  ): Promise<string> {
+    if (!serviceId) {
+      return serializeRow('INVITEM', INVITEM_FIELDS, {
+        NAME: itemName,
+        INVITEMTYPE: 'DISC',
+        DESC: charge.description ?? '',
+        ACCNT: incomeAccount,
+        ASSETACCNT: '',
+        COGSACCNT: '',
+        PRICE: '',
+        COST: '',
+        TAXABLE: 'N'
+      });
+    }
+
+    const service = await tenantDb(knex, tenantId).table<DbService>('service_catalog')
+      .select('service_id', 'service_name', 'description', 'default_rate', 'item_kind')
+      .where({ service_id: serviceId })
+      .first();
+    const isProduct = service?.item_kind === 'product';
+    const asInventory = isProduct && settings.newProductItemType === 'INVENTORY';
+    let averageCost: number | null = null;
+    if (asInventory) {
+      this.assertListName(settings.inventoryAssetAccount, MAX_ACCOUNT_NAME_LENGTH, 'account', invoiceNumber,
+        'Set the inventory asset account in the QuickBooks Desktop settings.');
+      this.assertListName(settings.cogsAccount, MAX_ACCOUNT_NAME_LENGTH, 'account', invoiceNumber,
+        'Set the cost of goods sold account in the QuickBooks Desktop settings.');
+      const inventory = await tenantDb(knex, tenantId).table<{ service_id: string; average_cost?: number | null }>('product_inventory_settings')
+        .select('average_cost')
+        .where({ service_id: serviceId })
+        .first();
+      averageCost = inventory?.average_cost ?? null;
+    }
+
+    // Catalog rates and costs are stored in minor units; IIF list prices are plain decimals.
+    const toDecimal = (cents: number | null | undefined) =>
+      cents === null || cents === undefined ? '' : minorUnitsToPlainDecimalText(toCents(cents), 'en-US', currency);
+
+    return serializeRow('INVITEM', INVITEM_FIELDS, {
+      NAME: itemName,
+      INVITEMTYPE: !isProduct ? 'SERV' : asInventory ? 'INVENTORY' : 'PART',
+      DESC: service?.description ?? service?.service_name ?? charge.description ?? '',
+      ACCNT: incomeAccount,
+      ASSETACCNT: asInventory ? settings.inventoryAssetAccount : '',
+      COGSACCNT: asInventory ? settings.cogsAccount : '',
+      PRICE: toDecimal(charge.unit_price ?? service?.default_rate),
+      COST: asInventory ? toDecimal(averageCost) : '',
+      TAXABLE: charge.is_taxable ? 'Y' : 'N'
+    });
+  }
+
+  private async loadClientContact(knex: Knex, tenantId: string, clientId: string): Promise<DbClientLocation | null> {
+    const locations = await tenantDb(knex, tenantId).table<DbClientLocation>('client_locations')
+      .select('address_line1', 'address_line2', 'city', 'state_province', 'postal_code', 'country_name', 'phone', 'email', 'is_billing_address', 'is_default')
+      .where({ client_id: clientId });
+    const list = Array.isArray(locations) ? locations : [];
+    return list.find((row) => row.is_billing_address) ?? list.find((row) => row.is_default) ?? list[0] ?? null;
   }
 
   private async resolveSalesTaxItem(
@@ -590,13 +753,22 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
 
   private buildFile(
     context: AccountingExportAdapterContext,
-    documents: AccountingExportDocument[]
+    documents: AccountingExportDocument[],
+    listRecords: IifListRecords
   ): AccountingExportFileAttachment {
+    const payloads = documents.map((document) => document.payload as unknown as InvoiceDocumentPayload);
+    // Only list records the included invoices reference, so a delivery that
+    // drops an invoice does not create its customer or items either.
+    const customerRows = uniqueRows(payloads.flatMap((p) => p.listRecordNames?.customers ?? []), listRecords.customers);
+    const itemRows = uniqueRows(payloads.flatMap((p) => p.listRecordNames?.items ?? []), listRecords.items);
+
     const rows = [
+      ...(customerRows.length > 0 ? [`!CUST\t${CUST_FIELDS.join('\t')}`, ...customerRows] : []),
+      ...(itemRows.length > 0 ? [`!INVITEM\t${INVITEM_FIELDS.join('\t')}`, ...itemRows] : []),
       `!TRNS\t${TRNS_FIELDS.join('\t')}`,
       `!SPL\t${SPL_FIELDS.join('\t')}`,
       '!ENDTRNS',
-      ...documents.flatMap((document) => (document.payload as unknown as InvoiceDocumentPayload).iifRows)
+      ...payloads.flatMap((payload) => payload.iifRows)
     ];
     return {
       filename: this.buildFilename(context),
@@ -682,7 +854,7 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
     }
 
     const rows = await tenantDb(knex, tenantId).table<DbClient>('clients')
-      .select('client_id', 'client_name', 'payment_terms')
+      .select('client_id', 'client_name', 'payment_terms', 'billing_email')
       .whereIn('client_id', clientIds);
 
     return new Map(rows.map((row) => [row.client_id, row]));
