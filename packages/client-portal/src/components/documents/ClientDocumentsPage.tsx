@@ -23,6 +23,14 @@ const isReturnedActionError = (
 ): value is { readonly actionError: string } | { readonly permissionError: string } =>
   isActionMessageError(value) || isActionPermissionError(value);
 
+// Uploads are allowed up to the storage cap, and buffering a multi-megabyte log
+// or CSV export into a <pre> wedges the tab. Bigger text files stay download-only.
+const MAX_INLINE_TEXT_PREVIEW_BYTES = 2 * 1024 * 1024;
+
+const canPreviewAsText = (doc: IDocument): boolean =>
+  isInlineTextDocumentMimeType(doc.mime_type)
+  && !(typeof doc.file_size === 'number' && doc.file_size > MAX_INLINE_TEXT_PREVIEW_BYTES);
+
 function getDocumentIcon(mimeType: string | undefined): React.ReactNode {
   if (!mimeType) return <File className="w-5 h-5" />;
 
@@ -304,7 +312,7 @@ export default function ClientDocumentsPage() {
       if (requestId !== previewRequestId.current) return;
       if (isReturnedActionError(content)) throw new UserFacingError(getErrorMessage(content));
       if (!content || !('content' in content)) throw new Error('Document preview returned no content');
-      if (content.content.kind === 'file' && isInlineTextDocumentMimeType(doc.mime_type)) {
+      if (content.content.kind === 'file' && canPreviewAsText(doc)) {
         const response = await fetch(`/api/client-portal/documents/${encodeURIComponent(doc.document_id)}/file?disposition=inline`, { credentials: 'include' });
         if (requestId !== previewRequestId.current) return;
         if (!response.ok) throw new UserFacingError(t('portal.previewError', 'Could not load this preview. Please try again.'));

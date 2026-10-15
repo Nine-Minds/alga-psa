@@ -327,6 +327,20 @@ describe('ClientDocumentsPage', () => {
     expect(URL.createObjectURL).not.toHaveBeenCalled();
   });
 
+  it('leaves an oversized text file on the download path', async () => {
+    const actions = await import('@alga-psa/client-portal/actions/client-portal-actions/client-documents');
+    const hugeTextDocument = { ...mockTextDocument, file_size: 8 * 1024 * 1024 } as IDocument;
+    vi.mocked(actions.getClientDocuments).mockResolvedValue({ documents: [hugeTextDocument], total: 1, page: 1, pageSize: 20, totalPages: 1 } as any);
+    vi.mocked(actions.getClientDocumentContent).mockResolvedValue({ document: { document_id: 'doc-3' }, content: { kind: 'file' } } as any);
+    const fetchMock = vi.fn().mockResolvedValue(new Response('too many bytes'));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ClientDocumentsPage />);
+    await waitFor(() => expect(screen.getByText('Server Notes.txt')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('client-docs-view-document-doc-3')!);
+    await waitFor(() => expect(screen.getByText('Preview is not available for this file type.')).toBeInTheDocument());
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   const deferred = <T,>() => {
     let resolve!: (value: T) => void;
     const promise = new Promise<T>((res) => { resolve = res; });
