@@ -841,5 +841,13 @@
     "teaRole": "Esperto capo della cerimonia del tè",
     "teaNotes": "Sa perché un corvo assomiglia a una scrivania",
     "teaTags": "Creativo, Eccentrico, Esperto di tè"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · ultima sincronizzazione: {{date}}",
+    "description": "Questo contatto viene sincronizzato con un account della directory.",
+    "signInName": "Nome di accesso: {{name}}",
+    "lastSynced": "Ultima sincronizzazione: {{date}}",
+    "deleted": "Inattivo — l’account Microsoft è stato eliminato.",
+    "disabled": "Inattivo — l’account Microsoft è disabilitato."
   }
 }

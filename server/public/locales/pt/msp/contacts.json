@@ -841,5 +841,13 @@
     "teaRole": "Especialista-chefe em cerimônias do chá",
     "teaNotes": "Sabe por que um corvo se parece com uma escrivaninha",
     "teaTags": "Criativo, Excêntrico, Especialista em chá"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · última sincronização em {{date}}",
+    "description": "Este contato é sincronizado com uma conta do diretório.",
+    "signInName": "Nome de acesso: {{name}}",
+    "lastSynced": "Última sincronização em {{date}}",
+    "deleted": "Inativo — a conta Microsoft foi excluída.",
+    "disabled": "Inativo — a conta Microsoft está desabilitada."
   }
 }

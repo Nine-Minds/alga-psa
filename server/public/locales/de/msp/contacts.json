@@ -841,5 +841,13 @@
     "teaRole": "Leitender Experte für Teezeremonien",
     "teaNotes": "Weiß, warum ein Rabe einem Schreibtisch gleicht",
     "teaTags": "Kreativ, Exzentrisch, Teeexperte"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · zuletzt synchronisiert am {{date}}",
+    "description": "Dieser Kontakt wird mit einem Verzeichniskonto synchronisiert.",
+    "signInName": "Anmeldename: {{name}}",
+    "lastSynced": "Zuletzt synchronisiert am {{date}}",
+    "deleted": "Inaktiv — das Microsoft-Konto wurde gelöscht.",
+    "disabled": "Inaktiv — das Microsoft-Konto ist deaktiviert."
   }
 }

@@ -1373,6 +1373,14 @@
   "enums": {
     "addOnDescription": {
       "ai_assistant": "Ge ditt team tillgång till AI-chatt, dokumentstöd, hjälp i sidopanelen och AI-verktyg för arbetsflöden."
+    },
+    "notificationCategory": {
+      "tickets": "Ärenden",
+      "invoices": "Fakturor",
+      "messages": "Meddelanden",
+      "projects": "Projekt",
+      "system": "System",
+      "appointments": "Bokningar"
     }
   },
   "timePicker": {
@@ -1599,6 +1607,16 @@
       "internalComment": "Intern kommentar",
       "commentBy": "Kommentar av {{author}}:",
       "readAt": "Läst {{time}}"
+    },
+    "item": {
+      "unknown": "Okänd",
+      "justNow": "Just nu",
+      "minutesAgo": "för {{minutes}} min sedan",
+      "hoursAgo": "för {{hours}} h sedan",
+      "daysAgo": "för {{days}} d sedan",
+      "assigned": "Tilldelat:",
+      "performedBy": "av {{name}}",
+      "internal": "Intern"
     }
   },
   "importConflicts": {
@@ -1864,6 +1882,19 @@
   "skeletons": {
     "calendar": {
       "loading": "Läser in kalendern…"
+    }
+  },
+  "dialogs": {
+    "contactPicker": {
+      "title": "Välj kontakt",
+      "columns": {
+        "name": "Namn",
+        "email": "E-post",
+        "phone": "Telefon",
+        "action": "Åtgärd"
+      },
+      "select": "Välj",
+      "searchPlaceholder": "Sök efter namn, e-post eller telefon…"
     }
   }
 }

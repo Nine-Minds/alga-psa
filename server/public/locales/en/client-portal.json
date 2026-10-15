@@ -387,7 +387,25 @@
       "tenant_mismatch": "{{providerEmail}} belongs to a different organization's portal. Sign in with your password or contact your service provider."
     },
     "configurationTitle": "Sign-in failed",
-    "configurationMessage": "Sign-in failed. Please try again or contact your service provider."
+    "configurationMessage": "Sign-in failed. Please try again or contact your service provider.",
+    "registration": {
+      "messages": {
+        "verified": "User verified and registered successfully"
+      },
+      "errors": {
+        "verifyFailed": "Failed to verify and register user",
+        "invalidToken": "Invalid token",
+        "tokenExpired": "Token expired",
+        "tokenNotActive": "Token is not yet active",
+        "unknown": "Unknown error"
+      },
+      "user": "User",
+      "clientPortalUser": "Client Portal User",
+      "mspUser": "MSP User",
+      "resetExpiration": "1 hour",
+      "verificationExpiration": "24 hours",
+      "superadminRole": "Superadmin role"
+    }
   },
   "account": {
     "title": "Account",
@@ -613,7 +631,9 @@
       "invoices": "Invoice Notifications",
       "announcements": "System Announcements",
       "emailPreferences": "Email",
-      "internalPreferences": "Internal"
+      "internalPreferences": "Internal",
+      "unreadCount_few": "{{count}} unread notifications",
+      "unreadCount_many": "{{count}} unread notifications"
     },
     "actions": {
       "save": "Save Changes",
@@ -891,7 +911,9 @@
     "card": {
       "unread": "Unread",
       "noMessage": "No message"
-    }
+    },
+    "unreadCount_few": "{{count}} unread notifications",
+    "unreadCount_many": "{{count}} unread notifications"
   },
   "billing": {
     "columns": {

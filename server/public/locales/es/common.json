@@ -1331,6 +1331,14 @@
   "enums": {
     "addOnDescription": {
       "ai_assistant": "Desbloquee el chat con IA, la asistencia de documentos, la ayuda en la barra lateral y las herramientas de IA de flujo de trabajo para su equipo."
+    },
+    "notificationCategory": {
+      "tickets": "Tickets",
+      "invoices": "Facturas",
+      "messages": "Mensajes",
+      "projects": "Proyectos",
+      "system": "Sistema",
+      "appointments": "Citas"
     }
   },
   "form": {
@@ -1599,6 +1607,16 @@
       "internalComment": "Comentario interno",
       "commentBy": "Comentario de {{author}}:",
       "readAt": "Leído {{time}}"
+    },
+    "item": {
+      "unknown": "Desconocido",
+      "justNow": "Ahora mismo",
+      "minutesAgo": "hace {{minutes}} min",
+      "hoursAgo": "hace {{hours}} h",
+      "daysAgo": "hace {{days}} d",
+      "assigned": "Asignado:",
+      "performedBy": "por {{name}}",
+      "internal": "Interno"
     }
   },
   "importConflicts": {
@@ -1864,6 +1882,19 @@
   "skeletons": {
     "calendar": {
       "loading": "Cargando calendario..."
+    }
+  },
+  "dialogs": {
+    "contactPicker": {
+      "title": "Seleccionar contacto",
+      "columns": {
+        "name": "Nombre",
+        "email": "Correo electrónico",
+        "phone": "Teléfono",
+        "action": "Acción"
+      },
+      "select": "Seleccionar",
+      "searchPlaceholder": "Buscar por nombre, correo electrónico o teléfono..."
     }
   }
 }

@@ -1373,6 +1373,14 @@
   "enums": {
     "addOnDescription": {
       "ai_assistant": "Desbloqueie bate-papo de IA, assistência a documentos, ajuda da barra lateral e ferramentas de IA de fluxo de trabalho para sua equipe."
+    },
+    "notificationCategory": {
+      "tickets": "Tickets",
+      "invoices": "Faturas",
+      "messages": "Mensagens",
+      "projects": "Projetos",
+      "system": "Sistema",
+      "appointments": "Compromissos"
     }
   },
   "timePicker": {
@@ -1599,6 +1607,16 @@
       "internalComment": "Comentário interno",
       "commentBy": "Comentário de {{author}}:",
       "readAt": "Lido {{time}}"
+    },
+    "item": {
+      "unknown": "Desconhecido",
+      "justNow": "Agora mesmo",
+      "minutesAgo": "há {{minutes}} min",
+      "hoursAgo": "há {{hours}} h",
+      "daysAgo": "há {{days}} d",
+      "assigned": "Atribuído:",
+      "performedBy": "por {{name}}",
+      "internal": "Interno"
     }
   },
   "importConflicts": {
@@ -1864,6 +1882,19 @@
   "skeletons": {
     "calendar": {
       "loading": "Carregando calendário..."
+    }
+  },
+  "dialogs": {
+    "contactPicker": {
+      "title": "Selecione o contato",
+      "columns": {
+        "name": "Nome",
+        "email": "Email",
+        "phone": "Telefone",
+        "action": "Ação"
+      },
+      "select": "Selecione",
+      "searchPlaceholder": "Procurar por nome, email ou telefone..."
     }
   }
 }

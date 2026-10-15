@@ -1331,6 +1331,14 @@
   "enums": {
     "addOnDescription": {
       "ai_assistant": "Débloquez le chat IA, l'assistance documentaire, l'aide en barre latérale et les outils IA de workflow pour votre équipe."
+    },
+    "notificationCategory": {
+      "tickets": "Tickets",
+      "invoices": "Factures",
+      "messages": "Messages",
+      "projects": "Projets",
+      "system": "Système",
+      "appointments": "Rendez-vous"
     }
   },
   "form": {
@@ -1599,6 +1607,16 @@
       "internalComment": "Commentaire interne",
       "commentBy": "Commentaire de {{author}} :",
       "readAt": "Lu {{time}}"
+    },
+    "item": {
+      "unknown": "Inconnu",
+      "justNow": "À l’instant",
+      "minutesAgo": "il y a {{minutes}} min",
+      "hoursAgo": "il y a {{hours}} h",
+      "daysAgo": "il y a {{days}} j",
+      "assigned": "Attribué :",
+      "performedBy": "par {{name}}",
+      "internal": "Interne"
     }
   },
   "importConflicts": {
@@ -1864,6 +1882,19 @@
   "skeletons": {
     "calendar": {
       "loading": "Chargement du calendrier..."
+    }
+  },
+  "dialogs": {
+    "contactPicker": {
+      "title": "Sélectionner un contact",
+      "columns": {
+        "name": "Nom",
+        "email": "E-mail",
+        "phone": "Téléphone",
+        "action": "Action"
+      },
+      "select": "Sélectionner",
+      "searchPlaceholder": "Rechercher par nom, e-mail ou téléphone..."
     }
   }
 }

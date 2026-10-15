@@ -841,5 +841,13 @@
     "teaRole": "Chefsexpert på teceremonier",
     "teaNotes": "Vet varför en korp liknar ett skrivbord",
     "teaTags": "Kreativ, Excentrisk, Teexpert"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · senast synkroniserad {{date}}",
+    "description": "Den här kontakten synkroniseras med ett katalogkonto.",
+    "signInName": "Inloggningsnamn: {{name}}",
+    "lastSynced": "Senast synkroniserad {{date}}",
+    "deleted": "Inaktiv – Microsoft-kontot har tagits bort.",
+    "disabled": "Inaktiv – Microsoft-kontot är inaktiverat."
   }
 }

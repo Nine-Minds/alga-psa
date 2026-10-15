@@ -2550,5 +2550,33 @@
       "notAvailable": "Szablony zgłoszeń są niedostępne",
       "subcategoryNeedsCategory": "Podkategoria wymaga kategorii"
     }
+  },
+  "enums": {
+    "slaStatus": {
+      "paused": "Wstrzymany",
+      "on_track": "Zgodnie z planem",
+      "at_risk": "Zagrożony",
+      "breached": "Naruszony",
+      "unknown": "Nieznany",
+      "response_breached": "Naruszono SLA odpowiedzi",
+      "resolution_breached": "Naruszono SLA rozwiązania"
+    }
+  },
+  "sla": {
+    "tooltip": {
+      "paused": "Licznik SLA: wstrzymany",
+      "status": "Status SLA: {{status}}",
+      "responseBreached": "Odpowiedź: przekroczono o {{time}}",
+      "responseRemaining": "Odpowiedź: pozostały czas — {{time}}",
+      "resolutionBreached": "Rozwiązanie: przekroczono o {{time}}",
+      "resolutionRemaining": "Rozwiązanie: pozostały czas — {{time}}"
+    },
+    "time": {
+      "minutes": "{{minutes}} min",
+      "hoursMinutes": "{{hours}} godz. {{minutes}} min",
+      "hours": "{{hours}} godz.",
+      "daysHours": "{{days}} dn. {{hours}} godz.",
+      "days": "{{days}} dn."
+    }
   }
 }

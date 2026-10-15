@@ -841,5 +841,13 @@
     "teaRole": "Chief Tea Ceremony Expert",
     "teaNotes": "Knows why a raven is like a writing desk",
     "teaTags": "Creative, Eccentric, Tea Expert"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · last synced {{date}}",
+    "description": "This contact is kept in step with a directory account.",
+    "signInName": "Sign-in name: {{name}}",
+    "lastSynced": "Last synced {{date}}",
+    "deleted": "Inactive — the Microsoft account was deleted.",
+    "disabled": "Inactive — the Microsoft account is disabled."
   }
 }

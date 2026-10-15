@@ -841,5 +841,13 @@
     "teaRole": "Hoofdexpert theeceremonie",
     "teaNotes": "Weet waarom een raaf op een schrijftafel lijkt",
     "teaTags": "Creatief, Excentriek, Thee-expert"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · laatst gesynchroniseerd op {{date}}",
+    "description": "Dit contact wordt gesynchroniseerd met een directoryaccount.",
+    "signInName": "Aanmeldnaam: {{name}}",
+    "lastSynced": "Laatst gesynchroniseerd op {{date}}",
+    "deleted": "Inactief — het Microsoft-account is verwijderd.",
+    "disabled": "Inactief — het Microsoft-account is uitgeschakeld."
   }
 }

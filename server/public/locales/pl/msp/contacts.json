@@ -841,5 +841,13 @@
     "teaRole": "Główny ekspert ceremonii herbacianej",
     "teaNotes": "Wie, dlaczego kruk jest podobny do biurka",
     "teaTags": "Kreatywny, Ekscentryczny, Ekspert od herbaty"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · ostatnia synchronizacja: {{date}}",
+    "description": "Ten kontakt jest synchronizowany z kontem w katalogu.",
+    "signInName": "Nazwa logowania: {{name}}",
+    "lastSynced": "Ostatnia synchronizacja: {{date}}",
+    "deleted": "Nieaktywny — konto Microsoft zostało usunięte.",
+    "disabled": "Nieaktywny — konto Microsoft jest wyłączone."
   }
 }

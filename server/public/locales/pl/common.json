@@ -1331,6 +1331,14 @@
   "enums": {
     "addOnDescription": {
       "ai_assistant": "Odblokuj czat AI, pomoc w dokumentach, pomoc w pasku bocznym oraz narzędzia AI dla workflow Twojego zespołu."
+    },
+    "notificationCategory": {
+      "tickets": "Zgłoszenia",
+      "invoices": "Faktury",
+      "messages": "Wiadomości",
+      "projects": "Projekty",
+      "system": "System",
+      "appointments": "Wizyty"
     }
   },
   "form": {
@@ -1599,6 +1607,16 @@
       "internalComment": "Komentarz wewnętrzny",
       "commentBy": "Komentarz użytkownika {{author}}:",
       "readAt": "Przeczytano {{time}}"
+    },
+    "item": {
+      "unknown": "Nieznany",
+      "justNow": "Przed chwilą",
+      "minutesAgo": "{{minutes}} min temu",
+      "hoursAgo": "{{hours}} godz. temu",
+      "daysAgo": "{{days}} dn. temu",
+      "assigned": "Przypisano:",
+      "performedBy": "przez {{name}}",
+      "internal": "Wewnętrzny"
     }
   },
   "importConflicts": {
@@ -1864,6 +1882,19 @@
   "skeletons": {
     "calendar": {
       "loading": "Ładowanie kalendarza..."
+    }
+  },
+  "dialogs": {
+    "contactPicker": {
+      "title": "Wybierz kontakt",
+      "columns": {
+        "name": "Imię i nazwisko",
+        "email": "E-mail",
+        "phone": "Telefon",
+        "action": "Akcja"
+      },
+      "select": "Wybierz",
+      "searchPlaceholder": "Szukaj według imienia i nazwiska, adresu e-mail lub telefonu..."
     }
   }
 }

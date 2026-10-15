@@ -841,5 +841,13 @@
     "teaRole": "Expert en chef de la cérémonie du thé",
     "teaNotes": "Sait pourquoi un corbeau ressemble à un bureau",
     "teaTags": "Créatif, Excentrique, Expert en thé"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · dernière synchronisation le {{date}}",
+    "description": "Ce contact est synchronisé avec un compte de l’annuaire.",
+    "signInName": "Nom de connexion : {{name}}",
+    "lastSynced": "Dernière synchronisation le {{date}}",
+    "deleted": "Inactif — le compte Microsoft a été supprimé.",
+    "disabled": "Inactif — le compte Microsoft est désactivé."
   }
 }

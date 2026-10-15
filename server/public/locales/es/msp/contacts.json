@@ -841,5 +841,13 @@
     "teaRole": "Experto principal en ceremonias del té",
     "teaNotes": "Sabe por qué un cuervo se parece a un escritorio",
     "teaTags": "Creativo, Excéntrico, Experto en té"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · última sincronización: {{date}}",
+    "description": "Este contacto se sincroniza con una cuenta del directorio.",
+    "signInName": "Nombre de inicio de sesión: {{name}}",
+    "lastSynced": "Última sincronización: {{date}}",
+    "deleted": "Inactivo — la cuenta de Microsoft se eliminó.",
+    "disabled": "Inactivo — la cuenta de Microsoft está deshabilitada."
   }
 }

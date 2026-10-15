@@ -1331,6 +1331,14 @@
   "enums": {
     "addOnDescription": {
       "ai_assistant": "Schalten Sie KI-Chat, Dokumentenhilfe, Seitenleisten-Assistenz und Workflow-KI-Tools für Ihr Team frei."
+    },
+    "notificationCategory": {
+      "tickets": "Tickets",
+      "invoices": "Rechnungen",
+      "messages": "Nachrichten",
+      "projects": "Projekte",
+      "system": "System",
+      "appointments": "Termine"
     }
   },
   "form": {
@@ -1599,6 +1607,16 @@
       "internalComment": "Interner Kommentar",
       "commentBy": "Kommentar von {{author}}:",
       "readAt": "Gelesen {{time}}"
+    },
+    "item": {
+      "unknown": "Unbekannt",
+      "justNow": "Gerade eben",
+      "minutesAgo": "vor {{minutes}} Min.",
+      "hoursAgo": "vor {{hours}} Std.",
+      "daysAgo": "vor {{days}} T.",
+      "assigned": "Zugewiesen:",
+      "performedBy": "von {{name}}",
+      "internal": "Intern"
     }
   },
   "importConflicts": {
@@ -1864,6 +1882,19 @@
   "skeletons": {
     "calendar": {
       "loading": "Kalender wird geladen..."
+    }
+  },
+  "dialogs": {
+    "contactPicker": {
+      "title": "Kontakt auswählen",
+      "columns": {
+        "name": "Name",
+        "email": "E-Mail",
+        "phone": "Telefon",
+        "action": "Aktion"
+      },
+      "select": "Auswählen",
+      "searchPlaceholder": "Nach Name, E-Mail oder Telefon suchen..."
     }
   }
 }

@@ -1331,6 +1331,14 @@
   "enums": {
     "addOnDescription": {
       "ai_assistant": "Ontgrendel AI-chat, documenthulp, zijbalk-assistentie en workflow-AI-tools voor uw team."
+    },
+    "notificationCategory": {
+      "tickets": "Tickets",
+      "invoices": "Facturen",
+      "messages": "Berichten",
+      "projects": "Projecten",
+      "system": "Systeem",
+      "appointments": "Afspraken"
     }
   },
   "form": {
@@ -1599,6 +1607,16 @@
       "internalComment": "Intern commentaar",
       "commentBy": "Reactie van {{author}}:",
       "readAt": "Gelezen {{time}}"
+    },
+    "item": {
+      "unknown": "Onbekend",
+      "justNow": "Zojuist",
+      "minutesAgo": "{{minutes}} min geleden",
+      "hoursAgo": "{{hours}} u geleden",
+      "daysAgo": "{{days}} d geleden",
+      "assigned": "Toegewezen:",
+      "performedBy": "door {{name}}",
+      "internal": "Intern"
     }
   },
   "importConflicts": {
@@ -1864,6 +1882,19 @@
   "skeletons": {
     "calendar": {
       "loading": "Kalender laden..."
+    }
+  },
+  "dialogs": {
+    "contactPicker": {
+      "title": "Contact selecteren",
+      "columns": {
+        "name": "Naam",
+        "email": "E-mail",
+        "phone": "Telefoon",
+        "action": "Actie"
+      },
+      "select": "Selecteren",
+      "searchPlaceholder": "Zoeken op naam, e-mail of telefoon..."
     }
   }
 }
