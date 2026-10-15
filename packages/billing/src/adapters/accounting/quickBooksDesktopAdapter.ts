@@ -34,9 +34,10 @@ import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingR
 import { reconcileExportLineQuantity } from './exportLineQuantity';
 import { getQuickBooksItemName } from './quickBooksItemName';
 import { buildQuickBooksCsvMemo } from './quickBooksCSVAdapter';
+import { resolveMappingAdapterType } from './mappingAdapterType';
 
 /** Mappings are maintained on the QuickBooks CSV setup and shared with Desktop. */
-const MAPPING_ADAPTER_TYPE = 'quickbooks_csv';
+const MAPPING_ADAPTER_TYPE = resolveMappingAdapterType('quickbooks_desktop');
 const IIF_MAX_QUANTITY_DECIMALS = 5;
 // QuickBooks Desktop list-name limits, per ':'-separated segment.
 const MAX_CUSTOMER_NAME_LENGTH = 41;
