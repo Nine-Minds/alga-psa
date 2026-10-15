@@ -2556,7 +2556,8 @@
       "is",
       "Cc",
       "Bcc",
-      "Cc/Bcc"
+      "Cc/Bcc",
+      "Training"
     ],
     "caseInsensitive": [
       "account",

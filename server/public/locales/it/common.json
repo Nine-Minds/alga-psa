@@ -1940,7 +1940,7 @@
         "file-text": "Documento",
         "sticky-note": "Nota",
         "edit": "Modifica",
-        "flag": "Follow-up",
+        "flag": "Verifica successiva",
         "alarm-clock": "Promemoria",
         "clock": "Monitoraggio del tempo",
         "activity": "Attività generale",
@@ -1969,7 +1969,7 @@
         "Documents": "Documenti",
         "Tasks": "Attività",
         "Activities": "Attività",
-        "Business": "Business"
+        "Business": "Affari"
       }
     },
     "selected": "Selezionato: {{label}}",
