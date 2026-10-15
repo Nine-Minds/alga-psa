@@ -53,6 +53,7 @@
     "unassigned": "Sin asignar",
     "category": "Filtrar por categoría",
     "clearFilters": "Limpiar filtros",
+    "removeFilterChip": "Quitar filtro: {{label}}",
     "assignee": "Asignado",
     "allAssignees": "Todos los asignados",
     "responseState": "Estado de respuesta",

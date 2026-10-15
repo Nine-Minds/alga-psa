@@ -199,8 +199,8 @@ export interface ListFilterChip {
   onRemove: () => void;
   /** Automation id for the chip's remove button. */
   removeId?: string;
-  /** Accessible name for the remove button; defaults to `Remove <label>`. */
-  removeLabel?: string;
+  /** Translated accessible name for the remove button. The toolbar owns no strings. */
+  removeLabel: string;
 }
 
 export function ListFilterChips({ chips, clearLabel, onClear }: {
@@ -221,7 +221,7 @@ export function ListFilterChips({ chips, clearLabel, onClear }: {
             type="button"
             id={chip.removeId}
             onClick={chip.onRemove}
-            aria-label={chip.removeLabel ?? `Remove ${chip.label}`}
+            aria-label={chip.removeLabel}
             className="chip-primary inline-flex h-4 w-4 items-center justify-center rounded-full hover: hover:"
           >
             <XCircle className="h-3.5 w-3.5" />

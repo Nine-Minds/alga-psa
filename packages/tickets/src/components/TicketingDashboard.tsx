@@ -2235,7 +2235,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       });
     });
 
-    return chips;
+    return chips.map((chip) => ({
+      ...chip,
+      removeLabel: t('filters.removeFilterChip', 'Remove filter: {{label}}', { label: chip.label }),
+    }));
   }, [selectedBoards, excludedBoards, boards, selectedClient, clients, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, handleBoardSelect, handleClientSelect, handleCategorySelect, onFilterChange, t]);
 
   return (
