@@ -924,5 +924,10 @@
         "label": "Lista de comprobación"
       }
     }
+  },
+  "fallback": {
+    "agentSchedule": "La vista del calendario del agente ahora se administra en Programación. (agentId: {{agentId}})",
+    "timeEntry": "Las entradas de tiempo se administran en Programación.",
+    "scheduling": "La programación se administra en Programación."
   }
 }

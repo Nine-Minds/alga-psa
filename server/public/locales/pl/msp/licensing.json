@@ -38,7 +38,8 @@
     },
     "sessionDetails": "Szczegóły sesji (dla wsparcia)",
     "sessionId": "ID sesji:",
-    "goToAccountManagement": "Przejdź do zarządzania kontem"
+    "goToAccountManagement": "Przejdź do zarządzania kontem",
+    "enterpriseOnly": "Ta funkcja jest dostępna tylko w Pro."
   },
   "subscriptionForm": {
     "title": "Zarządzaj subskrypcją licencji",

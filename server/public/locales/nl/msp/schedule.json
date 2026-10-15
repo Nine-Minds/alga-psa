@@ -924,5 +924,10 @@
         "label": "Controlelijst"
       }
     }
+  },
+  "fallback": {
+    "agentSchedule": "De planningsweergave van de medewerker wordt nu beheerd in Planning. (agentId: {{agentId}})",
+    "timeEntry": "Tijdsvermeldingen worden beheerd in Planning.",
+    "scheduling": "De planning wordt beheerd in Planning."
   }
 }

@@ -1938,6 +1938,9 @@
   "skeletons": {
     "calendar": {
       "loading": "Kalender wird geladen..."
+    },
+    "kanbanBoard": {
+      "loading": "Kanban-Board wird geladen"
     }
   },
   "dialogs": {
@@ -1962,6 +1965,9 @@
       "message": "Sie haben ungespeicherte Änderungen. Möchten Sie die Seite wirklich verlassen? Ihre Änderungen gehen verloren.",
       "confirm": "Ohne Speichern verlassen",
       "cancel": "Bleiben"
+    },
+    "confirmAction": {
+      "title": "Aktion bestätigen"
     }
   },
   "viewDensity": {

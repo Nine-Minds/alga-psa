@@ -38,7 +38,8 @@
     },
     "sessionDetails": "Sessionsuppgifter (för support)",
     "sessionId": "Sessions-ID:",
-    "goToAccountManagement": "Gå till kontohanteringen"
+    "goToAccountManagement": "Gå till kontohanteringen",
+    "enterpriseOnly": "Den här funktionen är endast tillgänglig i Pro."
   },
   "subscriptionForm": {
     "title": "Hantera licensabonnemang",

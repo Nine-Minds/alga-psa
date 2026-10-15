@@ -38,7 +38,8 @@
     },
     "sessionDetails": "Sitzungsdetails (für den Support)",
     "sessionId": "Sitzungs-ID:",
-    "goToAccountManagement": "Zur Kontoverwaltung"
+    "goToAccountManagement": "Zur Kontoverwaltung",
+    "enterpriseOnly": "Diese Funktion ist nur in Pro verfügbar."
   },
   "subscriptionForm": {
     "title": "Lizenzabonnement verwalten",

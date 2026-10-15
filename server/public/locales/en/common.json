@@ -1938,6 +1938,9 @@
   "skeletons": {
     "calendar": {
       "loading": "Loading calendar..."
+    },
+    "kanbanBoard": {
+      "loading": "Loading Kanban board"
     }
   },
   "dialogs": {
@@ -1962,6 +1965,9 @@
       "message": "You have unsaved changes. Are you sure you want to leave? Your changes will be lost.",
       "confirm": "Leave Without Saving",
       "cancel": "Stay"
+    },
+    "confirmAction": {
+      "title": "Confirm Action"
     }
   },
   "viewDensity": {

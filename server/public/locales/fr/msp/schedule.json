@@ -924,5 +924,10 @@
         "label": "Liste de contrôle"
       }
     }
+  },
+  "fallback": {
+    "agentSchedule": "La vue du planning de l’agent est désormais gérée dans Planification. (agentId : {{agentId}})",
+    "timeEntry": "Les entrées de temps sont gérées dans Planification.",
+    "scheduling": "La planification est gérée dans Planification."
   }
 }

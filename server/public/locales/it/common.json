@@ -1938,6 +1938,9 @@
   "skeletons": {
     "calendar": {
       "loading": "Caricamento del calendario..."
+    },
+    "kanbanBoard": {
+      "loading": "Caricamento della bacheca Kanban"
     }
   },
   "dialogs": {
@@ -1962,6 +1965,9 @@
       "message": "Hai modifiche non salvate. Vuoi davvero uscire? Le modifiche andranno perse.",
       "confirm": "Esci senza salvare",
       "cancel": "Rimani"
+    },
+    "confirmAction": {
+      "title": "Conferma azione"
     }
   },
   "viewDensity": {

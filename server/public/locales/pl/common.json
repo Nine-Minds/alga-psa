@@ -1938,6 +1938,9 @@
   "skeletons": {
     "calendar": {
       "loading": "Ładowanie kalendarza..."
+    },
+    "kanbanBoard": {
+      "loading": "Ładowanie tablicy Kanban"
     }
   },
   "dialogs": {
@@ -1962,6 +1965,9 @@
       "message": "Masz niezapisane zmiany. Czy na pewno chcesz wyjść? Twoje zmiany zostaną utracone.",
       "confirm": "Wyjdź bez zapisywania",
       "cancel": "Zostań"
+    },
+    "confirmAction": {
+      "title": "Potwierdź działanie"
     }
   },
   "viewDensity": {

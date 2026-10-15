@@ -38,7 +38,8 @@
     },
     "sessionDetails": "Dettagli della sessione (per il supporto)",
     "sessionId": "ID sessione:",
-    "goToAccountManagement": "Vai a Gestione account"
+    "goToAccountManagement": "Vai a Gestione account",
+    "enterpriseOnly": "Questa funzionalità è disponibile solo in Pro."
   },
   "subscriptionForm": {
     "title": "Gestisci abbonamento licenze",

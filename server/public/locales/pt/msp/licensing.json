@@ -38,7 +38,8 @@
     },
     "sessionDetails": "Detalhes da sessão (para suporte)",
     "sessionId": "ID da sessão:",
-    "goToAccountManagement": "Vá para Gerenciamento de contas"
+    "goToAccountManagement": "Vá para Gerenciamento de contas",
+    "enterpriseOnly": "Este recurso está disponível apenas no Pro."
   },
   "subscriptionForm": {
     "title": "Gerenciar assinatura de licença",

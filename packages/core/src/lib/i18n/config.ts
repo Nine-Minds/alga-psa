@@ -217,8 +217,8 @@ export const ROUTE_NAMESPACES = {
   // time-entry launcher (period picker + blocked-launch feedback) is opened
   // from both. msp/user-activities loads on ticket, project and dispatch
   // surfaces because they host the shared "My group" activity-group control.
-  '/msp/tickets': ['common', 'msp/core', 'features/tickets', 'msp/time-entry', 'msp/user-activities'],
-  '/msp/projects': ['common', 'msp/core', 'features/projects', 'features/tickets', 'msp/time-entry', 'msp/user-activities'],
+  '/msp/tickets': ['common', 'msp/core', 'features/tickets', 'msp/time-entry', 'msp/user-activities', 'msp/schedule'],
+  '/msp/projects': ['common', 'msp/core', 'features/projects', 'features/tickets', 'msp/time-entry', 'msp/user-activities', 'msp/schedule'],
   '/msp/billing/credits': ['common', 'msp/core', 'features/billing', 'msp/credits'],
   '/msp/reports': ['common', 'msp/core', 'msp/reports'],
   '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing', 'msp/billing-settings'],
@@ -226,13 +226,13 @@ export const ROUTE_NAMESPACES = {
   '/msp/quote-document-templates': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
   '/msp/inventory': ['common', 'msp/core', 'features/inventory'],
   // These routes can open ticket details, including the shared SLA badge.
-  '/msp/clients': ['common', 'msp/core', 'msp/clients', 'features/tickets', 'msp/time-entry'],
+  '/msp/clients': ['common', 'msp/core', 'msp/clients', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/billing'],
   // msp/dashboard carries the shared "Good morning" greeting used by the queue.
   '/msp/opportunities': ['common', 'msp/core', 'msp/opportunities', 'msp/dashboard'],
-  '/msp/contacts': ['common', 'msp/core', 'msp/contacts', 'features/tickets', 'msp/time-entry'],
-  '/msp/interactions': ['common', 'msp/core', 'msp/clients', 'msp/integrations', 'msp/time-entry'],
-  '/msp/assets': ['common', 'msp/core', 'msp/assets', 'features/tickets', 'msp/time-entry'],
-  '/msp/assets/maintenance': ['common', 'msp/core', 'msp/assets', 'features/tickets', 'msp/time-entry'],
+  '/msp/contacts': ['common', 'msp/core', 'msp/contacts', 'features/tickets', 'msp/time-entry', 'msp/schedule'],
+  '/msp/interactions': ['common', 'msp/core', 'msp/clients', 'msp/integrations', 'msp/time-entry', 'msp/schedule'],
+  '/msp/assets': ['common', 'msp/core', 'msp/assets', 'features/tickets', 'msp/time-entry', 'msp/schedule'],
+  '/msp/assets/maintenance': ['common', 'msp/core', 'msp/assets', 'features/tickets', 'msp/time-entry', 'msp/schedule'],
   '/msp/onboarding': ['common', 'msp/core', 'msp/onboarding'],
   '/msp/workflows': ['common', 'msp/core', 'msp/workflows'],
   '/msp/workflows/runs': ['common', 'msp/core', 'msp/workflows'],

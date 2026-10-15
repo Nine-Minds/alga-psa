@@ -38,7 +38,8 @@
     },
     "sessionDetails": "Sessiedetails (voor ondersteuning)",
     "sessionId": "Sessie-ID:",
-    "goToAccountManagement": "Ga naar accountbeheer"
+    "goToAccountManagement": "Ga naar accountbeheer",
+    "enterpriseOnly": "Deze functie is alleen beschikbaar in Pro."
   },
   "subscriptionForm": {
     "title": "Licentieabonnement beheren",

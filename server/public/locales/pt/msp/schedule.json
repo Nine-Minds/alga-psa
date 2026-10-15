@@ -924,5 +924,10 @@
         "label": "Lista de verificação"
       }
     }
+  },
+  "fallback": {
+    "agentSchedule": "A visualização da agenda do agente agora fica em Agendamento. (agentId: {{agentId}})",
+    "timeEntry": "O lançamento de horas é gerenciado em Agendamento.",
+    "scheduling": "O agendamento é gerenciado em Agendamento."
   }
 }

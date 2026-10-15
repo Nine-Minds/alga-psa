@@ -1938,6 +1938,9 @@
   "skeletons": {
     "calendar": {
       "loading": "Kalender laden..."
+    },
+    "kanbanBoard": {
+      "loading": "Kanbanbord laden"
     }
   },
   "dialogs": {
@@ -1962,6 +1965,9 @@
       "message": "U hebt niet-opgeslagen wijzigingen. Weet u zeker dat u wilt vertrekken? Uw wijzigingen gaan verloren.",
       "confirm": "Verlaten zonder opslaan",
       "cancel": "Blijven"
+    },
+    "confirmAction": {
+      "title": "Actie bevestigen"
     }
   },
   "viewDensity": {

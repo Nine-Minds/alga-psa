@@ -1938,6 +1938,9 @@
   "skeletons": {
     "calendar": {
       "loading": "Chargement du calendrier..."
+    },
+    "kanbanBoard": {
+      "loading": "Chargement du tableau Kanban"
     }
   },
   "dialogs": {
@@ -1962,6 +1965,9 @@
       "message": "Vous avez des modifications non enregistrées. Voulez-vous vraiment quitter cette page ? Vos modifications seront perdues.",
       "confirm": "Quitter sans enregistrer",
       "cancel": "Rester"
+    },
+    "confirmAction": {
+      "title": "Confirmer l’action"
     }
   },
   "viewDensity": {

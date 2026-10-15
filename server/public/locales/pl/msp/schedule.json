@@ -924,5 +924,10 @@
         "label": "Lista kontrolna"
       }
     }
+  },
+  "fallback": {
+    "agentSchedule": "Widok harmonogramu agenta jest teraz zarządzany w module Planowanie. (agentId: {{agentId}})",
+    "timeEntry": "Wpisy czasu są zarządzane w module Planowanie.",
+    "scheduling": "Planowanie jest zarządzane w module Planowanie."
   }
 }

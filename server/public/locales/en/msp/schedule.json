@@ -924,5 +924,10 @@
         "label": "Checklist"
       }
     }
+  },
+  "fallback": {
+    "agentSchedule": "Agent schedule view is now owned by Scheduling. (agentId: {{agentId}})",
+    "timeEntry": "Time entry is managed in Scheduling.",
+    "scheduling": "Scheduling is managed in Scheduling."
   }
 }

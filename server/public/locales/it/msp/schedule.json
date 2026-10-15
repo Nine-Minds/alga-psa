@@ -924,5 +924,10 @@
         "label": "Lista di controllo"
       }
     }
+  },
+  "fallback": {
+    "agentSchedule": "La vista del programma dell’agente è ora gestita in Pianificazione. (agentId: {{agentId}})",
+    "timeEntry": "Gli inserimenti ore sono gestiti in Pianificazione.",
+    "scheduling": "La pianificazione è gestita in Pianificazione."
   }
 }

@@ -1938,6 +1938,9 @@
   "skeletons": {
     "calendar": {
       "loading": "Läser in kalendern…"
+    },
+    "kanbanBoard": {
+      "loading": "Läser in Kanban-tavlan…"
     }
   },
   "dialogs": {
@@ -1962,6 +1965,9 @@
       "message": "Du har osparade ändringar. Vill du verkligen lämna sidan? Dina ändringar går förlorade.",
       "confirm": "Lämna utan att spara",
       "cancel": "Stanna"
+    },
+    "confirmAction": {
+      "title": "Bekräfta åtgärd"
     }
   },
   "viewDensity": {

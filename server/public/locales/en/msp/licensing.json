@@ -38,7 +38,8 @@
     },
     "sessionDetails": "Session Details (for support)",
     "sessionId": "Session ID:",
-    "goToAccountManagement": "Go to Account Management"
+    "goToAccountManagement": "Go to Account Management",
+    "enterpriseOnly": "This feature is available in Pro only."
   },
   "subscriptionForm": {
     "title": "Manage License Subscription",

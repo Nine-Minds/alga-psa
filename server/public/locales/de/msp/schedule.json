@@ -924,5 +924,10 @@
         "label": "Checkliste"
       }
     }
+  },
+  "fallback": {
+    "agentSchedule": "Die Zeitplanansicht des Mitarbeiters wird jetzt in der Planung verwaltet. (agentId: {{agentId}})",
+    "timeEntry": "Zeiteinträge werden in der Planung verwaltet.",
+    "scheduling": "Die Terminplanung wird in der Planung verwaltet."
   }
 }

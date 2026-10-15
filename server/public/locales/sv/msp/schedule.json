@@ -924,5 +924,10 @@
         "label": "Checklista"
       }
     }
+  },
+  "fallback": {
+    "agentSchedule": "Handläggarens schemavy hanteras nu i Schemaläggning. (agentId: {{agentId}})",
+    "timeEntry": "Tidposter hanteras i Schemaläggning.",
+    "scheduling": "Schemaläggning hanteras i Schemaläggning."
   }
 }
