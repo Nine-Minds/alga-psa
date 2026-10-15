@@ -303,6 +303,10 @@
       "actions": {
         "learnMore": "Meer informatie over Pro"
       }
+    },
+    "unavailable": {
+      "title": "Installatie van extensies niet beschikbaar",
+      "description": "De installatie van extensies is beschikbaar in AlgaPSA Pro."
     }
   },
   "installSimple": {

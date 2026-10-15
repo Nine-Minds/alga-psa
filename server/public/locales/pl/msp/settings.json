@@ -2431,7 +2431,12 @@
   },
   "policyManagement": {
     "title": "Zarządzanie zasadami",
-    "upgradeDescription": "Zarządzanie zasadami jest funkcją Pro. Uaktualnij plan, aby uzyskać dostęp do zaawansowanych ustawień zasad."
+    "upgradeDescription": "Zarządzanie zasadami jest funkcją Pro. Uaktualnij plan, aby uzyskać dostęp do zaawansowanych ustawień zasad.",
+    "bundleLibrary": {
+      "title": "Biblioteka pakietów autoryzacji",
+      "upgradeDescription": "Zaawansowane zarządzanie pakietami autoryzacji jest dostępne w Pro. Przejdź na Pro, aby skonfigurować pakiety ograniczające uprawnienia ról, zespołów, użytkowników i kluczy API.",
+      "protectionsDescription": "Wbudowane zabezpieczenia autoryzacji pozostają aktywne nawet wtedy, gdy konfigurowalne zaawansowane mechanizmy kontroli są niedostępne w tej edycji lub planie."
+    }
   },
   "roleManagement": {
     "title": "Zarządzanie rolami",

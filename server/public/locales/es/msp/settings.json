@@ -2431,7 +2431,12 @@
   },
   "policyManagement": {
     "title": "Administración de políticas",
-    "upgradeDescription": "La administración de políticas es una función Pro. Actualice su plan para acceder a controles avanzados de políticas."
+    "upgradeDescription": "La administración de políticas es una función Pro. Actualice su plan para acceder a controles avanzados de políticas.",
+    "bundleLibrary": {
+      "title": "Biblioteca de paquetes de autorización",
+      "upgradeDescription": "La administración avanzada de paquetes de autorización está disponible en Pro. Actualice su plan para configurar paquetes que restrinjan los permisos de roles, equipos, usuarios y claves de API.",
+      "protectionsDescription": "Las protecciones de autorización integradas permanecen activas incluso cuando los controles avanzados configurables no están disponibles en esta edición o nivel."
+    }
   },
   "roleManagement": {
     "title": "Administrar roles",

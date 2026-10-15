@@ -1580,7 +1580,20 @@
     "showLess": "Visa färre",
     "columnsHidden": "{{count}} kolumner är dolda på grund av begränsat utrymme.",
     "columnsHidden_few": "{{count}} kolumner är dolda.",
-    "columnsHidden_many": "{{count}} kolumner är dolda."
+    "columnsHidden_many": "{{count}} kolumner är dolda.",
+    "responsiveColumnsHidden_one": "{{count}} kolumn är dold på grund av begränsat utrymme. Ändra storleken för att se fler.",
+    "responsiveColumnsHidden_other": "{{count}} kolumner är dolda på grund av begränsat utrymme. Ändra storleken för att se fler.",
+    "responsiveColumnsHidden_few": "{{count}} kolumner är dolda på grund av begränsat utrymme. Ändra storleken för att se fler.",
+    "responsiveColumnsHidden_many": "{{count}} kolumner är dolda på grund av begränsat utrymme. Ändra storleken för att se fler.",
+    "empty": "Inga resultat",
+    "pagination": {
+      "empty": "0 poster",
+      "range_one": "{{first}}–{{last}} av {{count}} post",
+      "range_other": "{{first}}–{{last}} av {{count}} poster",
+      "range_few": "{{first}}–{{last}} av {{count}} poster",
+      "range_many": "{{first}}–{{last}} av {{count}} poster",
+      "perPage": "{{count}} per sida"
+    }
   },
   "richTextEditorSkeleton": {
     "loading": "Läser in redigeraren…"

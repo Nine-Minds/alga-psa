@@ -303,6 +303,10 @@
       "actions": {
         "learnMore": "Dowiedz się więcej o Pro"
       }
+    },
+    "unavailable": {
+      "title": "Instalacja rozszerzeń jest niedostępna",
+      "description": "Instalacja rozszerzeń jest dostępna w AlgaPSA Pro."
     }
   },
   "installSimple": {

@@ -2431,7 +2431,12 @@
   },
   "policyManagement": {
     "title": "Gestion des stratégies",
-    "upgradeDescription": "La gestion des stratégies est une fonctionnalité Pro. Mettez votre offre à niveau pour accéder aux contrôles avancés des stratégies."
+    "upgradeDescription": "La gestion des stratégies est une fonctionnalité Pro. Mettez votre offre à niveau pour accéder aux contrôles avancés des stratégies.",
+    "bundleLibrary": {
+      "title": "Bibliothèque de paquets d’autorisation",
+      "upgradeDescription": "La gestion avancée des paquets d’autorisation est disponible dans Pro. Passez à Pro pour configurer des paquets qui restreignent les autorisations des rôles, des équipes, des utilisateurs et des clés API.",
+      "protectionsDescription": "Les protections d’autorisation intégrées restent actives même lorsque les contrôles avancés configurables ne sont pas disponibles dans cette édition ou cette offre."
+    }
   },
   "roleManagement": {
     "title": "Gérer les rôles",

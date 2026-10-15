@@ -2379,7 +2379,12 @@
       "currentRun": "Uruchomienie {{id}}",
       "backToWorkflow": "Wróć do workflow"
     },
-    "title": "Studio uruchamiania workflow"
+    "title": "Studio uruchamiania workflow",
+    "communityEdition": {
+      "title": "Funkcja Pro",
+      "description": "Studio uruchomień workflow jest dostępne tylko w Pro.",
+      "runId": "ID uruchomienia: {{runId}}"
+    }
   },
   "schedules": {
     "common": {

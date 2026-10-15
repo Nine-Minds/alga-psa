@@ -1580,7 +1580,20 @@
     "showLess": "Weniger anzeigen",
     "columnsHidden": "{{count}} Spalten aufgrund von begrenztem Platz ausgeblendet.",
     "columnsHidden_few": "{{count}} Spalten aus Platzgründen ausgeblendet.",
-    "columnsHidden_many": "{{count}} Spalten aus Platzgründen ausgeblendet."
+    "columnsHidden_many": "{{count}} Spalten aus Platzgründen ausgeblendet.",
+    "responsiveColumnsHidden_one": "{{count}} Spalte wegen Platzmangels ausgeblendet. Vergrößern Sie den Bereich, um mehr zu sehen.",
+    "responsiveColumnsHidden_other": "{{count}} Spalten wegen Platzmangels ausgeblendet. Vergrößern Sie den Bereich, um mehr zu sehen.",
+    "responsiveColumnsHidden_few": "{{count}} Spalten wegen Platzmangels ausgeblendet. Vergrößern Sie den Bereich, um mehr zu sehen.",
+    "responsiveColumnsHidden_many": "{{count}} Spalten wegen Platzmangels ausgeblendet. Vergrößern Sie den Bereich, um mehr zu sehen.",
+    "empty": "Keine Ergebnisse",
+    "pagination": {
+      "empty": "0 Einträge",
+      "range_one": "{{first}}–{{last}} von {{count}} Eintrag",
+      "range_other": "{{first}}–{{last}} von {{count}} Einträgen",
+      "range_few": "{{first}}–{{last}} von {{count}} Einträgen",
+      "range_many": "{{first}}–{{last}} von {{count}} Einträgen",
+      "perPage": "{{count}} pro Seite"
+    }
   },
   "richTextEditorSkeleton": {
     "loading": "Editor wird geladen…"

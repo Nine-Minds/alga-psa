@@ -303,6 +303,10 @@
       "actions": {
         "learnMore": "Läs mer om Pro"
       }
+    },
+    "unavailable": {
+      "title": "Installation av tillägg är inte tillgänglig",
+      "description": "Installation av tillägg är tillgänglig i AlgaPSA Pro."
     }
   },
   "installSimple": {

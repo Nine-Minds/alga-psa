@@ -2431,7 +2431,12 @@
   },
   "policyManagement": {
     "title": "Gestione dei criteri",
-    "upgradeDescription": "La gestione dei criteri è una funzionalità Pro. Esegui l’upgrade per accedere ai controlli avanzati dei criteri."
+    "upgradeDescription": "La gestione dei criteri è una funzionalità Pro. Esegui l’upgrade per accedere ai controlli avanzati dei criteri.",
+    "bundleLibrary": {
+      "title": "Libreria dei pacchetti di autorizzazione",
+      "upgradeDescription": "La gestione avanzata dei pacchetti di autorizzazione è disponibile in Pro. Passa a Pro per configurare pacchetti che limitano le autorizzazioni per ruoli, team, utenti e chiavi API.",
+      "protectionsDescription": "Le protezioni di autorizzazione integrate rimangono attive anche quando i controlli avanzati configurabili non sono disponibili in questa edizione o piano."
+    }
   },
   "roleManagement": {
     "title": "Gestisci ruoli",

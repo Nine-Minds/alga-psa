@@ -2431,7 +2431,12 @@
   },
   "policyManagement": {
     "title": "Beleidsbeheer",
-    "upgradeDescription": "Beleidsbeheer is een Pro-functie. Voer een upgrade uit voor toegang tot geavanceerde beleidsinstellingen."
+    "upgradeDescription": "Beleidsbeheer is een Pro-functie. Voer een upgrade uit voor toegang tot geavanceerde beleidsinstellingen.",
+    "bundleLibrary": {
+      "title": "Bibliotheek met autorisatiebundels",
+      "upgradeDescription": "Geavanceerd beheer van autorisatiebundels is beschikbaar in Pro. Upgrade om beperkende bundels voor rollen, teams, gebruikers en API-sleutels te configureren.",
+      "protectionsDescription": "Ingebouwde autorisatiebeveiligingen blijven actief, ook wanneer configureerbare geavanceerde opties niet beschikbaar zijn in deze editie of dit abonnement."
+    }
   },
   "roleManagement": {
     "title": "Rollen beheren",

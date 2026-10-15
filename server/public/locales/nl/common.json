@@ -1580,7 +1580,20 @@
     "showLess": "Minder tonen",
     "columnsHidden": "{{count}} kolommen verborgen vanwege beperkte ruimte.",
     "columnsHidden_few": "{{count}} kolommen verborgen wegens beperkte ruimte.",
-    "columnsHidden_many": "{{count}} kolommen verborgen wegens beperkte ruimte."
+    "columnsHidden_many": "{{count}} kolommen verborgen wegens beperkte ruimte.",
+    "responsiveColumnsHidden_one": "{{count}} kolom verborgen wegens beperkte ruimte. Pas de grootte aan om meer te zien.",
+    "responsiveColumnsHidden_other": "{{count}} kolommen verborgen wegens beperkte ruimte. Pas de grootte aan om meer te zien.",
+    "responsiveColumnsHidden_few": "{{count}} kolommen verborgen wegens beperkte ruimte. Pas de grootte aan om meer te zien.",
+    "responsiveColumnsHidden_many": "{{count}} kolommen verborgen wegens beperkte ruimte. Pas de grootte aan om meer te zien.",
+    "empty": "Geen resultaten",
+    "pagination": {
+      "empty": "Geen items",
+      "range_one": "{{first}}–{{last}} van {{count}} item",
+      "range_other": "{{first}}–{{last}} van {{count}} items",
+      "range_few": "{{first}}–{{last}} van {{count}} items",
+      "range_many": "{{first}}–{{last}} van {{count}} items",
+      "perPage": "{{count}} per pagina"
+    }
   },
   "richTextEditorSkeleton": {
     "loading": "Editor laden…"

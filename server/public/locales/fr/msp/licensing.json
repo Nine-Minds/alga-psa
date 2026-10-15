@@ -10,7 +10,8 @@
   },
   "purchasePage": {
     "title": "Acheter des licences",
-    "description": "Ajoutez davantage de licences utilisateur à votre compte AlgaPSA"
+    "description": "Ajoutez davantage de licences utilisateur à votre compte AlgaPSA",
+    "communityEditionDescription": "La Community Edition auto-hébergée permet un nombre illimité d’utilisateurs, sans restriction de licence ni coût supplémentaire."
   },
   "purchaseSuccess": {
     "metaTitle": "Achat réussi",
@@ -256,7 +257,8 @@
         "description_many": "Il vous reste {{count}} jours pour utiliser toutes les fonctionnalités Pro.",
         "description_other": "Il vous reste {{count}} jours pour utiliser toutes les fonctionnalités Pro.",
         "descriptionNoDays": "Vous pouvez utiliser toutes les fonctionnalités Pro pendant la période d’essai.",
-        "badge": "Essai actif"
+        "badge": "Essai actif",
+        "description_few": "Il vous reste {{count}} jours pour utiliser toutes les fonctionnalités Pro."
       },
       "licensed": {
         "eyebrow": "Licence payante",
@@ -304,7 +306,8 @@
       "refreshLabel": "Actualisation de la licence",
       "connected": "Connecté",
       "lastCheckIn": "Dernière vérification : {{timestamp}}",
-      "refreshHelp": "Applique immédiatement les changements de postes ou d’offre effectués dans le portail."
+      "refreshHelp": "Applique immédiatement les changements de postes ou d’offre effectués dans le portail.",
+      "daysRemaining_few": "{{count}} jours restants"
     },
     "portal": {
       "manageTitle": "Postes, facturation et codes d’activation",

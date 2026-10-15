@@ -1580,7 +1580,20 @@
     "showLess": "Afficher moins",
     "columnsHidden": "{{count}} colonnes masquées en raison de l'espace limité.",
     "columnsHidden_few": "{{count}} colonnes masquées faute de place.",
-    "columnsHidden_many": "{{count}} colonnes masquées faute de place."
+    "columnsHidden_many": "{{count}} colonnes masquées faute de place.",
+    "responsiveColumnsHidden_one": "{{count}} colonne masquée par manque d’espace. Redimensionnez la zone pour en voir davantage.",
+    "responsiveColumnsHidden_other": "{{count}} colonnes masquées par manque d’espace. Redimensionnez la zone pour en voir davantage.",
+    "responsiveColumnsHidden_few": "{{count}} colonnes masquées par manque d’espace. Redimensionnez la zone pour en voir davantage.",
+    "responsiveColumnsHidden_many": "{{count}} colonnes masquées par manque d’espace. Redimensionnez la zone pour en voir davantage.",
+    "empty": "Aucun résultat",
+    "pagination": {
+      "empty": "0 élément",
+      "range_one": "{{first}}–{{last}} sur {{count}} élément",
+      "range_other": "{{first}}–{{last}} sur {{count}} éléments",
+      "range_few": "{{first}}–{{last}} sur {{count}} éléments",
+      "range_many": "{{first}}–{{last}} sur {{count}} éléments",
+      "perPage": "{{count}} par page"
+    }
   },
   "richTextEditorSkeleton": {
     "loading": "Chargement de l'éditeur…"

@@ -2431,7 +2431,12 @@
   },
   "policyManagement": {
     "title": "Richtlinienverwaltung",
-    "upgradeDescription": "Die Richtlinienverwaltung ist eine Pro-Funktion. Führen Sie ein Upgrade durch, um auf erweiterte Richtliniensteuerungen zuzugreifen."
+    "upgradeDescription": "Die Richtlinienverwaltung ist eine Pro-Funktion. Führen Sie ein Upgrade durch, um auf erweiterte Richtliniensteuerungen zuzugreifen.",
+    "bundleLibrary": {
+      "title": "Bibliothek für Autorisierungspakete",
+      "upgradeDescription": "Die erweiterte Verwaltung von Autorisierungspaketen ist in Pro verfügbar. Führen Sie ein Upgrade durch, um einschränkende Pakete für Rollen, Teams, Benutzer und API-Schlüssel zu konfigurieren.",
+      "protectionsDescription": "Integrierte Autorisierungsschutzmaßnahmen bleiben auch dann aktiv, wenn konfigurierbare erweiterte Steuerelemente in dieser Edition oder Tarifstufe nicht verfügbar sind."
+    }
   },
   "roleManagement": {
     "title": "Rollen verwalten",
