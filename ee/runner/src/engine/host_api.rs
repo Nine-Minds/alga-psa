@@ -48,7 +48,6 @@ use component::alga::extension::{
 pub struct HostRuntimeConfig {
     pub egress_allowlist: Vec<String>,
     pub ui_proxy_base: Option<Url>,
-    pub ui_proxy_auth: Option<String>,
     pub ui_proxy_timeout: Duration,
 }
 
@@ -57,7 +56,6 @@ impl Default for HostRuntimeConfig {
         Self {
             egress_allowlist: Vec::new(),
             ui_proxy_base: None,
-            ui_proxy_auth: None,
             ui_proxy_timeout: Duration::from_millis(5_000),
         }
     }
@@ -82,12 +80,6 @@ impl HostRuntimeConfig {
                 Err(err) => {
                     tracing::warn!(base = %base, error = %err, "UI_PROXY_BASE_URL is invalid; UI proxy calls disabled");
                 }
-            }
-        }
-
-        if let Ok(auth) = std::env::var("UI_PROXY_AUTH_KEY") {
-            if !auth.trim().is_empty() {
-                cfg.ui_proxy_auth = Some(auth);
             }
         }
 
