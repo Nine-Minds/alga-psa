@@ -420,7 +420,7 @@ async fn ui_proxy_capability_denied() -> anyhow::Result<()> {
 struct ProxyServerState {
     tenant: String,
     extension: String,
-    auth: String,
+    api_key: String,
 }
 
 async fn proxy_handler(
@@ -447,10 +447,10 @@ async fn proxy_handler(
     );
     assert_eq!(
         headers
-            .get("x-runner-auth")
+            .get("x-api-key")
             .and_then(|v| v.to_str().ok())
             .unwrap_or_default(),
-        state.auth
+        state.api_key
     );
     assert_eq!(
         headers
@@ -494,7 +494,7 @@ async fn ui_proxy_forwards_request() -> anyhow::Result<()> {
     let state = Arc::new(ProxyServerState {
         tenant: "tenant-ok".to_string(),
         extension: "ext-ok".to_string(),
-        auth: "proxy-secret".to_string(),
+        api_key: "sk_ui_proxy_key".to_string(),
     });
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
@@ -514,7 +514,6 @@ async fn ui_proxy_forwards_request() -> anyhow::Result<()> {
     let base_url = format!("http://127.0.0.1:{}/api/ui-proxy", addr.port());
     let _env = EnvGuard::set(&[
         ("UI_PROXY_BASE_URL", base_url.as_str()),
-        ("UI_PROXY_AUTH_KEY", state.auth.as_str()),
         ("UI_PROXY_TIMEOUT_MS", "2000"),
     ]);
 
@@ -562,7 +561,12 @@ async fn ui_proxy_forwards_request() -> anyhow::Result<()> {
         version_id: request.context.version_id.clone(),
         config: request.context.config.clone(),
         providers,
-        secrets: None,
+        // The runner authenticates UI proxy calls with x-api-key from the
+        // extension's own api_key secret (see 6919425ba9); the mock asserts it.
+        secrets: Some(SecretMaterial {
+            values: HashMap::from([("api_key".to_string(), state.api_key.clone())]),
+            version: Some("v1".to_string()),
+        }),
         user: request.user.clone(),
     };
 
