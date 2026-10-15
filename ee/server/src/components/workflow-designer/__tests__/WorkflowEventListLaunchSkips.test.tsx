@@ -15,6 +15,16 @@ const actionMocks = vi.hoisted(() => ({
   listEventLaunchSkipsAction: vi.fn(),
 }));
 
+const navigationMocks = vi.hoisted(() => ({
+  replace: vi.fn(),
+  searchParams: new URLSearchParams(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: navigationMocks.replace }),
+  useSearchParams: () => navigationMocks.searchParams,
+}));
+
 vi.mock('@alga-psa/workflows/actions', () => actionMocks);
 vi.mock('@alga-psa/workflows/hooks/useWorkflowEnumOptions', () => ({
   useFormatWorkflowEventStatus: () => (value: string) => value,
@@ -40,7 +50,7 @@ import WorkflowEventList from '../WorkflowEventList';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  window.history.replaceState({}, '', `/?eventId=${EVENT_ID}`);
+  navigationMocks.searchParams = new URLSearchParams({ eventId: EVENT_ID });
   actionMocks.listWorkflowEventsPagedAction.mockResolvedValue({ items: [], totalItems: 0 });
   actionMocks.listWorkflowEventSummaryAction.mockResolvedValue({ total: 0, matched: 0, unmatched: 0, error: 0 });
   actionMocks.getWorkflowEventAction.mockResolvedValue({
@@ -58,7 +68,6 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  window.history.replaceState({}, '', '/');
 });
 
 describe('WorkflowEventList "Workflows not launched" section', () => {

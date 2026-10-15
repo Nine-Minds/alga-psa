@@ -1,4 +1,5 @@
 import { beforeAll, afterAll, describe, it, expect, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -90,6 +91,11 @@ async function hasSchemaTable(connection: Knex, tableName: string): Promise<bool
     .first('table_name');
   return Boolean(row);
 }
+
+vi.mock('next/server', async () => ({
+  ...await import('next/dist/server/web/spec-extension/request'),
+  ...await import('next/dist/server/web/spec-extension/response'),
+}));
 
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
@@ -2329,6 +2335,340 @@ it('T021: deleting a recurring invoice clears service-period invoice linkage and
     .select('record_id');
 
   expect(invoiceableRows.map((row) => row.record_id)).toEqual([materializationPlan.records[0].recordId]);
+}, HOOK_TIMEOUT);
+
+// ---------------------------------------------------------------------------
+// alga0002228: REST DELETE /api/v1/invoices/:id shares the UI's delete engine.
+// The controller is exercised with authenticate/checkPermission stubbed to a
+// context for a real tenant user; everything below the controller (service,
+// shared delete engine, DB) is real.
+// ---------------------------------------------------------------------------
+async function createRestInvoiceHarness() {
+  const { ApiInvoiceController } = await import('../../lib/api/controllers/ApiInvoiceController');
+  const { InvoiceService } = await import('../../lib/api/services/InvoiceService');
+  const userId = await createUser(db, tenantId, { user_type: 'internal' });
+  const context = { tenant: tenantId, userId, user: { user_id: userId, user_type: 'internal' } } as any;
+
+  class TestInvoiceController extends ApiInvoiceController {
+    protected async authenticate(req: NextRequest) {
+      return Object.assign(req, { context }) as any;
+    }
+    protected async checkPermission() {}
+    protected runWithApiKeyContext<T>(_req: any, fn: () => Promise<T>): Promise<T> {
+      return fn();
+    }
+  }
+
+  // BaseService resolves its connection through the real tenant AsyncLocalStorage
+  // context; this file mocks @alga-psa/db's runWithTenant to a passthrough.
+  const { runWithTenant: realRunWithTenant } = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
+  const inTenant = <T,>(fn: () => Promise<T>): Promise<T> =>
+    withRealTransactions(() => realRunWithTenant(tenantId, fn));
+
+  const controller = new TestInvoiceController();
+  const service = new InvoiceService();
+  const restDelete = (invoiceId: string) =>
+    inTenant(() =>
+      controller.delete()(new NextRequest(`http://localhost/api/v1/invoices/${invoiceId}`, { method: 'DELETE' })),
+    );
+  return { context, service, restDelete, userId, inTenant };
+}
+
+async function insertPlainInvoice(clientId: string, status: 'draft' | 'sent' = 'draft') {
+  const invoiceId = uuidv4();
+  const now = '2026-03-18T15:15:00.000Z';
+  await tenantTable(db, tenantId, 'invoices').insert({
+    invoice_id: invoiceId,
+    tenant: tenantId,
+    client_id: clientId,
+    invoice_number: `INV-${invoiceId.slice(0, 8)}`,
+    invoice_date: now,
+    due_date: now,
+    subtotal: 1000,
+    tax: 0,
+    total_amount: 1000,
+    status,
+    currency_code: 'USD',
+    created_at: now,
+    updated_at: now,
+  });
+  const chargeIds: string[] = [];
+  for (const description of ['Manual line A', 'Manual line B']) {
+    const itemId = uuidv4();
+    chargeIds.push(itemId);
+    await tenantTable(db, tenantId, 'invoice_charges').insert({
+      item_id: itemId,
+      tenant: tenantId,
+      invoice_id: invoiceId,
+      description,
+      quantity: 1,
+      unit_price: 5,
+      total_price: 5,
+      net_amount: 5,
+      tax_amount: 0,
+      is_manual: true,
+      created_at: now,
+      updated_at: now,
+    });
+  }
+  return { invoiceId, chargeIds };
+}
+
+const NOT_DRAFT_DELETE_MESSAGE = 'Only draft invoices can be deleted; void the invoice instead.';
+const HAS_PAYMENTS_DELETE_MESSAGE = 'Invoices with recorded payments cannot be deleted';
+
+it('T-REST-DEL-1: REST DELETE of a fresh recurring draft removes it, releases its periods, and the window is due and regenerable again', async () => {
+  setupCommonMocks({ tenantId, userId: 'rest-delete-recurring-user', permissionCheck: () => true });
+  const { restDelete, service, context, inTenant } = await createRestInvoiceHarness();
+
+  const { contextLike, currentPeriodStart, nextPeriodStart } = await createClientWithRecurringCycles({
+    clientName: 'REST Delete Recurring Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-03-12',
+    currentPeriodStart: '2025-04-12',
+    nextPeriodStart: '2025-05-12',
+  });
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'REST Delete Service',
+    planName: 'REST Delete Plan',
+    baseRateCents: 245,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+  const plan = materializeContractCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T18:30:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: `${currentPeriodStart}T00:00:00Z`,
+    sourceObligation: { tenant: tenantId, obligationId: fixedLine.contractLineId, chargeFamily: 'fixed' },
+    duePosition: 'advance',
+    sourceRuleVersion: `${fixedLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-rest-delete',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(plan.records[0]);
+
+  const selectorInput = buildContractCadenceDueSelectionInput({
+    clientId: contextLike.clientId,
+    contractId: fixedLine.contractId,
+    contractLineId: fixedLine.contractLineId,
+    windowStart: `${currentPeriodStart}T00:00:00Z`,
+    windowEnd: `${nextPeriodStart}T00:00:00Z`,
+  });
+  const generated = await generateInvoiceForSelectionInput(selectorInput);
+  expect(generated).toBeTruthy();
+  const invoiceId = generated!.invoice_id;
+
+  const chargeIds = await tenantTable(db, tenantId, 'invoice_charges')
+    .where({ tenant: tenantId, invoice_id: invoiceId })
+    .pluck('item_id');
+  expect(chargeIds.length).toBeGreaterThan(0);
+
+  // Recurring drafts cannot have their items replaced through update().
+  await expect(
+    inTenant(() =>
+      service.update(invoiceId, { items: [{ description: 'x', quantity: 1, unit_price: 1 }] } as any, context),
+    ),
+  ).rejects.toMatchObject({ statusCode: 409 });
+  expect(
+    await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).pluck('item_id'),
+  ).toHaveLength(chargeIds.length);
+
+  const response = await restDelete(invoiceId);
+  expect(response.status).toBe(204);
+
+  // The audit row is written through onBeforeCommit, atomically with the delete.
+  const auditRow = await tenantTable(db, tenantId, 'audit_logs')
+    .where({ tenant: tenantId, table_name: 'invoices', record_id: invoiceId, operation: 'DELETE' })
+    .first();
+  expect(auditRow).toBeTruthy();
+  expect(auditRow.details).toMatchObject({ action: 'invoice.deleted' });
+
+  expect(await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
+  expect(await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
+  expect(
+    await tenantTable(db, tenantId, 'invoice_charge_details').whereIn('item_id', chargeIds).first(),
+  ).toBeUndefined();
+  expect(await tenantTable(db, tenantId, 'transactions').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
+
+  const reopened = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, record_id: plan.records[0].recordId })
+    .first(['lifecycle_state', 'invoice_id', 'invoice_charge_id', 'invoice_charge_detail_id', 'invoice_linked_at']);
+  expect(reopened).toMatchObject({
+    lifecycle_state: 'locked',
+    invoice_id: null,
+    invoice_charge_id: null,
+    invoice_charge_detail_id: null,
+    invoice_linked_at: null,
+  });
+
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'REST Delete Recurring Client',
+  });
+  const dueRow = dueWork.invoiceCandidates
+    .flatMap((candidate) => candidate.members)
+    .find((row) =>
+      row.contractLineId === fixedLine.contractLineId
+      && normalizeDateValue(row.invoiceWindowStart) === currentPeriodStart
+      && normalizeDateValue(row.invoiceWindowEnd) === nextPeriodStart,
+    );
+  expect(dueRow).toBeTruthy();
+
+  const regenerated = await generateInvoiceForSelectionInput(dueRow!.selectorInput);
+  expect(regenerated).toBeTruthy();
+  expect(regenerated!.invoice_id).not.toBe(invoiceId);
+}, HOOK_TIMEOUT);
+
+it('T-REST-DEL-2: REST DELETE of a non-recurring draft removes the invoice and its charges', async () => {
+  const { restDelete } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Delete Manual Client' });
+  const { invoiceId } = await insertPlainInvoice(contextLike.clientId);
+
+  const response = await restDelete(invoiceId);
+  expect(response.status).toBe(204);
+
+  expect(await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
+  expect(await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
+}, HOOK_TIMEOUT);
+
+it('T-REST-DEL-3: REST DELETE of a finalized invoice answers 409 and leaves the invoice untouched', async () => {
+  const { restDelete, service, context, inTenant } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Delete Finalized Client' });
+  const { invoiceId, chargeIds } = await insertPlainInvoice(contextLike.clientId);
+
+  await inTenant(() => service.finalizeInvoice({ invoice_id: invoiceId } as any, context));
+  const before = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(before.finalized_at).toBeTruthy();
+
+  const response = await restDelete(invoiceId);
+  expect(response.status).toBe(409);
+  const body = await response.json();
+  expect(body.error.code).toBe('CONFLICT');
+  expect(body.error.message).toBe(NOT_DRAFT_DELETE_MESSAGE);
+
+  const after = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(after).toBeTruthy();
+  expect(after.status).toBe(before.status);
+  expect(after.status).not.toBe('cancelled');
+  expect(String(after.finalized_at)).toBe(String(before.finalized_at));
+  const charges = await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).pluck('item_id');
+  expect(charges.sort()).toEqual([...chargeIds].sort());
+}, HOOK_TIMEOUT);
+
+async function expectRestDeleteRefused(
+  restDelete: (id: string) => Promise<Response>,
+  invoiceId: string,
+  chargeIds: string[],
+  expectedStatus: string,
+  expectedMessage: string = NOT_DRAFT_DELETE_MESSAGE,
+) {
+  const response = await restDelete(invoiceId);
+  expect(response.status).toBe(409);
+  const body = await response.json();
+  expect(body.error.code).toBe('CONFLICT');
+  expect(body.error.message).toBe(expectedMessage);
+
+  const after = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(after).toBeTruthy();
+  expect(after.status).toBe(expectedStatus);
+  const charges = await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).pluck('item_id');
+  expect(charges.sort()).toEqual([...chargeIds].sort());
+}
+
+it.each([
+  ['T-REST-DEL-5', 'sent'],
+  ['T-REST-DEL-6', 'paid'],
+])('%s: REST DELETE of a %s invoice with NULL finalized_at answers 409 and leaves it untouched', async (_id, status) => {
+  const { restDelete } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: `REST Delete ${status} Client` });
+  const { invoiceId, chargeIds } = await insertPlainInvoice(contextLike.clientId);
+  await tenantTable(db, tenantId, 'invoices')
+    .where({ tenant: tenantId, invoice_id: invoiceId })
+    .update({ status, finalized_at: null });
+
+  await expectRestDeleteRefused(restDelete, invoiceId, chargeIds, status);
+}, HOOK_TIMEOUT);
+
+it('T-REST-DEL-7: REST DELETE of a draft that has a recorded payment answers 409 and keeps the payment', async () => {
+  const { restDelete } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Delete Paid Draft Client' });
+  const { invoiceId, chargeIds } = await insertPlainInvoice(contextLike.clientId);
+  const paymentId = uuidv4();
+  await tenantTable(db, tenantId, 'invoice_payments').insert({
+    payment_id: paymentId,
+    tenant: tenantId,
+    invoice_id: invoiceId,
+    amount: 500,
+    payment_method: 'check',
+    status: 'completed',
+  });
+
+  await expectRestDeleteRefused(restDelete, invoiceId, chargeIds, 'draft', HAS_PAYMENTS_DELETE_MESSAGE);
+  const payment = await tenantTable(db, tenantId, 'invoice_payments')
+    .where({ tenant: tenantId, payment_id: paymentId })
+    .first();
+  expect(payment).toBeTruthy();
+}, HOOK_TIMEOUT);
+
+it('T-REST-DEL-4: REST DELETE of an unknown invoice id answers 404', async () => {
+  const { restDelete, service, context, inTenant } = await createRestInvoiceHarness();
+  const response = await restDelete(uuidv4());
+  expect(response.status).toBe(404);
+
+  // The service itself (past the controller's getById pre-check) also maps a
+  // missing invoice to NotFound rather than silently succeeding.
+  await expect(inTenant(() => service.delete(uuidv4(), context))).rejects.toMatchObject({ statusCode: 404 });
+}, HOOK_TIMEOUT);
+
+it('T-REST-UPD-1: REST update writes a header-only change without a missing-column error and replaces invoice_charges for a non-recurring draft', async () => {
+  const { service, context, inTenant } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Update Client' });
+  const { invoiceId, chargeIds } = await insertPlainInvoice(contextLike.clientId);
+
+  await inTenant(() => service.update(invoiceId, { due_date: '2026-06-30' } as any, context));
+  const headerOnly = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(normalizeDateValue(headerOnly.due_date)).toBe('2026-06-30');
+
+  const serviceId = await createTestService(contextLike, {});
+  await inTenant(() =>
+    service.update(
+      invoiceId,
+      { items: [{ service_id: serviceId, description: 'Replacement line', quantity: 2, unit_price: 7 }] } as any,
+      context,
+    ),
+  );
+  const charges = await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId });
+  expect(charges).toHaveLength(1);
+  expect(charges[0].description).toBe('Replacement line');
+  expect(chargeIds).not.toContain(charges[0].item_id);
+
+  // A finalized invoice may not have its items replaced.
+  await inTenant(() => service.finalizeInvoice({ invoice_id: invoiceId } as any, context));
+  await expect(
+    inTenant(() => service.update(invoiceId, { items: [{ description: 'x', quantity: 1, unit_price: 1 }] } as any, context)),
+  ).rejects.toMatchObject({ statusCode: 409 });
+}, HOOK_TIMEOUT);
+
+it('T-REST-STATUS-1: sendInvoice on a finalized invoice no longer fails on the missing invoices.updated_by column', async () => {
+  const { service, context, inTenant } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Status Client' });
+  const { invoiceId } = await insertPlainInvoice(contextLike.clientId);
+  await inTenant(() => service.finalizeInvoice({ invoice_id: invoiceId } as any, context));
+
+  await inTenant(() =>
+    service.sendInvoice({ invoice_id: invoiceId, email_addresses: ['billing@example.com'], include_pdf: false } as any, context),
+  );
+  const sent = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(sent.status).toBe('sent');
+
+  // recordPayment is intentionally not asserted here: it has a separate, pre-existing
+  // defect (invoice_payments.created_by does not exist), outside alga0002228's scope.
 }, HOOK_TIMEOUT);
 
 it('T051/T078: invoiced-history reader returns client-cadence recurring invoices with service-period metadata after the hard cutover', async () => {

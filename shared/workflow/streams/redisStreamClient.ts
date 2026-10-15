@@ -63,8 +63,16 @@ export interface ConsumeOptions {
  * Redis Stream for workflow events
  * Provides methods for publishing events to Redis Streams and consuming events from Redis Streams
  */
+// LEVERAGE: pattern redis-consumer-group-ensure — same NOGROUP detection and group-cache invalidation lives in packages/event-bus/src/eventBus.ts
+function isNoGroupError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('NOGROUP');
+}
+
 export class RedisStreamClient {
   private static createdConsumerGroups: Set<string> = new Set<string>();
+  // Streams that already logged a NOGROUP warning in the current streak; cleared after a successful read.
+  private noGroupWarned: Set<string> = new Set<string>();
   private client: any | null = null;
   private config: RedisStreamConfig;
   private consumerId: string;
@@ -162,6 +170,17 @@ export class RedisStreamClient {
    */
   private getStreamName(executionId: string): string {
     return `${this.config.streamPrefix}${executionId}`;
+  }
+
+  private handleNoGroup(streamName: string): void {
+    RedisStreamClient.createdConsumerGroups.delete(`${streamName}::${this.config.consumerGroup}`);
+    if (!this.noGroupWarned.has(streamName)) {
+      this.noGroupWarned.add(streamName);
+      logger.warn('[RedisStreamClient] consumer group missing, recreating', {
+        stream: streamName,
+        group: this.config.consumerGroup
+      });
+    }
   }
 
   /**
@@ -338,9 +357,11 @@ export class RedisStreamClient {
 
       if (!streamEntries || streamEntries.length === 0) {
         logger.debug(`[RedisStreamClient] No messages found in stream ${streamName}`);
+        this.noGroupWarned.delete(streamName);
         return [];
       }
       
+      this.noGroupWarned.delete(streamName);
       logger.info(`[RedisStreamClient] Successfully read ${streamEntries.length} entries from stream ${streamName}`);
 
       // Extract messages from the stream entries
@@ -356,6 +377,12 @@ export class RedisStreamClient {
 
       return resultMessages;
     } catch (error) {
+      if (isNoGroupError(error)) {
+        // Redis lost the stream/group (restart without persistence, DEL, FLUSHALL).
+        // Drop the cache entry so the next tick re-runs XGROUP CREATE ... 0 MKSTREAM.
+        this.handleNoGroup(this.getStreamName(executionId));
+        return [];
+      }
       logger.error(`[RedisStreamClient] Failed to read messages from stream for execution ${executionId}:`, error);
       throw error;
     }
@@ -424,6 +451,10 @@ export class RedisStreamClient {
           message: message!.message
         }));
     } catch (error: any) {
+      if (isNoGroupError(error)) {
+        this.handleNoGroup(this.getStreamName(executionId));
+        return [];
+      }
       // If XAUTOCLAIM is not supported (Redis < 6.2), fall back to the old method
       if (error.message && error.message.includes('ERR unknown command')) {
         logger.warn(`[RedisStreamClient] XAUTOCLAIM not supported, falling back to XCLAIM`);
@@ -954,6 +985,8 @@ export class RedisStreamClient {
    */
   public async close(): Promise<void> {
     this.stopConsumer();
+    RedisStreamClient.createdConsumerGroups.clear();
+    this.noGroupWarned.clear();
     
     if (this.client && this.isConnected) {
       await this.client.quit();

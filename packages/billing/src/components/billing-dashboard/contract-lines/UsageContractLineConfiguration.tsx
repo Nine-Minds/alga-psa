@@ -850,7 +850,7 @@ export function UsagePlanConfiguration({
                             });
                           } else {
                             const rate = config.base_rate !== undefined
-                              ? money(Math.round(Number(config.base_rate) * 100))
+                              ? money(Math.round(Number(config.base_rate)))
                               : t('configuration.usage.services.summary.notSet', { defaultValue: 'Not Set' });
                             const unit = config.unit_of_measure || t('configuration.usage.services.summary.defaultUnit', { defaultValue: 'Unit' });
                             return t('configuration.usage.services.summary.ratePerUnit', {

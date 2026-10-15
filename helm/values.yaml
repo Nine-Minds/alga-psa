@@ -305,6 +305,9 @@ redis:
     existingClaim: ""
     size: 20Gi
     storageClass: "local-path"
+    aof:
+      # Appliance only. Turning this on changes the pod command and rolls redis-0 once.
+      enabled: false
 
 
 db:

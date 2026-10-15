@@ -352,6 +352,58 @@ export const updateContractLine = withAuth(async (
                 throw new Error('Permission denied: Cannot update contract lines');
             }
 
+            // Template lines live in contract_template_lines, not contract_lines. Without this
+            // branch the live lookup below reports the template line as not found and any
+            // line-level edit (timing, cadence, rounding) is lost.
+            const existingTemplateLine = await tenantDb(trx, tenant).table('contract_template_lines')
+                .where({ template_line_id: planId })
+                .first();
+            if (existingTemplateLine) {
+                const templatePatch: Record<string, unknown> = {};
+                if (updateData.contract_line_name !== undefined) templatePatch.template_line_name = updateData.contract_line_name;
+                if (updateData.billing_frequency !== undefined) templatePatch.billing_frequency = updateData.billing_frequency;
+                if (updateData.is_active !== undefined) templatePatch.is_active = updateData.is_active;
+                if (updateData.minimum_billable_time !== undefined) templatePatch.minimum_billable_time = updateData.minimum_billable_time;
+                if (updateData.round_up_to_nearest !== undefined) templatePatch.round_up_to_nearest = updateData.round_up_to_nearest;
+                if (updateData.cadence_owner !== undefined || updateData.billing_timing !== undefined) {
+                    const templatePolicy = resolveRecurringAuthoringPolicy({
+                        cadenceOwner: updateData.cadence_owner,
+                        fallbackCadenceOwner: existingTemplateLine.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+                        billingTiming: updateData.billing_timing,
+                        fallbackBillingTiming: existingTemplateLine.billing_timing,
+                    });
+                    templatePatch.cadence_owner = templatePolicy.cadenceOwner;
+                    templatePatch.billing_timing = templatePolicy.billingTiming;
+                }
+                if (Object.keys(templatePatch).length > 0) {
+                    await tenantDb(trx, tenant).table('contract_template_lines')
+                        .where({ template_line_id: planId })
+                        .update({ ...templatePatch, updated_at: trx.fn.now() });
+                }
+                const updatedTemplateLine = await tenantDb(trx, tenant).table('contract_template_lines')
+                    .where({ template_line_id: planId })
+                    .first();
+                return {
+                    contract_line_id: updatedTemplateLine.template_line_id,
+                    contract_line_name: updatedTemplateLine.template_line_name,
+                    billing_frequency: updatedTemplateLine.billing_frequency,
+                    is_custom: true,
+                    contract_id: updatedTemplateLine.template_id,
+                    tenant,
+                    display_order: updatedTemplateLine.display_order ?? 0,
+                    custom_rate: updatedTemplateLine.custom_rate != null ? Number(updatedTemplateLine.custom_rate) : null,
+                    ...normalizeTemplateRecurringStorage({
+                        billing_timing: updatedTemplateLine.billing_timing,
+                        cadence_owner: updatedTemplateLine.cadence_owner,
+                    }),
+                    contract_line_type: updatedTemplateLine.line_type ?? 'Fixed',
+                    service_category: updatedTemplateLine.service_category ?? null,
+                    is_active: updatedTemplateLine.is_active ?? true,
+                    created_at: updatedTemplateLine.created_at,
+                    updated_at: updatedTemplateLine.updated_at,
+                } as IContractLine;
+            }
+
             // Fetch the existing plan to check its type
             await tenantDb(trx, tenant).table('contract_lines')
                 .where('contract_line_id', planId).forUpdate().first('contract_line_id');

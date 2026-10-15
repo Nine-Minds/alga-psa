@@ -2102,12 +2102,26 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
                           defaultValue: "{{count}} services",
                         })}
                   </Badge>
-                  <Badge variant="secondary" className="text-xs">
-                    {t("templateDetail.composition.fixedFeeRate", {
-                      defaultValue: "Fixed Fee Rate:",
-                    })}{" "}
-                    {formatTemplateRate(line.rate)}
-                  </Badge>
+                  {/* Only a fixed fee line carries a line-level rate; an
+                      hourly/usage line prices per service, so its badge shows
+                      only when the template actually stored a line rate. */}
+                  {(line.contract_line_type === "Fixed" ||
+                    line.rate != null) && (
+                    <Badge variant="secondary" className="text-xs">
+                      {line.contract_line_type === "Hourly"
+                        ? t("templateDetail.composition.hourlyRateLabel", {
+                            defaultValue: "Hourly rate:",
+                          })
+                        : line.contract_line_type === "Usage"
+                          ? t("templateDetail.composition.unitRateLabel", {
+                              defaultValue: "Unit rate:",
+                            })
+                          : t("templateDetail.composition.fixedFeeRate", {
+                              defaultValue: "Fixed Fee Rate:",
+                            })}{" "}
+                      {formatTemplateRate(line.rate)}
+                    </Badge>
+                  )}
                   {line.contract_line_type === "Fixed" && (
                     <Button
                       id={`edit-rate-${line.contract_line_id}`}

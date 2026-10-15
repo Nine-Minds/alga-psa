@@ -1249,6 +1249,7 @@
       "usageBasedPlans": "Plany według zużycia",
       "recurringQuantityLabel": "Ilość cykliczna:",
       "unitRateLabel": "Stawka jednostkowa:",
+      "hourlyRateLabel": "Stawka godzinowa:",
       "unitRateFromCatalog": "Cena katalogowa w walucie klienta",
       "unitAmountLabel": "Kwota cykliczna:",
       "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"

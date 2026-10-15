@@ -1249,6 +1249,7 @@
       "usageBasedPlans": "Förbrukningsbaserade avtalsrader",
       "recurringQuantityLabel": "Återkommande antal:",
       "unitRateLabel": "Enhetspris:",
+      "hourlyRateLabel": "Timtaxa:",
       "unitRateFromCatalog": "Katalogpris i kundens valuta",
       "unitAmountLabel": "Återkommande belopp:",
       "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"

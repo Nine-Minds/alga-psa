@@ -90,10 +90,15 @@ export default defineConfig({
       // currency-neutral template review step — listed for the same reason as above.
       'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
       'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateReviewContractStep.unitRate.test.tsx',
+      // Contract-line service rates are stored in minor units; the services list
+      // must not re-scale them. Listed for the same reason as above.
+      'src/components/billing-dashboard/contract-lines/GenericContractLineServicesList.customRate.test.tsx',
       // Wizard quantity input draft/commit behavior.
       'src/components/billing-dashboard/contracts/QuantityInput.test.tsx',
       // Template saves must stay valid upserts on Citus distributed tables.
       'src/models/templateSaveUpsert.citus.test.ts',
+      // Client AR must stay a single-shard, co-located join on Citus.
+      'src/actions/billingProfileArActions.citus.test.ts',
     ],
     testTimeout: 20000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing

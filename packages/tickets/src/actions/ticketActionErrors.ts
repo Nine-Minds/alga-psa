@@ -90,6 +90,8 @@ const EXPECTED_TICKET_MESSAGE_PREFIXES = [
   'Reply visibility must match the thread root visibility',
   'Select at least one child ticket different from the master',
   'Source ticket not found',
+  'A ticket cannot be created from a template and a duplicate at once',
+  'Ticket template not found',
   'Status not valid for this board',
   'Tenant required',
   'Tenant is required to delete comment',

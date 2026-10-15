@@ -104,7 +104,8 @@
     },
     "passwords": "Hasła",
     "ticketsAll": "Wszystkie zgłoszenia",
-    "ticketsRecurring": "Zgłoszenia cykliczne"
+    "ticketsRecurring": "Zgłoszenia cykliczne",
+    "ticketsTemplates": "Szablony zgłoszeń"
   },
   "sidebar": {
     "backToMain": "Powrót do głównego",

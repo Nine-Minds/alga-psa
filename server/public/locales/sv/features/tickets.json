@@ -60,7 +60,6 @@
     "button": "Filter",
     "unassigned": "Ej tilldelat",
     "category": "Filtrera efter kategori",
-    "clearFilters": "Rensa filter",
     "assignee": "Ansvarig",
     "allAssignees": "Alla ansvariga",
     "responseState": "Svarsstatus",
@@ -222,7 +221,10 @@
     "printOptions": "Utskriftsalternativ",
     "duplicate": "Duplicera",
     "rowActions": "Åtgärder",
-    "openMenu": "Öppna meny"
+    "openMenu": "Öppna meny",
+    "moreActions": "Fler åtgärder",
+    "createTemplate": "Skapa mall från ärende",
+    "createWorkflowFromTicket": "Skapa arbetsflöde från ärende"
   },
   "messages": {
     "noTickets": "Inga ärenden hittades",
@@ -849,7 +851,16 @@
     "duplicateChecklistHeading": "Checklista från #{{number}}",
     "duplicateChecklistRequired": "(obligatorisk)",
     "duplicateCopyChecklist": "Kopiera checklistpunkter (obockade)",
-    "duplicateCustomFieldsNote": "Värden för anpassade fält kopieras från #{{number}}."
+    "duplicateCustomFieldsNote": "Värden för anpassade fält kopieras från #{{number}}.",
+    "templateLabel": "Mall",
+    "templateNone": "Ingen",
+    "templateLoadFailed": "Mallen kunde inte läsas in. Försök igen.",
+    "fromTemplatePill": "Från mall: {{name}}",
+    "templateChecklistHeading": "Checklista från mall: {{name}}",
+    "templateCustomFieldsNote": "Värden för anpassade fält kopieras från mallen.",
+    "templateReplaceTitle": "Ersätta dina ändringar?",
+    "templateReplaceMessage": "Att använda en mall ersätter rubrik, beskrivning och andra fält du har fyllt i.",
+    "templateReplaceConfirm": "Använd mall"
   },
   "itil": {
     "calculatedPriority": "Prioritet (beräknad)",
@@ -1593,7 +1604,8 @@
     },
     "autoClose": "Stängs automatiskt {{date}} om ingen ny aktivitet sker.",
     "autoCloseWarned": "Kunden har varnats.",
-    "duplicatedFrom": "Duplicerat från #{{number}}"
+    "duplicatedFrom": "Duplicerat från #{{number}}",
+    "fromTemplate": "Från mall: {{name}}"
   },
   "invalidTicketData": "Ogiltiga ärendedata",
   "timeEntries": {
@@ -1904,7 +1916,8 @@
       "noStatusChange": "Ändra inte status",
       "showAllActivity": "Visa all aktivitet",
       "collapseActivity": "Fäll ihop äldre aktivitet",
-      "replyingToComment": "Svarar {{name}}"
+      "replyingToComment": "Svarar {{name}}",
+      "createdFromTemplate": "{{actor}} skapade detta ärende från mallen \"{{name}}\""
     }
   },
   "externalLinks": {
@@ -2311,5 +2324,85 @@
     "pausedHint": "Pausat. Återuppta för att fortsätta spåra eller stoppa för att logga tiden.",
     "workDescription": "Arbetsbeskrivning",
     "whatAreYouWorkingOn": "Vad arbetar du med?"
+  },
+  "templates": {
+    "loading": "Läser in…",
+    "list": {
+      "title": "Ärendemallar",
+      "new": "Ny mall",
+      "empty": "Inga ärendemallar än. Öppna ett ärende och välj \"Skapa mall från ärende\", eller skapa en från grunden.",
+      "showInactive": "Visa inaktiva",
+      "deleted": "Mallen har tagits bort",
+      "deleteTitle": "Ta bort mall",
+      "deleteMessage": "Ta bort \"{{name}}\"? Ärenden som redan skapats från den ändras inte.",
+      "columns": {
+        "name": "Namn",
+        "title": "Ärenderubrik",
+        "board": "Tavla",
+        "checklist": "Checklistpunkter",
+        "status": "Status"
+      }
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "actions": {
+      "edit": "Redigera",
+      "newTicket": "Nytt ärende från mall",
+      "activate": "Aktivera",
+      "deactivate": "Inaktivera",
+      "delete": "Ta bort",
+      "cancel": "Avbryt"
+    },
+    "sections": {
+      "details": "Mall",
+      "ticket": "Ärende",
+      "checklist": "Checklista",
+      "customFields": "Anpassade fält"
+    },
+    "fields": {
+      "name": "Mallnamn",
+      "notes": "Anteckningar",
+      "notesHelp": "Endast för ditt team. Kopieras inte till ärenden.",
+      "title": "Ärenderubrik",
+      "description": "Beskrivning",
+      "descriptionPlaceholder": "Beskrivning"
+    },
+    "checklist": {
+      "empty": "Inga checklistpunkter.",
+      "itemName": "Checklistpunkt",
+      "required": "Obligatoriskt",
+      "moveUp": "Flytta upp",
+      "moveDown": "Flytta ned",
+      "remove": "Ta bort punkt",
+      "add": "Lägg till punkt"
+    },
+    "customFields": {
+      "empty": "Inga värden för anpassade fält.",
+      "name": "Fältnamn",
+      "value": "Värde",
+      "remove": "Ta bort fält",
+      "add": "Lägg till fält"
+    },
+    "editor": {
+      "back": "Ärendemallar",
+      "newTitle": "Ny ärendemall",
+      "created": "Mallen har skapats",
+      "saved": "Mallen har sparats",
+      "saving": "Sparar…",
+      "save": "Spara",
+      "fromTicket": "Förifyllt från ärende #{{number}}. Inget sparas förrän du klickar på Spara.",
+      "inlineImages": "Beskrivningen innehåller bilder som tillhör källärendet. De kan sluta visas om ärendet tas bort. Ta bort dem eller ladda upp dem igen om mallen ska finnas kvar efter ärendet.",
+      "viewOnly": "Du kan visa den här mallen men inte ändra den.",
+      "referenceProblems": "Vissa fält i den här mallen pekar på sådant som inte längre finns. De lämnas tomma när mallen används. Rätta dem och spara:"
+    },
+    "errors": {
+      "notFound": "Ärendemallen hittades inte",
+      "duplicateName": "Det finns redan en mall med namnet {{name}}",
+      "invalidReferences": "Mallen refererar till en tavla, kategori eller prioritet som inte är tillgänglig",
+      "notAvailable": "Ärendemallar är inte tillgängliga",
+      "subcategoryNeedsCategory": "En underkategori kräver en kategori"
+    }
   }
 }

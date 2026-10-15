@@ -13,6 +13,7 @@ let contactId: string;
 
 let getActiveServicesAction: typeof import('@alga-psa/client-portal/actions/account').getActiveServices;
 let getBillingCyclesAction: typeof import('@alga-psa/client-portal/actions/account').getBillingCycles;
+let getClientContractLineAction: typeof import('@alga-psa/client-portal/actions/client-portal-actions/client-billing').getClientContractLine;
 
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
@@ -109,11 +110,57 @@ describe('Client portal billing reads post-drop integration', () => {
       getActiveServices: getActiveServicesAction,
       getBillingCycles: getBillingCyclesAction,
     } = await import('@alga-psa/client-portal/actions/account'));
+
+    ({ getClientContractLine: getClientContractLineAction } = await import(
+      '@alga-psa/client-portal/actions/client-portal-actions/client-billing'
+    ));
   }, 120_000);
 
   afterAll(async () => {
     await db?.destroy();
   });
+
+  /**
+   * Each contract-line case needs its own client, and the portal user resolves
+   * its client through `contacts.client_id`, so point the mocked user's contact
+   * at a freshly provisioned client for the duration of one call.
+   */
+  async function provisionPortalClient(label: string): Promise<{ clientId: string; contactId: string }> {
+    const scopedClientId = uuidv4();
+    const scopedContactId = uuidv4();
+
+    await db('clients').insert({
+      tenant: tenantId,
+      client_id: scopedClientId,
+      client_name: `Portal Client ${label} ${scopedClientId.slice(0, 8)}`,
+      billing_cycle: 'monthly',
+      is_tax_exempt: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+
+    await db('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: scopedContactId,
+      client_id: scopedClientId,
+      full_name: `Portal Contact ${label}`,
+      email: `portal-${label}-${scopedContactId.slice(0, 8)}@test.local`,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+
+    return { clientId: scopedClientId, contactId: scopedContactId };
+  }
+
+  async function asPortalContact<T>(scopedContactId: string, run: () => Promise<T>): Promise<T> {
+    const previousContactId = contactId;
+    contactId = scopedContactId;
+    try {
+      return await run();
+    } finally {
+      contactId = previousContactId;
+    }
+  }
 
   it('T110: client-portal billing/account/services reads avoid client_contract_lines and still render active recurring services', async () => {
     expect(await db.schema.hasTable('client_contract_lines')).toBe(false);
@@ -191,5 +238,68 @@ describe('Client portal billing reads post-drop integration', () => {
     expect(activeServices.some((service) => service.name === 'Portal Managed Service')).toBe(true);
     expect(billingCycles.length).toBeGreaterThan(0);
     expect(observedSql.some((sql) => /client_contract_lines/i.test(sql))).toBe(false);
+  }, 90_000);
+
+  it('T111: getClientContractLine returns the active assignment carrying a real is_active flag', async () => {
+    const { clientId, contactId: scopedContactId } = await provisionPortalClient('active');
+
+    const serviceId = await createTestService(
+      { db, tenantId, clientId } as any,
+      {
+        service_name: 'Portal Active Line Service',
+        billing_method: 'fixed',
+        default_rate: 12000,
+        unit_of_measure: 'month',
+      },
+    );
+
+    await createFixedPlanAssignment(
+      { db, tenantId, clientId } as any,
+      serviceId,
+      {
+        clientId,
+        planName: 'Portal Active Line Plan',
+        startDate: '2026-02-01',
+        endDate: null,
+        assignmentIsActive: true,
+      },
+    );
+
+    const contractLine = await asPortalContact(scopedContactId, () => getClientContractLineAction());
+
+    expect(contractLine).not.toBeNull();
+    expect((contractLine as any)?.contract_line_name).toBe('Portal Active Line Plan');
+    // The dialog's status badge reads this exact field, so it has to be a real boolean.
+    expect((contractLine as any)?.is_active).toBe(true);
+  }, 90_000);
+
+  it('T112: getClientContractLine does not surface an inactive contract assignment', async () => {
+    const { clientId, contactId: scopedContactId } = await provisionPortalClient('inactive');
+
+    const serviceId = await createTestService(
+      { db, tenantId, clientId } as any,
+      {
+        service_name: 'Portal Inactive Line Service',
+        billing_method: 'fixed',
+        default_rate: 9000,
+        unit_of_measure: 'month',
+      },
+    );
+
+    await createFixedPlanAssignment(
+      { db, tenantId, clientId } as any,
+      serviceId,
+      {
+        clientId,
+        planName: 'Portal Inactive Line Plan',
+        startDate: '2026-03-01',
+        endDate: null,
+        assignmentIsActive: false,
+      },
+    );
+
+    const contractLine = await asPortalContact(scopedContactId, () => getClientContractLineAction());
+
+    expect(contractLine).toBeNull();
   }, 90_000);
 });

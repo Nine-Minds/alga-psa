@@ -368,6 +368,10 @@ const servicePeriodPostInventoryRemovals = new Set([
   'packages/billing/src/components/billing-dashboard/CreditManagement.tsx',
   'packages/reporting/src/actions/reconciliationReportActions.servicePeriods.test.ts',
   'server/src/test/unit/billing/creditReconciliation.servicePeriods.test.ts',
+  // The mock-DB unit test was replaced by the DB-backed T-REST integration
+  // tests in server/src/test/integration/billingInvoiceTiming.integration.test.ts
+  // (alga0002228).
+  'server/src/test/unit/api/invoiceService.deleteRecurringDetailGuard.test.ts',
 ]);
 
 describe('service-period-first billing plan artifacts', () => {

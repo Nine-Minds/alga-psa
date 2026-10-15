@@ -1249,6 +1249,7 @@
       "usageBasedPlans": "Usage-Based Plans",
       "recurringQuantityLabel": "Recurring quantity:",
       "unitRateLabel": "Unit rate:",
+      "hourlyRateLabel": "Hourly rate:",
       "unitRateFromCatalog": "Catalog price in the client's currency",
       "unitAmountLabel": "Recurring amount:",
       "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
