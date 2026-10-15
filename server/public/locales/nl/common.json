@@ -119,7 +119,8 @@
     "finishSetup": "Installatie voltooien",
     "skip": "Overslaan",
     "saveAsDraft": "Opslaan als concept",
-    "completing": "Voltooien..."
+    "completing": "Voltooien...",
+    "more": "Meer"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1716,6 +1717,9 @@
     },
     "actions": {
       "removeTag": "Label {{tag}} verwijderen"
+    },
+    "errors": {
+      "providerRequired": "useTags moet binnen een TagProvider worden gebruikt"
     }
   },
   "statusDialog": {

@@ -119,7 +119,8 @@
     "finishSetup": "Terminer la configuration",
     "skip": "Passer",
     "saveAsDraft": "Enregistrer comme brouillon",
-    "completing": "Finalisation..."
+    "completing": "Finalisation...",
+    "more": "Plus"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1716,6 +1717,9 @@
     },
     "actions": {
       "removeTag": "Retirer l’étiquette {{tag}}"
+    },
+    "errors": {
+      "providerRequired": "useTags doit être utilisé au sein d’un TagProvider"
     }
   },
   "statusDialog": {

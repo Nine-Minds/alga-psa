@@ -119,7 +119,8 @@
     "finishSetup": "Slutför konfigurationen",
     "skip": "Hoppa över",
     "saveAsDraft": "Spara som utkast",
-    "completing": "Slutför…"
+    "completing": "Slutför…",
+    "more": "Mer"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1716,6 +1717,9 @@
     },
     "actions": {
       "removeTag": "Ta bort taggen {{tag}}"
+    },
+    "errors": {
+      "providerRequired": "useTags måste användas inom en TagProvider"
     }
   },
   "statusDialog": {

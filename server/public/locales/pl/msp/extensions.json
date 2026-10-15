@@ -102,7 +102,12 @@
       "description": "Zarządzaj rozszerzeniami"
     },
     "title": "Rozszerzenia",
-    "description": "Zarządzanie rozszerzeniami jest dostępne w Pro."
+    "description": "Zarządzanie rozszerzeniami jest dostępne w Pro.",
+    "unavailable": {
+      "metadataTitle": "Rozszerzenia (tylko EE)",
+      "title": "Rozszerzenia są niedostępne",
+      "description": "Dostępne w wersji Pro."
+    }
   },
   "detail": {
     "metadataTitle": "Rozszerzenia - Funkcja Pro",
@@ -138,7 +143,12 @@
       "description": "Skonfiguruj ustawienia rozszerzeń"
     },
     "title": "Ustawienia rozszerzeń",
-    "description": "Ustawienia rozszerzeń są dostępne w Pro."
+    "description": "Ustawienia rozszerzeń są dostępne w Pro.",
+    "unavailable": {
+      "metadataTitle": "Ustawienia rozszerzenia (tylko EE)",
+      "title": "Ustawienia rozszerzenia są niedostępne",
+      "description": "Ta strona jest dostępna w wersji Pro."
+    }
   },
   "details": {
     "label": "Szczegóły rozszerzenia",

@@ -102,7 +102,12 @@
       "description": "Administrar extensiones"
     },
     "title": "Extensiones",
-    "description": "La gestión de extensiones está disponible en Pro."
+    "description": "La gestión de extensiones está disponible en Pro.",
+    "unavailable": {
+      "metadataTitle": "Extensiones (solo EE)",
+      "title": "Extensiones no disponibles",
+      "description": "Disponible en Pro."
+    }
   },
   "detail": {
     "metadataTitle": "Extensiones - Función Pro",
@@ -138,7 +143,12 @@
       "description": "Configurar la extensión"
     },
     "title": "Configuración de extensiones",
-    "description": "La configuración de extensiones está disponible en Pro."
+    "description": "La configuración de extensiones está disponible en Pro.",
+    "unavailable": {
+      "metadataTitle": "Configuración de la extensión (solo EE)",
+      "title": "Configuración de la extensión no disponible",
+      "description": "Esta página está disponible en Pro."
+    }
   },
   "details": {
     "label": "Detalles de la extensión",

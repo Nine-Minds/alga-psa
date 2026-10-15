@@ -102,7 +102,12 @@
       "description": "Erweiterungen verwalten"
     },
     "title": "Erweiterungen",
-    "description": "Die Erweiterungsverwaltung ist in Pro verfügbar."
+    "description": "Die Erweiterungsverwaltung ist in Pro verfügbar.",
+    "unavailable": {
+      "metadataTitle": "Erweiterungen (nur EE)",
+      "title": "Erweiterungen nicht verfügbar",
+      "description": "In Pro verfügbar."
+    }
   },
   "detail": {
     "metadataTitle": "Erweiterungen - Pro-Funktion",
@@ -138,7 +143,12 @@
       "description": "Erweiterungseinstellungen konfigurieren"
     },
     "title": "Erweiterungseinstellungen",
-    "description": "Erweiterungseinstellungen sind in Pro verfügbar."
+    "description": "Erweiterungseinstellungen sind in Pro verfügbar.",
+    "unavailable": {
+      "metadataTitle": "Erweiterungseinstellungen (nur EE)",
+      "title": "Erweiterungseinstellungen nicht verfügbar",
+      "description": "Diese Seite ist in Pro verfügbar."
+    }
   },
   "details": {
     "label": "Erweiterungsdetails",

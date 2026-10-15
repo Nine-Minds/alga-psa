@@ -102,7 +102,12 @@
       "description": "Extensies beheren"
     },
     "title": "Extensies",
-    "description": "Extensiebeheer is beschikbaar in Pro."
+    "description": "Extensiebeheer is beschikbaar in Pro.",
+    "unavailable": {
+      "metadataTitle": "Extensies (alleen EE)",
+      "title": "Extensies niet beschikbaar",
+      "description": "Beschikbaar in Pro."
+    }
   },
   "detail": {
     "metadataTitle": "Extensies - Pro-functie",
@@ -138,7 +143,12 @@
       "description": "Extensie-instellingen configureren"
     },
     "title": "Extensie-instellingen",
-    "description": "Extensie-instellingen zijn beschikbaar in Pro."
+    "description": "Extensie-instellingen zijn beschikbaar in Pro.",
+    "unavailable": {
+      "metadataTitle": "Extensie-instellingen (alleen EE)",
+      "title": "Extensie-instellingen niet beschikbaar",
+      "description": "Deze pagina is beschikbaar in Pro."
+    }
   },
   "details": {
     "label": "Extensiedetails",
