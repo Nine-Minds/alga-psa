@@ -231,6 +231,41 @@ describe('useListViews', () => {
     expect(result.current.activeView?.view_id).toBe(created.view_id);
     expect(result.current.isDirty).toBe(false);
   });
+
+  /**
+   * A list can unmount with its first load still in flight. React reads
+   * `window` on every state dispatch, so a write that lands after the
+   * environment is gone throws out of the awaiting promise rather than being a
+   * harmless no-op — in the server unit shard that was five unhandled
+   * rejections, which fails the run even with every test passing.
+   */
+  it('drops a views load that settles after the list unmounted', async () => {
+    let settle!: (value: ListViewCollection<Filters>) => void;
+    actions.listListViews.mockReturnValue(new Promise<ListViewCollection<Filters>>((resolve) => {
+      settle = resolve;
+    }));
+
+    const { unmount } = renderListViews();
+    await waitFor(() => expect(actions.listListViews).toHaveBeenCalledTimes(1));
+    unmount();
+
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown) => rejections.push(reason);
+    process.on('unhandledRejection', onRejection);
+
+    // What vitest does once a test file is finished: the jsdom globals go away.
+    const savedWindow = Reflect.get(globalThis, 'window');
+    Reflect.deleteProperty(globalThis, 'window');
+    try {
+      settle(collection());
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    } finally {
+      Reflect.set(globalThis, 'window', savedWindow);
+      process.off('unhandledRejection', onRejection);
+    }
+
+    expect(rejections.map(String)).toEqual([]);
+  });
 });
 
 /**

@@ -152,6 +152,17 @@ export function useListViews<TLive, F = Record<string, unknown>>({
   const urlHasExplicitStateRef = useRef(urlHasExplicitState);
   const ownsUrlRef = useRef(ownsUrl);
   ownsUrlRef.current = ownsUrl;
+  /**
+   * A list can unmount while its views are still in flight — navigating off the
+   * screen before the load returns, or a test finishing. State written after
+   * that targets a tree that is gone, and React reads `window` on every
+   * dispatch, so once the environment is gone it throws out of the awaiting
+   * promise instead of being a harmless no-op.
+   */
+  const mountedRef = useRef(true);
+  useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
 
   const reportFailure = useCallback((result: unknown, fallbackKey: string, fallback: string) => {
     const message = isFailure(result) ? getErrorMessage(result) : null;
@@ -163,17 +174,17 @@ export function useListViews<TLive, F = Record<string, unknown>>({
       const result = (await listListViews(adapterRef.current.listKey)) as ActionResult<ListViewCollection<F>>;
       if (isFailure(result)) {
         // No access to views on this list: the picker simply has nothing to show.
-        setCollection({ views: [], defaultViewId: null, canShare: false });
+        if (mountedRef.current) setCollection({ views: [], defaultViewId: null, canShare: false });
         return null;
       }
-      setCollection(result);
+      if (mountedRef.current) setCollection(result);
       return result;
     } catch (error) {
       console.error('[listViews] failed to load views', error);
-      setCollection({ views: [], defaultViewId: null, canShare: false });
+      if (mountedRef.current) setCollection({ views: [], defaultViewId: null, canShare: false });
       return null;
     } finally {
-      setIsLoading(false);
+      if (mountedRef.current) setIsLoading(false);
     }
   }, []);
 
@@ -274,7 +285,7 @@ export function useListViews<TLive, F = Record<string, unknown>>({
       toast.error(t('listViews.errors.saveFailed', 'The view could not be saved.'));
       return false;
     } finally {
-      setIsSaving(false);
+      if (mountedRef.current) setIsSaving(false);
     }
   }, [t]);
 
