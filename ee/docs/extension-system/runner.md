@@ -132,7 +132,7 @@ Earlier versions included an `endpoint` field pointing at `dist/handlers/...`. C
 - `REGISTRY_BASE_URL`, `ALGA_AUTH_KEY`: Used to fetch install metadata/signature info from the EE server.
 - `EXT_EGRESS_ALLOWLIST`: Comma-separated list of hostnames allowed for `alga.http.fetch`.
 - `RUNNER_DEBUG_REDIS_URL`, `RUNNER_DEBUG_REDIS_STREAM_PREFIX`, `RUNNER_DEBUG_REDIS_MAXLEN`, `RUNNER_DEBUG_MAX_EVENT_BYTES`: Enable Redis-backed debug streaming (stdout/stderr/log fan-out).
-- `UI_PROXY_BASE_URL`, `UI_PROXY_AUTH_KEY`, `UI_PROXY_TIMEOUT_MS`: Configure the UI proxy host capability.
+- `UI_PROXY_BASE_URL`, `UI_PROXY_TIMEOUT_MS`: Configure the UI proxy host capability (UI proxy calls authenticate with the extension's own `api_key` secret, not a shared runner key).
 - `WASM_POOL_*` / `EXT_CACHE_ROOT`: Tune Wasmtime pooling and cache directories.
 
 ## Gateway → Runner flow (summary)
