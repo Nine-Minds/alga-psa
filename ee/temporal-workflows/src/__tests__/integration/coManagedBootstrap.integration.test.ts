@@ -18330,6 +18330,16 @@ it('native ticket email recipient matrix retains assignments, additional agents,
   await Promise.all([process(db, f.principal.tenant, send), process(db, f.principal.tenant, send)]);
   expect(send).toHaveBeenCalledTimes(4);
   expect(send.mock.calls.map(([delivery]) => delivery.email).sort()).toEqual(['additional@example.test', 'assigned@example.test', 'follower@example.test', 'watcher@example.test']);
+  // T076 moved from the legacy delimiter fixture: internal recipients now use
+  // durable, address-bound cm2 tokens rather than email_reply_tokens rows.
+  const deliveries = send.mock.calls.map(([delivery]) => delivery);
+  expect(new Set(deliveries.map(delivery => delivery.replyToken)).size).toBe(4);
+  for (const delivery of deliveries) {
+    expect(delivery.replyToken).toMatch(/^cm2:[A-Za-z0-9_-]{43}$/);
+    expect(await f.sponsor.table('co_management_customer_reply_tokens').where('token', delivery.replyToken).first())
+      .toMatchObject({ tenant: f.principal.tenant, recipient_email: delivery.email,
+        recipient_user_id: delivery.recipientUserId, ticket_id: f.ticket.ticketId, comment_id: f.request.commentId });
+  }
   expect(send.mock.calls.every(([delivery]) => delivery.message.conversationTarget.conversationId === f.requesterRef.conversationId)).toBe(true);
   expect((await f.sponsor.table('co_management_customer_email_deliveries')).filter(row => row.status === 'skipped')).toHaveLength(1);
   await enqueue(db, f.request); await process(db, f.principal.tenant, send); expect(send).toHaveBeenCalledTimes(4);
