@@ -1964,7 +1964,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           <div>
             <div className="flex items-center gap-2 mb-2">
               <h2 className="text-lg font-semibold">{t('fields.description', 'Description')}</h2>
-              {!isEditingDescription && (
+              {!isEditingDescription && !isFieldFrozen('description') && (
                 <button
                   onClick={() => {
                     // Store original content before entering edit mode

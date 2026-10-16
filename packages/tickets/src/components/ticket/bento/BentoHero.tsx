@@ -1218,7 +1218,7 @@ export function BentoHero({
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
               {t('fields.description', 'Description')}
             </span>
-            {!isEditingDescription ? (
+            {!isEditingDescription && !isFrozen('description') ? (
               <button
                 id={`${id}-description-edit`}
                 type="button"

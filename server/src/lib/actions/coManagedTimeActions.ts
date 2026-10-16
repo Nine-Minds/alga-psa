@@ -3,13 +3,22 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { getCoManagedEffortTotals, CoManagedSharedWorkError, registerCoManagedTimeWorkReference, getCoManagedTimeBillingProfile,
-  setCoManagedTimeBillingProfile, type CoManagedTimeBillingProfileChange, type CoManagedSharedResource } from '@alga-psa/co-managed';
+  setCoManagedTimeBillingProfile, readCoManagedSharedTimeSummary, type CoManagedTimeBillingProfileChange, type CoManagedSharedResource } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 
 export const registerSharedTimeWorkAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource) => {
   const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   return registerCoManagedTimeWorkReference(knex, actor, resource);
+});
+
+/** The native ticket time-entries list for a shared work item. The actor is the
+ * tracked browser session (an API-key override is refused), the reference is
+ * resolved from the qualified resource in the caller's own workspace, and each
+ * entry passes the standard native time read admission. */
+export const listSharedTimeEntriesAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource) => {
+  const { knex } = await createTenantKnex(tenant);
+  return readCoManagedSharedTimeSummary(knex, tenant, resource, () => coManagedBrowserActor(user, tenant));
 });
 
 export const getSharedTimeBillingProfileAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource) => {

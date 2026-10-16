@@ -8,6 +8,7 @@ import { StopwatchConflictError, StopwatchError } from './stopwatchErrors';
 import { activeMs, toEntrySpan } from './stopwatchMath';
 import type {
   LogSessionInput,
+  LogSessionOptions,
   StartSessionInput,
   StartSessionOptions,
   StopwatchOptions,
@@ -87,6 +88,17 @@ async function loadDisplayFields(trx: Knex.Transaction, tenant: string, session:
       out.work_item_title = row.task_name ?? null;
       out.project_name = row.project_name ?? null;
       out.client_name = row.client_name ?? null;
+    }
+  } else if (session.work_item_type === 'co_managed' && session.work_item_id) {
+    // The reference is the home workspace's own captured evidence of the shared work; the
+    // customer tenant is never read here.
+    const reference = await db.table('co_managed_time_work_references').where({ reference_id: session.work_item_id })
+      .first('client_id', 'ticket_number', 'title');
+    if (reference) {
+      out.work_item_title = reference.title ?? null;
+      out.ticket_number = reference.ticket_number ?? null;
+      const client = await db.table('clients').where({ client_id: reference.client_id }).first('client_name');
+      out.client_name = client?.client_name ?? null;
     }
   }
 
@@ -203,6 +215,14 @@ async function assertWorkItemStartable(
     if (!input.workItemId) throw new StopwatchError('workItemNotFound');
     const task = await db.table('project_tasks').where({ task_id: input.workItemId }).first('task_id');
     if (!task) throw new StopwatchError('workItemNotFound');
+    return;
+  }
+
+  if (input.workItemType === 'co_managed') {
+    if (!options?.coManagedAdmitted) throw new StopwatchError('unsupportedWorkItem');
+    if (!input.workItemId) throw new StopwatchError('workItemNotFound');
+    const reference = await db.table('co_managed_time_work_references').where({ reference_id: input.workItemId }).first('reference_id');
+    if (!reference) throw new StopwatchError('workItemNotFound');
     return;
   }
 
@@ -373,10 +393,18 @@ export async function logSession(
   actor: IUser,
   sessionId: string,
   input: LogSessionInput = {},
-  options?: StopwatchOptions,
+  options?: LogSessionOptions,
 ): Promise<LogSessionResult> {
   const session = await lockOwnSession(trx, tenant, actor.user_id, sessionId);
   if (!OPEN_STATUSES.includes(session.status)) throw new StopwatchError('notOpen');
+  // A shared clock books only its own shared work, and only through an admitted co-managed save;
+  // a native clock can never be redirected onto shared work (or the reverse).
+  const entryWorkType = input.work_item_type ?? session.work_item_type;
+  const entryWorkId = input.work_item_id ?? session.work_item_id;
+  if ((session.work_item_type === 'co_managed' || entryWorkType === 'co_managed') &&
+    (session.work_item_type !== entryWorkType || session.work_item_id !== entryWorkId || !options?.access)) {
+    throw new StopwatchError('unsupportedWorkItem');
+  }
 
   const now = await currentTime(trx, options);
   if (session.status === 'running') {
@@ -424,7 +452,7 @@ export async function logSession(
     tax_rate_id: input.tax_rate_id ?? undefined,
   }) as SaveTimeEntryParams;
 
-  const persisted = await persistTimeEntry(trx, { tenant, actor, entry });
+  const persisted = await persistTimeEntry(trx, { tenant, actor, entry, access: options?.access ?? null });
 
   const [updated] = await tenantDb(trx, tenant).table('time_tracking_sessions')
     .where({ session_id: sessionId })

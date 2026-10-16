@@ -11,6 +11,7 @@ import { registerCoManagedManagementPolicyTests } from './helpers/coManagedManag
 import { registerCoManagedInvoiceJourneyTests } from './helpers/coManagedInvoiceJourneyCases';
 import { registerCoManagedInvitationRecoveryTests } from './helpers/coManagedInvitationRecoveryCases';
 import { registerCoManagedTimeBillingProfileTests } from '../../../../../server/src/test/integration/helpers/coManagedTimeBillingProfileCases';
+import { registerCoManagedSharedStopwatchTests } from '../../../../../server/src/test/integration/helpers/coManagedSharedStopwatchCases';
 import { registerCoManagedPortableWorkspaceExportTests } from '../../../../../server/src/test/integration/helpers/coManagedPortableWorkspaceExportCases';
 import { registerCoManagedPortableRemoteMeetingCases } from '../../../../../server/src/test/integration/coManagedPortableRemoteMeeting.cases';
 import { registerCoManagedPortableSupplementalFileCases } from '../../../../../server/src/test/integration/coManagedPortableSupplementalFiles.cases';
@@ -21330,6 +21331,7 @@ registerCoManagedPortableRemoteMeetingCases(() => db, withMeetingCreationFixture
 registerCoManagedPortableWorkspaceExportTests(() => db, withPortableVaultExportFixture, artifactStorage, withTenantLicenseFixture, withHostedPsaUpgradeFixture);
 
 registerCoManagedTimeBillingProfileTests(() => db, withMspSharedTimeSaveFixture, withSharedProjectTaskFixture);
+registerCoManagedSharedStopwatchTests(() => db, withMspSharedTimeSaveFixture);
 
 registerCoManagedInvitationRecoveryTests(() => db, prepare, delivery.send);
 

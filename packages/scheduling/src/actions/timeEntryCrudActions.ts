@@ -331,7 +331,9 @@ async function saveTimeEntryWithConnection(user: IUser, tenant: string, timeEntr
     }
     // Stopwatch sessions log commercial time (a service is required); operational
     // or co-managed time is entered directly.
-    if (timeEntry.stopwatch_session_id && (operational || access)) {
+    // The one exception is commercial shared work: a clock started on a co_managed reference logs
+    // through the admitted co-managed save (logSession enforces that the session matches the entry).
+    if (timeEntry.stopwatch_session_id && (operational || (access && validatedTimeEntry.work_item_type !== 'co_managed'))) {
       throw new Error('Validation failed: a stopwatch session cannot be logged as operational or co-managed time');
     }
     const persisted = stopwatchSessionId
@@ -348,7 +350,7 @@ async function saveTimeEntryWithConnection(user: IUser, tenant: string, timeEntr
           tax_rate_id: validatedTimeEntry.tax_rate_id,
           time_sheet_id: validatedTimeEntry.time_sheet_id,
           user_id: validatedTimeEntry.user_id,
-        })).persisted
+        }, { access })).persisted
       : await persistTimeEntry(db, {
           tenant,
           actor: user,

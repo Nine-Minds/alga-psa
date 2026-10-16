@@ -88,7 +88,7 @@ import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
 import { runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
-import { resolveTicketTimeWorkItem } from '../../lib/ticketDataSource';
+import { resolveTicketFrozenFields, resolveTicketTimeWorkItem } from '../../lib/ticketDataSource';
 import { buildTicketTimeEntryContext } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
 import type { RecurringTicketSource } from '../../lib/recurring/types';
@@ -818,6 +818,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [ticketPropertiesDirtyFields, setTicketPropertiesDirtyFields] = useState<string[]>([]);
     const [liveHighlightedFields, setLiveHighlightedFields] = useState<string[]>([]);
     const [liveFieldConflicts, setLiveFieldConflicts] = useState<Partial<Record<string, TicketLiveConflictState>>>({});
+    const frozenFieldList = useMemo(
+        () => resolveTicketFrozenFields(dataSource.screen, Object.keys(liveFieldConflicts)),
+        [dataSource.screen, liveFieldConflicts],
+    );
     const [reactionRefreshVersion, setReactionRefreshVersion] = useState(0);
     const [livePendingFieldVersion, setLivePendingFieldVersion] = useState(0);
     const ticketInfoDirtyFieldsRef = useRef<string[]>([]);
@@ -1912,7 +1916,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const [editorKey, setEditorKey] = useState(0);
     const refreshTicketDocuments = useCallback(async () => {
-        if (!ticket.ticket_id) return;
+        // A data source without documents has no native document rows for this
+        // ticket id; the workspace-level document provider must not be asked.
+        if (!ticket.ticket_id || !dataSource.capabilities.documents) return;
 
         try {
             const docs = await getDocumentByTicketId(ticket.ticket_id);
@@ -1927,7 +1933,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         } catch (error) {
             console.error('Failed to refresh ticket documents:', error);
         }
-    }, [ticket.ticket_id]);
+    }, [ticket.ticket_id, dataSource.capabilities.documents]);
 
     const resetCommentDeleteState = useCallback(() => {
         setIsDeleteDialogOpen(false);
@@ -4222,7 +4228,7 @@ const handleClose = () => {
                         : undefined}
                     resolveAndCloseDisabled={closedStatusOptions.length === 0 || isSubmitting || isSubmittingResolutionClose}
                     liveHighlightedFields={liveHighlightedFields}
-                    liveFrozenFields={Object.keys(liveFieldConflicts)}
+                    liveFrozenFields={frozenFieldList}
                     liveFieldConflicts={liveFieldConflicts}
                     onLiveDirtyFieldsChange={setTicketInfoDirtyFields}
                     onKeepLiveConflict={handleKeepLiveConflict}
@@ -4373,7 +4379,7 @@ const handleClose = () => {
                                     onLiveDirtyFieldsChange={setTicketInfoDirtyFields}
                                     liveHighlightedFields={liveHighlightedFields}
                                     liveFieldConflicts={liveFieldConflicts}
-                                    liveFrozenFields={Object.keys(liveFieldConflicts)}
+                                    liveFrozenFields={frozenFieldList}
                                     onKeepLiveConflict={handleKeepLiveConflict}
                                     onTakeLiveConflict={handleTakeLiveConflict}
                                     liveEditingUsers={liveEditingUsers}
@@ -4412,6 +4418,7 @@ const handleClose = () => {
                                     onContentChange={handleContentChange}
                                     isSubmitting={isSubmitting}
                                     hideInternalTab={false}
+                                    readOnly={dataSource.screen.readOnly}
                                     externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []}
                                     onClipboardImageUploaded={refreshTicketDocuments}
                                     uploadTicketAttachmentAction={uploadTicketAttachmentAction}
@@ -4533,7 +4540,7 @@ const handleClose = () => {
                                     onLiveDirtyFieldsChange={setTicketPropertiesDirtyFields}
                                     liveHighlightedFields={liveHighlightedFields}
                                     liveFieldConflicts={liveFieldConflicts}
-                                    liveFrozenFields={Object.keys(liveFieldConflicts)}
+                                    liveFrozenFields={frozenFieldList}
                                     onKeepLiveConflict={handleKeepLiveConflict}
                                     onTakeLiveConflict={handleTakeLiveConflict}
                                     liveEditingUsers={liveEditingUsers}
@@ -4606,7 +4613,7 @@ const handleClose = () => {
                             onLiveDirtyFieldsChange={setTicketInfoDirtyFields}
                             liveHighlightedFields={liveHighlightedFields}
                             liveFieldConflicts={liveFieldConflicts}
-                            liveFrozenFields={Object.keys(liveFieldConflicts)}
+                            liveFrozenFields={frozenFieldList}
                             onKeepLiveConflict={handleKeepLiveConflict}
                             onTakeLiveConflict={handleTakeLiveConflict}
                             liveEditingUsers={liveEditingUsers}

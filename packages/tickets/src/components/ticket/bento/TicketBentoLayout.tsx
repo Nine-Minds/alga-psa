@@ -244,6 +244,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const { t } = useTranslation('features/tickets');
   const dataSource = useTicketDataSource();
   const { capabilities } = dataSource;
+  const frozenFieldSet = React.useMemo(() => new Set(props.liveFrozenFields ?? []), [props.liveFrozenFields]);
   const { getUserAvatarUrlsBatchAction, getTeamAvatarUrlsBatchAction } = dataSource.avatars;
   const ticketId = ticket.ticket_id ?? '';
   // Guards against re-entrant add/remove churn on rapid multi-select changes.
@@ -809,9 +810,9 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         </Suspense>
       ) : null}
 
-      {teamTile}
+      {frozenFieldSet.has('additional_agents') ? null : teamTile}
 
-      <TicketWatchListCard
+      {frozenFieldSet.has('watch_list') ? null : <TicketWatchListCard
         id={`${id}-watch-list`}
         attributes={ticket.attributes}
         onUpdateWatchList={props.onUpdateWatchList}
@@ -824,7 +825,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         teams={props.teams}
         getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
         getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-      />
+      />}
 
       {capabilities.documents ? (
         <DocumentsTile

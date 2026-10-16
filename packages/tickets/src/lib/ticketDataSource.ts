@@ -25,7 +25,7 @@
  *   `{...base, ...overrides}` also works but replaces whole groups.
  */
 import type React from 'react';
-import type { IComment, ITicket, WorkItemType } from '@alga-psa/types';
+import type { IComment, ITicket, TicketTimeEntriesSummary, WorkItemType } from '@alga-psa/types';
 
 // Types only: `typeof` on a type-only import erases at runtime, so this
 // module never loads an action. The native implementation owns the runtime
@@ -255,6 +255,34 @@ export interface TicketScreenBehavior {
   refresh?: (mode: TicketRefreshMode) => void | Promise<void>;
   /** Where the header "Back to Tickets" control goes. Native: `/msp/tickets`. */
   backHref?: string;
+  /**
+   * The viewer may look but not write: every field is frozen, the comment
+   * composer, reply and edit affordances, the description editor, the
+   * additional-agents/team picker and the watch list are absent. Native
+   * default: writable (absent / false).
+   */
+  readOnly?: boolean;
+  /**
+   * Fields this data source cannot write even for a writer (for example
+   * `board_id`). Frozen fields render disabled. Names are the ticket field
+   * names plus the section keys in {@link TICKET_SCREEN_FIELDS}.
+   */
+  frozenFields?: readonly string[];
+}
+
+/** Every field / section key a read-only screen freezes. */
+export const TICKET_SCREEN_FIELDS: readonly string[] = Object.freeze([
+  'title', 'description', 'status_id', 'priority_id', 'category_id', 'subcategory_id', 'board_id',
+  'assigned_to', 'due_date', 'response_state', 'client_id', 'contact_name_id', 'location_id',
+  'billing_profile_id', 'itil_impact', 'itil_urgency', 'additional_agents', 'watch_list',
+]);
+
+/** Frozen field list for the screen: the data source's, plus any live conflicts. */
+export function resolveTicketFrozenFields(
+  screen: Pick<TicketScreenBehavior, 'readOnly' | 'frozenFields'>,
+  extra: readonly string[] = [],
+): string[] {
+  return [...new Set([...(screen.readOnly ? TICKET_SCREEN_FIELDS : screen.frozenFields ?? []), ...extra])];
 }
 
 // ---------------------------------------------------------------------------
@@ -306,7 +334,30 @@ export interface TicketCommentAuthorLabelArgs {
   authorName: string;
 }
 
+/** Composer affordances a data source can turn off. Absent / `true` = shown (native). */
+export interface TicketComposerFeatures {
+  /** The "Schedule" publish toggle. */
+  schedule?: boolean;
+  /** The "Mark as Resolution" toggle (and its close-status controls). */
+  resolution?: boolean;
+}
+
+export interface TicketComposerFooterArgs {
+  /** The audience currently selected in the composer, when the data source has audiences. */
+  audienceId: string | undefined;
+  /** True while a submission is in flight. */
+  disabled: boolean;
+}
+
 export interface TicketConversationConfig {
+  /** Turns individual composer toggles off. */
+  composerFeatures?: TicketComposerFeatures;
+  /**
+   * Extra controls rendered under the editor, above the submit button (for
+   * example an attachment picker). The data source owns whatever state the
+   * control holds and consumes it in its own comment write methods.
+   */
+  composerFooter?: (args: TicketComposerFooterArgs) => React.ReactNode;
   /**
    * Present: the composer shows an audience control INSTEAD OF the Internal
    * toggle and passes the chosen audience id to the comment write methods.
@@ -364,6 +415,12 @@ export interface TicketTimeConfig {
    * `{ workItemType: 'ticket', workItemId: ticket.ticket_id }`.
    */
   resolveWorkItem?: (ticket: Pick<ITicket, 'ticket_id'>) => TicketTimeWorkItem;
+  /**
+   * The per-work-item time entries list (and the Time logged tile built on
+   * it). Native default: the scheduling callback `fetchTimeEntriesForTicket`.
+   * A data source whose time lives on another work item supplies this.
+   */
+  fetchTimeEntries?: (ticketId: string) => Promise<TicketTimeEntriesSummary>;
 }
 
 // ---------------------------------------------------------------------------

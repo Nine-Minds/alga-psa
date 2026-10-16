@@ -2,8 +2,11 @@
 
 import type { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
+import { CoManagedSharedWorkError, admitCoManagedNativeTimeSource, lockTimeEntryBillingMode } from '@alga-psa/co-managed';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
+import { StopwatchError } from '../lib/stopwatch/stopwatchErrors';
 import { timeSheetActionErrorFrom, type TimeSheetActionError } from './timeSheetActionErrors';
 import {
   StopwatchConflictError,
@@ -27,7 +30,7 @@ export type StartStopwatchResult =
   | { conflict: StopwatchSessionView };
 
 export interface StartStopwatchInput {
-  work_item_type: 'ticket' | 'project_task';
+  work_item_type: 'ticket' | 'project_task' | 'co_managed';
   work_item_id: string;
   service_id?: string | null;
   notes?: string;
@@ -67,19 +70,32 @@ export const startStopwatch = withAuth(async (
     return permissionError('Permission denied: Cannot read tickets');
   }
   try {
-    const session = await knex.transaction((trx) =>
-      startSession(trx, tenant, user.user_id, {
+    const session = await knex.transaction(async (trx) => {
+      // Shared work: the same engine guards as a shared time save (live shared update + read
+      // authority, staff assignment, lifecycle, entitlement), in this transaction, with the
+      // tracked browser session as the actor. The clock is commercial-mode only: operational
+      // workspaces track shared effort on their own native timers.
+      let access: Awaited<ReturnType<typeof admitCoManagedNativeTimeSource>> | null = null;
+      if (input.work_item_type === 'co_managed') {
+        if (await lockTimeEntryBillingMode(trx, tenant) !== 'commercial') throw new StopwatchError('unsupportedWorkItem');
+        access = await admitCoManagedNativeTimeSource(trx, await resolveNativeTimeBrowserActor(user, tenant),
+          { user_id: user.user_id, work_item_id: input.work_item_id, work_item_type: 'co_managed' }, 'create');
+      }
+      const started = await startSession(trx, tenant, user.user_id, {
         workItemType: input.work_item_type,
         workItemId: input.work_item_id,
         serviceId: input.service_id ?? null,
         notes: input.notes,
-      }),
-    );
+      }, { coManagedAdmitted: !!access });
+      await access?.assertCurrent();
+      return started;
+    });
     return { session };
   } catch (error) {
     if (error instanceof StopwatchConflictError) {
       return { conflict: error.openSession };
     }
+    if (error instanceof CoManagedSharedWorkError) return permissionError('Permission denied: This shared work is not available for time tracking');
     return expectedOrThrow(error);
   }
 });

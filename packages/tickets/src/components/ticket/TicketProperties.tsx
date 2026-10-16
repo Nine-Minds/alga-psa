@@ -1281,7 +1281,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           */}
 
           {/* Additional Agents */}
-          <div>
+          {!isFieldFrozen('additional_agents') && <div>
             <h5 className="font-bold mb-2">{t('properties.additionalAgents', 'Additional Agents')}</h5>
             <MultiUserAndTeamPicker
               id={`${id}-additional-agents`}
@@ -1339,11 +1339,11 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               onUserClick={disableAgentSchedule ? undefined : onAgentClick}
               userClickLabel={t('bento.hero.viewSchedule', 'View schedule')}
             />
-          </div>
+          </div>}
         </div>
       </ContentCard>
 
-      <TicketWatchListCard
+      {!isFieldFrozen('watch_list') && <TicketWatchListCard
         id={`${id}-watch-list`}
         attributes={ticket.attributes}
         onUpdateWatchList={onUpdateWatchList}
@@ -1356,7 +1356,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         teams={teams}
         getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
         getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-      />
+      />}
 
 
       {!hideMaterials && ticket.ticket_id && ticket.client_id && (

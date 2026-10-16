@@ -1,6 +1,8 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
-import { toCalendarDateString } from '@alga-psa/core';
+import { toCalendarDateString, workedMinutes } from '@alga-psa/core';
+import type { TicketTimeEntriesSummary, TicketTimeEntrySummaryEntry } from '@alga-psa/types';
+import type { CoManagedSharedResource } from './sharedWork';
 import { dispatchCoManagedNativeTime } from './nativeTimeDispatch';
 import { lockCoManagedLocalAuthentication, snapshotCoManagedAuthenticatedActor, type CoManagedAuthenticatedActor } from './localAuthentication';
 import { admitCoManagedNativeTimeSource, admitCoManagedNativeTimeOwner, isNativeTimeFieldHidden } from './nativeTimeEntryAccess';
@@ -221,5 +223,58 @@ async function readSheetComments(trx: Knex.Transaction, tenant: string, sheetId:
     return { tenant, comment_id: row.comment_id, time_sheet_id: sheetId, user_id: row.user_id, comment: row.comment,
       created_at: new Date(row.created_at).toISOString(), is_approver: row.is_approver,
       user_name: isNativeTimeFieldHidden(fields, ['user_name', 'comments.user_name', 'time_sheet_comments.user_name']) ? undefined : `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() };
+  });
+}
+
+const NO_SHARED_TIME: TicketTimeEntriesSummary = { entries: [], ownTotalMinutes: 0, ownEntryCount: 0, othersTotalMinutes: 0, othersEntryCount: 0,
+  othersVisibleMinutes: 0, othersVisibleCount: 0, othersHiddenMinutes: 0, othersHiddenCount: 0, totalMinutes: 0 };
+
+/** The native ticket time list for one shared work item, keyed by the MSP's
+ * local work reference. It adds no authority: the reference is found by the
+ * qualified resource in the actor's own workspace (never a browser-supplied
+ * reference ID), then every entry on it is read through the same per-entry
+ * source/owner/sheet admission as any other native time read. Entries that
+ * admission refuses are counted as hidden minutes, never returned. A resource
+ * that was never registered has no time yet. */
+export async function readCoManagedSharedTimeSummary(db: Knex, tenant: string, resource: CoManagedSharedResource,
+  identify: () => Promise<CoManagedAuthenticatedActor>): Promise<TicketTimeEntriesSummary> {
+  if (!isCoManagedUuid(tenant) || !resource || resource.tenant === tenant || !isCoManagedUuid(resource.tenant) ||
+    !isCoManagedUuid(resource.relationshipId) || !isCoManagedUuid(resource.id) || !['ticket', 'project_task'].includes(resource.kind)) throw new CoManagedSharedWorkError();
+  return withTransaction(db, async trx => {
+    await dispatchCoManagedNativeTime(trx, tenant, { kind: 'inherited' });
+    const owner = tenantDb(trx, tenant);
+    const actor = snapshotCoManagedAuthenticatedActor(await identify());
+    if (actor.tenant !== tenant) throw new CoManagedSharedWorkError();
+    const credential = await lockCoManagedLocalAuthentication(trx, actor);
+    if (!await hasCoManagedLocalPermission(trx, actor, 'time_entry', 'read', true)) throw new CoManagedSharedWorkError();
+    const reference = await owner.table('co_managed_time_work_references').where({ customer_tenant: resource.tenant,
+      relationship_id: resource.relationshipId, source_kind: resource.kind, source_id: resource.id }).first('reference_id');
+    if (!reference) { await credential.assertCurrent(); return { ...NO_SHARED_TIME, entries: [] }; }
+    const hints = await owner.table('time_entries').where({ work_item_type: 'co_managed', work_item_id: reference.reference_id,
+      co_managed_work_reference_id: reference.reference_id }).orderBy('entry_id').select('*');
+    // Owners and sheets before sources, matching native writers and the tenant collection read.
+    await owner.table('users').whereIn('user_id', [...new Set(hints.map(row => row.user_id))]).orderBy('user_id').forShare().select('user_id');
+    await owner.table('time_sheets').whereIn('id', [...new Set(hints.map(row => row.time_sheet_id).filter(Boolean))]).orderBy('id').forShare().select('id');
+    const summary: TicketTimeEntriesSummary = { ...NO_SHARED_TIME, entries: [] };
+    const visible: TicketTimeEntrySummaryEntry[] = [];
+    for (const hint of hints) {
+      const own = hint.user_id === actor.userId, worked = workedMinutes(hint);
+      if (own) { summary.ownTotalMinutes += worked; summary.ownEntryCount += 1; }
+      else { summary.othersTotalMinutes += worked; summary.othersEntryCount += 1; }
+      let entry: any;
+      try { entry = (await readNativeTimeEntry(trx, actor, hint, false, true)).entry; }
+      catch (error) { if (error instanceof CoManagedSharedWorkError) continue; throw error; }
+      if (!own) { summary.othersVisibleMinutes += worked; summary.othersVisibleCount += 1; }
+      visible.push({ entry_id: entry.entry_id, user_id: entry.user_id, user_name: entry.user_name?.trim() || null,
+        start_time: entry.start_time, end_time: entry.end_time, work_date: entry.work_date ?? null,
+        billable_duration: Number(entry.billable_duration) || 0, notes: entry.notes ?? null, approval_status: entry.approval_status,
+        service_id: entry.service_id ?? null, service_name: entry.service_name ?? null, is_own: own });
+    }
+    summary.entries = visible.sort((a, b) => b.start_time.localeCompare(a.start_time) || a.entry_id.localeCompare(b.entry_id));
+    summary.othersHiddenCount = summary.othersEntryCount - summary.othersVisibleCount;
+    summary.othersHiddenMinutes = summary.othersTotalMinutes - summary.othersVisibleMinutes;
+    summary.totalMinutes = summary.ownTotalMinutes + summary.othersTotalMinutes;
+    await credential.assertCurrent();
+    return summary;
   });
 }

@@ -89,11 +89,11 @@ export function TicketStopwatchControls({
     }
   }, []);
 
+  const trackedType = timeWorkItem.workItemType;
   const handleStart = () =>
     run(() =>
       stopwatch.start(
-        // Narrowed above: the stopwatch backend only books ticket / project_task work.
-        { workItemType: timeWorkItem.workItemType as 'ticket' | 'project_task', workItemId: timeWorkItem.workItemId, notes: timeDescription.trim() || undefined },
+        { workItemType: trackedType as 'ticket' | 'project_task' | 'co_managed', workItemId: timeWorkItem.workItemId, notes: timeDescription.trim() || undefined },
         launchLog(),
       ),
     );
@@ -104,9 +104,9 @@ export function TicketStopwatchControls({
     }
   };
 
-  // The stopwatch session store only supports ticket / project_task work items;
-  // other work item types (for example co_managed) book time through the time entry flow.
-  if (timeWorkItem.workItemType !== 'ticket' && timeWorkItem.workItemType !== 'project_task') {
+  // The server session store books ticket, project_task and co_managed work and refuses
+  // anything else; other work item types book time through the time entry flow only.
+  if (trackedType !== 'ticket' && trackedType !== 'project_task' && trackedType !== 'co_managed') {
     return null;
   }
 
@@ -142,6 +142,10 @@ export function TicketStopwatchControls({
             {session.work_item_type === 'ticket'
               ? t(isPaused ? 'stopwatch.pausedElsewhereTicket' : 'stopwatch.runningElsewhereTicket',
                   isPaused ? 'Paused on another ticket: {{label}}' : 'Running on another ticket: {{label}}',
+                  { label: sessionLabel })
+              : session.work_item_type === 'co_managed'
+              ? t(isPaused ? 'stopwatch.pausedElsewhereShared' : 'stopwatch.runningElsewhereShared',
+                  isPaused ? 'Paused on another shared item: {{label}}' : 'Running on another shared item: {{label}}',
                   { label: sessionLabel })
               : t(isPaused ? 'stopwatch.pausedElsewhereTask' : 'stopwatch.runningElsewhereTask',
                   isPaused ? 'Paused on another task: {{label}}' : 'Running on another task: {{label}}',

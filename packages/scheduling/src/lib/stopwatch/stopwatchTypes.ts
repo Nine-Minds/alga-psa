@@ -1,3 +1,4 @@
+import type { CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import type {
   StopwatchSegmentView,
   StopwatchSessionStatus,
@@ -53,4 +54,15 @@ export interface StopwatchOptions {
 export interface StartSessionOptions extends StopwatchOptions {
   /** Legacy mobile adapter only: accept work item types other than ticket/project_task. */
   allowLegacyWorkItemTypes?: boolean;
+  /**
+   * The caller already admitted a `co_managed` work reference through the
+   * co-managed engine (live shared update + read authority, in this same
+   * transaction). Without it a `co_managed` start is refused.
+   */
+  coManagedAdmitted?: boolean;
+}
+
+export interface LogSessionOptions extends StopwatchOptions {
+  /** Admission the caller obtained for the entry being logged (co_managed only). */
+  access?: CoManagedNativeTimeAccess | null;
 }

@@ -1,0 +1,196 @@
+'use client';
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { IComment } from '@alga-psa/types';
+import type { CommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import type { CoManagedSharedResource } from '@alga-psa/co-managed';
+import { conversationDocument } from './conversationText';
+import { composeTicketDataSource, type TicketConversationAudiences, type TicketDataSource } from '@alga-psa/tickets/lib/ticketDataSource';
+import { nativeTicketDataSource } from '@alga-psa/tickets/lib/nativeTicketDataSource';
+import { TicketDataSourceProvider } from '@alga-psa/tickets/components/ticket/TicketDataSourceContext';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { getCoManagedTicketScreenAction } from '@/lib/actions/coManagedSharedWorkActions';
+import { getCoManagedTicketConversationScreenAction } from '@/lib/actions/coManagedTicketConversationActions';
+import { createCoManagedTicketCommentAction } from '@/lib/actions/coManagedTicketCommentActions';
+import CoManagedTicketSection from './CoManagedTicketSection';
+import CoManagedEffortSummary from './CoManagedEffortSummary';
+import CoManagedThreadDisclosure from './CoManagedThreadDisclosure';
+import { newCoManagedOperationId } from './coManagedOperationId';
+
+const ALL_AUDIENCES: CommentAudience[] = ['requester', 'shared_it', 'organization_private'];
+const MAX_MAP_PAGES = 20;
+
+type ConversationScreen = Awaited<ReturnType<typeof getCoManagedTicketConversationScreenAction>>;
+type ThreadRef = { storeTenant: string; threadId: string };
+type KnownComment = { audience: CommentAudience; storeTenant: string; threadId: string; own: boolean; topLevel: boolean };
+
+/** Commentary on `{ actionError }`: the same shape native comment actions return, so the screen's existing error handling shows it. */
+const actionError = (message: string) => ({ actionError: message });
+
+/**
+ * Customer-side (local) co-managed ticket: the NATIVE ticket screen with the
+ * Internal toggle replaced by the co-managed audience control, audience-aware
+ * comment writes, and the Co-managed section slot. Everything not overridden
+ * below is the native data source, unchanged.
+ *
+ * Audience writes go through the existing co-managed comment command
+ * (`createCoManagedTicketCommentAction`); this component adds no authority.
+ */
+export default function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: { ticketId: string; children: React.ReactNode }) {
+  const { t } = useTranslation('msp/licensing');
+  // Presentation gate only (same flag as CoManagedFeatureBoundary). The provider stays mounted either way so the
+  // native screen never remounts when the flag resolves; off or unresolved means the plain native data source.
+  const { enabled: flagEnabled, error: flagError } = useFeatureFlag('release-v1-6-feature', { defaultValue: false });
+  const enabled = flagEnabled === true && !flagError;
+  const tRef = useRef(t);
+  tRef.current = t;
+  const [screenState, setScreenState] = useState<{ resource: CoManagedSharedResource; customerName: string } | 'failed' | null>(null);
+  const [writeAudiences, setWriteAudiences] = useState<CommentAudience[] | null>(null);
+  const [disclosure, setDisclosure] = useState<{ thread: ThreadRef; actor: { tenant: string; userId: string }; audiences: CommentAudience[]; done: () => void } | null>(null);
+  const known = useRef(new Map<string, KnownComment>());
+  const actor = useRef<{ tenant: string; userId: string } | null>(null);
+  const resource = useRef<CoManagedSharedResource | null>(null);
+  const resourceReady = useRef<Promise<CoManagedSharedResource | null>>(Promise.resolve(null));
+  // A retry of the same content replays the same operation, never a second message.
+  const operation = useRef<{ key: string; id: string } | null>(null);
+
+  const loadConversationMap = useCallback(async (target: CoManagedSharedResource) => {
+    let before: Awaited<ReturnType<typeof getCoManagedTicketConversationScreenAction>>['nextBefore'] | undefined;
+    const next = new Map<string, KnownComment>();
+    let first: ConversationScreen | null = null;
+    for (let page = 0; page < MAX_MAP_PAGES; page++) {
+      const screen = await getCoManagedTicketConversationScreenAction(target, before ?? undefined);
+      first ??= screen;
+      for (const item of screen.items) {
+        next.set(item.commentId, { audience: item.audience, storeTenant: item.storeTenant, threadId: item.threadId, topLevel: !item.parentCommentId,
+          own: item.author?.kind === 'user' && item.author.tenant === screen.actor.tenant && item.author.id === screen.actor.userId });
+      }
+      if (!screen.nextBefore) break;
+      before = screen.nextBefore;
+    }
+    known.current = next;
+    if (first) { actor.current = first.actor; setWriteAudiences(first.writeAudiences); }
+  }, []);
+
+  useEffect(() => {
+    setScreenState(null); setWriteAudiences(null); known.current = new Map();
+    if (!enabled) return;
+    let cancelled = false;
+    const loading = getCoManagedTicketScreenAction({ kind: 'local', ticketId }).then(async screen => {
+      if (cancelled) return null;
+      resource.current = screen.summary.resource;
+      setScreenState({ resource: screen.summary.resource, customerName: screen.customerName });
+      try { await loadConversationMap(screen.summary.resource); } catch { /* audience control stays at its defaults; the server still authorizes each write */ }
+      return screen.summary.resource;
+    }).catch(() => { if (!cancelled) setScreenState('failed'); return null; });
+    resourceReady.current = loading;
+    return () => { cancelled = true; };
+  }, [ticketId, enabled, loadConversationMap]);
+
+  /** One audience-aware write; returns the new comment id. */
+  const writeComment = useCallback(async (input: { content: string; audience: CommentAudience; parentCommentId?: string }): Promise<string> => {
+    const target = await resourceReady.current;
+    if (!target) throw new Error(tRef.current('coManaged.editor.errors.forbidden'));
+    const document = conversationDocument(input.content);
+    if (!document) throw new Error(tRef.current('coManaged.editor.errors.invalid'));
+    let parent: { storeTenant: string; threadId: string; commentId: string } | undefined;
+    if (input.parentCommentId) {
+      const knownParent = known.current.get(input.parentCommentId);
+      const stored = knownParent ?? await nativeTicketDataSource.comments.findCommentById(input.parentCommentId)
+        .then(comment => comment && 'thread_id' in comment && comment.thread_id ? { storeTenant: target.tenant, threadId: comment.thread_id } : null);
+      if (!stored) throw new Error(tRef.current('coManaged.editor.errors.invalid'));
+      parent = { storeTenant: stored.storeTenant, threadId: stored.threadId, commentId: input.parentCommentId };
+    }
+    const key = JSON.stringify([input.content, input.audience, input.parentCommentId ?? null]);
+    if (operation.current?.key !== key) operation.current = { key, id: newCoManagedOperationId() };
+    const result = await createCoManagedTicketCommentAction(target, parent
+      ? { operationId: operation.current.id, document, parent, expectedAudience: input.audience }
+      : { operationId: operation.current.id, document, audience: input.audience });
+    if (!result.ok) {
+      // Only an unconfirmed outcome keeps its operation id; a definite rejection starts fresh next time.
+      if (result.code !== 'unknownOutcome') operation.current = null;
+      throw new Error(tRef.current(`coManaged.editor.errors.${result.code}`));
+    }
+    operation.current = null;
+    known.current.set(result.receipt.commentId, { audience: input.audience, storeTenant: result.receipt.storeTenant, threadId: result.receipt.threadId, topLevel: !parent, own: true });
+    return result.receipt.commentId;
+  }, []);
+
+  const dataSource = useMemo<TicketDataSource>(() => {
+    // Native until the co-managed screen has loaded; a ticket that is not co-managed stays native.
+    if (!enabled || !screenState || screenState === 'failed') return nativeTicketDataSource;
+    const customerName = screenState.customerName;
+    const allowed = writeAudiences ?? ALL_AUDIENCES;
+    const label = (audience: CommentAudience) => audience === 'organization_private' && customerName
+      ? tRef.current('coManaged.section.privateTo', { organization: customerName })
+      : tRef.current(`coManaged.conversation.audiences.${audience}`);
+    const audienceOf = (comment: IComment): CommentAudience =>
+      (comment.comment_id ? known.current.get(comment.comment_id)?.audience : undefined) ?? (comment.is_internal ? 'shared_it' : 'requester');
+    const options = allowed.map(audience => ({ id: audience, label: label(audience), internal: audience !== 'requester' }));
+    const defaultAudience = allowed.includes('shared_it') ? 'shared_it' : allowed[0];
+    // No writable audience (for example a retained read-only ticket): keep the native toggle.
+    const audiences: TicketConversationAudiences | undefined = !options.length ? undefined : {
+      options,
+      defaultId: defaultAudience ?? 'shared_it',
+      controlLabel: tRef.current('coManaged.conversation.audience'),
+      getCommentAudience: comment => { const audience = audienceOf(comment); return { id: audience, label: label(audience) }; },
+      canChangeCommentAudience: comment => {
+        const entry = comment.comment_id ? known.current.get(comment.comment_id) : undefined;
+        return Boolean(entry?.own && entry.topLevel && allowed.includes(entry.audience));
+      },
+      changeCommentAudience: comment => new Promise<void>(resolve => {
+        const entry = comment.comment_id ? known.current.get(comment.comment_id) : undefined;
+        if (!entry || !actor.current) return; // never settles: no reload for a change that did not start
+        // The disclosure dialog previews and confirms; the screen reloads only after it saves.
+        setDisclosure({ thread: { storeTenant: entry.storeTenant, threadId: entry.threadId }, actor: actor.current,
+          audiences: entry.storeTenant === resource.current?.tenant ? allowed : allowed.filter(value => value !== 'organization_private'), done: resolve });
+      }),
+    };
+
+    const addComment: TicketDataSource['comments']['addTicketCommentWithCacheForCurrentUser'] = async (ticketIdArg, content, isInternal, isResolution, closesTicket, suppression, schedule, emailRecipients, writeOptions) => {
+      const audience = writeOptions?.audienceId as CommentAudience | undefined;
+      // Scheduling, resolution and per-recipient email are native-only features of a requester-visible comment.
+      if (!audience || (audience === 'requester' && (schedule || isResolution || emailRecipients))) {
+        return nativeTicketDataSource.comments.addTicketCommentWithCacheForCurrentUser(
+          ticketIdArg, content, audience ? false : isInternal, isResolution, closesTicket, suppression, schedule, emailRecipients);
+      }
+      try {
+        const commentId = await writeComment({ content, audience });
+        const created = await nativeTicketDataSource.comments.findCommentById(commentId);
+        return (created ?? actionError(tRef.current('coManaged.editor.errors.unknownOutcome'))) as Awaited<ReturnType<typeof nativeTicketDataSource.comments.addTicketCommentWithCacheForCurrentUser>>;
+      } catch (error) {
+        return actionError(error instanceof Error ? error.message : tRef.current('coManaged.editor.errors.unknownOutcome')) as never;
+      }
+    };
+    const createComment: TicketDataSource['comments']['createComment'] = async (comment, emailRecipients) => {
+      const audience = (comment as { audienceId?: string }).audienceId as CommentAudience | undefined;
+      if (!audience) return nativeTicketDataSource.comments.createComment(comment, emailRecipients);
+      try {
+        return await writeComment({ content: comment.note ?? '', audience, parentCommentId: comment.parent_comment_id ?? undefined });
+      } catch (error) {
+        return actionError(error instanceof Error ? error.message : tRef.current('coManaged.editor.errors.unknownOutcome')) as never;
+      }
+    };
+
+    return composeTicketDataSource(nativeTicketDataSource, {
+      comments: { addTicketCommentWithCacheForCurrentUser: addComment, createComment },
+      conversation: {
+        ...(audiences ? { audiences } : {}),
+        // The co-managed document model has no images, files or local mentions.
+        ...(audiences ? { editor: { disallowImages: true, disallowFiles: true, disallowMentions: true } } : {}),
+        formatAuthorLabel: ({ comment, authorName }) => comment.actor_organization_name ? `${authorName} · ${comment.actor_organization_name}` : authorName,
+      },
+      slots: {
+        coManagedSection: ({ layout, refresh }) => <CoManagedTicketSection target={{ kind: 'local', ticketId }} onChanged={refresh} layout={layout} />,
+        timeSummary: ({ timeEntriesRefreshKey }) => <CoManagedEffortSummary target={{ kind: 'shared', resource: screenState.resource }} refreshKey={timeEntriesRefreshKey} />,
+      },
+    });
+  }, [enabled, screenState, writeAudiences, ticketId, writeComment]);
+
+  return <TicketDataSourceProvider dataSource={dataSource}>
+    {children}
+    {disclosure && resource.current && <CoManagedThreadDisclosure resource={resource.current} thread={disclosure.thread} actor={disclosure.actor} audiences={disclosure.audiences}
+      onClosed={() => setDisclosure(null)} onSaved={() => { const { done } = disclosure; setDisclosure(null); done(); }} />}
+  </TicketDataSourceProvider>;
+}
