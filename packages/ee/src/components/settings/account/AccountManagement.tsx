@@ -20,10 +20,10 @@ export default function AccountManagement(_props: AccountManagementProps) {
     <Card className="p-8 text-center">
       <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
       <p className="text-muted-foreground mb-4">
-        {t('communityEdition.hostedDescription')}
+        {t('communityEdition.hostedDescription', { defaultValue: 'Account management and billing features are available in Pro for hosted deployments.' })}
       </p>
       <p className="text-sm text-muted-foreground">
-        {t('communityEdition.selfHostedDescription')}
+        {t('communityEdition.selfHostedDescription', { defaultValue: 'Self-hosted Community Edition has unlimited users with no license restrictions or billing.' })}
       </p>
     </Card>
   );
