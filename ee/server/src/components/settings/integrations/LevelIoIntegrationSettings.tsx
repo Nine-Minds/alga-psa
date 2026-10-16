@@ -10,6 +10,7 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
@@ -75,6 +76,7 @@ export default function LevelIoIntegrationSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
   const [showSigningSecret, setShowSigningSecret] = useState(false);
+  const [confirmRegenerateOpen, setConfirmRegenerateOpen] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const [isSaving, startSaving] = useTransition();
@@ -288,6 +290,7 @@ export default function LevelIoIntegrationSettings() {
   };
 
   const handleRegenerateSigningSecret = () => {
+    setConfirmRegenerateOpen(false);
     startRegenerating(async () => {
       setError(null);
       setSuccess(null);
@@ -540,7 +543,7 @@ export default function LevelIoIntegrationSettings() {
                     <Copy className="mr-1 h-4 w-4" />
                     {copyLabel('signingSecret')}
                   </Button>
-                  <Button id="levelio-regenerate-webhook-signing-secret" type="button" variant="outline" size="sm" onClick={handleRegenerateSigningSecret} disabled={isRegenerating}>
+                  <Button id="levelio-regenerate-webhook-signing-secret" type="button" variant="outline" size="sm" onClick={() => setConfirmRegenerateOpen(true)} disabled={isRegenerating}>
                     {t('integrations.rmm.levelio.webhook.regenerateSecret', { defaultValue: 'Regenerate secret' })}
                   </Button>
                 </div>
@@ -571,8 +574,8 @@ export default function LevelIoIntegrationSettings() {
         <CardHeader>
           <CardTitle>{t('integrations.rmm.levelio.webhook.fallbackTitle', { defaultValue: 'Fallback: Automation HTTP Request' })}</CardTitle>
           <CardDescription>
-            {t('integrations.rmm.levelio.webhook.description', {
-              defaultValue: 'Level cannot register webhooks via its API. In Level, create an automation with an HTTP POST action using the URL, header, and payload below to push alerts into Alga in real time.',
+            {t('integrations.rmm.levelio.webhook.fallbackDescription', {
+              defaultValue: "Use this fallback only when Level's native Settings → Webhooks can't be used. Create an automation with an HTTP POST action using the URL, header, and payload below to push alerts into Alga.",
             })}
           </CardDescription>
         </CardHeader>
@@ -633,6 +636,19 @@ export default function LevelIoIntegrationSettings() {
           )}
         </CardContent>
       </Card>
+      <ConfirmationDialog
+        id="levelio-regenerate-signing-secret-dialog"
+        isOpen={confirmRegenerateOpen}
+        onClose={() => setConfirmRegenerateOpen(false)}
+        onConfirm={handleRegenerateSigningSecret}
+        title={t('integrations.rmm.levelio.webhook.regenerateConfirmTitle', { defaultValue: 'Regenerate signing secret?' })}
+        message={t('integrations.rmm.levelio.webhook.regenerateConfirmMessage', {
+          defaultValue: "Existing Level webhooks will fail with 401 until you paste the new signing secret into Level's webhook settings. Alerts sent in the meantime are retried by Level but may be lost if the secret is not updated.",
+        })}
+        confirmLabel={t('integrations.rmm.levelio.webhook.regenerateConfirmLabel', { defaultValue: 'Regenerate' })}
+        cancelLabel={t('integrations.rmm.levelio.webhook.regenerateCancel', { defaultValue: 'Cancel' })}
+        isConfirming={isRegenerating}
+      />
       {isActive && (
         <RmmDeviceSyncSettings provider="levelio" onSaved={() => void refresh(true)} />
       )}

@@ -348,7 +348,7 @@ describe('Level.io alert ingestion through the Level emulator (route + DB)', { s
         if (!editable.has(key)) expect(body[key]).toBe(template[key]);
       }
       // Only Level's documented system variables, never alert_* placeholders.
-      expect(Object.values(template).join(' ')).not.toMatch(/\{\{(?!level_)/);
+      expect(Object.values(body).join(' ')).not.toMatch(/\{\{(?!level_)/);
     }
 
     await runLevelScenario('levelio-automation-alga-template');
