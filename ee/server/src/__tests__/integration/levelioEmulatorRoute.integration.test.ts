@@ -69,6 +69,7 @@ vi.mock('../../../../../server/src/lib/eventBus/index', () => ({
 const { LEVELIO_AUTOMATION_DESCRIPTION_PLACEHOLDER, LEVELIO_AUTOMATION_NAME_PLACEHOLDER } = await import(
   '../../lib/integrations/levelio/webhookPayload'
 );
+const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
 const { POST } = await import('../../app/api/webhooks/levelio/route');
 
 /**
@@ -283,6 +284,49 @@ afterAll(async () => {
   }
   await h.db.destroy().catch(() => undefined);
 }, HOOK_TIMEOUT);
+
+/** Emulator control helpers shared by the ticket-close cases. */
+async function levelCall(path: string, body: unknown) {
+  return fetch(`${control}/control/levelio/${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then((r) => r.json() as Promise<{ ok: boolean; result: any }>);
+}
+
+async function seedAcmeWithServer(webhookEventTypes: string[]) {
+  await clearAlertsAndTickets();
+  await fetch(`${control}/control/levelio/reset`, { method: 'POST' });
+  await levelCall('seed/group', { id: ACME, name: 'Acme Corp' });
+  await levelCall('seed/device', { id: SRV_01, hostname: 'SRV-01', role: 'server', groupId: ACME, serial_number: 'SN-SRV-01' });
+  await levelCall('seed/webhook', {
+    id: 'alga-native',
+    url: `${routeOrigin}/api/webhooks/levelio?tenant=${tenantId}`,
+    secret: LEVEL_WEBHOOK_SIGNING_SECRET,
+    eventTypes: webhookEventTypes,
+  });
+}
+
+async function registerLevelAdapter() {
+  // Vitest aliases @enterprise to the CE stub; production EE builds resolve it to the
+  // real adapter, so register that adapter explicitly (the registry wins in resolveAdapter).
+  const { registerRmmAlertOutboundAdapter } = await import('@alga-psa/shared/rmm/alerts');
+  const { levelIoAlertOutboundAdapter } = await import('../../lib/integrations/levelio/alerts/outboundAdapter');
+  registerRmmAlertOutboundAdapter('levelio', levelIoAlertOutboundAdapter);
+}
+
+async function closeTicketAndDeliver(ticketId: string) {
+  const closed = await table('statuses').where({ board_id: boardId, is_closed: true }).first('status_id');
+  await table('tickets').where({ ticket_id: ticketId }).update({ status_id: closed.status_id });
+  const { handleTicketClosed } = await import(
+    '../../../../../server/src/lib/eventBus/subscribers/rmmAlertTicketClosedSubscriber'
+  );
+  await handleTicketClosed({ payload: { tenantId, ticketId } });
+}
+
+async function alertRow(externalAlertId: string) {
+  return table('rmm_alerts').where({ tenant: tenantId, external_alert_id: externalAlertId }).first();
+}
 
 describe('Level.io alert ingestion through the Level emulator (route + DB)', { shuffle: false }, () => {
   it('native signed webhooks are accepted with 2xx and create tickets; resolve resets; redelivery is a no-op', async () => {
@@ -522,5 +566,100 @@ describe('Level.io alert ingestion through the Level emulator (route + DB)', { s
     expect(rows[0].ticket_id).toBeTruthy();
     expect(rows[0].ticket_id).not.toBe(firstTicketId);
     expect(await ticketCount()).toBe(2);
+  });
+
+  it('a native alert is resolved in Level (POST /v2/alerts/:id/resolve) when its ticket closes', async () => {
+    await seedAcmeWithServer(['alert_active']);
+    await registerLevelAdapter();
+    await levelCall('actions/fire-alert', { deviceId: SRV_01, name: 'Native disk', severity: 'warning' });
+    const [levelAlert] = await levelState('alerts');
+    expect(levelAlert.is_resolved).toBe(false);
+    const before = await alertRow(levelAlert.id);
+    expect(before.status).toBe('active');
+    expect(before.ticket_id).toBeTruthy();
+
+    await closeTicketAndDeliver(before.ticket_id);
+
+    expect((await alertRow(levelAlert.id)).status).toBe('resolved');
+    const [after] = await levelState('alerts');
+    expect(after.id).toBe(levelAlert.id);
+    expect(after.is_resolved).toBe(true);
+  });
+
+  it('a failing Level resolve leaves the native alert active and stamps outbound_reset_error', async () => {
+    await seedAcmeWithServer(['alert_active']);
+    await registerLevelAdapter();
+    await levelCall('actions/fire-alert', { deviceId: SRV_01, name: 'Native cpu', severity: 'critical' });
+    const [levelAlert] = await levelState('alerts');
+    const before = await alertRow(levelAlert.id);
+
+    const armed = await fetch(`${control}/control/levelio/faults/operation-fault/arm`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ operation: 'POST /v2/alerts/:id/resolve', status: 400, message: 'resolve refused', remaining: 5 }),
+    });
+    expect(armed.status).toBe(200);
+    try {
+      await closeTicketAndDeliver(before.ticket_id);
+    } finally {
+      await fetch(`${control}/control/levelio/faults/operation-fault/disarm`, { method: 'POST' });
+    }
+
+    const row = await alertRow(levelAlert.id);
+    expect(row.status).toBe('active');
+    expect(typeof row.metadata.outbound_reset_error).toBe('string');
+    expect(row.metadata.outbound_reset_error).toContain('resolve refused');
+    expect((await levelState('alerts'))[0].is_resolved).toBe(false);
+  });
+
+  it('an automation row dedup-attached to another alert\'s ticket is reset when that ticket auto-resolves', async () => {
+    await seedAcmeWithServer(['alert_active', 'alert_resolved']);
+    await registerLevelAdapter();
+    const rule = await table('rmm_alert_rules').where({ integration_id: integrationId }).first('rule_id', 'actions');
+    await table('rmm_alert_rules')
+      .where({ rule_id: rule.rule_id })
+      .update({ actions: JSON.stringify({ ...rule.actions, autoResolveTicket: true }) });
+    try {
+      // Native alert opens the ticket.
+      await levelCall('actions/fire-alert', { deviceId: SRV_01, name: 'Disk full', severity: 'critical' });
+      const [levelAlert] = await levelState('alerts');
+      const native = await alertRow(levelAlert.id);
+      expect(native.ticket_id).toBeTruthy();
+
+      // An automation alert for the same device + condition name dedup-attaches to that ticket.
+      const attached = await POST(
+        new Request(`${routeOrigin}/api/webhooks/levelio?tenant=${tenantId}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-alga-webhook-secret': ALGA_WEBHOOK_SECRET },
+          body: JSON.stringify({ event: 'alert.triggered', name: 'Disk full', severity: 'critical', device_id: SRV_01 }),
+        }),
+      );
+      expect(await attached.json()).toMatchObject({ outcome: 'occurrence_appended' });
+      const automationId = `automation:${SRV_01}:disk full`;
+      const automation = await alertRow(automationId);
+      expect(automation.status).toBe('active');
+      expect(automation.ticket_id).toBe(native.ticket_id);
+      expect(await ticketCount()).toBe(1);
+
+      // Level resolves the native alert -> alert_resolved webhook -> autoResolveTicket closes the ticket.
+      vi.mocked(publishWorkflowEvent).mockClear();
+      await levelCall('actions/resolve-alert', { alertId: levelAlert.id });
+      expect((await alertRow(levelAlert.id)).status).toBe('auto_resolved');
+      const closedCalls = vi.mocked(publishWorkflowEvent).mock.calls.filter(([arg]: any[]) => arg.eventType === 'TICKET_CLOSED');
+      expect(closedCalls).toHaveLength(1);
+      const closedEvent = closedCalls[0][0] as any;
+      expect(closedEvent.payload.ticketId).toBe(native.ticket_id);
+      expect(closedEvent.ctx.actor).toEqual({ actorType: 'SYSTEM' });
+      expect((await alertRow(automationId)).status).toBe('active');
+
+      // Deliver that TICKET_CLOSED payload to the subscriber, as the event bus would.
+      const { handleTicketClosed } = await import(
+        '../../../../../server/src/lib/eventBus/subscribers/rmmAlertTicketClosedSubscriber'
+      );
+      await handleTicketClosed({ payload: { ...closedEvent.payload, tenantId: closedEvent.ctx.tenantId } });
+      expect((await alertRow(automationId)).status).toBe('resolved');
+    } finally {
+      await table('rmm_alert_rules').where({ rule_id: rule.rule_id }).update({ actions: JSON.stringify(rule.actions) });
+    }
   });
 });
