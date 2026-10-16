@@ -758,6 +758,22 @@
         "update": "Odmowa uprawnień: nie można modyfikować partii eksportu księgowego",
         "execute": "Odmowa uprawnień: nie można uruchamiać partii eksportu księgowego",
         "createMappings": "Tworzenie mapowań QuickBooks z eksportu wymaga uprawnień do eksportu i zarządzania mapowaniami"
+      },
+      "quickbooksMapping": {
+        "noDecisions": "Wybierz sposób obsługi co najmniej jednej niezmapowanej pozycji.",
+        "stale": "Jedna z wybranych pozycji nie jest już niezmapowana w tej partii. Odśwież i spróbuj ponownie.",
+        "duplicateSubmission": "„{{algaName}}\" przesłano dwukrotnie.",
+        "invalidMode": "Wybierz „Utwórz nowy\" lub „Już w QuickBooks\" dla „{{algaName}}\".",
+        "nameRequired": "Wprowadź nazwę w QuickBooks dla „{{algaName}}\".",
+        "nameInvalidCharacters": "Nazwa w QuickBooks dla „{{algaName}}\" nie może zawierać tabulatorów, podziałów wiersza ani cudzysłowów.",
+        "nameTooLong": "Nazwa w QuickBooks dla „{{algaName}}\" jest dłuższa niż {{maxLength}} znaków.",
+        "duplicateNewName": "„{{qbName}}\" jest użyta dla więcej niż jednego nowego wpisu QuickBooks.",
+        "duplicateClientName": "„{{qbName}}\" wybrano dla więcej niż jednego klienta. Każdą nazwę QuickBooks można zmapować tylko do jednego.",
+        "duplicateItemName": "„{{qbName}}\" wybrano dla więcej niż jednej pozycji. Każdą nazwę QuickBooks można zmapować tylko do jednej.",
+        "nameTakenByClient": "„{{qbName}}\" jest już zmapowana do innego klienta, więc nie można jej użyć także dla „{{algaName}}\". Wybierz inną nazwę QuickBooks lub zmień istniejące mapowanie w mapowaniach QuickBooks.",
+        "nameTakenByItem": "„{{qbName}}\" jest już zmapowana do innej pozycji, więc nie można jej użyć także dla „{{algaName}}\". Wybierz inną nazwę QuickBooks lub zmień istniejące mapowanie w mapowaniach QuickBooks.",
+        "unsupportedBatch": "Ta partia nie jest eksportem QuickBooks Desktop ani QuickBooks CSV.",
+        "nameTakenConcurrently": "Jedna z tych nazw QuickBooks została właśnie zmapowana do innego wpisu. Odśwież listę i wybierz inną nazwę."
       }
     },
     "vendorBill": {

@@ -758,6 +758,22 @@
         "update": "Autorizzazione negata: impossibile modificare i lotti di esportazione contabile",
         "execute": "Autorizzazione negata: impossibile eseguire i lotti di esportazione contabile",
         "createMappings": "Per creare mappature QuickBooks da un'esportazione servono le capacità di esportazione e di gestione delle mappature"
+      },
+      "quickbooksMapping": {
+        "noDecisions": "Scegli come gestire almeno un elemento non mappato.",
+        "stale": "Uno degli elementi selezionati non è più non mappato per questo batch. Aggiorna e riprova.",
+        "duplicateSubmission": "\"{{algaName}}\" è stato inviato due volte.",
+        "invalidMode": "Scegli crea o esistente per \"{{algaName}}\".",
+        "nameRequired": "Inserisci un nome QuickBooks per \"{{algaName}}\".",
+        "nameInvalidCharacters": "Il nome QuickBooks per \"{{algaName}}\" non può contenere tabulazioni, interruzioni di riga o virgolette doppie.",
+        "nameTooLong": "Il nome QuickBooks per \"{{algaName}}\" supera i {{maxLength}} caratteri.",
+        "duplicateNewName": "\"{{qbName}}\" è usato per più di una nuova voce QuickBooks.",
+        "duplicateClientName": "\"{{qbName}}\" è scelto per più di un cliente. Ogni nome QuickBooks può essere mappato a uno solo.",
+        "duplicateItemName": "\"{{qbName}}\" è scelto per più di un articolo. Ogni nome QuickBooks può essere mappato a uno solo.",
+        "nameTakenByClient": "\"{{qbName}}\" è già mappato a un altro cliente, quindi non può essere usato anche per \"{{algaName}}\". Scegli un altro nome QuickBooks o modifica la mappatura esistente nelle mappature QuickBooks.",
+        "nameTakenByItem": "\"{{qbName}}\" è già mappato a un altro articolo, quindi non può essere usato anche per \"{{algaName}}\". Scegli un altro nome QuickBooks o modifica la mappatura esistente nelle mappature QuickBooks.",
+        "unsupportedBatch": "Questo batch non è un'esportazione QuickBooks Desktop o QuickBooks CSV.",
+        "nameTakenConcurrently": "Uno di questi nomi QuickBooks è appena stato mappato a un'altra voce. Aggiorna l'elenco e scegli un altro nome."
       }
     },
     "vendorBill": {

@@ -758,6 +758,22 @@
         "update": "Permissão negada: não é possível modificar os lotes de exportação contábil",
         "execute": "Permissão negada: não é possível executar os lotes de exportação contábil",
         "createMappings": "Criar mapeamentos do QuickBooks a partir de uma exportação exige as capacidades de exportar e de gerenciar mapeamentos"
+      },
+      "quickbooksMapping": {
+        "noDecisions": "Escolha como tratar pelo menos um item sem mapeamento.",
+        "stale": "Um dos itens selecionados não está mais sem mapeamento neste lote. Atualize e tente novamente.",
+        "duplicateSubmission": "\"{{algaName}}\" foi enviado duas vezes.",
+        "invalidMode": "Escolha criar ou existente para \"{{algaName}}\".",
+        "nameRequired": "Informe um nome do QuickBooks para \"{{algaName}}\".",
+        "nameInvalidCharacters": "O nome do QuickBooks para \"{{algaName}}\" não pode conter tabulações, quebras de linha ou aspas duplas.",
+        "nameTooLong": "O nome do QuickBooks para \"{{algaName}}\" tem mais de {{maxLength}} caracteres.",
+        "duplicateNewName": "\"{{qbName}}\" é usado para mais de uma entrada nova do QuickBooks.",
+        "duplicateClientName": "\"{{qbName}}\" foi escolhido para mais de um cliente. Cada nome do QuickBooks pode ser mapeado para apenas um.",
+        "duplicateItemName": "\"{{qbName}}\" foi escolhido para mais de um item. Cada nome do QuickBooks pode ser mapeado para apenas um.",
+        "nameTakenByClient": "\"{{qbName}}\" já está mapeado para outro cliente, então não pode ser usado também para \"{{algaName}}\". Escolha outro nome do QuickBooks ou altere o mapeamento existente nos mapeamentos do QuickBooks.",
+        "nameTakenByItem": "\"{{qbName}}\" já está mapeado para outro item, então não pode ser usado também para \"{{algaName}}\". Escolha outro nome do QuickBooks ou altere o mapeamento existente nos mapeamentos do QuickBooks.",
+        "unsupportedBatch": "Este lote não é uma exportação do QuickBooks Desktop ou do QuickBooks CSV.",
+        "nameTakenConcurrently": "Um destes nomes do QuickBooks acabou de ser mapeado para outra entrada. Atualize a lista e escolha outro nome."
       }
     },
     "vendorBill": {

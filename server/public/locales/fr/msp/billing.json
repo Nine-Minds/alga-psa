@@ -758,6 +758,22 @@
         "update": "Autorisation refusée : impossible de modifier les lots d’export comptable",
         "execute": "Autorisation refusée : impossible d’exécuter les lots d’export comptable",
         "createMappings": "La création de correspondances QuickBooks depuis un export nécessite les capacités d'export et de gestion des correspondances"
+      },
+      "quickbooksMapping": {
+        "noDecisions": "Choisissez comment traiter au moins un élément non associé.",
+        "stale": "L'un des éléments sélectionnés n'est plus non associé pour ce lot. Actualisez et réessayez.",
+        "duplicateSubmission": "« {{algaName}} » a été soumis deux fois.",
+        "invalidMode": "Choisissez « Créer » ou « Déjà dans QuickBooks » pour « {{algaName}} ».",
+        "nameRequired": "Saisissez un nom QuickBooks pour « {{algaName}} ».",
+        "nameInvalidCharacters": "Le nom QuickBooks de « {{algaName}} » ne peut pas contenir de tabulations, de sauts de ligne ni de guillemets doubles.",
+        "nameTooLong": "Le nom QuickBooks de « {{algaName}} » dépasse {{maxLength}} caractères.",
+        "duplicateNewName": "« {{qbName}} » est utilisé pour plusieurs nouvelles entrées QuickBooks.",
+        "duplicateClientName": "« {{qbName}} » est choisi pour plusieurs clients. Chaque nom QuickBooks ne peut être associé qu'à un seul.",
+        "duplicateItemName": "« {{qbName}} » est choisi pour plusieurs articles. Chaque nom QuickBooks ne peut être associé qu'à un seul.",
+        "nameTakenByClient": "« {{qbName}} » est déjà associé à un autre client et ne peut donc pas être utilisé aussi pour « {{algaName}} ». Choisissez un autre nom QuickBooks ou modifiez la correspondance existante dans les correspondances QuickBooks.",
+        "nameTakenByItem": "« {{qbName}} » est déjà associé à un autre article et ne peut donc pas être utilisé aussi pour « {{algaName}} ». Choisissez un autre nom QuickBooks ou modifiez la correspondance existante dans les correspondances QuickBooks.",
+        "unsupportedBatch": "Ce lot n'est pas un export QuickBooks Desktop ou QuickBooks CSV.",
+        "nameTakenConcurrently": "L'un de ces noms QuickBooks vient d'être associé à une autre entrée. Actualisez la liste et choisissez un autre nom."
       }
     },
     "vendorBill": {

@@ -758,6 +758,22 @@
         "update": "Permiso denegado: no se pueden modificar los lotes de exportación contable",
         "execute": "Permiso denegado: no se pueden ejecutar los lotes de exportación contable",
         "createMappings": "Para crear asignaciones de QuickBooks desde una exportación se requieren las capacidades de exportar y de gestionar asignaciones"
+      },
+      "quickbooksMapping": {
+        "noDecisions": "Elija cómo tratar al menos un elemento sin asignar.",
+        "stale": "Uno de los elementos seleccionados ya no está sin asignar en este lote. Actualice e inténtelo de nuevo.",
+        "duplicateSubmission": "\"{{algaName}}\" se envió dos veces.",
+        "invalidMode": "Elija crear o existente para \"{{algaName}}\".",
+        "nameRequired": "Introduzca un nombre de QuickBooks para \"{{algaName}}\".",
+        "nameInvalidCharacters": "El nombre de QuickBooks para \"{{algaName}}\" no puede contener tabulaciones, saltos de línea ni comillas dobles.",
+        "nameTooLong": "El nombre de QuickBooks para \"{{algaName}}\" supera los {{maxLength}} caracteres.",
+        "duplicateNewName": "\"{{qbName}}\" se usa para más de una entrada nueva de QuickBooks.",
+        "duplicateClientName": "\"{{qbName}}\" está elegido para más de un cliente. Cada nombre de QuickBooks solo puede asignarse a uno.",
+        "duplicateItemName": "\"{{qbName}}\" está elegido para más de un artículo. Cada nombre de QuickBooks solo puede asignarse a uno.",
+        "nameTakenByClient": "\"{{qbName}}\" ya está asignado a otro cliente, por lo que no puede usarse también para \"{{algaName}}\". Elija otro nombre de QuickBooks o cambie la asignación existente en las asignaciones de QuickBooks.",
+        "nameTakenByItem": "\"{{qbName}}\" ya está asignado a otro artículo, por lo que no puede usarse también para \"{{algaName}}\". Elija otro nombre de QuickBooks o cambie la asignación existente en las asignaciones de QuickBooks.",
+        "unsupportedBatch": "Este lote no es una exportación de QuickBooks Desktop ni de QuickBooks CSV.",
+        "nameTakenConcurrently": "Uno de estos nombres de QuickBooks se acaba de asignar a otra entrada. Actualice la lista y elija otro nombre."
       }
     },
     "vendorBill": {

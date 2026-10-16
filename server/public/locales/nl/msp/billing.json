@@ -758,6 +758,22 @@
         "update": "Toestemming geweigerd: boekhoudexportbatches kunnen niet worden gewijzigd",
         "execute": "Toestemming geweigerd: boekhoudexportbatches kunnen niet worden uitgevoerd",
         "createMappings": "Voor het aanmaken van QuickBooks-koppelingen vanuit een export zijn de bevoegdheden voor exporteren en het beheren van koppelingen nodig"
+      },
+      "quickbooksMapping": {
+        "noDecisions": "Kies hoe ten minste één niet-gekoppeld item moet worden behandeld.",
+        "stale": "Een van de geselecteerde items is voor deze batch niet meer ongekoppeld. Vernieuw en probeer het opnieuw.",
+        "duplicateSubmission": "\"{{algaName}}\" is twee keer ingediend.",
+        "invalidMode": "Kies nieuw aanmaken of bestaand voor \"{{algaName}}\".",
+        "nameRequired": "Voer een QuickBooks-naam in voor \"{{algaName}}\".",
+        "nameInvalidCharacters": "De QuickBooks-naam voor \"{{algaName}}\" mag geen tabs, regeleinden of dubbele aanhalingstekens bevatten.",
+        "nameTooLong": "De QuickBooks-naam voor \"{{algaName}}\" is langer dan {{maxLength}} tekens.",
+        "duplicateNewName": "\"{{qbName}}\" wordt voor meer dan één nieuwe QuickBooks-vermelding gebruikt.",
+        "duplicateClientName": "\"{{qbName}}\" is gekozen voor meer dan één klant. Elke QuickBooks-naam kan maar aan één worden gekoppeld.",
+        "duplicateItemName": "\"{{qbName}}\" is gekozen voor meer dan één artikel. Elke QuickBooks-naam kan maar aan één worden gekoppeld.",
+        "nameTakenByClient": "\"{{qbName}}\" is al aan een andere klant gekoppeld en kan daarom niet ook voor \"{{algaName}}\" worden gebruikt. Kies een andere QuickBooks-naam of wijzig de bestaande koppeling in de QuickBooks-koppelingen.",
+        "nameTakenByItem": "\"{{qbName}}\" is al aan een ander artikel gekoppeld en kan daarom niet ook voor \"{{algaName}}\" worden gebruikt. Kies een andere QuickBooks-naam of wijzig de bestaande koppeling in de QuickBooks-koppelingen.",
+        "unsupportedBatch": "Deze batch is geen QuickBooks Desktop- of QuickBooks CSV-export.",
+        "nameTakenConcurrently": "Een van deze QuickBooks-namen is zojuist aan een andere vermelding gekoppeld. Vernieuw de lijst en kies een andere naam."
       }
     },
     "vendorBill": {

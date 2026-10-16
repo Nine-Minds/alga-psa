@@ -29,6 +29,9 @@ import { useAccountingCapabilities } from './useAccountingCapabilities';
 type SettingsField = keyof QuickBooksDesktopSettings;
 type TextSettingsField = Exclude<SettingsField, 'newProductItemType'>;
 
+// Component IDs must be kebab-case (UI reflection system).
+const toKebabCase = (value: string) => value.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+
 /**
  * QuickBooks Desktop (IIF) Integration Settings
  *
@@ -211,7 +214,7 @@ const QuickBooksDesktopIntegrationSettings: React.FC = () => {
             {fields.map((field) => (
               <div key={field.key}>
                 <Input
-                  id={`qbd-setting-${field.key}`}
+                  id={`qbd-setting-${toKebabCase(field.key)}`}
                   label={field.label}
                   required={field.required}
                   value={draft[field.key]}
@@ -234,11 +237,11 @@ const QuickBooksDesktopIntegrationSettings: React.FC = () => {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-sm font-medium text-foreground" htmlFor="qbd-setting-newProductItemType">
+                <label className="text-sm font-medium text-foreground" htmlFor="qbd-setting-new-product-item-type">
                   {t('integrations.qbd.settings.fields.newProductItemType', { defaultValue: 'New product item type' })}
                 </label>
                 <CustomSelect
-                  id="qbd-setting-newProductItemType"
+                  id="qbd-setting-new-product-item-type"
                   options={[
                     { value: 'NONINVENTORY', label: t('integrations.qbd.settings.itemTypes.nonInventory', { defaultValue: 'Non-inventory Part' }) },
                     { value: 'INVENTORY', label: t('integrations.qbd.settings.itemTypes.inventory', { defaultValue: 'Inventory Part' }) }
@@ -261,7 +264,7 @@ const QuickBooksDesktopIntegrationSettings: React.FC = () => {
                 {inventoryFields.map((field) => (
                   <div key={field.key}>
                     <Input
-                      id={`qbd-setting-${field.key}`}
+                      id={`qbd-setting-${toKebabCase(field.key)}`}
                       label={field.label}
                       required
                       value={draft[field.key]}
