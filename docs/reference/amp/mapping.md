@@ -14,6 +14,8 @@ else in the pipeline uses the internal noun.
 | tickets | `tickets` |
 | ticket_comments | `comments` |
 | assets | `assets` |
+| products | `service_catalog` (`item_kind = 'product'`) plus `service_prices` |
+| vendor_products | `vendors` (created or matched by name) and `vendor_products` |
 
 ## Operator-supplied configuration at preflight
 
@@ -51,4 +53,5 @@ design — mapping exists only where the source is not already canonical.
 - A ticket whose organization cannot be resolved uses the default requester
   client.
 - A comment is only applied when its ticket applied (dependency order:
-  organizations → locations → contacts → tickets → comments → assets).
+  organizations → locations → contacts → tickets → comments → assets → products →
+  vendor_products).

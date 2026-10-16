@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 
 import { tenantDb } from '@alga-psa/db';
+import { createProductCore } from '@alga-psa/billing/lib/catalog/productCatalogCore';
 import { convertSpreadsheets, inferSpreadsheetMapping } from '@alga-psa/migration-connectors/csv';
 import { buildSamplePackage, sampleEntityRows } from '@alga-psa/migration-sdk';
 import { AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY, type AmpPackageRows } from '@alga-psa/migration-spec';
@@ -78,6 +79,13 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   await tenantTable(tenantId, 'migration_identity_mappings').del();
   await tenantTable(tenantId, 'migration_jobs').del();
   await tenantTable(tenantId, 'asset_type_registry').del();
+  await tenantTable(tenantId, 'vendor_products').del();
+  await tenantTable(tenantId, 'product_inventory_settings').del();
+  await tenantTable(tenantId, 'vendors').del();
+  await tenantTable(tenantId, 'service_prices').del();
+  await tenantTable(tenantId, 'service_catalog').del();
+  await tenantTable(tenantId, 'service_types').del();
+  await tenantTable(tenantId, 'default_billing_settings').del();
   // Domain rows, children before parents.
   await tenantTable(tenantId, 'asset_history').del();
   await tenantTable(tenantId, 'assets').del();
@@ -443,7 +451,15 @@ async function configureJob(
     .update({ configuration: JSON.stringify(configuration) });
 }
 
-function buildPackage(name: string, rows?: AmpPackageRows): string {
+/** The original six-entity sample; products need a service type, so they have their own tests. */
+function legacySampleRows(): AmpPackageRows {
+  const rows = legacySampleRows();
+  delete rows.products;
+  delete rows.vendor_products;
+  return rows;
+}
+
+function buildPackage(name: string, rows: AmpPackageRows = legacySampleRows()): string {
   const packagePath = path.join(packageDir, `${name}-${uuidv4().slice(0, 8)}.amp`);
   buildSamplePackage(packagePath, {}, rows);
   return packagePath;
@@ -969,7 +985,7 @@ describe('AMP migration pipeline integration', () => {
 
   it('a record failing mid-run leaves a truthful ledger and retry applies only unapplied work', async () => {
     const fixture = await createFixture();
-    const rows = sampleEntityRows();
+    const rows = legacySampleRows();
     rows.contacts = [
       ...(rows.contacts ?? []),
       {
@@ -1035,7 +1051,7 @@ describe('AMP migration pipeline integration', () => {
       .first();
     const matchedName = String(fixtureClient.client_name);
 
-    const rows = sampleEntityRows();
+    const rows = legacySampleRows();
     rows.organizations = [];
     rows.locations = [];
     rows.tickets = [];
@@ -1212,4 +1228,158 @@ describe('AMP migration pipeline integration', () => {
       expect(targetsA.has(target)).toBe(false);
     }
   }, HOOK_TIMEOUT);
+  describe('products and vendor_products', () => {
+    const NS = 'fixture:instance-1';
+
+    async function productFixture(fixture: Fixture, currency: string | null = 'JPY') {
+      const serviceTypeId = uuidv4();
+      await tenantTable(fixture.tenantId, 'service_types').insert({
+        tenant: fixture.tenantId,
+        id: serviceTypeId,
+        name: `Hardware ${serviceTypeId.slice(0, 6)}`,
+        is_active: true,
+      });
+      if (currency) {
+        await tenantTable(fixture.tenantId, 'default_billing_settings').insert({
+          tenant: fixture.tenantId,
+          default_currency_code: currency,
+        });
+      }
+      return serviceTypeId;
+    }
+
+    function productRows(overrides: Partial<AmpPackageRows> = {}): AmpPackageRows {
+      return {
+        products: [
+          { package_record_id: 'p-new', source_record_id: 'src-p-new', external_identifier_namespace: NS, name: 'New Switch', sku: 'NEW-1', price_minor: 1500, cost_minor: 900, category_name: 'Networking', is_active: 1 },
+          { package_record_id: 'p-exist', source_record_id: 'src-p-exist', external_identifier_namespace: NS, name: 'Imported Name For Existing', sku: 'EXIST-1', price_minor: 5000 },
+        ],
+        vendor_products: [
+          { package_record_id: 'vp-1', source_record_id: 'src-vp-1', external_identifier_namespace: NS, product_package_record_id: 'p-new', vendor_name: 'Ingram Micro', vendor_sku: 'IM-1', unit_cost_minor: 900, lead_time_days: 3, is_preferred: 1 },
+          { package_record_id: 'vp-2', source_record_id: 'src-vp-2', external_identifier_namespace: NS, product_sku: 'EXIST-1', vendor_name: '  ingram micro ', vendor_sku: 'IM-2', unit_cost_minor: 4000 },
+          { package_record_id: 'vp-3', source_record_id: 'src-vp-3', external_identifier_namespace: NS, product_package_record_id: 'p-new', vendor_name: 'TD Synnex', unit_cost_minor: 950, is_preferred: 1 },
+        ],
+        ...overrides,
+      };
+    }
+
+    async function seedExistingProduct(fixture: Fixture, serviceTypeId: string): Promise<string> {
+      const created = await db.transaction((trx) =>
+        createProductCore(trx, fixture.tenantId, {
+          service_name: 'Existing Catalog Item',
+          custom_service_type_id: serviceTypeId,
+          sku: 'EXIST-1',
+          cost_currency: 'JPY',
+          default_rate: 0,
+        })
+      );
+      return created.serviceId;
+    }
+
+    async function stageProducts(fixture: Fixture, rows: AmpPackageRows, serviceTypeId: string | null) {
+      const migrationJobId = await createJob(fixture);
+      const staging = await new MigrationStager(db, fixture.tenantId).stage(migrationJobId, buildPackage('products', rows));
+      expect(staging.rejected).toBe(false);
+      await configureJob(fixture, migrationJobId, serviceTypeId ? { products: { serviceTypeId } } : {});
+      return migrationJobId;
+    }
+
+    it('dry run reports SKU matches and writes nothing; apply creates, matches and demotes preferred offers', async () => {
+      const fixture = await createFixture();
+      const serviceTypeId = await productFixture(fixture);
+      const existingId = await seedExistingProduct(fixture, serviceTypeId);
+      const migrationJobId = await stageProducts(fixture, productRows(), serviceTypeId);
+
+      const catalogBefore = await tenantTable(fixture.tenantId, 'service_catalog').count({ count: '*' }).first();
+      const preflight = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
+      expect(preflight.state).toBe('ready');
+      expect(preflight.plan.map((entry) => entry.entityType)).toEqual(['products', 'vendor_products']);
+      expect(preflight.issues.map((issue) => issue.code)).toEqual(['PRODUCT_SKU_MATCHES_EXISTING']);
+      expect(preflight.issues[0].sampleRecordIds).toEqual(['p-exist']);
+      const catalogAfterDryRun = await tenantTable(fixture.tenantId, 'service_catalog').count({ count: '*' }).first();
+      expect(Number(catalogAfterDryRun?.count)).toBe(Number(catalogBefore?.count));
+      expect(Number((await tenantTable(fixture.tenantId, 'vendors').count({ count: '*' }).first())?.count)).toBe(0);
+
+      const result = await new MigrationDomainApplier(db, fixture.tenantId).applyJob(migrationJobId, fixture.ownerUserId);
+      // p-new + vp-1..3 created; p-exist matched (recorded as skipped).
+      expect(result).toEqual({ cancelled: false, created: 4, skipped: 1, failed: 0 });
+
+      const products = await tenantTable(fixture.tenantId, 'service_catalog').where({ item_kind: 'product' });
+      expect(products.map((row: any) => row.sku).sort()).toEqual(['EXIST-1', 'NEW-1']);
+      const created = products.find((row: any) => row.sku === 'NEW-1');
+      expect(created.service_name).toBe('New Switch');
+      expect(created.product_category).toBe('Networking');
+      expect(created.custom_service_type_id).toBe(serviceTypeId);
+      // Minor units are stored as given; the blank currency resolved to the tenant currency (JPY), not a default.
+      expect(Number(created.cost)).toBe(900);
+      expect(created.cost_currency).toBe('JPY');
+      const prices = await tenantTable(fixture.tenantId, 'service_prices').where({ service_id: created.service_id });
+      expect(prices.map((row: any) => [row.currency_code, Number(row.rate)])).toEqual([['JPY', 1500]]);
+      // The matched product is untouched.
+      const existing = products.find((row: any) => row.sku === 'EXIST-1');
+      expect(existing.service_id).toBe(existingId);
+      expect(existing.service_name).toBe('Existing Catalog Item');
+
+      const vendors = await tenantTable(fixture.tenantId, 'vendors');
+      expect(vendors.map((row: any) => row.vendor_name).sort()).toEqual(['Ingram Micro', 'TD Synnex']);
+      const offers = await tenantTable(fixture.tenantId, 'vendor_products');
+      expect(offers).toHaveLength(3);
+      for (const offer of offers) expect(offer.cost_currency).toBe('JPY');
+      const preferredForNew = offers.filter((offer: any) => offer.service_id === created.service_id && offer.is_preferred);
+      expect(preferredForNew).toHaveLength(1);
+      expect(vendors.find((row: any) => row.vendor_id === preferredForNew[0].vendor_id).vendor_name).toBe('TD Synnex');
+
+      const outcomes = await tenantTable(fixture.tenantId, 'migration_record_outcomes').where({ migration_job_id: migrationJobId });
+      const matched = outcomes.filter((row: any) => row.action === 'skipped');
+      expect(matched).toHaveLength(1);
+      expect(matched[0].target_entity_id).toBe(existingId);
+
+      // Re-running creates nothing new: the identity ledger skips every record.
+      const rerun = await new MigrationDomainApplier(db, fixture.tenantId).applyJob(migrationJobId, fixture.ownerUserId);
+      expect(rerun).toEqual({ cancelled: false, created: 0, skipped: 5, failed: 0 });
+      expect(await tenantTable(fixture.tenantId, 'vendor_products')).toHaveLength(3);
+      expect(await tenantTable(fixture.tenantId, 'vendors')).toHaveLength(2);
+    }, HOOK_TIMEOUT);
+
+    it('blocks preflight without a product service type, and for vendor SKUs that match nothing', async () => {
+      const fixture = await createFixture();
+      await productFixture(fixture);
+      const rows = productRows();
+      rows.vendor_products = [
+        { package_record_id: 'vp-x', source_record_id: 'src-vp-x', external_identifier_namespace: NS, product_sku: 'NOPE-9', vendor_name: 'Ingram Micro', unit_cost_minor: 1 },
+      ];
+      const migrationJobId = await stageProducts(fixture, rows, null);
+      const preflight = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
+      expect(preflight.state).toBe('blocked');
+      expect(preflight.issues.map((issue) => issue.code).sort()).toEqual([
+        'CONFIG_PRODUCT_SERVICE_TYPE_REQUIRED',
+        'VENDOR_PRODUCT_UNRESOLVED',
+      ]);
+    }, HOOK_TIMEOUT);
+
+    it('blocks preflight when amounts carry no currency and the tenant has none configured', async () => {
+      const fixture = await createFixture();
+      const serviceTypeId = await productFixture(fixture, null);
+      const migrationJobId = await stageProducts(fixture, productRows(), serviceTypeId);
+      const preflight = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
+      expect(preflight.issues.map((issue) => issue.code)).toContain('CONFIG_TENANT_CURRENCY_MISSING');
+      expect(preflight.state).toBe('blocked');
+    }, HOOK_TIMEOUT);
+
+    it('fails a row whose assumed currency no longer matches the tenant currency', async () => {
+      const fixture = await createFixture();
+      const serviceTypeId = await productFixture(fixture, 'JPY');
+      const rows = productRows();
+      rows.products = [
+        { package_record_id: 'p-assumed', source_record_id: 'src-p-assumed', external_identifier_namespace: NS, name: 'Assumed USD', sku: 'ASSUMED-1', price_minor: 12950, extension_json: JSON.stringify({ __assumed_currency: 'USD' }) },
+      ];
+      rows.vendor_products = [];
+      const migrationJobId = await stageProducts(fixture, rows, serviceTypeId);
+      const result = await new MigrationDomainApplier(db, fixture.tenantId).applyJob(migrationJobId, fixture.ownerUserId);
+      expect(result).toMatchObject({ created: 0, failed: 1 });
+      const outcome = await tenantTable(fixture.tenantId, 'migration_record_outcomes').where({ migration_job_id: migrationJobId, action: 'failed' }).first();
+      expect(JSON.stringify(outcome.errors)).toContain('assuming USD');
+      expect(await tenantTable(fixture.tenantId, 'service_catalog').where({ sku: 'ASSUMED-1' })).toHaveLength(0);
+    }, HOOK_TIMEOUT);
+  });
 });
