@@ -1349,6 +1349,10 @@ export class StripeService {
           const { updateApplianceEntitlementSeats } = await import('@ee/lib/applianceConsole/algaLicenseAdminClient');
           return updateApplianceEntitlementSeats(applianceTenantId, seats);
         },
+        syncState: async (stripeSubId, state) => {
+          const { syncApplianceSubscriptionState } = await import('@ee/lib/applianceConsole/algaLicenseAdminClient');
+          return syncApplianceSubscriptionState(stripeSubId, state);
+        },
         audit: masterTenantId
           ? async (details) => {
               const { PlatformReportAuditService } = await import('@ee/lib/platformReports');
