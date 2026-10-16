@@ -163,6 +163,7 @@
       "preview": {
         "title": "Podgląd faktury",
         "description": "To jest podgląd tego, jak faktura będzie wyglądać po sfinalizowaniu.",
+        "noBillingEmailWarning": "{{clientName}} nie ma adresu e-mail do rozliczeń. Fakturę można wygenerować, ale nie będzie można jej wysłać e-mailem ani opłacić online, dopóki nie ustawisz kontaktu rozliczeniowego, adresu e-mail do rozliczeń klienta lub adresu e-mail w lokalizacji rozliczeniowej lub domyślnej.",
         "summary_one": "Wybrano fakturę {{count}}",
         "summary_other": "Wybrano faktury {{count}}",
         "summaryCombined": "Ten wybór spowoduje wygenerowanie jednej połączonej faktury.",
@@ -415,7 +416,7 @@
       "BILLING_PROFILE_NOT_FOUND": "Wybrany profil rozliczeniowy nie jest dostępny dla tego klienta. Odśwież stronę i spróbuj ponownie."
     },
     "warnings": {
-      "noBillingEmail": "Ten klient nie ma adresu e-mail do rozliczeń. Ustaw kontakt ds. rozliczeń, adres e-mail do rozliczeń klienta lub adres e-mail w lokalizacji rozliczeniowej albo domyślnej przed wygenerowaniem faktury."
+      "noBillingEmail": "Ten klient nie ma adresu e-mail do rozliczeń. Fakturę można wygenerować, ale nie będzie można jej wysłać e-mailem ani opłacić online, dopóki nie ustawisz kontaktu rozliczeniowego, adresu e-mail do rozliczeń klienta lub adresu e-mail w lokalizacji rozliczeniowej lub domyślnej."
     },
     "errorFallback": {
       "title": "Coś poszło nie tak",

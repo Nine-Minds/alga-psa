@@ -35,6 +35,7 @@ import { CompanyAccountingSyncService } from '../../services/companySync/company
 import { KnexCompanyMappingRepository } from '../../services/companySync/companyMappingRepository';
 import { buildNormalizedCompanyPayload } from '../../services/companySync/companySyncNormalizer';
 import { XeroCompanyAdapter } from '../../services/companySync/adapters/xeroCompanyAdapter';
+import { resolveClientExportEmail } from './exportRecipientEmails';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { resolveXeroRealmAliases } from '../../services/accountingSync/xeroRealmIdentity';
 import { AppError, fromMinorUnits, toMinorUnits } from '@alga-psa/core';
@@ -932,6 +933,11 @@ export class XeroAdapter implements AccountingExportAdapter {
       .select('client_id', 'client_name', 'billing_email')
       .whereIn('client_id', Array.from(clientIds));
 
+    // The contact's email is the address the client's invoices are emailed to
+    // (billing contact, billing email, billing/default location), not the raw column.
+    for (const client of clients) {
+      client.billing_email = await resolveClientExportEmail(knex, tenantId, client.client_id);
+    }
     const clientMap = new Map(clients.map((client) => [client.client_id, client]));
 
     const targetRealm = context.batch.target_realm;

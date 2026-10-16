@@ -147,6 +147,7 @@
       "preview": {
         "title": "Rechnungsvorschau",
         "description": "Dies ist eine Vorschau, wie die Rechnung nach Fertigstellung aussehen wird.",
+        "noBillingEmailWarning": "{{clientName}} hat keine Rechnungs-E-Mail-Adresse. Die Rechnung kann erstellt werden, aber sie kann erst per E-Mail versendet oder online bezahlt werden, wenn Sie einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort festlegen.",
         "summary_one": "{{count}}-Rechnung ausgewählt",
         "summary_other": "{{count}}-Rechnungen ausgewählt",
         "summaryCombined": "Durch diese Auswahl wird eine kombinierte Rechnung generiert.",
@@ -397,7 +398,7 @@
       "BILLING_PROFILE_NOT_FOUND": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar. Aktualisiere die Seite und versuche es erneut."
     },
     "warnings": {
-      "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege vor dem Generieren der Rechnung einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort fest."
+      "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Die Rechnung kann erstellt werden, aber sie kann erst per E-Mail versendet oder online bezahlt werden, wenn Sie einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort festlegen."
     },
     "errorFallback": {
       "title": "Etwas ist schief gelaufen",

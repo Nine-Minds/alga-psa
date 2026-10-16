@@ -147,6 +147,7 @@
       "preview": {
         "title": "Visualização da fatura",
         "description": "Esta é uma prévia de como ficará a fatura quando finalizada.",
+        "noBillingEmailWarning": "{{clientName}} não tem e-mail de cobrança. A fatura pode ser gerada, mas não poderá ser enviada por e-mail nem paga online até que você defina um contato de cobrança, um e-mail de cobrança do cliente ou um e-mail no local de cobrança ou padrão.",
         "summary_one": "Fatura {{count}} selecionada",
         "summary_other": "Faturas {{count}} selecionadas",
         "summaryCombined": "Esta seleção gerará uma fatura combinada.",
@@ -397,7 +398,7 @@
       "BILLING_PROFILE_NOT_FOUND": "O perfil de faturação selecionado não está disponível para este cliente. Atualize a página e tente novamente."
     },
     "warnings": {
-      "noBillingEmail": "Este cliente não tem um e-mail de faturação. Defina um contato de faturação, um e-mail de faturação do cliente ou um endereço de e-mail na localização de faturação ou predefinida antes de gerar a fatura."
+      "noBillingEmail": "Este cliente não tem e-mail de cobrança. A fatura pode ser gerada, mas não poderá ser enviada por e-mail nem paga online até que você defina um contato de cobrança, um e-mail de cobrança do cliente ou um e-mail no local de cobrança ou padrão."
     },
     "errorFallback": {
       "title": "Algo deu errado",

@@ -147,6 +147,7 @@
       "preview": {
         "title": "Anteprima della fattura",
         "description": "Questa è un'anteprima di come apparirà la fattura una volta finalizzata.",
+        "noBillingEmailWarning": "{{clientName}} non ha un'email di fatturazione. La fattura può essere generata, ma non potrà essere inviata via email né pagata online finché non imposti un contatto di fatturazione, un'email di fatturazione del cliente o un'email sulla sede di fatturazione o predefinita.",
         "summary_one": "Fattura {{count}} selezionata",
         "summary_other": "Fatture {{count}} selezionate",
         "summaryCombined": "Questa selezione genererà una fattura combinata.",
@@ -397,7 +398,7 @@
       "BILLING_PROFILE_NOT_FOUND": "Il profilo di fatturazione selezionato non è disponibile per questo cliente. Aggiorna la pagina e riprova."
     },
     "warnings": {
-      "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita prima di generare la fattura."
+      "noBillingEmail": "Questo cliente non ha un'email di fatturazione. La fattura può essere generata, ma non potrà essere inviata via email né pagata online finché non imposti un contatto di fatturazione, un'email di fatturazione del cliente o un'email sulla sede di fatturazione o predefinita."
     },
     "errorFallback": {
       "title": "Qualcosa è andato storto",
