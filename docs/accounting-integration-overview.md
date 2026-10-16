@@ -122,7 +122,12 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. For CSV
   - `inventoryAssetAccount` and `cogsAccount`: used only for new Inventory Part items. They default to `Inventory Asset` and `Cost of Goods Sold`.
 - **Mapping metadata overrides:**
   - `qbdIncomeAccount` on an Items / Services or Discounts mapping sets the income account per item.
-  - `qbdSalesTaxItem` on a Tax Codes mapping sets the sales tax item or group per region. The tax-code mapping's own value is a QuickBooks tax *code*, not an item, so it is never used as the item.
+  - A region's sales tax item or group is resolved in this order:
+    1. `qbdSalesTaxItem` metadata on its Tax Codes mapping;
+    2. the mapping's own value, unless it is the QuickBooks Online code `TAX` or `NON`;
+    3. `defaultSalesTaxItem`.
+
+    IIF carries no per-line tax code, so for Desktop the mapping value is the item name.
 - **Fail-closed rules.** QuickBooks Desktop creates any name it does not recognise when it imports an IIF file, so the transform throws instead of guessing in these cases:
   - Missing item, income account, or sales tax item.
   - Names over QuickBooks' limits: 41 characters for customers, 31 for items and accounts.

@@ -214,7 +214,8 @@ Select **QuickBooks Desktop (IIF)** at **Settings → Integrations → Accountin
    - **Default income account**: required unless every item mapping sets its
      own.
    - **Sales tax liability account**: defaults to `Sales Tax Payable`.
-   - **Default sales tax item**: needed only for invoices that carry tax.
+   - **Default sales tax item**: used for taxed invoices whose tax region has
+     no Tax Codes mapping.
    - **New product item type**: the QuickBooks item type an export uses when it
      creates a new item for an AlgaPSA product. The default is **Non-inventory
      Part**: AlgaPSA stays the inventory system of record and QuickBooks only
@@ -229,12 +230,16 @@ Select **QuickBooks Desktop (IIF)** at **Settings → Integrations → Accountin
      a mapping. You don't have to set them all up in advance: the export
      prompts for anything missing (see
      [Export invoices and import tax back](#export-invoices-and-import-tax-back)).
+   - On the **Tax Codes** tab, enter each region's QuickBooks Desktop **sales
+     tax item or group name** in the QuickBooks Tax Code field. Regions without
+     a mapping use the default sales tax item.
    - Unmapped payment terms are left blank.
 3. **Per-item overrides.** Optional. In the mapping metadata editor, add:
    - `{"qbdIncomeAccount": "Account name"}` to an Items / Services or Discounts
      mapping, to post that item to a different income account.
-   - `{"qbdSalesTaxItem": "Item name"}` to a Tax Codes mapping, to use a
-     region-specific sales tax item or group.
+   - `{"qbdSalesTaxItem": "Item name"}` to a Tax Codes mapping, if the same
+     mapping also serves QuickBooks CSV and its tax code field must hold the
+     QuickBooks Online code. The metadata wins for Desktop.
 
 Each invoice becomes one QuickBooks invoice. Its lines come from the mapped
 items, and it carries one sales tax line for the tax AlgaPSA calculated.

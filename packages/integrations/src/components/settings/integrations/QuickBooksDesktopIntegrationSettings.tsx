@@ -141,7 +141,7 @@ const QuickBooksDesktopIntegrationSettings: React.FC = () => {
     {
       key: 'defaultSalesTaxItem',
       label: t('integrations.qbd.settings.fields.defaultSalesTaxItem', { defaultValue: 'Default sales tax item' }),
-      help: t('integrations.qbd.settings.fields.defaultSalesTaxItemHelp', { defaultValue: 'Sales tax item or group for taxed invoices whose tax code mapping has no "qbdSalesTaxItem" metadata.' })
+      help: t('integrations.qbd.settings.fields.defaultSalesTaxItemHelp', { defaultValue: 'Sales tax item or group for taxed invoices whose tax region has no Tax Codes mapping.' })
     }
   ];
 
