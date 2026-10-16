@@ -17,6 +17,8 @@ export * from './inventoryEvents';
 export * from './stockLowSignal';
 export * from './dashboardQueries';
 export * from './tenantCurrency';
+export * from './vendors';
+export * from './vendorProducts';
 export * from './receive';
 export * from './adjust';
 export * from './counts';
