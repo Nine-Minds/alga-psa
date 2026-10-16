@@ -61,6 +61,12 @@ describe('Quote infrastructure', () => {
     context = await resetContext();
     mockedTenantConnection.db = context.db;
     mockedTenantConnection.tenant = context.tenantId;
+    // The dev seeds ship grouped-layout quote fixtures (Q-0001 / Q-0002, see
+    // server/seeds/dev/90_quotes.cjs) into the very tenant this file reuses,
+    // and the listByTenant cases below assert tenant-wide counts and ordering.
+    // Drop them inside the test transaction — quote_items and quote_activities
+    // cascade — so each case sees only the rows it created.
+    await context.db('quotes').where({ tenant: context.tenantId }).del();
   }, 30000);
 
   afterEach(async () => {
