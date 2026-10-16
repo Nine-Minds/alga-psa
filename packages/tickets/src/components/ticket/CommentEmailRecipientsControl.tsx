@@ -10,8 +10,7 @@ import {
 } from '@alga-psa/ui/components/EmailRecipientsInput';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { MAX_COMMENT_EMAIL_RECIPIENTS } from '@shared/lib/tickets/commentEmailRecipientsCore';
-import { getContactsByClient } from '../../actions/clientLookupActions';
-import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
+import { useTicketDataSource } from './TicketDataSourceContext';
 
 export const COMMENT_EMAIL_RECIPIENTS_TOGGLE_ID = 'ticket-comment-cc-bcc-toggle';
 export const COMMENT_EMAIL_RECIPIENTS_CC_ID = 'ticket-comment-cc-input';
@@ -72,6 +71,7 @@ export const commentEmailRecipientsPayload = (
  * so typing doesn't hit the server on every keystroke.
  */
 export function useCommentEmailRecipientSuggestions(clientId?: string | null) {
+  const { getContactsByClient, getAllUsers } = useTicketDataSource().people;
   const contactsRef = useRef<EmailRecipientSuggestion[] | null>(null);
   const usersRef = useRef<EmailRecipientSuggestion[] | null>(null);
 
@@ -119,7 +119,7 @@ export function useCommentEmailRecipientSuggestions(clientId?: string | null) {
 
     // Client contacts rank ahead of internal users.
     return [...contactsRef.current.filter(matches), ...usersRef.current.filter(matches)];
-  }, [clientId]);
+  }, [clientId, getContactsByClient, getAllUsers]);
 }
 
 export interface CommentEmailRecipientsControlProps {

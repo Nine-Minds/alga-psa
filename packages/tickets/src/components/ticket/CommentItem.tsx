@@ -12,10 +12,11 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClampedContent } from '@alga-psa/ui/components/ClampedContent';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
-import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
 import { ReactionDisplay } from '@alga-psa/ui/components/ReactionDisplay';
 import type { IAggregatedReaction } from '@alga-psa/types';
 import { getCommentResponseSource } from '../../lib/responseSource';
@@ -31,7 +32,6 @@ import { extractTicketRichTextHtml } from '../../lib/ticketRichTextHtml';
 import { TicketConversationAttachments } from './TicketConversationAttachments';
 import { CommentMetadataDebugModal } from './CommentMetadataDebugModal';
 import { isNonEmptyCommentMetadata } from './commentMetadataDebug';
-import { cancelScheduledComment, rescheduleScheduledComment } from '../../actions/comment-actions/commentActions';
 import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
@@ -183,6 +183,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
 }) => {
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
+  const dataSource = useTicketDataSource();
+  const { cancelScheduledComment, rescheduleScheduledComment } = dataSource.comments;
+  const { searchUsersForMentions } = dataSource.viewer;
+  const { audiences, editor: editorRestrictions, formatAuthorLabel } = dataSource.conversation;
+  const commentAudience = audiences?.getCommentAudience(conversation) ?? null;
   // toLocaleString() follows the browser; comment timestamps belong to the app locale.
   const { formatDate } = useFormatters();
   const [metadataDebugOpen, setMetadataDebugOpen] = useState(false);
@@ -229,7 +234,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const isSystemAuthor = resolvedAuthor.source === 'system';
 
   // LEVERAGE: pattern comment-author-label — same author-label rules as resolveLatestActivityActor (lib/latestActivityActor.ts)
-  const getAuthorName = () => {
+  const getNativeAuthorName = () => {
     if (isSystemAuthor) {
       return isBundleMirror ? t('conversation.bundledUpdate') : t('conversation.systemAuthor', 'System');
     }
@@ -240,6 +245,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
       return inboundSenderIdentity.fromName || inboundSenderIdentity.fromAddress;
     }
     return resolvedAuthor.displayName;
+  };
+  const getAuthorName = () => {
+    const nativeName = getNativeAuthorName();
+    return formatAuthorLabel ? formatAuthorLabel({ comment: conversation, authorName: nativeName }) : nativeName;
   };
 
   // An unmatched inbound email still names its sender, so the avatar shows those
@@ -350,13 +359,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
       return;
     }
     setIsScheduleMutating(true);
-    try { await rescheduleScheduledComment(commentId, date.toISOString(), timeZone); window.location.reload(); } finally { setIsScheduleMutating(false); }
+    try { await rescheduleScheduledComment(commentId, date.toISOString(), timeZone); runTicketRefresh(dataSource, 'reload'); } finally { setIsScheduleMutating(false); }
   };
   const handleCancelSchedule = async () => {
     if (!canEdit) return;
     if (!window.confirm(t('conversation.cancelScheduledCommentConfirm', 'Cancel this scheduled comment?'))) return;
     setIsScheduleMutating(true);
-    try { await cancelScheduledComment(commentId); window.location.reload(); } finally { setIsScheduleMutating(false); }
+    try { await cancelScheduledComment(commentId); runTicketRefresh(dataSource, 'reload'); } finally { setIsScheduleMutating(false); }
   };
 
   const editorContent = useMemo(() => {
@@ -390,12 +399,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
           </div>
         </div>
         <TextEditor
-            allowFileAttachments
+            allowFileAttachments={!editorRestrictions?.disallowFiles}
           {...withDataAutomationId({ id: `${commentId}-text-editor` })}
           roomName={`ticket-${ticketId}-comment-${currentComment.comment_id}`}
           initialContent={editedContent}
           onContentChange={handleContentChange}
-          searchMentions={searchUsersForMentions}
+          searchMentions={editorRestrictions?.disallowMentions ? undefined : searchUsersForMentions}
           uploadFile={uploadFile}
         />
 
@@ -566,6 +575,26 @@ const CommentItem: React.FC<CommentItemProps> = ({
                         : t('conversation.bundledUpdate')}
                     </span>
                   )
+                )}
+                {commentAudience && (
+                  <span
+                    {...withDataAutomationId({ id: `${commentId}-audience-badge` })}
+                    className="inline-flex shrink-0 items-center rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))]"
+                  >
+                    {commentAudience.label}
+                  </span>
+                )}
+                {audiences?.changeCommentAudience && audiences.canChangeCommentAudience?.(conversation) && (
+                  <CustomSelect
+                    id={`${commentId}-audience-select`}
+                    value={commentAudience?.id ?? ''}
+                    options={audiences.options.map((option) => ({ value: option.id, label: option.label }))}
+                    onValueChange={(value: string) => {
+                      void audiences.changeCommentAudience?.(conversation, value)
+                        .then(() => runTicketRefresh(dataSource, 'reload'));
+                    }}
+                    className="!w-auto"
+                  />
                 )}
                 {conversation.is_internal && (
                   <Tooltip content={t('conversation.internalCommentTooltip')}>

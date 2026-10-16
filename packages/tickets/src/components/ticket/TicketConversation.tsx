@@ -48,7 +48,7 @@ import { useDialogSubmitShortcut, usePageCreateShortcut } from '@alga-psa/ui/key
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { getContactAvatarUrlAction, getUserContactId, searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { useTicketDataSource } from './TicketDataSourceContext';
 import { hasCommentCollaborationAttribution, type CommentContactAuthor, type CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
@@ -61,7 +61,6 @@ import {
   setStoredTicketConversationNewestFirst,
 } from './ticketConversationOrderPreference';
 import { buildTicketThreadTabState } from './ticketConversationThreadTabs';
-import { toggleCommentReaction, getCommentsReactionsBatch } from '../../actions/comment-actions/commentReactionActions';
 import type { IAggregatedReaction } from '@alga-psa/types';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
@@ -94,12 +93,14 @@ interface TicketConversationProps {
     options?: TicketNotificationSuppressionValue,
     schedule?: { publishAt: string; timeZone: string } | null,
     emailRecipients?: CommentEmailRecipientsPayload,
+    audienceId?: string,
   ) => Promise<boolean>;
   onAddReplyComment?: (
     content: PartialBlock[],
     parentCommentId: string,
     isInternal: boolean,
     emailRecipients?: CommentEmailRecipientsPayload,
+    audienceId?: string,
   ) => Promise<boolean>;
   onTabChange: (tab: string) => void;
   onEdit: (conversation: IComment) => void;
@@ -182,6 +183,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   allowEmailRecipients = false,
 }) => {
   const { t } = useTranslation('features/tickets');
+  const dataSource = useTicketDataSource();
+  const { toggleCommentReaction, getCommentsReactionsBatch } = dataSource.comments;
+  const { getContactAvatarUrlAction } = dataSource.avatars;
+  const { getUserContactId, searchUsersForMentions: nativeSearchUsersForMentions } = dataSource.viewer;
+  const { audiences, editor: editorRestrictions } = dataSource.conversation;
+  const searchUsersForMentions = editorRestrictions?.disallowMentions ? undefined : nativeSearchUsersForMentions;
   const { t: tCore } = useTranslation('common');
   const { deleteDocument } = useDocumentsCrossFeature();
   // Ensure we have a stable id for interactive element ids
@@ -196,7 +203,15 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   // opens where the reader clicked and never moves mid-draft.
   const [editorPlacement, setEditorPlacement] = useState<'top' | 'bottom'>('top');
   const [reverseOrder, setReverseOrder] = useState(defaultNewestFirst);
-  const [isInternalToggle, setIsInternalToggle] = useState(false);
+  const [internalToggleState, setInternalToggleState] = useState(false);
+  const [audienceId, setAudienceId] = useState<string | undefined>(audiences?.defaultId);
+  const selectedAudience = audiences?.options.find((option) => option.id === audienceId);
+  // With audiences the composer's audience control replaces the Internal
+  // toggle; the selected option's `internal` flag drives the legacy boolean.
+  const isInternalToggle = audiences ? Boolean(selectedAudience?.internal) : internalToggleState;
+  const setIsInternalToggle = useCallback((value: boolean) => {
+    if (!audiences) setInternalToggleState(value);
+  }, [audiences]);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
   // One-off Cc/Bcc for the comment being composed. Separate drafts for the main
   // composer and the reply composer so one never leaks into the other.
@@ -323,6 +338,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     setEditorPlacement(placement);
     setShowEditor(true);
   };
+  // A reply keeps its parent's audience; only audience-aware sources get one.
+  const replyAudienceArgs = (parentCommentId: string): [string | undefined] | [] => {
+    if (!audiences) return [];
+    const parent = conversations.find((comment) => comment.comment_id === parentCommentId);
+    return [parent ? audiences.getCommentAudience(parent)?.id : undefined];
+  };
   const handleSubmitComment = async () => {
     if (composeUploadSession.isUploading || isSubmittingFromParent || submitInFlightRef.current) return;
     submitInFlightRef.current = true;
@@ -355,10 +376,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             : null,
           // Never sent with an internal note, even though the draft is kept.
           showEmailRecipients && !isInternalToggle ? emailRecipients.payload : undefined,
+          // Audience-aware sources only: native calls keep their exact argument list.
+          ...(audiences ? ([audienceId] as [string | undefined]) : ([] as [])),
         );
         if (success) {
           emailRecipients.reset();
           setIsInternalToggle(false);
+          setAudienceId(audiences?.defaultId);
           setIsResolutionToggle(false);
           setResolutionCloseStatusId(NO_STATUS_CHANGE);
           setNotificationSuppression(defaultNotificationSuppression());
@@ -501,6 +525,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     [conversations]
   );
   useEffect(() => {
+    if (!dataSource.capabilities.reactions) return;
     const commentIds = commentIdsKey.split(',').filter(Boolean);
     if (commentIds.length === 0) return;
     getCommentsReactionsBatch(commentIds)
@@ -577,8 +602,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           onReply={() => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
           hideInternalTab={hideInternalTab}
           uploadFile={existingCommentUploadSession.uploadFile}
-          reactions={reactionsMap[mergedConversation.comment_id || ''] || []}
-          onToggleReaction={handleToggleReaction}
+          reactions={dataSource.capabilities.reactions ? reactionsMap[mergedConversation.comment_id || ''] || [] : undefined}
+          onToggleReaction={dataSource.capabilities.reactions ? handleToggleReaction : undefined}
           userNames={reactionUserNames}
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
           externalLinks={externalLinksByCommentId[mergedConversation.comment_id || ''] ?? []}
@@ -621,6 +646,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                 parentCommentId,
                 isInternal,
                 isInternal ? undefined : replyEmailRecipients.payload,
+                ...replyAudienceArgs(parentCommentId),
               );
               if (success) {
                 replyEmailRecipients.reset();
@@ -816,7 +842,21 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       <div className='flex-grow min-w-0 max-w-full'>
         {/* Toggle switches above the editor */}
         <div className="flex flex-wrap items-center gap-4 mb-2 ml-2">
-          {!hideInternalTab && (
+          {!hideInternalTab && audiences && (
+            <div className="flex items-center space-x-2">
+              <Label htmlFor={`${compId}-audience-select`}>
+                {audiences.controlLabel ?? t('conversation.audience', 'Audience')}
+              </Label>
+              <CustomSelect
+                id={`${compId}-audience-select`}
+                value={audienceId ?? audiences.defaultId}
+                options={audiences.options.map((option) => ({ value: option.id, label: option.label }))}
+                onValueChange={setAudienceId}
+                className="!w-auto"
+              />
+            </div>
+          )}
+          {!hideInternalTab && !audiences && (
             <div className="flex items-center space-x-2">
               <Switch
                 id={`${compId}-internal-toggle`}
@@ -918,7 +958,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         )}
         <Suspense fallback={<RichTextEditorSkeleton height="200px" title={t('conversation.commentEditor', 'Comment Editor')} />}>
           <TextEditor
-            allowFileAttachments
+            allowFileAttachments={!editorRestrictions?.disallowFiles}
             {...withDataAutomationId({ id: `${compId}-editor` })}
             key={editorKey}
             roomName={`ticket-${ticket.ticket_id}`}
@@ -1077,6 +1117,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             parentCommentId,
             isInternal,
             isInternal ? undefined : replyEmailRecipients.payload,
+            ...replyAudienceArgs(parentCommentId),
           );
           if (success) {
             replyEmailRecipients.reset();

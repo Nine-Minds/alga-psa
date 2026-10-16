@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IDocument } from '@alga-psa/types';
@@ -43,6 +44,7 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
   allowBlockDocuments = true,
 }) => {
   const router = useRouter();
+  const dataSource = useTicketDataSource();
   const { getDocumentByTicketId, renderDocuments } = useDocumentsCrossFeature();
   const isBento = useContentCardVariant() === 'bento';
   const { t } = useTranslation('features/documents');
@@ -88,9 +90,9 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
     if (onDocumentCreated) {
       await onDocumentCreated();
     } else {
-      router.refresh();
+      runTicketRefresh(dataSource, 'soft', router);
     }
-  }, [onDocumentCreated, router]);
+  }, [onDocumentCreated, router, dataSource]);
 
   // Create a ref for the upload form container
   const uploadFormRef = useRef<HTMLDivElement>(null);

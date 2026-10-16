@@ -13,15 +13,14 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
-import { getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
-import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { useTicketDataSource } from './TicketDataSourceContext';
 import { buildTicketAssignmentKey } from '../../lib/ticketAssignmentKey';
 import { CategoryPicker } from '../CategoryPicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { TagManager } from '@alga-psa/tags/components';
 import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
-import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '../../actions/ticketCategoryActions';
+import type { BoardCategoryData } from '../../actions/ticketCategoryActions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { Pencil, Check, X, HelpCircle, Save, PauseCircle, Users, Mail, History, CheckCircle } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -42,7 +41,6 @@ import { useSession } from 'next-auth/react';
 import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
-import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TicketLiveConflictState } from './ticketLiveFields';
@@ -176,6 +174,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 }) => {
   const { data: session } = useSession();
   const { t } = useTranslation('features/tickets');
+  const dataSource = useTicketDataSource();
+  const { getUserAvatarUrlsBatchAction, getTeamAvatarUrlsBatchAction } = dataSource.avatars;
+  const { searchUsersForMentions } = dataSource.viewer;
+  const { getTicketCategories, getTicketCategoriesByBoard, getTicketStatuses } = dataSource.options;
   const { deleteDocument } = useDocumentsCrossFeature();
   // Use initialCategories from server to avoid timing issues on first render
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
@@ -2057,7 +2059,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 {t('info.resolveAndClose', 'Resolve and close')}
               </Button>
             ) : null}
-            {ticket.ticket_id && onOpenEmailNotificationLogs ? (
+            {ticket.ticket_id && onOpenEmailNotificationLogs && dataSource.capabilities.emailLogs ? (
               <Tooltip content={t('info.openEmailNotificationLogs', 'View email notification logs')}>
                 <Button
                   id={`${id}-open-email-notification-logs`}

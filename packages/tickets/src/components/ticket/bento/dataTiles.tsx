@@ -16,15 +16,12 @@ import {
   useTileData,
 } from '@alga-psa/ui/components/bento';
 import {
-  getTicketScheduleEntries,
-  getTicketInteractions,
-  getTicketBillingRollup,
-  getTicketAppointmentRequests,
   type TicketScheduleEntrySummary,
   type TicketInteractionSummary,
   type TicketBillingRollup,
   type TicketAppointmentRequestSummary,
 } from '../../../actions/ticketBentoActions';
+import { useTicketDataSource } from '../TicketDataSourceContext';
 
 type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
 
@@ -70,6 +67,7 @@ export function ScheduledWorkTile({
   onOpenEntry?: (entryId: string) => void;
 }) {
   const { t } = useTranslation('features/tickets');
+  const { getTicketScheduleEntries } = useTicketDataSource().tiles;
   const { data, error, loading } = useTileData(
     () => getTicketScheduleEntries(ticketId),
     [ticketId, refreshKey],
@@ -256,6 +254,7 @@ export function AppointmentRequestsTile({
   refreshKey?: number;
 }) {
   const { t } = useTranslation('features/tickets');
+  const { getTicketAppointmentRequests } = useTicketDataSource().tiles;
   const { data, error, loading } = useTileData(
     () => getTicketAppointmentRequests(ticketId),
     [ticketId, refreshKey],
@@ -315,6 +314,7 @@ export function CallsEmailsTile({
 }) {
   const { t } = useTranslation('features/tickets');
   const { teamsPhoneConnected } = useCallLinkContext();
+  const { getTicketInteractions } = useTicketDataSource().tiles;
   const { data, error, loading } = useTileData(
     () => getTicketInteractions(ticketId, { limit: 5 }),
     [ticketId, refreshKey],
@@ -451,6 +451,7 @@ export function BillingTile({
   initialData?: Promise<TicketBillingRollup | null>;
 }) {
   const { t } = useTranslation('features/tickets');
+  const { getTicketBillingRollup } = useTicketDataSource().tiles;
   const { data, error, loading } = useTileData(
     () => getTicketBillingRollup(ticketId),
     [ticketId, refreshKey],

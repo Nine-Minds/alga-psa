@@ -32,15 +32,11 @@ import {
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ExternalLinkRelationship, ExternalSystemActor, ExternalSystemDefinition } from '@alga-psa/types';
 import { renderExternalLinkUrl } from '../../lib/externalSystems';
-import {
-  addExternalLink,
-  getTicketExternalLinks,
-  listExternalSystems,
-  removeExternalLink,
-  updateExternalLink,
-  type ExternalSystemOption,
-  type ITicketExternalLinkView,
+import type {
+  ExternalSystemOption,
+  ITicketExternalLinkView,
 } from '../../actions/externalLinks/externalLinkActions';
+import { useTicketDataSource } from './TicketDataSourceContext';
 
 /**
  * Ticket detail section listing structured external-system references.
@@ -135,6 +131,13 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
   disabled = false,
 }) => {
   const { t } = useTranslation('features/tickets');
+  const {
+    addExternalLink,
+    getTicketExternalLinks,
+    listExternalSystems,
+    removeExternalLink,
+    updateExternalLink,
+  } = useTicketDataSource().externalLinks;
 
   const [links, setLinks] = useState<ITicketExternalLinkView[]>(initialLinks ?? []);
   const [isLoading, setIsLoading] = useState(false);

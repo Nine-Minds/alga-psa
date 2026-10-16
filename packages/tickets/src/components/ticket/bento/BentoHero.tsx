@@ -22,15 +22,14 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
-import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { useTicketDataSource } from '../TicketDataSourceContext';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { computeSlaClocks, formatSlaLabel, type TicketSlaFields } from './slaClocks';
 import { useTeamAvatarUrl } from './useTeamAvatarUrl';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../../lib/ticketRichText';
 import { useTicketRichTextUploadSession } from '../useTicketRichTextUploadSession';
-import { getTicketStatuses } from '@alga-psa/reference-data/actions';
-import { getTicketCategoriesByBoard, type BoardCategoryData } from '../../../actions/ticketCategoryActions';
+import type { BoardCategoryData } from '../../../actions/ticketCategoryActions';
 import { useRegisterUnsavedChanges, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
 import { buildTicketAssignmentKey } from '../../../lib/ticketAssignmentKey';
@@ -212,6 +211,9 @@ export function BentoHero({
   resolveTicketAttachmentViewUrl,
 }: BentoHeroProps) {
   const { t } = useTranslation('features/tickets');
+  const dataSource = useTicketDataSource();
+  const { getTicketStatuses, getTicketCategoriesByBoard } = dataSource.options;
+  const { searchUsersForMentions } = dataSource.viewer;
   const [additionalAgentsOpen, setAdditionalAgentsOpen] = useState(false);
   const activityCrossFeature = useOptionalActivityCrossFeature();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
