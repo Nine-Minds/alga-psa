@@ -496,14 +496,18 @@ export class FinancialService extends BaseService<ITransaction> {
     }
 
     // transactions has created_at but no updated_at, so created_* maps and
-    // updated_* is rejected by applyRangeFilters.
+    // updated_* is declared unsupported (null) and rejected.
     this.applyRangeFilters(dataQuery, query, {
       created_from: 't.created_at',
       created_to: 't.created_at',
+      updated_from: null,
+      updated_to: null,
     });
     this.applyRangeFilters(countQuery, query, {
       created_from: 'created_at',
       created_to: 'created_at',
+      updated_from: null,
+      updated_to: null,
     });
 
     // Sorting and pagination

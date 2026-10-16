@@ -141,15 +141,20 @@ export abstract class BaseService<T = any> {
   }
 
   /**
-   * Map of range filter keys (`<field>_from` / `<field>_to`) to the timestamp
-   * column they constrain. Subclasses that expose additional ranges must extend
-   * this map (e.g. override, spread `super.rangeFilterColumns()`, and add keys).
+   * Declared range-filter keys for this resource. Meaning is per key:
+   * - a string value is the column to constrain; whether the bound is `>=` or
+   *   `<=` is chosen from the key's suffix (`_from` / `_to`);
+   * - `null` means a range key this resource declares but does not support, so
+   *   `applyRangeFilters` throws `UnsupportedRangeFilterError` (400);
+   * - a key absent from the map is not a range filter at all. `applyRangeFilters`
+   *   ignores it and `applyFilters` treats it like any other filter.
    *
-   * The map is explicit on purpose: a `_from`/`_to` key that is not listed is
-   * rejected loudly rather than guessed at, so an unsupported key can neither be
-   * turned into a reference to a column that does not exist nor silently dropped.
+   * Key presence — not the `_from`/`_to` suffix — decides what is a range filter,
+   * so a real column filter such as `assigned_to` is never mistaken for one.
+   * Subclasses that expose additional ranges must extend this map (e.g.
+   * override, spread `super.rangeFilterColumns()`, and add keys).
    */
-  protected rangeFilterColumns(): Record<string, string> {
+  protected rangeFilterColumns(): Record<string, string | null> {
     return {
       created_from: this.auditFields.createdAt,
       created_to: this.auditFields.createdAt,
@@ -159,10 +164,10 @@ export abstract class BaseService<T = any> {
   }
 
   /**
-   * Apply only the `<field>_from` / `<field>_to` range filters. Each key must be
-   * present in `rangeFilterColumns()`; an unmapped range key throws
-   * `UnsupportedRangeFilterError` so a dropped filter never silently returns
-   * unfiltered rows.
+   * Apply the declared range filters. Only keys present in `rangeFilterColumns()`
+   * are range filters: a mapped key applies its bound, a `null` mapping throws
+   * `UnsupportedRangeFilterError`, and any other key is left for `applyFilters`
+   * or the caller's own filter code.
    *
    * Subclasses with hand-written filter methods can call this to get the common
    * `created_from`/`updated_from` handling without adopting the rest of
@@ -171,20 +176,19 @@ export abstract class BaseService<T = any> {
   protected applyRangeFilters(
     query: Knex.QueryBuilder,
     filters: Record<string, any>,
-    columns: Record<string, string> = this.rangeFilterColumns()
+    columns: Record<string, string | null> = this.rangeFilterColumns()
   ): Knex.QueryBuilder {
-    const rangeColumns = columns;
-
     Object.entries(filters ?? {}).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
-      if (!key.endsWith('_from') && !key.endsWith('_to')) return;
+      if (!Object.prototype.hasOwnProperty.call(columns, key)) return;
 
-      const rangeColumn = rangeColumns[key];
-      if (!rangeColumn) {
+      const rangeColumn = columns[key];
+      if (rangeColumn === null) {
         throw new UnsupportedRangeFilterError(key);
       }
 
-      query.where(rangeColumn, key.endsWith('_from') ? '>=' : '<=', value);
+      // Direction comes from the suffix, but only for keys declared as ranges.
+      query.where(rangeColumn, key.endsWith('_to') ? '<=' : '>=', value);
     });
 
     return query;
@@ -194,11 +198,13 @@ export abstract class BaseService<T = any> {
    * Apply filters to query
    */
   protected applyFilters(query: Knex.QueryBuilder, filters: Record<string, any>): Knex.QueryBuilder {
-    query = this.applyRangeFilters(query, filters);
+    const rangeColumns = this.rangeFilterColumns();
+    query = this.applyRangeFilters(query, filters, rangeColumns);
 
     Object.entries(filters ?? {}).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
-      if (key.endsWith('_from') || key.endsWith('_to')) return;
+      // Declared range keys were applied (or rejected) above.
+      if (Object.prototype.hasOwnProperty.call(rangeColumns, key)) return;
 
       if (key === 'search' && this.searchableFields.length > 0) {
         query.where(subQuery => {

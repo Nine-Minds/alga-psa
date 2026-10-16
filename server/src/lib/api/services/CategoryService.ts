@@ -295,10 +295,12 @@ export class CategoryService extends BaseService {
       let query = this.buildTenantScopedQuery(trx, context);
 
       // The `categories` table has created_at but no updated_at, so created_*
-      // maps and updated_* is rejected by applyRangeFilters.
+      // maps and updated_* is declared unsupported (null) and rejected.
       this.applyRangeFilters(query, filters as Record<string, any>, {
         created_from: 'categories.created_at',
         created_to: 'categories.created_at',
+        updated_from: null,
+        updated_to: null,
       });
 
       // Apply board filter if provided

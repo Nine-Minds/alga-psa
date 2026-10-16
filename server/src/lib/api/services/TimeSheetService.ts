@@ -129,8 +129,14 @@ export class TimeSheetService extends BaseService<any> {
    * supported ranges map to the sheet's submitted/approved timestamps and, via
    * the time_periods join, the period window.
    */
-  protected rangeFilterColumns(): Record<string, string> {
+  protected rangeFilterColumns(): Record<string, string | null> {
     return {
+      // time_sheets has no created_at/updated_at: declare the common keys as
+      // unsupported so they are rejected instead of silently ignored.
+      created_from: null,
+      created_to: null,
+      updated_from: null,
+      updated_to: null,
       submitted_from: `${this.tableName}.submitted_at`,
       submitted_to: `${this.tableName}.submitted_at`,
       approved_from: `${this.tableName}.approved_at`,

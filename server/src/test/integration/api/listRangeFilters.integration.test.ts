@@ -424,14 +424,90 @@ describe('list range filters across BaseService-backed resources (real schema)',
     await expect(timeSheets.list({ page: 1, limit: 10 }, context, { created_from: '2026-01-01' } as any))
       .rejects.toBeInstanceOf(UnsupportedRangeFilterError);
 
-    // The base service must reject any unmapped *_from/*_to key loudly.
+    // A key explicitly declared unsupported (null) must be rejected loudly.
     class BareService extends BaseService<any> {
       constructor() {
         super({ tableName: 'clients', primaryKey: 'client_id' });
+      }
+      protected rangeFilterColumns(): Record<string, string | null> {
+        return { ...super.rangeFilterColumns(), purchase_date_from: null };
       }
     }
     const bare = service(BareService, tenantId);
     await expect(bare.list({ page: 1, limit: 10, filters: { purchase_date_from: '2026-01-01' } }, context))
       .rejects.toBeInstanceOf(UnsupportedRangeFilterError);
+  });
+
+  // Regression: `assigned_to` ends in `_to` but is a plain column filter, not a
+  // range filter. It must filter, not be rejected as an unknown range key.
+  it('applies assigned_to on projects instead of rejecting it as a range key', async () => {
+    const tenantId = await createTenant();
+    const clientId = await createClient(tenantId);
+    const userId = await createUser(tenantId);
+    const statusId = uuidv4();
+    await tenantTable(tenantId, 'statuses').insert({
+      tenant: tenantId,
+      status_id: statusId,
+      name: 'Open',
+      status_type: 'project',
+      order_number: 1,
+      item_type: 'project',
+    });
+
+    const insertProject = (projectId: string, assignedTo: string | null) =>
+      tenantTable(tenantId, 'projects').insert({
+        tenant: tenantId,
+        project_id: projectId,
+        project_name: `Project ${projectId.slice(0, 8)}`,
+        status: statusId,
+        wbs_code: projectId.slice(0, 8),
+        client_id: clientId,
+        project_number: `P-${projectId.slice(0, 8)}`,
+        assigned_to: assignedTo,
+      });
+
+    const assignedProjectId = uuidv4();
+    const unassignedProjectId = uuidv4();
+    await insertProject(assignedProjectId, userId);
+    await insertProject(unassignedProjectId, null);
+
+    const result = await service(ProjectService, tenantId).list(
+      { page: 1, limit: 100 },
+      contextFor(tenantId),
+      { assigned_to: userId } as any,
+    );
+    const returned = ids(result.data, 'project_id');
+    expect(returned).toContain(assignedProjectId);
+    expect(returned).not.toContain(unassignedProjectId);
+  });
+
+  // The only asset `_to` filters are mapped date ranges; confirm one still works.
+  it('applies asset purchase_date_to instead of rejecting it', async () => {
+    const tenantId = await createTenant();
+    const clientId = await createClient(tenantId);
+    const assetId = uuidv4();
+    await tenantTable(tenantId, 'assets').insert({
+      tenant: tenantId,
+      asset_id: assetId,
+      asset_tag: `A-${assetId.slice(0, 8)}`,
+      name: `Asset ${assetId.slice(0, 8)}`,
+      status: 'active',
+      client_id: clientId,
+      purchase_date: '2026-01-15',
+    });
+
+    const included = await service(AssetService, tenantId).list(
+      { page: 1, limit: 100 },
+      contextFor(tenantId),
+      { purchase_date_to: '2026-02-01' } as any,
+    );
+    expect(ids(included.data, 'asset_id')).toContain(assetId);
+
+    const excluded = await service(AssetService, tenantId).list(
+      { page: 1, limit: 100 },
+      contextFor(tenantId),
+      { purchase_date_to: '2026-01-01' } as any,
+    );
+    expect(ids(excluded.data, 'asset_id')).not.toContain(assetId);
   });
 });

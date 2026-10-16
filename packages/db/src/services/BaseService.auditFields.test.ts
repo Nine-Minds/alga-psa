@@ -92,6 +92,15 @@ class FilterService extends BaseService<Record<string, unknown>> {
     this.applyFilters(builder as unknown as Knex.QueryBuilder, filters);
     return builder.wheres;
   }
+
+  runRangeFilters(
+    filters: Record<string, unknown>,
+    columns: Record<string, string | null>,
+  ): RecordedWhere[] {
+    const builder = new RecordingQueryBuilder();
+    this.applyRangeFilters(builder as unknown as Knex.QueryBuilder, filters, columns);
+    return builder.wheres;
+  }
 }
 
 describe('BaseService audit field filtering', () => {
@@ -178,14 +187,28 @@ describe('BaseService audit field filtering', () => {
     ]);
   });
 
-  it('throws for an unmapped _from/_to key instead of silently dropping the filter', () => {
+  it('rejects a declared-but-unsupported range key (null mapping)', () => {
     const service = new FilterService();
 
-    // A dropped filter returns unfiltered rows; fail loudly instead.
-    expect(() => service.runFilters({ purchase_date_from: '2026-01-01' }))
+    // A declared key mapped to null is a range key this resource cannot serve;
+    // a dropped filter would return unfiltered rows, so fail loudly.
+    expect(() => service.runRangeFilters({ updated_from: '2026-01-01' }, { updated_from: null }))
       .toThrow(UnsupportedRangeFilterError);
-    expect(() => service.runFilters({ purchase_date_from: '2026-01-01' }))
-      .toThrow(/Unsupported range filter "purchase_date_from"/);
+    expect(() => service.runRangeFilters({ updated_from: '2026-01-01' }, { updated_from: null }))
+      .toThrow(/Unsupported range filter "updated_from"/);
+  });
+
+  it('treats a key absent from the map as a normal filter, not a range key', () => {
+    const service = new FilterService();
+
+    // `assigned_to` ends in `_to` but is not declared as a range key, so it must
+    // be applied as a plain column filter rather than rejected.
+    expect(service.runFilters({ assigned_to: 'user-1' })).toEqual([
+      { column: 'assigned_to', value: 'user-1' },
+    ]);
+    expect(service.runRangeFilters({ assigned_to: 'user-1' }, {
+      created_from: 'created_at',
+    })).toEqual([]);
   });
 
   it('applies non-range keys and mapped ranges together', () => {
