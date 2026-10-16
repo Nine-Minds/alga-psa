@@ -1110,7 +1110,8 @@
       "unknown": "Desconocido",
       "unifiedMemory": "{{size}}GB Memoria unificada",
       "memoryUsed": "({{size}}GB usado)",
-      "freeStorage": "{{size}} GB gratis"
+      "freeStorage": "{{size}} GB gratis",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "No hay datos de hardware disponibles",
     "emptyStorage": "No se detectaron unidades de almacenamiento"

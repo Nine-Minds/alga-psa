@@ -1110,7 +1110,8 @@
       "unknown": "Inconnu",
       "unifiedMemory": "{{size}}Go de mémoire unifiée",
       "memoryUsed": "({{size}}Go utilisé)",
-      "freeStorage": "{{size}} Go gratuits"
+      "freeStorage": "{{size}} Go gratuits",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "Aucune donnée matérielle disponible",
     "emptyStorage": "Aucun lecteur de stockage détecté"
