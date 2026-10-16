@@ -168,7 +168,7 @@ describe('AccountingExportsTab unmapped QuickBooks prompt', () => {
   });
 
   it('keeps the prompt open and shows the error when saving fails', async () => {
-    mocks.saveMappings.mockResolvedValue({ success: false, code: 'QB_EXPORT_MAPPING_INVALID', message: 'Name already used' });
+    mocks.saveMappings.mockResolvedValue({ actionError: 'Name already used', messageKey: 'msp/billing:errors.accountingExport.quickbooksMapping.nameTakenByItem' });
     fireEvent.click(await renderTab());
     await screen.findByText('Unmapped QuickBooks items');
 

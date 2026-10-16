@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -89,12 +89,35 @@ export function QuickBooksUnmappedItemsDialog({
     );
   };
 
+  const footer = (
+    <div className="flex justify-end space-x-2">
+      <Button id="accounting-exports-unmapped-cancel" variant="ghost" onClick={onCancel} disabled={saving}>
+        {t('accountingExports.unmapped.actions.cancel', { defaultValue: 'Cancel' })}
+      </Button>
+      <Button id="accounting-exports-unmapped-mappings" variant="outline" asChild>
+        <Link href={mappingsHref}>
+          {t('accountingExports.unmapped.actions.goToMappings', { defaultValue: 'Go to QuickBooks mappings' })}
+        </Link>
+      </Button>
+      <Button
+        id="accounting-exports-unmapped-save"
+        type="button"
+        onClick={submit}
+        disabled={saving || !canManageMappings || entities.length === 0 || invalidKeys.size > 0}
+      >
+        {t('accountingExports.unmapped.actions.save', { defaultValue: 'Save mappings and export' })}
+      </Button>
+    </div>
+  );
+
   return (
     <Dialog
       isOpen={isOpen}
       onClose={onCancel}
       title={t('accountingExports.unmapped.title', { defaultValue: 'Unmapped QuickBooks items' })}
       id="accounting-exports-unmapped-dialog"
+      className="max-w-2xl"
+      footer={footer}
     >
       <DialogContent>
         <div className="space-y-4">
@@ -118,11 +141,13 @@ export function QuickBooksUnmappedItemsDialog({
             </Alert>
           ) : null}
 
-          <div className="max-h-80 space-y-3 overflow-y-auto">
+          <div className="space-y-3">
             {entities.map((entity) => {
               const key = rowKey(entity);
               const row = rows[key] ?? { mode: 'create', name: entity.proposedName };
-              const idBase = `accounting-exports-unmapped-${entity.algaEntityType}-${entity.algaEntityId}`;
+              const idBase = `accounting-exports-unmapped-${entity.algaEntityType}-${entity.algaEntityId}`
+                .toLowerCase()
+                .replace(/[^a-z0-9-]+/g, '-');
               return (
                 <div key={key} className="grid gap-2 rounded-md border p-3 md:grid-cols-[1fr_12rem_1fr]" id={idBase}>
                   <div className="min-w-0">
@@ -161,23 +186,6 @@ export function QuickBooksUnmappedItemsDialog({
           ) : null}
         </div>
       </DialogContent>
-      <DialogFooter>
-        <Button id="accounting-exports-unmapped-cancel" variant="ghost" onClick={onCancel} disabled={saving}>
-          {t('accountingExports.unmapped.actions.cancel', { defaultValue: 'Cancel' })}
-        </Button>
-        <Button id="accounting-exports-unmapped-mappings" variant="outline" asChild>
-          <Link href={mappingsHref}>
-            {t('accountingExports.unmapped.actions.goToMappings', { defaultValue: 'Go to QuickBooks mappings' })}
-          </Link>
-        </Button>
-        <Button
-          id="accounting-exports-unmapped-save"
-          onClick={submit}
-          disabled={saving || !canManageMappings || entities.length === 0 || invalidKeys.size > 0}
-        >
-          {t('accountingExports.unmapped.actions.save', { defaultValue: 'Save mappings and export' })}
-        </Button>
-      </DialogFooter>
     </Dialog>
   );
 }

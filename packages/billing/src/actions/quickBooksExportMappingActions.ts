@@ -3,7 +3,12 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError
+} from '@alga-psa/ui/lib/errorHandling';
 import { AUTOMATIC_DISCOUNT_MAPPING_ID, DISCOUNT_MAPPING_ENTITY_TYPE } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
 import { AccountingExportRepository } from '../repositories/accountingExportRepository';
@@ -15,14 +20,18 @@ import {
   findQuickBooksNameConflict,
   validateQuickBooksMappingDecisions,
   type QuickBooksMappingDecision,
+  type QuickBooksMappingProblem,
   type UnmappedQuickBooksEntity
 } from './quickBooksExportMappingRules';
 
-export interface QuickBooksExportMappingError {
-  success: false;
-  code: string;
-  message: string;
-}
+const toActionError = (problem: QuickBooksMappingProblem): ActionMessageError =>
+  actionError(problem.message, `msp/billing:${problem.key}`, problem.params);
+
+const unsupportedBatch = (): ActionMessageError =>
+  actionError(
+    'This batch is not a QuickBooks Desktop or QuickBooks CSV export.',
+    'msp/billing:errors.accountingExport.quickbooksMapping.unsupportedBatch'
+  );
 
 async function checkPermissions(user: Parameters<typeof hasPermission>[0]): Promise<ActionPermissionError | null> {
   if ((user as { user_type?: string }).user_type === 'client') {
@@ -47,14 +56,14 @@ export const getUnmappedQuickBooksEntities = withAuth(async (
   user,
   _ctx,
   batchId: string
-): Promise<UnmappedQuickBooksEntity[] | ActionPermissionError | QuickBooksExportMappingError> => {
+): Promise<UnmappedQuickBooksEntity[] | ActionPermissionError | ActionMessageError> => {
   const denied = await checkPermissions(user);
   if (denied) return denied;
 
   const repo = await AccountingExportRepository.create();
   const batch = await repo.getBatch(batchId);
   if (!batch || !QUICKBOOKS_FILE_ADAPTERS.includes(batch.adapter_type)) {
-    return { success: false, code: 'QB_EXPORT_MAPPING_UNSUPPORTED', message: 'This batch is not a QuickBooks Desktop or QuickBooks CSV export.' };
+    return unsupportedBatch();
   }
   const errors = await repo.listErrors(batchId);
   return collectUnmappedQuickBooksEntities(batch.adapter_type, errors);
@@ -71,20 +80,20 @@ export const saveQuickBooksExportMappings = withAuth(async (
   { tenant },
   batchId: string,
   decisions: QuickBooksMappingDecision[]
-): Promise<{ saved: number } | ActionPermissionError | QuickBooksExportMappingError> => {
+): Promise<{ saved: number } | ActionPermissionError | ActionMessageError> => {
   const denied = await checkPermissions(user);
   if (denied) return denied;
 
   const repo = await AccountingExportRepository.create();
   const batch = await repo.getBatch(batchId);
   if (!batch || !QUICKBOOKS_FILE_ADAPTERS.includes(batch.adapter_type)) {
-    return { success: false, code: 'QB_EXPORT_MAPPING_UNSUPPORTED', message: 'This batch is not a QuickBooks Desktop or QuickBooks CSV export.' };
+    return unsupportedBatch();
   }
 
   const pending = collectUnmappedQuickBooksEntities(batch.adapter_type, await repo.listErrors(batchId));
   const problem = validateQuickBooksMappingDecisions(batch.adapter_type, pending, decisions);
   if (problem) {
-    return { success: false, code: 'QB_EXPORT_MAPPING_INVALID', message: problem };
+    return toActionError(problem);
   }
 
   const isDesktop = batch.adapter_type === 'quickbooks_desktop';
@@ -109,7 +118,7 @@ export const saveQuickBooksExportMappings = withAuth(async (
     });
   const conflict = findQuickBooksNameConflict(pending, decisions, existing, storedEntityType);
   if (conflict) {
-    return { success: false, code: 'QB_EXPORT_MAPPING_NAME_TAKEN', message: conflict };
+    return toActionError(conflict);
   }
 
   try {
@@ -135,11 +144,10 @@ export const saveQuickBooksExportMappings = withAuth(async (
   } catch (error) {
     // A concurrent mapping edit can still take a name between the check and the insert.
     if ((error as { code?: string } | null)?.code === '23505') {
-      return {
-        success: false,
-        code: 'QB_EXPORT_MAPPING_NAME_TAKEN',
-        message: 'One of these QuickBooks names was just mapped to another entry. Refresh the list and choose a different name.'
-      };
+      return actionError(
+        'One of these QuickBooks names was just mapped to another entry. Refresh the list and choose a different name.',
+        'msp/billing:errors.accountingExport.quickbooksMapping.nameTakenConcurrently'
+      );
     }
     throw error;
   }

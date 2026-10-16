@@ -758,6 +758,22 @@
         "update": "Permission denied: Cannot modify accounting export batches",
         "execute": "Permission denied: Cannot execute accounting export batches",
         "createMappings": "Creating QuickBooks mappings from an export requires the export and manage-mappings capabilities"
+      },
+      "quickbooksMapping": {
+        "noDecisions": "Choose how to handle at least one unmapped item.",
+        "stale": "One of the selected items is no longer unmapped for this batch. Refresh and try again.",
+        "duplicateSubmission": "\"{{algaName}}\" was submitted twice.",
+        "invalidMode": "Choose create or existing for \"{{algaName}}\".",
+        "nameRequired": "Enter a QuickBooks name for \"{{algaName}}\".",
+        "nameInvalidCharacters": "The QuickBooks name for \"{{algaName}}\" cannot contain tabs, line breaks or double quotes.",
+        "nameTooLong": "The QuickBooks name for \"{{algaName}}\" is longer than {{maxLength}} characters.",
+        "duplicateNewName": "\"{{qbName}}\" is used for more than one new QuickBooks entry.",
+        "duplicateClientName": "\"{{qbName}}\" is chosen for more than one client. Each QuickBooks name can be mapped to only one.",
+        "duplicateItemName": "\"{{qbName}}\" is chosen for more than one item. Each QuickBooks name can be mapped to only one.",
+        "nameTakenByClient": "\"{{qbName}}\" is already mapped to another client, so it cannot also be used for \"{{algaName}}\". Choose a different QuickBooks name, or change the existing mapping in the QuickBooks mappings.",
+        "nameTakenByItem": "\"{{qbName}}\" is already mapped to another item, so it cannot also be used for \"{{algaName}}\". Choose a different QuickBooks name, or change the existing mapping in the QuickBooks mappings.",
+        "unsupportedBatch": "This batch is not a QuickBooks Desktop or QuickBooks CSV export.",
+        "nameTakenConcurrently": "One of these QuickBooks names was just mapped to another entry. Refresh the list and choose a different name."
       }
     },
     "vendorBill": {

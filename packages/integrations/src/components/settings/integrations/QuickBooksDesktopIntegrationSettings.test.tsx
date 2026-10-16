@@ -75,18 +75,18 @@ describe('QuickBooksDesktopIntegrationSettings new-item settings', () => {
     const { default: Settings } = await import('./QuickBooksDesktopIntegrationSettings');
     render(<Settings />);
 
-    expect(await screen.findByTestId('qbd-setting-newProductItemType')).toHaveValue('NONINVENTORY');
-    expect(document.getElementById('qbd-setting-inventoryAssetAccount')).toBeNull();
-    expect(document.getElementById('qbd-setting-cogsAccount')).toBeNull();
+    expect(await screen.findByTestId('qbd-setting-new-product-item-type')).toHaveValue('NONINVENTORY');
+    expect(document.getElementById('qbd-setting-inventory-asset-account')).toBeNull();
+    expect(document.getElementById('qbd-setting-cogs-account')).toBeNull();
   });
 
   it('shows the inventory accounts for Inventory Part and saves the choice', async () => {
     const { default: Settings } = await import('./QuickBooksDesktopIntegrationSettings');
     render(<Settings />);
 
-    fireEvent.change(await screen.findByTestId('qbd-setting-newProductItemType'), { target: { value: 'INVENTORY' } });
-    expect(document.getElementById('qbd-setting-inventoryAssetAccount')).toHaveValue('Inventory Asset');
-    expect(document.getElementById('qbd-setting-cogsAccount')).toHaveValue('Cost of Goods Sold');
+    fireEvent.change(await screen.findByTestId('qbd-setting-new-product-item-type'), { target: { value: 'INVENTORY' } });
+    expect(document.getElementById('qbd-setting-inventory-asset-account')).toHaveValue('Inventory Asset');
+    expect(document.getElementById('qbd-setting-cogs-account')).toHaveValue('Cost of Goods Sold');
     expect(screen.getByText(/on-hand quantities will go negative/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));

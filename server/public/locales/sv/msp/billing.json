@@ -758,6 +758,22 @@
         "update": "Åtkomst nekad: du kan inte ändra batcher för bokföringsexport",
         "execute": "Åtkomst nekad: du kan inte köra batcher för bokföringsexport",
         "createMappings": "För att skapa QuickBooks-mappningar från en export krävs behörigheterna att exportera och att hantera mappningar"
+      },
+      "quickbooksMapping": {
+        "noDecisions": "Välj hur minst en omappad post ska hanteras.",
+        "stale": "En av de valda posterna är inte längre omappad för den här batchen. Uppdatera och försök igen.",
+        "duplicateSubmission": "\"{{algaName}}\" skickades två gånger.",
+        "invalidMode": "Välj skapa ny eller befintlig för \"{{algaName}}\".",
+        "nameRequired": "Ange ett QuickBooks-namn för \"{{algaName}}\".",
+        "nameInvalidCharacters": "QuickBooks-namnet för \"{{algaName}}\" får inte innehålla tabbar, radbrytningar eller dubbla citattecken.",
+        "nameTooLong": "QuickBooks-namnet för \"{{algaName}}\" är längre än {{maxLength}} tecken.",
+        "duplicateNewName": "\"{{qbName}}\" används för mer än en ny QuickBooks-post.",
+        "duplicateClientName": "\"{{qbName}}\" är valt för mer än en kund. Varje QuickBooks-namn kan bara mappas till en.",
+        "duplicateItemName": "\"{{qbName}}\" är valt för mer än en artikel. Varje QuickBooks-namn kan bara mappas till en.",
+        "nameTakenByClient": "\"{{qbName}}\" är redan mappat till en annan kund och kan därför inte också användas för \"{{algaName}}\". Välj ett annat QuickBooks-namn eller ändra den befintliga mappningen under QuickBooks-mappningar.",
+        "nameTakenByItem": "\"{{qbName}}\" är redan mappat till en annan artikel och kan därför inte också användas för \"{{algaName}}\". Välj ett annat QuickBooks-namn eller ändra den befintliga mappningen under QuickBooks-mappningar.",
+        "unsupportedBatch": "Den här batchen är ingen QuickBooks Desktop- eller QuickBooks CSV-export.",
+        "nameTakenConcurrently": "Ett av dessa QuickBooks-namn mappades just till en annan post. Uppdatera listan och välj ett annat namn."
       }
     },
     "vendorBill": {

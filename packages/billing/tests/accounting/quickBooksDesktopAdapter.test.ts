@@ -49,11 +49,11 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
   withTransaction: vi.fn(async (knex: any, cb: (trx: any) => Promise<unknown>) => cb(knex))
 }));
 
-vi.mock('../../services/accountingMappingResolver', () => ({
+vi.mock('../../src/services/accountingMappingResolver', () => ({
   AccountingMappingResolver: { create: vi.fn(async () => harness.resolver) }
 }));
 
-vi.mock('../../lib/invoiceExternalSyncLock', () => ({
+vi.mock('../../src/lib/invoiceExternalSyncLock', () => ({
   lockInvoiceForExternalSync: vi.fn(async (_trx: unknown, _tenant: string, invoiceId: string) => {
     if (harness.lockFailures.has(invoiceId)) {
       const { AppError } = await import('@alga-psa/core');
@@ -62,7 +62,7 @@ vi.mock('../../lib/invoiceExternalSyncLock', () => ({
   })
 }));
 
-vi.mock('../../repositories/invoiceMappingRepository', () => ({
+vi.mock('../../src/repositories/invoiceMappingRepository', () => ({
   KnexInvoiceMappingRepository: class {
     async upsertInvoiceMapping(input: unknown) {
       harness.upserts.push(input);
@@ -70,7 +70,7 @@ vi.mock('../../repositories/invoiceMappingRepository', () => ({
   }
 }));
 
-import { QuickBooksDesktopAdapter, formatIifDate, sanitizeIifField } from './quickBooksDesktopAdapter';
+import { QuickBooksDesktopAdapter, formatIifDate, sanitizeIifField } from '../../src/adapters/accounting/quickBooksDesktopAdapter';
 
 const NOW = '2026-01-01T00:00:00.000Z';
 const SETTINGS = {

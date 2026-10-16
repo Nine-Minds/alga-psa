@@ -98,14 +98,29 @@ export function collectUnmappedQuickBooksEntities(adapterType: string, errors: E
   return Array.from(byKey.values());
 }
 
+/** A user-facing validation problem, localized at the server-action boundary. */
+export interface QuickBooksMappingProblem {
+  message: string;
+  /** Key under the msp/billing namespace. */
+  key: string;
+  params?: Record<string, string | number>;
+}
+
+const MESSAGE_KEY_PREFIX = 'errors.accountingExport.quickbooksMapping';
+const problem = (
+  key: string,
+  message: string,
+  params?: Record<string, string | number>
+): QuickBooksMappingProblem => ({ key: `${MESSAGE_KEY_PREFIX}.${key}`, message, ...(params ? { params } : {}) });
+
 /** Returns a user-facing problem, or null when every decision can be saved. */
 export function validateQuickBooksMappingDecisions(
   adapterType: string,
   pending: UnmappedQuickBooksEntity[],
   decisions: QuickBooksMappingDecision[]
-): string | null {
+): QuickBooksMappingProblem | null {
   if (!Array.isArray(decisions) || decisions.length === 0) {
-    return 'Choose how to handle at least one unmapped item.';
+    return problem('noDecisions', 'Choose how to handle at least one unmapped item.');
   }
   const pendingByKey = new Map(pending.map((entity) => [`${entity.algaEntityType}:${entity.algaEntityId}`, entity]));
   const createdNames = new Set<string>();
@@ -116,32 +131,41 @@ export function validateQuickBooksMappingDecisions(
     const key = `${decision.algaEntityType}:${decision.algaEntityId}`;
     const entity = pendingByKey.get(key);
     if (!entity) {
-      return 'One of the selected items is no longer unmapped for this batch. Refresh and try again.';
+      return problem('stale', 'One of the selected items is no longer unmapped for this batch. Refresh and try again.');
     }
+    const algaName = entity.algaName;
     if (seen.has(key)) {
-      return `"${entity.algaName}" was submitted twice.`;
+      return problem('duplicateSubmission', `"${algaName}" was submitted twice.`, { algaName });
     }
     seen.add(key);
     if (decision.mode !== 'create' && decision.mode !== 'existing') {
-      return `Choose create or existing for "${entity.algaName}".`;
+      return problem('invalidMode', `Choose create or existing for "${algaName}".`, { algaName });
     }
 
     const name = typeof decision.externalName === 'string' ? decision.externalName.trim() : '';
     if (!name) {
-      return `Enter a QuickBooks name for "${entity.algaName}".`;
+      return problem('nameRequired', `Enter a QuickBooks name for "${algaName}".`, { algaName });
     }
     if (/[\t\r\n"]/.test(name)) {
-      return `The QuickBooks name for "${entity.algaName}" cannot contain tabs, line breaks or double quotes.`;
+      return problem(
+        'nameInvalidCharacters',
+        `The QuickBooks name for "${algaName}" cannot contain tabs, line breaks or double quotes.`,
+        { algaName }
+      );
     }
     const maxLength = maxQuickBooksNameLength(adapterType, decision.algaEntityType);
     if (name.split(':').some((segment) => segment.length > maxLength)) {
-      return `The QuickBooks name for "${entity.algaName}" is longer than ${maxLength} characters.`;
+      return problem(
+        'nameTooLong',
+        `The QuickBooks name for "${algaName}" is longer than ${maxLength} characters.`,
+        { algaName, maxLength }
+      );
     }
     if (decision.mode === 'create') {
       // Customers and items are separate QuickBooks lists, so the same name may appear once in each.
       const nameKey = `${decision.algaEntityType === 'client' ? 'customer' : 'item'}:${name.toLowerCase()}`;
       if (createdNames.has(nameKey)) {
-        return `"${name}" is used for more than one new QuickBooks entry.`;
+        return problem('duplicateNewName', `"${name}" is used for more than one new QuickBooks entry.`, { qbName: name });
       }
       createdNames.add(nameKey);
     }
@@ -149,7 +173,17 @@ export function validateQuickBooksMappingDecisions(
     // (idx_unique_external_mapping), whether the entry is new or existing.
     const mappedKey = `${decision.algaEntityType}:${name}`;
     if (mappedNames.has(mappedKey)) {
-      return `"${name}" is chosen for more than one ${decision.algaEntityType === 'client' ? 'client' : 'item'}. Each QuickBooks name can be mapped to only one.`;
+      return decision.algaEntityType === 'client'
+        ? problem(
+            'duplicateClientName',
+            `"${name}" is chosen for more than one client. Each QuickBooks name can be mapped to only one.`,
+            { qbName: name }
+          )
+        : problem(
+            'duplicateItemName',
+            `"${name}" is chosen for more than one item. Each QuickBooks name can be mapped to only one.`,
+            { qbName: name }
+          );
     }
     mappedNames.add(mappedKey);
   }
@@ -172,7 +206,7 @@ export function findQuickBooksNameConflict(
   decisions: QuickBooksMappingDecision[],
   existing: ExistingQuickBooksMappingRow[],
   storedEntityType: (type: UnmappedEntityType) => string
-): string | null {
+): QuickBooksMappingProblem | null {
   for (const decision of decisions) {
     const name = decision.externalName.trim();
     const owner = existing.find(
@@ -185,7 +219,18 @@ export function findQuickBooksNameConflict(
       const entity = pending.find(
         (item) => item.algaEntityType === decision.algaEntityType && item.algaEntityId === decision.algaEntityId
       );
-      return `"${name}" is already mapped to another ${decision.algaEntityType === 'client' ? 'client' : 'item'}, so it cannot also be used for "${entity?.algaName ?? decision.algaEntityId}". Choose a different QuickBooks name, or change the existing mapping in the QuickBooks mappings.`;
+      const params = { qbName: name, algaName: entity?.algaName ?? decision.algaEntityId };
+      return decision.algaEntityType === 'client'
+        ? problem(
+            'nameTakenByClient',
+            `"${name}" is already mapped to another client, so it cannot also be used for "${params.algaName}". Choose a different QuickBooks name, or change the existing mapping in the QuickBooks mappings.`,
+            params
+          )
+        : problem(
+            'nameTakenByItem',
+            `"${name}" is already mapped to another item, so it cannot also be used for "${params.algaName}". Choose a different QuickBooks name, or change the existing mapping in the QuickBooks mappings.`,
+            params
+          );
     }
   }
   return null;

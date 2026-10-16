@@ -75,7 +75,7 @@ describe('validateQuickBooksMappingDecisions', () => {
       validateQuickBooksMappingDecisions('quickbooks_desktop', pending, [
         { algaEntityType: 'service', algaEntityId: 'svc-other', externalName: 'X', mode: 'create' }
       ])
-    ).toMatch(/no longer unmapped/);
+    ).toMatchObject({ key: 'errors.accountingExport.quickbooksMapping.stale' });
   });
 
   it('rejects empty, over-long and separator-bearing names', () => {
@@ -83,9 +83,9 @@ describe('validateQuickBooksMappingDecisions', () => {
       validateQuickBooksMappingDecisions('quickbooks_desktop', pending, [
         { algaEntityType: 'service', algaEntityId: 'svc-1', externalName, mode: 'create' }
       ]);
-    expect(decide('  ')).toMatch(/Enter a QuickBooks name/);
-    expect(decide('x'.repeat(32))).toMatch(/longer than 31/);
-    expect(decide('Bad\tName')).toMatch(/cannot contain/);
+    expect(decide('  ')).toMatchObject({ key: 'errors.accountingExport.quickbooksMapping.nameRequired', params: { algaName: 'Dell 16: Laptop' } });
+    expect(decide('x'.repeat(32))).toMatchObject({ key: 'errors.accountingExport.quickbooksMapping.nameTooLong', params: { maxLength: 31 } });
+    expect(decide('Bad\tName')).toMatchObject({ key: 'errors.accountingExport.quickbooksMapping.nameInvalidCharacters' });
     expect(decide('Hardware:Laptops')).toBeNull();
   });
 
@@ -99,7 +99,7 @@ describe('validateQuickBooksMappingDecisions', () => {
         { algaEntityType: 'service', algaEntityId: 'svc-1', externalName: 'Laptop', mode: 'create' },
         { algaEntityType: 'service', algaEntityId: 'svc-2', externalName: 'laptop', mode: 'create' }
       ])
-    ).toMatch(/more than one new QuickBooks entry/);
+    ).toMatchObject({ key: 'errors.accountingExport.quickbooksMapping.duplicateNewName', params: { qbName: 'laptop' } });
     expect(
       validateQuickBooksMappingDecisions('quickbooks_desktop', twoItems, [
         { algaEntityType: 'client', algaEntityId: 'client-1', externalName: 'Acme', mode: 'create' },
@@ -118,7 +118,7 @@ describe('validateQuickBooksMappingDecisions', () => {
         { algaEntityType: 'service', algaEntityId: 'svc-1', externalName: 'Laptop', mode: 'existing' },
         { algaEntityType: 'service', algaEntityId: 'svc-2', externalName: 'Laptop', mode: 'existing' }
       ])
-    ).toMatch(/more than one item/);
+    ).toMatchObject({ key: 'errors.accountingExport.quickbooksMapping.duplicateItemName', params: { qbName: 'Laptop' } });
   });
 });
 
@@ -134,7 +134,11 @@ describe('findQuickBooksNameConflict', () => {
         [{ alga_entity_type: 'service', alga_entity_id: 'svc-other', external_entity_id: 'Laptop' }],
         stored
       )
-    ).toMatch(/already mapped to another item.*"Dell 16: Laptop"/);
+    ).toMatchObject({
+      key: 'errors.accountingExport.quickbooksMapping.nameTakenByItem',
+      params: { qbName: 'Laptop', algaName: 'Dell 16: Laptop' },
+      message: expect.stringMatching(/already mapped to another item/)
+    });
   });
 
   it('ignores the same entity, other entity types, and other names', () => {

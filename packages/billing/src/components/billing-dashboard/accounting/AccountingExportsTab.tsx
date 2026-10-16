@@ -11,7 +11,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import toast from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { cancelAccountingExportBatch, createAccountingExportBatch, downloadAccountingExportArtifact, executeAccountingExportBatch, getAccountingExportBatch, getAccountingExportConnections, listAccountingExportBatches } from '@alga-psa/billing/actions/accountingExportActions';
 import type { AccountingExportActionError } from '@alga-psa/billing/actions/accountingExportActions';
@@ -489,8 +489,8 @@ export default function AccountingExportsTab(): React.JSX.Element {
         setUnmappedError(result.permissionError);
         return;
       }
-      if (isAccountingExportActionError(result)) {
-        setUnmappedError(result.message);
+      if (isActionMessageError(result)) {
+        setUnmappedError(getErrorMessage(result));
         return;
       }
       setUnmappedPrompt(null);
