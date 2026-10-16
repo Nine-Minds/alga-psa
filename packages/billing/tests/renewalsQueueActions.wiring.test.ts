@@ -22,7 +22,7 @@ describe('renewalsQueueActions wiring', () => {
     expect(source).toContain("export const listRenewalQueueRows = withAuth(async (");
     expect(source).toContain('requireBillingReadPermission(user);');
     expect(source).toContain('horizonDays: number = DEFAULT_RENEWALS_HORIZON_DAYS');
-    expect(source).toContain(".map(normalizeClientContract)");
+    expect(source).toContain(".map((row) => normalizeClientContract(row))");
     expect(source).toContain('.filter(');
     expect(source).toContain('Boolean(row.decision_due_date)');
     expect(source).toContain('row.days_until_due >= 0');

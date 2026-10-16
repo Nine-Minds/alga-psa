@@ -4,6 +4,7 @@ import type { Knex } from 'knex';
 import {
   createClientContractAssignment,
   deriveClientContractStatus,
+  getTenantLocalToday,
   updateClientContractAssignment,
 } from '@alga-psa/shared/billingClients';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
@@ -204,7 +205,10 @@ const withRenewalDefaultsJoin = (
   return facade.tenantJoin(query, 'default_billing_settings as dbs', 'cc.tenant', 'dbs.tenant', { type: 'left' });
 };
 
-export const normalizeClientContract = (row: any): IClientContract => {
+export const normalizeClientContract = (
+  row: any,
+  options: { today?: string } = {}
+): IClientContract => {
   if (!row) return row;
 
   const normalized = { ...row } as Record<string, unknown>;
@@ -290,6 +294,7 @@ export const normalizeClientContract = (row: any): IClientContract => {
     contractStatus: typeof normalized.contract_status === 'string'
       ? normalized.contract_status
       : undefined,
+    now: options.today,
   });
 
   delete normalized.tenant_default_renewal_mode;
@@ -341,7 +346,8 @@ const ClientContract = {
         ...RENEWAL_DEFAULT_SELECTIONS,
       ]);
 
-      return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
+      const today = await getTenantLocalToday(db, tenant);
+      return dedupeClientContractsByRenewalCycle(rows.map((row: any) => normalizeClientContract(row, { today })));
     } catch (error) {
       console.error(`Error fetching contracts for client ${clientId}:`, error);
       throw error;
@@ -376,7 +382,8 @@ const ClientContract = {
         ...RENEWAL_DEFAULT_SELECTIONS,
       ]);
 
-      return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
+      const today = await getTenantLocalToday(db, tenant);
+      return dedupeClientContractsByRenewalCycle(rows.map((row: any) => normalizeClientContract(row, { today })));
     } catch (error) {
       console.error('Error fetching contracts for clients:', error);
       throw error;
@@ -404,7 +411,7 @@ const ClientContract = {
         ])
         .first();
 
-      return row ? normalizeClientContract(row) : null;
+      return row ? normalizeClientContract(row, { today: await getTenantLocalToday(db, tenant) }) : null;
     } catch (error) {
       console.error(`Error fetching client contract ${clientContractId}:`, error);
       throw error;
@@ -439,7 +446,9 @@ const ClientContract = {
         return null;
       }
 
-      const normalized = normalizeClientContract(clientContract) as any;
+      const normalized = normalizeClientContract(clientContract, {
+        today: await getTenantLocalToday(db, tenant),
+      }) as any;
 
       const assignmentContractLinesQuery = facade.table('client_contracts as cc')
         .where({

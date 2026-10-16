@@ -273,7 +273,7 @@ export const listRenewalQueueRows = withAuth(async (
   const rows = await query;
 
   const queueRows = rows
-    .map(normalizeClientContract)
+    .map((row) => normalizeClientContract(row))
     .filter(
       (row) =>
         Boolean(row.decision_due_date) &&

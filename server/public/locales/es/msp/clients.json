@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Activo",
+      "scheduled": "Programado",
       "inactive": "Inactivo",
       "loading": "Cargando...",
       "na": "N/D",
