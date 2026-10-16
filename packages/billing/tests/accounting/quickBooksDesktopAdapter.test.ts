@@ -3,17 +3,35 @@ import type { AccountingExportAdapterContext, AccountingExportLine } from '@alga
 
 const harness = vi.hoisted(() => {
   const rows: Record<string, any[]> = {};
-  const builder = (list: any[]) => {
+  const updates: Array<{ table: string; where: any[]; patch: any }> = [];
+  const builder = (table: string, list: any[]) => {
     const qb: any = {};
-    for (const method of ['select', 'where', 'whereIn', 'whereNull', 'orderBy']) {
+    const where: any[] = [];
+    for (const method of ['select', 'whereIn', 'orderBy']) {
       qb[method] = () => qb;
     }
+    for (const method of ['where', 'whereNull', 'whereRaw']) {
+      qb[method] = (...args: any[]) => {
+        where.push([method, ...args]);
+        return qb;
+      };
+    }
+    qb.modify = (cb: (query: any) => void) => {
+      cb(qb);
+      return qb;
+    };
+    qb.update = async (patch: any) => {
+      updates.push({ table, where, patch });
+      return 1;
+    };
     qb.first = async () => list[0] ?? null;
     qb.then = (resolve: any, reject?: any) => Promise.resolve(list).then(resolve, reject);
     return qb;
   };
-  const knex: any = (table: string) => builder(rows[table] ?? []);
-  const tenantDb = () => ({ table: (table: string) => builder(rows[table] ?? []) });
+  const knex: any = (table: string) => builder(table, rows[table] ?? []);
+  knex.raw = (sql: string, bindings?: unknown[]) => ({ sql, bindings });
+  knex.fn = { now: () => 'now()' };
+  const tenantDb = () => ({ table: (table: string) => builder(table, rows[table] ?? []) });
 
   const mappings = {
     services: {} as Record<string, any>,
@@ -22,24 +40,26 @@ const harness = vi.hoisted(() => {
     terms: {} as Record<string, any>,
     clients: {} as Record<string, any>
   };
+  // The real resolver tags every resolution with its source; fixtures may override it.
+  const withSource = (mapping: any, source: string) => (mapping ? { source, ...mapping } : null);
   const resolverCalls: Array<{ method: string; adapterType: string }> = [];
   const resolver = {
     resolveServiceMapping: async (p: any) => {
       resolverCalls.push({ method: 'service', adapterType: p.adapterType });
-      return mappings.services[p.serviceId] ?? null;
+      return withSource(mappings.services[p.serviceId], 'service');
     },
     resolveDiscountMapping: async (p: any) => {
       resolverCalls.push({ method: 'discount', adapterType: p.adapterType });
-      return mappings.discount;
+      return withSource(mappings.discount, 'discount');
     },
-    resolveTaxCodeMapping: async (p: any) => mappings.taxRegions[p.taxRegionId] ?? null,
-    resolvePaymentTermMapping: async (p: any) => mappings.terms[p.paymentTermId] ?? null,
-    resolveClientMapping: async (p: any) => mappings.clients[p.clientId] ?? null
+    resolveTaxCodeMapping: async (p: any) => withSource(mappings.taxRegions[p.taxRegionId], 'tax_code'),
+    resolvePaymentTermMapping: async (p: any) => withSource(mappings.terms[p.paymentTermId], 'payment_term'),
+    resolveClientMapping: async (p: any) => withSource(mappings.clients[p.clientId], 'company')
   };
 
   const upserts: any[] = [];
   const lockFailures = new Set<string>();
-  return { rows, knex, tenantDb, mappings, resolver, resolverCalls, upserts, lockFailures };
+  return { rows, updates, knex, tenantDb, mappings, resolver, resolverCalls, upserts, lockFailures };
 });
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({
@@ -171,6 +191,7 @@ beforeEach(() => {
   harness.mappings.clients = {};
   harness.resolverCalls.length = 0;
   harness.upserts.length = 0;
+  harness.updates.length = 0;
   harness.lockFailures.clear();
   harness.rows.clients = [{ client_id: 'client-1', client_name: 'Acme Corp', payment_terms: 'net_30' }];
 });
@@ -554,16 +575,63 @@ describe('QuickBooksDesktopAdapter list records for items created by the export 
     expect(field(rows, '!INVITEM', items[0], 'INVITEMTYPE')).toBe('DISC');
   });
 
-  it('never writes list records for mappings linked to existing entries or created by another batch', async () => {
+  it('never writes list records for linked mappings, already-delivered entries, or category-resolved services', async () => {
     harness.rows.invoices = [invoice()];
     harness.rows.invoice_charges = [charge()];
-    harness.mappings.clients = { 'client-1': { external_entity_id: 'Acme Corp', metadata: { linked_via: 'accounting_export' } } };
-    harness.mappings.services = { 'svc-1': { external_entity_id: 'Consulting', metadata: created({ qbdCreateInBatch: 'batch-0' }) } };
+    harness.mappings.clients = {
+      'client-1': { external_entity_id: 'Acme Corp', metadata: created({ qbdCreateInBatch: 'batch-0', qbdListRecordBatch: 'batch-0' }) }
+    };
+    harness.mappings.services = {
+      'svc-1': { external_entity_id: 'Consulting', source: 'service_category', metadata: created({ qbdCreateInBatch: 'batch-0' }) }
+    };
 
     const { rows } = await transformContent(
       context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
     );
     expect(rows.map((r) => r[0])).toEqual(['!TRNS', '!SPL', '!ENDTRNS', 'TRNS', 'SPL', 'ENDTRNS']);
+
+    harness.mappings.clients = { 'client-1': { external_entity_id: 'Acme Corp', metadata: { linked_via: 'accounting_export' } } };
+    const linked = await transformContent(
+      context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
+    );
+    expect(linked.rows.some((r) => r[0] === 'CUST')).toBe(false);
+  });
+
+  it('keeps defining a prompt-created entry in later batches until a batch including it is delivered', async () => {
+    harness.rows.invoices = [invoice()];
+    harness.rows.invoice_charges = [charge()];
+    harness.mappings.clients = { 'client-1': { external_entity_id: 'Acme Corp', metadata: created({ qbdCreateInBatch: 'batch-0' }) } };
+
+    const later = await transformContent(
+      context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
+    );
+    expect(later.rows.some((r) => r[0] === 'CUST')).toBe(true);
+
+    // Regenerating the batch that delivered it (e.g. the v1 download route) still defines it.
+    harness.mappings.clients['client-1'].metadata = created({ qbdCreateInBatch: 'batch-0', qbdListRecordBatch: 'batch-1' });
+    const regenerated = await transformContent(
+      context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
+    );
+    expect(regenerated.rows.some((r) => r[0] === 'CUST')).toBe(true);
+  });
+
+  it('marks the list records of delivered invoices as delivered, inside the invoice transaction', async () => {
+    harness.rows.invoices = [invoice()];
+    harness.rows.invoice_charges = [charge()];
+    harness.mappings.clients = { 'client-1': { external_entity_id: 'Acme Corp', metadata: created() } };
+    harness.mappings.services = { 'svc-1': { external_entity_id: 'Consulting', metadata: created() } };
+
+    const adapter = await QuickBooksDesktopAdapter.create();
+    const ctx = context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }]);
+    await adapter.deliver(await adapter.transform(ctx), ctx);
+
+    const stamped = harness.updates.filter((u) => u.table === 'tenant_external_entity_mappings');
+    expect(stamped.map((u) => u.where.find((w: any[]) => w[0] === 'where' && typeof w[1] === 'object')?.[1])).toEqual([
+      { integration_type: 'quickbooks_csv', alga_entity_type: 'client', alga_entity_id: 'client-1' },
+      { integration_type: 'quickbooks_csv', alga_entity_type: 'service', alga_entity_id: 'svc-1' }
+    ]);
+    expect(stamped[0].where).toEqual(expect.arrayContaining([['whereRaw', "metadata ->> 'qbdListRecordBatch' IS NULL"]]));
+    expect(stamped[0].patch.metadata.bindings).toEqual(['batch-1']);
   });
 
   it('leaves out the list records of an invoice that failed delivery', async () => {
@@ -589,6 +657,8 @@ describe('QuickBooksDesktopAdapter list records for items created by the export 
 
     const delivered = await adapter.deliver(transformed, ctx);
     const content = (delivered.metadata as any).files[0].content as string;
+    // Not stamped as delivered, so Globex's next batch defines it again.
+    expect(harness.updates.filter((u) => u.table === 'tenant_external_entity_mappings')).toEqual([]);
     expect(content).not.toContain('!CUST');
     expect(content).not.toContain('Globex');
   });

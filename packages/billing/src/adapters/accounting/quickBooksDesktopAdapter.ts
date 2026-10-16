@@ -25,7 +25,9 @@ import {
   AccountingExportDeliveryResult,
   AccountingExportDocument,
   AccountingExportFileAttachment,
-  AccountingExportTransformResult
+  AccountingExportTransformResult,
+  AUTOMATIC_DISCOUNT_MAPPING_ID,
+  DISCOUNT_MAPPING_ENTITY_TYPE
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
@@ -58,9 +60,10 @@ type TrnsRow = Record<(typeof TRNS_FIELDS)[number], string>;
 type SplRow = Record<(typeof SPL_FIELDS)[number], string>;
 
 // List records that create a customer or item in QuickBooks before the
-// transactions that reference it. Emitted only for mappings created by the
-// export prompt for this batch (metadata.qbdCreateInBatch === batch_id), never
-// for names that may already exist in the company file.
+// transactions that reference it. Emitted only for mappings the export prompt
+// created (metadata.qbdCreateInBatch), until a batch that included them is
+// delivered (metadata.qbdListRecordBatch); re-exporting that same batch keeps
+// them. Never emitted for names that may already exist in the company file.
 const CUST_FIELDS = [
   'NAME', 'BADDR1', 'BADDR2', 'BADDR3', 'BADDR4', 'BADDR5', 'PHONE1', 'EMAIL', 'TERMS'
 ] as const;
@@ -86,6 +89,11 @@ export interface QuickBooksDesktopAdapterSettings {
 interface IifListRecords {
   customers: Record<string, string>;
   items: Record<string, string>;
+}
+
+interface ListRecordEntity {
+  algaEntityType: string;
+  algaEntityId: string;
 }
 
 type DbInvoice = {
@@ -159,6 +167,8 @@ interface InvoiceDocumentPayload {
   iifRows: string[];
   /** Customer and item names whose list records this invoice depends on. */
   listRecordNames?: { customers: string[]; items: string[] };
+  /** Mappings behind those list records, stamped as delivered when this invoice is. */
+  listRecordEntities?: ListRecordEntity[];
   totals: {
     amountCents: number;
     taxCents: number;
@@ -303,7 +313,8 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
       const terms = nonEmptyString(termMapping?.external_entity_id) ?? '';
 
       const invoiceListNames = { customers: [] as string[], items: [] as string[] };
-      if (this.isCreatedInBatch(customerMapping?.metadata, context)) {
+      const invoiceListEntities: ListRecordEntity[] = [];
+      if (customerMapping?.source === 'company' && this.needsListRecord(customerMapping.metadata, context)) {
         if (!listRecords.customers[customerName]) {
           const contact = await this.loadClientContact(knex, tenantId, clientId);
           listRecords.customers[customerName] = serializeRow('CUST', CUST_FIELDS, {
@@ -319,6 +330,7 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
           });
         }
         invoiceListNames.customers.push(customerName);
+        invoiceListEntities.push({ algaEntityType: 'client', algaEntityId: clientId });
       }
 
       const currency = invoice.currency_code ?? exportLines.find((line) => line.currency_code)?.currency_code ?? 'USD';
@@ -387,12 +399,22 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
         this.assertListName(incomeAccount, MAX_ACCOUNT_NAME_LENGTH, 'account', invoiceNumber,
           'Use the exact QuickBooks Desktop income account name.');
 
-        if (this.isCreatedInBatch(itemMapping.metadata, context)) {
+        // Only a direct service or discount mapping can come from the prompt; a
+        // service resolved through its category mapping is never redefined.
+        const itemFromPrompt =
+          (itemMapping.source === 'service' || itemMapping.source === 'discount') &&
+          this.needsListRecord(itemMapping.metadata, context);
+        if (itemFromPrompt) {
           if (!listRecords.items[itemName]) {
             listRecords.items[itemName] = await this.buildItemRecord(
               knex, tenantId, itemName, incomeAccount, isServicelessDiscount ? null : charge.service_id!, charge, settings, invoiceNumber, currency
             );
           }
+          invoiceListEntities.push(
+            isServicelessDiscount
+              ? { algaEntityType: DISCOUNT_MAPPING_ENTITY_TYPE, algaEntityId: AUTOMATIC_DISCOUNT_MAPPING_ID }
+              : { algaEntityType: 'service', algaEntityId: charge.service_id! }
+          );
           invoiceListNames.items.push(itemName);
         }
 
@@ -503,6 +525,7 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
         currency,
         iifRows,
         listRecordNames: invoiceListNames,
+        listRecordEntities: invoiceListEntities,
         totals: { amountCents: totalCents, taxCents }
       };
 
@@ -574,6 +597,9 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
               invoiceNumber: payload.invoiceNumber
             }
           });
+          if (payload.listRecordEntities?.length) {
+            await this.markListRecordsDelivered(trx, tenantId, context, payload.listRecordEntities);
+          }
         });
 
         deliveredDocuments.push(document);
@@ -633,8 +659,52 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
     };
   }
 
-  private isCreatedInBatch(metadata: Record<string, unknown> | null | undefined, context: AccountingExportAdapterContext): boolean {
-    return Boolean(metadata) && metadata!.qbdCreateInBatch === context.batch.batch_id;
+  /**
+   * A prompt-created mapping still needs its CUST/INVITEM record until a batch
+   * that included it is delivered; that batch keeps emitting it, so its file
+   * regenerates identically.
+   */
+  private needsListRecord(metadata: Record<string, unknown> | null | undefined, context: AccountingExportAdapterContext): boolean {
+    if (!metadata || !metadata.qbdCreateInBatch) return false;
+    const deliveredIn = metadata.qbdListRecordBatch;
+    return deliveredIn === undefined || deliveredIn === null || deliveredIn === context.batch.batch_id;
+  }
+
+  /**
+   * Called inside the invoice's delivery transaction: marks the prompt-created
+   * mappings whose list records this delivered file defines, so later batches
+   * stop redefining them. Mappings already stamped keep their first batch.
+   */
+  private async markListRecordsDelivered(
+    trx: Knex.Transaction,
+    tenantId: string,
+    context: AccountingExportAdapterContext,
+    entities: ListRecordEntity[]
+  ): Promise<void> {
+    for (const entity of entities) {
+      await tenantDb(trx, tenantId).table('tenant_external_entity_mappings')
+        .where({
+          integration_type: MAPPING_ADAPTER_TYPE,
+          alga_entity_type: entity.algaEntityType,
+          alga_entity_id: entity.algaEntityId
+        })
+        .modify((query: Knex.QueryBuilder) => {
+          if (context.batch.target_realm) {
+            query.where('external_realm_id', context.batch.target_realm);
+          } else {
+            query.whereNull('external_realm_id');
+          }
+        })
+        .whereNull('deleted_at')
+        .whereRaw("metadata ->> 'qbdCreateInBatch' IS NOT NULL")
+        .whereRaw("metadata ->> 'qbdListRecordBatch' IS NULL")
+        .update({
+          metadata: trx.raw("jsonb_set(COALESCE(metadata, '{}'::jsonb), '{qbdListRecordBatch}', to_jsonb(?::text))", [
+            context.batch.batch_id
+          ]),
+          updated_at: trx.fn.now()
+        });
+    }
   }
 
   private async buildItemRecord(
