@@ -22,6 +22,10 @@ import {
   LEVELIO_WEBHOOK_SIGNING_SECRET_KEY,
 } from '../../integrations/levelio/levelApiClient';
 import {
+  LEVELIO_AUTOMATION_DESCRIPTION_PLACEHOLDER,
+  LEVELIO_AUTOMATION_NAME_PLACEHOLDER,
+} from '../../integrations/levelio/webhookPayload';
+import {
   runLevelIoAlertsBackfill,
   runLevelIoDeviceSync,
   runLevelIoFullSync,
@@ -531,9 +535,9 @@ export const getLevelIoWebhookInfo = withAdvancedAssetsAccess(async (user, { ten
     const payloadTemplate = JSON.stringify(
       {
         event: 'alert.triggered',
-        name: 'Replace with a name for this alert',
+        name: LEVELIO_AUTOMATION_NAME_PLACEHOLDER,
         severity: 'warning',
-        description: 'Replace with a description',
+        description: LEVELIO_AUTOMATION_DESCRIPTION_PLACEHOLDER,
         device_id: '{{level_device_id}}',
         hostname: '{{level_device_hostname}}',
         group_id: '{{level_group_id}}',

@@ -116,6 +116,10 @@ vi.mock('@ee/lib/integrations/levelio/sync/syncEngine', () => ({
 }));
 
 import { POST } from '../../../app/api/webhooks/levelio/route';
+import {
+  LEVELIO_AUTOMATION_DESCRIPTION_PLACEHOLDER,
+  LEVELIO_AUTOMATION_NAME_PLACEHOLDER,
+} from '../../../lib/integrations/levelio/webhookPayload';
 
 const WEBHOOK_URL = 'http://localhost/api/webhooks/levelio';
 
@@ -314,6 +318,22 @@ describe('Level.io automation path: placeholders and identity', () => {
     const otherDevice = await send(payload({ alert_id: undefined, name: 'CPU', device_id: 'dev-2' }));
     expect(cpu1).toBe(cpu2);
     expect(new Set([cpu1, mem, otherDevice]).size).toBe(3);
+  });
+
+  it('the unedited template name is replaced (with a warning) by the edited description, else a generic name', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const send = async (body: Record<string, unknown>) => {
+      h.processRmmAlertEvent.mockClear();
+      expect((await POST(request('tenant-a', 'secret-a', body))).status).toBe(200);
+      return (await processCall()) as any;
+    };
+    const pristine = { name: LEVELIO_AUTOMATION_NAME_PLACEHOLDER, alert_id: undefined };
+    const edited = await send(payload({ ...pristine, description: 'Disk almost full' }));
+    expect(edited.externalAlertId).toBe('automation:dev-1:disk almost full');
+    const bare = await send(payload({ ...pristine, description: LEVELIO_AUTOMATION_DESCRIPTION_PLACEHOLDER }));
+    expect(bare.externalAlertId).toBe('automation:dev-1:level alert');
+    expect(warn).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
   });
 
   it('canonicalizes an explicit unmapped level_group_id to the deepest mapped ancestor', async () => {

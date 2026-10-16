@@ -61,6 +61,14 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishBuiltWorkflowPayload: vi.fn(async () => undefined),
 }));
 
+vi.mock('../../../../../server/src/lib/db/db', () => ({ getConnection: async () => h.db }));
+vi.mock('../../../../../server/src/lib/eventBus/index', () => ({
+  getEventBus: () => ({ subscribe: vi.fn(), unsubscribe: vi.fn() }),
+}));
+
+const { LEVELIO_AUTOMATION_DESCRIPTION_PLACEHOLDER, LEVELIO_AUTOMATION_NAME_PLACEHOLDER } = await import(
+  '../../lib/integrations/levelio/webhookPayload'
+);
 const { POST } = await import('../../app/api/webhooks/levelio/route');
 
 /**
@@ -72,7 +80,11 @@ function algaSettingsTemplate(): { headerName: string; payloadTemplate: string }
   const literal = /const payloadTemplate = JSON\.stringify\(\s*(\{[\s\S]*?\})\s*,\s*null\s*,\s*2\s*\)/.exec(source)?.[1];
   const headerName = /headerName: '([^']+)'/.exec(source)?.[1];
   if (!literal || !headerName) throw new Error('getLevelIoWebhookInfo no longer builds a payload template; update this test');
-  return { headerName, payloadTemplate: JSON.stringify(new Function(`return (${literal});`)(), null, 2) };
+  return { headerName, payloadTemplate: JSON.stringify(new Function(
+        'LEVELIO_AUTOMATION_NAME_PLACEHOLDER',
+        'LEVELIO_AUTOMATION_DESCRIPTION_PLACEHOLDER',
+        `return (${literal});`,
+      )(LEVELIO_AUTOMATION_NAME_PLACEHOLDER, LEVELIO_AUTOMATION_DESCRIPTION_PLACEHOLDER), null, 2) };
 }
 
 const tenantId = uuidv4();
@@ -447,5 +459,68 @@ describe('Level.io alert ingestion through the Level emulator (route + DB)', { s
     expect(await ticketCount()).toBe(1);
     const ticket = await table('tickets').where({ tenant: tenantId }).first();
     expect(ticket.client_id).toBe(clientId);
+  });
+
+  it('closing the ticket resets the automation alert so the same automation re-fires into a new ticket', async () => {
+    await clearAlertsAndTickets();
+    await fetch(`${control}/control/levelio/reset`, { method: 'POST' });
+    const call = (path: string, body: unknown) =>
+      fetch(`${control}/control/levelio/${path}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then((r) => r.json() as Promise<{ ok: boolean; result: any }>);
+
+    await call('seed/group', { id: ACME, name: 'Acme Corp' });
+    await call('seed/device', { id: SRV_01, hostname: 'SRV-01', role: 'server', groupId: ACME, serial_number: 'SN-SRV-01' });
+    await call('seed/automation', {
+      name: 'Forward alerts to Alga (refire)',
+      url: `${routeOrigin}/api/webhooks/levelio?tenant=${tenantId}`,
+      headers: [{ key: 'X-Alga-Webhook-Secret', value: ALGA_WEBHOOK_SECRET }],
+      body: JSON.stringify({
+        event: 'alert.triggered',
+        name: 'Disk full',
+        severity: 'critical',
+        device_id: '{{level_device_id}}',
+        hostname: '{{level_device_hostname}}',
+        group_id: '{{level_group_id}}',
+      }),
+    });
+
+    const first = await call('actions/fire-alert', { deviceId: SRV_01, name: 'Disk full', severity: 'critical' });
+    expect(JSON.parse(first.result.automationRuns[0].response)).toMatchObject({ outcome: 'ticket_created' });
+    const [row1] = await rmmAlerts();
+    expect(row1.external_alert_id).toBe(`automation:${SRV_01}:disk full`);
+    expect(row1.status).toBe('active');
+    const firstTicketId = row1.ticket_id as string;
+    expect(firstTicketId).toBeTruthy();
+
+    // A repeat while the ticket is open dedupes into the same row (the bug's precondition).
+    const dup = await call('actions/fire-alert', { deviceId: SRV_01, name: 'Disk full', severity: 'critical' });
+    expect(JSON.parse(dup.result.automationRuns[0].response)).toMatchObject({ outcome: 'skipped' });
+
+    // Close the ticket and deliver TICKET_CLOSED to the subscriber (the event bus is not wired here).
+    const closed = await table('statuses').where({ board_id: boardId, is_closed: true }).first('status_id');
+    await table('tickets').where({ ticket_id: firstTicketId }).update({ status_id: closed.status_id });
+    // Vitest aliases @enterprise to the CE stub; production EE builds resolve it to the
+    // real adapter, so register that adapter explicitly (the registry wins in resolveAdapter).
+    const { registerRmmAlertOutboundAdapter } = await import('@alga-psa/shared/rmm/alerts');
+    const { levelIoAlertOutboundAdapter } = await import('../../lib/integrations/levelio/alerts/outboundAdapter');
+    registerRmmAlertOutboundAdapter('levelio', levelIoAlertOutboundAdapter);
+    const { handleTicketClosed } = await import(
+      '../../../../../server/src/lib/eventBus/subscribers/rmmAlertTicketClosedSubscriber'
+    );
+    await handleTicketClosed({ payload: { tenantId, ticketId: firstTicketId } });
+    const [afterClose] = await rmmAlerts();
+    expect(afterClose.status).toBe('resolved');
+
+    const second = await call('actions/fire-alert', { deviceId: SRV_01, name: 'Disk full', severity: 'critical' });
+    expect(JSON.parse(second.result.automationRuns[0].response)).toMatchObject({ outcome: 'ticket_created' });
+    const rows = await rmmAlerts();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('active');
+    expect(rows[0].ticket_id).toBeTruthy();
+    expect(rows[0].ticket_id).not.toBe(firstTicketId);
+    expect(await ticketCount()).toBe(2);
   });
 });

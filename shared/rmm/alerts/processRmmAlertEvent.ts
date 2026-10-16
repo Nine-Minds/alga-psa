@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
-import { tenantDb, withTransaction } from '@alga-psa/db';
+import { registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import type {
   NormalizedRmmAlertEvent,
   RmmAlertProcessingContext,
@@ -21,6 +22,7 @@ import {
   publishTicketTransitionsAfterCommit,
 } from '../../lib/tickets/ticketLifecycleEvents';
 import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
+import { buildTicketClosedPayload } from '../../lib/tickets/ticketWorkflowEventPayloads';
 
 /**
  * Single entry point for normalized RMM alert events (webhooks and the
@@ -382,6 +384,33 @@ async function processReset(
               before: transitionBefore,
               correlationId: event.externalAlertId,
             });
+            // The transition publisher has no TICKET_CLOSED member, so emit it
+            // here (system actor, after commit) like every other close path.
+            // This lets the ticket-closed subscriber reset any other alert rows
+            // attached to this ticket (e.g. dedup-attached automation alerts).
+            const closedStatus = await db.table('statuses')
+              .where({ status_id: statusId })
+              .first('is_closed');
+            if (closedStatus?.is_closed) {
+              const closedTicketId = existing.ticket_id;
+              const closedAt = new Date().toISOString();
+              registerAfterCommit(
+                trx,
+                () =>
+                  publishWorkflowEvent({
+                    eventType: 'TICKET_CLOSED',
+                    payload: buildTicketClosedPayload({ ticketId: closedTicketId, closedAt }),
+                    ctx: {
+                      tenantId: event.tenantId,
+                      actor: { actorType: 'SYSTEM' },
+                      correlationId: event.externalAlertId,
+                    },
+                    eventName: 'Ticket Closed',
+                    toState: statusId,
+                  }),
+                `TICKET_CLOSED ticket=${closedTicketId}`
+              );
+            }
             await db.table('rmm_alerts')
               .where({ alert_id: existing.alert_id })
               .update({ status: 'auto_resolved' });

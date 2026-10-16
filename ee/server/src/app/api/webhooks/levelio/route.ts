@@ -39,6 +39,8 @@ import { resolveLevelIoWebhookOrganization } from '../../../../lib/integrations/
 import {
   automationAlertId,
   cleanAutomationValue,
+  LEVELIO_AUTOMATION_DESCRIPTION_PLACEHOLDER,
+  LEVELIO_AUTOMATION_NAME_PLACEHOLDER,
   secretsMatch,
   verifyLevelSignature,
 } from '../../../../lib/integrations/levelio/webhookPayload';
@@ -326,7 +328,19 @@ function parseAutomationPayload(body: any): Parsed {
   }
 
   const event = (cleanAutomationValue(body.event) ?? 'alert.triggered').toLowerCase();
-  const name = cleanAutomationValue(body.name) ?? 'Level alert';
+  const description = cleanAutomationValue(body.description);
+  let name = cleanAutomationValue(body.name) ?? 'Level alert';
+  if (name === LEVELIO_AUTOMATION_NAME_PLACEHOLDER) {
+    // Unedited template: every such automation on a device would share one
+    // identity. Keep the alert (dropping it would lose a real signal) but derive
+    // the name from the customer's description when they edited that, else a
+    // generic name, and warn so the misconfiguration is visible.
+    name =
+      description && description !== LEVELIO_AUTOMATION_DESCRIPTION_PLACEHOLDER ? description : 'Level alert';
+    console.warn(
+      `[Level webhook] Automation payload still has the template alert name; using "${name}". Edit "name" so distinct automations stay distinct alerts.`,
+    );
+  }
   const suppliedAlertId = cleanAutomationValue(body.alert_id);
   const policyId = cleanAutomationValue(body.policy_id);
 
@@ -338,7 +352,7 @@ function parseAutomationPayload(body: any): Parsed {
       deviceId,
       explicitGroupId: cleanAutomationValue(body.group_id),
       name,
-      description: cleanAutomationValue(body.description),
+      description,
       hostname: cleanAutomationValue(body.hostname),
       severity: cleanAutomationValue(body.severity),
       occurredAt: parseOccurredAt(cleanAutomationValue(body.alert_time) ?? ''),

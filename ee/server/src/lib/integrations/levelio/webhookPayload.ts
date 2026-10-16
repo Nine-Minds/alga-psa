@@ -51,6 +51,14 @@ export function verifyLevelSignature(rawBody: string, header: string | null, sig
 }
 
 /**
+ * The literal `name` in the generated automation payload template. Left
+ * unedited it would give every automation on a device the same identity, so
+ * the webhook falls back to a payload-derived name (see parseAutomationPayload).
+ */
+export const LEVELIO_AUTOMATION_NAME_PLACEHOLDER = 'Replace with a name for this alert';
+export const LEVELIO_AUTOMATION_DESCRIPTION_PLACEHOLDER = 'Replace with a description';
+
+/**
  * Automation alert identity.
  *
  * Level exposes no alert variables to automations, so there is no alert id to
@@ -58,11 +66,13 @@ export function verifyLevelSignature(rawBody: string, header: string | null, sig
  * alert name the customer typed into the automation's payload:
  * `automation:<deviceId>:<name>`. Distinct alerts (different device or name)
  * no longer collapse; a repeat of the same alert on the same device maps to
- * the same row. Trade-off: while that alert is still open (no ticket resolved
- * or reset), another firing of the same name on the same device is treated as
- * a repeat and dedupes instead of opening a new row, and two automations that
- * share a name on one device are the same alert. A customer-supplied
- * `alert_id` (rendered, not a placeholder) still takes precedence.
+ * the same row. While that row is open (`active`/`acknowledged`/`suppressed`),
+ * another firing of the same name on the same device dedupes into it, and two
+ * automations that share a name on one device are the same alert. When the
+ * row's ticket closes, the ticket-closed subscriber resets the row to
+ * `resolved` through the Level outbound adapter (no remote call is made for
+ * `automation:` ids), so the next firing reopens it and creates a new ticket. A
+ * customer-supplied `alert_id` (rendered, not a placeholder) still takes precedence.
  */
 export function automationAlertId(deviceId: string, name: string): string {
   const normalized = name.trim().toLowerCase().replace(/\s+/g, ' ');
