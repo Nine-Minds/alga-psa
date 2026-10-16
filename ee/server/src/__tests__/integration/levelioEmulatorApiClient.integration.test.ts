@@ -14,6 +14,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import levelio, { type LevelEmulatorCore } from '@alga-psa/emulator-levelio';
 import { LevelIoApiClient, LevelIoApiError } from '../../lib/integrations/levelio/levelApiClient';
+import { mapLevelIoDiskUsage } from '../../lib/integrations/levelio/mappers/deviceMapper';
 
 // createLevelIoClient imports the secrets provider at module load; the client
 // under test is constructed directly with the emulator's base URL.
@@ -117,9 +118,10 @@ describe('LevelIoApiClient against the Level emulator', () => {
     expect(devices.map((d) => d.hostname)).toEqual(['WS-01']);
     expect(devices[0].operating_system).toEqual({ full_operating_system: 'Windows 11 Pro', major_version: '10.0' });
     expect(devices[0].network_interfaces).toHaveLength(1);
-    // Level's documented device carries `disks`; Alga's mapper reads `disk_partitions`.
-    expect((devices[0] as unknown as Record<string, unknown>).disks).toHaveLength(1);
-    expect(devices[0].disk_partitions).toBeUndefined();
+    // Level's documented device carries `disks`, which Alga's type and mapper read.
+    expect(devices[0].disks).toHaveLength(1);
+    expect((devices[0] as unknown as Record<string, unknown>).disk_partitions).toBeUndefined();
+    expect(mapLevelIoDiskUsage(devices[0])).toEqual([{ name: 'NVMe Samsung', total_gb: 476.84 }]);
 
     expect((await client().getDevice(ws.id)).security).toEqual({ score: 80 });
     expect(await client().listDevices({ groupId: acme.id })).toEqual([]);
