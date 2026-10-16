@@ -1,3 +1,6 @@
+import { withCoManagedWorkflowTicketMutation } from '@alga-psa/co-managed/workflowTicketMutation';
+import { registerWorkflowConversationRetainer, registerWorkflowTicketMutationAdapter } from '@alga-psa/shared/workflow/runtime';
+import { retainCoManagedWorkflowCommentEvent } from '@alga-psa/co-managed/workflowConversationEvents';
 import { isEnterprise } from './features';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
 import { logger, registerFeatureFlagChecker, registerJobEnqueuer, registerScheduledJobEnqueuer, registerScheduledJobCanceler } from '@alga-psa/core';
@@ -42,6 +45,9 @@ export async function initializeApp() {
   try {
     // Load environment configuration
     config();
+
+    const { startPortableTemporaryRecovery } = await import('./portableTemporaryRecovery');
+    startPortableTemporaryRecovery(() => logger.error('Portable temporary-file recovery failed'));
 
     // Register the server's PostHog-backed feature-flag checker so that
     // packages (@alga-psa/integrations, @alga-psa/clients, etc.) can check
@@ -137,6 +143,8 @@ export async function initializeApp() {
       getSystemEmailService: async () => getSystemEmailService(),
       getTenantEmailService: async (tenant) => TenantEmailService.getInstance(tenant),
     });
+    registerWorkflowConversationRetainer(retainCoManagedWorkflowCommentEvent);
+    registerWorkflowTicketMutationAdapter(withCoManagedWorkflowTicketMutation);
     registerWorkflowEmailProvider({
       TenantEmailService: Object.assign(TenantEmailService, { resolveOutboundSenderForTenant: TenantEmailService.resolveOutboundSenderForTenant }) as any,
       StaticTemplateProcessor: StaticTemplateProcessor as any,

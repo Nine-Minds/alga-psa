@@ -17,6 +17,15 @@ import type { IUser } from '@alga-psa/types';
 // rather than positional .where('tenant', ...) calls.
 const { tenantScopeSpy } = vi.hoisted(() => ({ tenantScopeSpy: vi.fn() }));
 
+// Document authorization now runs co-managed meeting-artifact admission first,
+// which reads the workspace lifecycle and the browser session. These fixtures
+// are an ordinary PSA tenant with no session; admission does not apply to them
+// and has dedicated coverage in the co-managed suites, so stub it to the
+// "not a co-managed workspace" outcome.
+vi.mock('../../../../packages/documents/src/lib/meetingDocumentAdmission', () => ({
+  admitMeetingDocumentsForBrowser: vi.fn(async () => ({ handled: false as const })),
+}));
+
 // Mock dependencies
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),

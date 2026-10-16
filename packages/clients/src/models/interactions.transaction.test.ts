@@ -1,4 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { INDEPENDENT_TENANT_ROW, fakeTable } from '@alga-psa/db/testing';
+
+// Lifecycle admission rejects a tenant that is not a uuid, so this suite's
+// workspace has to look like a real one.
+const TENANT = '11111111-1111-4111-8111-111111111111';
 
 const hoisted = vi.hoisted(() => ({
   createTenantKnexMock: vi.fn(),
@@ -20,7 +25,7 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) =>
-    fn({ user_id: 'user-1', user_type: 'internal' }, { tenant: 'tenant-1' }, ...args),
+    fn({ user_id: 'user-1', user_type: 'internal' }, { tenant: TENANT }, ...args),
 }));
 vi.mock('../lib/authHelpers', () => ({
   assertMspPermission: vi.fn(),
@@ -132,13 +137,17 @@ class FakeInteractionQuery {
 
 function createFakeDb(rows: Row[]) {
   const db = ((tableName: string) => {
-    if (tableName !== 'interactions') {
-      throw new Error(`Unexpected table ${tableName}`);
+    if (tableName === 'interactions') {
+      return new FakeInteractionQuery(rows);
     }
-    return new FakeInteractionQuery(rows);
+    // Every other table on this connection is read by co-managed lifecycle
+    // admission, which this suite is not about: the shared double answers as an
+    // independent PSA workspace so admission steps out of the way.
+    return fakeTable({ tables: { tenants: [{ ...INDEPENDENT_TENANT_ROW, tenant: TENANT }] } }, TENANT, tableName);
   }) as any;
 
   db.raw = (sql: string) => sql;
+  db.isTransaction = true;
   return db;
 }
 
@@ -175,12 +184,12 @@ describe('InteractionModel transaction support', () => {
     const stagedRows: Row[] = [];
     const trx = createFakeDb(stagedRows);
 
-    const created = await InteractionModel.addInteraction(interactionInput(), 'tenant-1', trx);
+    const created = await InteractionModel.addInteraction(interactionInput(), TENANT, trx);
 
     expect(hoisted.createTenantKnexMock).not.toHaveBeenCalled();
     expect(created).toMatchObject({
       interaction_id: 'interaction-1',
-      tenant: 'tenant-1',
+      tenant: TENANT,
       client_id: 'client-1',
       type_name: 'online meeting',
     });
@@ -194,25 +203,25 @@ describe('InteractionModel transaction support', () => {
   it('keeps addInteraction working without an explicit transaction', async () => {
     const rows: Row[] = [];
     const db = createFakeDb(rows);
-    hoisted.createTenantKnexMock.mockResolvedValue({ knex: db, tenant: 'tenant-1' });
+    hoisted.createTenantKnexMock.mockResolvedValue({ knex: db, tenant: TENANT });
 
-    const created = await InteractionModel.addInteraction(interactionInput(), 'tenant-1');
+    const created = await InteractionModel.addInteraction(interactionInput(), TENANT);
 
-    expect(hoisted.createTenantKnexMock).toHaveBeenCalledWith('tenant-1');
+    expect(hoisted.createTenantKnexMock).toHaveBeenCalledWith(TENANT);
     expect(rows).toHaveLength(1);
     expect(created).toMatchObject({
       interaction_id: 'interaction-1',
-      tenant: 'tenant-1',
+      tenant: TENANT,
       client_id: 'client-1',
     });
   });
 
   it('updates and reloads through the supplied transaction without opening a pooled connection', async () => {
-    const baseRows = [interactionInput({ interaction_id: 'interaction-1', tenant: 'tenant-1' })];
+    const baseRows = [interactionInput({ interaction_id: 'interaction-1', tenant: TENANT })];
     const stagedRows = structuredClone(baseRows);
     const trx = createFakeDb(stagedRows);
 
-    const updated = await InteractionModel.updateInteraction('interaction-1', { title: 'New title' }, 'tenant-1', trx);
+    const updated = await InteractionModel.updateInteraction('interaction-1', { title: 'New title' }, TENANT, trx);
 
     expect(updated.title).toBe('New title');
     expect(stagedRows[0].title).toBe('New title');
@@ -221,28 +230,28 @@ describe('InteractionModel transaction support', () => {
   });
 
   it('keeps updateInteraction working without an explicit transaction', async () => {
-    const rows = [interactionInput({ interaction_id: 'interaction-1', tenant: 'tenant-1' })];
-    hoisted.createTenantKnexMock.mockResolvedValue({ knex: createFakeDb(rows), tenant: 'tenant-1' });
+    const rows = [interactionInput({ interaction_id: 'interaction-1', tenant: TENANT })];
+    hoisted.createTenantKnexMock.mockResolvedValue({ knex: createFakeDb(rows), tenant: TENANT });
 
-    const updated = await InteractionModel.updateInteraction('interaction-1', { title: 'New title' }, 'tenant-1');
+    const updated = await InteractionModel.updateInteraction('interaction-1', { title: 'New title' }, TENANT);
 
     expect(updated.title).toBe('New title');
     expect(rows[0].title).toBe('New title');
-    expect(hoisted.createTenantKnexMock).toHaveBeenCalledExactlyOnceWith('tenant-1');
+    expect(hoisted.createTenantKnexMock).toHaveBeenCalledExactlyOnceWith(TENANT);
   });
 
   it.each([false, true])('keeps interaction and calendar updates atomic (sync fails: %s)', async (syncFails) => {
-    const rows = [interactionInput({ interaction_id: 'interaction-1', tenant: 'tenant-1' })];
+    const rows = [interactionInput({ interaction_id: 'interaction-1', tenant: TENANT })];
     const calendar = { title: 'Support meeting' };
     const db = createFakeDb(rows);
-    hoisted.createTenantKnexMock.mockResolvedValue({ knex: db, tenant: 'tenant-1' });
+    hoisted.createTenantKnexMock.mockResolvedValue({ knex: db, tenant: TENANT });
     hoisted.withTransactionMock.mockImplementation(async (_db, callback) => {
       const stagedRows = structuredClone(rows);
       const stagedCalendar = { ...calendar };
       const trx = createFakeDb(stagedRows);
       hoisted.syncInteractionScheduleEntriesMock.mockImplementation(async (connection, tenant, interaction) => {
         expect(connection).toBe(trx);
-        expect(tenant).toBe('tenant-1');
+        expect(tenant).toBe(TENANT);
         expect(interaction.title).toBe('New title');
         expect(stagedRows[0].title).toBe('New title');
         stagedCalendar.title = interaction.title;

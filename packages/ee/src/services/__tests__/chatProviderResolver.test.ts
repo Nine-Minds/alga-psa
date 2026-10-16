@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { coManagedLifecycleMock } from '@alga-psa/db/testing';
 
 const openAiConfigs = vi.hoisted(() => [] as Array<Record<string, unknown>>);
 const getSecretMock = vi.hoisted(() => vi.fn());
 const rolloutEnabledMock = vi.hoisted(() => vi.fn());
 const licensingMocks = vi.hoisted(() => ({
   getLicenseStateRow: vi.fn(),
+  getSelfHostAiGatewayCredential: vi.fn(),
   isSelfHostLicensing: vi.fn(),
 }));
 
@@ -20,7 +22,11 @@ vi.mock('@alga-psa/core/secrets', () => ({
   getSecret: getSecretMock,
 }));
 
-vi.mock('@alga-psa/licensing', () => licensingMocks);
+vi.mock('@alga-psa/licensing', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  ...licensingMocks,
+  ...coManagedLifecycleMock({ fn: vi.fn }),
+}));
 
 vi.mock('../aiGatewayRollout', () => ({
   isAiUsageBillingEnabled: rolloutEnabledMock,
@@ -33,6 +39,7 @@ describe('package chatProviderResolver appliance path', () => {
     getSecretMock.mockReset();
     rolloutEnabledMock.mockReset();
     licensingMocks.getLicenseStateRow.mockReset();
+    licensingMocks.getSelfHostAiGatewayCredential.mockReset();
     licensingMocks.isSelfHostLicensing.mockReset();
 
     process.env.AI_GATEWAY_URL = 'https://gateway.example.test/';
@@ -46,6 +53,9 @@ describe('package chatProviderResolver appliance path', () => {
     licensingMocks.getLicenseStateRow.mockResolvedValue({
       appliance_credential: 'c'.repeat(64),
     });
+    // The appliance credential the gateway client now reads through the
+    // licensing seam rather than off the license-state row.
+    licensingMocks.getSelfHostAiGatewayCredential.mockResolvedValue('c'.repeat(64));
   });
 
   afterEach(() => {

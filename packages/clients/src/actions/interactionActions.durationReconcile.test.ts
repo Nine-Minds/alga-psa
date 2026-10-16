@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
+  tenant: '11111111-1111-4111-8111-111111111111',
   assertMspPermissionMock: vi.fn(),
   hasPermissionAsyncMock: vi.fn(),
   createInteractionWithSideEffectsMock: vi.fn(),
@@ -11,14 +12,19 @@ const hoisted = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) =>
-    fn({ user_id: 'user-1', user_type: 'internal' }, { tenant: 'tenant-1' }, ...args),
+    fn({ user_id: 'user-1', user_type: 'internal' }, { tenant: hoisted.tenant }, ...args),
 }));
 
-vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: async () => ({ knex: {} as any }),
-  tenantDb: () => ({ table: vi.fn() }),
-  withTransaction: async (_db: any, fn: any) => fn({} as any),
-}));
+// Lifecycle admission reads tenants.product_code through a transaction, so the
+// doubles come from the shared testing helpers (independent PSA tenant default).
+vi.mock('@alga-psa/db', async () => {
+  const { fakeTenantDb, fakeTransaction, fakeWithTransaction } = await import('@alga-psa/db/testing');
+  return {
+    createTenantKnex: async () => ({ knex: fakeTransaction() as any }),
+    tenantDb: fakeTenantDb(),
+    withTransaction: fakeWithTransaction(),
+  };
+});
 
 vi.mock('@alga-psa/storage/StorageService', () => ({
   StorageService: { deleteFile: vi.fn() },
@@ -70,6 +76,7 @@ vi.mock('./interactionCreateHelper', async (importOriginal) => {
   };
 });
 
+const TENANT = hoisted.tenant;
 const START = new Date('2026-10-01T09:00:00.000Z');
 
 function interactionInput(overrides: Record<string, unknown> = {}) {
@@ -78,7 +85,7 @@ function interactionInput(overrides: Record<string, unknown> = {}) {
     title: 'Follow-up call',
     user_id: 'user-1',
     client_id: 'client-1',
-    tenant: 'tenant-1',
+    tenant: TENANT,
     ...overrides,
   } as any;
 }
@@ -181,13 +188,13 @@ describe('interaction duration reconciliation', () => {
     expect(hoisted.updateInteractionMock).toHaveBeenCalledWith(
       'interaction-1',
       { end_time: new Date('2026-10-01T11:00:00.000Z'), duration: 120 },
-      'tenant-1',
+      TENANT,
       expect.anything(),
     );
     // The calendar block is resized from the same reconciled record.
     expect(hoisted.syncInteractionScheduleEntriesMock).toHaveBeenCalledWith(
       expect.anything(),
-      'tenant-1',
+      TENANT,
       expect.objectContaining({ duration: 120 }),
     );
     expect(result).toMatchObject({ duration: 120 });
@@ -230,7 +237,7 @@ describe('interaction duration reconciliation', () => {
     expect(hoisted.updateInteractionMock).toHaveBeenCalledWith(
       'interaction-1',
       updateData,
-      'tenant-1',
+      TENANT,
       expect.anything(),
     );
     expect(hoisted.updateInteractionMock.mock.calls[0][1]).toBe(updateData);
@@ -245,7 +252,7 @@ describe('interaction duration reconciliation', () => {
     expect(hoisted.updateInteractionMock).toHaveBeenCalledWith(
       'interaction-1',
       { title: 'Renamed' },
-      'tenant-1',
+      TENANT,
       expect.anything(),
     );
   });

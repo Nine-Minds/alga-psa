@@ -1,0 +1,13 @@
+Playwright network log (server-action POSTs) on dev server :3374, qa@emeraldcity.oz. Sidebar clicks are client-side navigations; "work-signals read" = response is the small escalatedUnassigned/awaitingReply counts payload.
+
+full load /msp/tickets                               work-signals reads=1  other POSTs=29  full document loads=1   7f3b46db9d 0:{"a":"$@1","f":"","q":"","i":true,"b":"development"} 1:D"$2" 1:{"assignedRelationshipCou
+client nav -> Service Requests                       work-signals reads=0  other POSTs=2  full document loads=0
+client nav -> Clients                                work-signals reads=0  other POSTs=27  full document loads=0
+client nav -> Home                                   work-signals reads=1  other POSTs=19  full document loads=1   7f3b46db9d 0:{"a":"$@1","f":"","q":"","i":true,"b":"development"} 1:D"$2" 1:{"assignedRelationshipCou
+client nav -> Tickets (callout page)                 work-signals reads=0  other POSTs=20  full document loads=0
+client nav -> Customer Tickets (list mounts its own queue read) work-signals reads=0  other POSTs=3  full document loads=0
+window focus                                         work-signals reads=1  other POSTs=1  full document loads=0   7f3b46db9d 0:{"a":"$@1","f":"","q":"","i":true,"b":"development"} 1:D"$2" 1:{"assignedRelationshipCou
+
+Reading the log: every sidebar hop that stayed a client-side navigation (Service Requests, Clients, All Tickets, Customer Tickets) made 0 work-signals reads.
+The single read inside "client nav -> Home" coincides with a full document load (the preceding Surveys link did a hard navigation in this build), i.e. the provider remounted; it is not a client navigation.
+The read on "full load" is the provider's first (lazy, post-paint) read; the read on "window focus" is the focus refresh. The ~20-30 "other POSTs" per page are unrelated server actions (layout, menus, feature flags, list data).

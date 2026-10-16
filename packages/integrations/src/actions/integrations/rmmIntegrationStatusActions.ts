@@ -1,5 +1,6 @@
 'use server';
 
+import { assertTenantProductCapability } from '@shared/services/productAccessGuard';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
@@ -21,6 +22,7 @@ export const getRmmIntegrationStatuses = withAuth(async (user, { tenant }): Prom
 }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'read');
   if (!permitted) return { success: false, error: 'Forbidden' };
+  await assertTenantProductCapability(tenant, 'rmm');
 
   try {
     const { knex } = await createTenantKnex();
@@ -37,6 +39,7 @@ export const updateRmmDeviceSyncSettings = withAuth(async (
 ): Promise<{ success: boolean; error?: string; intervalMinutes?: number }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
+  await assertTenantProductCapability(tenant, 'rmm');
 
   try {
     const { knex } = await createTenantKnex();

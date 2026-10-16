@@ -5,6 +5,9 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BentoTimelineTile } from './BentoTimelineTile';
+import { TicketDataSourceProvider } from '../TicketDataSourceContext';
+import { composeTicketDataSource } from '../../../lib/ticketDataSource';
+import { nativeTicketDataSource } from '../../../lib/nativeTicketDataSource';
 
 type BentoTimelineTileProps = React.ComponentProps<typeof BentoTimelineTile>;
 
@@ -347,5 +350,25 @@ describe('BentoTimelineTile composer heading', () => {
 
     expect(screen.getByRole('switch', { name: 'Schedule' })).toHaveAttribute('aria-checked', 'false');
     expect(screen.queryByLabelText('Publish at (America/New_York)')).not.toBeInTheDocument();
+  });
+});
+
+describe('BentoTimelineTile read-only viewer', () => {
+  const readOnlySource = composeTicketDataSource(nativeTicketDataSource, { screen: { readOnly: true } });
+
+  it('offers no compose affordance to a read-grant viewer', () => {
+    render(
+      <TicketDataSourceProvider dataSource={readOnlySource}>
+        <BentoTimelineTile {...defaultProps} />
+      </TicketDataSourceProvider>,
+    );
+    expect(document.getElementById('ticket-timeline-add-comment-btn')).toBeNull();
+    expect(document.getElementById('ticket-timeline-composer-dock')).toBeNull();
+    expect(document.getElementById('ticket-timeline-composer-top')).toBeNull();
+  });
+
+  it('keeps the Add Comment affordance natively', () => {
+    render(<BentoTimelineTile {...defaultProps} />);
+    expect(document.getElementById('ticket-timeline-add-comment-btn')).not.toBeNull();
   });
 });

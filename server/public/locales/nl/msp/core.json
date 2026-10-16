@@ -105,6 +105,12 @@
     "passwords": "Wachtwoorden",
     "ticketsAll": "Alle tickets",
     "ticketsRecurring": "Terugkerende tickets",
+    "coManaged": "Gezamenlijk beheerde IT",
+    "coManagedDelegation": "Gedelegeerd beheer",
+    "coManagedAccess": "Toegang voor gezamenlijk beheer",
+    "ticketsCustomer": "Klanttickets",
+    "projectsSharedTasks": "Gedeelde taken",
+    "coManagedOverview": "Overzicht",
     "ticketsTemplates": "Ticketsjablonen"
   },
   "sidebar": {

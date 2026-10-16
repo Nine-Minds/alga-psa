@@ -73,14 +73,18 @@ async function seedTenantWithPendingDeletion(opts: {
 beforeAll(async () => {
   db = await createTestDbConnection({ runSeeds: false });
 
-  // Apply the EE migrations that own the reactivation schema.
+  // Apply the EE migrations that own the reactivation schema. The integration
+  // lane now builds its database from a CE+EE overlay, so they may already be
+  // applied; each is keyed on the table it creates, because the first one is
+  // an unguarded createTable that throws "already exists" on a second run.
   const require = createRequire(import.meta.url);
   const eeMigrations = [
-    '../../../../ee/server/migrations/20260113120000_create_pending_tenant_deletions.cjs',
-    '../../../../ee/server/migrations/20260605120000_add_tenant_reactivation_winback_tables.cjs',
+    { file: '20260113120000_create_pending_tenant_deletions.cjs', creates: 'pending_tenant_deletions' },
+    { file: '20260605120000_add_tenant_reactivation_winback_tables.cjs', creates: 'tenant_reactivation_tokens' },
   ];
-  for (const migrationPath of eeMigrations) {
-    await require(migrationPath).up(db);
+  for (const migration of eeMigrations) {
+    if (await db.schema.hasTable(migration.creates)) continue;
+    await require(`../../../../ee/server/migrations/${migration.file}`).up(db);
   }
 });
 

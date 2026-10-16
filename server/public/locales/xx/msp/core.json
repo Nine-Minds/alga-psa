@@ -105,6 +105,12 @@
     "extensions": "⟦Ḗẋŧḗƞşīȯƞş⟧",
     "ticketsAll": "⟦Ȧŀŀ Ŧīƈķḗŧş⟧",
     "ticketsRecurring": "⟦Řḗƈŭřřīƞɠ Ŧīƈķḗŧş⟧",
+    "coManaged": "⟦Ƈȯ-ḿȧƞȧɠḗḓ ĪŦ⟧",
+    "coManagedDelegation": "⟦Ḓḗŀḗɠȧŧḗḓ ȧḓḿīƞīşŧřȧŧīȯƞ⟧",
+    "coManagedAccess": "⟦Ƈȯ-ḿȧƞȧɠḗḓ ȧƈƈḗşş⟧",
+    "ticketsCustomer": "⟦Ƈŭşŧȯḿḗř Ŧīƈķḗŧş⟧",
+    "projectsSharedTasks": "⟦Şħȧřḗḓ Ŧȧşķş⟧",
+    "coManagedOverview": "⟦Ȯṽḗřṽīḗẇ⟧",
     "ticketsTemplates": "⟦Ŧīƈķḗŧ Ŧḗḿƥŀȧŧḗş⟧"
   },
   "marketing": {

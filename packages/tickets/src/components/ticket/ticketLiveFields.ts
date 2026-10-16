@@ -1,11 +1,10 @@
 'use client';
 
+import type { TicketLiveUpdateActor } from '../../lib/ticketLiveUpdateActor';
+
 export interface TicketLiveConflictState {
   updatedFields: string[];
-  updatedBy: {
-    userId: string;
-    displayName: string;
-  };
+  updatedBy: TicketLiveUpdateActor;
   updatedAt: string;
 }
 

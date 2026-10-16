@@ -6,6 +6,7 @@ import {
   type TeamsMeetingConfigSkipReason,
 } from './meetingConfig';
 import { renewTeamsMeetingArtifactSubscriptions } from './artifactSubscriptions';
+import { assertTeamsMeetingCreationIdentity, findTeamsCreationEvent, resolveOnlineMeetingIdFromJoinUrl, teamsEventReceipt, TEAMS_CREATION_OPERATION_PROPERTY, type TeamsMeetingCreationIdentity, type CreatedTeamsEventReceipt } from './meetingCreationRecovery';
 
 export interface CreateTeamsMeetingInput {
   tenantId: string;
@@ -16,6 +17,8 @@ export interface CreateTeamsMeetingInput {
   /** Optional HTML body carried onto the Graph event (appointment context + PSA link). */
   bodyHtml?: string | null;
   appointmentRequestId?: string | null;
+  /** Supplied only from a durable, admitted creation operation. */
+  creationIdentity?: TeamsMeetingCreationIdentity;
 }
 
 export interface CreateTeamsMeetingResult {
@@ -37,20 +40,13 @@ export interface TeamsMeetingAttendee {
 export type CreateTeamsMeetingOutcome =
   | { status: 'created'; meeting: CreateTeamsMeetingResult }
   | { status: 'skipped'; reason: TeamsMeetingConfigSkipReason }
-  | { status: 'failed'; errorCode: string; errorMessage: string };
+  | { status: 'failed'; errorCode: string; errorMessage: string; createdEvent?: CreatedTeamsEventReceipt };
 
 interface GraphEventResponse {
   id?: unknown;
   onlineMeeting?: {
     joinUrl?: unknown;
   } | null;
-}
-
-interface GraphOnlineMeetingListResponse {
-  value?: Array<{
-    id?: unknown;
-    joinWebUrl?: unknown;
-  }>;
 }
 
 function normalizeString(value: unknown): string {
@@ -65,46 +61,12 @@ function normalizeErrorMessage(error: unknown): string {
   return String(error || 'Unknown error');
 }
 
-function escapeODataString(value: string): string {
-  return value.replace(/'/g, "''");
-}
-
 export function mapGraphStatusToMeetingErrorCode(status: number): string {
   if (status === 401 || status === 403) return 'graph_unauthorized';
   if (status === 404) return 'graph_not_found';
   if (status === 429) return 'graph_throttled';
   if (status >= 500 && status <= 599) return 'graph_server_error';
   return 'graph_error';
-}
-
-async function resolveOnlineMeetingIdFromJoinUrl(params: {
-  accessToken: string;
-  organizerUpn: string;
-  joinWebUrl: string;
-}): Promise<string> {
-  const filter = encodeURIComponent(`JoinWebUrl eq '${escapeODataString(params.joinWebUrl)}'`);
-  const response = await fetch(
-    `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(params.organizerUpn)}/onlineMeetings?$filter=${filter}`,
-    {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${params.accessToken}`,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Failed to resolve online meeting (${response.status}): ${errorBody || response.statusText}`);
-  }
-
-  const payload = (await response.json()) as GraphOnlineMeetingListResponse;
-  const meetingId = normalizeString(payload.value?.[0]?.id);
-  if (!meetingId) {
-    throw new Error('Microsoft Graph did not return an onlineMeeting id for the event join URL.');
-  }
-
-  return meetingId;
 }
 
 /**
@@ -125,7 +87,9 @@ function ensureArtifactSubscriptionsInBackground(tenantId: string): void {
 export async function createTeamsMeetingWithResult(
   input: CreateTeamsMeetingInput
 ): Promise<CreateTeamsMeetingOutcome> {
+  let createdEvent: CreatedTeamsEventReceipt | undefined;
   try {
+    if (input.creationIdentity) assertTeamsMeetingCreationIdentity(input.creationIdentity);
     const configState = await resolveTeamsMeetingConfigState(input.tenantId);
     if (configState.status !== 'ready') {
       logger.warn('[TeamsMeetings] Unable to create Teams meeting because the tenant is not ready', {
@@ -137,6 +101,12 @@ export async function createTeamsMeetingWithResult(
       return { status: 'skipped', reason: configState.reason };
     }
     const config = configState.config;
+    const identity = input.creationIdentity;
+    if (identity && (config.microsoftTenantId.toLowerCase() !== identity.target.microsoftTenantId.toLowerCase() ||
+      config.organizerUserId.toLowerCase() !== identity.target.organizerUserId.toLowerCase() || config.sendMeetingInvites !== identity.target.sendMeetingInvites)) {
+      return { status: 'failed', errorCode: 'creation_target_changed', errorMessage: 'The Teams organizer or invitation configuration changed. Start a new authorized operation after recovery.' };
+    }
+    const organizer = identity?.target.organizerUserId ?? config.organizerUpn;
 
     const accessToken = await fetchMicrosoftGraphAppToken({
       tenantAuthority: config.microsoftTenantId,
@@ -149,15 +119,18 @@ export async function createTeamsMeetingWithResult(
     const attendees = config.sendMeetingInvites ? input.attendees ?? [] : [];
     const bodyHtml = normalizeString(input.bodyHtml);
 
-    const response = await fetch(
-      `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(config.organizerUpn)}/events`,
+    const recovered = identity ? await findTeamsCreationEvent(accessToken, identity) : null;
+    const response = recovered ? null : await fetch(
+      `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(organizer)}/events`,
       {
         method: 'POST',
+        signal: AbortSignal.timeout(30_000),
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
+          ...(identity ? { transactionId: identity.operationId, singleValueExtendedProperties: [{ id: TEAMS_CREATION_OPERATION_PROPERTY, value: identity.operationId }] } : {}),
           subject: input.subject,
           start: {
             dateTime: input.startDateTime,
@@ -175,7 +148,7 @@ export async function createTeamsMeetingWithResult(
       }
     );
 
-    if (!response.ok) {
+    if (response && !response.ok) {
       const errorBody = await response.text();
       const errorMessage = `Failed to create Teams meeting (${response.status}): ${errorBody || response.statusText}`;
       logger.warn('[TeamsMeetings] Failed to create Teams meeting', {
@@ -192,7 +165,8 @@ export async function createTeamsMeetingWithResult(
       };
     }
 
-    const payload = (await response.json()) as GraphEventResponse;
+    const payload = recovered ?? (await response!.json()) as GraphEventResponse;
+    if (identity) createdEvent = teamsEventReceipt(payload, identity.target);
     const eventId = normalizeString(payload.id);
     const joinWebUrl = normalizeString(payload.onlineMeeting?.joinUrl);
 
@@ -201,11 +175,12 @@ export async function createTeamsMeetingWithResult(
         tenant: input.tenantId,
         appointment_request_id: input.appointmentRequestId ?? null,
         operation: 'create',
-        status: response.status,
+        status: response?.status ?? 200,
         graph_response: payload,
       });
       return {
         status: 'failed',
+        ...(createdEvent ? { createdEvent } : {}),
         errorCode: 'graph_missing_meeting_fields',
         errorMessage: 'Microsoft Graph created the event but did not return an online meeting join URL.',
       };
@@ -213,7 +188,7 @@ export async function createTeamsMeetingWithResult(
 
     const meetingId = await resolveOnlineMeetingIdFromJoinUrl({
       accessToken,
-      organizerUpn: config.organizerUpn,
+      organizerUpn: organizer,
       joinWebUrl,
     });
 
@@ -221,7 +196,7 @@ export async function createTeamsMeetingWithResult(
       tenant: input.tenantId,
       appointment_request_id: input.appointmentRequestId ?? null,
       operation: 'create',
-      status: response.status,
+      status: response?.status ?? 200,
       meeting_id: meetingId,
       event_id: eventId,
       attendee_count: attendees.length,
@@ -234,8 +209,8 @@ export async function createTeamsMeetingWithResult(
       meeting: {
         joinWebUrl,
         meetingId,
-        organizerUpn: config.organizerUpn,
-        organizerUserId: config.organizerUserId,
+        organizerUpn: identity?.target.organizerUpn ?? config.organizerUpn,
+        organizerUserId: identity?.target.organizerUserId ?? config.organizerUserId,
         eventId,
       },
     };
@@ -248,7 +223,7 @@ export async function createTeamsMeetingWithResult(
       status: null,
       error: errorMessage,
     });
-    return { status: 'failed', errorCode: 'exception', errorMessage };
+    return { status: 'failed', errorCode: 'exception', errorMessage, ...(createdEvent ? { createdEvent } : {}) };
   }
 }
 

@@ -23,6 +23,8 @@ import { useProduct } from '@/context/ProductContext';
 import { filterMenuSectionsByProduct } from '@/lib/productSurfaceRegistry';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getCoManagedDelegatedAdministration } from '@/lib/actions/coManagedDelegatedAdministrationActions';
+import { useCoManagedWorkSignals } from '@/components/co-managed/CoManagedWorkSignalsProvider';
 
 export function filterNavigationSectionsBySelfHost(
   sections: readonly NavigationSection[],
@@ -151,15 +153,37 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const useNavigationSections =
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
   const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
+  const coManagedFlag = useFeatureFlag('release-v1-6-feature', { defaultValue: false });
+  const coManagedEnabled = coManagedFlag?.enabled === true && !coManagedFlag.loading && !coManagedFlag.error;
   const marketingEnabled =
     typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [selfHostMode, setSelfHostMode] = useState(false);
-  const { hasFeature } = useTier();
+  const [tenantLicenseScope, setTenantLicenseScope] = useState(false);
+  const [hasDelegationDirectory, setHasDelegationDirectory] = useState(false);
+  const { hasFeature, isPro } = useTier();
   // Mirrors the menuConfig tier gate so the vault nav item tracks the tenant tier.
   const credentialsVaultEnabled = hasFeature(TIER_FEATURES.CREDENTIALS);
   const { productCode, edition } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
+  // Customer Tickets / Shared Tasks appear only once the flag resolved on, the tenant
+  // sponsors (PSA Pro) and the reader reports an assigned relationship. Presentation only.
+  const { available: coManagedWorkAvailable } = useCoManagedWorkSignals();
+
+  // In a PSA tenant, Delegated administration shows only for a non-empty directory.
+  const delegationDirectoryCheck = coManagedEnabled && isPro && productCode === 'psa';
+  useEffect(() => {
+    if (!delegationDirectoryCheck) { setHasDelegationDirectory(false); return; }
+    let isMounted = true;
+    getCoManagedDelegatedAdministration()
+      .then((result) => {
+        if (!isMounted) return;
+        const directory = result as { side?: string; workspaces?: unknown[] } | null;
+        setHasDelegationDirectory(directory?.side === 'directory' && (directory.workspaces?.length ?? 0) > 0);
+      })
+      .catch(() => { if (isMounted) setHasDelegationDirectory(false); });
+    return () => { isMounted = false; };
+  }, [delegationDirectoryCheck]);
 
   useEffect(() => {
     let isMounted = true;
@@ -167,6 +191,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       .then((result) => {
         if (isMounted && !isActionPermissionError(result)) {
           setSelfHostMode(result.selfHostMode);
+          setTenantLicenseScope(result.scope === 'tenant');
         }
       })
       .catch(() => {});
@@ -214,6 +239,18 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     const filteredSections = baseSections.map((section) => ({
       ...section,
       items: section.items
+        .map((item) => item.name === 'Co-managed IT' && item.subItems ? {
+          ...item,
+          subItems: item.subItems
+            .filter((sub) => sub.href !== '/msp/co-managed' || (coManagedEnabled && isPro))
+            .filter((sub) => sub.href !== '/msp/co-management' || (coManagedEnabled && productCode === 'co_managed'))
+            .filter((sub) => sub.href !== '/msp/co-management/administration' || (coManagedEnabled &&
+              (productCode === 'co_managed' ? userPermissions.includes('co_management:manage') : isPro && hasDelegationDirectory))),
+        } : item.subItems ? {
+          ...item,
+          subItems: item.subItems.filter((sub) =>
+            (sub.href !== '/msp/tickets/customer' && sub.href !== '/msp/co-management/tasks') || (coManagedWorkAvailable && coManagedEnabled && isPro && productCode === 'psa')),
+        } : item)
         .filter((item) => item.name !== 'Marketing' || marketingEnabled)
         .filter((item) => item.name !== 'Passwords' || credentialsVaultEnabled)
         .map((item) => {
@@ -238,7 +275,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
         userPermissions,
       ),
     );
-  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled]);
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled, coManagedEnabled, isPro, userPermissions, hasDelegationDirectory, coManagedWorkAvailable]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);
@@ -246,9 +283,9 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
 
     return filterNavigationSectionsBySelfHost(
       productSections,
-      selfHostMode,
+      selfHostMode && (!tenantLicenseScope || coManagedEnabled),
     );
-  }, [edition, productCode, selfHostMode]);
+  }, [edition, productCode, selfHostMode, tenantLicenseScope, coManagedEnabled]);
 
   const billingSections = useMemo(
     () => filterNavigationSectionsByPermission(

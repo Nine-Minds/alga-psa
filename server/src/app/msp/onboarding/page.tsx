@@ -16,6 +16,9 @@ export default function OnboardingPage() {
   const [initialData, setInitialData] = useState<Partial<WizardData>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isRevisit, setIsRevisit] = useState(false);
+  // Assume a reset is still owed until the server says otherwise, so a failed load
+  // can never quietly drop the prompt for someone on a temporary password.
+  const [requiresPasswordReset, setRequiresPasswordReset] = useState(true);
 
   useEffect(() => {
     checkOnboardingStatusAndLoadData();
@@ -47,6 +50,10 @@ export default function OnboardingPage() {
       // For returning users, only fetch company/tenant data
       if (!isReturningUser) {
         const initialDataResult = await getOnboardingInitialData();
+
+        if (initialDataResult.success) {
+          setRequiresPasswordReset(initialDataResult.requiresPasswordReset !== false);
+        }
 
         if (initialDataResult.success && initialDataResult.data) {
           // Merge saved progress with current user data
@@ -120,6 +127,7 @@ export default function OnboardingPage() {
         onComplete={handleComplete}
         fullPage={true}
         isRevisit={isRevisit}
+        requiresPasswordReset={requiresPasswordReset}
         productCode={productCode}
       />
     </div>

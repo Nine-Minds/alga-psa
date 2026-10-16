@@ -61,10 +61,11 @@ export function isHolidayDate(date: Date, holidays: HolidayDateInput[], utc = fa
 }
 
 export interface GenerateOccurrencesOptions {
+  /** Calendar expansion represents the master as an occurrence too. Other
+   * callers can retain the historical subsequent-occurrences-only contract. */
+  includeMaster?: boolean;
   /** Holidays to exclude from generated occurrences */
   holidays?: IHoliday[];
-  /** Include the master date when the caller materializes the whole series virtually. */
-  includeMaster?: boolean;
 }
 
 // LEVERAGE: pattern recurrence-engine — schedule entries should move onto shared/lib/recurrence
@@ -155,7 +156,8 @@ export function generateOccurrences(
       return baseOccurrences;
     }
 
-    // Filter out the master entry's start date and apply the original time to each occurrence
+    // Calendar readers include the master; subsequent-only callers omit it.
+    // Both paths apply the original time and the same exclusions.
     const masterStartDate = new Date(entry.scheduled_start);
     const occurrencesWithTime = baseOccurrences
       .filter((date): boolean => {

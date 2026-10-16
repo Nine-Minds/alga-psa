@@ -72,7 +72,11 @@ function expectTimeEntryBody(body: any) {
   for (const stale of ['started_at', 'ended_at', 'duration_minutes']) {
     expect(body.properties).not.toHaveProperty(stale);
   }
-  expect(body.required).toEqual(expect.arrayContaining(['work_item_type', 'start_time', 'end_time', 'service_id']));
+  expect(body.required).toEqual(expect.arrayContaining(['work_item_type', 'start_time', 'end_time']));
+  // service_id is mandatory only for commercial entries (the retained service
+  // admission rejects its absence); operational co-managed entries carry none.
+  // The schema therefore cannot list it as required, so the description must.
+  expect(body.properties.service_id.description).toContain('Required on create for commercial');
 }
 
 describe('contact and time-entry request bodies in generated API artifacts', () => {

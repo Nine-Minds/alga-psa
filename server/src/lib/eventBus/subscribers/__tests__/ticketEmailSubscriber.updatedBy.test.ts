@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 
 import { ticketEmailSubscriberTestHarness } from '../ticketEmailSubscriber';
+import { resolveTicketNotificationActorNames } from '../../../notifications/ticketNotificationContext';
 
 const { formatAccumulatedChanges, resolveUpdatedByDisplay } = ticketEmailSubscriberTestHarness;
 
@@ -35,18 +36,21 @@ const change = (userId?: string) => ({ timestamp: new Date().toISOString(), user
 
 describe('ticketEmailSubscriber updater rendering', () => {
   it('renders System for a changeSet with no userId', async () => {
-    const html = await formatAccumulatedChanges(makeDb(), [change(undefined)] as any, tenant);
+    const db = makeDb(); const changes = [change(undefined)] as any;
+    const html = await formatAccumulatedChanges(db, changes, await resolveTicketNotificationActorNames(db, tenant, changes), tenant);
     expect(html).toContain('System');
   });
 
   it('never renders a UUID for an updater id with no users row', async () => {
-    const html = await formatAccumulatedChanges(makeDb(), [change(ghostId)] as any, tenant);
+    const db = makeDb(); const changes = [change(ghostId)] as any;
+    const html = await formatAccumulatedChanges(db, changes, await resolveTicketNotificationActorNames(db, tenant, changes), tenant);
     expect(html).toContain('System');
     expect(html).not.toContain(ghostId);
   });
 
   it('renders the real name for a known user', async () => {
-    const html = await formatAccumulatedChanges(makeDb(), [change(realId)] as any, tenant);
+    const db = makeDb(); const changes = [change(realId)] as any;
+    const html = await formatAccumulatedChanges(db, changes, await resolveTicketNotificationActorNames(db, tenant, changes), tenant);
     expect(html).toContain('Grace Hopper');
   });
 

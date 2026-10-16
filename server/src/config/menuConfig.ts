@@ -86,6 +86,8 @@ export interface MenuItem {
   underConstruction?: boolean;
   requiresSelfHost?: boolean;
   requiredPermission?: string;
+  /** Names a count source the sidebar renders as a badge (hidden at zero). */
+  badgeSource?: 'co-managed-work';
 }
 
 export interface NavigationSection {
@@ -116,6 +118,8 @@ export const navigationSections: NavigationSection[] = [
         icon: Ticket,
         subItems: [
           { name: 'All Tickets', translationKey: 'nav.ticketsAll', icon: Ticket, href: '/msp/tickets' },
+          // Presentation-gated in SidebarWithFeatureFlags (flag + sponsoring PSA Pro + an assigned relationship).
+          { name: 'Customer Tickets', translationKey: 'nav.ticketsCustomer', icon: Handshake, href: '/msp/tickets/customer', badgeSource: 'co-managed-work' },
           { name: 'Recurring Tickets', translationKey: 'nav.ticketsRecurring', icon: Repeat, href: '/msp/tickets/recurring', requiredPermission: 'recurring_ticket:read' },
           { name: 'Ticket Templates', translationKey: 'nav.ticketsTemplates', icon: LayoutTemplate, href: '/msp/tickets/templates', requiredPermission: 'ticket_template:read' }
         ]
@@ -138,6 +142,7 @@ export const navigationSections: NavigationSection[] = [
         icon: ListTodo,
         subItems: [
           { name: 'All Projects', translationKey: 'nav.projectsAll', icon: ListTodo, href: '/msp/projects' },
+          { name: 'Shared Tasks', translationKey: 'nav.projectsSharedTasks', icon: ListChecks, href: '/msp/co-management/tasks' },
           { name: 'Templates', translationKey: 'nav.projectsTemplates', icon: SquareDashedKanban, href: '/msp/projects/templates' }
         ]
       },
@@ -146,6 +151,14 @@ export const navigationSections: NavigationSection[] = [
         translationKey: 'nav.clients',
         icon: Building2,
         href: '/msp/clients'
+      },
+      {
+        name: 'Co-managed IT', translationKey: 'nav.coManaged', icon: Users,
+        subItems: [
+          { name: 'Overview', translationKey: 'nav.coManagedOverview', icon: Users, href: '/msp/co-managed', requiredPermission: 'co_management:read' },
+          { name: 'Delegated administration', translationKey: 'nav.coManagedDelegation', icon: Users, href: '/msp/co-management/administration' },
+          { name: 'Co-managed access', translationKey: 'nav.coManagedAccess', icon: Users, href: '/msp/co-management', requiredPermission: 'co_management:manage' },
+        ],
       },
       {
         name: 'Opportunities',

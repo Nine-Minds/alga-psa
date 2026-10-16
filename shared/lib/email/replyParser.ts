@@ -275,13 +275,13 @@ const KNOWN_QUOTE_MARKER_TOKENS = ['gmail_quote', 'yahoo_quoted', 'protonmail_qu
 const REPLY_HEADER_LOOKBEHIND_CHARS = 300;
 
 /** Convert an HTML fragment to visible text, preserving block-level line breaks. */
-function htmlToVisibleText(html: string): string {
+export function htmlToVisibleText(html: string): string {
   const withBreaks = html
     .replace(/<(?:style|script)\b[\s\S]*?<\/(?:style|script)>/gi, ' ')
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<(?:br|\/p|\/div|\/li|\/tr|\/h[1-6]|\/blockquote|\/table)\b[^>]*>/gi, '\n')
     .replace(/<[^>]+>/g, ' ');
-  return decodeHtml(withBreaks)
+  return decodeHtml(withBreaks.replace(/&nbsp;/gi, ' '))
     .split('\n')
     .map((line) => line.replace(/\s+/g, ' ').trim())
     .join('\n');
@@ -441,8 +441,12 @@ function trimHtmlAtBoundary(html: string, config: ReplyParserConfig): TrimResult
   const attributeIndex = html.toLowerCase().indexOf(config.htmlBoundaryAttribute.toLowerCase());
 
   if (attributeIndex >= 0) {
+    // Cut before the marker's opening tag, not inside its attribute list.
+    // Otherwise an HTML-only reply retains an incomplete `<div` or `<p`.
+    const tagStart = html.lastIndexOf('<', attributeIndex);
+    const boundaryStart = tagStart >= 0 && html.lastIndexOf('>', attributeIndex) < tagStart ? tagStart : attributeIndex;
     return {
-      text: html.slice(0, attributeIndex).trim(),
+      text: html.slice(0, boundaryStart).trim(),
       matched: config.htmlBoundaryAttribute,
       heuristic: 'html-boundary',
     };

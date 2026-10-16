@@ -1,7 +1,8 @@
 import { prepareCommentAttachmentEmail, claimCommentEmailDelivery, finishCommentEmailDelivery, recipientCanReceiveCommentFiles } from './ticketCommentAttachmentEmail';
 import { isPublicAttachmentComment } from '@shared/lib/ticketCommentAttachments';
 import { randomUUID } from 'node:crypto';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
+import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 import { getConnection } from '../db/db';
 // Note: Email sending is routed through TenantEmailService
 import logger from '@alga-psa/core/logger';
@@ -122,6 +123,8 @@ export interface SendEmailParams {
    */
   cc?: EmailAddress[];
   bcc?: EmailAddress[];
+  /** Retry authority stays with a caller that must revalidate access. */
+  retryPolicy?: 'queue' | 'caller';
 }
 
 function applyReplyMarkers(
@@ -240,6 +243,12 @@ export async function appendOutboundMessageIdReference(
 }
 
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
+  await sendEventEmailWithOutcome(params);
+}
+
+/** Distinguishes transport acceptance from intentional skips and generic queue
+ * acceptance. Durable callers use retryPolicy=caller and own retry scheduling. */
+export async function sendEventEmailWithOutcome(params: SendEmailParams): Promise<'sent' | 'skipped' | 'queued'> {
   try {
     logger.info('[SendEventEmail] 🚀 NEW EMAIL PROVIDER MANAGER VERSION - Preparing to send email:', {
       to: params.to,
@@ -279,6 +288,9 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
     // Get the template content using tenant-aware connection
     const knex = await getConnection(params.tenantId);
+    // Older event retries retain rendered context, not current task authority.
+    // Co-managed tasks use the qualified queue and never fall back to this path.
+    if (params.template === 'task-comment-added' && await withTransaction(knex, trx => hasCoManagedConversationOwnership(trx, params.tenantId))) return 'skipped';
     logger.debug('[SendEventEmail] Database connection established:', {
       tenantId: params.tenantId,
       database: knex.client.config.connection.database
@@ -450,13 +462,13 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         ticket_id: destinationTicketId, master_ticket_id: attachmentTicketId,
       }).first();
       if (!child || !await isPublicAttachmentComment(knex, params.tenantId, attachmentCommentId!, attachmentTicketId!) ||
-        !await recipientCanReceiveCommentFiles(knex, params.tenantId, destinationTicketId!, params.to)) return;
+        !await recipientCanReceiveCommentFiles(knex, params.tenantId, destinationTicketId!, params.to)) return 'skipped';
 
       const mirror = await db.table('ticket_bundle_mirrors').where({
         source_comment_id: attachmentCommentId!, child_ticket_id: destinationTicketId!,
       }).first();
-      if (mirror && !await isPublicAttachmentComment(knex, params.tenantId, mirror.child_comment_id, destinationTicketId!)) return;
-      if (params.replyContext?.commentId && params.replyContext.commentId !== mirror?.child_comment_id) return;
+      if (mirror && !await isPublicAttachmentComment(knex, params.tenantId, mirror.child_comment_id, destinationTicketId!)) return 'skipped';
+      if (params.replyContext?.commentId && params.replyContext.commentId !== mirror?.child_comment_id) return 'skipped';
       // Link-only bundles have no child comment. Never persist a master comment
       // under a child's reply token; incoming replies still target that ticket.
       params = { ...params, replyContext: { ...params.replyContext, commentId: mirror?.child_comment_id } };
@@ -473,7 +485,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
             .whereRaw('lower(email) = ?', [params.to.trim().toLowerCase()]).first();
           // Preserve staff text notifications; never send private files or stale
           // public-event content to a customer after a visibility change.
-          if (!current || current.deleted_at || current.publish_state !== 'published' || !staffRecipient) return;
+          if (!current || current.deleted_at || current.publish_state !== 'published' || !staffRecipient) return 'skipped';
         }
         const service = TenantEmailService.getInstance(params.tenantId);
         const capabilities = await service.getAttachmentCapabilities();
@@ -555,7 +567,9 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     if (managedCommentDelivery && !await claimCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to)) {
       const delivery = await tenantDb(knex, params.tenantId).table('ticket_comment_email_deliveries')
         .where({ comment_id: attachmentCommentId!, recipient: params.to.trim().toLowerCase() }).first();
-      if (delivery?.state === 'sent') return;
+      // Another attempt already delivered this comment email; report the real
+      // outcome rather than a fresh send.
+      if (delivery?.state === 'sent') return 'sent';
       throw new EmailProviderError('Comment email has an unresolved provider outcome; reconcile before retrying.',
         'unknown', 'unknown', false, 'COMMENT_DELIVERY_RECONCILIATION_REQUIRED', { requiresReconciliation: true });
     }
@@ -579,6 +593,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       headers: { ...AUTO_GENERATED_MAIL_HEADERS, ...params.headers },
       attachments: params.attachments,
       providerId: params.providerId,
+      retryPolicy: params.retryPolicy,
       from: params.from,
       userId: params.recipientUserId  // For rate limiting
     }).catch(async (error: unknown) => {
@@ -615,7 +630,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
           template: params.template,
           providerId: params.providerId
         });
-        return;
+        return 'skipped';
       }
 
       const providerId = result.providerId || params.providerId || 'unknown';
@@ -670,6 +685,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       tenantId: params.tenantId,
       template: params.template
     });
+    return result.queued ? 'queued' : 'sent';
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     if (isEmailServiceDisabledErrorMessage(errorMessage)) {
@@ -680,7 +696,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         template: params.template,
         providerId: params.providerId
       });
-      return;
+      return 'skipped';
     }
 
     // EmailProviderError stores its provider code in errorCode (not code) and

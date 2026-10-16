@@ -263,6 +263,8 @@ registerSearchVisibilityVerifier('ticket_comment', async (knex, user, row) => {
   )
     .select('ticket_id', 'is_internal')
     .where('comment_id', row.id)
+    .whereNull('deleted_at')
+    .where('publish_state', 'published')
     .first();
   if (!comment) return false;
   if (comment.is_internal && !user.isInternal) return false;

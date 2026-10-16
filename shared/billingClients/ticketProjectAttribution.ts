@@ -61,6 +61,28 @@ export function ticketProjectAttributionJoin(
 }
 
 /**
+ * The same attribution keyed by ticket rather than by time entry: a `LEFT JOIN`
+ * exposing `<alias>.project_id` for the ticket aliased `ticketAlias`. For
+ * loaders that resolve work rows per ticket (the co-managed billing work
+ * union) before joining time entries.
+ */
+export function ticketProjectAttributionByTicketJoin(
+  ticketAlias: string,
+  alias: string = TICKET_PROJECT_ATTRIBUTION_ALIAS,
+): string {
+  return `LEFT JOIN (
+      SELECT link.tenant, link.ticket_id,
+             MIN(link.project_id::text)::uuid AS project_id,
+             COUNT(DISTINCT link.project_id) AS project_count
+      ${billableTicketLinkSource()}
+      GROUP BY link.tenant, link.ticket_id
+    ) ${alias}
+      ON ${alias}.tenant = ${ticketAlias}.tenant
+     AND ${alias}.ticket_id = ${ticketAlias}.ticket_id
+     AND ${alias}.project_count = 1`;
+}
+
+/**
  * The project a time entry bills under: its phase's project for project-task
  * time, the resolved link project for ticket time.
  */

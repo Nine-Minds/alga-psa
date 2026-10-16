@@ -9,6 +9,7 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
+import { assertCommentThreadAudience, resolveCommentAudience } from '../lib/commentAudience';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
@@ -134,6 +135,7 @@ export const createCommentSchema = z.object({
   content: z.string().min(1, 'Comment content is required'),
   parent_comment_id: z.string().uuid('Parent comment ID must be a valid UUID').optional(),
   is_internal: z.boolean().optional(),
+  collaboration_audience: z.enum(['requester', 'shared_it', 'organization_private']).optional(),
   is_resolution: z.boolean().optional(),
   is_system_generated: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
@@ -210,6 +212,7 @@ export interface UpdateTicketInput {
   location_id?: string | null;
   contact_name_id?: string | null;
   status_id?: string;
+  response_state?: 'awaiting_client' | 'awaiting_internal' | null;
   board_id?: string;
   category_id?: string | null;
   subcategory_id?: string | null;
@@ -277,6 +280,7 @@ export interface CreateCommentInput {
   content: string;
   parent_comment_id?: string;
   is_internal?: boolean;
+  collaboration_audience?: 'requester' | 'shared_it' | 'organization_private';
   is_resolution?: boolean;
   is_system_generated?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
@@ -1201,7 +1205,7 @@ export class TicketModel {
 
     const currentTicket = await db.table('tickets')
       .where({ ticket_id: ticketId })
-      .first();
+      .forUpdate().first();
 
     if (!currentTicket) {
       throw new Error('Ticket not found');
@@ -1267,6 +1271,18 @@ export class TicketModel {
           throw new Error(categoryResult.error);
         }
       }
+    }
+
+    // Canonical closure semantics also apply to workflow/model callers.
+    if (updateData.status_id) {
+      const previousStatus = await db.table('statuses').where('status_id', currentTicket.status_id).forShare().first('is_closed');
+      const nextStatus = await db.table('statuses').where('status_id', updateData.status_id).forShare().first('is_closed');
+      if (!nextStatus) throw new Error('Selected ticket status is unavailable');
+      updateData.is_closed = Boolean(nextStatus.is_closed);
+      if (nextStatus.is_closed && !previousStatus?.is_closed) Object.assign(updateData, {
+        closed_at: new Date(), closed_by: userId ?? updateData.updated_by ?? null, response_state: null,
+      });
+      else if (!nextStatus.is_closed && previousStatus?.is_closed) Object.assign(updateData, { closed_at: null, closed_by: null });
     }
 
     // Update the ticket
@@ -1439,8 +1455,14 @@ export class TicketModel {
     trx: Knex.Transaction,
     eventPublisher?: IEventPublisher,
     analyticsTracker?: IAnalyticsTracker,
-    userId?: string
+    userId?: string,
+    // Retention-only publisher: used when `eventPublisher` is absent so a
+    // silent caller (workflow comment without Cc/Bcc) keeps its co-managed
+    // outbox, admission and redaction chain without publishing for others.
+    silentRetentionPublisher?: IEventPublisher
   ): Promise<CreateCommentOutput> {
+    if (!trx?.isTransaction) throw new Error('Comment creation requires the owning transaction');
+
     // Validate required tenant
     if (!tenant) {
       throw new Error('Tenant is required');
@@ -1453,6 +1475,8 @@ export class TicketModel {
     }
 
     const validatedData = validation.data;
+    if (validatedData.collaboration_audience && validatedData.is_internal !== undefined &&
+        validatedData.is_internal !== (validatedData.collaboration_audience !== 'requester')) throw new Error('Comment audience and visibility disagree');
     const db = tenantDb(trx, tenant);
 
     // Verify ticket exists and belongs to tenant
@@ -1481,7 +1505,7 @@ export class TicketModel {
     const commentId = uuidv4();
     const parentCommentId = validatedData.parent_comment_id || null;
     let threadId = uuidv4();
-    let commentIsInternal = validatedData.is_internal || false;
+    let commentIsInternal = validatedData.collaboration_audience ? validatedData.collaboration_audience !== 'requester' : validatedData.is_internal || false;
     const now = new Date();
 
     // Map legacy/alias author types to current enum: internal | client | unknown
@@ -1572,6 +1596,7 @@ export class TicketModel {
         project_task_id: null,
         root_comment_id: commentId,
         is_internal: commentIsInternal,
+        ...(validatedData.collaboration_audience ? { collaboration_audience: validatedData.collaboration_audience } : {}),
         reply_count: 0,
         last_activity_at: now,
         created_at: now,
@@ -1579,6 +1604,13 @@ export class TicketModel {
       });
     }
 
+    // A root comment creates its own thread in this transaction: the row is not
+    // yet visible to anyone else, so there is nothing to lock or re-read. Only
+    // replies join an existing (lockable, possibly co-managed) thread.
+    const currentAudience = parentCommentId
+      ? await assertCommentThreadAudience(trx, tenant, threadId, { ticketId: validatedData.ticket_id, isInternal: commentIsInternal, parentCommentId })
+      : resolveCommentAudience({ collaboration_audience: validatedData.collaboration_audience, is_internal: commentIsInternal });
+    if (validatedData.collaboration_audience && currentAudience !== validatedData.collaboration_audience) throw new Error('Reply audience changed');
     await db.table('comments').insert(baseCommentData);
     await reconcileCommentAttachments(trx, tenant, commentId, userId || validatedData.author_id || '');
 
@@ -1611,7 +1643,8 @@ export class TicketModel {
     }
 
     // Publish comment event if publisher provided
-    if (eventPublisher) {
+    const commentPublisher = eventPublisher ?? silentRetentionPublisher;
+    if (commentPublisher) {
       try {
         // Resolve a display name so notification templates render the author/body.
         // Inbound-email comments frequently match no contact and no user; the
@@ -1644,9 +1677,20 @@ export class TicketModel {
             author: authorName
           }
         };
-        if ((eventPublisher as any).__inboundOutboxPublisher === true) {
-          // The inbound publisher writes its durable outbox in this transaction.
-          await eventPublisher.publishCommentCreated(event);
+        // Both markers mean the same thing: this publisher owns the comment
+        // event inside the caller's transaction and must be the one to raise
+        // it. `__inboundOutboxPublisher` writes durable outbox rows for the
+        // inbound-email pipeline; `transactionalCommentEvents` runs the
+        // workflow publisher, whose publishCommentCreated carries the
+        // co-managed retention chain -- licence state, executing run and
+        // version authority, field-redaction policy and actor identity.
+        // Testing only the first marker sent every workflow-authored comment
+        // down persistCommentPublication instead, which stamps the row and
+        // returns: no event, no outbox row, and none of those checks. The
+        // catch below already treats the two markers as equivalent.
+        if ((commentPublisher as any).__inboundOutboxPublisher === true
+          || (commentPublisher as any).transactionalCommentEvents === true) {
+          await commentPublisher.publishCommentCreated(event);
         } else {
           await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: buildTicketCommentAddedPayload({
             tenantId: tenant, occurredAt: new Date().toISOString(), ticketId: validatedData.ticket_id, commentId, actor,
@@ -1656,7 +1700,9 @@ export class TicketModel {
         }
       } catch (error) {
         console.error('Failed to publish comment created event:', error);
-        throw error;
+        if (commentPublisher.transactionalCommentEvents || (commentPublisher as any).__inboundOutboxPublisher === true) {
+          throw error;
+        }
       }
     }
 

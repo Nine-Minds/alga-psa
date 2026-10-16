@@ -65,6 +65,18 @@ describe('ProductContext', () => {
     expect(result.current.edition).toBe('enterprise');
   });
 
+  it('preserves a co-managed session without treating it as PSA or AlgaDesk', () => {
+    useSession.mockReturnValue({
+      status: 'authenticated',
+      data: { user: { product_code: 'co_managed' } },
+    });
+    const { result } = renderHook(() => useProduct(), { wrapper });
+    expect(result.current.productCode).toBe('co_managed');
+    expect(result.current.isMisconfigured).toBe(false);
+    expect(result.current.isPsa).toBe(false);
+    expect(result.current.isAlgaDesk).toBe(false);
+  });
+
   it('fails closed to psa and marks misconfigured for unknown product code', () => {
     useSession.mockReturnValue({
       status: 'authenticated',

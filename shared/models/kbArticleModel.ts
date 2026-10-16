@@ -8,6 +8,7 @@
 
 import { randomUUID } from 'crypto';
 import { Knex } from 'knex';
+import { withCoManagedOperationalTransaction } from '@alga-psa/licensing/lifecycle';
 import { tenantDb } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type {
@@ -105,88 +106,89 @@ export async function publishKbArticleCreated(
 }
 
 /**
- * Creates a KB article and its underlying document. Callers are responsible for
- * authorization — this runs with whatever connection/tenant it is handed — and
- * for calling publishKbArticleCreated once their transaction has committed.
+ * Creates the article and document in one lifecycle-admitted transaction,
+ * reusing a caller transaction when supplied. Callers authorize the actor and
+ * call publishKbArticleCreated only after the owning transaction commits.
  */
 export async function createKbArticle(
-  knex: Knex | Knex.Transaction,
+  connection: Knex | Knex.Transaction,
   context: CreateKbArticleContext,
   input: CreateKbArticleInput,
 ): Promise<IKBArticleWithDocument> {
   const { tenant, userId } = context;
+  return withCoManagedOperationalTransaction(connection, tenant, async knex => {
 
-  if (!input.title?.trim()) {
-    throw new Error(KB_ARTICLE_TITLE_REQUIRED);
-  }
-
-  let slug = input.slug?.trim() || generateKbArticleSlug(input.title);
-  const articleType = input.articleType || 'how_to';
-  const audience = input.audience || 'internal';
-
-  // Ensure slug uniqueness — append a numeric suffix if needed
-  const existingSlug = await tenantScopedTable(knex, 'kb_articles', tenant)
-    .where({ slug })
-    .first();
-  if (existingSlug) {
-    // If the caller provided an explicit slug, treat collision as an error
-    if (input.slug?.trim()) {
-      throw new Error(KB_ARTICLE_SLUG_TAKEN);
+    if (!input.title?.trim()) {
+      throw new Error(KB_ARTICLE_TITLE_REQUIRED);
     }
-    // Otherwise auto-deduplicate
-    let suffix = 2;
-    while (true) {
-      const candidate = `${slug}-${suffix}`;
-      const collision = await tenantScopedTable(knex, 'kb_articles', tenant)
-        .where({ slug: candidate })
-        .first();
-      if (!collision) {
-        slug = candidate;
-        break;
+
+    let slug = input.slug?.trim() || generateKbArticleSlug(input.title);
+    const articleType = input.articleType || 'how_to';
+    const audience = input.audience || 'internal';
+
+    // Ensure slug uniqueness — append a numeric suffix if needed
+    const existingSlug = await tenantScopedTable(knex, 'kb_articles', tenant)
+      .where({ slug })
+      .first();
+    if (existingSlug) {
+      // If the caller provided an explicit slug, treat collision as an error
+      if (input.slug?.trim()) {
+        throw new Error(KB_ARTICLE_SLUG_TAKEN);
       }
-      suffix++;
+      // Otherwise auto-deduplicate
+      let suffix = 2;
+      while (true) {
+        const candidate = `${slug}-${suffix}`;
+        const collision = await tenantScopedTable(knex, 'kb_articles', tenant)
+          .where({ slug: candidate })
+          .first();
+        if (!collision) {
+          slug = candidate;
+          break;
+        }
+        suffix++;
+      }
     }
-  }
 
-  // Create the underlying document.
-  const documentId = randomUUID();
-  const now = new Date();
+    // Create the underlying document.
+    const documentId = randomUUID();
+    const now = new Date();
 
-  await tenantScopedTable(knex, 'documents', tenant).insert({
-    tenant,
-    document_id: documentId,
-    document_name: input.title.trim(),
-    user_id: userId,
-    created_by: userId,
-    order_number: 0,
-    folder_path: '/Knowledge Base',
-    entered_at: now,
-    updated_at: now,
-  });
-
-  // Store block content if provided
-  if (input.content && Array.isArray(input.content) && input.content.length > 0) {
-    await tenantScopedTable(knex, 'document_block_content', tenant).insert({
-      content_id: randomUUID(),
-      document_id: documentId,
+    await tenantScopedTable(knex, 'documents', tenant).insert({
       tenant,
-      block_data: JSON.stringify(input.content),
-      created_at: now,
+      document_id: documentId,
+      document_name: input.title.trim(),
+      user_id: userId,
+      created_by: userId,
+      order_number: 0,
+      folder_path: '/Knowledge Base',
+      is_client_visible: false,
+      entered_at: now,
       updated_at: now,
     });
-  }
 
-  const document = await tenantScopedTable(knex, 'documents', tenant)
-    .where({ document_id: documentId })
-    .first() as IDocument;
+    // Store block content if provided
+    if (input.content && Array.isArray(input.content) && input.content.length > 0) {
+      await tenantScopedTable(knex, 'document_block_content', tenant).insert({
+        content_id: randomUUID(),
+        document_id: documentId,
+        tenant,
+        block_data: JSON.stringify(input.content),
+        created_at: now,
+        updated_at: now,
+      });
+    }
 
-  // Create the KB article record — clean up document on failure
-  const articleId = randomUUID();
-  const nextReviewDue = input.reviewCycleDays
-    ? new Date(Date.now() + input.reviewCycleDays * 24 * 60 * 60 * 1000)
-    : null;
+    const document = await tenantScopedTable(knex, 'documents', tenant)
+      .where({ document_id: documentId })
+      .first() as IDocument;
 
-  try {
+    // Create the KB article record in the same transaction as its document.
+    const articleId = randomUUID();
+    const nextReviewDue = input.reviewCycleDays
+      ? new Date(Date.now() + input.reviewCycleDays * 24 * 60 * 60 * 1000)
+      : null;
+
     await tenantScopedTable(knex, 'kb_articles', tenant).insert({
       tenant,
       article_id: articleId,
@@ -201,23 +203,16 @@ export async function createKbArticle(
       created_by: userId,
       updated_by: userId,
     });
-  } catch (err) {
-    // Clean up orphaned document if kb_articles insert fails
-    await tenantScopedTable(knex, 'documents', tenant)
-      .where({ document_id: document.document_id })
-      .del()
-      .catch(() => {}); // best effort cleanup
-    throw err;
-  }
 
-  const article = await tenantScopedTable(knex, 'kb_articles', tenant)
-    .select(KB_ARTICLE_SELECT_COLUMNS)
-    .where({ article_id: articleId })
-    .first();
+    const article = await tenantScopedTable(knex, 'kb_articles', tenant)
+      .select(KB_ARTICLE_SELECT_COLUMNS)
+      .where({ article_id: articleId })
+      .first();
 
-  return {
-    ...article,
-    document,
-    document_name: document.document_name,
-  } as unknown as IKBArticleWithDocument;
+    return {
+      ...article,
+      document,
+      document_name: document.document_name,
+    } as unknown as IKBArticleWithDocument;
+  });
 }

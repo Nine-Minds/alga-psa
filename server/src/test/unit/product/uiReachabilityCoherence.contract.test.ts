@@ -18,8 +18,13 @@ import {
 import { getAllowedSettingsTabIds } from '../../../lib/settingsProductTabs';
 import { listRouteDirSegments, matchesRules } from './support/appRouteInventory';
 
-type ProductCode = 'algadesk' | 'psa';
-const PRODUCTS: ProductCode[] = ['algadesk', 'psa'];
+import type { ProductCode } from '@alga-psa/types';
+
+// Every shipping product, not a hand-maintained subset. co_managed was absent
+// until 2026-09-20, which is exactly how the provider dead end reached main:
+// the nav entry survived the co_managed filter and landed on a route the
+// co_managed boundary denies, and no coherence assertion ever looked.
+const PRODUCTS: ProductCode[] = ['algadesk', 'psa', 'co_managed'];
 
 // Pages that are reachable but intentionally carry no sidebar/settings-rail
 // entry. Every entry states how the page IS reached; a prefix listed here
@@ -65,6 +70,22 @@ const PERMISSION_NAV_PINS: Array<{
   },
 ];
 
+// (product / permission:action) pairs the seed catalog does not grant even
+// though the route registry resolves the destination as allowed. Each entry is
+// an OPEN defect with an owner, not a waiver — the assertion below still
+// requires the gap to be real, so repairing the catalog turns this red and
+// forces the entry to be deleted rather than rotting into a silent exemption.
+const UNSEEDED_PERMISSION_PINS: Record<string, string> = {
+  'co_managed/account_management:read':
+    'A co-managed customer workspace resolves /msp/account as allowed (msp_core_helpdesk) '
+    + 'but its seed vocabulary never grants account_management:read, so the header avatar '
+    + 'menu -> Account entry never renders for any co-managed tenant. Found while extending '
+    + 'this contract to co_managed. Repairing it means adding the permission to the '
+    + 'co_managed product in server/migrations/utils/permissions/catalog.cjs AND backfilling '
+    + 'existing tenants in a migration; that is a seeding change beyond this card, so it is '
+    + 'reported here as a separate open defect rather than fixed.',
+};
+
 const allSidebarSections: NavigationSection[] = [
   ...navigationSections,
   ...settingsNavigationSections,
@@ -94,7 +115,7 @@ function settingsTabOf(href: string): string | null {
   return new URLSearchParams(query).get('tab');
 }
 
-// Both products provision from the unified permission catalog.
+// Every product provisions from the unified permission catalog.
 const permissionCatalog = createRequire(import.meta.url)(
   path.resolve(process.cwd(), '../server/migrations/utils/permissions/catalog.cjs'),
 );
@@ -170,12 +191,27 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
         `expected ${pin.wiringFile} to gate the entry via ${pin.wiringMarker} (${pin.reachedVia}) — if the gate moved, update this pin`,
       ).toContain(pin.wiringMarker);
 
+      const gapKey = (product: string) => `${product}/${pin.permission}:${pin.action}`;
+
       const missing = PRODUCTS.filter(
         (product) => !seedGrantsPermission(product, pin.permission, pin.action),
-      );
+      ).filter((product) => !(gapKey(product) in UNSEEDED_PERMISSION_PINS));
       expect(
         missing,
         `permission catalog missing ${pin.permission}:${pin.action} — "${pin.reachedVia}" is silently unreachable for every tenant of: ${missing.join(', ')}`,
+      ).toEqual([]);
+
+      // A recorded gap must stay real. Once the catalog seeds the permission,
+      // this fails and the entry has to be removed, so the report can never
+      // outlive the defect and quietly mask a later regression.
+      const staleGaps = PRODUCTS.filter(
+        (product) =>
+          gapKey(product) in UNSEEDED_PERMISSION_PINS &&
+          seedGrantsPermission(product, pin.permission, pin.action),
+      );
+      expect(
+        staleGaps,
+        `${pin.permission}:${pin.action} is now seeded for ${staleGaps.join(', ')} — delete those entries from UNSEEDED_PERMISSION_PINS`,
       ).toEqual([]);
 
       // The entry renders whenever the permission is seeded, so the

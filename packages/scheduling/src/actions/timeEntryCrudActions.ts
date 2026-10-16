@@ -1,17 +1,6 @@
 'use server'
 
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
-// Bucket usage MUST go through the shared canonical service. This package used
-// to carry a local fork (src/services/bucketUsageService.ts) that kept querying
-// the dropped `client_contract_lines` table and caused a prod outage on
-// time-entry save. Don't recreate a local copy.
-import { adjustTimeSpanDraw } from '@alga-psa/shared/billingClients/drawAdjustments';
-import { isBucketUsageError } from '@alga-psa/shared/billingClients/bucketUsageErrors';
-// Hour-block burn MUST go through the shared canonical service too — same
-// rationale as bucketUsageService (both scheduling and billing import it).
-import {
-  reverseTimeEntryAllocations,
-} from '@alga-psa/shared/billingClients/hourBlockService';
+import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import {
   ITimeEntry,
   ITimeEntryWithWorkItem,
@@ -28,95 +17,33 @@ import {
   updateTimeEntryApprovalStatusParamsSchema,
   UpdateTimeEntryApprovalStatusParams,
 } from './timeEntrySchemas'; // Import schemas
-import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
 import { assertCanActOnBehalf, assertCanApproveSubject } from './timeEntryDelegationAuth';
 import {
   createTimeEntryChangeRequestRecord,
   fetchTimeEntryChangeRequestsForEntryIdsFromDb,
 } from './timeEntryChangeRequestActions';
-import { persistTimeEntry, publishPersistedTimeEntryEvents } from '../lib/timeEntryWriteCore';
+import { NON_BILLABLE_FALLBACK_WORK_ITEM_ID, persistTimeEntry, publishPersistedTimeEntryEvents } from '../lib/timeEntryWriteCore';
 import { logSession } from '../lib/stopwatch/stopwatchCore';
 import { attachTimeEntryChangeRequests } from '../lib/timeEntryChangeRequests';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import {
-  buildTimeEntryApprovedPayload,
-  buildTimeEntrySubmittedPayload,
-  toWorkflowTimeEntryWorkItemType,
-} from '@alga-psa/workflow-streams';
 import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
 } from './timeSheetActionErrors';
 import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
+import type { Knex } from 'knex';
+import { productTimeEntryMode, type IUser } from '@alga-psa/types';
+import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave,
+  CoManagedSharedWorkError, retainCoManagedTimeParticipation, assertCoManagedTimeSaveFields, reviewCoManagedNativeTimeEntry, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeSheet, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
+import { reverseDeletedTimeEntryBilling } from '../lib/timeEntryDeletionBilling';
+import { publishTimeEntrySearchEvent } from '../lib/timeEntrySearchEvents';
+import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
+import { timeEntrySchema } from '../schemas/timeSheet.schemas';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
 }
 
-const NON_BILLABLE_FALLBACK_WORK_ITEM_ID = '__non_billable__';
-
-type TimeEntrySearchEventType =
-  | 'TIME_ENTRY_CREATED'
-  | 'TIME_ENTRY_UPDATED'
-  | 'TIME_ENTRY_DELETED'
-  | 'TIME_ENTRY_SUBMITTED'
-  | 'TIME_ENTRY_APPROVED'
-  | 'TIME_ENTRY_CHANGES_REQUESTED';
-
-async function publishTimeEntrySearchEvent(
-  eventType: TimeEntrySearchEventType,
-  payload: {
-    tenantId: string;
-    timeEntryId: string;
-    userId?: string;
-    workItemId?: string | null;
-    workItemType?: string | null;
-    approvedBy?: string;
-    requestedBy?: string;
-    reason?: string;
-    changes?: Record<string, unknown>;
-  },
-): Promise<void> {
-  try {
-    const timestamp = new Date().toISOString();
-    const workItemType = toWorkflowTimeEntryWorkItemType(payload.workItemType);
-    if (
-      (eventType === 'TIME_ENTRY_SUBMITTED' || eventType === 'TIME_ENTRY_APPROVED') &&
-      workItemType &&
-      payload.userId &&
-      payload.workItemId
-    ) {
-      const params = {
-        timeEntryId: payload.timeEntryId,
-        userId: payload.userId,
-        workItemId: payload.workItemId,
-        workItemType,
-        approvedBy: payload.approvedBy,
-        reason: payload.reason,
-        changes: payload.changes,
-        timestamp,
-      };
-      const ctx = {
-        tenantId: payload.tenantId,
-        actor: { actorType: 'USER' as const, actorUserId: payload.approvedBy ?? payload.userId },
-      };
-      if (eventType === 'TIME_ENTRY_SUBMITTED') {
-        await publishWorkflowEvent({ eventType, payload: buildTimeEntrySubmittedPayload(params), ctx });
-      } else {
-        await publishWorkflowEvent({ eventType, payload: buildTimeEntryApprovedPayload(params), ctx });
-      }
-      return;
-    }
-    // Ad-hoc / interaction / non-billable time has no workflow representation (the schema models
-    // ticket and project-task time only), so it reindexes search through TIME_ENTRY_UPDATED.
-    await publishEvent({
-      eventType: eventType === 'TIME_ENTRY_SUBMITTED' || eventType === 'TIME_ENTRY_APPROVED' ? 'TIME_ENTRY_UPDATED' : eventType,
-      payload: { ...payload, timestamp },
-    });
-  } catch (eventError) {
-    console.error(`[TimeEntryActions] Failed to publish ${eventType} event`, eventError);
-  }
-}
 
 function normalizeFetchedWorkItemId(entry: Pick<ITimeEntry, 'work_item_id' | 'work_item_type'>): string {
   if (entry.work_item_type === 'non_billable_category' && !entry.work_item_id) {
@@ -134,6 +61,9 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   try {
     const {knex: db} = await createTenantKnex();
     const tenantScopedDb = tenantDb(db, tenant) as any;
+
+    const current = await readCoManagedNativeTimeSheet(db, tenant, timeSheetId, () => resolveNativeTimeBrowserActor(user, tenant));
+    if (current.handled) return current.entries;
 
   // Check permission for time entry reading
   if (!await hasPermission(user, 'time_entry', 'read', db)) {
@@ -326,15 +256,47 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   }
 });
 
-export const saveTimeEntry = withAuth(async (
-  user,
-  { tenant },
-  timeEntry: Omit<ITimeEntry, 'tenant'> & { stopwatch_session_id?: string | null }
-): Promise<ITimeEntryWithWorkItem | TimeSheetActionError> => {
-  const {knex: db} = await createTenantKnex();
-  const tenantScopedDb = tenantDb(db, tenant) as any;
+/** UI hint only; every save re-evaluates the product and stored entry mode. */
+export const getTimeEntryBillingMode = withAuth(async (user, { tenant }) => {
+  const { knex } = await createTenantKnex();
+  if (user.user_type !== 'internal' || !await hasPermission(user, 'time_entry', 'read', knex)) throw new CoManagedSharedWorkError();
+  const workspace = await tenantDb(knex, tenant).table('tenants').first('product_code');
+  const mode = workspace && productTimeEntryMode(workspace.product_code);
+  if (!mode) throw new CoManagedSharedWorkError();
+  return mode;
+});
 
+export const saveTimeEntry = withAuth(async (user, { tenant }, timeEntry: Omit<ITimeEntry, 'tenant'> & { stopwatch_session_id?: string | null }): Promise<ITimeEntryWithWorkItem | TimeSheetActionError> => {
+  const { knex } = await createTenantKnex();
   try {
+    return await withTransaction(knex, async trx => {
+      const currentMode = await lockTimeEntryBillingMode(trx, tenant);
+      const stored = timeEntry.entry_id ? await tenantDb(trx, tenant).table('time_entries').where('entry_id', timeEntry.entry_id).first('billing_mode', 'work_item_type') : null;
+      let access: CoManagedNativeTimeAccess | null = null;
+      if (timeEntry.work_item_type === 'co_managed' || stored?.work_item_type === 'co_managed' || currentMode === 'operational' || stored?.billing_mode === 'operational' || await hasCoManagedConversationOwnership(trx, tenant)) {
+        access = await admitCoManagedNativeTimeSave(trx, await resolveNativeTimeBrowserActor(user, tenant), timeEntry);
+      }
+      if (access) assertCoManagedTimeSaveFields(access, timeEntry.work_item_type);
+      const mode = await lockTimeEntryBillingMode(trx, tenant, timeEntry.entry_id || undefined);
+      if (timeEntry.entry_id && stored?.work_item_type === 'co_managed') await retainCoManagedTimeParticipation(trx, tenant, timeEntry.entry_id);
+      const result = await saveTimeEntryWithConnection(user, tenant, timeEntry, trx, mode === 'operational', access);
+      if (result.work_item_type === 'co_managed') {
+        if (!result.entry_id) throw new Error('Time entry save returned a row without an entry ID.');
+        await retainCoManagedTimeParticipation(trx, tenant, result.entry_id);
+      }
+      await access?.assertCurrent();
+      return result;
+    });
+  } catch (error) {
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+async function saveTimeEntryWithConnection(user: IUser, tenant: string, timeEntry: Omit<ITimeEntry, 'tenant'> & { stopwatch_session_id?: string | null },
+  db: Knex.Transaction, operational: boolean, access: CoManagedNativeTimeAccess | null): Promise<ITimeEntryWithWorkItem> {
+  const tenantScopedDb = tenantDb(db, tenant) as any;
   // Check permission based on whether this is a create or update operation
   if (timeEntry.entry_id) {
     // Update operation
@@ -349,9 +311,12 @@ export const saveTimeEntry = withAuth(async (
   }
 
   // Validate input
-  const validatedTimeEntry = validateData<SaveTimeEntryParams>(saveTimeEntryParamsSchema, timeEntry);
+  const operationalFields = operational ? operationalTimeEntryFields(timeEntry) : null;
+  const validatedTimeEntry = validateData<SaveTimeEntryParams>(operational ? timeEntrySchema : saveTimeEntryParamsSchema,
+    operational ? { ...timeEntry, ...operationalFields, service_id: undefined, tax_region: undefined } : timeEntry);
+  if (access && !(new Date(validatedTimeEntry.end_time).getTime() > new Date(validatedTimeEntry.start_time).getTime())) throw new Error('Time entry end must be after start');
 
-  if (!validatedTimeEntry.service_id?.trim()) {
+  if (!operational && !validatedTimeEntry.service_id?.trim()) {
     throw new Error('Service is required for time entries');
   }
 
@@ -364,29 +329,38 @@ export const saveTimeEntry = withAuth(async (
     if (stopwatchSessionId && validatedTimeEntry.entry_id) {
       throw new Error('Validation failed: a stopwatch session can only be logged as a new time entry');
     }
-    const persisted = await db.transaction(async (trx) => {
-      if (!stopwatchSessionId) {
-        return persistTimeEntry(trx, { tenant, actor: user, entry: validatedTimeEntry });
-      }
-      const logged = await logSession(trx, tenant, user, stopwatchSessionId, {
-        work_item_id: validatedTimeEntry.work_item_id,
-        work_item_type: validatedTimeEntry.work_item_type,
-        start_time: validatedTimeEntry.start_time,
-        end_time: validatedTimeEntry.end_time,
-        billable_duration: validatedTimeEntry.billable_duration,
-        notes: validatedTimeEntry.notes,
-        service_id: validatedTimeEntry.service_id,
-        contract_line_id: validatedTimeEntry.contract_line_id,
-        tax_region: validatedTimeEntry.tax_region,
-        tax_rate_id: validatedTimeEntry.tax_rate_id,
-        time_sheet_id: validatedTimeEntry.time_sheet_id,
-        user_id: validatedTimeEntry.user_id,
-      });
-      return logged.persisted;
-    });
+    // Stopwatch sessions log commercial time (a service is required); operational
+    // or co-managed time is entered directly.
+    // The one exception is commercial shared work: a clock started on a co_managed reference logs
+    // through the admitted co-managed save (logSession enforces that the session matches the entry).
+    if (timeEntry.stopwatch_session_id && (operational || (access && validatedTimeEntry.work_item_type !== 'co_managed'))) {
+      throw new Error('Validation failed: a stopwatch session cannot be logged as operational or co-managed time');
+    }
+    const persisted = stopwatchSessionId
+      ? (await logSession(db, tenant, user, stopwatchSessionId, {
+          work_item_id: validatedTimeEntry.work_item_id,
+          work_item_type: validatedTimeEntry.work_item_type,
+          start_time: validatedTimeEntry.start_time,
+          end_time: validatedTimeEntry.end_time,
+          billable_duration: validatedTimeEntry.billable_duration,
+          notes: validatedTimeEntry.notes,
+          service_id: validatedTimeEntry.service_id,
+          contract_line_id: validatedTimeEntry.contract_line_id,
+          tax_region: validatedTimeEntry.tax_region,
+          tax_rate_id: validatedTimeEntry.tax_rate_id,
+          time_sheet_id: validatedTimeEntry.time_sheet_id,
+          user_id: validatedTimeEntry.user_id,
+        }, { access })).persisted
+      : await persistTimeEntry(db, {
+          tenant,
+          actor: user,
+          entry: validatedTimeEntry,
+          operational: operationalFields ? { fields: operationalFields } : null,
+          access,
+        });
 
-    // Post-commit: publish only after the transaction above has committed.
-    await publishPersistedTimeEntryEvents(persisted);
+    // Publish only after the owning transaction has committed.
+    registerAfterCommit(db, () => publishPersistedTimeEntryEvents(persisted), 'time-entry-search');
 
     const entry = persisted.entry;
     const entry_id = validatedTimeEntry.entry_id;
@@ -395,7 +369,8 @@ export const saveTimeEntry = withAuth(async (
 
     // Fetch work item details based on the saved entry
     let workItemDetails: IWorkItem;
-    switch (entry.work_item_type) {
+    if (access) workItemDetails = access.workItem;
+    else switch (entry.work_item_type) {
       case 'project_task': {
         const taskQuery = tenantScopedDb.table('project_tasks')
           .where({
@@ -521,13 +496,7 @@ export const saveTimeEntry = withAuth(async (
     };
     return result;
 
-  } catch (error) {
-    console.error('Error saving time entry:', error);
-    const expected = timeSheetActionErrorFrom(error);
-    if (expected) return expected;
-    throw error;
-  }
-});
+}
 
 export const updateTimeEntryApprovalStatus = withAuth(async (
   user,
@@ -550,6 +519,9 @@ export const updateTimeEntryApprovalStatus = withAuth(async (
       updateTimeEntryApprovalStatusParamsSchema,
       params,
     );
+    if (await reviewCoManagedNativeTimeEntry(db, tenant, { entryId: validatedParams.entryId, approvalStatus: validatedParams.approvalStatus,
+      comment: validatedParams.changeRequestComment }, () => resolveNativeTimeBrowserActor(user, tenant),
+      event => publishTimeEntrySearchEvent(event.eventType, event.payload))) return;
 
     const existingEntry = await tenantScopedDb.table('time_entries')
       .where({
@@ -653,6 +625,10 @@ export const deleteTimeEntry = withAuth(async (
   const {knex: db} = await createTenantKnex();
 
   try {
+    const handled = await deleteCoManagedNativeTimeEntry(db, tenant, entryId, () => resolveNativeTimeBrowserActor(user, tenant),
+      (trx, entry) => reverseDeletedTimeEntryBilling(trx, tenant, entry),
+      event => publishTimeEntrySearchEvent('TIME_ENTRY_DELETED', event));
+    if (handled) return;
   // Check permission for time entry deletion
   if (!await hasPermission(user, 'time_entry', 'delete', db)) {
     throw new Error('Permission denied: Cannot delete time entries');
@@ -677,56 +653,7 @@ export const deleteTimeEntry = withAuth(async (
         throw new Error('This time entry has already been invoiced and cannot be deleted.');
       }
 
-      // --- Bucket Usage Update Logic (Before Delete) ---
-      if (timeEntry.service_id && (timeEntry.billable_duration || 0) > 0) {
-        let clientId: string | null = null;
-        if (timeEntry.work_item_id && timeEntry.work_item_type) {
-            clientId = await getClientIdForWorkItem(trx, tenant, timeEntry.work_item_id as string, timeEntry.work_item_type as string);
-        }
-
-        if (clientId && timeEntry.service_id) {
-          // Scope-resolution gate + weighted burn, resolved under the deleted
-          // entry's OWN client and line (negative on delete).
-          try {
-            const reversedDelta = await adjustTimeSpanDraw(
-              trx,
-              tenant,
-              clientId,
-              {
-                service_id: timeEntry.service_id,
-                start_time: timeEntry.start_time,
-                end_time: timeEntry.end_time,
-                billable_duration: timeEntry.billable_duration,
-                contract_line_id: timeEntry.contract_line_id ?? null,
-              },
-              -1,
-            );
-            if (reversedDelta !== 0) {
-              console.log(`Successfully decremented bucket usage for deleted entry ${entryId} (weighted delta ${reversedDelta})`);
-            }
-          } catch (bucketError) {
-            console.error(`Error updating bucket usage for deleted time entry ${entryId}:`, bucketError);
-            // Re-throwing ensures data consistency; preserve the typed code.
-            if (isBucketUsageError(bucketError)) {
-              throw bucketError;
-            }
-            throw new Error(`Bucket usage update failed while deleting time entry ${entryId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
-          }
-        }
-      }
-      // --- End Bucket Usage Update Logic ---
-
-      // --- Hour-block burn reversal ---
-      // Restore the minutes the deleted entry drew from any hour blocks. Best-
-      // effort like the save path: failures are logged and the nightly
-      // reconcile converges. Runs unconditionally (an entry may carry block
-      // allocations without being contract-covered).
-      try {
-        await reverseTimeEntryAllocations(trx, tenant, entryId);
-      } catch (blockReverseError) {
-        console.error(`Error reversing hour-block burn for deleted time entry ${entryId}:`, blockReverseError);
-      }
-      // --- End Hour-block burn reversal ---
+      await reverseDeletedTimeEntryBilling(trx, tenant, timeEntry);
 
       // 2. Delete the time entry
       const deleteCount = await trxTenantDb.table('time_entries')
@@ -789,6 +716,8 @@ export const getTimeEntryById = withAuth(async (
   const tenantScopedDb = tenantDb(db, tenant) as any;
 
   try {
+    const current = await readCoManagedNativeTimeEntry(db, tenant, entryId, () => resolveNativeTimeBrowserActor(user, tenant));
+    if (current.handled) return current.entry;
   // Check permission for time entry reading
   if (!await hasPermission(user, 'time_entry', 'read', db)) {
     throw new Error('Permission denied: Cannot read time entries');

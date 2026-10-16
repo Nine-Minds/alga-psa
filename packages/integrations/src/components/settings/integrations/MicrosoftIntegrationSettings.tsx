@@ -11,6 +11,7 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRouter } from 'next/navigation';
+import { MAILBOX_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import {
   archiveMicrosoftProfile,
   getMicrosoftIntegrationStatus,
@@ -656,7 +657,7 @@ export function MicrosoftIntegrationSettings({
                   id="microsoft-platform-connect-email"
                   type="button"
                   className="mt-3"
-                  onClick={() => router.push('/msp/settings/integrations?category=communication')}
+                  onClick={() => router.push(MAILBOX_SETUP_ENTRY_PATH)}
                 >
                   {t('integrations.microsoft.settings.platform.connectAction', { defaultValue: 'Connect a mailbox →' })}
                 </Button>

@@ -25,6 +25,9 @@ import {
 } from '@alga-psa/tickets/lib/ticketViewSettings';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
+import { redirect } from 'next/navigation';
+import { resolveLegacyQueueRedirect } from '@alga-psa/tickets/lib';
+import { CoManagedCalloutStrip } from '@/components/co-managed/CoManagedCalloutStrip';
 import type { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -52,6 +55,15 @@ function isReturnedActionError(value: unknown): value is { actionError: string }
 }
 
 export default async function TicketsPage({ searchParams }: TicketsPageProps) {
+  // Legacy `?queueView=…` links belong to Customer Tickets; `workspace=msp` (retired)
+  // lands here with the qualified params stripped. Outside the try so the redirect isn't swallowed.
+  const legacyTarget = resolveLegacyQueueRedirect(new URLSearchParams(
+    Object.entries(await searchParams ?? {}).flatMap(([k, v]) => (typeof v === 'string' ? [[k, v] as [string, string]] : [])),
+  ));
+  if (legacyTarget) {
+    redirect(legacyTarget);
+  }
+
   try {
     const user = await getCurrentUser();
     const productCode = await getCurrentTenantProduct();
@@ -362,6 +374,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
           allowSlaStatusFilter={allowSlaStatusFilter}
           smartSearchAvailable={smartSearchAvailable}
           useAlgaDeskQuickAddForm={useAlgaDeskQuickAddForm}
+          listCallout={productCode === 'psa' ? <CoManagedCalloutStrip /> : undefined}
         />
       </div>
     );

@@ -60,6 +60,8 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: hasPermissionMock }));
 
+vi.mock('@alga-psa/licensing', () => ({ assertCoManagedOperationalWrite: vi.fn() }));
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   tenantDb: () => ({
@@ -67,6 +69,7 @@ vi.mock('@alga-psa/db', () => ({
     tenantJoin: (query: any) => query,
   }),
   withTransaction: async (_db: unknown, work: (trx: any) => Promise<unknown>) => work(trxStub),
+  registerAfterCommit: vi.fn(),
 }));
 
 vi.mock('../models/projectTask', () => ({

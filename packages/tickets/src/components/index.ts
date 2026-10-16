@@ -31,3 +31,5 @@ export { default as TicketDocumentsSection } from './ticket/TicketDocumentsSecti
 export { default as TicketInfo } from './ticket/TicketInfo';
 export { default as TicketMaterialsCard } from './ticket/TicketMaterialsCard';
 export { default as TicketProperties } from './ticket/TicketProperties';
+
+export { TicketConversationAttachmentsProvider, type TicketConversationAttachmentsProps } from './ticket/TicketConversationAttachments';

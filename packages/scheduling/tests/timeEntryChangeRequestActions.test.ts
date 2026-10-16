@@ -1,4 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { INDEPENDENT_TENANT_ROW, fakeTable } from '@alga-psa/db/testing';
+
+// The co-managed native-time seam rejects a tenant or sheet id that is not a
+// uuid before it reads anything, so these fixtures look like real identifiers.
+const TENANT = '00000000-0000-4000-8000-000000000001';
+const SHEET_ID = '00000000-0000-4000-8000-000000000003';
 
 const createTenantKnexMock = vi.fn();
 const hasPermissionMock = vi.fn();
@@ -9,7 +15,8 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   createTenantKnex: createTenantKnexMock,
   // The tenantDb facade applies the tenant predicate that production used to
   // pass explicitly. Mirror that here so the tenant-scoping assertions stay
@@ -74,9 +81,9 @@ describe('time entry change request action helpers', () => {
     const { createTimeEntryChangeRequestRecord } = await import('../src/actions/timeEntryChangeRequestActions');
 
     await createTimeEntryChangeRequestRecord(db, {
-      tenant: 'tenant-1',
+      tenant: TENANT,
       timeEntryId: 'entry-1',
-      timeSheetId: 'sheet-1',
+      timeSheetId: SHEET_ID,
       comment: 'Please split travel time.',
       createdBy: 'manager-1',
     });
@@ -84,11 +91,11 @@ describe('time entry change request action helpers', () => {
     expect(insertMock).toHaveBeenCalledWith({
       change_request_id: 'gen_random_uuid()',
       time_entry_id: 'entry-1',
-      time_sheet_id: 'sheet-1',
+      time_sheet_id: SHEET_ID,
       comment: 'Please split travel time.',
       created_by: 'manager-1',
       created_at: 'NOW',
-      tenant: 'tenant-1',
+      tenant: TENANT,
     });
   });
 
@@ -116,7 +123,7 @@ describe('time entry change request action helpers', () => {
     const { markTimeEntryChangeRequestsHandled } = await import('../src/actions/timeEntryChangeRequestActions');
 
     await markTimeEntryChangeRequestsHandled(db, {
-      tenant: 'tenant-1',
+      tenant: TENANT,
       timeEntryId: 'entry-1',
       handledBy: 'user-1',
     });
@@ -163,14 +170,14 @@ describe('time entry change request action helpers', () => {
                 {
                   change_request_id: 'cr-1',
                   time_entry_id: 'entry-1',
-                  time_sheet_id: 'sheet-1',
+                  time_sheet_id: SHEET_ID,
                   comment: 'Please split travel time.',
                   created_at: '2026-03-10T11:00:00.000Z',
                   created_by: 'manager-1',
                   handled_at: null,
                   handled_by: null,
                   created_by_name: 'Grace Hopper',
-                  tenant: 'tenant-1',
+                  tenant: TENANT,
                 },
               ]);
             },
@@ -179,10 +186,15 @@ describe('time entry change request action helpers', () => {
           return builder;
         }
 
-        throw new Error(`Unexpected table ${table}`);
+        // Co-managed lifecycle admission reads the workspace product on the
+        // way in; this suite is an independent PSA tenant, so the seam declines.
+        return fakeTable({ tenantRow: { ...INDEPENDENT_TENANT_ROW, tenant: TENANT } }, TENANT, table.split(' ')[0]);
       },
       {
         raw: (_sql: string) => '',
+        fn: { now: () => 'NOW' },
+        isTransaction: true,
+        transaction: async (callback: (trx: any) => Promise<any>) => callback(db),
       },
     );
     createTenantKnexMock.mockResolvedValue({ knex: db });
@@ -191,20 +203,20 @@ describe('time entry change request action helpers', () => {
 
     const result = await (fetchTimeEntryChangeRequestsForTimeSheet as any)(
       { user_id: 'viewer-1' },
-      { tenant: 'tenant-1' },
-      'sheet-1',
+      { tenant: TENANT },
+      SHEET_ID,
     );
 
     expect(result).toHaveLength(1);
     expect(result[0].created_by_name).toBe('Grace Hopper');
-    expect(whereCalls).toContainEqual({ id: 'sheet-1', tenant: 'tenant-1' });
+    expect(whereCalls).toContainEqual({ id: SHEET_ID, tenant: TENANT });
     expect(whereCalls).toContainEqual({
-      'change_requests.time_sheet_id': 'sheet-1',
-      'change_requests.tenant': 'tenant-1',
+      'change_requests.time_sheet_id': SHEET_ID,
+      'change_requests.tenant': TENANT,
     });
     expect(assertCanActOnBehalfMock).toHaveBeenCalledWith(
       { user_id: 'viewer-1' },
-      'tenant-1',
+      TENANT,
       'user-1',
       db,
     );

@@ -1,7 +1,7 @@
 import { TenantEntity } from ".";
 import type { ProjectServiceSource } from "./project.interfaces";
 
-export type WorkItemType = 'ticket' | 'project_task' | 'non_billable_category' | 'ad_hoc' | 'interaction' | 'appointment_request' | 'opportunity_step';
+export type WorkItemType = 'ticket' | 'project_task' | 'co_managed' | 'non_billable_category' | 'ad_hoc' | 'interaction' | 'appointment_request' | 'opportunity_step';
 
 export interface IWorkItem extends TenantEntity {
   work_item_id: string;

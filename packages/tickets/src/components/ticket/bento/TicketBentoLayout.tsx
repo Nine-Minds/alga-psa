@@ -36,8 +36,7 @@ import { TicketStopwatchControls } from '../TicketStopwatchControls';
 import TicketMaterialsCard from './../TicketMaterialsCard';
 import TicketWatchListCard from './../TicketWatchListCard';
 import type { CommentEmailRecipientsPayload } from '../CommentEmailRecipientsControl';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { useTicketDataSource } from '../TicketDataSourceContext';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from '@alga-psa/ui/components/bento/BentoTile';
@@ -221,6 +220,10 @@ export interface TicketBentoLayoutProps {
   onLoadAllContactsForWatchList?: () => Promise<void>;
   // Materials / feedback / documents / assets
   hideMaterials?: boolean;
+  /** App-layer slot content (`slots.coManagedSection`), rendered as its own tile. */
+  coManagedSection?: React.ReactNode;
+  /** App-layer slot content (`slots.timeSummary`), rendered under the time summary. */
+  timeSummarySlot?: React.ReactNode;
   surveySummaryCard?: React.ReactNode;
   associatedAssets?: React.ReactNode;
   documents: any[];
@@ -239,6 +242,10 @@ export interface TicketBentoLayoutProps {
 export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const { id, ticket } = props;
   const { t } = useTranslation('features/tickets');
+  const dataSource = useTicketDataSource();
+  const { capabilities } = dataSource;
+  const frozenFieldSet = React.useMemo(() => new Set(props.liveFrozenFields ?? []), [props.liveFrozenFields]);
+  const { getUserAvatarUrlsBatchAction, getTeamAvatarUrlsBatchAction } = dataSource.avatars;
   const ticketId = ticket.ticket_id ?? '';
   // Guards against re-entrant add/remove churn on rapid multi-select changes.
   const isProcessingAgentsRef = useRef(false);
@@ -555,17 +562,21 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         selectedClientId: effectiveClientId ?? null,
       })}
 
-      {props.surveySummaryCard ? props.surveySummaryCard : null}
+      {props.coManagedSection ? (
+        <div id={`${id}-co-managed-section`}>{props.coManagedSection}</div>
+      ) : null}
 
-      {props.associatedAssets ? (
+      {capabilities.survey && props.surveySummaryCard ? props.surveySummaryCard : null}
+
+      {capabilities.assets && props.associatedAssets ? (
         <div id={`${id}-assets-container`}>{props.associatedAssets}</div>
       ) : null}
 
-      {!props.hideMaterials ? (
+      {capabilities.materials && !props.hideMaterials ? (
         <TicketMaterialsCard id={`${id}-materials`} ticketId={ticketId} clientId={ticket.client_id} initialMaterials={props.bentoStreams?.materials} />
       ) : null}
 
-      {!props.hideScheduling ? (
+      {capabilities.scheduling && !props.hideScheduling ? (
         <>
           <Suspense fallback={<BentoTileSkeleton id={`${id}-scheduled-work-tile-loading`} title={t('bento.tiles.scheduledWork', 'Scheduled work')} />}>
             <ScheduledWorkTile
@@ -577,11 +588,13 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
               onOpenEntry={props.onOpenScheduleEntry}
             />
           </Suspense>
-          <AppointmentRequestsTile
-            id={`${id}-appointment-requests-tile`}
-            ticketId={ticketId}
-            refreshKey={props.scheduleRefreshKey}
-          />
+          {capabilities.appointmentRequests ? (
+            <AppointmentRequestsTile
+              id={`${id}-appointment-requests-tile`}
+              ticketId={ticketId}
+              refreshKey={props.scheduleRefreshKey}
+            />
+          ) : null}
         </>
       ) : null}
       <Suspense fallback={<BentoTileSkeleton id={`${id}-calls-emails-tile-loading`} title={t('bento.tiles.callsAndEmails', 'Calls and emails')} />}>
@@ -614,7 +627,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
     </div>
   );
 
-  const timerTile = !props.hideTimeEntry ? (
+  const timerTile = capabilities.timeEntry && !props.hideTimeEntry ? (
     <BentoTile id={`${id}-time-tile`} title={t('bento.tiles.timeLogged', 'Time logged')} icon={<Clock className="h-4 w-4" />}>
       <Suspense
         fallback={
@@ -631,6 +644,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           initialSummary={props.bentoStreams?.timeEntries}
         />
       </Suspense>
+      {props.timeSummarySlot ?? null}
       {ticketId ? (
         <TicketStopwatchControls
           id={`${id}-timer`}
@@ -769,21 +783,28 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
     // At the lg tier the right rail spans the full width below the timeline,
     // so its tiles flow as a 3-up grid; at xl it becomes the stacked rail.
     <div className="min-w-0 space-y-4 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-4 lg:items-start xl:block xl:space-y-4">
-      {!props.hideSlaStatus ? <SlaClocksTile id={`${id}-sla-tile`} ticket={ticket} initialPolicyName={props.bentoStreams?.slaPolicyName} /> : null}
+      {capabilities.sla && !props.hideSlaStatus ? <SlaClocksTile id={`${id}-sla-tile`} ticket={ticket} initialPolicyName={props.bentoStreams?.slaPolicyName} /> : null}
 
       {/* These sections ship their own ContentCard chrome; the surrounding
           ContentCardVariantProvider restyles it to match the bento tiles, so
           they render directly (no BentoTile double-wrap). */}
-      <TicketChecklistSection
-        id={`${id}-checklist-section`}
-        ticketId={ticketId}
-        initialItems={props.checklistItems}
-        onItemsChanged={props.onChecklistItemsChanged}
-      />
+      {capabilities.checklist ? (
+        <TicketChecklistSection
+          id={`${id}-checklist-section`}
+          ticketId={ticketId}
+          initialItems={props.checklistItems}
+          onItemsChanged={props.onChecklistItemsChanged}
+        />
+      ) : null}
 
       {timerTile}
+      {!timerTile && props.timeSummarySlot ? (
+        <BentoTile id={`${id}-time-tile`} title={t('bento.tiles.timeLogged', 'Time logged')} icon={<Clock className="h-4 w-4" />}>
+          {props.timeSummarySlot}
+        </BentoTile>
+      ) : null}
 
-      {!props.hideBilling ? (
+      {capabilities.billing && !props.hideBilling ? (
         <Suspense fallback={<BentoTileSkeleton id={`${id}-billing-tile-loading`} title={t('bento.tiles.billing', 'Billing')} />}>
           <BillingTile
             id={`${id}-billing-tile`}
@@ -794,9 +815,9 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         </Suspense>
       ) : null}
 
-      {teamTile}
+      {frozenFieldSet.has('additional_agents') ? null : teamTile}
 
-      <TicketWatchListCard
+      {frozenFieldSet.has('watch_list') ? null : <TicketWatchListCard
         id={`${id}-watch-list`}
         attributes={ticket.attributes}
         onUpdateWatchList={props.onUpdateWatchList}
@@ -809,30 +830,36 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         teams={props.teams}
         getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
         getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-      />
+      />}
 
-      <DocumentsTile
-        id={`${id}-documents-section`}
-        ticketId={ticketId}
-        documents={props.documents}
-        resolveDocumentViewUrl={props.resolveTicketAttachmentViewUrl}
-        forceUploadToRoot={props.disableAttachmentFolderSelection}
-        allowDocumentSharing={!props.disableAttachmentSharing}
-        allowLinkExistingDocuments={!props.disableAttachmentLinking}
-        allowBlockDocuments={!props.disableAttachmentLinking}
-        onDocumentCreated={props.onDocumentCreated}
-      />
+      {capabilities.documents ? (
+        <DocumentsTile
+          id={`${id}-documents-section`}
+          ticketId={ticketId}
+          documents={props.documents}
+          resolveDocumentViewUrl={props.resolveTicketAttachmentViewUrl}
+          forceUploadToRoot={props.disableAttachmentFolderSelection}
+          allowDocumentSharing={!props.disableAttachmentSharing}
+          allowLinkExistingDocuments={!props.disableAttachmentLinking}
+          allowBlockDocuments={!props.disableAttachmentLinking}
+          onDocumentCreated={props.onDocumentCreated}
+        />
+      ) : null}
 
       {/* Flag-gated; adapts to the bento variant via useContentCardVariant.
           Mirrors the Entry view's placement after Documents. */}
-      <TicketCredentialsSection ticketId={ticketId} clientId={ticket.client_id ?? null} />
+      {capabilities.credentials ? (
+        <TicketCredentialsSection ticketId={ticketId} clientId={ticket.client_id ?? null} />
+      ) : null}
 
-      <TicketExternalLinksSection
-        id={`${id}-external-links-section`}
-        ticketId={ticketId}
-        initialLinks={props.externalLinks}
-        onLinksChanged={props.onExternalLinksChanged}
-      />
+      {capabilities.externalLinks ? (
+        <TicketExternalLinksSection
+          id={`${id}-external-links-section`}
+          ticketId={ticketId}
+          initialLinks={props.externalLinks}
+          onLinksChanged={props.onExternalLinksChanged}
+        />
+      ) : null}
     </div>
   );
 
@@ -862,13 +889,13 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           onBatchSelectChange={props.onBatchSelectChange}
           onUpdateDescription={props.onUpdateDescription}
           responseStateTrackingEnabled={props.responseStateTrackingEnabled}
-          hideSlaStatus={props.hideSlaStatus}
+          hideSlaStatus={props.hideSlaStatus || !capabilities.sla}
           workflowLocked={props.workflowLocked}
           onOpenAllFields={props.onOpenAllFields}
           tags={props.tags}
-          onTagsChange={props.onTagsChange}
-          taskActions={props.taskActions}
-          quickInvoiceActions={props.quickInvoiceActions}
+          onTagsChange={capabilities.tags ? props.onTagsChange : undefined}
+          taskActions={capabilities.createProjectTask ? props.taskActions : undefined}
+          quickInvoiceActions={capabilities.quickInvoice ? props.quickInvoiceActions : undefined}
           onResolveAndClose={props.onResolveAndClose}
           resolveAndCloseDisabled={props.resolveAndCloseDisabled}
           liveHighlightedFields={props.liveHighlightedFields}

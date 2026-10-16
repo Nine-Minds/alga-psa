@@ -1,8 +1,8 @@
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
+import { withTimePeriodWriteAdmission } from '@alga-psa/co-managed';
 import { createClientContractLineCycles } from '@alga-psa/billing/lib/billing/createBillingCycles';
-import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
-import { TimePeriodSettings } from '@alga-psa/scheduling/models/timePeriodSettings';
+import { createNextTimePeriodsAdmitted, NO_ACTIVE_TIME_PERIOD_SETTINGS } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
 import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';
 
@@ -43,19 +43,30 @@ export type NextTimePeriodOutcome =
   | { status: 'skipped'; details: string }
   | { status: 'completed'; details: string };
 
+/** Horizon (days ahead) the nightly run fills periods through. */
+const NEXT_TIME_PERIOD_HORIZON_DAYS = 5;
+
 export async function createNextTimePeriodForTenant(tenantId: string): Promise<NextTimePeriodOutcome> {
   return runWithTenant(tenantId, async () => {
     const tenantKnex = await getConnection(tenantId);
-    const settings = await TimePeriodSettings.getActiveSettings(tenantKnex, tenantId);
+    // Lifecycle admission, the stored-settings read and the period write share
+    // ONE transaction (the same fence the queue-identity job uses): a co-managed
+    // workspace whose sponsor goes read-only mid-run is either serialized behind
+    // it or rolls every generated period back, instead of being checked and
+    // then written in separate transactions.
+    const outcome = await withTimePeriodWriteAdmission(tenantKnex, tenantId, (trx) =>
+      createNextTimePeriodsAdmitted(trx, tenantId, NEXT_TIME_PERIOD_HORIZON_DAYS));
 
-    if (!settings || settings.length === 0) {
+    if (outcome.status === 'skipped') {
+      return { status: 'skipped', details: `Skipped - ${outcome.reason}` };
+    }
+    if (outcome.result.reason === NO_ACTIVE_TIME_PERIOD_SETTINGS) {
       logger.debug(`No time period settings configured for tenant ${tenantId}, skipping time period creation`);
       return { status: 'skipped', details: 'Skipped - no time period settings configured' };
     }
-
-    const result = await createNextTimePeriod(settings);
-    const details = result
-      ? `Created new time period ${result.start_date} to ${result.end_date}`
+    const { period } = outcome.result;
+    const details = period
+      ? `Created new time period ${period.start_date} to ${period.end_date}`
       : 'No new time period needed';
     logger.info(`Time period creation completed for tenant ${tenantId}: ${details}`);
     return { status: 'completed', details };

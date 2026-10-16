@@ -1,0 +1,106 @@
+Co-managed fixture reset/apply/verify cycle
+worktree: 449e0a7b6c10adc03f2d88ad6977e42ae2ebd91f  (fixture script change uncommitted at capture time)
+date: 2026-09-20T21:05:30Z
+db: server_co_managed @ 127.0.0.1:5472
+
+===== VERIFY (before)  [npm run fixtures:co-managed -- --verify] =====
+present  1 seat pool       Munchkin Country seat admission -> CO_MANAGED_SEAT_LIMIT (expected CO_MANAGED_SEAT_LIMIT)
+present  6 delegation      MSP administrator's delegated screen -> Service Desk (board_settings)
+present  6 delegation      Executive (private) board -> out of the MSP administrator's reach
+
+present  1 seat pool       sponsor entitlement (co_managed_entitlements)
+present  1 seat pool       allocation with headroom (co_managed_allocations)
+present  1 seat pool       allocation at ceiling (co_managed_allocations)
+present  2 escalation      ticket ready to escalate (tickets)
+present  2 escalation      escalated ticket work (co_management_ticket_work)
+present  2 escalation      MSP SLA obligation (sla_organization_obligations)
+present  2 escalation      priority mapping (co_managed_sla_priority_mappings)
+present  3 notes           shared IT note (comments)
+present  3 notes           MSP private note (co_management_private_comments)
+present  4 effort          MSP commercial time (time_entries)
+present  4 effort          customer operational time (time_entries)
+present  5 departure       live relationship to export (co_management_relationships)
+present  5 departure       sealed archive manifest (co_managed_archive_manifests)
+present  5 departure       closure record (co_managed_relationship_closures)
+present  6 delegation      scoped grant (co_management_delegated_grants)
+present  6 delegation      out-of-scope private board (boards)
+present  7 collaboration   shared project scope (co_management_project_scopes)
+present  7 collaboration   shared task reference (co_managed_project_task_references)
+present  7 collaboration   cross-org task comments (project_task_comments)
+
+19/19 fixture checks present.
+exit=0
+
+===== RESET  [npm run fixtures:co-managed -- --reset] =====
+
+> fixtures:co-managed
+> tsx scripts/dev/co-managed-fixtures.ts --reset
+
+Co-managed fixtures removed; sponsor pool restored to its pre-fixture baseline.
+exit=0
+
+===== VERIFY (documented post-reset baseline)  [npm run fixtures:co-managed -- --verify] =====
+MISMATCH 1 seat pool       Munchkin Country seat admission -> admitted (expected CO_MANAGED_SEAT_LIMIT)
+MISMATCH 6 delegation      MSP administrator's delegated screen -> unavailable to cm.msp.admin@oz.test
+present  6 delegation      Executive (private) board -> out of the MSP administrator's reach
+
+present  1 seat pool       sponsor entitlement (co_managed_entitlements)
+present  1 seat pool       allocation with headroom (co_managed_allocations)
+MISSING  1 seat pool       allocation at ceiling (co_managed_allocations)
+MISSING  2 escalation      ticket ready to escalate (tickets)
+MISSING  2 escalation      escalated ticket work (co_management_ticket_work)
+MISSING  2 escalation      MSP SLA obligation (sla_organization_obligations)
+MISSING  2 escalation      priority mapping (co_managed_sla_priority_mappings)
+MISSING  3 notes           shared IT note (comments)
+MISSING  3 notes           MSP private note (co_management_private_comments)
+MISSING  4 effort          MSP commercial time (time_entries)
+MISSING  4 effort          customer operational time (time_entries)
+present  5 departure       live relationship to export (co_management_relationships)
+present  5 departure       sealed archive manifest (co_managed_archive_manifests)
+present  5 departure       closure record (co_managed_relationship_closures)
+MISSING  6 delegation      scoped grant (co_management_delegated_grants)
+MISSING  6 delegation      out-of-scope private board (boards)
+MISSING  7 collaboration   shared project scope (co_management_project_scopes)
+MISSING  7 collaboration   shared task reference (co_managed_project_task_references)
+MISSING  7 collaboration   cross-org task comments (project_task_comments)
+
+5/19 fixture checks present.
+exit=1
+
+===== APPLY  [npm run fixtures:co-managed -- ] =====
+[co-managed onboarding role grants] 1/1 tenant 54490467-e4b7-58e4-b2f5-74bacfa02ce7 (co_managed): +0 default-role grants
+[co-managed onboarding role grants] complete at catalog v1-51437edc320dc7cc: 1 reconciled, 0 skipped, 0 failed of 1 tenants. Skipped and failed tenants keep their existing permissions; reconcile them with the read-only audit (server/migrations/utils/permissions/auditPermissionCatalog.cjs) and the onboarding recovery.
+Created default project task statuses in statuses table for tenant 54490467-e4b7-58e4-b2f5-74bacfa02ce7
+Created AD to M365 project template for tenant 54490467-e4b7-58e4-b2f5-74bacfa02ce7
+Seeded built-in asset types for tenant 54490467-e4b7-58e4-b2f5-74bacfa02ce7
+Co-managed fixtures applied.
+exit=0
+
+===== VERIFY (final, must be 19/19)  [npm run fixtures:co-managed -- --verify] =====
+present  1 seat pool       Munchkin Country seat admission -> CO_MANAGED_SEAT_LIMIT (expected CO_MANAGED_SEAT_LIMIT)
+present  6 delegation      MSP administrator's delegated screen -> Service Desk (board_settings)
+present  6 delegation      Executive (private) board -> out of the MSP administrator's reach
+
+present  1 seat pool       sponsor entitlement (co_managed_entitlements)
+present  1 seat pool       allocation with headroom (co_managed_allocations)
+present  1 seat pool       allocation at ceiling (co_managed_allocations)
+present  2 escalation      ticket ready to escalate (tickets)
+present  2 escalation      escalated ticket work (co_management_ticket_work)
+present  2 escalation      MSP SLA obligation (sla_organization_obligations)
+present  2 escalation      priority mapping (co_managed_sla_priority_mappings)
+present  3 notes           shared IT note (comments)
+present  3 notes           MSP private note (co_management_private_comments)
+present  4 effort          MSP commercial time (time_entries)
+present  4 effort          customer operational time (time_entries)
+present  5 departure       live relationship to export (co_management_relationships)
+present  5 departure       sealed archive manifest (co_managed_archive_manifests)
+present  5 departure       closure record (co_managed_relationship_closures)
+present  6 delegation      scoped grant (co_management_delegated_grants)
+present  6 delegation      out-of-scope private board (boards)
+present  7 collaboration   shared project scope (co_management_project_scopes)
+present  7 collaboration   shared task reference (co_managed_project_task_references)
+present  7 collaboration   cross-org task comments (project_task_comments)
+
+19/19 fixture checks present.
+exit=0
+

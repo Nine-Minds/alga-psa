@@ -50,3 +50,6 @@ export { ClientKBPage, ClientKBArticleView } from './kb';
 
 // Appliance Licenses (C6)
 export { default as ClientLicensesPage } from './licenses/ClientLicensesPage';
+
+export { RequesterTaskConversationProvider } from './projects/RequesterTaskConversation';
+export type { RequesterTaskConversationProps } from './projects/RequesterTaskConversation';

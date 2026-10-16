@@ -103,6 +103,8 @@
       "selectAsset": "Markera tillgången {{name}}",
       "selectedAssets_one": "{{count}} tillgång markerad",
       "selectedAssets_other": "{{count}} tillgångar markerade",
+      "selectedAssets_few": "{{count}} tillgångar markerade",
+      "selectedAssets_many": "{{count}} tillgångar markerade",
       "clearSelection": "Avmarkera alla",
       "bulkActionsComingSoon": "Massåtgärder kommer snart"
     },
@@ -390,10 +392,16 @@
       "momentsAgo": "nyss",
       "minutesAgo_one": "för {{count}} minut sedan",
       "minutesAgo_other": "för {{count}} minuter sedan",
+      "minutesAgo_few": "för {{count}} minuter sedan",
+      "minutesAgo_many": "för {{count}} minuter sedan",
       "hoursAgo_one": "för {{count}} timme sedan",
       "hoursAgo_other": "för {{count}} timmar sedan",
+      "hoursAgo_few": "för {{count}} timmar sedan",
+      "hoursAgo_many": "för {{count}} timmar sedan",
       "daysAgo_one": "för {{count}} dag sedan",
-      "daysAgo_other": "för {{count}} dagar sedan"
+      "daysAgo_other": "för {{count}} dagar sedan",
+      "daysAgo_few": "för {{count}} dagar sedan",
+      "daysAgo_many": "för {{count}} dagar sedan"
     }
   },
   "assetDetailHeader": {
@@ -552,7 +560,6 @@
     "description": "Dokumentlista och bilageyta för filer som hör till en tillgång"
   },
   "assetForm": {
-    "additionalFields": "Ytterligare fält",
     "title": "Tillgångsformulär",
     "description": "Huvudformulär för att skapa och redigera tillgångar med fält för identitet, livscykel, avtal och metadata",
     "heading": "Redigera tillgång",
@@ -668,6 +675,7 @@
       "printer": "Skrivardetaljer",
       "custom": "Detaljer för {{typeName}}"
     },
+    "additionalFields": "Ytterligare fält",
     "help": {
       "assignedTo": "I kundportalen ser personer med begränsad synlighet den här enheten bara om den är tilldelad dem eller någon som rapporterar till dem."
     }
@@ -825,7 +833,9 @@
       "addAsset": "Lägg till tillgång",
       "showLess": "Visa färre",
       "moreAssets_one": "{{count}} tillgång till",
-      "moreAssets_other": "{{count}} tillgångar till"
+      "moreAssets_other": "{{count}} tillgångar till",
+      "moreAssets_few": "{{count}} tillgångar till",
+      "moreAssets_many": "{{count}} tillgångar till"
     },
     "errors": {
       "loadAvailableAssets": "Det gick inte att läsa in tillgängliga tillgångar",
@@ -839,8 +849,12 @@
     "success": {
       "associated_one": "{{count}} tillgång har kopplats",
       "associated_other": "{{count}} tillgångar har kopplats",
+      "associated_few": "{{count}} tillgångar kopplades",
+      "associated_many": "{{count}} tillgångar kopplades",
       "associatedPartial_one": "{{count}} tillgång har kopplats, {{failed}} misslyckades (kan redan vara kopplade)",
       "associatedPartial_other": "{{count}} tillgångar har kopplats, {{failed}} misslyckades (kan redan vara kopplade)",
+      "associatedPartial_few": "{{count}} tillgångar kopplades, {{failed}} misslyckades (kan redan vara kopplade)",
+      "associatedPartial_many": "{{count}} tillgångar kopplades, {{failed}} misslyckades (kan redan vara kopplade)",
       "removed": "Tillgångskopplingen har tagits bort"
     },
     "empty": {
@@ -864,7 +878,9 @@
       },
       "actions": {
         "addAssets_one": "Lägg till tillgång",
-        "addAssets_other": "Lägg till tillgångar"
+        "addAssets_other": "Lägg till tillgångar",
+        "addAssets_few": "Lägg till tillgångar",
+        "addAssets_many": "Lägg till tillgångar"
       }
     },
     "table": {
@@ -1257,17 +1273,29 @@
     "frequency": {
       "every_one": "Varje {{frequency}}",
       "every_other": "Intervall: {{count}} {{frequency}}",
+      "every_few": "Var {{count}}:e {{frequency}}",
+      "every_many": "Var {{count}}:e {{frequency}}",
       "units": {
         "daily_one": "dag",
         "daily_other": "dagar",
+        "daily_few": "dag",
+        "daily_many": "dag",
         "weekly_one": "vecka",
         "weekly_other": "veckor",
+        "weekly_few": "vecka",
+        "weekly_many": "vecka",
         "monthly_one": "månad",
         "monthly_other": "månader",
+        "monthly_few": "månad",
+        "monthly_many": "månad",
         "quarterly_one": "kvartal",
         "quarterly_other": "kvartal",
+        "quarterly_few": "kvartal",
+        "quarterly_many": "kvartal",
         "yearly_one": "år",
-        "yearly_other": "år"
+        "yearly_other": "år",
+        "yearly_few": "år",
+        "yearly_many": "år"
       }
     },
     "status": {

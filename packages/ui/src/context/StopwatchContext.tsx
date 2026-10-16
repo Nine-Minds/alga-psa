@@ -16,7 +16,7 @@ import type { StopwatchEntrySpanView, StopwatchSessionView } from '@alga-psa/typ
 export type StopwatchState = 'idle' | 'running' | 'paused';
 
 export interface StopwatchStartInput {
-  workItemType: 'ticket' | 'project_task';
+  workItemType: 'ticket' | 'project_task' | 'co_managed';
   workItemId: string;
   serviceId?: string | null;
   notes?: string;

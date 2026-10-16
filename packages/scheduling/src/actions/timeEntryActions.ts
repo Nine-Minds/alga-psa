@@ -16,7 +16,8 @@ import {
   saveTimeEntry,
   updateTimeEntryApprovalStatus,
   deleteTimeEntry,
-  getTimeEntryById
+  getTimeEntryById,
+  getTimeEntryBillingMode
 } from './timeEntryCrudActions';
 import { fetchTimeEntryChangeRequestsForTimeSheet } from './timeEntryChangeRequestActions';
 import {
@@ -46,6 +47,7 @@ export {
   updateTimeEntryApprovalStatus,
   deleteTimeEntry,
   getTimeEntryById,
+  getTimeEntryBillingMode,
   fetchTimeEntryChangeRequestsForTimeSheet,
   fetchWorkItemsForTimeSheet,
   addWorkItem,

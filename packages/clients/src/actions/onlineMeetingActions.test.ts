@@ -11,6 +11,9 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: hoisted.hasPermissionMock,
 }));
 
+vi.mock('@alga-psa/db', () => ({ createTenantKnex: vi.fn(async () => ({ knex: {} })) }));
+vi.mock('@alga-psa/co-managed', () => ({ readCoManagedInteractionMeeting: vi.fn(async () => ({ handled: false })) }));
+
 vi.mock('../models/onlineMeeting', () => ({
   default: {
     getByInteractionId: hoisted.getByInteractionIdMock,

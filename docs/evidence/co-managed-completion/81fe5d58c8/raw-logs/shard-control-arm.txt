@@ -1,0 +1,700 @@
+
+> server@1.6.1 test:integration:tier1
+> node ../scripts/run-tier1-integration.mjs --reporter=default --reporter=json --outputFile.json=./test-results-integration.json
+
+tier1 gate: Change evidence unavailable; full suite required
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ src/test/integration/portalSelectableTicketStatuses.integration.test.ts (3 tests) 404ms 66 MB heap used
+ ✓ src/test/integration/contactEmailLookup.integration.test.ts (4 tests) 882ms 77 MB heap used
+ ✓ src/test/integration/api/assetTicketCategoryApi.integration.test.ts (6 tests) 481ms 133 MB heap used
+ ✓ src/test/integration/workflowRuntimeV2.publish.integration.test.ts (51 tests) 6090ms 211 MB heap used
+   ✓ workflow runtime v2 publish + registry + run integration tests > Publish rejects unknown action id/version references. Mocks: non-target dependencies.  846ms
+   ✓ workflow runtime v2 publish + registry + run integration tests > Publish fails when payloadSchemaRef is missing from registry. Mocks: non-target dependencies.  502ms
+   ✓ workflow runtime v2 publish + registry + run integration tests > Publish reports an empty action input expression once, with no type warning. Mocks: non-target dependencies.  399ms
+   ✓ workflow runtime v2 publish + registry + run integration tests > Action registry server action includes email workflow actions. Mocks: non-target dependencies.  560ms
+   ✓ workflow runtime v2 publish + registry + run integration tests > Start run launches a Temporal-backed workflow run and records the Temporal identifiers. Mocks: non-target dependencies.  365ms
+ ✓ src/test/integration/invoiceTicketImmutable.integration.test.ts (1 test) 26000ms 232 MB heap used
+   ✓ generates immutable ticket presentation from approved source records  26000ms
+ ✓ src/test/integration/clientPortalBillingReads.postDrop.integration.test.ts (1 test) 299ms 239 MB heap used
+ ✓ src/test/integration/marketingOpportunityHandoff.integration.test.ts (1 test) 206ms 250 MB heap used
+ ✓ src/test/integration/assetServiceRepair.integration.test.ts (7 tests) 734ms 295 MB heap used
+ ✓ src/test/integration/webhookDelivery.ssrf.test.ts (2 tests) 2ms 293 MB heap used
+ ✓ src/test/integration/citusTenantFilterEmailProviders.integration.test.ts (2 tests) 0ms 301 MB heap used
+ ✓ src/test/integration/coManagedReservations.integration.test.ts (52 tests) 718ms 303 MB heap used
+ ✓ src/test/integration/marketingActivities.integration.test.ts (1 test) 222ms 251 MB heap used
+ ✓ src/test/integration/serviceRequestDefinitionManagement.integration.test.ts (1 test) 178ms 261 MB heap used
+ ✓ src/test/integration/internal-notifications/mentionNotifications.integration.test.ts (2 tests) 342ms 290 MB heap used
+ ✓ src/test/integration/replyTokenThreading.integration.test.ts (9 tests) 308ms 303 MB heap used
+ ✓ src/test/integration/billingInvoiceTiming.integration.test.ts (63 tests) 5870ms 381 MB heap used
+   ✓ Billing Invoice Timing Integration > T140/T175/T252: DB-backed monthly contract-cadence billing persists contract-owned detail periods and executes from selector input without a raw billingCycleId bridge  309ms
+ ✓ src/test/integration/email/outboundMessageIdStorage.test.ts (6 tests) 272ms 386 MB heap used
+ ✓ src/test/integration/templateRuntimeNormalization.clientActions.integration.test.ts (4 tests) 1034ms 401 MB heap used
+ ✓ src/test/integration/billing/invoiceStatusManagement.integration.test.ts (10 tests) 25344ms 450 MB heap used
+ ✓ src/test/integration/accounting/exportDashboard.integration.test.ts (4 tests) 2703ms 492 MB heap used
+   ✓ Accounting export dashboard integration > lists batches filtered by status and adapter for dashboard filters  373ms
+   ✓ Accounting export dashboard integration > provides batch detail with lines and errors for invoice drawer context  386ms
+   ✓ Accounting export dashboard integration > T178: rereads mixed historical and canonical export lines without collapsing stored period semantics  329ms
+   ✓ Accounting export dashboard integration > creates a re-export batch via invoice selector for invoice detail workflow  306ms
+ ✓ src/test/integration/inboundEmailInApp.webhooks.integration.test.ts (44 tests) 1876ms 595 MB heap used
+ ✓ src/test/integration/imapWebhookHandoff.integration.test.ts (9 tests) 44ms 601 MB heap used
+ ✓ src/test/integration/billing/billingProfileCycles.integration.test.ts (4 tests) 1084ms 596 MB heap used
+ ✓ src/test/integration/accounting/mappingPermissions.integration.test.ts (2 tests) 852ms 636 MB heap used
+ ✓ src/test/integration/calendar/webhookProcessing.integration.test.ts (8 tests) 309ms 653 MB heap used
+ ✓ src/test/integration/eventEmailRetryQueueRecovery.integration.test.ts (2 tests) 8ms 649 MB heap used
+ ✓ src/test/integration/actions/projectActionsIntegration.test.ts (4 tests) 9874ms 674 MB heap used
+   ✓ Project Actions Integration - Project Numbers > createProject with numbering > should create project with auto-generated project_number  2845ms
+   ✓ Project Actions Integration - Project Numbers > createProject with numbering > should create multiple projects with sequential numbers  1618ms
+   ✓ Project Actions Integration - Project Numbers > createProject with numbering > should enforce unique project_number per tenant  1382ms
+   ✓ Project Actions Integration - Project Numbers > project_number field validation > should include project_number in returned project object  2347ms
+ ✓ src/test/integration/accounting/xeroInboundReconciliation.integration.test.ts (12 tests) 36673ms 497 MB heap used
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > stores the delivery baseline so an unchanged poll is a no-op and a material change becomes drift without touching Alga lines  1275ms
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > applies an external payment once, persists the AR rows, and replays without duplicate financial effect  6982ms
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > exports a UI-created service mapping and reconciles a real inbound payment with replay (balances verified)  522ms
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > reverses a deleted external payment  6367ms
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > runs the real allocation query: emits a deletion for a removed credit allocation, scoped to the organisation  468ms
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > counts open health exceptions only for the selected organisation  628ms
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > replacing a fully settling credit allocation preserves the paid balance  10830ms
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > replays a replacement without duplicate financial effect  3658ms
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > replaces multiple allocations on one invoice without netting the balance away  508ms
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > migrates a legacy aggregate allocation id to per-AllocationID identity without losing the balance  694ms
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > rolls back a failed replacement application and recovers after the committed reversal  1578ms
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > recovers when the replacement is split across polls (reversal then application)  1034ms
+[algasim] stripe vendor surface listening {"port":44747}
+[algasim] control API listening {"port":40545}
+ ✓ src/test/integration/payments/invoiceEmailPaymentLinks.journey.integration.test.ts (25 tests) 23415ms 526 MB heap used
+   ✓ journey: invoice email payment links against the Stripe emulator > direct send with payment links enabled > sends a finalized invoice with a Checkout URL and portal URL; the customer uses the billing contact email  308ms
+   ✓ journey: invoice email payment links against the Stripe emulator > direct send with payment links enabled > degrades to a portal-only email with the cause retained when Checkout creation fails  1038ms
+   ✓ journey: invoice email payment links against the Stripe emulator > direct send with payment links enabled > surfaces a portal provider failure as PaymentLinkError with the cause retained  1038ms
+   ✓ journey: invoice email payment links against the Stripe emulator > terminal-status invalidation and provider-expiration failures > surfaces a safe portal failure and creates no replacement session when provider expiration fails on the stale-balance path  1041ms
+   ✓ journey: invoice email payment links against the Stripe emulator > terminal-status invalidation and provider-expiration failures > sends a portal-only email with the cause logged and no replacement session when provider expiration fails  1053ms
+   ✓ journey: invoice email payment links against the Stripe emulator > terminal-status invalidation and provider-expiration failures > retries provider expiration on the next attempt instead of creating a replacement while the old session is open  1063ms
+   ✓ journey: invoice email payment links against the Stripe emulator > terminal-status invalidation and provider-expiration failures > retries provider expiration on a later email send instead of creating a replacement while the old session is open  1091ms
+   ✓ journey: invoice email payment links against the Stripe emulator > terminal-status invalidation and provider-expiration failures > retries a previously failed provider expiration when a paid invoice is revisited  1054ms
+ ✓ src/test/integration/applianceInitialAdminPasswordReset.integration.test.ts (3 tests) 987ms 521 MB heap used
+ ✓ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1416 tests) 284350ms 855 MB heap used
+   ✓ co-managed ticket escalation and handback > rechecks session expiry after waiting for the approved destination lock without leaving a grant or work reference  1176ms
+   ✓ co-managed ticket escalation and handback > rechecks license expiry after waiting for the approved destination lock without leaving a grant or work reference  1177ms
+   ✓ paginates the qualified shared IT journal without leaking source fields hidden by authorization bundles  358ms
+   ✓ rejects the legacy ticket edit if its grace deadline passes while waiting for the ticket lock  1161ms
+   ✓ rejects the optimized ticket edit if its grace deadline passes while waiting for the ticket lock  1164ms
+   ✓ stores foreign ticket activity through an owner-local actor reference with immutable name and organization snapshots  400ms
+   ✓ retains close gates and rolls back foreign ticket edits, references, audit and queued publication together  1103ms
+   ✓ rechecks the MSP session deadline after waiting for the actor-reference lock before a canonical mutation  1229ms
+   ✓ rechecks revoked queue scope and session expiry after waiting for lifecycle locks  1254ms
+   ✓ stores MSP-private threads under MSP ownership with qualified soft resources and same-thread parent constraints  311ms
+   ✓ rechecks the actual session after waiting for a private thread lock before applying content  1215ms
+   ✓ rechecks shared comment session authority after waiting on its root thread without leaving a reply or receipt  1217ms
+   ✓ retains recipient identity, membership and resource grant locks through the delivery callback  342ms
+   ✓ rechecks the interactive session after waiting for a stored notification lock  1243ms
+   ✓ propagates failed ordinary-event MSP fanout for retry without duplicating recipients already committed  477ms
+   ✓ recovers committed channels through the scheduled server job handler without requiring the original event  545ms
+   ✓ does not issue a notification signal token if the session expires while waiting for a home identity lock  1249ms
+   ✓ edits and deletes own qualified comments with exact-version retries, preserved audiences and metadata-only committed effects  440ms
+   ✓ rechecks shared edit authority after a thread lock wait and leaves no receipt or effects when the session expires  1240ms
+   ✓ preserves canonical rich documents through create, inherited replies, exact edit retries and current conversation reads  309ms
+   ✓ keeps interrupted attachment uploads pending and hidden, snapshots bytes, and retries the same immutable object  325ms
+   ✓ keeps attachment transport expiry pending, permits an exact renewed retry and retains reads during license lapse  2421ms
+   ✓ derives attachment upload controls from actual qualified authorship, content redactions and lifecycle  705ms
+   ✓ publishes a drafted message and every prepared attachment atomically through the production comment adapter  384ms
+   ✓ keeps private draft messages and files in the correct organization and inherits reply audiences  398ms
+   ✓ rolls draft publication and native effects back with the owner and rejects publication after scope loss or license lapse  321ms
+   ✓ keeps staged files invisible to requesters until publication and rejects corrupted bytes or session expiry during download  888ms
+   ✓ rechecks requester session expiry after comment lock waits before opening storage  1322ms
+   ✓ expires idle drafts and standalone pending uploads while retaining fresh work and every published file  538ms
+   ✓ rechecks draft session expiry after cleanup lock contention before uploading any bytes  1291ms
+   ✓ removes a published attachment idempotently without changing its message and purges only the selected object  416ms
+   ✓ rolls attachment removal back with its caller and rejects staged-file removal through a colliding comment  324ms
+   ✓ rechecks session expiry after an attachment removal lock wait before marking the file discarded  1236ms
+   ✓ retains audience admission after grant loss, license lapse and session expiry behind a thread lock  1259ms
+   ✓ keeps published draft files attached across disclosure and rejects old-audience staged replies  325ms
+   ✓ transfers a confirmed MSP-private thread and files atomically with historical authors and empty tombstones  520ms
+   ✓ checks source checksums and session expiry before sending private bytes into customer storage  1295ms
+   ✓ commits co-managed event outbox intent atomically when the outer owner never flushes hooks and removes it on rollback  575ms
+   ✓ retries co-managed event outbox lost acknowledgements, isolates damaged rows and prevents concurrent delivery  3885ms
+   ✓ rolls actual co-managed in-app consumers back when completion fails and emits channels only after a successful retry  2755ms
+   ✓ issues stable requester reply tokens per delivery and address and preserves identity across retries  301ms
+   ✓ rechecks requester token expiry after waiting for the canonical thread lock  1241ms
+   ✓ rolls requester reply writes back if the token expires while the writer is awaiting work  1195ms
+   ✓ quarantines actual requester email after malformed_token rejection without native matching or new-ticket side effects  364ms
+   ✓ rolls qualified requester reply writes and outbox back before retaining quarantine after expiry during the writer  320ms
+   ✓ rechecks customer technician token expiry after a canonical thread lock wait  1200ms
+   ✓ rolls back customer technician writes when token expiry occurs while the writer awaits work  1201ms
+   ✓ does not publish technician artifact bytes after the retained claim expires during transport  2279ms
+   ✓ preserves initial inbound internal-only delivery even when excluded consumer rows are replayed  2851ms
+   ✓ publishes a scheduled co-managed comment once with atomic state, workflow and notification intent  1087ms
+   ✓ cancels old scheduled content during legacy handoff when its source is restricted  351ms
+   ✓ pages shared project tasks without copying assignments, and loses access immediately on unsharing  364ms
+   ✓ task attachments retain qualified audiences, retry identity and independent MSP archive bytes  460ms
+   ✓ task attachments survive encrypted customer export and native restore without the MSP private store  1432ms
+   ✓ task conversations page both stores with microsecond cursors and duplicate IDs in a non-UTC connection  784ms
+   ✓ task email discovery commits both organizations before transport and recovers failures through the actual maintenance handler  565ms
+   ✓ operational time storage rejects commercial tax_rate_id even through legacy writes  783ms
+   ✓ native time detail reads recheck credential expiry after waiting for the actual work lock  1785ms
+   ✓ native timesheet collections reject the whole response when credentials expire during a source lock wait  1755ms
+   ✓ native time deletion rolls effort, review comments, task totals and events back on final key expiry  1256ms
+   ✓ native time API collections reject the whole result when a key expires during a source wait  1752ms
+   ✓ native time sheet lists reject the whole collection when the key expires during a nested source wait  1759ms
+   ✓ customer sheet reporting computes visible statistics and exports all pages with filters and grouping  913ms
+   ✓ customer schedule reads reject the whole collection when its key expires while retaining a work root  1781ms
+   ✓ customer meeting artifact delivery cancels prepared content on final credential expiry and cannot use revoked credentials  1561ms
+   ✓ customer interaction meeting reads reject expired credentials after waiting for an actual source lock  1457ms
+   ✓ MSP SLA observation does not advance wrong-owner work  352ms
+   ✓ MSP SLA email skips a queued recipient after field-redaction changes  909ms
+   ✓ MSP SLA ticket API missing reopen setup rolls back the canonical row and retained clock  401ms
+   ✓ MSP SLA workflow updates reject missing_role before mutating canonical work  520ms
+   ✓ co-managed workflow close rejects hidden response_state source fields before queuing a message  793ms
+   ✓ MSP shared time save admits actual API credentials and preserves qualified work on updates and reads  1543ms
+   ✓ MSP shared time deletion retains the source reference and prevents deleting submitted effort  772ms
+   ✓ conversation participation rolls back the canonical task mutation when capture fails  435ms
+   ✓ archive reads deliver pending and stored bytes with integrity and final session checks  961ms
+   ✓ PSA capability backfills join the co-managed upgrade transaction and preserve customer work and existing grants  362ms
+   ✓ portable vault export retains customer metadata and audited usable secrets after departure without MSP private data  466ms
+   ✓ portable vault export fails closed on restricted ACL, audit failure and authority changes during provider work  484ms
+   ✓ portable workspace coordinator binds actual private and shared conversation files to authenticated package records  1046ms
+   ✓ portable conversation export verifies stored checksums and removes staged files after parent access or path changes  385ms
+   ✓ portable workspace graph validates cross-section identities and rejects dangling author service and configuration references  599ms
+   ✓ portable remote meeting files capture real bounded Graph response streams from retained original identities only  424ms
+   ✓ portable workspace coordinator seals all sections at one cutoff and delivers under fresh native locks without provider work  1186ms
+   ✓ portable workspace coordinator rejects source changes after staging and revoked sessions before any delivery callback  1091ms
+   ✓ portable workspace prepared download rejects an expired staging lease before opening a transaction  589ms
+   ✓ portable export browser handler streams after releasing database locks and rejects revoked or foreign requests  893ms
+   ✓ portable workspace restore inserts actual files records and usable vault into a new suspended tenant atomically  1283ms
+   ✓ portable workspace coordinator removes all staged files after a later credential provider failure and disposes abandoned packages  860ms
+   ✓ portable installation restore authenticates owner authority and converges retries without replacing tenants  6790ms
+   ✓ portable workspace preparation enforces cumulative disk limits and cancels provider work without retained staging  533ms
+   ✓ shared invoice journey persists qualified MSP and native effort once under concurrent generation and retries  362ms
+   ✓ shared invoice journey reconciles approved MSP effort into a later contract and claims its native recurring period once  392ms
+   ✓ shared invoice journey retains rendered MSP invoice and archive after actual customer tenant deletion  1194ms
+   ✓ requester task conversation pages before returning private counts and rejects replies to a deleted root  393ms
+   ✓ delegated administration option search paginates only authorized display fields and admitted principals  560ms
+   ✓ co-managed provisioning cleanup > cancels a queued workspace without creating it and acknowledges capacity release exactly once  1901ms
+   ✓ co-managed provisioning cleanup > cleans the real bootstrapped defaults and invitation while retaining the MSP, siblings and reservation tombstone  1899ms
+   ✓ co-managed provisioning cleanup > rolls back data deletion and retains seats on failure, then resumes the same operation  3626ms
+   ✓ co-managed provisioning cleanup > records retryable cleanup failure for unknown tenant data instead of releasing its reservation  3508ms
+   ✓ co-managed provisioning cleanup > serializes first signup against cancellation so only one can claim the workspace  1954ms
+   ✓ task thread private disclosure rechecks the session after transport before publishing any customer content  800ms
+   ✓ archive boundary paginates authorized work without hidden-only pages or candidate counts  405ms
+ ✓ src/test/integration/ticketBundlingPortalAuthor.integration.test.ts (3 tests) 335ms 894 MB heap used
+ ✓ src/test/integration/onboardingAdToM365TemplateStatusMappings.integration.test.ts (3 tests) 333ms 924 MB heap used
+ ✓ src/test/integration/bucketUsageReport.integration.test.ts (4 tests) 364ms 939 MB heap used
+ ✓ src/test/integration/api/userActivities.test.ts (35 tests) 1044ms 973 MB heap used
+ ✓ src/test/integration/documentPermissionsIntegration.test.ts (11 tests) 11976ms 712 MB heap used
+   ✓ Document Permissions Integration Tests > canAccessDocument with real database > should allow access to document with no associations (tenant-level)  502ms
+   ✓ Document Permissions Integration Tests > canAccessDocument with real database > should verify document with ticket association exists in database  1401ms
+   ✓ Document Permissions Integration Tests > canAccessDocument with real database > should verify document with contract association exists in database  2408ms
+   ✓ Document Permissions Integration Tests > canAccessDocument with real database > should verify document with multiple associations exists in database  1722ms
+   ✓ Document Permissions Integration Tests > filterAccessibleDocuments with real database > should bulk load associations in single query  498ms
+   ✓ Document Permissions Integration Tests > filterAccessibleDocuments with real database > should correctly map document IDs to entity types  509ms
+   ✓ Document Permissions Integration Tests > Database integrity checks > should enforce tenant isolation for document_associations  516ms
+   ✓ Document Permissions Integration Tests > Database integrity checks > should handle documents with same name but different tenants  499ms
+   ✓ Document Permissions Integration Tests > Database integrity checks > should support all entity types in document_associations CHECK constraint  1215ms
+   ✓ Document Permissions Integration Tests > Performance tests > should efficiently query large number of documents  722ms
+   ✓ Document Permissions Integration Tests > Performance tests > should efficiently bulk load associations for many documents  1384ms
+ ✓ src/test/integration/serviceRequestAdvancedVisibility.integration.test.ts (1 test) 613ms 731 MB heap used
+ ✓ src/test/integration/authorization/bundleRevisionPublishing.integration.test.ts (2 tests) 311ms 736 MB heap used
+ ✓ src/test/integration/contactTestHelpersPhoneRows.integration.test.ts (3 tests) 279ms 739 MB heap used
+ ✓ src/test/integration/projectTemplateStatusMappingsMigration.integration.test.ts (16 tests) 954ms 748 MB heap used
+ ✓ src/test/integration/ticketEmailDelimiters.test.ts (26 tests) 197ms 783 MB heap used
+ ✓ src/test/integration/sla/slaService.integration.test.ts (13 tests) 566ms 750 MB heap used
+ ✓ src/test/integration/ticketAssignmentResources.integration.test.ts (21 tests) 283ms 773 MB heap used
+stdout | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+[RedisConfig] Using configuration: {
+  url: 'redis://localhost:6379',
+  prefix: 'alga-psa:',
+  eventBus: {
+    streamPrefix: 'event-stream:',
+    consumerGroup: 'event-processors',
+    maxStreamLength: 1000,
+    blockingTimeout: 5000,
+    claimTimeout: 30000,
+    batchSize: 10,
+    maxDeliveries: 10,
+    reconnectStrategy: { retries: 10, initialDelay: 100, maxDelay: 3000 }
+  }
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should add a reaction to a comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should add a reaction to a comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should add a reaction to a comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should add a reaction to a comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should support custom alga emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should support custom alga emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should support custom alga emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should support custom alga emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should remove a reaction when toggled again
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should remove a reaction when toggled again
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should remove a reaction when toggled again
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should remove a reaction when toggled again
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should get aggregated reactions in batch
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should get aggregated reactions in batch
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should get aggregated reactions in batch
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should get aggregated reactions in batch
+[publishTicketUpdate] Failed to publish live ticket update: ReconnectStrategyError: Max reconnection attempts reached
+    at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:140:16)
+    at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+    at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3) {
+  originalError: Error: Max reconnection attempts reached
+      at Object.reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:112:18)
+      at RedisSocket._RedisSocket_reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:119:85)
+      at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:131:111)
+      at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+      at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3),
+  socketError: [ErrorReply: ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?]
+}
+[publishTicketUpdate] Failed to publish live ticket update: ReconnectStrategyError: Max reconnection attempts reached
+    at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:140:16)
+    at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+    at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3) {
+  originalError: Error: Max reconnection attempts reached
+      at Object.reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:112:18)
+      at RedisSocket._RedisSocket_reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:119:85)
+      at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:131:111)
+      at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+      at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3),
+  socketError: [ErrorReply: ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?]
+}
+[publishTicketUpdate] Failed to publish live ticket update: ReconnectStrategyError: Max reconnection attempts reached
+    at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:140:16)
+    at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+    at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3) {
+  originalError: Error: Max reconnection attempts reached
+      at Object.reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:112:18)
+      at RedisSocket._RedisSocket_reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:119:85)
+      at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:131:111)
+      at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+      at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3),
+  socketError: [ErrorReply: ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?]
+}
+[publishTicketUpdate] Failed to publish live ticket update: ReconnectStrategyError: Max reconnection attempts reached
+    at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:140:16)
+    at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+    at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3) {
+  originalError: Error: Max reconnection attempts reached
+      at Object.reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:112:18)
+      at RedisSocket._RedisSocket_reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:119:85)
+      at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:131:111)
+      at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+      at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3),
+  socketError: [ErrorReply: ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?]
+}
+[publishTicketUpdate] Failed to publish live ticket update: ReconnectStrategyError: Max reconnection attempts reached
+    at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:140:16)
+    at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+    at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3) {
+  originalError: Error: Max reconnection attempts reached
+      at Object.reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:112:18)
+      at RedisSocket._RedisSocket_reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:119:85)
+      at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:131:111)
+      at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+      at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3),
+  socketError: [ErrorReply: ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?]
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should get aggregated reactions in batch
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should get aggregated reactions in batch
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should get aggregated reactions in batch
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should get aggregated reactions in batch
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should get aggregated reactions in batch
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should count reactions from multiple users on the same emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should count reactions from multiple users on the same emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should count reactions from multiple users on the same emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should count reactions from multiple users on the same emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should cascade delete reactions when ticket comment is deleted
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should cascade delete reactions when ticket comment is deleted
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should cascade delete reactions when ticket comment is deleted
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should cascade delete reactions when ticket comment is deleted
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Tenant Isolation > should only return reactions belonging to the current tenant
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Tenant Isolation > should only return reactions belonging to the current tenant
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Tenant Isolation > should only return reactions belonging to the current tenant
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Tenant Isolation > should only return reactions belonging to the current tenant
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Tenant Isolation > should only return reactions belonging to the current tenant
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+ ❯ src/test/integration/commentReactions.integration.test.ts (23 tests | 8 failed) 166571ms 738 MB heap used
+   × Comment Reactions - Ticket Comments > should add a reaction to a comment 20225ms
+     → Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   × Comment Reactions - Ticket Comments > should remove a reaction when toggled again 20219ms
+     → Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   × Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment 20323ms
+     → Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   × Comment Reactions - Ticket Comments > should get aggregated reactions in batch 20200ms
+     → Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   ✓ Comment Reactions - Ticket Comments > should return empty object for empty comment IDs  381ms
+   ✓ Comment Reactions - Ticket Comments > should return empty arrays for comments with no reactions 207ms
+   × Comment Reactions - Ticket Comments > should support custom alga emoji 20214ms
+     → Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   × Comment Reactions - Ticket Comments > should count reactions from multiple users on the same emoji 20262ms
+     → Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   × Comment Reactions - Ticket Comments > should cascade delete reactions when ticket comment is deleted 20207ms
+     → Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   ✓ Comment Reactions - Task Comments > should add a reaction to a task comment 189ms
+   ✓ Comment Reactions - Task Comments > should remove a reaction when toggled again 198ms
+   ✓ Comment Reactions - Task Comments > should allow multiple different emojis on the same task comment 188ms
+   ✓ Comment Reactions - Task Comments > should get aggregated reactions in batch for task comments 212ms
+   ✓ Comment Reactions - Task Comments > should manually cascade delete reactions when task comment is deleted 207ms
+   ✓ Comment Reactions - Task Comments > should return empty object for empty task comment IDs 210ms
+   ✓ Comment Reactions - Task Comments > should return undefined for task comments with no reactions 187ms
+   ✓ Comment Reactions - Task Comments > should support custom alga emoji on task comment 219ms
+   ✓ Comment Reactions - Task Comments > should count reactions from multiple users on the same emoji 211ms
+   ✓ Emoji Validation > should reject empty emoji string on ticket comment 257ms
+   ✓ Emoji Validation > should reject emoji exceeding max length on ticket comment 208ms
+   ✓ Emoji Validation > should reject empty emoji string on task comment  435ms
+   ✓ Emoji Validation > should reject emoji exceeding max length on task comment  630ms
+   × Tenant Isolation > should only return reactions belonging to the current tenant 20340ms
+     → Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ✓ src/test/integration/surveyTokenService.integration.test.ts (2 tests) 2056ms 757 MB heap used
+[algasim] smtp-sink vendor surface listening {"port":40353}
+[algasim] control API listening {"port":44329}
+ ✓ src/test/integration/ticketCommentAttachmentsIntegration.test.ts (57 tests) 6849ms 854 MB heap used
+   ✓ ticket comment attachments (migrated PostgreSQL) > live PgBoss discovery reuses workers and recovers a committed publication to SMTP once  3906ms
+ ✓ src/test/integration/serviceRequestWorkflowProviderEditorOptions.integration.test.ts (1 test) 1030ms 855 MB heap used
+   ✓ service request workflow provider editor options > T031: EE startup exposes workflow-only and ticket-plus-workflow execution modes to editor option surfaces  357ms
+ ✓ src/test/integration/api/projectService.statusLookup.integration.test.ts (9 tests) 5375ms 880 MB heap used
+ ✓ src/test/integration/billing/catalogPriceProvenanceActions.integration.test.ts (6 tests) 17263ms 906 MB heap used
+   ✓ Catalog price provenance — clone, wizard, constraints and schedule overlap > T11: an inherited template line clones to NULL/inherited and a later catalog change reaches it  3067ms
+   ✓ Catalog price provenance — clone, wizard, constraints and schedule overlap > T13: a wizard-created fixed line is inherited with no member snapshot  419ms
+   ✓ Catalog price provenance — clone, wizard, constraints and schedule overlap > T14: the CHECK constraints reject inherited + a rate and custom + no rate  3177ms
+   ✓ Catalog price provenance — clone, wizard, constraints and schedule overlap > T22: rate_provenance survives the detailed contract-line repository round-trip  3466ms
+   ✓ Catalog price provenance — clone, wizard, constraints and schedule overlap > T18: overlapping schedules are rejected on create and on update  658ms
+ ✓ src/test/integration/wizardBucketPoolSubmission.integration.test.ts (1 test) 2850ms 926 MB heap used
+ ✓ src/test/integration/microsoftEmailOAuthCallbackRoute.integration.test.ts (15 tests) 810ms 937 MB heap used
+ ✓ src/test/integration/journeys/invoiceRenderToDelivery.journey.integration.test.ts (1 test) 1319ms 836 MB heap used
+   ✓ journey: invoice render → stored PDF > renders a finalized invoice to a real PDF, stores it tenant-scoped, and links it via the generated-document event  952ms
+ ✓ src/test/integration/emailProviderErrorMessages.test.ts (10 tests) 492ms 844 MB heap used
+ ✓ src/test/integration/sla/slaNotificationService.integration.test.ts (9 tests) 258ms 854 MB heap used
+ ✓ src/test/integration/contactPhoneNumbers.integration.test.ts (1 test) 193ms 862 MB heap used
+ ✓ src/test/integration/transactionThreadingDeadlock.integration.test.ts (6 tests) 525ms 882 MB heap used
+ ✓ src/test/integration/ampMigrationLedger.integration.test.ts (1 test) 189ms 886 MB heap used
+ ✓ src/test/integration/apiRateLimit.dbActions.test.ts (2 tests) 47ms 882 MB heap used
+ ✓ src/test/integration/serviceRequestHistoryIntegrity.integration.test.ts (1 test) 529ms 904 MB heap used
+ ✓ src/test/integration/contractWizard.integration.test.ts (12 tests) 1213ms 936 MB heap used
+ ✓ src/test/integration/email/emailLogActions.getEmailLogs.integration.test.ts (6 tests) 732ms 939 MB heap used
+ ✓ src/test/integration/scheduling/scheduleEntryRecurrence.integration.test.ts (42 tests) 2896ms 944 MB heap used
+ ✓ src/test/integration/serviceRequestPortalCatalog.integration.test.ts (1 test) 208ms 948 MB heap used
+ ✓ src/test/integration/microsoftEmailSameAppUpdate.integration.test.ts (2 tests) 274ms 976 MB heap used
+ ✓ src/test/integration/serviceRequestPublishing.integration.test.ts (1 test) 194ms 976 MB heap used
+ ✓ src/test/integration/workflowDesignerGroupedPersistence.integration.test.ts (7 tests) 663ms 1022 MB heap used
+ ✓ src/test/integration/serviceRequestTemplateInstantiation.integration.test.ts (1 test) 198ms 1047 MB heap used
+ ✓ src/test/integration/inboundAuthPauseReconnectSave.integration.test.ts (13 tests) 597ms 1054 MB heap used
+ ✓ src/test/integration/webhook.secretLifecycle.test.ts (3 tests) 2ms 1067 MB heap used
+ ✓ src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts (11 tests) 890ms 1077 MB heap used
+ ✓ src/test/integration/emailScenarioMessageLookup.integration.test.ts (1 test) 210ms 1076 MB heap used
+ ✓ src/test/integration/billing/billingProfileSpendReport.integration.test.ts (5 tests) 537ms 1080 MB heap used
+ ✓ src/test/integration/microsoftWebhookUnifiedQueue.integration.test.ts (9 tests) 24ms 1092 MB heap used
+ ✓ src/test/integration/webhookDelivery.happyPath.test.ts (1 test) 14ms 1089 MB heap used
+ ✓ src/test/integration/api/financialBulkOps.integration.test.ts (5 tests) 967ms 920 MB heap used
+ ✓ src/test/integration/accounting/accountingMappingResolver.integration.test.ts (3 tests) 1915ms 1064 MB heap used
+ ✓ src/test/integration/journeys/documentLanguageResolution.journey.integration.test.ts (3 tests) 826ms 1101 MB heap used
+ ✓ src/test/integration/billing/recurringInvoiceHistory.db.test.tsx (3 tests) 10735ms 212 MB heap used
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should add a reaction to a comment
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/test/integration/commentReactions.integration.test.ts:186:3
+    184|   }, HOOK_TIMEOUT);
+    185|
+    186|   it('should add a reaction to a comment', async () => {
+       |   ^
+    187|     const result = await toggleCommentReaction(commentId, '\u{1F44D}');
+    188|     expect(result).toEqual({ added: true });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should remove a reaction when toggled again
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/test/integration/commentReactions.integration.test.ts:198:3
+    196|   });
+    197|
+    198|   it('should remove a reaction when toggled again', async () => {
+       |   ^
+    199|     await toggleCommentReaction(commentId, '\u{1F44D}');
+    200|     const result = await toggleCommentReaction(commentId, '\u{1F44D}');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/test/integration/commentReactions.integration.test.ts:208:3
+    206|   });
+    207|
+    208|   it('should allow multiple different emojis on the same comment', asy…
+       |   ^
+    209|     await toggleCommentReaction(commentId, '\u{1F44D}');
+    210|     await toggleCommentReaction(commentId, '\u{2764}\u{FE0F}');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should get aggregated reactions in batch
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/test/integration/commentReactions.integration.test.ts:221:3
+    219|   });
+    220|
+    221|   it('should get aggregated reactions in batch', async () => {
+       |   ^
+    222|     // Add reactions to first comment
+    223|     await toggleCommentReaction(commentId, '\u{1F44D}');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should support custom alga emoji
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/test/integration/commentReactions.integration.test.ts:259:3
+    257|   });
+    258|
+    259|   it('should support custom alga emoji', async () => {
+       |   ^
+    260|     const result = await toggleCommentReaction(commentId, ':alga:');
+    261|     expect(result).toEqual({ added: true });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should count reactions from multiple users on the same emoji
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/test/integration/commentReactions.integration.test.ts:269:3
+    267|   });
+    268|
+    269|   it('should count reactions from multiple users on the same emoji', a…
+       |   ^
+    270|     // Add reaction as primary user
+    271|     await toggleCommentReaction(commentId, '\u{1F44D}');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should cascade delete reactions when ticket comment is deleted
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/test/integration/commentReactions.integration.test.ts:306:3
+    304|   });
+    305|
+    306|   it('should cascade delete reactions when ticket comment is deleted',…
+       |   ^
+    307|     await toggleCommentReaction(commentId, '\u{1F44D}');
+    308|     await toggleCommentReaction(commentId, '\u{2764}\u{FE0F}');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Tenant Isolation > should only return reactions belonging to the current tenant
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/test/integration/commentReactions.integration.test.ts:734:3
+    732|   }, HOOK_TIMEOUT);
+    733|
+    734|   it('should only return reactions belonging to the current tenant', a…
+       |   ^
+    735|     // Add a reaction as the current tenant
+    736|     await toggleCommentReaction(commentId, '\u{1F44D}');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  1 failed | 77 passed (78)
+      Tests  8 failed | 2163 passed (2171)
+   Start at  16:14:03
+   Duration  704.06s (transform 14.93s, setup 406ms, collect 20.99s, tests 678.27s, environment 169ms, prepare 60ms)
+
+JSON report written to /home/robert/alga-copies/feature-co-managed-it/server/test-results-integration.json

@@ -35,3 +35,18 @@ export function normalizeLocale(value: unknown): SupportedLocale | null {
   const languagePart = trimmed.split(/[-_]/)[0];
   return isSupportedLocale(languagePart) ? languagePart : null;
 }
+
+/**
+ * The locales an email or notification template ships copy for.
+ *
+ * Templates carry written copy, so they are stored per *language pack* rather
+ * than per selectable locale. That is narrower than `supportedLocales` in two
+ * ways: a regional variant (`en-AU`) has no pack of its own and renders the
+ * language it falls back to, and the `xx`/`yy` pseudo-locales are QA fills that
+ * must never reach a recipient's mailbox. Seeding either would write duplicate
+ * or unreadable rows into every tenant's template table.
+ *
+ * The migrations keep their own copy of this list (they are `.cjs` and cannot
+ * import this module); `templateLocaleParity.test.ts` holds the two in step.
+ */
+export const TEMPLATE_LOCALES: readonly SupportedLocale[] = LOCALE_CONFIG.supportedLocales;

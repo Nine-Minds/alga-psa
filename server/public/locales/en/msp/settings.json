@@ -1,4 +1,11 @@
 {
+  "coManaged": {
+    "providers": {
+      "title": "Email and identity providers",
+      "description": "Register your own Google or Microsoft application for inbound email, staff sign-in and directory setup. These credentials belong to your workspace.",
+      "backToEmail": "Back to Email settings"
+    }
+  },
   "escalationManager": {
     "unsavedChanges_one": "{{count}} unsaved change",
     "unsavedChanges_other": "{{count}} unsaved changes"

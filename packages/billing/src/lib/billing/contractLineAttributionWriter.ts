@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { joinTimeEntryBillingWorkContext } from './timeEntryWorkContext';
 import { toISODate, toPlainDate } from '@alga-psa/core';
 import {
   ticketProjectAttributionJoin,
@@ -118,12 +119,15 @@ async function loadWindowRecords(params: {
     .filter((projectId: unknown): projectId is string => typeof projectId === 'string');
 
   const timeQuery = db.table<any>('time_entries');
+  // Reconciliation must see the same owner/type-qualified work and local
+  // billing default as charge calculation, including retained MSP references.
+  joinTimeEntryBillingWorkContext(trx, tenant, timeQuery);
   // This writer runs inside the generation transaction immediately before the
-  // engine's loaders, and it repeats their fixed-price exclusion and
-  // billing-profile COALESCE. It therefore has to resolve the project the same
-  // way they do, or it would pre-write a contract line for ticket time the
-  // engine then refuses to bill, and choose that line without the project's
-  // billing profile.
+  // engine's loaders and repeats their fixed-price exclusion. The excluded
+  // project is therefore resolved through the one shared resolver (phase
+  // project for project-task time, the flagged link project for ticket time),
+  // or it would pre-write a contract line for ticket time the engine refuses
+  // to bill. Retained co-managed references carry no project, as before.
   timeQuery.joinRaw(ticketProjectAttributionJoin('time_entries'));
   db.tenantJoin(timeQuery, 'project_tasks', 'time_entries.work_item_id', 'project_tasks.task_id', { type: 'left' });
   db.tenantJoin(timeQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id', { type: 'left' });
@@ -136,7 +140,6 @@ async function loadWindowRecords(params: {
     // from the time entry rather than the (inferred) phase.
     { type: 'left', rootTenantColumn: 'time_entries.tenant' },
   );
-  db.tenantJoin(timeQuery, 'tickets', 'time_entries.work_item_id', 'tickets.ticket_id', { type: 'left' });
 
   const timeEntriesQuery = timeQuery
       .where('time_entries.tenant', tenant)
@@ -147,9 +150,7 @@ async function loadWindowRecords(params: {
       .where('time_entries.billable_duration', '>', 0)
       .where('time_entries.start_time', '>=', windowStart)
       .where('time_entries.end_time', '<', windowEnd)
-      .where(function (this: Knex.QueryBuilder) {
-        this.where('projects.client_id', clientId).orWhere('tickets.client_id', clientId);
-      });
+      .where('billing_work.client_id', clientId);
   if (fixedPriceProjectIds.length > 0) {
     timeEntriesQuery.where(function (this: Knex.QueryBuilder) {
       this.whereNull('projects.project_id').orWhereNotIn(
@@ -164,7 +165,7 @@ async function loadWindowRecords(params: {
         'time_entries.entry_id',
         'time_entries.service_id',
         'time_entries.start_time',
-        trx.raw('COALESCE(tickets.billing_profile_id, projects.billing_profile_id) as work_item_billing_profile_id'),
+        'billing_work.billing_profile_id as work_item_billing_profile_id',
       ),
     db.table<any>('usage_tracking')
       .where({

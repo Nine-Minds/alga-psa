@@ -1,5 +1,8 @@
 'use server'
 
+import { commandCoManagedNativeTimeSheets, listCoManagedNativeTimeSheets, openCoManagedNativeTimeSheet, deleteCoManagedNativeTimeSheet } from '@alga-psa/co-managed';
+import { publishNativeEvent } from '../lib/nativeEventPublication';
+import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex, tenantDb, resolveUserTimeZone } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
@@ -98,6 +101,8 @@ export const fetchTimeSheets = withAuth(async (user, { tenant }): Promise<ITimeS
   console.log('Fetching time sheets for user:', currentUserId);
 
   const {knex: db} = await createTenantKnex();
+  const current = await listCoManagedNativeTimeSheets(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { userId: currentUserId });
+  if (current.handled) return current.sheets as ITimeSheet[];
   const facade = tenantDb(db, tenant);
   const query = facade.table('time_sheets')
     .where({
@@ -133,6 +138,9 @@ export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: st
   const {knex: db} = await createTenantKnex();
 
   try {
+    const current = await commandCoManagedNativeTimeSheets(db, tenant, { sheetIds: [validatedParams.timeSheetId], command: 'submit' },
+      () => resolveNativeTimeBrowserActor(user, tenant), publishNativeEvent);
+    if (current.handled) return current.sheets[0] as ITimeSheet;
     if (!await hasPermission(user, 'time_sheet', 'submit', db)) {
       throw new Error('Permission denied: Cannot submit timesheets');
     }
@@ -209,8 +217,10 @@ export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: st
   }
 });
 
-export const fetchAllTimeSheets = withAuth(async (_user, { tenant }): Promise<ITimeSheet[]> => {
+export const fetchAllTimeSheets = withAuth(async (user, { tenant }): Promise<ITimeSheet[]> => {
   const {knex: db} = await createTenantKnex();
+  const current = await listCoManagedNativeTimeSheets(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), {});
+  if (current.handled) return current.sheets as ITimeSheet[];
   const facade = tenantDb(db, tenant);
 
   console.log('Fetching all time sheets');
@@ -243,6 +253,8 @@ export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string
     const validatedParams = validateData<FetchTimePeriodsParams>(fetchTimePeriodsParamsSchema, { userId });
 
     const {knex: db} = await createTenantKnex();
+    const current = await listCoManagedNativeTimeSheets(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { userId: validatedParams.userId, periods: true });
+    if (current.handled) return current.periods as ITimePeriodWithStatusView[];
 
     await assertCanActOnBehalf(user, tenant, validatedParams.userId, db);
 
@@ -363,6 +375,8 @@ export const fetchOrCreateTimeSheet = withAuth(async (user, { tenant }, userId: 
     );
 
     const {knex: db} = await createTenantKnex();
+    const current = await openCoManagedNativeTimeSheet(db, tenant, { userId: validatedParams.userId, periodId: validatedParams.periodId }, () => resolveNativeTimeBrowserActor(user, tenant));
+    if (current.handled) return current.sheet as ITimeSheetView;
 
     await assertCanActOnBehalf(user, tenant, validatedParams.userId, db);
 
@@ -434,6 +448,9 @@ export const deleteTimeSheets = withAuth(async (
 
   for (const timeSheetId of uniqueIds) {
     try {
+      if (await deleteCoManagedNativeTimeSheet(db, tenant, timeSheetId, () => resolveNativeTimeBrowserActor(user, tenant))) {
+        deletedIds.push(timeSheetId); continue;
+      }
       await db.transaction(async (trx) => {
         const sheet = await tenantScopedTable(trx, 'time_sheets', tenant)
           .where({ id: timeSheetId })

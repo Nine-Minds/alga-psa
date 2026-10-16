@@ -1,0 +1,43 @@
+{
+  "title": "Gedelegeerd beheer",
+  "description": "Door de klant goedgekeurde ondersteuning bij geselecteerde instellingen en gebruikersgegevens.",
+  "banner": "Klantwerkruimte: {{customer}} · MSP: {{sponsor}}",
+  "loading": "Goedgekeurde toegang laden…",
+  "refresh": "Toegang vernieuwen",
+  "loadError": "De toegang kon niet worden geladen. Vernieuw om uw huidige rechten te controleren.",
+  "noWorkspaces": "Er zijn momenteel geen klantwerkruimten met goedgekeurde beheertaken voor u.",
+  "noGrants": "Er zijn momenteel geen beheertaken goedgekeurd.",
+  "readOnly": "Deze werkruimte is alleen-lezen. Beheerders van de klant kunnen de toegang nog steeds intrekken.",
+  "approveTitle": "Eén specifieke beheertaak goedkeuren",
+  "approvalHint": "Kies een toegewezen MSP-technicus of team, een bewerking en één klantrecord. Goedkeuring geeft geen algemene beheertoegang.",
+  "approvalSummary": "{{principal}} toestaan om ‘{{operation}}’ uit te voeren voor {{target}}.",
+  "principal": "Toegewezen MSP-technicus of team",
+  "target": "Klantrecord",
+  "operation": "Bewerking",
+  "search": "Records zoeken",
+  "previous": "Vorige",
+  "next": "Volgende",
+  "approve": "Taak goedkeuren",
+  "retry": "Hetzelfde verzoek opnieuw proberen",
+  "revoke": "Toegang intrekken",
+  "save": "Wijzigingen opslaan",
+  "resend": "Goedgekeurde uitnodiging opnieuw verzenden",
+  "saveError": "Het verzoek kon niet worden bevestigd. Probeer hetzelfde verzoek opnieuw of vernieuw de toegang voordat u een andere wijziging aanbrengt.",
+  "unavailable": "Niet-beschikbaar record",
+  "unavailableHint": "Deze goedkeuring geeft geen toegang meer tot het bijbehorende record. U kunt de goedkeuring intrekken.",
+  "invitationHint": "Bij opnieuw verzenden blijven de ontvanger, rol, instellingslink en vervaldatum van de klant ongewijzigd. De uitnodiging wordt niet verlengd of vervangen.",
+  "invitationTerms": "Ontvanger: {{email}} · Rol: {{role}} · Verloopt: {{expires}}",
+  "operations": {
+    "board_settings": "Weergave-instellingen van een bord bewerken",
+    "user_profile": "Profiel van een niet-beheerder bewerken",
+    "invitation_resend": "Een door de klant aangemaakte uitnodiging opnieuw verzenden"
+  },
+  "fields": {
+    "board_name": "Naam van het bord",
+    "description": "Omschrijving",
+    "enable_live_ticket_timer": "Live tickettimer inschakelen",
+    "first_name": "Voornaam",
+    "last_name": "Achternaam",
+    "timezone": "Tijdzone"
+  }
+}

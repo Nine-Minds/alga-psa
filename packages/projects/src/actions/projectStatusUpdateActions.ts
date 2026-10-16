@@ -2,6 +2,7 @@
 
 import Handlebars from 'handlebars';
 import type { Knex } from 'knex';
+import { withCoManagedOperationalTransaction } from '@alga-psa/licensing';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getPortalDomain } from '@alga-psa/auth/lib/PortalDomainModel';
@@ -465,7 +466,9 @@ export const sendProjectStatusUpdate = withAuth(
       const html = Handlebars.compile(template.html_content)(context);
       const text = Handlebars.compile(template.text_content, { noEscape: true })(context);
 
-      const result = await TenantEmailService.getInstance(tenant).sendEmail({
+      // Keep admission through transport so a concurrent sponsorship change
+      // cannot pass the final check and revoke this send before it starts.
+      const result = await withCoManagedOperationalTransaction(knex, tenant, () => TenantEmailService.getInstance(tenant).sendEmail({
         tenantId: tenant,
         mailClass: 'project',
         to: { email: recipientEmail, name: recipientName },
@@ -476,7 +479,7 @@ export const sendProjectStatusUpdate = withAuth(
         entityType: 'project',
         entityId: projectId,
         userId: user.user_id,
-      });
+      }));
       if (!result.success || result.queued) throw new Error(result.error || 'Project status update email was not sent.');
 
       logger.info('[projectStatusUpdate] Status update sent', {

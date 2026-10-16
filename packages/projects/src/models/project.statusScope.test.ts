@@ -1,4 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// These in-memory tests isolate mapping semantics; real lifecycle admission and
+// transaction rollback are covered by coManagedBootstrap.integration.test.ts.
+vi.mock('@alga-psa/licensing', () => ({
+  withCoManagedOperationalTransaction: async (db: unknown, _tenant: string, work: (trx: unknown) => Promise<unknown>) => work(db),
+}));
 
 import ProjectModel from './project';
 

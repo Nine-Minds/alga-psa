@@ -12,10 +12,11 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClampedContent } from '@alga-psa/ui/components/ClampedContent';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
-import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
 import { ReactionDisplay } from '@alga-psa/ui/components/ReactionDisplay';
 import type { IAggregatedReaction } from '@alga-psa/types';
 import { getCommentResponseSource } from '../../lib/responseSource';
@@ -28,9 +29,9 @@ import { readCommentEmailRecipients } from '@shared/lib/tickets/commentEmailReci
 import { parseTicketRichTextContent } from '../../lib/ticketRichText';
 import { extractTicketRichTextPlainText } from '../../lib/ticketRichText';
 import { extractTicketRichTextHtml } from '../../lib/ticketRichTextHtml';
+import { TicketConversationAttachments } from './TicketConversationAttachments';
 import { CommentMetadataDebugModal } from './CommentMetadataDebugModal';
 import { isNonEmptyCommentMetadata } from './commentMetadataDebug';
-import { cancelScheduledComment, rescheduleScheduledComment } from '../../actions/comment-actions/commentActions';
 import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
@@ -182,6 +183,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
 }) => {
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
+  const dataSource = useTicketDataSource();
+  const { cancelScheduledComment, rescheduleScheduledComment } = dataSource.comments;
+  const { searchUsersForMentions } = dataSource.viewer;
+  const { audiences, editor: editorRestrictions, formatAuthorLabel } = dataSource.conversation;
+  const commentAudience = audiences?.getCommentAudience(conversation) ?? null;
   // toLocaleString() follows the browser; comment timestamps belong to the app locale.
   const { formatDate } = useFormatters();
   const [metadataDebugOpen, setMetadataDebugOpen] = useState(false);
@@ -228,7 +234,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const isSystemAuthor = resolvedAuthor.source === 'system';
 
   // LEVERAGE: pattern comment-author-label — same author-label rules as resolveLatestActivityActor (lib/latestActivityActor.ts)
-  const getAuthorName = () => {
+  const getNativeAuthorName = () => {
     if (isSystemAuthor) {
       return isBundleMirror ? t('conversation.bundledUpdate') : t('conversation.systemAuthor', 'System');
     }
@@ -239,6 +245,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
       return inboundSenderIdentity.fromName || inboundSenderIdentity.fromAddress;
     }
     return resolvedAuthor.displayName;
+  };
+  const getAuthorName = () => {
+    const nativeName = getNativeAuthorName();
+    return formatAuthorLabel ? formatAuthorLabel({ comment: conversation, authorName: nativeName }) : nativeName;
   };
 
   // An unmatched inbound email still names its sender, so the avatar shows those
@@ -280,10 +290,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
-    if (isDeleted) return false;
-    if (conversation.is_system_generated) return false;
-    return currentUserId === conversation.user_id;
-  }, [conversation.user_id, currentUserId, isDeleted]);
+    if (isDeleted || conversation.is_system_generated || resolvedAuthor.source === 'collaborator') return false;
+    return Boolean(currentUserId) && currentUserId === conversation.user_id;
+  }, [conversation.user_id, conversation.is_system_generated, resolvedAuthor.source, currentUserId, isDeleted]);
 
   const plainTextForCopy = useMemo(
     () => extractTicketRichTextPlainText(conversation.note),
@@ -323,6 +332,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
         : t('conversation.copyCommentAriaLabel', 'Copy comment text');
 
   const handleSave = () => {
+    if (!canEdit) return;
     const updates: Partial<IComment> = {
       note: JSON.stringify(editedContent),
       is_internal: isInternalToggle,
@@ -337,6 +347,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
     onContentChange(blocks);
   };
   const handleReschedule = async () => {
+    if (!canEdit) return;
     const timeZone = conversation.scheduled_publish_tz || getUserTimeZone();
     let date: Date;
     try {
@@ -348,16 +359,17 @@ const CommentItem: React.FC<CommentItemProps> = ({
       return;
     }
     setIsScheduleMutating(true);
-    try { await rescheduleScheduledComment(commentId, date.toISOString(), timeZone); window.location.reload(); } finally { setIsScheduleMutating(false); }
+    try { await rescheduleScheduledComment(commentId, date.toISOString(), timeZone); runTicketRefresh(dataSource, 'reload'); } finally { setIsScheduleMutating(false); }
   };
   const handleCancelSchedule = async () => {
+    if (!canEdit) return;
     if (!window.confirm(t('conversation.cancelScheduledCommentConfirm', 'Cancel this scheduled comment?'))) return;
     setIsScheduleMutating(true);
-    try { await cancelScheduledComment(commentId); window.location.reload(); } finally { setIsScheduleMutating(false); }
+    try { await cancelScheduledComment(commentId); runTicketRefresh(dataSource, 'reload'); } finally { setIsScheduleMutating(false); }
   };
 
   const editorContent = useMemo(() => {
-    if (!currentComment || !isEditing) return null;
+    if (!currentComment || !isEditing || !canEdit) return null;
 
     return (
       <div className="min-w-0 max-w-full">
@@ -387,12 +399,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
           </div>
         </div>
         <TextEditor
-            allowFileAttachments
+            allowFileAttachments={!editorRestrictions?.disallowFiles}
           {...withDataAutomationId({ id: `${commentId}-text-editor` })}
           roomName={`ticket-${ticketId}-comment-${currentComment.comment_id}`}
           initialContent={editedContent}
           onContentChange={handleContentChange}
-          searchMentions={searchUsersForMentions}
+          searchMentions={editorRestrictions?.disallowMentions ? undefined : searchUsersForMentions}
           uploadFile={uploadFile}
         />
 
@@ -417,6 +429,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   }, [
     currentComment,
     isEditing,
+    canEdit,
     commentId,
     ticketId,
     editedContent,
@@ -433,7 +446,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   // NOTE: Do NOT depend on currentComment values - that would reload unsaved edits after cancel.
   // We intentionally only use conversation values (the persisted values from the database).
   useEffect(() => {
-    if (isEditing && currentComment?.comment_id === conversation.comment_id) {
+    if (canEdit && isEditing && currentComment?.comment_id === conversation.comment_id) {
       // Reset toggles to persisted values
       setIsInternalToggle(conversation.is_internal ?? false);
       setIsResolutionToggle(conversation.is_resolution ?? false);
@@ -442,7 +455,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
         parseCommentNoteContent(conversation.note || '', conversation.comment_id, 'edit')
       );
     }
-  }, [isEditing, currentComment?.comment_id, conversation.comment_id, conversation.note, conversation.is_internal, conversation.is_resolution]);
+  }, [canEdit, isEditing, currentComment?.comment_id, conversation.comment_id, conversation.note, conversation.is_internal, conversation.is_resolution]);
 
   useEffect(() => {
     if (!conversation.comment_id || typeof window === 'undefined') {
@@ -528,7 +541,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             <UserAvatar
               {...withDataAutomationId({ id: `${commentId}-avatar` })}
               userId={resolvedAuthor.userId || ''}
-              userName={resolvedAuthor.displayName}
+              userName={resolvedAuthor.avatarName ?? resolvedAuthor.displayName}
               avatarUrl={resolvedAuthor.avatarUrl}
               size={isCompact ? 'sm' : 'md'}
             />
@@ -562,6 +575,26 @@ const CommentItem: React.FC<CommentItemProps> = ({
                         : t('conversation.bundledUpdate')}
                     </span>
                   )
+                )}
+                {commentAudience && (
+                  <span
+                    {...withDataAutomationId({ id: `${commentId}-audience-badge` })}
+                    className="inline-flex shrink-0 items-center rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))]"
+                  >
+                    {commentAudience.label}
+                  </span>
+                )}
+                {audiences?.changeCommentAudience && audiences.canChangeCommentAudience?.(conversation) && (
+                  <CustomSelect
+                    id={`${commentId}-audience-select`}
+                    value={commentAudience?.id ?? ''}
+                    options={audiences.options.map((option) => ({ value: option.id, label: option.label }))}
+                    onValueChange={(value: string) => {
+                      void audiences.changeCommentAudience?.(conversation, value)
+                        .then(() => runTicketRefresh(dataSource, 'reload'));
+                    }}
+                    className="!w-auto"
+                  />
                 )}
                 {conversation.is_internal && (
                   <Tooltip content={t('conversation.internalCommentTooltip')}>
@@ -777,7 +810,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               >
                 [deleted]
               </div>
-            ) : isEditing && currentComment?.comment_id === conversation.comment_id ? (
+            ) : canEdit && isEditing && currentComment?.comment_id === conversation.comment_id ? (
               editorContent
             ) : (
               <div
@@ -805,6 +838,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   </ClampedContent>
               </div>
           )}
+          <TicketConversationAttachments ticketId={ticketId} comment={conversation} />
           {reactions && onToggleReaction && (
             <ReactionDisplay
               id={`${commentId}-reactions`}
@@ -818,7 +852,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
       </div>
       <Dialog
         id={`reschedule-comment-${commentId}`}
-        isOpen={isRescheduleOpen}
+        isOpen={canEdit && isRescheduleOpen}
         onClose={() => setIsRescheduleOpen(false)}
         title={t('conversation.rescheduleComment', 'Reschedule comment')}
         className="max-w-md"

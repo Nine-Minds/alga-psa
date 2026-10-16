@@ -7,9 +7,10 @@ import { createTestDbConnection } from '@ee/lib/testing/db-test-utils';
 import { writeScimAudit } from '@ee/lib/scim/audit';
 
 // audit_logs carries a BEFORE INSERT trigger (set_tenant_on_audit_log_insert)
-// that reads app.current_tenant with no fallback. Ordinary request connections
-// never set that GUC, so a bare insert raised 42704 and aborted the enclosing
-// transaction — which is what made every SCIM admin mutation return HTTP 500.
+// that attributes the row to NEW.tenant, falling back to app.current_tenant and
+// raising when neither is present. Ordinary request connections never set that
+// GUC, so the original tenant-less insert aborted the enclosing transaction —
+// which is what made every SCIM admin mutation return HTTP 500.
 describe('SCIM audit writes', () => {
   let db: Knex;
 
@@ -76,34 +77,39 @@ describe('SCIM audit writes', () => {
     expect(leaked.rows?.[0]?.tenant ?? null).toBeFalsy();
   });
 
-  // The control: a bare insert, as the SCIM admin actions used to do it.
+  // The control: an insert that names neither an owner nor a tenant context,
+  // as the SCIM admin actions used to do it. The trigger still fails closed and
+  // still takes the enclosing transaction with it, which is what turned every
+  // SCIM admin mutation into an HTTP 500.
   //
-  // This needs its own pool. Once set_config has named a custom GUC on a
-  // connection, the parameter stays defined for that session and reverts to ''
-  // at transaction end rather than becoming absent — so on a connection the
-  // tests above have touched the trigger fails with 22P02 instead of 42704.
-  // That is also why this bug can look intermittent in a long-lived process:
-  // the SQLSTATE depends on whether the pooled connection ever carried a
-  // tenant. Either way the insert fails and takes the transaction with it.
-  it('still fails without the GUC, so the fix is what makes the insert land', async () => {
+  // This needs its own pool: once set_config has named a custom GUC on a
+  // connection the parameter stays defined for that session and reverts to ''
+  // at transaction end rather than becoming absent, so the tests above would
+  // otherwise leave a tenant context behind on the connection under test.
+  it('still fails with neither an explicit tenant nor tenant context', async () => {
     const pristine = createTestDbConnection();
     const trx = await pristine.transaction();
     try {
-      const tenant = await anyTenant(trx);
+      // Proves the transaction is healthy before the control insert.
+      await anyTenant(trx);
 
       await expect(
-        tenantDb(trx, tenant).table('audit_logs').insert({
-          tenant,
-          audit_id: randomUUID(),
-          user_id: randomUUID(),
-          operation: 'scim_connection_created',
-          table_name: 'scim_connections',
-          record_id: randomUUID(),
-          changed_data: JSON.stringify({}),
-          details: JSON.stringify({}),
-          timestamp: trx.fn.now(),
-        })
-      ).rejects.toMatchObject({ code: '42704' });
+        tenantDb(trx, '__scim_audit_control__')
+          .unscoped('audit_logs', 'the control deliberately writes no tenant at all')
+          .insert({
+            audit_id: randomUUID(),
+            user_id: randomUUID(),
+            operation: 'scim_connection_created',
+            table_name: 'scim_connections',
+            record_id: randomUUID(),
+            changed_data: JSON.stringify({}),
+            details: JSON.stringify({}),
+            timestamp: trx.fn.now(),
+          })
+      ).rejects.toThrow(/require an explicit tenant or current tenant context/);
+
+      // …and it took the enclosing transaction with it, exactly as before.
+      await expect(trx.raw('select 1')).rejects.toThrow();
     } finally {
       await trx.rollback();
       await pristine.destroy();

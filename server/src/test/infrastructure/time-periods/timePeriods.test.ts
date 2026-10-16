@@ -2,10 +2,11 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } 
 import { v4 as uuidv4 } from 'uuid';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { ITimePeriodSettings, ITimePeriod } from '../../../interfaces/timeEntry.interfaces';
-import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods, createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
+import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { createTimePeriodSettings } from '@alga-psa/scheduling/actions/time-period-settings-actions/timePeriodSettingsActions';
-import { ensureTimePeriodCoversDate } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
+import { createNextTimePeriod, ensureTimePeriodCoversDate } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
 import { Temporal } from '@js-temporal/polyfill';
+import { createNextTimePeriod as createNextTimePeriodJob } from '@alga-psa/scheduling/lib/timePeriodAutomation';
 import { ISO8601String } from '../../../types/types.d';
 import * as tenantModule from '../../../lib/tenant';
 import { TestContext } from '../../../../test-utils/testContext';
@@ -337,6 +338,16 @@ describe('Time Periods Infrastructure', () => {
   });
 
   describe('createNextTimePeriod', () => {
+    async function runPeriodJob(settings: ITimePeriodSettings[], horizon: number) {
+      await tenantTable(context, 'time_period_settings').insert(settings.map(setting => withSettingsDefaults({ ...setting, end_day: setting.end_day ?? 0 })));
+      const jobId = uuidv4(), scheduledJobId = uuidv4();
+      await tenantTable(context, 'jobs').insert({ tenant: tenantId, job_id: jobId, type: 'createNextTimePeriods', status: 'processing', user_id: null,
+        metadata: JSON.stringify({ triggeredBy: 'scheduler', scheduledJobId }) });
+      const result = await createNextTimePeriodJob(context.db, { tenant: tenantId, jobId, scheduledJobId }, horizon);
+      expect(result.status).toBe('completed');
+      return result.status === 'completed' ? result.result.period : null;
+    }
+
     beforeEach(async () => {
       freezeTime({ year: 2024, month: 1, day: 15 });
     });
@@ -367,9 +378,7 @@ describe('Time Periods Infrastructure', () => {
       };
       await createTimePeriod(initialPeriod);
 
-      // createNextTimePeriod is a plain function, not a withAuth action: it
-      // reads the tenant from async-local context and throws without one.
-      const result = await runWithTenant(tenantId, () => createNextTimePeriod(settings, 7));
+      const result = await runPeriodJob(settings, 7);
 
       expect(result).not.toBeNull();
       expect(result!.tenant).toBe(tenantId);
@@ -399,7 +408,7 @@ describe('Time Periods Infrastructure', () => {
       };
       await createTimePeriod(initialPeriod);
 
-      const result = await runWithTenant(tenantId, () => createNextTimePeriod(settings, 5));
+      const result = await runPeriodJob(settings, 5);
 
       expect(result).toBeNull();
     });

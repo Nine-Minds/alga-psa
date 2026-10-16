@@ -1,14 +1,13 @@
 'use client';
 
+import type { TicketLiveRemoteUpdate } from '../../hooks/useTicketLive';
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getUserTimeZone } from '@alga-psa/core';
 import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
-import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import { DeleteEntityDialog } from "@alga-psa/ui/components/DeleteEntityDialog";
-import { preCheckDeletion } from "@alga-psa/auth/lib/preCheckDeletion";
 import type { DeletionValidationResult } from "@alga-psa/types";
 import {
     ITicket,
@@ -28,7 +27,7 @@ import {
 } from "@alga-psa/types";
 import { ITag } from "@alga-psa/types";
 import { TagManager } from "@alga-psa/tags/components";
-import { findTagsByEntityId, isTagActionError } from "@alga-psa/tags/actions";
+import { isTagActionError } from "@alga-psa/tags/actions";
 import { useTags } from '@alga-psa/tags/context';
 import TicketInfo from "./TicketInfo";
 import TicketNotificationSuppressionControl, { type TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
@@ -53,32 +52,17 @@ import {
 import { useDrawer } from "@alga-psa/ui";
 import { useCatalogShortcut } from "@alga-psa/ui/keyboard-shortcuts";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
-import { findUserById, getCurrentUser, getCurrentUserPermissions } from "@alga-psa/user-composition/actions";
-import { findBoardById } from "../../actions/board-actions/boardActions";
-import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "../../actions/comment-actions/commentActions";
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { getAllActiveContacts, getClientLocations, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
-import { addTicketCommentWithCache, updateTicketWithCache } from "../../actions/optimizedTicketActions";
-import { getTicketById, updateTicket, deleteTicket } from "../../actions/ticketActions";
-import {
-    checkTicketClosure,
-    getTicketAutoCloseState,
-    type ITicketAutoCloseState,
-} from "../../actions/close-rules/closeRuleActions";
-import { getTicketChecklistItems, type ITicketChecklistItem } from "../../actions/checklists/ticketChecklistActions";
+import type { ITicketAutoCloseState } from "../../actions/close-rules/closeRuleActions";
+import type { ITicketChecklistItem } from "../../actions/checklists/ticketChecklistActions";
 import type { ITicketExternalLinkView } from "../../actions/externalLinks/externalLinkActions";
 import type { CloseRuleFailure } from "../../lib/validateTicketClosure";
-import { previewBundleStatusPropagationAction } from "../../actions/ticketBundleActions";
 import { BundleStatusPropagationDialog } from "../BundleStatusPropagationDialog";
 import type { BundleStatusPropagationPreview } from "../../lib/ticketBundlePropagation";
 import TicketChecklistSection, { summarizeChecklist } from "./TicketChecklistSection";
 import { Dialog, DialogContent, DialogFooter } from "@alga-psa/ui/components/Dialog";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
-import { getTicketStatuses } from "@alga-psa/reference-data/actions";
-import { getAllPriorities } from "@alga-psa/reference-data/actions";
-import { addTicketResource, getTicketResources, removeTicketResource } from "../../actions/ticketResourceActions";
-import { assignTeamToTicket, removeTeamFromTicket } from "../../actions/teamAssignmentActions";
-import { getTeamById, getTeams, isTeamActionError } from '@alga-psa/teams/actions';
+import { isTeamActionError } from '@alga-psa/teams/actions';
 import AgentScheduleDrawer from "./AgentScheduleDrawer";
 import type { WorkItemScheduleContext } from '@alga-psa/ui/context';
 import { Button } from "@alga-psa/ui/components/Button";
@@ -99,38 +83,26 @@ import { ResponseStateBadge } from '@alga-psa/ui/components';
 import TicketNavigation from './TicketNavigation';
 import LayoutToggle from './bento/LayoutToggle';
 import TicketBentoLayout from './bento/TicketBentoLayout';
-import {
-    getTicketLayoutPreference,
-    setTicketLayoutPreference,
-    type TicketDetailLayout,
-} from '../../actions/ticketLayoutPreference';
+import type { TicketDetailLayout } from '../../actions/ticketLayoutPreference';
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
+import { runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
+import { resolveTicketFrozenFields, resolveTicketTimeWorkItem } from '../../lib/ticketDataSource';
 import { buildTicketTimeEntryContext } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
-import { getRecurringSourceForTicket } from '../../actions/recurringTicketActions';
 import type { RecurringTicketSource } from '../../lib/recurring/types';
 import { buildCreateTicketHref } from '../../lib/createTicketRoute';
 import {
     setTicketWatchListOnAttributes,
     type TicketWatchListEntry,
 } from '@shared/lib/tickets/watchList';
-import {
-    addChildrenToBundleAction,
-    findTicketByNumberAction,
-    getBundleMasterClosedContextAction,
-    promoteBundleMasterAction,
-    removeChildFromBundleAction,
-    unbundleMasterTicketAction,
-    updateBundleSettingsAction,
-    searchEligibleChildTicketsAction,
-    type BundleMasterClosedContextActionResult,
-    type EligibleChildTicket
+import type {
+    BundleMasterClosedContextActionResult,
+    EligibleChildTicket
 } from '../../actions/ticketBundleActions';
 import { ClosedMasterChoiceFields } from './ClosedMasterChoiceFields';
 import type { ClosedMasterChoice } from '../../lib/ticketBundlePolicy';
-import { deleteDraftClipboardImages } from '../../actions/comment-actions/clipboardImageDraftActions';
 import {
     resolveCommentReferencedImageDocuments,
     type CommentImageDocumentReference,
@@ -209,7 +181,7 @@ interface TicketDetailsProps {
         changes: Record<string, unknown>,
         options?: Partial<TicketNotificationSuppressionValue> & { propagateToChildren?: boolean }
     ) => Promise<boolean>;
-    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload) => Promise<void>;
+    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload, audienceId?: string) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
     /**
@@ -361,6 +333,29 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Hardcoded English, and a date that followed the browser's locale.
     const { formatDate, locale, dateFormat } = useFormatters();
     const ticketLive = useTicketLiveContext();
+    const dataSource = useTicketDataSource();
+    const { capabilities } = dataSource;
+    const {
+        getTicketById, updateTicket, deleteTicket, preCheckDeletion, updateTicketWithCache,
+        getRecurringSourceForTicket, findBoardById,
+    } = dataSource.ticket;
+    const {
+        findCommentsByTicketId, findCommentById, createComment, updateComment, deleteComment,
+        addTicketCommentWithCache, deleteDraftClipboardImages,
+    } = dataSource.comments;
+    const { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getClientLocations } = dataSource.people;
+    const { addTicketResource, getTicketResources, removeTicketResource, assignTeamToTicket, removeTeamFromTicket, getTeamById, getTeams } = dataSource.resources;
+    const { checkTicketClosure, getTicketAutoCloseState } = dataSource.closeRules;
+    const {
+        previewBundleStatusPropagationAction, addChildrenToBundleAction, findTicketByNumberAction,
+        getBundleMasterClosedContextAction, promoteBundleMasterAction, removeChildFromBundleAction,
+        unbundleMasterTicketAction, updateBundleSettingsAction, searchEligibleChildTicketsAction,
+    } = dataSource.bundles;
+    const { getTicketChecklistItems } = dataSource.checklist;
+    const { findTagsByEntityId } = dataSource.tags;
+    const {
+        getCurrentUserPermissions, getTicketLayoutPreference, setTicketLayoutPreference, getTicketingDisplaySettings,
+    } = dataSource.viewer;
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
     const [canViewCommentMetadataDebug, setCanViewCommentMetadataDebug] = useState(
@@ -385,10 +380,25 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     });
     const { getDocumentByTicketId, deleteDocument } = useDocumentsCrossFeature();
     const router = useRouter();
+    const ticketsListHref = dataSource.screen.backHref ?? '/msp/tickets';
+    const refreshScreen = useCallback(
+        (mode: 'soft' | 'reload' = 'soft') => runTicketRefresh(dataSource, mode, router),
+        [dataSource, router],
+    );
+    // Capability gates: a section the data source cannot back is absent, never a placeholder.
+    const effectiveHideSlaStatus = hideSlaStatus || !capabilities.sla;
+    const effectiveHideBilling = hideBilling || !capabilities.billing;
+    const effectiveHideScheduling = hideScheduling || !capabilities.scheduling;
+    const effectiveHideTimeEntry = hideTimeEntry || !capabilities.timeEntry;
+    const effectiveHideMaterials = hideMaterials || !capabilities.materials;
+    const effectiveSurveySummaryCard = capabilities.survey ? surveySummaryCard : undefined;
+    const effectiveAssociatedAssets = capabilities.assets ? associatedAssets : null;
+    const effectiveRenderCreateProjectTask = capabilities.createProjectTask ? renderCreateProjectTask : undefined;
+    const effectiveRenderQuickInvoice = capabilities.quickInvoice && !effectiveHideBilling ? renderQuickInvoice : undefined;
     // Gates the header "Create template from ticket" item and the template link; server actions are authoritative.
     const templatePermissions = useTicketTemplatePermissions();
     // Gates the header "Create workflow from ticket" item: EE slot present, workflow:manage, not Alga Desk.
-    const canCreateWorkflowFromTicket = Boolean(renderCreateWorkflowFromTicket) && canManageWorkflows && !isAlgaDeskMode;
+    const canCreateWorkflowFromTicket = Boolean(renderCreateWorkflowFromTicket) && capabilities.createWorkflow && canManageWorkflows && !isAlgaDeskMode;
     const searchParams = useSearchParams();
 
     useEffect(() => {
@@ -417,7 +427,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const tenant = initialTicket.tenant;
 
     const [ticket, setTicket] = useState(initialTicket);
-    const [bundle, setBundle] = useState<any>(initialBundle);
+    const [bundle, setBundle] = useState<any>(capabilities.bundles ? initialBundle : null);
     const [cardTitleVisible, setCardTitleVisible] = useState(true);
     const cardTitleRef = useRef<HTMLHeadingElement>(null);
     const [isEmailNotificationLogsDrawerOpen, setIsEmailNotificationLogsDrawerOpen] = useState(false);
@@ -536,7 +546,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             return;
         }
         let cancelled = false;
-        if (!ticket.ticket_id) return;
+        if (!capabilities.checklist || !ticket.ticket_id) return;
         getTicketChecklistItems(ticket.ticket_id)
             .then((items) => { if (!cancelled) setChecklistItems(items); })
             .catch((err) => console.error('Failed to load ticket checklist:', err));
@@ -555,6 +565,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         ticket.category_id,
         ticket.subcategory_id,
         ticket.priority_id,
+        capabilities.checklist,
     ]);
 
     const checklistSummary = useMemo(
@@ -718,7 +729,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // bootstrap, then kept current by the section's onLinksChanged so the origin
     // badge and comment chips update immediately on add/edit/remove — no reload.
     const [externalLinks, setExternalLinks] = useState<ITicketExternalLinkView[] | null>(
-        bootstrap?.externalLinks ?? null,
+        capabilities.externalLinks ? bootstrap?.externalLinks ?? null : null,
     );
     const originExternalLink = useMemo(
         () => (externalLinks ?? []).find(
@@ -745,7 +756,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // The definition a recurring ticket came from; null (no link) when the viewer may not read definitions.
     const [recurringSource, setRecurringSource] = useState<RecurringTicketSource | null>(null);
     useEffect(() => {
-        if (ticketOrigin !== 'recurring' || !ticket.ticket_id) {
+        if (ticketOrigin !== 'recurring' || !ticket.ticket_id || !capabilities.externalLinks) {
             setRecurringSource(null);
             return;
         }
@@ -754,7 +765,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             .then((source) => { if (!cancelled) setRecurringSource(source ?? null); })
             .catch((error) => console.error('Failed to load the recurring ticket source:', error));
         return () => { cancelled = true; };
-    }, [ticketOrigin, ticket.ticket_id]);
+    }, [ticketOrigin, ticket.ticket_id, capabilities.externalLinks]);
     const ticketOriginLabels = useMemo(() => ({
         internal: t('origin.internal', 'Created Internally'),
         clientPortal: t('origin.clientPortal', 'Created via Client Portal'),
@@ -828,16 +839,16 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [ticketPropertiesDirtyFields, setTicketPropertiesDirtyFields] = useState<string[]>([]);
     const [liveHighlightedFields, setLiveHighlightedFields] = useState<string[]>([]);
     const [liveFieldConflicts, setLiveFieldConflicts] = useState<Partial<Record<string, TicketLiveConflictState>>>({});
+    const frozenFieldList = useMemo(
+        () => resolveTicketFrozenFields(dataSource.screen, Object.keys(liveFieldConflicts)),
+        [dataSource.screen, liveFieldConflicts],
+    );
     const [reactionRefreshVersion, setReactionRefreshVersion] = useState(0);
     const [livePendingFieldVersion, setLivePendingFieldVersion] = useState(0);
     const ticketInfoDirtyFieldsRef = useRef<string[]>([]);
     const ticketPropertiesDirtyFieldsRef = useRef<string[]>([]);
     const pendingLiveNetworkFieldsRef = useRef<Set<string>>(new Set());
-    const pendingRemoteUpdateRef = useRef<{
-        updatedFields: string[];
-        updatedBy: { userId: string; displayName: string };
-        updatedAt: string;
-    } | null>(null);
+    const pendingRemoteUpdateRef = useRef<TicketLiveRemoteUpdate | null>(null);
     const remoteUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
     const liveHighlightTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
 
@@ -1006,7 +1017,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const refreshTicketSnapshot = useCallback(async (
         updatedFields: string[] = [],
-        remoteUpdatedBy?: { userId: string; displayName: string }
+        remoteUpdatedBy?: { userId: string | null; displayName: string }
     ) => {
         if (!ticket.ticket_id) {
             return { refreshed: false as const };
@@ -1094,7 +1105,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             return { refreshed: true as const, latestTicket };
         } catch (error) {
             if (isRemoteUpdateAccessError(error)) {
-                router.push('/msp/tickets');
+                router.push(ticketsListHref);
                 return { refreshed: false as const, redirected: true as const };
             }
 
@@ -1108,6 +1119,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         getContactsByClient,
         isRemoteUpdateAccessError,
         router,
+        ticketsListHref,
         ticket.client_id,
         ticket.contact_name_id,
         ticket.location_id,
@@ -1184,7 +1196,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     }, [getLiveFieldLabel, highlightLiveFields, refreshTicketSnapshot, t]);
 
-    const queueRemoteUpdate = useCallback((update: { updatedFields: string[]; updatedBy: { userId: string; displayName: string }; updatedAt: string }) => {
+    const queueRemoteUpdate = useCallback((update: TicketLiveRemoteUpdate) => {
         const currentPendingUpdate = pendingRemoteUpdateRef.current;
 
         pendingRemoteUpdateRef.current = currentPendingUpdate
@@ -1202,8 +1214,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, [clearRemoteUpdateTimer, flushPendingRemoteUpdate]);
 
     useEffect(() => {
-        setBundle(initialBundle);
-    }, [initialBundle]);
+        setBundle(capabilities.bundles ? initialBundle : null);
+    }, [initialBundle, capabilities.bundles]);
 
     useEffect(() => {
         setBoard(initialBoard);
@@ -1458,7 +1470,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 // as the Back button / BackNav) so the tickets list reopens filtered.
                 const returnFilters = searchParams?.get('returnFilters') ?? null;
                 const filtersQuery = returnFilters ? decodeURIComponent(returnFilters) : '';
-                router.push(filtersQuery ? `/msp/tickets?${filtersQuery}` : '/msp/tickets');
+                router.push(filtersQuery ? `${ticketsListHref}?${filtersQuery}` : ticketsListHref);
             }
         } catch (error: any) {
             console.error('Failed to delete ticket:', error);
@@ -1468,7 +1480,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         } finally {
             setIsTicketDeleteProcessing(false);
         }
-    }, [ticket.ticket_id, ticket.ticket_number, isInDrawer, closeDrawer, onClose, router, searchParams, t]);
+    }, [ticket.ticket_id, ticket.ticket_number, isInDrawer, closeDrawer, onClose, router, searchParams, t, ticketsListHref]);
 
     useEffect(() => {
         if (bootstrapSkips.current.teams) {
@@ -1562,7 +1574,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             return;
         }
         const fetchTags = async () => {
-            if (!ticket.ticket_id) return;
+            if (!capabilities.tags || !ticket.ticket_id) return;
             
             try {
                 const ticketTags = await findTagsByEntityId(ticket.ticket_id, 'ticket');
@@ -1577,7 +1589,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
         };
         fetchTags();
-    }, [ticket.ticket_id]);
+    }, [ticket.ticket_id, capabilities.tags]);
 
     const handleClientClick = async () => {
         if (!client?.client_id) return;
@@ -1669,7 +1681,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     };
 
   const handleAgentClick = (userId: string) => {
-    if (disableAgentSchedule) {
+    if (disableAgentSchedule || !capabilities.scheduling) {
       return;
     }
 
@@ -1925,7 +1937,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const [editorKey, setEditorKey] = useState(0);
     const refreshTicketDocuments = useCallback(async () => {
-        if (!ticket.ticket_id) return;
+        // A data source without documents has no native document rows for this
+        // ticket id; the workspace-level document provider must not be asked.
+        if (!ticket.ticket_id || !dataSource.capabilities.documents) return;
 
         try {
             const docs = await getDocumentByTicketId(ticket.ticket_id);
@@ -1940,7 +1954,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         } catch (error) {
             console.error('Failed to refresh ticket documents:', error);
         }
-    }, [ticket.ticket_id]);
+    }, [ticket.ticket_id, dataSource.capabilities.documents]);
 
     const resetCommentDeleteState = useCallback(() => {
         setIsDeleteDialogOpen(false);
@@ -1955,6 +1969,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         options?: TicketNotificationSuppressionValue,
         schedule?: { publishAt: string; timeZone: string } | null,
         emailRecipients?: CommentEmailRecipientsPayload,
+        audienceId?: string,
     ): Promise<boolean> => {
         // Check if content is empty
         const contentStr = JSON.stringify(newCommentContent);
@@ -1998,14 +2013,20 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
             // Use the optimized handler if provided
             if (onAddComment) {
-                await onAddComment(
+                // Native never has an audience: only audience-aware data sources get the extra argument.
+                const addCommentArgs = [
                     JSON.stringify(newCommentContent),
                     isInternal,
                     isResolution,
                     willCloseTicket,
                     schedule,
                     emailRecipients,
-                );
+                ] as const;
+                if (audienceId !== undefined) {
+                    await onAddComment(...addCommentArgs, audienceId);
+                } else {
+                    await onAddComment(...addCommentArgs);
+                }
                 await refreshTicketDocuments();
 
                 // Optimistically update the response state in UI to match server behavior:
@@ -2073,7 +2094,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                             scheduled_publish_tz: schedule.timeZone,
                         } : {}),
                         // See email-subscriber suppression note above.
-                        ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {})
+                        ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {}),
+                        ...(audienceId !== undefined ? { audienceId } : {}),
                     }, emailRecipients);
                     if (isReturnedActionError(newComment)) {
                         handleTicketActionError(newComment, t('messages.addCommentFailed', 'Failed to add comment'));
@@ -2138,6 +2160,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         parentCommentId: string,
         isInternal: boolean,
         emailRecipients?: CommentEmailRecipientsPayload,
+        audienceId?: string,
     ): Promise<boolean> => {
         const contentStr = JSON.stringify(content);
         const hasContent = contentStr !== JSON.stringify([{
@@ -2166,7 +2189,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 is_resolution: false,
                 user_id: userId,
                 author_type: 'internal',
-                parent_comment_id: parentCommentId
+                parent_comment_id: parentCommentId,
+                ...(audienceId !== undefined ? { audienceId } : {}),
             }, emailRecipients);
             if (isReturnedActionError(result)) {
                 throw result;
@@ -2413,6 +2437,7 @@ const handleClose = () => {
                 closeDrawer,
                 context: buildTicketTimeEntryContext({
                     ticket,
+                    workItem: resolveTicketTimeWorkItem(dataSource, ticket),
                     clientName: client?.client_name ?? null,
                     timeDescription,
                     masterTicketNumber: bundle?.masterTicket?.ticket_number ?? null,
@@ -2463,6 +2488,7 @@ const handleClose = () => {
                 closeDrawer,
                 context: buildTicketTimeEntryContext({
                     ticket,
+                    workItem: resolveTicketTimeWorkItem(dataSource, ticket),
                     clientName: client?.client_name ?? null,
                     timeDescription: '',
                     masterTicketNumber: bundle?.masterTicket?.ticket_number ?? null,
@@ -3101,11 +3127,11 @@ const handleClose = () => {
                 return;
             }
             toast.success(t('messages.removedFromBundle'));
-            router.refresh();
+            refreshScreen();
         } catch (error) {
             handleTicketActionError(error, t('messages.removeFromBundleFailed'));
         }
-    }, [router]);
+    }, [refreshScreen]);
 
     const handleUnbundleMaster = useCallback(async () => {
         if (!ticket.ticket_id) return;
@@ -3116,11 +3142,11 @@ const handleClose = () => {
                 return;
             }
             toast.success(t('messages.bundleRemoved'));
-            router.refresh();
+            refreshScreen();
         } catch (error) {
             handleTicketActionError(error, t('messages.unbundleFailed'));
         }
-    }, [ticket.ticket_id, router]);
+    }, [ticket.ticket_id, refreshScreen]);
 
     const performAddChildToBundle = useCallback(async (childTicketId: string, onClosedMaster?: ClosedMasterChoice) => {
         if (!ticket.ticket_id) return;
@@ -3136,8 +3162,8 @@ const handleClose = () => {
         toast.success(t('messages.addedToBundle'));
         setAddChildTicketNumber('');
         resetChildTicketPickerState();
-        router.refresh();
-    }, [ticket.ticket_id, t, router, resetChildTicketPickerState]);
+        refreshScreen();
+    }, [ticket.ticket_id, t, refreshScreen, resetChildTicketPickerState]);
 
     // Fetch the master's closed context before linking. An open master links
     // straight away; a closed master must go through the explicit choice
@@ -3342,11 +3368,11 @@ const handleClose = () => {
             }
             toast.success(t('messages.promotedMaster'));
             router.push(`/msp/tickets/${childTicketId}`);
-            router.refresh();
+            refreshScreen();
         } catch (error) {
             handleTicketActionError(error, t('messages.promoteMasterFailed'));
         }
-    }, [ticket.ticket_id, router]);
+    }, [ticket.ticket_id, router, refreshScreen]);
 
     const handleToggleBundleMode = useCallback(async () => {
         if (!ticket.ticket_id || !bundle?.isBundleMaster) return;
@@ -3359,13 +3385,13 @@ const handleClose = () => {
                 return;
             }
             toast.success(t('messages.bundleSettingsUpdated'));
-            router.refresh();
+            refreshScreen();
         } catch (error) {
             handleTicketActionError(error, t('messages.updateBundleSettingsFailed'));
         } finally {
             setIsUpdatingBundleSettings(false);
         }
-    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, router]);
+    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, refreshScreen]);
 
     if (!tenant) {
         return (
@@ -3557,7 +3583,7 @@ const handleClose = () => {
                                     </div>
                                 ) : null}
 
-                                {(autoCloseState || checklistSummary.requiredTotal > 0) && (
+                                {capabilities.checklist && (autoCloseState || checklistSummary.requiredTotal > 0) && (
                                     <div id={`${id}-close-rules-banner`} className="mb-4 flex flex-wrap items-center gap-2">
                                         {autoCloseState && (
                                             <div
@@ -3593,19 +3619,32 @@ const handleClose = () => {
         </>
     );
 
+    // App-layer slot sections; absent slots render nothing (no placeholder).
+    const slotArgsFor = (layout: 'entry' | 'grid') => ({
+        ticket: ticket as ITicket,
+        layout,
+        refresh: () => refreshScreen(),
+    });
+    const activeLayout = useGridLayout ? 'grid' : 'entry';
+    const coManagedSectionNode = dataSource.slots.coManagedSection?.(slotArgsFor(activeLayout)) ?? null;
+    const timeSummarySlot = dataSource.slots.timeSummary?.({
+        ...slotArgsFor(activeLayout),
+        timeEntriesRefreshKey,
+    }) ?? null;
+
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-[rgb(var(--color-app-ground))]">
                 <div className="sticky top-0 z-10 bg-[rgb(var(--color-app-ground))] py-2 flex gap-3">
                     {!isInDrawer && (
                         <div className="flex-shrink-0 self-start">
-                            <BackNav href="/msp/tickets"><span className="text-right">← {t('navigation.backTo', 'Back to')}<br />{t('navigation.tickets', 'Tickets')} </span></BackNav>
+                            <BackNav href={ticketsListHref}><span className="text-right">← {t('navigation.backTo', 'Back to')}<br />{t('navigation.tickets', 'Tickets')} </span></BackNav>
                         </div>
                     )}
                     <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                {!isInDrawer && ticket.ticket_id && (
+                                {!isInDrawer && capabilities.navigation && ticket.ticket_id && (
                                     <TicketNavigation currentTicketId={ticket.ticket_id} initialAdjacent={bootstrap?.streams?.adjacentTickets} />
                                 )}
                                 <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
@@ -3672,10 +3711,10 @@ const handleClose = () => {
                             </div>
 
                             <div className="flex items-center gap-2">
-                                {ticketLive.enabled && ticketLive.connectionStatus === 'connected' && livePresenceUsers.length > 0 ? (
+                                {capabilities.live && ticketLive.enabled && ticketLive.connectionStatus === 'connected' && livePresenceUsers.length > 0 ? (
                                     <PresenceBar users={livePresenceUsers} />
                                 ) : null}
-                                {ticketLive.enabled && connectionStatusLabel ? (
+                                {capabilities.live && ticketLive.enabled && connectionStatusLabel ? (
                                     <span className="text-xs font-medium text-amber-700" data-testid="ticket-live-connection-status">
                                         {connectionStatusLabel}
                                     </span>
@@ -3697,6 +3736,7 @@ const handleClose = () => {
                                         <span>{t('fields.openInNewTab', 'Open in new tab')}</span>
                                     </Button>
                                 )}
+                                {capabilities.duplicate ? (
                                 <Button
                                     id={`${id}-duplicate-ticket-button`}
                                     variant="outline"
@@ -3710,7 +3750,8 @@ const handleClose = () => {
                                     <Copy className="h-4 w-4" />
                                     <span>{t('actions.duplicate', { defaultValue: 'Duplicate' })}</span>
                                 </Button>
-                                {templatePermissions.create || canCreateWorkflowFromTicket ? (
+                                ) : null}
+                                {(capabilities.createTemplate && templatePermissions.create) || canCreateWorkflowFromTicket ? (
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button
@@ -3723,7 +3764,7 @@ const handleClose = () => {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            {templatePermissions.create ? (
+                                            {capabilities.createTemplate && templatePermissions.create ? (
                                                 <DropdownMenuItem
                                                     id={`${id}-create-template-menu-item`}
                                                     onClick={() => router.push(
@@ -3755,6 +3796,7 @@ const handleClose = () => {
                                         onOpenChange: setCreateWorkflowOpen,
                                     })
                                     : null}
+                                {capabilities.delete ? (
                                 <Button
                                     id={`${id}-delete-ticket-button`}
                                     variant="destructive"
@@ -3765,6 +3807,7 @@ const handleClose = () => {
                                     <Trash2 className="h-4 w-4" />
                                     <span>{t('actions.delete', { defaultValue: 'Delete' })}</span>
                                 </Button>
+                                ) : null}
                             </div>
                         </div>
                         <h1
@@ -3806,6 +3849,7 @@ const handleClose = () => {
                     })()}
                 </div>
                 {/* Delete Ticket Dialog (with dependency validation) */}
+                {capabilities.delete ? (
                 <DeleteEntityDialog
                     id={`${id}-delete-ticket-dialog`}
                     isOpen={isDeleteTicketDialogOpen}
@@ -3816,6 +3860,7 @@ const handleClose = () => {
                     isValidating={isTicketDeleteValidating}
                     isDeleting={isTicketDeleteProcessing}
                 />
+                ) : null}
 
                 {/* Confirmation Dialog for Comment Deletion */}
                 <ConfirmationDialog
@@ -3974,6 +4019,7 @@ const handleClose = () => {
 
                 {/* Sync-mode bundle master: choose whether a boundary-crossing
                     status change propagates to the affected children. */}
+                {capabilities.bundles ? (
                 <BundleStatusPropagationDialog
                     isOpen={bundlePropagationPreview !== null}
                     preview={bundlePropagationPreview}
@@ -3982,6 +4028,7 @@ const handleClose = () => {
                     onMasterOnly={() => resolveBundlePropagationDecision({ proceed: true, propagateToChildren: false })}
                     onPropagate={() => resolveBundlePropagationDecision({ proceed: true, propagateToChildren: true })}
                 />
+                ) : null}
 
                 {/* Blocked-close dialog: unmet close rules with quick actions and
                     a permissioned "Close anyway" override. */}
@@ -4208,21 +4255,21 @@ const handleClose = () => {
                     onBatchSelectChange={(changes, options) => handleBatchSaveChanges(changes, options)}
                     onUpdateDescription={handleUpdateDescription}
                     responseStateTrackingEnabled={responseStateTrackingEnabled}
-                    hideSlaStatus={hideSlaStatus}
-                    hideBilling={hideBilling}
-                    hideScheduling={hideScheduling}
+                    hideSlaStatus={effectiveHideSlaStatus}
+                    hideBilling={effectiveHideBilling}
+                    hideScheduling={effectiveHideScheduling}
                     workflowLocked={Boolean(bundle?.isBundleChild)}
                     onOpenAllFields={() => setIsAllFieldsDrawerOpen(true)}
                     tags={tags}
-                    onTagsChange={handleTagsChange}
-                    taskActions={renderCreateProjectTask?.({ ticket, additionalAgents: additionalAgentsForInfo })}
-                    quickInvoiceActions={hideBilling ? undefined : renderQuickInvoice?.({ ticket })}
+                    onTagsChange={capabilities.tags ? handleTagsChange : undefined}
+                    taskActions={effectiveRenderCreateProjectTask?.({ ticket, additionalAgents: additionalAgentsForInfo })}
+                    quickInvoiceActions={effectiveRenderQuickInvoice?.({ ticket })}
                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                         ? () => setIsResolutionCloseDialogOpen(true)
                         : undefined}
                     resolveAndCloseDisabled={closedStatusOptions.length === 0 || isSubmitting || isSubmittingResolutionClose}
                     liveHighlightedFields={liveHighlightedFields}
-                    liveFrozenFields={Object.keys(liveFieldConflicts)}
+                    liveFrozenFields={frozenFieldList}
                     liveFieldConflicts={liveFieldConflicts}
                     onLiveDirtyFieldsChange={setTicketInfoDirtyFields}
                     onKeepLiveConflict={handleKeepLiveConflict}
@@ -4277,7 +4324,9 @@ const handleClose = () => {
                     onChecklistItemsChanged={setChecklistItems}
                     externalLinks={externalLinks ?? undefined}
                     onExternalLinksChanged={setExternalLinks}
-                    hideTimeEntry={hideTimeEntry}
+                    hideTimeEntry={effectiveHideTimeEntry}
+                    timeSummarySlot={timeSummarySlot}
+                    coManagedSection={coManagedSectionNode}
                     isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
                     timeDescription={timeDescription}
                     onTimeDescriptionChange={setTimeDescription}
@@ -4306,12 +4355,12 @@ const handleClose = () => {
                     allContactsForWatchList={allContactsForWatchList}
                     allContactsForWatchListLoading={allContactsForWatchListLoading}
                     onLoadAllContactsForWatchList={handleLoadAllContactsForWatchList}
-                    hideMaterials={hideMaterials}
-                    surveySummaryCard={surveySummaryCard}
-                    associatedAssets={associatedAssets}
+                    hideMaterials={effectiveHideMaterials}
+                    surveySummaryCard={effectiveSurveySummaryCard}
+                    associatedAssets={effectiveAssociatedAssets}
                     documents={documents}
                     onDocumentCreated={async () => {
-                        router.refresh();
+                        refreshScreen();
                     }}
                     disableAttachmentFolderSelection={disableAttachmentFolderSelection}
                     disableAttachmentSharing={disableAttachmentSharing}
@@ -4338,7 +4387,7 @@ const handleClose = () => {
                                     users={availableAgents}
                                     tags={tags}
                                     allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
-                                    onTagsChange={handleTagsChange}
+                                    onTagsChange={capabilities.tags ? handleTagsChange : undefined}
                                     isInDrawer={isInDrawer}
                                     onItilFieldChange={handleItilFieldChange}
                                     initialCategories={initialCategories}
@@ -4346,8 +4395,8 @@ const handleClose = () => {
                                     itilUrgency={itilUrgency}
                                     isBundledChild={Boolean(bundle?.isBundleChild)}
                                     responseStateTrackingEnabled={responseStateTrackingEnabled}
-                                    renderProjectTaskActions={renderCreateProjectTask}
-                                    renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
+                                    renderProjectTaskActions={effectiveRenderCreateProjectTask}
+                                    renderQuickInvoiceActions={effectiveRenderQuickInvoice}
                                     onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                         ? () => setIsResolutionCloseDialogOpen(true)
                                         : undefined}
@@ -4362,16 +4411,16 @@ const handleClose = () => {
                                     deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
                                     resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                                     onOpenEmailNotificationLogs={() => setIsEmailNotificationLogsDrawerOpen(true)}
-                                    onOpenActivityLog={() => {
+                                    onOpenActivityLog={capabilities.activityLog ? () => {
                                         setActivityLogRefreshKey((value) => value + 1);
                                         setIsActivityLogDrawerOpen(true);
-                                    }}
-                                    hideSlaStatus={hideSlaStatus}
+                                    } : undefined}
+                                    hideSlaStatus={effectiveHideSlaStatus}
                                     additionalAgents={additionalAgentsForInfo}
                                     onLiveDirtyFieldsChange={setTicketInfoDirtyFields}
                                     liveHighlightedFields={liveHighlightedFields}
                                     liveFieldConflicts={liveFieldConflicts}
-                                    liveFrozenFields={Object.keys(liveFieldConflicts)}
+                                    liveFrozenFields={frozenFieldList}
                                     onKeepLiveConflict={handleKeepLiveConflict}
                                     onTakeLiveConflict={handleTakeLiveConflict}
                                     liveEditingUsers={liveEditingUsers}
@@ -4410,6 +4459,7 @@ const handleClose = () => {
                                     onContentChange={handleContentChange}
                                     isSubmitting={isSubmitting}
                                     hideInternalTab={false}
+                                    readOnly={dataSource.screen.readOnly}
                                     externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []}
                                     onClipboardImageUploaded={refreshTicketDocuments}
                                     uploadTicketAttachmentAction={uploadTicketAttachmentAction}
@@ -4424,6 +4474,7 @@ const handleClose = () => {
                             </div>
                         </Suspense>
                         
+                        {capabilities.checklist ? (
                         <div className="mb-6">
                             <TicketChecklistSection
                                 id={`${id}-checklist-section`}
@@ -4432,7 +4483,9 @@ const handleClose = () => {
                                 onItemsChanged={setChecklistItems}
                             />
                         </div>
+                        ) : null}
 
+                        {capabilities.documents ? (
                         <Suspense fallback={<div id="ticket-documents-skeleton" className="animate-pulse skeleton-fill h-64 rounded-lg mb-6"></div>}>
                             <TicketDocumentsSection
                                 id={`${id}-documents-section`}
@@ -4443,16 +4496,20 @@ const handleClose = () => {
                                 allowLinkExistingDocuments={!disableAttachmentLinking}
                                 allowBlockDocuments={!disableAttachmentLinking}
                                 onDocumentCreated={async () => {
-                                    router.refresh();
+                                    refreshScreen();
                                 }}
                             />
                         </Suspense>
+                        ) : null}
 
+                        {capabilities.credentials ? (
                         <TicketCredentialsSection
                             ticketId={ticket.ticket_id || ''}
                             clientId={ticket.client_id ?? null}
                         />
+                        ) : null}
 
+                        {capabilities.externalLinks ? (
                         <div className="mt-6">
                             <TicketExternalLinksSection
                                 id={`${id}-external-links-section`}
@@ -4461,6 +4518,7 @@ const handleClose = () => {
                                 onLinksChanged={setExternalLinks}
                             />
                         </div>
+                        ) : null}
 
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
@@ -4504,16 +4562,17 @@ const handleClose = () => {
                                 onClientTypeFilterChange={setClientTypeFilter}
                                 tags={tags}
                                 allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
-                                onTagsChange={handleTagsChange}
+                                onTagsChange={capabilities.tags ? handleTagsChange : undefined}
                                 onItilFieldChange={handleItilFieldChange}
                                 onUpdateWatchList={handleUpdateWatchList}
                                 watchListSaving={isWatchListSaving}
                                 allContactsForWatchList={allContactsForWatchList}
                                 allContactsForWatchListLoading={allContactsForWatchListLoading}
                                 onLoadAllContactsForWatchList={handleLoadAllContactsForWatchList}
-                                surveySummaryCard={surveySummaryCard}
-                                    hideTimeEntry={hideTimeEntry}
-                                    hideMaterials={hideMaterials}
+                                surveySummaryCard={effectiveSurveySummaryCard}
+                                    hideTimeEntry={effectiveHideTimeEntry}
+                                    timeSummarySlot={timeSummarySlot}
+                                    hideMaterials={effectiveHideMaterials}
                                                     onRemoveTeamAssignment={handleRemoveTeamAssignment}
                                     onAssignTeam={handleAssignTeam}
                                     isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
@@ -4523,7 +4582,7 @@ const handleClose = () => {
                                     onLiveDirtyFieldsChange={setTicketPropertiesDirtyFields}
                                     liveHighlightedFields={liveHighlightedFields}
                                     liveFieldConflicts={liveFieldConflicts}
-                                    liveFrozenFields={Object.keys(liveFieldConflicts)}
+                                    liveFrozenFields={frozenFieldList}
                                     onKeepLiveConflict={handleKeepLiveConflict}
                                     onTakeLiveConflict={handleTakeLiveConflict}
                                     liveEditingUsers={liveEditingUsers}
@@ -4531,7 +4590,11 @@ const handleClose = () => {
                                 />
                         </Suspense>
                         
-                        {associatedAssets ? <div className="mt-6" id="associated-assets-container">{associatedAssets}</div> : null}
+                        {coManagedSectionNode ? (
+                            <div className="mt-6" id="co-managed-section-container">{coManagedSectionNode}</div>
+                        ) : null}
+
+                        {effectiveAssociatedAssets ? <div className="mt-6" id="associated-assets-container">{effectiveAssociatedAssets}</div> : null}
                     </div>
                 </div>
                 )}
@@ -4559,7 +4622,7 @@ const handleClose = () => {
                             users={availableAgents}
                             tags={tags}
                             allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
-                            onTagsChange={handleTagsChange}
+                            onTagsChange={capabilities.tags ? handleTagsChange : undefined}
                             isInDrawer
                             onItilFieldChange={handleItilFieldChange}
                             initialCategories={initialCategories}
@@ -4567,8 +4630,8 @@ const handleClose = () => {
                             itilUrgency={itilUrgency}
                             isBundledChild={Boolean(bundle?.isBundleChild)}
                             responseStateTrackingEnabled={responseStateTrackingEnabled}
-                            renderProjectTaskActions={renderCreateProjectTask}
-                            renderQuickInvoiceActions={hideBilling ? undefined : renderQuickInvoice}
+                            renderProjectTaskActions={effectiveRenderCreateProjectTask}
+                            renderQuickInvoiceActions={effectiveRenderQuickInvoice}
                             onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
                                 ? () => setIsResolutionCloseDialogOpen(true)
                                 : undefined}
@@ -4583,16 +4646,16 @@ const handleClose = () => {
                             deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
                             resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                             onOpenEmailNotificationLogs={() => setIsEmailNotificationLogsDrawerOpen(true)}
-                            onOpenActivityLog={() => {
+                            onOpenActivityLog={capabilities.activityLog ? () => {
                                 setActivityLogRefreshKey((value) => value + 1);
                                 setIsActivityLogDrawerOpen(true);
-                            }}
-                            hideSlaStatus={hideSlaStatus}
+                            } : undefined}
+                            hideSlaStatus={effectiveHideSlaStatus}
                             additionalAgents={additionalAgentsForInfo}
                             onLiveDirtyFieldsChange={setTicketInfoDirtyFields}
                             liveHighlightedFields={liveHighlightedFields}
                             liveFieldConflicts={liveFieldConflicts}
-                            liveFrozenFields={Object.keys(liveFieldConflicts)}
+                            liveFrozenFields={frozenFieldList}
                             onKeepLiveConflict={handleKeepLiveConflict}
                             onTakeLiveConflict={handleTakeLiveConflict}
                             liveEditingUsers={liveEditingUsers}
@@ -4643,6 +4706,7 @@ const handleClose = () => {
                     ) : null}
                 </div>
             </Drawer>
+            {capabilities.emailLogs ? (
             <Drawer
                 id={`${id}-email-notification-logs-drawer`}
                 isOpen={isEmailNotificationLogsDrawerOpen}
@@ -4663,6 +4727,8 @@ const handleClose = () => {
                     />
                 </div>
             </Drawer>
+            ) : null}
+            {capabilities.activityLog ? (
             <Drawer
                 id="ticket-activity-log-drawer"
                 isOpen={isActivityLogDrawerOpen}
@@ -4684,6 +4750,7 @@ const handleClose = () => {
                     ) : null}
                 </div>
             </Drawer>
+            ) : null}
         </ReflectionContainer>
     );
 };

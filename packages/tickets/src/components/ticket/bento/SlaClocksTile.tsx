@@ -10,7 +10,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { getTicketSlaPolicyName } from '../../../actions/ticketBentoActions';
+import { useTicketDataSource } from '../TicketDataSourceContext';
 import { computeSlaClocks, formatSlaLabel, type SlaClock, type TicketSlaFields } from './slaClocks';
 
 type SlaPolicyNameResult = string | null | ActionMessageError | ActionPermissionError;
@@ -73,6 +73,7 @@ interface SlaClocksTileProps {
 /** "SLA clocks" tile — response + resolution targets from the sla_* columns. */
 export function SlaClocksTile({ id, ticket, initialPolicyName }: SlaClocksTileProps) {
   const { t } = useTranslation('features/tickets');
+  const { getTicketSlaPolicyName } = useTicketDataSource().tiles;
   // Re-derive on a minute cadence so "left"/"overdue" labels stay honest
   // while the screen sits open.
   const [now, setNow] = useState(() => Date.now());
@@ -108,7 +109,7 @@ export function SlaClocksTile({ id, ticket, initialPolicyName }: SlaClocksTilePr
     return () => {
       cancelled = true;
     };
-  }, [ticket.ticket_id, ticket.sla_policy_id]);
+  }, [ticket.ticket_id, ticket.sla_policy_id, getTicketSlaPolicyName]);
 
   const clocks = useMemo(() => computeSlaClocks(ticket, now), [ticket, now]);
 

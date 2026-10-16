@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { filterPseudoLocales, getBestMatchingLocale, INCOMPLETE_LOCALES, normalizeLocale, PREVIEW_LOCALES, LOCALE_CONFIG } from './config';
+import { filterPseudoLocales, getBestMatchingLocale, getTranslationLanguageCode, INCOMPLETE_LOCALES, normalizeLocale, PREVIEW_LOCALES, LOCALE_CONFIG } from './config';
 
 describe('filterPseudoLocales', () => {
   afterEach(() => {
@@ -141,5 +141,11 @@ describe('normalizeLocale', () => {
   it('normalizes an explicitly stored Swedish preference', () => {
     vi.stubEnv('NODE_ENV', 'production');
     expect(normalizeLocale('sv-SE')).toBe('sv');
+  });
+
+  it('exposes the translation language code for region-tagged locales', () => {
+    expect(getTranslationLanguageCode('en-AU')).toBe('en');
+    expect(getTranslationLanguageCode('fr')).toBe('fr');
+    expect(getTranslationLanguageCode('xx')).toBe('xx');
   });
 });

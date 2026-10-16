@@ -63,6 +63,22 @@
     "./lib/ticketCloseRules/index.js": "./dist/lib/ticketCloseRules/index.js",
     "./lib/recurrence": "./dist/lib/recurrence/index.js",
     "./lib/recurrence/index.js": "./dist/lib/recurrence/index.js",
+    "./utils/appointmentDateTime": {
+      "types": "./utils/appointmentDateTime.ts",
+      "import": "./dist/utils/appointmentDateTime.js"
+    },
+    "./lib/commentAudience": "./dist/lib/commentAudience.js",
+    "./lib/tickets/responseState": "./dist/lib/tickets/responseState.js",
+    "./billingClients/*": "./dist/billingClients/*.js",
+    "./billingClients/*.js": "./dist/billingClients/*.js",
+    "./lib/email/senderAuthVerification": "./dist/lib/email/senderAuthVerification.js",
+    "./utils/tenantSlug": "./dist/utils/tenantSlug.js",
+    "./lib/sla/organizationSlaClock": "./dist/lib/sla/organizationSlaClock.js",
+    "./lib/sla/organizationSlaStore": "./dist/lib/sla/organizationSlaStore.js",
+    "./lib/sla/organizationSlaNotifications": "./dist/lib/sla/organizationSlaNotifications.js",
+    "./lib/sla/organizationSlaLock": "./dist/lib/sla/organizationSlaLock.js",
+    "./lib/sla/slaPolicyResolver": "./dist/lib/sla/slaPolicyResolver.js",
+    "./billingClients/timeEntryWorkBillingContext": "./dist/billingClients/timeEntryWorkBillingContext.js",
     "./*": "./dist/*"
   },
   "scripts": {
@@ -109,7 +125,8 @@
     "winston": "^3.13.1",
     "winston-daily-rotate-file": "^5.0.0",
     "zod": "^3.22.4",
-    "zod-to-json-schema": "^3.24.6"
+    "zod-to-json-schema": "^3.24.6",
+    "@alga-psa/licensing": "file:../packages/licensing"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.7",

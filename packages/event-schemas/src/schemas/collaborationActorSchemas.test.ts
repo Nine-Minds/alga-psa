@@ -1,0 +1,120 @@
+import { describe, expect, it } from 'vitest';
+import { EventSchemas } from './eventBusSchema';
+import { buildWorkflowPayload } from './workflowEventPublishHelpers';
+
+const owner = '00000000-0000-4000-8000-000000000001';
+const reference = {
+  ownerTenantId: owner, referenceId: '00000000-0000-4000-8000-000000000002',
+  tenantId: '00000000-0000-4000-8000-000000000003', userId: '00000000-0000-4000-8000-000000000004',
+  displayName: 'Morgan Lee', organizationName: 'Service Partner',
+};
+const timestamp = '2026-09-06T20:00:00.000Z';
+const ctx = { tenantId: owner, occurredAt: timestamp, actor: { actorType: 'COLLABORATOR' as const, actorReference: reference } };
+const ticketId = '00000000-0000-4000-8000-000000000005';
+const envelope = { id: ticketId, timestamp };
+
+describe('qualified collaboration event attribution', () => {
+  it.each(['TICKET_UPDATED', 'TICKET_CLOSED', 'TICKET_ASSIGNED'] as const)('retains the owner-local reference and source snapshot through %s publication', eventType => {
+    const payload = buildWorkflowPayload({ ticketId, changes: { title: { previous: 'Old', new: 'New' } } }, ctx);
+    const parsed = EventSchemas[eventType].parse({ ...envelope, eventType, payload });
+    expect(parsed.payload).toMatchObject({ actorType: 'COLLABORATOR', actorReference: reference, changes: payload.changes });
+    expect(parsed.payload).not.toHaveProperty('userId');
+    expect(parsed.payload).not.toHaveProperty('actorUserId');
+  });
+
+  it.each(['userId', 'actorUserId', 'actorContactId', 'updatedByUserId', 'closedByUserId', 'createdByUserId', 'assignedByUserId'])('rejects mixed %s attribution before unknown fields can be stripped', field => {
+    const payload = buildWorkflowPayload({ ticketId }, ctx);
+    const forged = { ...payload, [field]: reference.userId };
+    expect(EventSchemas.TICKET_UPDATED.safeParse({ ...envelope, eventType: 'TICKET_UPDATED', payload: forged }).success).toBe(false);
+    expect(() => buildWorkflowPayload({ ticketId, [field]: reference.userId }, ctx)).toThrow('tenant-local actor');
+  });
+
+  it.each([
+    { actorReference: undefined },
+    { actorType: 'USER', actorUserId: reference.userId },
+    { actorReference: { ...reference, ownerTenantId: reference.tenantId } },
+    { actorReference: { ...reference, tenantId: owner } },
+    { actorReference: { ...reference, userId: 'invalid' } },
+  ])('rejects missing, malformed and cross-owner references', alteration => {
+    const payload = { ...buildWorkflowPayload({ ticketId }, ctx), ...alteration };
+    expect(EventSchemas.TICKET_UPDATED.safeParse({ ...envelope, eventType: 'TICKET_UPDATED', payload }).success).toBe(false);
+  });
+
+  it('retains attribution in the legacy response-state branch with no tenant-local actor', () => {
+    const payload = buildWorkflowPayload({ ticketId, userId: null, previousState: 'awaiting_client', newState: null, trigger: 'close' }, ctx);
+    expect(EventSchemas.TICKET_RESPONSE_STATE_CHANGED.parse({ ...envelope, eventType: 'TICKET_RESPONSE_STATE_CHANGED', payload }).payload)
+      .toMatchObject({ actorType: 'COLLABORATOR', actorReference: reference, userId: null, trigger: 'close' });
+  });
+
+  it('copies reference metadata and preserves ordinary user and system producers', () => {
+    const payload = buildWorkflowPayload({ ticketId }, ctx);
+    expect(payload.actorReference).not.toBe(reference);
+    expect(buildWorkflowPayload({ ticketId }, { ...ctx, actor: { actorType: 'USER', actorUserId: reference.userId } }))
+      .toMatchObject({ actorType: 'USER', actorUserId: reference.userId });
+    expect(buildWorkflowPayload({ ticketId }, { ...ctx, actor: { actorType: 'SYSTEM' } }))
+      .toMatchObject({ actorType: 'SYSTEM' });
+  });
+});
+
+describe('qualified comment audience contracts', () => {
+  const commentId = '00000000-0000-4000-8000-000000000006';
+  const threadId = '00000000-0000-4000-8000-000000000007';
+  const payload = { ...buildWorkflowPayload({ ticketId }, ctx), commentId, thread_id: threadId, parent_comment_id: null, is_reply: false,
+    comment: { id: commentId, thread_id: threadId, parent_comment_id: null, is_reply: false, content: 'Saved comment', author: 'Morgan Lee',
+      authorType: 'internal', isInternal: true, audience: 'shared_it' } };
+  const event = { ...envelope, eventType: 'TICKET_COMMENT_ADDED', payload };
+  it('retains the audience, qualified author and thread through serialization', () => {
+    const parsed = EventSchemas.TICKET_COMMENT_ADDED.parse(JSON.parse(JSON.stringify(event)));
+    expect(parsed.payload).toMatchObject(payload);
+    expect(parsed.payload).not.toHaveProperty('userId');
+    expect(EventSchemas.TICKET_COMMENT_ADDED.parse({ ...event, payload: { ...payload, comment: { ...payload.comment, audience: 'requester', isInternal: false } } }).payload.comment.audience).toBe('requester');
+  });
+  it.each([
+    { comment: { ...payload.comment, audience: undefined } },
+    { comment: { ...payload.comment, audience: 'organization_private' } },
+    { comment: { ...payload.comment, isInternal: false } },
+    { comment: { ...payload.comment, authorType: 'client' } },
+    { comment: undefined },
+    { commentId: ticketId },
+    { thread_id: ticketId },
+    { parent_comment_id: ticketId },
+    { userId: reference.userId },
+  ])('rejects mixed identity, inconsistent threading and unsafe foreign audiences', change => {
+    expect(EventSchemas.TICKET_COMMENT_ADDED.safeParse({ ...event, payload: { ...payload, ...change } }).success).toBe(false);
+  });
+  it('retains ordinary local producers and requires a local author without foreign attribution', () => {
+    const legacy = { tenantId: owner, ticketId, userId: reference.userId, comment: { id: commentId, content: 'Local comment', author: 'Local User', isInternal: true } };
+    expect(EventSchemas.TICKET_COMMENT_ADDED.parse({ ...event, payload: legacy }).payload).toMatchObject(legacy);
+    expect(EventSchemas.TICKET_COMMENT_ADDED.safeParse({ ...event, payload: { ...legacy, userId: undefined } }).success).toBe(false);
+  });
+});
+
+describe('qualified message workflow authors', () => {
+  const payload = { ...buildWorkflowPayload({ ticketId }, ctx), messageId: ticketId, visibility: 'internal', audience: 'shared_it',
+    authorType: 'collaborator', authorReference: reference, channel: 'ui' };
+  const event = { ...envelope, eventType: 'TICKET_MESSAGE_ADDED', payload };
+  it('preserves the qualified message author independently of owner-local author IDs', () => {
+    expect(EventSchemas.TICKET_MESSAGE_ADDED.parse(event).payload).toMatchObject(payload);
+    expect(EventSchemas.TICKET_INTERNAL_NOTE_ADDED.parse({ ...event, eventType: 'TICKET_INTERNAL_NOTE_ADDED', payload: { ...payload, noteId: ticketId } }).payload.audience).toBe('shared_it');
+  });
+  it.each([{ authorId: reference.userId }, { authorReference: undefined }, { authorType: 'user', authorId: reference.userId },
+    { authorReference: { ...reference, displayName: 'Different author' } }, { audience: 'organization_private' }, { audience: undefined }, { visibility: 'public' }])('rejects flattened, inconsistent or private foreign workflow messages', alteration => {
+    expect(EventSchemas.TICKET_MESSAGE_ADDED.safeParse({ ...event, payload: { ...payload, ...alteration } }).success).toBe(false);
+  });
+});
+
+describe('qualified comment mutation events', () => {
+  it.each([['TICKET_COMMENT_UPDATED', 'edit'], ['TICKET_COMMENT_UPDATED', 'audience'], ['TICKET_COMMENT_DELETED', 'delete']] as const)('keeps %s content-free and owner-qualified', (eventType, kind) => {
+    const payload = { tenantId: owner, ticketId, commentId: ticketId, actorType: 'COLLABORATOR', actorReference: reference,
+      isInternal: true, collaborationMutation: { kind, threadId: ticketId, audience: 'shared_it' } };
+    expect(EventSchemas[eventType].parse({ ...envelope, eventType, payload }).payload).toMatchObject(payload);
+    for (const patch of [{ userId: reference.userId }, { actorType: 'USER' }, { actorReference: { ...reference, ownerTenantId: reference.tenantId } },
+      { collaborationMutation: { kind, threadId: ticketId, audience: 'organization_private' } }, { isInternal: false }, { commentId: undefined }]) {
+      expect(EventSchemas[eventType].safeParse({ ...envelope, eventType, payload: { ...payload, ...patch } }).success).toBe(false);
+    }
+    if (kind !== 'delete') expect(EventSchemas[eventType].safeParse({ ...envelope, eventType, payload: { ...payload,
+      newComment: { id: ticketId, content: 'Cached secret', author: 'Someone' } } }).success).toBe(false);
+    expect(EventSchemas[eventType].safeParse({ ...envelope, eventType, payload: { ...payload, actorType: 'USER', actorReference: undefined,
+      userId: reference.userId, collaborationMutation: { kind, threadId: ticketId, audience: 'organization_private' } } }).success).toBe(true);
+  });
+});

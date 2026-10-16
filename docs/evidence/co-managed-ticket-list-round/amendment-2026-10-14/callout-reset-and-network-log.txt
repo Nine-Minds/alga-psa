@@ -1,0 +1,22 @@
+Live callout 3 -> dismiss -> 0 -> 2 against dev server :3374 (qa@emeraldcity.oz). Counts changed by SQL on co_managed_ticket_references.assigned_to; refresh triggered by a window focus event.
+
+1 initial (3 live): callout=[Customer tickets need you 3 escalated tickets, unassigned] stored=[(none)] db_unassigned_escalated=3
+2 after dismiss: callout=[(no callout)] stored=[all={"escalatedUnassigned":3,"awaitingReply":0}] db_unassigned_escalated=3
+3 after reload (still dismissed): callout=[(no callout)] stored=[all={"escalatedUnassigned":3,"awaitingReply":0}] db_unassigned_escalated=3
+nav Service Requests: url=/msp/service-requests
+nav Clients: url=/msp/clients
+nav Surveys: url=/msp/surveys/dashboard
+nav Tickets: url=/msp/surveys/dashboard
+4 after focus, live 0 (dismissal reset): callout=[(no callout)] stored=[all={"awaitingReply":0}] db_unassigned_escalated=0
+5 after focus, live 2 (callout returns): callout=[Customer tickets need you 2 escalated tickets, unassigned] stored=[all={"awaitingReply":0}] db_unassigned_escalated=2
+
+Server-action POSTs seen by Playwright (signalsRead = response body contains escalatedUnassigned):
+load /msp/tickets                                              signals-queue reads=1  other server-action POSTs=29
+full reload                                                    signals-queue reads=1  other server-action POSTs=29
+nav -> Service Requests                                        signals-queue reads=0  other server-action POSTs=2
+nav -> Clients                                                 signals-queue reads=0  other server-action POSTs=14
+nav -> Customer Tickets (direct client route)                  signals-queue reads=2  other server-action POSTs=1
+full page load /msp/tickets (first read of this page load)     signals-queue reads=1  other server-action POSTs=30
+window focus after DB: all 3 assigned (0 live)                 signals-queue reads=1  other server-action POSTs=1
+window focus after DB: 2 unassigned (2 live)                   signals-queue reads=1  other server-action POSTs=1
+(a step with no row made no server-action POST at all)

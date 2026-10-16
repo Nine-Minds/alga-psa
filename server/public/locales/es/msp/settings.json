@@ -1,4 +1,11 @@
 {
+  "coManaged": {
+    "providers": {
+      "title": "Proveedores de correo e identidad",
+      "description": "Registre su propia aplicación de Google o Microsoft para el correo entrante, el inicio de sesión del personal y la configuración del directorio. Estas credenciales pertenecen a su espacio de trabajo.",
+      "backToEmail": "Volver a la configuración de correo"
+    }
+  },
   "escalationManager": {
     "unsavedChanges_one": "{{count}} cambio sin guardar",
     "unsavedChanges_other": "{{count}} cambios sin guardar"

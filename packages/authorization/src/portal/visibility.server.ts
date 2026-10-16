@@ -153,12 +153,22 @@ async function resolveVisibleContactIds(
   return [contactId, ...collectReportContactIds(edges, contactId)];
 }
 
+/**
+ * `options.lock` takes FOR SHARE on the contact, its visibility group and the
+ * group's board memberships, so callers that authorize inside a writing
+ * transaction (co-managed requester email and portal attachment reads) decide
+ * against an assignment that cannot change under them before they commit.
+ */
 export async function getClientContactVisibilityContext(
   trx: Knex.Transaction,
   tenant: string,
-  contactId: string
+  contactId: string,
+  options: { lock?: boolean } = {}
 ): Promise<ContactVisibilityContext> {
-  const contact = await tenantScopedTable<{
+  // Unlocked reads are exactly the plain queries; only a locking caller adds FOR SHARE.
+  const locked = <Q extends Knex.QueryBuilder>(query: Q, ...tables: string[]): Q =>
+    options.lock ? (query.forShare(...tables) as Q) : query;
+  const contact = await locked(tenantScopedTable<{
     contact_name_id: string;
     client_id: string | null;
     portal_visibility_group_id: string | null;
@@ -166,7 +176,7 @@ export async function getClientContactVisibilityContext(
   }>(trx, 'contacts', tenant)
     .where({
       contact_name_id: contactId
-    })
+    }))
     .first('contact_name_id', 'client_id', 'portal_visibility_group_id', 'is_client_admin');
 
   if (!contact || !contact.client_id) {
@@ -193,7 +203,7 @@ export async function getClientContactVisibilityContext(
     };
   }
 
-  const group = await tenantScopedTable<{
+  const group = await locked(tenantScopedTable<{
     group_id: string;
     client_id: string;
     ticket_scope: 'client' | 'contact';
@@ -202,7 +212,7 @@ export async function getClientContactVisibilityContext(
   }>(trx, 'client_portal_visibility_groups', tenant)
     .where({
       group_id: contact.portal_visibility_group_id
-    })
+    }))
     .first('group_id', 'client_id', 'ticket_scope', 'asset_scope', 'project_scope');
 
   if (!group) {
@@ -225,7 +235,7 @@ export async function getClientContactVisibilityContext(
     throw new Error('Assigned visibility group has an invalid asset or project scope');
   }
 
-  const boardIds = await tenantDb(trx, tenant)
+  const boardIds = await locked(tenantDb(trx, tenant)
     .tenantJoin(
       tenantScopedTable<{ board_id: string }>(
         trx,
@@ -238,7 +248,7 @@ export async function getClientContactVisibilityContext(
     )
     .where({
       'cvgb.group_id': contact.portal_visibility_group_id
-    })
+    }), 'cvgb')
     .select('cvgb.board_id')
     .then((rows: Array<{ board_id: string }>) => rows.map((row) => row.board_id));
 

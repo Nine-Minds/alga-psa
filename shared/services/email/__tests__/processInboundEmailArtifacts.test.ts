@@ -145,6 +145,8 @@ const h = vi.hoisted(() => {
 
   const knex: any = (name: string) => makeBuilder(name);
   knex.table = (name: string) => makeBuilder(name);
+  // Lifecycle admission refuses a bare connection; the harness knex doubles as its own transaction.
+  knex.isTransaction = true;
   knex.transaction = async (callback: any) => callback(knex);
   knex.raw = async () => undefined;
   knex.fn = { now: () => new Date() };
@@ -163,6 +165,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, _tenant: string) => conn,
+  withTransaction: async (db: any, callback: (trx: any) => unknown) => callback(db),
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -271,6 +274,9 @@ function seedTables() {
   h.storageState.policyCalls.length = 0;
   h.storageState.artifactCalls.length = 0;
   h.tables.set('users', [{ user_id: 'system-user', created_at: '2020-01-01T00:00:00.000Z' }]);
+  // Operational lifecycle admission reads the workspace row; an independent PSA
+  // workspace steps out of the way.
+  h.tables.set('tenants', [{ tenant: 'tenant-1', product_code: 'psa' }]);
   for (const table of [
     'email_processed_attachments',
     'external_files',

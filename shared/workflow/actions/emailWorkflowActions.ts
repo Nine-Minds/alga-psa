@@ -65,6 +65,9 @@ const EMPTY_FALLBACK_COMMENT =
  */
 export interface InboundEmailExecutionOptions {
   existingConnection?: Knex.Transaction | Knex;
+  /** Trusted workflow runtime context; not email payload authorship. */
+  workflowRunId?: string;
+  workflowTicketAction?: 'create' | 'update';
   /** Inbox id the helper's outbox rows belong to (durable path). */
   inboxId?: string;
   eventPublisher?: import('@alga-psa/types').IEventPublisher;
@@ -1590,6 +1593,7 @@ export async function createCommentFromEmail(
     ticket_id: string;
     content: string;
     parent_comment_id?: string;
+    collaboration_audience?: 'requester' | 'shared_it' | 'organization_private';
     format?: string;
     source?: string;
     author_type?: string;
@@ -1649,6 +1653,8 @@ export async function createCommentFromEmail(
         new WorkflowEventPublisher({
           suppressCommentEmail: commentData.suppressTechEmailNotification ?? false,
           transaction: trx,
+          workflowRunId: executionOptions?.workflowRunId,
+          ticketAction: executionOptions?.workflowTicketAction,
         });
       // The durable outbox publisher distinguishes the initial comment (in-app
       // only) from a reply comment; drive that from this call's flag.
@@ -1662,7 +1668,8 @@ export async function createCommentFromEmail(
         ticket_id: commentData.ticket_id,
         content,
         parent_comment_id: commentData.parent_comment_id,
-        is_internal: false,
+        is_internal: commentData.collaboration_audience ? commentData.collaboration_audience !== 'requester' : false,
+        collaboration_audience: commentData.collaboration_audience,
         is_resolution: false,
         author_type: ticketModelAuthorType,
         author_id: commentData.author_id,
@@ -1684,7 +1691,7 @@ export async function createCommentFromEmail(
         .first();
       const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
 
-      if (responseStateEnabled) {
+      if (responseStateEnabled && (!commentData.collaboration_audience || commentData.collaboration_audience === 'requester')) {
         if (normalizedAuthorType === 'client') {
           await db.table('tickets')
             .where({ ticket_id: commentData.ticket_id })

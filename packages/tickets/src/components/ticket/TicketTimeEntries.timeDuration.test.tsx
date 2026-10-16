@@ -5,6 +5,8 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TicketTimeEntries from './TicketTimeEntries';
+import { TicketDataSourceProvider } from './TicketDataSourceContext';
+import { nativeTicketDataSource } from '../../lib/nativeTicketDataSource';
 import type { TicketTimeEntriesSummary } from '@alga-psa/types';
 
 const fetchTimeEntriesForTicket = vi.fn();
@@ -99,5 +101,21 @@ describe('TicketTimeEntries worked duration and billability', () => {
     expect(screen.getByText('Billable')).toBeInTheDocument();
     // The billed value must not leak into any displayed duration.
     expect(screen.queryByText(/45/)).not.toBeInTheDocument();
+  });
+});
+
+describe('TicketTimeEntries data source list', () => {
+  it('reads the per-work-item list from the data source instead of the scheduling callback', async () => {
+    fetchTimeEntriesForTicket.mockReset();
+    const fetchTimeEntries = vi.fn().mockResolvedValue(summary);
+    const dataSource: any = { ...nativeTicketDataSource, time: { fetchTimeEntries } };
+    render(
+      <TicketDataSourceProvider dataSource={dataSource}>
+        <TicketTimeEntries id="shared" ticketId="customer-ticket" currentUserId="user-me" />
+      </TicketDataSourceProvider>,
+    );
+    await screen.findByText('Ad-hoc non-billable');
+    expect(fetchTimeEntries).toHaveBeenCalledWith('customer-ticket');
+    expect(fetchTimeEntriesForTicket).not.toHaveBeenCalled();
   });
 });

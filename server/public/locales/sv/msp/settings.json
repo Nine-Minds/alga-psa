@@ -1,4 +1,11 @@
 {
+  "coManaged": {
+    "providers": {
+      "title": "E-post- och identitetsleverantörer",
+      "description": "Registrera ditt eget Google- eller Microsoft-program för inkommande e-post, personalinloggning och katalogkonfiguration. Dessa autentiseringsuppgifter tillhör din arbetsyta.",
+      "backToEmail": "Tillbaka till e-postinställningar"
+    }
+  },
   "escalationManager": {
     "unsavedChanges_one": "{{count}} osparad ändring",
     "unsavedChanges_other": "{{count}} osparade ändringar"
@@ -3144,7 +3151,6 @@
   },
   "settings": {
     "assetTypes": {
-      "additionalFields": "Ytterligare fält",
       "tab": "Tillgångar",
       "title": "Tillgångstyper",
       "description": "Anpassade typer använder ett fältschema för sina formulär. Inbyggda typer kan dessutom ha ytterligare fält.",
@@ -3233,7 +3239,8 @@
           "invalidOptions": "Alternativen måste ha värden som inte är tomma.",
           "invalidField": "Detta fält är ogiltigt."
         }
-      }
+      },
+      "additionalFields": "Ytterligare fält"
     }
   },
   "mcpServer": {

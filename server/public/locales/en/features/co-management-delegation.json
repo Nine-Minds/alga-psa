@@ -1,0 +1,43 @@
+{
+  "title": "Delegated administration",
+  "description": "Customer-approved assistance with selected settings and user records.",
+  "banner": "Customer workspace: {{customer}} · MSP: {{sponsor}}",
+  "loading": "Loading approved access…",
+  "refresh": "Refresh access",
+  "loadError": "Access could not be loaded. Refresh to check your current permissions.",
+  "noWorkspaces": "No customer workspaces currently have approved administration tasks for you.",
+  "noGrants": "No administration tasks are currently approved.",
+  "readOnly": "This workspace is read-only. Customer administrators can still revoke access.",
+  "approveTitle": "Approve a specific administration task",
+  "approvalHint": "Choose an assigned MSP technician or team, an operation, and one customer record. Approval does not grant general administration access.",
+  "approvalSummary": "Allow {{principal}} to perform “{{operation}}” for {{target}}.",
+  "principal": "Assigned MSP technician or team",
+  "target": "Customer record",
+  "operation": "Operation",
+  "search": "Search records",
+  "previous": "Previous",
+  "next": "Next",
+  "approve": "Approve task",
+  "retry": "Retry same request",
+  "revoke": "Revoke access",
+  "save": "Save changes",
+  "resend": "Resend approved invitation",
+  "saveError": "The request could not be confirmed. Retry the same request or refresh access before making another change.",
+  "unavailable": "Unavailable record",
+  "unavailableHint": "This approval no longer permits access to its record. You can revoke it.",
+  "invitationHint": "Resending keeps the customer’s existing recipient, role, setup link and expiry. It does not extend or replace the invitation.",
+  "invitationTerms": "Recipient: {{email}} · Role: {{role}} · Expires: {{expires}}",
+  "operations": {
+    "board_settings": "Edit board display settings",
+    "user_profile": "Edit a non-administrator profile",
+    "invitation_resend": "Resend a customer-created invitation"
+  },
+  "fields": {
+    "board_name": "Board name",
+    "description": "Description",
+    "enable_live_ticket_timer": "Enable live ticket timer",
+    "first_name": "First name",
+    "last_name": "Last name",
+    "timezone": "Time zone"
+  }
+}

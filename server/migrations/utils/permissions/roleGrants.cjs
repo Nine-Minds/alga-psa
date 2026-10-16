@@ -38,6 +38,14 @@ const DEFAULT_ROLES = {
     { key: 'client:Finance', roleName: 'Finance', msp: false, client: true },
     { key: 'client:User', roleName: 'User', msp: false, client: true },
   ],
+  co_managed: [
+    { key: 'msp:Admin', roleName: 'Admin', msp: true, client: false, allMsp: true },
+    { key: 'msp:Technician', roleName: 'Technician', msp: true, client: false },
+    { key: 'msp:Project Manager', roleName: 'Project Manager', msp: true, client: false },
+    { key: 'msp:Dispatcher', roleName: 'Dispatcher', msp: true, client: false },
+    { key: 'client:Admin', roleName: 'Admin', msp: false, client: true },
+    { key: 'client:User', roleName: 'User', msp: false, client: true },
+  ],
   algadesk: [
     { key: 'msp:Admin', roleName: 'Admin', msp: true, client: false, allMsp: true },
     { key: 'msp:Agent', roleName: 'Agent', msp: true, client: false },

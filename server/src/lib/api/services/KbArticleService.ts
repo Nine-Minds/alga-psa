@@ -4,6 +4,9 @@
  */
 
 import { randomUUID } from 'crypto';
+import type { Knex } from 'knex';
+import { formatBlockNoteContent } from '@alga-psa/formatting/blocknoteUtils';
+import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import {
   KbImportParseTimeoutError,
@@ -128,6 +131,7 @@ function convertApiMarkdown(content: string): BlockNoteBlock[] {
 export class KbArticleService extends BaseService<any> {
   constructor() {
     super({
+      mutationGuard: (trx, context) => assertCoManagedOperationalWrite(trx, context.tenant),
       tableName: 'kb_articles',
       primaryKey: 'article_id',
       tenantColumn: 'tenant',
@@ -137,8 +141,17 @@ export class KbArticleService extends BaseService<any> {
     });
   }
 
+  private async withArticleWrite<T>(
+    context: ServiceContext,
+    work: (trx: Knex.Transaction, context: ServiceContext) => Promise<T>,
+  ): Promise<T> {
+    const connection = await this.getDbForContext(context);
+    return withCoManagedOperationalTransaction(connection, context.tenant, trx =>
+      work(trx, { ...context, db: trx }));
+  }
+
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<any>> {
-    const { knex } = await this.getKnex();
+    const knex = await this.getDbForContext(context);
     const {
       page = 1,
       limit = 25,
@@ -210,7 +223,7 @@ export class KbArticleService extends BaseService<any> {
   }
 
   async getById(id: string, context: ServiceContext): Promise<any | null> {
-    const { knex } = await this.getKnex();
+    const knex = await this.getDbForContext(context);
 
     const db = tenantDb(knex, context.tenant);
     const articleQuery = db.table('kb_articles as ka')
@@ -230,79 +243,79 @@ export class KbArticleService extends BaseService<any> {
   }
 
   async create(data: CreateKbArticleData, context: ServiceContext): Promise<any> {
-    const { knex } = await this.getKnex();
-    const db = tenantDb(knex, context.tenant);
+    return this.withArticleWrite(context, async (knex, context) => {
+      const db = tenantDb(knex, context.tenant);
 
-    if (!data.title?.trim()) {
-      throw new ValidationError('Title is required');
-    }
-
-    let slug = data.slug?.trim() || generateSlug(data.title);
-    const articleType = data.article_type || 'how_to';
-    const audience = data.audience || 'internal';
-
-    // Ensure slug uniqueness
-    const existingSlug = await this.buildTenantScopedQuery(knex, context).where('slug', slug).first();
-    if (existingSlug) {
-      if (data.slug?.trim()) {
-        throw new ConflictError('An article with this slug already exists');
+      if (!data.title?.trim()) {
+        throw new ValidationError('Title is required');
       }
-      let suffix = 2;
-      while (true) {
-        const candidate = `${slug}-${suffix}`;
-        const collision = await this.buildTenantScopedQuery(knex, context).where('slug', candidate).first();
-        if (!collision) {
-          slug = candidate;
-          break;
+
+      let slug = data.slug?.trim() || generateSlug(data.title);
+      const articleType = data.article_type || 'how_to';
+      const audience = data.audience || 'internal';
+
+      // Ensure slug uniqueness
+      const existingSlug = await this.buildTenantScopedQuery(knex, context).where('slug', slug).first();
+      if (existingSlug) {
+        if (data.slug?.trim()) {
+          throw new ConflictError('An article with this slug already exists');
         }
-        suffix++;
-      }
-    }
-
-    // Create underlying document
-    const documentId = randomUUID();
-    const now = new Date();
-
-    await db.table('documents').insert({
-      tenant: context.tenant,
-      document_id: documentId,
-      document_name: data.title.trim(),
-      user_id: context.userId,
-      created_by: context.userId,
-      order_number: 0,
-      folder_path: '/Knowledge Base',
-      entered_at: now,
-      updated_at: now,
-    });
-
-    // Store block content if provided
-    if (data.content) {
-      let blocks: BlockNoteBlock[];
-      if (data.content_format === 'blocknote') {
-        blocks = parseApiBlockNoteContent(data.content);
-      } else {
-        blocks = convertApiMarkdown(data.content);
+        let suffix = 2;
+        while (true) {
+          const candidate = `${slug}-${suffix}`;
+          const collision = await this.buildTenantScopedQuery(knex, context).where('slug', candidate).first();
+          if (!collision) {
+            slug = candidate;
+            break;
+          }
+          suffix++;
+        }
       }
 
-      if (blocks.length > 0) {
-        await db.table('document_block_content').insert({
-          content_id: randomUUID(),
-          document_id: documentId,
-          tenant: context.tenant,
-          block_data: JSON.stringify(blocks),
-          created_at: now,
-          updated_at: now,
-        });
+      // Create underlying document
+      const documentId = randomUUID();
+      const now = new Date();
+
+      await db.table('documents').insert({
+        tenant: context.tenant,
+        document_id: documentId,
+        document_name: data.title.trim(),
+        user_id: context.userId,
+        created_by: context.userId,
+        order_number: 0,
+        folder_path: '/Knowledge Base',
+        is_client_visible: false,
+        entered_at: now,
+        updated_at: now,
+      });
+
+      // Store block content if provided
+      if (data.content) {
+        let blocks: BlockNoteBlock[];
+        if (data.content_format === 'blocknote') {
+          blocks = parseApiBlockNoteContent(data.content);
+        } else {
+          blocks = convertApiMarkdown(data.content);
+        }
+
+        if (blocks.length > 0) {
+          await db.table('document_block_content').insert({
+            content_id: randomUUID(),
+            document_id: documentId,
+            tenant: context.tenant,
+            block_data: JSON.stringify(blocks),
+            created_at: now,
+            updated_at: now,
+          });
+        }
       }
-    }
 
-    // Create KB article record
-    const articleId = randomUUID();
-    const nextReviewDue = data.review_cycle_days
-      ? new Date(Date.now() + data.review_cycle_days * 24 * 60 * 60 * 1000)
-      : null;
+      // Create KB article record
+      const articleId = randomUUID();
+      const nextReviewDue = data.review_cycle_days
+        ? new Date(Date.now() + data.review_cycle_days * 24 * 60 * 60 * 1000)
+        : null;
 
-    try {
       await db.table('kb_articles').insert({
         tenant: context.tenant,
         article_id: articleId,
@@ -317,159 +330,157 @@ export class KbArticleService extends BaseService<any> {
         created_by: context.userId,
         updated_by: context.userId,
       });
-    } catch (err) {
-      await db.table('documents')
-        .where('document_id', documentId)
-        .del()
-        .catch(() => {});
-      throw err;
-    }
 
-    return this.getById(articleId, context);
+      return this.getById(articleId, context);
+    });
   }
 
   async update(id: string, data: UpdateKbArticleData, context: ServiceContext): Promise<any> {
-    const { knex } = await this.getKnex();
-
-    const existing = await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .first();
-
-    if (!existing) {
-      throw new NotFoundError('Article not found');
-    }
-
-    const updates: Record<string, any> = {
-      updated_at: knex.fn.now(),
-      updated_by: context.userId,
-    };
-
-    if (data.title !== undefined) {
-      await tenantDb(knex, context.tenant).table('documents')
-        .where('document_id', existing.document_id)
-        .update({ document_name: data.title.trim(), updated_at: knex.fn.now() });
-    }
-
-    if (data.slug !== undefined) {
-      const newSlug = data.slug.trim();
-      const collision = await this.buildTenantScopedQuery(knex, context)
-        .where('slug', newSlug)
-        .whereNot('article_id', id)
+    return this.withArticleWrite(context, async (knex, context) => {
+      const existing = await this.buildTenantScopedQuery(knex, context)
+        .where('article_id', id)
         .first();
-      if (collision) {
-        throw new ConflictError('An article with this slug already exists');
+
+      if (!existing) {
+        throw new NotFoundError('Article not found');
       }
-      updates.slug = newSlug;
-    }
 
-    if (data.article_type !== undefined) updates.article_type = data.article_type;
-    if (data.audience !== undefined) updates.audience = data.audience;
-    if (data.category_id !== undefined) updates.category_id = data.category_id;
-    if (data.status !== undefined) updates.status = data.status;
+      const updates: Record<string, any> = {
+        updated_at: knex.fn.now(),
+        updated_by: context.userId,
+      };
 
-    if (data.review_cycle_days !== undefined) {
-      updates.review_cycle_days = data.review_cycle_days;
-      if (data.review_cycle_days) {
-        updates.next_review_due = new Date(Date.now() + data.review_cycle_days * 24 * 60 * 60 * 1000);
+      if (data.title !== undefined) {
+        await tenantDb(knex, context.tenant).table('documents')
+          .where('document_id', existing.document_id)
+          .update({ document_name: data.title.trim(), updated_at: knex.fn.now() });
       }
-    }
 
-    await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .update(updates);
+      if (data.slug !== undefined) {
+        const newSlug = data.slug.trim();
+        const collision = await this.buildTenantScopedQuery(knex, context)
+          .where('slug', newSlug)
+          .whereNot('article_id', id)
+          .first();
+        if (collision) {
+          throw new ConflictError('An article with this slug already exists');
+        }
+        updates.slug = newSlug;
+      }
 
-    return this.getById(id, context);
+      if (data.article_type !== undefined) updates.article_type = data.article_type;
+      if (data.audience !== undefined) updates.audience = data.audience;
+      if (data.category_id !== undefined) updates.category_id = data.category_id;
+      if (data.status !== undefined) updates.status = data.status;
+
+      if (data.review_cycle_days !== undefined) {
+        updates.review_cycle_days = data.review_cycle_days;
+        if (data.review_cycle_days) {
+          updates.next_review_due = new Date(Date.now() + data.review_cycle_days * 24 * 60 * 60 * 1000);
+        }
+      }
+
+      await this.buildTenantScopedQuery(knex, context)
+        .where('article_id', id)
+        .update(updates);
+
+      if (data.audience !== undefined || data.status !== undefined) {
+        const audience = data.audience ?? existing.audience;
+        const status = data.status ?? existing.status;
+        await tenantDb(knex, context.tenant).table('documents')
+          .where('document_id', existing.document_id)
+          .update({ is_client_visible: status === 'published' && (audience === 'client' || audience === 'public'), updated_at: knex.fn.now() });
+      }
+
+      return this.getById(id, context);
+    });
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
-    const { knex } = await this.getKnex();
+    return this.withArticleWrite(context, async (knex, context) => {
+      const article = await this.buildTenantScopedQuery(knex, context)
+        .where('article_id', id)
+        .first();
 
-    const article = await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .first();
+      if (!article) {
+        throw new NotFoundError('Article not found');
+      }
 
-    if (!article) {
-      throw new NotFoundError('Article not found');
-    }
+      // Delete article, then associated document
+      await this.buildTenantScopedQuery(knex, context)
+        .where('article_id', id)
+        .del();
 
-    // Delete article, then associated document
-    await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .del();
+      await tenantDb(knex, context.tenant).table('document_block_content')
+        .where('document_id', article.document_id)
+        .del();
 
-    await tenantDb(knex, context.tenant).table('document_block_content')
-      .where('document_id', article.document_id)
-      .del()
-      .catch(() => {});
-
-    await tenantDb(knex, context.tenant).table('documents')
-      .where('document_id', article.document_id)
-      .del()
-      .catch(() => {});
+      await tenantDb(knex, context.tenant).table('documents')
+        .where('document_id', article.document_id)
+        .del();
+    });
   }
 
   async publish(id: string, context: ServiceContext): Promise<any> {
-    const { knex } = await this.getKnex();
+    return this.withArticleWrite(context, async (knex, context) => {
+      const article = await this.buildTenantScopedQuery(knex, context)
+        .where('article_id', id)
+        .first();
 
-    const article = await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .first();
+      if (!article) {
+        throw new NotFoundError('Article not found');
+      }
 
-    if (!article) {
-      throw new NotFoundError('Article not found');
-    }
+      const now = knex.fn.now();
+      await this.buildTenantScopedQuery(knex, context)
+        .where('article_id', id)
+        .update({
+          status: 'published',
+          published_at: now,
+          published_by: context.userId,
+          updated_at: now,
+          updated_by: context.userId,
+        });
 
-    const now = knex.fn.now();
-    await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .update({
-        status: 'published',
-        published_at: now,
-        published_by: context.userId,
-        updated_at: now,
-        updated_by: context.userId,
-      });
-
-    // Auto-set client visibility for client/public audience
-    if (article.audience === 'client' || article.audience === 'public') {
+      // Publication cannot expose an internal article through document reads.
       await tenantDb(knex, context.tenant).table('documents')
         .where('document_id', article.document_id)
-        .update({ is_client_visible: true, updated_at: now });
-    }
+        .update({ is_client_visible: article.audience === 'client' || article.audience === 'public', updated_at: now });
 
-    return this.getById(id, context);
+      return this.getById(id, context);
+    });
   }
 
   async archive(id: string, context: ServiceContext): Promise<any> {
-    const { knex } = await this.getKnex();
+    return this.withArticleWrite(context, async (knex, context) => {
+      const article = await this.buildTenantScopedQuery(knex, context)
+        .where('article_id', id)
+        .first();
 
-    const article = await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .first();
+      if (!article) {
+        throw new NotFoundError('Article not found');
+      }
 
-    if (!article) {
-      throw new NotFoundError('Article not found');
-    }
+      const now = knex.fn.now();
+      await this.buildTenantScopedQuery(knex, context)
+        .where('article_id', id)
+        .update({
+          status: 'archived',
+          updated_at: now,
+          updated_by: context.userId,
+        });
 
-    const now = knex.fn.now();
-    await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .update({
-        status: 'archived',
-        updated_at: now,
-        updated_by: context.userId,
-      });
+      // Clear client visibility
+      await tenantDb(knex, context.tenant).table('documents')
+        .where('document_id', article.document_id)
+        .update({ is_client_visible: false, updated_at: now });
 
-    // Clear client visibility
-    await tenantDb(knex, context.tenant).table('documents')
-      .where('document_id', article.document_id)
-      .update({ is_client_visible: false, updated_at: now });
-
-    return this.getById(id, context);
+      return this.getById(id, context);
+    });
   }
 
   async getContent(id: string, context: ServiceContext): Promise<{ content: string; format: string } | null> {
-    const { knex } = await this.getKnex();
+    const knex = await this.getDbForContext(context);
 
     const db = tenantDb(knex, context.tenant);
     const articleQuery = db.table('kb_articles as ka')
@@ -499,53 +510,53 @@ export class KbArticleService extends BaseService<any> {
   }
 
   async updateContent(id: string, data: UpdateKbArticleContentData, context: ServiceContext): Promise<any> {
-    const { knex } = await this.getKnex();
+    return this.withArticleWrite(context, async (knex, context) => {
+      const article = await this.buildTenantScopedQuery(knex, context)
+        .where('article_id', id)
+        .first();
 
-    const article = await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .first();
+      if (!article) {
+        throw new NotFoundError('Article not found');
+      }
 
-    if (!article) {
-      throw new NotFoundError('Article not found');
-    }
+      let blocks: BlockNoteBlock[];
+      if (data.format === 'blocknote') {
+        blocks = parseApiBlockNoteContent(data.content);
+      } else {
+        blocks = convertApiMarkdown(data.content);
+      }
 
-    let blocks: BlockNoteBlock[];
-    if (data.format === 'blocknote') {
-      blocks = parseApiBlockNoteContent(data.content);
-    } else {
-      blocks = convertApiMarkdown(data.content);
-    }
-
-    const now = new Date();
-    const existing = await tenantDb(knex, context.tenant).table('document_block_content')
-      .where('document_id', article.document_id)
-      .first();
-
-    if (existing) {
-      await tenantDb(knex, context.tenant).table('document_block_content')
+      const now = new Date();
+      const existing = await tenantDb(knex, context.tenant).table('document_block_content')
         .where('document_id', article.document_id)
-        .update({ block_data: JSON.stringify(blocks), updated_at: now });
-    } else {
-      await tenantDb(knex, context.tenant).table('document_block_content').insert({
-        content_id: randomUUID(),
-        document_id: article.document_id,
-        tenant: context.tenant,
-        block_data: JSON.stringify(blocks),
-        created_at: now,
-        updated_at: now,
-      });
-    }
+        .first();
 
-    // Update article timestamp
-    await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .update({ updated_at: now, updated_by: context.userId });
+      if (existing) {
+        await tenantDb(knex, context.tenant).table('document_block_content')
+          .where('document_id', article.document_id)
+          .update({ block_data: JSON.stringify(blocks), updated_at: now });
+      } else {
+        await tenantDb(knex, context.tenant).table('document_block_content').insert({
+          content_id: randomUUID(),
+          document_id: article.document_id,
+          tenant: context.tenant,
+          block_data: JSON.stringify(blocks),
+          created_at: now,
+          updated_at: now,
+        });
+      }
 
-    return this.getById(id, context);
+      // Update article timestamp
+      await this.buildTenantScopedQuery(knex, context)
+        .where('article_id', id)
+        .update({ updated_at: now, updated_by: context.userId });
+
+      return this.getById(id, context);
+    });
   }
 
   async getCategories(context: ServiceContext): Promise<any[]> {
-    const { knex } = await this.getKnex();
+    const knex = await this.getDbForContext(context);
 
     return tenantDb(knex, context.tenant).table('standard_categories')
       .select('id', 'category_name', 'parent_category_uuid', 'display_order')
@@ -554,7 +565,7 @@ export class KbArticleService extends BaseService<any> {
   }
 
   async getTemplates(context: ServiceContext, articleType?: string): Promise<any[]> {
-    const { knex } = await this.getKnex();
+    const knex = await this.getDbForContext(context);
 
     let query = tenantDb(knex, context.tenant).table('kb_article_templates');
 
@@ -566,55 +577,55 @@ export class KbArticleService extends BaseService<any> {
   }
 
   async createFromTicket(ticketId: string, context: ServiceContext): Promise<any> {
-    const { knex } = await this.getKnex();
+    return this.withArticleWrite(context, async (knex, context) => {
+      const ticket = await tenantDb(knex, context.tenant).table('tickets')
+        .where('ticket_id', ticketId)
+        .first();
 
-    const ticket = await tenantDb(knex, context.tenant).table('tickets')
-      .where('ticket_id', ticketId)
-      .first();
+      if (!ticket) {
+        throw new NotFoundError('Ticket not found');
+      }
 
-    if (!ticket) {
-      throw new NotFoundError('Ticket not found');
-    }
+      const title = ticket.title || 'Untitled Article';
+      const description = formatBlockNoteContent(ticket.attributes?.description ?? '').text;
+      const resolution = ticket.resolution || '';
 
-    const title = ticket.title || 'Untitled Article';
-    const description = ticket.description || '';
-    const resolution = ticket.resolution || '';
+      // Build BlockNote content from ticket data
+      const blocks: BlockNoteBlock[] = [];
 
-    // Build BlockNote content from ticket data
-    const blocks: BlockNoteBlock[] = [];
-
-    blocks.push({
-      type: 'heading',
-      props: { level: 2 },
-      content: [{ type: 'text', text: 'Problem', styles: {} }],
-    });
-
-    if (description) {
       blocks.push({
-        type: 'paragraph',
-        content: [{ type: 'text', text: description, styles: {} }],
+        type: 'heading',
+        props: { level: 2 },
+        content: [{ type: 'text', text: 'Problem', styles: {} }],
       });
-    }
 
-    blocks.push({
-      type: 'heading',
-      props: { level: 2 },
-      content: [{ type: 'text', text: 'Resolution', styles: {} }],
-    });
+      if (description) {
+        blocks.push({
+          type: 'paragraph',
+          content: [{ type: 'text', text: description, styles: {} }],
+        });
+      }
 
-    if (resolution) {
       blocks.push({
-        type: 'paragraph',
-        content: [{ type: 'text', text: resolution, styles: {} }],
+        type: 'heading',
+        props: { level: 2 },
+        content: [{ type: 'text', text: 'Resolution', styles: {} }],
       });
-    }
 
-    return this.create({
-      title,
-      article_type: 'troubleshooting',
-      audience: 'internal',
-      content: JSON.stringify(blocks),
-      content_format: 'blocknote',
-    }, context);
+      if (resolution) {
+        blocks.push({
+          type: 'paragraph',
+          content: [{ type: 'text', text: resolution, styles: {} }],
+        });
+      }
+
+      return this.create({
+        title,
+        article_type: 'troubleshooting',
+        audience: 'internal',
+        content: JSON.stringify(blocks),
+        content_format: 'blocknote',
+      }, context);
+    });
   }
 }

@@ -1,18 +1,22 @@
 import { publishWorkflowEvent, type WorkflowEventPublishContext } from '@alga-psa/event-bus/publishers';
 import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 
+import type { CollaborationActorReference } from '@alga-psa/event-schemas/collaboration';
+import type { CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 type TicketMessageChannel = 'email' | 'portal' | 'ui' | 'api';
 type TicketMessageVisibility = 'public' | 'internal';
-type TicketMessageAuthorType = 'user' | 'contact';
+type TicketMessageAuthorType = 'user' | 'contact' | 'collaborator';
 
 export type TicketCommunicationAuthor =
   | { authorType: 'user'; authorId: string }
-  | { authorType: 'contact'; authorId: string; contactId: string };
+  | { authorType: 'contact'; authorId: string; contactId: string }
+  | { authorType: 'collaborator'; authorReference: CollaborationActorReference };
 
 export type TicketCommunicationMessageInput = {
   ticketId: string;
   messageId: string;
   visibility: TicketMessageVisibility;
+  audience?: CommentAudience;
   author: TicketCommunicationAuthor;
   channel: TicketMessageChannel;
   createdAt?: string | Date;
@@ -26,7 +30,9 @@ export type TicketCommunicationWorkflowEvent =
         ticketId: string;
         messageId: string;
         visibility: TicketMessageVisibility;
-        authorId: string;
+        authorId?: string;
+        authorReference?: CollaborationActorReference;
+        audience?: CommentAudience;
         authorType: TicketMessageAuthorType;
         channel: TicketMessageChannel;
         createdAt?: string;
@@ -49,6 +55,7 @@ export type TicketCommunicationWorkflowEvent =
       payload: {
         ticketId: string;
         noteId: string;
+        audience?: CommentAudience;
         createdAt?: string;
       } & BuiltWorkflowPayload<'TICKET_INTERNAL_NOTE_ADDED'>;
     };
@@ -65,7 +72,8 @@ export function buildTicketCommunicationWorkflowEvents(
       ticketId: input.ticketId,
       messageId: input.messageId,
       visibility: input.visibility,
-      authorId: input.author.authorId,
+      ...(input.author.authorType === 'collaborator' ? { authorReference: { ...input.author.authorReference } } : { authorId: input.author.authorId }),
+      ...(input.audience ? { audience: input.audience } : {}),
       authorType: input.author.authorType,
       channel: input.channel,
       createdAt,
@@ -79,6 +87,7 @@ export function buildTicketCommunicationWorkflowEvents(
       payload: builtWorkflowPayload('TICKET_INTERNAL_NOTE_ADDED', {
         ticketId: input.ticketId,
         noteId: input.messageId,
+        ...(input.audience ? { audience: input.audience } : {}),
         createdAt,
       }),
     });

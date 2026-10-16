@@ -12,6 +12,7 @@
  * they are shared by the action and the engine.
  */
 import axios, { AxiosError } from 'axios';
+import { assertTenantProductCapability } from '@shared/services/productAccessGuard';
 import type { Knex } from 'knex';
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -516,6 +517,7 @@ export async function runTacticalRmmDeviceSync(
   options: TacticalDeviceSyncOptions = {}
 ): Promise<TacticalDeviceSyncResult> {
   const { tenant, actorUserId } = args;
+  await assertTenantProductCapability(tenant, 'rmm');
   const syncType = options.syncType ?? 'full';
   const since = options.since;
 

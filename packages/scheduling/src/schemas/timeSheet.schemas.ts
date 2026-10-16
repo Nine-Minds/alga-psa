@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { iso8601Schema, plainDateSchema, tenantSchema } from '@alga-psa/validation';
 
 export const timeSheetStatusSchema = z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']);
-export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'non_billable_category', 'ad_hoc', 'interaction'] as const);
+export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'co_managed', 'non_billable_category', 'ad_hoc', 'interaction'] as const);
 
 // Core schemas
 export const timePeriodSchema = tenantSchema.extend({

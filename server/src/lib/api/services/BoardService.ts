@@ -4,12 +4,14 @@
  */
 
 import { IBoard } from '@alga-psa/types';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { BaseService, ServiceContext, ListResult, ListOptions } from '@alga-psa/db';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 export class BoardService extends BaseService<IBoard> {
   constructor() {
     super({
+      mutationGuard: (trx, context) => assertCoManagedOperationalWrite(trx, context.tenant),
       tableName: 'boards',
       primaryKey: 'board_id',
       tenantColumn: 'tenant',

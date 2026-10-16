@@ -8,7 +8,8 @@
  * they preserve the legacy V1 pointer handoff exactly.
  */
 
-import { getInboundDurableMode } from './inboundEmailDurableStore';
+import { getInboundDurableModeForTenant, getTenantInboundEmailPolicy } from './inboundEmailDurableStore';
+import type { UnifiedInboundEmailQueueJob } from '../../interfaces/inbound-email.interfaces';
 import { enqueueInboundEmailDurableJob } from './unifiedInboundEmailQueueV2';
 import { reviveTerminalIngress, upsertIngress } from './inboundEmailDurableStore';
 import { buildIngressKey } from './inboundEmailIdentity';
@@ -32,6 +33,25 @@ export interface PersistIngressResult {
   mode: 'off' | 'shadow' | 'enforce';
   ingressId: string | null;
   enqueued: boolean;
+}
+
+/** V1 deliveries from an older producer may still be in Redis. A sponsored
+ * workspace never executes their legacy effects: persist an idempotent V2
+ * ingress first. Redis enqueue failure is recoverable from that durable row;
+ * failure to persist must throw so the old delivery cannot be acknowledged. */
+export async function handoffRequiredDurableInboundJob(job: UnifiedInboundEmailQueueJob): Promise<boolean> {
+  if (!(await getTenantInboundEmailPolicy(job.tenantId)).requiresDurable) return false;
+  const pointer: InboundProviderPointer = job.provider === 'microsoft'
+    ? { providerType: 'microsoft', providerMessageId: job.pointer.messageId, extra: { ...job.pointer } }
+    : job.provider === 'google'
+      ? { providerType: 'google', historyId: job.pointer.historyId, pubsubMessageId: job.pointer.pubsubMessageId,
+          mailbox: job.pointer.emailAddress, extra: { ...job.pointer } }
+      : { providerType: 'imap', providerMessageId: job.pointer.messageId, mailbox: job.pointer.mailbox,
+          uidValidity: job.pointer.uidValidity, uid: job.pointer.uid, extra: { ...job.pointer } };
+  const result = await persistIngressPointer({ tenant: job.tenantId, providerId: job.providerId,
+    providerType: job.provider, pointer });
+  if (result.mode !== 'enforce' || !result.ingressId) throw new Error('The required durable inbound handoff did not persist');
+  return true;
 }
 
 /**
@@ -58,7 +78,7 @@ export async function persistIngressPointer(params: {
    */
   reviveTerminal?: boolean;
 }): Promise<PersistIngressResult> {
-  const mode = getInboundDurableMode();
+  const mode = await getInboundDurableModeForTenant(params.tenant);
   if (mode === 'off') {
     return { durable: false, mode, ingressId: null, enqueued: false };
   }
@@ -143,7 +163,7 @@ export async function stageReadyInboundSource(params: {
   pointer: InboundProviderPointer;
   rawMime: Buffer;
 }): Promise<StageReadySourceResult> {
-  const mode = getInboundDurableMode();
+  const mode = await getInboundDurableModeForTenant(params.tenant);
   if (mode === 'off') {
     return { durable: false, inboxId: null };
   }

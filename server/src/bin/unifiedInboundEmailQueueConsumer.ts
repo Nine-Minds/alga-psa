@@ -1,10 +1,12 @@
+import { retainCoManagedInboundCommentEvent } from '@alga-psa/co-managed/inboundConversationEvents';
+import { processCoManagedReplyArtifact } from '@alga-psa/co-managed/inboundEmailAttachments';
+import { admitCoManagedEmailReply } from '@alga-psa/co-managed/inboundEmailReply';
 import { UnifiedInboundEmailQueueConsumer } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueConsumer';
 import { UnifiedInboundEmailQueueConsumerV2 } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueConsumerV2';
 import {
   processUnifiedInboundEmailDurableJob,
   renewPostgresLeaseForV2Job,
 } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessorV2';
-import { getInboundDurableMode } from '@alga-psa/shared/services/email/inboundEmailDurableStore';
 import { assertInboundAuthPauseNotifierRegistered } from '@alga-psa/shared/services/email/inboundAuthPauseNotifier';
 import { processUnifiedInboundEmailQueueJob } from '../services/email/unifiedInboundEmailQueueJobProcessor';
 import { registerInboundAuthPauseNotifications } from '../services/email/inboundAuthPauseNotificationService';
@@ -33,25 +35,23 @@ async function main(): Promise<void> {
     },
   });
 
-  let durableConsumer: UnifiedInboundEmailQueueConsumerV2 | null = null;
-  if (getInboundDurableMode() !== 'off') {
-    durableConsumer = new UnifiedInboundEmailQueueConsumerV2({
-      pollDelayMs: 250,
-      renewPostgresLease: renewPostgresLeaseForV2Job,
-      handleJob: async (job, ctx) => processUnifiedInboundEmailDurableJob(job, ctx),
-    });
-  }
+  // Co-managed tenants require V2 regardless of the installation rollout mode.
+  const durableConsumer = new UnifiedInboundEmailQueueConsumerV2({
+    pollDelayMs: 250,
+    renewPostgresLease: renewPostgresLeaseForV2Job,
+    handleJob: async (job, ctx) => processUnifiedInboundEmailDurableJob(job, ctx, { qualifiedReplyAdmission: admitCoManagedEmailReply, qualifiedReplyArtifacts: processCoManagedReplyArtifact, retainConversationEvent: retainCoManagedInboundCommentEvent }),
+  });
 
   const shutdown = () => {
     consumer.stop();
-    durableConsumer?.stop();
+    durableConsumer.stop();
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 
   await Promise.all([
     consumer.start(),
-    durableConsumer ? durableConsumer.start() : Promise.resolve(),
+    durableConsumer.start(),
   ]);
 }
 

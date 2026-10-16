@@ -23,14 +23,7 @@ import AsyncSearchableSelect, { type SelectOption } from '@alga-psa/ui/component
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import type { ITicketMaterial, IServicePrice, IStockUnit } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import {
-  listTicketMaterials,
-  addTicketMaterial,
-  deleteTicketMaterial,
-  searchServiceCatalogForPicker,
-  getServicePrices,
-  listAvailableStockUnitsForMaterial,
-} from '../../actions/materialCatalogActions';
+import { useTicketDataSource } from './TicketDataSourceContext';
 import {
   getProductAvailability,
   type ProductAvailability,
@@ -70,6 +63,14 @@ export default function TicketMaterialsCard({
   initialMaterials,
 }: TicketMaterialsCardProps) {
   const { t } = useTranslation('features/tickets');
+  const {
+    listTicketMaterials,
+    addTicketMaterial,
+    deleteTicketMaterial,
+    searchServiceCatalogForPicker,
+    getServicePrices,
+    listAvailableStockUnitsForMaterial,
+  } = useTicketDataSource().materials;
   const { money, currencyCode } = useCurrencyFormat();
   const [materials, setMaterials] = useState<ITicketMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(!initialMaterials);

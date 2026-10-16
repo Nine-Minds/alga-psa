@@ -1,0 +1,189 @@
+# cd server && VITEST_SEED=2 npx vitest run src/test/unit/product/coManagedCallout.test.tsx  (hook reverted to HEAD fc34d51cce; tests as in this commit)
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "2"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ❯ |jsdom| src/test/unit/product/coManagedCallout.test.tsx (25 tests | 4 failed) 6874ms 117 MB heap used
+   ✓ T023 — callout strip > shows each signal as a deep link to Customer Tickets with the matching filter 259ms
+   ✓ T023 — callout strip > loads lazily after mount through the one action and never asks until the gate resolves  302ms
+   ✓ T023 — callout strip > renders nothing and makes no read when flag still loading  302ms
+   ✓ T023 — callout strip > renders nothing and makes no read when flag errored  303ms
+   ✓ T023 — callout strip > renders nothing and makes no read when tenant not Pro  303ms
+   ✓ T023 — callout strip > renders nothing and makes no read when non-PSA product  303ms
+   ✓ T023 — callout strip > renders nothing on an action error 255ms
+   ✓ T023 — callout strip > renders nothing on an empty answer 253ms
+   ✓ T023 — callout strip > renders nothing on zero counts 254ms
+   ✓ T023 — callout strip > renders nothing on no assigned relationship 255ms
+   ✓ T023 — callout strip > shows only the non-zero segment 260ms
+   ✓ T023 — dismissal is per viewer and per count > stays dismissed for the same viewer and counts, across a remount  513ms
+   ✓ T023 — dismissal is per viewer and per count > is remembered per viewer: another viewer on the same browser still sees it  518ms
+   ✓ T023 — dismissal is per viewer and per count > returns when a count changes, only for the segment that changed  518ms
+   ✓ T023 — dismissal is per viewer and per count > still dismisses for the page when browser storage is unavailable 290ms
+   × T023 — dismissal is per viewer and per count > keeps an in-memory dismissal across a remount for the life of the page when storage throws 8ms
+     → expected {} to deeply equal { escalatedUnassigned: 3, …(1) }
+   × T023 — dismissal is correct on the first render and per key > never renders a dismissed strip, not even for one commit, once the signals resolve 358ms
+     → expected [ <div …(4)>…(3)</div> ] to deeply equal []
+   × T023 — dismissal is correct on the first render and per key > reads the stored dismissal on the hook's very first render 2ms
+     → expected {} to deeply equal { escalatedUnassigned: 3, …(1) }
+   × T023 — dismissal is correct on the first render and per key > applies the new key's dismissal, never the previous key's, when the viewer changes on a mounted component 3ms
+     → expected { escalatedUnassigned: 3, …(1) } to deeply equal {}
+   ✓ T023 — dismissal is correct on the first render and per key > shows the strip for a second viewer after the mounted viewer switches 257ms
+   ✓ T024 — menu badge > shows the sum of the two signals 257ms
+   ✓ T024 — menu badge > shows no badge at zero, on error, or when the gate is closed 273ms
+   ✓ T024 — menu badge > shows no badge on items that do not name the source 256ms
+   ✓ T025 — client-scoped callout > asks for counts narrowed to the client and opens the co-managed section 260ms
+   ✓ T025 — client-scoped callout > renders nothing when the client has no signal or the read fails  305ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |jsdom| src/test/unit/product/coManagedCallout.test.tsx > T023 — dismissal is per viewer and per count > keeps an in-memory dismissal across a remount for the life of the page when storage throws
+AssertionError: expected {} to deeply equal { escalatedUnassigned: 3, …(1) }
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- {[39m
+[32m-   "awaitingReply": 4,[39m
+[32m-   "escalatedUnassigned": 3,[39m
+[32m- }[39m
+[31m+ {}[39m
+
+ ❯ src/test/unit/product/coManagedCallout.test.tsx:155:37
+    153|     unmount();
+    154|     const again = renderHook(() => useCalloutDismissal('viewer-memory'…
+    155|     expect(again.result.current[0]).toEqual({ escalatedUnassigned: 3, …
+       |                                     ^
+    156|   });
+    157| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |jsdom| src/test/unit/product/coManagedCallout.test.tsx > T023 — dismissal is correct on the first render and per key > never renders a dismissed strip, not even for one commit, once the signals resolve
+AssertionError: expected [ <div …(4)>…(3)</div> ] to deeply equal []
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [][39m
+[31m+ [[39m
+[31m+   <div[39m
+[31m+     class="mb-3 flex items-center gap-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-primary-50))] px-3 py-2 text-sm"[39m
+[31m+     data-testid="co-managed-callout"[39m
+[31m+     id="co-managed-callout-all"[39m
+[31m+     role="status"[39m
+[31m+   >[39m
+[31m+     <span[39m
+[31m+       class="font-medium"[39m
+[31m+     >[39m
+[31m+       Customer tickets need you[39m
+[31m+     </span>[39m
+[31m+     <div[39m
+[31m+       class="flex flex-1 flex-wrap items-center gap-2"[39m
+[31m+     >[39m
+[31m+       <a[39m
+[31m+         class="underline-offset-2 hover:underline"[39m
+[31m+         href="/msp/tickets/customer?queueView=working&workspace=all&signal=escalated_unassigned"[39m
+[31m+         id="co-managed-callout-escalated-all"[39m
+[31m+       >[39m
+[31m+         coManaged.callout.escalatedUnassigned:3[39m
+[31m+       </a>[39m
+[31m+       <a[39m
+[31m+         class="underline-offset-2 hover:underline"[39m
+[31m+         href="/msp/tickets/customer?queueView=working&workspace=all&signal=awaiting_reply"[39m
+[31m+         id="co-managed-callout-awaiting-all"[39m
+[31m+       >[39m
+[31m+         coManaged.callout.awaitingReply:4[39m
+[31m+       </a>[39m
+[31m+     </div>[39m
+[31m+     <button[39m
+[31m+       aria-label="Dismiss"[39m
+[31m+       class="rounded p-1 hover:bg-[rgb(var(--color-border-100))]"[39m
+[31m+       id="co-managed-callout-dismiss-all"[39m
+[31m+       type="button"[39m
+[31m+     >[39m
+[31m+       <svg[39m
+[31m+         aria-hidden="true"[39m
+[31m+         class="lucide lucide-x h-4 w-4"[39m
+[31m+         fill="none"[39m
+[31m+         height="24"[39m
+[31m+         stroke="currentColor"[39m
+[31m+         stroke-linecap="round"[39m
+[31m+         stroke-linejoin="round"[39m
+[31m+         stroke-width="2"[39m
+[31m+         viewBox="0 0 24 24"[39m
+[31m+         width="24"[39m
+[31m+         xmlns="http://www.w3.org/2000/svg"[39m
+[31m+       >[39m
+[31m+         <path[39m
+[31m+           d="M18 6 6 18"[39m
+[31m+         />[39m
+[31m+         <path[39m
+[31m+           d="m6 6 12 12"[39m
+[31m+         />[39m
+[31m+       </svg>[39m
+[31m+     </button>[39m
+[31m+   </div>,[39m
+[31m+ ][39m
+
+ ❯ src/test/unit/product/coManagedCallout.test.tsx:181:22
+    179|     observer.disconnect();
+    180|     expect(screen.queryByTestId('co-managed-callout')).toBeNull();
+    181|     expect(appeared).toEqual([]);
+       |                      ^
+    182|   });
+    183| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |jsdom| src/test/unit/product/coManagedCallout.test.tsx > T023 — dismissal is correct on the first render and per key > reads the stored dismissal on the hook's very first render
+AssertionError: expected {} to deeply equal { escalatedUnassigned: 3, …(1) }
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- {[39m
+[32m-   "awaitingReply": 4,[39m
+[32m-   "escalatedUnassigned": 3,[39m
+[32m- }[39m
+[31m+ {}[39m
+
+ ❯ src/test/unit/product/coManagedCallout.test.tsx:188:21
+    186|     const seen: unknown[] = [];
+    187|     renderHook(() => { const [dismissed] = useCalloutDismissal('viewer…
+    188|     expect(seen[0]).toEqual(COUNTS);
+       |                     ^
+    189|   });
+    190| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |jsdom| src/test/unit/product/coManagedCallout.test.tsx > T023 — dismissal is correct on the first render and per key > applies the new key's dismissal, never the previous key's, when the viewer changes on a mounted component
+AssertionError: expected { escalatedUnassigned: 3, …(1) } to deeply equal {}
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- {}[39m
+[31m+ {[39m
+[31m+   "awaitingReply": 4,[39m
+[31m+   "escalatedUnassigned": 3,[39m
+[31m+ }[39m
+
+ ❯ src/test/unit/product/coManagedCallout.test.tsx:204:27
+    202|     // viewer-2 has nothing stored: every render for it is empty; view…
+    203|     for (const entry of seen) {
+    204|       expect(entry.value).toEqual(entry.viewer === 'viewer-1' ? COUNTS…
+       |                           ^
+    205|     }
+    206|     expect(seen.some(entry => entry.viewer === 'viewer-2')).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 21 passed (25)
+   Start at  17:49:01
+   Duration  14.07s (transform 1.91s, setup 121ms, collect 3.37s, tests 6.87s, environment 164ms, prepare 33ms)
+

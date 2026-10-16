@@ -199,6 +199,14 @@ vi.mock('@alga-psa/auth/client', () => ({
   AppSessionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// AppSessionProvider is stubbed above, so nothing supplies next-auth's session
+// context to the hooks the page tree reaches (useFeatureFlag reads useSession
+// for the flag's distinct id). The layout renders the real provider in the app.
+vi.mock('next-auth/react', () => ({
+  SessionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useSession: () => ({ data: null, status: 'unauthenticated', update: vi.fn() }),
+}));
+
 vi.mock('@/components/layout/DefaultLayout', () => ({
   default: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="default-layout">{children}</div>
@@ -230,6 +238,12 @@ vi.mock('@alga-psa/ui/ui-reflection/ClientUIStateProvider', () => ({
 
 vi.mock('@product/chat/context', () => ({
   AIChatContextProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+// The callout/badge provider reads the release flag (needs a real session); this test is not about it.
+vi.mock('@/components/co-managed/CoManagedWorkSignalsProvider', () => ({
+  CoManagedWorkSignalsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useCoManagedWorkSignals: () => ({ available: false, viewerId: null, escalatedUnassigned: 0, awaitingReply: 0, total: 0 }),
 }));
 
 vi.mock('@/context/TierContext', () => ({
@@ -283,7 +297,8 @@ vi.mock('@alga-psa/tickets/actions/ticketDisplaySettings', () => ({
   getTicketingDisplaySettings: (...args: unknown[]) => getTicketingDisplaySettingsMock(...args),
 }));
 
-vi.mock('@alga-psa/tickets/lib', () => ({
+vi.mock('@alga-psa/tickets/lib', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   isTicketStatusOpenFilter: (value: unknown) => value === 'open',
   TICKET_STATUS_FILTER_OPEN: 'open',
 }));

@@ -82,12 +82,14 @@ export const createTaskComment = withAuth(async (
   }
 ): Promise<string | ProjectTaskCommentActionError> => {
   try {
-    const { knex: db } = await createTenantKnex();
-    return await createTaskCommentWithDb(db, tenant, user, {
+    // Snapshot the command before the first await: the caller's object may change while we wait.
+    const command = {
       taskId: comment.taskId,
       note: comment.note,
       parentCommentId: comment.parentCommentId || comment.parent_comment_id || null,
-    });
+    };
+    const { knex: db } = await createTenantKnex();
+    return await createTaskCommentWithDb(db, tenant, user, command);
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -99,13 +101,13 @@ export const createTaskComment = withAuth(async (
  * Get all comments for a task
  */
 export const getTaskComments = withAuth(async (
-  _user,
+  user,
   { tenant },
   taskId: string
 ): Promise<IProjectTaskCommentWithUser[] | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await listTaskCommentsWithDb(db, tenant, taskId);
+    return await listTaskCommentsWithDb(db, tenant, user, taskId);
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -120,11 +122,12 @@ export const updateTaskComment = withAuth(async (
   user,
   { tenant },
   taskCommentId: string,
-  updates: Partial<Pick<IProjectTaskComment, 'note'>>
+  updates: Partial<Pick<IProjectTaskComment, 'note'>>,
+  expectedRevision?: number
 ): Promise<void | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await updateTaskCommentWithDb(db, tenant, user, taskCommentId, updates);
+    return await updateTaskCommentWithDb(db, tenant, user, taskCommentId, updates, expectedRevision);
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -138,11 +141,12 @@ export const updateTaskComment = withAuth(async (
 export const deleteTaskComment = withAuth(async (
   user,
   { tenant },
-  taskCommentId: string
+  taskCommentId: string,
+  expectedRevision?: number
 ): Promise<void | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await deleteTaskCommentWithDb(db, tenant, user, taskCommentId);
+    return await deleteTaskCommentWithDb(db, tenant, user, taskCommentId, expectedRevision);
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -164,7 +168,7 @@ export const getTaskCommentCount = withAuth(async (
     }
 
     const { knex: db } = await createTenantKnex();
-    return await countTaskCommentsWithDb(db, tenant, taskId);
+    return await countTaskCommentsWithDb(db, tenant, user, taskId);
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -181,6 +185,8 @@ export const getTaskCommentCountsBatch = withAuth(async (
   taskIds: string[]
 ): Promise<Record<string, number> | ProjectTaskCommentActionError> => {
   try {
+    // Snapshot before the first await: the caller's array may change while we wait.
+    taskIds = [...taskIds];
     if (taskIds.length === 0) return {};
 
     if (!await hasPermission(user, 'project_task', 'read')) {
@@ -188,7 +194,7 @@ export const getTaskCommentCountsBatch = withAuth(async (
     }
 
     const { knex: db } = await createTenantKnex();
-    return await countTaskCommentsBatchWithDb(db, tenant, taskIds);
+    return await countTaskCommentsBatchWithDb(db, tenant, user, taskIds);
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;

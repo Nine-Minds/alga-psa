@@ -4,7 +4,7 @@
  */
 
 import { Knex } from 'knex';
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, TimePeriodCalendarError } from '@alga-psa/db';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import { 
   CreateTimeSheetData,
@@ -29,8 +29,10 @@ import { publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildScheduleEntryCreatedPayload, buildScheduleEntryDeletedPayload, buildScheduleEntryUpdatedPayload } from '@alga-psa/workflow-streams';
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
+import { publishNativeEvent } from '@alga-psa/scheduling/lib/nativeEventPublication';
 import { ensureTimePeriodCoversDate } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
 import { Temporal } from '@js-temporal/polyfill';
+import { assertCanActOnBehalf } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 import { hasPermission } from '../../auth/rbac';
 import {
   buildVisibilityFilter,
@@ -39,6 +41,9 @@ import {
   type CalendarAccess,
 } from '@alga-psa/scheduling/lib/calendarAccess';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../middleware/apiMiddleware';
+import { NativeScheduleRelationError, commandCoManagedNativeSchedule, NativeScheduleError, readCoManagedNativeSchedules, NativeTimePeriodSettingsError, readCoManagedNativeTimePeriodSettings, commandCoManagedNativeTimePeriodSettings, readCoManagedNativeTimePeriods, commandCoManagedNativeTimePeriods, NativeTimeSheetError, createCoManagedNativeTimeSheet, editCoManagedNativeTimeSheet, CoManagedSharedWorkError, NativeTimeReviewError, readCoManagedNativeTimeSheet, listCoManagedNativeTimeSheets, commandCoManagedNativeTimeSheets, deleteCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
+import { CoManagedLifecycleError } from '@alga-psa/licensing';
+import { exportTimeSheetProjections, timeSheetStatistics, timeSheetDto, timeSheetCommentDto, filterTimeSheets, sortTimeSheets } from './timeSheetCollection';
 
 /**
  * Normalize a DATE column value to YYYY-MM-DD.
@@ -123,8 +128,80 @@ export class TimeSheetService extends BaseService<any> {
     });
   }
 
+  private sheetActor(context: ServiceContext) {
+    if (!context.apiKeyId || context.user?.user_id !== context.userId || context.user?.tenant !== context.tenant || context.user?.user_type !== 'internal') throw new CoManagedSharedWorkError();
+    return { kind: 'api_key' as const, tenant: context.tenant, userId: context.userId, apiKeyId: context.apiKeyId };
+  }
+
+  private async withSheetErrors<T>(work: () => Promise<T>, resource = 'time sheet'): Promise<T> {
+    try { return await work(); } catch (error) {
+      if (error instanceof CoManagedSharedWorkError) throw new ForbiddenError(`Permission denied: Cannot access this ${resource}`);
+      if (error instanceof CoManagedLifecycleError) throw Object.assign(new ForbiddenError(error.message), { code: error.code });
+      if (error instanceof NativeScheduleRelationError) throw new ConflictError(error.message);
+      if (error instanceof NativeScheduleError) {
+        if (error.code === 'SCHEDULE_INVALID') throw new BadRequestError(error.message);
+        if (error.code === 'SCHEDULE_NOT_FOUND') throw new NotFoundError(error.message);
+        throw new ConflictError(error.message);
+      }
+      if (error instanceof NativeTimePeriodSettingsError) {
+        if (error.code === 'SETTINGS_INVALID') throw new BadRequestError(error.message);
+        if (error.code === 'SETTINGS_NOT_FOUND') throw new NotFoundError(error.message);
+        throw new ConflictError(error.message);
+      }
+      if (error instanceof TimePeriodCalendarError) {
+        if (error.code === 'PERIOD_INVALID_DATES') throw new BadRequestError(error.message);
+        if (error.code === 'PERIOD_NOT_FOUND') throw new NotFoundError(error.message);
+        throw new ConflictError(error.message);
+      }
+      if (error instanceof NativeTimeSheetError) {
+        if (error.code === 'SHEET_INVALID_INPUT') throw new BadRequestError(error.message);
+        throw new ConflictError(error.message);
+      }
+      if (error instanceof Error && error.message === 'Time period not found') throw new NotFoundError(error.message);
+      if (error instanceof NativeTimeReviewError) {
+        if (error.code === 'TIME_REVIEW_NOT_FOUND') throw new NotFoundError(error.message);
+        throw new ConflictError(error.message);
+      }
+      if (error instanceof Error && error.message === 'Time sheet not found') throw new NotFoundError(error.message);
+      if (error instanceof Error && ['Only draft time sheets can be removed', 'Time sheet still has time entries'].includes(error.message)) throw new ConflictError(error.message);
+      if (error instanceof Error && error.message === 'Comment cannot be empty') throw new BadRequestError(error.message);
+      throw error;
+    }
+  }
+
+  private currentSheet(knex: Knex, id: string, context: ServiceContext) {
+    return this.withSheetErrors(async () => {
+      const current = await readCoManagedNativeTimeSheet(knex, context.tenant, id, async () => this.sheetActor(context), { view: true, comments: true, employee: true, summary: true });
+      return current.handled ? { handled: true as const, sheet: timeSheetDto({ ...current.sheet, time_entries: current.entries, comments: current.comments }) } : current;
+    });
+  }
+
+  private currentSheets(knex: Knex, context: ServiceContext) {
+    return this.withSheetErrors(() => listCoManagedNativeTimeSheets(knex, context.tenant, async () => this.sheetActor(context), { details: true }));
+  }
+
+  private currentSheetCommand(knex: Knex, id: string, command: 'submit' | 'approve' | 'request_changes' | 'reverse', context: ServiceContext, note?: string) {
+    // Keep command, private feedback and response admission in one transaction.
+    // A failure to disclose the result must also roll back the mutation/events.
+    return this.withSheetErrors(() => withTransaction(knex, async trx => {
+      const current = await commandCoManagedNativeTimeSheets(trx, context.tenant, { sheetIds: [id], command, reason: note }, async () => this.sheetActor(context), publishNativeEvent);
+      if (!current.handled) return current;
+      if (note?.trim() && command !== 'reverse') await addCoManagedNativeTimeSheetComment(trx, context.tenant,
+        { sheetId: id, userId: context.userId, comment: note }, async () => this.sheetActor(context));
+      const result = await this.currentSheet(trx, id, context);
+      if (!result.handled) throw new CoManagedSharedWorkError();
+      return result;
+    }));
+  }
+
   async list(options: ListOptions, context: ServiceContext, filters?: TimeSheetFilterData): Promise<ListResult<any>> {
       const { knex } = await this.getKnex();
+      const current = await this.currentSheets(knex, context);
+      if (current.handled) {
+        const rows = sortTimeSheets(filterTimeSheets(current.sheets.map(timeSheetDto), { ...options.filters, ...filters }), options.sort, options.order);
+        const limit = options.limit ?? 25, offset = ((options.page ?? 1) - 1) * limit;
+        return { data: rows.slice(offset, offset + limit), total: rows.length };
+      }
       const db = tenantDb(knex, context.tenant);
       
       let query = this.buildTenantScopedQuery(knex, context);
@@ -247,6 +324,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async getById(id: string, context: ServiceContext): Promise<any | null> {
       const { knex } = await this.getKnex();
+      const current = await this.currentSheet(knex, id, context);
+      if (current.handled) return current.sheet;
       const db = tenantDb(knex, context.tenant);
       const query = this.buildTenantScopedQuery(knex, context);
 
@@ -270,6 +349,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async getWithDetails(id: string, context: ServiceContext): Promise<any | null> {
+    const { knex } = await this.getKnex();
+    const current = await this.currentSheet(knex, id, context);
+    if (current.handled) return current.sheet;
     const timeSheet = await this.getById(id, context);
     if (!timeSheet) return null;
 
@@ -295,15 +377,39 @@ export class TimeSheetService extends BaseService<any> {
 
   async create(data: CreateTimeSheetData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
-      
+      const current = await this.withSheetErrors(() => withTransaction(knex, async trx => {
+        const result = await createCoManagedNativeTimeSheet(trx, context.tenant, { userId: data.user_id ?? context.userId, periodId: data.period_id, notes: data.notes }, async () => this.sheetActor(context));
+        if (!result.handled) return result;
+        const response = await this.currentSheet(trx, result.sheet.id, context);
+        if (!response.handled) throw new CoManagedSharedWorkError();
+        return response;
+      }));
+      if (current.handled) return current.sheet;
+
+      // Declining the co-managed path hands this request to the native one, so
+      // the native one has to carry the same delegation authority the
+      // co-managed path would have applied (admitCoManagedNativeTimeOwner:
+      // approve plus read_all-or-manager). update() and delete() below already
+      // refuse another user's sheet; creation did not, and without this a
+      // sponsor workspace falling through would gain a sheet it could not
+      // create a moment earlier.
+      const subjectUserId = data.user_id || context.userId;
+      if (subjectUserId !== context.userId) {
+        if (!context.user) throw new ForbiddenError('Permission denied: Cannot create a time sheet for another user');
+        try { await assertCanActOnBehalf(context.user, context.tenant, subjectUserId, knex); }
+        catch (error) { throw new ForbiddenError(error instanceof Error ? error.message : 'Permission denied: Cannot create a time sheet for another user'); }
+      }
+
       const created = await withTransaction(knex, async (trx) => {
+        // time_sheets carries no created_at/updated_at columns; writing them
+        // made every native creation fail on an undefined column. That only
+        // became reachable for a sponsor workspace once this path started
+        // owning its empty sheets.
         const timeSheetData = {
           ...data,
-          user_id: data.user_id || context.userId,
+          user_id: subjectUserId,
           approval_status: 'DRAFT',
-          tenant: context.tenant,
-          created_at: new Date(),
-          updated_at: new Date()
+          tenant: context.tenant
         };
 
         const [timeSheet] = await tenantDb(trx, context.tenant).table(this.tableName)
@@ -333,6 +439,13 @@ export class TimeSheetService extends BaseService<any> {
 
   async update(id: string, data: UpdateTimeSheetData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => withTransaction(knex, async trx => {
+        if (!await editCoManagedNativeTimeSheet(trx, context.tenant, id, data, async () => this.sheetActor(context), publishNativeEvent)) return { handled: false as const };
+        const response = await this.currentSheet(trx, id, context);
+        if (!response.handled) throw new CoManagedSharedWorkError();
+        return response;
+      }));
+      if (current.handled) return current.sheet;
       
       await withTransaction(knex, async (trx) => {
         const existing = await this.getById(id, context);
@@ -350,10 +463,7 @@ export class TimeSheetService extends BaseService<any> {
           throw new ConflictError('Cannot modify approved time sheets');
         }
   
-        const updateData = {
-          ...data,
-          updated_at: new Date()
-        };
+        const updateData = { ...data };
   
         await this.buildTenantScopedQuery(trx, context)
           .where({ [this.primaryKey]: id })
@@ -381,6 +491,7 @@ export class TimeSheetService extends BaseService<any> {
 
   async delete(id: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();
+      if (await this.withSheetErrors(() => deleteCoManagedNativeTimeSheet(knex, context.tenant, id, async () => this.sheetActor(context)))) return;
       
       await withTransaction(knex, async (trx) => {
         const existing = await this.getById(id, context);
@@ -419,6 +530,8 @@ export class TimeSheetService extends BaseService<any> {
   // Time sheet workflow operations
   async submitTimeSheet(id: string, data: SubmitTimeSheetData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.currentSheetCommand(knex, id, 'submit', context, data.submission_notes);
+      if (current.handled) return current.sheet;
       
       await withTransaction(knex, async (trx) => {
         const timeSheet = await this.getById(id, context);
@@ -472,6 +585,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async approveTimeSheet(id: string, data: ApproveTimeSheetData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.currentSheetCommand(knex, id, 'approve', context, data.approval_notes);
+      if (current.handled) return current.sheet;
       
       await withTransaction(knex, async (trx) => {
         const timeSheet = await this.getById(id, context);
@@ -530,6 +645,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async requestChanges(id: string, data: RequestChangesTimeSheetData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.currentSheetCommand(knex, id, 'request_changes', context, [data.change_reason, data.detailed_feedback].filter(Boolean).join('\n\n'));
+      if (current.handled) return current.sheet;
       
       await withTransaction(knex, async (trx) => {
         const timeSheet = await this.getById(id, context);
@@ -600,6 +717,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async reverseApproval(id: string, data: ReverseApprovalData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.currentSheetCommand(knex, id, 'reverse', context, data.reversal_reason);
+      if (current.handled) return current.sheet;
       
       await withTransaction(knex, async (trx) => {
         const timeSheet = await this.getById(id, context);
@@ -673,6 +792,9 @@ export class TimeSheetService extends BaseService<any> {
   // Time sheet comments
   async addComment(id: string, data: CreateTimeSheetCommentData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => addCoManagedNativeTimeSheetComment(knex, context.tenant,
+        { sheetId: id, userId: context.userId, comment: data.comment_text }, async () => this.sheetActor(context)));
+      if (current.handled) return timeSheetCommentDto(current.comment);
       
       return withTransaction(knex, async (trx) => {
         const commentData = {
@@ -698,6 +820,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async getTimeSheetComments(timeSheetId: string, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const current = await this.currentSheet(knex, timeSheetId, context);
+      if (current.handled) return current.sheet.comments;
       const db = tenantDb(knex, context.tenant);
       const query = db.table('time_sheet_comments');
       
@@ -726,6 +850,9 @@ export class TimeSheetService extends BaseService<any> {
   // Time periods management
   async getTimePeriods(context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => readCoManagedNativeTimePeriods(knex, context.tenant, async () => this.sheetActor(context)));
+      if (current.handled) return current.periods;
+
       const today = todayUtc();
 
       const rows = await tenantDb(knex, context.tenant).table('time_periods')
@@ -736,6 +863,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async getCurrentTimePeriod(context: ServiceContext, date?: string): Promise<any | null> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => readCoManagedNativeTimePeriods(knex, context.tenant, async () => this.sheetActor(context), { date: date ?? new Date().toISOString().slice(0, 10) }));
+      if (current.handled) return current.periods[0] ?? null;
 
       const today = todayUtc();
       const targetDate = date ?? today;
@@ -752,6 +881,11 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async getTimePeriod(id: string, context: ServiceContext, db?: Knex | Knex.Transaction): Promise<any | null> {
+      if (!db) {
+        const { knex } = await this.getKnex();
+        const current = await this.withSheetErrors(() => readCoManagedNativeTimePeriods(knex, context.tenant, async () => this.sheetActor(context), { id }));
+        if (current.handled) return current.periods[0] ?? null;
+      }
       const conn = db ?? (await this.getKnex()).knex;
 
       const period = await tenantDb(conn, context.tenant).table('time_periods')
@@ -764,6 +898,9 @@ export class TimeSheetService extends BaseService<any> {
 
   async createTimePeriod(data: CreateTimePeriodData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeTimePeriods(knex, context.tenant, { action: 'create', periods: [data] }, async () => this.sheetActor(context)));
+      if (current.handled) return current.periods[0];
+
 
       return withTransaction(knex, async (trx) => {
         // Dates are already normalized to YYYY-MM-DD by the schema; is_current is ignored (derived on read).
@@ -787,6 +924,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async updateTimePeriod(id: string, data: UpdateTimePeriodData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeTimePeriods(knex, context.tenant, { action: 'update', id, dates: data }, async () => this.sheetActor(context)));
+      if (current.handled) return current.periods[0];
 
       return withTransaction(knex, async (trx) => {
         const existingPeriod = await TimePeriod.findById(trx, context.tenant, id);
@@ -832,6 +971,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async deleteTimePeriod(id: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeTimePeriods(knex, context.tenant, { action: 'delete', id }, async () => this.sheetActor(context)));
+      if (current.handled) return;
       
       return withTransaction(knex, async (trx) => {
         const period = await TimePeriod.findById(trx, context.tenant, id);
@@ -890,6 +1031,8 @@ export class TimeSheetService extends BaseService<any> {
   // Time period settings
   async getTimePeriodSettings(context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => readCoManagedNativeTimePeriodSettings(knex, context.tenant, async () => this.sheetActor(context)));
+      if (current.handled) return current.settings.map(row => ({ ...row, settings_id: row.time_period_settings_id }));
       
       return tenantDb(knex, context.tenant).table('time_period_settings')
         .orderBy('effective_from', 'desc');
@@ -898,6 +1041,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async createTimePeriodSettings(data: CreateTimePeriodSettingsData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeTimePeriodSettings(knex, context.tenant, { action: 'create', settings: data }, async () => this.sheetActor(context)));
+      if (current.handled) return { ...current.settings, settings_id: current.settings.time_period_settings_id };
 
       try {
         return await withTransaction(knex, async (trx) => {
@@ -929,6 +1074,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async updateTimePeriodSettings(id: string, data: UpdateTimePeriodSettingsData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeTimePeriodSettings(knex, context.tenant, { action: 'update', id, settings: data }, async () => this.sheetActor(context)));
+      if (current.handled) return { ...current.settings, settings_id: current.settings.time_period_settings_id };
 
       try {
         return await withTransaction(knex, async (trx) => {
@@ -978,9 +1125,15 @@ export class TimeSheetService extends BaseService<any> {
 
 
 
+  private currentSchedules(knex: Knex, context: ServiceContext, options: { id?: string; start?: string; end?: string; userId?: string } = {}) {
+    return this.withSheetErrors(() => readCoManagedNativeSchedules(knex, context.tenant, async () => this.sheetActor(context), options), 'schedule');
+  }
+
   // Schedule entries
   async getScheduleEntries(context: ServiceContext, filters?: any): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const current = await this.currentSchedules(knex, context, { start: filters?.start_date, end: filters?.end_date, userId: filters?.user_id });
+      if (current.handled) return current.entries;
       const db = tenantDb(knex, context.tenant);
       
       let query = db.table('schedule_entries');
@@ -1076,12 +1229,14 @@ export class TimeSheetService extends BaseService<any> {
 
   async createScheduleEntry(data: CreateScheduleEntryData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeSchedule(knex, context.tenant, { action: 'create', data }, async () => this.sheetActor(context), publishNativeEvent), 'schedule');
+      if (current.handled) return current.entry;
       const ScheduleEntry = (await import('@alga-psa/shared/models/scheduleEntry')).default;
 
       const entry = await withTransaction(knex, async (trx) => {
         // Map work_item_type to valid WorkItemType or default
         let workItemType: 'ticket' | 'project_task' | 'non_billable_category' | 'ad_hoc' | 'interaction';
-        if (data.work_item_type === 'ticket' || data.work_item_type === 'project_task') {
+        if (data.work_item_type === 'ticket' || data.work_item_type === 'project_task' || data.work_item_type === 'interaction' || data.work_item_type === 'non_billable_category') {
           workItemType = data.work_item_type;
         } else {
           // Map other types to non_billable_category or ad_hoc
@@ -1095,10 +1250,13 @@ export class TimeSheetService extends BaseService<any> {
           scheduled_end: new Date(data.scheduled_end),
           work_item_id: data.work_item_id ?? null,
           work_item_type: workItemType,
-          notes: data.notes,
+          notes: data.notes ?? undefined,
           is_private: data.is_private,
+          // baseScheduleEntrySchema accepts is_all_day, so dropping it here would take the
+          // field from the caller and silently create a timed entry. ScheduleEntry.create
+          // validates the UTC-midnight boundaries.
           is_all_day: data.is_all_day ?? false,
-          recurrence_pattern: data.recurrence_pattern ? JSON.parse(data.recurrence_pattern) : null,
+          recurrence_pattern: typeof data.recurrence_pattern === 'string' ? JSON.parse(data.recurrence_pattern) : data.recurrence_pattern ?? null,
           assigned_user_ids: data.assigned_user_ids || [],
           status: 'scheduled'
         }, {
@@ -1122,6 +1280,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async updateScheduleEntry(id: string, data: UpdateScheduleEntryData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeSchedule(knex, context.tenant, { action: 'update', id, data }, async () => this.sheetActor(context), publishNativeEvent), 'schedule');
+      if (current.handled) return current.entry;
       
       const result = await withTransaction(knex, async (trx) => {
         const existing = await tenantDb(trx, context.tenant).table('schedule_entries')
@@ -1210,6 +1370,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async deleteScheduleEntry(id: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeSchedule(knex, context.tenant, { action: 'delete', id }, async () => this.sheetActor(context), publishNativeEvent), 'schedule');
+      if (current.handled) return;
       
       const existing = await withTransaction(knex, async (trx) => {
         const existing = await tenantDb(trx, context.tenant).table('schedule_entries')
@@ -1251,6 +1413,16 @@ export class TimeSheetService extends BaseService<any> {
   // Search and statistics
   async search(searchData: TimeSheetSearchData, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const current = await this.currentSheets(knex, context);
+      if (current.handled) {
+        const rows = filterTimeSheets(current.sheets.map(timeSheetDto), { period_start_from: searchData.date_from, period_end_to: searchData.date_to });
+        const query = searchData.query.toLocaleLowerCase(), fields = searchData.fields?.length ? searchData.fields : ['notes'];
+        return rows.filter(sheet => (!query || fields.some(field => typeof sheet[field] === 'string' && sheet[field].toLocaleLowerCase().includes(query))) &&
+          (!searchData.approval_statuses?.length || searchData.approval_statuses.includes(sheet.approval_status)) &&
+          (!searchData.user_ids?.length || searchData.user_ids.includes(sheet.user_id)) &&
+          (!searchData.period_ids?.length || searchData.period_ids.includes(sheet.period_id)))
+          .slice(0, searchData.limit ?? 25).map(sheet => { const { time_entries, ...fields } = sheet; return searchData.include_entries ? sheet : fields; });
+      }
       const db = tenantDb(knex, context.tenant);
       const tableName = this.tableName; // Capture tableName to use in callbacks
       
@@ -1317,7 +1489,22 @@ export class TimeSheetService extends BaseService<any> {
 
 
 
+  async exportCurrentTimeSheets(options: TimeSheetExportQuery, context: ServiceContext) {
+    const { knex } = await this.getKnex();
+    const current = await this.currentSheets(knex, context);
+    if (!current.handled) return current;
+    const rows = filterTimeSheets(current.sheets.map(timeSheetDto), { period_start_from: options.date_from, period_end_to: options.date_to })
+      .filter(sheet => (!options.user_ids?.length || options.user_ids.includes(sheet.user_id)) &&
+        (!options.period_ids?.length || options.period_ids.includes(sheet.period_id)) &&
+        (!options.approval_statuses?.length || options.approval_statuses.includes(sheet.approval_status)));
+    try { return { handled: true as const, data: await exportTimeSheetProjections(rows, options) }; }
+    catch (error) { if (error instanceof Error && error.message === 'Unknown timesheet export field') throw new BadRequestError(error.message); throw error; }
+  }
+
   async getStatistics(context: ServiceContext, filters?: TimeSheetFilterData): Promise<any> {
+    const { knex } = await this.getKnex();
+    const current = await this.currentSheets(knex, context);
+    if (current.handled) return timeSheetStatistics(filterTimeSheets(current.sheets.map(timeSheetDto), filters));
     // Implementation would return comprehensive time sheet statistics
     // Similar to other statistics methods in the pattern
     return {
@@ -1424,6 +1611,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async getScheduleEntry(id: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.currentSchedules(knex, context, { id });
+      if (current.handled) return current.entries[0] ?? null;
       
       const entry = await tenantDb(knex, context.tenant).table('schedule_entries')
         .where({ entry_id: id })

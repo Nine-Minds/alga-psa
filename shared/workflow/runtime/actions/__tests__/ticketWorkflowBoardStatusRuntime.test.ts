@@ -85,6 +85,8 @@ import { TicketModel } from '../../../../models/ticketModel';
 import { registerTicketActions } from '../businessOperations/tickets';
 
 class FakeQueryBuilder {
+  forUpdate(): this { return this; }
+  forShare(): this { return this; }
   private conditions: Record<string, any> = {};
   private comparisons: Array<{ column: string; operator: string; value: any }> = [];
   private inclusions: Array<{ column: string; values: any[] }> = [];
@@ -369,7 +371,7 @@ class FakeQueryBuilder {
 }
 
 function createFakeTrx(tables: TableMap) {
-  const trx: any = (tableName: string) => new FakeQueryBuilder(tableName, tables);
+  const trx: any = Object.assign((tableName: string) => new FakeQueryBuilder(tableName, tables), { isTransaction: true });
   // ticketStatusClockPatch builds a CASE expression through trx.raw; the fake keeps it opaque.
   trx.raw = (sql: string, bindings?: unknown[]) => ({ sql, bindings });
   return trx;
@@ -754,7 +756,7 @@ describe('ticket workflow runtime board-scoped statuses', () => {
       }),
       'tenant-1',
       expect.any(Function),
-      undefined,
+      expect.objectContaining({ transactionalCommentEvents: true, publishCommentCreated: expect.any(Function) }),
       undefined,
       'user-1'
     );

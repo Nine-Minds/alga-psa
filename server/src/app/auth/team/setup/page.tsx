@@ -1,5 +1,7 @@
 'use client';
 
+import { CoManagedWorkspaceBoundary } from '@/components/co-managed/CoManagedFeatureBoundary';
+import { AppSessionProvider } from '@alga-psa/auth/client';
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -33,6 +35,7 @@ function TeamSetupContent() {
   const searchParams = useSearchParams();
   const token = searchParams?.get('token') || '';
 
+  const [isCoManaged, setIsCoManaged] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -74,6 +77,7 @@ function TeamSetupContent() {
     try {
       const result = await verifyUserInvitationToken(token);
       if (result.success && result.invitee) {
+        setIsCoManaged(result.isCoManaged === true);
         setInvitee(result.invitee);
       } else {
         setError(result.error || t('teamSetup.errors.invalidOrExpired', { defaultValue: 'Invalid or expired invitation token' }));
@@ -194,7 +198,7 @@ function TeamSetupContent() {
     );
   }
 
-  return (
+  const content = (
     <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-border-50))] p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
@@ -343,12 +347,19 @@ function TeamSetupContent() {
       </Card>
     </div>
   );
+  return <CoManagedWorkspaceBoundary productCode={isCoManaged ? 'co_managed' : 'psa'}>{content}</CoManagedWorkspaceBoundary>;
 }
 
 export default function TeamSetupPage() {
+  // This page renders pre-login, outside the authenticated layouts that mount
+  // a SessionProvider. CoManagedWorkspaceBoundary -> useFeatureFlag calls
+  // useSession, which throws without a provider — so mount one here (the
+  // session is simply null for an anonymous invitee).
   return (
-    <I18nWrapper portal="msp">
-      <TeamSetupContent />
-    </I18nWrapper>
+    <AppSessionProvider>
+      <I18nWrapper portal="msp">
+        <TeamSetupContent />
+      </I18nWrapper>
+    </AppSessionProvider>
   );
 }

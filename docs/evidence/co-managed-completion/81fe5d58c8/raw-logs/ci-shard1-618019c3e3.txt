@@ -1,0 +1,586 @@
+integration / Integration shard 1	UNKNOWN STEP	﻿2026-09-20T05:56:40.3603518Z Current runner version: '2.337.0'
+##[group]Runner Image Provisioner
+Hosted Compute Agent
+Version: 20260828.587
+Commit: abac92662cab4cc7352de4f9f9d2e2419aad9c29
+Build Date: 2026-08-28T16:44:25Z
+Worker ID: {6e166be9-0065-4952-bdd7-23774cebb4e9}
+Azure Region: eastus
+##[endgroup]
+##[group]Operating System
+Ubuntu
+24.04.5
+LTS
+##[endgroup]
+##[group]Runner Image
+Image: ubuntu-24.04
+Version: 20260907.300.1
+Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260907.300/images/ubuntu/Ubuntu2404-Readme.md
+Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260907.300
+##[endgroup]
+##[group]GITHUB_TOKEN Permissions
+Contents: read
+Metadata: read
+##[endgroup]
+Secret source: Actions
+Cache mode: write
+Prepare workflow directory
+Prepare all required actions
+Getting action download info
+Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+Uses: Nine-Minds/alga-psa/.github/workflows/integration-tests.yml@refs/pull/3363/merge (994f00893bfdf24fdc232e42ab2514af5809b78f)
+Complete job name: integration / Integration shard 1
+##[group]Checking docker version
+##[command]/usr/bin/docker version --format '{{.Server.APIVersion}}'
+'1.48'
+Docker daemon API version: '1.48'
+##[command]/usr/bin/docker version --format '{{.Client.APIVersion}}'
+'1.48'
+Docker client API version: '1.48'
+##[endgroup]
+##[group]Clean up resources from previous jobs
+##[command]/usr/bin/docker ps --all --quiet --no-trunc --filter "label=291b3e"
+##[command]/usr/bin/docker network prune --force --filter "label=291b3e"
+##[endgroup]
+##[group]Create local container network
+##[command]/usr/bin/docker network create --label 291b3e github_network_2d7e13eb923d42df94f35a33985fae46
+0c1000d6f6e4fe0231b82934282317f278e4967d5d893c03d46aafc3041474da
+##[endgroup]
+##[group]Starting postgres service container
+##[command]/usr/bin/docker pull ankane/pgvector:latest
+latest: Pulling from ankane/pgvector
+a803e7c4b030: Pulling fs layer
+12dd3b657e91: Pulling fs layer
+147adba297eb: Pulling fs layer
+56ee7c0dd616: Pulling fs layer
+f9aacf30f429: Pulling fs layer
+7ad57b8030eb: Pulling fs layer
+786562b3be85: Pulling fs layer
+04efcdd3a2a4: Pulling fs layer
+2c35234636c9: Pulling fs layer
+6e662fa63f18: Pulling fs layer
+f1a157d7d7b0: Pulling fs layer
+bb153abf3802: Pulling fs layer
+7077e54346e0: Pulling fs layer
+2e3723549f11: Pulling fs layer
+c5f09b500022: Pulling fs layer
+f9aacf30f429: Waiting
+7ad57b8030eb: Waiting
+786562b3be85: Waiting
+04efcdd3a2a4: Waiting
+2c35234636c9: Waiting
+6e662fa63f18: Waiting
+f1a157d7d7b0: Waiting
+bb153abf3802: Waiting
+7077e54346e0: Waiting
+2e3723549f11: Waiting
+c5f09b500022: Waiting
+56ee7c0dd616: Waiting
+12dd3b657e91: Verifying Checksum
+12dd3b657e91: Download complete
+56ee7c0dd616: Verifying Checksum
+56ee7c0dd616: Download complete
+7ad57b8030eb: Verifying Checksum
+7ad57b8030eb: Download complete
+f9aacf30f429: Verifying Checksum
+f9aacf30f429: Download complete
+a803e7c4b030: Verifying Checksum
+a803e7c4b030: Download complete
+04efcdd3a2a4: Verifying Checksum
+04efcdd3a2a4: Download complete
+786562b3be85: Verifying Checksum
+786562b3be85: Download complete
+6e662fa63f18: Verifying Checksum
+6e662fa63f18: Download complete
+f1a157d7d7b0: Verifying Checksum
+f1a157d7d7b0: Download complete
+bb153abf3802: Download complete
+7077e54346e0: Verifying Checksum
+7077e54346e0: Download complete
+2e3723549f11: Verifying Checksum
+2e3723549f11: Download complete
+c5f09b500022: Verifying Checksum
+c5f09b500022: Download complete
+2c35234636c9: Verifying Checksum
+2c35234636c9: Download complete
+a803e7c4b030: Pull complete
+12dd3b657e91: Pull complete
+147adba297eb: Pull complete
+56ee7c0dd616: Pull complete
+f9aacf30f429: Pull complete
+7ad57b8030eb: Pull complete
+786562b3be85: Pull complete
+04efcdd3a2a4: Pull complete
+2c35234636c9: Pull complete
+6e662fa63f18: Pull complete
+f1a157d7d7b0: Pull complete
+bb153abf3802: Pull complete
+... [1808 lines omitted] ...
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > replays a replacement without duplicate financial effect  892ms
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > replaces multiple allocations on one invoice without netting the balance away  904ms
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > migrates a legacy aggregate allocation id to per-AllocationID identity without losing the balance  1027ms
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > rolls back a failed replacement application and recovers after the committed reversal  904ms
+   ✓ Xero inbound reconciliation (DB + controlled provider boundary) > recovers when the replacement is split across polls (reversal then application)  920ms
+ ✓ src/test/integration/calendar/webhookProcessing.integration.test.ts (8 tests) 1034ms 526 MB heap used
+ ✓ src/test/integration/eventEmailRetryQueueRecovery.integration.test.ts (2 tests) 18ms 525 MB heap used
+ ✓ src/test/integration/accounting/accountingMappingResolver.integration.test.ts (3 tests) 1492ms 638 MB heap used
+ ✓ src/test/integration/actions/projectActionsIntegration.test.ts (4 tests) 4221ms 657 MB heap used
+   ✓ Project Actions Integration - Project Numbers > createProject with numbering > should create project with auto-generated project_number  832ms
+   ✓ Project Actions Integration - Project Numbers > createProject with numbering > should create multiple projects with sequential numbers  779ms
+   ✓ Project Actions Integration - Project Numbers > createProject with numbering > should enforce unique project_number per tenant  723ms
+   ✓ Project Actions Integration - Project Numbers > project_number field validation > should include project_number in returned project object  766ms
+[algasim] stripe vendor surface listening {"port":39053}
+[algasim] control API listening {"port":44731}
+ ✓ src/test/integration/payments/invoiceEmailPaymentLinks.journey.integration.test.ts (25 tests) 25252ms 744 MB heap used
+   ✓ journey: invoice email payment links against the Stripe emulator > direct send with payment links enabled > sends a finalized invoice with a Checkout URL and portal URL; the customer uses the billing contact email  570ms
+   ✓ journey: invoice email payment links against the Stripe emulator > direct send with payment links enabled > degrades to a portal-only email with the cause retained when Checkout creation fails  1046ms
+   ✓ journey: invoice email payment links against the Stripe emulator > direct send with payment links enabled > surfaces a portal provider failure as PaymentLinkError with the cause retained  1044ms
+   ✓ journey: invoice email payment links against the Stripe emulator > terminal-status invalidation and provider-expiration failures > surfaces a safe portal failure and creates no replacement session when provider expiration fails on the stale-balance path  1057ms
+   ✓ journey: invoice email payment links against the Stripe emulator > terminal-status invalidation and provider-expiration failures > sends a portal-only email with the cause logged and no replacement session when provider expiration fails  1073ms
+   ✓ journey: invoice email payment links against the Stripe emulator > terminal-status invalidation and provider-expiration failures > retries provider expiration on the next attempt instead of creating a replacement while the old session is open  1074ms
+   ✓ journey: invoice email payment links against the Stripe emulator > terminal-status invalidation and provider-expiration failures > retries provider expiration on a later email send instead of creating a replacement while the old session is open  1113ms
+   ✓ journey: invoice email payment links against the Stripe emulator > terminal-status invalidation and provider-expiration failures > retries a previously failed provider expiration when a paid invoice is revisited  1080ms
+ ✓ src/test/integration/applianceInitialAdminPasswordReset.integration.test.ts (3 tests) 783ms 739 MB heap used
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+[co-managed onboarding permissions] catalog v1-51437edc320dc7cc: 1 tenants (enumerate tenants for permission catalog reconciliation)
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+[co-managed onboarding permissions] 1/1 tenant 9b20db42-c96a-44a4-99bf-60ac335f2628 (co_managed): +145 permissions, ~0 descriptions, +276 grants, 0 unknown permissions and 0 extra grants preserved
+[co-managed onboarding permissions] complete at catalog v1-51437edc320dc7cc: 1 reconciled, 0 skipped, 0 failed of 1 tenants. Skipped and failed tenants keep their existing permissions; reconcile them with the read-only audit (server/migrations/utils/permissions/auditPermissionCatalog.cjs) and the onboarding recovery.
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+[co-managed onboarding role grants] catalog v1-51437edc320dc7cc: 1 tenants (enumerate tenants for permission catalog reconciliation)
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+[co-managed onboarding role grants] 1/1 tenant 9b20db42-c96a-44a4-99bf-60ac335f2628 (co_managed): +0 default-role grants
+[co-managed onboarding role grants] complete at catalog v1-51437edc320dc7cc: 1 reconciled, 0 skipped, 0 failed of 1 tenants. Skipped and failed tenants keep their existing permissions; reconcile them with the read-only audit (server/migrations/utils/permissions/auditPermissionCatalog.cjs) and the onboarding recovery.
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+Created default project task statuses in statuses table for tenant 9b20db42-c96a-44a4-99bf-60ac335f2628
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+Created AD to M365 project template for tenant 9b20db42-c96a-44a4-99bf-60ac335f2628
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+Seeded built-in asset types for tenant 9b20db42-c96a-44a4-99bf-60ac335f2628
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+[withAdminTransaction:luszy8] Starting transaction wrapper
+[withAdminTransaction:luszy8] Getting admin connection for new transaction
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+[withAdminTransaction:36vavt] Starting transaction wrapper
+[withAdminTransaction:36vavt] Getting admin connection for new transaction
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+[withAdminTransaction:l618z] Starting transaction wrapper
+[withAdminTransaction:l618z] Getting admin connection for new transaction
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+[withAdminTransaction:vmwten] Starting transaction wrapper
+[withAdminTransaction:vmwten] Using existing transaction
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+[withAdminTransaction:vmwten] Existing transaction callback completed successfully
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+[withAdminTransaction:ajn8u9] Starting transaction wrapper
+[withAdminTransaction:ajn8u9] Using existing transaction
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+[WorkflowAnalyticsTracker] Comment created analytics: {
+  event: 'comment_created',
+  userId: undefined,
+  data: {
+    ticket_id: '9f5dfb58-b454-4d42-a5d2-ac7c5f07e5ba',
+    is_internal: false,
+    is_resolution: false,
+    author_type: 'client',
+    created_via: 'manual',
+    tracked_via: 'workflow'
+  }
+}
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+[withAdminTransaction:ajn8u9] Existing transaction callback completed successfully
+
+stdout | ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+processInboundEmailInApp: inbound threaded reply decision {
+  tenantId: '9b20db42-c96a-44a4-99bf-60ac335f2628',
+  providerId: '6636a390-1035-41ff-8902-44f6d9b9ca8b',
+  emailId: 'bd23c231-c736-4d21-9fb0-1e1eb6301ca0',
+  ticketId: '9f5dfb58-b454-4d42-a5d2-ac7c5f07e5ba',
+  matchedBy: 'reply_token',
+  metadata: {
+    policyEnabled: false,
+    wasClosedTicketMatch: false,
+    cutoffHours: 168,
+    cutoffExceeded: false,
+    senderKind: 'client',
+    action: 'comment_only',
+    reopenTargetSource: null,
+    reopenTargetStatusId: null,
+    automated: { isAutomated: false, reason: null, detail: null },
+    aiSuppression: {
+      enabled: false,
+      attempted: false,
+      decision: null,
+      source: null,
+      reason: null,
+      model: null,
+      error: null,
+      rawOutput: null
+    }
+  }
+}
+
+ ❯ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1416 tests | 1 failed) 632775ms 867 MB heap used
+   ✓ co-managed bootstrap against the complete installed schema > creates only customer-owned operational defaults and an invitation, without an MSP login or subscription copy 178ms
+   ✓ co-managed bootstrap against the complete installed schema > recovers repeated worker delivery with exactly one workspace, self-client, board, and administrator invitation 142ms
+   ✓ co-managed bootstrap against the complete installed schema > refuses an unreserved co-managed bootstrap through the ordinary tenant factory 1ms
+   ✓ co-managed bootstrap against the complete installed schema > delivers only to the customer admin, retries an undelivered invitation, and never returns its token 177ms
+   ✓ co-managed bootstrap against the complete installed schema > does not send an invitation for a cancelled relationship 127ms
+   ✓ customer-owned co-management acceptance > atomically activates seats and records the approved scope, including concurrent retries 164ms
+   ✓ customer-owned co-management acceptance > accepts escalation-only access without silently granting board oversight 156ms
+   ✓ customer-owned co-management acceptance > denies the sponsor, sibling customers, and a guessed relationship identity 268ms
+   ✓ customer-owned co-management acceptance > rechecks permissions and active internal identity instead of trusting an earlier review 139ms
+   ✓ customer-owned co-management acceptance > rejects stale revisions and edited scopes even without a revision advance 157ms
+   ✓ customer-owned co-management acceptance > leaves seats reserved when activation is denied during a capacity lapse 167ms
+   ✓ customer-owned co-management acceptance > serializes acceptance against cancellation so only one may win 137ms
+   ✓ customer technician allocation admission > serializes concurrent last-seat creates without using MSP licensed_user_count 148ms
+   ✓ customer technician allocation admission > reserves invitation capacity against direct creates and concurrent other invitations 157ms
+   ✓ customer technician allocation admission > does not charge requesters or expired invitations as technician seats 149ms
+   ✓ customer technician allocation admission > requires the original administrator invitation before activation 130ms
+   ✓ customer technician allocation admission > blocks growth immediately on lapse, including consuming an already-issued invitation 148ms
+   ✓ customer technician allocation admission > serializes reactivation with a new last-seat account and tolerates repeated activation of the winner 154ms
+   ✓ customer technician allocation admission > never shrinks below committed seats or evicts users; a concurrent shrink/create cannot oversubscribe 148ms
+   ✓ real user service with co-managed allocation admission > creates the initial administrator from its token exactly once, with role and token consumption in the same transaction 226ms
+   ✓ real user service with co-managed allocation admission > rolls back the account and keeps the invitation usable if a required account write fails 151ms
+   ✓ real user service with co-managed allocation admission > prevents API creation from taking a seat already reserved by another invitation 172ms
+   ✓ co-managed directory reactivation > keeps a directory-deactivated user inactive when another technician has taken the available seat 204ms
+   ✓ grows an allocation only from available verified capacity and rejects stale resize attempts 164ms
+   ✓ transactional operational lifecycle admission > requires acceptance even for an administrator with capacity, then permits operational writes 147ms
+... [338 lines omitted] ...
+   ✓ rolls back requester email discovery with its owning transaction and requires a root recovery connection 286ms
+   ✓ rechecks requester email address changes between token commit and delivery  370ms
+   ✓ rechecks requester email audience changes between token commit and delivery  348ms
+   ✓ rechecks requester email revocation changes between token commit and delivery  376ms
+   ✓ rechecks requester email preferences changes between token commit and delivery  352ms
+   ✓ processes an actual qualified requester email reply atomically in its canonical thread with durable effects and replay  366ms
+   ✓ quarantines actual requester email after sender rejection without native matching or new-ticket side effects  301ms
+   ✓ quarantines actual requester email after authentication rejection without native matching or new-ticket side effects  306ms
+   ✓ quarantines actual requester email after contact rejection without native matching or new-ticket side effects  312ms
+   ✓ quarantines actual requester email after private rejection without native matching or new-ticket side effects  310ms
+   ✓ quarantines actual requester email after revoked rejection without native matching or new-ticket side effects  322ms
+   ✓ quarantines actual requester email after expired rejection without native matching or new-ticket side effects  311ms
+   ✓ quarantines actual requester email after unknown_token rejection without native matching or new-ticket side effects  310ms
+   ✓ quarantines actual requester email after malformed_token rejection without native matching or new-ticket side effects  301ms
+   ✓ quarantines actual requester email after case_variant rejection without native matching or new-ticket side effects  311ms
+   ✓ rolls qualified requester reply writes and outbox back before retaining quarantine after expiry during the writer  578ms
+   ✓ retries actual requester email writer failures without quarantining valid authority or duplicating the eventual reply  416ms
+   ✓ applies requester email reopen policy inside the admitted transaction and destination scope  375ms
+   ✓ applies requester email cutoff policy inside the admitted transaction and destination scope  366ms
+   ✓ applies requester email hidden_destination policy inside the admitted transaction and destination scope  326ms
+   ✓ applies requester email foreign_rule_client policy inside the admitted transaction and destination scope  325ms
+   ✓ applies requester email rate_limited policy inside the admitted transaction and destination scope  357ms
+   ✓ applies requester email automated policy inside the admitted transaction and destination scope  397ms
+   ✓ keeps a default-location requester reply customer-authored without resolving the address to a privileged user  367ms
+   ✓ retains requester email for retry when its worker lacks the required admission adapter  307ms
+   × defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause 395ms
+     → Failed to fully serialize error: Maximum call stack size exceeded
+Inner error message: expected { disposition: 'retry', …(1) } to match object { disposition: 'defer', …(1) }
+(1 matching property omitted from actual)
+   ✓ admits a requester reply using its HTML attribute token marker without native fallback  381ms
+   ✓ admits a requester reply using its HTML comment token marker without native fallback  362ms
+   ✓ skips HTML-only requester mail containing just a token, markup and non-content without creating a reply  313ms
+   ✓ discovers production requester mail once, recovers it through the scheduled job and accepts a reply using its committed token  543ms
+   ✓ rolls requester discovery and after-commit delivery back with an enclosing transaction, then recovers once  434ms
+   ✓ preserves native requester delivery for published rollout history and enrolls only unpublished work  493ms
+   ✓ moves primary requester delivery out of the native subscriber without bypassing the co-managed watcher authority boundary  448ms
+   ✓ issues stable customer technician tokens without granting an interactive identity and binds each sent address  346ms
+   ✓ admits customer technician replies to the canonical requester thread using current local authority  326ms
+   ✓ admits customer technician replies to the canonical shared_it thread using current local authority  326ms
+   ✓ admits customer technician replies to the canonical organization_private thread using current local authority  326ms
+   ✓ rejects customer technician reply after sender changes without calling the writer 286ms
+   ✓ rejects customer technician reply after authentication changes without calling the writer 291ms
+   ✓ rejects customer technician reply after inactive changes without calling the writer 291ms
+   ✓ rejects customer technician reply after portal changes without calling the writer 289ms
+   ✓ rejects customer technician reply after no_role changes without calling the writer 284ms
+   ✓ rejects customer technician reply after no_update changes without calling the writer 286ms
+   ✓ rejects customer technician reply after suspended changes without calling the writer 290ms
+   ✓ rejects customer technician reply after audience changes without calling the writer  334ms
+   ✓ rejects customer technician reply after deleted changes without calling the writer 290ms
+   ✓ rejects customer technician reply after unpublished changes without calling the writer  302ms
+   ✓ rejects customer technician reply after expired changes without calling the writer 295ms
+   ✓ rejects customer technician reply after revoked changes without calling the writer  325ms
+... [1075 lines omitted] ...
+ ✓ src/test/integration/scheduling/scheduleEntryRecurrence.integration.test.ts (42 tests) 1872ms 1069 MB heap used
+ ✓ src/test/integration/serviceRequestPortalCatalog.integration.test.ts (1 test) 474ms 1072 MB heap used
+ ✓ src/test/integration/microsoftEmailSameAppUpdate.integration.test.ts (2 tests) 555ms 874 MB heap used
+ ✓ src/test/integration/serviceRequestPublishing.integration.test.ts (1 test) 435ms 899 MB heap used
+ ✓ src/test/integration/workflowDesignerGroupedPersistence.integration.test.ts (7 tests) 1097ms 931 MB heap used
+ ✓ src/test/integration/serviceRequestTemplateInstantiation.integration.test.ts (1 test) 448ms 957 MB heap used
+ ✓ src/test/integration/inboundAuthPauseReconnectSave.integration.test.ts (13 tests) 551ms 961 MB heap used
+ ✓ src/test/integration/webhook.secretLifecycle.test.ts (3 tests) 3ms 973 MB heap used
+ ✓ src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts (11 tests) 1226ms 973 MB heap used
+ ✓ src/test/integration/emailScenarioMessageLookup.integration.test.ts (1 test) 452ms 973 MB heap used
+ ✓ src/test/integration/billing/billingProfileSpendReport.integration.test.ts (5 tests) 663ms 991 MB heap used
+ ✓ src/test/integration/microsoftWebhookUnifiedQueue.integration.test.ts (9 tests) 55ms 986 MB heap used
+ ✓ src/test/integration/webhookDelivery.happyPath.test.ts (1 test) 21ms 1001 MB heap used
+ ✓ src/test/integration/api/financialBulkOps.integration.test.ts (5 tests) 1002ms 1046 MB heap used
+ ✓ src/test/integration/accounting/exportDashboard.integration.test.ts (4 tests) 2068ms 1089 MB heap used
+   ✓ Accounting export dashboard integration > lists batches filtered by status and adapter for dashboard filters  346ms
+   ✓ Accounting export dashboard integration > provides batch detail with lines and errors for invoice drawer context  317ms
+   ✓ Accounting export dashboard integration > T178: rereads mixed historical and canonical export lines without collapsing stored period semantics  321ms
+   ✓ Accounting export dashboard integration > creates a re-export batch via invoice selector for invoice detail workflow  365ms
+ ✓ src/test/integration/journeys/documentLanguageResolution.journey.integration.test.ts (3 tests) 1503ms 1132 MB heap used
+   ✓ journey: recipient language hierarchy → localized render → portal download > portal download files a PDF in the client language and the authorizer scopes it to that client  405ms
+ ✓ src/test/integration/billing/recurringInvoiceHistory.db.test.tsx (3 tests) 16345ms 185 MB heap used
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+Error: Failed to fully serialize error: Maximum call stack size exceeded
+Inner error message: expected { disposition: 'retry', …(1) } to match object { disposition: 'defer', …(1) }
+(1 matching property omitted from actual)
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 77 passed (78)
+      Tests  1 failed | 2170 passed (2171)
+   Start at  06:00:40
+   Duration  889.41s (transform 22.42s, setup 690ms, collect 36.00s, tests 846.59s, environment 365ms, prepare 126ms)
+
+JSON report written to /home/runner/work/alga-psa/alga-psa/server/test-results-integration.json
+Runner exited with 1
+Runner did not report success
+File failed: ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts
+failed: ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause
+npm error Lifecycle script `test:integration:tier1` failed with error:
+npm error code 1
+npm error path /home/runner/work/alga-psa/alga-psa/server
+npm error workspace server@1.6.1
+npm error location /home/runner/work/alga-psa/alga-psa/server
+npm error command failed
+npm error command sh -c node ../scripts/run-tier1-integration.mjs --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results-integration.json
+##[error]Process completed with exit code 1.
+Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+##[group]Run actions/upload-artifact@v4
+with:
+  name: server-integration-shard-1
+  path: test-results/integration/
+  retention-days: 30
+  if-no-files-found: warn
+  compression-level: 6
+  overwrite: false
+  include-hidden-files: false
+env:
+  INTEGRATION_SHARD_INDEX: 1
+  INTEGRATION_SHARD_TOTAL: 4
+  COMMENT_SMTP_ISOLATED: true
+  COMMENT_SMTP_PORT: 33025
+  COMMENT_SMTP_API_PORT: 38080
+  DB_HOST: localhost
+... [819 lines omitted] ...
+ 2026-09-20 06:14:41.447 UTC [1341] STATEMENT:  update "contract_lines" set "rate_provenance" = $1, "custom_rate" = $2 where "tenant" = $3 and "contract_line_id" = $4
+ 2026-09-20 06:14:41.450 UTC [1341] ERROR:  new row for relation "contract_line_service_fixed_config" violates check constraint "contract_line_service_fixed_config_rate_provenance_rate_check"
+ 2026-09-20 06:14:41.450 UTC [1341] DETAIL:  Failing row contains (704dbd99-38e2-4ca2-b2be-3068e6faecc8, 13a2e75f-98a5-40b1-a3fc-44c034c854df, 2026-09-20 06:14:41.146567+00, 2026-09-20 06:14:41.146567+00, 5.00, null, inherited).
+ 2026-09-20 06:14:41.450 UTC [1341] STATEMENT:  update "contract_line_service_fixed_config" set "rate_provenance" = $1, "base_rate" = $2 where "tenant" = $3 and "config_id" = $4
+ 2026-09-20 06:14:41.451 UTC [1341] ERROR:  new row for relation "contract_line_service_fixed_config" violates check constraint "contract_line_service_fixed_config_rate_provenance_rate_check"
+ 2026-09-20 06:14:41.451 UTC [1341] DETAIL:  Failing row contains (704dbd99-38e2-4ca2-b2be-3068e6faecc8, 13a2e75f-98a5-40b1-a3fc-44c034c854df, 2026-09-20 06:14:41.146567+00, 2026-09-20 06:14:41.146567+00, null, null, custom).
+ 2026-09-20 06:14:41.451 UTC [1341] STATEMENT:  update "contract_line_service_fixed_config" set "rate_provenance" = $1, "base_rate" = $2 where "tenant" = $3 and "config_id" = $4
+ 2026-09-20 06:14:41.947 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:41.953 UTC [60] LOG:  checkpoint complete: wrote 34 buffers (0.2%); 0 WAL file(s) added, 1 removed, 0 recycled; write=0.002 s, sync=0.002 s, total=0.006 s; sync files=13, longest=0.001 s, average=0.001 s; distance=21227 kB, estimate=58229 kB
+ 2026-09-20 06:14:42.946 UTC [1346] FATAL:  terminating connection due to administrator command
+ 2026-09-20 06:14:42.950 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:42.954 UTC [60] LOG:  checkpoint complete: wrote 25 buffers (0.2%); 0 WAL file(s) added, 1 removed, 0 recycled; write=0.001 s, sync=0.001 s, total=0.005 s; sync files=10, longest=0.001 s, average=0.001 s; distance=17961 kB, estimate=54202 kB
+ 2026-09-20 06:14:43.684 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:43.690 UTC [60] LOG:  checkpoint complete: wrote 69 buffers (0.4%); 0 WAL file(s) added, 2 removed, 0 recycled; write=0.002 s, sync=0.001 s, total=0.006 s; sync files=11, longest=0.001 s, average=0.001 s; distance=18141 kB, estimate=50596 kB
+ 2026-09-20 06:14:45.639 UTC [1358] FATAL:  terminating connection due to administrator command
+ 2026-09-20 06:14:45.643 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:45.647 UTC [60] LOG:  checkpoint complete: wrote 28 buffers (0.2%); 0 WAL file(s) added, 1 removed, 0 recycled; write=0.001 s, sync=0.001 s, total=0.005 s; sync files=11, longest=0.001 s, average=0.001 s; distance=18086 kB, estimate=47345 kB
+ 2026-09-20 06:14:46.255 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:46.261 UTC [60] LOG:  checkpoint complete: wrote 22 buffers (0.1%); 0 WAL file(s) added, 1 removed, 0 recycled; write=0.001 s, sync=0.001 s, total=0.006 s; sync files=11, longest=0.001 s, average=0.001 s; distance=17952 kB, estimate=44406 kB
+ 2026-09-20 06:14:46.884 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:46.888 UTC [60] LOG:  checkpoint complete: wrote 21 buffers (0.1%); 0 WAL file(s) added, 1 removed, 0 recycled; write=0.001 s, sync=0.001 s, total=0.005 s; sync files=11, longest=0.001 s, average=0.001 s; distance=18009 kB, estimate=41766 kB
+ 2026-09-20 06:14:47.445 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:47.450 UTC [60] LOG:  checkpoint complete: wrote 25 buffers (0.2%); 0 WAL file(s) added, 1 removed, 0 recycled; write=0.001 s, sync=0.001 s, total=0.005 s; sync files=11, longest=0.001 s, average=0.001 s; distance=17980 kB, estimate=39387 kB
+ 2026-09-20 06:14:48.046 UTC [1390] FATAL:  role "root" does not exist
+ 2026-09-20 06:14:48.562 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:48.568 UTC [60] LOG:  checkpoint complete: wrote 31 buffers (0.2%); 0 WAL file(s) added, 1 removed, 0 recycled; write=0.001 s, sync=0.001 s, total=0.006 s; sync files=13, longest=0.001 s, average=0.001 s; distance=18009 kB, estimate=37250 kB
+ 2026-09-20 06:14:49.241 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:49.246 UTC [60] LOG:  checkpoint complete: wrote 20 buffers (0.1%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.002 s, sync=0.001 s, total=0.006 s; sync files=9, longest=0.001 s, average=0.001 s; distance=17938 kB, estimate=35318 kB
+ 2026-09-20 06:14:49.810 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:49.815 UTC [60] LOG:  checkpoint complete: wrote 22 buffers (0.1%); 0 WAL file(s) added, 1 removed, 0 recycled; write=0.001 s, sync=0.001 s, total=0.005 s; sync files=9, longest=0.001 s, average=0.001 s; distance=17637 kB, estimate=33550 kB
+ 2026-09-20 06:14:50.457 UTC [1408] ERROR:  update or delete on table "contracts" violates foreign key constraint "contract_lines_contract_fk" on table "contract_lines"
+ 2026-09-20 06:14:50.457 UTC [1408] DETAIL:  Key (tenant, contract_id)=(13a2e75f-98a5-40b1-a3fc-44c034c854df, fc5adf52-256c-4279-88a3-c92c0cf57293) is still referenced from table "contract_lines".
+ 2026-09-20 06:14:50.457 UTC [1408] STATEMENT:  delete from "contracts" where "contracts"."tenant" = $1 and "tenant" = $2 and "contract_id" = $3
+ 2026-09-20 06:14:50.468 UTC [1408] ERROR:  update or delete on table "clients" violates foreign key constraint "contracts_owner_client_id_fkey" on table "contracts"
+ 2026-09-20 06:14:50.468 UTC [1408] DETAIL:  Key (tenant, client_id)=(13a2e75f-98a5-40b1-a3fc-44c034c854df, e3ea64fe-b8e5-44a8-986f-329081753a13) is still referenced from table "contracts".
+ 2026-09-20 06:14:50.468 UTC [1408] STATEMENT:  delete from "clients" where "clients"."tenant" = $1 and "tenant" = $2 and "client_id" = $3
+ 2026-09-20 06:14:50.537 UTC [1410] ERROR:  update or delete on table "contracts" violates foreign key constraint "contract_lines_contract_fk" on table "contract_lines"
+ 2026-09-20 06:14:50.537 UTC [1410] DETAIL:  Key (tenant, contract_id)=(13a2e75f-98a5-40b1-a3fc-44c034c854df, d68d11df-f708-4871-8542-536c660729a0) is still referenced from table "contract_lines".
+ 2026-09-20 06:14:50.537 UTC [1410] STATEMENT:  delete from "contracts" where "contracts"."tenant" = $1 and "tenant" = $2 and "contract_id" = $3
+ 2026-09-20 06:14:50.548 UTC [1410] ERROR:  update or delete on table "clients" violates foreign key constraint "contracts_owner_client_id_fkey" on table "contracts"
+ 2026-09-20 06:14:50.548 UTC [1410] DETAIL:  Key (tenant, client_id)=(13a2e75f-98a5-40b1-a3fc-44c034c854df, 0c4e71e6-e91f-4501-b656-374336481231) is still referenced from table "contracts".
+ 2026-09-20 06:14:50.548 UTC [1410] STATEMENT:  delete from "clients" where "clients"."tenant" = $1 and "tenant" = $2 and "client_id" = $3
+ 2026-09-20 06:14:50.609 UTC [1409] ERROR:  column "contract_line_id" does not exist at character 131
+ 2026-09-20 06:14:50.609 UTC [1409] STATEMENT:  delete from "contract_line_service_bucket_config" where "contract_line_service_bucket_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.610 UTC [1409] ERROR:  column "contract_line_id" does not exist at character 129
+ 2026-09-20 06:14:50.610 UTC [1409] STATEMENT:  delete from "contract_line_service_usage_config" where "contract_line_service_usage_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.611 UTC [1409] ERROR:  column "contract_line_id" does not exist at character 125
+ 2026-09-20 06:14:50.611 UTC [1409] STATEMENT:  delete from "contract_line_service_rate_tiers" where "contract_line_service_rate_tiers"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.612 UTC [1409] ERROR:  column "contract_line_id" does not exist at character 133
+ 2026-09-20 06:14:50.612 UTC [1409] STATEMENT:  delete from "contract_line_service_hourly_configs" where "contract_line_service_hourly_configs"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.613 UTC [1409] ERROR:  column "contract_line_id" does not exist at character 131
+ 2026-09-20 06:14:50.613 UTC [1409] STATEMENT:  delete from "contract_line_service_hourly_config" where "contract_line_service_hourly_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.614 UTC [1409] ERROR:  column "contract_line_id" does not exist at character 129
+ 2026-09-20 06:14:50.614 UTC [1409] STATEMENT:  delete from "contract_line_service_fixed_config" where "contract_line_service_fixed_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.691 UTC [1406] ERROR:  column "contract_line_id" does not exist at character 131
+ 2026-09-20 06:14:50.691 UTC [1406] STATEMENT:  delete from "contract_line_service_bucket_config" where "contract_line_service_bucket_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.692 UTC [1406] ERROR:  column "contract_line_id" does not exist at character 129
+ 2026-09-20 06:14:50.692 UTC [1406] STATEMENT:  delete from "contract_line_service_usage_config" where "contract_line_service_usage_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.692 UTC [1406] ERROR:  column "contract_line_id" does not exist at character 125
+ 2026-09-20 06:14:50.692 UTC [1406] STATEMENT:  delete from "contract_line_service_rate_tiers" where "contract_line_service_rate_tiers"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.693 UTC [1406] ERROR:  column "contract_line_id" does not exist at character 133
+ 2026-09-20 06:14:50.693 UTC [1406] STATEMENT:  delete from "contract_line_service_hourly_configs" where "contract_line_service_hourly_configs"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.694 UTC [1406] ERROR:  column "contract_line_id" does not exist at character 131
+ 2026-09-20 06:14:50.694 UTC [1406] STATEMENT:  delete from "contract_line_service_hourly_config" where "contract_line_service_hourly_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.695 UTC [1406] ERROR:  column "contract_line_id" does not exist at character 129
+ 2026-09-20 06:14:50.695 UTC [1406] STATEMENT:  delete from "contract_line_service_fixed_config" where "contract_line_service_fixed_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.773 UTC [1411] ERROR:  column "contract_line_id" does not exist at character 131
+ 2026-09-20 06:14:50.773 UTC [1411] STATEMENT:  delete from "contract_line_service_bucket_config" where "contract_line_service_bucket_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.774 UTC [1411] ERROR:  column "contract_line_id" does not exist at character 129
+ 2026-09-20 06:14:50.774 UTC [1411] STATEMENT:  delete from "contract_line_service_usage_config" where "contract_line_service_usage_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.775 UTC [1411] ERROR:  column "contract_line_id" does not exist at character 125
+ 2026-09-20 06:14:50.775 UTC [1411] STATEMENT:  delete from "contract_line_service_rate_tiers" where "contract_line_service_rate_tiers"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.776 UTC [1411] ERROR:  column "contract_line_id" does not exist at character 133
+ 2026-09-20 06:14:50.776 UTC [1411] STATEMENT:  delete from "contract_line_service_hourly_configs" where "contract_line_service_hourly_configs"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.777 UTC [1411] ERROR:  column "contract_line_id" does not exist at character 131
+ 2026-09-20 06:14:50.777 UTC [1411] STATEMENT:  delete from "contract_line_service_hourly_config" where "contract_line_service_hourly_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.777 UTC [1411] ERROR:  column "contract_line_id" does not exist at character 129
+ 2026-09-20 06:14:50.777 UTC [1411] STATEMENT:  delete from "contract_line_service_fixed_config" where "contract_line_service_fixed_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.848 UTC [1410] ERROR:  column "contract_line_id" does not exist at character 131
+ 2026-09-20 06:14:50.848 UTC [1410] STATEMENT:  delete from "contract_line_service_bucket_config" where "contract_line_service_bucket_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.849 UTC [1410] ERROR:  column "contract_line_id" does not exist at character 129
+ 2026-09-20 06:14:50.849 UTC [1410] STATEMENT:  delete from "contract_line_service_usage_config" where "contract_line_service_usage_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.850 UTC [1410] ERROR:  column "contract_line_id" does not exist at character 125
+ 2026-09-20 06:14:50.850 UTC [1410] STATEMENT:  delete from "contract_line_service_rate_tiers" where "contract_line_service_rate_tiers"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.850 UTC [1410] ERROR:  column "contract_line_id" does not exist at character 133
+ 2026-09-20 06:14:50.850 UTC [1410] STATEMENT:  delete from "contract_line_service_hourly_configs" where "contract_line_service_hourly_configs"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.851 UTC [1410] ERROR:  column "contract_line_id" does not exist at character 131
+ 2026-09-20 06:14:50.851 UTC [1410] STATEMENT:  delete from "contract_line_service_hourly_config" where "contract_line_service_hourly_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.852 UTC [1410] ERROR:  column "contract_line_id" does not exist at character 129
+ 2026-09-20 06:14:50.852 UTC [1410] STATEMENT:  delete from "contract_line_service_fixed_config" where "contract_line_service_fixed_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.902 UTC [1411] ERROR:  column "contract_line_id" does not exist at character 131
+ 2026-09-20 06:14:50.902 UTC [1411] STATEMENT:  delete from "contract_line_service_bucket_config" where "contract_line_service_bucket_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.903 UTC [1411] ERROR:  column "contract_line_id" does not exist at character 129
+ 2026-09-20 06:14:50.903 UTC [1411] STATEMENT:  delete from "contract_line_service_usage_config" where "contract_line_service_usage_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.904 UTC [1411] ERROR:  column "contract_line_id" does not exist at character 125
+ 2026-09-20 06:14:50.904 UTC [1411] STATEMENT:  delete from "contract_line_service_rate_tiers" where "contract_line_service_rate_tiers"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.905 UTC [1411] ERROR:  column "contract_line_id" does not exist at character 133
+ 2026-09-20 06:14:50.905 UTC [1411] STATEMENT:  delete from "contract_line_service_hourly_configs" where "contract_line_service_hourly_configs"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.905 UTC [1411] ERROR:  column "contract_line_id" does not exist at character 131
+ 2026-09-20 06:14:50.905 UTC [1411] STATEMENT:  delete from "contract_line_service_hourly_config" where "contract_line_service_hourly_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.906 UTC [1411] ERROR:  column "contract_line_id" does not exist at character 129
+ 2026-09-20 06:14:50.906 UTC [1411] STATEMENT:  delete from "contract_line_service_fixed_config" where "contract_line_service_fixed_config"."tenant" = $1 and "tenant" = $2 and "contract_line_id" = $3
+ 2026-09-20 06:14:50.925 UTC [1411] ERROR:  update or delete on table "clients" violates foreign key constraint "contracts_owner_client_id_fkey" on table "contracts"
+ 2026-09-20 06:14:50.925 UTC [1411] DETAIL:  Key (tenant, client_id)=(13a2e75f-98a5-40b1-a3fc-44c034c854df, d23d4fa7-bf2c-4b8b-a3a9-43ce479c18d6) is still referenced from table "contracts".
+ 2026-09-20 06:14:50.925 UTC [1411] STATEMENT:  delete from "clients" where "clients"."tenant" = $1 and "tenant" = $2 and "client_id" = $3
+ 2026-09-20 06:14:50.935 UTC [1411] ERROR:  update or delete on table "clients" violates foreign key constraint "contracts_owner_client_id_fkey" on table "contracts"
+ 2026-09-20 06:14:50.935 UTC [1411] DETAIL:  Key (tenant, client_id)=(13a2e75f-98a5-40b1-a3fc-44c034c854df, 579ac0bf-35c8-4815-9aee-3d1109f6e31a) is still referenced from table "contracts".
+ 2026-09-20 06:14:50.935 UTC [1411] STATEMENT:  delete from "clients" where "clients"."tenant" = $1 and "tenant" = $2 and "client_id" = $3
+ 2026-09-20 06:14:50.986 UTC [1407] ERROR:  update or delete on table "contracts" violates foreign key constraint "contract_lines_contract_fk" on table "contract_lines"
+ 2026-09-20 06:14:50.986 UTC [1407] DETAIL:  Key (tenant, contract_id)=(13a2e75f-98a5-40b1-a3fc-44c034c854df, 2f05d924-43da-44a6-b78b-40a49140900a) is still referenced from table "contract_lines".
+ 2026-09-20 06:14:50.986 UTC [1407] STATEMENT:  delete from "contracts" where "contracts"."tenant" = $1 and "tenant" = $2 and "contract_id" = $3
+ 2026-09-20 06:14:50.996 UTC [1407] ERROR:  update or delete on table "clients" violates foreign key constraint "contracts_owner_client_id_fkey" on table "contracts"
+ 2026-09-20 06:14:50.996 UTC [1407] DETAIL:  Key (tenant, client_id)=(13a2e75f-98a5-40b1-a3fc-44c034c854df, 24741979-53be-4a02-ba9e-a293d639191f) is still referenced from table "contracts".
+ 2026-09-20 06:14:50.996 UTC [1407] STATEMENT:  delete from "clients" where "clients"."tenant" = $1 and "tenant" = $2 and "client_id" = $3
+ 2026-09-20 06:14:51.016 UTC [1407] ERROR:  update or delete on table "clients" violates foreign key constraint "contracts_owner_client_id_fkey" on table "contracts"
+ 2026-09-20 06:14:51.016 UTC [1407] DETAIL:  Key (tenant, client_id)=(13a2e75f-98a5-40b1-a3fc-44c034c854df, 2a8f9d38-66d6-42ee-a8f0-af335b14b993) is still referenced from table "contracts".
+ 2026-09-20 06:14:51.016 UTC [1407] STATEMENT:  delete from "clients" where "clients"."tenant" = $1 and "tenant" = $2 and "client_id" = $3
+ 2026-09-20 06:14:51.131 UTC [1411] ERROR:  update or delete on table "contracts" violates foreign key constraint "contract_lines_contract_fk" on table "contract_lines"
+ 2026-09-20 06:14:51.131 UTC [1411] DETAIL:  Key (tenant, contract_id)=(13a2e75f-98a5-40b1-a3fc-44c034c854df, d04dad1a-9302-4a97-aea3-6a4e9d10f577) is still referenced from table "contract_lines".
+ 2026-09-20 06:14:51.131 UTC [1411] STATEMENT:  delete from "contracts" where "contracts"."tenant" = $1 and "tenant" = $2 and "contract_id" = $3
+ 2026-09-20 06:14:51.134 UTC [1411] ERROR:  update or delete on table "clients" violates foreign key constraint "contracts_owner_client_id_fkey" on table "contracts"
+ 2026-09-20 06:14:51.134 UTC [1411] DETAIL:  Key (tenant, client_id)=(13a2e75f-98a5-40b1-a3fc-44c034c854df, 47579b78-4983-4725-8300-264d2f104906) is still referenced from table "contracts".
+ 2026-09-20 06:14:51.134 UTC [1411] STATEMENT:  delete from "clients" where "clients"."tenant" = $1 and "tenant" = $2 and "client_id" = $3
+ 2026-09-20 06:14:51.304 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:51.309 UTC [60] LOG:  checkpoint complete: wrote 109 buffers (0.7%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.002 s, sync=0.001 s, total=0.006 s; sync files=11, longest=0.001 s, average=0.001 s; distance=18620 kB, estimate=32057 kB
+ 2026-09-20 06:14:51.920 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:51.924 UTC [60] LOG:  checkpoint complete: wrote 27 buffers (0.2%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.001 s, sync=0.001 s, total=0.004 s; sync files=11, longest=0.001 s, average=0.001 s; distance=18014 kB, estimate=30653 kB
+ 2026-09-20 06:14:53.883 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:53.887 UTC [60] LOG:  checkpoint complete: wrote 24 buffers (0.1%); 0 WAL file(s) added, 1 removed, 1 recycled; write=0.001 s, sync=0.001 s, total=0.005 s; sync files=11, longest=0.001 s, average=0.001 s; distance=18496 kB, estimate=29437 kB
+ 2026-09-20 06:14:54.720 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:54.724 UTC [60] LOG:  checkpoint complete: wrote 21 buffers (0.1%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.001 s, sync=0.001 s, total=0.004 s; sync files=11, longest=0.001 s, average=0.001 s; distance=17648 kB, estimate=28258 kB
+ 2026-09-20 06:14:55.398 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:55.402 UTC [60] LOG:  checkpoint complete: wrote 23 buffers (0.1%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.001 s, sync=0.001 s, total=0.004 s; sync files=11, longest=0.001 s, average=0.001 s; distance=17990 kB, estimate=27231 kB
+ 2026-09-20 06:14:56.289 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:56.293 UTC [60] LOG:  checkpoint complete: wrote 24 buffers (0.1%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.001 s, sync=0.001 s, total=0.005 s; sync files=11, longest=0.001 s, average=0.001 s; distance=17651 kB, estimate=26273 kB
+ 2026-09-20 06:14:57.523 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:57.527 UTC [60] LOG:  checkpoint complete: wrote 91 buffers (0.6%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.002 s, sync=0.002 s, total=0.005 s; sync files=12, longest=0.001 s, average=0.001 s; distance=18694 kB, estimate=25515 kB
+ 2026-09-20 06:14:58.123 UTC [1450] FATAL:  role "root" does not exist
+ 2026-09-20 06:14:58.974 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:14:59.147 UTC [60] LOG:  checkpoint complete: wrote 6316 buffers (38.5%); 0 WAL file(s) added, 0 removed, 2 recycled; write=0.148 s, sync=0.022 s, total=0.173 s; sync files=3688, longest=0.002 s, average=0.001 s; distance=35632 kB, estimate=35632 kB
+ 2026-09-20 06:15:00.289 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:15:00.294 UTC [60] LOG:  checkpoint complete: wrote 20 buffers (0.1%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.001 s, sync=0.002 s, total=0.005 s; sync files=11, longest=0.002 s, average=0.001 s; distance=17815 kB, estimate=33850 kB
+ 2026-09-20 06:15:00.832 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:15:01.013 UTC [60] LOG:  checkpoint complete: wrote 6067 buffers (37.0%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.145 s, sync=0.034 s, total=0.181 s; sync files=3688, longest=0.002 s, average=0.001 s; distance=18027 kB, estimate=32268 kB
+ 2026-09-20 06:15:02.263 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:15:02.419 UTC [60] LOG:  checkpoint complete: wrote 6008 buffers (36.7%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.101 s, sync=0.052 s, total=0.156 s; sync files=3689, longest=0.031 s, average=0.001 s; distance=18015 kB, estimate=30843 kB
+ 2026-09-20 06:15:03.693 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:15:03.698 UTC [60] LOG:  checkpoint complete: wrote 75 buffers (0.5%); 0 WAL file(s) added, 0 removed, 2 recycled; write=0.002 s, sync=0.002 s, total=0.006 s; sync files=11, longest=0.001 s, average=0.001 s; distance=17854 kB, estimate=29544 kB
+ 2026-09-20 06:15:05.860 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:15:05.864 UTC [60] LOG:  checkpoint complete: wrote 60 buffers (0.4%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.001 s, sync=0.001 s, total=0.004 s; sync files=16, longest=0.001 s, average=0.001 s; distance=20229 kB, estimate=28612 kB
+ 2026-09-20 06:15:08.186 UTC [1491] FATAL:  role "root" does not exist
+ 2026-09-20 06:15:13.670 UTC [60] LOG:  checkpoint starting: immediate force wait
+ 2026-09-20 06:15:13.675 UTC [60] LOG:  checkpoint complete: wrote 56 buffers (0.3%); 0 WAL file(s) added, 0 removed, 1 recycled; write=0.001 s, sync=0.001 s, total=0.005 s; sync files=11, longest=0.001 s, average=0.001 s; distance=18112 kB, estimate=27562 kB
+ 2026-09-20 06:15:18.256 UTC [1505] FATAL:  role "root" does not exist
+ 2026-09-20 06:15:28.337 UTC [1522] FATAL:  role "root" does not exist
+Stop and remove container: 2d526645b93f4d14a0c19fa6627b126b_ankanepgvectorlatest_95ce12
+##[command]/usr/bin/docker rm --force ea23470583bfa6d3c9c3af3d411ee556e26b9f2b16eeaf457f831a19454af619
+ea23470583bfa6d3c9c3af3d411ee556e26b9f2b16eeaf457f831a19454af619
+Print service container logs: 83d049d8cf7247b3a21699a27fbfe306_greenmailstandalone218_6955a0
+##[command]/usr/bin/docker logs --details d6a48b06de87b3769d409c749d167351700999aa5dc44553c07e5d7f4292c328
+ Executing 'java -Djava.net.preferIPv4Stack=true -Dgreenmail.setup.test.all -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled -jar greenmail-standalone.jar' ...
+ 2026-09-20 05:56:54,675 INFO  GreenMailStandaloneRunner| Starting GreenMail standalone v2.1.8 using [ServerSetup{port=3025, bindAddress='0.0.0.0', protocol='smtp', readTimeout=-1, connectionTimeout=-1, writeTimeout=-1, verbose=false, serverStartupTimeout=2000, mailProperties={}}, ServerSetup{port=3465, bindAddress='0.0.0.0', protocol='smtps', readTimeout=-1, connectionTimeout=-1, writeTimeout=-1, verbose=false, serverStartupTimeout=2000, mailProperties={}}, ServerSetup{port=3110, bindAddress='0.0.0.0', protocol='pop3', readTimeout=-1, connectionTimeout=-1, writeTimeout=-1, verbose=false, serverStartupTimeout=2000, mailProperties={}}, ServerSetup{port=3995, bindAddress='0.0.0.0', protocol='pop3s', readTimeout=-1, connectionTimeout=-1, writeTimeout=-1, verbose=false, serverStartupTimeout=2000, mailProperties={}}, ServerSetup{port=3143, bindAddress='0.0.0.0', protocol='imap', readTimeout=-1, connectionTimeout=-1, writeTimeout=-1, verbose=false, serverStartupTimeout=2000, mailProperties={}}, ServerSetup{port=3993, bindAddress='0.0.0.0', protocol='imaps', readTimeout=-1, connectionTimeout=-1, writeTimeout=-1, verbose=false, serverStartupTimeout=2000, mailProperties={}}]
+ 2026-09-20 05:56:55,104 INFO  GreenMailStandaloneRunner| Starting GreenMail API server at http://0.0.0.0:8080/
+Stop and remove container: 83d049d8cf7247b3a21699a27fbfe306_greenmailstandalone218_6955a0
+##[command]/usr/bin/docker rm --force d6a48b06de87b3769d409c749d167351700999aa5dc44553c07e5d7f4292c328
+d6a48b06de87b3769d409c749d167351700999aa5dc44553c07e5d7f4292c328
+Print service container logs: 450b93a6aded4541b4585d3e116db0b1_redis7alpine_e94b28
+##[command]/usr/bin/docker logs --details 408afda6182057f8378597aa9e6c909ee93dbf6d01957ef5854dfee1bb08adb2
+ 1:C 20 Sep 2026 05:56:55.373 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+ 1:C 20 Sep 2026 05:56:55.373 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+ 1:C 20 Sep 2026 05:56:55.373 * Redis version=7.4.11, bits=64, commit=00000000, modified=0, pid=1, just started
+ 1:C 20 Sep 2026 05:56:55.373 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+ 1:M 20 Sep 2026 05:56:55.373 * monotonic clock: POSIX clock_gettime
+ 1:M 20 Sep 2026 05:56:55.374 * Running mode=standalone, port=6379.
+ 1:M 20 Sep 2026 05:56:55.374 * Server initialized
+ 1:M 20 Sep 2026 05:56:55.375 * Ready to accept connections tcp
+ 1:M 20 Sep 2026 06:02:24.397 * 100 changes in 300 seconds. Saving...
+ 1:M 20 Sep 2026 06:02:24.398 * Background saving started by pid 209
+ 209:C 20 Sep 2026 06:02:24.403 * DB saved on disk
+ 209:C 20 Sep 2026 06:02:24.403 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+ 1:M 20 Sep 2026 06:02:24.498 * Background saving terminated with success
+ 1:M 20 Sep 2026 06:07:25.018 * 100 changes in 300 seconds. Saving...
+ 1:M 20 Sep 2026 06:07:25.019 * Background saving started by pid 392
+ 392:C 20 Sep 2026 06:07:25.022 * DB saved on disk
+ 392:C 20 Sep 2026 06:07:25.023 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+ 1:M 20 Sep 2026 06:07:25.119 * Background saving terminated with success
+ 1:M 20 Sep 2026 06:14:33.949 * 100 changes in 300 seconds. Saving...
+ 1:M 20 Sep 2026 06:14:33.950 * Background saving started by pid 653
+ 653:C 20 Sep 2026 06:14:33.955 * DB saved on disk
+ 653:C 20 Sep 2026 06:14:33.955 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+ 1:M 20 Sep 2026 06:14:34.051 * Background saving terminated with success
+Stop and remove container: 450b93a6aded4541b4585d3e116db0b1_redis7alpine_e94b28
+##[command]/usr/bin/docker rm --force 408afda6182057f8378597aa9e6c909ee93dbf6d01957ef5854dfee1bb08adb2
+408afda6182057f8378597aa9e6c909ee93dbf6d01957ef5854dfee1bb08adb2
+Remove container network: github_network_2d7e13eb923d42df94f35a33985fae46
+##[command]/usr/bin/docker network rm github_network_2d7e13eb923d42df94f35a33985fae46
+github_network_2d7e13eb923d42df94f35a33985fae46
+Cleaning up orphan processes
+##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/cache@v4, actions/checkout@v4, actions/setup-node@v4, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

@@ -115,7 +115,13 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
       }),
       insert: vi.fn().mockResolvedValue([1]),
     };
-    const knex: any = vi.fn(() => query);
+    const knex: any = vi.fn((table?: string) => {
+      if (table === 'tenants' || table === 'co_management_relationships') return {
+        where: vi.fn().mockReturnThis(),
+        first: async () => table === 'tenants' ? { product_code: 'psa' } : undefined,
+      };
+      return query;
+    });
     knex.fn = { now: vi.fn(() => new Date()) };
     knex.raw = vi.fn((sql: string) => sql);
     knex.transaction = vi.fn(async (callback: (trx: any) => Promise<unknown>) => callback(knex));

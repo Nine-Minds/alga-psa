@@ -22,7 +22,7 @@ export const toggleTaskCommentReaction = withAuth(async (
   emoji: string
 ): Promise<{ added: boolean }> => {
   const { knex: db } = await createTenantKnex();
-  return toggleTaskCommentReactionWithDb(db, tenant, user.user_id, taskCommentId, emoji);
+  return toggleTaskCommentReactionWithDb(db, tenant, user, taskCommentId, emoji);
 });
 
 /**
@@ -34,6 +34,8 @@ export const getTaskCommentsReactionsBatch = withAuth(async (
   { tenant },
   taskCommentIds: string[]
 ): Promise<IReactionsBatchResult> => {
+  // Snapshot before the first await: the caller's array may change while we wait.
+  taskCommentIds = [...taskCommentIds];
   const { knex: db } = await createTenantKnex();
-  return getTaskCommentsReactionsBatchWithDb(db, tenant, user.user_id, taskCommentIds);
+  return getTaskCommentsReactionsBatchWithDb(db, tenant, user, taskCommentIds);
 });

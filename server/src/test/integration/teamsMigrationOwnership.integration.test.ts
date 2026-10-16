@@ -48,8 +48,13 @@ describe('Teams migration ownership (integration)', () => {
     const merged = await createMergedEeMigrationsDir();
     mergedEeMigrationsRootDir = merged.rootDir;
 
+    // Name the CE directory explicitly. This suite's whole subject is what CE
+    // migrations alone produce, and the integration lane sets
+    // TEST_MIGRATIONS_DIR to a CE+EE overlay — which the default would pick up,
+    // giving this "CE schema" the Teams tables it asserts are absent.
     ceDb = await createTestDbConnection({
       databaseName: 'test_database_teams_ce_schema',
+      migrationsDir: ceMigrationsDir,
       runSeeds: false,
     });
 

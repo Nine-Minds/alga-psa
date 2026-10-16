@@ -10,6 +10,7 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import type { ContactVisibilityContext } from './clientPortalVisibility';
 import { getClientContactVisibilityContext } from './clientPortalVisibility.server';
 
 /**
@@ -109,39 +110,47 @@ function toTicketAuthorizationRecord(ticket: Partial<ITicket>): AuthorizationRec
     assignedUserIds: Array.from(assignees),
     clientId: ticket.client_id ?? null,
     boardId: ticket.board_id ?? null,
+    contactId: ticket.contact_name_id ?? null,
     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
   };
 }
 
-async function resolveClientSelectedBoardIds(
+/**
+ * `undefined` means "internal principal, portal visibility does not apply";
+ * `null` means "portal principal whose visibility could not be resolved" and
+ * must deny. Returning the whole context rather than only its board ids is what
+ * carries contact scoping into the kernel: a contact-scoped portal user is
+ * restricted to their own tickets, not to every ticket on their boards.
+ */
+async function resolveClientVisibility(
   trx: Conn,
   tenant: string,
   user: IUserWithRoles,
-): Promise<string[] | undefined> {
+): Promise<ContactVisibilityContext | null | undefined> {
   if (user.user_type !== 'client') {
     return undefined;
   }
 
   if (!user.contact_id) {
-    return [];
+    return null;
   }
 
   try {
-    const visibilityContext = await getClientContactVisibilityContext(
+    return await getClientContactVisibilityContext(
       trx as Knex.Transaction,
       tenant,
       user.contact_id,
     );
-    return visibilityContext.visibleBoardIds ?? undefined;
   } catch {
     // Fail closed for client-portal users when visibility context cannot be
     // resolved safely.
-    return [];
+    return null;
   }
 }
 
 interface TicketAuthorizationContext {
   authorizationSubject: AuthorizationSubject;
+  contactVisibility: ContactVisibilityContext | null | undefined;
   selectedBoardIds: string[] | undefined;
   authorizationKernel: ReturnType<typeof createAuthorizationKernel>;
   requestCache: RequestLocalAuthorizationCache;
@@ -153,9 +162,10 @@ async function createTicketAuthorizationContext(
   user: IUserWithRoles,
 ): Promise<TicketAuthorizationContext> {
   const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
-  const selectedBoardIds = await resolveClientSelectedBoardIds(trx, tenant, user);
+  const contactVisibility = await resolveClientVisibility(trx, tenant, user);
+  const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
   const relationshipRules =
-    selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' as const }];
+    contactVisibility === undefined ? [] : [{ template: 'contact_visibility' as const }];
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider({
       relationshipRules,
@@ -173,7 +183,7 @@ async function createTicketAuthorizationContext(
   });
   const requestCache = new RequestLocalAuthorizationCache();
 
-  return { authorizationSubject, selectedBoardIds, authorizationKernel, requestCache };
+  return { authorizationSubject, contactVisibility, selectedBoardIds, authorizationKernel, requestCache };
 }
 
 export interface TicketRecordRow {
@@ -182,6 +192,7 @@ export interface TicketRecordRow {
   entered_by: string | null;
   client_id: string | null;
   board_id: string | null;
+  contact_name_id: string | null;
   assigned_team_id: string | null;
 }
 
@@ -198,6 +209,7 @@ async function resolveTicketRecord(
       'entered_by',
       'client_id',
       'board_id',
+      'contact_name_id',
       'assigned_team_id',
     )) as TicketRecordRow | undefined;
   return row ?? null;
@@ -231,6 +243,7 @@ export async function authorizeTicketRecordAccess(input: {
       id: input.ticketId,
     },
     record: toTicketAuthorizationRecord(ticket as Partial<ITicket>),
+    contactVisibility: context.contactVisibility,
     selectedBoardIds: context.selectedBoardIds,
     requestCache: context.requestCache,
     knex: input.trx as Knex,

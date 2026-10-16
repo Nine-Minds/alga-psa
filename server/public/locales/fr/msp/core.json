@@ -105,6 +105,12 @@
     "passwords": "Mots de passe",
     "ticketsAll": "Tous les tickets",
     "ticketsRecurring": "Tickets récurrents",
+    "coManaged": "Informatique cogérée",
+    "coManagedDelegation": "Administration déléguée",
+    "coManagedAccess": "Accès cogéré",
+    "ticketsCustomer": "Tickets clients",
+    "projectsSharedTasks": "Tâches partagées",
+    "coManagedOverview": "Vue d'ensemble",
     "ticketsTemplates": "Modèles de tickets"
   },
   "sidebar": {

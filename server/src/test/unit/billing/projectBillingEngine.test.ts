@@ -41,6 +41,15 @@ const billingEngineSource = readFileSync(
   ),
   "utf8",
 );
+// The ticket/project attribution join moved out of the engine into the shared
+// billing-work union that both time-entry loaders join.
+const timeEntryWorkContextSource = readFileSync(
+  new URL(
+    "../../../../../packages/billing/src/lib/billing/timeEntryWorkContext.ts",
+    import.meta.url,
+  ),
+  "utf8",
+);
 // The authoritative cap write-down lives on the persistence side.
 const invoiceGenerationSource = readFileSync(
   new URL(
@@ -1275,26 +1284,26 @@ describe("ticket time project attribution", () => {
     expect(charges[0]).not.toHaveProperty("project_billing_config_id");
 
     // The exclusion itself is a loader predicate, and it keys off the project
-    // the COALESCE join now resolves for ticket time.
+    // the billing_work union resolves for ticket time.
     expect(billingEngineSource).toContain(
-      'this.whereNull("projects.project_id").orWhereNotIn(\n          "projects.project_id",\n          fixedPriceProjectIds,',
+      'this.whereNull("billing_work.project_id").orWhereNotIn(\n          "billing_work.project_id",\n          fixedPriceProjectIds,',
     );
   });
 
   it("T027: both time-entry loaders resolve the project through the shared resolver", () => {
-    const resolverCalls = billingEngineSource.match(
-      /joinRaw\(ticketProjectAttributionJoin\("time_entries"\)\)/g,
+    // Both loaders take project attribution from the one billing_work union...
+    const workJoins = billingEngineSource.match(
+      /joinTimeEntryBillingWorkContext\(this\.knex, this\.tenant!, \w+\)/g,
     );
-    expect(resolverCalls).toHaveLength(2);
-
-    const coalesceJoins = billingEngineSource.match(
-      /ticketProjectIdExpression\("project_phases"\)/g,
+    expect(workJoins).toHaveLength(2);
+    expect(billingEngineSource.match(/"billing_work\.project_id"/g)!.length).toBeGreaterThanOrEqual(6);
+    // ...which resolves ticket time through the shared link resolver, not an
+    // inline copy of it.
+    expect(timeEntryWorkContextSource).toContain(
+      "ticketProjectAttributionByTicketJoin('t')",
     );
-    expect(coalesceJoins).toHaveLength(2);
-    // project_phases is null for ticket time, so the projects join cannot infer
-    // its tenant predicate from the phase.
-    expect(billingEngineSource).toContain(
-      '{ type: "left", rootTenantColumn: "time_entries.tenant" }',
+    expect(timeEntryWorkContextSource).toContain(
+      "ticket_project.project_id AS project_id",
     );
     // The dead join this replaces must not come back: the engine reads the link
     // table only through the shared fragments (the ambiguity warning's
@@ -1302,12 +1311,15 @@ describe("ticket time project attribution", () => {
     expect(
       billingEngineSource.match(/project_ticket_links/g),
     ).toHaveLength(1);
+    expect(timeEntryWorkContextSource).not.toContain("project_ticket_links");
     expect(billingEngineSource).toContain(
       "JOIN (${ambiguousTicketProjectLinksQuery()}) ambiguous",
     );
     // Decision e: invoiced time is out of reach of both loaders, whatever the
     // link says.
-    expect(billingEngineSource).toContain('.where("time_entries.invoiced", false)');
+    expect(
+      billingEngineSource.match(/\.where\("time_entries\.invoiced", false\)/g)!.length,
+    ).toBeGreaterThanOrEqual(2);
   });
 
   it("T028: the resolver yields one row per ticket and attributes nothing when links disagree", () => {

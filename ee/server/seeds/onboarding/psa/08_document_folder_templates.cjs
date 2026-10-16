@@ -122,3 +122,6 @@ exports.seed = async function (knex, tenantId) {
 
   console.log(`Created default folders for ${DEFAULTS.length} entity types for tenant ${tenantId}`);
 };
+
+// Shared operational bootstrap reuses these definitions without commercial folders.
+exports.DEFAULTS = DEFAULTS;

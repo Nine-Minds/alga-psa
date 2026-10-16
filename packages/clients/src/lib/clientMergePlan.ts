@@ -481,6 +481,48 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
       + 'was discarded for this specific client. It has no live write path, and re-stamping it would '
       + 'misattribute the record (and collide with the target\'s own row on the per-client unique key).',
   },
+  // Co-managed IT. Every row is anchored to a co-management relationship or is
+  // retained evidence; see each reason.
+  {
+    table: 'co_managed_archive_files',
+    reason:
+      'Immutable retained evidence (UPDATE is rejected by trigger); it records which client the work was done for at the time and must not be re-attributed.',
+  },
+  {
+    table: 'co_managed_participation_evidence',
+    reason:
+      'Immutable retained evidence (UPDATE is rejected by trigger); it records which client the work was done for at the time and must not be re-attributed.',
+  },
+  {
+    table: 'co_managed_ticket_references',
+    reason:
+      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship.',
+  },
+  {
+    table: 'co_managed_project_task_references',
+    reason:
+      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship.',
+  },
+  {
+    table: 'co_managed_time_work_references',
+    reason:
+      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship. Its billing profile is a relationship-side reference, not a client_billing_profiles row moved by the merge.',
+  },
+  {
+    table: 'co_management_requester_email_deliveries',
+    reason:
+      'Delivery receipt qualified against the relationship by trigger; a historical send record with no live write path to re-point.',
+  },
+  {
+    table: 'co_management_requester_reply_tokens',
+    reason:
+      'Single-use reply token for a requester already notified; it is bound to that notification and expires, so there is no live write path to re-point.',
+  },
+  {
+    table: 'co_management_workflow_ticket_emails',
+    reason:
+      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship.',
+  },
   // These columns are OAuth application identifiers (varchar/text, no foreign
   // key to `clients`). Re-stamping one would break the integration outright.
   { table: 'google_calendar_provider_config', reason: 'OAuth client id, not an Alga client.' },
@@ -527,6 +569,8 @@ export const PROFILE_HISTORY_TABLES: Array<{
   table: string;
   label: string;
   nullableBillingProfile?: boolean;
+  /** Present in one edition only; skipped when the table is not installed. */
+  editionOptional?: boolean;
 }> = [
   { table: 'invoices', label: 'invoice', nullableBillingProfile: true },
   { table: 'client_billing_cycles', label: 'billing cycle' },
@@ -534,4 +578,9 @@ export const PROFILE_HISTORY_TABLES: Array<{
   { table: 'transactions', label: 'transaction', nullableBillingProfile: true },
   { table: 'credit_tracking', label: 'credit', nullableBillingProfile: true },
   { table: 'client_tax_settings', label: 'tax setting' },
+  // Enterprise autopay consent hangs off the profile (PK tenant+billing_profile_id)
+  // and carries a redundant client_id FK to clients. The profile moves, so the
+  // consent moves with it; leaving client_id on the tombstone would break
+  // `profile.client_id == row.client_id`. No collision is possible: one row per profile.
+  { table: 'billing_profile_autopay', label: 'autopay authorization', editionOptional: true },
 ];

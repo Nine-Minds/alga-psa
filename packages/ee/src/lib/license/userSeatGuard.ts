@@ -6,7 +6,7 @@
  * on EE builds) lives in `ee/server/src/lib/license/userSeatGuard.ts`.
  */
 export async function checkApplianceLicenseSeatLimit(
-  _usedSeats: number
+  _usedSeats: number, _tenant: string, _connection?: unknown
 ): Promise<{ seats: number } | null> {
   return null;
 }

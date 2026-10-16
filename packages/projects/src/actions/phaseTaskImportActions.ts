@@ -1,8 +1,10 @@
 'use server';
 
 import { Knex } from 'knex';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import type { WorkflowCatalogEventType } from '@alga-psa/event-schemas';
+import { createTenantKnex, tenantDb, registerAfterCommit } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/shared/db';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { unparseCSV } from '@alga-psa/core';
@@ -683,6 +685,13 @@ export async function validatePhaseTaskImportDataWithReferenceData(
  */
 const DEFAULT_UNSPECIFIED_STATUS_NAME = 'No Status Specified';
 
+function publishImportEventAfterCommit<T extends WorkflowCatalogEventType>(
+  trx: Knex.Transaction,
+  event: Parameters<typeof publishWorkflowEvent<T>>[0],
+): void {
+  registerAfterCommit(trx, () => publishWorkflowEvent<T>(event), event.eventType);
+}
+
 /**
  * Import phases and tasks into an existing project
  */
@@ -699,6 +708,7 @@ export const importPhasesAndTasks = withAuth(async (
     const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       if (!await hasPermission(user, 'project', 'update', trx)) {
         throw new Error('Permission denied: Cannot update projects');
       }
@@ -1022,7 +1032,7 @@ export const importPhasesAndTasks = withAuth(async (
             };
             const statusInfo = await resolveProjectStatusInfo(taskTrx, tenant, newTask.project_status_mapping_id);
 
-            await publishWorkflowEvent({
+            publishImportEventAfterCommit(trx, {
               eventType: 'PROJECT_TASK_CREATED',
               ctx,
               payload: buildProjectTaskCreatedPayload({
@@ -1037,7 +1047,7 @@ export const importPhasesAndTasks = withAuth(async (
             });
 
             if (newTask.assigned_to) {
-              await publishWorkflowEvent({
+              publishImportEventAfterCommit(trx, {
                 eventType: 'PROJECT_TASK_ASSIGNED',
                 ctx,
                 payload: buildProjectTaskAssignedPayload({

@@ -34,7 +34,7 @@ describe('ticket service documents and materials tenant-scoped query contract', 
     expect(downloadSection).toContain("tenantScopedTable(knex, 'documents as d', context.tenant)");
     expect(downloadSection).not.toContain("'d.tenant': context.tenant");
 
-    expect(deleteSection).toContain("tenantScopedTable(knex, 'documents as d', context.tenant)");
+    expect(deleteSection).toContain("tenantScopedTable(trx, 'documents as d', context.tenant)");
     expect(deleteSection).toContain("tenantScopedTable(trx, 'document_associations', context.tenant)");
     expect(deleteSection).toContain("tenantScopedTable(trx, 'documents', context.tenant)");
     expect(deleteSection).not.toContain("'d.tenant': context.tenant");

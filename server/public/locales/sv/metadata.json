@@ -234,6 +234,55 @@
       },
       "title": "Kunder"
     },
+    "coManaged": {
+      "title": "Samhanterad IT",
+      "archive": {
+        "title": "Arkiv för delat arbete"
+      },
+      "tickets": {
+        "title": "Samhanterade ärendeköer"
+      }
+    },
+    "coManagement": {
+      "providers": {
+        "title": "E-post- och identitetsleverantörer"
+      },
+      "title": "Samhanterad åtkomst",
+      "administration": {
+        "title": "Delegerad administration"
+      },
+      "departure": {
+        "title": "Avsluta samhantering"
+      },
+      "export": {
+        "title": "Exportera arbetsyta"
+      },
+      "projects": {
+        "detail": {
+          "title": "Delat projekt"
+        }
+      },
+      "sla": {
+        "title": "Samhanterade SLA-prioriteter"
+      },
+      "tasks": {
+        "title": "Köer för projektuppgifter",
+        "detail": {
+          "title": "Delad projektuppgift"
+        }
+      },
+      "ticketAccess": {
+        "title": "Åtkomst till enskilda ärenden"
+      },
+      "tickets": {
+        "detail": {
+          "title": "Delat ärende"
+        }
+      },
+      "upgrade": {
+        "title": "Uppgradera till AlgaPSA"
+      }
+    },
     "contacts": {
       "title": "Kontakter",
       "detail": {
@@ -592,6 +641,9 @@
     },
     "layout": {
       "defaultTitle": "Översikt | AlgaPSA"
+    },
+    "customerTickets": {
+      "title": "Kundärenden"
     }
   },
   "share": {

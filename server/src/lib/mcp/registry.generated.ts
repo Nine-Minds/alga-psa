@@ -48613,6 +48613,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "enum": [
             "ticket",
             "project_task",
+            "co_managed",
             "non_billable_category",
             "ad_hoc",
             "interaction"
@@ -48634,10 +48635,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "service_id": {
           "type": "string",
           "format": "uuid",
-          "description": "Required (it drives billing)."
+          "description": "Required on create for commercial (PSA) time entries, where it drives billing; operational co-managed entries carry no service. Cannot be cleared on update."
         },
         "tax_region": {
           "type": "string"
+        },
+        "contract_line_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         },
         "is_billable": {
           "type": "boolean",
@@ -48647,8 +48655,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "work_item_type",
         "start_time",
-        "end_time",
-        "service_id"
+        "end_time"
       ]
     },
     "responseBodySchema": {
@@ -48855,6 +48862,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "enum": [
                   "ticket",
                   "project_task",
+                  "co_managed",
                   "non_billable_category",
                   "ad_hoc",
                   "interaction"
@@ -48876,10 +48884,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "service_id": {
                 "type": "string",
                 "format": "uuid",
-                "description": "Required (it drives billing)."
+                "description": "Required on create for commercial (PSA) time entries, where it drives billing; operational co-managed entries carry no service. Cannot be cleared on update."
               },
               "tax_region": {
                 "type": "string"
+              },
+              "contract_line_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
               },
               "is_billable": {
                 "type": "boolean",
@@ -48889,8 +48904,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "required": [
               "work_item_type",
               "start_time",
-              "end_time",
-              "service_id"
+              "end_time"
             ]
           },
           "minItems": 1,
@@ -48966,6 +48980,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "enum": [
                       "ticket",
                       "project_task",
+                      "co_managed",
                       "non_billable_category",
                       "ad_hoc",
                       "interaction"
@@ -48987,10 +49002,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "service_id": {
                     "type": "string",
                     "format": "uuid",
-                    "description": "Required on create (it drives billing); cannot be cleared on update."
+                    "description": "Required on create for commercial (PSA) time entries, where it drives billing; operational co-managed entries carry no service. Cannot be cleared on update."
                   },
                   "tax_region": {
                     "type": "string"
+                  },
+                  "contract_line_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
                   },
                   "is_billable": {
                     "type": "boolean",
@@ -49832,6 +49854,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "enum": [
             "ticket",
             "project_task",
+            "co_managed",
             "non_billable_category",
             "ad_hoc",
             "interaction"
@@ -49853,10 +49876,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "service_id": {
           "type": "string",
           "format": "uuid",
-          "description": "Required on create (it drives billing); cannot be cleared on update."
+          "description": "Required on create for commercial (PSA) time entries, where it drives billing; operational co-managed entries carry no service. Cannot be cleared on update."
         },
         "tax_region": {
           "type": "string"
+        },
+        "contract_line_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         },
         "is_billable": {
           "type": "boolean",

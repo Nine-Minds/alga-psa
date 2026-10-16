@@ -50,7 +50,8 @@
     "@alga-psa/formatting": "*",
     "@alga-psa/types": "*",
     "@alga-psa/validation": "*",
-    "file-type": "^21.3.2"
+    "file-type": "^21.3.2",
+    "@alga-psa/licensing": "*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

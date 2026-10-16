@@ -27,6 +27,7 @@ import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/E
 import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
 import { normalizeInboundMessageIdentity } from '@alga-psa/shared/services/email/inboundEmailIdentity';
 import { createHash } from 'node:crypto';
+import { handoffRequiredDurableInboundJob } from './inboundEmailProducer';
 
 export class SourceMessageUnavailableError extends Error {
   public readonly reason: string;
@@ -39,7 +40,7 @@ export class SourceMessageUnavailableError extends Error {
 }
 
 export interface UnifiedInboundEmailQueueProcessResult {
-  outcome: 'processed' | 'skipped';
+  outcome: 'processed' | 'skipped' | 'handed_off';
   processedCount: number;
   dedupedCount: number;
   skippedCount: number;
@@ -888,6 +889,10 @@ async function getInboundProviderGateReason(
 export async function processUnifiedInboundEmailQueueJob(
   job: UnifiedInboundEmailQueueJob
 ): Promise<UnifiedInboundEmailQueueProcessResult> {
+  if (await handoffRequiredDurableInboundJob(job)) {
+    return { outcome: 'handed_off', processedCount: 0, dedupedCount: 0, skippedCount: 0,
+      reason: 'required_durable_ingress' };
+  }
   const gateReason = await getInboundProviderGateReason(job);
   if (gateReason) {
     console.info('[UnifiedInboundEmailQueueJobProcessor] skipped gated provider job', {

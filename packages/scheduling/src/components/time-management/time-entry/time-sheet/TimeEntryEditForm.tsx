@@ -295,7 +295,9 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
   // Get client ID from entry or work item
   useEffect(() => {
+    let current = true;
     const fetchClientId = async () => {
+      if (entry?.billing_mode === 'operational') { setClientId(null); return; }
       let resolvedClientId: string | null = null;
       if (entry?.client_id) {
         console.log('Using client ID directly from entry:', entry.client_id);
@@ -304,7 +306,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         console.log('Attempting to get client ID from work item:', entry.work_item_id);
         try {
           // Pass tenant ID as the second argument
-          resolvedClientId = await getClientIdForWorkItem(entry.work_item_id, entry.work_item_type);
+          resolvedClientId = await getClientIdForWorkItem(entry.work_item_id, entry.work_item_type, entry.entry_id || undefined);
           console.log('Resolved client ID from work item:', resolvedClientId);
         } catch (error) {
           console.error('Error fetching client ID for work item:', error);
@@ -315,19 +317,22 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         resolvedClientId = null;
       }
 
-      if (clientId !== resolvedClientId) {
+      if (current && clientId !== resolvedClientId) {
         setClientId(resolvedClientId);
         console.log('Set clientId state to:', resolvedClientId);
       }
     };
 
     fetchClientId();
-  }, [entry?.client_id, entry?.work_item_id, clientId]); // Added work_item_id and clientId dependencies
+    return () => { current = false; };
+  }, [entry?.billing_mode, entry?.client_id, entry?.work_item_id, clientId]); // Added work_item_id and clientId dependencies
 
   // Load eligible contract lines and set default tax region when service or client ID changes
   useEffect(() => {
+    let current = true;
     let cancelled = false;
     const loadDataAndSetDefaults = async () => {
+      if (entry?.billing_mode === 'operational') { setEligibleContractLines([]); setShowContractLineSelector(false); return; }
       // --- Removed Tax Region / Default Rate Logic ---
       // Tax details are now determined by the backend based on service_id's tax_rate_id
       // --- End Removed Logic ---
@@ -351,6 +356,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         console.log('No client ID available, cannot fetch client details.');
       }
 
+      if (!current) return;
       // 2. Load Eligible Contract Lines (dependent on service and client)
       if (cancelled) return;
       if (!entry?.service_id) {
@@ -367,7 +373,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
             entry.service_id,
             entry.start_time ?? selectedDate.toISOString()
           ) as EligiblePlanUI[];
-          if (cancelled) return;
+          if (!current) return;
           const entryDate = entry.start_time ? new Date(entry.start_time) : new Date(); // Use current date if start_time not set yet
 
           const filteredPlans = plans.filter(plan => {
@@ -412,7 +418,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         } catch (error) {
           if (cancelled) return;
           console.error('Error loading eligible contract lines:', error);
-          setEligibleContractLines([]); // Reset on error
+          if (current) setEligibleContractLines([]); // Reset on error
         }
       }
     }
@@ -421,8 +427,8 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     if (entry) {
       loadDataAndSetDefaults();
     }
-    return () => { cancelled = true; };
-  }, [entry?.entry_id, entry?.tempId, entry?.work_item_id, entry?.service_id, clientId, entry?.start_time, entry?.contract_line_id, index, onUpdateEntry]);
+    return () => { current = false; cancelled = true; };
+  }, [entry?.billing_mode, entry?.service_id, clientId, entry?.start_time, entry?.contract_line_id, index, onUpdateEntry]);
 
 const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDuration: number) => {
   const durationToSet = Math.max(0, newDuration);
@@ -461,7 +467,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       return;
     }
 
-    if (!entry?.service_id?.trim()) {
+    if (entry?.billing_mode !== 'operational' && !entry?.service_id?.trim()) {
       setValidationErrors(prev => ({
         ...prev,
         service: t('timeEntryForm.validation.serviceRequired', {
@@ -478,7 +484,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
     // Call parent's onSave with the current entry
     onSave(index);
-  }, [onSave, validateTimes, entry?.service_id, entry?.work_item_type, showContractLineSelector, eligibleContractLines.length, entry?.contract_line_id, index, setShowErrors, t]);
+  }, [onSave, validateTimes, entry?.billing_mode, entry?.service_id, entry?.work_item_type, showContractLineSelector, eligibleContractLines.length, entry?.contract_line_id, index, setShowErrors, t]);
 
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
     if (!isEditable || !entry) return;
@@ -619,6 +625,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
         </div>
       )}
 
+      {entry?.billing_mode !== 'operational' && <>
       <div className="space-y-1.5">
         <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
           <span>
@@ -683,6 +690,8 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           }
         />
       )}
+
+      </>}
 
       {/*
         Date field — shown for both new and existing entries so a saved entry can be moved to a
@@ -833,6 +842,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               {t('common.units.minutesShort', { defaultValue: 'm' })}
             </span>
           </div>
+          {entry?.billing_mode !== 'operational' && (
           <div className="inline-flex h-10 items-center gap-3 px-1">
             <Switch
               id={`${id}-billable-duration-${index}`}
@@ -863,6 +873,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               {t('timeEntryForm.labels.billable', { defaultValue: 'Billable' })}
             </span>
           </div>
+          )}
         </div>
         {(showErrors || Boolean(validationErrors.duration)) && validationErrors.duration && (
           <span className="text-sm text-red-500">

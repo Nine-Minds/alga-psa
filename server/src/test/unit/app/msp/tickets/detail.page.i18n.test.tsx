@@ -187,6 +187,12 @@ vi.mock('@/context/ProductContext', () => ({
   }),
 }));
 
+// The callout/badge provider reads the release flag (needs a real session); this test is about ticket detail chrome.
+vi.mock('@/components/co-managed/CoManagedWorkSignalsProvider', () => ({
+  CoManagedWorkSignalsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useCoManagedWorkSignals: () => ({ available: false, viewerId: null, escalatedUnassigned: 0, awaitingReply: 0, total: 0 }),
+}));
+
 vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({
   KeyboardShortcutsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));

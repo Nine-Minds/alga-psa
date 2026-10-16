@@ -48,7 +48,7 @@ describe('pushNotificationDispatcher', () => {
     mockGetActiveTokens.mockResolvedValue([
       { expo_push_token: 'ExponentPushToken[abc]', device_id: 'dev1', platform: 'ios' },
     ]);
-    mockSendPush.mockResolvedValue(undefined);
+    mockSendPush.mockResolvedValue({ delivery: { status: 'delivered' }, results: [] });
 
     await triggerPushForNotification(baseNotification);
 
@@ -73,7 +73,7 @@ describe('pushNotificationDispatcher', () => {
       { expo_push_token: 'ExponentPushToken[normal]', device_id: 'd2', platform: 'android', push_priority_threshold: 'normal' },
       { expo_push_token: 'ExponentPushToken[high]', device_id: 'd3', platform: 'ios', push_priority_threshold: 'high' },
     ]);
-    mockSendPush.mockResolvedValue(undefined);
+    mockSendPush.mockResolvedValue({ delivery: { status: 'delivered' }, results: [] });
 
     await triggerPushForNotification({ ...baseNotification, priority: 'normal' });
     expect(mockSendPush).toHaveBeenLastCalledWith(
@@ -115,7 +115,7 @@ describe('pushNotificationDispatcher', () => {
       { expo_push_token: 'ExponentPushToken[abc]', device_id: 'dev1', platform: 'ios' },
       { expo_push_token: 'ExponentPushToken[xyz]', device_id: 'dev2', platform: 'android' },
     ]);
-    mockSendPush.mockResolvedValue(undefined);
+    mockSendPush.mockResolvedValue({ delivery: { status: 'delivered' }, results: [] });
 
     await triggerPushForNotification(baseNotification);
 
@@ -132,7 +132,7 @@ describe('pushNotificationDispatcher', () => {
     mockGetActiveTokens.mockResolvedValue([
       { expo_push_token: 'ExponentPushToken[abc]', device_id: 'dev1', platform: 'ios' },
     ]);
-    mockSendPush.mockResolvedValue(undefined);
+    mockSendPush.mockResolvedValue({ delivery: { status: 'delivered' }, results: [] });
 
     await triggerPushForNotification({
       ...baseNotification,
@@ -151,7 +151,7 @@ describe('pushNotificationDispatcher', () => {
     mockGetActiveTokens.mockResolvedValue([
       { expo_push_token: 'ExponentPushToken[abc]', device_id: 'dev1', platform: 'ios' },
     ]);
-    mockSendPush.mockResolvedValue(undefined);
+    mockSendPush.mockResolvedValue({ delivery: { status: 'delivered' }, results: [] });
 
     await triggerPushForNotification({
       ...baseNotification,
@@ -180,7 +180,7 @@ describe('pushNotificationDispatcher', () => {
       mockGetActiveTokens.mockResolvedValue([
         { expo_push_token: 'ExponentPushToken[t]', device_id: 'd', platform: 'ios' },
       ]);
-      mockSendPush.mockResolvedValue(undefined);
+      mockSendPush.mockResolvedValue({ delivery: { status: 'delivered' }, results: [] });
 
       await triggerPushForNotification({ ...baseNotification, template_name: template });
 
@@ -197,7 +197,7 @@ describe('pushNotificationDispatcher', () => {
       mockGetActiveTokens.mockResolvedValue([
         { expo_push_token: 'ExponentPushToken[t]', device_id: 'd', platform: 'ios' },
       ]);
-      mockSendPush.mockResolvedValue(undefined);
+      mockSendPush.mockResolvedValue({ delivery: { status: 'delivered' }, results: [] });
     });
 
     it.each(['task-assigned', 'task-additional-agent-assigned', 'task-additional-agent-added', 'task-comment-added'])(

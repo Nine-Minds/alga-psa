@@ -47,6 +47,7 @@ describe('menuConfig i18n metadata', () => {
       'nav.surveys',
       'nav.projects',
       'nav.clients',
+      'nav.coManaged',
       'nav.opportunities',
       'nav.marketing.label',
       'nav.contacts',
@@ -76,10 +77,15 @@ describe('menuConfig i18n metadata', () => {
 
     expect(keyedSubItems.map((item) => item.translationKey)).toEqual([
       'nav.ticketsAll',
+      'nav.ticketsCustomer',
       'nav.ticketsRecurring',
       'nav.ticketsTemplates',
       'nav.projectsAll',
+      'nav.projectsSharedTasks',
       'nav.projectsTemplates',
+      'nav.coManagedOverview',
+      'nav.coManagedDelegation',
+      'nav.coManagedAccess',
       'nav.marketing.calendar',
       'nav.marketing.posts',
       'nav.marketing.content',

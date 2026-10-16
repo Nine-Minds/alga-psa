@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { tenantDb } from '@alga-psa/db';
 import type { IProjectTemplateStatusMapping } from '@alga-psa/types';
 import { TEMPLATE_STATUS_MAPPINGS_UNRESOLVED_MESSAGE } from './templateStatusMappingUtils';
@@ -297,6 +298,7 @@ export async function replaceTemplateStatusMappingCore(
   templateStatusMappingId: string,
   replacement: TemplateStatusMappingReplacement
 ): Promise<{ mapping: IProjectTemplateStatusMapping; unresolvedStatusMappingCount: number }> {
+  await assertCoManagedOperationalWrite(trx, tenant);
   const mapping = await tenantDb(trx, tenant)
     .table('project_template_status_mappings')
     .where({

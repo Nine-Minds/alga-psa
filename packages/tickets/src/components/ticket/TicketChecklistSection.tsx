@@ -36,16 +36,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatDateTime, getUserTimeZone, utcToLocal } from '@alga-psa/core';
-import {
-  addChecklistItem,
-  applyChecklistTemplate,
-  deleteChecklistItem,
-  getChecklistTemplates,
-  getTicketChecklistItems,
-  reorderChecklistItems,
-  setChecklistItemCompleted,
-  updateChecklistItem,
-} from '../../actions/checklists';
+import { useTicketDataSource } from './TicketDataSourceContext';
 import type { IChecklistTemplate, ITicketChecklistItem } from '../../actions/checklists';
 
 const COMPLETED_AT_FORMAT = 'MMM d, yyyy h:mm a';
@@ -93,6 +84,16 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
   disabled = false,
 }) => {
   const { t } = useTranslation('features/tickets');
+  const {
+    addChecklistItem,
+    applyChecklistTemplate,
+    deleteChecklistItem,
+    getChecklistTemplates,
+    getTicketChecklistItems,
+    reorderChecklistItems,
+    setChecklistItemCompleted,
+    updateChecklistItem,
+  } = useTicketDataSource().checklist;
   const { data: session } = useSession();
 
   const [items, setItems] = useState<ITicketChecklistItem[]>(initialItems ?? []);

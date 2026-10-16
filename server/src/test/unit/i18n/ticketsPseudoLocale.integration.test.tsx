@@ -143,6 +143,12 @@ vi.mock('@product/chat/context', () => ({
 
 vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({}));
 
+// The callout/badge provider reads the release flag (needs a real session); this test is not about it.
+vi.mock('@/components/co-managed/CoManagedWorkSignalsProvider', () => ({
+  CoManagedWorkSignalsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useCoManagedWorkSignals: () => ({ available: false, viewerId: null, escalatedUnassigned: 0, awaitingReply: 0, total: 0 }),
+}));
+
 vi.mock('@/context/TierContext', () => ({
   TierProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useTier: () => ({ hasAddOn: () => false, hasFeature: () => true }),

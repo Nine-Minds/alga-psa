@@ -58,6 +58,8 @@ export interface SearchQueryOptions {
   sort?: 'relevance' | 'recent';
   includeSnippets?: boolean;
   acl?: SearchAclPrincipal;
+  /** Trusted admitted relation, constructed inside the authenticated search transaction. */
+  searchIndex?: { sql: string; bindings: Knex.RawBinding[] };
 }
 
 export interface SearchIndexHit {
@@ -281,7 +283,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
   const aclPredicate = options.acl
     ? aclPredicateSql(options.acl)
     : { sql: 'TRUE', bindings: [] };
-  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant);
+  const searchIndex = options.searchIndex ?? scopedSearchIndexSql(options.knex, options.tenant);
   const cursorPredicateSql = sort === 'recent'
     ? `
         ?::timestamptz IS NULL
@@ -446,7 +448,7 @@ export async function countSearchMatchesByType(
   const aclPredicate = options.acl
     ? aclPredicateSql(options.acl)
     : { sql: 'TRUE', bindings: [] };
-  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant);
+  const searchIndex = options.searchIndex ?? scopedSearchIndexSql(options.knex, options.tenant);
 
   const result = await options.knex.raw<{ rows: Array<{ object_type: SearchObjectType; total: string | number }> }>(
     `
@@ -511,7 +513,7 @@ export async function countSearchMatches(
   const aclPredicate = options.acl
     ? aclPredicateSql(options.acl)
     : { sql: 'TRUE', bindings: [] };
-  const searchIndex = scopedSearchIndexSql(options.knex, options.tenant);
+  const searchIndex = options.searchIndex ?? scopedSearchIndexSql(options.knex, options.tenant);
 
   const result = await options.knex.raw<{ rows: Array<{ total: string | number }> }>(
     `

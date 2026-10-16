@@ -75,9 +75,22 @@ describe('ticket support facade contract', () => {
     expect(sources.teamAssignmentCore).toContain("tenantJoin(");
     expect(sources.teamAssignmentCore).toContain("'users'");
 
-    expect(sources.ticketBundleUtils).toContain("tenantScopedTable(trx, 'tickets as t', tenant)");
-    expect(sources.ticketBundleUtils).toContain("tenantJoin(");
-    expect(sources.ticketBundleUtils).toContain("'statuses as s'");
+    // ticketBundleUtils no longer joins: the master ticket and its status are
+    // now read as separate row-locked statements (50148971cc) so concurrent
+    // child replies cannot both infer a closed->open transition from one join
+    // snapshot. Nothing is left to route through tenantJoin, so the guard is
+    // stated the way it was always meant: every tickets/statuses root goes
+    // through the facade, and no raw join may smuggle an unscoped one back in.
+    expect(sources.ticketBundleUtils).toContain("tenantScopedTable(trx, 'tickets', tenant)");
+    expect(sources.ticketBundleUtils).toContain("tenantScopedTable(trx, 'statuses', tenant)");
+    expect(sources.ticketBundleUtils).toContain('return tenantDb(conn, tenant).table(table)');
+    for (const table of coveredTenantTables) {
+      expect(sources.ticketBundleUtils).not.toMatch(
+        new RegExp(
+          `\\.(?:join|leftJoin|rightJoin|innerJoin|outerJoin|leftOuterJoin|rightOuterJoin|fullOuterJoin|crossJoin)\\(\\s*['"]${table}(?:\\s+as\\s+\\w+)?['"]`
+        )
+      );
+    }
   });
 
   it('keeps response-state DB settings off the client-safe tickets lib barrel', () => {

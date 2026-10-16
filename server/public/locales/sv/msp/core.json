@@ -105,6 +105,12 @@
     "extensions": "Tillägg",
     "ticketsAll": "Alla ärenden",
     "ticketsRecurring": "Återkommande ärenden",
+    "coManaged": "Samhanterad IT",
+    "coManagedDelegation": "Delegerad administration",
+    "coManagedAccess": "Samhanterad åtkomst",
+    "ticketsCustomer": "Kundärenden",
+    "projectsSharedTasks": "Delade uppgifter",
+    "coManagedOverview": "Översikt",
     "ticketsTemplates": "Ärendemallar"
   },
   "marketing": {

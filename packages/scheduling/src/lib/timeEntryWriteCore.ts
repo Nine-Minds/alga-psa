@@ -10,24 +10,15 @@ import {
 } from '@alga-psa/db';
 import { toPlainDate } from '@alga-psa/core';
 import {
-  CONTRACT_LINE_SOURCE_BY_SELECTION_REASON,
   type ContractLineSource,
   type ITimeEntry,
   type IUser,
 } from '@alga-psa/types';
-// Bucket usage MUST go through the shared canonical service. See the note in
-// actions/timeEntryCrudActions.ts history: a local fork once queried the dropped
-// `client_contract_lines` table and caused a prod outage on time-entry save.
-import { adjustTimeSpanDraw } from '@alga-psa/shared/billingClients/drawAdjustments';
-import { isBucketUsageError } from '@alga-psa/shared/billingClients/bucketUsageErrors';
-// Hour-block burn MUST go through the shared canonical service too.
-import {
-  allocateTimeEntry,
-  reverseTimeEntryAllocations,
-} from '@alga-psa/shared/billingClients/hourBlockService';
+import type { CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
-import { resolveContractLineSelection } from '../lib/contractLineDisambiguation';
-import { getClientIdForWorkItem } from '../actions/timeEntryHelpers';
+import { resolveTimeEntryContract } from './timeEntryContract';
+// Bucket draw and hour-block burn, through the shared canonical services.
+import { reconcileTimeEntryBillingAllocations } from './timeEntryBillingAllocations';
 import { assertCanActOnBehalf } from '../actions/timeEntryDelegationAuth';
 import { markTimeEntryChangeRequestsHandled } from '../actions/timeEntryChangeRequestActions';
 import type { SaveTimeEntryParams } from '../actions/timeEntrySchemas';
@@ -62,12 +53,25 @@ import type { SaveTimeEntryParams } from '../actions/timeEntrySchemas';
 
 export type TimeEntrySearchEventType = 'TIME_ENTRY_CREATED' | 'TIME_ENTRY_UPDATED';
 
+/** Stands in for the work item of non-billable time saved without one. */
+export const NON_BILLABLE_FALLBACK_WORK_ITEM_ID = '__non_billable__';
+
 export interface PersistTimeEntryInput {
   tenant: string;
   /** The acting user (who is doing the write; may differ from the entry's subject). */
   actor: IUser;
-  /** Already validated with saveTimeEntryParamsSchema. */
+  /** Already validated with saveTimeEntryParamsSchema (or the operational schema). */
   entry: SaveTimeEntryParams;
+  /**
+   * Operational (co-managed customer) time: no service or contract, the fields
+   * from operationalTimeEntryFields are stored as given, and no billing draw.
+   */
+  operational?: { fields: Record<string, unknown> } | null;
+  /**
+   * Admitted co-managed access. The subject user comes from the admission
+   * rather than act-on-behalf, and the save does not reassign work.
+   */
+  access?: CoManagedNativeTimeAccess | null;
 }
 
 export interface PersistedTimeEntry {
@@ -138,7 +142,9 @@ export async function persistTimeEntry(
     timeEntryUserId = existing.user_id;
   }
 
-  await assertCanActOnBehalf(actor, tenant, timeEntryUserId, trx);
+  const { operational, access } = input;
+  if (access) timeEntryUserId = access.subjectUserId;
+  else await assertCanActOnBehalf(actor, tenant, timeEntryUserId, trx);
 
   // Extract only the fields that exist in the database schema
   const {
@@ -202,6 +208,7 @@ export async function persistTimeEntry(
   const startDate = truncateToMinute(start_time);
   const endDate = truncateToMinute(end_time);
   const actualDurationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
+  if (access && actualDurationMinutes <= 0) throw new Error('Time entry must contain at least one minute');
   
   // Always store actual duration, only set billable_duration to 0 if explicitly non-billable
   const finalBillableDuration = billable_duration === 0 ? 0 :
@@ -219,6 +226,7 @@ export async function persistTimeEntry(
   const cleanedEntry = {
     work_item_id,
     work_item_type,
+    co_managed_work_reference_id: work_item_type === 'co_managed' ? work_item_id : null,
     start_time: formatISO(startDate), // minute-truncated; keep stored instant in sync with duration
     end_time: formatISO(endDate),
     work_date,
@@ -242,73 +250,20 @@ export async function persistTimeEntry(
   };
 
   // Log the cleaned entry for debugging
-  console.log('Cleaned entry data:', cleanedEntry);
+  if (operational) Object.assign(cleanedEntry, operational.fields);
+  if (access && work_item_type === 'non_billable_category' && work_item_id === NON_BILLABLE_FALLBACK_WORK_ITEM_ID) {
+    Object.assign(cleanedEntry, { work_item_id: null });
+  }
 
   let resultingEntry: ITimeEntry | null = null;
 
-  // If no contract line ID is provided, try to determine the default one
-  if (!contract_line_id && service_id) {
-    try {
-      const effectiveDateForContractResolution = work_date || start_time;
-      let defaultContractClientId: string | null = null;
-      // The work item's billing profile narrows contract-line selection when
-      // more than one line is eligible — the case parallel per-profile
-      // contracts create (F134). Selected alongside the client so the
-      // narrowing costs no extra round trip.
-      let workItemBillingProfileId: string | null = null;
-
-      if (work_item_type === 'project_task') {
-        const projectTaskClientQuery = tenantScopedDb.table('project_tasks');
-        tenantScopedDb.tenantJoin(
-          projectTaskClientQuery,
-          'project_phases',
-          'project_tasks.phase_id',
-          'project_phases.phase_id',
-        );
-        tenantScopedDb.tenantJoin(
-          projectTaskClientQuery,
-          'projects',
-          'project_phases.project_id',
-          'projects.project_id',
-        );
-        const projectRow = await projectTaskClientQuery
-          .where({ 'project_tasks.task_id': work_item_id })
-          .first('projects.client_id', 'projects.billing_profile_id');
-        defaultContractClientId = projectRow?.client_id ?? null;
-        workItemBillingProfileId = projectRow?.billing_profile_id ?? null;
-      } else if (work_item_type === 'ticket') {
-        const ticketRow = await tenantScopedDb.table('tickets')
-          .where({ ticket_id: work_item_id })
-          .first('client_id', 'billing_profile_id');
-        defaultContractClientId = ticketRow?.client_id ?? null;
-        workItemBillingProfileId = ticketRow?.billing_profile_id ?? null;
-      } else if (work_item_type === 'interaction') {
-        defaultContractClientId = (await tenantScopedDb.table('interactions')
-          .where({ interaction_id: work_item_id })
-          .first('client_id'))?.client_id ?? null;
-      }
-
-      const selection = await resolveContractLineSelection(
-        defaultContractClientId as string,
-        service_id,
-        effectiveDateForContractResolution,
-        { billingProfileId: workItemBillingProfileId }
-      );
-
-      if (selection.selectedContractLineId) {
-        cleanedEntry.contract_line_id = selection.selectedContractLineId;
-      }
-      // Record how the line was chosen, including the unresolved case — the
-      // reason is what the review queue and the attribution inspector read
-      // (F062, F063).
-      cleanedEntry.contract_line_source =
-        CONTRACT_LINE_SOURCE_BY_SELECTION_REASON[selection.reason];
-    } catch (error) {
-      console.error('Error determining default contract line:', error);
-      cleanedEntry.contract_line_source = 'unresolved';
-    }
+  // Commercial time resolves its contract line in this transaction; an explicit
+  // line must actually cover the work's client and service.
+  if (!operational) {
+    Object.assign(cleanedEntry, await resolveTimeEntryContract(trx, tenant, cleanedEntry, {
+      explicitLineId: contract_line_id,
+    }));
   }
-
 
   console.log('Starting transaction for time entry');
 
@@ -348,8 +303,9 @@ export async function persistTimeEntry(
     }
   }
 
-  let oldDuration = 0; // Initialize oldDuration
   let oldEntrySpan: {
+    billing_mode?: string;
+    billable_duration?: number;
     service_id?: string | null;
     start_time?: string | Date;
     end_time?: string | Date;
@@ -361,14 +317,13 @@ export async function persistTimeEntry(
     // Fetch original entry before update to calculate delta
     const originalEntryForUpdate = await tenantScopedDb.table('time_entries')
       .where({ entry_id })
-      .select('billable_duration', 'work_item_id', 'work_item_type', 'service_id', 'start_time', 'end_time', 'contract_line_id')
+      .select('billing_mode', 'billable_duration', 'work_item_id', 'work_item_type', 'service_id', 'start_time', 'end_time', 'contract_line_id')
       .first();
     // If original entry not found, maybe throw error or handle gracefully?
     // Throwing error for now as update shouldn't happen if original is gone.
     if (!originalEntryForUpdate) {
          throw new Error(`Original time entry with ID ${entry_id} not found for update.`);
     }
-    oldDuration = originalEntryForUpdate.billable_duration || 0;
     oldEntrySpan = originalEntryForUpdate;
 
     // Update existing entry - exclude tenant from SET clause (partition key cannot be modified)
@@ -425,9 +380,11 @@ export async function persistTimeEntry(
     resultingEntry = inserted;
     console.log('Inserted entry:', resultingEntry);
 
-    // Add user to ticket_resources or task_resources when a new time entry is created.
-    if (work_item_type === 'project_task') {
-      await recalculateProjectTaskActualHoursForEntryChange(trx, tenant, null, inserted);
+    await recalculateProjectTaskActualHoursForEntryChange(trx, tenant, null, inserted);
+    // Add user to ticket_resources or task_resources when a new time entry is
+    // created. Co-managed (admitted) effort does not implicitly change work
+    // assignments.
+    if (!access && work_item_type === 'project_task') {
 
       // Get current task to check if it already has an assignee
       const task = await tenantScopedDb.table('project_tasks')
@@ -473,7 +430,7 @@ export async function persistTimeEntry(
           // No task_resources record is created when there's no additional user
         }
       }
-    } else if (work_item_type === 'ticket') {
+    } else if (!access && work_item_type === 'ticket') {
       // Check if user is already in ticket_resources for this ticket
       const existingResource = await tenantScopedDb.table('ticket_resources')
         .where({
@@ -521,143 +478,12 @@ export async function persistTimeEntry(
       }
     }
   }
-  // --- Bucket Usage Update Logic ---
-  // Ordering matters: the OLD draw must be fully reversed BEFORE the NEW
-  // draw is applied. findOrCreateCurrentBucketUsageRecord computes rollover
-  // from the previous period's minutes_used, and updateBucketUsageMinutes
-  // derives overage from the running total — both snapshot whatever usage
-  // state exists at the moment they run. If the new draw ran first, a
-  // cross-period edit/reassignment would create (or update) the target
-  // period's record with rollover computed from usage that still includes
-  // the old, not-yet-reversed draw, leaving stale rollover behind. So:
-  // reverse the old side first (under the OLD entry's own client derived
-  // from its own work item, span, service, and line), then apply the new
-  // side (under the NEW entry's own client, span, service, and line).
-  // Rollover state is only ever computed from post-reversal data.
-  // Never reuse the new context to reverse the old draw (or vice versa) —
-  // that would reverse against the wrong pool when an entry moves
-  // clients/lines.
-
-  // Old side (updates only): resolve the reversal under the OLD entry's own
-  // client (its own work item), span, service, and line — before any new
-  // draw runs.
-  let oldClientId: string | null = null;
-  if (entry_id && oldEntrySpan?.work_item_id && oldEntrySpan.work_item_type) {
-    oldClientId = await getClientIdForWorkItem(trx, tenant, oldEntrySpan.work_item_id as string, oldEntrySpan.work_item_type as string);
-  }
-  if (entry_id && oldClientId && oldEntrySpan?.service_id && oldEntrySpan.start_time) {
-    try {
-      const reversedDelta = await adjustTimeSpanDraw(
-        trx,
-        tenant,
-        oldClientId,
-        {
-          service_id: oldEntrySpan.service_id,
-          start_time: oldEntrySpan.start_time,
-          end_time: oldEntrySpan.end_time ?? oldEntrySpan.start_time,
-          billable_duration: oldDuration,
-          contract_line_id: oldEntrySpan.contract_line_id ?? null,
-        },
-        -1,
-      );
-      if (reversedDelta !== 0) {
-        console.log(`Reversed old bucket usage for entry ${resultingEntry?.entry_id} (weighted ${reversedDelta})`);
-      }
-    } catch (bucketError) {
-      if (isBucketUsageError(bucketError)) throw bucketError;
-      throw new Error(`Bucket usage reversal failed for time entry ${resultingEntry?.entry_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
-    }
-  }
-
-  // New side: apply the saved entry's burn when it resolves to a pool.
-  let newClientId: string | null = null;
-  if (resultingEntry?.work_item_id && resultingEntry.work_item_type) {
-    newClientId = await getClientIdForWorkItem(trx, tenant, resultingEntry.work_item_id as string, resultingEntry.work_item_type as string);
-  }
-  if (newClientId) {
-    if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
-      try {
-        const appliedDelta = await adjustTimeSpanDraw(
-          trx,
-          tenant,
-          newClientId,
-          {
-            service_id: resultingEntry.service_id,
-            start_time: resultingEntry.start_time,
-            end_time: resultingEntry.end_time,
-            billable_duration: resultingEntry.billable_duration,
-            contract_line_id: resultingEntry.contract_line_id ?? null,
-          },
-          1,
-        );
-        if (appliedDelta !== 0) {
-          console.log(`Applied new bucket usage for entry ${resultingEntry.entry_id} (weighted ${appliedDelta})`);
-        }
-      } catch (bucketError) {
-        if (isBucketUsageError(bucketError)) throw bucketError;
-        throw new Error(`Bucket usage update failed for time entry ${resultingEntry.entry_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
-      }
-    }
-  }
-  // --- End Bucket Usage Update Logic ---
-
-  // --- Hour-block burn logic ---
-  // Applies only when the entry is NOT contract-covered (contracts always
-  // win), so it never fires for the bucket path above — the two are
-  // mutually exclusive by construction. Block burn is best-effort on save:
-  // a failure is logged, never aborts the entry save, and the nightly
-  // reconcile converges allocations to the canonical FIFO state.
-  // The reverse-on-update runs UNCONDITIONALLY (before any eligibility
-  // check): an entry edited to be contract-covered, non-billable, or
-  // serviceless must still give its minutes back to the blocks immediately
-  // — otherwise the client loses block minutes AND pays the contract/
-  // hourly rate until the nightly reconcile catches up.
-  try {
-    // A caught PostgreSQL error still leaves its transaction aborted. Use
-    // a nested transaction (SAVEPOINT) so a best-effort burn failure rolls
-    // back only the reverse/re-allocation work, not the time-entry save.
-    await trx.transaction(async (burnTrx) => {
-      const savedEntryId = resultingEntry?.entry_id;
-      if (entry_id && savedEntryId) {
-        // Update: reverse then re-allocate (clean FIFO, no delta).
-        await reverseTimeEntryAllocations(burnTrx, tenant, savedEntryId);
-      }
-      if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
-        let blockClientId: string | null = null;
-        if (resultingEntry.work_item_id && resultingEntry.work_item_type) {
-          blockClientId = await getClientIdForWorkItem(
-            burnTrx,
-            tenant,
-            resultingEntry.work_item_id as string,
-            resultingEntry.work_item_type as string,
-          );
-        }
-        if (blockClientId && !resultingEntry.contract_line_id) {
-          const burnEntry = {
-            entry_id: savedEntryId!,
-            service_id: resultingEntry.service_id,
-            billable_duration: resultingEntry.billable_duration,
-            contract_line_id: resultingEntry.contract_line_id,
-            work_item_id: resultingEntry.work_item_id,
-            work_item_type: resultingEntry.work_item_type,
-            work_date: resultingEntry.work_date,
-            start_time: resultingEntry.start_time,
-          };
-          const burned = await allocateTimeEntry(burnTrx, tenant, blockClientId, burnEntry);
-          if (burned.length > 0) {
-            console.log(`Time entry ${savedEntryId} burned ${burned.reduce((sum, a) => sum + a.minutes, 0)} block minutes.`);
-          }
-        }
-      }
-    });
-  } catch (blockBurnError) {
-    console.error(`Error applying hour-block burn for time entry ${resultingEntry?.entry_id}:`, blockBurnError);
-  }
-  // --- End Hour-block burn logic ---
 
   if (!resultingEntry) {
     throw new Error('Time entry save completed without creating or updating a row.');
   }
+  // Bucket draw and hour-block burn for the old/new rows (operational time draws nothing).
+  await reconcileTimeEntryBillingAllocations(trx, tenant, oldEntrySpan, resultingEntry);
 
   // Ensure resultingEntry is treated as ITimeEntry
   const entry = resultingEntry as ITimeEntry;
@@ -677,7 +503,7 @@ export async function persistTimeEntry(
         userId: entry.user_id,
         workItemId: entry.work_item_id,
         workItemType: entry.work_item_type,
-        changes: entry_id ? (validatedTimeEntry as Record<string, unknown>) : undefined,
+        changes: entry_id && !access ? (validatedTimeEntry as Record<string, unknown>) : undefined,
       },
     },
   };

@@ -58,7 +58,8 @@
     "settings": "Inställningar",
     "profile": "Profil",
     "logout": "Logga ut",
-    "help": "Hjälp"
+    "help": "Hjälp",
+    "coManagedDelegation": "Delegerad administration"
   },
   "actions": {
     "save": "Spara",
@@ -1634,6 +1635,17 @@
     "uploadingFiles": "Laddar upp filer…",
     "fileUploadFailed": "Filuppladdningen misslyckades."
   },
+  "emailPreferences": {
+    "loading": "Läser in e-postinställningar…",
+    "saving": "Sparar e-postinställningar…",
+    "slow": "Det här tar längre tid än vanligt. Väntar på bekräftelse innan fler ändringar tillåts.",
+    "loadError": "Det gick inte att läsa in sparade e-postinställningar. Försök igen för att bekräfta dina aktuella inställningar.",
+    "saveError": "Det gick inte att bekräfta att inställningarna sparades. Kontrollera dina sparade inställningar och försök igen.",
+    "retry": "Försök igen",
+    "disabledByAdmin": "Inaktiverat av administratören",
+    "mixed": "Delvis aktiverat",
+    "empty": "Inga kategorier för e-postaviseringar är tillgängliga."
+  },
   "listViews": {
     "defaultView": "Standardvy",
     "unsavedChanges": "Den här vyn har osparade ändringar",
@@ -1704,17 +1716,6 @@
       "copyFailed": "Det gick inte att kopiera länken."
     }
   },
-  "emailPreferences": {
-    "loading": "Läser in e-postinställningar…",
-    "saving": "Sparar e-postinställningar…",
-    "slow": "Det här tar längre tid än vanligt. Väntar på bekräftelse innan fler ändringar tillåts.",
-    "loadError": "Det gick inte att läsa in sparade e-postinställningar. Försök igen för att bekräfta dina aktuella inställningar.",
-    "saveError": "Det gick inte att bekräfta att inställningarna sparades. Kontrollera dina sparade inställningar och försök igen.",
-    "retry": "Försök igen",
-    "disabledByAdmin": "Inaktiverat av administratören",
-    "mixed": "Delvis aktiverat",
-    "empty": "Inga kategorier för e-postaviseringar är tillgängliga."
-  },
   "unitOfMeasure": {
     "labels": {
       "each": "Styck",
@@ -1754,5 +1755,17 @@
   "emailRecipients": {
     "remove": "Ta bort {{email}}",
     "placeholder": "Skriv en adress och tryck på Retur"
+  },
+  "users": {
+    "soloLicenseLimit": "Solo-planen stöder en tekniker. Uppgradera arbetsytan innan du aktiverar ytterligare en användare.",
+    "coManagedAdmission": {
+      "allocationConflict": "Licenstilldelningen för den här arbetsytan har ändrats eller finns inte längre. Uppdatera och försök igen.",
+      "invitationInvalid": "Inbjudan är inte längre giltig. Be din administratör om en ny inbjudan.",
+      "licenseLapsed": "Den sponsrande Pro-licensen och dess samhanterade användarlicenser måste återställas innan kundtekniker kan läggas till.",
+      "notActive": "En kundadministratör måste aktivera samhanteringsrelationen innan tekniker kan läggas till.",
+      "poolLimit": "Den sponsrande MSP:n har inga lediga samhanterade användarlicenser kvar för att utöka den här tilldelningen.",
+      "seatLimit": "Den här arbetsytan har använt alla samhanterade tekniklicenser som tilldelats den. Be den sponsrande MSP:n tilldela fler användarlicenser."
+    },
+    "technicianLicenseLimit": "Den här arbetsytan kan inte aktivera ytterligare en tekniker. Kontrollera aktiveringsstatus och tillgänglig licenstilldelning."
   }
 }

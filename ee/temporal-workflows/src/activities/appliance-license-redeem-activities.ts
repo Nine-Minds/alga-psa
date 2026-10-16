@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { ApplicationFailure } from '@temporalio/activity';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
-import { verifyLicense } from '@alga-psa/licensing';
+import { verifyLicense, upsertLicenseState } from '@alga-psa/licensing';
 
 const DEFAULT_SERVICE_URL = 'https://license.nineminds.com';
 const NON_RETRYABLE_CODES = new Set([
@@ -59,11 +59,11 @@ export async function applianceLicenseRedeemActivity(input: { claimCode: string 
   if (body.tenant_id && tenantId && body.tenant_id !== tenantId) fail('Claim code belongs to a different tenant', 'tenant_mismatch');
   const verified = verifyLicense(body.first_jwt || '');
   if (!verified.valid) fail('License service returned an invalid license', 'invalid_license_response');
-  await knex('license_state').where({ id: row.id }).update({
+  await upsertLicenseState({
     license_token: body.first_jwt, appliance_id: applianceId,
     check_in_url: body.check_in_url, appliance_credential: body.appliance_credential,
-    last_checkin_at: knex.fn.now(), updated_at: knex.fn.now(),
-  });
+    last_checkin_at: new Date(),
+  }, knex);
   return {
     edition: body.edition || verified.claims.tier, tenantId: body.tenant_id || tenantId,
     licenseToken: body.first_jwt, applianceCredential: body.appliance_credential,
@@ -79,6 +79,6 @@ export async function applianceLicenseApplyActivity(input: { licenseKey: string 
   if (!verified.valid) fail(`License is invalid: ${verified.reason}`, 'invalid_license');
   if (verified.claims.exp * 1000 <= Date.now()) fail('License has expired', 'expired_license');
   if (verified.claims.aud && tenantId && verified.claims.aud !== tenantId) fail('License belongs to a different tenant', 'tenant_mismatch');
-  await knex('license_state').where({ id: row.id }).update({ license_token: token, updated_at: knex.fn.now() });
+  await upsertLicenseState({ license_token: token }, knex);
   return { edition: verified.claims.tier, expiresAt: new Date(verified.claims.exp * 1000).toISOString() };
 }

@@ -28,10 +28,9 @@ describe('time entry service requirement validation', () => {
     approval_status: 'DRAFT',
   } as const;
 
-  it('rejects API time entry creation without service_id', () => {
+  it('leaves product-dependent API service requirements to retained save admission', () => {
     const result = createTimeEntrySchema.safeParse(baseCreatePayload);
-    expect(result.success).toBe(false);
-    expect(result.error?.issues.some(issue => issue.path[0] === 'service_id')).toBe(true);
+    expect(result.success).toBe(true);
   });
 
   it('rejects scheduling time entry saves without service_id', () => {
@@ -48,22 +47,27 @@ describe('time entry service requirement validation', () => {
     expect(result.error?.issues.some(issue => issue.path[0] === 'service_id')).toBe(true);
   });
 
-  it('rejects starting time tracking without service_id', () => {
+  it('leaves timer service selection to the current billing mode', () => {
     const result = startTimeTrackingSchema.safeParse({
       work_item_id: '00000000-0000-0000-0000-000000000000',
       work_item_type: 'ticket',
       notes: 'Track time',
     });
-    expect(result.success).toBe(false);
-    expect(result.error?.issues.some(issue => issue.path[0] === 'service_id')).toBe(true);
+    expect(result.success).toBe(true);
   });
 
-  it('reports a missing service_id with the documented message at path service_id', () => {
-    const result = createTimeEntrySchema.safeParse(baseCreatePayload);
-    expect(result.success).toBe(false);
-    const issue = result.error?.issues.find(i => i.path[0] === 'service_id');
-    expect(issue?.path).toEqual(['service_id']);
-    expect(issue?.message).toBe('service_id is required for time entries');
+  it('reports a missing service_id with the documented message at path service_id', async () => {
+    // The schema leaves the requirement to the retained service admission, which
+    // still rejects a commercial entry with the documented message and path.
+    const { TimeEntryService } = await import('../../../lib/api/services/TimeEntryService');
+    let error: any;
+    try {
+      (TimeEntryService.prototype as any).assertServiceIdPresent.call({}, undefined);
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error?.name).toBe('ValidationError');
+    expect(error.details).toEqual([{ path: ['service_id'], message: 'service_id is required for time entries' }]);
   });
 
   it('rejects end_time that is not after start_time at path end_time', () => {

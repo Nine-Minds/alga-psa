@@ -1,5 +1,6 @@
 import type { WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { getRedisClient, getRedisConfig } from '@alga-psa/event-bus';
+import type { NotificationDeliveryResult } from '../lib/notificationTransportTypes';
 import type { InternalNotification } from '../types/internalNotification';
 import logger from '@alga-psa/core/logger';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -7,6 +8,7 @@ import {
   buildNotificationDeliveredPayload,
   buildNotificationFailedPayload,
 } from '@alga-psa/workflow-streams';
+import { deliverCurrentNotification } from '../lib/notificationDelivery';
 import { deliverTeamsNotification } from './teamsNotificationDelivery';
 
 /**
@@ -38,7 +40,8 @@ function safePublishNotificationWorkflowEvent<T extends WorkflowCatalogEventType
   });
 }
 
-async function broadcastInAppNotification(notification: InternalNotification): Promise<void> {
+/** Transport-only adapter; callers retain current notification authority through this promise. */
+export async function publishAuthorizedInAppNotification(notification: InternalNotification): Promise<NotificationDeliveryResult> {
   const now = new Date().toISOString();
   try {
     const client = await getRedisClient();
@@ -50,7 +53,8 @@ async function broadcastInAppNotification(notification: InternalNotification): P
       timestamp: new Date().toISOString()
     });
 
-    await client.publish(channel, message);
+    try { await client.publish(channel, message); }
+    finally { await client.disconnect().catch(error => logger.warn('[NotificationBroadcaster] Redis disconnect failed', { error })); }
 
     logger.info('[NotificationBroadcaster] Notification broadcasted', {
       channel,
@@ -58,8 +62,6 @@ async function broadcastInAppNotification(notification: InternalNotification): P
       userId: notification.user_id,
       tenant: notification.tenant
     });
-
-    await client.disconnect();
 
     safePublishNotificationWorkflowEvent({
       eventType: 'NOTIFICATION_DELIVERED',
@@ -77,6 +79,7 @@ async function broadcastInAppNotification(notification: InternalNotification): P
       },
       idempotencyKey: `notification:${notification.internal_notification_id}:delivered`,
     });
+    return { status: 'delivered' };
   } catch (error) {
     logger.error('[NotificationBroadcaster] Failed to broadcast notification', {
       error,
@@ -103,15 +106,21 @@ async function broadcastInAppNotification(notification: InternalNotification): P
       },
       idempotencyKey: `notification:${notification.internal_notification_id}:failed`,
     });
+    return { status: 'failed', errorCode: 'redis_publish_failed', retryable: true };
   }
 }
 
 export async function broadcastNotification(notification: InternalNotification): Promise<void> {
   const results = await Promise.allSettled([
-    broadcastInAppNotification(notification),
+    deliverCurrentNotification(notification, publishAuthorizedInAppNotification),
     deliverTeamsNotification(notification),
   ]);
 
+  if (results[0]?.status === 'rejected') {
+    logger.warn('[NotificationBroadcaster] In-app notification authorization or delivery failed', {
+      notificationId: notification.internal_notification_id, error: normalizeErrorMessage(results[0].reason),
+    });
+  }
   if (results[1]?.status === 'rejected') {
     logger.warn('[NotificationBroadcaster] Teams notification delivery crashed unexpectedly', {
       notificationId: notification.internal_notification_id,

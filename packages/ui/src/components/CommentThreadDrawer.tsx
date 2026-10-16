@@ -26,6 +26,7 @@ export interface CommentThreadDrawerProps<TComment> {
   submitLabel?: string;
   cancelLabel?: string;
   isSubmitting?: boolean;
+  canReply?: boolean;
   uploadFile?: (file: File, blockId?: string) => Promise<string>;
   searchMentions?: (query: string) => Promise<any[]>;
   /** Forwarded to the reply composer's editor footer (e.g. Cc/Bcc control). */
@@ -52,6 +53,7 @@ export function CommentThreadDrawer<TComment>({
   submitLabel = 'Reply',
   cancelLabel = 'Cancel',
   isSubmitting = false,
+  canReply = true,
   uploadFile,
   searchMentions,
   replyFooterActions,
@@ -78,7 +80,7 @@ export function CommentThreadDrawer<TComment>({
             />
           )}
         </div>
-        {composerParentId && (
+        {canReply && composerParentId && (
           <div className="comment-thread-drawer-composer border-t border-gray-200 pt-4">
             <InlineReplyComposer
               id={`${id}-composer`}

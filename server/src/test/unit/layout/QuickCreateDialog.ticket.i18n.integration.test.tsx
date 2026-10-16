@@ -152,6 +152,10 @@ vi.mock('@/context/TierContext', () => ({
 // MspLayoutClient now wraps the tree in ProductProvider, which calls
 // next-auth's useSession(); the AppSessionProvider mock above is a passthrough
 // that doesn't supply a session context, so stub the provider out.
+vi.mock('@/components/co-managed/CoManagedWorkSignalsProvider', () => ({
+  CoManagedWorkSignalsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 vi.mock('@/context/ProductContext', () => ({
   ProductProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));

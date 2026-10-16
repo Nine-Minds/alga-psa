@@ -176,67 +176,86 @@ async function launchExistingEntry(params: {
   );
 }
 
+export type PreparedNewTimeEntry = Omit<React.ComponentProps<typeof NewWorkItemTimeEntry>, 'closeDrawer' | 'onComplete'>;
+
+/**
+ * Everything a new entry for this work item needs, or undefined after telling
+ * the user why time can't be entered. Shared by the drawer launcher and screens
+ * that host the form themselves (co-managed shared work).
+ */
+export async function prepareTimeEntryForWorkItem(context: TimeEntryWorkItemContext): Promise<PreparedNewTimeEntry | undefined> {
+  const user = await getCurrentUser();
+  if (!user?.user_id) {
+    launchBlockedToast(launchMessage('noUser', 'Unable to load current user for time entry.'));
+    return undefined;
+  }
+
+  const [periods, userTimeZone] = await Promise.all([
+    fetchTimePeriods(user.user_id),
+    getTimeEntryUserTimeZone(),
+  ]);
+
+  if (isActionMessageError(periods) || isActionPermissionError(periods)) {
+    launchBlockedToast(getErrorMessage(periods));
+    return undefined;
+  }
+  if (isActionMessageError(userTimeZone) || isActionPermissionError(userTimeZone)) {
+    launchBlockedToast(getErrorMessage(userTimeZone));
+    return undefined;
+  }
+
+  if (!periods.length) {
+    launchBlockedToast(
+      launchMessage(
+        'noPeriods',
+        'No time periods are set up yet, so time can’t be entered. Ask an administrator to create time periods under Settings → Time Entry.',
+      ),
+    );
+    return undefined;
+  }
+
+  const timeZone = typeof userTimeZone === 'string' ? userTimeZone : 'UTC';
+  const defaults = resolveEntryDefaults({ context, periods, timeZone });
+  if (!defaults) {
+    launchBlockedToast(
+      launchMessage(
+        'noEditablePeriods',
+        'Every time sheet is submitted or approved, so there is no day to add time to. Ask an approver to reopen a sheet, or an administrator to add a time period.',
+      ),
+    );
+    return undefined;
+  }
+
+  return {
+    workItem: buildWorkItem(context),
+    userId: user.user_id,
+    userTimeZone: timeZone,
+    periods,
+    defaults,
+    contextNotice: context.notice,
+    stopwatchSessionId: context.stopwatchSessionId,
+  };
+}
+
+export { NewWorkItemTimeEntry };
+
 export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, context, onComplete, existingEntryId }: LaunchTimeEntryParams): Promise<void> {
   try {
-    const user = await getCurrentUser();
-    if (!user?.user_id) {
-      launchBlockedToast(launchMessage('noUser', 'Unable to load current user for time entry.'));
-      return;
-    }
-
     if (existingEntryId) {
+      const user = await getCurrentUser();
+      if (!user?.user_id) {
+        launchBlockedToast(launchMessage('noUser', 'Unable to load current user for time entry.'));
+        return;
+      }
       await launchExistingEntry({ existingEntryId, openDrawer, closeDrawer, context, onComplete });
       return;
     }
 
-    const [periods, userTimeZone] = await Promise.all([
-      fetchTimePeriods(user.user_id),
-      getTimeEntryUserTimeZone(),
-    ]);
-
-    if (isActionMessageError(periods) || isActionPermissionError(periods)) {
-      launchBlockedToast(getErrorMessage(periods));
-      return;
-    }
-    if (isActionMessageError(userTimeZone) || isActionPermissionError(userTimeZone)) {
-      launchBlockedToast(getErrorMessage(userTimeZone));
-      return;
-    }
-
-    if (!periods.length) {
-      launchBlockedToast(
-        launchMessage(
-          'noPeriods',
-          'No time periods are set up yet, so time can’t be entered. Ask an administrator to create time periods under Settings → Time Entry.',
-        ),
-      );
-      return;
-    }
-
-    const timeZone = typeof userTimeZone === 'string' ? userTimeZone : 'UTC';
-    const defaults = resolveEntryDefaults({ context, periods, timeZone });
-    if (!defaults) {
-      launchBlockedToast(
-        launchMessage(
-          'noEditablePeriods',
-          'Every time sheet is submitted or approved, so there is no day to add time to. Ask an approver to reopen a sheet, or an administrator to add a time period.',
-        ),
-      );
-      return;
-    }
+    const prepared = await prepareTimeEntryForWorkItem(context);
+    if (!prepared) return;
 
     openDrawer(
-      <NewWorkItemTimeEntry
-        closeDrawer={closeDrawer}
-        onComplete={onComplete}
-        workItem={buildWorkItem(context)}
-        userId={user.user_id}
-        userTimeZone={timeZone}
-        periods={periods}
-        defaults={defaults}
-        contextNotice={context.notice}
-        stopwatchSessionId={context.stopwatchSessionId}
-      />,
+      <NewWorkItemTimeEntry {...prepared} closeDrawer={closeDrawer} onComplete={onComplete} />,
       undefined,
       undefined,
       '900px',

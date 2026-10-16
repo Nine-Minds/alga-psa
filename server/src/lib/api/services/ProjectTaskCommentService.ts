@@ -108,11 +108,11 @@ export class ProjectTaskCommentService extends BaseService<never> {
 
   async listComments(taskId: string, context: ServiceContext): Promise<ProjectTaskCommentResponse[]> {
     const knex = await this.getDbForContext(context);
-    const comments = await listTaskCommentsWithDb(knex, context.tenant, taskId);
+    const comments = await listTaskCommentsWithDb(knex, context.tenant, actorFrom(context), taskId);
     const batch = await getTaskCommentsReactionsBatchWithDb(
       knex,
       context.tenant,
-      context.userId,
+      actorFrom(context),
       comments.map((comment) => comment.taskCommentId),
     );
     return comments.map((comment) => this.shape(comment, batch.reactions, batch.userNames));
@@ -184,11 +184,11 @@ export class ProjectTaskCommentService extends BaseService<never> {
     const knex = await this.getDbForContext(context);
     let added: boolean;
     try {
-      ({ added } = await toggleTaskCommentReactionWithDb(knex, context.tenant, context.userId, commentId, emoji));
+      ({ added } = await toggleTaskCommentReactionWithDb(knex, context.tenant, actorFrom(context), commentId, emoji));
     } catch (error) {
       throwTaskCommentApiError(error);
     }
-    const batch = await getTaskCommentsReactionsBatchWithDb(knex, context.tenant, context.userId, [commentId]);
+    const batch = await getTaskCommentsReactionsBatchWithDb(knex, context.tenant, actorFrom(context), [commentId]);
     return { added, reactions: batch.reactions[commentId] ?? [], reaction_user_names: batch.userNames };
   }
 }

@@ -132,6 +132,11 @@ export async function setTenantContext(trx: Knex.Transaction, tenantId: string):
   await trx.raw(`select set_config('app.current_tenant', ?, true)`, [tenantId]);
 }
 
+/** The user a run acts as (its workflow version's publisher, else creator). */
+export async function resolveRunActorUserId(trx: Knex.Transaction, tenantId: string, runId: string): Promise<string | null> {
+  return (await resolveRunContext(trx, tenantId, runId))?.actorUserId ?? null;
+}
+
 export type RunContext = {
   actorUserId: string;
   workflowId: string;
@@ -149,7 +154,8 @@ export async function resolveRunContext(trx: Knex.Transaction, tenantId: string,
   const query = db.table('workflow_runs as wr');
   db.tenantJoin(query, 'workflow_definition_versions as wdv', 'wr.workflow_id', 'wdv.workflow_id', {
     type: 'left',
-    rootTenantColumn: 'wr.tenant'
+    rootTenantColumn: 'wr.tenant',
+    on: join => join.andOn('wr.workflow_version', '=', 'wdv.version')
   });
   db.tenantJoin(query, 'workflow_definitions as wd', 'wr.workflow_id', 'wd.workflow_id', {
     type: 'left',
