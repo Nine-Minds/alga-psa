@@ -4091,7 +4091,7 @@
           "salesTaxPayableAccount": "Sales tax liability account",
           "salesTaxPayableAccountHelp": "The account the sales tax line posts to.",
           "defaultSalesTaxItem": "Default sales tax item",
-          "defaultSalesTaxItemHelp": "Sales tax item or group for taxed invoices whose tax code mapping has no \"qbdSalesTaxItem\" metadata.",
+          "defaultSalesTaxItemHelp": "Sales tax item or group for taxed invoices whose tax region has no Tax Codes mapping.",
           "newProductItemType": "New product item type",
           "inventoryWarning": "Alga stock receipts are not exported, so QuickBooks on-hand quantities will go negative unless you also enter stock in QuickBooks.",
           "nonInventoryHelp": "Recommended: Alga stays the inventory system of record and QuickBooks only records the sale.",

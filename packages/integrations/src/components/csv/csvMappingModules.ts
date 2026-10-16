@@ -296,6 +296,7 @@ function createTaxCodeModule(tabLabel: string): AccountingMappingModule {
     externalEntityType: 'TaxCode',
     labels: {
       tab: tabLabel,
+      description: 'QuickBooks CSV: the QuickBooks tax code for the region. QuickBooks Desktop: the sales tax item or group name for the region (TAX and NON are ignored); unmapped regions use the default sales tax item.',
       addButton: 'Add Tax Code Mapping',
       algaColumn: 'Alga Tax Region',
       externalColumn: 'QuickBooks Tax Code',
@@ -303,7 +304,8 @@ function createTaxCodeModule(tabLabel: string): AccountingMappingModule {
         addTitle: 'Add QuickBooks Tax Code Mapping',
         editTitle: 'Edit QuickBooks Tax Code Mapping',
         algaField: 'Alga Tax Region',
-        externalField: 'QuickBooks Tax Code'
+        externalField: 'QuickBooks Tax Code',
+        helpText: 'QuickBooks Desktop: enter the sales tax item or group name exactly as it appears in your Item List.'
       },
       deleteConfirmation: {
         title: 'Delete Tax Code Mapping',

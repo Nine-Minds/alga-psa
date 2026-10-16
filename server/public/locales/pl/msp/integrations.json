@@ -4091,7 +4091,7 @@
           "salesTaxPayableAccount": "Konto zobowiązań z tytułu podatku od sprzedaży",
           "salesTaxPayableAccountHelp": "Konto, na które księgowana jest linia podatku od sprzedaży.",
           "defaultSalesTaxItem": "Domyślna pozycja podatku od sprzedaży",
-          "defaultSalesTaxItemHelp": "Pozycja lub grupa podatku od sprzedaży dla opodatkowanych faktur, których mapowanie kodu podatkowego nie ma metadanych \"qbdSalesTaxItem\".",
+          "defaultSalesTaxItemHelp": "Pozycja lub grupa podatku od sprzedaży dla opodatkowanych faktur, których region podatkowy nie ma mapowania kodu podatkowego.",
           "newProductItemType": "Typ pozycji dla nowych produktów",
           "inventoryWarning": "Przyjęcia magazynowe z Alga nie są eksportowane, więc stany w QuickBooks staną się ujemne, chyba że wprowadzisz stany również w QuickBooks.",
           "nonInventoryHelp": "Zalecane: Alga pozostaje głównym systemem magazynowym, a QuickBooks rejestruje tylko sprzedaż.",

@@ -4091,7 +4091,7 @@
           "salesTaxPayableAccount": "Conta de imposto sobre vendas a pagar",
           "salesTaxPayableAccountHelp": "A conta em que a linha de imposto sobre vendas é lançada.",
           "defaultSalesTaxItem": "Item de imposto sobre vendas padrão",
-          "defaultSalesTaxItemHelp": "Item ou grupo de imposto sobre vendas para faturas tributadas cujo mapeamento de código de imposto não tem metadados \"qbdSalesTaxItem\".",
+          "defaultSalesTaxItemHelp": "Item ou grupo de imposto sobre vendas para faturas tributadas cuja região fiscal não tem mapeamento em Códigos de imposto.",
           "newProductItemType": "Tipo de item para produtos novos",
           "inventoryWarning": "Os recebimentos de estoque do Alga não são exportados, então as quantidades em estoque no QuickBooks ficarão negativas, a menos que você também registre o estoque no QuickBooks.",
           "nonInventoryHelp": "Recomendado: o Alga continua como sistema de referência do estoque e o QuickBooks registra apenas a venda.",

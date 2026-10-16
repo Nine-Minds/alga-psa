@@ -4091,7 +4091,7 @@
           "salesTaxPayableAccount": "Umsatzsteuer-Verbindlichkeitskonto",
           "salesTaxPayableAccountHelp": "Das Konto, auf das die Umsatzsteuerzeile gebucht wird.",
           "defaultSalesTaxItem": "Standard-Umsatzsteuerartikel",
-          "defaultSalesTaxItemHelp": "Umsatzsteuerartikel oder -gruppe für besteuerte Rechnungen, deren Steuercode-Zuordnung keine \"qbdSalesTaxItem\"-Metadaten enthält.",
+          "defaultSalesTaxItemHelp": "Umsatzsteuerartikel oder -gruppe für besteuerte Rechnungen, deren Steuerregion keine Steuercode-Zuordnung hat.",
           "newProductItemType": "Artikeltyp für neue Produkte",
           "inventoryWarning": "Wareneingänge aus Alga werden nicht exportiert, daher werden die Bestände in QuickBooks negativ, sofern Sie den Bestand nicht auch in QuickBooks erfassen.",
           "nonInventoryHelp": "Empfohlen: Alga bleibt das führende System für den Lagerbestand, und QuickBooks erfasst nur den Verkauf.",

@@ -4091,7 +4091,7 @@
           "salesTaxPayableAccount": "Compte de taxe de vente à payer",
           "salesTaxPayableAccountHelp": "Le compte sur lequel la ligne de taxe de vente est comptabilisée.",
           "defaultSalesTaxItem": "Article de taxe de vente par défaut",
-          "defaultSalesTaxItemHelp": "Article ou groupe de taxe de vente pour les factures taxées dont la correspondance de code de taxe n'a pas de métadonnée \"qbdSalesTaxItem\".",
+          "defaultSalesTaxItemHelp": "Article ou groupe de taxe de vente pour les factures taxées dont la région fiscale n'a pas de correspondance de code de taxe.",
           "newProductItemType": "Type d'article pour les nouveaux produits",
           "inventoryWarning": "Les réceptions de stock d'Alga ne sont pas exportées : les quantités en stock dans QuickBooks deviendront négatives, sauf si vous saisissez aussi le stock dans QuickBooks.",
           "nonInventoryHelp": "Recommandé : Alga reste le système de référence pour le stock et QuickBooks n'enregistre que la vente.",

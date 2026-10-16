@@ -44,6 +44,8 @@ const MAX_CUSTOMER_NAME_LENGTH = 41;
 const MAX_ITEM_NAME_LENGTH = 31;
 const MAX_ACCOUNT_NAME_LENGTH = 31;
 const IIF_LINE_ENDING = '\r\n';
+// QuickBooks Online tax codes a shared quickbooks_csv tax mapping may hold; never a Desktop item name.
+const QBO_PSEUDO_TAX_CODES = new Set(['TAX', 'NON']);
 
 const TRNS_FIELDS = [
   'TRNSID', 'TRNSTYPE', 'DATE', 'ACCNT', 'NAME', 'AMOUNT', 'DOCNUM', 'MEMO', 'TOPRINT', 'DUEDATE', 'TERMS', 'PONUM'
@@ -720,13 +722,20 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
           targetRealm: context.batch.target_realm
         })
       : null;
-    // The tax-code mapping's external id is a QuickBooks tax *code* (TAX/NON);
-    // Desktop needs a sales tax *item*, carried in metadata.qbdSalesTaxItem.
-    const item = sanitizeIifField(nonEmptyString(taxMapping?.metadata?.qbdSalesTaxItem) ?? settings.defaultSalesTaxItem);
+    // Desktop has no per-line tax code in IIF, only one sales tax *item* per
+    // invoice. A region's item is metadata.qbdSalesTaxItem, else the mapping's
+    // own value (what a Desktop-only tenant types in the Tax Code field), unless
+    // that value is a QuickBooks Online pseudo code (TAX/NON) kept for CSV use.
+    const mappedValue = nonEmptyString(taxMapping?.external_entity_id);
+    const mappedItem =
+      mappedValue && !QBO_PSEUDO_TAX_CODES.has(mappedValue.toUpperCase()) ? mappedValue : null;
+    const item = sanitizeIifField(
+      nonEmptyString(taxMapping?.metadata?.qbdSalesTaxItem) ?? mappedItem ?? settings.defaultSalesTaxItem
+    );
     if (!item) {
       throw new AppError(
         'QBD_SALES_TAX_ITEM_MISSING',
-        `QuickBooks Desktop export: invoice ${invoiceNumber} has sales tax${charge.tax_region ? ` for region ${charge.tax_region}` : ''} but no sales tax item. Set the default sales tax item in the QuickBooks Desktop settings or "qbdSalesTaxItem" on the tax code mapping.`
+        `QuickBooks Desktop export: invoice ${invoiceNumber} has sales tax${charge.tax_region ? ` for region ${charge.tax_region}` : ''} but no sales tax item. Set the default sales tax item in the QuickBooks Desktop settings, or map the region on the Tax Codes tab to the QuickBooks Desktop sales tax item name.`
       );
     }
     this.assertListName(item, MAX_ITEM_NAME_LENGTH, 'item', invoiceNumber,

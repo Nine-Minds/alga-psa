@@ -315,6 +315,40 @@ describe('QuickBooksDesktopAdapter IIF transform', () => {
     expect(field(rows, '!SPL', rows[5], 'INVITEM')).toBe('State Tax');
   });
 
+  it('uses the tax code mapping value as the sales tax item, ahead of the default', async () => {
+    harness.rows.invoices = [invoice()];
+    harness.rows.invoice_charges = [charge({ tax_amount: 500, tax_region: 'PA' })];
+    harness.mappings.taxRegions = { PA: { external_entity_id: 'PA Sales Tax', metadata: null } };
+
+    const { rows } = await transformContent(
+      context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
+    );
+    expect(field(rows, '!SPL', rows[5], 'INVITEM')).toBe('PA Sales Tax');
+  });
+
+  it('prefers qbdSalesTaxItem metadata over the mapping value', async () => {
+    harness.rows.invoices = [invoice()];
+    harness.rows.invoice_charges = [charge({ tax_amount: 500, tax_region: 'PA' })];
+    harness.mappings.taxRegions = { PA: { external_entity_id: 'PA Sales Tax', metadata: { qbdSalesTaxItem: 'PA Group' } } };
+
+    const { rows } = await transformContent(
+      context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
+    );
+    expect(field(rows, '!SPL', rows[5], 'INVITEM')).toBe('PA Group');
+  });
+
+  it('never uses a QuickBooks Online pseudo tax code as the Desktop sales tax item', async () => {
+    harness.rows.invoices = [invoice()];
+    harness.rows.invoice_charges = [charge({ tax_amount: 500, tax_region: 'NJ' })];
+    harness.mappings.taxRegions = { NJ: { external_entity_id: 'non', metadata: null } };
+
+    await expect(
+      transformContent(
+        context([{ document_id: 'inv-1', document_line_id: 'charge-1' }], { ...SETTINGS, defaultSalesTaxItem: '' })
+      )
+    ).rejects.toMatchObject({ code: 'QBD_SALES_TAX_ITEM_MISSING' });
+  });
+
   it('fails an invoice whose tax regions resolve to different sales tax items', async () => {
     harness.rows.invoices = [invoice()];
     harness.rows.invoice_charges = [
