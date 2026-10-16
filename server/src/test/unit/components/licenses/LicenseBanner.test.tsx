@@ -2,11 +2,11 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import LicenseBanner from '@/components/licenses/LicenseBanner';
+import LicenseBanner, { notifyLicenseStatusChanged } from '@/components/licenses/LicenseBanner';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import type { LicenseStatus } from '@/lib/actions/licenseManagementActions';
 
@@ -189,5 +189,19 @@ describe('LicenseBanner', () => {
     const { container } = render(<LicenseBanner />);
     await new Promise((r) => setTimeout(r, 0));
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('LicenseBanner refresh signal', () => {
+  it('refetches status when a license change is announced', async () => {
+    mockGetLicenseStatus.mockReset();
+    mockGetLicenseStatus.mockResolvedValueOnce({ ...baseStatus, state: 'trial_expired' });
+    render(<LicenseBanner />);
+    expect(await screen.findByText(/Pro trial has expired/)).toBeInTheDocument();
+
+    mockGetLicenseStatus.mockResolvedValueOnce({ ...baseStatus, state: 'trial', tier: 'pro', daysRemaining: 12, trialUsed: true });
+    act(() => notifyLicenseStatusChanged());
+    expect(await screen.findByText(/12 days remaining/)).toBeInTheDocument();
+    expect(mockGetLicenseStatus).toHaveBeenCalledTimes(2);
   });
 });

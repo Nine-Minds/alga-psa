@@ -31,9 +31,11 @@ import { armNavigationCommitWatchdog } from './navigationCommitWatchdog';
 interface DefaultLayoutProps {
   children: React.ReactNode;
   initialSidebarCollapsed?: boolean;
+  /** Rendered across the top of the content column, above the header. */
+  topBanner?: React.ReactNode;
 }
 
-export default function DefaultLayout({ children, initialSidebarCollapsed = false }: DefaultLayoutProps) {
+export default function DefaultLayout({ children, initialSidebarCollapsed = false, topBanner }: DefaultLayoutProps) {
   const { t } = useTranslation('msp/core');
   const { hasAddOn } = useTier();
   const router = useRouter();
@@ -446,6 +448,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
           onMenuItemClick={handleMenuItemClick}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
+          {topBanner}
           <QuickAskProvider value={quickAskContextValue}>
             <Header
               sidebarOpen={sidebarOpen}

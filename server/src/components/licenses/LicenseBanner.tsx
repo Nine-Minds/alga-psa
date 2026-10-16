@@ -9,6 +9,14 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import type { LicenseStatus } from '@/lib/actions/licenseManagementActions';
 
+/** Dispatched on window after a license change so the banner refetches its status. */
+export const LICENSE_STATUS_CHANGED_EVENT = 'license-status-changed';
+
+// LEVERAGE: pattern window-custom-event-notify — cross-component notify via window CustomEvent (also alga:quick-create:created in CreateTicketRouteClient)
+export function notifyLicenseStatusChanged(): void {
+  window.dispatchEvent(new CustomEvent(LICENSE_STATUS_CHANGED_EVENT));
+}
+
 /**
  * Trial / license expiry banner for self-hosted installs.
  *
@@ -28,13 +36,22 @@ export default function LicenseBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    getLicenseStatus()
-      .then((result) => {
-        if (!isActionPermissionError(result)) {
-          setStatus(result);
-        }
-      })
-      .catch(() => {});
+    let cancelled = false;
+    const load = () => {
+      getLicenseStatus()
+        .then((result) => {
+          if (!cancelled && !isActionPermissionError(result)) {
+            setStatus(result);
+          }
+        })
+        .catch(() => {});
+    };
+    load();
+    window.addEventListener(LICENSE_STATUS_CHANGED_EVENT, load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(LICENSE_STATUS_CHANGED_EVENT, load);
+    };
   }, []);
 
   if (!status?.selfHostMode || dismissed) return null;

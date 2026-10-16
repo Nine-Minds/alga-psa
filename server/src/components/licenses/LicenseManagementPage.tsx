@@ -33,6 +33,7 @@ import {
   refreshLicenseNow,
 } from "@/lib/actions/licenseManagementActions";
 import type { LicenseStatus } from "@/lib/actions/licenseManagementActions";
+import { notifyLicenseStatusChanged } from "./LicenseBanner";
 import {
   getErrorMessage,
   isActionPermissionError,
@@ -369,6 +370,7 @@ export default function LicenseManagementPage() {
       console.error("Failed to refresh session after license change:", error);
     }
     setStatus(newStatus);
+    notifyLicenseStatusChanged();
   }
 
   function handleSubmitLicense() {
