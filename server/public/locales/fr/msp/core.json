@@ -284,6 +284,18 @@
     "platformNotification": {
       "learnMore": "En savoir plus",
       "dismiss": "Ignorer la notification"
+    },
+    "integrationHealth": {
+      "inboundEmail": {
+        "authFailure": "Les e-mails entrants de {{mailbox}} sont en pause car ses identifiants ne fonctionnent plus.",
+        "error": "Les e-mails entrants de {{mailbox}} ont signalé une erreur et ne sont peut-être plus reçus."
+      },
+      "calendar": {
+        "error": "La synchronisation du calendrier pour {{providerName}} a signalé une erreur et ne fonctionne plus.",
+        "disconnected": "La synchronisation du calendrier pour {{providerName}} est déconnectée et ne fonctionne plus."
+      },
+      "review": "Vérifier",
+      "dismiss": "Ignorer l'alerte d'intégration"
     }
   },
   "quickCreate": {
