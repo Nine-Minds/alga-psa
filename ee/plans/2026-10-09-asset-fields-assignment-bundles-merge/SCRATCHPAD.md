@@ -998,3 +998,77 @@ which predates the fixes. Confirmed from the run's own logs:
   `06b26e3577` set out to do.
 
 So nothing further was needed for CI beyond pushing what is on the branch.
+
+## Round 15 — current with main, and two guard rails (2026-10-16)
+
+### The branch was behind main again
+
+The three red lanes were raised against a head that predates every fix on the
+branch, so the one thing standing between the PR and a green run was being
+current. `origin/main` had moved on by 13 commits (`3182eecf73`, the
+invoice-billing-email gate). Merged: **no conflicts, and not one file touched on
+both sides** — `comm -12` over the two diffs against the merge base
+`fedefafb07` is empty, so there is no semantic overlap either. Main's side is
+invoicing (`exportRecipientEmails`, recurring/template editors) and three new
+`packages/ui` pieces; this branch's side is assets, groups and merge.
+
+Checked after merging rather than assumed:
+
+- `server` `tsc --noEmit` — 0 errors (needs `--max-old-space-size=12288` on
+  node 25; 8192 now OOMs during bootstrap).
+- `packages/assets` and `shared` `tsc --noEmit` — clean.
+- `packages/assets` 57 files / 349 tests, `shared/rmm` 6 files / 42 tests — all
+  pass.
+- No migration-timestamp collision with main: main added none, and the
+  `20261009120000` pair (`add_asset_procurement_fields` vs main's older
+  `service_prices_display_order`) sorts deterministically by filename and the
+  two touch different tables.
+
+### An unseeded tenant could not save an asset at all
+
+`validateAssetStatusSlug` was the one status reader with no builtin fallback —
+`listAssetTypes`, `listDeployableStatusSlugs` and the form selects all have one.
+A tenant whose `asset_statuses` is empty (the seeding gap that already bites
+`standard_statuses` reaches this table through the same door: appliance and
+hand-made tenants that never ran the onboarding seed) would have had *every*
+asset create and update refused with `unknown_status`, with no way to set a
+status that would be accepted. Now an empty registry accepts the five builtin
+slugs and nothing else; a seeded registry is unchanged, so this cannot mask a
+real typo. `packages/assets/src/lib/assetStatusRegistry.test.ts` pins all six
+cases (known slug, unknown slug, archived-only-if-unchanged, the fallback, an
+invented slug on an unseeded tenant, empty input); the fallback case fails
+against the old file.
+
+### Two bare `catch {}` blocks outlived the decision to stop writing them
+
+Round 5 introduced `isMissingAssetGroupTable` so a pre-groups schema could be
+absorbed without hiding anything else, but the workspace-membership lookups in
+`shared/rmm/autoAssignFromSignedInUser.ts` and
+`shared/rmm/signedInUserMappings.ts` still swallowed every error. Inside a
+transaction that is worse than noisy: an aborted transaction surfaces as an
+error on the next statement, and swallowing it here reads as "not a workspace
+member" — which is exactly the case FR-E4 says must never be auto-assigned.
+Both now rethrow anything that is not `42P01` on an `asset_group*` relation.
+
+### Provenance of the changes that are not in features.json
+
+Noting these so they are not read as volunteered scope:
+
+- `packages/projects` (`1a937f2865`, `615a707063`, `3e0e444e92`,
+  `db40dc8449`) — `1a937f2865` is the fix for the `unit` lane's only failure.
+  The other three answer the pipeline's own browser check, which reported the
+  project edit drawer leaving the board and list stale after a status delete.
+  Both are pipeline findings against this PR, not product work chosen here.
+- `packages/tickets` (`cb226627ee`) — the operator's browser feedback, verbatim:
+  "location and billing profile are not visible on ticket (grid view)". The
+  billing-profile picker is FR-F5's surface; the location row rides with it
+  because the grid layout had neither.
+- `retireVanishedTacticalAssets` (`0be22e63cc`) — the standing feedback on
+  FR-B6 for Tactical, verbatim: "Tactical create also still hard-codes status
+  'active' … and has no tombstone path writing 'retired'". It is deliberately
+  full-sync-only and treats an empty agent list as "could not see the fleet",
+  so an incremental page or an API hiccup cannot retire a fleet.
+
+Lifting the projects and ticket work into their own PRs is the reviewer's
+preference and a fair one, but it needs a push and a second PR, neither of
+which is this round's to make.

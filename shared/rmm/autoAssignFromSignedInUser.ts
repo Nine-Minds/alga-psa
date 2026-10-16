@@ -1,6 +1,10 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { getOpenAssetAssignment, setAssetAssignee } from '../models/assetAssignmentModel';
+import {
+  getOpenAssetAssignment,
+  isMissingAssetGroupTable,
+  setAssetAssignee,
+} from '../models/assetAssignmentModel';
 import {
   isRmmContactAssignmentMode,
   matchContactForRmmUser,
@@ -56,8 +60,11 @@ export async function applyRmmSignedInUserAssignment(
       .where({ 'm.asset_id': args.assetId, 'g.kind': 'shared_workspace' })
       .first<{ group_id: string }>('g.group_id');
     if (workspace) return { assigned: false, reason: 'shared_workspace' };
-  } catch {
-    // Groups not available on this schema.
+  } catch (error) {
+    // Only "the groups tables are not there yet" is absorbed. Any other error
+    // inside a transaction would already have aborted it, and swallowing that
+    // here could auto-assign a contact onto a shared-workspace member.
+    if (!isMissingAssetGroupTable(error)) throw error;
   }
 
   const open = await getOpenAssetAssignment(trx, args.tenant, args.assetId);

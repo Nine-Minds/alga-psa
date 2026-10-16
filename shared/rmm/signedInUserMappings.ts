@@ -1,6 +1,11 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { setAssetAssignee, getOpenAssetAssignment, isAssetAssigneeError } from '../models/assetAssignmentModel';
+import {
+  setAssetAssignee,
+  getOpenAssetAssignment,
+  isAssetAssigneeError,
+  isMissingAssetGroupTable,
+} from '../models/assetAssignmentModel';
 import {
   matchContactForRmmUser,
   normalizeRmmUsername,
@@ -132,8 +137,11 @@ export async function suggestContactForAsset(
       .where({ 'm.asset_id': assetId, 'g.kind': 'shared_workspace' })
       .first<{ group_id: string }>('g.group_id');
     if (workspace) return null;
-  } catch {
-    // Groups not available on this schema.
+  } catch (error) {
+    // Only the pre-groups schema is absorbed; any other failure is the
+    // caller's, and hiding it here would offer a suggestion for an asset whose
+    // people are the workspace's.
+    if (!isMissingAssetGroupTable(error)) throw error;
   }
 
   const rawUser = await getAssetSignedInUser(conn, tenant, assetId);
