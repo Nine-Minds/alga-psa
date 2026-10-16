@@ -263,6 +263,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [pendingBoardConfig, setPendingBoardConfig] = useState<BoardCategoryData['boardConfig'] | null>(null);
   const [pendingCategories, setPendingCategories] = useState<ITicketCategory[] | null>(null);
   const [isQuickAddCategoryOpen, setIsQuickAddCategoryOpen] = useState(false);
+  // Category creation runs a native action against the local tenant, so only data sources that back it offer it.
+  const canCreateCategory = dataSource.capabilities.categoryCreate && !dataSource.screen.readOnly;
 
   // Get the effective board ID (pending or saved)
   const effectiveBoardId = pendingChanges.board_id ?? originalTicketValues.board_id;
@@ -382,6 +384,19 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [isLoadingBoardConfig, setIsLoadingBoardConfig] = useState(false);
   const [isLoadingStatusOptions, setIsLoadingStatusOptions] = useState(false);
   const [boardScopedStatusOptions, setBoardScopedStatusOptions] = useState(statusOptions);
+  // When the options do not include the current status (e.g. a read-only viewer whose options are not
+  // loaded), still show its label rather than the placeholder.
+  const statusSelectOptions = useMemo(() => {
+    if (
+      !pendingStatusValue ||
+      pendingStatusValue !== originalTicketValues.status_id ||
+      !ticket.status_name ||
+      boardScopedStatusOptions.some((option) => option.value === pendingStatusValue)
+    ) {
+      return boardScopedStatusOptions;
+    }
+    return [...boardScopedStatusOptions, { value: pendingStatusValue, label: ticket.status_name }];
+  }, [boardScopedStatusOptions, pendingStatusValue, originalTicketValues.status_id, ticket.status_name]);
   const fetchingBoardIdRef = useRef<string | null>(null);
   const saveSuccessTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -1370,7 +1385,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <div className={`transition-opacity ${isFieldRemotelyEdited('status_id') ? 'opacity-60' : ''}`}>
                 <CustomSelect
                   value={pendingStatusValue}
-                  options={boardScopedStatusOptions}
+                  options={statusSelectOptions}
                   onValueChange={(value) => handlePendingChange('status_id', value)}
                   customStyles={customStyles}
                   className="!w-fit"
@@ -1565,7 +1580,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       placeholder={effectiveBoardConfig.category_type === 'custom'
                         ? t('quickAdd.selectCategory', 'Select category')
                         : t('quickAdd.selectItilCategory', 'Select ITIL category')}
-                      onAddNew={() => setIsQuickAddCategoryOpen(true)}
+                      onAddNew={canCreateCategory && !isFieldFrozen('category_id') ? () => setIsQuickAddCategoryOpen(true) : undefined}
+                      disabled={dataSource.screen.readOnly === true || isFieldFrozen('category_id')}
                     />
                   )}
                 </div>
@@ -1583,6 +1599,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 ) : null}
               </div>
             )}
+            {canCreateCategory && (
             <QuickAddCategory
               isOpen={isQuickAddCategoryOpen}
               onClose={() => setIsQuickAddCategoryOpen(false)}
@@ -1616,6 +1633,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               preselectedBoardId={effectiveBoardId || undefined}
               categories={effectiveCategories}
             />
+            )}
 
             {/* Row 3: Priority area (animated based on board type) */}
             <div className="col-span-2 transition-all duration-200 ease-in-out">
@@ -1945,6 +1963,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             )}
 
             {/* Row 6: Tags */}
+            {dataSource.capabilities.tags && (
             <div className="col-span-2">
               <h5 className="font-bold mb-2">{t('settings.display.columns.tags', 'Tags')}</h5>
               {onTagsChange && ticket.ticket_id ? (
@@ -1959,6 +1978,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 <p className="text-sm text-gray-500">{t('info.tagsCannotBeManaged', 'Tags cannot be managed')}</p>
               )}
             </div>
+            )}
           </div>
 
           <div>

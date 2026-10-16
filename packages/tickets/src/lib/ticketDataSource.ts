@@ -198,6 +198,8 @@ export interface TicketCapabilities {
   createWorkflow: boolean;
   /** Create project task from ticket (the injected `renderCreateProjectTask` node). */
   createProjectTask: boolean;
+  /** Creating categories from the ticket screen ("Add new category"). Native-only: needs a board in the local tenant. */
+  categoryCreate: boolean;
 }
 
 export type TicketCapabilityKey = keyof TicketCapabilities;
@@ -229,6 +231,7 @@ export const NATIVE_TICKET_CAPABILITIES: Readonly<TicketCapabilities> = Object.f
   createTemplate: true,
   createWorkflow: true,
   createProjectTask: true,
+  categoryCreate: true,
 });
 
 /** Every capability off: a convenient starting point for a reduced data source. */
