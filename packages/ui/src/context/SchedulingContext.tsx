@@ -73,7 +73,7 @@ function AgentScheduleFallback({ agentId }: { agentId: string }) {
     <div className="p-4">
       <Alert>
         <AlertDescription>
-          {t('fallback.agentSchedule', { agentId })}
+          {t('fallback.agentSchedule', { agentId, defaultValue: `Agent schedule view is now owned by Scheduling. (agentId: ${agentId})` })}
         </AlertDescription>
       </Alert>
     </div>
@@ -83,10 +83,10 @@ function AgentScheduleFallback({ agentId }: { agentId: string }) {
 const defaultSchedulingCallbacks: SchedulingCallbacks = {
   renderAgentSchedule: (agentId: string) => <AgentScheduleFallback agentId={agentId} />,
   launchTimeEntry: async () => {
-    toast(translate('msp/schedule', 'fallback.timeEntry'));
+    toast(translate('msp/schedule', 'fallback.timeEntry', { defaultValue: 'Time entry is managed in Scheduling.' }));
   },
   launchScheduleEntry: async () => {
-    toast(translate('msp/schedule', 'fallback.scheduling'));
+    toast(translate('msp/schedule', 'fallback.scheduling', { defaultValue: 'Scheduling is managed in Scheduling.' }));
   },
   fetchTimeEntriesForTicket: async () => ({
     entries: [],
@@ -101,7 +101,7 @@ const defaultSchedulingCallbacks: SchedulingCallbacks = {
     totalMinutes: 0,
   }),
   deleteTimeEntry: async () => {
-    toast(translate('msp/schedule', 'fallback.timeEntry'));
+    toast(translate('msp/schedule', 'fallback.timeEntry', { defaultValue: 'Time entry is managed in Scheduling.' }));
   },
 };
 

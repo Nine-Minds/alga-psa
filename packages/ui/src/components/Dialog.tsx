@@ -486,7 +486,7 @@ export function Dialog({
           {...withDataAutomationId(updateDialog)}
           role="dialog"
           aria-modal="true"
-          aria-label={title || t('dialogs.defaultTitle')}
+          aria-label={title || t('dialogs.defaultTitle', { defaultValue: 'Dialog' })}
           tabIndex={-1}
           className={`relative bg-[rgb(var(--color-card))] rounded-lg shadow-lg border border-[rgb(var(--color-primary-200))] w-full ${className || 'max-w-3xl'} max-h-[90%] flex flex-col focus:outline-none`}
         >
@@ -524,7 +524,7 @@ export function Dialog({
               onClick={requestClose}
               data-dialog-close-button="true"
               className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
-              aria-label={t('actions.close')}
+              aria-label={t('actions.close', { defaultValue: 'Close' })}
             >
               <X className="h-4 w-4" />
             </button>
@@ -639,7 +639,7 @@ export function Dialog({
               ) : (
                 <>
                   <VisuallyHidden.Root>
-                    <RadixDialog.Title>{t('dialogs.defaultTitle')}</RadixDialog.Title>
+                    <RadixDialog.Title>{t('dialogs.defaultTitle', { defaultValue: 'Dialog' })}</RadixDialog.Title>
                   </VisuallyHidden.Root>
                   <div className="flex items-center justify-center">
                     <div className="w-12 h-1 bg-[rgb(var(--color-border-300))] rounded-full" /> {/* Visual drag indicator */}
@@ -649,7 +649,7 @@ export function Dialog({
             </div>
           ) : (
             <VisuallyHidden.Root>
-              <RadixDialog.Title>{t('dialogs.defaultTitle')}</RadixDialog.Title>
+              <RadixDialog.Title>{t('dialogs.defaultTitle', { defaultValue: 'Dialog' })}</RadixDialog.Title>
             </VisuallyHidden.Root>
           )}
           <div
@@ -677,7 +677,7 @@ export function Dialog({
                 onClick={requestClose}
                 data-dialog-close-button="true"
                 className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
-                aria-label={t('actions.close')}
+                aria-label={t('actions.close', { defaultValue: 'Close' })}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -686,7 +686,7 @@ export function Dialog({
                 <button
                   data-dialog-close-button="true"
                   className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
-                  aria-label={t('actions.close')}
+                  aria-label={t('actions.close', { defaultValue: 'Close' })}
                 >
                   <X className="h-4 w-4" />
                 </button>

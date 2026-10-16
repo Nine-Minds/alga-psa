@@ -375,7 +375,7 @@ export const DrawerOutlet: React.FC = () => {
   useEffect(() => registerOutlet?.(), [registerOutlet]);
   const isOpen = history.length > 0 && currentEntry !== null;
   const title = currentEntry?.type === 'form' && !currentEntry.title
-    ? t('drawer.formTitle', { title: currentEntry.metadata?.activity.title })
+    ? t('drawer.formTitle', { title: currentEntry.metadata?.activity.title, defaultValue: `${currentEntry.metadata?.activity.title} - Form` })
     : currentEntry?.title;
 
   return (
@@ -399,7 +399,7 @@ export const DrawerOutlet: React.FC = () => {
                     size="sm"
                     onClick={() => guardActiveDismiss(goBack)}
                     className="mr-2"
-                    aria-label={t('drawer.actions.goBack')}
+                    aria-label={t('drawer.actions.goBack', { defaultValue: 'Go back' })}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -414,7 +414,7 @@ export const DrawerOutlet: React.FC = () => {
                     size="sm"
                     onClick={() => guardActiveDismiss(goForward)}
                     className="mr-2"
-                    aria-label={t('drawer.actions.goForward')}
+                    aria-label={t('drawer.actions.goForward', { defaultValue: 'Go forward' })}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -424,7 +424,7 @@ export const DrawerOutlet: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => guardActiveDismiss(closeDrawer)}
-                  aria-label={t('drawer.actions.close')}
+                  aria-label={t('drawer.actions.close', { defaultValue: 'Close drawer' })}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -437,7 +437,7 @@ export const DrawerOutlet: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => guardActiveDismiss(closeDrawer)}
-                aria-label={t('drawer.actions.close')}
+                aria-label={t('drawer.actions.close', { defaultValue: 'Close drawer' })}
                 className="hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))]"
               >
                 <X className="h-4 w-4" />

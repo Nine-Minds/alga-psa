@@ -99,7 +99,7 @@ export function InlineReplyComposer({
             checked={isInternal}
             onCheckedChange={setIsInternal}
           />
-          <Label htmlFor={`${componentId}-internal-toggle`}>{t('inlineReplyComposer.fields.internal.label')}</Label>
+          <Label htmlFor={`${componentId}-internal-toggle`}>{t('inlineReplyComposer.fields.internal.label', { defaultValue: 'Mark as Internal' })}</Label>
         </div>
       )}
       <TextEditor
@@ -120,7 +120,7 @@ export function InlineReplyComposer({
           onClick={() => onSubmit({ parentCommentId, content, isInternal })}
           disabled={isSubmitting || submitDisabled}
         >
-          {submitLabel ?? t('inlineReplyComposer.actions.reply')}
+          {submitLabel ?? t('inlineReplyComposer.actions.reply', { defaultValue: 'Reply' })}
         </Button>
         <Button
           id={`${componentId}-cancel`}
@@ -129,7 +129,7 @@ export function InlineReplyComposer({
           onClick={onCancel}
           disabled={isSubmitting}
         >
-          {cancelLabel ?? t('actions.cancel')}
+          {cancelLabel ?? t('actions.cancel', { defaultValue: 'Cancel' })}
         </Button>
       </div>
     </div>

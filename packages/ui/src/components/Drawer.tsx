@@ -149,7 +149,7 @@ const Drawer = ({
         >
           {/* Visually hidden title for accessibility */}
           <Dialog.Title className="sr-only">
-            {t('dialogs.contentTitle')}
+            {t('dialogs.contentTitle', { defaultValue: 'Dialog Content' })}
           </Dialog.Title>
           <InsideDialogContext.Provider value={true}>
             <InsideDrawerContext.Provider value={true}>
@@ -175,7 +175,7 @@ const Drawer = ({
           {!hideCloseButton && (
             <button
               className="absolute top-4 right-4 text-muted-foreground hover:text-[rgb(var(--color-text-600))]"
-              aria-label={t('actions.close')}
+              aria-label={t('actions.close', { defaultValue: 'Close' })}
               onClick={requestClose}
             >
               <X />

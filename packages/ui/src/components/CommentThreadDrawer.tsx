@@ -88,8 +88,8 @@ export function CommentThreadDrawer<TComment>({
               roomName={composerRoomName}
               initialInternal={initialInternal}
               showInternalToggle={showInternalToggle}
-              submitLabel={submitLabel ?? t('inlineReplyComposer.actions.reply')}
-              cancelLabel={cancelLabel ?? t('actions.cancel')}
+              submitLabel={submitLabel ?? t('inlineReplyComposer.actions.reply', { defaultValue: 'Reply' })}
+              cancelLabel={cancelLabel ?? t('actions.cancel', { defaultValue: 'Cancel' })}
               isSubmitting={isSubmitting}
               uploadFile={uploadFile}
               searchMentions={searchMentions}

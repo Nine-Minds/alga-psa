@@ -49,7 +49,7 @@ const GenericDialog = ({
   const { automationIdProps: closeButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: `${id}-close`,
     type: 'button',
-    label: t('actions.closeDialog'),
+    label: t('actions.closeDialog', { defaultValue: 'Close Dialog' }),
   });
 
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -170,7 +170,7 @@ const GenericDialog = ({
             <button
               {...closeButtonProps}
               className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))]"
-              aria-label={t('actions.close')}
+              aria-label={t('actions.close', { defaultValue: 'Close' })}
             >
               <X className="h-4 w-4" />
             </button>

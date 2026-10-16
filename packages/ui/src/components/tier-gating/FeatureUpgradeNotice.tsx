@@ -39,19 +39,19 @@ export function FeatureUpgradeNotice({
       </div>
 
       <h2 className="text-xl font-semibold mb-2">
-        {t('featureUpgradeNotice.title', { featureName, tierLabel })}
+        {t('featureUpgradeNotice.title', { featureName, tierLabel, defaultValue: `${featureName} requires ${tierLabel}` })}
       </h2>
 
       <p className="text-muted-foreground max-w-md mb-6">
         {description ||
-          t('featureUpgradeNotice.description', { tierLabel, featureName })}
+          t('featureUpgradeNotice.description', { tierLabel, featureName, defaultValue: `Upgrade to the ${tierLabel} tier to unlock ${featureName} and more powerful features.` })}
       </p>
 
       <Link
         href={upgradeHref}
         className="inline-flex items-center justify-center px-6 py-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-lg transition-colors"
       >
-        {upgradeLabel ?? t('featureUpgradeNotice.actions.viewPlans')}
+        {upgradeLabel ?? t('featureUpgradeNotice.actions.viewPlans', { defaultValue: 'View Plans' })}
       </Link>
     </div>
   );

@@ -180,10 +180,10 @@ export function UnsavedChangesProvider({
         isOpen={showDialog}
         onClose={handleClose}
         onConfirm={handleConfirm}
-        title={dialogTitle ?? t('dialogs.unsavedChanges.title')}
-        message={dialogMessage ?? t('dialogs.unsavedChanges.message')}
-        confirmLabel={t('dialogs.unsavedChanges.confirm')}
-        cancelLabel={t('dialogs.unsavedChanges.cancel')}
+        title={dialogTitle ?? t('dialogs.unsavedChanges.title', 'Unsaved Changes')}
+        message={dialogMessage ?? t('dialogs.unsavedChanges.message', 'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.')}
+        confirmLabel={t('dialogs.unsavedChanges.confirm', 'Leave Without Saving')}
+        cancelLabel={t('dialogs.unsavedChanges.cancel', 'Stay')}
       />
     </UnsavedChangesContext>
   );

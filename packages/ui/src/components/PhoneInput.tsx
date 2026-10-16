@@ -132,7 +132,7 @@ export const PhoneInput = ({
   return (
     <div className={`w-full space-y-1 ${className}`.trim()} data-automation-type="phone-input-group">
       <Label htmlFor={phoneId} className="block">
-        {label === undefined ? t('fields.phone.label') : label}
+        {label === undefined ? t('fields.phone.label', { defaultValue: 'Phone' }) : label}
         {required && <span className="ml-1 text-[rgb(var(--color-text-500))]" aria-hidden="true">*</span>}
       </Label>
 
@@ -148,7 +148,7 @@ export const PhoneInput = ({
               onChange={(event) => onChange(event.target.value)}
               onBlur={onBlur}
               onKeyDown={handlePhoneKeyDown}
-              placeholder={placeholder === undefined ? t('fields.phone.placeholder') : placeholder}
+              placeholder={placeholder === undefined ? t('fields.phone.placeholder', { defaultValue: '+1 (555) 123-4567' }) : placeholder}
               disabled={disabled}
               required={required}
               hasError={error}
@@ -165,7 +165,7 @@ export const PhoneInput = ({
               onChange={(nextValue) => onChange(nextValue ?? '')}
               onBlur={onBlur}
               onKeyDown={handlePhoneKeyDown}
-              placeholder={placeholder === undefined ? t('fields.phone.placeholder') : placeholder}
+              placeholder={placeholder === undefined ? t('fields.phone.placeholder', { defaultValue: '+1 (555) 123-4567' }) : placeholder}
               disabled={disabled}
               required={required}
               hasError={error}
@@ -179,14 +179,14 @@ export const PhoneInput = ({
           <Input
             id={extensionId}
             ref={extensionRef}
-            aria-label={extensionLabel === undefined ? t('fields.phoneExtension.label') : extensionLabel}
+            aria-label={extensionLabel === undefined ? t('fields.phoneExtension.label', { defaultValue: 'Extension' }) : extensionLabel}
             data-automation-id={dataAutomationId ? `${dataAutomationId}-ext` : undefined}
             inputMode="numeric"
             pattern="[0-9]*"
             maxLength={10}
             value={extension}
             onChange={(event) => onExtensionChange?.(event.target.value.replace(/\D/g, ''))}
-            placeholder={extensionPlaceholder === undefined ? t('fields.phoneExtension.placeholder') : extensionPlaceholder}
+            placeholder={extensionPlaceholder === undefined ? t('fields.phoneExtension.placeholder', { defaultValue: 'ext. 1234' }) : extensionPlaceholder}
             disabled={disabled}
             className="w-full"
           />

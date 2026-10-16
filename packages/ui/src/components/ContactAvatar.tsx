@@ -38,7 +38,7 @@ const ContactAvatar = ({
       size={size}
       className={className}
       getInitials={getContactInitials}
-      altText={contactName ? t('contactAvatar.alt', { name: contactName }) : t('contactAvatar.defaultAlt')}
+      altText={contactName ? t('contactAvatar.alt', { name: contactName, defaultValue: `${contactName} avatar` }) : t('contactAvatar.defaultAlt', 'Contact avatar')}
     />
   );
 };
