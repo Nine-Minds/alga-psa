@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { PartialBlock } from '@blocknote/core';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
@@ -11,12 +11,16 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
-import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { SectionCard } from '@alga-psa/ui/components/SectionCard';
+import FormCardsSkeleton from '@alga-psa/ui/components/skeletons/FormCardsSkeleton';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
+import {
+  UnsavedChangesProvider,
+  useRegisterUnsavedChanges,
+} from '@alga-psa/ui/context/UnsavedChangesContext';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -163,48 +167,6 @@ function snapshot(form: FormState): string {
   return JSON.stringify(toInput(form));
 }
 
-/** One editor section on the app's card surface: the section heading over its fields. */
-function SectionCard({ id, title, bodyClassName = 'space-y-4', children }: {
-  id: string;
-  title: string;
-  bodyClassName?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card id={id}>
-      <CardHeader className="pb-3">
-        <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">{title}</h2>
-      </CardHeader>
-      <CardContent className={bodyClassName}>{children}</CardContent>
-    </Card>
-  );
-}
-
-/** Form-shaped pulse placeholder, so the editor keeps its card layout while the template loads. */
-function TicketTemplateEditorSkeleton({ label }: { label: string }) {
-  return (
-    <div id={`${ID}-loading`} role="status" aria-label={label} className="mx-auto max-w-5xl space-y-6 p-6">
-      <div className="space-y-3">
-        <Skeleton className="h-10 w-40" />
-        <Skeleton className="h-8 w-72" />
-      </div>
-      {[0, 1].map((section) => (
-        <Card key={`skeleton-section-${section}`}>
-          <CardHeader className="pb-3"><Skeleton className="h-5 w-32" /></CardHeader>
-          <CardContent className="space-y-4">
-            {[0, 1, 2].map((field) => (
-              <div key={`skeleton-field-${field}`} className="space-y-2">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
 export interface TicketTemplateEditorProps {
   /** A template id, or `'new'` to create one. */
   templateId: string;
@@ -216,7 +178,7 @@ export interface TicketTemplateEditorProps {
  * Create / edit page body for a ticket template: name, ticket fields, description, tags, checklist
  * and custom fields. "Create template from ticket" lands here prefilled; nothing is persisted until Save.
  */
-export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplateEditorProps) {
+function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEditorProps) {
   const { t } = useTranslation('features/tickets');
   const router = useRouter();
   const reference = useRecurringReferenceData();
@@ -233,7 +195,6 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
-  const savedRef = useRef(false);
 
   // Until the permission check resolves nothing is locked, so a permitted user never sees a flash of
   // disabled fields; the server actions enforce the permission either way.
@@ -275,12 +236,9 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
 
   const dirty = useMemo(() => !loading && snapshot(form) !== baseline, [form, baseline, loading]);
 
-  useEffect(() => {
-    if (!dirty || savedRef.current) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
-    window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
-  }, [dirty]);
+  // Feeds the provider above: in-app navigation (back button, sidebar links) asks for confirmation and
+  // the shared leave guard covers reload, tab close and the browser history chords.
+  useRegisterUnsavedChanges(`${ID}-editor`, dirty);
 
   const patch = (changes: Partial<FormState>) => setForm((current) => ({ ...current, ...changes }));
   const patchChecklist = (key: string, changes: Partial<ChecklistRow>) =>
@@ -318,7 +276,8 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
         const result = await createTicketTemplate(parsed.data, fromTicketId ?? null);
         const message = recurringErrorMessage(result);
         if (message !== null) { setErrors([message]); return; }
-        savedRef.current = true;
+        // The draft is now stored, so the guard must let the redirect to the saved template through.
+        setBaseline(snapshot(form));
         toast.success(t('templates.editor.created', 'Template created'));
         router.replace(`/msp/tickets/templates/${(result as { template_id: string }).template_id}`);
       } else {
@@ -339,14 +298,14 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
   };
 
   if (loading) {
-    return <TicketTemplateEditorSkeleton label={t('templates.loading', 'Loading…')} />;
+    return <FormCardsSkeleton id={`${ID}-loading`} label={t('templates.loading', 'Loading…')} />;
   }
   if (loadError) {
     return <div className="p-6"><Alert id={`${ID}-load-error`} variant="destructive"><AlertDescription>{loadError}</AlertDescription></Alert></div>;
   }
 
   return (
-    <div id={`${ID}-editor`} className="mx-auto max-w-5xl space-y-6 p-6">
+    <div id={`${ID}-editor`} className="space-y-6 p-6">
       <div className="space-y-3">
         {/* BackNav routes through UnsavedChangesContext, so an in-app back click respects a dirty form. */}
         <BackNav id={`${ID}-back`} href="/msp/tickets/templates">
@@ -406,19 +365,22 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
       )}
 
       <SectionCard id={`${ID}-details`} title={t('templates.sections.details', 'Template')}>
-        <div>
-          <Label htmlFor={`${ID}-name`}>{t('templates.fields.name', 'Template name')}</Label>
-          <Input id={`${ID}-name`} value={form.name} disabled={readOnly} onChange={(event) => patch({ name: event.target.value })} />
-        </div>
-        <div>
-          <Label htmlFor={`${ID}-notes`}>{t('templates.fields.notes', 'Notes')}</Label>
-          <TextArea id={`${ID}-notes`} value={form.notes} disabled={readOnly} onChange={(event) => patch({ notes: event.target.value })} />
-          <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{t('templates.fields.notesHelp', 'For your team only. Not copied to tickets.')}</p>
+        {/* Two columns on wide viewports, so short fields do not stretch across the whole page. */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <Label htmlFor={`${ID}-name`}>{t('templates.fields.name', 'Template name')}</Label>
+            <Input id={`${ID}-name`} value={form.name} disabled={readOnly} onChange={(event) => patch({ name: event.target.value })} />
+          </div>
+          <div>
+            <Label htmlFor={`${ID}-notes`}>{t('templates.fields.notes', 'Notes')}</Label>
+            <TextArea id={`${ID}-notes`} value={form.notes} disabled={readOnly} onChange={(event) => patch({ notes: event.target.value })} />
+            <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{t('templates.fields.notesHelp', 'For your team only. Not copied to tickets.')}</p>
+          </div>
         </div>
       </SectionCard>
 
       <SectionCard id={`${ID}-ticket`} title={t('templates.sections.ticket', 'Ticket')}>
-        <div>
+        <div className="md:max-w-2xl">
           <Label htmlFor={`${ID}-title`}>{t('templates.fields.title', 'Ticket title')}</Label>
           <Input id={`${ID}-title`} value={form.title} disabled={readOnly} onChange={(event) => patch({ title: event.target.value })} />
         </div>
@@ -482,7 +444,7 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
         />
       </SectionCard>
 
-      <SectionCard id={`${ID}-checklist`} title={t('templates.sections.checklist', 'Checklist')} bodyClassName="space-y-3">
+      <SectionCard id={`${ID}-checklist`} title={t('templates.sections.checklist', 'Checklist')} bodyClassName="space-y-3 md:max-w-3xl">
         {/* LEVERAGE: pattern checklist-item-list-editor — an add/reorder/remove list of checklist items is also written by the checklist template editor; both should share one editor component */}
         {form.checklist.length === 0 && (
           <p id={`${ID}-checklist-empty`} className="text-sm text-[rgb(var(--color-text-500))]">
@@ -530,7 +492,7 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
         )}
       </SectionCard>
 
-      <SectionCard id={`${ID}-custom-fields`} title={t('templates.sections.customFields', 'Custom fields')} bodyClassName="space-y-3">
+      <SectionCard id={`${ID}-custom-fields`} title={t('templates.sections.customFields', 'Custom fields')} bodyClassName="space-y-3 md:max-w-3xl">
         {form.customFields.length === 0 && (
           <p id={`${ID}-custom-fields-empty`} className="text-sm text-[rgb(var(--color-text-500))]">
             {t('templates.customFields.empty', 'No custom field values.')}
@@ -570,6 +532,28 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
         )}
       </SectionCard>
     </div>
+  );
+}
+
+/**
+ * The editor plus the page-level unsaved-changes guard it needs: the provider owns the confirmation
+ * dialog and the shared leave guard, and the body registers its dirty state with it.
+ */
+export function TicketTemplateEditor(props: TicketTemplateEditorProps) {
+  const { t } = useTranslation('common');
+
+  return (
+    <UnsavedChangesProvider
+      dialogTitle={t('unsavedChangesGuard.title', 'Discard unsaved changes?')}
+      dialogMessage={t(
+        'unsavedChangesGuard.message',
+        'You have unsaved changes that will be lost if you close this. Do you want to discard them?',
+      )}
+      dialogConfirmLabel={t('unsavedChangesGuard.discard', 'Discard changes')}
+      dialogCancelLabel={t('unsavedChangesGuard.keepEditing', 'Keep editing')}
+    >
+      <TicketTemplateEditorBody {...props} />
+    </UnsavedChangesProvider>
   );
 }
 

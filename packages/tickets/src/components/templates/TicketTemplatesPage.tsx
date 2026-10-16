@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import DataTableSkeleton from '@alga-psa/ui/components/skeletons/DataTableSkeleton';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
@@ -31,30 +31,6 @@ import { useTicketTemplatePermissions } from './useTicketTemplatePermissions';
 
 /** Column widths of the loading skeleton, shaped like the table it stands in for. */
 const SKELETON_CELLS = ['w-40', 'w-48', 'w-24', 'w-20', 'w-16'];
-
-/** Pulse placeholder wearing the DataTable's card chrome, so the page does not jump when rows land. */
-function TicketTemplatesTableSkeleton({ label }: { label: string }) {
-  return (
-    <div
-      id="ticket-templates-loading"
-      role="status"
-      aria-label={label}
-      className="overflow-hidden rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] card-elevated"
-    >
-      <div className="flex items-center gap-4 border-b border-[rgb(var(--color-border-200)/0.7)] bg-[rgb(var(--color-table-row-alt))] px-4 py-2.5">
-        {SKELETON_CELLS.map((width) => <Skeleton key={width} className={`h-3 ${width}`} />)}
-      </div>
-      {Array.from({ length: 5 }).map((_, row) => (
-        <div
-          key={`skeleton-row-${row}`}
-          className="flex items-center gap-4 border-b border-[rgb(var(--color-border-100))] px-4 py-3.5 last:border-b-0"
-        >
-          {SKELETON_CELLS.map((width) => <Skeleton key={width} className={`h-4 ${width}`} />)}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 /** The ticket templates list: name, board, checklist size, active state and the row actions. */
 export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode?: boolean } = {}) {
@@ -241,7 +217,11 @@ export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode
       {error && <Alert id="ticket-templates-error" variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
 
       {loading ? (
-        <TicketTemplatesTableSkeleton label={t('templates.loading', 'Loading…')} />
+        <DataTableSkeleton
+          id="ticket-templates-loading"
+          label={t('templates.loading', 'Loading…')}
+          columnWidths={SKELETON_CELLS}
+        />
       ) : (
         <>
           <DataTable
