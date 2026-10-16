@@ -453,7 +453,7 @@ async function configureJob(
 
 /** The original six-entity sample; products need a service type, so they have their own tests. */
 function legacySampleRows(): AmpPackageRows {
-  const rows = legacySampleRows();
+  const rows = sampleEntityRows();
   delete rows.products;
   delete rows.vendor_products;
   return rows;
@@ -535,6 +535,8 @@ describe('AMP migration pipeline integration', () => {
       tickets: 1,
       ticket_comments: 1,
       assets: 1,
+      products: 0,
+      vendor_products: 0,
     });
     expect(await stagedCountsByEntity(fixture.tenantId, migrationJobId)).toEqual({
       organizations: 1,
@@ -638,8 +640,10 @@ describe('AMP migration pipeline integration', () => {
       expect(outcome.target_entity_id).toBeTruthy();
     }
 
+    // Staging also records zero-count rows for the empty products/vendor_products tables.
     const jobEntities = await tenantTable(fixture.tenantId, 'migration_job_entities')
-      .where({ migration_job_id: migrationJobId });
+      .where({ migration_job_id: migrationJobId })
+      .whereIn('entity_type', [...ALL_ENTITY_TYPES]);
     expect(jobEntities).toHaveLength(6);
     for (const entity of jobEntities) {
       expect(entity.state).toBe('completed');
