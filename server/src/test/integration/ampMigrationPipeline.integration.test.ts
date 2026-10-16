@@ -1366,6 +1366,39 @@ describe('AMP migration pipeline integration', () => {
       expect(preflight.state).toBe('blocked');
     }, HOOK_TIMEOUT);
 
+    it('blocks preflight for rows with no amounts at all, since the appliers still resolve a tenant currency', async () => {
+      const fixture = await createFixture();
+      const serviceTypeId = await productFixture(fixture, null);
+      const rows = productRows();
+      // Product without price or cost: createProductCore still needs a cost_currency.
+      rows.products = [
+        { package_record_id: 'p-bare', source_record_id: 'src-p-bare', external_identifier_namespace: NS, name: 'Bare', sku: 'BARE-1' },
+      ];
+      // Offer without a unit cost: the applier still resolves a currency.
+      rows.vendor_products = [
+        { package_record_id: 'vp-bare', source_record_id: 'src-vp-bare', external_identifier_namespace: NS, vendor_name: 'Ingram Micro', product_package_record_id: 'p-bare' },
+      ];
+      const migrationJobId = await stageProducts(fixture, rows, serviceTypeId);
+      const preflight = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
+      expect(preflight.issues.map((issue) => issue.code)).toContain('CONFIG_TENANT_CURRENCY_MISSING');
+      expect(preflight.state).toBe('blocked');
+    }, HOOK_TIMEOUT);
+
+    it('does not demand a tenant currency for a SKU-matched product or fully-declared currencies', async () => {
+      const fixture = await createFixture();
+      const serviceTypeId = await productFixture(fixture, null);
+      const rows = productRows();
+      rows.products = [
+        { package_record_id: 'p-full', source_record_id: 'src-p-full', external_identifier_namespace: NS, name: 'Full', sku: 'FULL-1', price_minor: 1000, price_currency: 'EUR', cost_minor: 500, cost_currency: 'EUR' },
+      ];
+      rows.vendor_products = [
+        { package_record_id: 'vp-full', source_record_id: 'src-vp-full', external_identifier_namespace: NS, vendor_name: 'Ingram Micro', product_package_record_id: 'p-full', unit_cost_minor: 500, cost_currency: 'EUR' },
+      ];
+      const migrationJobId = await stageProducts(fixture, rows, serviceTypeId);
+      const preflight = await new MigrationPlanner(db, fixture.tenantId).preflight(migrationJobId);
+      expect(preflight.issues.map((issue) => issue.code)).not.toContain('CONFIG_TENANT_CURRENCY_MISSING');
+    }, HOOK_TIMEOUT);
+
     it('fails a row whose assumed currency no longer matches the tenant currency', async () => {
       const fixture = await createFixture();
       const serviceTypeId = await productFixture(fixture, 'JPY');

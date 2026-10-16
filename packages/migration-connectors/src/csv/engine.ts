@@ -86,6 +86,12 @@ export const MONEY_COLUMN_CURRENCY: Readonly<Record<string, string>> = {
   cost_minor: 'cost_currency',
   unit_cost_minor: 'cost_currency',
 };
+/**
+ * A sheet with one generic `Currency` column maps it to `price_currency`; cost
+ * falls back to it when the row has no cost currency of its own, so a cost is
+ * never read or stored under the tenant currency when the sheet declared one.
+ */
+const CURRENCY_FALLBACK: Readonly<Record<string, string>> = { cost_currency: 'price_currency' };
 const CURRENCY_COLUMNS: ReadonlySet<string> = new Set(['price_currency', 'cost_currency']);
 const FLAG_COLUMNS: ReadonlySet<string> = new Set(['is_internal', 'is_active', 'is_preferred']);
 const MAX_LEAD_TIME_DAYS = 3650;
@@ -337,6 +343,13 @@ export function buildEntityRows(
           record[target] = normalized;
         } else {
           record[target] = transformed;
+        }
+      }
+
+      for (const [column, fallback] of Object.entries(CURRENCY_FALLBACK)) {
+        if (!(column in record) && !invalidCurrencyColumns.has(column)) {
+          if (typeof record[fallback] === 'string') record[column] = record[fallback];
+          else if (invalidCurrencyColumns.has(fallback)) invalidCurrencyColumns.add(column);
         }
       }
 

@@ -498,17 +498,24 @@ export class MigrationPlanner {
       }
     }
 
-    // Money without a currency means "tenant currency at apply time"; that is
-    // only valid when the tenant has one configured.
+    // The appliers resolve the tenant currency whenever a currency cell is
+    // blank: every vendor offer needs a cost currency, and every product that
+    // will be created (not SKU-matched) needs one for cost, plus one for the
+    // price when it has a price. Flag exactly those rows.
     const needsTenantCurrency = await staged()
       .whereIn('entity_type', ['products', 'vendor_products'])
       .where((query) =>
         query
-          .where((q) =>
+          .where((q) => q.where({ entity_type: 'vendor_products' }).whereRaw(`payload ->> 'cost_currency' IS NULL`))
+          .orWhere((q) =>
             q
-              .whereRaw(`payload ->> 'price_minor' IS NOT NULL AND payload ->> 'price_currency' IS NULL`)
-              .orWhereRaw(`payload ->> 'cost_minor' IS NOT NULL AND payload ->> 'cost_currency' IS NULL`)
-              .orWhereRaw(`payload ->> 'unit_cost_minor' IS NOT NULL AND payload ->> 'cost_currency' IS NULL`)
+              .where({ entity_type: 'products' })
+              .whereRaw(`NOT (COALESCE(btrim(payload ->> 'sku'), '') <> '' AND ${existingSku('migration_staged_records')})`, [this.tenant])
+              .where((qq) =>
+                qq
+                  .whereRaw(`payload ->> 'cost_currency' IS NULL`)
+                  .orWhereRaw(`payload ->> 'price_minor' IS NOT NULL AND payload ->> 'price_currency' IS NULL`)
+              )
           )
       )
       .first();

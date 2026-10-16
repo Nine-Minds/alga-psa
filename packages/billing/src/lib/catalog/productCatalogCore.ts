@@ -75,7 +75,10 @@ export function normalizeProductSku(sku: string | null | undefined): string | nu
   return trimmed.length > 0 ? trimmed : null;
 }
 
-/** Find the tenant's product with this (trimmed) SKU; null when none. */
+/**
+ * Find the tenant's product with this (trimmed) SKU; null when none.
+ * Product-only on purpose: service_catalog_product_sku_unique is partial (item_kind = 'product'), so a service/other-kind row with the same SKU is not a conflict.
+ */
 export async function findProductBySkuCore(
   trx: Knex | Knex.Transaction,
   tenant: string,

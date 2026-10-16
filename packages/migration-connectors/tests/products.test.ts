@@ -140,6 +140,25 @@ describe('products and vendor_products conversion', () => {
     expect(byName['Yen item']).toMatchObject({ price_minor: 1500, price_currency: 'JPY', is_active: 0 });
   });
 
+  it('applies one generic Currency column to both price and cost', async () => {
+    const { result, rows } = await convert('SKU,Name,Price,Cost,Currency\nA1,Widget,10.50,5.25,EUR\n', 'products', 'USD');
+    expect(result.valid).toBe(true);
+    expect(rows[0]).toMatchObject({
+      price_minor: 1050,
+      price_currency: 'EUR',
+      cost_minor: 525,
+      cost_currency: 'EUR',
+    });
+    expect(rows[0].extension_json ?? null).toBeNull();
+  });
+
+  it('parses price and cost with the shared currency exponent (JPY)', async () => {
+    const { result, rows } = await convert('SKU,Name,Price,Cost,Currency\nA1,Widget,1500,900,JPY\n', 'products', 'USD');
+    expect(result.valid).toBe(true);
+    expect(rows[0]).toMatchObject({ price_minor: 1500, price_currency: 'JPY', cost_minor: 900, cost_currency: 'JPY' });
+    expect(rows[0].extension_json ?? null).toBeNull();
+  });
+
   it('uses the supplied default currency only for the exponent, leaving the currency null', async () => {
     const { result, rows } = await convert('SKU,Name,List Price\nA1,Widget,10.50\n', 'products', 'JPY');
     // 10.50 is over-precise for a 0-decimal default currency and must be rejected.
