@@ -264,8 +264,9 @@ choose:
 - **Create new**: add it to QuickBooks under the name shown, which you can edit.
   For QuickBooks Desktop, the IIF file defines the new customer (with its
   billing address, phone and email) or item (type, description, income account
-  and price) before the invoices that use it. For QuickBooks CSV, QuickBooks
-  adds the new name when you import the file.
+  and price) before the invoices that use it. If an invoice fails to export,
+  the next file that includes it defines them again. For QuickBooks CSV,
+  QuickBooks adds the new name when you import the file.
 - **Already in QuickBooks**: link to an existing QuickBooks entry with exactly
   that name. Nothing is written to QuickBooks for it, so its existing details
   are not overwritten.
