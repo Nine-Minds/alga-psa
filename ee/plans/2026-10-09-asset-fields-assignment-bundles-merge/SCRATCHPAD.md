@@ -1149,3 +1149,90 @@ behaviours are covered by descriptively-titled tests), and lifting the
 `packages/projects` / `packages/tickets` work into its own PR. Both are
 housekeeping against a PR the operator wants merged now, and the second needs a
 push either way.
+
+## Round 17 — proving the unpushed head is CI-clean (2026-10-16)
+
+The review's blocking note was that the newest commits carry no CI run: the
+two red-lane fixes are committed, but nothing green has ever been observed on
+`f0f3130d9e`. Pushing is still not this round's to take, so instead of
+asserting readiness this round *reproduces the lanes locally* and classifies
+every residual failure with evidence.
+
+### The lane inventory says only two things were ever broken
+
+`gh pr checks 3763` has 40+ passing lanes against the stale head and four red:
+`Production regression readiness` and `citus / Citus execution complete` are
+rollups that only echo the other two, so the whole PR rests on `unit / Nx
+affected unit tests` and `citus / Combined migrations`. Both fixes re-verified
+here rather than trusted:
+
+- The citus seed fix: `ee/server/seeds/onboarding/psa/` really does end at
+  `11_asset_statuses.cjs`, and `product-upgrade-operations` now expects exactly
+  that list with the new file last. The e2e rollback fix adds `asset_statuses`
+  to the pre-`rollbackTenantInDB` delete list beside `asset_type_registry`. The
+  other four new tables need no entry there — a freshly created tenant has no
+  assets, so no rows exist to block the tenant delete.
+- The projects fix was re-run as a whole package (567 tests) last round.
+
+### Every package this branch actually edits, re-run at this HEAD
+
+`nx affected` lists 55 projects, but only 17 are directly edited; the rest are
+transitive through `types`/`ui`/`core`. All directly-edited ones now pass at
+`f0f3130d9e`: assets 349/349, integrations 1111/1111, ui 735/735, types
+138/138, client-portal 393, tickets 1304, billing 1942, msp-composition 39,
+plus projects/clients/authorization/core/shared from the previous rounds.
+`packages/assets` mattered most — `92f4702372` changed the status registry that
+gates every create and update, and the full suite had not been re-run since.
+
+Four residual local failures, each proven environmental rather than branch-made:
+
+- **tickets (3) and client-portal (2)** — `window.localStorage.setItem is not a
+  function` at `packages/ui/src/components/DataTable.tsx:453`. That file is in
+  the diff, so this needed ruling out properly: the diff touches *zero*
+  localStorage lines (it adds `rowProps`), both test files are byte-identical
+  to `origin/main`, and giving Node a valid `--localstorage-file` makes all five
+  pass. It is the Node 25 native `localStorage` global shadowing jsdom; CI runs
+  Node 22, which has no such global.
+- **billing (1)** — `QuoteForm.terms` expected `2026-11-15`, got `2026-11-16`.
+  The branch does not touch `packages/billing` at all, and the file passes
+  7/7 under `TZ=UTC`, which is what the runners use. A local EDT artifact.
+- **msp-composition (1 suite, 0 tests)** — a collection error, so it could not
+  be dismissed as a Node quirk. It is `Failed to resolve entry for package
+  "@alga-psa/workflow-streams"` reached *through* `packages/assets/dist`. Every
+  link in that chain predates the branch: `workflow-streams` has an `nx:noop`
+  build whose `exports` still point at a `dist/index.mjs` nothing ever writes,
+  `assetActions` imports it on `origin/main` too, and `MspRecurringTickets.tsx`
+  (untouched here) is what pulls assets in. It only fires because this worktree
+  has a gitignored `packages/assets/dist` built per the plan's instructions —
+  CI starts clean. The four msp-composition files the branch does edit are
+  byte-identical to `94a11c7f18`, the head whose run passed this package.
+
+No branch-caused failure surfaced anywhere. Also confirmed the two migration
+filenames that looked duplicated in `git log --name-only`
+(`..._billing_strategy`, `..._nullable_actor`) are renames, not a double
+migration: only `20261009125100` and `20261009125200` exist on disk.
+
+### T090 now has the database test it claimed
+
+The one review finding that was mine to fix. `tests.json` marked T090
+implemented on the strength of `assetGroupsCitusFk.test.ts`, but that file pins
+the Citus FK probe — not the constraints T090 describes. New
+`server/src/test/integration/assetGroups.integration.test.ts` exercises them
+against real Postgres: a second group for an already-grouped asset rejected by
+`asset_group_members_tenant_asset_uk` (and the first membership left intact),
+the same asset twice in one group, both valid `kind` values accepted with
+`workspace` and `''` refused by `asset_groups_kind_check`, `owner`/`user`
+accepted with `viewer` refused by `asset_group_contacts_role_check`, and the
+`ON DELETE CASCADE` clearing members and contacts. Five tests, green, and green
+alongside the other four asset integration files (36 together) so the tenant
+fixtures do not collide. `asset_id` and `contact_name_id` use bare UUIDs on
+purpose — the migration puts no FK on either, so the subject is the constraint.
+
+### What is still not done, and why
+
+Lifting `packages/projects` and `packages/tickets` into their own PR remains
+the reviewer's open preference. It needs a push and a second PR, and both
+bodies of work answer standing operator feedback (the ticket grid's missing
+location/billing-profile row, verbatim; the project board going stale after a
+status delete, from this PR's own browser check), so dropping them here would
+regress feedback this card is told to hold. Recorded, not silently skipped.
