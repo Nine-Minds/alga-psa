@@ -336,7 +336,7 @@ export const LineItem: React.FC<LineItemProps> = ({
         <div className="flex-1">
           {editState.is_discount ? (
             <>
-              <span className="font-medium text-blue-600">
+              <span className="font-medium text-primary-600">
                 {isQuantityCredit
                   ? t('lineItem.collapsed.credit', { defaultValue: 'Credit' })
                   : editState.applies_to_item_id
@@ -401,7 +401,7 @@ export const LineItem: React.FC<LineItemProps> = ({
   return (
     <div id={itemDomId} className={`p-4 border rounded-lg space-y-3 mb-2 ${
       editState.isRemoved ? 'opacity-50 bg-muted' : ''
-    } ${editState.is_discount ? 'border-blue-200 bg-blue-50' : ''} ${
+    } ${editState.is_discount ? 'border-primary/30 bg-primary/10' : ''} ${
       isSearchHighlighted ? 'search-highlight ring-2 ring-yellow-400 bg-yellow-50' : ''
     }`}>
       <div className="flex justify-between items-center">
@@ -777,7 +777,7 @@ export const LineItem: React.FC<LineItemProps> = ({
       <div className="text-right text-sm text-muted-foreground">
         {editState.is_discount ? (
           <>
-            <span className="text-blue-600 font-medium">
+            <span className="text-primary-600 font-medium">
               {isQuantityCredit
                 ? t('lineItem.summary.credit', { defaultValue: 'Credit' })
                 : editState.discount_type === 'percentage'
