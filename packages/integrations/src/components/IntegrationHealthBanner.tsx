@@ -33,6 +33,26 @@ const MESSAGES: Record<IntegrationHealthReason, { key: string; defaultValue: str
     key: 'banners.integrationHealth.calendar.disconnected',
     defaultValue: 'Calendar sync for {{providerName}} is disconnected and is not syncing.',
   },
+  rmm_sync_error: {
+    key: 'banners.integrationHealth.rmm.syncError',
+    defaultValue: '{{providerName}} reported a sync error, so device and alert data may be out of date.',
+  },
+  rmm_reconnect_required: {
+    key: 'banners.integrationHealth.rmm.reconnectRequired',
+    defaultValue: '{{providerName}} needs to be reconnected — its credentials can no longer be refreshed.',
+  },
+  accounting_reconnect_required: {
+    key: 'banners.integrationHealth.accounting.reconnectRequired',
+    defaultValue: '{{providerName}} needs to be reconnected before accounting sync can run again.',
+  },
+  accounting_sync_error: {
+    key: 'banners.integrationHealth.accounting.syncError',
+    defaultValue: 'The last {{providerName}} sync did not finish, so invoices and payments may be out of date.',
+  },
+  teams_bot_credentials_missing: {
+    key: 'banners.integrationHealth.teams.botCredentialsMissing',
+    defaultValue: 'The {{providerName}} bot cannot reply: its bot connector credentials are not configured on the server.',
+  },
 };
 
 function dismissStorageKey(alertId: string): string {
