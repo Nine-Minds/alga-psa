@@ -155,16 +155,21 @@ export default function ProjectInfo({
           if (onProjectUpdate) {
             onProjectUpdate(updatedProject);
           }
+          onStatusesChanged?.();
           closeDrawer();
         }}
         onCancel={() => {
+          onStatusesChanged?.();
           closeDrawer();
         }}
       />,
       undefined,
-      // Reported on the drawer's own close rather than from Save/Cancel: the
-      // status-column editor writes its adds and deletes immediately, so a
-      // dismissal with Escape or the header X has to refresh the board too.
+      // The status-column editor writes its adds and deletes immediately, so
+      // every dismissal has to refresh the board — including Escape and the
+      // header X, which never reach Save or Cancel. Those two go through this
+      // `onClose`; Save and Cancel report for themselves because the
+      // `closeDrawer` they captured is the one from before this drawer opened
+      // (it is memoized on the current history entry) and so skips `onClose`.
       () => onStatusesChanged?.(),
     );
   };

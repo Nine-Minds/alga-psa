@@ -19,13 +19,23 @@ const listSource = readFileSync(path.resolve(__dirname, 'TaskListView.tsx'), 'ut
 describe('status column edits in the edit drawer refresh the board', () => {
   it('the drawer reports every close, however it was dismissed', () => {
     expect(infoSource).toContain('onStatusesChanged?: () => void;');
-    // Save, Cancel, Escape and the header X all end in `closeDrawer()`, which
-    // is what fires the `onClose` argument of `openDrawer` — so reporting it
-    // there covers the dismissals that never reach Save or Cancel.
     const open = infoSource.indexOf('<ProjectDetailsEdit');
     expect(open).toBeGreaterThan(-1);
     const openCall = infoSource.slice(open, infoSource.indexOf('};', open));
+    // Escape and the header X never reach Save or Cancel; they dismiss through
+    // the outlet's own `closeDrawer`, which fires the `onClose` argument of
+    // `openDrawer`.
     expect(openCall).toMatch(/\/>,\s*(?:\/\/[^\n]*\n\s*)*undefined,(?:\s*\/\/[^\n]*\n)*\s*\(\) => onStatusesChanged\?\.\(\),/);
+    // `onClose` alone is not enough: DrawerContext memoizes `closeDrawer` on
+    // the current history entry, so the one these two handlers captured — from
+    // the render before this drawer opened, when there was no entry — skips
+    // `onClose` entirely. Each must report for itself.
+    const save = openCall.indexOf('onSave={');
+    const cancel = openCall.indexOf('onCancel={');
+    expect(save).toBeGreaterThan(-1);
+    expect(cancel).toBeGreaterThan(save);
+    expect(openCall.slice(save, cancel)).toContain('onStatusesChanged?.();');
+    expect(openCall.slice(cancel)).toContain('onStatusesChanged?.();');
   });
 
   it('the page turns that report into a refresh key for the board', () => {

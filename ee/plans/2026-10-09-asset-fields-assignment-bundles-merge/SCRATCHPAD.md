@@ -936,3 +936,65 @@ end there), so there is one path instead of two partial ones.
 The contract test gained a case for the project-wide re-read (including the
 `TaskListView` coupling it depends on) and its drawer case now pins the
 `onClose` wiring. packages/projects: 104 files / 567 tests green.
+
+## Round 14 — Save and Close never reported the close (2026-10-16)
+
+Round 13's re-read was right and still did not help, because the report that
+feeds it never fired on the path the browser check used. Its own evidence said
+so precisely: dismissing the drawer with **Escape** or the header **X** did
+refresh (a status added in the editor showed up in the list's row picker
+straight away, and deleting an empty column updated the list), while **Save and
+Close** left the deleted column sitting in the list with all three tasks under
+it until a reload.
+
+`DrawerContext` memoizes `closeDrawer` on the current history entry:
+
+```ts
+const closeDrawer = useCallback(() => {
+  if (currentEntry?.onClose) currentEntry.onClose();
+  dispatch({ type: 'CLOSE_DRAWER' });
+}, [currentEntry]);
+```
+
+`ProjectInfo.handleEditClick` builds the `onSave`/`onCancel` closures *as it
+opens the drawer*, so the `closeDrawer` they capture is the one from the render
+before the drawer existed — when `currentEntry` was `null`. Calling it closes
+the drawer and skips `onClose` entirely. Escape and the header X are different:
+they dismiss through `DrawerOutlet`, which reads `closeDrawer` from the context
+on every render and therefore always has the entry. That is the whole split in
+the screenshots.
+
+Round 12 had Save and Cancel call `onStatusesChanged` directly, which worked;
+Round 13 moved the single report to `onClose` to cover Escape and X, and in
+doing so handed the two main paths to a stale closure. Both are needed, so both
+are there now: `onClose` for the dismissals that never reach a handler, and an
+explicit call in `onSave` and `onCancel` for the ones whose `closeDrawer` cannot
+fire it. Each path reports exactly once.
+
+The contract case for the drawer now pins both halves and carries the reason, so
+the next round cannot trade one for the other again; it fails against the old
+file with `expected 'onSave={(updatedProject) => {…' to contain
+'onStatusesChanged?.();'`. The shared `closeDrawer` was left alone on purpose —
+making it stale-proof would change when `onClose` fires for every drawer in the
+app, which is far outside this card.
+
+### CI
+
+The three red lanes on PR #3763 (`unit`, `citus`, and the readiness aggregator
+that only reports them) were all raised against the pushed head `94a11c7f18`,
+which predates the fixes. Confirmed from the run's own logs:
+
+- `unit` — one failure, `ProjectTaskStatusSettings.test.tsx > delete flow >
+  requires a destination when the column still holds tasks`; fixed by
+  `1a937f2865`.
+- `citus` — two failures, `tenant-creation-workflow.e2e` (the `asset_statuses`
+  FK outliving `rollbackTenantInDB`) and `product-upgrade-operations`
+  (`11_asset_statuses.cjs` missing from its hand-kept seed list); both fixed by
+  `da94eca92f`.
+- The operator's `create_distributed_table('asset_groups', …)` failure is gone:
+  this run distributes `asset_groups` and `asset_assignments` and logs
+  `asset_groups and client_locations have incompatible distribution - skipping
+  foreign key asset_groups_tenant_location_id_foreign`, which is what
+  `06b26e3577` set out to do.
+
+So nothing further was needed for CI beyond pushing what is on the branch.
