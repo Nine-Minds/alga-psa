@@ -29,7 +29,7 @@ describe('sendVendorSupportRequestEmail', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.sendEmail.mockResolvedValue(undefined);
+    mocks.sendEmail.mockResolvedValue({ success: true, messageId: 'message-1' });
     delete process.env.VENDOR_SUPPORT_EMAIL;
   });
 
@@ -122,6 +122,20 @@ describe('sendVendorSupportRequestEmail', () => {
     expect(message.html).not.toContain('<script>');
     expect(message.html).not.toContain('<img');
     expect(message.text).toContain('<img src=x onerror=alert(1)> & broken');
+  });
+
+  it('throws when the provider reports a failed send', async () => {
+    mocks.sendEmail.mockResolvedValue({ success: false, error: 'SMTP 535 authentication failed' });
+
+    await expect(sendVendorSupportRequestEmail(baseData))
+      .rejects.toThrow('SMTP 535 authentication failed');
+  });
+
+  it('throws when a failed send carries no error message', async () => {
+    mocks.sendEmail.mockResolvedValue({ success: false });
+
+    await expect(sendVendorSupportRequestEmail(baseData))
+      .rejects.toThrow('Failed to send vendor support request email');
   });
 
   it('honours the VENDOR_SUPPORT_EMAIL override for staging', async () => {

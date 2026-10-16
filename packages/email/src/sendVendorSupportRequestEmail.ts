@@ -78,11 +78,17 @@ ${blockLines.join('\n')}`;
     </div>
   `;
 
-  await emailService.sendEmail({
+  // sendEmail resolves { success: false } instead of throwing on provider
+  // rejections, so a failed send has to be raised for callers to see it.
+  const result = await emailService.sendEmail({
     to: process.env.VENDOR_SUPPORT_EMAIL || DEFAULT_VENDOR_SUPPORT_EMAIL,
     subject,
     html: htmlBody,
     text: textBody,
     replyTo: data.userEmail,
   });
+
+  if (!result.success) {
+    throw new Error(result.error || 'Failed to send vendor support request email');
+  }
 }

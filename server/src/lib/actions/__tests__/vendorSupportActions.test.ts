@@ -111,6 +111,13 @@ describe('submitVendorSupportRequest', () => {
     mocks.sendVendorSupportRequestEmail.mockRejectedValueOnce(new Error('smtp down'));
 
     expect(await rawSubmit(user, ctx, validInput)).toEqual({ success: false, error: 'send_failed' });
+
+    // A provider rejection reaches the action as a throw as well: sendEmail
+    // resolves { success: false } and sendVendorSupportRequestEmail raises it
+    // (see packages/email/src/__tests__/sendVendorSupportRequestEmail.test.ts).
+    mocks.sendVendorSupportRequestEmail.mockRejectedValueOnce(new Error('SMTP 535 authentication failed'));
+    expect(await rawSubmit(user, ctx, validInput)).toEqual({ success: false, error: 'send_failed' });
+
     expect(await rawSubmit(user, ctx, validInput)).toEqual({ success: true });
   });
 
