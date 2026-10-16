@@ -1,5 +1,7 @@
 'use server';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal asset actions intentionally compose asset feature APIs for client-facing read views. */
+
 import { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, type AuthContext } from '@alga-psa/auth';

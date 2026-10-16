@@ -1,3 +1,5 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal asset status badge intentionally reuses the asset feature's status schema so labels and tones never drift from the MSP view. */
+
 import type { AssetStatusKind } from '@alga-psa/types';
 import type { BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { BUILTIN_ASSET_STATUSES, assetStatusLabelForSlug } from '@alga-psa/assets/lib/assetStatusSchema';
