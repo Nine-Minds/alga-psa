@@ -4,6 +4,10 @@ import { withAuth } from '@alga-psa/auth';
 import { coManagedBrowserActor as browserActor } from '../co-managed/browserActor';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { CoManagedSlaSetupError } from '@alga-psa/co-managed';
+import { getCoManagedSharedTicketDetails, getCoManagedTicketEditor, searchCoManagedTicketEditOptions } from '@alga-psa/co-managed';
+import { isCoManagedLifecycleError } from '@alga-psa/licensing';
+import { buildSharedTicketData } from '../co-managed/sharedTicketData';
+import type { SharedTicketDetailsResult, SharedTicketOptionPage } from '../co-managed/sharedTicketDataTypes';
 import { getCoManagedSharedWorkSummary, getCoManagedTicketScreen, getCoManagedTicketHandoffHistory, getCoManagedExplicitTicketGrants, escalateCoManagedTicket, handBackCoManagedTicket, revokeCoManagedTicketGrant, CoManagedSharedWorkError, type CoManagedSharedResource, type CoManagedTicketHandoffRequest } from '@alga-psa/co-managed';
 
 
@@ -39,7 +43,7 @@ export const revokeSharedTicketGrantAction = withAuth(async (user, { tenant }, r
 
 export type CoManagedTicketScreenTarget = { kind: 'local'; ticketId: string } | { kind: 'shared'; resource: CoManagedSharedResource };
 
-export const getCoManagedTicketScreenAction = withAuth(async (user, { tenant }, target: CoManagedTicketScreenTarget) => {
+async function loadTicketScreen(tenant: string, user: Parameters<typeof browserActor>[0], target: CoManagedTicketScreenTarget) {
   const actor = await browserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   return withTransaction(knex, async trx => {
@@ -49,6 +53,33 @@ export const getCoManagedTicketScreenAction = withAuth(async (user, { tenant }, 
     if (!relationship) throw new CoManagedSharedWorkError();
     return getCoManagedTicketScreen(trx, actor, { tenant, relationshipId: relationship.relationship_id, kind: 'ticket', id: target.ticketId });
   });
+}
+
+export const getCoManagedTicketScreenAction = withAuth(async (user, { tenant }, target: CoManagedTicketScreenTarget) =>
+  loadTicketScreen(tenant, user, target));
+
+/** Everything the native ticket screen needs for a shared ticket, from admitted and
+ * redacted co-managed reads only. Sponsor sessions: each read below re-runs its own
+ * admission, so a revoked grant or missing staff assignment fails the whole load. */
+export const getSharedTicketDetailsAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource): Promise<SharedTicketDetailsResult> => {
+  if (resource?.kind !== 'ticket') throw new CoManagedSharedWorkError();
+  const screen = await loadTicketScreen(tenant, user, { kind: 'shared', resource });
+  const actor = await browserActor(user, tenant);
+  const { knex } = await createTenantKnex(tenant);
+  const details = await getCoManagedSharedTicketDetails(knex, actor, resource);
+  const editor = await getCoManagedTicketEditor(knex, actor, resource);
+  const firstPage = async (field: 'status_id' | 'priority_id'): Promise<SharedTicketOptionPage> => {
+    if (!editor.editableFields.includes(field)) return { options: [], nextAfterId: null };
+    try { return await searchCoManagedTicketEditOptions(knex, actor, resource, { field }); }
+    catch (error) {
+      // The editor is the authority for what is editable; a lifecycle lapse between the
+      // two reads degrades the picker to the current value rather than failing the screen.
+      if (isCoManagedLifecycleError(error)) return { options: [], nextAfterId: null };
+      throw error;
+    }
+  };
+  return buildSharedTicketData({ resource, screen, details, editor,
+    statusOptions: await firstPage('status_id'), priorityOptions: await firstPage('priority_id') });
 });
 
 export const getSharedTicketHandoffHistoryAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, beforeRevision?: number) => {

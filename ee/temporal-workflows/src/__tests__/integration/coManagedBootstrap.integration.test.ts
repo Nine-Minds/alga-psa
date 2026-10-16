@@ -4228,7 +4228,7 @@ it('edits the canonical shared ticket and returns the same receipt for exact and
   editing, save, principal, resource, customer, workflow, live,
 }) => {
   const state = await editing.getCoManagedTicketEditor(db, principal, resource);
-  expect(state.editableFields).toEqual(['title', 'url', 'status_id', 'priority_id', 'due_date', 'response_state']);
+  expect(state.editableFields).toEqual(['title', 'url', 'status_id', 'priority_id', 'due_date', 'response_state', 'description', 'category_id']);
   expect(state.values).toMatchObject({ title: expect.any(String), url: null, due_date: null, response_state: null });
   expect(state.selectedOptions.status_id?.id).toBe(state.values.status_id);
   const request = { operationId: randomUUID(), expected: { title: state.values.title! }, patch: { title: 'Edited from the MSP workspace' } };
@@ -4432,6 +4432,180 @@ it('binds edit receipts to the qualified ticket and disables workflow editing fo
   await expect(save({ operationId: randomUUID(), expected: { priority_id: state.values.priority_id! }, patch: { priority_id: null } }))
     .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
 }));
+
+
+const BLOCKS = (text: string) => JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text, styles: {} }] }]);
+
+/** Customer-owned context the sponsor's summary deliberately omits. */
+async function seedSharedTicketContext(fixture: Awaited<ReturnType<typeof ticketHandoffFixture>>) {
+  const { customer, resource, operation, actor } = fixture;
+  const contactId = randomUUID(), categoryId = randomUUID(), subcategoryId = randomUUID();
+  await customer.table('contacts').insert({ tenant: resource.tenant, contact_name_id: contactId, full_name: 'Casey Requester',
+    email: `${contactId}@example.test`, client_id: operation.customer_client_id });
+  const created = { tenant: resource.tenant, created_by: actor.userId, board_id: operation.customer_board_id };
+  await customer.table('categories').insert({ ...created, category_id: categoryId, category_name: 'Hardware' });
+  await customer.table('categories').insert({ ...created, category_id: subcategoryId, category_name: 'Laptops', parent_category: categoryId });
+  await customer.table('users').where('user_id', actor.userId).update({ first_name: 'Ada', last_name: 'Owner' });
+  const description = BLOCKS('Printer on floor 3 is down');
+  await customer.table('tickets').where('ticket_id', resource.id).update({ contact_name_id: contactId, category_id: categoryId, subcategory_id: subcategoryId,
+    assigned_to: actor.userId, due_date: '2026-11-01T09:00:00.000Z', attributes: { description, watcher_contact_ids: ['keep-me'] } });
+  return { contactId, categoryId, subcategoryId, description };
+}
+async function redactSponsorTicketFields(fixture: Awaited<ReturnType<typeof ticketHandoffFixture>>) {
+  const { principal, operation, sponsor } = fixture;
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Redacted shared details', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read',
+    templateKey: 'selected_clients', config: { selectedClientIds: [operation.request.clientId], redactedFields: [] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  return (redactedFields: string[]) => sponsor.table('authorization_bundle_rules').where('revision_id', revisionId)
+    .update({ config: { selectedClientIds: [operation.request.clientId], redactedFields } });
+}
+
+describe('co-managed shared ticket details for the native screen', () => {
+  it('T004 returns description, requester, client, category, due date and customer assignee to an admitted sponsor', async () => withSharedTicketEditorFixture(async fixture => {
+    const { principal, resource, editing } = fixture;
+    const seeded = await seedSharedTicketContext(fixture);
+    const { getCoManagedSharedTicketDetails } = await import('../../../../../packages/co-managed/src/sharedTicketDetails');
+    const details = await getCoManagedSharedTicketDetails(db, principal, resource);
+    expect(details.resource).toEqual(resource);
+    expect(details.fields).toEqual({ description: seeded.description, requester: { name: 'Casey Requester' }, client: { name: expect.any(String) },
+      category: { id: seeded.categoryId, name: 'Hardware' }, due_date: '2026-11-01T09:00:00.000Z', customer_assignee: { name: 'Ada Owner' } });
+    // Names only for customer people/organisations; no contact/client/user identifiers, no watch list.
+    expect(JSON.stringify(details)).not.toMatch(new RegExp(`${seeded.contactId}|${fixture.actor.userId}|keep-me|watcher`));
+    // The assembled native-screen payload carries the same facts and stays serialisable.
+    const { getCoManagedTicketScreen } = await import('../../../../../packages/co-managed/src/ticketCollaboration');
+    const { buildSharedTicketData } = await import('../../../../../server/src/lib/co-managed/sharedTicketData');
+    const editor = await editing.getCoManagedTicketEditor(db, principal, resource);
+    const status = await editing.searchCoManagedTicketEditOptions(db, principal, resource, { field: 'status_id' });
+    const priority = await editing.searchCoManagedTicketEditOptions(db, principal, resource, { field: 'priority_id' });
+    const result = buildSharedTicketData({ resource, screen: await getCoManagedTicketScreen(db, principal, resource), details, editor, statusOptions: status, priorityOptions: priority });
+    expect(JSON.parse(JSON.stringify(result))).toEqual(result);
+    expect(result.ticketData.ticket).toMatchObject({ ticket_id: resource.id, tenant: resource.tenant, title: 'Customer issue', due_date: '2026-11-01T09:00:00.000Z',
+      attributes: { description: seeded.description }, category_id: seeded.categoryId, contact_name: 'Casey Requester', board_id: expect.any(String) });
+    expect(result.ticketData).toMatchObject({ comments: [], documents: [], contacts: [], userMap: {}, contactMap: {}, clients: [], locations: [], agentSchedules: [],
+      categories: [{ category_id: seeded.categoryId, category_name: 'Hardware' }], contactInfo: { full_name: 'Casey Requester' } });
+    expect(result.customerAssignee).toEqual({ name: 'Ada Owner' });
+    expect(result.screen).toMatchObject({ side: 'sponsor', canWrite: true, canHandBack: true, canEscalate: false, work_revision: 1, responsibility: 'msp' });
+    expect(result.editor.baselines).toEqual(editor.values);
+    expect(result.ticketData.options.status.map(option => option.value)).toContain(editor.values.status_id);
+  }));
+
+  it('T004 omits each disclosed field when the sponsor home policy redacts it, never padding it', async () => withSharedTicketEditorFixture(async fixture => {
+    const { principal, resource } = fixture;
+    await seedSharedTicketContext(fixture);
+    const { getCoManagedSharedTicketDetails } = await import('../../../../../packages/co-managed/src/sharedTicketDetails');
+    const setRedactions = await redactSponsorTicketFields(fixture);
+    const all = ['description', 'requester', 'client', 'category', 'due_date', 'customer_assignee'];
+    const redactions: Record<string, string[]> = { description: ['tickets.attributes'], requester: ['contact_name_id'], client: ['tickets.client_id'],
+      category: ['category_id'], due_date: ['due_date'], customer_assignee: ['assigned_to'] };
+    for (const hide of all) {
+      await setRedactions(redactions[hide]);
+      const { fields } = await getCoManagedSharedTicketDetails(db, principal, resource);
+      expect(Object.keys(fields).sort(), hide).toEqual(all.filter(key => key !== hide).sort());
+    }
+    await setRedactions(['fields']);
+    expect((await getCoManagedSharedTicketDetails(db, principal, resource)).fields).toEqual({});
+  }));
+
+  it('T004 denies the details read without a current staff assignment and for non-sponsor tickets', async () => withSharedTicketEditorFixture(async fixture => {
+    const { principal, resource, sponsor, customerPrincipal } = fixture;
+    const { getCoManagedSharedTicketDetails } = await import('../../../../../packages/co-managed/src/sharedTicketDetails');
+    await expect(getCoManagedSharedTicketDetails(db, customerPrincipal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await expect(getCoManagedSharedTicketDetails(db, principal, { ...resource, id: randomUUID() })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await sponsor.table('co_management_staff_assignments').del();
+    await expect(getCoManagedSharedTicketDetails(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  }));
+
+  it('T005 applies a description edit through the native path with a receipt, preserving customer-owned attributes', async () => withSharedTicketEditorFixture(async fixture => {
+    const { principal, resource, customer, editing, save } = fixture;
+    const seeded = await seedSharedTicketContext(fixture);
+    const state = await editing.getCoManagedTicketEditor(db, principal, resource);
+    expect(state.values.description).toBe(seeded.description);
+    const next = BLOCKS('Printer fixed; replaced toner');
+    const request = { operationId: randomUUID(), expected: { description: seeded.description }, patch: { description: next } };
+    const receipts = await Promise.all(Array.from({ length: 3 }, () => save(request)));
+    expect(receipts.every(receipt => JSON.stringify(receipt) === JSON.stringify(receipts[0]))).toBe(true);
+    expect(receipts[0].operationId).toBe(request.operationId);
+    const row = await customer.table('tickets').where('ticket_id', resource.id).first();
+    expect(row.attributes).toEqual({ description: next, watcher_contact_ids: ['keep-me'] });
+    expect(row.category_id).toBe(seeded.categoryId);
+    expect(await customer.table('co_management_command_receipts')).toHaveLength(1);
+    expect((await editing.getCoManagedTicketEditor(db, principal, resource)).values.description).toBe(next);
+    await expect(save({ ...request, patch: { description: BLOCKS('different') } })).rejects.toMatchObject({ code: 'TICKET_EDIT_OPERATION_CONFLICT' });
+  }));
+
+  it('T005 rejects a stale description or category baseline as a conflict without writing', async () => withSharedTicketEditorFixture(async fixture => {
+    const { principal, resource, customer, editing, save } = fixture;
+    const seeded = await seedSharedTicketContext(fixture);
+    const state = await editing.getCoManagedTicketEditor(db, principal, resource);
+    await customer.table('tickets').where('ticket_id', resource.id).update({ attributes: { description: BLOCKS('Customer edited first') } });
+    await expect(save({ operationId: randomUUID(), expected: { description: state.values.description! }, patch: { description: BLOCKS('MSP draft') } }))
+      .rejects.toMatchObject({ code: 'TICKET_EDIT_CONFLICT' });
+    const other = randomUUID();
+    await customer.table('categories').insert({ tenant: resource.tenant, category_id: other, category_name: 'Software', created_by: fixture.actor.userId, board_id: fixture.operation.customer_board_id });
+    await customer.table('tickets').where('ticket_id', resource.id).update({ category_id: other });
+    await expect(save({ operationId: randomUUID(), expected: { category_id: seeded.categoryId }, patch: { category_id: null } }))
+      .rejects.toMatchObject({ code: 'TICKET_EDIT_CONFLICT' });
+    expect(await customer.table('co_management_command_receipts')).toEqual([]);
+    expect((await customer.table('tickets').where('ticket_id', resource.id).first()).category_id).toBe(other);
+  }));
+
+  it('T005 edits the category within the ticket board, clears the stale subcategory and rejects foreign categories', async () => withSharedTicketEditorFixture(async fixture => {
+    const { principal, resource, customer, editing, save, operation } = fixture;
+    const seeded = await seedSharedTicketContext(fixture);
+    const second = randomUUID(), otherBoard = randomUUID(), foreign = randomUUID();
+    const created = { tenant: resource.tenant, created_by: fixture.actor.userId };
+    await customer.table('categories').insert({ ...created, category_id: second, category_name: 'Software', board_id: operation.customer_board_id });
+    const board = await customer.table('boards').where('board_id', operation.customer_board_id).first();
+    await customer.table('boards').insert({ ...board, board_id: otherBoard, board_name: 'Another board', is_default: false });
+    await customer.table('categories').insert({ ...created, category_id: foreign, category_name: 'Other board category', board_id: otherBoard });
+    const state = await editing.getCoManagedTicketEditor(db, principal, resource);
+    expect(state.selectedOptions.category_id).toEqual({ id: seeded.categoryId, name: 'Hardware' });
+    // Only top-level categories of this board are offered; the subcategory and foreign board are not.
+    const page = await editing.searchCoManagedTicketEditOptions(db, principal, resource, { field: 'category_id' });
+    expect(page.options.map(option => option.name).sort()).toEqual(['Hardware', 'Software']);
+    expect((await editing.searchCoManagedTicketEditOptions(db, principal, resource, { field: 'category_id', search: 'soft' })).options).toEqual([{ id: second, name: 'Software' }]);
+    for (const bad of [foreign, seeded.subcategoryId, randomUUID()]) {
+      await expect(save({ operationId: randomUUID(), expected: { category_id: seeded.categoryId }, patch: { category_id: bad } }))
+        .rejects.toMatchObject({ code: 'INVALID_TICKET_EDIT' });
+    }
+    const request = { operationId: randomUUID(), expected: { category_id: seeded.categoryId }, patch: { category_id: second } };
+    const receipt = await save(request);
+    expect(receipt.operationId).toBe(request.operationId);
+    expect(await customer.table('tickets').where('ticket_id', resource.id).first('category_id', 'subcategory_id')).toEqual({ category_id: second, subcategory_id: null });
+    expect(await save(request)).toEqual(receipt);
+    expect(await customer.table('co_management_command_receipts')).toHaveLength(1);
+    await save({ operationId: randomUUID(), expected: { category_id: second }, patch: { category_id: null } });
+    expect((await customer.table('tickets').where('ticket_id', resource.id).first()).category_id).toBeNull();
+  }));
+
+  it('T005 hides description and category from editing and options when the home policy redacts them', async () => withSharedTicketEditorFixture(async fixture => {
+    const { principal, resource, editing, save } = fixture;
+    const seeded = await seedSharedTicketContext(fixture);
+    const setRedactions = await redactSponsorTicketFields(fixture);
+    await setRedactions(['tickets.attributes', 'category_id']);
+    const state = await editing.getCoManagedTicketEditor(db, principal, resource);
+    expect(state.editableFields).not.toContain('description'); expect(state.editableFields).not.toContain('category_id');
+    expect(state.values).not.toHaveProperty('description'); expect(state.values).not.toHaveProperty('category_id');
+    expect(state.selectedOptions).not.toHaveProperty('category_id');
+    await expect(editing.searchCoManagedTicketEditOptions(db, principal, resource, { field: 'category_id' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await expect(save({ operationId: randomUUID(), expected: { description: seeded.description }, patch: { description: BLOCKS('blind') } }))
+      .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  }));
+
+  it('T005 refuses attribute rewrites beyond the description on the shared native path', async () => withSharedTicketEditorFixture(async fixture => {
+    const { principal, resource, customer, editing } = fixture;
+    await seedSharedTicketContext(fixture);
+    const { updateTicketInTransaction } = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
+    await expect(editing.editCoManagedTicket(db, principal, resource, { operationId: randomUUID(), expected: { title: 'Customer issue' }, patch: { title: 'x' } },
+      async (context) => { await updateTicketInTransaction(context.trx, fixture.user, resource.tenant, resource.id, { attributes: { description: 'x' } }, undefined,
+        { actorReferenceId: context.actorReferenceId, assertWriteAuthority: context.assertWriteAuthority }); }))
+      .rejects.toThrow('Shared ticket edits can only change the description attribute');
+    expect((await customer.table('tickets').where('ticket_id', resource.id).first()).attributes.watcher_contact_ids).toEqual(['keep-me']);
+  }));
+});
 
 async function withTicketQueueFixture(work: (fixture: Awaited<ReturnType<typeof ticketHandoffFixture>> & { nativeId: string; list: typeof import('../../../../../packages/co-managed/src/ticketQueue').getCoManagedTicketQueue }) => Promise<void>) {
   const fixture = await ticketHandoffFixture();

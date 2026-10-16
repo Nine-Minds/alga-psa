@@ -14,6 +14,10 @@ export interface CoManagedTicketEditValues {
   priority_id: string | null;
   due_date: string | null;
   response_state: 'awaiting_client' | 'awaiting_internal' | null;
+  /** Rich text (BlockNote JSON string) persisted as `tickets.attributes.description`, exactly as the native screen does. */
+  description: string | null;
+  /** A top-level category of the ticket's board in the customer tenant. */
+  category_id: string | null;
 }
 export type CoManagedTicketEditField = keyof CoManagedTicketEditValues;
 export type CoManagedTicketEditPatch = Partial<CoManagedTicketEditValues>;
@@ -23,8 +27,15 @@ export interface CoManagedTicketEditorState {
   resource: CoManagedSharedResource;
   values: CoManagedTicketEditPatch;
   editableFields: CoManagedTicketEditField[];
-  selectedOptions: Partial<Record<'status_id' | 'priority_id', { id: string; name: string }>>;
+  selectedOptions: Partial<Record<'status_id' | 'priority_id' | 'category_id', { id: string; name: string }>>;
 }
+/** The canonical native `updateTicketInTransaction` patch for an admitted edit. */
+export interface CoManagedNativeTicketPatch {
+  title?: string; url?: string | null; status_id?: string; priority_id?: string | null; due_date?: string | null;
+  response_state?: 'awaiting_client' | 'awaiting_internal' | null;
+  category_id?: string | null; subcategory_id?: null; attributes?: Record<string, unknown>;
+}
+export const COMANAGED_TICKET_DESCRIPTION_MAX_LENGTH = 1_000_000;
 export interface CoManagedTicketEditContext extends CoManagedSharedWorkContext {
   actorReferenceId: string;
   assertWriteAuthority: (trx: Knex.Transaction) => Promise<void>;
@@ -37,13 +48,23 @@ export class CoManagedTicketEditError extends Error {
     this.name = 'CoManagedTicketEditError';
   }
 }
-const fields: CoManagedTicketEditField[] = ['title', 'url', 'status_id', 'priority_id', 'due_date', 'response_state'];
+const fields: CoManagedTicketEditField[] = ['title', 'url', 'status_id', 'priority_id', 'due_date', 'response_state', 'description', 'category_id'];
 const fieldSources: Record<CoManagedTicketEditField, string[]> = {
   title: ['title', 'tickets.title'], url: ['url', 'tickets.url'], due_date: ['due_date', 'tickets.due_date'],
   response_state: ['response_state', 'tickets.response_state'],
   status_id: ['status', 'status_id', 'status_name', 'tickets.status_id', 'statuses'],
   priority_id: ['priority', 'priority_id', 'priority_name', 'tickets.priority_id', 'priorities'],
+  description: ['description', 'attributes', 'tickets.attributes', 'tickets.description'],
+  category_id: ['category', 'category_id', 'category_name', 'tickets.category_id', 'categories'],
 };
+/** `description` is not a column: it lives inside the native `attributes` document. */
+function attributesDescription(attributes: unknown): string | null {
+  if (!attributes || typeof attributes !== 'object' || Array.isArray(attributes)) return null;
+  const description = (attributes as Record<string, unknown>).description;
+  return typeof description === 'string' ? description : null;
+}
+const fieldValue = (row: any, field: CoManagedTicketEditField): string | null =>
+  field === 'description' ? attributesDescription(row.attributes) : normalizeValue(row[field]);
 const normalizeValue = (value: unknown): string | null => value == null ? null : value instanceof Date ? value.toISOString() : String(value);
 const hidden = (context: CoManagedSharedWorkContext, field: CoManagedTicketEditField) => isCoManagedReadFieldHidden(context.redactedFields, fieldSources[field]);
 function ticketResource(input: CoManagedSharedResource): CoManagedSharedResource {
@@ -69,15 +90,29 @@ function snapshotRequest(input: CoManagedTicketEditRequest): CoManagedTicketEdit
     if (field === 'status_id' && !isCoManagedUuid(value)) invalid();
     if (field === 'priority_id' && value !== null && !isCoManagedUuid(value)) invalid();
     if (field === 'due_date' && value !== null && (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value) || !Number.isFinite(Date.parse(value)))) invalid();
+    if (field === 'description' && (typeof value !== 'string' || value.length > COMANAGED_TICKET_DESCRIPTION_MAX_LENGTH)) invalid();
+    if (field === 'category_id' && value !== null && !isCoManagedUuid(value)) invalid();
     if (field === 'response_state' && value !== null && value !== 'awaiting_client' && value !== 'awaiting_internal') invalid();
     expected[field] = before!; patch[field] = value!;
   }
   return { operationId: input.operationId.toLowerCase(), expected, patch } as CoManagedTicketEditRequest;
 }
 
+/** Translate the admitted domain patch into the canonical native update. The row is
+ * the one locked for this edit, so the attributes merge cannot lose a concurrent
+ * customer change (e.g. the watch list). Changing the category clears the
+ * subcategory, which is only valid under the previous parent. */
+function toNativePatch(patch: CoManagedTicketEditPatch, row: any): CoManagedNativeTicketPatch {
+  const { description, category_id, ...rest } = patch;
+  const native: CoManagedNativeTicketPatch = { ...rest };
+  if (description !== undefined) native.attributes = { ...(row.attributes && typeof row.attributes === 'object' ? row.attributes : {}), description };
+  if (category_id !== undefined) { native.category_id = category_id; if (category_id !== row.category_id) native.subcategory_id = null; }
+  return native;
+}
+
 async function ticketRow(context: CoManagedSharedWorkContext) {
   const row = await tenantDb(context.trx, context.resource.tenant).table('tickets').where('ticket_id', context.resource.id)
-    .first(...fields, 'board_id', 'master_ticket_id');
+    .first('title', 'url', 'status_id', 'priority_id', 'due_date', 'response_state', 'category_id', 'attributes', 'board_id', 'master_ticket_id');
   if (!row) throw new CoManagedSharedWorkError();
   return row;
 }
@@ -90,7 +125,7 @@ async function editableFields(context: CoManagedSharedWorkContext, readContext: 
 async function readEditor(context: CoManagedSharedWorkContext, editable: CoManagedTicketEditField[] = []): Promise<CoManagedTicketEditorState> {
   const owner = tenantDb(context.trx, context.resource.tenant), row = await ticketRow(context);
   const values: Record<string, string | null> = {};
-  for (const field of fields) if (!hidden(context, field)) values[field] = normalizeValue(row[field]);
+  for (const field of fields) if (!hidden(context, field)) values[field] = fieldValue(row, field);
   const selectedOptions: CoManagedTicketEditorState['selectedOptions'] = {};
   if ('status_id' in values && row.status_id) {
     const status = await owner.table('statuses').where({ status_id: row.status_id, board_id: row.board_id, item_type: 'ticket' }).first('name');
@@ -99,6 +134,10 @@ async function readEditor(context: CoManagedSharedWorkContext, editable: CoManag
   if ('priority_id' in values && row.priority_id) {
     const priority = await owner.table('priorities').where({ priority_id: row.priority_id, item_type: 'ticket' }).first('priority_name');
     if (priority) selectedOptions.priority_id = { id: row.priority_id, name: priority.priority_name };
+  }
+  if ('category_id' in values && row.category_id) {
+    const category = await owner.table('categories').where({ category_id: row.category_id }).first('category_name');
+    if (category) selectedOptions.category_id = { id: row.category_id, name: category.category_name };
   }
   await assertCoManagedSessionUnexpired(context.trx, { ...context.actor, kind: 'session', sessionId: context.sessionId });
   if (editable.length) await assertCoManagedOperationalWrite(context.trx, context.resource.tenant);
@@ -122,17 +161,21 @@ export async function getCoManagedTicketEditor(db: Knex, inputActor: CoManagedSe
 /** Picklists are customer-owned context for this editable ticket, not directory
  * access. Both action permissions and field redactions apply on every page. */
 export async function searchCoManagedTicketEditOptions(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
-  input: { field: 'status_id' | 'priority_id'; search?: string; afterId?: string }) {
+  input: { field: 'status_id' | 'priority_id' | 'category_id'; search?: string; afterId?: string }) {
   const actor = snapshotCoManagedSessionActor(inputActor), resource = ticketResource(inputResource);
-  if (!input || !['status_id', 'priority_id'].includes(input.field) || (input.search !== undefined && (typeof input.search !== 'string' || input.search.length > 200)) ||
+  if (!input || !['status_id', 'priority_id', 'category_id'].includes(input.field) || (input.search !== undefined && (typeof input.search !== 'string' || input.search.length > 200)) ||
       (input.afterId !== undefined && !isCoManagedUuid(input.afterId))) throw new CoManagedTicketEditError('INVALID_TICKET_EDIT');
   const { field, search = '', afterId } = input;
   return withCoManagedSharedWork(db, actor, resource, 'update', context =>
     withCoManagedSharedWork(context.trx, actor, resource, 'read', async readContext => {
       const row = await ticketRow(context);
       if (!(await editableFields(context, readContext, row)).includes(field)) throw new CoManagedSharedWorkError();
-      const owner = tenantDb(context.trx, resource.tenant), name = field === 'status_id' ? 'name' : 'priority_name';
-      const query = owner.table(field === 'status_id' ? 'statuses' : 'priorities').where('item_type', 'ticket').orderBy(field).limit(26);
+      const owner = tenantDb(context.trx, resource.tenant);
+      const name = { status_id: 'name', priority_id: 'priority_name', category_id: 'category_name' }[field];
+      const table = { status_id: 'statuses', priority_id: 'priorities', category_id: 'categories' }[field];
+      const query = owner.table(table).orderBy(field).limit(26);
+      if (field === 'category_id') query.where({ board_id: row.board_id }).whereNull('parent_category');
+      else query.where('item_type', 'ticket');
       if (field === 'status_id') query.where('board_id', row.board_id);
       if (afterId) query.where(field, '>', afterId);
       if (search) query.whereILike(name, `%${search.replace(/[\\%_]/g, '\\$&')}%`);
@@ -148,7 +191,7 @@ export async function searchCoManagedTicketEditOptions(db: Knex, inputActor: CoM
  * retains qualified authority, baseline checking and receipt atomicity; it does
  * not create a shadow ticket or import the tickets package back into its model. */
 export async function editCoManagedTicket(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
-  input: CoManagedTicketEditRequest, apply: (context: CoManagedTicketEditContext, patch: CoManagedTicketEditPatch) => Promise<void>): Promise<CoManagedTicketEditReceipt> {
+  input: CoManagedTicketEditRequest, apply: (context: CoManagedTicketEditContext, patch: CoManagedNativeTicketPatch) => Promise<void>): Promise<CoManagedTicketEditReceipt> {
   const actor = snapshotCoManagedSessionActor(inputActor), resource = ticketResource(inputResource), request = snapshotRequest(input);
   // LEVERAGE: pattern co-managed-command-receipt — shared edits and private notes
   // share retry semantics while retaining different receipt ownership.
@@ -166,12 +209,14 @@ export async function editCoManagedTicket(db: Knex, inputActor: CoManagedSession
           await assertCoManagedOperationalWrite(context.trx, resource.tenant);
           return { operationId: request.operationId, appliedAt: normalizeValue(previous.applied_at)! };
         }
-        if (Object.entries(request.expected).some(([field, value]) => normalizeValue(row[field]) !== value)) throw new CoManagedTicketEditError('TICKET_EDIT_CONFLICT');
+        if (Object.entries(request.expected).some(([field, value]) => fieldValue(row, field as CoManagedTicketEditField) !== value)) throw new CoManagedTicketEditError('TICKET_EDIT_CONFLICT');
         if (request.patch.status_id && !await owner.table('statuses').where({ status_id: request.patch.status_id,
           board_id: row.board_id, item_type: 'ticket' }).forShare().first('status_id')) throw new CoManagedTicketEditError('INVALID_TICKET_EDIT');
         if (request.patch.priority_id && !await owner.table('priorities').where({ priority_id: request.patch.priority_id, item_type: 'ticket' }).forShare().first('priority_id')) {
           throw new CoManagedTicketEditError('INVALID_TICKET_EDIT');
         }
+        if (request.patch.category_id && !await owner.table('categories').where({ category_id: request.patch.category_id, board_id: row.board_id })
+          .whereNull('parent_category').forShare().first('category_id')) throw new CoManagedTicketEditError('INVALID_TICKET_EDIT');
         const actorReferenceId = await ensureCoManagedActorReference(context);
         const assertWriteAuthority = async (trx: Knex.Transaction) => {
           if (trx !== context.trx) throw new CoManagedSharedWorkError();
@@ -179,7 +224,7 @@ export async function editCoManagedTicket(db: Knex, inputActor: CoManagedSession
           await assertCoManagedOperationalWrite(trx, resource.tenant);
         };
         await assertWriteAuthority(context.trx);
-        await apply({ ...context, actorReferenceId, assertWriteAuthority }, request.patch);
+        await apply({ ...context, actorReferenceId, assertWriteAuthority }, toNativePatch(request.patch, row));
         const [receipt] = await owner.table('co_management_command_receipts').insert({ tenant: resource.tenant, operation_id: request.operationId,
           relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: resource.id, actor_tenant: actor.tenant,
           actor_user_id: actor.userId, command_type: 'ticket_edit', request_hash: hash, applied_at: context.trx.raw('clock_timestamp()'),
