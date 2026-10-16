@@ -116,8 +116,9 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
     period_id: uuidSchema,
     start_date: timePeriodDateSchema,
     end_date: timePeriodDateSchema.describe(TIME_PERIOD_END_DATE_DESCRIPTION),
-    is_current: z.boolean(),
-    is_closed: z.boolean()
+    // Optional: shared (co-managed) sheet reads do not disclose these flags.
+    is_current: z.boolean().optional(),
+    is_closed: z.boolean().optional()
   }).optional(),
   
   time_entries: z.array(timeEntryResponseSchema).optional(),

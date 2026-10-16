@@ -14618,14 +14618,22 @@ it('customer time periods refuse to alter used periods and preserve per-item nat
 
 it('customer time periods generate contiguous full periods and roll back overlapping batches', async () => withTimeSheetApiFixture(async ({ sheetService, context, customer }: any) => {
   const { generateTimePeriodCalendar } = await import('../../../../../packages/co-managed/src/nativeTimePeriod');
+  const { commandCoManagedNativeTimePeriods } = await import('../../../../../packages/co-managed/src');
   expect(generateTimePeriodCalendar({ start_date: '2027-01-31', end_date: '2027-04-01', frequency: 'monthly' })).toEqual([
     { start_date: '2027-01-31', end_date: '2027-02-28' }, { start_date: '2027-02-28', end_date: '2027-03-31' },
   ]);
-  const periods = await sheetService.generateTimePeriods({ start_date: '2026-10-01', end_date: '2026-10-22', frequency: 'weekly', frequency_unit: 1 }, context);
+  // The service-level generate endpoint was removed upstream as dead code; the batch
+  // command it delegated to is still the co-managed contract, so exercise it directly.
+  const { knex } = await sheetService.getKnex();
+  const generate = async (data: any) => {
+    const result = await sheetService.withSheetErrors(() => commandCoManagedNativeTimePeriods(knex, context.tenant, { action: 'create', periods: generateTimePeriodCalendar(data) }, async () => sheetService.sheetActor(context)));
+    return result.periods;
+  };
+  const periods = await generate({ start_date: '2026-10-01', end_date: '2026-10-22', frequency: 'weekly', frequency_unit: 1 });
   expect(periods.map((period: any) => [period.start_date, period.end_date])).toEqual([
     ['2026-10-01', '2026-10-08'], ['2026-10-08', '2026-10-15'], ['2026-10-15', '2026-10-22'],
   ]);
-  await expect(sheetService.generateTimePeriods({ start_date: '2026-09-24', end_date: '2026-10-08', frequency: 'weekly', frequency_unit: 1 }, context)).rejects.toMatchObject({ statusCode: 409 });
+  await expect(generate({ start_date: '2026-09-24', end_date: '2026-10-08', frequency: 'weekly', frequency_unit: 1 })).rejects.toMatchObject({ statusCode: 409 });
   expect(await customer.table('time_periods').where('start_date', '2026-09-24')).toHaveLength(0);
 }));
 
