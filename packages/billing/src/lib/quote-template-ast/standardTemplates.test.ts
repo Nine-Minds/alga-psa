@@ -44,6 +44,20 @@ describe('standard quote template AST definitions', () => {
     );
   });
 
+  // alga-2026-0002573: a quote's custom section titles reach the grouped
+  // layout through the band's own `name`, so the heading must stay bound to
+  // that path and the fixed "Monthly Items" / "One-time Items" nodes must stay
+  // gone. Binding the heading to an i18n key again would make custom titles
+  // unreachable without any other gate noticing.
+  it('binds the grouped band heading to the band name a custom section title replaces', () => {
+    const ast = getStandardQuoteTemplateAstByCode('standard-quote-grouped');
+    expect(collectNodesById(ast?.layout, 'cadence-band-name')[0]?.content).toEqual({
+      type: 'path', path: 'name',
+    });
+    expect(collectNodesById(ast?.layout, 'monthly-section-label')).toEqual([]);
+    expect(collectNodesById(ast?.layout, 'onetime-section-label')).toEqual([]);
+  });
+
   it('auto-selects the by-location template when the view model has multiple locations', () => {
     expect(autoSelectStandardQuoteTemplateCode({ has_multiple_locations: true })).toBe(
       STANDARD_QUOTE_BY_LOCATION_CODE,

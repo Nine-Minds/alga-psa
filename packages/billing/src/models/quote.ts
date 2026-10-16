@@ -397,6 +397,8 @@ const Quote = {
         version: nextVersion,
         parent_quote_id: rootQuoteId,
         po_number: sourceQuote.po_number ?? null,
+        recurring_section_title: sourceQuote.recurring_section_title?.trim() || null,
+        onetime_section_title: sourceQuote.onetime_section_title?.trim() || null,
         subtotal: 0,
         discount_total: 0,
         tax: 0,
