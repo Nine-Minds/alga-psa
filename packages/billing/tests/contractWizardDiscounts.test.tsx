@@ -259,6 +259,28 @@ describe('ContractWizard contract-wide discounts', () => {
     });
   });
 
+  // The simulator reloads its scenario whenever this draft changes, which
+  // discards nothing only because the draft is tied to wizard state: a bare
+  // re-render must hand back the very same draft.
+  it('hands the simulator the same draft when the draft itself did not change', async () => {
+    const editingContract = editing();
+    const { rerender } = render(
+      <ContractWizard open onOpenChange={vi.fn()} editingContract={editingContract} />,
+    );
+    const user = userEvent.setup();
+    await goToReview(user);
+    await addDiscount(user, 'Loyalty', '10');
+
+    const handed = simulator.drafts[simulator.drafts.length - 1];
+    const rendersBefore = simulator.drafts.length;
+    await act(async () => {
+      rerender(<ContractWizard open onOpenChange={vi.fn()} editingContract={editingContract} />);
+    });
+
+    expect(simulator.drafts.length).toBeGreaterThan(rendersBefore);
+    expect(simulator.drafts[simulator.drafts.length - 1]).toBe(handed);
+  });
+
   it('refuses a discount the authoring rules reject instead of submitting it', async () => {
     render(<ContractWizard open onOpenChange={vi.fn()} editingContract={editing()} />);
     const user = userEvent.setup();

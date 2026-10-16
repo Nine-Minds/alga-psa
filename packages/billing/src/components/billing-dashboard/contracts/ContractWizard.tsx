@@ -522,6 +522,19 @@ export function ContractWizard({
     return !isEqual(wizardData, initialWizardDataRef.current);
   }, [open, wizardData]);
 
+  // The simulator reloads its scenario whenever this input changes, so it is
+  // tied to the draft itself: a re-render that leaves the draft alone (a step
+  // change, a save in flight) must not disturb a projection on screen.
+  const draftSimulationInput = useMemo(
+    () =>
+      ({
+        ...wizardData,
+        fixed_lines: meaningfulFixedLines(wizardData.fixed_lines),
+        discounts: wizardData.discounts ?? [],
+      }) as ContractDraftSimulationInput,
+    [wizardData],
+  );
+
   const handleConfirmationDone = () => {
     const created = createdContract;
     setCreatedContract(null);
@@ -1294,15 +1307,7 @@ export function ContractWizard({
                     "Test this unsaved draft with assumed activity. Simulation does not save or issue anything.",
                 })}
               </p>
-              <ContractDraftSimulator
-                draft={
-                  {
-                    ...wizardData,
-                    fixed_lines: meaningfulFixedLines(wizardData.fixed_lines),
-                    discounts: wizardData.discounts ?? [],
-                  } as ContractDraftSimulationInput
-                }
-              />
+              <ContractDraftSimulator draft={draftSimulationInput} />
             </section>
           </div>
         );
