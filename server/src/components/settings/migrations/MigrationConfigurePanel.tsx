@@ -67,6 +67,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
   const [assetTypeMapping, setAssetTypeMapping] = useState<Record<string, string>>({});
   const [customFieldMapping, setCustomFieldMapping] = useState<Record<string, Record<string, string>>>({});
   const [defaultClientId, setDefaultClientId] = useState('');
+  const [productServiceTypeId, setProductServiceTypeId] = useState('');
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -95,6 +96,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
         const savedFieldMapping = configuration.assets?.customFieldMapping ?? {};
         setCustomFieldMapping(seedCustomAssetFieldMappings(configuration.assets?.assetTypeMapping ?? {}, savedFieldMapping, loaded.assetTypes, loaded.packageAssetCustomFields));
         setDefaultClientId(configuration.defaultClientId ?? '');
+        setProductServiceTypeId(configuration.products?.serviceTypeId ?? '');
       })
       .catch((error) => {
         if (!cancelled) {
@@ -114,6 +116,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
 
   const hasTickets = options?.stagedEntityTypes.includes('tickets') ?? false;
   const hasAssets = options?.stagedEntityTypes.includes('assets') ?? false;
+  const hasProducts = options?.stagedEntityTypes.includes('products') ?? false;
   const hasOrphanCandidates =
     (options?.stagedEntityTypes.includes('contacts') ?? false) || hasAssets;
 
@@ -168,6 +171,7 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
               },
             }
           : {}),
+        ...(hasProducts ? { products: { serviceTypeId: productServiceTypeId || null } } : {}),
         ...(hasAssets ? { assets: { assetTypeMapping, customFieldMapping: Object.fromEntries(Object.entries(seedCustomAssetFieldMappings(assetTypeMapping, customFieldMapping, options.assetTypes, options.packageAssetCustomFields)).map(([slug, sourceMap]) => [slug, Object.fromEntries(Object.entries(sourceMap).filter(([, targetKey]) => targetKey))])) } } : {}),
       });
       setSaveSucceeded(true);
@@ -186,6 +190,8 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
     defaultRequesterClientId,
     details.migrationJobId,
     hasAssets,
+    hasProducts,
+    productServiceTypeId,
     hasTickets,
     onSaved,
     options,
@@ -337,6 +343,29 @@ const MigrationConfigurePanel = ({ details, onSaved }: MigrationConfigurePanelPr
               {duplicateTargets.length > 0 && <p className="text-xs text-destructive">{t('importExport.migration.customFields.duplicate')}</p>}
             </section>;
           })}
+        </section>
+      )}
+
+      {hasProducts && (
+        <section className="space-y-4 rounded-md border border-border p-4">
+          <h4 className="text-sm font-semibold text-foreground">
+            {t('importExport.migration.configure.products.title', { defaultValue: 'Products' })}
+          </h4>
+          <div className="max-w-md space-y-2">
+            <Label htmlFor="amp-config-product-service-type-select">
+              {t('importExport.migration.configure.products.serviceType', { defaultValue: 'Service type for new products' })}
+            </Label>
+            <CustomSelect
+              id="amp-config-product-service-type-select"
+              options={(options?.serviceTypes ?? []).map((type) => ({ value: type.id, label: type.name }))}
+              value={productServiceTypeId}
+              onValueChange={setProductServiceTypeId}
+              placeholder={t('importExport.migration.configure.products.serviceTypePlaceholder', { defaultValue: 'Select a service type' })}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t('importExport.migration.configure.products.serviceTypeHelp', { defaultValue: 'Products whose SKU already exists are matched and left unchanged; only new products are filed under this service type.' })}
+            </p>
+          </div>
         </section>
       )}
 

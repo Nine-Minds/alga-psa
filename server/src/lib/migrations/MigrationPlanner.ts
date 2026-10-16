@@ -44,6 +44,9 @@ export class MigrationPlanner {
     if ((stagedCounts.assets ?? 0) > 0) {
       issues.push(...(await this.checkAssetConfiguration(migrationJobId, configuration)));
     }
+    if ((stagedCounts.products ?? 0) > 0 || (stagedCounts.vendor_products ?? 0) > 0) {
+      issues.push(...(await this.checkProductConfiguration(migrationJobId, configuration, stagedCounts)));
+    }
     issues.push(...(await this.checkLocationRequirements(migrationJobId)));
     issues.push(...(await this.checkOrphanPlacement(migrationJobId, configuration, stagedCounts)));
 
@@ -399,6 +402,126 @@ export class MigrationPlanner {
       }
     }
 
+    return issues;
+  }
+
+  /**
+   * Dry-run checks for products and vendor price lists. Read-only apart from
+   * marking records blocked: SKU matches are reported (never created), the
+   * service type needed for NEW products is validated, and money without a
+   * currency requires a configured tenant currency.
+   */
+  private async checkProductConfiguration(
+    migrationJobId: string,
+    configuration: MigrationJobConfiguration,
+    stagedCounts: Partial<Record<AmpEntityType, number>>
+  ): Promise<PreflightIssue[]> {
+    const issues: PreflightIssue[] = [];
+    const db = tenantDb(this.knex, this.tenant);
+    const staged = () => db.table('migration_staged_records').where({ migration_job_id: migrationJobId });
+    const existingSku = (alias: string) =>
+      `EXISTS (SELECT 1 FROM service_catalog sc WHERE sc.tenant = ? AND sc.item_kind = 'product' AND btrim(sc.sku) = btrim(${alias}.payload ->> 'sku'))`;
+
+    if ((stagedCounts.products ?? 0) > 0) {
+      const matched = await staged()
+        .where({ entity_type: 'products' })
+        .whereRaw(`COALESCE(btrim(payload ->> 'sku'), '') <> ''`)
+        .whereRaw(existingSku('migration_staged_records'), [this.tenant])
+        .orderBy('package_record_id')
+        .select('package_record_id');
+      if (matched.length > 0) {
+        issues.push({
+          severity: 'warning',
+          code: 'PRODUCT_SKU_MATCHES_EXISTING',
+          message: `${matched.length} product(s) match an existing product by SKU; they will be mapped to it and left unchanged, not created.`,
+          entityType: 'products',
+          recordCount: matched.length,
+          sampleRecordIds: matched.slice(0, SAMPLE_LIMIT).map((row: { package_record_id: string }) => row.package_record_id),
+        });
+      }
+
+      const unmatchedRow = await staged()
+        .where({ entity_type: 'products' })
+        .whereRaw(`NOT (COALESCE(btrim(payload ->> 'sku'), '') <> '' AND ${existingSku('migration_staged_records')})`, [this.tenant])
+        .count({ count: '*' })
+        .first();
+      const toCreate = Number(unmatchedRow?.count ?? 0);
+      const serviceTypeId = configuration.products?.serviceTypeId;
+      if (toCreate > 0 && !serviceTypeId) {
+        issues.push({
+          severity: 'blocking',
+          code: 'CONFIG_PRODUCT_SERVICE_TYPE_REQUIRED',
+          message: `${toCreate} new product(s) need a service type; choose one in Configure.`,
+          entityType: 'products',
+        });
+      } else if (serviceTypeId) {
+        const type = await db.table('service_types').where({ id: serviceTypeId, is_active: true }).first();
+        if (!type) {
+          issues.push({
+            severity: 'blocking',
+            code: 'CONFIG_PRODUCT_SERVICE_TYPE_NOT_FOUND',
+            message: 'The configured product service type does not exist or is inactive in this tenant.',
+            entityType: 'products',
+          });
+        }
+      }
+    }
+
+    if ((stagedCounts.vendor_products ?? 0) > 0) {
+      // A SKU-only offer must resolve to an existing product or to a staged one.
+      const unresolved = await this.blockRecords(
+        migrationJobId,
+        'vendor_products',
+        (query) =>
+          query
+            .whereRaw(`payload ->> 'product_package_record_id' IS NULL`)
+            .whereRaw(
+              `NOT (${existingSku('migration_staged_records')} OR EXISTS (
+                SELECT 1 FROM migration_staged_records p
+                WHERE p.tenant = migration_staged_records.tenant
+                  AND p.migration_job_id = migration_staged_records.migration_job_id
+                  AND p.entity_type = 'products'
+                  AND btrim(p.payload ->> 'sku') = btrim(migration_staged_records.payload ->> 'product_sku')))`,
+              [this.tenant]
+            ),
+        { code: 'VENDOR_PRODUCT_UNRESOLVED', message: 'No existing or staged product has this product SKU.' }
+      );
+      if (unresolved.count > 0) {
+        issues.push({
+          severity: 'blocking',
+          code: 'VENDOR_PRODUCT_UNRESOLVED',
+          message: `${unresolved.count} vendor price-list row(s) reference a SKU that matches no existing or staged product.`,
+          entityType: 'vendor_products',
+          recordCount: unresolved.count,
+          sampleRecordIds: unresolved.sample,
+        });
+      }
+    }
+
+    // Money without a currency means "tenant currency at apply time"; that is
+    // only valid when the tenant has one configured.
+    const needsTenantCurrency = await staged()
+      .whereIn('entity_type', ['products', 'vendor_products'])
+      .where((query) =>
+        query
+          .where((q) =>
+            q
+              .whereRaw(`payload ->> 'price_minor' IS NOT NULL AND payload ->> 'price_currency' IS NULL`)
+              .orWhereRaw(`payload ->> 'cost_minor' IS NOT NULL AND payload ->> 'cost_currency' IS NULL`)
+              .orWhereRaw(`payload ->> 'unit_cost_minor' IS NOT NULL AND payload ->> 'cost_currency' IS NULL`)
+          )
+      )
+      .first();
+    if (needsTenantCurrency) {
+      const row = await db.table('default_billing_settings').select('default_currency_code').first();
+      if (!row?.default_currency_code?.trim()) {
+        issues.push({
+          severity: 'blocking',
+          code: 'CONFIG_TENANT_CURRENCY_MISSING',
+          message: 'Some product amounts have no currency and this tenant has no default billing currency; set one in billing settings or add a currency column.',
+        });
+      }
+    }
     return issues;
   }
 

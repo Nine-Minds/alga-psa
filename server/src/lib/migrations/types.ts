@@ -38,11 +38,18 @@ export interface AssetMigrationConfiguration {
   customFieldMapping?: Record<string, Record<string, string>>;
 }
 
+/** Operator-supplied product reference data. Required when products are staged. */
+export interface ProductMigrationConfiguration {
+  /** Tenant service type (service_types.id) that newly created products are filed under. */
+  serviceTypeId?: string | null;
+}
+
 export interface MigrationJobConfiguration {
   /** Client that receives orphaned contacts/assets (no resolvable organization). */
   defaultClientId?: string | null;
   tickets?: TicketMigrationConfiguration;
   assets?: AssetMigrationConfiguration;
+  products?: ProductMigrationConfiguration;
 }
 
 export interface MigrationJobSummary {
@@ -167,6 +174,9 @@ export const MIGRATION_PHASE_ORDER: readonly AmpEntityType[] = [
   'tickets',
   'ticket_comments',
   'assets',
+  // Vendor offers reference products, so products always apply first.
+  'products',
+  'vendor_products',
 ];
 
 export function migrationPhaseFor(entityType: AmpEntityType): number {

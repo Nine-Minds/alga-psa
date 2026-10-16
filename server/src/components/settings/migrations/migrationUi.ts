@@ -157,6 +157,8 @@ export const MIGRATION_ENTITY_LABELS: Record<AmpEntityType, string> = {
   tickets: 'Tickets',
   ticket_comments: 'Ticket comments',
   assets: 'Assets',
+  products: 'Products',
+  vendor_products: 'Vendor price list',
 };
 
 export function migrationEntityLabel(entityType: string): string {
