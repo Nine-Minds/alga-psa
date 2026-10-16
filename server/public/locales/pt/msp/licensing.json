@@ -263,7 +263,8 @@
         "title": "{{tier}} está ativo",
         "description": "Sua licença paga está ativa neste appliance.",
         "descriptionWithExpiry": "Sua licença está ativa até {{date}}.",
-        "badge": "Licenciado"
+        "badge": "Licenciado",
+        "descriptionEnding": "A sua subscrição foi cancelada. O Pro permanece ativo até {{date}}."
       },
       "licenseExpired": {
         "eyebrow": "A licença requer atenção",
@@ -288,6 +289,12 @@
         "title": "Você está usando o Essentials",
         "description": "O Essentials está ativo neste appliance. Continue usando o conjunto principal de recursos ou inicie uma avaliação Pro única de 15 dias.",
         "badge": "Essentials ativo"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Subscrição terminada",
+        "title": "Está agora na edição gratuita",
+        "description": "A sua subscrição Pro terminou. Os seus dados são mantidos e as funcionalidades Pro voltam a ativar-se quando subscrever novamente.",
+        "badge": "Edição gratuita"
       }
     },
     "trialCta": {
@@ -352,7 +359,21 @@
       "activateLicenseKey": "Falha ao ativar a chave de licença.",
       "activateClaimCode": "Falha ao ativar o código de ativação.",
       "startTrial": "Falha ao iniciar a avaliação.",
-      "refreshLicense": "Falha ao atualizar a licença."
+      "refreshLicense": "Falha ao atualizar a licença.",
+      "credentialRevoked": "A credencial de licença deste dispositivo foi revogada. Volte a ligá-lo com um novo código de ativação do portal de licenças.",
+      "subscriptionEnding": "A sua subscrição Pro foi cancelada. O Pro termina em {{date}}.",
+      "subscriptionEndingNoDate": "A sua subscrição Pro foi cancelada.",
+      "subscriptionEnded": "A sua subscrição Pro terminou. Este dispositivo está na edição gratuita.",
+      "resubscribeAt": "Subscreva novamente em {{url}}.",
+      "resubscribeToRestore": "Subscreva novamente para restaurar o Pro."
+    },
+    "lapse": {
+      "lapsedTitle": "Está agora na edição gratuita. Subscreva novamente para restaurar o Pro.",
+      "endingTitle": "A sua subscrição Pro foi cancelada.",
+      "endedOn": "O Pro terminou em {{date}}.",
+      "endsOn": "O Pro termina em {{date}}.",
+      "dataKept": "Nada é eliminado. Os seus dados permanecem e as funcionalidades Pro voltam a ativar-se depois de subscrever novamente e atualizar a licença.",
+      "resubscribe": "Subscrever novamente"
     }
   },
   "errors": {

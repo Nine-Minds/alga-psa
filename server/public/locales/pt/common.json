@@ -46,7 +46,11 @@
     "licenseWrongTenant": "Esta licença foi emitida para outra instância e não é válida aqui. A instalação está usando os recursos Essentials.",
     "manageLicense": "Gerenciar licença",
     "ariaLabel": "Status da licença",
-    "dismiss": "Dispensar"
+    "dismiss": "Dispensar",
+    "subscriptionEnding": "A sua subscrição Pro foi cancelada. O Pro termina em {{date}}. Subscreva novamente para manter o Pro.",
+    "subscriptionEndingNoDate": "A sua subscrição Pro foi cancelada. Subscreva novamente para manter o Pro.",
+    "subscriptionLapsed": "Está agora na edição gratuita. Subscreva novamente para restaurar o Pro.",
+    "resubscribe": "Subscrever novamente"
   },
   "nav": {
     "dashboard": "Painel",

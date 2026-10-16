@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRouter } from 'next/navigation';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Button } from '@alga-psa/ui/components/Button';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import type { LicenseStatus } from '@/lib/actions/licenseManagementActions';
 
@@ -12,6 +14,8 @@ import type { LicenseStatus } from '@/lib/actions/licenseManagementActions';
  *
  * Shown only in self-host mode (license_state row present).
  * Displays trial countdown, upcoming license expiry, or expired state.
+ * Shows the Pro subscription lapse: a warning from the moment a cancellation
+ * is known until Pro ends, then a "now on the free edition" message after.
  * Links to the in-app License page for renewal.
  *
  * Intentionally uses the server action for licensing status rather than
@@ -35,11 +39,16 @@ export default function LicenseBanner() {
 
   if (!status?.selfHostMode || dismissed) return null;
 
-  const { state, daysRemaining, tier } = status;
+  const { state, daysRemaining, subscription } = status;
+  const subscriptionEndDate = subscription?.endsAt
+    ? new Date(subscription.endsAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
 
   // Determine whether to show the banner and with what urgency.
   let message: string | null = null;
   let urgency: 'info' | 'warning' | 'error' = 'info';
+  // Resubscribe link is only offered for the subscription messages.
+  let resubscribeUrl: string | null = null;
 
   switch (state) {
     case 'trial':
@@ -61,14 +70,27 @@ export default function LicenseBanner() {
       urgency = 'warning';
       break;
     case 'licensed':
-      if (daysRemaining !== null && daysRemaining <= 14) {
+      if (subscription?.phase === 'ending') {
+        // Cancel known, Pro still running: warn until the lapse.
+        message = subscriptionEndDate
+          ? t('licenseBanner.subscriptionEnding', { defaultValue: 'Your Pro subscription has been cancelled. Pro ends on {{date}}. Resubscribe to keep Pro.', date: subscriptionEndDate })
+          : t('licenseBanner.subscriptionEndingNoDate', { defaultValue: 'Your Pro subscription has been cancelled. Resubscribe to keep Pro.' });
+        urgency = daysRemaining !== null && daysRemaining <= 3 ? 'error' : 'warning';
+        resubscribeUrl = subscription.resubscribeUrl;
+      } else if (daysRemaining !== null && daysRemaining <= 14) {
         message = t('licenseBanner.licenseExpiresIn', { defaultValue: 'License expires in {{count}} days. Renew to avoid service interruption.', count: daysRemaining });
         urgency = daysRemaining <= 3 ? 'error' : 'warning';
       }
       break;
     case 'license_expired':
-      message = t('licenseBanner.licenseExpired', { defaultValue: 'License has expired. The install is now running Essentials features.' });
-      urgency = 'error';
+      if (subscription?.phase === 'lapsed') {
+        message = t('licenseBanner.subscriptionLapsed', { defaultValue: "You're now on the free edition. Resubscribe to restore Pro." });
+        urgency = 'warning';
+        resubscribeUrl = subscription.resubscribeUrl;
+      } else {
+        message = t('licenseBanner.licenseExpired', { defaultValue: 'License has expired. The install is now running Essentials features.' });
+        urgency = 'error';
+      }
       break;
     case 'license_wrong_tenant':
       message = t('licenseBanner.licenseWrongTenant', { defaultValue: 'This license was issued for a different appliance and is not valid here. The install is running Essentials features.' });
@@ -85,37 +107,37 @@ export default function LicenseBanner() {
 
   if (!message) return null;
 
-  const bgColor = urgency === 'error' ? '#fef2f2' : urgency === 'warning' ? '#fffbeb' : '#eff6ff';
-  const borderColor = urgency === 'error' ? '#fecaca' : urgency === 'warning' ? '#fde68a' : '#bfdbfe';
-  const textColor = urgency === 'error' ? '#991b1b' : urgency === 'warning' ? '#92400e' : '#1e40af';
-
   return (
-    <div
-      style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0.5rem 1rem', background: bgColor,
-        borderBottom: `1px solid ${borderColor}`, color: textColor,
-        fontSize: '0.875rem',
-      }}
-      role="banner"
+    <Alert
+      id="license-banner"
+      variant={urgency === 'error' ? 'destructive' : urgency}
+      className="rounded-none border-x-0 border-t-0 shadow-none"
       aria-label={t('licenseBanner.ariaLabel', { defaultValue: 'License status' })}
     >
-      <span>{message}</span>
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexShrink: 0, marginLeft: '1rem' }}>
-        <button
-          onClick={() => router.push('/msp/licenses')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', color: 'inherit', fontSize: 'inherit' }}
-        >
-          {t('licenseBanner.manageLicense', { defaultValue: 'Manage License' })}
-        </button>
-        <button
-          onClick={() => setDismissed(true)}
-          aria-label={t('licenseBanner.dismiss', { defaultValue: 'Dismiss' })}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: '1rem', lineHeight: 1 }}
-        >
-          ×
-        </button>
-      </div>
-    </div>
+      <AlertDescription className="flex items-center justify-between gap-4">
+        <span>{message}</span>
+        <div className="flex flex-shrink-0 items-center gap-3">
+          {resubscribeUrl ? (
+            <Button id="license-banner-resubscribe-button" variant="link" size="xs" asChild>
+              <a href={resubscribeUrl} target="_blank" rel="noopener noreferrer">
+                {t('licenseBanner.resubscribe', { defaultValue: 'Resubscribe' })}
+              </a>
+            </Button>
+          ) : null}
+          <Button id="license-banner-manage-button" variant="link" size="xs" onClick={() => router.push('/msp/licenses')}>
+            {t('licenseBanner.manageLicense', { defaultValue: 'Manage License' })}
+          </Button>
+          <Button
+            id="license-banner-dismiss-button"
+            variant="icon"
+            size="xs"
+            onClick={() => setDismissed(true)}
+            aria-label={t('licenseBanner.dismiss', { defaultValue: 'Dismiss' })}
+          >
+            ×
+          </Button>
+        </div>
+      </AlertDescription>
+    </Alert>
   );
 }

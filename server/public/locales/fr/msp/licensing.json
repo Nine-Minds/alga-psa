@@ -263,7 +263,8 @@
         "title": "{{tier}} est actif",
         "description": "Votre licence payante est active sur cette appliance.",
         "descriptionWithExpiry": "Votre licence est active jusqu’au {{date}}.",
-        "badge": "Sous licence"
+        "badge": "Sous licence",
+        "descriptionEnding": "Votre abonnement a été annulé. Pro reste actif jusqu'au {{date}}."
       },
       "licenseExpired": {
         "eyebrow": "La licence nécessite votre attention",
@@ -288,6 +289,12 @@
         "title": "Vous utilisez Essentials",
         "description": "Essentials est actif sur cette appliance. Continuez à utiliser les fonctionnalités principales ou démarrez un essai Pro unique de 15 jours.",
         "badge": "Essentials actif"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Abonnement terminé",
+        "title": "Vous utilisez maintenant l'édition gratuite",
+        "description": "Votre abonnement Pro est terminé. Vos données sont conservées et les fonctionnalités Pro se réactivent à votre réabonnement.",
+        "badge": "Édition gratuite"
       }
     },
     "trialCta": {
@@ -352,7 +359,21 @@
       "activateLicenseKey": "Impossible d’activer la clé de licence.",
       "activateClaimCode": "Impossible d’activer le code d’activation.",
       "startTrial": "Impossible de démarrer l’essai.",
-      "refreshLicense": "Impossible d’actualiser la licence."
+      "refreshLicense": "Impossible d’actualiser la licence.",
+      "credentialRevoked": "L'identifiant de licence de cet appareil a été révoqué. Reconnectez-le avec un nouveau code d'activation depuis le portail de licences.",
+      "subscriptionEnding": "Votre abonnement Pro a été annulé. Pro prend fin le {{date}}.",
+      "subscriptionEndingNoDate": "Votre abonnement Pro a été annulé.",
+      "subscriptionEnded": "Votre abonnement Pro est terminé. Cet appareil utilise l'édition gratuite.",
+      "resubscribeAt": "Réabonnez-vous sur {{url}}.",
+      "resubscribeToRestore": "Réabonnez-vous pour rétablir Pro."
+    },
+    "lapse": {
+      "lapsedTitle": "Vous utilisez maintenant l'édition gratuite. Réabonnez-vous pour rétablir Pro.",
+      "endingTitle": "Votre abonnement Pro a été annulé.",
+      "endedOn": "Pro a pris fin le {{date}}.",
+      "endsOn": "Pro prend fin le {{date}}.",
+      "dataKept": "Rien n'est supprimé. Vos données restent en place et les fonctionnalités Pro se réactivent après votre réabonnement et l'actualisation de la licence.",
+      "resubscribe": "Se réabonner"
     }
   },
   "errors": {

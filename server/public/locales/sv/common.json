@@ -46,7 +46,11 @@
     "licenseWrongTenant": "Licensen utfärdades för en annan installation och är inte giltig här. Installationen använder Essentials-funktionerna.",
     "manageLicense": "Hantera licens",
     "ariaLabel": "Licensstatus",
-    "dismiss": "Stäng"
+    "dismiss": "Stäng",
+    "subscriptionEnding": "Din Pro-prenumeration har avslutats. Pro upphör den {{date}}. Teckna prenumerationen igen för att behålla Pro.",
+    "subscriptionEndingNoDate": "Din Pro-prenumeration har avslutats. Teckna prenumerationen igen för att behålla Pro.",
+    "subscriptionLapsed": "Du använder nu den kostnadsfria utgåvan. Teckna prenumerationen igen för att återställa Pro.",
+    "resubscribe": "Teckna igen"
   },
   "nav": {
     "dashboard": "Översikt",

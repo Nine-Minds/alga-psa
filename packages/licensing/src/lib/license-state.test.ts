@@ -99,3 +99,75 @@ describe('resolveSelfHostTier', () => {
     expect(result?.tier).toBe('pro');
   });
 });
+
+describe('resolveSelfHostTier — subscription lapse boundary', () => {
+  beforeEach(() => clearLicenseVerifyCache());
+
+  const cancelled = {
+    subscription_state: 'cancelled' as const,
+    subscription_resubscribe_url: 'https://portal.example/resubscribe',
+  };
+
+  it('before exp: still licensed (Pro) with an ending-subscription warning ending at the token exp', () => {
+    const result = resolveSelfHostTier(makeRow({ license_token: VALID_PRO_TOKEN, ...cancelled }));
+    expect(result?.state).toBe('licensed');
+    expect(result?.tier).toBe('pro');
+    expect(result?.subscription).toEqual({
+      phase: 'ending',
+      endsAt: result?.expiresAt,
+      resubscribeUrl: 'https://portal.example/resubscribe',
+    });
+  });
+
+  it('a scheduled cancel uses the known cancel date while still licensed', () => {
+    const cancelsAt = new Date(Date.now() + 5 * 86400_000);
+    const result = resolveSelfHostTier(
+      makeRow({ license_token: VALID_PRO_TOKEN, subscription_state: 'cancel_scheduled', subscription_cancels_at: cancelsAt }),
+    );
+    expect(result?.state).toBe('licensed');
+    expect(result?.subscription?.phase).toBe('ending');
+    expect(result?.subscription?.endsAt).toEqual(cancelsAt);
+  });
+
+  it('after exp: essentials / license_expired with the subscription-lapse reason and the exp date', () => {
+    const result = resolveSelfHostTier(makeRow({ license_token: EXPIRED_TOKEN, ...cancelled }));
+    expect(result?.state).toBe('license_expired');
+    expect(result?.tier).toBe('essentials');
+    expect(result?.subscription?.phase).toBe('lapsed');
+    expect(result?.subscription?.endsAt).toEqual(new Date(1752287153 * 1000));
+    expect(result?.subscription?.resubscribeUrl).toBe('https://portal.example/resubscribe');
+  });
+
+  it('legacy lapse (no URL, no cancel date) still resolves with the token exp date', () => {
+    const result = resolveSelfHostTier(makeRow({ license_token: EXPIRED_TOKEN, subscription_state: 'cancelled' }));
+    expect(result?.subscription).toEqual({ phase: 'lapsed', endsAt: new Date(1752287153 * 1000), resubscribeUrl: null });
+  });
+
+  it('an expired token with no cancelled-subscription context stays a generic license_expired', () => {
+    expect(resolveSelfHostTier(makeRow({ license_token: EXPIRED_TOKEN }))?.subscription).toBeNull();
+    // active context does not make an expiry a "subscription lapse"
+    expect(
+      resolveSelfHostTier(makeRow({ license_token: EXPIRED_TOKEN, subscription_state: 'active' }))?.subscription,
+    ).toBeNull();
+    // cancel scheduled in the future + expired token = offline/check-in failure, not a lapse
+    expect(
+      resolveSelfHostTier(
+        makeRow({ license_token: EXPIRED_TOKEN, subscription_state: 'cancel_scheduled', subscription_cancels_at: new Date(Date.now() + 86400_000) }),
+      )?.subscription,
+    ).toBeNull();
+  });
+
+  it('reactivated (fresh token, context cleared): licensed with no warning', () => {
+    const result = resolveSelfHostTier(
+      makeRow({
+        license_token: VALID_PRO_TOKEN,
+        subscription_state: null,
+        subscription_cancels_at: null,
+        subscription_resubscribe_url: null,
+      }),
+    );
+    expect(result?.state).toBe('licensed');
+    expect(result?.subscription).toBeNull();
+  });
+});
+

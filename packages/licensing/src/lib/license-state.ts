@@ -29,7 +29,20 @@ export interface LicenseStateRow {
    */
   appliance_credential: string | null;
   last_checkin_at: Date | null;
+  /**
+   * Subscription context from the last alga-license check-in (migration
+   * 20261016000000). All null/absent = no known subscription event (legacy
+   * appliance, never connected, or the subscription is healthy). Optional so
+   * an un-migrated row still type-checks and resolves.
+   */
+  subscription_state?: SubscriptionStateValue | null;
+  subscription_cancels_at?: Date | null;
+  subscription_resubscribe_url?: string | null;
+  subscription_context_updated_at?: Date | null;
 }
+
+/** Subscription states the check-in contract can report (stored verbatim). */
+export type SubscriptionStateValue = 'active' | 'cancel_scheduled' | 'cancelled';
 
 /** Derived licensing state for an install. */
 export type LicenseStateKind =
@@ -41,6 +54,21 @@ export type LicenseStateKind =
   | 'license_expired' // License was present but has expired
   | 'license_wrong_tenant'; // Validly-signed license, but issued for a different tenant (aud mismatch)
 
+/**
+ * Subscription lifecycle surfaced to the UI.
+ *  - 'ending' — still licensed (Pro runs until `endsAt`) but the subscription is
+ *               cancelled / scheduled to end. Drives the pre-lapse warning.
+ *  - 'lapsed' — the token has expired and the subscription had been cancelled:
+ *               the install is on the free edition by subscription lapse (not
+ *               a generic expiry or credential problem).
+ */
+export interface ResolvedSubscription {
+  phase: 'ending' | 'lapsed';
+  /** When Pro ends (ending) / ended (lapsed). Null only if truly unknown. */
+  endsAt: Date | null;
+  resubscribeUrl: string | null;
+}
+
 export interface ResolvedLicenseState {
   /** Current licensing state kind. */
   state: LicenseStateKind;
@@ -50,6 +78,13 @@ export interface ResolvedLicenseState {
   expiresAt: Date | null;
   /** Days remaining until expiry (null when no expiry or already expired). */
   daysRemaining: number | null;
+  /**
+   * Cancelled-subscription context, or null. Additive: `state`/`tier` are
+   * unchanged for existing consumers (a lapse is still `license_expired` /
+   * `essentials`; the downgrade is defined by that resolution, nothing is
+   * deleted).
+   */
+  subscription: ResolvedSubscription | null;
 }
 
 const TRIAL_DURATION_MS = 15 * 24 * 60 * 60 * 1000;
@@ -83,6 +118,44 @@ export async function upsertLicenseState(
     await knex('license_state').insert({ ...fields, updated_at: knex.fn.now() });
   }
   clearLicenseVerifyCache();
+}
+
+/**
+ * Pre-lapse warning: the install is still licensed but the last check-in said
+ * the subscription is cancelled or scheduled to end. Null otherwise — including
+ * `active` and legacy rows with no subscription data.
+ */
+function resolveEndingSubscription(row: LicenseStateRow, tokenExp: Date): ResolvedSubscription | null {
+  const sub = row.subscription_state;
+  if (sub !== 'cancelled' && sub !== 'cancel_scheduled') return null;
+  // Pro runs until the held token's exp even once the subscription is
+  // cancelled (soft revocation never hard-cuts), so that is the end date. A
+  // scheduled end that is known is more precise while the token is still rolling.
+  const cancelsAt = row.subscription_cancels_at ? new Date(row.subscription_cancels_at) : null;
+  const endsAt = sub === 'cancel_scheduled' && cancelsAt ? cancelsAt : tokenExp;
+  return { phase: 'ending', endsAt, resubscribeUrl: row.subscription_resubscribe_url ?? null };
+}
+
+/**
+ * Expired-token result. When the last check-in recorded a cancelled
+ * subscription (or a scheduled end that has now passed) the lapse carries
+ * subscription context so callers can say *why* Pro ended and where to
+ * resubscribe; otherwise it is a plain `license_expired`.
+ */
+function licenseExpired(row: LicenseStateRow, tokenExp: Date | null, now: number): ResolvedLicenseState {
+  const sub = row.subscription_state;
+  const cancelsAt = row.subscription_cancels_at ? new Date(row.subscription_cancels_at) : null;
+  const subscriptionEnded =
+    sub === 'cancelled' || (sub === 'cancel_scheduled' && cancelsAt !== null && cancelsAt.getTime() <= now);
+  return {
+    state: 'license_expired',
+    tier: 'essentials',
+    expiresAt: null,
+    daysRemaining: null,
+    subscription: subscriptionEnded
+      ? { phase: 'lapsed', endsAt: tokenExp ?? cancelsAt, resubscribeUrl: row.subscription_resubscribe_url ?? null }
+      : null,
+  };
 }
 
 /**
@@ -124,7 +197,7 @@ export function resolveSelfHostTier(
         // have a tenant to compare against — an unbound token, or a missing
         // expectedTenantId, falls through to the normal licensed result.
         if (result.claims.aud && expectedTenantId && result.claims.aud !== expectedTenantId) {
-          return { state: 'license_wrong_tenant', tier: 'essentials', expiresAt: null, daysRemaining: null };
+          return { state: 'license_wrong_tenant', tier: 'essentials', expiresAt: null, daysRemaining: null, subscription: null };
         }
         const daysRemaining = Math.ceil((expMs - now) / (24 * 60 * 60 * 1000));
         return {
@@ -132,22 +205,30 @@ export function resolveSelfHostTier(
           tier: result.claims.tier,
           expiresAt: new Date(expMs),
           daysRemaining,
+          subscription: resolveEndingSubscription(row, new Date(expMs)),
         };
       }
       // Claims valid but exp in the past (shouldn't reach here — verifyLicense
       // already checks expiry, but guard for clock-skew edge cases).
-      return { state: 'license_expired', tier: 'essentials', expiresAt: null, daysRemaining: null };
+      return licenseExpired(row, new Date(expMs), now);
     }
     // Expired token: surface as license_expired, not trial_expired.
+    //
+    // THIS IS THE DEFINED DOWNGRADE for a lapsed Pro subscription: at the held
+    // token's `exp` the install resolves to `essentials` (CE behavior). Every
+    // Pro gate (assertTierAccess, eeRuntimeEnabledServer, the seat guard) keys
+    // off this tier, so they degrade to free-edition behavior. No data is
+    // deleted; reactivation stores a fresh token on the next `ok` check-in and
+    // this resolver returns `licensed` again.
     if (isLicenseVerifyFailure(result) && result.reason === 'expired') {
-      return { state: 'license_expired', tier: 'essentials', expiresAt: null, daysRemaining: null };
+      return licenseExpired(row, result.expiredAt ? new Date(result.expiredAt * 1000) : null, now);
     }
     // Malformed/bad_signature/unknown_kid — treat as if no token stored.
   }
 
   // 2. Check CE choice (no trial available).
   if (row.edition_choice === 'ce') {
-    return { state: 'ce', tier: 'essentials', expiresAt: null, daysRemaining: null };
+    return { state: 'ce', tier: 'essentials', expiresAt: null, daysRemaining: null, subscription: null };
   }
 
   // 3. Check active trial.
@@ -160,15 +241,16 @@ export function resolveSelfHostTier(
         tier: 'pro',
         expiresAt: new Date(trialEnd),
         daysRemaining,
+        subscription: null,
       };
     }
-    return { state: 'trial_expired', tier: 'essentials', expiresAt: null, daysRemaining: null };
+    return { state: 'trial_expired', tier: 'essentials', expiresAt: null, daysRemaining: null, subscription: null };
   }
 
   // 4. EE chosen but no trial started yet — essentials until trial starts.
   // Distinct from trial_expired: a fresh install has NOT used its trial, and
   // surfacing it as "expired" (banner + License page) misleads on day one.
-  return { state: 'trial_available', tier: 'essentials', expiresAt: null, daysRemaining: null };
+  return { state: 'trial_available', tier: 'essentials', expiresAt: null, daysRemaining: null, subscription: null };
 }
 
 /**

@@ -47,6 +47,7 @@ const baseStatus: LicenseStatus = {
   connected: false,
   lastCheckinAt: null,
   tenantId: "tenant-1",
+  subscription: null,
 };
 
 beforeEach(() => {
@@ -159,5 +160,71 @@ describe("LicenseManagementPage", () => {
     expect(
       screen.queryByRole("button", { name: /Start 15-day Pro trial/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows the pre-lapse section with the end date, resubscribe link and refresh button", async () => {
+    mockGetLicenseStatus.mockResolvedValue({
+      ...baseStatus,
+      state: "licensed",
+      tier: "pro",
+      customer: "Acme",
+      connected: true,
+      expiresAt: "2030-01-31T00:00:00.000Z",
+      daysRemaining: 20,
+      subscription: {
+        phase: "ending",
+        endsAt: "2030-01-31T12:00:00.000Z",
+        resubscribeUrl: "https://portal.example/resubscribe",
+      },
+    });
+
+    render(<LicenseManagementPage />);
+
+    expect(
+      await screen.findByText("Your Pro subscription has been cancelled."),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/^Pro ends on /)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Resubscribe/ }).getAttribute("href"),
+    ).toBe("https://portal.example/resubscribe");
+    expect(
+      document.getElementById("license-lapse-refresh-now"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the free-edition message after the lapse, without 'contact support'", async () => {
+    mockGetLicenseStatus.mockResolvedValue({
+      ...baseStatus,
+      state: "license_expired",
+      tier: "essentials",
+      trialUsed: true,
+      subscription: { phase: "lapsed", endsAt: "2025-07-12T00:00:00.000Z", resubscribeUrl: null },
+    });
+
+    render(<LicenseManagementPage />);
+
+    expect(
+      await screen.findByText(
+        "You’re now on the free edition. Resubscribe to restore Pro.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/^Pro ended on /)).toBeInTheDocument();
+    expect(screen.queryByText(/contact support/i)).not.toBeInTheDocument();
+  });
+
+  it("shows no lapse section when the subscription is healthy", async () => {
+    mockGetLicenseStatus.mockResolvedValue({
+      ...baseStatus,
+      state: "licensed",
+      tier: "pro",
+      customer: "Acme",
+      expiresAt: "2030-01-31T00:00:00.000Z",
+      daysRemaining: 20,
+    });
+
+    render(<LicenseManagementPage />);
+
+    await screen.findByText("Pro is active");
+    expect(screen.queryByText(/Resubscribe/)).not.toBeInTheDocument();
   });
 });

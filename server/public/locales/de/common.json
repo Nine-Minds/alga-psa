@@ -46,7 +46,11 @@
     "licenseWrongTenant": "Diese Lizenz wurde für eine andere Appliance ausgestellt und ist hier nicht gültig. Die Installation verwendet Essentials-Funktionen.",
     "manageLicense": "Lizenz verwalten",
     "ariaLabel": "Lizenzstatus",
-    "dismiss": "Schließen"
+    "dismiss": "Schließen",
+    "subscriptionEnding": "Ihr Pro-Abonnement wurde gekündigt. Pro endet am {{date}}. Schließen Sie das Abonnement erneut ab, um Pro zu behalten.",
+    "subscriptionEndingNoDate": "Ihr Pro-Abonnement wurde gekündigt. Schließen Sie das Abonnement erneut ab, um Pro zu behalten.",
+    "subscriptionLapsed": "Sie nutzen jetzt die kostenlose Edition. Schließen Sie das Abonnement erneut ab, um Pro wiederherzustellen.",
+    "resubscribe": "Erneut abonnieren"
   },
   "nav": {
     "dashboard": "Dashboard",
