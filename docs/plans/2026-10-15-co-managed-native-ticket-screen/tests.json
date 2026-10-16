@@ -1,0 +1,139 @@
+[
+  {
+    "id": "T001",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F004",
+      "F005",
+      "F012"
+    ],
+    "description": "TicketDetails renders with the native default data source and calls the same native actions as before (existing TicketDetails suites green, no new calls on mount)",
+    "implemented": false
+  },
+  {
+    "id": "T002",
+    "featureIds": [
+      "F003",
+      "F009",
+      "F034"
+    ],
+    "description": "Capabilities: a data source with shared capabilities renders no bundle, materials, billing, delete, credentials, external links, email logs, documents, checklist, assets, tags sections in either layout",
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "featureIds": [
+      "F010",
+      "F011"
+    ],
+    "description": "Negative: under the shared data source no native ticket-id action is invoked and avatar actions never receive the foreign tenant",
+    "implemented": false
+  },
+  {
+    "id": "T004",
+    "featureIds": [
+      "F013",
+      "F014"
+    ],
+    "description": "DB integration: shared loader returns description/requester/client/category/due/customer assignee for an admitted sponsor and omits each when redacted by home policy; denied without staff assignment",
+    "implemented": false
+  },
+  {
+    "id": "T005",
+    "featureIds": [
+      "F016",
+      "F017"
+    ],
+    "description": "DB integration: shared description/category edit applies via editCoManagedTicket with receipt; stale baseline returns conflict; same operation retry is idempotent",
+    "implemented": false
+  },
+  {
+    "id": "T006",
+    "featureIds": [
+      "F017",
+      "F018",
+      "F015"
+    ],
+    "description": "Unit: changing status on the shared screen calls saveSharedTicketEditAction with expected baseline and lists customer options from the co-managed search",
+    "implemented": false
+  },
+  {
+    "id": "T007",
+    "featureIds": [
+      "F019",
+      "F020",
+      "F021"
+    ],
+    "description": "Unit: shared conversation shows org-qualified authors, hides customer-private notes, defaults to Shared IT and posts through createCoManagedTicketCommentAction; edit/delete/disclosure use the co-managed actions",
+    "implemented": false
+  },
+  {
+    "id": "T008",
+    "featureIds": [
+      "F022"
+    ],
+    "description": "Unit: shared composer disallows image/file/mention blocks; attachment upload goes through the co-managed draft flow",
+    "implemented": false
+  },
+  {
+    "id": "T009",
+    "featureIds": [
+      "F023"
+    ],
+    "description": "Unit: customer-side native composer on a co_managed ticket shows the audience control and writes the chosen audience",
+    "implemented": false
+  },
+  {
+    "id": "T010",
+    "featureIds": [
+      "F024",
+      "F025",
+      "F026",
+      "F027",
+      "F028"
+    ],
+    "description": "Unit: Co-managed section shows responsibility, both SLAs, MSP assignment; hand back submits with expectedRevision, refreshes the screen and the work signals; history pages",
+    "implemented": false
+  },
+  {
+    "id": "T011",
+    "featureIds": [
+      "F029",
+      "F030",
+      "F031"
+    ],
+    "description": "Unit: stopwatch/time entry on a shared ticket launches the native time entry with work_item_type co_managed; effort split refreshes after save",
+    "implemented": false
+  },
+  {
+    "id": "T012",
+    "featureIds": [
+      "F032",
+      "F033",
+      "F035"
+    ],
+    "description": "Route tests: MSP shared route renders native TicketDetails with the shared provider (read-only viewer has no write affordances); customer route renders the Co-managed section and no panel",
+    "implemented": false
+  },
+  {
+    "id": "T013",
+    "featureIds": [
+      "F036"
+    ],
+    "description": "Contract: no remaining imports of the deleted panel components",
+    "implemented": false
+  },
+  {
+    "id": "T014",
+    "featureIds": [
+      "F032",
+      "F017",
+      "F020",
+      "F024",
+      "F029"
+    ],
+    "description": "Browser evidence: MSP on the shared ticket in Entry and Grid layouts \u2014 status change, Shared IT message, private note, stopwatch/time entry, MSP assignment, hand back; customer side shows the Co-managed section",
+    "implemented": false
+  }
+]
