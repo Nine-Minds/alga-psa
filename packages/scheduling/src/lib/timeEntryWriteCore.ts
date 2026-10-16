@@ -68,6 +68,73 @@ export interface PersistTimeEntryInput {
   actor: IUser;
   /** Already validated with saveTimeEntryParamsSchema. */
   entry: SaveTimeEntryParams;
+  /**
+   * Contract-line linkage the caller already decided (the REST time-entry API
+   * validates an explicit line, preserves a still-eligible one on update and
+   * rejects ambiguity with a 400 before writing). When present the core stores
+   * it verbatim — `id: null` clears the linkage — and does NOT run the
+   * resolver. Omitted (UI save, stopwatch log) keeps the original behaviour:
+   * a supplied `contract_line_id` is 'explicit', otherwise the resolver picks
+   * or records why it could not.
+   */
+  contractLine?: { id: string | null; source: ContractLineSource | null };
+}
+
+export interface WorkItemBillingContext {
+  clientId: string | null;
+  /** The work item's billing profile; narrows contract-line selection (F134). */
+  billingProfileId: string | null;
+}
+
+/**
+ * The client (and billing profile) a work item bills to. Shared by the write
+ * core's resolution and the REST time-entry API's pre-write validation so both
+ * derive the resolver inputs identically.
+ */
+export async function getWorkItemBillingContext(
+  tenantScopedDb: any,
+  workItemType: string | null | undefined,
+  workItemId: string | null | undefined,
+): Promise<WorkItemBillingContext> {
+  let clientId: string | null = null;
+  // The work item's billing profile narrows contract-line selection when
+  // more than one line is eligible — the case parallel per-profile
+  // contracts create (F134). Selected alongside the client so the
+  // narrowing costs no extra round trip.
+  let billingProfileId: string | null = null;
+
+  if (workItemType === 'project_task') {
+    const projectTaskClientQuery = tenantScopedDb.table('project_tasks');
+    tenantScopedDb.tenantJoin(
+      projectTaskClientQuery,
+      'project_phases',
+      'project_tasks.phase_id',
+      'project_phases.phase_id',
+    );
+    tenantScopedDb.tenantJoin(
+      projectTaskClientQuery,
+      'projects',
+      'project_phases.project_id',
+      'projects.project_id',
+    );
+    const projectRow = await projectTaskClientQuery
+      .where({ 'project_tasks.task_id': workItemId })
+      .first('projects.client_id', 'projects.billing_profile_id');
+    clientId = projectRow?.client_id ?? null;
+    billingProfileId = projectRow?.billing_profile_id ?? null;
+  } else if (workItemType === 'ticket') {
+    const ticketRow = await tenantScopedDb.table('tickets')
+      .where({ ticket_id: workItemId })
+      .first('client_id', 'billing_profile_id');
+    clientId = ticketRow?.client_id ?? null;
+    billingProfileId = ticketRow?.billing_profile_id ?? null;
+  } else if (workItemType === 'interaction') {
+    clientId = (await tenantScopedDb.table('interactions')
+      .where({ interaction_id: workItemId })
+      .first('client_id'))?.client_id ?? null;
+  }
+
+  return { clientId, billingProfileId };
 }
 
 export interface PersistedTimeEntry {
@@ -246,47 +313,16 @@ export async function persistTimeEntry(
 
   let resultingEntry: ITimeEntry | null = null;
 
-  // If no contract line ID is provided, try to determine the default one
-  if (!contract_line_id && service_id) {
+  if (input.contractLine) {
+    // The caller already decided the linkage (see PersistTimeEntryInput.contractLine).
+    cleanedEntry.contract_line_id = input.contractLine.id ?? (null as any);
+    cleanedEntry.contract_line_source = input.contractLine.source;
+  } else if (!contract_line_id && service_id) {
+    // If no contract line ID is provided, try to determine the default one
     try {
       const effectiveDateForContractResolution = work_date || start_time;
-      let defaultContractClientId: string | null = null;
-      // The work item's billing profile narrows contract-line selection when
-      // more than one line is eligible — the case parallel per-profile
-      // contracts create (F134). Selected alongside the client so the
-      // narrowing costs no extra round trip.
-      let workItemBillingProfileId: string | null = null;
-
-      if (work_item_type === 'project_task') {
-        const projectTaskClientQuery = tenantScopedDb.table('project_tasks');
-        tenantScopedDb.tenantJoin(
-          projectTaskClientQuery,
-          'project_phases',
-          'project_tasks.phase_id',
-          'project_phases.phase_id',
-        );
-        tenantScopedDb.tenantJoin(
-          projectTaskClientQuery,
-          'projects',
-          'project_phases.project_id',
-          'projects.project_id',
-        );
-        const projectRow = await projectTaskClientQuery
-          .where({ 'project_tasks.task_id': work_item_id })
-          .first('projects.client_id', 'projects.billing_profile_id');
-        defaultContractClientId = projectRow?.client_id ?? null;
-        workItemBillingProfileId = projectRow?.billing_profile_id ?? null;
-      } else if (work_item_type === 'ticket') {
-        const ticketRow = await tenantScopedDb.table('tickets')
-          .where({ ticket_id: work_item_id })
-          .first('client_id', 'billing_profile_id');
-        defaultContractClientId = ticketRow?.client_id ?? null;
-        workItemBillingProfileId = ticketRow?.billing_profile_id ?? null;
-      } else if (work_item_type === 'interaction') {
-        defaultContractClientId = (await tenantScopedDb.table('interactions')
-          .where({ interaction_id: work_item_id })
-          .first('client_id'))?.client_id ?? null;
-      }
+      const { clientId: defaultContractClientId, billingProfileId: workItemBillingProfileId } =
+        await getWorkItemBillingContext(tenantScopedDb, work_item_type, work_item_id);
 
       const selection = await resolveContractLineSelection(
         defaultContractClientId as string,
