@@ -10,6 +10,7 @@ import { ContactService } from '@/lib/api/services/ContactService';
 import { TicketService } from '@/lib/api/services/TicketService';
 import { ProjectService } from '@/lib/api/services/ProjectService';
 import { InvoiceService } from '@/lib/api/services/InvoiceService';
+import { FinancialService } from '@/lib/api/services/FinancialService';
 import { ContractLineService } from '@/lib/api/services/ContractLineService';
 import { AssetService } from '@/lib/api/services/AssetService';
 import { PermissionRoleService } from '@/lib/api/services/PermissionRoleService';
@@ -229,6 +230,34 @@ const supportedCases: SupportedCase[] = [
         filters as any,
       );
       return ids(result.data, 'invoice_id');
+    },
+  },
+  {
+    name: 'financial invoices (FinancialService.listInvoices)',
+    table: 'invoices',
+    idColumn: 'invoice_id',
+    createdColumn: 'created_at',
+    updatedColumn: 'updated_at',
+    insert: async (tenantId, fixtures) => {
+      const invoiceId = uuidv4();
+      await tenantTable(tenantId, 'invoices').insert({
+        tenant: tenantId,
+        invoice_id: invoiceId,
+        invoice_number: `FIN-${invoiceId.slice(0, 8)}`,
+        invoice_date: '2026-01-01',
+        due_date: '2026-01-31',
+        total_amount: 1000,
+        status: 'draft',
+        client_id: fixtures.clientId,
+      });
+      return invoiceId;
+    },
+    listIds: async (tenantId, filters) => {
+      const result = await service(FinancialService, tenantId).listInvoices(
+        { page: 1, limit: 100, ...filters } as any,
+        contextFor(tenantId),
+      );
+      return (result.data as any[]).map((row) => row.data.invoice_id);
     },
   },
   {
