@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { PartialBlock } from '@blocknote/core';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
@@ -9,11 +8,14 @@ import { toast } from 'react-hot-toast';
 import type { ITicketTemplate, PendingTag, TicketTemplateReferenceProblem } from '@alga-psa/types';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import BackNav from '@alga-psa/ui/components/BackNav';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -161,6 +163,48 @@ function snapshot(form: FormState): string {
   return JSON.stringify(toInput(form));
 }
 
+/** One editor section on the app's card surface: the section heading over its fields. */
+function SectionCard({ id, title, bodyClassName = 'space-y-4', children }: {
+  id: string;
+  title: string;
+  bodyClassName?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card id={id}>
+      <CardHeader className="pb-3">
+        <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">{title}</h2>
+      </CardHeader>
+      <CardContent className={bodyClassName}>{children}</CardContent>
+    </Card>
+  );
+}
+
+/** Form-shaped pulse placeholder, so the editor keeps its card layout while the template loads. */
+function TicketTemplateEditorSkeleton({ label }: { label: string }) {
+  return (
+    <div id={`${ID}-loading`} role="status" aria-label={label} className="mx-auto max-w-5xl space-y-6 p-6">
+      <div className="space-y-3">
+        <Skeleton className="h-10 w-40" />
+        <Skeleton className="h-8 w-72" />
+      </div>
+      {[0, 1].map((section) => (
+        <Card key={`skeleton-section-${section}`}>
+          <CardHeader className="pb-3"><Skeleton className="h-5 w-32" /></CardHeader>
+          <CardContent className="space-y-4">
+            {[0, 1, 2].map((field) => (
+              <div key={`skeleton-field-${field}`} className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export interface TicketTemplateEditorProps {
   /** A template id, or `'new'` to create one. */
   templateId: string;
@@ -295,33 +339,36 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
   };
 
   if (loading) {
-    return <div id={`${ID}-loading`} className="p-6 text-sm text-[rgb(var(--color-text-500))]">{t('templates.loading', 'Loading…')}</div>;
+    return <TicketTemplateEditorSkeleton label={t('templates.loading', 'Loading…')} />;
   }
   if (loadError) {
     return <div className="p-6"><Alert id={`${ID}-load-error`} variant="destructive"><AlertDescription>{loadError}</AlertDescription></Alert></div>;
   }
 
   return (
-    <div id={`${ID}-editor`} className="mx-auto max-w-5xl space-y-8 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <Link id={`${ID}-back`} href="/msp/tickets/templates" className="text-sm text-[rgb(var(--color-primary-600))] hover:underline">
-            {t('templates.editor.back', 'Ticket templates')}
-          </Link>
-          <h1 className="text-2xl font-semibold">
-            {isNew ? t('templates.editor.newTitle', 'New ticket template') : form.name}
-          </h1>
-          {template && (
-            <Badge variant={template.is_active ? 'success' : 'default-muted'}>
-              {template.is_active ? t('templates.status.active', 'Active') : t('templates.status.inactive', 'Inactive')}
-            </Badge>
+    <div id={`${ID}-editor`} className="mx-auto max-w-5xl space-y-6 p-6">
+      <div className="space-y-3">
+        {/* BackNav routes through UnsavedChangesContext, so an in-app back click respects a dirty form. */}
+        <BackNav id={`${ID}-back`} href="/msp/tickets/templates">
+          ← {t('templates.editor.back', 'Ticket templates')}
+        </BackNav>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-bold">
+              {isNew ? t('templates.editor.newTitle', 'New ticket template') : form.name}
+            </h1>
+            {template && (
+              <Badge variant={template.is_active ? 'success' : 'default-muted'}>
+                {template.is_active ? t('templates.status.active', 'Active') : t('templates.status.inactive', 'Inactive')}
+              </Badge>
+            )}
+          </div>
+          {!readOnly && (
+            <Button id={`${ID}-save`} type="button" disabled={saving || reference.loading} onClick={() => void save()}>
+              {saving ? t('templates.editor.saving', 'Saving…') : t('templates.editor.save', 'Save')}
+            </Button>
           )}
         </div>
-        {!readOnly && (
-          <Button id={`${ID}-save`} type="button" disabled={saving || reference.loading} onClick={() => void save()}>
-            {saving ? t('templates.editor.saving', 'Saving…') : t('templates.editor.save', 'Save')}
-          </Button>
-        )}
       </div>
 
       {fromTicket && (
@@ -358,8 +405,7 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
         </Alert>
       )}
 
-      <section id={`${ID}-details`} className="space-y-4">
-        <h2 className="text-lg font-semibold">{t('templates.sections.details', 'Template')}</h2>
+      <SectionCard id={`${ID}-details`} title={t('templates.sections.details', 'Template')}>
         <div>
           <Label htmlFor={`${ID}-name`}>{t('templates.fields.name', 'Template name')}</Label>
           <Input id={`${ID}-name`} value={form.name} disabled={readOnly} onChange={(event) => patch({ name: event.target.value })} />
@@ -369,10 +415,9 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
           <TextArea id={`${ID}-notes`} value={form.notes} disabled={readOnly} onChange={(event) => patch({ notes: event.target.value })} />
           <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{t('templates.fields.notesHelp', 'For your team only. Not copied to tickets.')}</p>
         </div>
-      </section>
+      </SectionCard>
 
-      <section id={`${ID}-ticket`} className="space-y-4">
-        <h2 className="text-lg font-semibold">{t('templates.sections.ticket', 'Ticket')}</h2>
+      <SectionCard id={`${ID}-ticket`} title={t('templates.sections.ticket', 'Ticket')}>
         <div>
           <Label htmlFor={`${ID}-title`}>{t('templates.fields.title', 'Ticket title')}</Label>
           <Input id={`${ID}-title`} value={form.title} disabled={readOnly} onChange={(event) => patch({ title: event.target.value })} />
@@ -435,10 +480,9 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
           onPendingTagsChange={(tags) => patch({ tags })}
           disabled={readOnly}
         />
-      </section>
+      </SectionCard>
 
-      <section id={`${ID}-checklist`} className="space-y-3">
-        <h2 className="text-lg font-semibold">{t('templates.sections.checklist', 'Checklist')}</h2>
+      <SectionCard id={`${ID}-checklist`} title={t('templates.sections.checklist', 'Checklist')} bodyClassName="space-y-3">
         {/* LEVERAGE: pattern checklist-item-list-editor — an add/reorder/remove list of checklist items is also written by the checklist template editor; both should share one editor component */}
         {form.checklist.length === 0 && (
           <p id={`${ID}-checklist-empty`} className="text-sm text-[rgb(var(--color-text-500))]">
@@ -484,10 +528,9 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
             {t('templates.checklist.add', 'Add item')}
           </Button>
         )}
-      </section>
+      </SectionCard>
 
-      <section id={`${ID}-custom-fields`} className="space-y-3">
-        <h2 className="text-lg font-semibold">{t('templates.sections.customFields', 'Custom fields')}</h2>
+      <SectionCard id={`${ID}-custom-fields`} title={t('templates.sections.customFields', 'Custom fields')} bodyClassName="space-y-3">
         {form.customFields.length === 0 && (
           <p id={`${ID}-custom-fields-empty`} className="text-sm text-[rgb(var(--color-text-500))]">
             {t('templates.customFields.empty', 'No custom field values.')}
@@ -525,7 +568,7 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
             {t('templates.customFields.add', 'Add field')}
           </Button>
         )}
-      </section>
+      </SectionCard>
     </div>
   );
 }
