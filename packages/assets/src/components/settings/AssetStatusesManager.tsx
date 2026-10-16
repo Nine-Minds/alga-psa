@@ -193,10 +193,32 @@ export default function AssetStatusesManager() {
     await commitOrder(ordered);
   };
 
+  /**
+   * The table keys its rows by position, so the grip that was focused keeps its
+   * place in the DOM and belongs to whichever status landed there — a second
+   * arrow press would move that one and undo the first. Focus follows the row
+   * that actually moved, found by its own id once React has re-rendered.
+   */
+  const focusDragHandle = useCallback((statusId: string) => {
+    if (typeof window === 'undefined') return;
+    const apply = () => {
+      const active = document.activeElement as HTMLElement | null;
+      // Only chase focus while it is still on the grips.
+      if (active?.id && !active.id.startsWith('asset-status-drag-handle-')) return;
+      document.getElementById(`asset-status-drag-handle-${statusId}`)?.focus();
+    };
+    if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(apply);
+    else setTimeout(apply, 0);
+  }, []);
+
   /** Keyboard path for the same move, since a grip cannot be dragged by key. */
   const moveByKeyboard = async (index: number, direction: -1 | 1) => {
+    const statusId = orderRef.current[index]?.status_id;
     const next = moveRow(index, index + direction);
-    if (next) await commitOrder(next);
+    if (!next || !statusId) return;
+    focusDragHandle(statusId);
+    await commitOrder(next);
+    focusDragHandle(statusId);
   };
 
   const confirmArchive = async () => {

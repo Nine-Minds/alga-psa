@@ -818,3 +818,27 @@ skip, the leftover drop, the no-op) and four source-contract cases pinning the
 ordering — no inline `client_locations` FK, the leftover drop before
 distribution, `ensureCompositeFk` after it, and both profile FKs routed
 through it.
+
+### Round 11b — the arrow keys moved the wrong status
+
+The browser check on round 10 found the keyboard half of the new drag order
+eating itself: focus the grip on "In repair", press ArrowDown once and it
+moves, press it again and *Inactive* moves instead, undoing the first move.
+
+`DataTable` keys its rows by position (`row.original.id` if the record has
+one — an `AssetStatus` has `status_id`), so React reuses the `<tr>` and its
+grip when the order changes: the focused button stays at the index it was at
+and simply starts describing a different status. The row index the handler
+closes over is therefore right, and the focus is on the wrong row.
+
+`moveByKeyboard` now remembers the status it moved and puts focus back on that
+status's own handle (`asset-status-drag-handle-<id>`) after the local reorder
+and again after the server write, so a run of arrow presses walks one status
+down the list the way the operator expects. It only chases focus while focus is
+still on a grip, so a reload that lands after the operator has tabbed away does
+not snatch it back.
+
+The test mock now keys its rows by position like the real table does —
+`AssetStatusesManager.reorder.test.tsx` had hidden the bug with a stable key —
+and a new case replays the operator's repro: two ArrowDowns move the same
+status two places (and the case fails without the focus restore).

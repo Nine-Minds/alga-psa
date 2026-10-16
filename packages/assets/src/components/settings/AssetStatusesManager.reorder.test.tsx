@@ -59,14 +59,19 @@ vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
   ConfirmationDialog: ({ isOpen, id }: any) => (isOpen ? <div id={id} /> : null),
 }));
 
-/** Mirrors the real table's `rowProps` contract: attributes land on the `<tr>`. */
+/**
+ * Mirrors the real table's `rowProps` contract (attributes land on the `<tr>`)
+ * and its row keys: DataTable keys rows by position unless the record carries
+ * an `id`, which an AssetStatus does not — so a reordered row reuses the DOM
+ * node that was already there, focus included.
+ */
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: ({ id, data = [], columns = [], rowClassName, rowProps }: any) => (
     <table id={id}>
       <tbody>
         {data.map((record: any, rowIndex: number) => (
           <tr
-            key={record.status_id}
+            key={`row_${rowIndex}`}
             data-testid={`row-${record.status_id}`}
             className={typeof rowClassName === 'function' ? rowClassName(record) : undefined}
             {...(typeof rowProps === 'function' ? rowProps(record, rowIndex) : {})}
@@ -160,6 +165,33 @@ describe('AssetStatusesManager reordering', () => {
     fireEvent.keyDown(document.getElementById('asset-status-drag-handle-s-1')!, { key: 'ArrowDown' });
 
     await waitFor(() => expect(mockReorderAssetStatuses).toHaveBeenCalledWith(['s-2', 's-1', 's-3']));
+  });
+
+  it('keeps focus on the moved status so a second arrow continues the move', async () => {
+    // The server answers with the order it was just given, as it does live.
+    let stored = rows;
+    mockListAssetStatuses.mockImplementation(async () => stored);
+    mockReorderAssetStatuses.mockImplementation(async (ids: string[]) => {
+      stored = ids.map((id, index) => ({
+        ...rows.find((row) => row.status_id === id)!,
+        display_order: index,
+      }));
+      return { success: true, data: stored };
+    });
+
+    render(<AssetStatusesManager />);
+    await waitForRows();
+
+    const handle = document.getElementById('asset-status-drag-handle-s-1')!;
+    handle.focus();
+    fireEvent.keyDown(handle, { key: 'ArrowDown' });
+
+    await waitFor(() => expect(mockReorderAssetStatuses).toHaveBeenLastCalledWith(['s-2', 's-1', 's-3']));
+    await waitFor(() => expect(document.activeElement?.id).toBe('asset-status-drag-handle-s-1'));
+
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' });
+
+    await waitFor(() => expect(mockReorderAssetStatuses).toHaveBeenLastCalledWith(['s-2', 's-3', 's-1']));
   });
 
   it('puts the server order back when the write is refused', async () => {
