@@ -211,6 +211,12 @@ interface TicketDetailsProps {
     ) => Promise<boolean>;
     onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
+    /**
+     * Additive notification fired after a user edit was saved successfully (field change,
+     * batch save, new comment, description edit). Purely informational; hosts use it to
+     * refresh data derived from the ticket (e.g. the activities list).
+     */
+    onSaved?: () => void;
     isSubmitting?: boolean;
     /**
      * Optional injected UI for survey summary (e.g. @alga-psa/surveys TicketSurveySummaryCard).
@@ -334,6 +340,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     onBatchTicketUpdate,
     onAddComment,
     onUpdateDescription,
+    onSaved,
     isSubmitting = false,
     surveySummaryCard,
     bootstrap,
@@ -1824,6 +1831,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 // stamps updated_at/updated_by itself; browsers never send them.
                 setTicket(prev => ({ ...prev, updated_at: new Date().toISOString() }));
                 setUpdatedByUser(localActor);
+                onSaved?.();
             }
         } catch (error) {
             console.error(`Error updating ticket ${field}:`, error);
@@ -2056,6 +2064,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 // not, since the editor only reads initialContent on mount.
                 setEditorKey((k) => k + 1);
 
+                onSaved?.();
                 return true;
             } else {
                 // Use the regular createComment action for MSP portal
@@ -2116,6 +2125,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         // See note above: remount the composer editor to clear the view.
                         setEditorKey((k) => k + 1);
                         console.log("New note added successfully");
+                        onSaved?.();
                         return true;
                     } else {
                         console.error('Failed to add comment');
@@ -2348,6 +2358,7 @@ const handleClose = () => {
                         updated_at: new Date().toISOString()
                     }));
                     setUpdatedByUser(localActor);
+                    onSaved?.();
                 }
                 
                 return success;
@@ -2383,6 +2394,7 @@ const handleClose = () => {
 
 
                 toast.success(t('messages.descriptionUpdated'));
+                onSaved?.();
                 return true;
             }
         } catch (error) {
@@ -2671,6 +2683,7 @@ const handleClose = () => {
                 updated_at: new Date().toISOString()
             }));
             setUpdatedByUser(localActor);
+            onSaved?.();
 
             if (field === 'itil_impact') {
                 toast.success(t('messages.itilImpactUpdated'));
@@ -2740,6 +2753,7 @@ const handleClose = () => {
                 // individual-save fallback below relies on handleSelectChange,
                 // which bumps per field on its own.
                 setActivityLogRefreshKey((value) => value + 1);
+                onSaved?.();
             }
             return success;
         }
@@ -2771,6 +2785,7 @@ const handleClose = () => {
                 for (const [field, value] of itilEntries) {
                     await handleItilFieldChange(field, value);
                 }
+                onSaved?.();
                 return true;
             }
 
