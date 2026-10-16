@@ -50080,7 +50080,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods",
     "displayName": "Create time period",
     "summary": "Create time period",
-    "description": "Creates time period via ApiTimeSheetController.createTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
+    "description": "Creates a time period. start_date/end_date accept YYYY-MM-DD (datetimes are truncated to their date). is_current is ignored on input and derived on read. Returns 409 when it overlaps an existing period; periods that touch (one's end_date equals the next's start_date) are allowed. end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
@@ -50088,8 +50088,41 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "parameters": [],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ],
+          "description": "Exclusive end of the period: the first day after the period. A period covering Aug 16–22 has end_date 2026-08-23."
+        },
+        "is_current": {
+          "type": "boolean",
+          "description": "Ignored. is_current is derived from the dates on read; accepted for backward compatibility."
+        }
+      },
+      "required": [
+        "start_date",
+        "end_date"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -50125,7 +50158,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/current",
     "displayName": "Get current time period",
     "summary": "Get current time period",
-    "description": "Current route delegates to ApiTimeSheetController.list() and does not call a dedicated current-period method.",
+    "description": "Returns the period containing today (UTC) or ?date=, via getCurrentTimePeriod(). When no period covers today it may materialize one from time period settings.",
     "tags": [
       "Work Management v1"
     ],
@@ -50278,7 +50311,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}",
     "displayName": "Update time period",
     "summary": "Update time period",
-    "description": "Updates time period UUID via updateTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
+    "description": "Updates time period UUID via updateTimePeriod(). start_date/end_date accept YYYY-MM-DD (datetimes are truncated to their date); is_current is ignored. Returns 409 when the period is closed, when it has time sheets, or when the new dates overlap another period. end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
@@ -50298,8 +50331,37 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ],
+          "description": "Exclusive end of the period: the first day after the period. A period covering Aug 16–22 has end_date 2026-08-23."
+        },
+        "is_current": {
+          "type": "boolean",
+          "description": "Ignored. is_current is derived from the dates on read; accepted for backward compatibility."
+        }
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -50335,7 +50397,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}",
     "displayName": "Delete time period",
     "summary": "Delete time period",
-    "description": "Deletes time period UUID via deleteTimePeriod().",
+    "description": "Deletes time period UUID via deleteTimePeriod(). Returns 409 when the period is closed or has time sheets.",
     "tags": [
       "Work Management v1"
     ],
@@ -50353,11 +50415,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
-    "requestBodySchema": {
-      "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
-    },
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -50392,7 +50449,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}/close",
     "displayName": "Close time period",
     "summary": "Close time period",
-    "description": "Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period close logic.",
+    "description": "Sets is_closed true (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.",
     "tags": [
       "Work Management v1"
     ],
@@ -50410,11 +50467,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
-    "requestBodySchema": {
-      "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
-    },
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -50449,7 +50501,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}/reopen",
     "displayName": "Reopen time period",
     "summary": "Reopen time period",
-    "description": "Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period reopen logic.",
+    "description": "Sets is_closed false (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.",
     "tags": [
       "Work Management v1"
     ],
@@ -50467,11 +50519,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
-    "requestBodySchema": {
-      "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
-    },
     "responseBodySchema": {
       "type": "object",
       "properties": {

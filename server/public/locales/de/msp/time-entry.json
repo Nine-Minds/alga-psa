@@ -457,7 +457,8 @@
       "missingFieldNamed": "Erforderliches Feld des Stundenzettels oder Zeiteintrags fehlt: {{field}}."
     },
     "timePeriod": {
-      "datesRequired": "Geben Sie gültige Start- und Enddaten ein."
+      "datesRequired": "Geben Sie gültige Start- und Enddaten ein.",
+      "closed": "Dieser Zeitraum ist geschlossen. Öffnen Sie ihn erneut, bevor Sie Änderungen vornehmen."
     },
     "timePeriodSettings": {
       "invalidValue": "Einer der Werte der Zeitraumeinstellung ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",

@@ -284,6 +284,18 @@
     "platformNotification": {
       "learnMore": "Mehr erfahren",
       "dismiss": "Benachrichtigung schließen"
+    },
+    "integrationHealth": {
+      "inboundEmail": {
+        "authFailure": "Eingehende E-Mails für {{mailbox}} sind pausiert — die Anmeldedaten funktionieren nicht mehr.",
+        "error": "Eingehende E-Mails für {{mailbox}} haben einen Fehler gemeldet und werden möglicherweise nicht empfangen."
+      },
+      "calendar": {
+        "error": "Die Kalendersynchronisierung für {{providerName}} hat einen Fehler gemeldet und synchronisiert nicht.",
+        "disconnected": "Die Kalendersynchronisierung für {{providerName}} ist getrennt und synchronisiert nicht."
+      },
+      "review": "Prüfen",
+      "dismiss": "Integrationshinweis schließen"
     }
   },
   "quickCreate": {

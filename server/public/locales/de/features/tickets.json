@@ -52,7 +52,6 @@
     "button": "Filter",
     "unassigned": "Nicht zugewiesen",
     "category": "Nach Kategorie filtern",
-    "clearFilters": "Filter löschen",
     "assignee": "Zuständiger",
     "allAssignees": "Alle Zuständigen",
     "responseState": "Antwortstatus",

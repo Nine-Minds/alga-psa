@@ -4028,6 +4028,8 @@
       "managePermission": "Permissão negada: você não tem permissão para gerenciar os mapeamentos contábeis.",
       "loadFailed": "Não é possível carregar os dados de mapeamento. Tente novamente.",
       "duplicate": "Já existe um mapeamento para esta entidade. Edite o mapeamento existente.",
+      "duplicateTarget": "Este destino já está mapeado para outra entidade nesta organização. Escolha um destino diferente.",
+      "duplicateXeroItem": "Este item do Xero já está mapeado para outro serviço. Um item só pode ser mapeado para um serviço; para faturar vários serviços com o mesmo código, mapeie-os para uma conta de receita.",
       "saveFailed": "Não é possível salvar o mapeamento. Tente novamente.",
       "idRequiredForUpdate": "O ID do mapeamento é obrigatório para a atualização.",
       "noUpdateData": "Nenhum dado de atualização informado.",

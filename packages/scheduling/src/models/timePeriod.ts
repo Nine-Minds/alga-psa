@@ -12,6 +12,7 @@ interface DbTimePeriod {
   start_date: string | Date;
   end_date: string | Date;
   tenant: string;
+  is_closed?: boolean;
 }
 
 function tenantScopedTable<T extends object = Record<string, unknown>>(
@@ -32,6 +33,8 @@ function toDbDate(date: Temporal.PlainDate | ISO8601String): string {
 
 // Helper function to convert database date to Temporal.PlainDate
 // After migration to DATE type, pg driver returns Date objects - handle both
+// LEVERAGE: friction pg-date-parsing — pg has no DATE (1082) type parser, so DATE arrives as a local-midnight Date;
+// toISOString() here is wrong east of UTC. Fix globally with a 1082 parser, not per call site.
 function fromDbDate(date: string | Date): Temporal.PlainDate {
   if (date instanceof Date) {
     return toPlainDate(date.toISOString().slice(0, 10));
@@ -181,7 +184,7 @@ export class TimePeriod {
     updates: Partial<Omit<ITimePeriod, 'period_id' | 'tenant'>>
   ): Promise<ITimePeriod> {
     // Create a clean object with only the fields we want to update
-    const dbUpdates: Record<string, string> = {};
+    const dbUpdates: Record<string, unknown> = { updated_at: knexOrTrx.fn.now() };
 
     // Convert dates if they exist
     if (updates.start_date) {
@@ -199,6 +202,26 @@ export class TimePeriod {
     if (!updatedPeriod) {
       throw new Error('Time period not found or belongs to different tenant');
     }
+
+    return {
+      ...updatedPeriod,
+      start_date: fromDbDate(updatedPeriod.start_date),
+      end_date: fromDbDate(updatedPeriod.end_date),
+    };
+  }
+
+  static async setClosed(
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    periodId: string,
+    closed: boolean
+  ): Promise<ITimePeriod | null> {
+    const [updatedPeriod] = await tenantScopedTable<DbTimePeriod>(knexOrTrx, 'time_periods', tenant)
+      .where('period_id', periodId)
+      .update({ is_closed: closed, updated_at: knexOrTrx.fn.now() } as any)
+      .returning('*');
+
+    if (!updatedPeriod) return null;
 
     return {
       ...updatedPeriod,

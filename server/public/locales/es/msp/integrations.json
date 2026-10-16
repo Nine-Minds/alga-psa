@@ -4028,6 +4028,8 @@
       "managePermission": "Permiso denegado: no tiene permiso para gestionar las asignaciones contables.",
       "loadFailed": "No se pueden cargar los datos de asignación. Inténtelo de nuevo.",
       "duplicate": "Ya existe una asignación para esta entidad. Edite la asignación existente en su lugar.",
+      "duplicateTarget": "Este destino ya está asignado a otra entidad en esta organización. Elija un destino diferente.",
+      "duplicateXeroItem": "Este artículo de Xero ya está asignado a otro servicio. Un artículo solo se puede asignar a un servicio; para facturar varios servicios con el mismo código, asígnelos a una cuenta de ingresos.",
       "saveFailed": "No se puede guardar la asignación. Inténtelo de nuevo.",
       "idRequiredForUpdate": "Se requiere el ID de la asignación para actualizar.",
       "noUpdateData": "No se proporcionaron datos de actualización.",

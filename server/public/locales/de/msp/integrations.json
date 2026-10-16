@@ -4028,6 +4028,8 @@
       "managePermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Buchhaltungszuordnungen zu verwalten.",
       "loadFailed": "Zuordnungsdaten können nicht geladen werden. Bitte versuchen Sie es erneut.",
       "duplicate": "Für dieses Objekt existiert bereits eine Zuordnung. Bearbeiten Sie stattdessen die vorhandene Zuordnung.",
+      "duplicateTarget": "Dieses Ziel ist in dieser Organisation bereits einer anderen Entität zugeordnet. Wählen Sie ein anderes Ziel.",
+      "duplicateXeroItem": "Dieser Xero-Artikel ist bereits einer anderen Dienstleistung zugeordnet. Ein Artikel kann nur einer Dienstleistung zugeordnet werden; um mehrere Dienstleistungen unter demselben Code abzurechnen, ordnen Sie sie stattdessen einem Erlöskonto zu.",
       "saveFailed": "Die Zuordnung kann nicht gespeichert werden. Bitte versuchen Sie es erneut.",
       "idRequiredForUpdate": "Für die Aktualisierung ist die Zuordnungs-ID erforderlich.",
       "noUpdateData": "Es wurden keine Aktualisierungsdaten übermittelt.",

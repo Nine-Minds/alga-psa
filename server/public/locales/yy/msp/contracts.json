@@ -1230,6 +1230,7 @@
       "usageBasedPlans": "〖Ŭşȧɠḗ-Ɓȧşḗḓ Ƥŀȧƞş ·······〗",
       "recurringQuantityLabel": "〖Řḗƈŭřřīƞɠ ʠŭȧƞŧīŧẏ: ········〗",
       "unitRateLabel": "〖Ŭƞīŧ řȧŧḗ: ····〗",
+      "hourlyRateLabel": "〖Ħȯŭřŀẏ řȧŧḗ: ·····〗",
       "unitRateFromCatalog": "〖Ƈȧŧȧŀȯɠ ƥřīƈḗ īƞ ŧħḗ ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ ················〗",
       "unitAmountLabel": "〖Řḗƈŭřřīƞɠ ȧḿȯŭƞŧ: ·······〗",
       "unitAmountValue": "〖{{count}} × {{rate}} = {{amount}} ··············〗"

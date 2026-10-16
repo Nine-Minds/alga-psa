@@ -288,7 +288,12 @@ const nextConfig = {
       '@alga-psa/types': '../packages/types/src',
       '@alga-psa/types/': '../packages/types/src/',
       '@alga-psa/core': '../packages/core/src',
+      // core exports whose name does not mirror src/ (they live in src/lib/) need
+      // an explicit entry: the '@alga-psa/core/' prefix would send them to
+      // src/<name>, and the dist/ fallback is absent wherever packages/ is
+      // mounted from source (e.g. the Teams development browser lane).
       '@alga-psa/core/rateLimit': '../packages/core/src/lib/rateLimit/index.ts',
+      '@alga-psa/core/fileNames': '../packages/core/src/lib/fileNames.ts',
       '@alga-psa/core/': '../packages/core/src/',
       '@alga-psa/validation': '../packages/validation/src',
       '@alga-psa/validation/': '../packages/validation/src/',
@@ -624,6 +629,9 @@ const nextConfig = {
       '@alga-psa/core/rateLimit': usePrebuilt
         ? path.join(prebuiltDirAbs('core'), 'lib/rateLimit/index.js')
         : path.join(__dirname, '../packages/core/src/lib/rateLimit/index.ts'),
+      '@alga-psa/core/fileNames': usePrebuilt
+        ? path.join(prebuiltDirAbs('core'), 'lib/fileNames.js')
+        : path.join(__dirname, '../packages/core/src/lib/fileNames.ts'),
       '@alga-psa/core/': `${prebuiltDirAbs('core')}/`,
       '@alga-psa/validation': prebuiltDirAbs('validation'),
       '@alga-psa/validation/': `${prebuiltDirAbs('validation')}/`,

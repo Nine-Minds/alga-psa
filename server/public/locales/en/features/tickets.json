@@ -60,7 +60,6 @@
     "button": "Filters",
     "unassigned": "Unassigned",
     "category": "Filter by category",
-    "clearFilters": "Clear filters",
     "assignee": "Assignee",
     "allAssignees": "All Assignees",
     "responseState": "Response State",

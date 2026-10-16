@@ -4028,6 +4028,8 @@
       "managePermission": "Autorisation refusée : vous n’avez pas l’autorisation de gérer les correspondances comptables.",
       "loadFailed": "Impossible de charger les données de correspondance. Veuillez réessayer.",
       "duplicate": "Une correspondance existe déjà pour cette entité. Modifiez plutôt la correspondance existante.",
+      "duplicateTarget": "Cette cible est déjà associée à une autre entité dans cette organisation. Choisissez une autre cible.",
+      "duplicateXeroItem": "Cet article Xero est déjà associé à un autre service. Un article ne peut être associé qu'à un seul service ; pour facturer plusieurs services avec le même code, associez-les plutôt à un compte de produits.",
       "saveFailed": "Impossible d’enregistrer la correspondance. Veuillez réessayer.",
       "idRequiredForUpdate": "L’identifiant de la correspondance est obligatoire pour la mise à jour.",
       "noUpdateData": "Aucune donnée de mise à jour fournie.",

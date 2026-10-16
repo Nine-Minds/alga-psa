@@ -4028,6 +4028,8 @@
       "managePermission": "Toestemming geweigerd: u hebt geen rechten om boekhoudkoppelingen te beheren.",
       "loadFailed": "Kan de koppelingsgegevens niet laden. Probeer het opnieuw.",
       "duplicate": "Er bestaat al een koppeling voor deze entiteit. Bewerk in plaats daarvan de bestaande koppeling.",
+      "duplicateTarget": "Dit doel is in deze organisatie al aan een andere entiteit gekoppeld. Kies een ander doel.",
+      "duplicateXeroItem": "Dit Xero-artikel is al aan een andere dienst gekoppeld. Een artikel kan aan slechts één dienst worden gekoppeld; koppel diensten aan een opbrengstrekening om ze onder dezelfde code te factureren.",
       "saveFailed": "Kan de koppeling niet opslaan. Probeer het opnieuw.",
       "idRequiredForUpdate": "Voor het bijwerken is de koppelings-ID verplicht.",
       "noUpdateData": "Er zijn geen bij te werken gegevens opgegeven.",

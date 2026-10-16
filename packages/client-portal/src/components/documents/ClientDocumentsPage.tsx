@@ -11,6 +11,7 @@ import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import type { IDocument, IFolderNode } from '@alga-psa/types';
 import { getClientDocuments, getClientDocumentFolders, getClientDocumentContent, ClientDocumentFilters } from '@alga-psa/client-portal/actions/client-portal-actions/client-documents';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
+import { isInlineTextDocumentMimeType } from '@alga-psa/core';
 import { getErrorMessage, isActionMessageError, isActionPermissionError, UserFacingError, userFacingErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DocumentRequestError, fetchAndSaveFile } from '../../lib/fetchAndSaveFile';
@@ -21,6 +22,14 @@ const isReturnedActionError = (
   value: unknown
 ): value is { readonly actionError: string } | { readonly permissionError: string } =>
   isActionMessageError(value) || isActionPermissionError(value);
+
+// Uploads are allowed up to the storage cap, and buffering a multi-megabyte log
+// or CSV export into a <pre> wedges the tab. Bigger text files stay download-only.
+const MAX_INLINE_TEXT_PREVIEW_BYTES = 2 * 1024 * 1024;
+
+const canPreviewAsText = (doc: IDocument): boolean =>
+  isInlineTextDocumentMimeType(doc.mime_type)
+  && !(typeof doc.file_size === 'number' && doc.file_size > MAX_INLINE_TEXT_PREVIEW_BYTES);
 
 function getDocumentIcon(mimeType: string | undefined): React.ReactNode {
   if (!mimeType) return <File className="w-5 h-5" />;
@@ -139,43 +148,51 @@ interface DocumentCardProps {
 function DocumentCard({ document, onView, onDownload, isDownloading, labels }: DocumentCardProps) {
   return (
     <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
+      <CardContent className="p-4 !pt-4">
+        {/* Beside an expanded folder sidebar an 800px portal leaves a 224px card,
+            and sharing the name's row with the actions cut the name to ~15px.
+            Under 18rem of card width the actions take their own line (~126px of
+            name instead); wider cards keep the original single row. */}
+        <div className="@container flex items-start gap-3">
           <div className="flex-shrink-0 p-2 bg-muted rounded-lg">
             {getDocumentIcon(document.mime_type)}
           </div>
-          <div className="flex-1 min-w-0">
-            <button type="button" id={`client-docs-title-view-${document.document_id}`} className="text-sm font-medium truncate text-left" onClick={() => onView(document)}>{document.document_name}</button>
-            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-              <span>{formatFileSize(document.file_size)}</span>
-              <span>·</span>
-              <span>{formatDate(document.entered_at)}</span>
+          <div className="flex flex-1 min-w-0 flex-col gap-1 @[18rem]:flex-row @[18rem]:items-start @[18rem]:gap-3">
+            <div className="flex-1 min-w-0">
+              <button type="button" id={`client-docs-title-view-${document.document_id}`} className="block w-full text-sm font-medium truncate text-left" title={document.document_name} onClick={() => onView(document)}>{document.document_name}</button>
+              <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
+                <span>{formatFileSize(document.file_size)}</span>
+                <span>·</span>
+                <span>{formatDate(document.entered_at)}</span>
+              </div>
+            </div>
+            <div className="flex flex-shrink-0 items-center justify-end gap-1">
+              <Button
+                id={`client-docs-view-document-${document.document_id}`}
+                variant="ghost" size="sm" onClick={() => onView(document)} aria-label={labels.view}
+                className="flex-shrink-0"><Eye className="w-4 h-4" /></Button>
+              {document.file_id ? <Button
+                id={`client-docs-download-document-${document.document_id}`}
+                variant="ghost"
+                size="sm"
+                onClick={() => onDownload(document)}
+                disabled={isDownloading}
+                className="flex-shrink-0"
+              >
+                <Download className="w-4 h-4" />
+              </Button> : <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button id={`client-docs-download-document-${document.document_id}`} variant="ghost" size="sm" disabled={isDownloading} aria-label={labels.download} className="flex-shrink-0">
+                    <Download className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem id={`client-docs-download-pdf-${document.document_id}`} onSelect={() => onDownload(document, 'pdf')}>{labels.downloadPdf}</DropdownMenuItem>
+                  <DropdownMenuItem id={`client-docs-download-markdown-${document.document_id}`} onSelect={() => onDownload(document, 'md')}>{labels.downloadMarkdown}</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>}
             </div>
           </div>
-          <Button
-            id={`client-docs-view-document-${document.document_id}`}
-            variant="ghost" size="sm" onClick={() => onView(document)} aria-label={labels.view}
-            className="flex-shrink-0"><Eye className="w-4 h-4" /></Button>
-          {document.file_id ? <Button
-            id={`client-docs-download-document-${document.document_id}`}
-            variant="ghost"
-            size="sm"
-            onClick={() => onDownload(document)}
-            disabled={isDownloading}
-            className="flex-shrink-0"
-          >
-            <Download className="w-4 h-4" />
-          </Button> : <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button id={`client-docs-download-document-${document.document_id}`} variant="ghost" size="sm" disabled={isDownloading} aria-label={labels.download}>
-                <Download className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem id={`client-docs-download-pdf-${document.document_id}`} onSelect={() => onDownload(document, 'pdf')}>{labels.downloadPdf}</DropdownMenuItem>
-              <DropdownMenuItem id={`client-docs-download-markdown-${document.document_id}`} onSelect={() => onDownload(document, 'md')}>{labels.downloadMarkdown}</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>}
         </div>
       </CardContent>
     </Card>
@@ -301,6 +318,15 @@ export default function ClientDocumentsPage() {
       if (requestId !== previewRequestId.current) return;
       if (isReturnedActionError(content)) throw new UserFacingError(getErrorMessage(content));
       if (!content || !('content' in content)) throw new Error('Document preview returned no content');
+      if (content.content.kind === 'file' && canPreviewAsText(doc)) {
+        const response = await fetch(`/api/client-portal/documents/${encodeURIComponent(doc.document_id)}/file?disposition=inline`, { credentials: 'include' });
+        if (requestId !== previewRequestId.current) return;
+        if (!response.ok) throw new UserFacingError(t('portal.previewError', 'Could not load this preview. Please try again.'));
+        const text = await response.text();
+        if (requestId !== previewRequestId.current) return;
+        setPreviewContent({ ...content, content: { kind: 'text', content: text } });
+        return;
+      }
       if (content.content.kind === 'file' && (doc.mime_type === 'application/pdf' || doc.mime_type?.startsWith('image/') && doc.mime_type !== 'image/svg+xml')) {
         const response = await fetch(`/api/client-portal/documents/${encodeURIComponent(doc.document_id)}/file?disposition=inline`, { credentials: 'include' });
         if (requestId !== previewRequestId.current) return;
@@ -341,7 +367,7 @@ export default function ClientDocumentsPage() {
         {folders.length > 0 && (
           <div className={`flex-shrink-0 transition-all ${isFolderSidebarCollapsed ? 'w-10' : 'w-64'}`}>
             <Card className="h-full">
-              <CardContent className="p-2 h-full overflow-auto">
+              <CardContent className="p-2 !pt-2 h-full overflow-auto">
                 {isFolderSidebarCollapsed ? (
                   <CollapseToggleButton
                     id="client-docs-expand-sidebar"
@@ -427,7 +453,9 @@ export default function ClientDocumentsPage() {
                 <p>{t('empty.default', 'No documents found')}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              /* Columns follow the space left by the folder sidebar: a fixed 3-up grid
+                 squeezed cards to ~130px at 1024px, leaving no room for the name. */
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))] gap-4">
                 {documents.map((doc) => (
                   <DocumentCard
                     key={doc.document_id}
@@ -477,7 +505,7 @@ export default function ClientDocumentsPage() {
       </div>
       <Dialog isOpen={!!preview} onClose={closePreview} title={preview?.document_name || t('portal.view', 'View document')} className="max-w-4xl" footer={preview && <div className="flex justify-end gap-2">{preview.file_id ? <Button id={`client-docs-preview-download-${preview.document_id}`} onClick={() => void handleDownload(preview)}>{t('portal.download', 'Download')}</Button> : <><Button id={`client-docs-preview-download-pdf-${preview.document_id}`} onClick={() => void handleDownload(preview, 'pdf')}>{t('portal.downloadPdf', 'Download PDF')}</Button><Button id={`client-docs-preview-markdown-${preview.document_id}`} variant="outline" onClick={() => void handleDownload(preview, 'md')}>{t('portal.downloadMarkdown', 'Download Markdown')}</Button></>}</div>}>
         <DialogContent>
-          {previewError ? <p role="alert" className="text-destructive">{previewError}</p> : isPreviewLoading || !previewContent ? <div role="status" aria-label={t('portal.loadingPreview', 'Loading preview')}><Spinner size="sm" /></div> : previewContent.content.kind === 'block' ? <DocumentRenderBoundary key={preview?.document_id} fallback={t('portal.previewError', 'Could not load this preview. Please try again.')}><DocumentViewerRenderer render={renderDocumentViewer} content={previewContent.content.blockData} /></DocumentRenderBoundary> : previewContent.content.kind === 'text' ? <pre className="whitespace-pre-wrap">{previewContent.content.content}</pre> : previewUrl && preview?.mime_type === 'application/pdf' ? <iframe title={preview.document_name} src={previewUrl} onError={() => setPreviewError(t('portal.previewError', 'Could not load this preview. Please try again.'))} className="w-full h-[70vh]" /> : previewUrl ? <img alt={preview?.document_name} src={previewUrl} onError={() => setPreviewError(t('portal.previewError', 'Could not load this preview. Please try again.'))} className="max-w-full max-h-[70vh] mx-auto" /> : <p>{t('portal.previewUnavailable', 'Preview is not available for this file type.')}</p>}
+          {previewError ? <p role="alert" className="text-destructive">{previewError}</p> : isPreviewLoading || !previewContent ? <div role="status" aria-label={t('portal.loadingPreview', 'Loading preview')}><Spinner size="sm" /></div> : previewContent.content.kind === 'block' ? <DocumentRenderBoundary key={preview?.document_id} fallback={t('portal.previewError', 'Could not load this preview. Please try again.')}><DocumentViewerRenderer render={renderDocumentViewer} content={previewContent.content.blockData} /></DocumentRenderBoundary> : previewContent.content.kind === 'text' ? <pre className="whitespace-pre-wrap break-words">{previewContent.content.content}</pre> : previewUrl && preview?.mime_type === 'application/pdf' ? <iframe title={preview.document_name} src={previewUrl} onError={() => setPreviewError(t('portal.previewError', 'Could not load this preview. Please try again.'))} className="w-full h-[70vh]" /> : previewUrl ? <img alt={preview?.document_name} src={previewUrl} onError={() => setPreviewError(t('portal.previewError', 'Could not load this preview. Please try again.'))} className="max-w-full max-h-[70vh] mx-auto" /> : <p>{t('portal.previewUnavailable', 'Preview is not available for this file type.')}</p>}
         </DialogContent>
       </Dialog>
     </div>

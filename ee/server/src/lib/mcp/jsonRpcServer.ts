@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  searchRegistryEntries,
+  runRegistrySearch,
   buildRequest,
   buildMetaToolDefinitions,
   SEARCH_API_REGISTRY_TOOL,
@@ -62,18 +62,13 @@ const textContent = (data: unknown): Array<{ type: 'text'; text: string }> => [
 const toolOk = (data: unknown): ToolOutcome => ({ content: textContent(data), isError: false });
 const toolErr = (message: string): ToolOutcome => ({ content: textContent({ error: message }), isError: true });
 
-function clampInt(value: unknown, fallback: number, min: number, max: number): number {
-  const n = typeof value === 'number' ? value : parseInt(String(value ?? ''), 10);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(Math.floor(n), max));
-}
-
 function bearerToken(authHeader: string | null): string | null {
   if (!authHeader) return null;
   const m = /^Bearer\s+(.+)$/i.exec(authHeader.trim());
   return m ? m[1] : null;
 }
 
+// LEVERAGE: pattern registry-resolve-entry — same id-tolerant lookup lives in alga-mcp-connector tools.ts and chat's resolveRegistryEntry
 function resolveEntry(registry: ChatApiRegistryEntry[], entryId: unknown): ChatApiRegistryEntry | null {
   const want = String(entryId ?? '').replace(/-/g, '_');
   if (!want) return null;
@@ -102,20 +97,8 @@ async function selfFetch(
 
 async function dispatchTool(name: string, args: Record<string, unknown>, ctx: DispatchCtx): Promise<ToolOutcome> {
   if (name === SEARCH_API_REGISTRY_TOOL) {
-    const query = typeof args.query === 'string' ? args.query : '';
-    if (!query.trim()) return toolErr('search_api_registry requires a non-empty "query".');
-    const limit = clampInt(args.limit, 5, 1, 25);
-    const results = searchRegistryEntries(ctx.registry, query, limit).map((r) => ({
-      entryId: r.entry.id,
-      displayName: r.entry.displayName,
-      method: r.entry.method.toUpperCase(),
-      path: r.entry.path,
-      summary: r.entry.summary,
-      parameters: r.entry.parameters,
-      approvalRequired: r.entry.approvalRequired,
-      score: Number(r.score.toFixed(2)),
-    }));
-    return toolOk({ query, count: results.length, results });
+    const r = runRegistrySearch(ctx.registry, args);
+    return r.ok ? toolOk(r.data) : toolErr(r.error);
   }
 
   if (name === SEARCH_BUSINESS_DATA_TOOL) {

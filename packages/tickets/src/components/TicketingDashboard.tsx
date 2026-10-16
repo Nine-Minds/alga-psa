@@ -2433,13 +2433,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       </button>
                     </span>
                   ))}
-                  <button
-                    type="button"
-                    onClick={handleResetFilters}
-                    className="ml-1 text-xs font-medium text-[rgb(var(--color-text-500))] underline-offset-2 hover:text-[rgb(var(--color-text-700))] hover:underline"
-                  >
-                    {t('filters.clearFilters', 'Clear filters')}
-                  </button>
                 </div>
               )}
 
