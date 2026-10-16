@@ -92,28 +92,9 @@ export class PermissionRoleService extends BaseService<IRole> {
     });
   }
 
-  /**
-   * Override to exclude created_by and updated_by fields which don't exist in roles table
-   */
-  protected addCreateAuditFields(data: any, context: ServiceContext): any {
-    const now = new Date().toISOString();
-    return {
-      ...data,
-      [this.auditFields.createdAt]: now,
-      [this.auditFields.updatedAt]: now,
-      [this.tenantColumn]: context.tenant
-    };
-  }
-
-  /**
-   * Override to exclude updated_by field which doesn't exist in roles table
-   */
-  protected addUpdateAuditFields(data: any, context: ServiceContext): any {
-    return {
-      ...data,
-      [this.auditFields.updatedAt]: new Date().toISOString()
-    };
-  }
+  // The base audit helpers filter the stamped fields against the target table's
+  // columns, so `roles` (which has created_at/updated_at but not
+  // created_by/updated_by) no longer needs an override.
 
   // =============================================================================
   // PERMISSION MANAGEMENT
@@ -577,7 +558,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         }
       }
 
-      roleData = this.addCreateAuditFields(roleData, context);
+      roleData = await this.addCreateAuditFields(trx, roleData, context, 'roles');
       const [role] = await tenantDb(trx, context.tenant).table('roles').insert(roleData).returning('*');
 
       // Handle permissions assignment
@@ -655,7 +636,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         }
       }
 
-      const updateData = this.addUpdateAuditFields(data, context);
+      const updateData = await this.addUpdateAuditFields(trx, data, context, 'roles');
       
       const [role] = await tenantDb(trx, context.tenant).table('roles')
         .where('role_id', roleId)

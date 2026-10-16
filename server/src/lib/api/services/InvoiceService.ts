@@ -663,12 +663,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       // Prepare update data. `items` is not an invoices column; it is handled below.
       const { items: _items, ...headerData } = data;
-      // LEVERAGE: pattern audit-stamped-update — hand-built filterAuditFields({..., updated_by, updated_at}) payload; a tenantDb(...).updateAudited() helper may be the missing layer
-      const updateData: any = await this.filterAuditFields(trx, {
-        ...headerData,
-        updated_by: context.userId,
-        updated_at: new Date()
-      }, 'invoices');
+      const updateData: any = await this.addUpdateAuditFields(trx, headerData, context, 'invoices');
 
       // Remove undefined values
       Object.keys(updateData).forEach(key => {
@@ -951,16 +946,13 @@ export class InvoiceService extends BaseService<IInvoice> {
       const taxAmount = lineItems.reduce((sum: number, item: any) => sum + Number(item.tax_amount || 0), 0);
       const totalAmount = subtotal + taxAmount;
 
-      // LEVERAGE: pattern audit-stamped-update — hand-built filterAuditFields({..., updated_by, updated_at}) payload; a tenantDb(...).updateAudited() helper may be the missing layer
-      const invoiceUpdate = await this.filterAuditFields(trx, {
+      const invoiceUpdate = await this.addUpdateAuditFields(trx, {
         status: 'sent', // Change to sent instead of finalized
         subtotal,
         tax: taxAmount,
         total_amount: totalAmount,
         finalized_at: data.finalized_at || new Date().toISOString().split('T')[0],
-        updated_by: context.userId,
-        updated_at: new Date()
-      }, 'invoices');
+      }, context, 'invoices');
 
       // Update invoice status and amounts
       await tenantDb(trx, context.tenant).table('invoices')

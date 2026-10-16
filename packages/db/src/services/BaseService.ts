@@ -122,19 +122,35 @@ export abstract class BaseService<T = any> {
   }
 
   /**
+   * Map of range filter keys (`<field>_from` / `<field>_to`) to the timestamp
+   * column they constrain. Subclasses that expose additional ranges can extend
+   * this map (e.g. override, spread `super.rangeFilterColumns()`, and add keys).
+   *
+   * The map is explicit on purpose: a `_from`/`_to` key that is not listed is
+   * never guessed at, so an unsupported key cannot be turned into a reference to
+   * a column that does not exist.
+   */
+  protected rangeFilterColumns(): Record<string, string> {
+    return {
+      created_from: this.auditFields.createdAt,
+      created_to: this.auditFields.createdAt,
+      updated_from: this.auditFields.updatedAt,
+      updated_to: this.auditFields.updatedAt,
+    };
+  }
+
+  /**
    * Apply filters to query
    */
   protected applyFilters(query: Knex.QueryBuilder, filters: Record<string, any>): Knex.QueryBuilder {
+    const rangeColumns = this.rangeFilterColumns();
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
 
-      // Handle special filter types
-      if (key.endsWith('_from')) {
-        const field = key.replace('_from', '');
-        query.where(field, '>=', value);
-      } else if (key.endsWith('_to')) {
-        const field = key.replace('_to', '');
-        query.where(field, '<=', value);
+      const rangeColumn = rangeColumns[key];
+      if (rangeColumn) {
+        query.where(rangeColumn, key.endsWith('_from') ? '>=' : '<=', value);
       } else if (key === 'search' && this.searchableFields.length > 0) {
         query.where(subQuery => {
           this.searchableFields.forEach((field, index) => {
@@ -147,6 +163,10 @@ export abstract class BaseService<T = any> {
         });
       } else if (Array.isArray(value)) {
         query.whereIn(key, value);
+      } else if (key.endsWith('_from') || key.endsWith('_to')) {
+        // Unmapped range key. Applying it would reference a column derived from
+        // the key (e.g. `updated` from `updated_from`), which almost certainly
+        // does not exist. Skip it rather than issue an invalid column reference.
       } else {
         query.where(key, value);
       }
@@ -182,29 +202,54 @@ export abstract class BaseService<T = any> {
   }
 
   /**
-   * Add audit fields for create operations
+   * Stamp create audit fields and return the row already filtered against the
+   * target table's columns, so a service can never write an audit column the
+   * table does not have. Pass `targetTable` when the row is written to a table
+   * other than this service's default `tableName`.
+   *
+   * This is the only supported way to add create audit fields; it goes through
+   * `filterAuditFields`, which reuses the shared `tableColumnsCache`.
    */
-  protected addCreateAuditFields(data: any, context: ServiceContext): any {
+  protected async addCreateAuditFields(
+    conn: Knex | Knex.Transaction,
+    data: any,
+    context: ServiceContext,
+    targetTable: string = this.tableName
+  ): Promise<any> {
     const now = new Date().toISOString();
-    return {
-      ...data,
-      [this.auditFields.createdBy]: context.userId,
-      [this.auditFields.updatedBy]: context.userId,
-      [this.auditFields.createdAt]: now,
-      [this.auditFields.updatedAt]: now,
-      [this.tenantColumn]: context.tenant
-    };
+    return this.filterAuditFields(
+      conn,
+      {
+        ...data,
+        [this.auditFields.createdBy]: context.userId,
+        [this.auditFields.updatedBy]: context.userId,
+        [this.auditFields.createdAt]: now,
+        [this.auditFields.updatedAt]: now,
+        [this.tenantColumn]: context.tenant
+      },
+      targetTable
+    );
   }
 
   /**
-   * Add audit fields for update operations
+   * Stamp update audit fields and return the row already filtered against the
+   * target table's columns. See `addCreateAuditFields` for the contract.
    */
-  protected addUpdateAuditFields(data: any, context: ServiceContext): any {
-    return {
-      ...data,
-      [this.auditFields.updatedBy]: context.userId,
-      [this.auditFields.updatedAt]: new Date().toISOString()
-    };
+  protected async addUpdateAuditFields(
+    conn: Knex | Knex.Transaction,
+    data: any,
+    context: ServiceContext,
+    targetTable: string = this.tableName
+  ): Promise<any> {
+    return this.filterAuditFields(
+      conn,
+      {
+        ...data,
+        [this.auditFields.updatedBy]: context.userId,
+        [this.auditFields.updatedAt]: new Date().toISOString()
+      },
+      targetTable
+    );
   }
 
   /**
@@ -318,10 +363,7 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const auditedData = await this.filterAuditFields(
-        trx,
-        this.addCreateAuditFields(data, context)
-      );
+      const auditedData = await this.addCreateAuditFields(trx, data, context);
       const [result] = await this.buildTenantScopedQuery(trx, context)
         .insert(auditedData)
         .returning('*');
@@ -336,10 +378,7 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const auditedData = await this.filterAuditFields(
-        trx,
-        this.addUpdateAuditFields(data, context)
-      );
+      const auditedData = await this.addUpdateAuditFields(trx, data, context);
 
       const [result] = await this.buildTenantScopedQuery(trx, context)
         .where(this.primaryKey, id)
@@ -362,12 +401,10 @@ export abstract class BaseService<T = any> {
 
     return withTransaction(knex, async (trx) => {
       if (this.softDelete) {
-        const auditedData = await this.filterAuditFields(
+        const auditedData = await this.addUpdateAuditFields(
           trx,
-          this.addUpdateAuditFields(
-            { deleted_at: new Date().toISOString() },
-            context
-          )
+          { deleted_at: new Date().toISOString() },
+          context
         );
 
         await this.buildTenantScopedQuery(trx, context)
@@ -401,7 +438,9 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const auditedData = data.map(item => this.addCreateAuditFields(item, context));
+      const auditedData = await Promise.all(
+        data.map(item => this.addCreateAuditFields(trx, item, context))
+      );
       const results = await this.buildTenantScopedQuery(trx, context)
         .insert(auditedData)
         .returning('*');
@@ -416,7 +455,7 @@ export abstract class BaseService<T = any> {
       const results: any[] = [];
 
       for (const update of updates) {
-        const auditedData = this.addUpdateAuditFields(update.data, context);
+        const auditedData = await this.addUpdateAuditFields(trx, update.data, context);
 
         const [result] = await this.buildTenantScopedQuery(trx, context)
           .where(this.primaryKey, update.id)
@@ -437,7 +476,8 @@ export abstract class BaseService<T = any> {
 
     return withTransaction(knex, async (trx) => {
       if (this.softDelete) {
-        const auditedData = this.addUpdateAuditFields(
+        const auditedData = await this.addUpdateAuditFields(
+          trx,
           { deleted_at: new Date().toISOString() },
           context
         );
