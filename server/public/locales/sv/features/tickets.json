@@ -2316,6 +2316,8 @@
     "runningElsewhereTicket": "Pågår på ett annat ärende: {{label}}",
     "pausedElsewhereTask": "Pausat på en annan uppgift: {{label}}",
     "runningElsewhereTask": "Pågår på en annan uppgift: {{label}}",
+    "pausedElsewhereShared": "Pausad på ett annat delat objekt: {{label}}",
+    "runningElsewhereShared": "Pågår på ett annat delat objekt: {{label}}",
     "switch": "Byt hit",
     "start": "Starta stoppur",
     "resume": "Återuppta stoppur",

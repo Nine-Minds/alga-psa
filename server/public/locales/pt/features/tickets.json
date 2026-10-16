@@ -2316,6 +2316,8 @@
     "runningElsewhereTicket": "Em andamento em outro ticket: {{label}}",
     "pausedElsewhereTask": "Pausado em outra tarefa: {{label}}",
     "runningElsewhereTask": "Em andamento em outra tarefa: {{label}}",
+    "pausedElsewhereShared": "Pausado em outro item compartilhado: {{label}}",
+    "runningElsewhereShared": "Em andamento em outro item compartilhado: {{label}}",
     "switch": "Mudar para cá",
     "start": "Iniciar cronômetro",
     "resume": "Retomar cronômetro",

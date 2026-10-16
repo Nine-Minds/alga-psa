@@ -2316,6 +2316,8 @@
     "runningElsewhereTicket": "Loopt op een ander ticket: {{label}}",
     "pausedElsewhereTask": "Gepauzeerd op een andere taak: {{label}}",
     "runningElsewhereTask": "Loopt op een andere taak: {{label}}",
+    "pausedElsewhereShared": "Gepauzeerd op een ander gedeeld item: {{label}}",
+    "runningElsewhereShared": "Actief op een ander gedeeld item: {{label}}",
     "switch": "Hier naartoe wisselen",
     "start": "Stopwatch starten",
     "resume": "Stopwatch hervatten",

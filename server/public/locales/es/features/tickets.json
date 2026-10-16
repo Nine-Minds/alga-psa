@@ -2316,6 +2316,8 @@
     "runningElsewhereTicket": "En marcha en otro ticket: {{label}}",
     "pausedElsewhereTask": "En pausa en otra tarea: {{label}}",
     "runningElsewhereTask": "En marcha en otra tarea: {{label}}",
+    "pausedElsewhereShared": "En pausa en otro elemento compartido: {{label}}",
+    "runningElsewhereShared": "En curso en otro elemento compartido: {{label}}",
     "switch": "Cambiar aquí",
     "start": "Iniciar cronómetro",
     "resume": "Reanudar cronómetro",

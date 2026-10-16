@@ -2316,6 +2316,8 @@
     "runningElsewhereTicket": "⟦Řŭƞƞīƞɠ ȯƞ ȧƞȯŧħḗř ŧīƈķḗŧ: {{label}}⟧",
     "pausedElsewhereTask": "⟦Ƥȧŭşḗḓ ȯƞ ȧƞȯŧħḗř ŧȧşķ: {{label}}⟧",
     "runningElsewhereTask": "⟦Řŭƞƞīƞɠ ȯƞ ȧƞȯŧħḗř ŧȧşķ: {{label}}⟧",
+    "pausedElsewhereShared": "⟦Ƥȧŭşḗḓ ȯƞ ȧƞȯŧħḗř şħȧřḗḓ īŧḗḿ: {{label}}⟧",
+    "runningElsewhereShared": "⟦Řŭƞƞīƞɠ ȯƞ ȧƞȯŧħḗř şħȧřḗḓ īŧḗḿ: {{label}}⟧",
     "switch": "⟦Şẇīŧƈħ ħḗřḗ⟧",
     "start": "⟦Şŧȧřŧ şŧȯƥẇȧŧƈħ⟧",
     "resume": "⟦Řḗşŭḿḗ şŧȯƥẇȧŧƈħ⟧",

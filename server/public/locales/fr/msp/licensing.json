@@ -494,6 +494,13 @@
         "team": "Équipes"
       }
     },
+    "section": {
+      "title": "Cogestion",
+      "viewHistory": "Afficher l'historique des transferts",
+      "responsible": "Responsable",
+      "change": "Modifier",
+      "privateTo": "Privé pour {{organization}}"
+    },
     "ticket": {
       "title": "Ticket cogéré",
       "escalate": "Transférer au MSP",
@@ -670,6 +677,7 @@
         "notReady": "Certains fichiers ne sont pas prêts. Réessayez pour terminer le téléversement et envoyer le même message.",
         "preparationFailed": "Impossible de lire les fichiers sélectionnés. Sélectionnez-les à nouveau ou retirez-les avant de réessayer.",
         "abandoned": "Ce brouillon a été supprimé. Enregistrez à nouveau pour créer un nouveau message avec les fichiers sélectionnés.",
+        "audienceUnavailable": "Les fichiers ne peuvent pas être joints aux messages de ce public. Retirez les fichiers ou choisissez un autre public.",
         "cancelUnknownOutcome": "Nous n’avons pas pu confirmer l’annulation. Réessayez pour vérifier la même demande d’annulation.",
         "canceling": "Annulation…"
       }

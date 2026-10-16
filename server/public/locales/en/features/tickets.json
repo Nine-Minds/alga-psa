@@ -2316,6 +2316,8 @@
     "runningElsewhereTicket": "Running on another ticket: {{label}}",
     "pausedElsewhereTask": "Paused on another task: {{label}}",
     "runningElsewhereTask": "Running on another task: {{label}}",
+    "pausedElsewhereShared": "Paused on another shared item: {{label}}",
+    "runningElsewhereShared": "Running on another shared item: {{label}}",
     "switch": "Switch here",
     "start": "Start stopwatch",
     "resume": "Resume stopwatch",
