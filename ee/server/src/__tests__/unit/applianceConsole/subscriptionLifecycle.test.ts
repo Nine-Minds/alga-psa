@@ -5,6 +5,11 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 
 const c4 = vi.hoisted(() => ({
+  AlgaLicenseHttpError: class AlgaLicenseHttpError extends Error {
+    constructor(message: string, readonly status: number) {
+      super(message);
+    }
+  },
   revokeApplianceEntitlement: vi.fn(),
   reactivateApplianceEntitlement: vi.fn(),
   updateApplianceEntitlementSeats: vi.fn(),
@@ -68,16 +73,28 @@ describe('appliance subscription lifecycle', () => {
     expect(decideLifecycleAction(event('customer.subscription.updated', lapsed, { status: 'past_due' }), lapsed)).toEqual({ action: 'revoke' });
   });
 
-  it('reactivates on any live status, carrying seats when there is a per-seat item', () => {
+  it('reactivates only on a lapsed→live transition, carrying seats when there is a per-seat item', () => {
     const sub = subscription();
     const upd = (prev?: Record<string, unknown>) => event('customer.subscription.updated', sub, prev);
     expect(decideLifecycleAction(upd({ status: 'unpaid' }), sub)).toEqual({ action: 'reactivate', seats: 5 });
-    expect(decideLifecycleAction(upd({ items: {} }), sub)).toEqual({ action: 'reactivate', seats: 5 });
-    expect(decideLifecycleAction(upd(), sub)).toEqual({ action: 'reactivate', seats: 5 });
+    expect(decideLifecycleAction(upd({ status: 'canceled', items: {} }), sub)).toEqual({ action: 'reactivate', seats: 5 });
     const trialing = subscription({ status: 'trialing' });
-    expect(decideLifecycleAction(event('customer.subscription.updated', trialing), trialing)).toEqual({ action: 'reactivate', seats: 5 });
+    expect(decideLifecycleAction(event('customer.subscription.updated', trialing, { status: 'incomplete_expired' }), trialing)).toEqual({ action: 'reactivate', seats: 5 });
     const flat = subscription({ items: { data: [] } });
     expect(decideLifecycleAction(event('customer.subscription.updated', flat, { status: 'canceled' }), flat)).toEqual({ action: 'reactivate' });
+  });
+
+  it('does not reactivate on routine live updates (no status transition)', () => {
+    const sub = subscription();
+    const upd = (prev?: Record<string, unknown>) => event('customer.subscription.updated', sub, prev);
+    expect(decideLifecycleAction(upd(), sub)).toEqual({ action: 'none' });
+    expect(decideLifecycleAction(upd({ metadata: {} }), sub)).toEqual({ action: 'none' });
+    expect(decideLifecycleAction(upd({ status: 'trialing' }), sub)).toEqual({ action: 'none' });
+  });
+
+  it('syncs seats only when the quantity changed on a live sub with no status transition', () => {
+    const sub = subscription();
+    expect(decideLifecycleAction(event('customer.subscription.updated', sub, { items: {} }), sub)).toEqual({ action: 'sync-seats', seats: 5 });
   });
 
   it('does nothing for non-lapsed, non-live statuses such as past_due', () => {
@@ -138,11 +155,22 @@ describe('appliance subscription lifecycle', () => {
     expect(c4.updateApplianceEntitlementSeats).not.toHaveBeenCalled();
   });
 
-  it('reactivates on an active update with no previous_attributes (retry / out-of-order)', async () => {
+  it('a routine live update (no status/items change) calls neither reactivate nor syncSeats', async () => {
     const active = subscription();
     stripe.subscriptions.retrieve.mockResolvedValue(active);
+    const outcome = await handleApplianceSubscriptionEvent(event('customer.subscription.updated', active, { metadata: {} }), stripe, deps());
+    expect(outcome.action).toBe('none');
     await handleApplianceSubscriptionEvent(event('customer.subscription.updated', active), stripe, deps());
-    expect(c4.reactivateApplianceEntitlement).toHaveBeenCalledWith('sub_app');
+    expect(c4.reactivateApplianceEntitlement).not.toHaveBeenCalled();
+    expect(c4.updateApplianceEntitlementSeats).not.toHaveBeenCalled();
+  });
+
+  it('a quantity change with no status change calls syncSeats only', async () => {
+    const active = subscription();
+    stripe.subscriptions.retrieve.mockResolvedValue(active);
+    const outcome = await handleApplianceSubscriptionEvent(event('customer.subscription.updated', active, { items: {} }), stripe, deps());
+    expect(outcome).toMatchObject({ action: 'sync-seats', seats: 5 });
+    expect(c4.reactivateApplianceEntitlement).not.toHaveBeenCalled();
     expect(c4.updateApplianceEntitlementSeats).toHaveBeenCalledWith(TENANT, 5);
   });
 
@@ -164,20 +192,32 @@ describe('appliance subscription lifecycle', () => {
     expect(c4.revokeApplianceEntitlement).toHaveBeenCalledWith('sub_app');
   });
 
-  it('propagates a reactivate failure so Stripe retries, and skips the seat sync', async () => {
+  it('treats a C4 404 on reactivate as nothing to do: warns, action none, no seat sync, no throw', async () => {
     const active = subscription();
     stripe.subscriptions.retrieve.mockResolvedValue(active);
-    c4.reactivateApplianceEntitlement.mockRejectedValue(new Error('alga-license down'));
+    c4.reactivateApplianceEntitlement.mockRejectedValue(new c4.AlgaLicenseHttpError('HTTP 404 not_found', 404));
+    const outcome = await handleApplianceSubscriptionEvent(event('customer.subscription.updated', active, { status: 'unpaid' }), stripe, deps());
+    expect(outcome).toMatchObject({ handled: true, action: 'none' });
+    expect(outcome.seats).toBeUndefined();
+    expect(c4.updateApplianceEntitlementSeats).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('sub_app'));
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining(TENANT));
+  });
+
+  it('propagates a C4 500 on reactivate so Stripe retries, and skips the seat sync', async () => {
+    const active = subscription();
+    stripe.subscriptions.retrieve.mockResolvedValue(active);
+    c4.reactivateApplianceEntitlement.mockRejectedValue(new c4.AlgaLicenseHttpError('HTTP 500', 500));
     await expect(
       handleApplianceSubscriptionEvent(event('customer.subscription.updated', active, { status: 'unpaid' }), stripe, deps()),
-    ).rejects.toThrow('alga-license down');
+    ).rejects.toThrow('HTTP 500');
     expect(c4.updateApplianceEntitlementSeats).not.toHaveBeenCalled();
   });
 
   it('still reactivates an active sub with no tenant id, skipping the seat sync with a warning', async () => {
     const orphan = subscription({ metadata: { deploymentType: 'appliance' } });
     stripe.subscriptions.retrieve.mockResolvedValue(orphan);
-    const outcome = await handleApplianceSubscriptionEvent(event('customer.subscription.updated', orphan, { items: {} }), stripe, deps());
+    const outcome = await handleApplianceSubscriptionEvent(event('customer.subscription.updated', orphan, { status: 'unpaid' }), stripe, deps());
     expect(outcome.action).toBe('reactivate');
     expect(outcome.seats).toBeUndefined();
     expect(c4.reactivateApplianceEntitlement).toHaveBeenCalledWith('sub_app');

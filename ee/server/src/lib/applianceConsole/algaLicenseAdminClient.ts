@@ -180,6 +180,17 @@ function configFromEnv(): AlgaLicenseConfig {
   return { serviceUrl: serviceUrl.replace(/\/$/, ''), serviceSecret: loadServiceSecret() };
 }
 
+/** Non-2xx response from alga-license; `status` lets callers tell 404 from a real failure. */
+export class AlgaLicenseHttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'AlgaLicenseHttpError';
+  }
+}
+
 async function errorDetail(res: Response): Promise<string> {
   try {
     const body = (await res.json()) as { error?: string; code?: string };
@@ -226,7 +237,10 @@ async function send<T>(method: 'POST' | 'PATCH', path: string, body: unknown): P
     throw new Error(`alga-license ${method} ${path} failed: ${err instanceof Error ? err.message : String(err)}`);
   }
   if (!res.ok) {
-    throw new Error(`alga-license ${method} ${path} returned HTTP ${res.status}${await errorDetail(res)}`);
+    throw new AlgaLicenseHttpError(
+      `alga-license ${method} ${path} returned HTTP ${res.status}${await errorDetail(res)}`,
+      res.status,
+    );
   }
   return (await res.json()) as T;
 }

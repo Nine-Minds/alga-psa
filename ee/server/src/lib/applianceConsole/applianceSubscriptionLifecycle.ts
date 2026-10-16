@@ -12,6 +12,7 @@
 import type Stripe from 'stripe';
 import logger from '@alga-psa/core/logger';
 import {
+  AlgaLicenseHttpError,
   reactivateApplianceEntitlement,
   revokeApplianceEntitlement,
   updateApplianceEntitlementSeats,
@@ -85,11 +86,15 @@ export async function resolveApplianceSubscription(
 /**
  * Pure decision: what does this event mean for the C4 entitlement?
  *
- * Decides on the subscription's CURRENT status, never on `previous_attributes`
- * (missing or stale under Stripe retries and out-of-order delivery). Reactivation
- * is idempotent in C4, so every live-status `updated` event re-asserts it and
- * retries/duplicates converge on the right state. Callers must pass a freshly
- * retrieved subscription for `updated` events (see handleApplianceSubscriptionEvent).
+ * Status is read from `sub`, which the handler refreshes from Stripe for
+ * `updated` events, so a stale payload cannot flip the decision. Reactivation is
+ * gated on an actual lapsed→live transition (`previous_attributes.status`): an
+ * operator may soft-revoke an entitlement while the Stripe sub is still active,
+ * and routine updates (renewals, period rollovers, metadata edits) must not undo
+ * that. Out-of-order delivery stays safe because the decision uses fresh state and
+ * revoke/reactivate are idempotent: a stale lapse event whose fresh status is live
+ * does not revoke, and a stale `updated(active, prev unpaid)` whose fresh status
+ * is canceled revokes instead of reactivating.
  */
 export function decideLifecycleAction(
   event: Stripe.Event,
@@ -101,21 +106,24 @@ export function decideLifecycleAction(
   if (event.type === 'customer.subscription.updated') {
     if (LAPSED_STATUSES.has(sub.status)) return { action: 'revoke' };
 
-    if (LIVE_STATUSES.has(sub.status)) {
+    const previous = (event.data.previous_attributes ?? {}) as { status?: string; items?: unknown };
+    const seats = findPerSeatItem(sub, env)?.quantity ?? null;
+
+    const cameBackToLife =
+      LIVE_STATUSES.has(sub.status) && typeof previous.status === 'string' && !LIVE_STATUSES.has(previous.status);
+    if (cameBackToLife) {
       // C4's seat PATCH only updates an ACTIVE entitlement (404 otherwise), so the
       // entitlement is re-enabled first; `seats` (if any) is synced afterwards.
-      const seats = findPerSeatItem(sub, env)?.quantity ?? null;
       return seats != null ? { action: 'reactivate', seats } : { action: 'reactivate' };
     }
+
+    const quantityChanged = previous.items !== undefined;
+    if (LIVE_STATUSES.has(sub.status) && quantityChanged && seats != null) return { action: 'sync-seats', seats };
     return { action: 'none' };
   }
 
-  if (event.type === 'invoice.payment_failed') {
-    // Stripe retries on its own schedule; the subscription status flips to
-    // past_due/unpaid and the `updated` event above handles the lapse.
-    return { action: 'none' };
-  }
-
+  // invoice.payment_failed: Stripe retries on its own schedule; the subscription
+  // status flips to past_due/unpaid and the `updated` event above handles the lapse.
   return { action: 'none' };
 }
 
@@ -151,8 +159,20 @@ export async function handleApplianceSubscriptionEvent(
     await deps.revoke(sub.id);
   } else if (decision.action === 'reactivate') {
     // Keyed by subscription id: no tenant id needed.
-    await deps.reactivate(sub.id);
-    if (decision.seats != null) {
+    let reactivated = true;
+    try {
+      await deps.reactivate(sub.id);
+    } catch (err) {
+      // No C4 entitlement for this sub (e.g. not provisioned yet): nothing to
+      // re-enable, and retrying would only fail again. Anything else is a real
+      // failure and must propagate so Stripe retries.
+      if (!(err instanceof AlgaLicenseHttpError && err.status === 404)) throw err;
+      logger.warn(`[ApplianceLifecycle] no alga-license entitlement to reactivate for ${sub.id} (tenant=${tenantId ?? 'unknown'}); skipping`);
+      outcome.action = 'none';
+      outcome.seats = undefined;
+      reactivated = false;
+    }
+    if (reactivated && decision.seats != null) {
       if (!tenantId) {
         logger.warn(`[ApplianceLifecycle] cannot sync seats for ${sub.id}: no tenant id in subscription metadata`);
         outcome.seats = undefined;
