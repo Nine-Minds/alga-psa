@@ -382,7 +382,8 @@ async function processReset(
             await publishTicketTransitionsAfterCommit(trx, {
               tenant: event.tenantId,
               before: transitionBefore,
-              correlationId: event.externalAlertId,
+              // Must be a UUID (workflow execution_id); external ids (Level GIDs etc.) are not.
+              correlationId: existing.alert_id,
             });
             // The transition publisher has no TICKET_CLOSED member, so emit it
             // here (system actor, after commit) like every other close path.
@@ -393,6 +394,7 @@ async function processReset(
               .first('is_closed');
             if (closedStatus?.is_closed) {
               const closedTicketId = existing.ticket_id;
+              const closedCorrelationId = existing.alert_id;
               const closedAt = new Date().toISOString();
               registerAfterCommit(
                 trx,
@@ -403,7 +405,7 @@ async function processReset(
                     ctx: {
                       tenantId: event.tenantId,
                       actor: { actorType: 'SYSTEM' },
-                      correlationId: event.externalAlertId,
+                      correlationId: closedCorrelationId,
                     },
                     eventName: 'Ticket Closed',
                     toState: statusId,
