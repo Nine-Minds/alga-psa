@@ -14,6 +14,7 @@ import { AccountingMappingResolver } from '../../services/accountingMappingResol
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { AppError, minorUnitsToPlainDecimalText, unparseCSV } from '@alga-psa/core';
 import { reconcileExportLineQuantity } from './exportLineQuantity';
+import { resolveExportRecipientEmails } from './exportRecipientEmails';
 
 const XERO_CSV_MAX_QUANTITY_DECIMALS = 4;
 
@@ -37,6 +38,7 @@ type DbInvoice = {
   due_date?: string | Date | null;
   client_id?: string | null;
   currency_code?: string | null;
+  billing_profile_id?: string | null;
 };
 
 type DbCharge = {
@@ -270,7 +272,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         // Build CSV row
         const row: XeroCsvRow = {
           '*ContactName': isFirstLine ? clientRow.client_name : '',
-          'EmailAddress': isFirstLine ? (clientRow.billing_email ?? '') : '',
+          'EmailAddress': isFirstLine ? (clientData.recipientEmails?.get(invoiceId) ?? clientRow.billing_email ?? '') : '',
           'POAddressLine1': '',
           'POAddressLine2': '',
           'POAddressLine3': '',
@@ -317,7 +319,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         invoiceId,
         invoiceNumber,
         clientName: clientRow.client_name,
-        clientEmail: clientRow.billing_email ?? '',
+        clientEmail: clientData.recipientEmails?.get(invoiceId) ?? clientRow.billing_email ?? '',
         rows: invoiceRows
       };
 
@@ -523,7 +525,8 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         'invoice_date',
         'due_date',
         'client_id',
-        'currency_code'
+        'currency_code',
+        'billing_profile_id'
       )
       .whereIn('invoice_id', invoiceIds);
 
@@ -567,7 +570,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
     tenantId: string,
     context: AccountingExportAdapterContext,
     invoices: Map<string, DbInvoice>
-  ): Promise<{ clients: Map<string, DbClient>; mappings: Map<string, MappingRow> }> {
+  ): Promise<{ clients: Map<string, DbClient>; mappings: Map<string, MappingRow>; recipientEmails?: Map<string, string | null> }> {
     const clientIds = new Set<string>();
 
     for (const invoice of invoices.values()) {
@@ -591,9 +594,18 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
       .whereIn('client_id', Array.from(clientIds));
 
     const clientMap = new Map(clients.map((client) => [client.client_id, client]));
+    // The contact email is the address each invoice is emailed to, resolved
+    // through its billing profile and the client's contact/email/locations.
+    const recipientEmails = await resolveExportRecipientEmails(
+      knex,
+      tenantId,
+      Array.from(invoices.values()).filter(
+        (invoice): invoice is DbInvoice & { client_id: string } => Boolean(invoice.client_id),
+      ),
+    );
 
     // For CSV export, we don't need Xero contact mappings since we use client names directly
-    return { clients: clientMap, mappings: new Map() };
+    return { clients: clientMap, mappings: new Map(), recipientEmails };
   }
 }
 

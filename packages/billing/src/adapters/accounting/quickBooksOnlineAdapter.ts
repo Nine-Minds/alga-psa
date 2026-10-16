@@ -52,6 +52,7 @@ import {
 } from '@alga-psa/integrations/lib/qbo/qboCompanyCountry';
 import { getAccountingSyncSettings } from '../../services/accountingSync/accountingSyncSettings';
 import { reconcileExportLineQuantity } from './exportLineQuantity';
+import { resolveClientExportEmail, resolveExportRecipientEmails } from './exportRecipientEmails';
 
 const QBO_MAX_QUANTITY_DECIMALS = 6;
 
@@ -416,10 +417,14 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           parentExternalId = parentMapping.external_entity_id;
         }
 
+        // A sub-customer is a separately-billing profile, so it carries that
+        // profile's own AP address rather than the parent's.
         const companyPayload = buildNormalizedCompanyPayload({
           companyId: exportTarget.algaEntityId,
           name: exportTarget.displayName,
-          primaryEmail: clientRow.billing_email ?? null
+          primaryEmail: exportTarget.isSubCustomer
+            ? clientData.recipientEmails?.get(invoiceId) ?? clientRow.billing_email ?? null
+            : clientRow.billing_email ?? null
         });
         companyPayload.parentExternalId = parentExternalId;
 
@@ -667,8 +672,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         qboInvoice.ExchangeRate = basisPointsToRate(invoice.exchange_rate_basis_points);
       }
 
-      if (clientRow?.billing_email) {
-        qboInvoice.BillEmail = { Address: clientRow.billing_email };
+      const billEmail = clientData.recipientEmails?.get(invoiceId) ?? clientRow?.billing_email ?? null;
+      if (billEmail) {
+        qboInvoice.BillEmail = { Address: billEmail };
       }
 
       const clientMetadataRaw = clientMapping.metadata ?? {};
@@ -1366,7 +1372,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     tenantId: string,
     context: AccountingExportAdapterContext,
     invoices: Map<string, DbInvoice>
-  ): Promise<{ clients: Map<string, DbClient>; mappings: Map<string, MappingRow> }> {
+  ): Promise<{ clients: Map<string, DbClient>; mappings: Map<string, MappingRow>; recipientEmails?: Map<string, string | null> }> {
     const clientIds = new Set<string>();
     // Profiles the invoices in this batch bill for. A sub-customer mapping is
     // keyed on the profile, not the client (F121).
@@ -1395,7 +1401,20 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       .select('client_id', 'client_name', 'billing_email', 'payment_terms')
       .whereIn('client_id', Array.from(clientIds));
 
+    // The customer's email is the address its invoices are emailed to (billing
+    // contact, billing email, billing/default location), not the raw column;
+    // a sub-customer's is resolved per invoice through its billing profile.
+    for (const client of clients) {
+      client.billing_email = await resolveClientExportEmail(knex, tenantId, client.client_id);
+    }
     const clientMap = new Map(clients.map((client) => [client.client_id, client]));
+    const recipientEmails = await resolveExportRecipientEmails(
+      knex,
+      tenantId,
+      Array.from(invoices.values()).filter(
+        (invoice): invoice is DbInvoice & { client_id: string } => Boolean(invoice.client_id),
+      ),
+    );
 
     const mappingRows = await tenantDb(knex, tenantId).table<MappingRowRaw>('tenant_external_entity_mappings')
       .select('*')
@@ -1423,7 +1442,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       mappingMap.set(normalized.alga_entity_id, normalized);
     });
 
-    return { clients: clientMap, mappings: mappingMap };
+    return { clients: clientMap, mappings: mappingMap, recipientEmails };
   }
 
   /**

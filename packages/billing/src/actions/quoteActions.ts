@@ -14,6 +14,7 @@ import Quote, { type QuoteListOptions } from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
+import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate, formatQuoteDate } from '../lib/quote-email-templates';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { mapLoadedQuoteToViewModel } from '../lib/adapters/quoteAdapters';
@@ -432,6 +433,8 @@ const getQuoteRecipients = async (
   quote: IQuote,
   emailAddresses: string[] = []
 ): Promise<string[]> => {
+  // The client's address is whoever its invoices go to (billing contact,
+  // billing email, billing/default location), not the raw billing_email column.
   const [contactRecipient, clientRecipient] = await Promise.all([
     quote.contact_id
       ? tenantDb(knex, tenant).table('contacts')
@@ -440,10 +443,7 @@ const getQuoteRecipients = async (
         .first<{ email?: string | null }>()
       : Promise.resolve(null),
     quote.client_id
-      ? tenantDb(knex, tenant).table('clients')
-        .select('billing_email')
-        .where({ client_id: quote.client_id })
-        .first<{ billing_email?: string | null }>()
+      ? resolveInvoiceBillingRecipient({ knexOrTrx: knex, tenantId: tenant, clientId: quote.client_id })
       : Promise.resolve(null),
   ]);
 
@@ -452,7 +452,7 @@ const getQuoteRecipients = async (
       [
         ...emailAddresses,
         contactRecipient?.email ?? '',
-        clientRecipient?.billing_email ?? '',
+        clientRecipient?.recipientEmail ?? '',
       ]
         .map((email) => email.trim())
         .filter((email) => email.length > 0)

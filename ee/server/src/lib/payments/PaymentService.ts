@@ -60,6 +60,7 @@ interface InvoiceData {
   status: string;
   finalized_at?: unknown | null;
   invoice_type?: string | null;
+  billing_profile_id?: string | null;
 }
 
 /**
@@ -264,7 +265,7 @@ export class PaymentService {
       await this.expireStalePaymentLink(existingLink, balanceDue);
     }
 
-    const client = await this.getClient(invoice.client_id);
+    const client = await this.getClient(invoice.client_id, invoice.billing_profile_id ?? null);
     if (!client) {
       throw new Error(`Client not found: ${invoice.client_id}`);
     }
@@ -1243,12 +1244,13 @@ export class PaymentService {
   /**
    * Gets a client by ID with the billing-recipient email.
    *
-   * The email uses the same shared precedence as invoice delivery: billing
-   * contact, clients.billing_email, active billing location, then active
-   * default location. Stripe customer creation retains the client company
-   * name as the customer name.
+   * The email uses the same shared precedence as invoice delivery: the billed
+   * profile's contact/email/location first, then billing contact,
+   * clients.billing_email, active billing location, then active default
+   * location. Stripe customer creation retains the client company name as the
+   * customer name.
    */
-  private async getClient(clientId: string): Promise<ClientData | null> {
+  private async getClient(clientId: string, billingProfileId: string | null = null): Promise<ClientData | null> {
     // Get client basic info
     const db = tenantDb(this.knex, this.tenantId);
     const client = await db.table('clients')
@@ -1264,6 +1266,7 @@ export class PaymentService {
       knexOrTrx: this.knex,
       tenantId: this.tenantId,
       clientId,
+      billingProfileId,
     });
 
     return {
