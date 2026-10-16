@@ -18,7 +18,7 @@ import { SectionCard } from '@alga-psa/ui/components/SectionCard';
 import FormCardsSkeleton from '@alga-psa/ui/components/skeletons/FormCardsSkeleton';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import {
-  UnsavedChangesProvider,
+  TranslatedUnsavedChangesProvider,
   useRegisterUnsavedChanges,
 } from '@alga-psa/ui/context/UnsavedChangesContext';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
@@ -540,20 +540,10 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
  * dialog and the shared leave guard, and the body registers its dirty state with it.
  */
 export function TicketTemplateEditor(props: TicketTemplateEditorProps) {
-  const { t } = useTranslation('common');
-
   return (
-    <UnsavedChangesProvider
-      dialogTitle={t('unsavedChangesGuard.title', 'Discard unsaved changes?')}
-      dialogMessage={t(
-        'unsavedChangesGuard.message',
-        'You have unsaved changes that will be lost if you close this. Do you want to discard them?',
-      )}
-      dialogConfirmLabel={t('unsavedChangesGuard.discard', 'Discard changes')}
-      dialogCancelLabel={t('unsavedChangesGuard.keepEditing', 'Keep editing')}
-    >
+    <TranslatedUnsavedChangesProvider>
       <TicketTemplateEditorBody {...props} />
-    </UnsavedChangesProvider>
+    </TranslatedUnsavedChangesProvider>
   );
 }
 

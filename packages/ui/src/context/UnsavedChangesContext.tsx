@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
+import { useTranslation } from '../lib/i18n/client';
 import { useLeaveGuard } from '../lib/leaveGuard';
 
 interface UnsavedChangesContextType {
@@ -194,6 +195,28 @@ export function UnsavedChangesProvider({
         cancelLabel={dialogCancelLabel}
       />
     </UnsavedChangesContext>
+  );
+}
+
+/**
+ * The provider wearing the app's translated guard copy, so a page only has to wrap its body. Use it
+ * unless a surface needs wording of its own.
+ */
+export function TranslatedUnsavedChangesProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation('common');
+
+  return (
+    <UnsavedChangesProvider
+      dialogTitle={t('unsavedChangesGuard.title', 'Discard unsaved changes?')}
+      dialogMessage={t(
+        'unsavedChangesGuard.message',
+        'You have unsaved changes that will be lost if you close this. Do you want to discard them?',
+      )}
+      dialogConfirmLabel={t('unsavedChangesGuard.discard', 'Discard changes')}
+      dialogCancelLabel={t('unsavedChangesGuard.keepEditing', 'Keep editing')}
+    >
+      {children}
+    </UnsavedChangesProvider>
   );
 }
 
