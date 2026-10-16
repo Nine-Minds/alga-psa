@@ -3,8 +3,8 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
-import { useLeaveGuard } from '../lib/leaveGuard';
 import { useTranslation } from '../lib/i18n/client';
+import { useLeaveGuard } from '../lib/leaveGuard';
 
 interface UnsavedChangesContextType {
   /**
@@ -45,12 +45,22 @@ interface UnsavedChangesProviderProps {
    * Custom message for the confirmation dialog
    */
   dialogMessage?: string;
+  /**
+   * Custom label for the button that leaves and discards the changes
+   */
+  dialogConfirmLabel?: string;
+  /**
+   * Custom label for the button that stays on the page
+   */
+  dialogCancelLabel?: string;
 }
 
 export function UnsavedChangesProvider({
   children,
   dialogTitle,
   dialogMessage,
+  dialogConfirmLabel,
+  dialogCancelLabel,
 }: UnsavedChangesProviderProps) {
   const { t } = useTranslation('common');
   // Use ref to track unsaved components without causing re-renders
@@ -182,10 +192,32 @@ export function UnsavedChangesProvider({
         onConfirm={handleConfirm}
         title={dialogTitle ?? t('dialogs.unsavedChanges.title', 'Unsaved Changes')}
         message={dialogMessage ?? t('dialogs.unsavedChanges.message', 'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.')}
-        confirmLabel={t('dialogs.unsavedChanges.confirm', 'Leave Without Saving')}
-        cancelLabel={t('dialogs.unsavedChanges.cancel', 'Stay')}
+        confirmLabel={dialogConfirmLabel ?? t('dialogs.unsavedChanges.confirm', 'Leave Without Saving')}
+        cancelLabel={dialogCancelLabel ?? t('dialogs.unsavedChanges.cancel', 'Stay')}
       />
     </UnsavedChangesContext>
+  );
+}
+
+/**
+ * The provider wearing the app's translated guard copy, so a page only has to wrap its body. Use it
+ * unless a surface needs wording of its own.
+ */
+export function TranslatedUnsavedChangesProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation('common');
+
+  return (
+    <UnsavedChangesProvider
+      dialogTitle={t('unsavedChangesGuard.title', 'Discard unsaved changes?')}
+      dialogMessage={t(
+        'unsavedChangesGuard.message',
+        'You have unsaved changes that will be lost if you close this. Do you want to discard them?',
+      )}
+      dialogConfirmLabel={t('unsavedChangesGuard.discard', 'Discard changes')}
+      dialogCancelLabel={t('unsavedChangesGuard.keepEditing', 'Keep editing')}
+    >
+      {children}
+    </UnsavedChangesProvider>
   );
 }
 
