@@ -9,6 +9,7 @@ import type {
 import {
   ASSET_STATUS_KINDS,
   BUILTIN_ASSET_STATUSES,
+  BUILTIN_ASSET_STATUS_SLUGS,
   generateAssetStatusSlug,
   type AssetStatusRegistryError,
   type AssetStatusRegistryResult,
@@ -90,6 +91,12 @@ export async function validateAssetStatusSlug(
 
   const row = await statusTable(conn, tenant).where({ slug: candidate }).first();
   if (!row) {
+    // A tenant whose registry was never seeded (the standard_statuses seeding
+    // gap reaches asset_statuses too) would otherwise have every asset write
+    // refused. With an empty registry the builtin slugs are the honest answer,
+    // the same fallback the status selects and the metrics use.
+    const seeded = await statusTable(conn, tenant).first();
+    if (!seeded && BUILTIN_ASSET_STATUS_SLUGS.includes(candidate)) return ok(candidate);
     return fail({ code: 'unknown_status', message: `Status "${candidate}" is not available`, slug: candidate });
   }
   if (!row.is_active && candidate !== storedSlug) {
