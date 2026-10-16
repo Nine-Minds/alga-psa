@@ -11,7 +11,11 @@
 
 import type Stripe from 'stripe';
 import logger from '@alga-psa/core/logger';
-import { revokeApplianceEntitlement, updateApplianceEntitlementSeats } from './algaLicenseAdminClient';
+import {
+  reactivateApplianceEntitlement,
+  revokeApplianceEntitlement,
+  updateApplianceEntitlementSeats,
+} from './algaLicenseAdminClient';
 import { findPerSeatItem } from './stripeBilling';
 
 export const APPLIANCE_DEPLOYMENT_TYPE = 'appliance';
@@ -21,22 +25,27 @@ const LAPSED_STATUSES = new Set<string>(['unpaid', 'canceled', 'incomplete_expir
 /** Sub statuses that mean "paying" for entitlement purposes. */
 const LIVE_STATUSES = new Set<string>(['active', 'trialing']);
 
+export type LifecycleAction = 'revoke' | 'reactivate' | 'sync-seats' | 'none';
+
 export interface ApplianceLifecycleOutcome {
   handled: boolean;
   tenantId: string | null;
   subscriptionId: string | null;
-  action: 'revoke' | 'sync-seats' | 'none';
+  action: LifecycleAction;
   seats?: number;
 }
 
 export interface ApplianceLifecycleDeps {
   revoke: (stripeSubId: string) => Promise<unknown>;
+  /** Re-enable a revoked entitlement, keyed by subscription id (idempotent in C4). */
+  reactivate: (stripeSubId: string) => Promise<unknown>;
   syncSeats: (tenantId: string, seats: number) => Promise<unknown>;
   audit?: (details: Record<string, unknown>) => Promise<void>;
 }
 
 const defaultDeps: ApplianceLifecycleDeps = {
   revoke: revokeApplianceEntitlement,
+  reactivate: reactivateApplianceEntitlement,
   syncSeats: updateApplianceEntitlementSeats,
 };
 
@@ -73,30 +82,30 @@ export async function resolveApplianceSubscription(
   return null;
 }
 
-/** Pure decision: what does this event mean for the C4 entitlement? */
+/**
+ * Pure decision: what does this event mean for the C4 entitlement?
+ *
+ * Decides on the subscription's CURRENT status, never on `previous_attributes`
+ * (missing or stale under Stripe retries and out-of-order delivery). Reactivation
+ * is idempotent in C4, so every live-status `updated` event re-asserts it and
+ * retries/duplicates converge on the right state. Callers must pass a freshly
+ * retrieved subscription for `updated` events (see handleApplianceSubscriptionEvent).
+ */
 export function decideLifecycleAction(
   event: Stripe.Event,
   sub: Stripe.Subscription,
   env: NodeJS.ProcessEnv = process.env,
-): { action: 'revoke' | 'sync-seats' | 'none'; seats?: number } {
+): { action: LifecycleAction; seats?: number } {
   if (event.type === 'customer.subscription.deleted') return { action: 'revoke' };
 
   if (event.type === 'customer.subscription.updated') {
     if (LAPSED_STATUSES.has(sub.status)) return { action: 'revoke' };
 
-    const previous = (event.data.previous_attributes ?? {}) as { status?: string; items?: unknown };
-    const item = findPerSeatItem(sub, env);
-    const seats = item?.quantity ?? null;
-
-    const cameBackToLife =
-      LIVE_STATUSES.has(sub.status) && typeof previous.status === 'string' && !LIVE_STATUSES.has(previous.status);
-    const quantityChanged = previous.items !== undefined;
-
-    if ((cameBackToLife || quantityChanged) && seats != null) return { action: 'sync-seats', seats };
-    if (cameBackToLife && seats == null) {
-      // Reactivation with no seat line (flat sub): still needs the entitlement re-enabled;
-      // C4's PATCH upserts active=true via the seats path, so send the current seats (null → skip).
-      return { action: 'none' };
+    if (LIVE_STATUSES.has(sub.status)) {
+      // C4's seat PATCH only updates an ACTIVE entitlement (404 otherwise), so the
+      // entitlement is re-enabled first; `seats` (if any) is synced afterwards.
+      const seats = findPerSeatItem(sub, env)?.quantity ?? null;
+      return seats != null ? { action: 'reactivate', seats } : { action: 'reactivate' };
     }
     return { action: 'none' };
   }
@@ -115,8 +124,16 @@ export async function handleApplianceSubscriptionEvent(
   stripe: Pick<Stripe, 'subscriptions'>,
   deps: ApplianceLifecycleDeps = defaultDeps,
 ): Promise<ApplianceLifecycleOutcome> {
-  const sub = await resolveApplianceSubscription(event, stripe);
-  if (!sub) return { handled: false, tenantId: null, subscriptionId: null, action: 'none' };
+  const resolved = await resolveApplianceSubscription(event, stripe);
+  if (!resolved) return { handled: false, tenantId: null, subscriptionId: null, action: 'none' };
+
+  // The event payload is a snapshot from when it was emitted; a retried or
+  // out-of-order `updated` event can carry a status that is no longer true (e.g.
+  // updated(active) delivered after the sub was deleted). Decide on the state
+  // Stripe reports now so a stale event can neither resurrect nor revoke wrongly.
+  // `deleted` events are terminal and need no refresh.
+  const sub =
+    event.type === 'customer.subscription.updated' ? await stripe.subscriptions.retrieve(resolved.id) : resolved;
 
   const tenantId = tenantIdFromSubscription(sub);
   const decision = decideLifecycleAction(event, sub);
@@ -132,6 +149,17 @@ export async function handleApplianceSubscriptionEvent(
 
   if (decision.action === 'revoke') {
     await deps.revoke(sub.id);
+  } else if (decision.action === 'reactivate') {
+    // Keyed by subscription id: no tenant id needed.
+    await deps.reactivate(sub.id);
+    if (decision.seats != null) {
+      if (!tenantId) {
+        logger.warn(`[ApplianceLifecycle] cannot sync seats for ${sub.id}: no tenant id in subscription metadata`);
+        outcome.seats = undefined;
+      } else {
+        await deps.syncSeats(tenantId, decision.seats);
+      }
+    }
   } else if (decision.action === 'sync-seats') {
     if (!tenantId) {
       logger.warn(`[ApplianceLifecycle] cannot sync seats for ${sub.id}: no tenant id in subscription metadata`);

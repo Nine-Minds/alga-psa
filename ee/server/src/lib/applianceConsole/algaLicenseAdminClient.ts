@@ -1,8 +1,8 @@
 /**
  * Admin client for the alga-license service ("C4").
  *
- * Backs the Appliance Console read-proxy (list/detail) plus the two writes the
- * Stripe lifecycle webhook needs (revoke, seat sync). Operator-initiated writes
+ * Backs the Appliance Console read-proxy (list/detail) plus the writes the
+ * Stripe lifecycle webhook needs (revoke, reactivate, seat sync). Operator-initiated writes
  * do NOT go through here: they run as Temporal workflows on the worker (see
  * ee/temporal-workflows/src/activities/appliance-console-activities.ts) so
  * that retries and audit lifecycle are handled in one place.
@@ -299,6 +299,14 @@ export async function getApplianceTenant(tenantId: string): Promise<ApplianceTen
 /** Soft-revoke the entitlement behind a Stripe subscription (idempotent in C4). */
 export async function revokeApplianceEntitlement(stripeSubId: string): Promise<{ revoked: boolean }> {
   return send<{ revoked: boolean }>('POST', '/revoke', { stripe_sub_id: stripeSubId });
+}
+
+/**
+ * Re-enable the entitlement behind a Stripe subscription that came back to
+ * active/trialing after a revoke (idempotent in C4; 404 if C4 has no such sub).
+ */
+export async function reactivateApplianceEntitlement(stripeSubId: string): Promise<{ reactivated: boolean }> {
+  return send<{ reactivated: boolean }>('POST', '/reactivate', { stripe_sub_id: stripeSubId });
 }
 
 /** Record a new seat count on the tenant's active entitlement (after Stripe changed). */
