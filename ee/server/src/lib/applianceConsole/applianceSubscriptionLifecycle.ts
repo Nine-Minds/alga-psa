@@ -88,8 +88,11 @@ export async function resolveApplianceSubscription(
  *
  * Status is read from `sub`, which the handler refreshes from Stripe for
  * `updated` events, so a stale payload cannot flip the decision. Reactivation is
- * gated on an actual lapsed→live transition (`previous_attributes.status`): an
- * operator may soft-revoke an entitlement while the Stripe sub is still active,
+ * gated on an actual lapsed→live transition (`previous_attributes.status`), where
+ * the previous status must be one of the lapsed statuses this handler revokes on
+ * (unpaid/canceled/incomplete_expired). past_due/incomplete/paused never caused a
+ * revoke here, so recovering from them must not re-enable an operator revoke; they
+ * fall through to sync-seats (items changed) or none. An operator may soft-revoke an entitlement while the Stripe sub is still active,
  * and routine updates (renewals, period rollovers, metadata edits) must not undo
  * that. Out-of-order delivery stays safe because the decision uses fresh state and
  * revoke/reactivate are idempotent: a stale lapse event whose fresh status is live
@@ -110,7 +113,7 @@ export function decideLifecycleAction(
     const seats = findPerSeatItem(sub, env)?.quantity ?? null;
 
     const cameBackToLife =
-      LIVE_STATUSES.has(sub.status) && typeof previous.status === 'string' && !LIVE_STATUSES.has(previous.status);
+      LIVE_STATUSES.has(sub.status) && typeof previous.status === 'string' && LAPSED_STATUSES.has(previous.status);
     if (cameBackToLife) {
       // C4's seat PATCH only updates an ACTIVE entitlement (404 otherwise), so the
       // entitlement is re-enabled first; `seats` (if any) is synced afterwards.

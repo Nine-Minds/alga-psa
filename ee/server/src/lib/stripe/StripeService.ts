@@ -21,6 +21,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
 import { ADD_ONS, type AddOnKey, type TenantTier } from '@alga-psa/types';
 import { tierFromStripeProduct } from './stripeTierMapping';
+import { ApplianceLifecycleRetryableError } from '../applianceConsole/applianceLifecycleError';
 import {
   getAppleIapConfig,
   getAllSubscriptionStatuses,
@@ -1371,9 +1372,13 @@ export class StripeService {
       }
       return outcome.handled;
     } catch (error) {
-      // A C4 failure must surface as a webhook failure so Stripe retries it.
+      // A C4 failure must surface as a webhook failure so Stripe retries it: the typed
+      // error tells the route to answer 5xx instead of its usual 200 acknowledgement.
       logger.error(`[StripeService] Appliance lifecycle handling failed for ${event.id}:`, error);
-      throw error;
+      throw new ApplianceLifecycleRetryableError(
+        `Appliance lifecycle handling failed for ${event.id}: ${error instanceof Error ? error.message : String(error)}`,
+        error,
+      );
     }
   }
 

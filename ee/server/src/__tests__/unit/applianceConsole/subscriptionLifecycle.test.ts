@@ -102,6 +102,38 @@ describe('appliance subscription lifecycle', () => {
     expect(decideLifecycleAction(event('customer.subscription.updated', pastDue, { status: 'active' }), pastDue)).toEqual({ action: 'none' });
   });
 
+  describe('reactivation gate: previous status must be one this handler revokes on', () => {
+    const seatItems = { data: [{ id: 'si_1', quantity: 5, price: { id: 'price_seat', recurring: { interval: 'month' } } }] };
+    const decide = (sub: any, prev: Record<string, unknown>) =>
+      decideLifecycleAction(event('customer.subscription.updated', sub, prev), sub);
+
+    it.each(['past_due', 'incomplete', 'paused'])('%s → active with no item change is none', (from) => {
+      expect(decide(subscription(), { status: from })).toEqual({ action: 'none' });
+    });
+
+    it.each(['past_due', 'incomplete', 'paused'])('%s → active with items changed and a seat line is sync-seats, not reactivate', (from) => {
+      expect(decide(subscription({ items: seatItems }), { status: from, items: {} })).toEqual({ action: 'sync-seats', seats: 5 });
+    });
+
+    it('past_due → active with items changed but no seat line is none', () => {
+      expect(decide(subscription({ items: { data: [] } }), { status: 'past_due', items: {} })).toEqual({ action: 'none' });
+    });
+
+    it.each(['unpaid', 'canceled', 'incomplete_expired'])('%s → active reactivates with and without a seat line', (from) => {
+      expect(decide(subscription(), { status: from })).toEqual({ action: 'reactivate', seats: 5 });
+      expect(decide(subscription({ items: { data: [] } }), { status: from })).toEqual({ action: 'reactivate' });
+    });
+
+    it('handler: previous past_due never calls reactivate', async () => {
+      const active = subscription();
+      stripe.subscriptions.retrieve.mockResolvedValue(active);
+      const outcome = await handleApplianceSubscriptionEvent(event('customer.subscription.updated', active, { status: 'past_due' }), stripe, deps());
+      expect(outcome.action).toBe('none');
+      expect(c4.reactivateApplianceEntitlement).not.toHaveBeenCalled();
+      expect(c4.updateApplianceEntitlementSeats).not.toHaveBeenCalled();
+    });
+  });
+
   it('ignores hosted subscriptions', async () => {
     const hosted = subscription({ metadata: { tenant_id: 'hosted-tenant' } });
     const outcome = await handleApplianceSubscriptionEvent(event('customer.subscription.deleted', hosted), stripe);

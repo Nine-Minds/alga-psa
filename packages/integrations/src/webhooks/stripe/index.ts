@@ -3,6 +3,15 @@ import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 /**
+ * Structural check (not instanceof): the error is created by the EE StripeService,
+ * which this route loads via dynamic import from a different package.
+ */
+function isRetryableLifecycleError(error: unknown): boolean {
+  const e = error as { name?: unknown; retryable?: unknown } | null;
+  return !!e && e.name === 'ApplianceLifecycleRetryableError' && e.retryable === true;
+}
+
+/**
  * POST /api/webhooks/stripe
  *
  * Stripe webhook endpoint for processing subscription events
@@ -124,9 +133,19 @@ export async function POST(req: NextRequest) {
         stack: error instanceof Error ? error.stack : undefined,
       });
 
+      // Appliance lifecycle failures (e.g. alga-license down) must be retried by
+      // Stripe: reactivation hangs on a single transition event. Answer 5xx.
+      if (isRetryableLifecycleError(error)) {
+        return NextResponse.json(
+          { received: true, processed: false, retryable: true, error: 'Processing failed (retry)' },
+          { status: 503 }
+        );
+      }
+
       // Return 200 to acknowledge receipt even if processing failed
       // This prevents Stripe from retrying immediately
       // The error is logged and recorded in stripe_webhook_events table
+      // (exception: retryable appliance lifecycle errors above)
       return NextResponse.json(
         {
           received: true,
