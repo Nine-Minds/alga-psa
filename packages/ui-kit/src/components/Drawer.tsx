@@ -263,7 +263,7 @@ export function Drawer({
               style={currentCloseButtonStyle}
               onMouseEnter={() => setCloseButtonHovered(true)}
               onMouseLeave={() => setCloseButtonHovered(false)}
-              aria-label={t('drawer.actions.close')}
+              aria-label={t('drawer.actions.close', { defaultValue: 'Close drawer' })}
             >
               <svg
                 width="20"

@@ -145,15 +145,15 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const { t } = useTranslation('common');
   // Support both confirmLabel and confirmText for backward compatibility
-  const buttonLabel = confirmText || (confirmLabel ?? t('actions.confirm'));
+  const buttonLabel = confirmText || (confirmLabel ?? t('actions.confirm', { defaultValue: 'Confirm' }));
 
   return (
-    <Dialog isOpen={isOpen} onClose={onCancel} title={title ?? t('dialogs.confirmAction.title')}>
+    <Dialog isOpen={isOpen} onClose={onCancel} title={title ?? t('dialogs.confirmAction.title', { defaultValue: 'Confirm Action' })}>
       <p style={{ ...messageStyle, whiteSpace: 'pre-line' }}>{message}</p>
       {children}
       <div style={actionsStyle}>
         <Button id="confirm-dialog-cancel" variant="secondary" onClick={onCancel}>
-          {cancelLabel ?? t('actions.cancel')}
+          {cancelLabel ?? t('actions.cancel', { defaultValue: 'Cancel' })}
         </Button>
         <Button
           id="confirm-dialog-confirm"
