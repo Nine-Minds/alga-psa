@@ -130,6 +130,28 @@ export function decideLifecycleAction(
   return { action: 'none' };
 }
 
+/**
+ * Seat sync that treats an alga-license 404 as terminal. The 404 means the
+ * entitlement is inactive or absent (e.g. operator soft-revoke), which a retry
+ * cannot fix, so surfacing it would make Stripe redeliver forever (503 loop).
+ * Every other error rethrows so Stripe retries. Returns false when skipped.
+ */
+async function syncSeatsTolerating404(
+  deps: ApplianceLifecycleDeps,
+  tenantId: string,
+  subId: string,
+  seats: number,
+): Promise<boolean> {
+  try {
+    await deps.syncSeats(tenantId, seats);
+    return true;
+  } catch (err) {
+    if (!(err instanceof AlgaLicenseHttpError && err.status === 404)) throw err;
+    logger.warn(`[ApplianceLifecycle] alga-license entitlement inactive or absent for ${subId} (tenant=${tenantId}); seats not synced`);
+    return false;
+  }
+}
+
 export async function handleApplianceSubscriptionEvent(
   event: Stripe.Event,
   stripe: Pick<Stripe, 'subscriptions'>,
@@ -180,7 +202,7 @@ export async function handleApplianceSubscriptionEvent(
         logger.warn(`[ApplianceLifecycle] cannot sync seats for ${sub.id}: no tenant id in subscription metadata`);
         outcome.seats = undefined;
       } else {
-        await deps.syncSeats(tenantId, decision.seats);
+        if (!(await syncSeatsTolerating404(deps, tenantId, sub.id, decision.seats))) outcome.seats = undefined;
       }
     }
   } else if (decision.action === 'sync-seats') {
@@ -188,7 +210,10 @@ export async function handleApplianceSubscriptionEvent(
       logger.warn(`[ApplianceLifecycle] cannot sync seats for ${sub.id}: no tenant id in subscription metadata`);
       outcome.action = 'none';
     } else {
-      await deps.syncSeats(tenantId, decision.seats!);
+      if (!(await syncSeatsTolerating404(deps, tenantId, sub.id, decision.seats!))) {
+        outcome.action = 'none';
+        outcome.seats = undefined;
+      }
     }
   }
 

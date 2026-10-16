@@ -256,4 +256,50 @@ describe('appliance subscription lifecycle', () => {
     expect(c4.updateApplianceEntitlementSeats).not.toHaveBeenCalled();
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('no tenant id'));
   });
+
+  describe('seat sync 404 (entitlement inactive/absent) is terminal, other errors retry', () => {
+    const seatChange = () => {
+      const active = subscription();
+      stripe.subscriptions.retrieve.mockResolvedValue(active);
+      return event('customer.subscription.updated', active, { items: {} });
+    };
+    const reactivation = () => {
+      const active = subscription();
+      stripe.subscriptions.retrieve.mockResolvedValue(active);
+      return event('customer.subscription.updated', active, { status: 'unpaid' });
+    };
+
+    it('sync-seats: 404 resolves with action none, no seats, and a warning', async () => {
+      c4.updateApplianceEntitlementSeats.mockRejectedValue(new c4.AlgaLicenseHttpError('HTTP 404 No active entitlement', 404));
+      const outcome = await handleApplianceSubscriptionEvent(seatChange(), stripe, deps());
+      expect(outcome).toMatchObject({ handled: true, action: 'none' });
+      expect(outcome.seats).toBeUndefined();
+      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('[ApplianceLifecycle]'));
+      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('seats not synced'));
+    });
+
+    it('sync-seats: a generic error is rethrown', async () => {
+      c4.updateApplianceEntitlementSeats.mockRejectedValue(new Error('network down'));
+      await expect(handleApplianceSubscriptionEvent(seatChange(), stripe, deps())).rejects.toThrow('network down');
+    });
+
+    it('sync-seats: a 5xx is rethrown', async () => {
+      c4.updateApplianceEntitlementSeats.mockRejectedValue(new c4.AlgaLicenseHttpError('HTTP 503', 503));
+      await expect(handleApplianceSubscriptionEvent(seatChange(), stripe, deps())).rejects.toThrow('HTTP 503');
+    });
+
+    it('reactivate: a seat-sync 404 keeps action reactivate with no seats', async () => {
+      c4.updateApplianceEntitlementSeats.mockRejectedValue(new c4.AlgaLicenseHttpError('HTTP 404 No active entitlement', 404));
+      const outcome = await handleApplianceSubscriptionEvent(reactivation(), stripe, deps());
+      expect(outcome).toMatchObject({ handled: true, action: 'reactivate' });
+      expect(outcome.seats).toBeUndefined();
+      expect(c4.reactivateApplianceEntitlement).toHaveBeenCalledWith('sub_app');
+      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('seats not synced'));
+    });
+
+    it('reactivate: a generic seat-sync error is rethrown', async () => {
+      c4.updateApplianceEntitlementSeats.mockRejectedValue(new Error('network down'));
+      await expect(handleApplianceSubscriptionEvent(reactivation(), stripe, deps())).rejects.toThrow('network down');
+    });
+  });
 });
