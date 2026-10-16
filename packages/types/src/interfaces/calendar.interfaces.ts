@@ -28,6 +28,9 @@ export interface CalendarProviderVendorConfig {
   accessToken?: string;
   refreshToken?: string;
   tokenExpiresAt?: string;
+  /** Optional per-provider endpoints for isolated OAuth/API emulator fixtures. */
+  apiRoot?: string;
+  tokenEndpoint?: string;
   redirectUri?: string;
   syncToken?: string;
   deltaLink?: string;
@@ -96,6 +99,7 @@ export interface ExternalCalendarEvent {
   provider: 'google' | 'microsoft';
   title: string;
   description?: string;
+  categories?: string[];
   start: {
     dateTime?: string; // ISO 8601 for timed events
     date?: string; // YYYY-MM-DD for all-day events

@@ -48,8 +48,15 @@ function createMockTx(seedTables: Record<string, Array<Record<string, any>>> = {
         });
         return builder;
       },
+      whereIn(column: string, values: readonly unknown[]) {
+        filteredRows = filteredRows.filter((row) => values.includes(row[normalizeColumnName(column)]));
+        return builder;
+      },
       select() {
         return builder;
+      },
+      then(resolve: (rows: Array<Record<string, any>>) => unknown, reject?: (error: unknown) => unknown) {
+        return Promise.resolve(filteredRows).then(resolve, reject);
       },
       async first() {
         return filteredRows[0] ?? null;
@@ -174,5 +181,47 @@ describe('persistInvoiceCharges billed-time snapshot persistence', () => {
     expect(inserts.invoice_charges[0].description).toBe('Remote Support');
     expect(inserts.invoice_charges[0].description).not.toContain('T-20260901-004');
     expect(JSON.stringify(inserts.invoice_charges[0])).not.toContain('Mail flow failed');
+  });
+
+  it('snapshots the catalog unit onto the persisted time charge', async () => {
+    const { tx, inserts } = createMockTx({
+      time_entries: [{ tenant: 'tenant-1', entry_id: 'entry-1', invoiced: false }],
+      service_catalog: [
+        { tenant: 'tenant-1', service_id: 'svc-h', unit_code: 'MIN', unit_of_measure: 'Minute' },
+        { tenant: 'tenant-1', service_id: 'svc-other', unit_code: 'DAY', unit_of_measure: 'Day' },
+      ],
+    });
+
+    await persistInvoiceCharges(
+      tx,
+      'invoice-1',
+      [timeCharge({ workItemSnapshot: SNAPSHOT })],
+      CLIENT,
+      SESSION,
+      'tenant-1',
+      { requireRecurringServicePeriodLinkage: false },
+    );
+
+    expect(inserts.invoice_charges).toHaveLength(1);
+    expect(inserts.invoice_charges[0].unit_code).toBe('MIN');
+    expect(inserts.invoice_charges[0].unit_label).toBe('Minute');
+  });
+
+  it('falls back to the hour unit for time charges whose service has no catalog unit', async () => {
+    const { tx, inserts } = createMockTx({
+      time_entries: [{ tenant: 'tenant-1', entry_id: 'entry-1', invoiced: false }],
+    });
+
+    await persistInvoiceCharges(
+      tx,
+      'invoice-1',
+      [timeCharge()],
+      CLIENT,
+      SESSION,
+      'tenant-1',
+      { requireRecurringServicePeriodLinkage: false },
+    );
+
+    expect(inserts.invoice_charges[0].unit_code).toBe('HUR');
   });
 });

@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
+import { environmentProjects, partitionByEnvironment } from '../scripts/lib/jsdom-test-globs.mjs';
 import serverConfig from './vitest.config';
 
 // One partition of the full server unit suite. scripts/run-server-unit-shard.mjs
@@ -14,10 +15,14 @@ if (!Array.isArray(include) || !include.length || include.some((file) => typeof 
   throw new Error('Assigned shard file list is empty or invalid');
 }
 
+// The two projects split the assigned list in JS — no second glob of the tree —
+// so their union is the partition byte for byte and the runner's list-equality
+// check still holds.
 export default defineConfig({
   ...serverConfig,
   test: {
     ...serverConfig.test,
     include,
+    projects: environmentProjects(partitionByEnvironment(include, __dirname)),
   },
 });

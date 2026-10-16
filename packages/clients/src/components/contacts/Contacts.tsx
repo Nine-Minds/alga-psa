@@ -5,10 +5,13 @@ import type { DeletionValidationResult, IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
+import { formatPhoneForDisplay, formatPhoneLabel } from '@alga-psa/validation';
 import { getAllContacts, getContactsByClient, getAllClients, searchContactListIds } from '@alga-psa/clients/actions';
 import { exportContactsToCSV, deleteContact, updateContact, getContactLastUsagePhoneTypes, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
+import { contactMatchesPhoneDigits, phoneSearchDigits } from '../../lib/contactSearchMatch';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import {
   DropdownMenuContent as StyledDropdownMenuContent,
@@ -57,6 +60,7 @@ import ContactsSkeleton from './ContactsSkeleton';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { useListViews } from '@alga-psa/list-views/hooks';
 import { ListViewPicker } from '@alga-psa/list-views/components';
 import {
@@ -711,6 +715,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           </div>
           {/* Renders nothing unless this contact is directory-maintained. */}
           <EntraContactBadge contact={record as unknown as Record<string, unknown>} />
+          {record.contact_kind === 'shared_mailbox' && <Badge variant="default-muted">{t('contactsPage.sharedMailbox')}</Badge>}
         </div>
       ),
     },
@@ -738,10 +743,16 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       dataIndex: 'default_phone_number',
       sortable: false,
       width: '15%',
-      render: (value, record): React.ReactNode =>
-        record.default_phone_number
-        || record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number
-        || t('common.states.na', { defaultValue: 'N/A' }),
+      render: (value, record): React.ReactNode => {
+        const defaultPhone = record.phone_numbers?.find((phoneNumber) => phoneNumber.is_default);
+        return (
+          <PhoneText
+            value={record.default_phone_number || defaultPhone?.phone_number}
+            extension={defaultPhone?.extension}
+            fallback={t('common.states.na', { defaultValue: 'N/A' })}
+          />
+        );
+      },
     },
     {
       title: t('contactsPage.table.client', { defaultValue: 'Client' }),
@@ -892,21 +903,26 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   }, [searchTerm]);
 
   const filteredContacts = useMemo(() => {
+    const searchTermLower = searchTerm.toLowerCase();
+    // Mirrors the server legs in buildContactListSearchQuery so instant results
+    // match what the indexed search returns a moment later.
+    const searchDigits = phoneSearchDigits(searchTerm);
+    const matchesLocally = (contact: IContact): boolean => Boolean(
+      contact.full_name.toLowerCase().includes(searchTermLower) ||
+      (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
+      contact.additional_email_addresses?.some((emailAddress) =>
+        emailAddress.email_address.toLowerCase().includes(searchTermLower)
+      ) ||
+      (contact.client_name && String(contact.client_name).toLowerCase().includes(searchTermLower)) ||
+      (contact.notes && contact.notes.toLowerCase().includes(searchTermLower)) ||
+      (searchDigits && contactMatchesPhoneDigits(contact, searchDigits))
+    );
+
     return contacts.filter(contact => {
-      const searchTermLower = searchTerm.toLowerCase();
       const matchesSearch = !searchTermLower ||
                           (indexedSearchContactIds
-                            ? indexedSearchContactIds.has(contact.contact_name_id) ||
-                              contact.full_name.toLowerCase().includes(searchTermLower) ||
-                              (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
-                              contact.additional_email_addresses?.some((emailAddress) =>
-                                emailAddress.email_address.toLowerCase().includes(searchTermLower)
-                              )
-                            : contact.full_name.toLowerCase().includes(searchTermLower) ||
-                              (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
-                              contact.additional_email_addresses?.some((emailAddress) =>
-                                emailAddress.email_address.toLowerCase().includes(searchTermLower)
-                              ));
+                            ? indexedSearchContactIds.has(contact.contact_name_id) || matchesLocally(contact)
+                            : matchesLocally(contact));
       const matchesStatus = filterStatus === 'all' ||
         (filterStatus === 'active' && !contact.is_inactive) ||
         (filterStatus === 'inactive' && contact.is_inactive);
@@ -952,10 +968,16 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       key: 'default_phone_number',
       label: t('contactsPage.table.phoneNumber', { defaultValue: 'Phone Number' }),
       header: t('contactsPage.table.phoneNumber', { defaultValue: 'Phone Number' }),
-      render: (contact) => contact.default_phone_number
-        || contact.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number
-        || contact.phone_numbers?.[0]?.phone_number
-        || t('contactsPage.print.emptyValue', { defaultValue: '-' }),
+      render: (contact) => {
+        const phone = contact.phone_numbers?.find((phoneNumber) => phoneNumber.is_default)
+          || contact.phone_numbers?.[0];
+        const formattedPhone = formatPhoneForDisplay(
+          contact.default_phone_number || phone?.phone_number,
+          phone?.extension
+        );
+        return formatPhoneLabel(formattedPhone, t('common:phone.extension', { defaultValue: 'ext.' }))
+          || t('contactsPage.print.emptyValue', { defaultValue: '-' });
+      },
     },
     {
       key: 'client_name',
@@ -1133,6 +1155,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             <DataTable
               key={`${currentPage}-${pageSize}`}
               id="contacts-table"
+              persistPageSize={false}
               data={tableData}
               columns={columns}
               pagination={true}

@@ -50,15 +50,19 @@ describe('OutlineView', () => {
     const sectionB = screen.getByText('Section B');
     expect(sectionA.compareDocumentPosition(sectionB) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-    // Selected node is highlighted.
+    // Selected node is highlighted (exposed to assistive tech as the selected tree item).
     const sectionARow = screen.getByText('Section A').closest('div') as HTMLElement;
     const sectionBRow = screen.getByText('Section B').closest('div') as HTMLElement;
-    expect(sectionBRow.className).toContain('bg-blue-600');
+    const itemOf = (row: HTMLElement) => row.closest('[role="treeitem"]') as HTMLElement;
+    expect(itemOf(sectionBRow).getAttribute('aria-selected')).toBe('true');
+    expect(sectionBRow.className).toContain('bg-primary-600');
 
     // Clicking a row selects it and updates highlight.
     fireEvent.click(sectionARow);
-    expect(sectionARow.className).toContain('bg-blue-600');
-    expect(sectionBRow.className).not.toContain('bg-blue-600');
+    expect(itemOf(sectionARow).getAttribute('aria-selected')).toBe('true');
+    expect(itemOf(sectionBRow).getAttribute('aria-selected')).toBe('false');
+    expect(sectionARow.className).toContain('bg-primary-600');
+    expect(sectionBRow.className).not.toContain('bg-primary-600');
   });
 
   it('renders names from canonical props.name (not legacy top-level name)', async () => {

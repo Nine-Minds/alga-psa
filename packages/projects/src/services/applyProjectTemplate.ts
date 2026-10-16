@@ -12,6 +12,7 @@ import {
   type ResolvedTemplateStatusMapping,
   type TemplateStatusMappingRow,
 } from '../lib/projectTemplateStatusMappingResolution';
+import { templateTaskDates } from '../lib/templateTaskDates';
 
 export interface ApplyProjectTemplateInput {
   project_name: string;
@@ -376,10 +377,12 @@ export async function applyProjectTemplate(
       const maxTaskNumber = taskNumbers.length > 0 ? Math.max(...taskNumbers) : 0;
       const newWbsCode = `${phase.wbs_code}.${maxTaskNumber + 1}`;
 
-      // Calculate task due_date from phase start_date and task duration_days
-      const dueDate = phase.start_date && templateTask.duration_days
-        ? addDays(new Date(phase.start_date), templateTask.duration_days)
-        : null;
+      // Both template counts are measured from the phase start.
+      const { start_date: startDate, due_date: dueDate } = templateTaskDates({
+        phaseStart: phase.start_date,
+        durationDays: templateTask.duration_days,
+        startOffsetDays: templateTask.start_offset_days,
+      });
 
       // Determine which status mapping to use for this task
       let taskStatusMappingId: string | undefined = getFallbackStatusMappingIdForPhase(templateTask.template_phase_id);
@@ -437,6 +440,7 @@ export async function applyProjectTemplate(
           project_status_mapping_id: taskStatusMappingId,
           assigned_to: taskAssignedTo,
           assigned_team_id: taskAssignedTeamId,
+          start_date: startDate,
           due_date: dueDate,
           service_id: options.copyServices ? (templateTask.service_id || null) : null
         };

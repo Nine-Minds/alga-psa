@@ -17,6 +17,7 @@ import { generateInvoice, createInvoiceFromBillingResult } from '@alga-psa/billi
 import { generateManualInvoice as generateManualInvoiceRaw } from '@alga-psa/billing/actions';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { BillingEngine } from '@alga-psa/billing/services';
+import { initializeClientDefaultTax } from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
@@ -311,6 +312,125 @@ describe('Billing Invoice Tax Calculations', () => {
       expect(discountItem).toBeDefined();
       expect(Number(discountItem!.net_amount)).toBe(-10000);
       expect(Number(discountItem!.tax_amount)).toBe(0);
+    });
+
+    it('inherits the configured GST default for new clients and catalog items and taxes 100.00 net at 10.00', async () => {
+      const gstRate = await tenantTable(context, 'tax_rates')
+        .where({ tenant: context.tenantId, region_code: 'US-NY', is_active: true })
+        .orderBy('created_at', 'asc')
+        .first('tax_rate_id');
+      const gstRateId = gstRate!.tax_rate_id as string;
+
+      await tenantTable(context, 'tenant_settings')
+        .insert({ tenant: context.tenantId, default_tax_rate_id: gstRateId })
+        .onConflict('tenant')
+        .merge({ default_tax_rate_id: gstRateId });
+
+      const clientId = await context.createEntity<IClient>('clients', {
+        client_name: 'GST Inheritance Client',
+        billing_cycle: 'monthly',
+        client_id: uuidv4(),
+        region_code: 'US-NY',
+        is_tax_exempt: false,
+        created_at: Temporal.Now.plainDateISO().toString(),
+        updated_at: Temporal.Now.plainDateISO().toString(),
+        url: '',
+        is_inactive: false
+      }, 'client_id');
+      await ensureClientBillingEmail(context, clientId);
+
+      // The shared initializer persists the configured default as the client's
+      // client-wide default (is_default true, location null).
+      await initializeClientDefaultTax(context.db, context.tenantId, clientId);
+
+      // Catalog item inherits the same rate (omitted -> configured default).
+      const inheritedService = await createTestService(context, {
+        service_name: 'Inherited GST Service',
+        billing_method: 'fixed',
+        default_rate: 10000, // $100.00
+        unit_of_measure: 'unit',
+        tax_region: 'US-NY',
+        tax_rate_id: gstRateId
+      });
+
+      const invoice = await generateManualInvoice({
+        clientId,
+        items: [
+          {
+            service_id: inheritedService,
+            description: 'Inherited GST Service',
+            quantity: 1,
+            rate: 10000
+          }
+        ]
+      });
+      await finalizeInvoice(invoice.invoice_id);
+
+      const savedInvoice = await tenantTable(context, 'invoices')
+        .where({ invoice_id: invoice.invoice_id, tenant: context.tenantId })
+        .first();
+      expect(Number(savedInvoice!.tax)).toBe(1000); // 10% GST on $100.00 net
+      expect(Number(savedInvoice!.total_amount)).toBe(11000); // net $100.00 + GST $10.00
+
+      // Non-taxable catalog item (explicit NULL) stays untaxed. No tax_region
+      // assignment: a region would overwrite the explicit NULL with that
+      // region's rate.
+      const nonTaxableService = await createTestService(context, {
+        service_name: 'Non Taxable Service',
+        billing_method: 'fixed',
+        default_rate: 10000,
+        unit_of_measure: 'unit',
+        tax_rate_id: null
+      });
+      const nonTaxableInvoice = await generateManualInvoice({
+        clientId,
+        items: [
+          {
+            service_id: nonTaxableService,
+            description: 'Non Taxable Service',
+            quantity: 1,
+            rate: 10000
+          }
+        ]
+      });
+      await finalizeInvoice(nonTaxableInvoice.invoice_id);
+      const savedNonTaxable = await tenantTable(context, 'invoices')
+        .where({ invoice_id: nonTaxableInvoice.invoice_id, tenant: context.tenantId })
+        .first();
+      expect(Number(savedNonTaxable!.tax)).toBe(0);
+      expect(Number(savedNonTaxable!.total_amount)).toBe(10000);
+
+      // Exempt client: the inherited default creates no tax obligation.
+      const exemptClientId = await context.createEntity<IClient>('clients', {
+        client_name: 'Exempt GST Client',
+        billing_cycle: 'monthly',
+        client_id: uuidv4(),
+        region_code: 'US-NY',
+        is_tax_exempt: true,
+        created_at: Temporal.Now.plainDateISO().toString(),
+        updated_at: Temporal.Now.plainDateISO().toString(),
+        url: '',
+        is_inactive: false
+      }, 'client_id');
+      await ensureClientBillingEmail(context, exemptClientId);
+      await initializeClientDefaultTax(context.db, context.tenantId, exemptClientId);
+
+      const exemptInvoice = await generateManualInvoice({
+        clientId: exemptClientId,
+        items: [
+          {
+            service_id: inheritedService,
+            description: 'Exempt GST Service',
+            quantity: 1,
+            rate: 10000
+          }
+        ]
+      });
+      await finalizeInvoice(exemptInvoice.invoice_id);
+      const savedExempt = await tenantTable(context, 'invoices')
+        .where({ invoice_id: exemptInvoice.invoice_id, tenant: context.tenantId })
+        .first();
+      expect(Number(savedExempt!.tax)).toBe(0);
     });
 
     it('should calculate tax correctly for services with different tax regions', async () => {

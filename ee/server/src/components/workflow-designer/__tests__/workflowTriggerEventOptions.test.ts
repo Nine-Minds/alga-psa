@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildWorkflowTriggerEventCategoryOptions,
+  buildWorkflowEventSearchKeywords,
   buildWorkflowTriggerEventOptions,
   getWorkflowTriggerEventCategoryKey,
   WORKFLOW_TRIGGER_EVENT_CATEGORY_KEY_OTHER,
@@ -73,12 +74,39 @@ describe('workflowTriggerEventOptions', () => {
 
   it('filters event options to the selected category and preserves unknown saved events in the Unknown bucket', () => {
     expect(buildWorkflowTriggerEventOptions(entries, 'Tickets')).toEqual([
-      { value: 'ticket.created', label: 'Ticket Created (ticket.created)' },
-      { value: 'ticket.updated', label: 'Ticket Updated (ticket.updated)' },
+      expect.objectContaining({ value: 'ticket.created', label: 'Ticket Created (ticket.created)' }),
+      expect.objectContaining({ value: 'ticket.updated', label: 'Ticket Updated (ticket.updated)' }),
     ]);
 
     expect(buildWorkflowTriggerEventOptions(entries, WORKFLOW_TRIGGER_EVENT_CATEGORY_KEY_UNKNOWN, 'missing.event')).toEqual([
       { value: 'missing.event', label: 'Unknown event (missing.event)' },
     ]);
   });
+
+  it('gives every event option search keywords from its name, code, description, category, and synonyms', () => {
+    const keywords = buildWorkflowEventSearchKeywords({
+      name: 'Ticket Customer Replied',
+      event_type: 'TICKET_CUSTOMER_REPLIED',
+      description: 'A contact replied to a ticket by email or in the portal',
+      category: 'Tickets',
+    });
+    expect(keywords).toContain('reply');
+    expect(keywords).toContain('portal');
+    expect(keywords).toContain('tickets');
+
+    // Description words are searchable but not expanded into synonyms.
+    const surveyExpired = buildWorkflowEventSearchKeywords({
+      name: 'Survey Expired',
+      event_type: 'SURVEY_EXPIRED',
+      description: 'Survey expired without response.',
+      category: 'Surveys',
+    });
+    expect(surveyExpired).toContain('response');
+    expect(surveyExpired).not.toContain('reply');
+    expect(surveyExpired).not.toContain('replied');
+
+    const [created] = buildWorkflowTriggerEventOptions(entries, 'Tickets');
+    expect(created.keywords).toContain('new');
+  });
 });
+

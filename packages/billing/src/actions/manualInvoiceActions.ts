@@ -15,7 +15,8 @@ import { getAnalyticsAsync } from '../lib/authHelpers';
 
 import { tenantDb } from '@alga-psa/db';
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
-import { getDueDate } from './billingAndTax';
+import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
+import { dueDateForPaymentTerms } from '../lib/billing/invoiceDueDate';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import logger from '@alga-psa/core/logger';
 import {
@@ -29,6 +30,8 @@ export interface ManualInvoiceItem { // Add export
   quantity: number;
   description: string;
   rate: number;
+  /** Per-line profile override; defaults to the invoice's billing profile. */
+  billing_profile_id?: string | null;
   is_discount?: boolean;
   discount_type?: DiscountType;
   applies_to_item_id?: string;
@@ -44,6 +47,12 @@ export interface ManualInvoiceItem { // Add export
 
 interface ManualInvoiceRequest {
   clientId: string;
+  /**
+   * Which of the client's billing profiles this invoice bills. Omitted means
+   * the client's default profile, so a client nobody has segmented keeps the
+   * behaviour it had before profiles existed.
+   */
+  billingProfileId?: string | null;
   invoiceNumber?: string;
   items: ManualInvoiceItem[];
   expirationDate?: string; // Add expiration date for prepayments
@@ -159,6 +168,9 @@ export const generateManualInvoice = withAuth(async (
       tenant,
       clientId,
       client.client_name,
+      // A profile of another client is rejected below; the resolver ignores one
+      // here for the same reason, so this cannot borrow a stranger's address.
+      request.billingProfileId?.trim() || null,
     );
     if (!emailValidation.valid) {
       return handledManualInvoiceFailure(
@@ -178,10 +190,29 @@ export const generateManualInvoice = withAuth(async (
     }
 
     const currentDate = Temporal.Now.plainDateISO().toString();
-    const dueDate = await getDueDate(clientId, currentDate);
-    if (isActionMessageError(dueDate) || isActionPermissionError(dueDate)) {
-      throw new Error(getErrorMessage(dueDate));
+    // Which profile this invoice bills (F095). The pick is validated against the
+    // client so a profile that moved in with a merged client can never be billed
+    // under the wrong customer. No pick leaves the invoice unattributed and its
+    // charges falling through to the client default, exactly as before.
+    const billingProfileId = request.billingProfileId?.trim() || null;
+    if (billingProfileId) {
+      const profile = await tenantDb(knex, tenant).table('client_billing_profiles')
+        .where({ billing_profile_id: billingProfileId })
+        .first('client_id', 'is_active');
+      if (!profile || profile.client_id !== clientId || profile.is_active === false) {
+        return handledManualInvoiceFailure(
+          'BILLING_PROFILE_NOT_FOUND',
+          'The selected billing profile is not available for this client',
+          context,
+          { billingProfileId },
+        );
+      }
     }
+
+    // Resolve preferences only after validating the selected profile. An omitted
+    // selection inherits the client's default profile.
+    const billingIdentity = await resolveEffectiveBillingIdentity(knex, tenant, clientId, billingProfileId);
+    const dueDate = dueDateForPaymentTerms(currentDate, billingIdentity.paymentTerms);
 
     const invoiceNumber = request.invoiceNumber?.trim() || await generateInvoiceNumber();
     const invoiceId = uuidv4();
@@ -194,8 +225,10 @@ export const generateManualInvoice = withAuth(async (
       invoice_id: invoiceId,
       tenant,
       client_id: clientId,
+      billing_profile_id: billingProfileId,
       invoice_date: currentDate,
       due_date: dueDate,
+      payment_method: billingIdentity.preferredPaymentMethod,
       invoice_number: invoiceNumber,
       status: 'draft',
       currency_code: currencyCode,
@@ -219,7 +252,12 @@ export const generateManualInvoice = withAuth(async (
       await invoiceService.persistManualInvoiceCharges(
         trx,
         invoiceId,
-        items,
+        billingProfileId
+          ? items.map((item) => ({
+            ...item,
+            billing_profile_id: item.billing_profile_id ?? billingProfileId,
+          }))
+          : items,
         client,
         session,
         tenant,

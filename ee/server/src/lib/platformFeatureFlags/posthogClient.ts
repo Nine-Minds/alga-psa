@@ -15,11 +15,6 @@ export const ENTRA_PHASE1_FLAG_DEFINITIONS = [
     name: 'Entra Client Sync Action',
     tags: ['entra', 'integration', 'phase-1'],
   },
-  {
-    key: 'entra-integration-cipp',
-    name: 'Entra CIPP Option',
-    tags: ['entra', 'integration', 'phase-1'],
-  },
 ] as const;
 
 async function getPostHogConfig(): Promise<{ apiKey: string; projectId: string }> {

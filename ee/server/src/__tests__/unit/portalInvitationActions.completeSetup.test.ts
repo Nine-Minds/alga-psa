@@ -56,6 +56,14 @@ function buildKnexHarness(params: {
   const usersInsertMock = vi.fn();
 
   const knexMock: any = vi.fn((table: string) => {
+    if (table === 'contacts') {
+      return {
+        where: vi.fn(() => ({
+          first: vi.fn(async () => ({ contact_kind: 'person' })),
+        })),
+      };
+    }
+
     if (table === 'users') {
       return {
         where: vi.fn((conditions: Record<string, unknown>) => {

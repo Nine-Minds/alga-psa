@@ -113,7 +113,12 @@
           "title": "⟦Ɋŭȯŧḗ Ḓḗŧȧīŀş⟧"
         }
       },
-      "title": "⟦Ɓīŀŀīƞɠ⟧"
+      "title": "⟦Ɓīŀŀīƞɠ⟧",
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "⟦Ƈȧřḓ Şḗŧŭƥ⟧"
+        }
+      }
     },
     "clientSettings": {
       "description": "⟦Ḿȧƞȧɠḗ ẏȯŭř ƈȯḿƥȧƞẏ şḗŧŧīƞɠş ȧƞḓ ƈȯƞƒīɠŭřȧŧīȯƞş⟧",
@@ -541,6 +546,12 @@
       "detail": {
         "title": "⟦Ŧīƈķḗŧ #{{ticketNumber}} - {{ticketTitle}}⟧",
         "fallbackTitle": "⟦Ŧīƈķḗŧ Ḓḗŧȧīŀş⟧"
+      },
+      "recurring": {
+        "title": "⟦Řḗƈŭřřīƞɠ ŧīƈķḗŧş⟧"
+      },
+      "templates": {
+        "title": "⟦Ŧīƈķḗŧ ŧḗḿƥŀȧŧḗş⟧"
       }
     },
     "timeEntry": {
@@ -613,6 +624,11 @@
     },
     "tab": {
       "title": "⟦Ŧḗȧḿş⟧"
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "⟦Ƈȧřḓ Şḗŧŭƥ⟧"
     }
   }
 }

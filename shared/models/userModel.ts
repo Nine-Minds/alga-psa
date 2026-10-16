@@ -125,21 +125,19 @@ async function _createPortalUserInDBWithTrx(
         throw new Error('A client portal user with this email already exists');
       }
 
-      // Get the contact to check is_client_admin flag if not explicitly provided
-      let isClientAdmin = input.isClientAdmin;
-      if (isClientAdmin === undefined) {
-        const contact = await db.table('contacts')
-          .where({
-            contact_name_id: input.contactId,
-          })
-          .first();
+      // Read the target contact for every creation path, including callers that
+      // explicitly supply a role. A shared mailbox must never receive a portal
+      // user or admin role.
+      const contact = await db.table('contacts')
+        .where({ contact_name_id: input.contactId })
+        .first();
 
-        if (!contact) {
-          throw new Error('Contact not found');
-        }
-
-        isClientAdmin = contact.is_client_admin || false;
+      if (!contact) throw new Error('Contact not found');
+      if (contact.contact_kind === 'shared_mailbox') {
+        throw new Error('Shared mailbox contacts cannot have a client portal user.');
       }
+
+      const isClientAdmin = input.isClientAdmin ?? contact.is_client_admin ?? false;
 
       // Determine the role to assign
       const roleToAssign = await determinePortalUserRole(trx, {

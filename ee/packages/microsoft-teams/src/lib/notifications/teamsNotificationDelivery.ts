@@ -1,3 +1,4 @@
+import type { WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -244,7 +245,10 @@ function buildTemplateParameters(notification: TeamsNotificationInput): Array<{ 
   ];
 }
 
-function safePublishNotificationWorkflowEvent(params: Parameters<typeof publishWorkflowEvent>[0]): void {
+// LEVERAGE: pattern safe-publish-workflow-event — fire-and-forget publishWorkflowEvent wrapper repeated per package
+function safePublishNotificationWorkflowEvent<T extends WorkflowCatalogEventType>(
+  params: Parameters<typeof publishWorkflowEvent<T>>[0]
+): void {
   void publishWorkflowEvent(params).catch((error) => {
     logger.warn('[TeamsNotificationDelivery] Failed to publish workflow notification event', {
       error: normalizeErrorMessage(error),

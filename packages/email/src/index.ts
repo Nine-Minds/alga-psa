@@ -46,8 +46,9 @@ export {
   capReferences
 } from './BaseEmailService';
 
-// Send-time brand logo embedding, for the paths that render a tenant template
-// and hand it straight to a provider instead of going through BaseEmailService.
+// Send-time passes, for the paths that render a template and hand it straight
+// to a provider instead of going through BaseEmailService.
+export { addGradientFallback } from './branding/gradientFallback';
 export {
   embedBrandLogo,
   type EmbedBrandLogoOptions,
@@ -67,6 +68,19 @@ export { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory'
 
 // Tenant email provider manager
 export { EmailProviderManager } from './providers/EmailProviderManager';
+
+// Outbound email diagnostics (provider-dispatched, shared kernel)
+export {
+  runOutboundEmailDiagnostics,
+  runOutboundEmailDiagnosticsWithSettings,
+} from './diagnostics/outboundDiagnostics';
+export type {
+  OutboundDiagnosticsSummary,
+  OutboundEmailDiagnosticsOptions,
+  OutboundEmailDiagnosticsReport,
+  OutboundProviderType,
+  OutboundStep,
+} from './diagnostics/outboundTypes';
 
 export {
   applyFromNameOverride,

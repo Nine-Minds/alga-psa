@@ -151,7 +151,8 @@
     "tryAgain": "Spróbuj ponownie",
     "backToBilling": "Wróć do rozliczeń",
     "retryFailed": "Nadal nie udało się rozpocząć płatności. Spróbuj ponownie za chwilę.",
-    "loading": "Ładowanie..."
+    "loading": "Ładowanie...",
+    "offlinePaymentMethod": "Ta faktura jest opłacana czekiem lub przelewem bankowym, więc płatność online jest niedostępna. Postępuj zgodnie z instrukcjami płatności na fakturze."
   },
   "quotes": {
     "pendingQuotes": "Oczekujące oferty",

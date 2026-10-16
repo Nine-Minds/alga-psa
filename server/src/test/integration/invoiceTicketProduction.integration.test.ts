@@ -78,8 +78,9 @@ it('renders saved transformed detail and primary tables through preview and PDF'
       const source = table.repeat.sourceBinding.bindingId;
       expect(resolveCanvasCollection(vm, source, ast)).toEqual({ rows: evaluation.bindings[source] });
     }
-    expect(resolveCanvasCollection(vm, ast.transforms.outputBindingId, ast).rows).toHaveLength(4);
-    expect(resolveCanvasCollection(vm, ast.transforms.outputBindingId, ast).rows.map((row) => row.amount)).toEqual([37500, 15000, 15000, 15000]);
+    // The overtime entry contributes two time entries (regular + overtime segment).
+    expect(resolveCanvasCollection(vm, ast.transforms.outputBindingId, ast).rows).toHaveLength(5);
+    expect(resolveCanvasCollection(vm, ast.transforms.outputBindingId, ast).rows.map((row) => row.amount)).toEqual([22500, 15000, 15000, 15000, 15000]);
     fs.writeFileSync(`${evidenceDir}/custom-canvas-rows.json`, JSON.stringify(tables.map((table) => ({
       source: table.repeat.sourceBinding.bindingId,
       ...resolveCanvasCollection(vm, table.repeat.sourceBinding.bindingId, ast),
@@ -92,7 +93,7 @@ it('renders saved transformed detail and primary tables through preview and PDF'
     fs.writeFileSync(`${evidenceDir}/custom.pdf`, await pdf.generatePDF({ invoiceId: invoice.invoice_id, userId: state.user.user_id, templateId: template.template_id }));
     const { execFileSync } = await import('node:child_process');
     const text = execFileSync('pdftotext', ['-layout', `${evidenceDir}/custom.pdf`, '-'], { encoding: 'utf8' });
-    expect(text).toContain('375,00');
+    expect(text).toContain('225,00');
     expect(text).toContain('525,00');
     expect(text).toContain(new Intl.NumberFormat('fr', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(vm.total / 100));
     expect(text).not.toContain('EDITED');
@@ -193,9 +194,10 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
   });
   const { generateInvoice, generateProjectInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
   let result: any;
+  let hourBlockPreviewSubtotal: number | undefined;
   if (variant === 'hour-block') {
     const { buildClientCadenceDueSelectionInput } = await import('@alga-psa/shared/billingClients/recurringRunExecutionIdentity');
-    const { generateInvoiceForSelectionInputs } = await import('@alga-psa/billing/actions/invoiceGeneration');
+    const { generateInvoiceForSelectionInputs, previewGroupedInvoicesForSelectionInputs } = await import('@alga-psa/billing/actions/invoiceGeneration');
     const periods = await db('recurring_service_periods').where({ tenant: ids.tenant, invoice_window_start: '2026-09-01', invoice_window_end: '2026-10-01' }).whereIn('obligation_id', [ids.lineId, ids.usageLineId]);
     const selectors = periods.map((period) => buildClientCadenceDueSelectionInput({ clientId: ids.clientId,
       scheduleKey: period.schedule_key, periodKey: period.period_key, windowStart: '2026-09-01', windowEnd: '2026-10-01' }));
@@ -204,6 +206,14 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
       periodKey: `period:2026-09-01:2026-10-01:unresolved:time:${blockEntryIds[1]}`,
       windowStart: '2026-09-01', windowEnd: '2026-10-01' }));
     fs.writeFileSync(`${dir}/selectors.json`, JSON.stringify(selectors, null, 2));
+    // A source-record selector has no recurring obligation. Both preview and
+    // generation must still include its uncovered time on the default invoice.
+    const preview = await previewGroupedInvoicesForSelectionInputs([
+      { previewGroupKey: 'hour-block', selectorInputs: selectors },
+    ]);
+    expect(preview.success, JSON.stringify(preview)).toBe(true);
+    if (!preview.success) throw new Error(preview.error);
+    hourBlockPreviewSubtotal = preview.previews[0].data.subtotal;
     result = await generateInvoiceForSelectionInputs(selectors);
   } else result = await (variant === 'cap' ? generateProjectInvoice(cappedProjectId!) : generateInvoice(ids.cycleId));
   expect(result.invoice_id, JSON.stringify(result)).toBeTruthy();
@@ -225,10 +235,15 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
   if (variant === 'cap' || variant === 'recurring-cap') {
     expect(vm.subtotal).toBe(variant === 'cap' ? 20000 : 55000); expect(vm.tax).toBe(variant === 'cap' ? 2000 : 5500);
     const cappedLinks = links.filter((link) => link.work_item_snapshot.workItemType === 'project_task');
-    expect(cappedLinks).toHaveLength(2);
-    for (const link of cappedLinks) {
-      const charge = charges.find((c) => c.item_id === link.item_id)!;
-      expect(Number(charge.net_amount)).not.toBe(link.work_item_snapshot.netAmount);
+    expect(cappedLinks).toHaveLength(variant === 'recurring-cap' ? 3 : 2);
+    // The overtime entry bills as two segment charges in the recurring-cap
+    // variant; the cap leaves the segment that still fits intact and writes
+    // down the rest.
+    const writtenDown = cappedLinks.filter((link) =>
+      Number(charges.find((c) => c.item_id === link.item_id)!.net_amount) !== link.work_item_snapshot.netAmount
+    );
+    expect(writtenDown.length).toBeGreaterThanOrEqual(2);
+    for (const link of writtenDown) {
       expect(vm.ticketPresentationRows!.find((r) => r.id === link.item_id)).toMatchObject({ rateKind: 'unknown', rate: null });
       expect(link.work_item_snapshot.rateKind).not.toBe('uniform');
     }
@@ -269,7 +284,7 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
     expect(await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id }).orderBy('item_id')).toEqual(before);
   }
   if (variant === 'task-identities') {
-    expect(links).toHaveLength(8);
+    expect(links).toHaveLength(9);
     const tasks = vm.ticketGroups!.filter((group) => group.workItemType === 'project_task');
     expect(tasks).toHaveLength(3);
     expect(new Set(tasks.map((group) => group.workItemId))).toEqual(new Set(taskIds));
@@ -287,6 +302,14 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
     expect(mapDbInvoiceToWasmViewModel(await Invoice.getFullInvoiceById(db, ids.tenant, result.invoice_id))).toEqual(vm);
   }
   if (variant === 'hour-block') {
+    expect(invoice!.billing_profile_id).toBe(ids.profileId);
+    expect(vm.subtotal).toBe(hourBlockPreviewSubtotal);
+    const uncoveredTimeLink = links.find((link) => link.entry_id === blockEntryIds[1]);
+    expect(uncoveredTimeLink).toBeDefined();
+    expect(charges.find((charge) => charge.item_id === uncoveredTimeLink!.item_id)).toMatchObject({
+      billing_profile_id: ids.profileId,
+      net_amount: '15000',
+    });
     const information = charges.filter((charge) => charge.billing_charge_type === 'hour_block');
     expect(information).toHaveLength(1);
     expect(Number(information[0].net_amount)).toBe(0);
@@ -304,7 +327,7 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
     fs.writeFileSync(`${dir}/persisted-prepaid.json`, JSON.stringify({ blockId, blockEntryIds, information, details }, null, 2));
   }
   if (variant === 'multi-tax-long') {
-    expect(links).toHaveLength(74);
+    expect(links).toHaveLength(75);
     expect(vm.subtotal).toBe(1137500); expect(vm.tax).toBe(167750);
     expect(vm.ticketPresentationRows!.find((row) => row.contributions.length > 2)).not.toHaveProperty('taxRate');
   }
@@ -404,7 +427,7 @@ it('saves and verifies a named nested alias on the generated long invoice throug
     }
     const scope = resolveCanvasRowScope(vm, ast, 'entry-detail');
     const nested = resolveCanvasCollection(vm, 'nestedEntries', ast, scope);
-    expect(nested.rows).toHaveLength(72);
+    expect(nested.rows).toHaveLength(73);
     expect(nested.rows.reduce((sum, row) => sum + Number(row.amount), 0)).toBe(1102500);
     const evaluation = evaluateTemplateAst(ast, vm as any);
     const transformed = resolveCanvasCollection(vm, ast.transforms.outputBindingId, ast);

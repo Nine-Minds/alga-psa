@@ -64,6 +64,7 @@ describe('MSP dashboard locale batch 2b-1', () => {
   it('T070: English msp/dashboard.json contains the expected dashboard and onboarding keys', () => {
     const expectedEntries: Record<string, string> = {
       'welcome.title': 'Welcome to Your MSP Command Center',
+      'welcome.titleBranded': 'Welcome to the {{companyName}} Command Center',
       'welcome.description': 'Track onboarding progress, configure critical services, and keep every client experience consistent.',
       'welcome.titleCommunity': 'Welcome back',
       'welcome.descriptionCommunity': 'Jump into tickets, scheduling, projects, and reporting from your dashboard.',

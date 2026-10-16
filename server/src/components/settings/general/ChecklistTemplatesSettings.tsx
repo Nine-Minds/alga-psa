@@ -313,6 +313,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
     }
   };
 
+  // LEVERAGE: pattern checklist-item-list-editor — add/reorder/remove list of checklist items is also written by TicketTemplateEditor; both should share one editor component
   const moveItem = async (templateItemId: string, direction: 'up' | 'down') => {
     if (!editingTemplate) return;
 

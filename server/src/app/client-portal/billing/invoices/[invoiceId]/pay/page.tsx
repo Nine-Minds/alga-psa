@@ -62,8 +62,13 @@ export default async function PayInvoicePage({ params }: PayInvoicePageProps) {
     redirect(billingBackUrl(invoiceId));
   }
 
-  // Link configuration/creation failures render the flagged failure state.
-  if (code === 'payment_not_configured' || code === 'payment_link_creation_failed') {
+  // Link configuration/creation failures, and invoices issued for payment by
+  // check or bank transfer, explain why online payment is unavailable.
+  if (
+    code === 'payment_not_configured' ||
+    code === 'payment_link_creation_failed' ||
+    code === 'offline_payment_method'
+  ) {
     return (
       <PaymentUnavailable
         code={code}

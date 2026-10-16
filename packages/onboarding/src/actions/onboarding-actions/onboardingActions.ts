@@ -774,6 +774,7 @@ export const setupBilling = withAuth(async (
       });
 
       // Create service_prices entry so the catalog UI shows the correct currency & rate
+      // LEVERAGE: friction catalog-price-writer — single-row epoch seed bypasses writeServiceCatalogPricing (display_order relies on the column default 0); onboarding does not depend on @alga-psa/billing. Route through the writer once it is reachable from this package.
       await tenantScopedTable('service_prices').insert({
         price_id: require('crypto').randomUUID(),
         tenant,

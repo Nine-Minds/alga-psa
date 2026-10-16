@@ -55,7 +55,7 @@ describe('RecurringServicePeriodsTab UI', () => {
 
     const generatedRecord = buildRecurringServicePeriodRecord({
       recordId: 'rsp-generated',
-      scheduleKey: 'schedule:tenant-1:contract_line:line-1:contract:arrears',
+      scheduleKey: 'schedule:tenant-1:line-1:contract:arrears',
       lifecycleState: 'generated',
       servicePeriod: {
         start: '2026-04-01',
@@ -117,7 +117,6 @@ describe('RecurringServicePeriodsTab UI', () => {
     mocks.getRecurringServicePeriodManagementView.mockResolvedValue({
       scheduleKey: generatedRecord.scheduleKey,
       obligationId: 'line-1',
-      obligationType: 'contract_line',
       cadenceOwner: 'contract',
       duePosition: 'arrears',
       chargeFamily: 'fixed',
@@ -241,13 +240,13 @@ describe('RecurringServicePeriodsTab UI', () => {
   it('T080: service-period management surface can show future generated rows, edited rows, and billed rows for one recurring obligation', async () => {
     render(
       <RecurringServicePeriodsTab
-        initialScheduleKey="schedule:tenant-1:contract_line:line-1:contract:arrears"
+        initialScheduleKey="schedule:tenant-1:line-1:contract:arrears"
       />,
     );
 
     await waitFor(() => {
       expect(mocks.getRecurringServicePeriodManagementView).toHaveBeenCalledWith(
-        'schedule:tenant-1:contract_line:line-1:contract:arrears',
+        'schedule:tenant-1:line-1:contract:arrears',
       );
     });
 
@@ -267,11 +266,10 @@ describe('RecurringServicePeriodsTab UI', () => {
   it('T305: zero-row schedules render a repair flow, re-materialize rows, and then show the schedule table', async () => {
     const repairedRecord = buildRecurringServicePeriodRecord({
       recordId: 'rsp-repaired',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:advance',
+      scheduleKey: 'schedule:tenant-1:line-1:client:advance',
       sourceObligation: {
         tenant: 'tenant-1',
         obligationId: 'line-1',
-        obligationType: 'client_contract_line',
         chargeFamily: 'fixed',
       },
       cadenceOwner: 'client',
@@ -292,7 +290,6 @@ describe('RecurringServicePeriodsTab UI', () => {
       .mockResolvedValueOnce({
         scheduleKey: repairedRecord.scheduleKey,
         obligationId: 'line-1',
-        obligationType: 'client_contract_line',
         cadenceOwner: 'client',
         duePosition: 'advance',
         chargeFamily: 'fixed',
@@ -319,7 +316,6 @@ describe('RecurringServicePeriodsTab UI', () => {
       .mockResolvedValueOnce({
         scheduleKey: repairedRecord.scheduleKey,
         obligationId: 'line-1',
-        obligationType: 'client_contract_line',
         cadenceOwner: 'client',
         duePosition: 'advance',
         chargeFamily: 'fixed',
@@ -364,7 +360,7 @@ describe('RecurringServicePeriodsTab UI', () => {
 
     render(
       <RecurringServicePeriodsTab
-        initialScheduleKey="schedule:tenant-1:client_contract_line:line-1:client:advance"
+        initialScheduleKey="schedule:tenant-1:line-1:client:advance"
       />,
     );
 
@@ -375,7 +371,7 @@ describe('RecurringServicePeriodsTab UI', () => {
 
     await waitFor(() => {
       expect(mocks.repairMissingRecurringServicePeriods).toHaveBeenCalledWith(
-        'schedule:tenant-1:client_contract_line:line-1:client:advance',
+        'schedule:tenant-1:line-1:client:advance',
       );
     });
 

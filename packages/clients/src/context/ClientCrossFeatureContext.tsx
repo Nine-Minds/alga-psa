@@ -63,6 +63,10 @@ export interface ClientTicketsRenderProps {
   initialUsers?: IUser[];
 }
 
+export interface ClientRecurringTicketsRenderProps {
+  clientId: string;
+}
+
 export interface ContactTicketsRenderProps {
   contactId: string;
   contactName?: string;
@@ -109,6 +113,10 @@ export interface ScheduleTeamsMeetingFromClientInput {
   endDateTime: string | Date;
   client_id?: string | null;
   contact_name_id?: string | null;
+  /** The opportunity the logged interaction belongs to, when scheduled from a deal. */
+  opportunity_id?: string | null;
+  /** Free-form interaction notes; the join link is appended server-side. */
+  notes?: string | null;
   attendees?: Array<{ emailAddress: string; name?: string }>;
   /** Who the logged interaction belongs to — distinct from the Teams organizer. Defaults to the creator. */
   interactionUserId?: string;
@@ -151,6 +159,8 @@ export interface ClientCrossFeatureCallbacks {
    */
   renderClientUnresolvedChargeReview?: (props: ClientUnresolvedChargeReviewRenderProps) => ReactNode;
   renderClientTickets: (props: ClientTicketsRenderProps) => ReactNode;
+  /** Optional: the Recurring tickets tab on client detail (the tickets package owns the component; clients must not import it). */
+  renderClientRecurringTickets?: (props: ClientRecurringTicketsRenderProps) => ReactNode;
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
   renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;
   renderContractQuickAdd?: (props: ContractQuickAddRenderProps) => ReactNode;

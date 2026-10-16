@@ -3,10 +3,15 @@ import { registerDefaultNodes } from './nodes/registerDefaultNodes';
 import { registerEmailWorkflowActionsV2 } from './actions/registerEmailWorkflowActions';
 import { registerBusinessOperationsActionsV2 } from './actions/registerBusinessOperationsActions';
 import { registerTransformActionsV2 } from './actions/registerTransformActions';
-import { emailWorkflowPayloadSchema } from './schemas/emailWorkflowSchemas';
-import { emptyWorkflowPayloadSchema, EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF } from './schemas/emptyWorkflowPayloadSchema';
-import { workflowClockTriggerPayloadSchema, WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from './schemas/workflowClockTriggerSchema';
-import { workflowEventPayloadSchemas } from './schemas/workflowEventPayloadSchemas';
+import {
+  dateTriggerPayloadSchemas,
+  emailWorkflowPayloadSchema,
+  emptyWorkflowPayloadSchema,
+  EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF,
+  workflowClockTriggerPayloadSchema,
+  WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
+  workflowEventPayloadSchemas,
+} from '@alga-psa/event-schemas';
 
 let initialized = false;
 
@@ -27,6 +32,9 @@ export function initializeWorkflowRuntimeV2(): void {
     if (!schemaRegistry.has(ref)) {
       schemaRegistry.register(ref, schema);
     }
+  }
+  for (const [ref, schema] of Object.entries(dateTriggerPayloadSchemas)) {
+    if (!schemaRegistry.has(ref)) schemaRegistry.register(ref, schema);
   }
 
   registerDefaultNodes();

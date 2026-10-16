@@ -58,8 +58,22 @@
     },
     "clients": {
       "title": "Your Company",
-      "help": "The client marked as your company is your own organization. Its name, address, and logo appear on invoices, quotes, and client-facing communications.",
+      "help": "The client marked as your company is your own organization. Its name, address, and logo appear on invoices, quotes, and client-facing communications, and the country on its location sets your date format and the country preselected on new records.",
       "currentDefault": "Your company is currently {{name}}.",
+      "defaults": {
+        "title": "What your company decides",
+        "intro": "The country on {{name}}'s location settles these for everyone in the MSP app:",
+        "country": "New clients, contacts and locations preselect {{country}}.",
+        "countryMissing": "New clients, contacts and locations preselect no country.",
+        "phoneCode": "Phone numbers start on the {{code}} dial code.",
+        "phoneCodeMissing": "Phone numbers start with no dial code.",
+        "dateFormat": "Dates are written {{pattern}} — {{example}} — on a {{clock}} clock.",
+        "clock12": "12-hour",
+        "clock24": "24-hour",
+        "noCountry": "{{name}} has no country on its location, so all three fall back to the {{pattern}} default. Add a location with a country to {{name}} to change them — there is no separate date-format setting.",
+        "portalNote": "Client portal users read dates in their own client's format, taken from that client's location country rather than yours.",
+        "changeIntro": "Switching to {{name}} also changes these defaults:"
+      },
       "yourCompanyBadge": "Your company",
       "table": {
         "name": "Name",
@@ -97,6 +111,18 @@
         "setDefaultClient": "Failed to set default client",
         "loadClients": "Failed to load clients"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Use your company name in the dashboard welcome",
+    "help": "Off by default: the MSP dashboard reads \"Welcome to Your MSP Command Center\". Turn this on and it names the client marked as your company instead. This switch saves on its own, right away.",
+    "noCompany": "No client is marked as your company yet. Pick one under Settings → General and its name can appear here.",
+    "previewLabel": "Your team sees:",
+    "preview": "Welcome to the {{companyName}} Command Center",
+    "previewDefault": "Welcome to Your MSP Command Center",
+    "messages": {
+      "saved": "Dashboard welcome updated",
+      "saveFailed": "Failed to update the dashboard welcome"
     }
   },
   "experimentalFeatures": {
@@ -362,6 +388,7 @@
         "emailAlreadyExists": "A user with this email address already exists",
         "reportsToSelf": "A user cannot report to themselves",
         "reportsToCycle": "This would create a circular reporting chain",
+        "invalidTimezone": "Choose a city-based time zone, such as America/New_York.",
         "passwordTooShort": "Password must be at least 8 characters long",
         "passwordChangeFailed": "Failed to change password",
         "passwordChangeError": "An error occurred while changing password",
@@ -396,7 +423,8 @@
       "placeholders": {
         "teamName": "Enter team name",
         "selectTeamLead": "Select a team lead",
-        "selectUserToAdd": "Select a user to add"
+        "selectUserToAdd": "Select a user to add",
+        "noTeamLead": "Not assigned"
       },
       "alert": {
         "unsavedChanges": "You have unsaved changes"
@@ -646,8 +674,8 @@
           "suppressAiHelp": "Enterprise AI Assistant add-on only. If unavailable, replies reopen normally."
         },
         "liveTimer": {
-          "label": "Enable live ticket timer",
-          "help": "Shows the live timer and tracked intervals on tickets in this board. Manual time entry remains available."
+          "label": "Show stopwatch on tickets",
+          "help": "Shows the stopwatch controls on tickets in this board. Turn this off to hide the stopwatch here; manual time entry stays available. A stopwatch that is already running keeps running."
         },
         "clientPortalVisible": {
           "label": "Visible in client portal",
@@ -794,6 +822,27 @@
           "appearanceHelp": "Tab pinning and the board's default list view",
           "assignment": "Assignment & SLA",
           "assignmentHelp": "Default routing, SLA and board manager",
+          "notifications": "Notifications",
+          "notificationsHelp": "Notify technicians about new tickets and status changes, and set default watchers",
+          "notificationsRulesLabel": "Notification rules",
+          "notificationsRulesHelp": "Recipients get one notification per event. They are not added as watchers.",
+          "notificationsAddRule": "Add rule",
+          "notificationsRuleTitle": "Rule {{number}}",
+          "notificationsRuleEnabled": "Enabled",
+          "notificationsRemoveRule": "Remove rule",
+          "notificationsOnCreate": "When a ticket is created on this board",
+          "notificationsOnStatus": "When a ticket enters",
+          "notificationsNoStatuses": "Statuses can be selected once the board has been saved.",
+          "notificationsRecipients": "Notify",
+          "notificationsRecipientsPlaceholder": "Select users and teams...",
+          "notificationsRecipientsHelp": "Team members are looked up each time a notification is sent.",
+          "notificationsDefaultWatchers": "Default watchers",
+          "notificationsDefaultWatchersPlaceholder": "Select users...",
+          "notificationsDefaultWatchersHelp": "Added to the watch list of every new ticket on this board, and notified of every later update.",
+          "notificationsTriggerRequired": "Each notification rule needs at least one trigger: ticket creation or a status.",
+          "notificationsRecipientRequired": "Each notification rule needs at least one user or team to notify.",
+          "notificationsFetchFailed": "Failed to load notification settings",
+          "notificationsStatusRemapFailed": "The board was created, but a notification rule status could not be matched to the new board. Re-add the notification rules.",
           "inbound": "Email & inbound replies",
           "inboundHelp": "Reopen tickets when clients reply by email",
           "close": "Close rules",
@@ -803,7 +852,7 @@
           "statuses": "Priorities & statuses",
           "statusesHelp": "Default priority and the ticket statuses for this board",
           "display": "Display & behaviour",
-          "displayHelp": "Live timer and board type"
+          "displayHelp": "Stopwatch and board type"
         },
         "saveChanges": "Save Changes",
         "unsaved": "Unsaved",
@@ -830,7 +879,17 @@
         }
       },
       "empty": "No boards found.",
-      "searchPlaceholder": "Search boards…"
+      "searchPlaceholder": "Search boards…",
+      "emailSender": {
+        "label": "Outbound sender",
+        "inboundWarning": "This sender is used for outbound ticket email. Inbound mail settings are unchanged.",
+        "displayName": "Display name",
+        "save": "Save sender",
+        "saved": "Sender saved",
+        "useDefault": "Use ticket default",
+        "duplicateRoute": "That sender route already exists.",
+        "saveFailed": "Could not save sender routing. Please try again."
+      }
     },
     "priorities": {
       "title": {
@@ -1219,6 +1278,7 @@
         "followThemeActive": "The colors below are kept but not applied while the portal follows the organization theme."
       },
       "cropHelp": "Drag and zoom to choose the part shown in the portal side panel and every circular frame. Your wide logo is not changed.",
+      "cropHelpFromSquare": "Drag and zoom to choose the part shown in the portal side panel and every circular frame. Only the mark is changed, so you can adjust it again later.",
       "heroGradient": {
         "primaryShades": "Primary color to primary shade",
         "primarySecondary": "Primary color to secondary color"
@@ -1313,7 +1373,7 @@
     },
     "domain": {
       "title": "Custom Domain",
-      "description": "Configure a branded hostname for your client portal. We will provision TLS certificates automatically once DNS is verified.",
+      "description": "Configure a branded hostname for your client portal.",
       "currentStatus": "Current status",
       "noDomainConfigured": "No custom domain configured",
       "defaultStatusMessage": "No custom domain registered yet.",
@@ -1355,7 +1415,8 @@
         "step3": "Obtain and maintain the TLS certificate for the domain on your proxy.",
         "step4": "Save the domain here — it activates immediately. Wire DNS and your proxy first, since portal links switch to this domain right away.",
         "docLinkText": "Reverse proxy setup & troubleshooting guide",
-        "neverSeenWarning": "No requests have reached {{domain}} yet. Check that your reverse proxy forwards the original Host header."
+        "neverSeenWarning": "No requests have reached {{domain}} yet. Check that your reverse proxy forwards the original Host header.",
+        "tlsNote": "TLS terminates at your reverse proxy, which holds the certificate."
       },
       "badges": {
         "pending_dns": "Pending DNS",
@@ -1380,7 +1441,8 @@
         "refreshFailed": "Failed to refresh domain status.",
         "retryFailed": "Retry failed.",
         "disableFailed": "Failed to disable custom domain."
-      }
+      },
+      "hostedTlsNote": "We will provision TLS certificates automatically once DNS is verified."
     },
     "yourCompanyName": "Your Company Name",
     "brandingPreviewMode": "Branding preview theme mode",
@@ -1490,6 +1552,11 @@
       "description": "The logo slots are shared with the client portal, but they only affect the MSP app after MSP UI customization is enabled below.",
       "logoHelp": "The square mark is used wherever the space is square — the collapsed side menu and circular frames. Drop a wide logo into a square slot and you pick which part becomes the mark; once a wide logo is uploaded you can also cut the mark straight from it. The optional wide logo replaces the mark and the name in the expanded side menu, so upload one that already contains your company name. The side menu follows its own background: dark-background variants on a dark menu, light ones on a light menu, falling back to whichever variant you uploaded.",
       "cropHelp": "Drag and zoom to choose the part shown in the collapsed side menu and every circular frame. Your wide logo is not changed.",
+      "cropHelpFromSquare": "Drag and zoom to choose the part shown in the collapsed side menu and every circular frame. Only the mark is changed, so you can adjust it again later.",
+      "linkDocument": {
+        "title": "Use an uploaded image",
+        "description": "Pick an image you have already uploaded to Documents. The document itself is left as it is."
+      },
       "fields": {
         "mark": "Square mark",
         "markDark": "Square mark for dark backgrounds",
@@ -1780,6 +1847,12 @@
         "useLogo": "Use my logo in the email header",
         "logoWide": "Wide logo",
         "logoDefault": "Square logo",
+        "logoArtwork": "Logo artwork",
+        "logoArtworkAuto": "Match the header",
+        "logoArtworkLight": "Light-background logo",
+        "logoArtworkDark": "Dark-background logo",
+        "logoArtworkAutoDark": "Automatic reads this header as dark and uses the dark-background logo.",
+        "logoArtworkAutoLight": "Automatic reads this header as light and uses the light-background logo.",
         "noLogo": "Upload a logo in Settings → Client Portal → Branding to use it here.",
         "showAttribution": "Show \"Powered by AlgaPSA\" in the footer"
       }
@@ -1985,7 +2058,7 @@
       "openMenu": "Open menu",
       "columns": {
         "startDate": "Start Date",
-        "endDate": "End Date",
+        "endDate": "Last Day",
         "actions": "Actions"
       },
       "form": {
@@ -1997,7 +2070,8 @@
         "startDate": "Start Date",
         "startDatePlaceholder": "Select start date",
         "noEndDate": "No End Date",
-        "endDate": "End Date",
+        "endDate": "Last Day of Period",
+        "endDateHelp": "The period includes this day.",
         "endDatePlaceholder": "Select end date",
         "deletePeriod": "Delete Period",
         "confirmDeleteTitle": "Confirm Delete",
@@ -2011,7 +2085,7 @@
         "noSettings": "No time period settings available. Unable to create a new time period.",
         "settingsRequired": "Cannot manage time period without settings.",
         "startDateRequired": "Start date must be provided.",
-        "startBeforeEnd": "Start date must be before end date.",
+        "startBeforeEnd": "End date cannot be before the start date.",
         "overlap": "The time period overlaps with an existing period.",
         "overlapRetry": "This time period overlaps with an existing one. Please choose different dates.",
         "create": "Failed to create time period.",
@@ -2179,6 +2253,18 @@
       "comingSoon": "Mapping templates and scheduled imports will live here. Save column mappings, share them across the team, and configure recurring jobs."
     },
     "migration": {
+      "customFields": {
+        "required": "required",
+        "title": "Fields for {{name}}",
+        "mapping": "Custom field mapping",
+        "description": "Map preserved CSV columns to fields on this asset type.",
+        "empty": "No custom columns were preserved for this asset type.",
+        "samples_one": "{{sample}} · {{count}} record",
+        "samples_other": "{{sample}} · {{count}} records",
+        "noSample": "No sample",
+        "missingRequired": "Required fields not mapped: {{fields}}",
+        "duplicate": "A custom field is mapped more than once. Choose a unique target for each source."
+      },
       "actions": {
         "back": "Back to migrations",
         "upload": "Upload package"
@@ -2335,6 +2421,11 @@
       "updateFailed": "Failed to update role",
       "validateDeletionFailed": "Failed to validate deletion. Please try again.",
       "deleteFailed": "Failed to delete role"
+    },
+    "editDialog": {
+      "title": "Edit Role",
+      "builtInNameLocked": "Built-in role names can't be changed because the system relies on them.",
+      "portalLocked": "Portal access can't be changed after a role is created."
     }
   },
   "security": {
@@ -3055,7 +3146,7 @@
     "assetTypes": {
       "tab": "Assets",
       "title": "Asset Types",
-      "description": "Manage the asset types available in your asset module. Custom types carry a field schema that drives their create/edit forms.",
+      "description": "Custom types use a field schema for their forms; built-in types also support additional fields.",
       "loading": "Loading asset types...",
       "table": {
         "name": "Name",
@@ -3083,7 +3174,7 @@
         "namePlaceholder": "e.g. Firewall",
         "displayOrderLabel": "Display Order",
         "iconLabel": "Icon",
-        "builtinSchemaHint": "Built-in types use fixed forms managed by AlgaPSA, so their field schema cannot be edited. You can still rename the type or change its icon."
+        "builtinSchemaHint": "The standard built-in form stays fixed. These additional fields are tenant-defined."
       },
       "deleteDialog": {
         "title": "Delete Asset Type",
@@ -3141,7 +3232,8 @@
           "invalidOptions": "Options must be non-empty values.",
           "invalidField": "This field is invalid."
         }
-      }
+      },
+      "additionalFields": "Additional fields"
     }
   },
   "mcpServer": {
@@ -3388,7 +3480,10 @@
       "duplicate": "That user already has the selected role.",
       "changePermission": "Permission denied: You do not have permission to change user roles.",
       "missingField": "Missing required user role field.",
-      "missingFieldNamed": "Missing required user role field: {{field}}."
+      "missingFieldNamed": "Missing required user role field: {{field}}.",
+      "nameRequired": "Role name is required.",
+      "builtInRename": "Built-in roles cannot be renamed.",
+      "duplicateName": "A role named \"{{name}}\" already exists for this portal."
     },
     "secrets": {
       "tenantContextMissing": "Tenant context is missing. Please refresh and try again.",
@@ -3413,6 +3508,7 @@
       "missingField": "Missing required tenant settings field.",
       "missingFieldNamed": "Missing required tenant settings field: {{field}}.",
       "invalidTimezone": "Invalid timezone: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} isn't a city-based time zone. Choose a zone such as America/New_York.",
       "permissions": {
         "clearOnboarding": "Permission denied: Only admin users can clear onboarding data.",
         "update": "Permission denied: Cannot update settings",
@@ -3461,5 +3557,8 @@
       "nothingToRetry": "No failed custom domain registration to retry.",
       "retryOnlyAfterFailure": "Retry is only available after a failed registration."
     }
+  },
+  "common": {
+    "saving": "Saving..."
   }
 }

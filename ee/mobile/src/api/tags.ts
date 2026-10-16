@@ -128,12 +128,28 @@ type TagCloudEntry = {
   text_color: string | null;
 };
 
+/** Entities the tag endpoints accept; the server's taggedEntityTypes list is the authority. */
+export type TagEntityType = "ticket" | "client" | "contact";
+
+export function getEntityTags(
+  client: ApiClient,
+  params: { apiKey: string; entityType: TagEntityType; entityId: string; signal?: AbortSignal },
+): Promise<ApiResult<SuccessResponse<EntityTags>>> {
+  return client.request<SuccessResponse<EntityTags>>({
+    method: "GET",
+    path: `/api/v1/tags/entity/${params.entityType}/${params.entityId}`,
+    signal: params.signal,
+    headers: { "x-api-key": params.apiKey },
+  });
+}
+
 export async function searchTagSuggestions(
   client: ApiClient,
-  params: { apiKey: string; search: string; limit?: number; signal?: AbortSignal },
+  params: { apiKey: string; search: string; limit?: number; entityType?: TagEntityType; signal?: AbortSignal },
 ): Promise<ApiResult<TagSuggestion[]>> {
   const term = params.search.trim();
   const limit = params.limit ?? 50;
+  const entityType = params.entityType ?? "ticket";
 
   if (!term) {
     const res = await client.request<SuccessResponse<{ tags?: TagCloudEntry[] }>>({
@@ -141,7 +157,7 @@ export async function searchTagSuggestions(
       path: "/api/v1/tags/cloud",
       signal: params.signal,
       query: {
-        entity_type: "ticket",
+        entity_type: entityType,
         limit,
       },
       headers: {
@@ -158,7 +174,7 @@ export async function searchTagSuggestions(
     signal: params.signal,
     query: {
       search_term: term,
-      entity_type: "ticket",
+      entity_type: entityType,
       limit,
     },
     headers: {

@@ -1,3 +1,7 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
+
+// LEVERAGE: pattern storage-private-builders — duplicates shared/workflow/streams/domainEventBuilders
+// (documentStorage/media) because @alga-psa/workflow-streams -> storage would close an nx graph cycle.
 function toIsoString(value: string | Date | undefined): string | undefined {
   if (!value) return undefined;
   if (typeof value === 'string') return value;
@@ -18,10 +22,10 @@ export function buildDocumentUploadedPayload(params: {
   contentType: string;
   sizeBytes: number | string;
   storageKey: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'DOCUMENT_UPLOADED'> {
   const uploadedAt = toIsoString(params.uploadedAt);
 
-  return {
+  return builtWorkflowPayload('DOCUMENT_UPLOADED', {
     documentId: params.documentId,
     ...(params.uploadedByUserId ? { uploadedByUserId: params.uploadedByUserId } : {}),
     ...(uploadedAt ? { uploadedAt } : {}),
@@ -29,7 +33,7 @@ export function buildDocumentUploadedPayload(params: {
     contentType: params.contentType,
     sizeBytes: toNonNegativeInt(params.sizeBytes),
     storageKey: params.storageKey,
-  };
+  });
 }
 
 export function buildDocumentDeletedPayload(params: {
@@ -37,15 +41,15 @@ export function buildDocumentDeletedPayload(params: {
   deletedByUserId?: string;
   deletedAt?: string | Date;
   reason?: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'DOCUMENT_DELETED'> {
   const deletedAt = toIsoString(params.deletedAt);
 
-  return {
+  return builtWorkflowPayload('DOCUMENT_DELETED', {
     documentId: params.documentId,
     ...(params.deletedByUserId ? { deletedByUserId: params.deletedByUserId } : {}),
     ...(deletedAt ? { deletedAt } : {}),
     ...(params.reason ? { reason: params.reason } : {}),
-  };
+  });
 }
 
 export function buildFileUploadedPayload(params: {
@@ -56,10 +60,10 @@ export function buildFileUploadedPayload(params: {
   contentType: string;
   sizeBytes: number | string;
   storageKey: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'FILE_UPLOADED'> {
   const uploadedAt = toIsoString(params.uploadedAt);
 
-  return {
+  return builtWorkflowPayload('FILE_UPLOADED', {
     fileId: params.fileId,
     uploadedByUserId: params.uploadedByUserId,
     uploadedAt,
@@ -67,7 +71,7 @@ export function buildFileUploadedPayload(params: {
     contentType: params.contentType,
     sizeBytes: toNonNegativeInt(params.sizeBytes),
     storageKey: params.storageKey,
-  };
+  });
 }
 
 export function buildMediaProcessingSucceededPayload(params: {
@@ -75,11 +79,11 @@ export function buildMediaProcessingSucceededPayload(params: {
   processedAt?: string;
   outputs?: unknown[];
   durationMs?: number;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'MEDIA_PROCESSING_SUCCEEDED'> {
+  return builtWorkflowPayload('MEDIA_PROCESSING_SUCCEEDED', {
     fileId: params.fileId,
     processedAt: params.processedAt,
     outputs: params.outputs,
     durationMs: params.durationMs,
-  };
+  });
 }

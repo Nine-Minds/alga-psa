@@ -87,6 +87,7 @@ export type TicketDetail = TicketListItem & {
   client_email?: string | null;
   client_phone?: string | null;
   location_name?: string | null;
+  location_address?: string | null;
   location_id?: string | null;
 } & Record<string, unknown>;
 
@@ -125,6 +126,11 @@ export type TicketComment = {
   scheduled_publish_at?: string | null;
   scheduled_publish_tz?: string | null;
   published_at?: string | null;
+  /** One-off Cc/Bcc the agent added to this single comment. */
+  email_recipients?: {
+    cc?: Array<{ email: string; name?: string }>;
+    bcc?: Array<{ email: string; name?: string }>;
+  } | null;
 };
 
 export function isScheduledComment(comment: Pick<TicketComment, "publish_state">): boolean {
@@ -251,6 +257,9 @@ export function addTicketComment(
     parent_comment_id?: string;
     scheduled_publish_at?: string;
     scheduled_publish_tz?: string;
+    /** One-off Cc/Bcc for this comment's email; rejected on internal notes. */
+    cc?: string[];
+    bcc?: string[];
     auditHeaders?: Record<string, string | undefined>;
   },
 ): Promise<ApiResult<SuccessResponse<TicketComment>>> {
@@ -269,6 +278,9 @@ export function addTicketComment(
       ...(params.scheduled_publish_at
         ? { scheduled_publish_at: params.scheduled_publish_at, scheduled_publish_tz: params.scheduled_publish_tz }
         : {}),
+      // Older servers reject unknown keys, so send these only when used.
+      ...(params.cc?.length ? { cc: params.cc } : {}),
+      ...(params.bcc?.length ? { bcc: params.bcc } : {}),
     },
   });
 }

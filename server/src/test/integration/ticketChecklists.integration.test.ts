@@ -40,6 +40,11 @@ vi.mock('@alga-psa/auth/actions', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: publishEventMock,
   publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus', () => ({
@@ -83,6 +88,7 @@ import {
   applyMatchingChecklistTemplates,
 } from '@alga-psa/shared/lib/ticketChecklists';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { updateTicketInTransaction } from '../../../../packages/tickets/src/actions/optimizedTicketActions';
 import { tenantDb } from '@alga-psa/db';
 import {
@@ -301,7 +307,7 @@ describe('ticket checklists', () => {
         fixture.tenantId,
         trx,
         { skipLocationValidation: true, skipCategoryValidation: true, skipSubcategoryValidation: true },
-        undefined,
+        silentTicketCreation('checklist auto-apply fixture does not assert on ticket events'),
         undefined,
         fixture.userId
       )

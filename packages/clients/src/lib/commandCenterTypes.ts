@@ -180,6 +180,7 @@ export interface ClientPulseContact {
   email: string | null;
   /** Default number from contact_phone_numbers, when one exists. */
   phone: string | null;
+  phone_extension: string | null;
   is_default: boolean;
   avatarUrl: string | null;
 }
@@ -195,6 +196,8 @@ export interface ClientPulseLocation {
   address_line1: string | null;
   city: string | null;
   phone: string | null;
+  phone_extension: string | null;
+  country_code: string | null;
   email: string | null;
   is_default: boolean;
   is_billing: boolean;

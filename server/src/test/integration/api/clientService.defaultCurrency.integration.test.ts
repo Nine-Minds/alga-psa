@@ -10,6 +10,11 @@ import { createClientSchema, updateClientSchema } from '@/lib/api/schemas/client
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(async () => undefined),
   publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 type ColumnInfoMap = Record<string, unknown>;
@@ -104,6 +109,48 @@ describe('client currency and billing-profile lifecycle integration', () => {
     if (db) {
       await db.destroy();
     }
+  });
+
+  it('rejects location fields, ignores unknown keys, updates real columns, and preserves omitted flags', async () => {
+    for (const [field, value] of [['email', 'x@example.com'], ['phone_no', '555-0100'], ['address', '1 Main St']] as const) {
+      const result = updateClientSchema.safeParse({ [field]: value });
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error.issues.some((issue) => issue.path.includes(field))).toBe(true);
+    }
+
+    const tenantId = await createTenant();
+    const clientId = await seedClient(tenantId);
+    const initialFlags = {
+      ...(hasColumn(clientColumns, 'auto_invoice') ? { auto_invoice: true } : {}),
+      ...(hasColumn(clientColumns, 'is_tax_exempt') ? { is_tax_exempt: true } : {}),
+      ...(hasColumn(clientColumns, 'is_inactive') ? { is_inactive: true } : {}),
+    };
+    await tenantTable(tenantId, 'clients').where({ client_id: clientId }).update(initialFlags);
+
+    const parsed = updateClientSchema.parse({ client_name: 'Renamed client', default_locale: 'fr', foo: 'bar' });
+    expect(parsed).toMatchObject({ client_name: 'Renamed client' });
+    expect(parsed).not.toHaveProperty('default_locale');
+    expect(parsed).not.toHaveProperty('foo');
+    const updated = await serviceFor(tenantId).update(clientId, parsed as any, { tenant: tenantId, userId: uuidv4() } as any);
+    expect(updated.client_name).toBe('Renamed client');
+    const persisted = await tenantTable(tenantId, 'clients').where({ client_id: clientId }).first();
+    for (const [field, value] of Object.entries(initialFlags)) expect(persisted[field]).toBe(value);
+  });
+
+  it('keeps location fields accepted by the create schema', () => {
+    const parsed = createClientSchema.parse({
+      client_name: 'Created client',
+      billing_cycle: 'monthly',
+      email: 'x@example.com',
+      phone_no: '555-0100',
+      address: '1 Main St',
+    });
+
+    expect(parsed).toMatchObject({
+      email: 'x@example.com',
+      phone_no: '555-0100',
+      address: '1 Main St',
+    });
   });
 
   // Regression: the field was absent from the request schema, so Zod stripped it
@@ -216,11 +263,12 @@ describe('client currency and billing-profile lifecycle integration', () => {
       .where({ client_id: created.client_id })
       .first();
     expect(persisted.url).toBe('');
+    // Legacy properties.tax_id input is consolidated into tax_id_number.
+    expect(persisted.tax_id_number).toBe('11-1111111');
     expect(persisted.properties).toEqual({
       website,
       industry: 'Testing',
       company_size: '1-10',
-      tax_id: '11-1111111',
     });
   });
 

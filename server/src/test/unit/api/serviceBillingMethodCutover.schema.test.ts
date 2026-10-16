@@ -44,4 +44,14 @@ describe('service billing_method cutover schema', () => {
 
     expect(result.success).toBe(false);
   });
+
+  it('accepts an hourly create without a unit for the server to default to HUR', () => {
+    const result = createServiceSchema.safeParse({ ...validCreatePayload, billing_method: 'hourly', unit_of_measure: undefined });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a usage service create without an explicit unit', () => {
+    const result = createServiceSchema.safeParse({ ...validCreatePayload, billing_method: 'usage', unit_of_measure: undefined });
+    expect(result.success).toBe(false);
+  });
 });

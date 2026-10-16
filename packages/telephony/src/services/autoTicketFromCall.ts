@@ -1,4 +1,6 @@
 import logger from '@alga-psa/core/logger';
+import { WorkflowEventPublisher } from '@alga-psa/shared/workflow/adapters/workflowEventPublisher';
+import { contactSuppressedTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { TelephonyCallRecordRow } from '../types';
 import { buildCallInteractionNotes, buildCallInteractionTitle } from '../lib/callInteractions';
@@ -78,7 +80,10 @@ export async function autoCreateTicketForCall(
       input.tenantId,
       trx,
       {},
-      undefined,
+      contactSuppressedTicketCreation(
+        new WorkflowEventPublisher({ transaction: trx }),
+        'auto-created telephony tickets never sent a client-facing new-ticket notification before TICKET_CREATED became mandatory'
+      ),
       undefined,
       undefined,
       3,

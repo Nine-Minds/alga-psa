@@ -1,4 +1,6 @@
+import { formatPhoneForDisplay, formatPhoneLabel } from "../../../../packages/validation/src/lib/phone";
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { buildMapsUrl, mapsQueryFromLines } from "../urls/mapsUrl";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { CommonActions } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -25,6 +27,10 @@ import {
 import { buildContactAvatarUri, getContactReachLine, type ContactListItem } from "../api/contacts";
 import { getClientMetadataHeaders } from "../device/clientMetadata";
 import { AccountManagerPickerModal } from "../features/clients/components/AccountManagerPickerModal";
+import { ClientFormModal } from "../features/clients/components/ClientFormModal";
+import { ContactFormModal } from "../features/contacts/components/ContactFormModal";
+import { useCapabilities } from "../capabilities/CapabilitiesContext";
+import { IconButton } from "../ui/components/IconButton";
 import { ClientNotesSection } from "../features/clients/components/ClientNotesSection";
 import { useTheme } from "../ui/ThemeContext";
 import type { Theme } from "../ui/themes";
@@ -82,12 +88,29 @@ export function ClientDetailScreen({ navigation, route }: Props) {
   const [managerError, setManagerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [addContactOpen, setAddContactOpen] = useState(false);
+  const { features } = useCapabilities();
 
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    if (!features.clientsUpdate || !detail) return;
+    navigation.setOptions({
+      headerRight: () => (
+        <IconButton
+          testID="client-detail-edit"
+          icon={<Feather name="edit-2" size={20} color={theme.colors.text} />}
+          onPress={() => setEditOpen(true)}
+          accessibilityLabel={t("detail.edit")}
+        />
+      ),
+    });
+  }, [detail, features.clientsUpdate, navigation, t, theme.colors.text]);
 
   const load = useCallback(async () => {
     if (!client || !session) return;
@@ -257,6 +280,7 @@ export function ClientDetailScreen({ navigation, route }: Props) {
   const logoUri = detail.logoUrl ? `${config.baseUrl}${detail.logoUrl}` : null;
   const notSet = t("detail.notSet", { defaultValue: "Not set" });
   const clientPhone = detail.phone_no?.trim() || null;
+  const formattedClientPhone = formatPhoneForDisplay(clientPhone);
 
   const detailRows: {
     icon: keyof typeof Feather.glyphMap;
@@ -268,9 +292,9 @@ export function ClientDetailScreen({ navigation, route }: Props) {
     {
       icon: "phone",
       label: t("detail.phone"),
-      value: detail.phone_no,
+      value: formatPhoneLabel(formattedClientPhone, t("detail.phoneExtension", { defaultValue: "ext." })),
       onPress: clientPhone
-        ? () => placeCall({ origin: { kind: "client", id: clientId }, phone: clientPhone, name: detail.client_name, contactId: null, clientId })
+        ? () => placeCall({ origin: { kind: "client", id: clientId }, phone: formattedClientPhone.e164 || clientPhone, name: detail.client_name, contactId: null, clientId })
         : undefined,
     },
     {
@@ -285,15 +309,21 @@ export function ClientDetailScreen({ navigation, route }: Props) {
       value: detail.url,
       onPress: detail.url ? () => void Linking.openURL(websiteUrl(detail.url ?? "")) : undefined,
     },
-    { icon: "map-pin", label: t("detail.address"), value: detail.address },
+    {
+      icon: "map-pin",
+      label: t("detail.address"),
+      value: detail.address,
+      onPress: detail.address ? () => void Linking.openURL(buildMapsUrl(mapsQueryFromLines(detail.address ?? ""))) : undefined,
+    },
     { icon: "briefcase", label: t("detail.clientType", { defaultValue: "Client type" }), value: detail.client_type },
     { icon: "layers", label: t("detail.industry", { defaultValue: "Industry" }), value: detail.properties?.industry },
     {
       icon: "user",
       label: t("detail.accountManager"),
       value: detail.account_manager_full_name,
-      onPress: openManagerPicker,
-      accessory: "edit-2",
+      // Same permission as every other client edit.
+      onPress: features.clientsUpdate ? openManagerPicker : undefined,
+      accessory: features.clientsUpdate ? "edit-2" : undefined,
     },
   ];
 
@@ -360,9 +390,26 @@ export function ClientDetailScreen({ navigation, route }: Props) {
 
       {contactsVisible ? (
         <>
-          <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>
-            {t("detail.contacts", { defaultValue: "Contacts" })}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: theme.spacing.lg }}>
+            <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
+              {t("detail.contacts", { defaultValue: "Contacts" })}
+            </Text>
+            {features.contactsCreate ? (
+              <Pressable
+                testID="client-detail-add-contact"
+                onPress={() => setAddContactOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t("detail.addContact")}
+                hitSlop={8}
+                style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", opacity: pressed ? 0.7 : 1 })}
+              >
+                <Feather name="plus" size={14} color={theme.colors.primary} />
+                <Text style={{ ...theme.typography.caption, color: theme.colors.primary, fontWeight: "600", marginLeft: 2 }}>
+                  {t("detail.addContact")}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
           {contacts.length === 0 ? (
             <Card style={{ marginTop: theme.spacing.sm }}>
               <Text style={{ ...theme.typography.body, color: theme.colors.textSecondary }}>
@@ -457,18 +504,30 @@ export function ClientDetailScreen({ navigation, route }: Props) {
                   {location.location_name || t("detail.locationFallback")}
                   {location.is_default ? ` • ${t("detail.defaultLocation")}` : ""}
                 </Text>
-                <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
-                  {locationLine(location)}
-                </Text>
+                {locationLine(location) ? (
+                  <Pressable
+                    onPress={() => void Linking.openURL(buildMapsUrl(mapsQueryFromLines(locationLine(location))))}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("detail.openInMaps")}
+                    hitSlop={4}
+                  >
+                    <Text style={{ ...theme.typography.caption, color: theme.colors.primary, marginTop: 2 }}>
+                      {locationLine(location)}
+                    </Text>
+                  </Pressable>
+                ) : null}
                 {location.phone ? (
                   <Pressable
-                    onPress={() => void Linking.openURL(`tel:${location.phone}`)}
+                    onPress={() => {
+                      const formattedPhone = formatPhoneForDisplay(location.phone, location.phone_extension, location.country_code);
+                      return Linking.openURL(`tel:${formattedPhone.e164 || location.phone}`);
+                    }}
                     accessibilityRole="button"
                     accessibilityLabel={t("detail.phone")}
                     hitSlop={4}
                   >
                     <Text style={{ ...theme.typography.caption, color: theme.colors.primary, marginTop: theme.spacing.xs }}>
-                      {location.phone}
+                      {formatPhoneLabel(formatPhoneForDisplay(location.phone, location.phone_extension, location.country_code), t("detail.phoneExtension", { defaultValue: "ext." }))}
                     </Text>
                   </Pressable>
                 ) : null}
@@ -478,6 +537,27 @@ export function ClientDetailScreen({ navigation, route }: Props) {
         </>
       ) : null}
 
+      <ClientFormModal
+        visible={editOpen}
+        mode="edit"
+        client={client}
+        apiKey={session.accessToken}
+        baseUrl={config.baseUrl}
+        initial={{ detail, locations }}
+        onClose={() => setEditOpen(false)}
+        onSaved={() => void load()}
+      />
+      <ContactFormModal
+        visible={addContactOpen}
+        mode="create"
+        client={client}
+        apiKey={session.accessToken}
+        baseUrl={config.baseUrl}
+        presetClient={{ id: clientId, name: detail.client_name }}
+        lockClient
+        onClose={() => setAddContactOpen(false)}
+        onSaved={() => void load()}
+      />
       <AccountManagerPickerModal
         visible={managerPickerOpen}
         updating={managerUpdating}

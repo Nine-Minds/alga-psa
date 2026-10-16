@@ -40,10 +40,7 @@ import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import type { ISO8601String, IClientContractLine } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db'; // Assuming needed if trx doesn't carry tenant context reliably
-import { toPlainDate, toISODate } from '@alga-psa/core';
-import {
-    buildClientCadencePostDropObligationRef,
-} from './postDropRecurringObligationIdentity';
+import { toPlainDate, toISODate, toCalendarDateString } from '@alga-psa/core';
 import { BucketUsageError } from './bucketUsageErrors';
 import {
     computeWeightedMinutes,
@@ -268,10 +265,19 @@ export async function loadAfterHoursRuleForBucket(
             end_time: String(entry.end_time),
             is_enabled: Boolean(entry.is_enabled),
         })),
-        holidays: holidays.map((holiday) => ({
-            holiday_date: String(holiday.holiday_date).slice(0, 10),
-            is_recurring: Boolean(holiday.is_recurring),
-        })),
+        holidays: holidays.flatMap((holiday) => {
+            let holidayDate: string | null;
+            // LEVERAGE: pattern holiday-date-normalize — keep DB DATE conversion at this loader boundary.
+            try {
+                holidayDate = toCalendarDateString(holiday.holiday_date);
+            } catch {
+                holidayDate = null;
+            }
+            return holidayDate ? [{
+                holiday_date: holidayDate,
+                is_recurring: Boolean(holiday.is_recurring),
+            }] : [];
+        }),
     };
 
     return { multiplier: afterHoursMultiplier, schedule };
@@ -454,20 +460,17 @@ async function calculatePeriod(
         return null;
     }
 
-    const recurringObligation = clientPlan.cadence_owner === 'contract'
-        ? {
-            obligationType: 'contract_line' as const,
-            obligationId: clientPlan.contract_line_id,
-        }
-        : buildClientCadencePostDropObligationRef({
-            contractLineId: clientPlan.client_contract_line_id,
-            chargeFamily: 'bucket',
-        });
+    const recurringObligation = {
+        obligationId: clientPlan.cadence_owner === 'contract'
+            ? clientPlan.contract_line_id
+            : clientPlan.client_contract_line_id,
+        cadenceOwner: clientPlan.cadence_owner ?? 'client',
+    };
 
     const matchingRecurringServicePeriod = await db.table('recurring_service_periods')
         .where({
-            obligation_type: recurringObligation.obligationType,
             obligation_id: recurringObligation.obligationId,
+            cadence_owner: recurringObligation.cadenceOwner,
         })
         .whereNotNull('service_period_start')
         .whereNotNull('service_period_end')

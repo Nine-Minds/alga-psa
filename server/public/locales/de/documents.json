@@ -5,6 +5,15 @@
     "authorizedBy": "Genehmigt von",
     "billTo": "Rechnung an",
     "billedTimeByTicket": "Abgerechnete Zeit nach Ticket",
+    "cadence": {
+      "annually": "Jährlich",
+      "monthly": "Monatlich",
+      "oneTime": "Einmalig",
+      "other": "Sonstige",
+      "quarterly": "Vierteljährlich",
+      "semiAnnually": "Halbjährlich"
+    },
+    "cadenceTotal": "{{cadence}} gesamt",
     "date": "Datum",
     "description": "Beschreibung",
     "discounts": "Rabatte",
@@ -27,6 +36,10 @@
     "oneTimeItems": "Einmalige Positionen",
     "oneTimeTotal": "Einmalig gesamt",
     "optional": "Optional",
+    "optionalIncluded": "Optional (enthalten)",
+    "optionalSection": "Optional (falls ausgewählt)",
+    "optionalSubtotal": "Optionale Zwischensumme",
+    "optionalTotal": "Optional falls ausgewählt",
     "orderConfirmationTitle": "AUFTRAGSBESTÄTIGUNG",
     "orderDate": "Bestelldatum",
     "orderNumber": "Auftrag Nr.",
@@ -77,7 +90,9 @@
       "pickedBy": "Kommissioniert von: ____________________     Datum: ____________",
       "preTaxTotals": "Die angegebenen Summen verstehen sich ohne Steuer. Die anfallende Steuer wird auf Ihrer Rechnung ausgewiesen.",
       "thankYouForOrder": "Vielen Dank für Ihren Auftrag."
-    }
+    },
+    "serialNumbers": "Seriennummern",
+    "allocatedSerialsNote": "Zugeordnete Seriennummern; können sich bei der Erfüllung ändern."
   },
   "errors": {
     "permissions": {

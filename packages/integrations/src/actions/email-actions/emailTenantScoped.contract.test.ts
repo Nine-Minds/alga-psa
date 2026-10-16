@@ -53,7 +53,16 @@ describe('email action tenant-scoped query contract', () => {
     const text = source('emailSettingsActions.ts');
 
     expect(text).toContain("import { createTenantKnex, tenantDb } from '@alga-psa/db';");
-    expect(text).toContain("const settingsTable = () => tenantDb(knex, tenant).table('tenant_email_settings');");
+    expect(text).toContain("const settingsTable = () => tenantDb(trx, tenant).table('tenant_email_settings');");
+  });
+
+  it('uses tenantDb for outbound sender and route query roots', () => {
+    const text = source('emailSenderActions.ts');
+
+    expect(text).toContain("import { createTenantKnex, tenantDb } from '@alga-psa/db';");
+    expect(text).toContain('const db = tenantDb(knex, tenant);');
+    expect(text).toContain("db.table('email_sender_addresses')");
+    expect(text).toContain("db.table('email_sender_routes')");
   });
 
   it('uses tenantDb and tenantJoin for email workflow helper roots', () => {

@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => {
   // (outside withTransaction), so the mocked connection must be callable.
   // A recurring (non-project) invoice finds no schedule rows, so `select`
   // resolves to an empty array.
-  const createQueryBuilder = () => {
+  const createQueryBuilder = (tableName: string) => {
     const builder: any = {
       join: vi.fn(() => builder),
       leftJoin: vi.fn(() => builder),
@@ -31,7 +31,11 @@ const mocks = vi.hoisted(() => {
       andWhere: vi.fn(() => builder),
       orderBy: vi.fn(() => builder),
       select: vi.fn(async () => []),
-      first: vi.fn(async () => undefined),
+      first: vi.fn(async () => tableName === 'client_billing_cycles'
+        ? { client_id: 'client-1', billing_profile_id: null }
+        : tableName === 'client_billing_profiles'
+          ? { billing_profile_id: 'unit-test-default-billing-profile' }
+          : undefined),
       update: vi.fn(async () => 1),
       insert: vi.fn(async () => []),
       delete: vi.fn(async () => 0),
@@ -39,7 +43,7 @@ const mocks = vi.hoisted(() => {
     };
     return builder;
   };
-  const knexStub = vi.fn((_tableName: string) => createQueryBuilder());
+  const knexStub = vi.fn((_tableName: string) => createQueryBuilder(_tableName));
   const createTenantKnex = vi.fn(async () => ({ knex: knexStub }));
   const withTransaction = vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<unknown>) => {
     const trx = ((tableName: string) => {
@@ -70,6 +74,11 @@ const mocks = vi.hoisted(() => {
           queryState.andWhere.push(args);
           return builder;
         }),
+        // Draft reconciliation probes the invoice before touching it; no draft
+        // adjustment exists in these header-period fixtures.
+        first: vi.fn(async () => undefined),
+        select: vi.fn(async () => []),
+        whereIn: vi.fn(() => builder),
         update: vi.fn(async (patch: Record<string, any>) => {
           if (tableName === 'invoices') {
             state.invoiceUpdates.push({
@@ -421,7 +430,7 @@ describe('invoice generation header billing periods', () => {
     );
   });
 
-  it('T-EC6: an explicit invoiceDate override stamps invoice_date and the due-date input on the override date', async () => {
+  it('T-EC6: an explicit invoiceDate override stamps invoice_date and dates the due date from the override', async () => {
     // The override is the tenant-local final calendar day the month-end close
     // computed; the server host clock may read any other date and must not win.
     vi.useFakeTimers();
@@ -439,7 +448,8 @@ describe('invoice generation header billing periods', () => {
     );
 
     expect(mocks.state.insertedInvoices[0].invoice_date).toBe('2026-01-31');
-    expect(mocks.getDueDate).toHaveBeenCalledWith('client-1', '2026-01-31');
+    // The stubbed profile identity sets no payment terms: Net 30 from the override.
+    expect(mocks.state.insertedInvoices[0].due_date).toBe('2026-03-02');
     vi.useRealTimers();
   });
 
@@ -461,7 +471,21 @@ describe('invoice generation header billing periods', () => {
     );
 
     expect(mocks.state.insertedInvoices[0].invoice_date).toBe(expectedHostDate);
-    expect(mocks.getDueDate).toHaveBeenCalledWith('client-1', expectedHostDate);
+    expect(mocks.state.insertedInvoices[0].due_date).toBe(
+      Temporal.PlainDate.from(expectedHostDate).add({ days: 30 }).toString(),
+    );
     vi.useRealTimers();
   });
 });
+
+// These fixtures characterize orchestration with no pending contract events.
+// Database settlement and discount lifecycle are covered by the invoice integration suite.
+vi.mock('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments', async importOriginal => ({
+  ...(await importOriginal<typeof import('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments')>()),
+  resolveContractChangeChargesForWindow: vi.fn(async () => []),
+  releaseOrphanedContractAdjustments: vi.fn(async () => undefined),
+  reconcileContractChangeAdjustmentsForInvoice: vi.fn(async () => ({ changed: false, settledInvoiceId: null, amountCents: 0 })),
+}));
+vi.mock('@alga-psa/billing/lib/billing/reconcileAutomaticInvoiceDiscounts', () => ({
+  reconcileAutomaticInvoiceAdjustments: vi.fn(async () => 0),
+}));

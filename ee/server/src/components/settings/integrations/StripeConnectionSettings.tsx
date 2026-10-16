@@ -40,6 +40,7 @@ interface PaymentConfigDisplay {
   has_webhook_secret: boolean;
   webhook_url?: string;
   webhook_events?: string[];
+  webhook_events_out_of_date?: boolean;
   webhook_status?: 'enabled' | 'disabled' | 'not_configured';
 }
 
@@ -269,6 +270,11 @@ export const StripeConnectionSettings: React.FC = () => {
                   <Label>{t('integrations.stripe.webhook.heading', { defaultValue: 'Webhook Configuration' })}</Label>
                   <Alert variant="success" showIcon={false}>
                     <AlertDescription>
+                      {config.webhook_events_out_of_date && (
+                        <p className="text-sm text-warning mb-2" role="status">
+                          {t('integrations.stripe.webhook.eventsOutOfDate', { defaultValue: 'Webhook events are out of date. Retry webhook configuration to update them.' })}
+                        </p>
+                      )}
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle className="h-4 w-4 text-success" />
                         <span className="font-medium">{t('integrations.stripe.webhook.configuredAutomatically', { defaultValue: 'Webhooks configured automatically' })}</span>

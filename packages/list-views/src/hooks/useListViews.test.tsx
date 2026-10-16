@@ -122,9 +122,11 @@ describe('useListViews', () => {
 
     const { result, onApply } = renderListViews();
 
-    await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
+    // onApply fires inside the resolving effect; activeView commits on the next
+    // render, so wait for the settled hook state rather than the callback.
+    await waitFor(() => expect(result.current.activeView?.view_id).toBe(VIEW_A));
+    expect(onApply).toHaveBeenCalledTimes(1);
     expect(onApply).toHaveBeenCalledWith({ status: 'inactive', tags: ['vip'] }, { viewId: VIEW_A });
-    expect(result.current.activeView?.view_id).toBe(VIEW_A);
     expect(new URLSearchParams(window.location.search).get('view')).toBe(VIEW_A);
   });
 
@@ -231,40 +233,74 @@ describe('useListViews', () => {
     expect(result.current.activeView?.view_id).toBe(created.view_id);
     expect(result.current.isDirty).toBe(false);
   });
+});
 
-  /**
-   * A list can unmount with its first load still in flight. React reads
-   * `window` on every state dispatch, so a write that lands after the
-   * environment is gone throws out of the awaiting promise rather than being a
-   * harmless no-op — in the server unit shard that was five unhandled
-   * rejections, which fails the run even with every test passing.
-   */
-  it('drops a views load that settles after the list unmounted', async () => {
-    let settle!: (value: ListViewCollection<Filters>) => void;
-    actions.listListViews.mockReturnValue(new Promise<ListViewCollection<Filters>>((resolve) => {
-      settle = resolve;
-    }));
+describe('useListViews after the list is left', () => {
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((settle) => {
+      resolve = settle;
+    });
+    return { promise, resolve };
+  }
 
-    const { unmount } = renderListViews();
-    await waitFor(() => expect(actions.listListViews).toHaveBeenCalledTimes(1));
-    unmount();
+  const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setUrl('');
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('does not update React state when the view list arrives after unmount', async () => {
+    const pending = deferred<ListViewCollection<Filters>>();
+    actions.listListViews.mockReturnValue(pending.promise);
     const rejections: unknown[] = [];
     const onRejection = (reason: unknown) => rejections.push(reason);
     process.on('unhandledRejection', onRejection);
 
-    // What vitest does once a test file is finished: the jsdom globals go away.
-    const savedWindow = Reflect.get(globalThis, 'window');
-    Reflect.deleteProperty(globalThis, 'window');
     try {
-      settle(collection());
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      const { unmount } = renderListViews();
+      unmount();
+
+      // A torn-down DOM environment (a finished test file) has no
+      // `window`; a state update from the late load would throw inside React.
+      vi.stubGlobal('window', undefined);
+      pending.resolve(collection({ defaultViewId: VIEW_A }));
+      await flush();
+      vi.unstubAllGlobals();
+      await flush();
     } finally {
-      Reflect.set(globalThis, 'window', savedWindow);
+      vi.unstubAllGlobals();
       process.off('unhandledRejection', onRejection);
     }
 
-    expect(rejections.map(String)).toEqual([]);
+    expect(rejections).toEqual([]);
+  });
+
+  it.each(['found', 'missing'] as const)('does not apply, toast, or rewrite the URL when a %s ?view= lookup settles after unmount', async (outcome) => {
+    const pending = deferred<ListViewSummary<Filters> | { actionError: string }>();
+    actions.listListViews.mockResolvedValue(collection());
+    actions.getListView.mockReturnValue(pending.promise);
+    setUrl('?view=33333333-3333-4333-8333-333333333333');
+
+    const { unmount, onApply } = renderListViews();
+    await waitFor(() => expect(actions.getListView).toHaveBeenCalled());
+    unmount();
+
+    // The user has moved on to another screen whose URL is its own.
+    window.history.replaceState(null, '', '/msp/tickets?view=55555555-5555-4555-8555-555555555555');
+    pending.resolve(outcome === 'found'
+      ? view('33333333-3333-4333-8333-333333333333', { filters: { status: 'inactive' } })
+      : { actionError: 'This view is private or no longer exists.' });
+    await flush();
+
+    expect(onApply).not.toHaveBeenCalled();
+    expect(toastMock.error).not.toHaveBeenCalled();
+    expect(window.location.search).toBe('?view=55555555-5555-4555-8555-555555555555');
   });
 });
 

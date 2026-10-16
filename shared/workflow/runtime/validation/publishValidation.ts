@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import type { WorkflowDefinition, PublishError, Step, NodeStep, InputMapping } from '../types';
 import { workflowDefinitionSchema } from '../types';
+import { dateTriggerPayloadSchemaRefs, getDateTriggerSourceByCatalogEvent, getDateTriggerSourceDefinition } from '@alga-psa/event-schemas';
+import { validateDateTriggerParams } from '../dateTriggerParams';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import { validateExpressionSource, describeExpressionError } from '../expressionEngine';
 import { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '../expressionFunctions';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { zodToWorkflowJsonSchema } from '@alga-psa/event-schemas';
 import { didYouMean } from './didYouMean';
 import { validateInputMapping, validateInputMappingSchema, collectSecretRefsFromConfig } from './mappingValidator';
 import { getWorkflowEventCorrelationPaths } from '../correlationDefaults';
@@ -53,6 +55,62 @@ export function validateWorkflowDefinition(
         code: 'INVALID_WORKFLOW_DEFINITION',
         message: 'Workflow definition failed schema validation'
       });
+    }
+  }
+
+  if (definition.trigger?.type === 'event') {
+    // The catalog row of a date source documents its payload but is never published as an event.
+    const dateSource = getDateTriggerSourceByCatalogEvent(definition.trigger.eventName);
+    if (dateSource) {
+      errors.push({
+        severity: 'error',
+        stepPath: 'trigger',
+        code: 'EVENT_TRIGGER_IS_DATE_SOURCE',
+        message: `"${definition.trigger.eventName}" is never published as an event, so this workflow would never run. Use a date trigger with the "${dateSource.id}" source instead.`
+      });
+    }
+  }
+
+  if (definition.trigger?.type === 'date') {
+    const expectedSchemaRef = dateTriggerPayloadSchemaRefs[definition.trigger.source];
+    if (definition.payloadSchemaRef !== expectedSchemaRef) {
+      errors.push({
+        severity: 'error',
+        stepPath: 'trigger',
+        code: 'DATE_TRIGGER_SCHEMA_MISMATCH',
+        message: `Date trigger source "${definition.trigger.source}" requires payload schema "${expectedSchemaRef}".`
+      });
+    }
+    const paramsResult = validateDateTriggerParams(definition.trigger.source, definition.trigger.params);
+    if (!paramsResult.ok) {
+      for (const issue of paramsResult.issues) {
+        errors.push({
+          severity: 'error',
+          stepPath: 'trigger',
+          code: 'DATE_TRIGGER_PARAMS_INVALID',
+          message: `Date trigger "${definition.trigger.source}": ${issue}.`
+        });
+      }
+    }
+    if (getDateTriggerSourceDefinition(definition.trigger.source)?.usesOffset === false && definition.trigger.offsetDays !== 0) {
+      errors.push({
+        severity: 'error',
+        stepPath: 'trigger',
+        code: 'DATE_TRIGGER_OFFSET_NOT_SUPPORTED',
+        message: `Date trigger source "${definition.trigger.source}" does not use an offset; offsetDays must be 0.`
+      });
+    }
+    if (definition.trigger.timezone) {
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone: definition.trigger.timezone });
+      } catch {
+        errors.push({
+          severity: 'error',
+          stepPath: 'trigger',
+          code: 'INVALID_TRIGGER_TIMEZONE',
+          message: `Date trigger timezone "${definition.trigger.timezone}" is not a valid IANA timezone.`,
+        });
+      }
     }
   }
 
@@ -283,7 +341,7 @@ function validateNodeStep(
             }
           }
 
-          const actionSchemaJson = zodToJsonSchema(action.inputSchema, { name: `${action.id}@${action.version}.input` }) as Record<string, unknown>;
+          const actionSchemaJson = zodToWorkflowJsonSchema(action.inputSchema, `${action.id}@${action.version}.input`);
           const requiredErrors = validateInputMappingSchema(config.inputMapping, actionSchemaJson, {
             stepPath,
             stepId: step.id,

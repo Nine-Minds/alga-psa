@@ -151,7 +151,8 @@
     "tryAgain": "Riprova",
     "backToBilling": "Torna alla fatturazione",
     "retryFailed": "Non è ancora stato possibile avviare il pagamento. Riprova tra un momento.",
-    "loading": "Caricamento..."
+    "loading": "Caricamento...",
+    "offlinePaymentMethod": "Questa fattura si paga con assegno o bonifico bancario, quindi il pagamento online non è disponibile. Segui le istruzioni di pagamento riportate in fattura."
   },
   "quotes": {
     "pendingQuotes": "Preventivi in sospeso",

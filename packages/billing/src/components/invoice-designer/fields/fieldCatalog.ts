@@ -53,6 +53,12 @@ const FIELD_DEFINITIONS: Record<string, TemplateFieldDefinition> = {
     category: 'Invoice',
     description: 'The purchase order reference for this invoice.',
   },
+  'invoice.paymentMethod': {
+    path: 'invoice.paymentMethod',
+    label: 'Payment Method',
+    category: 'Invoice',
+    description: 'How the customer pays this invoice, as recorded from its billing profile when it was generated.',
+  },
   'invoice.subtotal': {
     path: 'invoice.subtotal',
     label: 'Subtotal',

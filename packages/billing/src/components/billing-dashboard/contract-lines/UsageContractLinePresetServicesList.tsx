@@ -5,6 +5,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
+import { UnitOfMeasureInput, type UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 import { Plus, MoreVertical, Trash2, Save } from 'lucide-react';
 import {
   DropdownMenu,
@@ -34,6 +36,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { useUnsavedNavigationGuard } from '../../../hooks/useUnsavedNavigationGuard';
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -68,8 +71,6 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
-  const [showNavigateAwayConfirm, setShowNavigateAwayConfirm] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!presetId) return;
@@ -151,6 +152,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
       // Compare custom rate and unit
       if (service.custom_rate !== original.custom_rate) return true;
       if (service.unit_of_measure !== original.unit_of_measure) return true;
+      if ((service.unit_code ?? null) !== (original.unit_code ?? null)) return true;
 
       // Compare bucket configuration
       const serviceHasBucket = Boolean(service.bucket_overlay);
@@ -168,53 +170,12 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
     });
   }, [presetServices, originalServices]);
 
-  // Navigation warning
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (!hasUnsavedChanges) return;
-
-      const target = e.target as HTMLElement;
-      const link = target.closest('a[href]') as HTMLAnchorElement;
-
-      if (link && link.href) {
-        const currentPath = window.location.pathname + window.location.search;
-        const linkPath = new URL(link.href, window.location.origin).pathname + new URL(link.href, window.location.origin).search;
-
-        if (linkPath !== currentPath && !link.target && !link.download) {
-          e.preventDefault();
-          e.stopPropagation();
-          setPendingNavigation(link.href);
-          setShowNavigateAwayConfirm(true);
-        }
-      }
-    };
-
-    document.addEventListener('click', handleClick, true);
-    return () => document.removeEventListener('click', handleClick, true);
-  }, [hasUnsavedChanges]);
-
-  const handleNavigateAwayConfirm = () => {
-    if (pendingNavigation) {
-      window.location.href = pendingNavigation;
-    }
-  };
-
-  const handleNavigateAwayDismiss = () => {
-    setShowNavigateAwayConfirm(false);
-    setPendingNavigation(null);
-  };
+  // Warn before leaving this editor with unsaved changes
+  const {
+    showConfirm: showNavigateAwayConfirm,
+    confirmNavigation: handleNavigateAwayConfirm,
+    cancelNavigation: handleNavigateAwayDismiss,
+  } = useUnsavedNavigationGuard(hasUnsavedChanges);
 
   const getDefaultOverlay = useCallback((): BucketOverlayInput => ({
     total_minutes: undefined,
@@ -265,7 +226,8 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
         service_id: serviceId,
         custom_rate: service?.default_rate || 0,
         quantity: undefined,
-        unit_of_measure: service?.unit_of_measure || t('services.usagePreset.defaultUnit', { defaultValue: 'unit' }),
+        unit_of_measure: service?.unit_of_measure ?? '',
+        unit_code: service?.unit_code ?? null,
         bucket_total_minutes: undefined,
         bucket_overage_rate: undefined,
         bucket_allow_rollover: undefined,
@@ -295,11 +257,10 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
     })));
   };
 
-  const handleUnitChange = (serviceId: string, newUnit: string) => {
-    setPresetServices(currentServices => currentServices.map(s => ({
-      ...s,
-      unit_of_measure: s.service_id === serviceId ? newUnit : s.unit_of_measure
-    })));
+  const handleUnitChange = (serviceId: string, newUnit: UnitSelection) => {
+    setPresetServices(currentServices => currentServices.map(s => (
+      s.service_id === serviceId ? { ...s, unit_of_measure: newUnit.label, unit_code: newUnit.code } : s
+    )));
   };
 
   const handleSave = async () => {
@@ -316,6 +277,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
         custom_rate: s.custom_rate,
         quantity: s.quantity,
         unit_of_measure: s.unit_of_measure,
+        unit_code: s.unit_code,
         bucket_total_minutes: s.bucket_overlay?.total_minutes,
         bucket_overage_rate: s.bucket_overlay?.overage_rate,
         bucket_allow_rollover: s.bucket_overlay?.allow_rollover
@@ -463,16 +425,13 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                         <label className="text-sm font-medium">
                           {t('services.usagePreset.unitLabel', { defaultValue: 'Unit:' })}
                         </label>
-                        <Input
-                          type="text"
-                          value={service.unit_of_measure || t('services.usagePreset.defaultUnit', { defaultValue: 'unit' })}
-                          onChange={(e) => {
-                            handleUnitChange(service.service_id, e.target.value);
-                          }}
-                          className="w-32"
-                          placeholder={t('services.usagePreset.unitPlaceholder', {
-                            defaultValue: 'e.g., GB, user, device',
-                          })}
+                        <UnitOfMeasureInput
+                          id={`usage-preset-service-unit-${service.service_id}`}
+                          value={{ code: service.unit_code ?? '', label: service.unit_of_measure ?? '' }}
+                          onChange={(unit: UnitSelection) => handleUnitChange(service.service_id, unit)}
+                          className="w-48"
+                          loadCustomUnits={listTenantUnitsOfMeasure}
+                          registerCustomUnit={registerTenantUnitOfMeasure}
                         />
                       </div>
                     </div>

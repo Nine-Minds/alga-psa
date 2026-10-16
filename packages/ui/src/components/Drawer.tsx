@@ -9,6 +9,8 @@ import { DrawerComponent, UIComponent, AutomationProps } from "../ui-reflection/
 import { withDataAutomationId } from "../ui-reflection/withDataAutomationId";
 import { InsideDialogContext, InsideDrawerContext, useInsideDialog, useInsideDrawer } from './ModalityContext';
 import { useRadixEscapeOwner } from '../keyboard-shortcuts';
+import { editorPopupOwnsEscape } from '../keyboard-shortcuts/editable';
+import { DismissGuardProvider, useDismissGuard } from './DismissGuard';
 
 export interface DrawerProps {
   isOpen: boolean;
@@ -25,6 +27,12 @@ export interface DrawerProps {
   drawerVariant?: string;
   /** Width of the drawer (e.g., '50vw', '50%', '600px'). Defaults to responsive fixed widths */
   width?: string;
+  /**
+   * When true, every dismiss path (Escape, overlay click, the X button) asks
+   * "Discard unsaved changes?" before calling `onClose`. Content rendered inside
+   * the drawer can report the same state with `useRegisterDismissGuard`.
+   */
+  hasUnsavedChanges?: boolean;
 }
 
 type DrawerComponentProps = DrawerProps & AutomationProps;
@@ -39,11 +47,21 @@ const Drawer = ({
   reflectionChildren,
   hideCloseButton = false,
   drawerVariant,
-  width
+  width,
+  hasUnsavedChanges = false
 }: DrawerComponentProps): React.ReactElement => {
   const contentRef = React.useRef<HTMLDivElement | null>(null);
 
   useRadixEscapeOwner(isOpen);
+
+  const dismissGuard = useDismissGuard({
+    id: id || 'drawer',
+    isOpen,
+    onClose,
+    hasUnsavedChanges,
+    trackActive: true,
+  });
+  const requestClose = dismissGuard.requestClose;
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -82,7 +100,7 @@ const Drawer = ({
 
   return (
     <Dialog.Root modal={!isInsideDialog} open={isOpen} onOpenChange={(open) => {
-      if (!open) onClose(); // Ensure onClose is called when dialog is closed
+      if (!open) requestClose(); // Ensure onClose is called when dialog is closed (after confirming discard of unsaved changes)
     }}>
       <Dialog.Portal>
         {/* In non-modal mode (nested inside another Dialog), Radix does not render
@@ -91,7 +109,7 @@ const Drawer = ({
         {isInsideDialog ? (
           <div
             className={`fixed inset-0 bg-black/50 ${isInDrawer ? 'z-[60]' : 'z-50'}`}
-            onClick={onClose}
+            onClick={requestClose}
             aria-hidden="true"
           />
         ) : (
@@ -111,7 +129,18 @@ const Drawer = ({
             e.preventDefault();
           }}
           onCloseAutoFocus={(e) => e.preventDefault()}
-          onEscapeKeyDown={isInsideDialog ? (e) => e.stopPropagation() : undefined}
+          onEscapeKeyDown={(e) => {
+            if (isInsideDialog) {
+              e.stopPropagation();
+            }
+            // A nested dialog (including the discard confirmation) renders inline
+            // inside this content, and Radix handles Escape on the document in the
+            // capture phase — let that dialog keep its own Escape. An open editor
+            // popup (slash menu, mentions, emoji) likewise owns the first Escape.
+            if (contentRef.current?.querySelector('[role="dialog"]') || editorPopupOwnsEscape()) {
+              e.preventDefault();
+            }
+          }}
           onInteractOutside={isInsideDialog ? (e) => e.preventDefault() : undefined}
         >
           {/* Visually hidden title for accessibility */}
@@ -126,7 +155,9 @@ const Drawer = ({
                   scrolls the panel as before. */}
               <Theme className="flex-1 min-h-0 flex flex-col">
                 <div className={`p-6 flex-1 min-h-0 ${footer ? 'overflow-y-auto' : ''}`}>
-                  {children}
+                  <DismissGuardProvider value={dismissGuard.registry}>
+                    {children}
+                  </DismissGuardProvider>
                 </div>
               </Theme>
             </InsideDrawerContext.Provider>
@@ -141,11 +172,14 @@ const Drawer = ({
             <button
               className="absolute top-4 right-4 text-muted-foreground hover:text-[rgb(var(--color-text-600))]"
               aria-label="Close"
-              onClick={onClose}
+              onClick={requestClose}
             >
               <X />
             </button>
           )}
+          <InsideDialogContext.Provider value={true}>
+            {dismissGuard.confirmElement}
+          </InsideDialogContext.Provider>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

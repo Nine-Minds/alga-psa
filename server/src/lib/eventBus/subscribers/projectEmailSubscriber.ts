@@ -320,7 +320,7 @@ async function fetchTaskResourceEmails(
  * @param recipientUserId - Optional user ID for preference checking (only for internal users)
  */
 async function sendNotificationIfEnabled(
-  params: SendEmailParams,
+  params: Omit<SendEmailParams, 'mailClass'>,
   subtypeName: string,
   recipientUserId?: string
 ): Promise<void> {
@@ -351,7 +351,7 @@ async function sendNotificationIfEnabled(
         recipient: params.to
       });
       // Continue anyway to avoid breaking existing functionality
-      await sendEventEmail(params);
+      await sendEventEmail({ ...params, mailClass: 'project' });
       return;
     }
 
@@ -411,6 +411,7 @@ async function sendNotificationIfEnabled(
     // Pass recipientUserId for rate limiting in TenantEmailService
     await sendEventEmail({
       ...params,
+      mailClass: 'project',
       recipientUserId
     });
 
@@ -454,7 +455,7 @@ async function sendNotificationIfEnabled(
     if (isEmailProviderError && (error as any).isRetryable === true) {
       const queue = EventEmailRetryQueue.getInstance();
       if (queue.isReady()) {
-        await queue.enqueue(params, {
+        await queue.enqueue({ ...params, mailClass: 'project' }, {
           retryAfterMs:
             typeof (error as any).metadata?.retryAfterMs === 'number'
               ? (error as any).metadata.retryAfterMs

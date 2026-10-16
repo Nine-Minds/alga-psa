@@ -2,6 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 const embedBrandLogo = vi.fn();
@@ -55,6 +61,7 @@ describe('BaseEmailService brand logo embedding', () => {
     const { instance, sendEmail } = service();
 
     await instance.sendEmail({
+      mailClass: 'general',
       tenantId: 'tenant-1',
       to: 'customer@example.test',
       subject: 'Ticket updated',
@@ -76,6 +83,7 @@ describe('BaseEmailService brand logo embedding', () => {
     const { instance, sendEmail } = service();
 
     await expect(instance.sendEmail({
+      mailClass: 'general',
       tenantId: 'tenant-1',
       to: 'customer@example.test',
       subject: 'Ticket updated',
@@ -91,6 +99,7 @@ describe('BaseEmailService brand logo embedding', () => {
     const { instance } = service();
 
     await instance.sendEmail({
+      mailClass: 'general',
       to: 'customer@example.test',
       subject: 'Welcome',
       html: BRANDED_HTML,

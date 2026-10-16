@@ -54,6 +54,11 @@ vi.mock('@alga-psa/auth/actions', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: publishEventMock,
   publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus', () => ({
@@ -295,12 +300,14 @@ describe('auto-close engine', () => {
     await insertAutoCloseRule(fixture);
     // Board has gates the abandoned ticket can't satisfy — the engine bypasses them.
     await setBoardCloseRules(db, fixture, { require_time_entry: true });
-    const ticketId = await insertStaleTicket(fixture, 10); // due
+    // Last edited by a human: the system close must clear, not keep, that name.
+    const ticketId = await insertStaleTicket(fixture, 10, { updated_by: fixture.userId }); // due
 
     await autoCloseTicketsHandler({ tenantId: fixture.tenantId });
 
     const ticket = await scopedDbFor(fixture.tenantId).table('tickets').where({ ticket_id: ticketId }).first();
     expect(ticket.status_id).toBe(fixture.closedStatusId);
+    expect(ticket.updated_by).toBeNull();
     expect(ticket.is_closed).toBe(true);
     expect(ticket.closed_at).not.toBeNull();
     expect(ticket.closed_by).toBeNull();

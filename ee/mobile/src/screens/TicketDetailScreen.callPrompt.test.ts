@@ -13,6 +13,10 @@ function getInitials(name?: string | null) {
   return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
 }
 
+vi.mock("../capabilities/CapabilitiesContext", () => ({
+  useCapabilities: () => ({ features: { clientsCreate: false, clientsUpdate: false, contactsCreate: false, contactsUpdate: false }, defaultCountry: null, loaded: true, refresh: () => Promise.resolve() }),
+}));
+vi.mock("../features/contacts/components/ContactFormModal", () => ({ ContactFormModal: () => null }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,

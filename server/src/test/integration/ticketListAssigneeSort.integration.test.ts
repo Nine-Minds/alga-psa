@@ -7,6 +7,7 @@ import { describeWithDb } from '../../../test-utils/requireDb';
 import { TicketModel } from '@shared/models/ticketModel';
 import { TICKET_STATUS_FILTER_ALL } from '@alga-psa/tickets/lib';
 import type { ITicketListFilters } from '@alga-psa/types';
+import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 
 /**
  * DB-backed proof that the three newly supported sort keys actually execute
@@ -31,6 +32,11 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn().mockResolvedValue(undefined),
   publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 vi.mock('@alga-psa/auth', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/auth')>()),
@@ -230,7 +236,7 @@ async function seedFixture(): Promise<void> {
           assigned_team_id: item.teamId,
         } as any,
         tenantId,
-        trx,
+        trx, {}, silentTicketCreation('test fixture'),
       ),
     );
     const ticketId = created.ticket_id!;

@@ -192,6 +192,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Novo ticket • {{ticket.title}} ({{ticket.priority}})';
+SUBJECTS.sv = 'Nytt ärende • {{ticket.title}} ({{ticket.priority}})';
 COPY.pt = {
   headerLabel: 'Novo ticket criado',
   intro: 'Um novo ticket foi registrado para <strong>{{ticket.clientName}}</strong>. Revise o resumo abaixo e acesse o link para tomar as próximas ações.',
@@ -215,6 +216,29 @@ COPY.pt = {
   textDescription: 'Descrição',
   textView: 'Ver ticket',
 };
+COPY.sv = {
+  headerLabel: 'Nytt ärende skapat',
+  intro: 'Ett nytt ärende har registrerats för <strong>{{ticket.clientName}}</strong>. Granska sammanfattningen nedan och följ länken för att vidta åtgärder.',
+  badgePrefix: 'Ärende #',
+  priority: 'Prioritet',
+  status: 'Status',
+  created: 'Skapat',
+  assignedTo: 'Tilldelat till',
+  requester: 'Beställare',
+  board: 'Tavla',
+  category: 'Kategori',
+  location: 'Plats',
+  descriptionLabel: 'Beskrivning',
+  descriptionVar: '{{{ticket.description}}}',
+  viewButton: 'Visa ärende',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
+  textHeader: 'Nytt ärende skapat för {{ticket.clientName}}',
+  textCreated: 'Skapat',
+  textAssigned: 'Tilldelat till',
+  textRequester: 'Beställare',
+  textDescription: 'Beskrivning',
+  textView: 'Visa ärende',
+};
 
 /* eslint-enable max-len */
 
@@ -233,7 +257,7 @@ function buildBodyHtml(c) {
                   <tr>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">${c.status}</td>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.status}}</td>
-                  </tr>
+                  </tr>${c.extraRowsHtml || ''}
                   <tr>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">${c.created}</td>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{ticket.createdAt}} &middot; {{ticket.createdBy}}</td>
@@ -280,7 +304,7 @@ ${c.textCreated}: {{ticket.createdAt}} · {{ticket.createdBy}}
 
 ${c.priority}: {{ticket.priority}}
 ${c.status}: {{ticket.status}}
-${c.textAssigned}: {{ticket.assignedDetails}}
+${c.extraText || ''}${c.textAssigned}: {{ticket.assignedDetails}}
 ${c.textRequester}: {{ticket.requesterDetails}}
 ${c.board}: {{ticket.board}}
 ${c.category}: {{ticket.categoryDetails}}
@@ -312,4 +336,4 @@ function getTemplate() {
   };
 }
 
-module.exports = { TEMPLATE_NAME, SUBTYPE_NAME, getTemplate };
+module.exports = { TEMPLATE_NAME, SUBTYPE_NAME, COPY, buildBodyHtml, buildText, getTemplate };

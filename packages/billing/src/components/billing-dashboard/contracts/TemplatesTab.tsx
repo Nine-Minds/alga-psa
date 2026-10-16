@@ -258,7 +258,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
               </p>
             </div>
           ) : (
-            <DataTable
+            <DataTable id="contract-templates-table"
               data={filteredTemplateContracts}
               columns={templateColumns}
               pagination

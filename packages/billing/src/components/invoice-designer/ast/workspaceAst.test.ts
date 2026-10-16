@@ -128,7 +128,9 @@ describe('exportWorkspaceToTemplateAst', () => {
       return;
     }
 
-    expect(dynamicTable.repeat.sourceBinding.bindingId).toContain('collection');
+    // Known collections bind under the document catalog's id, like shipped templates.
+    expect(dynamicTable.repeat.sourceBinding.bindingId).toBe('lineItems');
+    expect(ast.bindings?.collections?.lineItems).toEqual({ id: 'lineItems', kind: 'collection', path: 'items' });
     expect(dynamicTable.repeat.itemBinding).toBe('item');
     expect(dynamicTable.columns.length).toBeGreaterThan(0);
     expect(json).toContain('"dynamic-table"');
@@ -486,7 +488,7 @@ describe('exportWorkspaceToTemplateAst', () => {
     const hydrated = importTemplateAstToWorkspace(sourceAst);
     const hydratedLogo = hydrated.nodesById['issuer-logo'];
 
-    expect(hydratedLogo?.type).toBe('image');
+    expect(hydratedLogo?.type).toBe('logo'); // bound to the company logo
     expect((hydratedLogo?.props as any)?.style).toMatchObject({
       width: '180px',
       maxHeight: '72px',

@@ -24,7 +24,7 @@ import { Knex } from 'knex';
 import { createTag, findTagsByEntityId } from '@alga-psa/tags/actions/tagActions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildClientArchivedPayload,
   buildClientCreatedPayload,
@@ -336,10 +336,15 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       ));
 
       // Handle all other fields
+      // Callers spread whole fetched records back in, and the read queries join
+      // location, account-manager and default-client columns onto clients. Only
+      // keys that exist on the stored row are real columns; anything else would
+      // fail the UPDATE (alga-2026-0002617).
+      const clientColumns = new Set(Object.keys(currentClient));
       Object.entries(permittedUpdateData).forEach(([key, value]) => {
         // Exclude properties, url, tax_region, account_manager_id, logoUrl (computed field), location fields, and partition keys (tenant, client_id)
-        const excludedFields = ['properties', 'url', 'tax_region', 'account_manager_id', 'logoUrl', 'logoWideUrl', 'tenant', 'client_id', 'phone', 'email', 'address', 'location_email', 'location_phone', 'location_address', 'address_line1', 'address_line2', 'city', 'state_province', 'postal_code', 'country_name'];
-        if (!excludedFields.includes(key)) {
+        const excludedFields = ['properties', 'url', 'tax_region', 'account_manager_id', 'logoUrl', 'logoWideUrl', 'tenant', 'client_id', 'phone', 'email', 'address', 'location_email', 'location_phone', 'location_phone_extension', 'location_country_code', 'location_address', 'address_line1', 'address_line2', 'city', 'state_province', 'postal_code', 'country_name'];
+        if (!excludedFields.includes(key) && clientColumns.has(key)) {
           // Always include the field in the update, setting null for undefined/empty values
           updateObject[key] = (value === undefined || value === '') ? null : value;
         }
@@ -726,6 +731,8 @@ function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: strin
       'tenant',
       'client_id',
       'phone',
+      'phone_extension',
+      'country_code',
       'email',
       'address_line1',
       'address_line2',
@@ -832,6 +839,8 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
           'tc.is_default',
           trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`),
           'cl.phone as location_phone',
+          'cl.phone_extension as location_phone_extension',
+          'cl.country_code as location_country_code',
           'cl.email as location_email',
           'cl.address_line1',
           'cl.address_line2',
@@ -1013,6 +1022,8 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
           'tc.is_default',
           trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`),
           'cl.phone as location_phone',
+          'cl.phone_extension as location_phone_extension',
+          'cl.country_code as location_country_code',
           'cl.email as location_email',
           'cl.address_line1',
           'cl.address_line2',
@@ -1344,7 +1355,7 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
     const tailored = tailorClientDeleteAlternatives(result, client.is_inactive);
     if (result.deleted) {
       const occurredAt = new Date().toISOString();
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'CLIENT_DELETED',
         payload: {
           clientId,

@@ -8,7 +8,8 @@ const findTicketByEmailThreadMock = vi.fn();
 const resolveInboundTicketDefaultsMock = vi.fn();
 const resolveEffectiveInboundTicketDefaultsMock = vi.fn();
 const findContactByEmailMock = vi.fn();
-const findClientIdByInboundEmailDomainMock = vi.fn();
+const findInboundEmailDomainMappingMock = vi.fn();
+const createContactForInboundSenderMock = vi.fn();
 const findValidClientPrimaryContactIdMock = vi.fn();
 const findEmailProviderMailboxAddressMock = vi.fn();
 const upsertTicketWatchListRecipientsMock = vi.fn();
@@ -77,7 +78,8 @@ vi.mock('@alga-psa/shared/workflow/actions/emailWorkflowActions', () => ({
   resolveInboundTicketDefaults: (...args: any[]) => resolveInboundTicketDefaultsMock(...args),
   resolveEffectiveInboundTicketDefaults: (...args: any[]) => resolveEffectiveInboundTicketDefaultsMock(...args),
   findContactByEmail: (...args: any[]) => findContactByEmailMock(...args),
-  findClientIdByInboundEmailDomain: (...args: any[]) => findClientIdByInboundEmailDomainMock(...args),
+  findInboundEmailDomainMapping: (...args: any[]) => findInboundEmailDomainMappingMock(...args),
+  createContactForInboundSender: (...args: any[]) => createContactForInboundSenderMock(...args),
   findValidClientPrimaryContactId: (...args: any[]) => findValidClientPrimaryContactIdMock(...args),
   findEmailProviderMailboxAddress: (...args: any[]) => findEmailProviderMailboxAddressMock(...args),
   upsertTicketWatchListRecipients: (...args: any[]) => upsertTicketWatchListRecipientsMock(...args),
@@ -129,7 +131,7 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       matched_email: 'client@example.com',
       user_type: 'client',
     });
-    findClientIdByInboundEmailDomainMock.mockResolvedValue(null);
+    findInboundEmailDomainMappingMock.mockResolvedValue(null);
     findValidClientPrimaryContactIdMock.mockResolvedValue(null);
     findEmailProviderMailboxAddressMock.mockResolvedValue('support@example.com');
     upsertTicketWatchListRecipientsMock.mockResolvedValue({ updated: true, watchList: [] });
@@ -171,8 +173,11 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
           const builder: any = {
             select: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
+            whereRaw: vi.fn().mockReturnThis(),
             orderBy: vi.fn().mockReturnThis(),
             first: vi.fn().mockResolvedValue(firstResult),
+            // The one-off Cc/Bcc lookup awaits the builder for a row list.
+            then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
           };
           return builder;
         }
@@ -213,7 +218,8 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       }),
       'tenant-1'
     );
-    expect(commentsQueryCount).toBe(2);
+    // Two reply-target queries plus the per-ticket one-off Cc/Bcc lookup.
+    expect(commentsQueryCount).toBe(3);
   });
 
   it('T034: In-Reply-To resolves outbound message id to comment thread', async () => {
@@ -266,8 +272,11 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
           const builder: any = {
             select: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
+            whereRaw: vi.fn().mockReturnThis(),
             orderBy: vi.fn().mockReturnThis(),
             first: vi.fn().mockResolvedValue({ parentCommentId: 'latest-comment-789' }),
+            // The one-off Cc/Bcc lookup awaits the builder for a row list.
+            then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
           };
           return builder;
         }
@@ -312,7 +321,8 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       }),
       'tenant-1'
     );
-    expect(commentsQueryCount).toBe(1);
+    // One reply-target query plus the per-ticket one-off Cc/Bcc lookup.
+    expect(commentsQueryCount).toBe(2);
   });
 
   it('quarantines a forged In-Reply-To from an unrelated sender before comment, artifacts, or watcher effects', async () => {

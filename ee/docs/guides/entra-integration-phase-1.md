@@ -43,7 +43,7 @@ Choose one connection type per tenant:
 - Best when you control OAuth app registration and consent flow.
 
 2. `cipp` (CIPP API)
-- Available on Pro when the `entra-integration-cipp` flag is enabled for the tenant.
+- Available on Pro. No feature flag is involved.
 - Uses the classic CIPP API for managed tenant and user enumeration.
 - Requires the **CIPP-API function app host** (for example `my-cipp-api.azurewebsites.net`) — not
   the CIPP frontend an operator signs into — and a **CIPP API key**, taken from
@@ -146,14 +146,33 @@ redirect URI list.)
 
 ## Feature Flags (Phase 1)
 
-Remaining flags:
+## Per managed tenant user import filters
+
+Open **Settings → Integrations → Entra → Clients** and expand a mapped managed tenant to edit its
+import filter. You can limit imports to licensed members, include or exclude security-group members,
+and add regular-expression exclusions. Group inclusion uses transitive membership with Direct Graph;
+CIPP currently checks the membership data returned by its user-group endpoint, which may be direct
+membership only.
+
+Filters are stored as per-managed-tenant overrides over tenant defaults. New settings are empty, so
+existing imports keep their current scope until you save a filter. Deactivating linked contacts that
+fall outside a filter is opt-in. Review the preflight before enabling it. A safety brake skips
+deactivation when a filter excludes every enabled user in a tenant that already has linked contacts.
+Contacts re-entering scope are reactivated only when the filter previously deactivated them.
+
+Shared mailboxes are not reliably identifiable in the current Graph/CIPP user records. Their
+Exchange recipient type requires additional Exchange data, and contacts do not have a service-contact
+type. Do not use display-name patterns as a mailbox classifier.
+
+## Feature Flags (Phase 1)
+
+Remaining flag:
 
 - `entra-integration-client-sync-action`
-- `entra-integration-cipp` — soft-launch control for the CIPP connection option
 
-Retired flags. `entra-integration-ui` (the master gate), `entra-integration-field-sync`
-and `entra-integration-ambiguous-queue` no longer exist. Access to the Entra surface is
-edition + tier + RBAC only:
+Retired flags. `entra-integration-ui` (the master gate), `entra-integration-field-sync`,
+`entra-integration-ambiguous-queue` and `entra-integration-cipp` no longer exist. Access to
+the Entra surface is edition + tier + RBAC only:
 
 ```
 EE edition  +  assertTierAccess(TIER_FEATURES.ENTRA_SYNC)  [Pro+]  +  system_settings read/update
@@ -162,6 +181,10 @@ EE edition  +  assertTierAccess(TIER_FEATURES.ENTRA_SYNC)  [Pro+]  +  system_set
 A tenant that fails the check gets the tier 403 from the API routes and an upgrade notice
 on the route — there is no "disabled" 404 any more. Field rules and the review queue
 render for every tenant that can reach the screen.
+
+The CIPP connection option follows the same rule. Only the tenant's tier controls it
+(`TIER_FEATURES.CIPP`, Pro). Tenants on Pro see CIPP next to Direct in the setup chooser
+and the console. Tenants below Pro see Direct only.
 
 Create/check default Phase 1 flag definitions through platform feature flag API:
 
@@ -376,12 +399,8 @@ never the mapped Alga client id, and never carry tokens or secrets.
 3. Validate discovery and mapping quality on pilot tenants. The setup wizard's preflight
    previews contact changes for one client without writing anything, so this no longer
    requires a leap of faith.
-4. For tenants needing CIPP, enable `entra-integration-cipp`. Its retirement is an ops
-   decision — flip per tenant, then globally, then retire.
-5. Enable `entra-integration-client-sync-action` after mapping/sync operations are stable.
-6. Expand tenant targeting incrementally.
+4. Enable `entra-integration-client-sync-action` after mapping/sync operations are stable.
+5. Expand tenant targeting incrementally.
 
 Field overwrite policy is no longer a rollout step: the rules ship visible and default to
-off, so a tenant that has not opted in already has the safe behaviour. Turning
-`entra-integration-cipp` off hides the CIPP connection option without deleting
-connection/mapping/run history data.
+off, so a tenant that has not opted in already has the safe behaviour.

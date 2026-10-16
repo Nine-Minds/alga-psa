@@ -139,12 +139,7 @@ export class CalendarWebhookProcessor {
               }
 
               await this.executeWithRetry(async () => {
-                const result = await this.syncService.deleteScheduleEntry(
-                  mapping.schedule_entry_id,
-                  provider.id,
-                  'all',
-                  true // skipExternalDelete - event already deleted in external calendar
-                );
+                const result = await this.syncService.handleInboundProviderDelete(mapping.schedule_entry_id, provider.id);
                 if (!result.success) {
                   throw new Error(result.error || 'Failed to delete schedule entry');
                 }
@@ -308,12 +303,7 @@ export class CalendarWebhookProcessor {
               }
 
               await this.executeWithRetry(async () => {
-                const result = await this.syncService.deleteScheduleEntry(
-                  mapping.schedule_entry_id,
-                  provider.id,
-                  'all',
-                  true
-                );
+                const result = await this.syncService.handleInboundProviderDelete(mapping.schedule_entry_id, provider.id);
                 if (!result.success) {
                   throw new Error(result.error || 'Failed to delete schedule entry');
                 }
@@ -487,12 +477,7 @@ export class CalendarWebhookProcessor {
                 }
 
                 await this.executeWithRetry(async () => {
-                  const result = await this.syncService.deleteScheduleEntry(
-                    mapping.schedule_entry_id,
-                    provider.id,
-                    'all',
-                    true // skipExternalDelete - event already deleted in external calendar
-                  );
+                  const result = await this.syncService.handleInboundProviderDelete(mapping.schedule_entry_id, provider.id);
                   if (!result.success) {
                     throw new Error(result.error || 'Failed to delete schedule entry');
                   }

@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { COUNTRY_CODE_PLACEHOLDER } from '@alga-psa/core/formatters';
+import { COUNTRY_CODE_PLACEHOLDER, COUNTRY_NAME_PLACEHOLDER } from '@alga-psa/core/formatters';
 
 export interface TenantDefaultCountry {
   code: string;
@@ -16,20 +16,44 @@ async function resolveLocationCountry(
     .where({ client_id: clientId, is_active: true })
     .orderBy('is_default', 'desc')
     .orderBy('is_billing_address', 'desc')
-    .first('country_code');
+    .first('country_code', 'country_name');
 
   const code = typeof location?.country_code === 'string'
     ? location.country_code.trim().toUpperCase()
     : '';
-  if (!code || code === COUNTRY_CODE_PLACEHOLDER) {
+  const name = typeof location?.country_name === 'string' ? location.country_name.trim() : '';
+
+  // The 'XX'/'Unknown' pair means the address was stamped as unknown — exactly
+  // what displayCountry blanks — so never guess a country out of a placeholder.
+  if (code === COUNTRY_CODE_PLACEHOLDER || name === COUNTRY_NAME_PLACEHOLDER) {
     return null;
   }
 
-  const country = await db.table('countries')
-    .where({ code, is_active: true })
+  if (code) {
+    const country = await db.table('countries')
+      .where({ code, is_active: true })
+      .first('code', 'name');
+
+    if (country) {
+      return { code: country.code, name: country.name };
+    }
+  }
+
+  // Rows written before the country picker (imports, older forms) can carry a
+  // non-ISO code such as 'UK', or none at all, while the stored name is the one
+  // the address renders. Resolve by that name so the preselected country, the
+  // dial code and the date pattern agree with what the location displays
+  // instead of silently falling back to the US default.
+  if (!name) {
+    return null;
+  }
+
+  const byName = await db.table('countries')
+    .where({ is_active: true })
+    .whereRaw('lower(name) = lower(?)', [name])
     .first('code', 'name');
 
-  return country ? { code: country.code, name: country.name } : null;
+  return byName ? { code: byName.code, name: byName.name } : null;
 }
 
 /**

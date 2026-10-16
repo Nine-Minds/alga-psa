@@ -110,7 +110,8 @@ export function listServiceTypes(
 export type CreateProductInput = {
   service_name: string;
   custom_service_type_id: string;
-  unit_of_measure: string;
+  unit_of_measure?: string;
+  unit_code?: string;
   sku?: string | null;
   barcode?: string | null;
 };

@@ -60,8 +60,9 @@ export async function createTicketForAlertId(
   if (alert.asset_id) {
     const asset = await db.table('assets')
       .where({ asset_id: alert.asset_id })
-      .first('client_id');
+      .first('client_id', 'name');
     clientId = asset?.client_id ?? null;
+    if (alert.device_name == null && asset?.name) alert.device_name = asset.name;
   }
 
   const rawMetadata = typeof alert.metadata === 'string' ? safeParse(alert.metadata) : alert.metadata;

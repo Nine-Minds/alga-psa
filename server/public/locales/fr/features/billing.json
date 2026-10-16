@@ -151,7 +151,8 @@
     "tryAgain": "Réessayer",
     "backToBilling": "Retour à la facturation",
     "retryFailed": "Nous n'avons toujours pas pu démarrer le paiement. Veuillez réessayer dans un instant.",
-    "loading": "Chargement..."
+    "loading": "Chargement...",
+    "offlinePaymentMethod": "Cette facture se règle par chèque ou virement bancaire : le paiement en ligne n’est pas disponible. Veuillez suivre les instructions de paiement figurant sur la facture."
   },
   "quotes": {
     "pendingQuotes": "Devis en attente",

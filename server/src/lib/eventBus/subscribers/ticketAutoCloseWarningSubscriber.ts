@@ -76,6 +76,7 @@ async function handleTicketAutoCloseWarningEvent(event: unknown): Promise<void> 
     await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
       const scopedDb = tenantDb(knex, tenantId);
+      const ticket = await scopedDb.table('tickets').where({ ticket_id: ticketId }).first('board_id');
 
       const subtype = await scopedDb.table('notification_subtypes')
         .where({ name: WARNING_SUBTYPE_NAME })
@@ -108,6 +109,8 @@ async function handleTicketAutoCloseWarningEvent(event: unknown): Promise<void> 
       const userIdForLog = portalUser?.user_id ?? assignedTo ?? enteredBy;
 
       await getEmailNotificationService().sendNotification({
+        mailClass: 'ticket',
+        boardId: ticket?.board_id,
         tenant: tenantId,
         userId: userIdForLog,
         subtypeId: subtype.id,

@@ -36,7 +36,7 @@
     "typescript": "^5"
   },
   "overrides": {
-    "axios": "^1.18.0",
+    "axios": "^1.20.0",
     "protobufjs": "^7.5.8",
     "@protobufjs/utf8": ">=1.1.1",
     "fast-uri": ">=3.1.6 <4",

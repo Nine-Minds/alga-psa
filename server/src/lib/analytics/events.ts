@@ -19,6 +19,9 @@ export enum AnalyticsEvents {
   TICKET_STATUS_CHANGED = 'ticket_status_changed',
   COMMENT_CREATED = 'comment_created',
   
+  // Clients
+  CLIENT_MERGED = 'client_merged',
+
   // Time Tracking
   TIME_ENTRY_CREATED = 'time_entry_created',
   TIME_ENTRY_UPDATED = 'time_entry_updated',

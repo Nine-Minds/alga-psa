@@ -276,7 +276,10 @@
       "heading": "⟦Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş⟧",
       "itemLabel": "⟦Īŧḗḿ {{index}}⟧",
       "selectItemPlaceholder": "⟦Şḗŀḗƈŧ ȧƞ īŧḗḿ⟧",
-      "servicesAndProducts": "⟦Şḗřṽīƈḗş & Ƥřȯḓŭƈŧş⟧"
+      "servicesAndProducts": "⟦Şḗřṽīƈḗş & Ƥřȯḓŭƈŧş⟧",
+      "recurringQuantity": "⟦Řḗƈŭřřīƞɠ ʠŭȧƞŧīŧẏ⟧",
+      "unitRateOptional": "⟦Ȯƥŧīȯƞȧŀ. Ŀḗȧṽḗ ŧħḗ ŭƞīŧ řȧŧḗ ḗḿƥŧẏ ŧȯ ŭşḗ ŧħīş şḗřṽīƈḗ'ş ƈȧŧȧŀȯɠ ƥřīƈḗ īƞ ŧħḗ ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ ẇħḗƞ ȧ ŀīƞḗ īş ƈřḗȧŧḗḓ ƒřȯḿ ŧħīş ƥřḗşḗŧ.⟧",
+      "alertUnits": "⟦Ŧȯ ƀīŀŀ ȧ şḗřṽīƈḗ ƥḗř şḗȧŧ ȯř ŭƞīŧ īƞşŧḗȧḓ, ƈħȯȯşḗ řḗƈŭřřīƞɠ ʠŭȧƞŧīŧẏ ƥřīƈīƞɠ ƒȯř īŧ: īŧ īş ƀīŀŀḗḓ ʠŭȧƞŧīŧẏ × ŭƞīŧ řȧŧḗ ḗṽḗřẏ ƥḗřīȯḓ ȧƞḓ īş ƞȯŧ ƥȧřŧ ȯƒ ŧħḗ ƀȧşḗ řȧŧḗ.⟧"
     },
     "hourly": {
       "addHourlyService": "⟦Ȧḓḓ Ħȯŭřŀẏ Şḗřṽīƈḗ⟧",
@@ -333,7 +336,8 @@
       "serviceSelectRequired": "⟦Şḗřṽīƈḗ {{index}}: Ƥŀḗȧşḗ şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧",
       "unitOfMeasureRequired": "⟦Şḗřṽīƈḗ {{index}}: Ŭƞīŧ ȯƒ ḿḗȧşŭřḗ īş řḗʠŭīřḗḓ⟧",
       "unitRateRequired": "⟦Şḗřṽīƈḗ {{index}}: Ŭƞīŧ řȧŧḗ īş řḗʠŭīřḗḓ⟧",
-      "usageServiceRequired": "⟦Ȧŧ ŀḗȧşŧ ȯƞḗ ŭşȧɠḗ-ƀȧşḗḓ şḗřṽīƈḗ īş řḗʠŭīřḗḓ⟧"
+      "usageServiceRequired": "⟦Ȧŧ ŀḗȧşŧ ȯƞḗ ŭşȧɠḗ-ƀȧşḗḓ şḗřṽīƈḗ īş řḗʠŭīřḗḓ⟧",
+      "recurringQuantityInvalid": "⟦Şḗřṽīƈḗ {{index}}: Řḗƈŭřřīƞɠ ʠŭȧƞŧīŧẏ ḿŭşŧ ƀḗ ȧ ẇħȯŀḗ ƞŭḿƀḗř, ẑḗřȯ ȯř ḿȯřḗ⟧"
     }
   },
   "forms": {
@@ -455,7 +459,8 @@
         "defaultRatePerUnit": "⟦Řȧŧḗ ƥḗř ŭƞīŧ (ŭşḗḓ īƒ ŧīḗřḗḓ ƥřīƈīƞɠ īş ȯƒƒ).⟧",
         "minimumUsage": "⟦Ḿīƞīḿŭḿ ƀīŀŀȧƀŀḗ ŭƞīŧş ƥḗř ƥḗřīȯḓ.⟧",
         "unitOfMeasure": "⟦ḗ.ɠ., ƓƁ, Ŭşḗř, Ḓḗṽīƈḗ.⟧"
-      }
+      },
+      "catalogUnitPrecedence": "⟦Ŧħḗ ƈȧŧȧŀȯɠ ŭƞīŧ ŧȧķḗş ƥřḗƈḗḓḗƞƈḗ ȯṽḗř ŧħīş ŭşȧɠḗ-ƈȯƞƒīɠ ŭƞīŧ.⟧"
     }
   },
   "list": {
@@ -727,7 +732,8 @@
         "enterRatePlaceholder": "⟦Ḗƞŧḗř řȧŧḗ⟧",
         "metadata": "⟦Şḗřṽīƈḗ Ŧẏƥḗ: {{type}} | Ḿḗŧħȯḓ: {{method}}⟧",
         "noCurrencyPrice": "⟦Ƞȯ {{currency}} ƥřīƈḗ⟧",
-        "rateDetail": "⟦Řȧŧḗ: {{symbol}}{{amount}}⟧"
+        "rateDetail": "⟦Řȧŧḗ: {{symbol}}{{amount}}⟧",
+        "catalogDefaultRateDetail": "⟦Ƈȧŧȧŀȯɠ ḓḗƒȧŭŀŧ: {{symbol}}{{amount}}⟧"
       },
       "unknownService": "⟦Ŭƞķƞȯẇƞ Şḗřṽīƈḗ⟧"
     },

@@ -1,5 +1,20 @@
 import type { ZodTypeAny } from 'zod';
+import {
+  bulkDeleteTimeEntrySchema,
+  bulkTimeEntrySchema,
+  bulkUpdateTimeEntrySchema,
+  createTimeEntrySchema,
+  updateTimeEntrySchema,
+} from '../../schemas/timeEntry';
+import { createTimePeriodSchema, updateTimePeriodSchema } from '../../schemas/timeSheet';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
+import {
+  activeStopwatchQuerySchema,
+  logStopwatchSchema,
+  startStopwatchSchema,
+  stopwatchSessionResponseSchema,
+  updateStopwatchSchema,
+} from '../../schemas/stopwatch';
 
 export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const tag = 'Work Management v1';
@@ -20,6 +35,24 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const ProjectTaskParam = registry.registerSchema(
     'WorkV1ProjectTaskParam',
     zOpenApi.object({ taskId: zOpenApi.string().uuid().describe('Project task UUID from project_tasks.task_id.') }),
+  );
+  const ProjectTaskChecklistItemParams = registry.registerSchema(
+    'WorkV1ProjectTaskChecklistItemParams',
+    zOpenApi.object({
+      taskId: zOpenApi.string().uuid().describe('Project task UUID from project_tasks.task_id.'),
+      itemId: zOpenApi.string().uuid().describe('Checklist item UUID from task_checklist_items.checklist_item_id.'),
+    }),
+  );
+  const ProjectTaskChecklistItemBody = registry.registerSchema(
+    'WorkV1ProjectTaskChecklistItemBody',
+    zOpenApi.object({
+      item_name: zOpenApi.string().min(1).optional().describe('Checklist item text. Required on create. `item_text` is accepted as a legacy alias.'),
+      description: zOpenApi.string().nullable().optional(),
+      assigned_to: zOpenApi.string().uuid().nullable().optional(),
+      completed: zOpenApi.boolean().optional().describe('Mark the item done/undone. `is_completed` is accepted as a legacy alias.'),
+      due_date: zOpenApi.string().nullable().optional(),
+      order_number: zOpenApi.number().int().min(0).optional(),
+    }),
   );
 
   const SessionParam = registry.registerSchema(
@@ -43,6 +76,43 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       sort: zOpenApi.string().optional(),
       order: zOpenApi.enum(['asc', 'desc']).optional(),
       fields: zOpenApi.string().optional(),
+      search: zOpenApi.string().optional(),
+      query: zOpenApi.string().optional(),
+    }),
+  );
+
+  // GET /api/v1/tickets validates `sort` against an allowlist (TicketService
+  // TICKET_LIST_API_SORT_SQL): anything else is a 400, not a database error.
+  const TicketListQuery = registry.registerSchema(
+    'WorkV1TicketListQuery',
+    zOpenApi.object({
+      page: zOpenApi.string().optional(),
+      limit: zOpenApi.string().optional(),
+      sort: zOpenApi
+        .enum([
+          'client_name',
+          'closed_at',
+          'created_at',
+          'due_date',
+          'entered_at',
+          'latest_activity_at',
+          'priority_name',
+          'status_name',
+          'ticket_number',
+          'title',
+          'updated_at',
+        ])
+        .optional()
+        .describe(
+          'Sort field. Defaults to entered_at. `created_at` is a legacy alias for `entered_at` (tickets have no created_at column). `latest_activity_at` orders by the newest of the ticket\'s own timestamps and its newest visible comment; for client-portal callers only client-visible comments count. Ties break on ticket_id descending. Any other value is rejected with 400.',
+        ),
+      order: zOpenApi.enum(['asc', 'desc']).optional(),
+      fields: zOpenApi
+        .string()
+        .optional()
+        .describe(
+          'Comma-separated response fields. Accepts ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, latest_activity_at, tags, master_ticket_id, bundle_master_ticket_number, bundle_child_count, or the mobile_list preset. Unknown names are rejected with 400.',
+        ),
       search: zOpenApi.string().optional(),
       query: zOpenApi.string().optional(),
     }),
@@ -160,8 +230,10 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       parent_comment_id: zOpenApi.string().uuid().optional(),
       scheduled_publish_at: zOpenApi.string().datetime({ offset: true }).optional().describe('Withhold this client-visible comment until this future instant (ISO 8601). Requires scheduled_publish_tz; not allowed with is_internal or when replying into an internal thread.'),
       scheduled_publish_tz: zOpenApi.string().max(64).optional().describe('IANA time zone the author scheduled in, e.g. America/New_York.'),
+      cc: zOpenApi.array(zOpenApi.string().email()).max(20).optional().describe('One-off Cc recipients for this comment\'s email only. They are never added to the ticket watch list and receive no later comments. Not allowed with is_internal. Max 20 cc + bcc combined.'),
+      bcc: zOpenApi.array(zOpenApi.string().email()).max(20).optional().describe('One-off Bcc recipients for this comment\'s email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined.'),
       ...ticketNotificationSuppressionProperties,
-    }).describe('Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history. Set scheduled_publish_at + scheduled_publish_tz to schedule a client-visible comment: it is stored with publish_state=scheduled, hidden from client-portal callers, and published by a background job.'),
+    }).describe('Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history. Set scheduled_publish_at + scheduled_publish_tz to schedule a client-visible comment: it is stored with publish_state=scheduled, hidden from client-portal callers, and published by a background job. cc/bcc add one-off recipients to this comment\'s email without touching the watch list.'),
   );
 
   const CreateTagBody = registry.registerSchema(
@@ -174,19 +246,24 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     }),
   );
 
-  const CreateTimeEntryBody = registry.registerSchema(
-    'WorkV1CreateTimeEntryBody',
-    zOpenApi.object({
-      work_item_type: zOpenApi.string().optional(),
-      work_item_id: zOpenApi.string().optional(),
-      user_id: zOpenApi.string().uuid().optional(),
-      started_at: zOpenApi.string().optional(),
-      ended_at: zOpenApi.string().optional(),
-      duration_minutes: zOpenApi.number().optional(),
-      billable_minutes: zOpenApi.number().optional(),
-      notes: zOpenApi.string().optional(),
-    }),
-  );
+  // Registered from the real validator schemas so the docs cannot drift from them.
+  const CreateTimeEntryBody = registry.registerSchema('WorkV1CreateTimeEntryBody', createTimeEntrySchema);
+  const UpdateTimeEntryBody = registry.registerSchema('WorkV1UpdateTimeEntryBody', updateTimeEntrySchema);
+  const BulkCreateTimeEntriesBody = registry.registerSchema('WorkV1BulkCreateTimeEntriesBody', bulkTimeEntrySchema);
+  const BulkUpdateTimeEntriesBody = registry.registerSchema('WorkV1BulkUpdateTimeEntriesBody', bulkUpdateTimeEntrySchema);
+  const BulkDeleteTimeEntriesBody = registry.registerSchema('WorkV1BulkDeleteTimeEntriesBody', bulkDeleteTimeEntrySchema);
+
+  const timeEntryBodySchemas: Record<string, ZodTypeAny> = {
+    'post /api/v1/time-entries': CreateTimeEntryBody,
+    'put /api/v1/time-entries/{id}': UpdateTimeEntryBody,
+    'post /api/v1/time-entries/bulk': BulkCreateTimeEntriesBody,
+    'put /api/v1/time-entries/bulk': BulkUpdateTimeEntriesBody,
+    'delete /api/v1/time-entries/bulk': BulkDeleteTimeEntriesBody,
+  };
+
+  // Registered from the real validator schemas so the docs cannot drift from them.
+  const CreateTimePeriodBody = registry.registerSchema('WorkV1CreateTimePeriodBody', createTimePeriodSchema);
+  const UpdateTimePeriodBody = registry.registerSchema('WorkV1UpdateTimePeriodBody', updateTimePeriodSchema);
 
   const CreateTimeSheetBody = registry.registerSchema(
     'WorkV1CreateTimeSheetBody',
@@ -254,7 +331,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/projects/search', summary: 'Search projects', description: 'Searches projects via ApiProjectController.search().', family: 'project' },
     { method: 'get', path: '/api/v1/projects/stats', summary: 'Get project stats', description: 'Returns project aggregate statistics for authorized projects.', family: 'project' },
     { method: 'get', path: '/api/v1/projects/tasks/{taskId}/checklist', summary: 'List task checklist items', description: 'Reads checklist items for project task UUID through ApiProjectController.getTaskChecklist().', family: 'project' },
-    { method: 'post', path: '/api/v1/projects/tasks/{taskId}/checklist', summary: 'Create task checklist item', description: 'Creates checklist item for project task UUID via ApiProjectController.createChecklistItem().', family: 'project' },
+    { method: 'post', path: '/api/v1/projects/tasks/{taskId}/checklist', summary: 'Create task checklist item', description: 'Creates checklist item for project task UUID via ApiProjectController.createChecklistItem(). Body uses the table\'s item_name / completed names; item_text / is_completed remain accepted aliases.', family: 'project' },
+    { method: 'put', path: '/api/v1/projects/tasks/{taskId}/checklist/{itemId}', summary: 'Update task checklist item', description: 'Updates one checklist item of the task, typically `completed` to tick it done. 404 when the item is not on that task.', family: 'project' },
+    { method: 'delete', path: '/api/v1/projects/tasks/{taskId}/checklist/{itemId}', summary: 'Delete task checklist item', description: 'Deletes one checklist item of the task. 404 when the item is not on that task.', family: 'project' },
     { method: 'delete', path: '/api/v1/projects/{id}', summary: 'Delete project', description: 'Deletes project by project UUID.', family: 'project' },
     { method: 'get', path: '/api/v1/projects/{id}', summary: 'Get project', description: 'Returns one project by project UUID.', family: 'project' },
     { method: 'put', path: '/api/v1/projects/{id}', summary: 'Update project', description: 'Updates project by project UUID.', family: 'project' },
@@ -292,7 +371,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'put', path: '/api/v1/tags/{id}/colors', summary: 'Update tag colors', description: 'Updates tag color attributes.', family: 'tag' },
     { method: 'put', path: '/api/v1/tags/{id}/text', summary: 'Update tag text', description: 'Updates tag display text.', family: 'tag' },
 
-    { method: 'get', path: '/api/v1/tickets', summary: 'List tickets', description: 'Lists tickets via ApiTicketController.list() with authorization-aware pagination.', family: 'ticket' },
+    { method: 'get', path: '/api/v1/tickets', summary: 'List tickets', description: 'Lists tickets via ApiTicketController.list() with authorization-aware pagination. `sort` is validated against an allowlist (unknown values return 400) and supports latest_activity_at, which is also selectable through `fields`.', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets', summary: 'Create ticket', description: 'Creates ticket via ApiTicketController.create().', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets/from-asset', summary: 'Create ticket from asset', description: 'Creates ticket from asset context via ApiTicketController.createFromAsset().', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/search', summary: 'Search tickets', description: 'Searches tickets via ApiTicketController.search().', family: 'ticket' },
@@ -315,7 +394,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
 
     { method: 'get', path: '/api/v1/time-entries', summary: 'List time entries', description: 'Lists time entries via ApiBaseController list flow.', family: 'time_entry' },
     { method: 'post', path: '/api/v1/time-entries', summary: 'Create time entry', description: 'Creates time entry.', family: 'time_entry' },
-    { method: 'get', path: '/api/v1/time-entries/active-session', summary: 'Get active tracking session', description: 'Returns active tracking session for current user context.', family: 'time_entry' },
+    { method: 'get', path: '/api/v1/time-entries/active-session', summary: 'Get active tracking session', description: 'Deprecated: use GET /api/v1/stopwatch/active. Returns the caller\'s open stopwatch session in the legacy time-entry-row shape (`session_id` is the stopwatch session id, `start_time` the first segment start). Requires time_entry:read.', family: 'time_entry' },
     { method: 'post', path: '/api/v1/time-entries/approve', summary: 'Approve time entries', description: 'Approves time entries payload.', family: 'time_entry' },
     { method: 'delete', path: '/api/v1/time-entries/bulk', summary: 'Bulk delete time entries', description: 'Bulk delete time entry operation.', family: 'time_entry' },
     { method: 'post', path: '/api/v1/time-entries/bulk', summary: 'Bulk create time entries', description: 'Bulk create time entry operation.', family: 'time_entry' },
@@ -323,22 +402,22 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/time-entries/export', summary: 'Export time entries', description: 'Exports time entries with optional filter/format query.', family: 'time_entry' },
     { method: 'post', path: '/api/v1/time-entries/request-changes', summary: 'Request time entry changes', description: 'Requests changes for submitted time entries.', family: 'time_entry' },
     { method: 'get', path: '/api/v1/time-entries/search', summary: 'Search time entries', description: 'Searches time entries with controller-specific filters.', family: 'time_entry' },
-    { method: 'post', path: '/api/v1/time-entries/start-tracking', summary: 'Start time tracking', description: 'Starts active tracking session.', family: 'time_entry' },
+    { method: 'post', path: '/api/v1/time-entries/start-tracking', summary: 'Start time tracking', description: 'Deprecated: use POST /api/v1/stopwatch. Starts a stopwatch session and returns it in the legacy time-entry-row shape. 409 when a session is already open.', family: 'time_entry' },
     { method: 'get', path: '/api/v1/time-entries/stats', summary: 'Get time entry stats', description: 'Returns time entry statistics.', family: 'time_entry' },
-    { method: 'post', path: '/api/v1/time-entries/stop-tracking/{sessionId}', summary: 'Stop time tracking', description: 'Stops active tracking session by session id.', family: 'time_entry' },
+    { method: 'post', path: '/api/v1/time-entries/stop-tracking/{sessionId}', summary: 'Stop time tracking', description: 'Deprecated: use POST /api/v1/stopwatch/{id}/log. Logs the open (running or paused) session as a time entry and returns the entry.', family: 'time_entry' },
     { method: 'get', path: '/api/v1/time-entries/templates', summary: 'List time entry templates', description: 'Lists available time entry templates.', family: 'time_entry' },
     { method: 'delete', path: '/api/v1/time-entries/{id}', summary: 'Delete time entry', description: 'Deletes time entry UUID.', family: 'time_entry' },
     { method: 'get', path: '/api/v1/time-entries/{id}', summary: 'Get time entry', description: 'Gets time entry UUID.', family: 'time_entry' },
     { method: 'put', path: '/api/v1/time-entries/{id}', summary: 'Update time entry', description: 'Updates time entry UUID.', family: 'time_entry' },
 
-    { method: 'get', path: '/api/v1/time-periods', summary: 'List time periods', description: 'Lists time periods via ApiTimeSheetController.listTimePeriods().', family: 'time_sheet' },
-    { method: 'post', path: '/api/v1/time-periods', summary: 'Create time period', description: 'Creates time period via ApiTimeSheetController.createTimePeriod().', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/time-periods/current', summary: 'Get current time period', description: 'Current route delegates to ApiTimeSheetController.list() and does not call a dedicated current-period method.', family: 'time_sheet' },
-    { method: 'delete', path: '/api/v1/time-periods/{id}', summary: 'Delete time period', description: 'Deletes time period UUID via deleteTimePeriod().', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/time-periods/{id}', summary: 'Get time period', description: 'Gets time period UUID via getTimePeriod().', family: 'time_sheet' },
-    { method: 'put', path: '/api/v1/time-periods/{id}', summary: 'Update time period', description: 'Updates time period UUID via updateTimePeriod().', family: 'time_sheet' },
-    { method: 'post', path: '/api/v1/time-periods/{id}/close', summary: 'Close time period', description: 'Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period close logic.', family: 'time_sheet' },
-    { method: 'post', path: '/api/v1/time-periods/{id}/reopen', summary: 'Reopen time period', description: 'Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period reopen logic.', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-periods', summary: 'List time periods', description: 'Lists time periods via ApiTimeSheetController.listTimePeriods(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
+    { method: 'post', path: '/api/v1/time-periods', summary: 'Create time period', description: 'Creates a time period. start_date/end_date accept YYYY-MM-DD (datetimes are truncated to their date). is_current is ignored on input and derived on read. Returns 409 when it overlaps an existing period; periods that touch (one\'s end_date equals the next\'s start_date) are allowed. end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-periods/current', summary: 'Get current time period', description: 'Returns the period containing today (UTC) or ?date=, via getCurrentTimePeriod(). When no period covers today it may materialize one from time period settings.', family: 'time_sheet' },
+    { method: 'delete', path: '/api/v1/time-periods/{id}', summary: 'Delete time period', description: 'Deletes time period UUID via deleteTimePeriod(). Returns 409 when the period is closed or has time sheets.', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-periods/{id}', summary: 'Get time period', description: 'Gets time period UUID via getTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
+    { method: 'put', path: '/api/v1/time-periods/{id}', summary: 'Update time period', description: 'Updates time period UUID via updateTimePeriod(). start_date/end_date accept YYYY-MM-DD (datetimes are truncated to their date); is_current is ignored. Returns 409 when the period is closed, when it has time sheets, or when the new dates overlap another period. end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
+    { method: 'post', path: '/api/v1/time-periods/{id}/close', summary: 'Close time period', description: 'Sets is_closed true (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.', family: 'time_sheet' },
+    { method: 'post', path: '/api/v1/time-periods/{id}/reopen', summary: 'Reopen time period', description: 'Sets is_closed false (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.', family: 'time_sheet' },
 
     { method: 'get', path: '/api/v1/time-sheets', summary: 'List time sheets', description: 'Lists time sheets via ApiTimeSheetController.list().', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets', summary: 'Create time sheet', description: 'Creates time sheet via create() path.', family: 'time_sheet' },
@@ -363,9 +442,6 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'get /api/v1/schedules/search',
     'get /api/v1/schedules/{id}',
     'get /api/v1/schedules/{id}/conflicts',
-    'get /api/v1/time-periods/current',
-    'post /api/v1/time-periods/{id}/close',
-    'post /api/v1/time-periods/{id}/reopen',
     'post /api/v1/time-sheets/bulk',
     'get /api/v1/time-sheets/search',
     'post /api/v1/time-sheets/{id}/add-entry',
@@ -373,6 +449,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'post /api/v1/time-sheets/{id}/reject',
     'delete /api/v1/time-sheets/{id}/remove-entry',
     'get /api/v1/time-sheets/{id}/summary',
+  ]);
+
+  // Legacy mobile tracking endpoints: adapters over the server-side stopwatch, kept for installed builds.
+  const LEGACY_TRACKING_OPS = new Set([
+    'post /api/v1/time-entries/start-tracking',
+    'post /api/v1/time-entries/stop-tracking/{sessionId}',
+    'get /api/v1/time-entries/active-session',
   ]);
 
   // Delete endpoints whose service runs deleteEntityWithValidation and can
@@ -388,10 +471,16 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'put /api/v1/tickets/{id}/status',
   ]);
 
+  const TIME_PERIOD_CONFLICT_OPS = new Set([
+    'post /api/v1/time-periods',
+    'put /api/v1/time-periods/{id}',
+    'delete /api/v1/time-periods/{id}',
+  ]);
+
   function requestFor(def: Def) {
     const req: Record<string, unknown> = {};
 
-    if (def.path.includes('{taskId}')) req.params = ProjectTaskParam;
+    if (def.path.includes('{taskId}')) req.params = def.path.includes('{itemId}') ? ProjectTaskChecklistItemParams : ProjectTaskParam;
     if (def.path.includes('{id}/phases/{phaseId}')) req.params = ProjectPhaseParams;
     if (def.path.includes('{sessionId}')) req.params = SessionParam;
     if (def.path.includes('{entityType}/{entityId}')) req.params = TagEntityParams;
@@ -404,7 +493,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       req.query = ListQuery;
     }
 
-    if (def.path.startsWith('/api/v1/projects') && (def.method === 'post' || def.method === 'put')) req.body = { schema: def.path === '/api/v1/projects' ? CreateProjectBody : GenericBody };
+    if (def.method === 'get' && def.path === '/api/v1/tickets') {
+      req.query = TicketListQuery;
+    }
+
+    if (def.path.startsWith('/api/v1/projects') && (def.method === 'post' || def.method === 'put')) {
+      req.body = { schema: def.path === '/api/v1/projects' ? CreateProjectBody : def.path.includes('/checklist') ? ProjectTaskChecklistItemBody : GenericBody };
+    }
     if (def.path.startsWith('/api/v1/tickets') && (def.method === 'post' || def.method === 'put')) {
       let schema: ZodTypeAny = def.path === '/api/v1/tickets' ? CreateTicketBody : GenericBody;
       if (def.method === 'put' && def.path === '/api/v1/tickets/{id}') schema = TicketUpdateBody;
@@ -414,8 +509,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       req.body = { schema };
     }
     if (def.path.startsWith('/api/v1/tags') && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/tags' && def.method === 'post' ? CreateTagBody : GenericBody };
-    if (def.path.startsWith('/api/v1/time-entries') && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/time-entries' && def.method === 'post' ? CreateTimeEntryBody : GenericBody };
-    if ((def.path.startsWith('/api/v1/time-sheets') || def.path.startsWith('/api/v1/time-periods') || def.path.startsWith('/api/v1/schedules')) && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/time-sheets' && def.method === 'post' ? CreateTimeSheetBody : GenericBody };
+    if (def.path.startsWith('/api/v1/time-entries') && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) {
+      req.body = { schema: timeEntryBodySchemas[`${def.method} ${def.path}`] ?? GenericBody };
+    }
+    if (def.path.startsWith('/api/v1/time-periods')) {
+      if (def.method === 'post' && def.path === '/api/v1/time-periods') req.body = { schema: CreateTimePeriodBody };
+      if (def.method === 'put' && def.path === '/api/v1/time-periods/{id}') req.body = { schema: UpdateTimePeriodBody };
+    } else if ((def.path.startsWith('/api/v1/time-sheets') || def.path.startsWith('/api/v1/schedules')) && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/time-sheets' && def.method === 'post' ? CreateTimeSheetBody : GenericBody };
 
     return req;
   }
@@ -467,6 +567,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       };
     }
 
+    if (TIME_PERIOD_CONFLICT_OPS.has(`${def.method} ${def.path}`)) {
+      responses[409] = {
+        description: 'Conflict: the period overlaps an existing period, is closed (reopen it first), or has time sheets that block the change.',
+        schema: ApiError,
+      };
+    }
+
     if (def.path.includes('/{id}') || def.path.includes('/{taskId}') || def.path.includes('/{sessionId}') || def.path.includes('/{entityId}')) {
       responses[404] = { description: 'Target resource not found.', schema: ApiError };
     }
@@ -487,6 +594,11 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       extensions['x-route-controller-mismatch'] = true;
     }
 
+    const deprecated = LEGACY_TRACKING_OPS.has(opKey);
+    if (deprecated) {
+      extensions['x-replaced-by'] = '/api/v1/stopwatch';
+    }
+
     registry.registerRoute({
       method: def.method,
       path: def.path,
@@ -497,9 +609,192 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       request: requestFor(def),
       responses: responsesFor(def),
       extensions,
+      deprecated: deprecated || undefined,
       edition: 'both',
     });
   }
+
+  // ==========================================================================
+  // Stopwatch (server-side sessions) - /api/v1/stopwatch
+  // ==========================================================================
+  const StopwatchSessionSchema = registry.registerSchema('WorkV1StopwatchSession', stopwatchSessionResponseSchema);
+  const StopwatchSessionResponse = registry.registerSchema(
+    'WorkV1StopwatchSessionResponse',
+    zOpenApi.object({ data: StopwatchSessionSchema }),
+  );
+  const StopwatchActiveResponse = registry.registerSchema(
+    'WorkV1StopwatchActiveResponse',
+    zOpenApi.object({ data: StopwatchSessionSchema.nullable().describe('The open (running or paused) session, or null.') }),
+  );
+  const StopwatchLogResponse = registry.registerSchema(
+    'WorkV1StopwatchLogResponse',
+    zOpenApi.object({
+      data: zOpenApi.object({
+        session: StopwatchSessionSchema,
+        time_entry: zOpenApi.record(zOpenApi.unknown()).describe('The persisted time entry.'),
+      }),
+    }),
+  );
+  const StopwatchConflictError = registry.registerSchema(
+    'WorkV1StopwatchConflictError',
+    zOpenApi.object({
+      error: zOpenApi.object({
+        code: zOpenApi.literal('CONFLICT'),
+        message: zOpenApi.string(),
+        details: zOpenApi.object({
+          reason: zOpenApi.string().describe('`open_session_exists`, or the message key of the failure (closed session, stopwatch disabled for the board, locked time sheet).'),
+          open_session: StopwatchSessionSchema.optional().describe('Present when reason is `open_session_exists`: the session that is already open.'),
+        }),
+      }),
+    }),
+  );
+  const StopwatchActiveQuery = registry.registerSchema('WorkV1StopwatchActiveQuery', activeStopwatchQuerySchema);
+  const StopwatchStartBody = registry.registerSchema('WorkV1StopwatchStartBody', startStopwatchSchema);
+  const StopwatchUpdateBody = registry.registerSchema('WorkV1StopwatchUpdateBody', updateStopwatchSchema);
+  const StopwatchLogBody = registry.registerSchema('WorkV1StopwatchLogBody', logStopwatchSchema);
+
+  const stopwatchExtensions = (action: 'read' | 'create') => ({
+    'x-tenant-scoped': true,
+    'x-auth-mechanism': 'x-api-key validated in ApiBaseController.authenticate()',
+    'x-tenant-header': 'x-tenant-id (optional; inferred from API key when omitted)',
+    'x-rbac-resource': 'time_entry',
+    'x-rbac-action': action,
+  });
+  const stopwatchCommonErrors = {
+    401: { description: 'API key missing/invalid or associated user missing.', schema: ApiError },
+    403: { description: 'Permission denied (time_entry:create for mutations, time_entry:read for reads).', schema: ApiError },
+    500: { description: 'Unexpected failure.', schema: ApiError },
+  };
+  const stopwatchSessionNotFound = { description: 'Stopwatch session not found (or it belongs to another user).', schema: ApiError };
+  const stopwatchSessionClosed = { description: 'The session is already logged or discarded (details.reason is the message key).', schema: StopwatchConflictError };
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/stopwatch/active',
+    summary: 'Get active stopwatch session',
+    description: 'Returns the caller\'s open (running or paused) stopwatch session, or `data: null`. Elapsed time is derived from `segments`; `active_ms` and `server_now` are computed by the server. `user_id` reads another user\'s session and requires delegation rights (time_sheet:approve plus read_all or manager-of-subject).',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { query: StopwatchActiveQuery },
+    responses: {
+      200: { description: 'Open session or null.', schema: StopwatchActiveResponse },
+      400: { description: 'Invalid query.', schema: ApiError },
+      ...stopwatchCommonErrors,
+    },
+    extensions: stopwatchExtensions('read'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/stopwatch',
+    summary: 'Start stopwatch',
+    description: 'Starts a stopwatch session on a ticket or project task. A user has at most one open session: starting while one exists returns 409 with `details.open_session`. Also 409 when the ticket\'s board has the stopwatch turned off.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: StopwatchStartBody } },
+    responses: {
+      201: { description: 'Session started.', schema: StopwatchSessionResponse },
+      400: { description: 'Validation failure.', schema: ApiError },
+      404: { description: 'Work item not found.', schema: ApiError },
+      409: { description: 'An open session already exists (details.open_session) or the board disabled the stopwatch.', schema: StopwatchConflictError },
+      ...stopwatchCommonErrors,
+    },
+    extensions: stopwatchExtensions('create'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/stopwatch/{id}/pause',
+    summary: 'Pause stopwatch',
+    description: 'Closes the open segment. Idempotent: pausing a paused session returns it unchanged.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: {
+      200: { description: 'Paused session.', schema: StopwatchSessionResponse },
+      404: stopwatchSessionNotFound,
+      409: stopwatchSessionClosed,
+      ...stopwatchCommonErrors,
+    },
+    extensions: stopwatchExtensions('create'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/stopwatch/{id}/resume',
+    summary: 'Resume stopwatch',
+    description: 'Opens a new segment. Idempotent: resuming a running session returns it unchanged.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: {
+      200: { description: 'Running session.', schema: StopwatchSessionResponse },
+      404: stopwatchSessionNotFound,
+      409: stopwatchSessionClosed,
+      ...stopwatchCommonErrors,
+    },
+    extensions: stopwatchExtensions('create'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'patch',
+    path: '/api/v1/stopwatch/{id}',
+    summary: 'Update stopwatch draft',
+    description: 'Updates the notes and/or service of an open session. Omitted fields are unchanged; `service_id: null` clears the service.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: StopwatchUpdateBody } },
+    responses: {
+      200: { description: 'Updated session.', schema: StopwatchSessionResponse },
+      400: { description: 'Validation failure.', schema: ApiError },
+      404: stopwatchSessionNotFound,
+      409: stopwatchSessionClosed,
+      ...stopwatchCommonErrors,
+    },
+    extensions: stopwatchExtensions('create'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/stopwatch/{id}/log',
+    summary: 'Log stopwatch as time entry',
+    description: 'Logs the session as exactly one time entry: start = first segment start (to the minute), end = start + active duration, billable_duration = active minutes (min 1). Any body field overrides the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: StopwatchLogBody } },
+    responses: {
+      201: { description: 'Session logged.', schema: StopwatchLogResponse },
+      400: { description: 'Validation failure (e.g. no service, no time period covers the date).', schema: ApiError },
+      404: stopwatchSessionNotFound,
+      409: { description: 'Session already closed, or the target time sheet is locked (details.reason is the message key).', schema: StopwatchConflictError },
+      ...stopwatchCommonErrors,
+    },
+    extensions: stopwatchExtensions('create'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/stopwatch/{id}',
+    summary: 'Discard stopwatch',
+    description: 'Discards an open session without logging time.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: {
+      204: { description: 'Session discarded; no content.', emptyBody: true },
+      404: stopwatchSessionNotFound,
+      409: stopwatchSessionClosed,
+      ...stopwatchCommonErrors,
+    },
+    extensions: stopwatchExtensions('create'),
+    edition: 'both',
+  });
 
   // ==========================================================================
   // Ticket sub-resources (priorities, statuses, comments, documents, materials)

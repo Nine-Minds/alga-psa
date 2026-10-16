@@ -19,6 +19,7 @@ const createBaseInvoice = (): WasmInvoiceViewModel => ({
   dueDate: '2026-02-15',
   currencyCode: 'USD',
   poNumber: 'PO-4412',
+  paymentMethod: 'Credit Card',
   customer: {
     name: 'Hawthorne Clinic',
     address: '1150 Oak Street, Portland, OR 97205',
@@ -230,6 +231,7 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
       recurringServicePeriodEnd: '2026-03-01',
       recurringServicePeriodLabel: 'Jan 1, 2026 - Mar 1, 2026',
       poNumber: 'PO-8831',
+      paymentMethod: 'Check',
       customer: {
         name: 'Evergreen Animal Hospital',
         address: '77 Fremont St, Denver, CO 80203',
@@ -306,6 +308,7 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
       recurringServicePeriodEnd: '2026-03-01',
       recurringServicePeriodLabel: 'Feb 1, 2026 - Mar 1, 2026',
       poNumber: 'PO-9942',
+      paymentMethod: 'Bank Transfer',
       customer: {
         name: 'Summit Physical Therapy',
         address: '320 Mountain View Dr, Boulder, CO 80302',
@@ -399,6 +402,7 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
       recurringServicePeriodEnd: '2026-02-01',
       recurringServicePeriodLabel: 'Jan 1, 2026 - Feb 1, 2026',
       poNumber: null,
+      paymentMethod: null,
       customer: {
         name: 'Helios Logistics Group',
         address: '2600 Meridian Blvd, Austin, TX 78741',

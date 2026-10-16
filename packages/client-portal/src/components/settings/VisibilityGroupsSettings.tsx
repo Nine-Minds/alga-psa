@@ -35,6 +35,8 @@ type VisibilityGroup = {
   name: string;
   description: string | null;
   ticket_scope: 'client' | 'contact';
+  asset_scope: 'client' | 'contact';
+  project_scope: 'client' | 'contact';
   board_ids: string[];
   board_count: number;
   assigned_contact_count: number;
@@ -74,6 +76,8 @@ export function VisibilityGroupsSettings() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [ticketScope, setTicketScope] = useState<'client' | 'contact'>('client');
+  const [assetScope, setAssetScope] = useState<'client' | 'contact'>('client');
+  const [projectScope, setProjectScope] = useState<'client' | 'contact'>('client');
   const [boardIds, setBoardIds] = useState<string[]>([]);
   const [assignments, setAssignments] = useState<Record<string, string | null>>({});
 
@@ -149,6 +153,8 @@ export function VisibilityGroupsSettings() {
     setDescription('');
     setBoardIds([]);
     setTicketScope('client');
+    setAssetScope('client');
+    setProjectScope('client');
   };
 
   const handleSelectBoards = (boardId: string) => {
@@ -180,6 +186,8 @@ export function VisibilityGroupsSettings() {
       setDescription(group.description || '');
       setBoardIds(group.board_ids || []);
       setTicketScope(group.ticket_scope);
+      setAssetScope(group.asset_scope ?? 'client');
+      setProjectScope(group.project_scope ?? 'client');
     } catch (error) {
       console.error('Failed to load visibility group', error);
       toast({
@@ -207,7 +215,9 @@ export function VisibilityGroupsSettings() {
       name: trimmedName,
       description: description.trim() || null,
       boardIds,
-      ticketScope
+      ticketScope,
+      assetScope,
+      projectScope
     };
 
     setIsSaving(true);
@@ -422,6 +432,32 @@ export function VisibilityGroupsSettings() {
                 { value: 'contact', label: t('clientSettings.visibilityGroups.scopeContact'), description: t('clientSettings.visibilityGroups.scopeContactDescription') },
               ]}
             />
+            <RadioGroup
+              id="portal-visibility-asset-scope"
+              name="portal-visibility-asset-scope"
+              label={t('clientSettings.visibilityGroups.assetScopeLabel')}
+              value={assetScope}
+              onChange={(value) => setAssetScope(value as 'client' | 'contact')}
+              disabled={isSaving || isLoading}
+              orientation="vertical"
+              options={[
+                { value: 'client', label: t('clientSettings.visibilityGroups.assetScopeClient'), description: t('clientSettings.visibilityGroups.assetScopeClientDescription') },
+                { value: 'contact', label: t('clientSettings.visibilityGroups.assetScopeContact'), description: t('clientSettings.visibilityGroups.assetScopeContactDescription') },
+              ]}
+            />
+            <RadioGroup
+              id="portal-visibility-project-scope"
+              name="portal-visibility-project-scope"
+              label={t('clientSettings.visibilityGroups.projectScopeLabel')}
+              value={projectScope}
+              onChange={(value) => setProjectScope(value as 'client' | 'contact')}
+              disabled={isSaving || isLoading}
+              orientation="vertical"
+              options={[
+                { value: 'client', label: t('clientSettings.visibilityGroups.projectScopeClient'), description: t('clientSettings.visibilityGroups.projectScopeClientDescription') },
+                { value: 'contact', label: t('clientSettings.visibilityGroups.projectScopeContact'), description: t('clientSettings.visibilityGroups.projectScopeContactDescription') },
+              ]}
+            />
             <div className="flex gap-2">
               <Button id="visibility-group-submit" type="submit" disabled={isSaving || isLoading}>
                 {editingGroupId
@@ -449,7 +485,12 @@ export function VisibilityGroupsSettings() {
                       <p className="font-medium">{group.name}</p>
                       {group.description ? <p className="text-sm text-muted-foreground">{group.description}</p> : null}
                       <p className="text-xs text-muted-foreground">
-                        {t(group.ticket_scope === 'contact' ? 'clientSettings.visibilityGroups.scopeContact' : 'clientSettings.visibilityGroups.scopeClient')} · {group.board_count} {t('clientSettings.visibilityGroups.boardCount', 'boards')} · {group.assigned_contact_count} {t('clientSettings.visibilityGroups.assignmentCount', 'assigned contacts')}
+                        {t('clientSettings.visibilityGroups.scopeSummary', {
+                          defaultValue: 'Tickets: {{tickets}} · Devices: {{devices}} · Projects: {{projects}}',
+                          tickets: t(group.ticket_scope === 'contact' ? 'clientSettings.visibilityGroups.scopeSummaryOwn' : 'clientSettings.visibilityGroups.scopeSummaryAll'),
+                          devices: t(group.asset_scope === 'contact' ? 'clientSettings.visibilityGroups.scopeSummaryOwn' : 'clientSettings.visibilityGroups.scopeSummaryAll'),
+                          projects: t(group.project_scope === 'contact' ? 'clientSettings.visibilityGroups.scopeSummaryOwn' : 'clientSettings.visibilityGroups.scopeSummaryAll'),
+                        })} · {group.board_count} {t('clientSettings.visibilityGroups.boardCount', 'boards')} · {group.assigned_contact_count} {t('clientSettings.visibilityGroups.assignmentCount', 'assigned contacts')}
                       </p>
                     </div>
                     <div className="flex gap-2">

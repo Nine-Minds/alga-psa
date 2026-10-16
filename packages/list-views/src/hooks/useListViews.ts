@@ -153,15 +153,17 @@ export function useListViews<TLive, F = Record<string, unknown>>({
   const ownsUrlRef = useRef(ownsUrl);
   ownsUrlRef.current = ownsUrl;
   /**
-   * A list can unmount while its views are still in flight — navigating off the
-   * screen before the load returns, or a test finishing. State written after
-   * that targets a tree that is gone, and React reads `window` on every
-   * dispatch, so once the environment is gone it throws out of the awaiting
-   * promise instead of being a harmless no-op.
+   * Views load through server actions that can settle after the list has been
+   * left. A late result must not apply a view, toast, or rewrite the address bar
+   * of whatever screen is showing now, nor update state of an unmounted hook.
    */
-  const mountedRef = useRef(true);
-  useEffect(() => () => {
-    mountedRef.current = false;
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const reportFailure = useCallback((result: unknown, fallbackKey: string, fallback: string) => {
@@ -170,22 +172,18 @@ export function useListViews<TLive, F = Record<string, unknown>>({
   }, [t]);
 
   const refresh = useCallback(async (): Promise<ListViewCollection<F> | null> => {
+    let loaded: ListViewCollection<F> | null = null;
     try {
       const result = (await listListViews(adapterRef.current.listKey)) as ActionResult<ListViewCollection<F>>;
-      if (isFailure(result)) {
-        // No access to views on this list: the picker simply has nothing to show.
-        if (mountedRef.current) setCollection({ views: [], defaultViewId: null, canShare: false });
-        return null;
-      }
-      if (mountedRef.current) setCollection(result);
-      return result;
+      // No access to views on this list: the picker simply has nothing to show.
+      loaded = isFailure(result) ? null : result;
     } catch (error) {
       console.error('[listViews] failed to load views', error);
-      if (mountedRef.current) setCollection({ views: [], defaultViewId: null, canShare: false });
-      return null;
-    } finally {
-      if (mountedRef.current) setIsLoading(false);
     }
+    if (!mountedRef.current) return null;
+    setCollection(loaded ?? { views: [], defaultViewId: null, canShare: false });
+    setIsLoading(false);
+    return loaded;
   }, []);
 
   useEffect(() => {
@@ -234,6 +232,7 @@ export function useListViews<TLive, F = Record<string, unknown>>({
       }
       void (async () => {
         const result = (await getListView(requested)) as ActionResult<ListViewSummary<F>>;
+        if (!mountedRef.current) return;
         if (!isFailure(result) && result.list_key === adapterRef.current.listKey) {
           applySummary(result);
           return;

@@ -47,6 +47,7 @@ const managedIssuers = {
 describe('MicrosoftProviderForm', () => {
   const mockOnSuccess = vi.fn();
   const mockOnCancel = vi.fn();
+  let popupStub: { closed: boolean; location: { href: string }; close: ReturnType<typeof vi.fn> };
 
   const defaultProps = {
     tenant: 'test-tenant-123',
@@ -64,6 +65,10 @@ describe('MicrosoftProviderForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(emailProviderActions.getMicrosoftEmailIssuerOptions).mockResolvedValue(managedIssuers as any);
+    // The OAuth popup is opened synchronously with an empty URL and navigated
+    // once the server returns the authorize URL.
+    popupStub = { closed: false, location: { href: '' }, close: vi.fn() };
+    vi.spyOn(window, 'open').mockReturnValue(popupStub as any);
     // Mock window.location
     Object.defineProperty(window, 'location', {
       configurable: true,
@@ -74,9 +79,10 @@ describe('MicrosoftProviderForm', () => {
       },
       writable: true,
     });
-});
+  });
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
   });
 
   it('should render form fields', () => {
@@ -522,6 +528,53 @@ describe('MicrosoftProviderForm', () => {
         issuer: { kind: 'managed', clientId: 'managed-client-id' },
       });
     });
+
+    // The placeholder provider is created without running webhook automation,
+    // which would fail before tokens exist and leave the row in an error state.
+    expect(emailProviderActions.upsertEmailProvider).toHaveBeenCalledWith(
+      expect.objectContaining({ providerType: 'microsoft' }),
+      true
+    );
+
+    // The popup is opened up-front and navigated to the authorize URL.
+    expect(window.open).toHaveBeenCalledWith('', 'microsoft-oauth', expect.any(String));
+    expect(popupStub.location.href).toBe('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
+  });
+
+  it('shows an actionable error and resets the button when OAuth initiation fails', async () => {
+    vi.mocked(emailProviderActions.upsertEmailProvider).mockResolvedValueOnce({
+      provider: {
+        id: 'provider-new',
+        tenant: 'test-tenant-123',
+        providerType: 'microsoft',
+        providerName: 'New Microsoft',
+        mailbox: 'new@microsoft.com',
+        isActive: true,
+        status: 'configuring',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    } as any);
+    vi.mocked(emailProviderActions.initiateEmailOAuth).mockResolvedValueOnce({
+      success: false,
+      error: 'OAuth state signing is not configured on this server.',
+    } as any);
+
+    const user = userEvent.setup();
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
+    await screen.findByText('AlgaPSA app (managed by Nine Minds)');
+
+    await user.type(screen.getByPlaceholderText('e.g., Support Mailbox (internal)'), 'New Microsoft');
+    await user.type(screen.getByPlaceholderText('support@client.com'), 'new@microsoft.com');
+    await user.click(screen.getByRole('button', { name: /sign in with microsoft/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('OAuth state signing is not configured on this server.')).toBeInTheDocument();
+    });
+
+    // The button must reset so the user can retry.
+    expect(screen.getByRole('button', { name: /sign in with microsoft/i })).toBeEnabled();
+    expect(popupStub.close).toHaveBeenCalled();
   });
 
   it('warns that switching the Microsoft app requires reconnecting an existing mailbox', async () => {

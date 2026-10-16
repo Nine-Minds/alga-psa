@@ -14,6 +14,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { RmmStatusIndicator } from './RmmStatusIndicator';
 import { RemoteAccessButton } from './RemoteAccessButton';
+import { hasRemoteAccessLinks } from '../actions/remoteAccessLinkActions';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import Pagination from '@alga-psa/ui/components/Pagination';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
@@ -52,6 +53,8 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     initialAssets,
 }: AssociatedAssetsProps) {
     const { t } = useTranslation('msp/assets');
+    const [hasTemplateLinks, setHasTemplateLinks] = useState(false);
+    useEffect(() => { void hasRemoteAccessLinks().then((result) => setHasTemplateLinks(result === true)).catch(() => setHasTemplateLinks(false)); }, []);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [associatedAssets, setAssociatedAssets] = useState<AssetAssociation[]>([]);
@@ -501,7 +504,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                             >
                                 {/* Row 1: Name + Status + Remove */}
                                 <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2 min-w-0">
+                                    <div className="flex min-w-0 flex-1 items-center gap-2">
                                 {association.asset ? (
                                     (() => {
                                         const asset = association.asset;
@@ -511,7 +514,8 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                             variant="link"
                                             size="sm"
                                             onClick={() => openDrawerForAsset(asset)}
-                                            className="h-auto p-0 text-sm font-medium truncate text-left justify-start"
+                                            title={asset.name}
+                                            className="h-auto min-w-0 max-w-full p-0 text-sm font-medium truncate text-left justify-start"
                                         >
                                             {asset.name}
                                         </Button>
@@ -528,7 +532,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                             <RmmStatusIndicator asset={association.asset} size="sm" />
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                    <div className="flex flex-shrink-0 items-center gap-2">
                                         {association.asset && (
                                             <Badge variant={
                                                 association.asset.status === 'active' ? 'success' :
@@ -538,22 +542,26 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                 {getAssetStatusLabel(association.asset.status)}
                                             </Badge>
                                         )}
-                                        {association.asset && association.asset.rmm_provider && association.asset.rmm_device_id && (
+                                        {association.asset && (
                                             <RemoteAccessButton
                                                 asset={association.asset}
                                                 variant="ghost"
                                                 size="sm"
+                                                hasTemplateLinks={hasTemplateLinks}
+                                                surface="ticket-sidebar"
+                                                iconOnly
                                             />
                                         )}
                                         <Button
                                             id={`remove-asset-${association.asset_id}`}
                                             variant="outline"
                                             size="sm"
+                                            aria-label={t('common.actions.remove', { defaultValue: 'Remove' })}
+                                            title={t('common.actions.remove', { defaultValue: 'Remove' })}
                                             onClick={() => handleRemoveAsset(association.asset_id)}
                                             className="text-gray-600 hover:text-gray-900"
                                         >
-                                            <span className="mr-1">×</span>
-                                            {t('common.actions.remove', { defaultValue: 'Remove' })}
+                                            <span aria-hidden="true">×</span>
                                         </Button>
                                     </div>
                                 </div>

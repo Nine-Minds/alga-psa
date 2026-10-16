@@ -1,3 +1,4 @@
+import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import { buildExternalMappingChangedPayload } from '@alga-psa/workflow-streams';
 
 export type TenantExternalEntityMappingRow = {
@@ -36,7 +37,7 @@ export function buildExternalMappingChangedPublishParams(params: {
   before?: TenantExternalEntityMappingRow | null;
   after?: TenantExternalEntityMappingRow | null;
   changedAt: string;
-}): { payload: Record<string, unknown>; idempotencyKey: string } {
+}): { payload: Record<string, unknown> & BuiltWorkflowPayload<'EXTERNAL_MAPPING_CHANGED'>; idempotencyKey: string } {
   const mapping = params.after ?? params.before;
   if (!mapping) {
     throw new Error('Expected at least one mapping row (before or after) to build EXTERNAL_MAPPING_CHANGED.');

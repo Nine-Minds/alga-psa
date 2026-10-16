@@ -12,18 +12,19 @@ function readRepoFile(relativePath: string): string {
 
 const sources = {
   resourceActions: readRepoFile('packages/tickets/src/actions/ticketResourceActions.ts'),
-  resourceCore: readRepoFile('packages/tickets/src/lib/ticketResourceCore.ts'),
+  resourceCore: readRepoFile('shared/services/tickets/ticketResourceCore.ts'),
   reassignTicketResources: readRepoFile('packages/db/src/lib/reassignTicketResources.ts'),
-  teamAssignmentCore: readRepoFile('packages/tickets/src/lib/teamAssignmentCore.ts'),
+  teamAssignmentCore: readRepoFile('shared/services/tickets/teamAssignmentCore.ts'),
   ticketBundleUtils: readRepoFile('packages/tickets/src/actions/ticketBundleUtils.ts'),
   ticketActivityActions: readRepoFile('packages/tickets/src/actions/ticketActivityActions.ts'),
   ticketNumberActions: readRepoFile('packages/tickets/src/actions/ticket-number-actions/ticketNumberActions.ts'),
-  responseStateSettings: readRepoFile('packages/tickets/src/lib/responseStateSettings.ts'),
+  responseState: readRepoFile('shared/lib/tickets/responseState.ts'),
   ticketAuthorizationSql: readRepoFile('packages/tickets/src/lib/ticketAuthorizationSql.ts'),
   readTicketActivity: readRepoFile('shared/lib/ticketActivity/readTicketActivity.ts'),
   writeTicketActivity: readRepoFile('shared/lib/ticketActivity/writeTicketActivity.ts'),
 };
 
+const responseStateSettingsSource = readRepoFile('packages/tickets/src/lib/responseStateSettings.ts');
 const ticketsLibIndexSource = readRepoFile('packages/tickets/src/lib/index.ts');
 
 const metadataSource = readRepoFile('packages/db/src/lib/tenantTableMetadata.ts');
@@ -80,7 +81,7 @@ describe('ticket support facade contract', () => {
   });
 
   it('keeps response-state DB settings off the client-safe tickets lib barrel', () => {
-    expect(sources.responseStateSettings).toContain('tenantDb');
+    expect(responseStateSettingsSource).toContain('@alga-psa/shared/lib/tickets/responseState');
     expect(ticketsLibIndexSource).not.toContain('responseStateSettings');
     expect(ticketsLibIndexSource).not.toContain('isResponseStateTrackingEnabled');
   });

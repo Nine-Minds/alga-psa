@@ -11,6 +11,6 @@ export type WorkflowRuntimeV2TemporalRunInput = {
   tenantId: string | null;
   workflowId: string;
   workflowVersion: number;
-  triggerType: 'event' | 'schedule' | 'recurring' | null;
+  triggerType: 'event' | 'schedule' | 'recurring' | 'date' | null;
   executionKey: string;
 };

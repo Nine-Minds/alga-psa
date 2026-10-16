@@ -12,9 +12,11 @@
     "noResultsDescription": "Try a different search.",
     "noAccess": "No access to clients",
     "noAccessDescription": "Your account does not have permission to view clients.",
-    "clientAccessibility": "Client {{name}}"
+    "clientAccessibility": "Client {{name}}",
+    "create": "New client"
   },
   "detail": {
+    "phoneExtension": "ext.",
     "title": "Client",
     "loading": "Loading client…",
     "unableToLoad": "Unable to load client",
@@ -24,6 +26,7 @@
     "email": "Email",
     "website": "Website",
     "address": "Address",
+    "openInMaps": "Open in maps",
     "accountManager": "Account manager",
     "clientType": "Client type",
     "industry": "Industry",
@@ -40,7 +43,10 @@
     "errors": {
       "managerPermission": "You do not have permission to update this client.",
       "managerGeneric": "Unable to update the account manager. Try again."
-    }
+    },
+    "edit": "Edit client",
+    "addContact": "Add contact",
+    "updated": "Client updated"
   },
   "managerPicker": {
     "title": "Assign account manager",
@@ -67,5 +73,60 @@
     "saveFailed": "Couldn't save note",
     "loadFailed": "Unable to load client notes.",
     "retry": "Retry"
+  },
+  "form": {
+    "createTitle": "New client",
+    "editTitle": "Edit client",
+    "name": "Client name",
+    "namePlaceholder": "e.g. Acme Corporation",
+    "clientType": "Client type",
+    "types": {
+      "company": "Company",
+      "individual": "Individual"
+    },
+    "website": "Website",
+    "websitePlaceholder": "acme.com",
+    "industry": "Industry",
+    "contactSection": "Phone, email & address",
+    "contactHint": "Saved as the client's default location.",
+    "phone": "Phone",
+    "email": "Email",
+    "addressLine1": "Address",
+    "addressLine2": "Address line 2",
+    "city": "City",
+    "stateProvince": "State / province",
+    "postalCode": "Postal code",
+    "country": "Country",
+    "selectCountry": "Select country",
+    "searchCountries": "Search countries…",
+    "inactive": "Inactive",
+    "inactiveHint": "Inactive clients are hidden from pickers and lists.",
+    "create": "Create client",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "created": "Client created",
+    "locationFailed": "Client saved, but its phone, email or address could not be saved.",
+    "errors": {
+      "nameRequired": "Client name is required.",
+      "countryRequired": "Choose a country for the address.",
+      "permission": "You do not have permission to save clients.",
+      "generic": "Unable to save the client. Try again.",
+      "duplicateName": "A client with this name already exists.",
+      "customTypeRequired": "Enter a label for the custom type."
+    },
+    "countriesFailed": "Unable to load countries.",
+    "accountManager": "Account manager",
+    "selectAccountManager": "Select account manager",
+    "notes": "Notes",
+    "notesPlaceholder": "What should the team know about this client?",
+    "tags": "Tags",
+    "addTags": "Add tags",
+    "noTags": "No tags",
+    "removeTag": "Remove tag {{tag}}",
+    "deactivateTitle": "Deactivate client",
+    "deactivatePrompt": "This client has {{count}} active contact(s). Would you like to deactivate them as well?",
+    "deactivatePortalWarning": "Deactivated contacts lose client portal access.",
+    "deactivateWithContacts": "Deactivate client and contacts",
+    "deactivateClientOnly": "Client only"
   }
 }

@@ -1,6 +1,7 @@
 {
   "welcome": {
     "title": "Welkom in uw MSP-commandocentrum",
+    "titleBranded": "Welkom in het commandocentrum van {{companyName}}",
     "description": "Volg de onboardingvoortgang, configureer kritieke diensten en houd de ervaring voor elke klant consistent.",
     "titleCommunity": "Welkom terug",
     "descriptionCommunity": "Ga vanaf uw dashboard direct naar tickets, planning, projecten en rapportage."

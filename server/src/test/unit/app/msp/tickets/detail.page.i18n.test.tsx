@@ -18,7 +18,11 @@ const getCurrentUserMock = vi.fn();
 const getConsolidatedTicketDataMock = vi.fn();
 const getSurveyTicketSummaryMock = vi.fn();
 
-let pathname = '/msp/tickets/ticket-123';
+// The detail route answers notFound() for any segment that is not uuid-shaped, so the
+// fixture id has to look like a real ticket id or the page never renders.
+const TICKET_ID = '6f1b0e3c-6a4f-4d5e-9b2a-7c8d9e0f1a2b';
+
+let pathname = `/msp/tickets/${TICKET_ID}`;
 
 const translations = {
   de: {
@@ -51,6 +55,10 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     replace: replaceMock,
   }),
+  // Mirrors the real export, which signals by throwing.
+  notFound: () => {
+    throw new Error('NEXT_NOT_FOUND');
+  },
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
@@ -321,7 +329,7 @@ const { MspLayoutClient } = await import('server/src/app/msp/MspLayoutClient');
 async function renderTicketDetail(locale: keyof typeof translations = 'de') {
   const page = await TicketDetailsPage({
     params: Promise.resolve({
-      id: 'ticket-123',
+      id: TICKET_ID,
     }),
   });
 
@@ -342,12 +350,12 @@ describe('/msp/tickets/[id] i18n integration', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-    pathname = '/msp/tickets/ticket-123';
+    pathname = `/msp/tickets/${TICKET_ID}`;
 
     getCurrentUserMock.mockResolvedValue({ id: 'user-1' });
     getConsolidatedTicketDataMock.mockResolvedValue({
       ticket: {
-        ticket_id: 'ticket-123',
+        ticket_id: TICKET_ID,
         client_id: 'client-1',
       },
     });

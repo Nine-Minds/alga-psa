@@ -26,6 +26,7 @@ import {
 import WorkflowDefinitionVersionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionVersionModelV2';
 import WorkflowDefinitionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionModelV2';
 import WorkflowRunModelV2 from '@alga-psa/workflows/persistence/workflowRunModelV2';
+import { INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS } from '@alga-psa/workflows/lib/workflowRunLauncher';
 import WorkflowRunStepModelV2 from '@alga-psa/workflows/persistence/workflowRunStepModelV2';
 import WorkflowRunWaitModelV2 from '@alga-psa/workflows/persistence/workflowRunWaitModelV2';
 import { WorkflowRuntimeV2, getActionRegistryV2, getNodeTypeRegistry, getSchemaRegistry } from '@alga-psa/workflows/runtime';
@@ -604,6 +605,44 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect((record?.definition_json as any)?.trigger).toEqual(trigger);
   });
 
+  it('Publish accepts a ticket.status_age date trigger and keeps its params. Mocks: non-target dependencies.', async () => {
+    const trigger = {
+      type: 'date',
+      source: 'ticket.status_age',
+      offsetDays: 0,
+      localTime: '08:00',
+      params: { statusName: 'Waiting', boardId: uuidv4(), days: 7, repeatEveryDays: 3, requireNoActivity: true },
+    };
+    const definition = (workflowId: string, payloadSchemaRef: string) => ({
+      id: workflowId,
+      version: 1,
+      name: 'Status age',
+      payloadSchemaRef,
+      trigger,
+      steps: [stateSetStep('state-1', 'READY')],
+    });
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
+    const result = await publishWorkflow(workflowId, 1, definition(workflowId, 'payload.TicketStatusAge.v1'));
+    expect(result.ok).toBe(true);
+    const record = await WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(db, workflowId, 1);
+    expect(record?.version).toBe(1);
+    expect((record?.definition_json as any)?.trigger).toEqual(trigger);
+  });
+
+  it('Publish rejects a ticket.status_age date trigger whose payload schema does not match. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
+    const result = await publishWorkflow(workflowId, 1, {
+      id: workflowId,
+      version: 1,
+      name: 'Status age mismatch',
+      payloadSchemaRef: 'payload.ContractEndDate.v1',
+      trigger: { type: 'date', source: 'ticket.status_age', offsetDays: 0, localTime: '08:00', params: { statusName: 'Waiting', days: 7 } },
+      steps: [stateSetStep('state-1', 'READY')],
+    });
+    expect(result.ok).toBe(false);
+    expect((result as any).errors).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'DATE_TRIGGER_SCHEMA_MISMATCH' })]));
+  });
+
   it('Node registry server action returns node definitions with JSON config schemas (API delegates to server action). Mocks: non-target dependencies.', async () => {
     const nodes = await listWorkflowRegistryNodesAction();
     const stateNode = nodes.find((node) => node.id === 'state.set');
@@ -803,12 +842,14 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     const runResult = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
     const run = await WorkflowRunModelV2.getById(db, runResult.runId);
 
+    // Someone is waiting in the Run dialog, so the engine connection uses the short timeout.
     expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith(
       expect.objectContaining({
         runId: runResult.runId,
         workflowId,
         workflowVersion: 1,
-      })
+      }),
+      { connectTimeoutMs: INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS }
     );
     expect(run?.engine).toBe('temporal');
     expect(run?.temporal_workflow_id).toBe('workflow-runtime-v2:run:run-replayed');
@@ -955,7 +996,8 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect(replayRecord?.temporal_workflow_id).toBe('workflow-runtime-v2:run:run-replayed');
     expect(replayRecord?.temporal_run_id).toBe('temporal-run-replayed');
     expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith(
-      expect.objectContaining({ runId: replayResult.runId, workflowId })
+      expect.objectContaining({ runId: replayResult.runId, workflowId }),
+      { connectTimeoutMs: INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS }
     );
   });
 
@@ -1038,7 +1080,7 @@ it('starts the shipped email workflow through the application action and rejects
   expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledOnce();
   expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith(expect.objectContaining({
     runId: result.runId, tenantId, workflowId, workflowVersion: definition.version,
-  }));
+  }), { connectTimeoutMs: INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS });
   await expect(startWorkflowRunAction({ workflowId, workflowVersion: definition.version, payload: {
     ...payload, emailData: { ...payload.emailData, from: { email: 'invalid-address' } },
   } })).rejects.toMatchObject({ status: 400 });

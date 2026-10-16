@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker } from '@alga-psa/event-schemas';
 import { withTenantTransaction, requirePermission, throwActionError, uuidSchema, type TenantTxContext } from './shared';
 import type { ActionContext } from '../../registries/actionRegistry';
 
@@ -13,14 +13,6 @@ interface ActivityGroup {
 }
 
 // LEVERAGE: pattern workflow-picker-metadata — same helper is private to tickets.ts
-const withWorkflowPicker = <T extends z.ZodTypeAny>(schema: T, description: string, kind: 'user'): T =>
-  withWorkflowJsonSchemaMetadata(schema, description, {
-    'x-workflow-picker-kind': kind,
-    'x-workflow-picker-dependencies': undefined,
-    'x-workflow-picker-fixed-value-hint': 'Search users',
-    'x-workflow-picker-allow-dynamic-reference': true,
-  });
-
 const groupSelectorFields = {
   groupId: uuidSchema.optional().describe('Activity group id'),
   groupName: z.string().min(1).optional().describe('Activity group name (case-insensitive)'),
@@ -217,7 +209,7 @@ export function registerActivityActions(): void {
     ui: {
       label: 'Remove from Activity Groups',
       category: 'Business Operations',
-      description: 'Remove an activity from all of a user\'s activity groups. No-op when it is not grouped.',
+      description: 'Remove an activity from all of a user\'s activity groups, returning it to the owner\'s default group (or Ungrouped when no default is set). No-op when it is not grouped.',
     },
     handler: async (input, ctx) => {
       return withTenantTransaction(ctx, async (tx) => {

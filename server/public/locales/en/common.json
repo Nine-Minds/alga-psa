@@ -1,4 +1,7 @@
 {
+  "phone": {
+    "extension": "ext."
+  },
   "colorPicker": {
     "invalidHexBackground": "Invalid hex color (e.g., #FF0000)",
     "invalidHexText": "Invalid hex color (e.g., #FFFFFF)",
@@ -211,6 +214,10 @@
         "updateComments": "Insufficient permissions to update comments",
         "deleteComments": "Insufficient permissions to delete comments",
         "viewDocuments": "Insufficient permissions to view ticket documents"
+      },
+      "projects": {
+        "read": "Insufficient permissions to view projects",
+        "readDetails": "Insufficient permissions to view project details"
       }
     },
     "tags": {
@@ -314,7 +321,8 @@
       "clientPortal": "Created via Client Portal",
       "inboundEmail": "Created via Inbound Email",
       "api": "Created via API",
-      "other": "Created via Other"
+      "other": "Created via Other",
+      "recurring": "Created by Recurring Schedule"
     },
     "responseSource": {
       "clientPortal": "Received via Client Portal",
@@ -821,7 +829,16 @@
       "fileError": "Failed to upload file",
       "associatedEntityTypeLabel": "Associate With",
       "noAssociation": "No association",
-      "selectAssociatedEntityError": "Select an associated entity before uploading."
+      "selectAssociatedEntityError": "Select an associated entity before uploading.",
+      "uploaded": "Uploaded",
+      "failed": "Failed",
+      "failureSummary": "{{failed}} of {{total}} files could not be uploaded. Review the errors below.",
+      "outcomeSummary": "{{succeeded}} of {{total}} files uploaded",
+      "emptyDropTitle": "No files received",
+      "emptyDropMessage": "No files were received. Save the attachment or email to your computer, then drag the saved file here or use Browse Files.",
+      "uploadInProgress": "An upload is already in progress. Wait for it to finish before adding more files.",
+      "refreshFailed": "Your files were uploaded, but the document list could not refresh. Reload the page to see them.",
+      "clearResults": "Clear results"
     },
     "folders": {
       "root": "Root",
@@ -1333,9 +1350,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Select timezone...",
-    "searchPlaceholder": "Search timezones or abbreviations (e.g. EST)...",
+    "searchPlaceholder": "Search by city, name, or abbreviation (e.g. New York, EST)...",
     "noResults": "No timezones found",
     "matchingGroup": "Matching \"{{query}}\"",
+    "noDst": "No DST",
+    "noDaylightSavingHint": "No daylight saving time. Clocks stay at {{offset}} all year.",
     "regions": {
       "Africa": "Africa",
       "America": "America",
@@ -1604,6 +1623,12 @@
     "threecxDialing": "Dialing from your 3CX extension",
     "threecxFailed": "The PBX could not place the call"
   },
+  "unsavedChangesGuard": {
+    "title": "Discard unsaved changes?",
+    "message": "You have unsaved changes that will be lost if you close this. Do you want to discard them?",
+    "discard": "Discard changes",
+    "keepEditing": "Keep editing"
+  },
   "editor": {
     "attachFiles": "Attach files",
     "uploadingFiles": "Uploading files…",
@@ -1689,5 +1714,45 @@
       "defaultFailed": "Your default view could not be changed.",
       "copyFailed": "The link could not be copied."
     }
+  },
+  "unitOfMeasure": {
+    "labels": {
+      "each": "Each",
+      "piece": "Piece",
+      "box": "Box",
+      "seat": "Seat",
+      "license": "License",
+      "device": "Device",
+      "user": "User",
+      "kit": "Kit",
+      "hour": "Hour",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "year": "Year",
+      "minute": "Minute",
+      "gigabyte": "Gigabyte",
+      "terabyte": "Terabyte",
+      "liter": "Liter",
+      "kilogram": "Kilogram",
+      "meter": "Meter"
+    },
+    "groups": {
+      "time": "Time",
+      "count": "Count",
+      "volume": "Volume",
+      "mass": "Mass",
+      "length": "Length",
+      "other": "Other",
+      "custom": "Custom"
+    },
+    "customOption": "Custom…",
+    "customPlaceholder": "Name this unit",
+    "register": "Add",
+    "selectPlaceholder": "Select a unit"
+  },
+  "emailRecipients": {
+    "remove": "Remove {{email}}",
+    "placeholder": "Type an address and press Enter"
   }
 }

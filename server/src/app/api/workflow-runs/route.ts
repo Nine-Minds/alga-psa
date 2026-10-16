@@ -33,6 +33,13 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const result = await startWorkflowRunAction(body);
+    // The run was recorded as FAILED because the workflow engine did not accept it;
+    // report that as a gateway failure while still returning the run id.
+    if ('launchFailure' in result && result.launchFailure) {
+      return NextResponse.json(result, {
+        status: result.launchFailure.reason === 'runtime_unavailable' ? 503 : 502
+      });
+    }
     return NextResponse.json(result);
   } catch (error) {
     return handleWorkflowV2ApiError(error);

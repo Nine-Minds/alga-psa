@@ -87,7 +87,7 @@ const BillingCycles: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [sortBy, setSortBy] = useState<string>('client_name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -117,7 +117,7 @@ const BillingCycles: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [currentPage, debouncedSearchTerm, sortBy, sortDirection, appliedDateRange]);
+  }, [currentPage, pageSize, debouncedSearchTerm, sortBy, sortDirection, appliedDateRange]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -345,7 +345,9 @@ const BillingCycles: React.FC = () => {
       title: t('billingCycles.columns.currentBillingCycle', {
         defaultValue: 'Current Billing Cycle',
       }),
+      id: 'current_billing_cycle',
       dataIndex: 'client_id',
+      sortable: false,
       render: (value: string) => {
         const cycle = billingSchedules[value]?.billingCycle ?? billingCycles[value];
         if (!cycle) {
@@ -357,12 +359,16 @@ const BillingCycles: React.FC = () => {
     },
     {
       title: t('billingCycles.columns.anchor', { defaultValue: 'Anchor' }),
+      id: 'billing_anchor',
       dataIndex: 'client_id',
+      sortable: false,
       render: (value: string) => formatAnchorSummary(value),
     },
     {
       title: t('billingCycles.columns.actions', { defaultValue: 'Actions' }),
+      id: 'client_billing_link',
       dataIndex: 'client_id',
+      sortable: false,
       render: (value: string) => (
         <div className="flex items-center gap-2">
           <Button id="billing-cycles-view-client" asChild variant="outline" size="sm">
@@ -474,6 +480,7 @@ const BillingCycles: React.FC = () => {
               pageSize={pageSize}
               totalItems={totalCount}
               onPageChange={handlePageChange}
+              onItemsPerPageChange={(nextPageSize) => { setPageSize(nextPageSize); setCurrentPage(1); }}
               manualSorting={true}
               sortBy={sortBy}
               sortDirection={sortDirection}

@@ -300,11 +300,15 @@ describe('client portal visibility group actions', () => {
       name: 'HR Contacts',
       description: 'Restricted HR boards',
       ticketScope: 'contact',
+      assetScope: 'contact',
+      projectScope: 'client',
       boardIds: [boardIdOne, boardIdTwo],
     });
 
     expect(result).toEqual({ group_id: 'group-new' });
-    expect(insertGroupMock).toHaveBeenCalledWith(expect.objectContaining({ ticket_scope: 'contact' }));
+    expect(insertGroupMock).toHaveBeenCalledWith(
+      expect.objectContaining({ ticket_scope: 'contact', asset_scope: 'contact', project_scope: 'client' })
+    );
     expect(insertGroupBoardsMock).toHaveBeenCalledWith([
       { tenant: 'tenant-1', group_id: 'group-new', board_id: boardIdOne },
       { tenant: 'tenant-1', group_id: 'group-new', board_id: boardIdTwo },
@@ -378,6 +382,7 @@ describe('client portal visibility group actions', () => {
       name: 'Executives',
       description: 'Exec-only boards',
       ticketScope: 'contact',
+      assetScope: 'contact',
       boardIds: [boardIdThree],
     });
 
@@ -386,8 +391,11 @@ describe('client portal visibility group actions', () => {
         name: 'Executives',
         description: 'Exec-only boards',
         ticket_scope: 'contact',
+        asset_scope: 'contact',
       })
     );
+    // A scope the caller did not send is left as stored, not reset to the schema default.
+    expect(updateMock.mock.calls[0][0]).not.toHaveProperty('project_scope');
     expect(deleteBoardsMock).toHaveBeenCalled();
     expect(insertBoardsMock).toHaveBeenCalledWith([
       { tenant: 'tenant-1', group_id: groupId, board_id: boardIdThree },

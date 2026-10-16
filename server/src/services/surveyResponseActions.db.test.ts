@@ -19,6 +19,11 @@ vi.mock('@alga-psa/auth', () => ({ localizeActionError: async (error: unknown) =
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: async (event: unknown) => { state.events.push(event); },
   publishWorkflowEvent: async (event: unknown) => { state.workflows.push(event); },
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 vi.mock('../lib/db', async () => {
   const db = await import('@alga-psa/db');
@@ -26,6 +31,12 @@ vi.mock('../lib/db', async () => {
 });
 vi.mock('../lib/eventBus/publishers', () => ({
   publishWorkflowEvent: async (event: unknown) => { state.workflows.push(event); },
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 vi.mock('@alga-psa/email', async () => {
   const { DatabaseTemplateProcessor } = await import('../../../packages/email/src/templateProcessors');
@@ -43,6 +54,7 @@ import { sendSurveyInvitation } from './surveyService';
 import { getSurveyInvitationForToken, submitSurveyResponse } from '../../../packages/surveys/src/actions/surveyResponseActions';
 import { issueSurveyToken } from '../../../packages/surveys/src/actions/surveyTokenService';
 import { EventSchemas } from '@alga-psa/event-schemas';
+import { LOCALE_CONFIG } from '../../../packages/email/src/lib/localeConfig';
 
 const require = createRequire(import.meta.url);
 const emailMigration = require('../../migrations/20260907200000_add_project_survey_email_template.cjs');
@@ -210,7 +222,7 @@ it('installs all project email translations idempotently and rolls back without 
   const trx = state.trx!;
   await emailMigration.up(trx);
   const projects = await trx('system_email_templates').where({ name: 'SURVEY_PROJECT_CLOSED' });
-  expect(projects.map(row => row.language_code).sort()).toEqual(['de', 'en', 'es', 'fr', 'it', 'nl', 'pl', 'pt']);
+  expect(projects.map(row => row.language_code).sort()).toEqual([...LOCALE_CONFIG.supportedLocales].sort());
   const { DatabaseTemplateProcessor } = await import('@alga-psa/email');
   for (const row of projects) {
     const rendered = await new DatabaseTemplateProcessor(trx, 'SURVEY_PROJECT_CLOSED').process({ locale: row.language_code,
@@ -223,7 +235,7 @@ it('installs all project email translations idempotently and rolls back without 
   }
   await emailMigration.down(trx);
   expect(await trx('system_email_templates').where({ name: 'SURVEY_PROJECT_CLOSED' })).toHaveLength(0);
-  expect(await trx('system_email_templates').where({ name: 'SURVEY_TICKET_CLOSED' })).toHaveLength(8);
+  expect(await trx('system_email_templates').where({ name: 'SURVEY_TICKET_CLOSED' })).toHaveLength(LOCALE_CONFIG.supportedLocales.length);
   await emailMigration.up(trx);
-  expect(await trx('system_email_templates').where({ name: 'SURVEY_PROJECT_CLOSED' })).toHaveLength(8);
+  expect(await trx('system_email_templates').where({ name: 'SURVEY_PROJECT_CLOSED' })).toHaveLength(LOCALE_CONFIG.supportedLocales.length);
 });

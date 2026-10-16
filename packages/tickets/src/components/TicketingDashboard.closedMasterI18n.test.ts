@@ -53,7 +53,7 @@ describe('TicketingDashboard closed-master bundle i18n', () => {
   });
 
   it('rejects a closed-master bundle with the same key the server action returns', () => {
-    const dashboard = readSource('./TicketingDashboard.tsx');
+    const dashboard = readSource('./BulkBundleDialog.tsx');
     const action = readSource('../actions/ticketBundleActions.ts');
 
     expect(dashboard).toContain("t('errors.bundle.closedMasterChoiceRequired'");

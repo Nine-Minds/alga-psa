@@ -12,11 +12,13 @@ import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import NumberingSettings from '@alga-psa/reference-data/components/settings/NumberingSettings';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import DefaultCurrencySettings from './DefaultCurrencySettings';
+import DefaultTimeEntryServiceSettings from './DefaultTimeEntryServiceSettings';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
 import CreditDrawdownSettings from './CreditDrawdownSettings';
 import RenewalAutomationSettings from './RenewalAutomationSettings';
 import CostRatesSettings from './CostRatesSettings';
+import QuoteSettings from './QuoteSettings';
 
 // Payment Settings Skeleton Component
 const PaymentSettingsSkeleton: React.FC = () => {
@@ -178,6 +180,28 @@ const BillingSettings: React.FC = () => {
             <CardContent>
               <DefaultCurrencySettings />
             </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('general.timeEntryService.title', { defaultValue: 'Default time-entry service' })}</CardTitle>
+              <CardDescription>
+                {t('general.timeEntryService.description', {
+                  defaultValue: 'Fallback service used for new ticket time entries. Per-client defaults take precedence.'
+                })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DefaultTimeEntryServiceSettings />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('general.quotes.title', { defaultValue: 'Quotes' })}</CardTitle>
+              <CardDescription>{t('general.quotes.description', { defaultValue: 'Set the default validity period for new quotes.' })}</CardDescription>
+            </CardHeader>
+            <CardContent><QuoteSettings /></CardContent>
           </Card>
 
           <Card>

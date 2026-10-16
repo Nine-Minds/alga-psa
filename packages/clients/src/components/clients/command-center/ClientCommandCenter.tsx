@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation';
 import { Globe, Mail, MapPin, Phone, type LucideIcon } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { BentoTile, BentoTileEmpty, BentoTileSkeleton, useTileData } from '@alga-psa/ui/components/bento';
 import type { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
@@ -237,7 +238,7 @@ export default function ClientCommandCenter({
     </>
   );
   if (identityLocation?.phone) {
-    identityItems.push({ key: 'phone', href: `tel:${identityLocation.phone}`, text: identityText(Phone, identityLocation.phone) });
+    identityItems.push({ key: 'phone', href: null, text: <><Phone className={IDENTITY_ICON_CLASS} aria-hidden="true" /><PhoneText value={identityLocation.phone} extension={identityLocation.phone_extension} defaultCountry={identityLocation.country_code} /></> });
   }
   if (identityLocation?.email) {
     identityItems.push({ key: 'email', href: `mailto:${identityLocation.email}`, text: identityText(Mail, identityLocation.email) });

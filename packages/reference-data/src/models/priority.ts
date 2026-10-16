@@ -76,7 +76,14 @@ const Priority = {
       throw new Error('Tenant context is required for priority operations');
     }
 
-    const { ...updateData } = priority;
+    // Only mutable priority fields may reach UPDATE. In particular, Citus
+    // rejects updates that include the distribution column (`tenant`), even
+    // when the supplied value is unchanged.
+    const updateData: Partial<Pick<IPriority, 'priority_name' | 'order_number' | 'color' | 'item_type'>> = {};
+    if (priority.priority_name !== undefined) updateData.priority_name = priority.priority_name;
+    if (priority.order_number !== undefined) updateData.order_number = priority.order_number;
+    if (priority.color !== undefined) updateData.color = priority.color;
+    if (priority.item_type !== undefined) updateData.item_type = priority.item_type;
 
     const [updatedPriority] = await prioritiesQuery(knexOrTrx, tenant)
       .where({ priority_id: id })

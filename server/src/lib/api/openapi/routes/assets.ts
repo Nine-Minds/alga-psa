@@ -77,11 +77,16 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.record(zOpenApi.unknown()).describe('Asset-type-specific extension data written to the corresponding extension table for workstation, network device, server, mobile device, or printer assets.'),
   );
 
+  const AssetAttributes = registry.registerSchema(
+    'AssetAttributes',
+    zOpenApi.record(zOpenApi.unknown()).describe("Values for a custom asset type's fields, keyed by each field's key in the tenant asset type registry fields_schema. On create, required fields must be present; on update, provided keys merge into the stored map, omitted keys remain, and required fields cannot be blanked. Other keys such as integration namespaces are stored as-is. Built-in asset types accept the map without schema validation.")
+  );
+
   const AssetCreateRequest = registry.registerSchema(
     'AssetCreateRequest',
     zOpenApi.object({
       client_id: zOpenApi.string().uuid().describe('Client UUID from clients.client_id. Required.'),
-      asset_type: AssetType.describe('Asset type. Determines the optional extension data table.'),
+      asset_type: AssetType.describe('Must be a built-in slug or registered custom slug; unknown slugs return 400.'),
       asset_tag: zOpenApi.string().min(1).max(255).describe('Required tenant-specific asset tag.'),
       name: zOpenApi.string().min(1).max(255).describe('Required asset name.'),
       status: zOpenApi.string().min(1).describe('Required asset status.'),
@@ -90,6 +95,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       serial_number: zOpenApi.string().optional().describe('Optional serial number.'),
       purchase_date: zOpenApi.string().datetime().optional().describe('Optional purchase date/time.'),
       warranty_end_date: zOpenApi.string().datetime().optional().describe('Optional warranty end date/time.'),
+      attributes: AssetAttributes.optional(),
       extension_data: AssetExtensionData.optional(),
     }),
   );
@@ -98,7 +104,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     'AssetUpdateData',
     zOpenApi.object({
       client_id: zOpenApi.string().uuid().optional().describe('Client UUID to assign to the asset.'),
-      asset_type: AssetType.optional().describe('Asset type to store in assets.asset_type.'),
+      asset_type: AssetType.optional().describe('Must be a built-in slug or registered custom slug; unknown slugs return 400.'),
       asset_tag: zOpenApi.string().min(1).max(255).optional().describe('Tenant-specific asset tag.'),
       name: zOpenApi.string().min(1).max(255).optional().describe('Asset name.'),
       status: zOpenApi.string().min(1).optional().describe('Asset status.'),
@@ -107,6 +113,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       serial_number: zOpenApi.string().optional().describe('Serial number.'),
       purchase_date: zOpenApi.string().datetime().optional().describe('Purchase date/time.'),
       warranty_end_date: zOpenApi.string().datetime().optional().describe('Warranty end date/time.'),
+      attributes: AssetAttributes.optional(),
     }),
   );
 
@@ -226,6 +233,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       created_at: zOpenApi.string().datetime().describe('Asset creation timestamp.'),
       updated_at: zOpenApi.string().datetime().describe('Asset last update timestamp.'),
       tenant: zOpenApi.string().uuid().describe('Tenant UUID from assets.tenant; filtered to the authenticated request context.'),
+      attributes: AssetAttributes.nullable().optional().describe('Stored custom-type attribute values and integration namespaces.'),
       client_name: zOpenApi.string().optional().describe('Client name selected from the joined clients table.'),
       warranty_status: zOpenApi.enum(['no_warranty', 'expired', 'expiring_soon', 'active']).optional().describe('Computed from warranty_end_date by SQL CASE expression.'),
       maintenance_status: zOpenApi.string().optional().describe('Optional computed maintenance status when present in service results.'),
@@ -830,7 +838,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets',
     summary: 'Create asset',
     description:
-      'Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. AssetService.create writes assets.tenant from the request context, inserts the asset, optionally upserts asset-type-specific extension_data, publishes an ASSET_CREATED event, and returns getWithDetails with HATEOAS links.',
+      'Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. Custom attributes are checked against the registered type schema and required fields must be present. Unknown asset_type slugs and invalid/missing required attributes return 400. AssetService.create writes the attributes map, optionally upserts extension_data, publishes ASSET_CREATED, and returns getWithDetails.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -846,7 +854,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: AssetResourceResponse,
       },
       400: {
-        description: 'Request body validation failed.',
+        description: 'Request validation failed, asset_type is not a built-in or registered slug, or custom attributes are invalid or missing required fields.',
         schema: ApiErrorEnvelope,
       },
       401: {
@@ -923,7 +931,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/bulk-update',
     summary: 'Bulk update assets',
     description:
-      'Updates up to 50 assets in the authenticated tenant. Each array item supplies an asset_id and partial update data validated with updateAssetSchema. The controller calls AssetService.update for every item, tenant-scoping each update by asset_id and context.tenant and publishing ASSET_UPDATED events.',
+      'Updates up to 50 assets in the authenticated tenant. Each item is validated and written independently; custom attributes are validated against that asset type and merged into its stored map. Unknown types and invalid attributes return 400. Earlier items may remain committed if a later item fails.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -939,7 +947,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: AssetBulkUpdateResponse,
       },
       400: {
-        description: 'Request body validation failed.',
+        description: 'Request validation failed, asset_type is not registered, or custom attributes are invalid.',
         schema: ApiErrorEnvelope,
       },
       401: {
@@ -1302,7 +1310,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}',
     summary: 'Update asset',
     description:
-      'Partially updates base asset fields for the authenticated tenant. The request body is validated with updateAssetSchema, where all fields are optional. AssetService.update scopes the update by asset_id and context.tenant, writes updated_at, publishes ASSET_UPDATED, and returns the refreshed base asset with joined client_name and warranty_status. This REST path does not update extension data, create asset history records, or wrap the update in a transaction. Missing assets currently lead to a 500 when the controller tries to add links to a null result rather than a clean 404.',
+      'Partially updates base asset fields for the authenticated tenant. Custom attributes are validated against the next asset type when asset_type changes, then merged into the stored map so omitted keys remain. Required custom fields cannot be blanked. Unknown asset_type slugs and invalid attributes return 400.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1319,7 +1327,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         schema: AssetResourceResponse,
       },
       400: {
-        description: 'Request body validation failed, or the database rejected an invalid reference.',
+        description: 'Request validation failed, asset_type is not registered, custom attributes are invalid, or the database rejected an invalid reference.',
         schema: ApiErrorEnvelope,
       },
       401: {

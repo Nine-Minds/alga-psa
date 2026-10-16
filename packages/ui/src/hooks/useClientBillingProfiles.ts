@@ -63,7 +63,19 @@ export function useClientBillingProfiles(
   const loaderRef = useRef(loadProfiles);
   loaderRef.current = loadProfiles;
 
+  // Each load takes a ticket; only the latest one may write state. A newer
+  // client's load, or unmount, invalidates any response still in flight.
+  const latestRequestRef = useRef(0);
+  useEffect(
+    () => () => {
+      latestRequestRef.current += 1;
+    },
+    [],
+  );
+
   const load = useCallback(async () => {
+    const request = ++latestRequestRef.current;
+    const isCurrent = () => request === latestRequestRef.current;
     if (!clientId) {
       setProfiles([]);
       setIsLoading(false);
@@ -72,6 +84,7 @@ export function useClientBillingProfiles(
     setIsLoading(true);
     try {
       const result = await loaderRef.current(clientId);
+      if (!isCurrent()) return;
       // A read failure must not be mistaken for "this client has one profile" —
       // that would silently hide a segmented client's profile UI. Keep the last
       // known list and surface the error instead.
@@ -84,21 +97,14 @@ export function useClientBillingProfiles(
       setProfiles(result);
       setError(null);
     } catch (loadError) {
-      setError(loadError);
+      if (isCurrent()) setError(loadError);
     } finally {
-      setIsLoading(false);
+      if (isCurrent()) setIsLoading(false);
     }
   }, [clientId]);
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      if (cancelled) return;
-      await load();
-    })();
-    return () => {
-      cancelled = true;
-    };
+    void load();
   }, [load]);
 
   return {

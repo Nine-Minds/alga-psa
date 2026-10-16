@@ -121,6 +121,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Projeto encerrado: {{project.name}}';
+SUBJECTS.sv = 'Projekt avslutat: {{project.name}}';
 COPY.pt = {
   headerLabel: 'Projeto encerrado',
   intro: 'Um projeto foi encerrado:',
@@ -133,6 +134,19 @@ COPY.pt = {
   textHeader: 'Projeto encerrado',
   textIntro: 'Um projeto foi encerrado:',
   textView: 'Ver projeto em',
+};
+COPY.sv = {
+  headerLabel: 'Projekt avslutat',
+  intro: 'Ett projekt har avslutats:',
+  projectName: 'Projektnamn',
+  status: 'Status',
+  changes: 'Ändringar',
+  closedBy: 'Avslutat av',
+  viewButton: 'Visa projekt',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
+  textHeader: 'Projekt avslutat',
+  textIntro: 'Ett projekt har avslutats:',
+  textView: 'Visa projekt på',
 };
 
 /* eslint-enable max-len */

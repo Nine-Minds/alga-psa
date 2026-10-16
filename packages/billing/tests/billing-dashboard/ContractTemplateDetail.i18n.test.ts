@@ -92,6 +92,8 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
       'templateDetail.composition.manageTemplateServices',
       'templateDetail.composition.addContractLinesBeforeManaging',
       'templateDetail.composition.fixedFeeRate',
+      'templateDetail.composition.hourlyRateLabel',
+      'templateDetail.composition.unitRateLabel',
       'templateDetail.composition.editRate',
       'templateDetail.composition.notSet',
     ];
@@ -154,5 +156,23 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
       expect(typeof value).toBe('string');
       expect(value).toMatch(pseudoPattern('xx'));
     }
+  });
+
+  it('bucketSummary formats overage via {{overage}} only, with no hardcoded currency symbol in any locale', () => {
+    const locales = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'xx', 'yy'];
+
+    for (const locale of locales) {
+      const contracts = readJson<Record<string, unknown>>(
+        `../../../../server/public/locales/${locale}/msp/contracts.json`
+      );
+      const value = getLeaf(contracts, 'templateDetail.composition.bucketSummary');
+
+      expect(typeof value, `${locale} bucketSummary`).toBe('string');
+      expect(value as string, `${locale} bucketSummary`).toContain('{{overage}}');
+      expect(value as string, `${locale} bucketSummary`).not.toContain('${{');
+    }
+
+    const source = read('../../src/components/billing-dashboard/contracts/ContractTemplateDetail.tsx');
+    expect(source).not.toContain('Overage ${{overage}}');
   });
 });

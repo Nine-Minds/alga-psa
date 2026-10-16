@@ -7,6 +7,9 @@ import { validateData, validateArray } from '@alga-psa/core';
 import { timePeriodSettingsSchema } from '../../schemas/timeSheet.schemas';
 import { formatUtcDateNoTime } from '@alga-psa/core';
 import { Knex } from 'knex';
+import { Temporal } from '@js-temporal/polyfill';
+import { resolveUserTimeZone } from '@alga-psa/db';
+import { defaultEffectiveFrom } from '../../lib/timePeriodSuggester';
 import { withAuth } from '@alga-psa/auth';
 import {
   actionError,
@@ -163,18 +166,43 @@ export const updateTimePeriodSettings = withAuth(async (
 });
 
 export const createTimePeriodSettings = withAuth(async (
-  _user,
+  user,
   { tenant },
   settings: Partial<ITimePeriodSettings>
 ): Promise<TimePeriodSettingsActionResult<ITimePeriodSettings>> => {
   try {
     const { knex: db } = await createTenantKnex();
 
+    let effectiveFrom: string;
+    if (settings.effective_from) {
+      effectiveFrom = formatUtcDateNoTime(new Date(settings.effective_from));
+    } else {
+      // Default: start of the period containing today in the creating user's timezone, so the
+      // current period is fully covered and an evening save in the Americas isn't a day ahead.
+      const userId = user?.user_id || null;
+      let timeZone = 'UTC';
+      if (userId) {
+        try {
+          timeZone = (await resolveUserTimeZone(db, tenant, userId)) || 'UTC';
+        } catch (tzError) {
+          console.warn('Could not resolve user timezone for effective_from default; using UTC', tzError);
+        }
+      }
+      let localToday: Temporal.PlainDate;
+      try {
+        localToday = Temporal.Now.plainDateISO(timeZone);
+      } catch {
+        console.warn(`Unknown timezone "${timeZone}" for effective_from default; using UTC`);
+        localToday = Temporal.Now.plainDateISO('UTC');
+      }
+      effectiveFrom = defaultEffectiveFrom(settings as ITimePeriodSettings, localToday).toString();
+    }
+
     const now = formatISO(new Date());
     const newSettings = {
       ...settings,
       is_active: true,
-      effective_from: settings.effective_from ? formatUtcDateNoTime(new Date(settings.effective_from)) : formatUtcDateNoTime(new Date()),
+      effective_from: effectiveFrom,
       effective_to: settings.effective_to ? formatUtcDateNoTime(new Date(settings.effective_to)) : undefined,
       start_day: settings.start_day || 1,
       end_day: settings.end_day || END_OF_PERIOD,

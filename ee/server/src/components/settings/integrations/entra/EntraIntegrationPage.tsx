@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getEntraIntegrationStatus,
@@ -13,7 +12,11 @@ import { EntraSetupWizard } from './EntraSetupWizard';
 import { selectEntraSurfaceMode } from './entraSetupModel';
 
 interface EntraIntegrationPageProps {
-  /** Whether the tenant's tier includes CIPP. Defaults to true. */
+  /**
+   * Whether the tenant's tier includes CIPP. This is the only gate on the CIPP
+   * option. Callers pass `useTierFeature(TIER_FEATURES.CIPP)`; the default only
+   * applies when the prop is omitted.
+   */
   canUseCipp?: boolean;
 }
 
@@ -23,10 +26,9 @@ interface EntraIntegrationPageProps {
  * completed, the operations console afterwards.
  */
 export default function EntraIntegrationPage({
-  canUseCipp: canUseCippTier = true,
+  canUseCipp: cippAvailable = true,
 }: EntraIntegrationPageProps): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
-  const cippFlag = useFeatureFlag('entra-integration-cipp', { defaultValue: false });
   const [status, setStatus] = React.useState<EntraStatusResponse | null>(null);
   const [statusLoading, setStatusLoading] = React.useState(true);
   const [statusError, setStatusError] = React.useState<string | null>(null);
@@ -82,7 +84,6 @@ export default function EntraIntegrationPage({
     );
   }, [t]);
 
-  const cippAvailable = cippFlag.enabled && canUseCippTier;
   const mode = selectEntraSurfaceMode({ hasCompletedFirstSync: status?.hasCompletedFirstSync });
 
   return (

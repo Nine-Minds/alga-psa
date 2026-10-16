@@ -168,7 +168,8 @@
       "expandGroup": "Expandir grupo",
       "collapseGroup": "Recolher grupo",
       "renameGroup": "Renomear grupo",
-      "deleteGroup": "Excluir grupo"
+      "deleteGroup": "Excluir grupo",
+      "groupMenu": "Ações do grupo"
     },
     "dropActivitiesHere": "Solte as atividades aqui",
     "ungroupedHeading": "Desagrupado",
@@ -178,6 +179,16 @@
       "status": "Status",
       "priority": "Prioridade",
       "dueDate": "Data de vencimento"
+    },
+    "defaultBadge": "Padrão",
+    "defaultBadgeHint": "As atividades que você não colocou em nenhum grupo aparecem aqui, incluindo trabalho recém-atribuído.",
+    "defaultGroupEmpty": "O novo trabalho atribuído a você aparecerá aqui",
+    "menu": {
+      "setDefault": "Definir como padrão para novo trabalho",
+      "unsetDefault": "Parar de usar como padrão"
+    },
+    "errors": {
+      "setDefaultFailed": "Não foi possível atualizar o grupo padrão"
     }
   },
   "printable": {
@@ -533,5 +544,32 @@
   "actions": {
     "print": "Imprimir",
     "printOptions": "Opções de impressão"
+  },
+  "actionMenu": {
+    "moveToGroup": "Mover para o grupo",
+    "loadingGroups": "A carregar…",
+    "newGroupTitle": "Novo grupo"
+  },
+  "deepLink": {
+    "notInView": "Este item não está na sua vista atual.",
+    "notOnList": "Este item já não está na sua lista de atividades.",
+    "clearFilters": "Limpar filtros"
+  },
+  "myGroup": {
+    "label": "O meu grupo",
+    "chip": "O meu grupo: {{name}}",
+    "ungrouped": "Sem grupo",
+    "privacyHint": "Só você pode ver isto. Organiza a sua lista de atividades.",
+    "selectPlaceholder": "Escolha um grupo",
+    "newGroup": "Novo grupo…",
+    "newGroupPlaceholder": "Nome do grupo",
+    "create": "Criar",
+    "cancel": "Cancelar",
+    "showOnBoard": "Mostrar nas minhas atividades",
+    "errors": {
+      "load": "Não foi possível carregar os seus grupos.",
+      "move": "Não foi possível alterar o seu grupo. Tente novamente.",
+      "create": "Não foi possível criar o grupo. Tente novamente."
+    }
   }
 }

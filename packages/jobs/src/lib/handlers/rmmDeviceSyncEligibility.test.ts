@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { parseRmmDeviceSyncState } from './rmmAlertPollingHandlers';
+import {
+  parseRmmDeviceSyncState,
+  reconcileRmmPollingSchedules,
+  RMM_DEVICE_SYNC_JOB,
+} from './rmmAlertPollingHandlers';
+import type { IJobRunner } from '../jobs/interfaces';
 
 // rmmAlertPollingHandlers pulls in the whole alert pipeline (Redis publishers,
 // provider fetchers) that these pure-function tests never exercise. Stubbing
@@ -11,6 +16,33 @@ vi.mock('@alga-psa/shared/rmm/alerts', () => ({
   runRmmAlertReconciliation: vi.fn(),
 }));
 vi.mock('@alga-psa/integrations/lib/rmm/alerts/pipelineDeps', () => ({ buildRmmAlertPipelineDeps: vi.fn() }));
+
+// For the real-reconciler tests below: the integrations scan and the jobs
+// lookup are stubbed; everything else in the reconciler runs for real.
+const reconcileDb = vi.hoisted(() => ({
+  integrations: [] as Array<Record<string, unknown>>,
+  existingJob: null as Record<string, unknown> | null,
+}));
+vi.mock('@alga-psa/db/admin', () => ({ getAdminConnection: async () => ({ raw: () => 'raw' }) }));
+vi.mock('@alga-psa/db', () => {
+  const jobsQuery = () => {
+    const q: Record<string, unknown> = {};
+    for (const m of ['whereRaw', 'whereNotNull', 'orderBy', 'whereNotIn']) q[m] = () => q;
+    q.first = () => q;
+    q.then = (resolve: (v: unknown) => unknown) => resolve(reconcileDb.existingJob);
+    return q;
+  };
+  const scan = () => {
+    const q: Record<string, unknown> = {};
+    for (const m of ['join', 'whereIn']) q[m] = () => q;
+    q.select = async () => reconcileDb.integrations;
+    return q;
+  };
+  return {
+    tenantDb: () => ({ unscoped: scan, table: jobsQuery }),
+    createTenantKnex: async () => ({ knex: {} }),
+  };
+});
 vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/alertFetcher', () => ({ tacticalRmmAlertFetcher: {} }));
 
 
@@ -123,5 +155,51 @@ describe('device sync eligibility', () => {
 describe('providers deliberately excluded from device sync', () => {
   it('lists only the providers with a job-callable device sync', () => {
     expect([...DEVICE_SYNC_PROVIDERS].sort()).toEqual(['levelio', 'ninjaone', 'tacticalrmm', 'tanium']);
+  });
+});
+
+/**
+ * The same eligibility, through the real reconciler: an integration that needs
+ * a reconnect has its schedule cancelled, and gets one again once healthy.
+ */
+describe('reconciler and reconnect_required', () => {
+  const integration = (tokenLifecycle?: { status: string }) => ({
+    tenant: 'tenant-1',
+    integration_id: 'integration-1',
+    provider: 'ninjaone',
+    is_active: true,
+    settings: { deviceSync: { enabled: true, intervalMinutes: 60 }, ...(tokenLifecycle ? { tokenLifecycle } : {}) },
+    tenant_suspended_at: null,
+  });
+  const runner = () => ({
+    scheduleRecurringJob: vi.fn().mockResolvedValue(undefined),
+    cancelJob: vi.fn().mockResolvedValue(true),
+  });
+
+  it('cancels the existing schedule while reconnect is required', async () => {
+    reconcileDb.integrations = [integration({ status: 'reconnect_required' })];
+    reconcileDb.existingJob = { job_id: 'job-1', tenant: 'tenant-1', interval: '0 * * * *' };
+    const r = runner();
+
+    await reconcileRmmPollingSchedules(r as unknown as IJobRunner);
+
+    expect(r.cancelJob).toHaveBeenCalledWith('job-1', 'tenant-1');
+    expect(r.scheduleRecurringJob).not.toHaveBeenCalled();
+  });
+
+  it('recreates the schedule once the integration is healthy again', async () => {
+    reconcileDb.integrations = [integration({ status: 'healthy' })];
+    reconcileDb.existingJob = null;
+    const r = runner();
+
+    await reconcileRmmPollingSchedules(r as unknown as IJobRunner);
+
+    expect(r.scheduleRecurringJob).toHaveBeenCalledTimes(1);
+    expect(r.scheduleRecurringJob).toHaveBeenCalledWith(
+      RMM_DEVICE_SYNC_JOB,
+      { tenantId: 'tenant-1', integrationId: 'integration-1', provider: 'ninjaone' },
+      '0 * * * *',
+      { singletonKey: `${RMM_DEVICE_SYNC_JOB}:tenant-1:integration-1` },
+    );
   });
 });

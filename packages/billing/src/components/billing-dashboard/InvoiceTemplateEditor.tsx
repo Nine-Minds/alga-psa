@@ -3,8 +3,9 @@
 // server/src/components/billing-dashboard/InvoiceTemplateEditor.tsx
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'react-hot-toast';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Card, CardHeader, CardContent, CardFooter } from '@alga-psa/ui/components/Card';
+import { Card, CardHeader, CardContent } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input'; // Import Input component
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert'; // Import Alert components
 import { getInvoiceTemplate, saveInvoiceTemplate } from '@alga-psa/billing/actions/invoiceTemplates'; // Correct function name
@@ -26,7 +27,11 @@ interface InvoiceTemplateEditorProps {
   templateId: string | null; // null indicates a new template
 }
 
-const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateId }) => {
+const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateId: requestedTemplateId }) => {
+  // A new layout becomes an existing one at its first save; from then on every
+  // save updates that record, whatever the URL says.
+  const [createdTemplateId, setCreatedTemplateId] = useState<string | null>(null);
+  const templateId = requestedTemplateId ?? createdTemplateId;
   const { t } = useTranslation('msp/invoicing');
   const { formatDate } = useFormatters();
   const router = useRouter();
@@ -194,7 +199,6 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
 
     setIsLoading(true);
     setError(null); // Clear generic error before attempting save
-    let saved = false;
 
     try {
       // Add logic to prepare the template data for saving
@@ -238,9 +242,26 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
       const result = await saveInvoiceTemplate(dataToSave as IInvoiceTemplate); // Type assertion might be needed
 
       if (result.success) {
-        // Navigate back to the templates list after successful save
-        handleBack();
-        saved = true;
+        toast.success(t('templateEditor.toast.saved', {
+          defaultValue: 'Layout "{{name}}" saved.',
+          name: template.name.trim(),
+        }));
+        // Saving keeps the author in the editor (Close returns to the list). A new
+        // layout takes its saved id so the next save updates it; the designer is
+        // already showing exactly what was saved, so it is not re-hydrated.
+        const savedTemplateId = result.template?.template_id;
+        if (result.template) {
+          setTemplate((previous) => ({ ...previous, ...result.template }));
+        }
+        if (isNewTemplate && savedTemplateId) {
+          setDesignerHydratedFor(savedTemplateId);
+          setCreatedTemplateId(savedTemplateId);
+          const params = new URLSearchParams(searchParams?.toString() ?? '');
+          params.set('templateId', savedTemplateId);
+          // The URL follows so a reload reopens this layout; a router navigation
+          // would re-run the server render for a page already showing it.
+          window.history.replaceState(window.history.state, '', `/msp/billing?${params.toString()}`);
+        }
       } else {
         setError((result as any).error || t('templateEditor.errors.saveFailed', {
           defaultValue: 'Failed to save template.',
@@ -253,9 +274,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
         defaultValue: 'An unexpected error occurred while saving.',
       }));
     } finally {
-      // Keep preview actions paused until navigation unmounts this editor.
-      // Resuming them here can enqueue work for the route we are leaving.
-      if (!saved) setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -268,51 +287,68 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
   // Removed the old top-level error display
   // The loading state is now handled by disabling UI elements within the Card below.
 
-  // Basic placeholder form
+  // One compact header row (title, name, status, actions) leaves the rest of the
+  // window to the designer, so the page itself never needs to scroll while editing.
   return (
     <Card>
-       <CardHeader>
-         <div className="flex items-center">
+       <CardHeader className="pb-3">
+         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
            <BackNav>
              {t('templateEditor.actions.back', {
                defaultValue: 'Back to Invoice Layouts',
              })}
            </BackNav>
+           <h2 className="text-lg font-semibold">
+             {isNewTemplate
+               ? t('templateEditor.titles.create', {
+                 defaultValue: 'Create New Invoice Layout',
+               })
+               : t('templateEditor.titles.edit', {
+                 name: template?.name || templateId,
+                 defaultValue: 'Edit Layout: {{name}}',
+               })}
+           </h2>
+           <div className="flex min-w-[260px] flex-1 items-center gap-2">
+             <label htmlFor="templateName" className="whitespace-nowrap text-sm font-medium text-[rgb(var(--color-text-700))]">
+               {t('templateEditor.fields.templateName', {
+                 defaultValue: 'Template Name',
+               })}
+             </label>
+             <Input
+               type="text"
+               id="templateName"
+               value={template?.name || ''}
+               onChange={(e) => setTemplate(prev => ({ ...prev, name: e.target.value }))}
+               disabled={isLoading}
+               containerClassName="flex-1"
+             />
+           </div>
+           <div className="flex items-center gap-2">
+             <span className="text-xs text-muted-foreground" aria-live="polite" id="template-save-status">
+               {template?.updated_at
+                 ? t('templateEditor.fields.savedAt', {
+                   defaultValue: 'Saved {{time}}',
+                   time: formatDate(template.updated_at, { dateStyle: 'medium', timeStyle: 'short' }),
+                 })
+                 : t('templateEditor.fields.notSaved', { defaultValue: 'Not saved yet' })}
+             </span>
+             <Button id="cancel-template-edit-button" variant="outline" onClick={handleBack} disabled={isLoading}>
+               {t('templateEditor.actions.close', { defaultValue: 'Close' })}
+             </Button>
+             <Button id="save-template-button" onClick={handleSave} disabled={isLoading}>
+               {isLoading
+                 ? t('templateEditor.actions.saving', { defaultValue: 'Saving...' })
+                 : t('templateEditor.actions.save', { defaultValue: 'Save Template' })}
+             </Button>
+           </div>
          </div>
-         <h2 className="text-xl font-semibold mt-2">
-           {isNewTemplate
-             ? t('templateEditor.titles.create', {
-               defaultValue: 'Create New Invoice Layout',
-             })
-             : t('templateEditor.titles.edit', {
-               name: template?.name || templateId,
-               defaultValue: 'Edit Layout: {{name}}',
-             })}
-         </h2>
+         {error && (
+           <Alert variant="destructive" className="mt-2" id="template-editor-error-alert">
+             <AlertDescription>{error}</AlertDescription>
+           </Alert>
+         )}
        </CardHeader>
-       <CardContent>
-         <div className="mt-4">
-           <label htmlFor="templateName" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-             {t('templateEditor.fields.templateName', {
-               defaultValue: 'Template Name',
-             })}
-           </label>
-           <Input
-             type="text"
-             id="templateName" // Keep ID for label association
-             value={template?.name || ''}
-             onChange={(e) => setTemplate(prev => ({ ...prev, name: e.target.value }))}
-             disabled={isLoading}
-             className="mt-1" // Add margin-top consistent with label
-           />
-           {/* Display validation/save errors using Alert */}
-           {error && (
-             <Alert variant="destructive" className="mt-2" id="template-editor-error-alert"> {/* Add ID and margin */}
-               <AlertDescription>{error}</AlertDescription>
-             </Alert>
-           )}
-         </div>
-         <div className="mt-4">
+       <CardContent className="pt-0">
            <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as 'visual' | 'code')}>
              <TabsList>
                <TabsTrigger value="visual" data-automation-id="invoice-template-editor-visual-tab">
@@ -322,7 +358,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
                  {t('templateEditor.tabs.code', { defaultValue: 'Code' })}
                </TabsTrigger>
              </TabsList>
-             <TabsContent value="visual" className="pt-4 space-y-3">
+             <TabsContent value="visual" className="pt-3">
                <div className="border rounded overflow-hidden bg-card" id="invoice-template-visual-designer">
                    <DesignerVisualWorkspace
                      previewPaused={isLoading}
@@ -331,7 +367,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
                    />
                  </div>
              </TabsContent>
-             <TabsContent value="code" className="pt-4">
+             <TabsContent value="code" className="pt-3">
                <Alert variant="info" className="mb-3" data-automation-id="invoice-template-editor-code-readonly-alert">
                  <AlertDescription>
                    {t('templateEditor.alerts.codeReadonly', {
@@ -362,36 +398,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
                </div>
              </TabsContent>
            </Tabs>
-         </div>
         </CardContent>
-        <CardFooter className="flex justify-between items-center gap-2"> {/* Updated class for layout */}
-           <div className="text-sm text-muted-foreground"> {/* Container for timestamps */}
-             {template?.created_at && (
-               <p id="template-created-at"> {/* Add id */}
-                 {t('templateEditor.fields.created', {
-                   defaultValue: 'Created',
-                 })}: {formatDate(template.created_at, { dateStyle: 'medium', timeStyle: 'short' })}
-               </p>
-             )}
-             {template?.updated_at && (
-               <p id="template-updated-at"> {/* Add id */}
-                 {t('templateEditor.fields.lastUpdated', {
-                   defaultValue: 'Last Updated',
-                 })}: {formatDate(template.updated_at, { dateStyle: 'medium', timeStyle: 'short' })}
-               </p>
-             )}
-           </div>
-           <div className="flex gap-2"> {/* Container for buttons */}
-             <Button id="cancel-template-edit-button" variant="outline" onClick={handleBack} disabled={isLoading}>
-               {t('templateEditor.actions.cancel', { defaultValue: 'Cancel' })}
-             </Button> {/* Add id */}
-             <Button id="save-template-button" onClick={handleSave} disabled={isLoading}>
-               {isLoading
-                 ? t('templateEditor.actions.saving', { defaultValue: 'Saving...' })
-                 : t('templateEditor.actions.save', { defaultValue: 'Save Template' })}
-             </Button>
-           </div>
-       </CardFooter>
     </Card>
   );
 };

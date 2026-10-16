@@ -69,6 +69,87 @@ test('redeemInstallCode requires a service URL', async () => {
   );
 });
 
+test('redeemInstallCode production path uses the shared resolver transport with a POST body', async () => {
+  const calls = [];
+  const requestImpl = async (url, timeoutMs, servers, options) => {
+    calls.push({ url, timeoutMs, servers, options });
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ tenant_id: 'tenant-1', edition: 'essentials' })
+    };
+  };
+  const r = await redeemInstallCode({
+    serviceUrl: 'https://lic.example',
+    installCode: 'K7QPM2RX',
+    applianceId: 'appliance-x',
+    lookupServers: ['192.0.2.53', '192.0.2.54'],
+    requestImpl
+  });
+  assert.equal(r.tenantId, 'tenant-1');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://lic.example/register');
+  assert.deepEqual(calls[0].servers, ['192.0.2.53', '192.0.2.54']);
+  assert.equal(calls[0].options.method, 'POST');
+  assert.deepEqual(JSON.parse(calls[0].options.body), { claim_code: 'K7QPM2RX', appliance_id: 'appliance-x' });
+  assert.equal(calls[0].options.rejectRedirects, true);
+});
+
+test('redeemInstallCode rejects a redirect instead of forwarding the claim code', async () => {
+  const requestImpl = async () => ({ statusCode: 307, body: '', headers: { location: 'https://evil.invalid/' } });
+  await assert.rejects(
+    () => redeemInstallCode({ serviceUrl: 'https://lic.example', installCode: 'X', applianceId: 'a', lookupServers: ['192.0.2.53'], requestImpl }),
+    /redirected away/
+  );
+});
+
+test('redeemInstallCode network failure names the destination and resolver path without leaking the code', async () => {
+  const requestImpl = async () => { const e = new Error('getaddrinfo ENOTFOUND'); e.code = 'ENOTFOUND'; throw e; };
+  await assert.rejects(
+    () => redeemInstallCode({ serviceUrl: 'https://lic.example', installCode: 'SECRETCODE', applianceId: 'a', lookupServers: ['192.0.2.53'], requestImpl }),
+    (error) => {
+      assert.match(error.message, /Could not reach the license service at https:\/\/lic\.example\/register/);
+      assert.match(error.message, /ENOTFOUND/);
+      assert.equal(error.network.hostname, 'lic.example');
+      assert.deepEqual(error.network.servers, ['192.0.2.53']);
+      assert.equal(error.network.code, 'ENOTFOUND');
+      assert.doesNotMatch(error.message, /SECRETCODE/);
+      return true;
+    }
+  );
+});
+
+test('redeemInstallCode rejects a non-HTTPS service URL clearly', async () => {
+  await assert.rejects(
+    () => redeemInstallCode({ serviceUrl: 'http://lic.example', installCode: 'X', applianceId: 'a', requestImpl: async () => ({ statusCode: 200, body: '{}' }) }),
+    /Invalid license service URL.*only https:/s
+  );
+  await assert.rejects(
+    () => redeemInstallCode({ serviceUrl: 'file:///etc/passwd', installCode: 'X', applianceId: 'a', requestImpl: async () => ({ statusCode: 200, body: '{}' }) }),
+    /Invalid license service URL.*only https:/s
+  );
+});
+
+test('redeemInstallCode reports the failed connection address and labels a later diagnostic lookup', async () => {
+  const requestImpl = async () => {
+    const error = new Error('self signed certificate');
+    error.code = 'DEPTH_ZERO_SELF_SIGNED_CERT';
+    error.lookupAddresses = ['203.0.113.7'];
+    error.lookupHostname = 'lic.example';
+    throw error;
+  };
+  await assert.rejects(
+    () => redeemInstallCode({ serviceUrl: 'https://lic.example', installCode: 'SECRETCODE', applianceId: 'a', lookupServers: [], requestImpl }),
+    (error) => {
+      assert.match(error.message, /The failed connection resolved lic\.example to 203\.0\.113\.7/);
+      assert.match(error.message, /later diagnostic lookup of lic\.example/);
+      assert.deepEqual(error.network.lookupAddresses, ['203.0.113.7']);
+      assert.equal(error.network.code, 'DEPTH_ZERO_SELF_SIGNED_CERT');
+      assert.doesNotMatch(error.message, /SECRETCODE/);
+      return true;
+    }
+  );
+});
+
 test('licenseSeedFromRedeem maps editions to seed literals', () => {
   const paid = licenseSeedFromRedeem({ edition: 'pro', licenseToken: 'jwt', applianceCredential: 'c', checkInUrl: 'u', applianceId: 'app' });
   assert.equal(paid.EDITION_CHOICE, 'ee');

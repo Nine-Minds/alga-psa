@@ -3,7 +3,18 @@ import { ReactNode } from 'react';
 export interface BaseColumnDefinition<T> {
   title: string | ReactNode;
   dataIndex: string | string[];
+  /**
+   * Column id; defaults to the dataIndex (joined with '_'). Must be unique per table — set it
+   * when two columns read the same field (e.g. an actions column keyed by the row id).
+   */
+  id?: string;
   width?: string;
+  /**
+   * Narrowest width (px or rem) the table may give this column when space is short.
+   * Columns that declare one shrink toward it before any column is hidden.
+   * It also replaces the default 96px floor for that column.
+   */
+  minWidth?: string;
   /** Optional class for header th */
   headerClassName?: string;
   /** Optional class for body td */

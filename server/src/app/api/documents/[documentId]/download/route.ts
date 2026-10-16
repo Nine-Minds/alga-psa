@@ -13,6 +13,9 @@ import {
   getAuthorizedDocumentByFileId,
   getAuthorizedDocumentById,
 } from '@alga-psa/documents/actions/documentActions';
+import { buildDocumentMarkdown } from '@alga-psa/documents/lib/documentMarkdownExport';
+
+// LEVERAGE: pattern document-byte-serving
 
 export async function GET(
   _request: NextRequest,
@@ -97,7 +100,7 @@ export async function GET(
           return NextResponse.json({ error: 'Document not found' }, { status: 404 });
         }
         const blockData = typeof blockRow.block_data === 'string' ? JSON.parse(blockRow.block_data) : blockRow.block_data;
-        const markdown = convertBlockNoteToMarkdown(blockData) ?? '';
+        const markdown = buildDocumentMarkdown(blockData, null) ?? '';
         const body = Buffer.from(markdown, 'utf8');
         const headers = new Headers();
         headers.set('Content-Type', 'text/markdown; charset=utf-8');

@@ -12,14 +12,28 @@
       "clearAll": "Alles löschen",
       "viewWeek": "Woche anzeigen",
       "compare": "Vergleichen",
-      "stopComparing": "Vergleich beenden"
+      "stopComparing": "Vergleich beenden",
+      "shareMyCalendar": "Meinen Kalender teilen",
+      "newGroupCalendar": "Neuer Gruppenkalender",
+      "manageGroupCalendar": "Kalender verwalten"
     },
     "labels": {
-      "inactive": "(Inaktiv)"
+      "inactive": "(Inaktiv)",
+      "archived": "(Archiviert)"
     },
     "aria": {
       "viewWeek": "Woche für {{name}} ansehen",
-      "compare": "{{name}} vergleichen"
+      "compare": "{{name}} vergleichen",
+      "toggleGroupCalendar": "{{name}} anzeigen"
+    },
+    "sections": {
+      "myCalendar": "Mein Kalender",
+      "people": "Personen",
+      "groupCalendars": "Gruppenkalender"
+    },
+    "empty": {
+      "people": "Noch niemand hat einen Kalender mit Ihnen geteilt. Teilen Sie Ihren, damit Kollegen sehen, wann Sie frei sind.",
+      "groups": "Gruppenkalender enthalten gemeinsame Termine wie Bereitschaftsdienste oder Büroschließungen."
     }
   },
   "agentView": {
@@ -90,7 +104,8 @@
         "start": "Beginn: {{dateTime}}",
         "end": "Ende: {{dateTime}}",
         "multiDay": "(Mehrtägig)"
-      }
+      },
+      "busy": "Beschäftigt"
     },
     "deleteDialog": {
       "title": "Zeitplaneintrag löschen",
@@ -122,6 +137,11 @@
         "title": "Druckoptionen",
         "description": "Wählen Sie die beim Drucken des Zeitplans enthaltenen Spalten."
       }
+    },
+    "busyDialog": {
+      "title": "Beschäftigt",
+      "close": "Schließen",
+      "timeRange": "{{start}} – {{end}}"
     }
   },
   "weeklyEvent": {
@@ -591,7 +611,11 @@
       "end": "Ende *",
       "notes": "Notizen",
       "technician": "Techniker",
-      "notesPlaceholder": "Alles, was der Techniker vor dem Start wissen sollte"
+      "notesPlaceholder": "Alles, was der Techniker vor dem Start wissen sollte",
+      "calendarPersonal": "Persönlich",
+      "calendarUnavailable": "Gruppenkalender",
+      "calendar": "Kalender",
+      "assignedUsersOptional": "Zugewiesene Benutzer"
     },
     "actions": {
       "cancel": "Abbrechen",
@@ -776,5 +800,58 @@
     "deleteFailed": "Zeitplaneintrag konnte nicht gelöscht werden",
     "loadFailed": "Zeitplaneintrag konnte nicht geladen werden",
     "noPermission": "Sie benötigen die Berechtigung zum Aktualisieren von Zeitplänen, um Arbeit zu planen."
+  },
+  "sharing": {
+    "levels": {
+      "freeBusy": "Frei/gebucht",
+      "read": "Details anzeigen",
+      "edit": "Bearbeiten",
+      "manage": "Verwalten"
+    },
+    "addRecipient": "Person oder Team hinzufügen",
+    "noRecipients": "Noch mit niemandem geteilt.",
+    "unknownRecipient": "Unbekannter Empfänger",
+    "removeRecipient": "{{name}} entfernen",
+    "errors": {
+      "load": "Kalenderfreigabe konnte nicht geladen werden.",
+      "save": "Kalenderfreigabe konnte nicht gespeichert werden."
+    },
+    "shareDialog": {
+      "title": "Meinen Kalender teilen",
+      "description": "Frei/gebucht zeigt nur, wann Sie beschäftigt sind. Details anzeigen zeigt Ihre Termine außer privaten. Bearbeiten erlaubt zusätzlich, Termine für Sie anzulegen und zu ändern."
+    },
+    "actions": {
+      "cancel": "Abbrechen",
+      "saving": "Wird gespeichert...",
+      "save": "Speichern"
+    },
+    "settings": {
+      "title": "Kalenderfreigabe",
+      "description": "Legen Sie fest, welche Kollegen und Teams Ihren Terminplan sehen und ob sie Termine für Sie buchen dürfen."
+    }
+  },
+  "groupCalendars": {
+    "errors": {
+      "load": "Kalender konnte nicht geladen werden.",
+      "nameRequired": "Kalendername ist erforderlich.",
+      "save": "Kalender konnte nicht gespeichert werden."
+    },
+    "dialog": {
+      "manageTitle": "Gruppenkalender verwalten",
+      "createTitle": "Neuer Gruppenkalender"
+    },
+    "actions": {
+      "restore": "Wiederherstellen",
+      "archive": "Archivieren",
+      "create": "Kalender erstellen"
+    },
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "z. B. Bereitschaftsdienst",
+      "color": "Farbe",
+      "description": "Beschreibung (optional)",
+      "members": "Mitglieder",
+      "creatorNote": "Sie können diesen Kalender verwalten."
+    }
   }
 }

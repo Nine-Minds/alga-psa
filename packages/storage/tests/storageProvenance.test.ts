@@ -13,6 +13,12 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/validation', () => ({
@@ -94,5 +100,28 @@ describe('StorageService provenance', () => {
     ).resolves.toMatchObject({ file_id: 'file-1' });
 
     expect(createProviderMock).toHaveBeenCalled();
+  });
+
+  it('passes the declared size through to provider.upload', async () => {
+    const upload = vi.fn(async () => ({
+      path: 'tenant-1/files/package.amp',
+      size: 3,
+      mime_type: 'application/vnd.sqlite3',
+    }));
+    createProviderMock.mockResolvedValue({ upload } as any);
+    createTenantKnexMock.mockResolvedValue({ knex: {} } as any);
+    fileCreateMock.mockResolvedValue({ file_id: 'file-1' } as any);
+
+    await StorageService.uploadStream('tenant-1', Readable.from([Buffer.from('abc')]), 'package.amp', {
+      mime_type: 'application/vnd.sqlite3',
+      uploaded_by_id: 'user-1',
+      size: 3,
+      origin: 'system-artifact',
+    });
+
+    expect(upload).toHaveBeenCalledWith(expect.anything(), 'tenant-1/files/sample.amp', {
+      mime_type: 'application/vnd.sqlite3',
+      size: 3,
+    });
   });
 });

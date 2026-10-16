@@ -1,0 +1,54 @@
+name: CE Postgres Auth
+
+on:
+  pull_request:
+    paths:
+      - 'docker-compose*.yaml'
+      - 'server/docker-compose*.yaml'
+      - 'hocuspocus/docker-compose.yaml'
+      - 'postgres/**'
+      - 'setup/entrypoint.sh'
+      - 'pgbouncer/**'
+      - 'scripts/tests/ce-postgres-auth.test.sh'
+      - '.github/workflows/ce-postgres-auth.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'docker-compose*.yaml'
+      - 'server/docker-compose*.yaml'
+      - 'hocuspocus/docker-compose.yaml'
+      - 'postgres/**'
+      - 'setup/entrypoint.sh'
+      - 'pgbouncer/**'
+      - 'scripts/tests/ce-postgres-auth.test.sh'
+      - '.github/workflows/ce-postgres-auth.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ce-postgres-auth-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ce-postgres-auth:
+    name: CE Postgres requires password authentication
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Shell syntax
+        run: |
+          bash -n postgres/alga-postgres-entrypoint.sh
+          bash -n setup/entrypoint.sh
+          bash -n scripts/tests/ce-postgres-auth.test.sh
+
+      # Uses the real postgres service from docker-compose.prebuilt.base.yaml and
+      # docker-compose.prebuilt.ce.yaml in a disposable compose project.
+      - name: Fresh install, upgrade, fail-closed and setup guard scenarios
+        run: scripts/tests/ce-postgres-auth.test.sh

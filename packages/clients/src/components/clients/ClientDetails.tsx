@@ -15,7 +15,6 @@ import ClientContactsList from '../contacts/ClientContactsList';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { Text, Heading } from '@radix-ui/themes';
 import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
-import { Switch } from '@alga-psa/ui/components/Switch';
 import BillingConfiguration from './BillingConfiguration';
 import { getClientById } from '@alga-psa/clients/actions';
 import {
@@ -32,6 +31,7 @@ import {
   listClientInboundEmailDomains,
   addClientInboundEmailDomain,
   removeClientInboundEmailDomain,
+  setClientInboundEmailDomainAutoCreateContacts,
   listClientNameAliases,
   addClientNameAlias,
   removeClientNameAlias,
@@ -45,9 +45,10 @@ import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/components/PrintableDetailHeader';
-import { ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
+import { ExternalLink, Merge, RefreshCw, Trash2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import InteractionsFeed from '../interactions/InteractionsFeed';
+import MergeClientsDialog from './MergeClientsDialog';
 import { IInteraction } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
@@ -108,45 +109,6 @@ import { ClientEquipmentTab } from './ClientEquipmentTab';
 const EMPTY_CONTACTS: IContact[] = [];
 const EMPTY_DOCUMENTS: IDocument[] = [];
 
-
-const SwitchDetailItem: React.FC<{
-  value: boolean;
-  onEdit: (value: boolean) => void;
-  automationId?: string;
-  statusLabel: string;
-  helperLabel: string;
-  activeLabel: string;
-  inactiveLabel: string;
-}> = ({ value, onEdit, automationId, statusLabel, helperLabel, activeLabel, inactiveLabel }) => {
-  // Register for UI automation with meaningful label
-  const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: automationId,
-    type: 'formField',
-    fieldType: 'checkbox',
-    label: statusLabel,
-    value: value ? activeLabel : inactiveLabel,
-    helperText: helperLabel
-  });
-
-  return (
-    <div className="flex items-center justify-between py-3" {...automationIdProps}>
-      <div>
-        <div className="text-gray-900 font-medium">{statusLabel}</div>
-        <div className="text-sm text-gray-500">{helperLabel}</div>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-700">
-          {value ? activeLabel : inactiveLabel}
-        </span>
-        <Switch
-          checked={value}
-          onCheckedChange={onEdit}
-          className="data-[state=checked]:bg-primary-500"
-        />
-      </div>
-    </div>
-  );
-};
 
 const TextDetailItem: React.FC<{
   label: string;
@@ -241,7 +203,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const { t } = useTranslation('msp/clients');
   // Field messages live under common:clients.validation.*, not this page's namespace.
   const { t: tValidation } = useTranslation('common');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, renderClientRecurringTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   // `client` is a prop and does not advance after this component saves. Keep
@@ -285,6 +247,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     users?: IUser[];
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
+  const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
   const [locationsRefreshKey, setLocationsRefreshKey] = useState(0);
   const [tags, setTags] = useState<ITag[]>([]);
   const [defaultContactOptions, setDefaultContactOptions] = useState<IContact[]>(contacts);
@@ -1185,7 +1148,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     });
   }, [clientActiveContacts, editedClient, client]);
 
-  const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string }>>([]);
+  const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string; auto_create_contacts: boolean }>>([]);
   const [inboundDomainDraft, setInboundDomainDraft] = useState('');
   const [isInboundDomainBusy, setIsInboundDomainBusy] = useState(false);
   const [inboundDestinationOptions, setInboundDestinationOptions] = useState<SelectOption[]>([]);
@@ -1201,7 +1164,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           toast.error(getErrorMessage(rows));
           return;
         }
-        setInboundEmailDomains((rows ?? []).map((r: any) => ({ id: r.id, domain: r.domain })));
+        setInboundEmailDomains((rows ?? []).map((r: any) => ({ id: r.id, domain: r.domain, auto_create_contacts: Boolean(r.auto_create_contacts) })));
       } catch (error) {
         // Non-blocking; if this fails we don't want to prevent other client edits.
         console.error('Failed to load inbound email domains:', error);
@@ -1262,7 +1225,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         return;
       }
       setInboundEmailDomains((prev) => {
-        const next = [...prev, { id: (created as any).id, domain: (created as any).domain }].filter(
+        const next = [...prev, { id: (created as any).id, domain: (created as any).domain, auto_create_contacts: false }].filter(
           (d, idx, arr) => idx === arr.findIndex((x) => x.id === d.id)
         );
         next.sort((a, b) => a.domain.localeCompare(b.domain));
@@ -1277,6 +1240,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setIsInboundDomainBusy(false);
     }
   }, [addClientInboundEmailDomain, editedClient.client_id, inboundDomainDraft, normalizeInboundDomain]);
+
+  const handleToggleInboundDomainAutoCreate = useCallback(async (domainId: string, enabled: boolean) => {
+    const previous = inboundEmailDomains.find((d) => d.id === domainId)?.auto_create_contacts ?? false;
+    setInboundEmailDomains((rows) => rows.map((d) => d.id === domainId ? { ...d, auto_create_contacts: enabled } : d));
+    try {
+      const result = await setClientInboundEmailDomainAutoCreateContacts(editedClient.client_id, domainId, enabled);
+      if (isClientActionError(result)) throw new Error(getErrorMessage(result));
+      toast.success(t('clientDetails.inboundDomainAutoCreateUpdated'));
+    } catch (error) {
+      setInboundEmailDomains((rows) => rows.map((d) => d.id === domainId ? { ...d, auto_create_contacts: previous } : d));
+      toast.error(t('clientDetails.inboundDomainAutoCreateUpdateFailed'));
+    }
+  }, [editedClient.client_id, inboundEmailDomains, t]);
 
   const handleRemoveInboundDomain = useCallback(async (domainId: string) => {
     if (!domainId) return;
@@ -1406,6 +1382,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           onDefaultContactChange={handleDefaultContactChange}
           onAddInboundDomain={handleAddInboundDomain}
           onRemoveInboundDomain={handleRemoveInboundDomain}
+          onToggleInboundDomainAutoCreate={handleToggleInboundDomainAutoCreate}
           onAddClientNameAlias={handleAddClientNameAlias}
           onRemoveClientNameAlias={handleRemoveClientNameAlias}
           onTagsChange={handleTagsChange}
@@ -1440,6 +1417,15 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         </div>
       )
     },
+    ...(renderClientRecurringTickets ? [{
+      id: 'recurring-tickets',
+      label: t('clientDetails.recurringTickets', { defaultValue: 'Recurring tickets' }),
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          {renderClientRecurringTickets({ clientId: client.client_id })}
+        </div>
+      ),
+    }] : []),
     {
       id: 'assets',
       label: t('clientDetails.assets', { defaultValue: 'Assets' }),
@@ -1494,7 +1480,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <ClientContactsList
             clientId={client.client_id}
-            clients={[client]}
+            client={client}
           />
         </div>
       )
@@ -1567,8 +1553,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             </FieldContainer>
             <TextDetailItem
               label="Tax ID"
-              value={editedClient.properties?.tax_id ?? ""}
-              onEdit={(value) => handleFieldChange('properties.tax_id', value)}
+              value={editedClient.tax_id_number ?? ""}
+              onEdit={(value) => handleFieldChange('tax_id_number', value)}
               automationId="tax-id-field"
             />
             <TextDetailItem
@@ -1885,6 +1871,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               size="sm"
             />
             <Button
+              id={`${id}-merge-client-button`}
+              onClick={() => setIsMergeDialogOpen(true)}
+              variant="outline"
+              size="sm"
+              className="flex items-center"
+              title={t('clientDetails.mergeClientHelp', {
+                defaultValue: 'Absorb another client into this one as a billing profile',
+              })}
+            >
+              <Merge className="h-4 w-4 mr-2" />
+              {t('clientDetails.mergeClient', { defaultValue: 'Merge' })}
+            </Button>
+            <Button
               id={`${id}-delete-client-button`}
               onClick={handleDeleteClient}
               variant="destructive"
@@ -1973,6 +1972,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             name: editedClient.client_name,
           },
         })}
+
+        <MergeClientsDialog
+          isOpen={isMergeDialogOpen}
+          onClose={() => setIsMergeDialogOpen(false)}
+          targetClientId={client.client_id}
+          clients={allClients.length ? allClients : [client]}
+          onMerged={() => setPulseRefreshNonce((nonce) => nonce + 1)}
+        />
 
         <QuickAddContact
           isOpen={isAddContactOpen}

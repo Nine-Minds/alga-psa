@@ -72,6 +72,7 @@ const TENANT_TABLES_EXPORT_ORDER: string[] = [
 
   // Assets
   'assets',
+  'asset_remote_access_links',
   'asset_history',
   'asset_associations',
   'asset_software',

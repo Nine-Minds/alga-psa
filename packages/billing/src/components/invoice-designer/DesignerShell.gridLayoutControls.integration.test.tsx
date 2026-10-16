@@ -84,6 +84,8 @@ afterEach(() => {
 describe('DesignerShell grid layout controls', () => {
   beforeEach(() => {
     useInvoiceDesignerStore.getState().resetWorkspace();
+    // Layout, size and flex controls live on the inspector's "Layout & size" tab.
+    useInvoiceDesignerStore.getState().setInspectorTab('layout');
   });
 
   it('renders 5 visual grid column presets when the selected container is in grid mode', () => {
@@ -187,7 +189,7 @@ describe('DesignerShell grid layout controls', () => {
     render(<DesignerShell />);
 
     const presets = document.querySelector('[data-automation-id="designer-container-layout-grid-presets"]');
-    const rawInput = screen.getByPlaceholderText('repeat(2, minmax(0, 1fr))');
+    const rawInput = screen.getByPlaceholderText('e.g. repeat(2, minmax(0, 1fr))');
 
     expect(presets).toBeTruthy();
     expect(rawInput).toBeTruthy();

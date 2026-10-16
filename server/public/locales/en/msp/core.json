@@ -102,7 +102,10 @@
     "jobMonitoring": "Job Monitoring",
     "jobs": "Jobs",
     "emailLogs": "Email Logs",
-    "extensions": "Extensions"
+    "extensions": "Extensions",
+    "ticketsAll": "All Tickets",
+    "ticketsRecurring": "Recurring Tickets",
+    "ticketsTemplates": "Ticket Templates"
   },
   "marketing": {
     "dialogs": {
@@ -589,7 +592,20 @@
       "system": "System",
       "selected": "Selected"
     },
-    "openUserMenu": "Open user menu"
+    "openUserMenu": "Open user menu",
+    "stopwatch": {
+      "untitled": "Untitled",
+      "ariaLabelPaused": "Stopwatch paused: {{label}} at {{clock}}",
+      "ariaLabelRunning": "Stopwatch running: {{label}} at {{clock}}",
+      "paused": "Stopwatch paused",
+      "running": "Stopwatch running",
+      "resume": "Resume",
+      "pause": "Pause",
+      "stop": "Stop and log",
+      "discard": "Discard",
+      "pausedNoDrawer": "Stopwatch paused at {{clock}}. Open the work item to log the time.",
+      "openTicket": "Open ticket"
+    }
   },
   "dialogs": {
     "aiInterrupt": {

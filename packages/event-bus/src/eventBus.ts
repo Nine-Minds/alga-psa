@@ -14,6 +14,7 @@ import {
   type WorkflowPublishHooks
 } from './schemas/eventBusSchema';
 import { WorkflowEventBaseSchema } from './schemas/workflowEventSchema';
+import { enforceWorkflowEventContract } from './workflow/workflowEventContract';
 
 type EventHandler = (event: Event) => Promise<void>;
 
@@ -29,9 +30,8 @@ const createRedisClient = async () => {
     logger.warn('[EventBus] No Redis password configured - this is not recommended for production');
   }
 
-  const client = createClient({
+  const clientOptions: Parameters<typeof createClient>[0] = {
     url: config.url,
-    password: password || undefined,
     socket: {
       reconnectStrategy: (retries) => {
         if (retries > config.eventBus.reconnectStrategy.retries) {
@@ -47,7 +47,15 @@ const createRedisClient = async () => {
         return delay;
       }
     }
-  });
+  };
+
+  // node-redis treats the presence of the password option as a request to
+  // authenticate, even when its value is undefined or empty.
+  if (password) {
+    clientOptions.password = password;
+  }
+
+  const client = createClient(clientOptions);
 
   client.on('error', (err) => {
     logger.error('[EventBus] Redis Client Error:', err);
@@ -174,8 +182,22 @@ const eventBusRegistry = globalThis as typeof globalThis & {
   [EVENT_BUS_KEY]?: EventBus;
 };
 
+// LEVERAGE: pattern redis-consumer-group-ensure — same NOGROUP detection and group-cache invalidation lives in shared/workflow/streams/redisStreamClient.ts
+function isNoGroupError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('NOGROUP');
+}
+
+// Redis reports "No such key '<key>' or consumer group ..."; used for logging only.
+function extractNoGroupKey(message: string): string | undefined {
+  return /No such key '([^']+)'/.exec(message)?.[1];
+}
+
 export class EventBus {
   private static createdConsumerGroups: Set<string> = new Set<string>();
+  // Streams whose group we dropped from the cache after a NOGROUP, so the recreate can be logged as a recovery.
+  private static recoveringConsumerGroups: Set<string> = new Set<string>();
+  private consecutiveNoGroup = 0;
   // Map<EventType, Map<Channel, Handlers>> so channel-specific consumers do not step on each other.
   private handlers: Map<EventType, Map<string, Set<EventHandler>>>;
   // Stable per-handler ids for per-(event, handler) processed tracking.
@@ -265,6 +287,15 @@ export class EventBus {
     return subscriptions;
   }
 
+  // A multi-stream XREADGROUP reports only the first missing group, but a Redis
+  // wipe removes all of them. Invalidate every active stream so one pass heals all.
+  private invalidateConsumerGroups(streams: string[]): void {
+    for (const stream of streams) {
+      EventBus.createdConsumerGroups.delete(stream);
+      EventBus.recoveringConsumerGroups.add(stream);
+    }
+  }
+
   private async ensureStreamAndGroup(stream: string): Promise<void> {
     // Check if we've already created this consumer group
     if (EventBus.createdConsumerGroups.has(stream)) {
@@ -279,12 +310,23 @@ export class EventBus {
       await client.xGroupCreate(stream, config.eventBus.consumerGroup, '0', {
         MKSTREAM: true
       });
-      logger.info(`[EventBus] Created consumer group for stream: ${stream}`);
+      if (EventBus.recoveringConsumerGroups.delete(stream)) {
+        logger.warn('[EventBus] consumer group missing, recreating', {
+          stream,
+          group: config.eventBus.consumerGroup
+        });
+      } else {
+        logger.info(`[EventBus] Created consumer group for stream: ${stream}`);
+      }
       // Add to the set of created consumer groups
       EventBus.createdConsumerGroups.add(stream);
     } catch (err: any) {
       if (err.message.includes('BUSYGROUP')) {
-        logger.info(`[EventBus] Consumer group already exists for stream: ${stream}`);
+        if (EventBus.recoveringConsumerGroups.delete(stream)) {
+          logger.debug(`[EventBus] Consumer group already recreated for stream: ${stream}`);
+        } else {
+          logger.info(`[EventBus] Consumer group already exists for stream: ${stream}`);
+        }
         // Add to the set of created consumer groups even if it already existed
         EventBus.createdConsumerGroups.add(stream);
       } else {
@@ -310,7 +352,8 @@ export class EventBus {
   }
 
   private getProcessedSetKey(tenantId: string, channel: string): string {
-    return channel === this.defaultChannel ? `processed_events:${tenantId}` : `processed_events:${tenantId}:${channel}`;
+    const channelSuffix = channel === this.defaultChannel ? '' : `:${channel}`;
+    return `${getRedisConfig().prefix}processed_events:${tenantId}${channelSuffix}`;
   }
 
   private getEventTenantId(event: Event): string {
@@ -338,7 +381,8 @@ export class EventBus {
   }
 
   private getProcessedHandlersSetKey(tenantId: string, channel: string): string {
-    return channel === this.defaultChannel ? `processed_event_handlers:${tenantId}` : `processed_event_handlers:${tenantId}:${channel}`;
+    const channelSuffix = channel === this.defaultChannel ? '' : `:${channel}`;
+    return `${getRedisConfig().prefix}processed_event_handlers:${tenantId}${channelSuffix}`;
   }
 
   private async isHandlerProcessed(event: Event, handlerKey: string, channel: string): Promise<boolean> {
@@ -468,10 +512,36 @@ export class EventBus {
           }
         }
 
+        this.consecutiveNoGroup = 0;
         await this.claimPendingMessages(subscriptionLookup);
         setImmediate(processEvents);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
+
+        // NOGROUP must be handled before the connection-error branch: it means Redis
+        // lost the stream/group (restart without persistence, DEL, FLUSHALL).
+        if (isNoGroupError(error)) {
+          const streams = this.getActiveSubscriptions().map((s) => s.stream);
+          this.invalidateConsumerGroups(streams);
+          this.consecutiveNoGroup += 1;
+          if (this.consecutiveNoGroup === 1) {
+            logger.warn('[EventBus] NOGROUP in event processing loop, recreating consumer groups', {
+              stream: extractNoGroupKey(errorMessage),
+              group: getRedisConfig().eventBus.consumerGroup,
+              streams: streams.length
+            });
+            setImmediate(processEvents);
+          } else {
+            if (this.consecutiveNoGroup % 60 === 0) {
+              logger.warn('[EventBus] NOGROUP persists in event processing loop', {
+                stream: extractNoGroupKey(errorMessage),
+                occurrences: this.consecutiveNoGroup
+              });
+            }
+            setTimeout(processEvents, 1000);
+          }
+          return;
+        }
         const isConnectionError = errorMessage.includes('ECONNREFUSED') ||
                                   errorMessage.includes('ENOTCONN') ||
                                   errorMessage.includes('Socket closed') ||
@@ -669,6 +739,14 @@ export class EventBus {
         }
       }
     } catch (error) {
+      if (isNoGroupError(error)) {
+        // The next loop iteration re-runs ensureStreamAndGroup for these streams.
+        this.invalidateConsumerGroups(Array.from(subscriptionLookup.keys()));
+        logger.warn('[EventBus] NOGROUP while claiming pending messages; consumer groups will be recreated', {
+          stream: extractNoGroupKey(error instanceof Error ? error.message : String(error))
+        });
+        return;
+      }
       logger.error('[EventBus] Error claiming pending messages:', error);
     }
   }
@@ -806,6 +884,17 @@ export class EventBus {
         throw new Error(eventBusDisabledReason ?? 'Event bus is disabled');
       }
       return;
+    }
+
+    // Plan step F: validate catalogued payloads against the schema the workflow worker uses.
+    // Deliberately OUTSIDE the try/catch below, which swallows publish errors: a contract
+    // violation must reach the emitter (throws in test, warns in development, no-op in production).
+    if ((options?.channel || this.defaultChannel) === this.defaultChannel) {
+      const wire = convertToWorkflowEvent(
+        { ...event, id: options?.eventId ?? 'contract-check', timestamp: new Date().toISOString() } as Event,
+        options?.workflow
+      );
+      enforceWorkflowEventContract(wire.event_type, wire.payload);
     }
 
     try {
@@ -947,6 +1036,7 @@ export class EventBus {
       this.initialized = false;
       this.handlers.clear();
       EventBus.createdConsumerGroups.clear();
+      EventBus.recoveringConsumerGroups.clear();
       if (eventBusRegistry[EVENT_BUS_KEY] === this) delete eventBusRegistry[EVENT_BUS_KEY];
     }
   }

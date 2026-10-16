@@ -112,6 +112,8 @@ export interface ProviderCreditApplicationRequest {
   externalInvoiceId: string;
   externalCustomerId?: string | null;
   amountCents: number;
+  /** ISO currency of the invoice/credit note; drives minor-unit scaling. */
+  currency?: string;
 }
 
 export interface ProviderCreditApplicationResult {
@@ -292,6 +294,16 @@ export interface AccountingExportAdapter {
     tenantId: string,
     targetRealm: string
   ): Promise<AccountingProviderOperations>;
+
+  /**
+   * Line tax codes the target company accepts on a taxable line, when it
+   * restricts them. Null means any mapped code is acceptable. Export
+   * pre-validation uses this to reject a mapping the provider would refuse.
+   */
+  allowedLineTaxCodes?(
+    tenantId: string,
+    targetRealm?: string | null
+  ): Promise<ReadonlySet<string> | null>;
 
   /**
    * Called after export when tax delegation is enabled.

@@ -32,6 +32,13 @@ export interface ResolvedRate {
   source: RateSource | null;
   sourceId: string | null;
   provenance: RateProvenance;
+  /** Governing unit-pricing revision, when one applied. */
+  revisionId?: string | null;
+  revisionVersion?: number | null;
+  pricePolicy?: "override" | "catalog" | null;
+  /** Catalog price that supplied a catalog-policy rate, when applicable. */
+  catalogPriceId?: string | null;
+  catalogEffectiveDate?: string | null;
 }
 
 export interface ContractLineRateRow {
@@ -52,9 +59,21 @@ export interface PlanServiceRateRow {
   base_rate_provenance?: RateProvenance | null;
   /** `contract_line_service_configuration.custom_rate` (cents). */
   configuration_custom_rate?: number | string | null;
+  /**
+   * `contract_line_services.custom_rate` (cents): the legacy service-line
+   * override. Consulted for products after the configuration override and
+   * before the catalog price, mirroring the invoice engine's product chain.
+   */
+  service_line_custom_rate?: number | string | null;
   /** `service_catalog.default_rate` (cents, currency-untagged legacy). */
   default_rate?: number | string | null;
   pricing_basis?: string | null;
+  /**
+   * `service_catalog.item_kind`. `product` members never treat the wizard's
+   * placeholder fixed `base_rate` as an override and may use the legacy
+   * service-line override.
+   */
+  item_kind?: string | null;
 }
 
 export interface PricingScheduleRateRow {
@@ -70,7 +89,11 @@ export interface UnitPricingRevisionRateRow {
   service_id: string;
   config_id: string;
   effective_period_start: string | Date;
-  unit_rate_cents: number | string;
+  /** Null for a catalog-policy revision (inheritance carries no rate). */
+  unit_rate_cents: number | string | null;
+  /** `override` (explicit rate) or `catalog` (inherit the currency price). */
+  price_policy?: string | null;
+  version?: number | string | null;
   created_at?: string | Date | null;
 }
 
@@ -201,33 +224,68 @@ export function resolveMemberRate(
       );
     });
   if (applicableRevisions.length > 0) {
-    const rateCents = toCents(applicableRevisions[0].unit_rate_cents);
+    const revision = applicableRevisions[0];
+    const revisionIdentity = {
+      revisionId: revision.revision_id ?? null,
+      revisionVersion:
+        revision.version === null || revision.version === undefined
+          ? null
+          : Number(revision.version),
+    };
+    // A catalog-policy revision fully replaces the baseline: it carries the
+    // quantity and declares that the price follows the currency/period catalog.
+    if (revision.price_policy === "catalog") {
+      const catalogRate = selectEffectiveServicePrice(
+        input.catalogPrices,
+        service.service_id,
+        input.currency,
+        periodStart,
+      );
+      return {
+        rateCents: catalogRate?.rateCents ?? null,
+        source: "unit_revision",
+        sourceId: revision.revision_id ?? null,
+        provenance: "inherited",
+        ...revisionIdentity,
+        pricePolicy: "catalog",
+        catalogPriceId: catalogRate?.price_id ?? null,
+        catalogEffectiveDate: catalogRate?.effectiveDate ?? null,
+      };
+    }
+    const rateCents = toCents(revision.unit_rate_cents);
     if (rateCents !== null) {
       return {
         rateCents,
         source: "unit_revision",
-        sourceId: applicableRevisions[0].revision_id ?? null,
+        sourceId: revision.revision_id ?? null,
         provenance: "custom",
+        ...revisionIdentity,
+        pricePolicy: "override",
       };
     }
   }
 
+  const isProduct = service.item_kind === "product";
+
   // 2. Per-service fixed-config snapshot, when the provenance says it governs.
-  const baseRateCents = toCents(service.service_base_rate);
-  const baseRateProvenance = normalizeProvenance(
-    service.base_rate_provenance,
-    baseRateCents,
-  );
-  if (
-    baseRateCents !== null &&
-    (baseRateProvenance === "custom" || baseRateProvenance === "unreviewed")
-  ) {
-    return {
-      rateCents: baseRateCents,
-      source: "service_override",
-      sourceId: service.config_id,
-      provenance: baseRateProvenance,
-    };
+  //    Products never read the wizard's placeholder fixed base_rate.
+  if (!isProduct) {
+    const baseRateCents = toCents(service.service_base_rate);
+    const baseRateProvenance = normalizeProvenance(
+      service.base_rate_provenance,
+      baseRateCents,
+    );
+    if (
+      baseRateCents !== null &&
+      (baseRateProvenance === "custom" || baseRateProvenance === "unreviewed")
+    ) {
+      return {
+        rateCents: baseRateCents,
+        source: "service_override",
+        sourceId: service.config_id,
+        provenance: baseRateProvenance,
+      };
+    }
   }
 
   // 3. Per-configuration custom rate.
@@ -239,6 +297,19 @@ export function resolveMemberRate(
       sourceId: service.config_id,
       provenance: "custom",
     };
+  }
+
+  // 3b. Product legacy service-line override, before the catalog price.
+  if (isProduct) {
+    const serviceLineRateCents = toCents(service.service_line_custom_rate);
+    if (serviceLineRateCents !== null) {
+      return {
+        rateCents: serviceLineRateCents,
+        source: "service_override",
+        sourceId: service.config_id,
+        provenance: "custom",
+      };
+    }
   }
 
   // 4. Effective catalog price in the contract's currency.

@@ -28,6 +28,10 @@ import { CURRENCY_OPTIONS } from "@alga-psa/core";
 // lowering the count fails the honesty test, adding one fails the growth test.
 const KNOWN_HARDCODED_CURRENCY: Record<string, { count: number; why: string }> =
   {
+    "packages/validation/src/lib/messages/clientValidationMessages.en.ts": {
+      count: 1,
+      why: "deliberate: English source of common.json clients.validation.annualRevenue.invalid, already allow-listed below as a locale string",
+    },
     "ee/server/src/components/settings/account/AccountManagement.tsx": {
       count: 15,
       why: "deliberate: Nine Minds subscription billing is USD (Stripe)",
@@ -38,14 +42,28 @@ const KNOWN_HARDCODED_CURRENCY: Record<string, { count: number; why: string }> =
     },
     "ee/server/src/components/workflow-designer/expression-editor/functionDefinitions.ts":
       {
-        count: 1,
+        count: 2,
         why: "deliberate: builds $functionName tokens for the expression language, not currency",
+      },
+    "ee/server/src/components/workflow-designer/expression-editor/hoverProvider.ts":
+      {
+        count: 1,
+        why: "deliberate: looks up $functionName tokens for the expression language, not currency",
       },
     "ee/server/src/components/workflow-designer/expression-editor/insertionText.ts":
       {
         count: 1,
         why: 'deliberate: "$0" is the snippet cursor placeholder, not currency',
       },
+    "ee/server/src/components/workflow-designer/expression-editor/signatureHelpProvider.ts":
+      {
+        count: 2,
+        why: "deliberate: resolves $functionName tokens for the expression language, not currency",
+      },
+    "ee/server/src/components/workflow-designer/mapping/textTemplate.ts": {
+      count: 1,
+      why: "deliberate: builds JSONata $variable paths such as $index, not currency",
+    },
     "ee/server/src/lib/scim/credentials.ts": {
       count: 2,
       why: 'deliberate: "$" delimits the algorithm/salt/digest fields of the scrypt hash encoding, not currency',

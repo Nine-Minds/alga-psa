@@ -10,8 +10,7 @@
  */
 
 import { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
-import { getConnection } from 'server/src/lib/db/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import {
   PaymentProvider,
@@ -28,15 +27,19 @@ import {
 } from 'server/src/interfaces/payment.interfaces';
 import { PaymentProviderRegistry, PAYMENT_PROVIDER_TYPES } from './PaymentProviderRegistry';
 import { createStripePaymentProvider } from './StripePaymentProvider';
+import { SavedPaymentMethodService } from './SavedPaymentMethodService';
+import { AutopayService } from './AutopayService';
+import { signalInvoiceAutopay } from '../temporal/invoiceAutopay';
 import { recordTransaction } from 'server/src/lib/utils/transactionUtils';
-import { recordExternalPayment } from '@alga-psa/billing/services';
-import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
+// LEVERAGE: friction — importing the billing services barrel pulls UI, notification, and inventory modules into the Temporal worker graph.
+import { recordExternalPayment } from '@alga-psa/billing/services/accountingSync/recordExternalPayment';
+import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services/invoiceBillingRecipientService';
 import {
   registerInvoiceTerminalStatusHandler,
   listActiveInvoicePaymentLinks,
   listPendingInvoicePaymentLinks,
 } from '@alga-psa/billing/services/accountingSync/invoiceTerminalStatusHandlers';
-import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildPaymentAppliedPayload,
   buildPaymentFailedPayload,
@@ -407,6 +410,26 @@ export class PaymentService {
    * Handles specific webhook event types.
    */
   private async handleWebhookEvent(event: PaymentWebhookEvent): Promise<WebhookProcessingResult> {
+    if (event.eventType === 'checkout.session.completed' && (event.payload as any)?.data?.object?.mode === 'setup') {
+      await (await SavedPaymentMethodService.create(this.tenantId)).completeSetup(event.externalLinkId ?? '');
+      return { success: true, paymentRecorded: false };
+    }
+    if (event.eventType === 'setup_intent.succeeded' && event.setupIntentId) {
+      await (await SavedPaymentMethodService.create(this.tenantId)).completeSetup(event.setupIntentId);
+      return { success: true, paymentRecorded: false };
+    }
+    if (event.eventType.startsWith('payment_method.') && event.externalPaymentMethodId) {
+      await (await SavedPaymentMethodService.create(this.tenantId)).syncFromProviderEvent(event);
+      return { success: true, paymentRecorded: false };
+    }
+    if (event.autopayAttemptId && (event.eventType === 'payment_intent.succeeded' || event.eventType === 'payment_intent.payment_failed')) {
+      const result = event.eventType === 'payment_intent.succeeded'
+        ? await this.handlePaymentSucceeded(event)
+        : await this.handlePaymentFailed(event);
+      if (result.success) await (await AutopayService.create(this.tenantId)).handleProviderEvent(event);
+      return result;
+    }
+
     switch (event.eventType) {
       case 'checkout.session.completed':
         return this.handleCheckoutCompleted(event);
@@ -482,6 +505,20 @@ export class PaymentService {
     return this.recordPaymentFromWebhook(event);
   }
 
+  async recordAutoPaySuccess(input: { invoiceId: string; amount: number; currency: string; paymentIntentId: string; attemptId: string }): Promise<WebhookProcessingResult> {
+    return this.recordPaymentFromWebhook({
+      eventId: `autopay:${input.attemptId}`,
+      eventType: 'payment_intent.succeeded',
+      provider: 'stripe',
+      payload: { autoPay: true, attemptId: input.attemptId },
+      invoiceId: input.invoiceId,
+      amount: input.amount,
+      currency: input.currency,
+      status: 'succeeded',
+      paymentIntentId: input.paymentIntentId,
+    });
+  }
+
   /**
    * Handles payment_intent.payment_failed event.
    */
@@ -493,7 +530,6 @@ export class PaymentService {
     });
 
     const occurredAt = new Date().toISOString();
-
     if (typeof event.amount === 'number') {
       const invoice = event.invoiceId ? await this.getInvoice(event.invoiceId) : null;
       const currency = (event.currency || invoice?.currency_code || 'USD').toUpperCase();
@@ -726,6 +762,8 @@ export class PaymentService {
       amount: event.amount,
       provider: event.provider, // Provider is already 'stripe'
       referenceNumber: event.paymentIntentId,
+      // A PaymentIntent settles once; auto-pay lands it from both the charge path and the webhook.
+      dedupeByReference: true,
       // The settling Checkout Session id so the terminal-status cleanup never
       // retires the very session whose completion settled the invoice.
       externalLinkId: event.externalLinkId,
@@ -745,6 +783,15 @@ export class PaymentService {
         success: false,
         paymentRecorded: false,
         error: recordResult.error,
+      };
+    }
+
+    if (recordResult.alreadyRecorded) {
+      return {
+        success: true,
+        paymentRecorded: false,
+        paymentId: recordResult.paymentId,
+        invoiceId: event.invoiceId,
       };
     }
 
@@ -1294,6 +1341,7 @@ registerInvoiceTerminalStatusHandler(async (params) => {
         excludeSettledReference: params.settledReference,
       }
     );
+    await signalInvoiceAutopay(params.tenantId, params.invoiceId, 'invoiceSettled');
     return;
   }
 

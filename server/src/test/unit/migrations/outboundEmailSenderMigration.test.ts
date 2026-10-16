@@ -1,0 +1,57 @@
+import { describe, expect, it, vi } from 'vitest';
+const migration = require('../../../../migrations/20260926100000_add_outbound_email_senders.cjs');
+
+describe('multiple outbound sender migration', () => {
+  it('backfills ticket From address and name, including name-only routes', async () => {
+    const statements: string[] = [];
+    let table: any;
+    table = new Proxy({}, { get: () => (..._args: unknown[]) => table });
+    const knex: any = {
+      schema: { createTable: vi.fn(async (_name: string, callback: (builder: any) => void) => callback(table)), dropTableIfExists: vi.fn() },
+      fn: { now: vi.fn(() => 'now()') },
+      raw: vi.fn(async (sql: string) => { statements.push(sql); return { rows: [] }; }),
+    };
+
+    await migration.up(knex);
+    const senderBackfill = statements.find((sql) => sql.includes('INSERT INTO email_sender_addresses')) ?? '';
+    const routeBackfill = statements.find((sql) => sql.includes('INSERT INTO email_sender_routes')) ?? '';
+
+    expect(senderBackfill).toContain('lower(trim(tes.ticketing_from_email))');
+    expect(senderBackfill).toContain('coalesce(nullif(trim(tes.ticketing_from_name), \'\'), nullif(trim(ep.sender_display_name), \'\'))');
+    expect(senderBackfill).toContain("ep.provider_type = 'microsoft'");
+    expect(senderBackfill).toContain("lower(tes.email_provider) = 'resend'");
+    expect(senderBackfill).toContain("ed.status = 'verified'");
+    expect(senderBackfill).toContain("THEN 'unverified' ELSE 'verified' END");
+    expect(routeBackfill).toContain("'mail_class', 'ticket'");
+    expect(routeBackfill).toContain('nullif(trim(tes.ticketing_from_name), \'\')');
+    expect(routeBackfill).toContain("WHERE (nullif(trim(tes.ticketing_from_email), '') IS NOT NULL");
+    expect(routeBackfill).toContain('OR nullif(trim(tes.ticketing_from_name), \'\') IS NOT NULL');
+    expect(statements.join('\n')).toContain('ON DELETE RESTRICT');
+    expect(statements.join('\n')).toContain('email_sender_addresses_microsoft_provider_fk');
+    expect(statements.join('\n')).toContain('email_sender_addresses_microsoft_provider_fk');
+  });
+
+  it('skips only the Microsoft provider FK when Citus is active', async () => {
+    const statements: string[] = [];
+    let table: any;
+    table = new Proxy({}, { get: () => (..._args: unknown[]) => table });
+    const knex: any = {
+      schema: { createTable: vi.fn(async (_name: string, callback: (builder: any) => void) => callback(table)), dropTableIfExists: vi.fn() },
+      fn: { now: vi.fn(() => 'now()') },
+      raw: vi.fn(async (sql: string, bindings?: unknown[]) => {
+        statements.push(sql);
+        if (sql.includes('pg_extension')) return { rows: [{ extname: 'citus' }] };
+        if (sql.includes('pg_proc')) return { rows: [{ exists: true }] };
+        if (sql.includes('pg_dist_partition')) {
+          return { rows: [{ is_distributed: bindings?.[0] === 'boards' }] };
+        }
+        return { rows: [] };
+      }),
+    };
+
+    await migration.up(knex);
+    expect(statements.join('\n')).toContain("create_distributed_table('email_sender_addresses', 'tenant')");
+    expect(statements.join('\n')).not.toContain('email_sender_addresses_microsoft_provider_fk');
+    expect(statements.join('\n')).toContain('email_sender_routes_board_fk');
+  });
+});

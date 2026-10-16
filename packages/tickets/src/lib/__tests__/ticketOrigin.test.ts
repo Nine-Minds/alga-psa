@@ -80,4 +80,10 @@ describe('ticket origin resolver', () => {
       getTicketOrigin({ ticket_origin: TICKET_ORIGINS.API, origin_link_system: 'email' }),
     ).toBe(TICKET_ORIGINS.INBOUND_EMAIL);
   });
+
+  it('resolves a stored recurring origin even when entered_by is null (system-generated)', () => {
+    expect(
+      getTicketOrigin({ ticket_origin: TICKET_ORIGINS.RECURRING, source: null, entered_by_user_type: null }),
+    ).toBe(TICKET_ORIGINS.RECURRING);
+  });
 });

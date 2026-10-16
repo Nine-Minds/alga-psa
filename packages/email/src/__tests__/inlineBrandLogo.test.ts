@@ -280,6 +280,48 @@ describe('embedBrandLogo', () => {
     expect(knex.reads.filter((table) => table === 'tenant_settings')).toHaveLength(1);
   });
 
+  it('repairs a pre-cid row with the artwork the tenant pinned', async () => {
+    const html = '<body><img data-alga-brand-logo src="/api/documents/view/file-wide?t=7" alt="Acme"/></body>';
+    const knex = fakeKnex(
+      {
+        ...logoRows('wide', 'wide-dark'),
+        tenant_settings: [{
+          settings: {
+            // Mid grey: light to the luminance rule, dark to the tenant.
+            emailBranding: { primary: '#6b7280', secondary: null, logo: { variant: 'wide', artwork: 'dark' } },
+            branding: { logoUrl: '/square', logoWideUrl: '/wide', logoWideDarkUrl: '/wide-dark' },
+          },
+        }],
+      },
+      allFiles('wide', 'wide-dark'),
+    );
+
+    const result = await embedBrandLogo(html, { tenantId: TENANT, knex: knex as any });
+
+    expect(result.html).toContain('src="cid:alga-brand-logo-wide-dark"');
+    expect(result.attachments[0].cid).toBe('alga-brand-logo-wide-dark');
+  });
+
+  it('repairs a pre-cid row with the dark artwork a dark header calls for', async () => {
+    const html = '<body><img data-alga-brand-logo src="/api/documents/view/file-wide?t=7" alt="Acme"/></body>';
+    const knex = fakeKnex(
+      {
+        ...logoRows('wide', 'wide-dark'),
+        tenant_settings: [{
+          settings: {
+            emailBranding: { primary: '#444444', secondary: null, logo: { variant: 'wide' } },
+            branding: { logoUrl: '/square', logoWideUrl: '/wide', logoWideDarkUrl: '/wide-dark' },
+          },
+        }],
+      },
+      allFiles('wide', 'wide-dark'),
+    );
+
+    const result = await embedBrandLogo(html, { tenantId: TENANT, knex: knex as any });
+
+    expect(result.html).toContain('src="cid:alga-brand-logo-wide-dark"');
+  });
+
   it('attaches the dark artwork a dark-header template asks for', async () => {
     const html = applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'wide-dark', alt: 'Acme' });
     const knex = fakeKnex(logoRows('wide', 'wide-dark'), allFiles('wide', 'wide-dark'));

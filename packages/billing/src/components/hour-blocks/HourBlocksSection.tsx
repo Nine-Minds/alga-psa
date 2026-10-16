@@ -25,6 +25,7 @@ import AdjustHourBlockDialog from './AdjustHourBlockDialog';
 import EditExpirationDialog from './EditExpirationDialog';
 import VoidHourBlockDialog from './VoidHourBlockDialog';
 import ManuallyExpireHourBlockDialog from './ManuallyExpireHourBlockDialog';
+import HourBlockCoverageNotice from './HourBlockCoverageNotice';
 import HourBlockDetailDrawer from './HourBlockDetailDrawer';
 
 const EXPIRING_SOON_DAYS = 7;
@@ -150,7 +151,19 @@ export default function HourBlocksSection({ clientId, currencyCode = 'USD' }: Ho
     {
       title: t('columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
-      render: (_value: string, record) => getStatusBadge(t, record),
+      render: (_value: string, record) => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {getStatusBadge(t, record)}
+          {record.contract_coverage && record.contract_coverage.length > 0 && (
+            <HourBlockCoverageNotice
+              variant="badge"
+              blockId={record.block_id}
+              coverage={record.contract_coverage}
+              unscoped={(record.scope_service_ids ?? []).length === 0}
+            />
+          )}
+        </div>
+      ),
     },
     {
       title: t('columns.expiration', { defaultValue: 'Expiration' }),

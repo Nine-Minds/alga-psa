@@ -101,9 +101,16 @@ export interface IClientContract extends TenantEntity {
   renewal_cycle_key?: string;
   days_until_due?: number;
   is_active: boolean;
+  /**
+   * Billing profile this contract bills to — step 3 of the charge-attribution
+   * chain. NULL falls through to the client default, the pre-profile behaviour.
+   */
+  billing_profile_id?: string | null;
   po_required?: boolean;
   po_number?: string | null;
   po_amount?: number | null;
+  /** The assigned contract's own currency (the PO amount is denominated in it). */
+  currency_code?: string | null;
   /** true = this contract's charges are excluded from credit draw-down. */
   credit_drawdown_opt_out?: boolean | null;
   created_at?: ISO8601String;
@@ -142,6 +149,9 @@ export interface IContractAssignmentSummary extends TenantEntity {
   client_contract_id: string;
   client_id: string;
   client_name?: string | null;
+  /** Profile this assignment bills; NULL falls back to the client default. */
+  billing_profile_id?: string | null;
+  billing_profile_name?: string | null;
   assignment_status?: ContractStatus;
   start_date: ISO8601String | null;
   end_date: ISO8601String | null;

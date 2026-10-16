@@ -14,12 +14,12 @@ test('Citus CLI independently requires both complete suites and replaces stale g
   };
   cpSync(new URL('../lib', import.meta.url), path.join(root, 'scripts/lib'), { recursive: true });
   cpSync(new URL('../verify-citus-execution.mjs', import.meta.url), path.join(root, 'scripts/verify-citus-execution.mjs'));
+  const runnerSource = readFileSync(new URL('../run-citus-runtime-tests.mjs', import.meta.url), 'utf8');
+  const runnerFiles = [...runnerSource.match(/const files = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
+  assert.ok(runnerFiles.length > 1, 'Citus runner must declare more than one required suite');
   const files = {
-    'citus-runtime': [
-      'ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts',
-      'server/src/test/integration/invoiceTicketImmutable.integration.test.ts',
-      'server/src/test/integration/remainingBucketUnits.integration.test.ts',
-    ],
+    // Seed exactly what the runtime runner collects so the gate cannot drift from its producer.
+    'citus-runtime': runnerFiles,
     'temporal-database': [
       'ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts',
       'ee/temporal-workflows/src/db/__tests__/database-connection.integration.test.ts',

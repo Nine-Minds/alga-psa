@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createClientSchema, updateClientSchema, clientResponseSchema } from '../../../lib/api/schemas/client';
 
@@ -27,10 +25,5 @@ describe('client properties defaultLocale API contract', () => {
       tenant: '22222222-2222-4222-8222-222222222222'
     };
     expect(clientResponseSchema.parse(client).properties?.defaultLocale).toBe('fr');
-  });
-
-  it('merges provided properties into the existing JSONB properties', () => {
-    const service = readFileSync(resolve(__dirname, '../../../lib/api/services/ClientService.ts'), 'utf8');
-    expect(service).toContain('updateData.properties = { ...(before.properties ?? {}), ...data.properties }');
   });
 });

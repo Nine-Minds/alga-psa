@@ -12,7 +12,7 @@ import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { Palette, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { EntityLogoVariant } from '@alga-psa/types';
 import {
@@ -20,8 +20,20 @@ import {
   updateTenantThemeAction,
 } from '@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions';
 import { getTenantBrandingAction } from '@alga-psa/tenancy/actions/tenant-actions/tenantBrandingActions';
-import { deleteTenantLogo, recropTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
-import type { LogoCropRect } from '@alga-psa/types';
+import {
+  getDashboardWelcomeSettingsAction,
+  setDashboardWelcomeUseCompanyNameAction,
+} from '@alga-psa/tenancy/actions/tenant-settings-actions/dashboardWelcomeActions';
+import {
+  deleteTenantLogo,
+  getTenantLogoInfoAction,
+  linkDocumentAsTenantLogo,
+  recropTenantLogo,
+  uploadTenantLogo,
+  type TenantLogoInfo,
+} from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
+import DocumentSelector from '@alga-psa/documents/components/DocumentSelector';
+import type { IDocument, LogoCropRect } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import {
   DEFAULT_THEME_PAIR_ID,
@@ -85,6 +97,13 @@ const AppearanceSettings = () => {
   const [logoWideUrl, setLogoWideUrl] = useState('');
   const [logoWideDarkUrl, setLogoWideDarkUrl] = useState('');
   const [faviconUrl, setFaviconUrl] = useState('');
+  // File names and crop sources behind each slot; branding only holds the URLs.
+  const [logoInfo, setLogoInfo] = useState<TenantLogoInfo | null>(null);
+  // The dashboard welcome opt-in is not part of the theme draft: it is a single
+  // flag, shared with Settings → General, and it saves the moment it is flipped.
+  const [welcomeUsesCompanyName, setWelcomeUsesCompanyName] = useState(false);
+  const [welcomeCompanyName, setWelcomeCompanyName] = useState<string | null>(null);
+  const [welcomeSaving, setWelcomeSaving] = useState(false);
 
   const isDirty = useMemo(() => {
     if (draft.pairId !== saved.pairId) return true;
@@ -97,13 +116,25 @@ const AppearanceSettings = () => {
 
   useRegisterUnsavedChanges('appearance-theme', isDirty);
 
+  // The names are a convenience next to the previews, so a failure here is
+  // logged and the slots simply stay nameless.
+  const refreshLogoInfo = useCallback(async () => {
+    try {
+      setLogoInfo(await getTenantLogoInfoAction());
+    } catch (error) {
+      console.error('Failed to load tenant logo details', error);
+    }
+  }, []);
+
   useEffect(() => {
     const load = async () => {
       try {
-        const [theme, branding, user] = await Promise.all([
+        const [theme, branding, user, welcome] = await Promise.all([
           getTenantThemeAction(),
           getTenantBrandingAction(),
           getCurrentUser(),
+          getDashboardWelcomeSettingsAction().catch(() => null),
+          refreshLogoInfo(),
         ]);
         const persisted = theme.customTheme
           ? { light: theme.customTheme.light, dark: theme.customTheme.dark }
@@ -139,6 +170,8 @@ const AppearanceSettings = () => {
         setFaviconUrl(branding?.faviconUrl || '');
         setClientName(branding?.clientName || '');
         setTenantId(user?.tenant || '');
+        setWelcomeUsesCompanyName(welcome?.useCompanyName === true);
+        setWelcomeCompanyName(welcome?.companyName ?? null);
       } catch (error) {
         handleError(error, t('appearance.messages.loadFailed', { defaultValue: 'Failed to load appearance settings' }));
       } finally {
@@ -237,6 +270,33 @@ const AppearanceSettings = () => {
     }
   };
 
+  const toggleWelcomeCompanyName = async (checked: boolean) => {
+    const previous = welcomeUsesCompanyName;
+    setWelcomeSaving(true);
+    setWelcomeUsesCompanyName(checked);
+    try {
+      const result = await setDashboardWelcomeUseCompanyNameAction(checked);
+      if (isActionPermissionError(result)) {
+        setWelcomeUsesCompanyName(previous);
+        handleError(result, t('dashboardWelcome.messages.saveFailed', {
+          defaultValue: 'Failed to update the dashboard welcome',
+        }));
+        return;
+      }
+      // The banner is rendered on the server, so refresh rather than making the
+      // admin reload to see the new title.
+      router.refresh();
+      toast.success(t('dashboardWelcome.messages.saved', { defaultValue: 'Dashboard welcome updated' }));
+    } catch (error) {
+      setWelcomeUsesCompanyName(previous);
+      handleError(error, t('dashboardWelcome.messages.saveFailed', {
+        defaultValue: 'Failed to update the dashboard welcome',
+      }));
+    } finally {
+      setWelcomeSaving(false);
+    }
+  };
+
   const discard = () => {
     setDraft(saved);
     setCustomSeedPairId(saved.pairId === 'custom' ? null : saved.pairId);
@@ -249,6 +309,7 @@ const AppearanceSettings = () => {
       // The sidebar mark is resolved server-side; refresh so the new logo lands
       // in the rail right away rather than on the next full page load.
       if (result?.success) {
+        await refreshLogoInfo();
         router.refresh();
       }
       return result;
@@ -257,23 +318,69 @@ const AppearanceSettings = () => {
     async (entityId: string) => {
       const result = await deleteTenantLogo(entityId, variant);
       if (result?.success) {
+        await refreshLogoInfo();
         router.refresh();
       }
       return result;
     };
-  // Re-cuts a square mark from the matching wide logo (light from wide, dark from wide-dark).
+  // Re-cuts a square mark from the image it came from: the square upload when
+  // there was one, otherwise the matching wide logo.
   const handleLogoRecrop = (variant: EntityLogoVariant) =>
     async (entityId: string, crop: LogoCropRect) => {
       const result = await recropTenantLogo(entityId, variant, crop);
       if (result?.success) {
+        await refreshLogoInfo();
         router.refresh();
       }
       return result;
     };
-  const markCropHelp = t('appearance.whiteLabel.cropHelp', {
-    defaultValue:
-      'Drag and zoom to choose the part shown in the collapsed side menu and every circular frame. Your wide logo is not changed.',
-  });
+  const handleLogoLink = (variant: EntityLogoVariant) =>
+    async ({ entityId, documentId }: { entityId: string; documentId: string }) => {
+      const result = await linkDocumentAsTenantLogo(entityId, documentId, variant);
+      if (result?.success) {
+        await refreshLogoInfo();
+        router.refresh();
+      }
+      return result;
+    };
+  const renderLogoDocumentSelector = (variant: EntityLogoVariant) =>
+    ({ isOpen, onClose, onSelectDocumentId }: {
+      isOpen: boolean;
+      onClose: () => void;
+      onSelectDocumentId: (documentId: string) => void;
+    }) => (
+      <DocumentSelector
+        id={`tenant-logo-${variant}-document-selector`}
+        isOpen={isOpen}
+        onClose={onClose}
+        singleSelect
+        typeFilter="image"
+        title={t('appearance.whiteLabel.linkDocument.title', { defaultValue: 'Use an uploaded image' })}
+        description={t('appearance.whiteLabel.linkDocument.description', {
+          defaultValue:
+            'Pick an image you have already uploaded to Documents. The document itself is left as it is.',
+        })}
+        onDocumentSelected={async (document: IDocument) => {
+          onSelectDocumentId(document.document_id);
+        }}
+      />
+    );
+
+  /** A mark cut from the wide logo leaves that logo alone — say so only then. */
+  const marksWideSource = (variant: 'default' | 'dark') => {
+    const mark = logoInfo?.[variant];
+    const wide = logoInfo?.[variant === 'dark' ? 'wide-dark' : 'wide'];
+    return !mark?.cropSourceUrl || (!!wide?.url && mark.cropSourceUrl === wide.url);
+  };
+  const markCropHelp = (variant: 'default' | 'dark') => (marksWideSource(variant)
+    ? t('appearance.whiteLabel.cropHelp', {
+        defaultValue:
+          'Drag and zoom to choose the part shown in the collapsed side menu and every circular frame. Your wide logo is not changed.',
+      })
+    : t('appearance.whiteLabel.cropHelpFromSquare', {
+        defaultValue:
+          'Drag and zoom to choose the part shown in the collapsed side menu and every circular frame. Only the mark is changed, so you can adjust it again later.',
+      }));
 
   const squareWarning = t('appearance.whiteLabel.warnings.expectSquare', {
     defaultValue:
@@ -416,6 +523,49 @@ const AppearanceSettings = () => {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('dashboardWelcome.label', { defaultValue: 'Use your company name in the dashboard welcome' })}</CardTitle>
+          <CardDescription>
+            {welcomeCompanyName
+              ? t('dashboardWelcome.help', {
+                  defaultValue:
+                    'Off by default: the MSP dashboard reads "Welcome to Your MSP Command Center". Turn this on and it names the client marked as your company instead. This switch saves on its own, right away.',
+                })
+              : t('dashboardWelcome.noCompany', {
+                  defaultValue:
+                    'No client is marked as your company yet. Pick one under Settings → General and its name can appear here.',
+                })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm">
+              {t('dashboardWelcome.previewLabel', { defaultValue: 'Your team sees:' })}{' '}
+              <span className="font-medium">
+                {welcomeUsesCompanyName && welcomeCompanyName
+                  ? t('dashboardWelcome.preview', {
+                      defaultValue: 'Welcome to the {{companyName}} Command Center',
+                      companyName: welcomeCompanyName,
+                    })
+                  : t('dashboardWelcome.previewDefault', {
+                      defaultValue: 'Welcome to Your MSP Command Center',
+                    })}
+              </span>
+            </p>
+            <Switch
+              id="dashboard-welcome-company-name-toggle"
+              checked={welcomeUsesCompanyName}
+              disabled={loading || welcomeSaving || !welcomeCompanyName}
+              onCheckedChange={toggleWelcomeCompanyName}
+              aria-label={t('dashboardWelcome.label', {
+                defaultValue: 'Use your company name in the dashboard welcome',
+              })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {isEEAvailable && (
         <Card>
           <CardHeader>
@@ -518,11 +668,15 @@ const AppearanceSettings = () => {
                       entityName={clientName || 'AlgaPSA'}
                       imageUrl={logoUrl}
                       wideImageUrl={logoWideUrl || null}
+                      cropSourceUrl={logoInfo?.default.cropSourceUrl ?? null}
+                      imageFileName={logoInfo?.default.fileName ?? null}
                       uploadAction={handleLogoUpload('default')}
                       deleteAction={handleLogoDelete('default')}
                       recropAction={handleLogoRecrop('default')}
+                      linkDocumentAsAvatar={handleLogoLink('default')}
+                      renderDocumentSelector={renderLogoDocumentSelector('default')}
                       cropWideToSquare
-                      cropHelpText={markCropHelp}
+                      cropHelpText={markCropHelp('default')}
                       onImageChange={(next) => setLogoUrl(next || '')}
                       previewShape="square"
                       aspectHint={{ expects: 'square', warning: squareWarning }}
@@ -546,11 +700,15 @@ const AppearanceSettings = () => {
                       entityName={clientName || 'AlgaPSA'}
                       imageUrl={logoDarkUrl}
                       wideImageUrl={logoWideDarkUrl || null}
+                      cropSourceUrl={logoInfo?.dark.cropSourceUrl ?? null}
+                      imageFileName={logoInfo?.dark.fileName ?? null}
                       uploadAction={handleLogoUpload('dark')}
                       deleteAction={handleLogoDelete('dark')}
                       recropAction={handleLogoRecrop('dark')}
+                      linkDocumentAsAvatar={handleLogoLink('dark')}
+                      renderDocumentSelector={renderLogoDocumentSelector('dark')}
                       cropWideToSquare
-                      cropHelpText={markCropHelp}
+                      cropHelpText={markCropHelp('dark')}
                       onImageChange={(next) => setLogoDarkUrl(next || '')}
                       previewShape="square"
                       aspectHint={{ expects: 'square', warning: squareWarning }}
@@ -571,8 +729,11 @@ const AppearanceSettings = () => {
                       entityId={tenantId}
                       entityName={clientName || 'AlgaPSA'}
                       imageUrl={logoWideUrl}
+                      imageFileName={logoInfo?.wide.fileName ?? null}
                       uploadAction={handleLogoUpload('wide')}
                       deleteAction={handleLogoDelete('wide')}
+                      linkDocumentAsAvatar={handleLogoLink('wide')}
+                      renderDocumentSelector={renderLogoDocumentSelector('wide')}
                       onImageChange={(next) => setLogoWideUrl(next || '')}
                       previewShape="rect"
                       aspectHint={{ expects: 'wide', warning: wideWarning }}
@@ -596,8 +757,11 @@ const AppearanceSettings = () => {
                       entityId={tenantId}
                       entityName={clientName || 'AlgaPSA'}
                       imageUrl={logoWideDarkUrl}
+                      imageFileName={logoInfo?.['wide-dark'].fileName ?? null}
                       uploadAction={handleLogoUpload('wide-dark')}
                       deleteAction={handleLogoDelete('wide-dark')}
+                      linkDocumentAsAvatar={handleLogoLink('wide-dark')}
+                      renderDocumentSelector={renderLogoDocumentSelector('wide-dark')}
                       onImageChange={(next) => setLogoWideDarkUrl(next || '')}
                       previewShape="rect"
                       aspectHint={{ expects: 'wide', warning: wideWarning }}
@@ -621,8 +785,11 @@ const AppearanceSettings = () => {
                     entityId={tenantId}
                     entityName={clientName || 'AlgaPSA'}
                     imageUrl={faviconUrl}
+                    imageFileName={logoInfo?.favicon.fileName ?? null}
                     uploadAction={handleLogoUpload('favicon')}
                     deleteAction={handleLogoDelete('favicon')}
+                    linkDocumentAsAvatar={handleLogoLink('favicon')}
+                    renderDocumentSelector={renderLogoDocumentSelector('favicon')}
                     onImageChange={(next) => setFaviconUrl(next || '')}
                     previewShape="rect"
                     accept={FAVICON_ACCEPT}

@@ -26,7 +26,13 @@ import { listContactPhoneTypeSuggestions, createClientContact } from '@alga-psa/
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { ChevronRight } from 'lucide-react';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
@@ -61,6 +67,9 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 type CreateClientData = Omit<IClient, "client_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at">;
 
 type CreateLocationData = Omit<IClientLocation, "location_id" | "tenant" | "created_at" | "updated_at">;
+
+const isClientLocationActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 type CreateContactData = Pick<IContact, 'full_name' | 'email' | 'role' | 'notes'> & Pick<
   CreateContactInput,
@@ -479,9 +488,12 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       if (locationData.address_line1.trim() || locationData.city.trim() || 
           hasActualPhone || locationData.email?.trim()) {
         try {
-          await createClientLocation(newClient.client_id, locationData);
+          const locationResult = await createClientLocation(newClient.client_id, locationData);
+          if (isClientLocationActionError(locationResult)) {
+            handleError(locationResult, t('quickAddClient.clientCreatedLocationFailed', { defaultValue: 'Client created but failed to add location.' }));
+          }
         } catch (locationError) {
-          handleError(locationError, "Client created but failed to add location.");
+          handleError(locationError, t('quickAddClient.clientCreatedLocationFailed', { defaultValue: 'Client created but failed to add location.' }));
         }
       }
 
@@ -500,7 +512,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
             jobTitle: contactData.role ?? undefined,
           });
         } catch (contactError) {
-          handleError(contactError, "Client created but failed to add contact.");
+          handleError(contactError, t('quickAddClient.clientCreatedContactFailed', { defaultValue: 'Client created but failed to add contact.' }));
         }
       }
 

@@ -2,7 +2,7 @@
 
 Run `npm run test:mutation:pilot` from the repository root after `npm ci`, using Node 22 or newer within the repository's supported range. The command mutates only calendar month-end close eligibility and authorization scope intersection, runs their maintained behavioral tests, and writes HTML, JSON and a source-checked summary under `reports/mutation/`.
 
-The `Scoped mutation pilot` workflow runs for changes to these modules, their tests or the pilot's dependencies/configuration, and supports manual dispatch. It fails on runner errors, missing scope, stale source, empty mutation sets and execution errors/timeouts. It reports surviving and uncovered mutants without imposing a mutation-score release gate. It does not substitute for browser, database or tenant-boundary testing.
+The `Scoped mutation pilot` workflow runs for changes to these modules, their tests or the pilot's dependencies/configuration, and supports manual dispatch. It fails on runner errors, a sandbox that omits a local module the suites import (checked by `tools/mutation/sandbox.test.mjs` before Stryker starts), missing scope, stale source, empty mutation sets and execution errors/timeouts. It reports surviving and uncovered mutants without imposing a mutation-score release gate. It does not substitute for browser, database or tenant-boundary testing.
 
 ## Compatibility and scope
 

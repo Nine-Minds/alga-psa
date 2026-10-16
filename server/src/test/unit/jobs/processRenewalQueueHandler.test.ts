@@ -6,13 +6,13 @@ const mocks = vi.hoisted(() => ({
   loggerWarn: vi.fn(),
   loggerError: vi.fn(),
   normalizeClientContract: vi.fn(),
-  initializeWorkflowRuntimeV2: vi.fn(),
-  getActionRegistryV2: vi.fn(),
-  createTicketWithRetry: vi.fn(),
+  createTicketWithSideEffects: vi.fn(),
+  withTransaction: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
+  withTransaction: mocks.withTransaction,
   // The facade scopes each table by tenant; the fake builder's where() merges
   // object criteria, so the recorded update where still carries { tenant, ... }.
   tenantDb: (conn: any, tenant: string) => ({
@@ -35,15 +35,8 @@ vi.mock('@shared/billingClients/clientContracts', () => ({
   normalizeClientContract: mocks.normalizeClientContract,
 }));
 
-vi.mock('@alga-psa/workflows/runtime', () => ({
-  initializeWorkflowRuntimeV2: mocks.initializeWorkflowRuntimeV2,
-  getActionRegistryV2: mocks.getActionRegistryV2,
-}));
-
-vi.mock('@shared/models/ticketModel', () => ({
-  TicketModel: {
-    createTicketWithRetry: mocks.createTicketWithRetry,
-  },
+vi.mock('@shared/services/tickets/createTicketWithSideEffects', () => ({
+  createTicketWithSideEffects: mocks.createTicketWithSideEffects,
 }));
 
 import { processRenewalQueueHandler } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
@@ -67,7 +60,6 @@ const futureDateOnly = (days: number) => {
 interface FakeKnexConfig {
   missingColumns?: Array<[string, string]>;
   candidateRows?: Record<string, unknown>[];
-  workflowRun?: { run_id: string } | undefined;
   existingTicket?: { ticket_id: string } | undefined;
 }
 
@@ -95,7 +87,6 @@ function buildFakeKnex(config: FakeKnexConfig) {
         throw new Error(`Unexpected select on ${table}`);
       },
       first: async () => {
-        if (table === 'workflow_runs') return config.workflowRun;
         if (table === 'tickets') return config.existingTicket;
         throw new Error(`Unexpected first on ${table}`);
       },
@@ -118,7 +109,6 @@ function buildFakeKnex(config: FakeKnexConfig) {
     hasColumn: async (table: string, column: string) => !missing.has(`${table}.${column}`),
     hasTable: async (_table: string) => true,
   };
-  knex.transaction = async (fn: (trx: unknown) => Promise<unknown>) => fn({});
 
   return { knex, updates };
 }
@@ -152,9 +142,9 @@ describe('processRenewalQueueHandler', () => {
     vi.clearAllMocks();
     // By default normalization is a passthrough of the raw row.
     mocks.normalizeClientContract.mockImplementation((row: Record<string, unknown>) => ({ ...row }));
-    // No workflow action registered by default -> handler must use the direct-creation fallback.
-    mocks.getActionRegistryV2.mockReturnValue({ get: () => undefined });
-    mocks.createTicketWithRetry.mockResolvedValue({ ticket_id: NEW_TICKET_ID });
+    // withTransaction owns the frame (so after-commit events flush); here it just runs the callback.
+    mocks.withTransaction.mockImplementation(async (_knex: unknown, fn: (trx: unknown) => Promise<unknown>) => fn({}));
+    mocks.createTicketWithSideEffects.mockResolvedValue({ ticketId: NEW_TICKET_ID, ticketNumber: 'T-1' });
   });
 
   it('should throw when tenantId is missing without opening a connection', async () => {
@@ -213,7 +203,7 @@ describe('processRenewalQueueHandler', () => {
 
     await processRenewalQueueHandler({ tenantId: TENANT });
 
-    expect(mocks.createTicketWithRetry).not.toHaveBeenCalled();
+    expect(mocks.createTicketWithSideEffects).not.toHaveBeenCalled();
     expect(updates).toHaveLength(1);
     expect(updates[0].where).toEqual({ tenant: TENANT, client_contract_id: CONTRACT_ROW_ID });
     expect(updates[0].payload).toMatchObject({
@@ -254,7 +244,7 @@ describe('processRenewalQueueHandler', () => {
     await processRenewalQueueHandler({ tenantId: TENANT });
 
     // No new ticket may be created when one already exists for this cycle.
-    expect(mocks.createTicketWithRetry).not.toHaveBeenCalled();
+    expect(mocks.createTicketWithSideEffects).not.toHaveBeenCalled();
     expect(updates).toHaveLength(1);
     expect(updates[0].payload).toMatchObject({
       created_ticket_id: EXISTING_TICKET_ID,
@@ -267,21 +257,23 @@ describe('processRenewalQueueHandler', () => {
     );
   });
 
-  it('should create a renewal ticket directly when no workflow run is available', async () => {
+  it('should create the renewal ticket through the shared service as a SYSTEM actor with contact mail suppressed', async () => {
     const dueDate = todayDateOnly();
     const row = buildCandidateRow({ decision_due_date: dueDate });
     const { knex, updates } = buildFakeKnex({
       candidateRows: [row],
-      workflowRun: undefined,
       existingTicket: undefined,
     });
     mocks.createTenantKnex.mockResolvedValue({ knex });
 
     await processRenewalQueueHandler({ tenantId: TENANT });
 
-    expect(mocks.createTicketWithRetry).toHaveBeenCalledTimes(1);
-    const [ticketInput, tenantArg] = mocks.createTicketWithRetry.mock.calls[0];
+    expect(mocks.createTicketWithSideEffects).toHaveBeenCalledTimes(1);
+    const [, tenantArg, serviceInput] = mocks.createTicketWithSideEffects.mock.calls[0];
     expect(tenantArg).toBe(TENANT);
+    expect(serviceInput.actor).toEqual({ type: 'system' });
+    expect(serviceInput.notificationSuppression).toEqual({ suppressContactNotifications: true });
+    const ticketInput = serviceInput.ticket;
     expect(ticketInput).toMatchObject({
       client_id: CLIENT_ID,
       board_id: BOARD_ID,
@@ -302,17 +294,17 @@ describe('processRenewalQueueHandler', () => {
     });
   });
 
-  it('should record an automation error instead of throwing when direct ticket creation fails', async () => {
+  it('should record an automation error instead of throwing when ticket creation fails', async () => {
     const dueDate = todayDateOnly();
     const row = buildCandidateRow({ decision_due_date: dueDate });
-    mocks.createTicketWithRetry.mockRejectedValue(new Error('boards are misconfigured'));
+    mocks.createTicketWithSideEffects.mockRejectedValue(new Error('boards are misconfigured'));
     const { knex, updates } = buildFakeKnex({ candidateRows: [row] });
     mocks.createTenantKnex.mockResolvedValue({ knex });
 
     await processRenewalQueueHandler({ tenantId: TENANT });
 
     expect(mocks.loggerError).toHaveBeenCalledWith(
-      'Direct renewal automation ticket creation failed',
+      'Renewal automation ticket creation failed',
       expect.objectContaining({ error: 'boards are misconfigured' }),
     );
     expect(updates).toHaveLength(1);
@@ -337,7 +329,7 @@ describe('processRenewalQueueHandler', () => {
 
     await processRenewalQueueHandler({ tenantId: TENANT });
 
-    expect(mocks.createTicketWithRetry).not.toHaveBeenCalled();
+    expect(mocks.createTicketWithSideEffects).not.toHaveBeenCalled();
     expect(updates).toHaveLength(1);
     expect(updates[0].payload).toMatchObject({
       automation_error: 'Missing renewal ticket routing defaults for create_ticket policy',
@@ -355,7 +347,7 @@ describe('processRenewalQueueHandler', () => {
 
     await processRenewalQueueHandler({ tenantId: TENANT });
 
-    expect(mocks.createTicketWithRetry).not.toHaveBeenCalled();
+    expect(mocks.createTicketWithSideEffects).not.toHaveBeenCalled();
     expect(mocks.loggerInfo).toHaveBeenCalledWith(
       'Renewal queue processing completed',
       expect.objectContaining({ createdTicketCount: 0 }),

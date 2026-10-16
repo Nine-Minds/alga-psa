@@ -1,6 +1,7 @@
 {
   "welcome": {
     "title": "Willkommen in Ihrer MSP-Kommandozentrale",
+    "titleBranded": "Willkommen in der Kommandozentrale von {{companyName}}",
     "description": "Verfolgen Sie den Onboarding-Fortschritt, konfigurieren Sie kritische Services und sorgen Sie für ein konsistentes Kundenerlebnis.",
     "titleCommunity": "Willkommen zurück",
     "descriptionCommunity": "Springen Sie von Ihrem Dashboard direkt zu Tickets, Planung, Projekten und Berichten."

@@ -21,8 +21,10 @@ import type {
   ITaskType,
   IUser,
   IUserWithRoles,
+  ProjectServiceSource,
   ProjectStatus,
 } from '@alga-psa/types';
+import { resolveEffectiveServiceSource } from '@alga-psa/core';
 import { revalidatePath } from 'next/cache';
 import {
   bulkApplyTagsToEntities,
@@ -53,6 +55,8 @@ import {
   buildProjectTaskDependencyBlockedPayload,
   buildProjectTaskDependencyUnblockedPayload,
   buildProjectTaskStatusChangedPayload,
+  buildProjectTaskUpdatedPayload,
+  buildProjectTaskAdditionalAgentAssignedPayload,
 } from '@alga-psa/workflow-streams';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -163,6 +167,23 @@ function tenantScopedTable(
     tenant: string,
 ): Knex.QueryBuilder {
     return tenantDb(conn, tenant).table(table);
+}
+
+// Local (not exported) because every export of a 'use server' module must be an
+// async function; the type is erased, but keeping it private avoids the trap.
+interface EffectiveTaskService {
+    serviceId: string | null;
+    serviceName: string | null;
+    /** Carried so callers can apply isTimeEntryService without the catalog. */
+    billingMethod: string | null;
+    source: ProjectServiceSource | null;
+    /** The phase → project fallback alone, ignoring the task's own service. */
+    inherited: {
+        serviceId: string | null;
+        serviceName: string | null;
+        billingMethod: string | null;
+        source: 'phase' | 'project' | null;
+    };
 }
 
 function projectTaskDependencyTaskQuery(
@@ -764,17 +785,17 @@ export const updateTaskWithChecklist = withAuth(async (
                 // needs the rich {previous,new} diff, so emit that and gate on
                 // a real field change (PRD F003 — no no-op deliveries).
                 if (Object.keys(webhookChanges).length > 0) {
-                    await publishEvent({
+                    await publishWorkflowEvent({
                         eventType: 'PROJECT_TASK_UPDATED',
-                        payload: {
-                            tenantId: tenant,
+                        ctx,
+                        payload: buildProjectTaskUpdatedPayload({
                             projectId: phase.project_id,
                             phaseId: phase.phase_id,
                             taskId,
                             userId: user.user_id,
-                            timestamp: new Date().toISOString(),
+                            updatedAt: occurredAt,
                             changes: webhookChanges,
-                        },
+                        }),
                     });
                 }
             }
@@ -1206,7 +1227,10 @@ export const addTicketLinkAction = withAuth(async (
     projectId: string,
     taskId: string | null,
     ticketId: string,
-    phaseId: string
+    phaseId: string,
+    // Linking a ticket to a task means its time is project work unless the
+    // linker says otherwise (alga-2026-0002622).
+    billUnderProject: boolean = true
 ): Promise<IProjectTicketLink | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
@@ -1221,7 +1245,7 @@ export const addTicketLinkAction = withAuth(async (
                 }
                 await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, taskProjectId);
             }
-            return await ProjectTaskModel.addTaskTicketLink(trx, tenant, projectId, taskId, ticketId, phaseId);
+            return await ProjectTaskModel.addTaskTicketLink(trx, tenant, projectId, taskId, ticketId, phaseId, billUnderProject);
         });
     } catch (error) {
         const expected = projectTaskActionErrorFrom(error);
@@ -1229,6 +1253,33 @@ export const addTicketLinkAction = withAuth(async (
             return expected;
         }
         console.error('Error adding ticket link:', error);
+        throw error;
+    }
+});
+
+export const setTicketLinkBillingAction = withAuth(async (
+    user,
+    { tenant },
+    linkId: string,
+    billUnderProject: boolean
+): Promise<void | ProjectTaskActionError> => {
+    try {
+        const {knex: db} = await createTenantKnex();
+        await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'update', trx);
+            const projectId = await resolveProjectIdForTaskTicketLink(trx, tenant, linkId);
+            if (!projectId) {
+                throw new Error('Project not found for task ticket link');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await ProjectTaskModel.setTicketLinkBilling(trx, tenant, linkId, billUnderProject);
+        });
+    } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
+        console.error('Error updating ticket link billing:', error);
         throw error;
     }
 });
@@ -1504,18 +1555,19 @@ export const addTaskResourceAction = withAuth(async (
             if (task) {
                 const phase = await ProjectModel.getPhaseById(trx, tenant, task.phase_id);
                 if (phase) {
-                    const eventPayload = {
-                        tenantId: tenant,
-                        projectId: phase.project_id,
-                        taskId: taskId,
-                        primaryAgentId: task.assigned_to,
-                        additionalAgentId: userId,
-                        assignedByUserId: user.user_id
-                    };
-                    console.log('[projectTaskActions] Publishing PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED event:', JSON.stringify(eventPayload));
-                    await publishEvent({
+                    await publishWorkflowEvent({
                         eventType: 'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
-                        payload: eventPayload
+                        payload: buildProjectTaskAdditionalAgentAssignedPayload({
+                            projectId: phase.project_id,
+                            taskId,
+                            primaryAgentId: task.assigned_to || userId,
+                            additionalAgentId: userId,
+                            assignedByUserId: user.user_id,
+                        }),
+                        ctx: {
+                            tenantId: tenant,
+                            actor: { actorType: 'USER', actorUserId: user.user_id },
+                        },
                     });
                 }
             }
@@ -1588,16 +1640,19 @@ export const addTaskResourcesAction = withAuth(async (
 
         // Emit per-agent events after commit so subscribers see the committed rows.
         for (const userId of added) {
-            await publishEvent({
+            await publishWorkflowEvent({
                 eventType: 'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
-                payload: {
-                    tenantId: tenant,
+                payload: buildProjectTaskAdditionalAgentAssignedPayload({
                     projectId,
                     taskId,
-                    primaryAgentId,
+                    primaryAgentId: primaryAgentId || userId,
                     additionalAgentId: userId,
-                    assignedByUserId: user.user_id
-                }
+                    assignedByUserId: user.user_id,
+                }),
+                ctx: {
+                    tenantId: tenant,
+                    actor: { actorType: 'USER', actorUserId: user.user_id },
+                },
             });
         }
 
@@ -2150,17 +2205,19 @@ export const moveTaskToPhase = withAuth(async (
                 ['phase_id', 'project_status_mapping_id']
             );
             if (Object.keys(moveChanges).length > 0) {
-                await publishEvent({
+                await publishWorkflowEvent({
                     eventType: 'PROJECT_TASK_UPDATED',
-                    payload: {
-                        tenantId: tenant,
+                    payload: buildProjectTaskUpdatedPayload({
                         projectId: newPhase.project_id,
                         phaseId: newPhaseId,
                         taskId,
                         userId: user.user_id,
-                        timestamp: new Date().toISOString(),
                         changes: moveChanges,
-                    }
+                    }),
+                    ctx: {
+                        tenantId: tenant,
+                        actor: { actorType: 'USER', actorUserId: user.user_id },
+                    },
                 });
             }
 
@@ -2316,6 +2373,7 @@ export const duplicateTaskToPhase = withAuth(async (
                 task_name: originalTask.task_name + ' (Copy)', // Add (Copy) suffix
                 description: originalTask.description,
                 description_rich_text: originalTask.description_rich_text,
+                start_date: originalTask.start_date,
                 due_date: originalTask.due_date,
                 estimated_hours: originalTask.estimated_hours,
                 assigned_to: options?.duplicatePrimaryAssignee ? originalTask.assigned_to : null,
@@ -2365,8 +2423,18 @@ export const duplicateTaskToPhase = withAuth(async (
                     if (!allowedTicketIds.has(link.ticket_id)) {
                         continue;
                     }
-                    // addTaskTicketLink expects projectId, taskId, ticketId, phaseId
-                    await ProjectTaskModel.addTaskTicketLink(trx, tenant, newPhase.project_id, newTask.task_id, link.ticket_id, newPhaseId);
+                    // addTaskTicketLink expects projectId, taskId, ticketId, phaseId.
+                    // A reference-only link stays reference-only on the copy:
+                    // duplicating a task must never start billing its time.
+                    await ProjectTaskModel.addTaskTicketLink(
+                        trx,
+                        tenant,
+                        newPhase.project_id,
+                        newTask.task_id,
+                        link.ticket_id,
+                        newPhaseId,
+                        link.bill_under_project ?? true
+                    );
                 }
             }
 
@@ -3165,6 +3233,86 @@ export const getPhaseTaskCounts = withAuth(async (
             result[row.phase_id] = Number(row.count);
         }
             return result;
+        });
+    });
+});
+
+/**
+ * The service a time entry for this task should prefill, resolved task → phase
+ * → project, plus which level it came from. Returns nulls when no level sets a
+ * default.
+ */
+export const getEffectiveTaskService = withAuth(async (
+    user,
+    { tenant },
+    taskId: string
+): Promise<EffectiveTaskService | ProjectTaskActionError> => {
+    return withProjectTaskActionErrors(async () => {
+        const { knex: db } = await createTenantKnex();
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'read', trx);
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+
+            const scoped = tenantDb(trx, tenant);
+            const query = tenantScopedTable(trx, 'project_tasks as pt', tenant);
+            scoped.tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+            scoped.tenantJoin(query, 'projects as p', 'pp.project_id', 'p.project_id');
+            // One catalog join per level so the name matches the id the COALESCE picked.
+            scoped.tenantJoin(query, 'service_catalog as task_service', 'pt.service_id', 'task_service.service_id', { type: 'left' });
+            scoped.tenantJoin(query, 'service_catalog as phase_service', 'pp.service_id', 'phase_service.service_id', { type: 'left' });
+            scoped.tenantJoin(query, 'service_catalog as project_service', 'p.service_id', 'project_service.service_id', { type: 'left' });
+
+            const row = await query
+                .where({ 'pt.task_id': taskId })
+                .first<Record<string, string | null>>(
+                    'pt.service_id as task_service_id',
+                    'pp.service_id as phase_service_id',
+                    'p.service_id as project_service_id',
+                    'task_service.service_name as task_service_name',
+                    'phase_service.service_name as phase_service_name',
+                    'project_service.service_name as project_service_name',
+                    'task_service.billing_method as task_billing_method',
+                    'phase_service.billing_method as phase_billing_method',
+                    'project_service.billing_method as project_billing_method'
+                );
+
+            const ids = {
+                task: row?.task_service_id ?? null,
+                phase: row?.phase_service_id ?? null,
+                project: row?.project_service_id ?? null,
+            };
+            const names: Record<ProjectServiceSource, string | null> = {
+                task: row?.task_service_name ?? null,
+                phase: row?.phase_service_name ?? null,
+                project: row?.project_service_name ?? null,
+            };
+            const billingMethods: Record<ProjectServiceSource, string | null> = {
+                task: row?.task_billing_method ?? null,
+                phase: row?.phase_billing_method ?? null,
+                project: row?.project_billing_method ?? null,
+            };
+
+            const source = resolveEffectiveServiceSource(ids);
+            // The phase → project fallback on its own, so the task form can name
+            // what an empty task-level service will resolve to.
+            const inheritedSource = resolveEffectiveServiceSource({ phase: ids.phase, project: ids.project });
+
+            return {
+                serviceId: source ? ids[source] : null,
+                serviceName: source ? names[source] : null,
+                billingMethod: source ? billingMethods[source] : null,
+                source,
+                inherited: {
+                    serviceId: inheritedSource ? ids[inheritedSource] : null,
+                    serviceName: inheritedSource ? names[inheritedSource] : null,
+                    billingMethod: inheritedSource ? billingMethods[inheritedSource] : null,
+                    source: inheritedSource as 'phase' | 'project' | null,
+                },
+            };
         });
     });
 });

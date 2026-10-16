@@ -36,7 +36,11 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
       return base.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(fallback[name] ?? ''));
     },
   }),
-  useFormatters: () => ({ locale: 'en-US' }),
+  useFormatters: () => ({
+    locale: 'en-US',
+    formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en-US', options).format(value),
+  }),
 }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -46,7 +50,9 @@ vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
   useBillingFrequencyOptions: () => [],
 }));
 vi.mock('../contract-lines/GenericContractLineServicesList', () => ({
-  default: () => <div />,
+  default: ({ contractLineId }: { contractLineId: string }) => (
+    <div data-testid={`services-list-${contractLineId}`} />
+  ),
 }));
 vi.mock('./ContractLineEditDialog', () => ({ ContractLineEditDialog: () => null }));
 
@@ -81,7 +87,7 @@ describe('ContractTemplateDetail Manage Services', () => {
 
   afterEach(() => cleanup());
 
-  it('opens the services manager and formats the line rate in the template currency', async () => {
+  it('opens the services manager and formats the line rate currency-neutrally', async () => {
     render(
       <CurrencyFormatProvider currencyCode="USD" locale="en-US">
         <ContractTemplateDetail />
@@ -93,6 +99,52 @@ describe('ContractTemplateDetail Manage Services', () => {
 
     await waitFor(() => expect(screen.getByText('Manage Template Services')).toBeInTheDocument());
     expect(actions.getDetailedContractLines).toHaveBeenCalled();
-    expect(screen.getByText(/123\.45/)).toHaveTextContent('€');
+    // Templates are currency-neutral: the rate carries no symbol or code, even
+    // when the stored template row has a currency_code and the provider has another.
+    const rate = screen.getByText(/123\.45/);
+    expect(rate).toHaveTextContent("123.45 in the client's currency");
+    expect(rate.textContent).not.toMatch(/[$€£¥]|USD|EUR/);
+    expect(screen.getByTestId('services-list-line-1')).toBeInTheDocument();
+  });
+
+  it('manages services on hourly and usage lines with type-appropriate rate labels', async () => {
+    actions.getDetailedContractLines.mockResolvedValue([
+      {
+        contract_line_id: 'line-hourly',
+        contract_line_name: 'Field Work',
+        contract_line_type: 'Hourly',
+        billing_frequency: 'monthly',
+        rate: 15000,
+      },
+      {
+        contract_line_id: 'line-usage',
+        contract_line_name: 'Bandwidth',
+        contract_line_type: 'Usage',
+        billing_frequency: 'monthly',
+        rate: null,
+      },
+    ]);
+
+    render(
+      <CurrencyFormatProvider currencyCode="USD" locale="en-US">
+        <ContractTemplateDetail />
+      </CurrencyFormatProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Manage Services' }));
+    await waitFor(() => expect(screen.getByText('Manage Template Services')).toBeInTheDocument());
+
+    // Hourly and usage lines get the same services manager a fixed line does.
+    expect(screen.getByTestId('services-list-line-hourly')).toBeInTheDocument();
+    expect(screen.getByTestId('services-list-line-usage')).toBeInTheDocument();
+
+    // The rate badge follows the line type, and the fixed-fee rate editor stays
+    // fixed-only.
+    expect(screen.getByText(/Hourly rate:/)).toHaveTextContent("150.00 in the client's currency");
+    expect(screen.queryByText(/Fixed Fee Rate:/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Edit Rate' })).toBeNull();
+    // A usage line with no line-level rate shows no rate badge at all: its
+    // rates live on the services below.
+    expect(screen.queryByText(/Unit rate:/)).toBeNull();
   });
 });

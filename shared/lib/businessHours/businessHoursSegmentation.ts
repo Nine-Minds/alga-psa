@@ -12,6 +12,7 @@
  */
 
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+import { toCalendarDateString } from '@alga-psa/core';
 
 /** Structural subset of @alga-psa/sla's IBusinessHoursEntry used by the math. */
 export interface BusinessHoursEntryInput {
@@ -23,7 +24,7 @@ export interface BusinessHoursEntryInput {
 
 /** Structural subset of @alga-psa/sla's IHoliday used by the math. */
 export interface BusinessHoursHolidayInput {
-  holiday_date: string;
+  holiday_date: string | Date;
   is_recurring: boolean;
 }
 
@@ -207,10 +208,18 @@ export function isHoliday(holidays: BusinessHoursHolidayInput[], date: Date): bo
   const monthDay = dateStr.slice(5); // MM-DD
 
   return holidays.some((holiday) => {
-    if (holiday.is_recurring) {
-      return holiday.holiday_date.slice(5) === monthDay;
+    let holidayDate: string | null;
+    // LEVERAGE: pattern holiday-date-normalize — keep defensive DB DATE conversion at this matcher.
+    try {
+      holidayDate = toCalendarDateString(holiday.holiday_date);
+    } catch {
+      holidayDate = null;
     }
-    return holiday.holiday_date === dateStr;
+    if (!holidayDate) return false;
+    if (holiday.is_recurring) {
+      return holidayDate.slice(5) === monthDay;
+    }
+    return holidayDate === dateStr;
   });
 }
 

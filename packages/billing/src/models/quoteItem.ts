@@ -2,6 +2,8 @@ import type { Knex } from 'knex';
 import type { IQuoteItem } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
+import { resolveTenantUnitCodeForLabel } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
+import { knownUnitCodeForLabel } from '@alga-psa/core/unitOfMeasure';
 
 function ensureIntegerField(value: unknown, fieldName: string): void {
   if (value !== undefined && value !== null && !Number.isInteger(Number(value))) {
@@ -42,6 +44,7 @@ type QuoteItemServiceLookupRow = {
   sku?: string | null;
   default_rate?: number | string | null;
   unit_of_measure?: string | null;
+  unit_code?: string | null;
   billing_method?: IQuoteItem['billing_method'];
   item_kind?: IQuoteItem['service_item_kind'];
   cost?: number | string | null;
@@ -165,6 +168,7 @@ const QuoteItem = {
           'sku',
           'default_rate',
           'unit_of_measure',
+          'unit_code',
           'billing_method',
           'item_kind',
           'cost',
@@ -234,6 +238,12 @@ const QuoteItem = {
         ...resolvedItem,
         catalog_description: snapshotFromOptions !== undefined ? snapshotFromOptions : null,
       };
+    }
+
+    if (resolvedItem.unit_of_measure !== undefined) {
+      resolvedItem.unit_code = await resolveTenantUnitCodeForLabel(
+        knexOrTrx, tenant, resolvedItem.unit_of_measure, resolvedItem.unit_code,
+      );
     }
 
     const quantity = Number(resolvedItem.quantity ?? 1);
@@ -306,7 +316,7 @@ const QuoteItem = {
       if (updateData.service_id) {
         const service = await quoteTable<QuoteItemServiceLookupRow>(knexOrTrx, tenant, 'service_catalog')
           .where({ service_id: updateData.service_id })
-          .select('service_name', 'description', 'sku', 'unit_of_measure', 'billing_method', 'item_kind')
+          .select('service_name', 'description', 'sku', 'unit_of_measure', 'unit_code', 'billing_method', 'item_kind')
           .first();
 
         if (!service) {
@@ -317,7 +327,8 @@ const QuoteItem = {
           ...resolvedUpdate,
           service_name: service.service_name,
           service_sku: service.sku ?? null,
-          unit_of_measure: service.unit_of_measure ?? null,
+          unit_of_measure: updateData.unit_of_measure ?? service.unit_of_measure ?? null,
+          unit_code: updateData.unit_code ?? (updateData.unit_of_measure === undefined ? service.unit_code : null) ?? null,
           billing_method: service.billing_method ?? null,
           service_item_kind: service.item_kind ?? 'service',
           catalog_description: normalizeCatalogDescription(service.description),
@@ -331,6 +342,18 @@ const QuoteItem = {
           catalog_description: null,
         };
       }
+    }
+
+    if (resolvedUpdate.unit_of_measure !== undefined || resolvedUpdate.unit_code !== undefined) {
+      const label = resolvedUpdate.unit_of_measure ?? existingItem.unit_of_measure ?? null;
+      const labelChanged = label !== existingItem.unit_of_measure;
+      const suppliedCode = resolvedUpdate.unit_code;
+      const previousCodeMatches = labelChanged && suppliedCode != null &&
+        (suppliedCode === existingItem.unit_code || suppliedCode === knownUnitCodeForLabel(existingItem.unit_of_measure));
+      resolvedUpdate.unit_code = await resolveTenantUnitCodeForLabel(
+        knexOrTrx, tenant, label,
+        labelChanged && (!suppliedCode || previousCodeMatches) ? null : suppliedCode ?? existingItem.unit_code,
+      );
     }
 
     const [updatedItem] = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')

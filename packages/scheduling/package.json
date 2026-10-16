@@ -25,6 +25,10 @@
       "import": "./src/components/schedule/AgentScheduleView.tsx",
       "types": "./src/components/schedule/AgentScheduleView.tsx"
     },
+    "./components/schedule/sharing/CalendarSharingSettings": {
+      "import": "./src/components/schedule/sharing/CalendarSharingSettings.tsx",
+      "types": "./src/components/schedule/sharing/CalendarSharingSettings.tsx"
+    },
     "./actions/scheduleActivityCore": {
       "import": "./src/actions/scheduleActivityCore.ts",
       "types": "./src/actions/scheduleActivityCore.ts"
@@ -36,6 +40,10 @@
     "./lib/resourceCapacity": {
       "import": "./src/lib/resourceCapacity.ts",
       "types": "./src/lib/resourceCapacity.ts"
+    },
+    "./lib/calendarAccess": {
+      "import": "./src/lib/calendarAccess.ts",
+      "types": "./src/lib/calendarAccess.ts"
     },
     "./lib/timeEntryLauncher": {
       "import": "./src/lib/timeEntryLauncher.tsx",

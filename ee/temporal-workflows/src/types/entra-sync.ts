@@ -82,6 +82,7 @@ export interface EntraTenantSyncResult {
   ambiguous: number;
   inactivated: number;
   skipped: number;
+  warnings?: string[];
   errorMessage?: string | null;
 }
 
