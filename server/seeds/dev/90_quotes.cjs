@@ -3,7 +3,19 @@ const { getFirstTenantSeedContext, getTenantDb } = require('./_tenant.cjs');
 // A tenant that cloned the grouped quote layout before alga-2026-0002383 keeps
 // a frozen copy of the pre-cadence AST. The same fixture backs the unit tests
 // for that case, so the seeded copy and the tests describe one reality.
-const legacyGroupedQuoteAst = require('../../../packages/billing/src/lib/quote-template-ast/__fixtures__/legacy-grouped-quote-ast.json');
+//
+// Every image that runs these seeds (setup/Dockerfile*, Dockerfile.build,
+// ee/setup/Dockerfile.dev) copies server/seeds without a packages/ tree, so a
+// top-level require here aborts the whole seed run on a fresh install. Resolve
+// it lazily and seed the clone only where the fixture exists — a checkout.
+const loadLegacyGroupedQuoteAst = () => {
+  try {
+    return require('../../../packages/billing/src/lib/quote-template-ast/__fixtures__/legacy-grouped-quote-ast.json');
+  } catch (error) {
+    if (error?.code !== 'MODULE_NOT_FOUND') throw error;
+    return null;
+  }
+};
 
 /**
  * Quote fixtures for the grouped-layout section titles (alga-2026-0002573).
@@ -28,6 +40,8 @@ const legacyGroupedQuoteAst = require('../../../packages/billing/src/lib/quote-t
 const QUOTE_DRAFT_ID = 'b4ffea3e-9457-48c0-839d-2c9e807ed562';
 const QUOTE_SENT_ID = '8f2d8bf0-24a0-42a7-89d6-3dc9f6c1f872';
 const TENANT_TEMPLATE_COPY_ID = 'd403ff84-cb9a-4de8-a817-3ec94159d4aa';
+// The prefix the fixture numbers below are written with.
+const FIXTURE_NUMBER_PREFIX = 'Q-';
 
 // Amounts are in minor units, matching the quote tables.
 const ITEMS = [
@@ -135,23 +149,26 @@ exports.seed = async function seed(knex) {
   const money = totals();
 
   // The tenant's own pre-cadence clone of the grouped layout.
-  await db.table('quote_document_templates')
-    .insert({
-      tenant: tenantId,
-      template_id: TENANT_TEMPLATE_COPY_ID,
-      name: 'Copy of Grouped Quote Template',
-      version: legacyGroupedQuoteAst.version,
-      templateAst: JSON.stringify(legacyGroupedQuoteAst),
-      is_default: false,
-      created_at: now,
-      updated_at: now,
-    })
-    .onConflict(['tenant', 'template_id'])
-    .merge({
-      name: 'Copy of Grouped Quote Template',
-      templateAst: JSON.stringify(legacyGroupedQuoteAst),
-      updated_at: now,
-    });
+  const legacyGroupedQuoteAst = loadLegacyGroupedQuoteAst();
+  if (legacyGroupedQuoteAst) {
+    await db.table('quote_document_templates')
+      .insert({
+        tenant: tenantId,
+        template_id: TENANT_TEMPLATE_COPY_ID,
+        name: 'Copy of Grouped Quote Template',
+        version: legacyGroupedQuoteAst.version,
+        templateAst: JSON.stringify(legacyGroupedQuoteAst),
+        is_default: false,
+        created_at: now,
+        updated_at: now,
+      })
+      .onConflict(['tenant', 'template_id'])
+      .merge({
+        name: 'Copy of Grouped Quote Template',
+        templateAst: JSON.stringify(legacyGroupedQuoteAst),
+        updated_at: now,
+      });
+  }
 
   const quotes = [
     {
@@ -224,20 +241,28 @@ exports.seed = async function seed(knex) {
     await db.table('quote_items').insert(buildItems(tenantId, quote.quote_id, quote.itemIdPrefix, userId, now));
   }
 
-  // Keep the counter past Q-0002 so Duplicate / Create revision mints a fresh
-  // number instead of colliding with a seeded one. Never walk it backwards:
-  // an environment that already minted Q-0012 keeps its place.
-  const counter = await db.table('next_number').where({ entity_type: 'QUOTE' }).select('last_number').first();
+  // Walk the counter past the seeded numbers, but only where it would actually
+  // mint one of them: (tenant, quote_number) is unique, so a tenant still on
+  // the migration default prefix ('Q-') would fail the user's next Create /
+  // Duplicate on Q-0001. 13_next_number.cjs gives this tenant 'QUO-', which
+  // cannot collide, and there the counter is left untouched — the quote
+  // numbering tests read it as the tenant's first-ever quote number. Never
+  // walk it backwards: an environment already at Q-0012 keeps its place.
+  const counter = await db.table('next_number')
+    .where({ entity_type: 'QUOTE' })
+    .select('prefix', 'last_number')
+    .first();
+
   if (!counter) {
     await db.table('next_number').insert({
       tenant: tenantId,
       entity_type: 'QUOTE',
-      prefix: 'Q-',
+      prefix: FIXTURE_NUMBER_PREFIX,
       initial_value: 1,
       last_number: quotes.length,
       padding_length: 4,
     });
-  } else if (Number(counter.last_number) < quotes.length) {
+  } else if (counter.prefix === FIXTURE_NUMBER_PREFIX && Number(counter.last_number) < quotes.length) {
     await db.table('next_number').where({ entity_type: 'QUOTE' }).update({ last_number: quotes.length });
   }
 };
