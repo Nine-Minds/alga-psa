@@ -387,6 +387,7 @@ const TENANT_TABLE_METADATA = {
   rmm_integrations: { scope: 'tenant' },
   rmm_maintenance_windows: { scope: 'tenant' },
   rmm_organization_mappings: { scope: 'tenant' },
+  rmm_webhook_events: { scope: 'tenant' },
   schedule_conflicts: { scope: 'tenant' },
   schedule_entries: { scope: 'tenant' },
   schedule_entry_assignees: { scope: 'tenant' },

@@ -8,15 +8,13 @@
  * scenarios are the bundled suite files
  * (packages/emulators/suite/scenarios/levelio-*.yaml), retargeted at the route.
  *
- * KNOWN PROD FAILURES (2026-10-15). The first two tests assert the broken
- * behavior the route had when they were written:
- *   (a) native webhook with a secret → 401 on every attempt, nothing recorded;
- *   (b) Alga's pasted payload template via an automation → 200, but the
- *       literal {{alert_id}} collapses every alert into one rmm_alerts row and
- *       no ticket is created.
- * When the route fix lands they fail by design. Flip them to assert that the
- * signed envelopes are accepted and that the CPU alert on SRV-01 creates a
- * ticket for Acme Corp (the third test shows the fixture can do that).
+ * The first two tests are the 2026-10-15 production failures, now fixed:
+ *   (a) native Settings -> Webhooks deliveries (X-Level-Signature, HMAC over
+ *       the raw body) are accepted with 2xx and create tickets; resolving
+ *       resets the alert; a redelivery of the same event_id is a no-op;
+ *   (b) the automation template Alga hands out renders only documented system
+ *       variables and produces distinct alerts and tickets (no collapse).
+ * The third test is the original control for the system-variable shape.
  */
 
 import { readFileSync } from 'node:fs';
@@ -32,6 +30,7 @@ import { createTestDbConnection } from '@main-test-utils/dbConfig';
 const HOOK_TIMEOUT = 180_000;
 
 const ALGA_WEBHOOK_SECRET = 'algasim-alga-webhook-secret';
+const LEVEL_WEBHOOK_SIGNING_SECRET = 'algasim-level-webhook-secret';
 const LEVEL_API_KEY = 'algasim-level-key';
 
 const h = vi.hoisted(() => ({ db: null as unknown as Knex }));
@@ -40,7 +39,11 @@ vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({
     getAppSecret: async () => undefined,
     getTenantSecret: async (_tenant: string, name: string) =>
-      ({ levelio_webhook_secret: ALGA_WEBHOOK_SECRET, levelio_api_key: LEVEL_API_KEY })[name],
+      ({
+        levelio_webhook_secret: ALGA_WEBHOOK_SECRET,
+        levelio_webhook_signing_secret: LEVEL_WEBHOOK_SIGNING_SECRET,
+        levelio_api_key: LEVEL_API_KEY,
+      })[name],
     setTenantSecret: async () => undefined,
   }),
 }));
@@ -141,7 +144,7 @@ async function ticketCount() {
 }
 
 async function clearAlertsAndTickets() {
-  for (const name of ['comments', 'comment_threads', 'asset_associations', 'rmm_alerts', 'tickets']) {
+  for (const name of ['comments', 'comment_threads', 'asset_associations', 'rmm_webhook_events', 'rmm_alerts', 'tickets']) {
     await table(name).where({ tenant: tenantId }).del().catch(() => undefined);
   }
 }
@@ -261,7 +264,7 @@ afterAll(async () => {
   if (!h.db) return;
   await clearAlertsAndTickets();
   for (const name of [
-    'next_number', 'rmm_alert_rules', 'tenant_external_entity_mappings', 'rmm_organization_mappings',
+    'next_number', 'rmm_webhook_events', 'rmm_alert_rules', 'tenant_external_entity_mappings', 'rmm_organization_mappings',
     'rmm_integrations', 'assets', 'statuses', 'boards', 'clients', 'users', 'tenants',
   ]) {
     await table(name).where({ tenant: tenantId }).del().catch(() => undefined);
@@ -270,55 +273,139 @@ afterAll(async () => {
 }, HOOK_TIMEOUT);
 
 describe('Level.io alert ingestion through the Level emulator (route + DB)', { shuffle: false }, () => {
-  it('known prod failure (a): native webhooks with a secret are rejected 401 on every attempt', async () => {
+  it('native signed webhooks are accepted with 2xx and create tickets; resolve resets; redelivery is a no-op', async () => {
     await clearAlertsAndTickets();
     await runLevelScenario('levelio-native-webhook-signed');
-    const core = host.instance('levelio').core as LevelEmulatorCore;
-    core.configure({ autoRetry: false });
-
-    // Level retries each failed delivery three times, minutes apart.
-    for (let round = 0; round < 3; round += 1) {
-      host.clock.advance('1h');
-      await fetch(`${control}/control/levelio/actions/deliver-due-retries`, { method: 'POST' });
-    }
 
     const deliveries = await levelState('webhook-deliveries');
-    expect(deliveries).toHaveLength(8);
+    expect(deliveries).toHaveLength(2);
     for (const delivery of deliveries) {
       expect(delivery.signature).toMatch(/^sha256=[0-9a-f]{64}$/);
-      expect(delivery.status).toBe(401);
-      expect(JSON.parse(delivery.response)).toEqual({ error: 'Unauthorized: missing webhook secret' });
+      expect(delivery.status).toBe(200);
+      expect(JSON.parse(delivery.response)).toMatchObject({ ok: true, recorded: true, outcome: 'ticket_created' });
     }
-    expect(new Set(deliveries.map((d: { eventId: string }) => d.eventId)).size).toBe(2);
-    expect(await rmmAlerts()).toEqual([]);
-    expect(await ticketCount()).toBe(0);
+    const alerts = await rmmAlerts();
+    expect(alerts).toHaveLength(2);
+    expect(alerts.every((a: { ticket_id: string | null }) => a.ticket_id)).toBe(true);
+    expect(await ticketCount()).toBe(2);
+    // The platform alert id (data.id) is the external alert id; WS-01's group
+    // is the unmapped Branch Office, so the ticket still lands on Acme Corp.
+    const tickets = await table('tickets').where({ tenant: tenantId }).select('client_id');
+    expect(tickets.every((t: { client_id: string }) => t.client_id === clientId)).toBe(true);
+
+    // Resolve the first alert: Level sends alert_resolved with the same data.id.
+    const levelAlerts = await levelState('alerts');
+    const cpu = levelAlerts.find((a: { device_id: string }) => a.device_id === WS_01);
+    const resolveResponse = await fetch(`${control}/control/levelio/actions/resolve-alert`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ alertId: cpu.id }),
+    });
+    expect(resolveResponse.ok).toBe(true);
+    const row = await table('rmm_alerts').where({ tenant: tenantId, external_alert_id: cpu.id }).first();
+    expect(row.status).toBe('resolved');
+    expect(await rmmAlerts()).toHaveLength(2);
+
+    // Re-run the original alert_active delivery (same event_id): a 2xx no-op that
+    // must not reopen the resolved alert, even though it arrives out of order.
+    const cpuActive = deliveries[0]; // the CPU alert_active, fired first by the scenario
+    const rerun = await fetch(`${control}/control/levelio/actions/rerun-delivery`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deliveryId: cpuActive.id }),
+    });
+    expect(rerun.ok).toBe(true);
+    const after = await levelState('webhook-deliveries');
+    const rerunRecord = after[after.length - 1];
+    expect(rerunRecord.eventId).toBe(cpuActive.eventId);
+    expect(rerunRecord.status).toBe(200);
+    expect(JSON.parse(rerunRecord.response)).toMatchObject({ ok: true, recorded: false, reason: 'duplicate_event' });
+    const stillResolved = await table('rmm_alerts').where({ tenant: tenantId, external_alert_id: cpu.id }).first();
+    expect(stillResolved.status).toBe('resolved');
+    expect(await ticketCount()).toBe(2);
   });
 
-  it('known prod failure (b): the pasted Alga template collapses every alert into one row and opens no ticket', async () => {
+  it('the automation template Alga hands out produces distinct alerts and tickets (no collapse)', async () => {
     await clearAlertsAndTickets();
 
-    // The scenario's automation is exactly what the settings screen hands out.
+    // The pristine scenario automation is exactly what the settings screen hands
+    // out; the other two are copies a customer edits per monitor (only name,
+    // description and severity differ - every variable-valued field is the template's).
     const settings = algaSettingsTemplate();
+    const template = JSON.parse(settings.payloadTemplate) as Record<string, string>;
     const scenario = loadScenarioFile(new URL('levelio-automation-alga-template.yaml', SCENARIOS).pathname);
-    const automation = scenario.steps.find((step: (typeof scenario.steps)[number]) => 'seed' in step && step.seed === 'levelio/automation') as {
-      params: { body: string; headers: Array<{ key: string; value: string }> };
-    };
-    expect(automation.params.body).toBe(settings.payloadTemplate);
-    expect(automation.params.headers).toEqual([{ key: settings.headerName, value: ALGA_WEBHOOK_SECRET }]);
+    const automations = scenario.steps.filter(
+      (step: (typeof scenario.steps)[number]) => 'seed' in step && step.seed === 'levelio/automation',
+    ) as Array<{ params: { body: string; headers: Array<{ key: string; value: string }> } }>;
+    expect(automations).toHaveLength(3);
+    expect(automations[0].params.body).toBe(settings.payloadTemplate);
+    for (const automation of automations) {
+      expect(automation.params.headers).toEqual([{ key: settings.headerName, value: ALGA_WEBHOOK_SECRET }]);
+      const body = JSON.parse(automation.params.body) as Record<string, string>;
+      expect(Object.keys(body)).toEqual(Object.keys(template));
+      const editable = new Set(['name', 'description', 'severity']);
+      for (const key of Object.keys(template)) {
+        if (!editable.has(key)) expect(body[key]).toBe(template[key]);
+      }
+      // Only Level's documented system variables, never alert_* placeholders.
+      expect(Object.values(template).join(' ')).not.toMatch(/\{\{(?!level_)/);
+    }
 
     await runLevelScenario('levelio-automation-alga-template');
 
     const runs = await levelState('automation-runs');
     expect(runs.map((run: { status: number }) => run.status)).toEqual([200, 200, 200]);
+    expect(runs.map((run: { unresolvedVariables: string[] }) => run.unresolvedVariables)).toEqual([[], [], []]);
     expect(runs.map((run: { response: string }) => JSON.parse(run.response).outcome)).toEqual([
-      'recorded_only',
-      'skipped',
-      'skipped',
+      'ticket_created',
+      'ticket_created',
+      'ticket_created',
     ]);
-    expect(await rmmAlerts()).toEqual([
-      expect.objectContaining({ external_alert_id: '{{alert_id}}', external_device_id: '{{device_id}}', ticket_id: null }),
-    ]);
+    const alerts = await rmmAlerts();
+    expect(alerts).toHaveLength(3);
+    expect(alerts.map((a: { external_alert_id: string }) => a.external_alert_id).some((id: string) => id.includes('{{'))).toBe(false);
+    expect(new Set(alerts.map((a: { external_alert_id: string }) => a.external_alert_id)).size).toBe(3);
+    expect(alerts.every((a: { ticket_id: string | null }) => a.ticket_id)).toBe(true);
+    expect(await ticketCount()).toBe(3);
+    const tickets = await table('tickets').where({ tenant: tenantId }).select('client_id');
+    expect(tickets.every((t: { client_id: string }) => t.client_id === clientId)).toBe(true);
+  });
+
+  it('old automations that still send the literal {{alert_id}} template are rejected and record nothing', async () => {
+    await clearAlertsAndTickets();
+    const res = await fetch(`${routeOrigin}/api/webhooks/levelio?tenant=${tenantId}`, {
+      method: 'POST',
+      headers: { 'x-alga-webhook-secret': ALGA_WEBHOOK_SECRET, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        event: 'alert.triggered',
+        alert_id: '{{alert_id}}',
+        device_id: '{{device_id}}',
+        hostname: '{{hostname}}',
+        name: '{{alert_name}}',
+        severity: '{{severity}}',
+        description: '{{description}}',
+      }),
+    });
+    expect(res.status).toBe(400);
+    expect(await rmmAlerts()).toEqual([]);
     expect(await ticketCount()).toBe(0);
+  });
+
+  it('the cleanup migration auto-resolves only open levelio {{...}} rows and leaves tickets alone', async () => {
+    await clearAlertsAndTickets();
+    const base = { tenant: tenantId, integration_id: integrationId, severity: 'none', source_type: 'levelio_webhook' };
+    const junk = uuidv4();
+    const real = uuidv4();
+    await table('rmm_alerts').insert([
+      { ...base, alert_id: junk, external_alert_id: '{{alert_id}}', status: 'active' },
+      { ...base, alert_id: real, external_alert_id: 'real-alert-1', status: 'active' },
+    ]);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const migration = (await import('../../../../../server/migrations/20261015180000_create_rmm_webhook_events_and_resolve_levelio_placeholder_alerts.cjs')) as any;
+    await (migration.up ?? migration.default.up)(h.db);
+    const rows = await table('rmm_alerts').where({ tenant: tenantId }).select('alert_id', 'status');
+    expect(rows.find((r: { alert_id: string }) => r.alert_id === junk).status).toBe('auto_resolved');
+    expect(rows.find((r: { alert_id: string }) => r.alert_id === real).status).toBe('active');
   });
 
   it('control: the same route tickets an alert whose payload uses Level\'s documented system variables', async () => {
