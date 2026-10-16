@@ -1230,6 +1230,7 @@
       "usageBasedPlans": "Forfaits à l'usage",
       "recurringQuantityLabel": "Quantité récurrente :",
       "unitRateLabel": "Tarif unitaire :",
+      "hourlyRateLabel": "Taux horaire :",
       "unitRateFromCatalog": "Prix du catalogue dans la devise du client",
       "unitAmountLabel": "Montant récurrent :",
       "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"

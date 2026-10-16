@@ -853,6 +853,117 @@ describe('createExternalEntityMapping — Xero account-mode service mappings', (
     const rows = await db('tenant_external_entity_mappings').where({ id: created.id });
     expect(rows[0].metadata).toMatchObject({ xeroTargetKind: 'account' });
   });
+
+  describe('shared codes and shared accounts', () => {
+    const itemMapping = (serviceId: string, code: string, metadata: Record<string, unknown> | null = { xeroTargetKind: 'item' }) => ({
+      integration_type: 'xero',
+      alga_entity_type: 'service',
+      alga_entity_id: serviceId,
+      external_entity_id: code,
+      external_realm_id: xeroRealm,
+      ...(metadata ? { metadata } : {}),
+    });
+    const create = (m: Record<string, unknown>) =>
+      (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, m);
+    const update = (id: string, u: Record<string, unknown>) =>
+      (updateExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, id, u);
+    const itemMessage = /Xero item is already mapped to another service/;
+
+    beforeEach(() => {
+      xeroListItemsMock.mockResolvedValue([
+        { itemId: 'g200', code: '200', name: 'Item 200', status: 'ACTIVE' },
+        { itemId: 'g201', code: '201', name: 'Item 201', status: 'ACTIVE' },
+      ]);
+    });
+
+    it('lets two services map to the same revenue account', async () => {
+      const other = await seedService(tenantA);
+      expect(await create(accountMapping())).toMatchObject({ id: expect.any(String) });
+      expect(await create(accountMapping({ alga_entity_id: other }))).toMatchObject({ id: expect.any(String) });
+      const rows = await db('tenant_external_entity_mappings').where({ tenant: tenantA });
+      expect(rows).toHaveLength(2);
+      for (const r of rows) {
+        expect(r.external_entity_id).toBe('200');
+        expect(r.metadata).toMatchObject({ xeroTargetKind: 'account' });
+      }
+    });
+
+    it('lets item:200 and account:200 coexist in one realm', async () => {
+      const other = await seedService(tenantA);
+      expect(await create(itemMapping(serviceA, '200'))).toMatchObject({ id: expect.any(String) });
+      expect(await create(accountMapping({ alga_entity_id: other }))).toMatchObject({ id: expect.any(String) });
+      expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA })).toHaveLength(2);
+    });
+
+    it('still rejects a second service on the same item, inserting nothing', async () => {
+      const other = await seedService(tenantA);
+      expect(await create(itemMapping(serviceA, '200'))).toMatchObject({ id: expect.any(String) });
+      const dup = await create(itemMapping(other, '200'));
+      expect(dup.actionError).toMatch(itemMessage);
+      expect(dup.messageKey).toBe('msp/integrations:errors.mappings.duplicateXeroItem');
+      expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA, alga_entity_id: other })).toHaveLength(0);
+    });
+
+    it('still enforces a legacy row whose metadata is NULL', async () => {
+      const other = await seedService(tenantA);
+      await seedMapping({
+        integration_type: 'xero',
+        alga_entity_id: serviceA,
+        external_entity_id: '200',
+        external_realm_id: xeroRealm,
+        metadata: null,
+      });
+      const dup = await create(itemMapping(other, '200', null));
+      expect(dup.actionError).toMatch(itemMessage);
+      expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA, alga_entity_id: other })).toHaveLength(0);
+    });
+
+    it('update into an item someone else holds returns the item message', async () => {
+      const other = await seedService(tenantA);
+      // An edit rewrites a pre-unification org-keyed realm to the owning
+      // connection id, so the holder is seeded under that canonical realm.
+      await seedMapping({
+        integration_type: 'xero',
+        alga_entity_id: serviceA,
+        external_entity_id: '200',
+        external_realm_id: 'xero-conn-1',
+        metadata: { xeroTargetKind: 'item' },
+      });
+      const b = await create(itemMapping(other, '201'));
+      const result = await update(b.id, { external_entity_id: '200' });
+      expect(result.actionError).toMatch(itemMessage);
+      expect(result.messageKey).toBe('msp/integrations:errors.mappings.duplicateXeroItem');
+      const row = await db('tenant_external_entity_mappings').where({ id: b.id }).first();
+      expect(row.external_entity_id).toBe('201');
+    });
+
+    it('blocks switching a shared account mapping to item mode when the item is held', async () => {
+      const other = await seedService(tenantA);
+      await seedMapping({
+        integration_type: 'xero',
+        alga_entity_id: serviceA,
+        external_entity_id: '200',
+        external_realm_id: 'xero-conn-1',
+        metadata: { xeroTargetKind: 'item' },
+      });
+      const b = await create(accountMapping({ alga_entity_id: other }));
+      const result = await update(b.id, { metadata: { xeroTargetKind: 'item' } });
+      expect(result.actionError).toMatch(itemMessage);
+      const row = await db('tenant_external_entity_mappings').where({ id: b.id }).first();
+      expect(row.metadata).toMatchObject({ xeroTargetKind: 'account' });
+    });
+
+    it('reports the item message when a relink collides with a newly held item', async () => {
+      const other = await seedService(tenantA);
+      const a = await create(itemMapping(serviceA, '201'));
+      await (deleteExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, a.id);
+      expect(await create(itemMapping(other, '200'))).toMatchObject({ id: expect.any(String) });
+      const relink = await create(itemMapping(serviceA, '200'));
+      expect(relink.actionError).toMatch(itemMessage);
+      const tombstone = await db('tenant_external_entity_mappings').where({ id: a.id }).first();
+      expect(tombstone.deleted_at).not.toBeNull();
+    });
+  });
 });
 
 describe('updateExternalEntityMapping — retarget rules', () => {
@@ -1035,13 +1146,7 @@ describe('createExternalEntityMappings — bulk create with per-row isolation', 
     });
   });
 
-  // KNOWN LIMITATION (pre-existing, same for the single create): the unique
-  // index idx_unique_external_mapping is (tenant, integration_type,
-  // alga_entity_type, external_entity_id, realm) and does not include the Xero
-  // target kind, so item:200 and account:200 cannot both be mapped for the
-  // same realm even though the app treats them as distinct. The failing row
-  // gets the duplicate error and does not disturb the rest of the batch.
-  it('surfaces the kind-blind unique index as a per-row duplicate error without aborting the batch', async () => {
+  it('lets item and account targets share a code, and many services share one account', async () => {
     xeroListItemsMock.mockResolvedValue([
       { itemId: 'g1', code: '200', name: 'Item 200', status: 'ACTIVE' },
       { itemId: 'g2', code: '201', name: 'Item 201', status: 'ACTIVE' },
@@ -1049,7 +1154,8 @@ describe('createExternalEntityMappings — bulk create with per-row isolation', 
     xeroListAccountsMock.mockResolvedValue([
       { accountId: 'ga1', code: '200', name: 'Sales', type: 'REVENUE', status: 'ACTIVE' },
     ]);
-    const [s1, s2, s3, s4] = [
+    const [s1, s2, s3, s4, s5] = [
+      await seedService(tenantA),
       await seedService(tenantA),
       await seedService(tenantA),
       await seedService(tenantA),
@@ -1063,12 +1169,13 @@ describe('createExternalEntityMappings — bulk create with per-row isolation', 
         bulkRow(s2, '201', 'item'),
         bulkRow(s3, '200', 'account'),
         bulkRow(s4, '200', 'account'),
+        bulkRow(s5, '200', 'item'),
       ]
     );
-    // s2 collides with s1 on the same item; s4 collides with s3 on the same account.
-    expect(results.map((r: any) => r.ok)).toEqual([true, false, true, false]);
-    expect(results[1].error).toMatch(/target is already mapped to another entity/);
-    expect(results[3].error).toMatch(/target is already mapped to another entity/);
+    // s2 collides with s1 on the same item; accounts are shareable; item:200
+    // and account:200 coexist.
+    expect(results.map((r: any) => r.ok)).toEqual([true, false, true, true, true]);
+    expect(results[1].error).toMatch(/Xero item is already mapped to another service/);
   });
 
   it('maps each unique-index violation to its own message', async () => {
@@ -1088,6 +1195,7 @@ describe('createExternalEntityMappings — bulk create with per-row isolation', 
     // Same target, different entity: idx_unique_external_mapping.
     const sameTarget = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, make(svc2, target));
     expect(sameTarget.actionError).toMatch(/target is already mapped to another entity/);
+    expect(sameTarget.messageKey).toBe('msp/integrations:errors.mappings.duplicateTarget');
 
     // Same entity, different target: idx_unique_alga_mapping.
     const sameEntity = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, make(svc1, uuidv4()));

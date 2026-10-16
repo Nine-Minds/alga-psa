@@ -26,6 +26,8 @@
     "./workflow": "./dist/workflow/index.js",
     "./workflow/runtime": "./dist/workflow/runtime/index.js",
     "./workflow/runtime/index.js": "./dist/workflow/runtime/index.js",
+    "./workflow/runtime/designer/draftFromTicket": "./dist/workflow/runtime/designer/draftFromTicket.js",
+    "./workflow/runtime/designer/draftFromTicket.js": "./dist/workflow/runtime/designer/draftFromTicket.js",
     "./workflow/persistence": "./dist/workflow/persistence/index.js",
     "./workflow/streams": "./dist/workflow/streams/index.js",
     "./workflow/streams/redisStreamClient.js": "./dist/workflow/streams/redisStreamClient.js",

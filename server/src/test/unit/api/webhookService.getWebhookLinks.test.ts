@@ -28,7 +28,7 @@ const webhookRow = {
 };
 
 describe('WebhookService.getWebhook HATEOAS links', () => {
-  it('advertises only actions backed by real routes, never a resource-level retry', async () => {
+  it('advertises only actions backed by real routes, including the bulk retry', async () => {
     const { WebhookService } = await import('../../../lib/api/services/WebhookService');
     const stubDb = {
       findOne: vi.fn(async () => ({ ...webhookRow })),
@@ -55,6 +55,14 @@ describe('WebhookService.getWebhook HATEOAS links', () => {
       rel: 'action',
     });
 
+    expect(links['retry-failed']).toEqual({
+      href: `/api/v1/webhooks/${WEBHOOK_ID}/retry-failed`,
+      method: 'POST',
+      rel: 'action',
+    });
+
+    // The phantom webhook-level `retry` link removed in #3719 stays gone: the
+    // bulk capability lives at retry-failed, and /webhooks/{id}/retry has no route.
     expect(links).not.toHaveProperty('retry');
     expect(
       Object.values(links).filter((link) => link.href.endsWith(`/webhooks/${WEBHOOK_ID}/retry`))

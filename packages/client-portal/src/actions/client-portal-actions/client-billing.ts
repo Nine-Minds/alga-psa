@@ -234,6 +234,7 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
       const planQuery = scopedDb.table('client_contracts as cc')
         .where({
           'cc.client_id': clientId,
+          'cc.is_active': true,
         })
         .select(
           'cl.contract_line_id',
@@ -244,12 +245,17 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
           'cl.service_category',
           'cl.custom_rate',
           'cl.contract_id',
+          'cl.is_active',
           'cl.tenant',
           'cc.client_id',
           'cc.start_date',
           'cc.end_date',
           'sc.category_name as service_category_name'
         )
+        .orderBy([
+          { column: 'cl.is_active', order: 'desc' },
+          { column: 'cc.start_date', order: 'desc' },
+        ])
         .first();
       scopedDb.tenantJoin(planQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
       scopedDb.tenantJoin(planQuery, 'contract_lines as cl', 'c.contract_id', 'cl.contract_id');

@@ -30,6 +30,7 @@ const GATES: Array<[string, string]> = [
   ['navigation', 'capabilities.navigation && ticket.ticket_id'],
   ['duplicate', '{capabilities.duplicate ? ('],
   ['create template', 'capabilities.createTemplate && templatePermissions.create'],
+  ['create workflow', 'capabilities.createWorkflow'],
   ['live presence', 'capabilities.live && ticketLive.enabled'],
 ];
 

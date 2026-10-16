@@ -574,6 +574,8 @@
         "sending": "⟦Şḗƞḓīƞɠ…⟧",
         "rotateSecret": "⟦Řȯŧȧŧḗ Şḗƈřḗŧ⟧",
         "rotating": "⟦Řȯŧȧŧīƞɠ…⟧",
+        "retryFailed": "⟦Řḗŧřẏ Ƒȧīŀḗḓ Ḓḗŀīṽḗřīḗş⟧",
+        "retryingFailed": "⟦Řḗŧřẏīƞɠ…⟧",
         "back": "⟦Ɓȧƈķ ŧȯ ẇḗƀħȯȯķş⟧"
       },
       "deliveries": {
@@ -615,6 +617,8 @@
         "stateChangeFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ẇḗƀħȯȯķ şŧȧŧḗ.⟧",
         "retryQueued": "⟦Řḗŧřẏ ʠŭḗŭḗḓ ƒȯř ḗṽḗƞŧ {{eventId}}.⟧",
         "retryFailed": "⟦Ƒȧīŀḗḓ ŧȯ řḗŧřẏ ḓḗŀīṽḗřẏ.⟧",
+        "retryFailedQueued": "⟦{{queued}} ḓḗŀīṽḗřīḗş ʠŭḗŭḗḓ ƒȯř řḗŧřẏ, {{skipped}} şķīƥƥḗḓ.⟧",
+        "retryFailedFailed": "⟦Ƒȧīŀḗḓ ŧȯ řḗŧřẏ ƒȧīŀḗḓ ḓḗŀīṽḗřīḗş.⟧",
         "invalidHeaderLine": "⟦Īƞṽȧŀīḓ ħḗȧḓḗř ŀīƞḗ: \"{{line}}\"⟧",
         "invalidRetryConfig": "⟦Řḗŧřẏ ƈȯƞƒīɠ ḿŭşŧ ƀḗ ȧ ĴŞȮȠ ȯƀĵḗƈŧ⟧"
       },

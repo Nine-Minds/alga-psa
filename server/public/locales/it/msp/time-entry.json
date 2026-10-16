@@ -457,7 +457,8 @@
       "missingFieldNamed": "Manca un campo obbligatorio del foglio ore o dell’inserimento ore: {{field}}."
     },
     "timePeriod": {
-      "datesRequired": "Inserire date di inizio e di fine valide."
+      "datesRequired": "Inserire date di inizio e di fine valide.",
+      "closed": "Questo periodo di tempo è chiuso. Riaprilo prima di apportare modifiche."
     },
     "timePeriodSettings": {
       "invalidValue": "Uno dei valori dell’impostazione del periodo non è valido. Aggiornare la pagina e riprovare.",

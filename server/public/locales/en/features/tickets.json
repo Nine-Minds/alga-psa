@@ -60,7 +60,6 @@
     "button": "Filters",
     "unassigned": "Unassigned",
     "category": "Filter by category",
-    "clearFilters": "Clear filters",
     "removeFilterChip": "Remove filter: {{label}}",
     "assignee": "Assignee",
     "allAssignees": "All Assignees",
@@ -225,7 +224,8 @@
     "rowActions": "Actions",
     "openMenu": "Open menu",
     "moreActions": "More actions",
-    "createTemplate": "Create template from ticket"
+    "createTemplate": "Create template from ticket",
+    "createWorkflowFromTicket": "Create workflow from ticket"
   },
   "messages": {
     "noTickets": "No tickets found",

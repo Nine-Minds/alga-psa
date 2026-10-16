@@ -574,6 +574,8 @@
         "sending": "Sending…",
         "rotateSecret": "Rotate Secret",
         "rotating": "Rotating…",
+        "retryFailed": "Retry Failed Deliveries",
+        "retryingFailed": "Retrying…",
         "back": "Back to webhooks"
       },
       "deliveries": {
@@ -615,6 +617,8 @@
         "stateChangeFailed": "Failed to update webhook state.",
         "retryQueued": "Retry queued for event {{eventId}}.",
         "retryFailed": "Failed to retry delivery.",
+        "retryFailedQueued": "{{queued}} deliveries queued for retry, {{skipped}} skipped.",
+        "retryFailedFailed": "Failed to retry failed deliveries.",
         "invalidHeaderLine": "Invalid header line: \"{{line}}\"",
         "invalidRetryConfig": "Retry config must be a JSON object"
       },

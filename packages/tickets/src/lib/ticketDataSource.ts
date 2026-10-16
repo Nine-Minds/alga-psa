@@ -194,6 +194,8 @@ export interface TicketCapabilities {
   duplicate: boolean;
   /** "Create template from ticket" menu. */
   createTemplate: boolean;
+  /** "Create workflow from ticket" menu entry (the injected `renderCreateWorkflowFromTicket` node). */
+  createWorkflow: boolean;
   /** Create project task from ticket (the injected `renderCreateProjectTask` node). */
   createProjectTask: boolean;
 }
@@ -225,6 +227,7 @@ export const NATIVE_TICKET_CAPABILITIES: Readonly<TicketCapabilities> = Object.f
   sla: true,
   duplicate: true,
   createTemplate: true,
+  createWorkflow: true,
   createProjectTask: true,
 });
 

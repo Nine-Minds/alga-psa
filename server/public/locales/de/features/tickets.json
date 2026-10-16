@@ -52,7 +52,6 @@
     "button": "Filter",
     "unassigned": "Nicht zugewiesen",
     "category": "Nach Kategorie filtern",
-    "clearFilters": "Filter löschen",
     "removeFilterChip": "Filter entfernen: {{label}}",
     "assignee": "Zuständiger",
     "allAssignees": "Alle Zuständigen",
@@ -217,7 +216,8 @@
     "rowActions": "Aktionen",
     "openMenu": "Menü öffnen",
     "moreActions": "Weitere Aktionen",
-    "createTemplate": "Vorlage aus Ticket erstellen"
+    "createTemplate": "Vorlage aus Ticket erstellen",
+    "createWorkflowFromTicket": "Workflow aus Ticket erstellen"
   },
   "messages": {
     "noTickets": "Keine Tickets gefunden",

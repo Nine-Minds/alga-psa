@@ -457,7 +457,8 @@
       "missingFieldNamed": "Missing required time sheet or time entry field: {{field}}."
     },
     "timePeriod": {
-      "datesRequired": "Enter valid start and end dates."
+      "datesRequired": "Enter valid start and end dates.",
+      "closed": "This time period is closed. Reopen it before making changes."
     },
     "timePeriodSettings": {
       "invalidValue": "One of the time period setting values is invalid. Please refresh and try again.",

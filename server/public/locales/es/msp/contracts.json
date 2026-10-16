@@ -1230,6 +1230,7 @@
       "usageBasedPlans": "Planes basados en uso",
       "recurringQuantityLabel": "Cantidad recurrente:",
       "unitRateLabel": "Tarifa unitaria:",
+      "hourlyRateLabel": "Tarifa por hora:",
       "unitRateFromCatalog": "Precio de catálogo en la moneda del cliente",
       "unitAmountLabel": "Importe recurrente:",
       "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
