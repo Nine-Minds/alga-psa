@@ -169,7 +169,7 @@ export const VendorSupportDialog: React.FC<VendorSupportDialogProps> = ({
           </div>
         )}
         {errorLabel ? (
-          <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+          <div className="mt-4 rounded-md border border-destructive bg-alert-destructive-bg p-3 text-sm text-[rgb(var(--color-text-800))]">
             <p>{t(errorLabel.key, { defaultValue: errorLabel.defaultValue })}</p>
             <a
               id="vendor-support-fallback-link"
