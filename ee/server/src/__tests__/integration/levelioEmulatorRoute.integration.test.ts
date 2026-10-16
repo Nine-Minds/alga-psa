@@ -662,4 +662,51 @@ describe('Level.io alert ingestion through the Level emulator (route + DB)', { s
       await table('rmm_alert_rules').where({ rule_id: rule.rule_id }).update({ actions: JSON.stringify(rule.actions) });
     }
   });
+
+  it('an automation alert re-fires into a new ticket after its ticket is closed even though no reset ever ran', async () => {
+    // The native webhook only subscribes to alert_resolved (empty = all types), so firing an
+    // alert delivers through the automation alone and the automation row owns the ticket.
+    await seedAcmeWithServer(['alert_resolved']);
+    const rule = await table('rmm_alert_rules').where({ integration_id: integrationId }).first('rule_id', 'actions');
+    await table('rmm_alert_rules')
+      .where({ rule_id: rule.rule_id })
+      .update({ actions: JSON.stringify({ ...rule.actions, resetAlertOnTicketClose: false }) });
+    try {
+      await levelCall('seed/automation', {
+        name: 'Forward alerts to Alga (no reset)',
+        url: `${routeOrigin}/api/webhooks/levelio?tenant=${tenantId}`,
+        headers: [{ key: 'X-Alga-Webhook-Secret', value: ALGA_WEBHOOK_SECRET }],
+        body: JSON.stringify({
+          event: 'alert.triggered',
+          name: 'Disk full',
+          severity: 'critical',
+          device_id: '{{level_device_id}}',
+          hostname: '{{level_device_hostname}}',
+          group_id: '{{level_group_id}}',
+        }),
+      });
+      const fire = () => levelCall('actions/fire-alert', { deviceId: SRV_01, name: 'Disk full', severity: 'critical' });
+
+      const first = await fire();
+      expect(JSON.parse(first.result.automationRuns[0].response)).toMatchObject({ outcome: 'ticket_created' });
+      const firstTicketId = (await alertRow(`automation:${SRV_01}:disk full`)).ticket_id as string;
+      expect(firstTicketId).toBeTruthy();
+
+      // Close the ticket directly: no TICKET_CLOSED delivery, no subscriber, no reset.
+      const closed = await table('statuses').where({ board_id: boardId, is_closed: true }).first('status_id');
+      await table('tickets').where({ ticket_id: firstTicketId }).update({ status_id: closed.status_id });
+      expect((await alertRow(`automation:${SRV_01}:disk full`)).status).toBe('active');
+
+      const second = await fire();
+      expect(JSON.parse(second.result.automationRuns[0].response)).toMatchObject({ outcome: 'ticket_created' });
+      const rows = await rmmAlerts();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].status).toBe('active');
+      expect(rows[0].ticket_id).toBeTruthy();
+      expect(rows[0].ticket_id).not.toBe(firstTicketId);
+      expect(await ticketCount()).toBe(2);
+    } finally {
+      await table('rmm_alert_rules').where({ rule_id: rule.rule_id }).update({ actions: JSON.stringify(rule.actions) });
+    }
+  });
 });

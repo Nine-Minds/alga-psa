@@ -102,6 +102,16 @@ async function resolveAlertContext(knex: Knex, event: NormalizedRmmAlertEvent): 
   return { assetId, clientId, organizationName, mappingDefaultContactId };
 }
 
+async function isLinkedTicketClosedOrMissing(
+  db: ReturnType<typeof tenantDb>,
+  ticketId: string
+): Promise<boolean> {
+  const query = db.table('tickets as t').where('t.ticket_id', ticketId);
+  db.tenantJoin(query, 'statuses as s', 's.status_id', 't.status_id');
+  const row = (await query.select({ is_closed: 's.is_closed' }).first()) as { is_closed?: boolean | null } | undefined;
+  return !row || row.is_closed === true;
+}
+
 async function processTriggered(
   ctx: RmmAlertProcessingContext,
   event: NormalizedRmmAlertEvent,
@@ -129,7 +139,14 @@ async function processTriggered(
     const duplicateStatuses = options.reprocessSuppressed
       ? ['active', 'acknowledged']
       : ['active', 'acknowledged', 'suppressed'];
-    if (existing && duplicateStatuses.includes(existing.status)) {
+    // A live-looking row whose linked ticket is closed (or gone — ticket_id has
+    // no FK) is not a redelivery: the reset that should have retired it never
+    // landed (outbound reset disabled, no adapter, lost TICKET_CLOSED). Let it
+    // fall through to the reopen path below instead of dropping every later firing.
+    const linkedTicketGone = existing && duplicateStatuses.includes(existing.status) && existing.ticket_id
+      ? await isLinkedTicketClosedOrMissing(db, existing.ticket_id)
+      : false;
+    if (existing && duplicateStatuses.includes(existing.status) && !linkedTicketGone) {
       const refresh: Record<string, unknown> = { updated_at: new Date().toISOString() };
       if (existing.device_name == null && event.deviceName != null) refresh.device_name = event.deviceName;
       await db.table('rmm_alerts')
