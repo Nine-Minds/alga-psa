@@ -489,7 +489,7 @@
   },
   "deferredRevenue": {
     "title": "Förutbetalda intäkter / skuld för kundförskott",
-    "description": "Månadsvis saldoutveckling per kund för tillgodohavanden och oanvända förbetalda timpottstimmar.",
+    "description": "Månadsvis saldoutveckling per kund för tillgodohavanden och oanvända förbetalda timmar (timpottperioder och timblock).",
     "printSubtitle": "Månad {{month}}",
     "printTable": "Saldoutveckling per kund",
     "empty": "Ingen skuld för kundförskott den här månaden.",
@@ -541,7 +541,18 @@
       "feeSource": "Avgift",
       "rollover": "överföring",
       "notBilled": "Ännu inte fakturerat",
-      "billed": "Fakturerat"
+      "billed": "Fakturerat",
+      "blocks": "Förbetalda timblock",
+      "noBlocks": "Inga förbetalda timblock.",
+      "service": "Tjänst",
+      "purchased": "Köpt",
+      "expiration": "Utgång",
+      "never": "Aldrig",
+      "status": "Status",
+      "statusActive": "Aktiv",
+      "statusExpired": "Utgången",
+      "statusVoided": "Ogiltigförklarad",
+      "statusPending": "Väntande"
     },
     "csv": {
       "client": "Kund",

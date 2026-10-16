@@ -489,7 +489,7 @@
   },
   "deferredRevenue": {
     "title": "Produits différés / passif prépayé",
-    "description": "Report par client et par mois des soldes de crédits clients et des heures de forfait d’heures prépayées non consommées.",
+    "description": "Report par client et par mois des soldes de crédits clients et des heures prépayées non consommées (périodes de forfait et blocs d’heures).",
     "printSubtitle": "Mois {{month}}",
     "printTable": "Report par client",
     "empty": "Aucun passif prépayé pour ce mois.",
@@ -541,7 +541,18 @@
       "feeSource": "Frais",
       "rollover": "report",
       "notBilled": "Pas encore facturé",
-      "billed": "Facturé"
+      "billed": "Facturé",
+      "blocks": "Blocs d’heures prépayés",
+      "noBlocks": "Aucun bloc d’heures prépayé.",
+      "service": "Service",
+      "purchased": "Acheté",
+      "expiration": "Expiration",
+      "never": "Jamais",
+      "status": "Statut",
+      "statusActive": "Actif",
+      "statusExpired": "Expiré",
+      "statusVoided": "Annulé",
+      "statusPending": "En attente"
     },
     "csv": {
       "client": "Client",

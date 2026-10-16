@@ -533,3 +533,96 @@ describe('buildDeferredRevenueReportFromData', () => {
     ).toBe(acme.credits.closing);
   });
 });
+
+function hourBlock(over: Record<string, unknown> = {}) {
+  return {
+    blockId: 'block-1',
+    clientId: 'client-1',
+    serviceName: 'Engineering',
+    contractName: 'Managed IT',
+    currencyCode: 'USD',
+    hourlyRate: 15000,
+    totalMinutes: 2400,
+    purchaseAmount: 600000,
+    status: 'active',
+    purchasedAt: '2026-02-05',
+    expirationDate: null,
+    voidedAt: null,
+    allocations: [],
+    ...over,
+  };
+}
+
+describe('buildDeferredRevenueReportFromData with prepaid hour blocks', () => {
+  it('rolls hour blocks into the hours movement and keeps block detail', () => {
+    const report = buildDeferredRevenueReportFromData(
+      makeData({
+        bucketPeriods: [],
+        billedFees: [],
+        hourBlocks: [hourBlock({ allocations: [{ createdAt: '2026-02-10T09:00:00.000Z', minutes: 240 }] })],
+      }),
+      '2026-02',
+    );
+    const usd = report.sections.find((section) => section.currencyCode === 'USD');
+    expect(usd).toBeDefined();
+    const acme = usd!.clients.find((c) => c.clientId === 'client-1');
+    expect(acme).toBeDefined();
+    expect(acme!.hours.opening).toBe(0);
+    expect(acme!.hours.issued).toBe(600000);
+    expect(acme!.hours.applied).toBe(-60000);
+    expect(acme!.hours.closing).toBe(540000);
+    // Total carries the client's credit balance alongside the block liability.
+    expect(acme!.total.closing).toBe(acme!.credits.closing + 540000);
+    expect(acme!.hourBlockDetails).toHaveLength(1);
+    expect(acme!.hourBlockDetails[0].blockId).toBe('block-1');
+    expect(acme!.hourBlockDetails[0].remainingMinutes).toBe(2160);
+  });
+
+  it('adds hour-block movements onto existing bucket hours for the same client×currency', () => {
+    const report = buildDeferredRevenueReportFromData(makeData(), '2026-02');
+    const baseline = report.sections.find((s) => s.currencyCode === 'USD')!.clients[0];
+    const baselineHoursClosing = baseline.hours.closing;
+
+    const withBlocks = buildDeferredRevenueReportFromData(
+      makeData({ hourBlocks: [hourBlock()] }),
+      '2026-02',
+    );
+    const merged = withBlocks.sections.find((s) => s.currencyCode === 'USD')!.clients.find((c) => c.clientId === 'client-1');
+    expect(merged!.hours.closing).toBe(baselineHoursClosing + 600000);
+    expect(merged!.bucketDetails.length).toBeGreaterThan(0);
+    expect(merged!.hourBlockDetails).toHaveLength(1);
+  });
+
+  it('surfaces a client whose only prepaid balance is an hour block', () => {
+    const report = buildDeferredRevenueReportFromData(
+      makeData({
+        creditTransactions: [],
+        creditTracking: [],
+        bucketPeriods: [],
+        billedFees: [],
+        hourBlocks: [hourBlock({ blockId: 'block-solo', clientId: 'client-2', currencyCode: 'EUR' })],
+      }),
+      '2026-02',
+    );
+    const eur = report.sections.find((section) => section.currencyCode === 'EUR');
+    expect(eur).toBeDefined();
+    const zed = eur!.clients.find((c) => c.clientId === 'client-2');
+    expect(zed).toBeDefined();
+    expect(zed!.hours.closing).toBe(600000);
+    expect(zed!.hourBlockDetails.map((d) => d.blockId)).toEqual(['block-solo']);
+  });
+
+  it('omits clients with no block or ledger activity in the month', () => {
+    const report = buildDeferredRevenueReportFromData(
+      makeData({
+        creditTransactions: [],
+        creditTracking: [],
+        bucketPeriods: [],
+        billedFees: [],
+        hourBlocks: [hourBlock({ purchasedAt: '2026-05-01' })],
+      }),
+      '2026-02',
+    );
+    expect(report.sections.every((s) => s.clients.length === 0)).toBe(true);
+  });
+});

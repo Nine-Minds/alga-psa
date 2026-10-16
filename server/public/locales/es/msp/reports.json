@@ -489,7 +489,7 @@
   },
   "deferredRevenue": {
     "title": "Ingresos diferidos / pasivo prepagado",
-    "description": "Evolución por cliente y por mes de los saldos de crédito de los clientes y de las horas de bolsa prepagadas no consumidas.",
+    "description": "Evolución por cliente y por mes de los saldos de crédito de los clientes y de las horas prepagadas no consumidas (períodos de bolsa y bloques de horas).",
     "printSubtitle": "Mes {{month}}",
     "printTable": "Evolución por cliente",
     "empty": "No hay pasivo prepagado para este mes.",
@@ -541,7 +541,18 @@
       "feeSource": "Tarifa",
       "rollover": "traspaso",
       "notBilled": "Aún sin facturar",
-      "billed": "Facturado"
+      "billed": "Facturado",
+      "blocks": "Bloques de horas prepagadas",
+      "noBlocks": "No hay bloques de horas prepagadas.",
+      "service": "Servicio",
+      "purchased": "Comprado",
+      "expiration": "Vencimiento",
+      "never": "Nunca",
+      "status": "Estado",
+      "statusActive": "Activo",
+      "statusExpired": "Vencido",
+      "statusVoided": "Anulado",
+      "statusPending": "Pendiente"
     },
     "csv": {
       "client": "Cliente",

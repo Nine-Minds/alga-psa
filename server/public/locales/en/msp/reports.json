@@ -489,7 +489,7 @@
   },
   "deferredRevenue": {
     "title": "Deferred revenue / prepaid liability",
-    "description": "Per-client, per-month rollforward of client credit balances and unburned prepaid bucket hours.",
+    "description": "Per-client, per-month rollforward of client credit balances and unburned prepaid hours (bucket periods and hour blocks).",
     "printSubtitle": "Month {{month}}",
     "printTable": "Per-client rollforward",
     "empty": "No prepaid liability for this month.",
@@ -541,7 +541,18 @@
       "feeSource": "Fee",
       "rollover": "rollover",
       "notBilled": "Not yet billed",
-      "billed": "Billed"
+      "billed": "Billed",
+      "blocks": "Prepaid hour blocks",
+      "noBlocks": "No prepaid hour blocks.",
+      "service": "Service",
+      "purchased": "Purchased",
+      "expiration": "Expiration",
+      "never": "Never",
+      "status": "Status",
+      "statusActive": "Active",
+      "statusExpired": "Expired",
+      "statusVoided": "Voided",
+      "statusPending": "Pending"
     },
     "csv": {
       "client": "Client",

@@ -489,7 +489,7 @@
   },
   "deferredRevenue": {
     "title": "Abgegrenzte Umsatzerlöse / vorausbezahlte Verbindlichkeiten",
-    "description": "Fortschreibung der Gutschriftensalden von Kunden und ungenutzter vorausbezahlter Stunden aus Stundenkontingenten – pro Kunde und Monat.",
+    "description": "Fortschreibung der Gutschriftensalden von Kunden und ungenutzter vorausbezahlter Stunden pro Kunde und Monat (Stundenkontingente und Stundenblöcke).",
     "printSubtitle": "Monat {{month}}",
     "printTable": "Fortschreibung pro Kunde",
     "empty": "Keine vorausbezahlten Verbindlichkeiten für diesen Monat.",
@@ -541,7 +541,18 @@
       "feeSource": "Gebühr",
       "rollover": "Übertrag",
       "notBilled": "Noch nicht abgerechnet",
-      "billed": "Abgerechnet"
+      "billed": "Abgerechnet",
+      "blocks": "Vorausbezahlte Stundenblöcke",
+      "noBlocks": "Keine vorausbezahlten Stundenblöcke.",
+      "service": "Dienstleistung",
+      "purchased": "Gekauft",
+      "expiration": "Ablauf",
+      "never": "Nie",
+      "status": "Status",
+      "statusActive": "Aktiv",
+      "statusExpired": "Abgelaufen",
+      "statusVoided": "Storniert",
+      "statusPending": "Ausstehend"
     },
     "csv": {
       "client": "Kunde",

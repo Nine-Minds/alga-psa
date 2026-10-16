@@ -489,7 +489,7 @@
   },
   "deferredRevenue": {
     "title": "Uitgestelde omzet / vooruitbetaalde verplichting",
-    "description": "Rollforward per klant en per maand van kredietsaldi van klanten en niet-verbruikte vooruitbetaalde urenbundeluren.",
+    "description": "Rollforward per klant en per maand van kredietsaldi van klanten en niet-verbruikte vooruitbetaalde uren (urenbundelperioden en urenblokken).",
     "printSubtitle": "Maand {{month}}",
     "printTable": "Rollforward per klant",
     "empty": "Geen vooruitbetaalde verplichting voor deze maand.",
@@ -541,7 +541,18 @@
       "feeSource": "Tarief",
       "rollover": "overdracht",
       "notBilled": "Nog niet gefactureerd",
-      "billed": "Gefactureerd"
+      "billed": "Gefactureerd",
+      "blocks": "Vooruitbetaalde urenblokken",
+      "noBlocks": "Geen vooruitbetaalde urenblokken.",
+      "service": "Dienst",
+      "purchased": "Gekocht",
+      "expiration": "Vervaldatum",
+      "never": "Nooit",
+      "status": "Status",
+      "statusActive": "Actief",
+      "statusExpired": "Verlopen",
+      "statusVoided": "Ongedaan gemaakt",
+      "statusPending": "In afwachting"
     },
     "csv": {
       "client": "Klant",

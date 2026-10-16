@@ -16,6 +16,7 @@ import { fixedMemberContributionCents, fixedRateBasisOf } from '@alga-psa/shared
 import { resolvePeriodFee, type BilledFeeCandidate } from './fee';
 import { classifyCreditSource, type CreditSourceInvoice } from './creditSource';
 import type { BucketPeriodInput } from './hours';
+import type { HourBlockAllocationInput, HourBlockInput } from './blocks';
 import { reconstructCreditBalances, type CreditTransactionRow } from './credits';
 import type { CreditDetailRow } from './types';
 
@@ -223,6 +224,70 @@ export async function loadCreditInvoices(
     });
   }
   return result;
+}
+
+/**
+ * Prepaid hour blocks with their burn allocations for the rollforward.
+ * Pending blocks (issuance invoice not finalized) carry no liability and are
+ * excluded; never-issued voided blocks (deleted draft) too. Allocations are
+ * immutable dated events grouped onto their block.
+ */
+export async function loadHourBlocks(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+): Promise<RawHourBlockRow[]> {
+  const db = tenantDb(conn, tenant);
+  const query = db.table('hour_blocks as hb');
+  db.tenantJoin(query, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
+  db.tenantJoin(query, 'contract_lines as cl', 'hb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
+  db.tenantJoin(query, 'contracts as ct', 'cl.contract_id', 'ct.contract_id', { type: 'left' });
+
+  const blocks = await query
+    .whereNot({ 'hb.status': 'pending' })
+    .whereNotNull('hb.purchased_at')
+    .select(
+      'hb.block_id',
+      'hb.client_id',
+      'hb.currency_code',
+      'hb.hourly_rate',
+      'hb.total_minutes',
+      'hb.purchase_amount',
+      'hb.status',
+      'hb.purchased_at',
+      'hb.expiration_date',
+      'hb.voided_at',
+      'sc.service_name',
+      'ct.contract_name',
+    );
+
+  const allocationsByBlock = new Map<string, HourBlockAllocationInput[]>();
+  if (blocks.length > 0) {
+    const allocationRows = await db
+      .table('hour_block_time_allocations')
+      .whereIn('block_id', blocks.map((block) => block.block_id))
+      .select('block_id', 'minutes', 'created_at');
+    for (const row of allocationRows) {
+      const list = allocationsByBlock.get(row.block_id) ?? [];
+      list.push({ createdAt: toStringValue(row.created_at), minutes: toNumber(row.minutes) });
+      allocationsByBlock.set(row.block_id, list);
+    }
+  }
+
+  return blocks.map((row) => ({
+    blockId: row.block_id,
+    clientId: row.client_id,
+    serviceName: row.service_name ?? 'Prepaid hours',
+    contractName: row.contract_name ?? null,
+    currencyCode: row.currency_code || 'USD',
+    hourlyRate: toNumber(row.hourly_rate),
+    totalMinutes: toNumber(row.total_minutes),
+    purchaseAmount: toNumber(row.purchase_amount),
+    status: String(row.status),
+    purchasedAt: row.purchased_at ? toStringValue(row.purchased_at) : null,
+    expirationDate: row.expiration_date ? toStringValue(row.expiration_date).slice(0, 10) : null,
+    voidedAt: row.voided_at ? toStringValue(row.voided_at) : null,
+    allocations: allocationsByBlock.get(row.block_id) ?? [],
+  }));
 }
 
 export async function loadBucketPeriods(
@@ -455,12 +520,17 @@ export async function loadFixedConfigBaseRates(
   return byLineService;
 }
 
+/** A loaded hour block, shaped for {@link HourBlockInput} plus display fields. */
+export type RawHourBlockRow = HourBlockInput;
+
 export interface BuildDeferredRevenueInput {
   clients: LoadedClient[];
   creditTransactions: CreditTransactionRow[];
   creditTracking: CreditTrackingDetailRow[];
   creditInvoices: Map<string, CreditSourceInvoice>;
   bucketPeriods: RawBucketPeriodRow[];
+  /** Prepaid hour blocks (non-pending, ever purchased) with allocations. */
+  hourBlocks?: RawHourBlockRow[];
   billedFees: BilledFeeCandidate[];
   /** fixed-config base rate × quantity, keyed by `${contractLineId}\u0000${serviceId}`. */
   fixedConfigBaseRates: Map<string, number | null>;
@@ -472,12 +542,13 @@ export async function loadDeferredRevenueData(
   conn: Knex | Knex.Transaction,
   tenant: string,
 ): Promise<BuildDeferredRevenueInput> {
-  const [clients, creditTransactions, creditTracking, bucketPeriods, billedFees, fixedConfigBaseRates] =
+  const [clients, creditTransactions, creditTracking, bucketPeriods, hourBlocks, billedFees, fixedConfigBaseRates] =
     await Promise.all([
       loadClients(conn, tenant),
       loadCreditTransactions(conn, tenant),
       loadCreditTrackingDetails(conn, tenant),
       loadBucketPeriods(conn, tenant),
+      loadHourBlocks(conn, tenant),
       loadBilledBucketFees(conn, tenant),
       loadFixedConfigBaseRates(conn, tenant),
     ]);
@@ -505,6 +576,7 @@ export async function loadDeferredRevenueData(
     creditTracking,
     creditInvoices,
     bucketPeriods,
+    hourBlocks,
     billedFees,
     fixedConfigBaseRates,
     pricingSchedules,

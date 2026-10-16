@@ -489,7 +489,7 @@
   },
   "deferredRevenue": {
     "title": "Ricavi differiti / passività anticipata",
-    "description": "Riepilogo per cliente e per mese dei saldi dei crediti del cliente e delle ore di pacchetto ore anticipate non consumate.",
+    "description": "Riepilogo per cliente e per mese dei saldi dei crediti del cliente e delle ore anticipate non consumate (periodi di pacchetto e blocchi di ore).",
     "printSubtitle": "Mese {{month}}",
     "printTable": "Riepilogo per cliente",
     "empty": "Nessuna passività anticipata per questo mese.",
@@ -541,7 +541,18 @@
       "feeSource": "Tariffa",
       "rollover": "riporto",
       "notBilled": "Non ancora fatturato",
-      "billed": "Fatturato"
+      "billed": "Fatturato",
+      "blocks": "Blocchi di ore anticipate",
+      "noBlocks": "Nessun blocco di ore anticipate.",
+      "service": "Servizio",
+      "purchased": "Acquistato",
+      "expiration": "Scadenza",
+      "never": "Mai",
+      "status": "Stato",
+      "statusActive": "Attivo",
+      "statusExpired": "Scaduto",
+      "statusVoided": "Annullato",
+      "statusPending": "In sospeso"
     },
     "csv": {
       "client": "Cliente",

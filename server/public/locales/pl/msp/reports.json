@@ -489,7 +489,7 @@
   },
   "deferredRevenue": {
     "title": "Przychód rozliczany w czasie / zobowiązania z przedpłat",
-    "description": "Zestawienie zmian sald kredytów klientów oraz niewykorzystanych, przedpłaconych godzin z pakietów w podziale na klienta i miesiąc.",
+    "description": "Zestawienie zmian sald kredytów klientów oraz niewykorzystanych przedpłaconych godzin w podziale na klienta i miesiąc (okresy pakietów i bloki godzin).",
     "printSubtitle": "Miesiąc {{month}}",
     "printTable": "Zestawienie zmian według klienta",
     "empty": "Brak zobowiązań z przedpłat w tym miesiącu.",
@@ -541,7 +541,18 @@
       "feeSource": "Opłata",
       "rollover": "przeniesienie",
       "notBilled": "Jeszcze nie rozliczone",
-      "billed": "Rozliczone"
+      "billed": "Rozliczone",
+      "blocks": "Przedpłacone bloki godzin",
+      "noBlocks": "Brak przedpłaconych bloków godzin.",
+      "service": "Usługa",
+      "purchased": "Kupiono",
+      "expiration": "Wygaśnięcie",
+      "never": "Nigdy",
+      "status": "Status",
+      "statusActive": "Aktywny",
+      "statusExpired": "Wygasły",
+      "statusVoided": "Unieważniony",
+      "statusPending": "Oczekujący"
     },
     "csv": {
       "client": "Klient",

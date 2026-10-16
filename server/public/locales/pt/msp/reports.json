@@ -489,7 +489,7 @@
   },
   "deferredRevenue": {
     "title": "Receita diferida / passivo pré-pago",
-    "description": "Movimentação mensal por cliente dos saldos de crédito do cliente e das horas pré-pagas não consumidas do banco de horas.",
+    "description": "Movimentação mensal por cliente dos saldos de crédito do cliente e das horas pré-pagas não consumidas (períodos de banco de horas e blocos de horas).",
     "printSubtitle": "Mês {{month}}",
     "printTable": "Movimentação por cliente",
     "empty": "Nenhum passivo pré-pago para este mês.",
@@ -541,7 +541,18 @@
       "feeSource": "Taxa",
       "rollover": "acúmulo",
       "notBilled": "Ainda não faturado",
-      "billed": "Faturado"
+      "billed": "Faturado",
+      "blocks": "Blocos de horas pré-pagas",
+      "noBlocks": "Nenhum bloco de horas pré-pagas.",
+      "service": "Serviço",
+      "purchased": "Comprado",
+      "expiration": "Validade",
+      "never": "Nunca",
+      "status": "Status",
+      "statusActive": "Ativo",
+      "statusExpired": "Expirado",
+      "statusVoided": "Cancelado",
+      "statusPending": "Pendente"
     },
     "csv": {
       "client": "Cliente",
