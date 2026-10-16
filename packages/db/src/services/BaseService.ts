@@ -11,6 +11,25 @@ import { tenantDb } from '../lib/tenantDb';
 const tableColumnsCache = new Map<string, Promise<Set<string>>>();
 const warnedMissingAuditFields = new Set<string>();
 
+/**
+ * Thrown when `applyFilters` receives a `<field>_from` / `<field>_to` key that
+ * has no column mapping for the resource. Failing loudly is deliberate: silently
+ * dropping the filter would return unfiltered rows the caller did not ask for.
+ *
+ * `statusCode`/`code` mirror the API middleware's ValidationError shape so the
+ * route layer renders this as a 400 rather than a 500, without packages/db
+ * depending on server internals.
+ */
+export class UnsupportedRangeFilterError extends Error {
+  readonly statusCode = 400;
+  readonly code = 'VALIDATION_ERROR';
+
+  constructor(public readonly filterKey: string) {
+    super(`Unsupported range filter "${filterKey}": no column mapping is defined for this resource`);
+    this.name = 'UnsupportedRangeFilterError';
+  }
+}
+
 // Import and re-export for services
 export interface ListOptions {
   page?: number;
@@ -123,12 +142,12 @@ export abstract class BaseService<T = any> {
 
   /**
    * Map of range filter keys (`<field>_from` / `<field>_to`) to the timestamp
-   * column they constrain. Subclasses that expose additional ranges can extend
+   * column they constrain. Subclasses that expose additional ranges must extend
    * this map (e.g. override, spread `super.rangeFilterColumns()`, and add keys).
    *
    * The map is explicit on purpose: a `_from`/`_to` key that is not listed is
-   * never guessed at, so an unsupported key cannot be turned into a reference to
-   * a column that does not exist.
+   * rejected loudly rather than guessed at, so an unsupported key can neither be
+   * turned into a reference to a column that does not exist nor silently dropped.
    */
   protected rangeFilterColumns(): Record<string, string> {
     return {
@@ -140,18 +159,48 @@ export abstract class BaseService<T = any> {
   }
 
   /**
+   * Apply only the `<field>_from` / `<field>_to` range filters. Each key must be
+   * present in `rangeFilterColumns()`; an unmapped range key throws
+   * `UnsupportedRangeFilterError` so a dropped filter never silently returns
+   * unfiltered rows.
+   *
+   * Subclasses with hand-written filter methods can call this to get the common
+   * `created_from`/`updated_from` handling without adopting the rest of
+   * `applyFilters`.
+   */
+  protected applyRangeFilters(
+    query: Knex.QueryBuilder,
+    filters: Record<string, any>,
+    columns: Record<string, string> = this.rangeFilterColumns()
+  ): Knex.QueryBuilder {
+    const rangeColumns = columns;
+
+    Object.entries(filters ?? {}).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      if (!key.endsWith('_from') && !key.endsWith('_to')) return;
+
+      const rangeColumn = rangeColumns[key];
+      if (!rangeColumn) {
+        throw new UnsupportedRangeFilterError(key);
+      }
+
+      query.where(rangeColumn, key.endsWith('_from') ? '>=' : '<=', value);
+    });
+
+    return query;
+  }
+
+  /**
    * Apply filters to query
    */
   protected applyFilters(query: Knex.QueryBuilder, filters: Record<string, any>): Knex.QueryBuilder {
-    const rangeColumns = this.rangeFilterColumns();
+    query = this.applyRangeFilters(query, filters);
 
-    Object.entries(filters).forEach(([key, value]) => {
+    Object.entries(filters ?? {}).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
+      if (key.endsWith('_from') || key.endsWith('_to')) return;
 
-      const rangeColumn = rangeColumns[key];
-      if (rangeColumn) {
-        query.where(rangeColumn, key.endsWith('_from') ? '>=' : '<=', value);
-      } else if (key === 'search' && this.searchableFields.length > 0) {
+      if (key === 'search' && this.searchableFields.length > 0) {
         query.where(subQuery => {
           this.searchableFields.forEach((field, index) => {
             if (index === 0) {
@@ -163,10 +212,6 @@ export abstract class BaseService<T = any> {
         });
       } else if (Array.isArray(value)) {
         query.whereIn(key, value);
-      } else if (key.endsWith('_from') || key.endsWith('_to')) {
-        // Unmapped range key. Applying it would reference a column derived from
-        // the key (e.g. `updated` from `updated_from`), which almost certainly
-        // does not exist. Skip it rather than issue an invalid column reference.
       } else {
         query.where(key, value);
       }

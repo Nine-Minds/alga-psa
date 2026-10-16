@@ -281,6 +281,27 @@ export class InvoiceService extends BaseService<IInvoice> {
     this.storageService = new StorageService();
   }
 
+  /**
+   * Range keys the invoice list accepts: the common created_ and updated_ keys
+   * plus the invoice due/finalized date windows. Any other `_from`/`_to` key is
+   * rejected by `applyRangeFilters` rather than silently dropped.
+   */
+  protected rangeFilterColumns(): Record<string, string> {
+    return {
+      ...super.rangeFilterColumns(),
+      created_from: 'invoices.created_at',
+      created_to: 'invoices.created_at',
+      updated_from: 'invoices.updated_at',
+      updated_to: 'invoices.updated_at',
+      invoice_date_from: 'invoices.invoice_date',
+      invoice_date_to: 'invoices.invoice_date',
+      due_date_from: 'invoices.due_date',
+      due_date_to: 'invoices.due_date',
+      finalized_date_from: 'invoices.finalized_at',
+      finalized_date_to: 'invoices.finalized_at',
+    };
+  }
+
   // Helper to get PDF service for specific tenant
   private getPdfService(tenant: string): PDFGenerationService {
     return createPDFGenerationService(tenant);
@@ -2201,8 +2222,13 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private applyInvoiceFilters(query: Knex.QueryBuilder, filters: InvoiceFilter): Knex.QueryBuilder {
+    // Common created_*/updated_* plus invoice/due/finalized windows. Unsupported
+    // range keys throw rather than returning unfiltered invoices.
+    this.applyRangeFilters(query, filters);
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
+      if (key.endsWith('_from') || key.endsWith('_to')) return;
 
       switch (key) {
         case 'status':
@@ -2221,18 +2247,6 @@ export class InvoiceService extends BaseService<IInvoice> {
           break;
         case 'invoice_number':
           query.whereILike('invoices.invoice_number', `%${value}%`);
-          break;
-        case 'invoice_date_from':
-          query.where('invoices.invoice_date', '>=', value);
-          break;
-        case 'invoice_date_to':
-          query.where('invoices.invoice_date', '<=', value);
-          break;
-        case 'due_date_from':
-          query.where('invoices.due_date', '>=', value);
-          break;
-        case 'due_date_to':
-          query.where('invoices.due_date', '<=', value);
           break;
         case 'min_amount':
           query.where('invoices.total_amount', '>=', value);

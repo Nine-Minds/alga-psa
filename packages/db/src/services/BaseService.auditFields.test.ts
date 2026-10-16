@@ -11,7 +11,7 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 
 import logger from '@alga-psa/core/logger';
-import { BaseService, type ServiceContext } from './BaseService';
+import { BaseService, UnsupportedRangeFilterError, type ServiceContext } from './BaseService';
 
 const context: ServiceContext = {
   tenant: 'tenant-1',
@@ -178,17 +178,25 @@ describe('BaseService audit field filtering', () => {
     ]);
   });
 
-  it('does not turn an unmapped _from/_to key into a column reference', () => {
+  it('throws for an unmapped _from/_to key instead of silently dropping the filter', () => {
     const service = new FilterService();
 
-    // `purchase_date_from` has no mapping, so it is dropped rather than
-    // becoming `where purchase_date <= ...`/`where purchase_date_from = ...`.
-    // Normal keys (and arrays) are still applied.
+    // A dropped filter returns unfiltered rows; fail loudly instead.
+    expect(() => service.runFilters({ purchase_date_from: '2026-01-01' }))
+      .toThrow(UnsupportedRangeFilterError);
+    expect(() => service.runFilters({ purchase_date_from: '2026-01-01' }))
+      .toThrow(/Unsupported range filter "purchase_date_from"/);
+  });
+
+  it('applies non-range keys and mapped ranges together', () => {
+    const service = new FilterService();
+
     expect(service.runFilters({
-      purchase_date_from: '2026-01-01',
       is_active: true,
       status: ['draft', 'sent'],
+      created_from: '2026-01-01',
     })).toEqual([
+      { column: 'created_at', op: '>=', value: '2026-01-01' },
       { column: 'is_active', value: true },
       { column: 'status', value: ['draft', 'sent'] },
     ]);

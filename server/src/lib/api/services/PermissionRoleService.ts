@@ -96,6 +96,20 @@ export class PermissionRoleService extends BaseService<IRole> {
   // columns, so `roles` (which has created_at/updated_at but not
   // created_by/updated_by) no longer needs an override.
 
+  /**
+   * The role list joins `user_roles`, which also has created_at/updated_at, so
+   * the range columns must be qualified to `r.`. Unsupported range keys throw.
+   */
+  protected rangeFilterColumns(): Record<string, string> {
+    return {
+      ...super.rangeFilterColumns(),
+      created_from: 'r.created_at',
+      created_to: 'r.created_at',
+      updated_from: 'r.updated_at',
+      updated_to: 'r.updated_at',
+    };
+  }
+
   // =============================================================================
   // PERMISSION MANAGEMENT
   // =============================================================================
@@ -372,6 +386,10 @@ export class PermissionRoleService extends BaseService<IRole> {
     dataQuery = scopedDb.tenantJoin(dataQuery, 'user_roles as ur', 'r.role_id', 'ur.role_id', { type: 'left' });
 
     let countQuery = scopedDb.table('roles as r');
+
+    // Common created_*/updated_* range filters (qualified to the roles alias).
+    this.applyRangeFilters(dataQuery, filters);
+    this.applyRangeFilters(countQuery, filters);
 
     // Apply filters
     if (filters.role_name) {
