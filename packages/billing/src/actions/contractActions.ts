@@ -20,8 +20,8 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
 import { getContractMonthlyFixedValuesByContract } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { resolveMemberRate, type ServicePriceRateRow } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
-import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { buildContractRecordCreatedPayload, buildContractRecordUpdatedPayload } from '@alga-psa/workflow-streams';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildContractRecordCreatedPayload } from '@alga-psa/workflow-streams';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
 import { Knex } from 'knex';
@@ -40,6 +40,8 @@ import {
   DetailedContractLine,
 } from '../repositories/contractLineRepository';
 import { newSupportReference } from '../lib/supportReference';
+import { ContractUpdateError, updateContractHeaderWithEvents } from '../lib/contractUpdate';
+import { ContractDeletionError, deleteContractWithEvents } from '../lib/contractDeletion';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 
 type TenantScopedKnex = Knex | Knex.Transaction;
@@ -189,13 +191,6 @@ async function attachContractClientLogos(
     ...row,
     logoUrl: row.client_id ? logoUrlsMap.get(row.client_id) ?? null : null,
   }));
-}
-
-async function isTemplateContract(knex: TenantScopedKnex, tenant: string, contractId: string): Promise<boolean> {
-  const template = await tenantScopedTable(knex, tenant, 'contract_templates')
-    .where({ template_id: contractId })
-    .first();
-  return Boolean(template);
 }
 
 export const getContracts = withAuth(async (user, { tenant }): Promise<IContract[] | ContractActionError> => {
@@ -572,77 +567,15 @@ export const updateContract = withAuth(async (
       return mapTemplateToContract(updatedTemplate);
     }
 
-    if (currentContract.is_system_managed_default === true) {
-      throw new ContractActionDomainError(
-        'System-managed default contracts are attribution-only; contract authoring and lifecycle edits are disabled.',
-      );
-    }
-
-    // Special handling for expired contracts
-    if (currentContract.status === 'expired') {
-      // If trying to manually change status of an expired contract (not through end date logic)
-      if (updateData.status && updateData.status !== 'expired') {
-        throw new ContractActionDomainError('Cannot manually change the status of an expired contract. To reactivate, extend the contract end date.');
+    try {
+      return await updateContractHeaderWithEvents(knex, tenant, currentContract, updateData, user.user_id);
+    } catch (error) {
+      // Rule refusals are expected domain errors, surfaced to the UI as messages.
+      if (error instanceof ContractUpdateError) {
+        throw new ContractActionDomainError(error.message);
       }
-
-      // Check if end dates are being updated on client contracts
-      // We'll check this after the client contract updates below
-      // For now, remove the status from updateData if it's expired (we'll handle it automatically)
-      if (updateData.status === 'expired') {
-        delete updateData.status; // Don't update status, we'll determine it based on end dates
-      }
-    } else {
-      // Prevent manual setting of expired status on non-expired contracts
-      if (updateData.status === 'expired') {
-        throw new ContractActionDomainError('Cannot manually set contract to expired. Contracts are automatically expired when their end date passes.');
-      }
+      throw error;
     }
-
-    // If trying to set contract to draft, check if it has invoices
-    if (updateData.status === 'draft') {
-      const hasInvoices = await Contract.hasInvoices(knex, tenant, contractId);
-      if (hasInvoices) {
-        throw new ContractActionDomainError('Cannot set contract to draft because it has associated invoices. Contracts with invoices cannot be set to draft.');
-      }
-    }
-
-    const {
-      tenant: _ignoredTenant,
-      is_system_managed_default: _ignoredSystemManagedMarker,
-      owner_client_id: _ignoredOwnerClientId,
-      ...safeUpdateData
-    } = updateData as any;
-    const updated = await Contract.update(knex, tenant, contractId, safeUpdateData);
-    const occurredAt = updated.updated_at ?? new Date().toISOString();
-    await publishWorkflowEvent({
-      eventType: 'CONTRACT_UPDATED',
-      payload: buildContractRecordUpdatedPayload({
-        contractId,
-        ownerClientId: updated.owner_client_id,
-        userId: user.user_id,
-        occurredAt: new Date(occurredAt).toISOString(),
-        status: updated.status,
-        patch: safeUpdateData,
-        before: currentContract as unknown as Record<string, unknown>,
-        after: updated as unknown as Record<string, unknown>,
-      }),
-      ctx: {
-        tenantId: tenant,
-        occurredAt,
-        actor: maybeUserActor(user),
-      },
-      idempotencyKey: `contract_updated:${contractId}:${occurredAt}`,
-    });
-
-    // After updating, check if an expired contract should be reactivated based on end dates
-    if (currentContract.status === 'expired') {
-      await Contract.checkAndReactivateExpiredContract(knex, tenant, contractId);
-      // Re-fetch the contract to get the potentially updated status
-      const reactivatedContract = await Contract.getById(knex, tenant, contractId);
-      return reactivatedContract!;
-    }
-
-    return updated;
   } catch (error) {
     console.error('Error updating contract:', error);
     const expected = contractActionErrorFrom(error);
@@ -671,64 +604,18 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
       }
     }
 
-    const templateExists = await isTemplateContract(knex, tenant, contractId);
-    if (templateExists) {
-      await ContractTemplateModel.delete(contractId, tenant);
-      return;
-    }
-
-    // LEVERAGE: friction contract-delete-owns-transaction — Contract.delete issues ~15
-    // statements but leaves the transaction to its caller, so every caller must remember
-    // to wrap it or a mid-way failure orphans the contract header.
-    // Everything commits together or rolls back; events are published only after commit.
-    const clientContracts = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const currentContract = await Contract.getById(trx, tenant, contractId);
-      if (currentContract?.is_system_managed_default === true) {
-        throw new ContractActionDomainError('System-managed default contracts cannot be deleted manually');
+    // Template branch, system-managed refusal, invoice guard, transactional delete and the
+    // post-commit events are shared with the REST API (DELETE /api/v1/contracts/{id}).
+    try {
+      await deleteContractWithEvents(knex, tenant, contractId, user.user_id);
+    } catch (error) {
+      // NOT_FOUND / SYSTEM_MANAGED are domain refusals; HAS_INVOICES keeps its message so
+      // contractActionErrorFrom maps it to the localized "has invoices" error.
+      if (error instanceof ContractDeletionError && error.code !== 'HAS_INVOICES') {
+        throw new ContractActionDomainError(error.message);
       }
-
-      const rows = await tenantScopedTable(trx, tenant, 'client_contracts')
-        .where({ contract_id: contractId })
-        .select('client_contract_id', 'client_id');
-
-      await Contract.delete(trx, tenant, contractId);
-      return rows;
-    });
-    const occurredAt = new Date().toISOString();
-
-    for (const clientContract of clientContracts) {
-      await publishNonCatalogWorkflowEvent({
-        eventType: 'CLIENT_CONTRACT_DELETED',
-        payload: {
-          clientContractId: clientContract.client_contract_id,
-          contractId,
-          clientId: clientContract.client_id,
-          userId: user.user_id,
-          timestamp: occurredAt,
-        },
-        ctx: {
-          tenantId: tenant,
-          occurredAt,
-          actor: maybeUserActor(user),
-        },
-        idempotencyKey: `client_contract_deleted:${clientContract.client_contract_id}:${occurredAt}`,
-      });
+      throw error;
     }
-
-    await publishNonCatalogWorkflowEvent({
-      eventType: 'CONTRACT_DELETED',
-      payload: {
-        contractId,
-        userId: user.user_id,
-        timestamp: occurredAt,
-      },
-      ctx: {
-        tenantId: tenant,
-        occurredAt,
-        actor: maybeUserActor(user),
-      },
-      idempotencyKey: `contract_deleted:${contractId}:${occurredAt}`,
-    });
   } catch (error) {
     const expected = contractActionErrorFrom(error);
     if (expected) {

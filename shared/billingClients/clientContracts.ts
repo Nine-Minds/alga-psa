@@ -359,6 +359,55 @@ export async function getClientContracts(
   return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
 }
 
+/**
+ * Currency a new contract for `clientId` is billed in: the client's configured
+ * default, then the tenant default (default_billing_settings), then 'USD' as the
+ * last-resort default the contract record has always used. Shared by the contract
+ * wizard and the REST contract create so both resolve the same currency.
+ */
+export async function resolveClientContractCurrency(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string
+): Promise<string> {
+  const db = tenantDb(knexOrTrx, tenant);
+  const clientRow = await db.table('clients')
+    .where({ client_id: clientId })
+    .select('default_currency_code')
+    .first();
+  if (clientRow?.default_currency_code) {
+    return clientRow.default_currency_code;
+  }
+  const billingSettings = await db.table('default_billing_settings')
+    .select('default_currency_code')
+    .first();
+  return billingSettings?.default_currency_code || 'USD';
+}
+
+/**
+ * Every client assignment of one contract (active or not), oldest first.
+ */
+export async function getClientContractsByContractId(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  contractId: string
+): Promise<IClientContract[]> {
+  const db = tenantDb(knexOrTrx, tenant);
+  const baseQuery = db.table('client_contracts as cc')
+    .where({ 'cc.contract_id': contractId })
+    .orderBy('cc.start_date', 'asc');
+  db.tenantJoin(baseQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id', { type: 'left' });
+
+  const rows = await withRenewalDefaultsJoin(db, baseQuery).select([
+    'cc.*',
+    'c.billing_frequency as contract_billing_frequency',
+    'c.status as contract_status',
+    ...RENEWAL_DEFAULT_SELECTIONS,
+  ]);
+
+  return rows.map(normalizeClientContract);
+}
+
 export async function getActiveClientContractsByClientIds(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,

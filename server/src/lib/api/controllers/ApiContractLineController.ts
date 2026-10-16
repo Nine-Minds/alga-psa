@@ -20,6 +20,8 @@ import {
   // Contract management schemas
   createContractSchema,
   updateContractSchema,
+  createContractAssignmentSchema,
+  updateContractAssignmentSchema,
   contractListQuerySchema,
   addContractLineSchema,
   updateContractAssociationSchema,
@@ -82,6 +84,9 @@ import { z } from 'zod';
 import { createApiResponse, createErrorResponse, createPaginatedResponse } from '../utils/response';
 import { getHateoasLinks } from '../utils/hateoas';
 import { requireRequestContext } from '../utils/requestContext';
+import { hasPermission } from '../../auth/rbac';
+import { getConnection } from '../../db/db';
+import { ForbiddenError, NotFoundError, UnauthorizedError } from '../middleware/apiMiddleware';
 
 export class ApiContractLineController {
   private contractLineService: ContractLineService;
@@ -470,6 +475,7 @@ export class ApiContractLineController {
     return async (req: NextRequest): Promise<NextResponse> => {
       const data = await req.json();
       const context = requireRequestContext(req);
+      await this.requireBillingPermission(context, 'create');
       
       // Validate request body
       const validation = createContractSchema.safeParse(data);
@@ -519,6 +525,160 @@ export class ApiContractLineController {
       
       await this.contractLineService.removeContractLine(params.contractId, params.contractLineId, requestContext);
       
+      return new NextResponse(null, { status: 204 });
+    };
+  }
+
+  /**
+   * Contract endpoints enforce the same `billing` permission as the UI contract actions.
+   */
+  private async requireBillingPermission(
+    context: ReturnType<typeof requireRequestContext>,
+    action: 'read' | 'create' | 'update' | 'delete'
+  ): Promise<void> {
+    if (!context.user) {
+      throw new UnauthorizedError('User context required');
+    }
+    const knex = await getConnection(context.tenant);
+    if (!(await hasPermission(context.user as any, 'billing', action, knex))) {
+      throw new ForbiddenError(`Permission denied: Cannot ${action} billing`);
+    }
+  }
+
+  /**
+   * GET /api/v1/contracts/{contractId}
+   */
+  getContract() {
+    return async (req: NextRequest, context: { params: Promise<{ contractId: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'read');
+      const contract = await this.contractLineService.getContract(params.contractId, requestContext);
+      return createApiResponse(contract);
+    };
+  }
+
+  /**
+   * PUT|PATCH /api/v1/contracts/{contractId}
+   */
+  updateContract() {
+    return async (req: NextRequest, context: { params: Promise<{ contractId: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'update');
+      const validation = updateContractSchema.safeParse(await req.json());
+      if (!validation.success) {
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+      }
+      const contract = await this.contractLineService.updateContract(params.contractId, validation.data, requestContext);
+      return createApiResponse(contract);
+    };
+  }
+
+  /**
+   * DELETE /api/v1/contracts/{contractId}
+   */
+  deleteContract() {
+    return async (req: NextRequest, context: { params: Promise<{ contractId: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'delete');
+      await this.contractLineService.deleteContract(params.contractId, requestContext);
+      return new NextResponse(null, { status: 204 });
+    };
+  }
+
+  /**
+   * GET /api/v1/contracts/{contractId}/assignments
+   */
+  listContractAssignments() {
+    return async (req: NextRequest, context: { params: Promise<{ contractId: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'read');
+      const assignments = await this.contractLineService.listContractAssignments(params.contractId, requestContext);
+      return createApiResponse(assignments);
+    };
+  }
+
+  /**
+   * POST /api/v1/contracts/{contractId}/assignments
+   */
+  createContractAssignment() {
+    return async (req: NextRequest, context: { params: Promise<{ contractId: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'create');
+      const validation = createContractAssignmentSchema.safeParse(await req.json());
+      if (!validation.success) {
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+      }
+      const assignment = await this.contractLineService.createContractAssignment(
+        params.contractId,
+        validation.data,
+        requestContext
+      );
+      return createApiResponse(assignment, 201);
+    };
+  }
+
+  /**
+   * GET /api/v1/contracts/{contractId}/assignments/{clientContractId}
+   */
+  getContractAssignment() {
+    return async (
+      req: NextRequest,
+      context: { params: Promise<{ contractId: string; clientContractId: string }> }
+    ): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'read');
+      const assignments = await this.contractLineService.listContractAssignments(params.contractId, requestContext);
+      const assignment = assignments.find((a) => a.client_contract_id === params.clientContractId);
+      if (!assignment) {
+        throw new NotFoundError('Client contract assignment not found');
+      }
+      return createApiResponse(assignment);
+    };
+  }
+
+  /**
+   * PUT|PATCH /api/v1/contracts/{contractId}/assignments/{clientContractId}
+   */
+  updateContractAssignment() {
+    return async (
+      req: NextRequest,
+      context: { params: Promise<{ contractId: string; clientContractId: string }> }
+    ): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'update');
+      const validation = updateContractAssignmentSchema.safeParse(await req.json());
+      if (!validation.success) {
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+      }
+      const assignment = await this.contractLineService.updateContractAssignment(
+        params.contractId,
+        params.clientContractId,
+        validation.data,
+        requestContext
+      );
+      return createApiResponse(assignment);
+    };
+  }
+
+  /**
+   * DELETE /api/v1/contracts/{contractId}/assignments/{clientContractId}
+   */
+  deleteContractAssignment() {
+    return async (
+      req: NextRequest,
+      context: { params: Promise<{ contractId: string; clientContractId: string }> }
+    ): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
+      await this.requireBillingPermission(requestContext, 'delete');
+      await this.contractLineService.deleteContractAssignment(params.contractId, params.clientContractId, requestContext);
       return new NextResponse(null, { status: 204 });
     };
   }

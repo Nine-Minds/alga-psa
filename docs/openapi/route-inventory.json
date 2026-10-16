@@ -3321,6 +3321,46 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/v1/contracts/{contractId}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PATCH",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/contracts/[contractId]/route.ts",
+    "controller": "ApiContractLineController",
+    "controller_import": "@/lib/api/controllers/ApiContractLineController",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/contracts/{contractId}/assignments",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/contracts/[contractId]/assignments/route.ts",
+    "controller": "ApiContractLineController",
+    "controller_import": "@/lib/api/controllers/ApiContractLineController",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/contracts/{contractId}/assignments/{clientContractId}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PATCH",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/contracts/[contractId]/assignments/[clientContractId]/route.ts",
+    "controller": "ApiContractLineController",
+    "controller_import": "@/lib/api/controllers/ApiContractLineController",
+    "controller_file": "server/src/lib/api/controllers/ApiContractLineController.ts"
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/v1/contracts/{contractId}/contract-lines",
     "methods": [
       "POST"
