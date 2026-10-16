@@ -283,6 +283,11 @@
         "title": "Informe de rentabilidad",
         "description": "Margen por cliente, acuerdo y ticket según las tarifas de costo internas configuradas.",
         "empty": "No hay datos de rentabilidad disponibles"
+      },
+      "hourBlockUsage": {
+        "title": "Uso de bloques de horas prepagadas",
+        "description": "Siga el consumo de los bloques de horas prepagadas emitidos (de contrato o puntuales) y su utilización.",
+        "empty": "No se han emitido bloques de horas prepagadas"
       }
     },
     "table": {
@@ -305,13 +310,20 @@
       "profit": "Beneficio",
       "margin": "Margen",
       "plusVariableUsage": "+ uso variable",
-      "variableUsage": "Uso variable"
+      "variableUsage": "Uso variable",
+      "service": "Servicio",
+      "hourlyRate": "Tarifa / h",
+      "expirationDate": "Vence",
+      "neverExpires": "Nunca",
+      "adhocBlock": "Puntual"
     },
     "statusValues": {
       "active": "Activo",
       "upcoming": "Próximo",
       "yes": "Sí",
-      "no": "No"
+      "no": "No",
+      "expired": "Vencido",
+      "voided": "Anulado"
     },
     "profitability": {
       "formats": {

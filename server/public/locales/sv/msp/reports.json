@@ -283,6 +283,11 @@
         "title": "Lönsamhetsrapport",
         "description": "Marginal per kund, avtal och ärende utifrån konfigurerade interna arbetskostnadssatser.",
         "empty": "Inga lönsamhetsdata tillgängliga"
+      },
+      "hourBlockUsage": {
+        "title": "Användning av förbetalda timblock",
+        "description": "Följ förbrukningen av utfärdade förbetalda timblock (avtalsutfärdade och enstaka) och deras utnyttjande.",
+        "empty": "Inga förbetalda timblock har utfärdats"
       }
     },
     "table": {
@@ -305,13 +310,20 @@
       "profit": "Vinst",
       "margin": "Marginal",
       "plusVariableUsage": "+ rörlig förbrukning",
-      "variableUsage": "Rörlig förbrukning"
+      "variableUsage": "Rörlig förbrukning",
+      "service": "Tjänst",
+      "hourlyRate": "Tariff / tim",
+      "expirationDate": "Går ut",
+      "neverExpires": "Aldrig",
+      "adhocBlock": "Enstaka"
     },
     "statusValues": {
       "active": "Aktivt",
       "upcoming": "Kommande",
       "yes": "Ja",
-      "no": "Nej"
+      "no": "Nej",
+      "expired": "Utgången",
+      "voided": "Ogiltigförklarad"
     },
     "profitability": {
       "formats": {

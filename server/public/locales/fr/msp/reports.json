@@ -283,6 +283,11 @@
         "title": "Rapport de rentabilité",
         "description": "Marge par client, contrat et ticket selon les taux de coût internes configurés.",
         "empty": "Aucune donnée de rentabilité disponible"
+      },
+      "hourBlockUsage": {
+        "title": "Utilisation des blocs d’heures prépayés",
+        "description": "Suivez la consommation des blocs d’heures prépayés émis (liés à un contrat ou ponctuels) et leur taux d’utilisation.",
+        "empty": "Aucun bloc d’heures prépayé émis"
       }
     },
     "table": {
@@ -305,13 +310,20 @@
       "profit": "Bénéfice",
       "margin": "Marge",
       "plusVariableUsage": "+ utilisation variable",
-      "variableUsage": "Utilisation variable"
+      "variableUsage": "Utilisation variable",
+      "service": "Service",
+      "hourlyRate": "Tarif / h",
+      "expirationDate": "Expire",
+      "neverExpires": "Jamais",
+      "adhocBlock": "Ponctuel"
     },
     "statusValues": {
       "active": "Actif",
       "upcoming": "À venir",
       "yes": "Oui",
-      "no": "Non"
+      "no": "Non",
+      "expired": "Expiré",
+      "voided": "Annulé"
     },
     "profitability": {
       "formats": {

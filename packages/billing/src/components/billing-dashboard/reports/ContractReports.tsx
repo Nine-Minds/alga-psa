@@ -21,10 +21,12 @@ import {
   getContractRevenueReport,
   getContractExpirationReport,
   getBucketUsageReport,
+  getHourBlockUsageReport,
   getContractReportSummary,
   ContractRevenue,
   ContractExpiration,
   BucketUsage,
+  HourBlockUsage,
   ContractReportSummary
 } from '@alga-psa/billing/actions/contractReportActions';
 import type { CurrencyAmount } from '@alga-psa/shared/billingClients/contractMonthlyValue';
@@ -68,6 +70,8 @@ const ContractReports: React.FC = () => {
   const [revenueData, setRevenueData] = useState<ContractRevenue[]>([]);
   const [expirationData, setExpirationData] = useState<ContractExpiration[]>([]);
   const [bucketUsageData, setBucketUsageData] = useState<BucketUsage[]>([]);
+  const [hourBlockUsageData, setHourBlockUsageData] = useState<HourBlockUsage[]>([]);
+  const [hourBlockPage, setHourBlockPage] = useState(1);
   const [summary, setSummary] = useState<ContractReportSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -89,13 +93,14 @@ const ContractReports: React.FC = () => {
         setIsLoading(true);
         setError(null);
 
-        const [revenue, expiration, bucketUsage, summaryData] = await Promise.all([
+        const [revenue, expiration, bucketUsage, hourBlockUsage, summaryData] = await Promise.all([
           getContractRevenueReport(),
           getContractExpirationReport(),
           getBucketUsageReport(),
+          getHourBlockUsageReport(),
           getContractReportSummary()
         ]);
-        const expectedLoadError = [revenue, expiration, bucketUsage, summaryData].find(isReturnedActionError);
+        const expectedLoadError = [revenue, expiration, bucketUsage, hourBlockUsage, summaryData].find(isReturnedActionError);
         if (expectedLoadError) {
           setError(getErrorMessage(expectedLoadError));
           return;
@@ -104,6 +109,7 @@ const ContractReports: React.FC = () => {
         setRevenueData(revenue);
         setExpirationData(expiration);
         setBucketUsageData(bucketUsage);
+        setHourBlockUsageData(hourBlockUsage);
         setSummary(summaryData);
       } catch (err) {
         console.error('Error loading report data:', err);
@@ -307,6 +313,87 @@ const ContractReports: React.FC = () => {
     }
   ];
 
+  // Hour Block Usage Columns (prepaid blocks: ad-hoc and contract-issued)
+  const hourBlockStatusLabel = (value: string): string => {
+    if (value === 'active') return t('contractReports.statusValues.active', { defaultValue: 'Active' });
+    if (value === 'expired') return t('contractReports.statusValues.expired', { defaultValue: 'Expired' });
+    if (value === 'voided') return t('contractReports.statusValues.voided', { defaultValue: 'Voided' });
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  };
+
+  const hourBlockUsageColumns: ColumnDefinition<HourBlockUsage>[] = [
+    {
+      title: t('contractReports.table.client', { defaultValue: 'Client' }),
+      dataIndex: 'client_name',
+      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />
+    },
+    {
+      title: t('contractReports.table.service', { defaultValue: 'Service' }),
+      dataIndex: 'service_name',
+      render: (value: string) => <span className="font-medium">{value}</span>
+    },
+    {
+      title: t('contractReports.table.contract', { defaultValue: 'Contract' }),
+      dataIndex: 'contract_name',
+      render: (value: string | null) => value ?? <span className="text-muted-foreground">{t('contractReports.table.adhocBlock', { defaultValue: 'Ad-hoc' })}</span>
+    },
+    {
+      title: t('contractReports.table.totalHours', { defaultValue: 'Total Hours' }),
+      dataIndex: 'total_hours',
+      render: (value: number) => `${value} ${t('units.hoursShort', { defaultValue: 'hrs' })}`
+    },
+    {
+      title: t('contractReports.table.usedHours', { defaultValue: 'Used Hours' }),
+      dataIndex: 'used_hours',
+      render: (value: number) => `${value} ${t('units.hoursShort', { defaultValue: 'hrs' })}`
+    },
+    {
+      title: t('contractReports.table.remaining', { defaultValue: 'Remaining' }),
+      dataIndex: 'remaining_hours',
+      render: (value: number) => (
+        <span className={value === 0 ? 'text-red-600 font-semibold' : ''}>
+          {value} {t('units.hoursShort', { defaultValue: 'hrs' })}
+        </span>
+      )
+    },
+    {
+      title: t('contractReports.table.utilization', { defaultValue: 'Utilization' }),
+      dataIndex: 'utilization_percentage',
+      render: (value: number) => (
+        <div className="flex items-center gap-2">
+          <div className="flex-1 bg-[rgb(var(--color-border-200))] rounded-full h-2 max-w-[100px]">
+            <div
+              className={`h-2 rounded-full ${value > 100 ? 'bg-destructive' : value > 80 ? 'bg-warning' : 'bg-success'}`}
+              style={{ width: `${Math.min(value, 100)}%` }}
+            />
+          </div>
+          <span className="text-sm font-medium">{value}{t('units.percent', { defaultValue: '%' })}</span>
+        </div>
+      )
+    },
+    {
+      title: t('contractReports.table.hourlyRate', { defaultValue: 'Rate / hr' }),
+      dataIndex: 'hourly_rate',
+      render: (value: number, record) => formatCents(value, record.currency_code)
+    },
+    {
+      title: t('contractReports.table.expirationDate', { defaultValue: 'Expires' }),
+      dataIndex: 'expiration_date',
+      render: (value: string | null) => value
+        ? formatDate(value)
+        : <span className="text-muted-foreground">{t('contractReports.table.neverExpires', { defaultValue: 'Never' })}</span>
+    },
+    {
+      title: t('contractReports.table.status', { defaultValue: 'Status' }),
+      dataIndex: 'status',
+      render: (value: string) => (
+        <Badge variant="secondary" className={value === 'active' ? 'border-green-300 text-green-800' : 'border-[rgb(var(--color-border-300))] text-muted-foreground'}>
+          {hourBlockStatusLabel(value)}
+        </Badge>
+      )
+    }
+  ];
+
   // Print columns mirror the on-screen tables but drop badges/bars and render every
   // row — the screen tables paginate.
   const revenuePrintColumns: PrintableTableColumn<ContractRevenue>[] = [
@@ -360,6 +447,19 @@ const ContractReports: React.FC = () => {
         ? `+${row.overage_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}`
         : t('units.dash', { defaultValue: '—' })),
     },
+  ];
+
+  const hourBlockUsagePrintColumns: PrintableTableColumn<HourBlockUsage>[] = [
+    { key: 'client', header: t('contractReports.table.client', { defaultValue: 'Client' }), render: (row) => row.client_name },
+    { key: 'service', header: t('contractReports.table.service', { defaultValue: 'Service' }), render: (row) => row.service_name },
+    { key: 'contract', header: t('contractReports.table.contract', { defaultValue: 'Contract' }), render: (row) => row.contract_name ?? t('contractReports.table.adhocBlock', { defaultValue: 'Ad-hoc' }) },
+    { key: 'totalHours', header: t('contractReports.table.totalHours', { defaultValue: 'Total Hours' }), render: (row) => `${row.total_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}` },
+    { key: 'usedHours', header: t('contractReports.table.usedHours', { defaultValue: 'Used Hours' }), render: (row) => `${row.used_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}` },
+    { key: 'remaining', header: t('contractReports.table.remaining', { defaultValue: 'Remaining' }), render: (row) => `${row.remaining_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}` },
+    { key: 'utilization', header: t('contractReports.table.utilization', { defaultValue: 'Utilization' }), render: (row) => `${row.utilization_percentage}${t('units.percent', { defaultValue: '%' })}` },
+    { key: 'hourlyRate', header: t('contractReports.table.hourlyRate', { defaultValue: 'Rate / hr' }), render: (row) => formatCents(row.hourly_rate, row.currency_code) },
+    { key: 'expiration', header: t('contractReports.table.expirationDate', { defaultValue: 'Expires' }), render: (row) => row.expiration_date ? formatDate(row.expiration_date) : t('contractReports.table.neverExpires', { defaultValue: 'Never' }) },
+    { key: 'status', header: t('contractReports.table.status', { defaultValue: 'Status' }), render: (row) => hourBlockStatusLabel(row.status) },
   ];
 
   const printSummaryMetrics = [
@@ -704,6 +804,48 @@ const ContractReports: React.FC = () => {
               columns={bucketUsagePrintColumns}
               getRowKey={(row) => `${row.contract_name}-${row.client_id ?? ''}`}
               emptyMessage={t('contractReports.sections.bucketUsage.empty', { defaultValue: 'No bucket-based contracts found' })}
+            />
+          )}
+          <Card className="p-6 mt-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-semibold">
+                {t('contractReports.sections.hourBlockUsage.title', { defaultValue: 'Prepaid Hour Block Usage' })}
+              </h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              {t('contractReports.sections.hourBlockUsage.description', {
+                defaultValue: 'Track burn-down of issued prepaid hour blocks (contract-issued and ad-hoc) and their utilization.',
+              })}
+            </p>
+            {hourBlockUsageData.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                {t('contractReports.sections.hourBlockUsage.empty', { defaultValue: 'No prepaid hour blocks issued' })}
+              </p>
+            ) : (
+              <DataTable
+                id="hour-block-usage-table"
+                data={hourBlockUsageData}
+                columns={hourBlockUsageColumns}
+                pagination={true}
+                currentPage={hourBlockPage}
+                onPageChange={setHourBlockPage}
+                pageSize={pageSize}
+                onItemsPerPageChange={handlePageSizeChange}
+              />
+            )}
+          </Card>
+          {printRoot(
+            'hour-block-usage-print',
+            t('contractReports.sections.hourBlockUsage.title', { defaultValue: 'Prepaid Hour Block Usage' }),
+            t('contractReports.sections.hourBlockUsage.description', {
+              defaultValue: 'Track burn-down of issued prepaid hour blocks (contract-issued and ad-hoc) and their utilization.',
+            }),
+            <PrintableTable
+              rows={hourBlockUsageData}
+              columns={hourBlockUsagePrintColumns}
+              getRowKey={(row) => row.block_id}
+              emptyMessage={t('contractReports.sections.hourBlockUsage.empty', { defaultValue: 'No prepaid hour blocks issued' })}
             />
           )}
         </TabsContent>

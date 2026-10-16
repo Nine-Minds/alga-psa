@@ -283,6 +283,11 @@
         "title": "Profitability Report",
         "description": "Client, agreement, and ticket margin using configured internal labor cost rates.",
         "empty": "No profitability data available"
+      },
+      "hourBlockUsage": {
+        "title": "Prepaid Hour Block Usage",
+        "description": "Track burn-down of issued prepaid hour blocks (contract-issued and ad-hoc) and their utilization.",
+        "empty": "No prepaid hour blocks issued"
       }
     },
     "table": {
@@ -305,13 +310,20 @@
       "profit": "Profit",
       "margin": "Margin",
       "plusVariableUsage": "+ variable usage",
-      "variableUsage": "Variable usage"
+      "variableUsage": "Variable usage",
+      "service": "Service",
+      "hourlyRate": "Rate / hr",
+      "expirationDate": "Expires",
+      "neverExpires": "Never",
+      "adhocBlock": "Ad-hoc"
     },
     "statusValues": {
       "active": "Active",
       "upcoming": "Upcoming",
       "yes": "Yes",
-      "no": "No"
+      "no": "No",
+      "expired": "Expired",
+      "voided": "Voided"
     },
     "profitability": {
       "formats": {

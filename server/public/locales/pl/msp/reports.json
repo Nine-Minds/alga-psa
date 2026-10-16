@@ -283,6 +283,11 @@
         "title": "Raport rentowności",
         "description": "Marża według klienta, umowy i zgłoszenia na podstawie skonfigurowanych wewnętrznych stawek kosztów.",
         "empty": "Brak danych o rentowności"
+      },
+      "hourBlockUsage": {
+        "title": "Wykorzystanie przedpłaconych bloków godzin",
+        "description": "Śledź zużycie wydanych przedpłaconych bloków godzin (z kontraktu i doraźnych) oraz ich wykorzystanie.",
+        "empty": "Nie wydano przedpłaconych bloków godzin"
       }
     },
     "table": {
@@ -305,13 +310,20 @@
       "profit": "Zysk",
       "margin": "Marża",
       "plusVariableUsage": "+ zmienne użycie",
-      "variableUsage": "Zmienne użycie"
+      "variableUsage": "Zmienne użycie",
+      "service": "Usługa",
+      "hourlyRate": "Stawka / h",
+      "expirationDate": "Wygasa",
+      "neverExpires": "Nigdy",
+      "adhocBlock": "Doraźny"
     },
     "statusValues": {
       "active": "Aktywny",
       "upcoming": "Nadchodzący",
       "yes": "Tak",
-      "no": "Nie"
+      "no": "Nie",
+      "expired": "Wygasły",
+      "voided": "Unieważniony"
     },
     "profitability": {
       "formats": {

@@ -283,6 +283,11 @@
         "title": "Report di redditività",
         "description": "Margine per cliente, contratto e ticket in base alle tariffe di costo interne configurate.",
         "empty": "Nessun dato di redditività disponibile"
+      },
+      "hourBlockUsage": {
+        "title": "Utilizzo dei blocchi di ore anticipate",
+        "description": "Monitora il consumo dei blocchi di ore anticipate emessi (da contratto o ad hoc) e il loro utilizzo.",
+        "empty": "Nessun blocco di ore anticipate emesso"
       }
     },
     "table": {
@@ -305,13 +310,20 @@
       "profit": "Profitto",
       "margin": "Margine",
       "plusVariableUsage": "+ utilizzo variabile",
-      "variableUsage": "Utilizzo variabile"
+      "variableUsage": "Utilizzo variabile",
+      "service": "Servizio",
+      "hourlyRate": "Tariffa / ora",
+      "expirationDate": "Scade",
+      "neverExpires": "Mai",
+      "adhocBlock": "Ad hoc"
     },
     "statusValues": {
       "active": "Attivo",
       "upcoming": "In arrivo",
       "yes": "Sì",
-      "no": "No"
+      "no": "No",
+      "expired": "Scaduto",
+      "voided": "Annullato"
     },
     "profitability": {
       "formats": {

@@ -283,6 +283,11 @@
         "title": "Winstgevendheidsrapport",
         "description": "Marge per klant, contract en ticket op basis van geconfigureerde interne kostentarieven.",
         "empty": "Geen winstgevendheidsgegevens beschikbaar"
+      },
+      "hourBlockUsage": {
+        "title": "Gebruik vooruitbetaalde urenblokken",
+        "description": "Volg de opname van uitgegeven vooruitbetaalde urenblokken (contractgebonden en ad-hoc) en het gebruik.",
+        "empty": "Geen vooruitbetaalde urenblokken uitgegeven"
       }
     },
     "table": {
@@ -305,13 +310,20 @@
       "profit": "Winst",
       "margin": "Marge",
       "plusVariableUsage": "+ variabel verbruik",
-      "variableUsage": "Variabel verbruik"
+      "variableUsage": "Variabel verbruik",
+      "service": "Dienst",
+      "hourlyRate": "Tarief / uur",
+      "expirationDate": "Verloopt",
+      "neverExpires": "Nooit",
+      "adhocBlock": "Ad-hoc"
     },
     "statusValues": {
       "active": "Actief",
       "upcoming": "Binnenkort",
       "yes": "Ja",
-      "no": "Nee"
+      "no": "Nee",
+      "expired": "Verlopen",
+      "voided": "Ongedaan gemaakt"
     },
     "profitability": {
       "formats": {

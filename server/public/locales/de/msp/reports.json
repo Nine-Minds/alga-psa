@@ -283,6 +283,11 @@
         "title": "Rentabilitätsbericht",
         "description": "Kunden-, Vertrags- und Ticketmarge auf Basis der konfigurierten internen Kostensätze.",
         "empty": "Keine Rentabilitätsdaten verfügbar"
+      },
+      "hourBlockUsage": {
+        "title": "Nutzung vorausbezahlter Stundenblöcke",
+        "description": "Verfolgung des Verbrauchs ausgegebener vorausbezahlter Stundenblöcke (vertragsgebunden und ad-hoc) und ihrer Auslastung.",
+        "empty": "Keine vorausbezahlten Stundenblöcke ausgegeben"
       }
     },
     "table": {
@@ -305,13 +310,20 @@
       "profit": "Gewinn",
       "margin": "Marge",
       "plusVariableUsage": "+ variabler Verbrauch",
-      "variableUsage": "Variabler Verbrauch"
+      "variableUsage": "Variabler Verbrauch",
+      "service": "Dienstleistung",
+      "hourlyRate": "Satz / Std.",
+      "expirationDate": "Läuft ab",
+      "neverExpires": "Nie",
+      "adhocBlock": "Ad-hoc"
     },
     "statusValues": {
       "active": "Aktiv",
       "upcoming": "Bevorstehend",
       "yes": "Ja",
-      "no": "Nein"
+      "no": "Nein",
+      "expired": "Abgelaufen",
+      "voided": "Storniert"
     },
     "profitability": {
       "formats": {
