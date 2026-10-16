@@ -1,3 +1,4 @@
+import { tryNormalizeDateOnly } from '@alga-psa/types';
 import type { ContractStatus } from '@alga-psa/types';
 
 /**
@@ -48,26 +49,10 @@ export function toLocalDateInTimeZone(instant: Date, timeZone?: string | null): 
 }
 
 
-const normalizeDateOnly = (value: string | Date | null | undefined): string | null => {
-  if (value instanceof Date) {
-    return value.toISOString().slice(0, 10);
-  }
-
-  if (typeof value !== 'string') {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    return trimmed;
-  }
-
-  return trimmed.includes('T') ? trimmed.slice(0, 10) : null;
-};
+// LEVERAGE: pattern date-only-normalizer — several local normalizeDateOnly copies exist; this one
+// delegates to the shared @alga-psa/types helper (local Y/M/D for Date, never toISOString).
+const normalizeDateOnly = (value: string | Date | null | undefined): string | null =>
+  tryNormalizeDateOnly(value);
 
 const normalizeNowDateOnly = (value?: string | Date, timeZone?: string | null): string => {
   if (value instanceof Date) {

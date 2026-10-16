@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { tryNormalizeDateOnly } from '@alga-psa/types';
 import type { IClientContract } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import type { ClientContractAssignmentCreateInput } from './types';
@@ -706,7 +707,7 @@ export async function activateClientContractAssignment(
   // start_date; that is deliberately unchanged).
   if (!needsHeaderActivation && existing.is_active && existing.assignment_status === 'scheduled') {
     throw new Error(
-      `Contract is already active and starts on ${String(existing.start_date).slice(0, 10)}; there is nothing to activate.`
+      `Contract is already active and starts on ${tryNormalizeDateOnly(existing.start_date) ?? String(existing.start_date)}; there is nothing to activate.`
     );
   }
 

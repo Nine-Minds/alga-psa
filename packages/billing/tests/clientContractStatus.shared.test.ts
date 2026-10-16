@@ -167,4 +167,32 @@ describe('deriveClientContractStatus', () => {
     expect(isLiveClientContractStatus('scheduled')).toBe(true);
     expect(isLiveClientContractStatus('draft')).toBe(false);
   });
+
+  it('keeps the calendar date of a pg DATE Date (local midnight) instead of shifting via UTC', () => {
+    // node-postgres returns DATE columns as local-midnight Date objects.
+    expect(
+      deriveClientContractStatus({
+        isActive: true,
+        startDate: new Date(2026, 9, 20),
+        endDate: null,
+        now: '2026-10-20',
+      })
+    ).toBe('active');
+    expect(
+      deriveClientContractStatus({
+        isActive: true,
+        startDate: new Date(2026, 9, 20),
+        endDate: null,
+        now: '2026-10-19',
+      })
+    ).toBe('scheduled');
+    expect(
+      deriveClientContractStatus({
+        isActive: true,
+        startDate: new Date(2026, 0, 1),
+        endDate: new Date(2026, 9, 19),
+        now: '2026-10-20',
+      })
+    ).toBe('expired');
+  });
 });

@@ -1,3 +1,4 @@
+import { tryNormalizeDateOnly } from '@alga-psa/types';
 import type { IClientContract } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
@@ -32,18 +33,9 @@ const normalizePositiveInteger = (value: unknown): number | undefined => {
   return normalized !== undefined && normalized > 0 ? normalized : undefined;
 };
 
-const normalizeDateOnly = (value: unknown): string | undefined => {
-  if (value === null || value === undefined) return undefined;
-  if (typeof value !== 'string') return undefined;
-
-  const trimmed = value.trim();
-  if (!trimmed) return undefined;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
-  if (trimmed.includes('T')) {
-    return trimmed.slice(0, 10);
-  }
-  return undefined;
-};
+// LEVERAGE: pattern date-only-normalizer — several local normalizeDateOnly copies exist; this one
+// delegates to the shared @alga-psa/types helper so pg DATE `Date` values keep their calendar date.
+const normalizeDateOnly = (value: unknown): string | undefined => tryNormalizeDateOnly(value) ?? undefined;
 
 const subtractDaysFromDateOnly = (dateOnly: string, days: number): string | undefined => {
   if (!Number.isInteger(days) || days < 0) return undefined;

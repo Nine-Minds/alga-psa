@@ -194,4 +194,25 @@ describe('activateClientContractAssignment', () => {
     ).rejects.toThrow('Client contract client-contract-missing not found');
     expect(updateContract).not.toHaveBeenCalled();
   });
+
+  it('names a clean YYYY-MM-DD start date when the assignment is already scheduled (pg Date value)', async () => {
+    const updateContract: PayloadMock = vi.fn();
+    const updateAssignment: PayloadMock = vi.fn();
+
+    await expect(
+      activateClientContractAssignment(
+        createMockTransaction(
+          {
+            contract: { contract_id: 'contract-1', status: 'active', is_active: true, currency_code: 'USD' },
+            // node-postgres returns DATE columns as local-midnight Date objects.
+            assignment: { ...baseAssignment, is_active: true, start_date: new Date(2099, 9, 22) },
+          },
+          { updateContract, updateAssignment },
+        ),
+        'tenant-1',
+        'client-contract-1',
+      ),
+    ).rejects.toThrow('Contract is already active and starts on 2099-10-22; there is nothing to activate.');
+    expect(updateAssignment).not.toHaveBeenCalled();
+  });
 });
