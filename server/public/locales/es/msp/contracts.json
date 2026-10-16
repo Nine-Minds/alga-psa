@@ -1528,6 +1528,14 @@
       "message": "Esto cambia el valor recurrente mensual estimado del contrato de {{before}} a {{after}}.",
       "confirm": "Confirmar y continuar",
       "cancel": "Volver"
+    },
+    "discounts": {
+      "help": "Los descuentos globales se aplican a cada cargo apto que factura este contrato. Se crean junto con el contrato al finalizar la configuración y la simulación de abajo los calcula.",
+      "draftDialog": {
+        "title": "¿Guardar el borrador sin descuentos?",
+        "message": "Un borrador guardado conserva solo sus líneas, por lo que los descuentos añadidos aquí no se guardan con él. Finalice la configuración para crearlos junto con el contrato o añádalos después en la pestaña Descuentos del contrato.",
+        "confirm": "Guardar el borrador igualmente"
+      }
     }
   },
   "wizardBasics": {

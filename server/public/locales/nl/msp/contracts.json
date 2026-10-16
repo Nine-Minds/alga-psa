@@ -1528,6 +1528,14 @@
       "message": "Hierdoor verandert de geschatte maandelijkse terugkerende waarde van het contract van {{before}} naar {{after}}.",
       "confirm": "Bevestigen en doorgaan",
       "cancel": "Terug"
+    },
+    "discounts": {
+      "help": "Contractbrede kortingen gelden voor elke geschikte kostenpost die dit contract factureert. Ze worden samen met het contract aangemaakt zodra u de installatie voltooit, en de simulatie hieronder rekent ze mee.",
+      "draftDialog": {
+        "title": "Concept zonder kortingen opslaan?",
+        "message": "Een opgeslagen concept behoudt alleen zijn regels, dus de hier toegevoegde kortingen worden er niet mee opgeslagen. Voltooi de installatie om ze samen met het contract aan te maken, of voeg ze later toe op het tabblad Kortingen van het contract.",
+        "confirm": "Concept toch opslaan"
+      }
     }
   },
   "wizardBasics": {

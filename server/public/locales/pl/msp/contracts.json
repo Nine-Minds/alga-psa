@@ -1528,6 +1528,14 @@
       "message": "To zmienia szacowaną miesięczną wartość cykliczną umowy z {{before}} na {{after}}.",
       "confirm": "Potwierdź i kontynuuj",
       "cancel": "Wstecz"
+    },
+    "discounts": {
+      "help": "Rabaty dla całej umowy obejmują każdą kwalifikującą się opłatę rozliczaną przez tę umowę. Powstają razem z umową po zakończeniu konfiguracji, a symulacja poniżej je wycenia.",
+      "draftDialog": {
+        "title": "Zapisać wersję roboczą bez rabatów?",
+        "message": "Zapisana wersja robocza zachowuje tylko swoje pozycje, więc dodane tutaj rabaty nie zostaną z nią zapisane. Zakończ konfigurację, aby utworzyć je razem z umową, albo dodaj je później na karcie Rabaty tej umowy.",
+        "confirm": "Zapisz wersję roboczą mimo to"
+      }
     }
   },
   "wizardBasics": {

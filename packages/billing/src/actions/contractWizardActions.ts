@@ -24,6 +24,10 @@ import {
 } from '@shared/billingClients/recurringAuthoringPolicy';
 import { createClientContractAssignment } from '@alga-psa/shared/billingClients';
 import { cloneTemplateDefaultDiscounts } from '../lib/billing/utils/templateClone';
+import {
+  toStoredDiscountValue,
+  validateDiscountInput,
+} from '../lib/billing/discountAuthoring';
 
 
 import ContractLine from '../models/contractLine';
@@ -71,6 +75,7 @@ import { syncRecurringServicePeriodsForContract } from './recurringServicePeriod
 import {
   contractWizardActionErrorFrom,
   fixedLineNoServiceMessage,
+  CONTRACT_DISCOUNT_PREFIX,
   RecurringTotalChangeRequiresConfirmation,
   type ContractWizardActionError,
   type RecurringTotalChangeConfirmation,
@@ -399,6 +404,25 @@ export type ClientContractWizardSubmission = {
    * after the corresponding wizard line is created.
    */
   bucket_pools?: ClientBucketPoolDraftInput[];
+  /**
+   * Contract-wide automatic discounts authored in the wizard. Each becomes one
+   * independently owned discount definition attached to the new client
+   * contract. Ignored for a draft save: a draft holds no standing terms.
+   */
+  discounts?: ClientContractWizardDiscountInput[];
+};
+
+/**
+ * One wizard-authored contract-wide discount. Values are in authoring units —
+ * percent units (`10` = 10%) or decimal currency (`50` = $50.00) — and are
+ * converted to the `discounts.value` convention by `toStoredDiscountValue`.
+ */
+export type ClientContractWizardDiscountInput = {
+  discount_name: string;
+  discount_type: 'percentage' | 'fixed';
+  value: number;
+  start_date: string;
+  end_date?: string | null;
 };
 
 /** Flag-on wizard bucket pool draft (line-keyed; see ContractWizard's BucketPoolDraft). */
@@ -1078,6 +1102,61 @@ const resolveClientContractCurrency = async (
     .select('default_currency_code')
     .first();
   return billingSettings?.default_currency_code || 'USD';
+};
+
+/**
+ * Writes the wizard's contract-wide discounts as definitions owned by the new
+ * client contract. Validation is the authoring module's, so a wizard draft and
+ * the contract's Discounts tab accept exactly the same discounts.
+ */
+const createWizardContractDiscounts = async (
+  trx: Knex.Transaction,
+  tenant: string,
+  params: {
+    clientContractId: string;
+    discounts: ClientContractWizardDiscountInput[];
+  },
+): Promise<void> => {
+  for (const discount of params.discounts) {
+    const input = {
+      discount_name: typeof discount?.discount_name === 'string' ? discount.discount_name.trim() : '',
+      discount_type: discount?.discount_type === 'fixed' ? ('fixed' as const) : ('percentage' as const),
+      value: Number(discount?.value),
+      start_date: normalizeDateOnly(discount?.start_date) ?? '',
+      end_date: discount?.end_date ? (normalizeDateOnly(discount.end_date) ?? null) : null,
+      scope: 'contract' as const,
+      is_active: true,
+    };
+    const invalid = validateDiscountInput(input);
+    if (invalid) {
+      throw new Error(`${CONTRACT_DISCOUNT_PREFIX}${invalid}`);
+    }
+
+    const discountId = uuidv4();
+    await tenantDb(trx, tenant).table('discounts').insert({
+      tenant,
+      discount_id: discountId,
+      discount_name: input.discount_name,
+      discount_type: input.discount_type,
+      value: toStoredDiscountValue(input),
+      start_date: `${input.start_date}T00:00:00.000Z`,
+      end_date: input.end_date ? `${input.end_date}T00:00:00.000Z` : null,
+      is_active: true,
+      scope: 'contract',
+      scope_service_id: null,
+      applies_to_item_id: null,
+      priority: null,
+      created_at: trx.fn.now(),
+      updated_at: trx.fn.now(),
+    });
+    await tenantDb(trx, tenant).table('contract_discount_assignments').insert({
+      tenant,
+      assignment_id: uuidv4(),
+      client_contract_id: params.clientContractId,
+      discount_id: discountId,
+      created_at: trx.fn.now(),
+    });
+  }
 };
 
 export const createClientContractFromWizard = withAuth(async (
@@ -1972,6 +2051,17 @@ export const createClientContractFromWizard = withAuth(async (
         clientContractId: clientContractAssignment.client_contract_id,
         clientId: submission.client_id,
         lineIdMap: sourceTemplateLineMap,
+      });
+    }
+
+    // Wizard-authored contract-wide discounts become this client contract's own
+    // definitions, the same independently owned shape the Discounts tab edits.
+    // A draft save carries none, so resuming a draft never meets standing terms
+    // the rebuild would orphan.
+    if (!isDraft) {
+      await createWizardContractDiscounts(trx, tenant, {
+        clientContractId: clientContractAssignment.client_contract_id,
+        discounts: submission.discounts ?? [],
       });
     }
 

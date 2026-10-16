@@ -1528,6 +1528,14 @@
       "message": "Dadurch ändert sich der geschätzte monatliche wiederkehrende Wert des Vertrags von {{before}} auf {{after}}.",
       "confirm": "Bestätigen und fortfahren",
       "cancel": "Zurück"
+    },
+    "discounts": {
+      "help": "Vertragsweite Rabatte gelten für jede berechtigte Position, die dieser Vertrag berechnet. Sie werden mit dem Vertrag angelegt, sobald Sie die Einrichtung abschließen, und die Simulation unten berechnet sie mit.",
+      "draftDialog": {
+        "title": "Entwurf ohne Rabatte speichern?",
+        "message": "Ein gespeicherter Entwurf behält nur seine Positionen, daher werden die hier hinzugefügten Rabatte nicht mitgespeichert. Schließen Sie die Einrichtung ab, um sie mit dem Vertrag anzulegen, oder fügen Sie sie später im Tab „Rabatte“ des Vertrags hinzu.",
+        "confirm": "Entwurf trotzdem speichern"
+      }
     }
   },
   "wizardBasics": {

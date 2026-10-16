@@ -1528,6 +1528,14 @@
       "message": "Isto altera o valor recorrente mensal estimado do contrato de {{before}} para {{after}}.",
       "confirm": "Confirmar e continuar",
       "cancel": "Voltar"
+    },
+    "discounts": {
+      "help": "Descontos gerais aplicam-se a cada cobrança elegível faturada por este contrato. Eles são criados junto com o contrato ao concluir a configuração, e a simulação abaixo os calcula.",
+      "draftDialog": {
+        "title": "Salvar o rascunho sem descontos?",
+        "message": "Um rascunho salvo mantém apenas suas linhas, portanto os descontos adicionados aqui não são salvos com ele. Conclua a configuração para criá-los junto com o contrato ou adicione-os depois na aba Descontos do contrato.",
+        "confirm": "Salvar o rascunho mesmo assim"
+      }
     }
   },
   "wizardBasics": {

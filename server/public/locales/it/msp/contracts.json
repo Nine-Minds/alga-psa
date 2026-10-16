@@ -1528,6 +1528,14 @@
       "message": "Questo modifica il valore ricorrente mensile stimato del contratto da {{before}} a {{after}}.",
       "confirm": "Conferma e continua",
       "cancel": "Indietro"
+    },
+    "discounts": {
+      "help": "Gli sconti globali si applicano a ogni addebito idoneo fatturato da questo contratto. Vengono creati insieme al contratto quando completi la configurazione e la simulazione qui sotto li calcola.",
+      "draftDialog": {
+        "title": "Salvare la bozza senza sconti?",
+        "message": "Una bozza salvata conserva solo le sue righe, quindi gli sconti aggiunti qui non vengono salvati con essa. Completa la configurazione per crearli insieme al contratto oppure aggiungili in seguito nella scheda Sconti del contratto.",
+        "confirm": "Salva comunque la bozza"
+      }
     }
   },
   "wizardBasics": {

@@ -1528,6 +1528,14 @@
       "message": "Detta ändrar avtalets uppskattade månatliga återkommande värde från {{before}} till {{after}}.",
       "confirm": "Bekräfta och fortsätt",
       "cancel": "Tillbaka"
+    },
+    "discounts": {
+      "help": "Avtalsövergripande rabatter gäller varje berättigad avgift som avtalet fakturerar. De skapas tillsammans med avtalet när du slutför konfigurationen, och simuleringen nedan prissätter dem.",
+      "draftDialog": {
+        "title": "Spara utkastet utan rabatter?",
+        "message": "Ett sparat utkast behåller bara sina rader, så rabatterna som lagts till här sparas inte med det. Slutför konfigurationen för att skapa dem tillsammans med avtalet, eller lägg till dem senare på avtalets flik Rabatter.",
+        "confirm": "Spara utkastet ändå"
+      }
     }
   },
   "wizardBasics": {

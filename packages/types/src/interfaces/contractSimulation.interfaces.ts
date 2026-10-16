@@ -295,6 +295,25 @@ export interface ContractWizardFixedLine {
   services: ContractWizardFixedService[];
 }
 
+/**
+ * A contract-wide automatic discount authored in the wizard, before the
+ * contract (and therefore any discount row) exists. Values stay in the
+ * authoring units the discount editor uses — percent units (`10` = 10%) or
+ * decimal currency (`50` = $50.00) — and are converted once where they are
+ * stored (`toStoredDiscountValue`) or simulated.
+ */
+export interface ContractDraftDiscount {
+  /** Stable client-side key for list editing; never persisted. */
+  draft_key: string;
+  discount_name: string;
+  discount_type: "percentage" | "fixed";
+  value: number;
+  /** Date-only (YYYY-MM-DD). */
+  start_date: string;
+  /** Date-only (YYYY-MM-DD); null/absent never expires. */
+  end_date?: string | null;
+}
+
 /** Minimal unsaved ContractWizard state accepted by the EE scenario hydrator. */
 export interface ContractDraftSimulationInput {
   client_id: string;
@@ -330,6 +349,8 @@ export interface ContractDraftSimulationInput {
     bucket_overlay?: ContractDraftBucketOverlayInput | null;
   }>;
   usage_billing_frequency?: string;
+  /** Contract-wide discounts authored in the wizard, priced by the simulator. */
+  discounts?: ContractDraftDiscount[];
 }
 
 /* ----------------------------- results ----------------------------- */

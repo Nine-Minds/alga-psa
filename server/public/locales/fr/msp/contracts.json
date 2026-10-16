@@ -1528,6 +1528,14 @@
       "message": "Cela modifie la valeur récurrente mensuelle estimée du contrat de {{before}} à {{after}}.",
       "confirm": "Confirmer et continuer",
       "cancel": "Retour"
+    },
+    "discounts": {
+      "help": "Les remises globales s’appliquent à chaque charge admissible facturée par ce contrat. Elles sont créées avec le contrat lorsque vous terminez la configuration, et la simulation ci-dessous les valorise.",
+      "draftDialog": {
+        "title": "Enregistrer le brouillon sans les remises ?",
+        "message": "Un brouillon enregistré ne conserve que ses lignes : les remises ajoutées ici ne sont pas enregistrées avec lui. Terminez la configuration pour les créer avec le contrat, ou ajoutez-les plus tard dans l’onglet Remises du contrat.",
+        "confirm": "Enregistrer le brouillon quand même"
+      }
     }
   },
   "wizardBasics": {

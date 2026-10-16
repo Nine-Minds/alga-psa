@@ -1528,6 +1528,14 @@
       "message": "This changes the contract's estimated monthly recurring value from {{before}} to {{after}}.",
       "confirm": "Confirm and continue",
       "cancel": "Go back"
+    },
+    "discounts": {
+      "help": "Contract-wide discounts apply to every eligible charge this contract bills. They are created with the contract when you finish setup, and the simulation below prices them.",
+      "draftDialog": {
+        "title": "Save draft without discounts?",
+        "message": "A saved draft keeps its lines only, so the discounts added here are not saved with it. Finish setup to create them with the contract, or add them later on the contract's Discounts tab.",
+        "confirm": "Save draft anyway"
+      }
     }
   },
   "wizardBasics": {

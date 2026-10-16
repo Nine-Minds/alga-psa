@@ -10,6 +10,7 @@ import React, {
 import dynamic from "next/dynamic";
 import { v4 as uuidv4 } from "uuid";
 import type {
+  ContractDraftDiscount,
   ContractDraftSimulationInput,
   ContractWizardFixedLine,
   FixedPricingBasis,
@@ -25,6 +26,7 @@ import { ProductsStep } from "./wizard-steps/ProductsStep";
 import { HourlyServicesStep } from "./wizard-steps/HourlyServicesStep";
 import { UsageBasedServicesStep } from "./wizard-steps/UsageBasedServicesStep";
 import { ReviewContractStep } from "./wizard-steps/ReviewContractStep";
+import { ContractDiscountsPanel } from "./wizard-steps/ContractDiscountsPanel";
 import { ContractCreatedConfirmation } from "./wizard-steps/ContractCreatedConfirmation";
 import {
   TemplateLinesStep,
@@ -215,6 +217,11 @@ export interface ContractWizardData {
   usage_billing_frequency?: string;
   /** Flag-on line-level bucket pools (weighted-burn model), materialized after the line is created. */
   bucket_pools?: BucketPoolDraft[];
+  /**
+   * Contract-wide automatic discounts authored here. They are written with the
+   * contract on Finish Setup; a saved draft keeps its lines only.
+   */
+  discounts?: ContractDraftDiscount[];
   contract_id?: string;
   is_draft?: boolean;
   /**
@@ -249,6 +256,7 @@ export const createDefaultContractWizardData = (): ContractWizardData => ({
   round_up_to_nearest: undefined,
   usage_services: [],
   bucket_pools: [],
+  discounts: [],
   template_id: undefined,
   template_lines: undefined,
 });
@@ -346,6 +354,9 @@ export function ContractWizard({
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] =
+    useState(false);
+  // Set when Save as Draft is pressed while wizard discounts are authored.
+  const [showDraftDiscountsDialog, setShowDraftDiscountsDialog] =
     useState(false);
   // Set once a contract with fixed-fee lines is created; the wizard then shows
   // when it first invoices and only reports completion when that is dismissed.
@@ -613,6 +624,7 @@ export function ContractWizard({
   const buildSubmissionData =
     async (
       recurringChangeAck?: { baseline_monthly_cents: number },
+      options?: { includeDiscounts?: boolean },
     ): Promise<ClientContractWizardSubmission> => {
       const useTenantDefaults = wizardData.use_tenant_renewal_defaults ?? true;
 
@@ -680,6 +692,12 @@ export function ContractWizard({
         template_id: wizardData.template_id,
         template_lines: wizardData.template_id
           ? (wizardData.template_lines ?? [])
+          : undefined,
+        // Standing discount terms are written only by Finish Setup; a draft
+        // keeps its lines, so Save as Draft submits none (the operator
+        // confirms that before it happens).
+        discounts: options?.includeDiscounts
+          ? (wizardData.discounts ?? [])
           : undefined,
       };
 
@@ -1046,7 +1064,9 @@ export function ContractWizard({
 
     setIsLoading(true);
     try {
-      const submission = await buildSubmissionData(recurringChangeAck);
+      const submission = await buildSubmissionData(recurringChangeAck, {
+        includeDiscounts: true,
+      });
       const result = await createClientContractFromWizard(submission);
 
       if (isRecurringChangeConfirmation(result)) {
@@ -1092,6 +1112,16 @@ export function ContractWizard({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Save as Draft is requested with discounts authored: the draft cannot hold
+  // them, so the operator confirms dropping them before anything is written.
+  const requestSaveDraft = () => {
+    if ((wizardData.discounts?.length ?? 0) > 0) {
+      setShowDraftDiscountsDialog(true);
+      return;
+    }
+    void handleSaveDraft();
   };
 
   const handleSaveDraft = async (
@@ -1230,12 +1260,22 @@ export function ContractWizard({
                   edits={wizardData.template_lines ?? []}
                 />
               )}
+              <ContractDiscountsPanel
+                discounts={wizardData.discounts ?? []}
+                currencyCode={wizardData.currency_code}
+                onChange={(discounts) => updateData({ discounts })}
+              />
             </div>
           );
         }
         return (
           <div className="space-y-6">
             <ReviewContractStep data={wizardData} />
+            <ContractDiscountsPanel
+              discounts={wizardData.discounts ?? []}
+              currencyCode={wizardData.currency_code}
+              onChange={(discounts) => updateData({ discounts })}
+            />
             <section
               aria-labelledby="draft-simulation-heading"
               className="space-y-3 border-t pt-6"
@@ -1259,6 +1299,7 @@ export function ContractWizard({
                   {
                     ...wizardData,
                     fixed_lines: meaningfulFixedLines(wizardData.fixed_lines),
+                    discounts: wizardData.discounts ?? [],
                   } as ContractDraftSimulationInput
                 }
               />
@@ -1288,7 +1329,7 @@ export function ContractWizard({
       onNext={handleNext}
       onSkip={handleSkip}
       onFinish={() => handleFinish()}
-      onSaveDraft={() => handleSaveDraft()}
+      onSaveDraft={() => requestSaveDraft()}
       isNextDisabled={isLoading}
       isSkipDisabled={REQUIRED_STEPS.includes(activeStep)}
       isLoading={isLoading}
@@ -1394,6 +1435,29 @@ export function ContractWizard({
         })}
         cancelLabel={t("wizard.recurringChange.cancel", {
           defaultValue: "Go back",
+        })}
+      />
+
+      <ConfirmationDialog
+        id="contract-wizard-draft-discounts"
+        isOpen={showDraftDiscountsDialog}
+        onClose={() => setShowDraftDiscountsDialog(false)}
+        onConfirm={() => {
+          setShowDraftDiscountsDialog(false);
+          void handleSaveDraft();
+        }}
+        title={t("wizard.discounts.draftDialog.title", {
+          defaultValue: "Save draft without discounts?",
+        })}
+        message={t("wizard.discounts.draftDialog.message", {
+          defaultValue:
+            "A saved draft keeps its lines only, so the discounts added here are not saved with it. Finish setup to create them with the contract, or add them later on the contract's Discounts tab.",
+        })}
+        confirmLabel={t("wizard.discounts.draftDialog.confirm", {
+          defaultValue: "Save draft anyway",
+        })}
+        cancelLabel={t("wizard.dialogs.unsavedChanges.cancel", {
+          defaultValue: "Stay",
         })}
       />
 
