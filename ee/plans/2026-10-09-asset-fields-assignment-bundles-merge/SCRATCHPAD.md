@@ -760,3 +760,61 @@ leaving it.
 
 `features.json` (109) and `tests.json` (157) stay fully `implemented: true`:
 this round changed how the plan's surfaces behave, not what they cover.
+
+## Round 11 — the groups migration on a real Citus (2026-10-16)
+
+The operator's CI run died on the one thing a plain-Postgres migration check
+can never see:
+
+```
+SELECT create_distributed_table('asset_groups', 'tenant', colocate_with => 'tenants')
+  - referenced table "client_locations" must be a distributed table or a reference table
+```
+
+`asset_groups.location_id` carried an inline composite FK to
+`client_locations`, and `client_locations` is still a coordinator-local table
+(the Citus local-table backlog). Citus refuses to distribute a table that
+references one, because the two rows could not be proven to live on the same
+node. Reproduced verbatim on `citusdata/citus:12.1` with a six-table skeleton
+of the real distribution states, which also confirmed the three pieces of the
+fix: the clients FK is fine (`clients` is distributed), the three group tables
+distribute once the location FK is out of the way, and a database left
+half-applied by the failed run comes forward after the leftover constraint is
+dropped.
+
+So the FK now follows the rule the repo had already written five times by hand
+for exactly this column — `20250613190110`, `20260415120[0-3]00`,
+`20260518120000` (`assets.location_id`) and `20260816010000`: add the
+constraint only when both sides agree on distribution, skip it otherwise.
+`20260816010000` left a LEVERAGE note asking for the probe to become a shared
+helper the next time a migration needed it, so `isFkCompatible` and
+`ensureCompositeFk` now live beside `ensureTenantDistribution` in
+`server/migrations/utils/citusDistribution.cjs`. `ensureCompositeFk` also
+drops an incompatible constraint it finds, which is what lets a half-applied
+database distribute on the retry; the migration drops the old inline name
+(`asset_groups_tenant_location_id_foreign`, the name knex generated) before
+distributing for the same reason.
+
+`20261009125000` got the same treatment: `assets` →
+`client_billing_profiles` is a distributed pair, but
+`rmm_organization_mappings` is not distributed by any migration in the chain,
+and a single-node cluster accepts that FK where a multi-node one would not.
+It is skipped rather than guessed, exactly as the ticket and project profile
+columns are.
+
+Nothing changes on plain Postgres: a scratch database ran both migrations and
+came out with the same constraint names as before
+(`asset_groups_tenant_location_id_foreign`,
+`assets_tenant_billing_profile_id_foreign`,
+`rmm_organization_mappings_tenant_billing_profile_id_foreign`), idempotent on
+re-run and clean on `down()`. Where Citus drops the location FK, the invariant
+is still enforced by `assertLocationOfClient` in
+`packages/assets/src/lib/assetGroups.ts` — the same bargain `assets.location_id`
+has lived with since 20260518120000.
+
+Covered by `server/src/test/unit/migrations/assetGroupsCitusFk.test.ts`: six
+probe cases (local referenced table, both distributed, no Citus, the add, the
+skip, the leftover drop, the no-op) and four source-contract cases pinning the
+ordering — no inline `client_locations` FK, the leftover drop before
+distribution, `ensureCompositeFk` after it, and both profile FKs routed
+through it.

@@ -15,9 +15,23 @@
  * packages/assets/src/lib/assetGroups.ts.
  *
  * No RLS: tenant isolation is app-layer (scoped queries + Citus distribution).
+ *
+ * `location_id` gets its foreign key only where Citus allows one:
+ * `client_locations` is still a coordinator-local table, and Citus refuses to
+ * distribute a table that references one, so the constraint is added after
+ * distribution and only when both sides match — the same bargain
+ * `assets.location_id` struck in 20260518120000.
  */
 
-const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+const { ensureTenantDistribution, ensureCompositeFk } = require('./utils/citusDistribution.cjs');
+
+const LOCATION_FK = {
+  table: 'asset_groups',
+  constraint: 'asset_groups_tenant_location_id_foreign',
+  columns: ['tenant', 'location_id'],
+  referencedTable: 'client_locations',
+  referencedColumns: ['tenant', 'location_id'],
+};
 
 exports.up = async function up(knex) {
   if (!(await knex.schema.hasTable('asset_groups'))) {
@@ -35,7 +49,6 @@ exports.up = async function up(knex) {
 
       table.primary(['tenant', 'group_id']);
       table.foreign(['tenant', 'client_id']).references(['tenant', 'client_id']).inTable('clients');
-      table.foreign(['tenant', 'location_id']).references(['tenant', 'location_id']).inTable('client_locations');
       table.index(['tenant', 'client_id'], 'idx_asset_groups_client');
     });
 
@@ -81,9 +94,16 @@ exports.up = async function up(knex) {
     `);
   }
 
+  // An earlier run of this migration created the location FK inline, which
+  // leaves create_distributed_table failing forever; clear it first so a
+  // half-applied database can still be brought forward.
+  await knex.raw(`ALTER TABLE asset_groups DROP CONSTRAINT IF EXISTS ${LOCATION_FK.constraint}`);
+
   await ensureTenantDistribution(knex, 'asset_groups');
   await ensureTenantDistribution(knex, 'asset_group_members');
   await ensureTenantDistribution(knex, 'asset_group_contacts');
+
+  await ensureCompositeFk(knex, LOCATION_FK);
 };
 
 exports.down = async function down(knex) {
