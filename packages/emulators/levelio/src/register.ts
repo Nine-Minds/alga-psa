@@ -8,7 +8,7 @@ import {
   LEVEL_SEVERITIES,
   LevelWireError,
 } from './core';
-import type { LevelEmulatorCore, LevelEventType, LevelWebhookEndpoint } from './core';
+import type { HttpRequestAction, LevelEmulatorCore, LevelEventType, LevelWebhookEndpoint } from './core';
 import {
   deliverEvent,
   flushDueRetries,
@@ -17,6 +17,21 @@ import {
   rerunDelivery,
   runAutomation,
 } from './dispatcher';
+
+/**
+ * Control inputs are typed from the core methods they feed rather than from
+ * the zod schemas. A consumer that compiles this package without
+ * strictNullChecks (EE's tsc includes its tests, which import the emulator
+ * source) sees every z.infer key as optional, which no longer satisfies the
+ * core signatures.
+ */
+// LEVERAGE: friction ee-tsc-compiles-foreign-package-sources-nonstrict — ee/server/tsconfig.json (strict:false) type-checks emulator src through package `types`, so zod inference cannot be the control signature.
+type GroupSeedInput = Parameters<LevelEmulatorCore['createGroup']>[0];
+type UpdateSeedInput = Parameters<LevelEmulatorCore['createUpdate']>[0];
+type FireAlertInput = Parameters<LevelEmulatorCore['raiseAlert']>[0];
+type WebhookSeedInput = Parameters<LevelEmulatorCore['registerWebhook']>[0];
+type AutomationSeedInput = Omit<Parameters<LevelEmulatorCore['createAutomation']>[0], 'action'> &
+  Partial<HttpRequestAction> & { url: string };
 
 function mask(value: string | null): string | null {
   if (!value) return value;
@@ -115,7 +130,7 @@ export function register(reg: ControlRegistry, core: LevelEmulatorCore): void {
     name: 'group',
     description: 'Create a group (optionally under a parent); emits group_created',
     params: z.object({ id: z.string().optional(), name: z.string(), parentId: z.string().nullable().optional() }),
-    run: (input) =>
+    run: (input: GroupSeedInput) =>
       control(async () => {
         const group = core.createGroup(input);
         return { group: core.presentGroup(group), ...(await emit('group_created', core.presentGroup(group))) };
@@ -206,7 +221,7 @@ export function register(reg: ControlRegistry, core: LevelEmulatorCore): void {
         installed_on: z.string().nullable().optional(),
       })
       .passthrough(),
-    run: (input) => control(() => core.createUpdate(input)),
+    run: (input: UpdateSeedInput) => control(() => core.createUpdate(input)),
   });
 
   // ── Alerts ─────────────────────────────────────────────────────────────
@@ -224,7 +239,7 @@ export function register(reg: ControlRegistry, core: LevelEmulatorCore): void {
       id: z.string().optional(),
       webhookDataExtra: z.record(z.unknown()).optional(),
     }),
-    run: (input) => control(async () => onAlertActive(core, core.raiseAlert(input))),
+    run: (input: FireAlertInput) => control(async () => onAlertActive(core, core.raiseAlert(input))),
   });
 
   reg.action({
@@ -252,7 +267,7 @@ export function register(reg: ControlRegistry, core: LevelEmulatorCore): void {
       eventTypes: EventTypes.optional(),
       enabled: z.boolean().optional(),
     }),
-    run: (input) => maskedWebhook(core.registerWebhook(input)),
+    run: (input: WebhookSeedInput) => maskedWebhook(core.registerWebhook(input)),
   });
 
   reg.action({
@@ -326,7 +341,7 @@ export function register(reg: ControlRegistry, core: LevelEmulatorCore): void {
       variables: z.record(z.string()).optional(),
       retries: z.number().int().min(0).max(5).optional(),
     }),
-    run: ({ url, method, contentType, headers, body, ...rest }) =>
+    run: ({ url, method, contentType, headers, body, ...rest }: AutomationSeedInput) =>
       core.createAutomation({
         ...rest,
         action: {

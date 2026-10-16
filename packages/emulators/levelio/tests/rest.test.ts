@@ -1,21 +1,17 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { startLevel } from './helpers';
 
-// Alga's real LevelIoApiClient over HTTP. Only the secrets provider (imported
-// at module load by createLevelIoClient) is stubbed; the client under test is
-// constructed directly with the emulator's base URL.
-vi.mock('@alga-psa/core/secrets', () => ({ getSecretProviderInstance: async () => ({ getTenantSecret: async () => undefined }) }));
-
-const { LevelIoApiClient, LevelIoApiError } = await import(
-  '../../../../ee/server/src/lib/integrations/levelio/levelApiClient'
-);
+// The Level v2 REST surface as a wire contract, driven with plain fetch the way
+// Level documents it (Authorization: <key>, limit + starting_after cursors,
+// include_* detail flags). Alga's LevelIoApiClient against this emulator is
+// covered on the product side, in
+// ee/server/src/__tests__/integration/levelioEmulatorApiClient.integration.test.ts,
+// so this package never imports the product.
 
 const API_KEY = 'algasim-level-key';
+const INCLUDE_ALL =
+  'include_operating_system=true&include_cpus=true&include_memory=true&include_disks=true&include_network_interfaces=true&include_security=true';
 let level: Awaited<ReturnType<typeof startLevel>>;
-
-function client(apiKey = API_KEY) {
-  return new LevelIoApiClient({ apiKey, baseUrl: level.vendor, maxRetries: 2 });
-}
 
 async function raw(path: string, init: RequestInit = {}) {
   const response = await fetch(`${level.vendor}${path}`, {
@@ -23,6 +19,21 @@ async function raw(path: string, init: RequestInit = {}) {
     headers: { authorization: API_KEY, ...(init.headers as Record<string, string>) },
   });
   return { status: response.status, headers: response.headers, body: (await response.json()) as any };
+}
+
+/** Walk a list endpoint with limit=100 + starting_after until has_more is false. */
+async function listAll(path: string) {
+  const items: any[] = [];
+  let startingAfter: string | undefined;
+  for (;;) {
+    const separator = path.includes('?') ? '&' : '?';
+    const cursor = startingAfter ? `&starting_after=${encodeURIComponent(startingAfter)}` : '';
+    const page = await raw(`${path}${separator}limit=100${cursor}`);
+    expect(page.status).toBe(200);
+    items.push(...page.body.data);
+    if (!page.body.has_more || page.body.data.length === 0) return items;
+    startingAfter = page.body.data[page.body.data.length - 1].id;
+  }
 }
 
 beforeAll(async () => {
@@ -37,27 +48,29 @@ beforeEach(async () => {
   await level.reset();
 });
 
-describe('Level REST surface via LevelIoApiClient', () => {
-  it('testConnection succeeds with the key and fails with Level\'s 401 envelope otherwise', async () => {
-    await expect(client().testConnection()).resolves.toBeUndefined();
+describe('Level v2 REST surface', () => {
+  it('accepts the bare API key and answers Level\'s 401 envelope otherwise', async () => {
+    expect((await raw('/v2/groups?limit=1')).status).toBe(200);
 
-    await expect(client('wrong-key').testConnection()).rejects.toMatchObject({ status: 401 });
-    const denied = await fetch(`${level.vendor}/v2/groups`, { headers: { authorization: `Bearer ${API_KEY}` } });
-    expect(denied.status).toBe(401);
-    expect(await denied.json()).toEqual({ error: 'Access denied' });
+    const wrong = await fetch(`${level.vendor}/v2/groups`, { headers: { authorization: 'wrong-key' } });
+    expect(wrong.status).toBe(401);
+    expect(await wrong.json()).toEqual({ error: 'Access denied' });
+    // Level takes the key verbatim, not as a Bearer token.
+    const bearer = await fetch(`${level.vendor}/v2/groups`, { headers: { authorization: `Bearer ${API_KEY}` } });
+    expect(bearer.status).toBe(401);
 
     await level.action('revoke-api-key', { key: API_KEY });
-    await expect(client().testConnection()).rejects.toBeInstanceOf(LevelIoApiError);
+    expect((await raw('/v2/groups?limit=1')).status).toBe(401);
   });
 
-  it('walks the group hierarchy across pages with starting_after/has_more', async () => {
+  it('pages the group hierarchy with starting_after/ending_before and has_more', async () => {
     const root = (await level.seed('group', { name: 'Acme Corp' })).group;
     for (let i = 0; i < 104; i += 1) {
       await level.seed('group', { name: `Site ${i}`, parentId: root.id });
     }
     await level.seed('device', { hostname: 'WS-01', groupId: root.id });
 
-    const groups = await client().listGroups();
+    const groups = await listAll('/v2/groups');
     expect(groups).toHaveLength(105);
     expect(new Set(groups.map((g) => g.id)).size).toBe(105);
     const acme = groups.find((g) => g.id === root.id)!;
@@ -92,18 +105,18 @@ describe('Level REST surface via LevelIoApiClient', () => {
     ).device;
     await level.seed('device', { hostname: 'OTHER-01', groupId: other.id });
 
-    const devices = await client().listDevices({ ancestorGroupId: acme.id });
+    const devices = await listAll(`/v2/devices?ancestor_group_id=${acme.id}&${INCLUDE_ALL}`);
     expect(devices.map((d) => d.hostname)).toEqual(['WS-01']);
     expect(devices[0].operating_system).toEqual({ full_operating_system: 'Windows 11 Pro', major_version: '10.0' });
     expect(devices[0].network_interfaces).toHaveLength(1);
-    // Level's documented device carries `disks`; Alga's mapper reads `disk_partitions`.
-    expect((devices[0] as unknown as Record<string, unknown>).disks).toHaveLength(1);
+    // Level's documented device carries `disks`, not `disk_partitions`.
+    expect(devices[0].disks).toHaveLength(1);
     expect(devices[0].disk_partitions).toBeUndefined();
 
     const bare = await raw(`/v2/devices/${ws.id}`);
     expect(bare.body.operating_system).toBeUndefined();
     expect(bare.body.security).toBeUndefined();
-    expect((await client().getDevice(ws.id)).security).toEqual({ score: 80 });
+    expect((await raw(`/v2/devices/${ws.id}?include_security=true`)).body.security).toEqual({ score: 80 });
 
     expect((await raw(`/v2/devices?group_id=${acme.id}`)).body.data).toEqual([]);
     expect((await raw('/v2/devices?serial_number=SN-1')).body.data).toHaveLength(1);
@@ -111,7 +124,7 @@ describe('Level REST surface via LevelIoApiClient', () => {
     expect((await raw('/v2/devices/nope')).body).toEqual({ error: 'Record not found' });
   });
 
-  it('reports last_seen_at as now for online devices and frozen for offline ones (incremental sync input)', async () => {
+  it('reports last_seen_at as now for online devices and frozen for offline ones', async () => {
     const online = (await level.seed('device', { hostname: 'ONLINE' })).device;
     const offline = (await level.seed('device', { hostname: 'OFFLINE' })).device;
     await level.action('device-offline', { deviceId: offline.id });
@@ -119,27 +132,34 @@ describe('Level REST surface via LevelIoApiClient', () => {
 
     level.host.clock.advance('2h');
     const since = new Date(level.host.clock.now().getTime() - 60_000);
-    const devices = await client().listDevices();
+    const devices = await listAll('/v2/devices');
     const byHost = Object.fromEntries(devices.map((d) => [d.hostname, d]));
     expect(byHost.OFFLINE.last_seen_at).toBe(frozenAt);
-    expect(new Date(byHost.ONLINE.last_seen_at!).getTime()).toBeGreaterThanOrEqual(since.getTime());
-    // The sync engine's incremental filter keeps devices seen at/after `since`.
-    const changed = devices.filter((d) => !d.last_seen_at || new Date(d.last_seen_at) >= since);
-    expect(changed.map((d) => d.id)).toEqual([online.id]);
+    expect(byHost.OFFLINE.online).toBe(false);
+    expect(new Date(byHost.ONLINE.last_seen_at).getTime()).toBeGreaterThanOrEqual(since.getTime());
+    expect([online.id]).toEqual(devices.filter((d) => new Date(d.last_seen_at) >= since).map((d) => d.id));
 
     await level.action('device-checkin', { deviceId: offline.id });
-    expect((await client().getDevice(offline.id)).online).toBe(true);
+    expect((await raw(`/v2/devices/${offline.id}`)).body.online).toBe(true);
   });
 
   it('lists alerts by device and status, and resolves through POST /resolve', async () => {
     const ws = (await level.seed('device', { hostname: 'WS-01' })).device;
     const srv = (await level.seed('device', { hostname: 'SRV-01', role: 'server' })).device;
-    const disk = (await level.action('fire-alert', { deviceId: ws.id, name: 'Low disk space', description: 'Disk free < 5.0%', severity: 'critical', payload: '4.37% (10.39 GB) remaining' })).alert;
+    const disk = (
+      await level.action('fire-alert', {
+        deviceId: ws.id,
+        name: 'Low disk space',
+        description: 'Disk free < 5.0%',
+        severity: 'critical',
+        payload: '4.37% (10.39 GB) remaining',
+      })
+    ).alert;
     await level.action('fire-alert', { deviceId: srv.id, name: 'CPU', severity: 'warning' });
 
-    const active = await client().listAlerts({ status: 'active' });
-    expect(active).toHaveLength(2);
-    expect(active[0]).toEqual({
+    const active = await raw('/v2/alerts?status=active');
+    expect(active.body.data).toHaveLength(2);
+    expect(active.body.data[0]).toEqual({
       id: disk.id,
       device_id: ws.id,
       device_hostname: 'WS-01',
@@ -152,9 +172,9 @@ describe('Level REST surface via LevelIoApiClient', () => {
       resolved_at: null,
     });
 
-    await client().resolveAlert(disk.id);
-    expect((await client().listAlerts({ status: 'resolved' })).map((a) => a.id)).toEqual([disk.id]);
-    expect(await client().listAlerts({ deviceId: srv.id })).toHaveLength(1);
+    expect((await raw(`/v2/alerts/${disk.id}/resolve`, { method: 'POST' })).status).toBe(200);
+    expect((await raw('/v2/alerts?status=resolved')).body.data.map((a: { id: string }) => a.id)).toEqual([disk.id]);
+    expect((await raw(`/v2/alerts?device_id=${srv.id}`)).body.data).toHaveLength(1);
     expect((await raw('/v2/alerts?status=bogus')).status).toBe(400);
   });
 
@@ -162,24 +182,29 @@ describe('Level REST surface via LevelIoApiClient', () => {
     const ws = (await level.seed('device', { hostname: 'WS-01' })).device;
     await level.seed('update', { deviceId: ws.id, name: 'KB5034441', category: 'Security Updates' });
     await level.seed('update', { deviceId: ws.id, name: 'KB0000001', is_available: false, installed_on: '2026-10-01T00:00:00.000Z' });
-    expect((await client().listUpdates({ deviceId: ws.id, status: 'available' })).map((u) => u.name)).toEqual(['KB5034441']);
-    expect((await client().listUpdates({ status: 'installed' })).map((u) => u.name)).toEqual(['KB0000001']);
+    const available = await raw(`/v2/updates?device_id=${ws.id}&status=available`);
+    expect(available.body.data.map((u: { name: string }) => u.name)).toEqual(['KB5034441']);
+    const installed = await raw('/v2/updates?status=installed');
+    expect(installed.body.data.map((u: { name: string }) => u.name)).toEqual(['KB0000001']);
   });
 
-  it('retries a 429 after Retry-After, then surfaces persistent 5xx and 429 as errors', async () => {
+  it('answers armed rate limits with 429 + Retry-After and operation faults with Level\'s error envelope', async () => {
     await level.seed('group', { name: 'Acme' });
 
-    await level.arm('rate-limit', { remaining: 2, retryAfterSeconds: 0 });
-    await expect(client().listGroups()).resolves.toHaveLength(1);
+    await level.arm('rate-limit', { remaining: 2, retryAfterSeconds: 7 });
+    const first = await raw('/v2/groups');
+    expect(first.status).toBe(429);
+    expect(first.headers.get('retry-after')).toBe('7');
+    expect((await raw('/v2/groups')).status).toBe(429);
+    expect((await raw('/v2/groups')).status).toBe(200);
     const journal = (await (await fetch(`${level.control}/control/levelio/requests`)).json()).result;
     expect(journal.requests.filter((r: { status: number }) => r.status === 429)).toHaveLength(2);
 
-    await level.arm('rate-limit', { remaining: 3, retryAfterSeconds: 0 });
-    await expect(client().listGroups()).rejects.toMatchObject({ status: 429 }); // maxRetries: 2
-
     await level.arm('operation-fault', { operation: 'GET /v2/devices', status: 503, message: 'Service unavailable' });
-    await expect(client().listDevices()).rejects.toMatchObject({ status: 503 });
-    await expect(client().listDevices()).resolves.toEqual([]);
+    const failed = await raw('/v2/devices');
+    expect(failed.status).toBe(503);
+    expect(failed.body).toEqual({ error: 'Service unavailable' });
+    expect((await raw('/v2/devices')).body).toEqual({ data: [], has_more: false });
   });
 
   it('answers 400 for out-of-range limits and unknown cursors, 501 for unmodeled v2 routes', async () => {
