@@ -805,6 +805,9 @@ export const listHourBlocks = withAuth(async (
               from: coverageRows.window.from,
               to: (block.expiration_date as string | null) ?? coverageRows.defaultTo,
             },
+            // A Prepaid Block line's own block draws from that line's time:
+            // never warn that the issuing line's time "will not draw" it.
+            excludeContractLineId: (row.contract_line_id as string | null) ?? null,
           });
         }
         return block;
@@ -902,6 +905,8 @@ export const getHourBlockDetail = withAuth(async (
             block.service_id,
           ),
           expirationDate: toCalendarDateString(block.expiration_date),
+          // The issuing line's time draws its own block; do not warn about it.
+          excludeContractLineId: (block.contract_line_id as string | null) ?? null,
         });
       }
 

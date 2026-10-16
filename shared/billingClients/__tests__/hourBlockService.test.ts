@@ -121,4 +121,24 @@ describe('classifyContractLineCoverage', () => {
     );
     expect(result[0].assignment).toBe('automatic');
   });
+
+  it('drops the excluded line so it is never named as a covering line', () => {
+    const result = classifyContractLineCoverage([row('a', '2026-01-01', null)], window, 'line-a');
+    expect(result).toHaveLength(0);
+  });
+
+  it('reclassifies to automatic once the block\'s own overlapping line is excluded', () => {
+    const result = classifyContractLineCoverage(
+      [row('a', '2026-01-01', null), row('b', '2026-06-01', '2027-06-01')],
+      window,
+      'line-b',
+    );
+    expect(result[0].assignment).toBe('automatic');
+    expect(result[0].lines.map((l) => l.contract_line_id)).toEqual(['line-a']);
+  });
+
+  it('treats a null exclusion as no exclusion', () => {
+    const withNull = classifyContractLineCoverage([row('a', '2026-01-01', null)], window, null);
+    expect(withNull).toHaveLength(1);
+  });
 });

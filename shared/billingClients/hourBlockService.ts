@@ -272,13 +272,19 @@ export interface ContractLineCoverageRow {
  * exactly one line on every covered date and rejects every entry), otherwise
  * 'when_assigned'. Lines that follow each other in time stay 'automatic'.
  * Output is sorted by service, contract and line name.
+ *
+ * `excludeContractLineId` drops one line from the classification. A block
+ * issued BY a Prepaid Block line must not warn that the line's own time "will
+ * not draw this block" — that time draws it (the contract burn target).
  */
 export function classifyContractLineCoverage(
   rows: ContractLineCoverageRow[],
   window: { from: string; to: string },
+  excludeContractLineId?: string | null,
 ): ServiceContractLineCoverage[] {
   const byService = new Map<string, { name: string; lines: Map<string, ContractLineCoverageLine> }>();
   for (const row of rows) {
+    if (excludeContractLineId && row.contract_line_id === excludeContractLineId) continue;
     const start = toDateOnly(row.start_date);
     if (!start) continue;
     const end = toDateOnly(row.end_date ?? null);
@@ -413,7 +419,12 @@ export async function getContractLineCoverageRowsForClient(
  */
 export function classifyContractLineCoverageForWindow(
   rows: ContractLineCoverageRow[],
-  options: { serviceIds: string[] | null; window: { from: string; to: string } },
+  options: {
+    serviceIds: string[] | null;
+    window: { from: string; to: string };
+    /** The block's issuing line: never a coverage warning against its own block. */
+    excludeContractLineId?: string | null;
+  },
 ): ServiceContractLineCoverage[] {
   const allowed = options.serviceIds ? new Set(options.serviceIds) : null;
   const { from, to } = options.window;
@@ -423,7 +434,7 @@ export function classifyContractLineCoverageForWindow(
     const end = toDateOnly(row.end_date ?? null);
     return !!start && start <= to && (end === null || end >= from);
   });
-  return classifyContractLineCoverage(narrowed, options.window);
+  return classifyContractLineCoverage(narrowed, options.window, options.excludeContractLineId);
 }
 
 /**
@@ -435,10 +446,16 @@ export async function getContractLineCoverageForClient(
   conn: Knex | Knex.Transaction,
   tenant: string,
   clientId: string,
-  options: { serviceIds: string[] | null; expirationDate?: string | Date | null; today?: string },
+  options: {
+    serviceIds: string[] | null;
+    expirationDate?: string | Date | null;
+    today?: string;
+    /** The block's issuing line: never a coverage warning against its own block. */
+    excludeContractLineId?: string | null;
+  },
 ): Promise<ServiceContractLineCoverage[]> {
   const { rows, window } = await getContractLineCoverageRowsForClient(conn, tenant, clientId, options);
-  return classifyContractLineCoverage(rows, window);
+  return classifyContractLineCoverage(rows, window, options.excludeContractLineId);
 }
 
 /**
