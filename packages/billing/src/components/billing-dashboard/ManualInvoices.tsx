@@ -353,7 +353,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
     let active = true;
     setHasSelectedClientBillingEmail(null);
-    void getClientBillingEmailStatus(selectedClient)
+    void getClientBillingEmailStatus(selectedClient, selectedBillingProfileId)
       .then(({ hasBillingEmail }) => {
         if (active) {
           setHasSelectedClientBillingEmail(hasBillingEmail);
@@ -368,7 +368,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     return () => {
       active = false;
     };
-  }, [currentInvoiceData, selectedClient, selectedSalesOrder]);
+  }, [currentInvoiceData, selectedClient, selectedBillingProfileId, selectedSalesOrder]);
 
   const salesOrderOptions = useMemo(
     () =>
@@ -1114,7 +1114,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                 <Alert id="manual-invoice-no-billing-email-warning" variant="warning">
                   <AlertDescription>
                     {t('manualInvoices.warnings.noBillingEmail', {
-                      defaultValue: 'This client has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location before generating the invoice.',
+                      defaultValue: 'This client has no billing email. The invoice can be generated, but it cannot be emailed or paid online until you set a billing contact, a client billing email, or an email on the billing or default location.',
                     })}
                   </AlertDescription>
                 </Alert>

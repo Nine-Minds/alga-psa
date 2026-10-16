@@ -147,6 +147,7 @@
       "preview": {
         "title": "Factuurvoorbeeld",
         "description": "Dit is een voorbeeld van hoe de factuur eruit zal zien als deze is voltooid.",
+        "noBillingEmailWarning": "{{clientName}} heeft geen factuur-e-mailadres. De factuur kan worden gegenereerd, maar kan pas per e-mail worden verzonden of online worden betaald als u een factuurcontact, een factuur-e-mailadres van de klant of een e-mailadres op de factuur- of standaardlocatie instelt.",
         "summary_one": "{{count}}-factuur geselecteerd",
         "summary_other": "{{count}} facturen geselecteerd",
         "summaryCombined": "Deze selectie genereert één gecombineerde factuur.",
@@ -397,7 +398,7 @@
       "BILLING_PROFILE_NOT_FOUND": "Het geselecteerde facturatieprofiel is niet beschikbaar voor deze klant. Vernieuw de pagina en probeer het opnieuw."
     },
     "warnings": {
-      "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in voordat u de factuur genereert."
+      "noBillingEmail": "Deze klant heeft geen factuur-e-mailadres. De factuur kan worden gegenereerd, maar kan pas per e-mail worden verzonden of online worden betaald als u een factuurcontact, een factuur-e-mailadres van de klant of een e-mailadres op de factuur- of standaardlocatie instelt."
     },
     "errorFallback": {
       "title": "Er is iets misgegaan",

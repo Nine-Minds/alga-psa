@@ -147,6 +147,7 @@
       "preview": {
         "title": "Förhandsgranskning av faktura",
         "description": "Detta är en förhandsgranskning av hur fakturan kommer att se ut när den är fastställd.",
+        "noBillingEmailWarning": "{{clientName}} saknar faktura-e-post. Fakturan kan skapas, men den kan inte skickas via e-post eller betalas online förrän du anger en fakturakontakt, en faktura-e-postadress för kunden eller en e-postadress på fakturerings- eller standardplatsen.",
         "summary_one": "{{count}} faktura markerad",
         "summary_other": "{{count}} fakturor markerade",
         "summaryCombined": "Det här urvalet skapar en samlad faktura.",
@@ -397,7 +398,7 @@
       "BILLING_PROFILE_NOT_FOUND": "Den valda faktureringsprofilen är inte tillgänglig för kunden. Ladda om sidan och försök igen."
     },
     "warnings": {
-      "noBillingEmail": "Den här kunden saknar e-postadress för fakturering. Ange en faktureringskontakt, en e-postadress för kundens fakturering eller en e-postadress för faktureringsplatsen eller standardplatsen innan du skapar fakturan."
+      "noBillingEmail": "Den här kunden saknar faktura-e-post. Fakturan kan skapas, men den kan inte skickas via e-post eller betalas online förrän du anger en fakturakontakt, en faktura-e-postadress för kunden eller en e-postadress på fakturerings- eller standardplatsen."
     },
     "errorFallback": {
       "title": "Något gick fel",

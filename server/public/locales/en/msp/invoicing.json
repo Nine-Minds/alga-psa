@@ -147,6 +147,7 @@
       "preview": {
         "title": "Invoice Preview",
         "description": "This is a preview of how the invoice will look when finalized.",
+        "noBillingEmailWarning": "{{clientName}} has no billing email. The invoice can be generated, but it cannot be emailed or paid online until you set a billing contact, a client billing email, or an email on the billing or default location.",
         "summary_one": "{{count}} invoice selected",
         "summary_other": "{{count}} invoices selected",
         "summaryCombined": "This selection will generate one combined invoice.",
@@ -397,7 +398,7 @@
       "BILLING_PROFILE_NOT_FOUND": "The selected billing profile is not available for this client. Refresh and try again."
     },
     "warnings": {
-      "noBillingEmail": "This client has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location before generating the invoice."
+      "noBillingEmail": "This client has no billing email. The invoice can be generated, but it cannot be emailed or paid online until you set a billing contact, a client billing email, or an email on the billing or default location."
     },
     "errorFallback": {
       "title": "Something went wrong",

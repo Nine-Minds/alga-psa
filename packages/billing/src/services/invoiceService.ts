@@ -11,6 +11,8 @@ import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import type { ISO8601String, IRecurringDueSelectionInput, IUsageServicePeriodStatus } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
+import { isOfflinePaymentMethod } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { canonicalizeRecurringServicePeriodScheduleKey } from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
 import { DEFAULT_UNIT_CODE, HOUR_UNIT_CODE, resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
@@ -493,9 +495,13 @@ export interface ValidationResult {
 }
 
 /**
- * Validates that a client has a billing email address set.
- * This is required for online payments via Stripe.
- * Returns a validation result instead of throwing an error.
+ * Reports whether an invoice for this client (billed to this profile) could be
+ * emailed or paid online. Advisory only: the email is consumed when the invoice
+ * is sent or a payment link is created, and both of those paths refuse on their
+ * own, so a missing address never blocks generating or previewing the invoice.
+ *
+ * A profile or client set to mail delivery with an offline payment method
+ * (check, bank transfer) never needs an address, so it is not flagged.
  */
 export async function validateClientBillingEmail(
   knex: Knex,
@@ -505,19 +511,24 @@ export async function validateClientBillingEmail(
   billingProfileId?: string | null,
 ): Promise<ValidationResult> {
   // A segmented client may hold its billing address on the profile alone, so
-  // the gate has to ask about the profile this invoice bills — otherwise a
-  // profile with a perfectly good AP inbox is refused an invoice.
+  // the check has to ask about the profile this invoice bills.
   const billingEmail = await getClientBillingEmail(knex, tenant, clientId, billingProfileId);
-  if (!billingEmail) {
-    return {
-      valid: false,
-      code: 'NO_BILLING_EMAIL',
-      params: { clientName },
-      error: `Cannot generate invoice: No billing email address for "${clientName}". ` +
-        `Please set a billing contact, billing email, or a billing/default location email before generating invoices.`
-    };
+  if (billingEmail) {
+    return { valid: true };
   }
-  return { valid: true };
+
+  const identity = await resolveEffectiveBillingIdentity(knex, tenant, clientId, billingProfileId);
+  if (identity.invoiceDeliveryMethod === 'mail' && isOfflinePaymentMethod(identity.preferredPaymentMethod)) {
+    return { valid: true };
+  }
+
+  return {
+    valid: false,
+    code: 'NO_BILLING_EMAIL',
+    params: { clientName },
+    error: `Cannot generate invoice: No billing email address for "${clientName}". ` +
+      `Please set a billing contact, billing email, or a billing/default location email before generating invoices.`
+  };
 }
 
 /** Unit snapshot for a manual line: its catalog service's unit, else what the caller sent, else Each. */
