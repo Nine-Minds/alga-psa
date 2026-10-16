@@ -45,11 +45,14 @@ type IntegrationHealthSource = (
   context: IntegrationHealthSourceContext
 ) => Promise<IntegrationHealthAlert[]>;
 
-type EeCalendarHealthModule = {
-  getCalendarProvidersImpl?: (
-    user: unknown,
-    context: { tenant: string }
-  ) => Promise<{ success: boolean; providers?: CalendarProviderConfig[]; error?: string }>;
+type EeCalendarProviderServiceModule = {
+  CalendarProviderService?: new () => {
+    getProviders: (filters: {
+      tenant: string;
+      userId?: string;
+      isActive?: boolean;
+    }) => Promise<CalendarProviderConfig[]>;
+  };
 };
 
 const EMAIL_SETTINGS_HREF = '/msp/settings/email';
@@ -113,19 +116,25 @@ const calendarSyncSource: IntegrationHealthSource = async ({ user, tenant }) => 
     return [];
   }
 
-  const ee = (await import('@alga-psa/ee-calendar/actions')) as EeCalendarHealthModule;
-  if (!ee.getCalendarProvidersImpl) {
+  // The EE `/actions` entry point is a 'use server' module that exports only
+  // the session-wrapped actions — never the `*Impl` helpers — so reaching for
+  // those silently yielded no calendar alerts at all. Use the provider service
+  // the EE callback routes import, which takes the tenant/user explicitly.
+  const ee = (await import(
+    '@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService'
+  )) as EeCalendarProviderServiceModule;
+  if (!ee.CalendarProviderService) {
     return [];
   }
 
-  const result = await ee.getCalendarProvidersImpl(user, { tenant });
-  if (!result?.success || !Array.isArray(result.providers)) {
-    return [];
-  }
+  // A deactivated provider is not syncing by choice; only live ones are news.
+  const providers = await new ee.CalendarProviderService().getProviders({
+    tenant,
+    userId: user.user_id,
+    isActive: true,
+  });
 
-  return result.providers
-    // A deactivated provider is not syncing by choice; only live ones are news.
-    .filter((provider) => provider.active !== false)
+  return (providers ?? [])
     .filter((provider) =>
       provider.connection_status === 'error' || provider.connection_status === 'disconnected'
     )

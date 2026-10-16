@@ -4,14 +4,14 @@ const {
   createTenantKnexMock,
   hasPermissionMock,
   isCalendarEnterpriseEditionMock,
-  getCalendarProvidersImplMock,
+  getCalendarProvidersMock,
   emailProviderRows,
   sessionUser,
 } = vi.hoisted(() => ({
   createTenantKnexMock: vi.fn(),
   hasPermissionMock: vi.fn(),
   isCalendarEnterpriseEditionMock: vi.fn(),
-  getCalendarProvidersImplMock: vi.fn(),
+  getCalendarProvidersMock: vi.fn(),
   emailProviderRows: { current: [] as any[] },
   sessionUser: {
     user_id: 'user-1',
@@ -55,8 +55,13 @@ vi.mock('../lib/calendarAvailability', () => ({
   isCalendarEnterpriseEdition: isCalendarEnterpriseEditionMock,
 }));
 
-vi.mock('@alga-psa/ee-calendar/actions', () => ({
-  getCalendarProvidersImpl: getCalendarProvidersImplMock,
+// The EE 'use server' actions entry point exports only session-wrapped
+// actions, so the health source reaches calendar state through the provider
+// service — mock the same module it imports.
+vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService', () => ({
+  CalendarProviderService: class {
+    getProviders = getCalendarProvidersMock;
+  },
 }));
 
 function calendarProvider(overrides: Record<string, unknown> = {}) {
@@ -87,7 +92,7 @@ describe('getIntegrationHealthAlerts', () => {
     createTenantKnexMock.mockReset().mockResolvedValue({ knex: {} });
     hasPermissionMock.mockReset().mockResolvedValue(true);
     isCalendarEnterpriseEditionMock.mockReset().mockReturnValue(false);
-    getCalendarProvidersImplMock.mockReset().mockResolvedValue({ success: true, providers: [] });
+    getCalendarProvidersMock.mockReset().mockResolvedValue([]);
     emailProviderRows.current = [];
     sessionUser.user_type = 'internal';
   });
@@ -162,28 +167,21 @@ describe('getIntegrationHealthAlerts', () => {
   });
 
   it('yields no calendar alerts on Community Edition', async () => {
-    getCalendarProvidersImplMock.mockResolvedValue({
-      success: true,
-      providers: [calendarProvider()],
-    });
+    getCalendarProvidersMock.mockResolvedValue([calendarProvider()]);
 
     const getIntegrationHealthAlerts = await loadAction();
 
     await expect(getIntegrationHealthAlerts()).resolves.toEqual([]);
-    expect(getCalendarProvidersImplMock).not.toHaveBeenCalled();
+    expect(getCalendarProvidersMock).not.toHaveBeenCalled();
   });
 
   it('reports failing calendar providers on Enterprise Edition, warning when disconnected', async () => {
     isCalendarEnterpriseEditionMock.mockReturnValue(true);
-    getCalendarProvidersImplMock.mockResolvedValue({
-      success: true,
-      providers: [
-        calendarProvider(),
-        calendarProvider({ id: 'cal-2', name: 'Team Calendar', connection_status: 'disconnected' }),
-        calendarProvider({ id: 'cal-3', connection_status: 'connected' }),
-        calendarProvider({ id: 'cal-4', connection_status: 'error', active: false }),
-      ],
-    });
+    getCalendarProvidersMock.mockResolvedValue([
+      calendarProvider(),
+      calendarProvider({ id: 'cal-2', name: 'Team Calendar', connection_status: 'disconnected' }),
+      calendarProvider({ id: 'cal-3', connection_status: 'connected' }),
+    ]);
 
     const getIntegrationHealthAlerts = await loadAction();
     const alerts = await getIntegrationHealthAlerts();
@@ -208,10 +206,13 @@ describe('getIntegrationHealthAlerts', () => {
         href: '/msp/profile?tab=calendar',
       },
     ]);
-    expect(getCalendarProvidersImplMock).toHaveBeenCalledWith(
-      expect.objectContaining({ user_id: 'user-1' }),
-      { tenant: 'tenant-123' }
-    );
+    // Per-user, active-only: a colleague's calendar or a provider the user
+    // switched off is not this user's problem to see in the shell.
+    expect(getCalendarProvidersMock).toHaveBeenCalledWith({
+      tenant: 'tenant-123',
+      userId: 'user-1',
+      isActive: true,
+    });
   });
 
   it('aggregates both integrations and never lets a failing source break the banner', async () => {
@@ -226,7 +227,7 @@ describe('getIntegrationHealthAlerts', () => {
         status: 'paused',
       },
     ];
-    getCalendarProvidersImplMock.mockRejectedValue(new Error('EE calendar unavailable'));
+    getCalendarProvidersMock.mockRejectedValue(new Error('EE calendar unavailable'));
 
     const getIntegrationHealthAlerts = await loadAction();
     const alerts = await getIntegrationHealthAlerts();
@@ -236,5 +237,21 @@ describe('getIntegrationHealthAlerts', () => {
       integration: 'inbound_email',
       reason: 'inbound_email_auth_failure',
     });
+  });
+
+  /**
+   * The first cut of this source read `getCalendarProvidersImpl` off
+   * `@alga-psa/ee-calendar/actions`, which exports only session-wrapped
+   * actions — the lookup quietly returned undefined and calendar failures were
+   * never surfaced while every mocked test still passed. Assert against the
+   * real EE module so a renamed export or moved path fails here instead.
+   */
+  it('imports an EE calendar surface that really exposes per-user providers', async () => {
+    const eeModule = await vi.importActual<
+      typeof import('@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService')
+    >('@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService');
+
+    expect(typeof eeModule.CalendarProviderService).toBe('function');
+    expect(typeof eeModule.CalendarProviderService.prototype.getProviders).toBe('function');
   });
 });
