@@ -1961,6 +1961,8 @@
   "timeEntry": {
     "title": "Inställningar för tidregistrering",
     "description": "Hantera inställningar för tidregistrering och tidsperioder",
+    "accessDenied": "Åtkomst nekad: du har inte behörighet att visa tidsperioder.",
+    "loading": "Läser in inställningar för tidregistrering…",
     "timePeriods": {
       "title": "Inställningar för tidsperioder",
       "description": "Konfigurera tidsperioder för fakturering",
