@@ -8,6 +8,7 @@ import type { IContact } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { useContactDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Link from 'next/link';
 import { assignAssetContact } from '../actions/assetAssignmentActions';
@@ -41,6 +42,9 @@ export function AssetAssigneeRow({
 }) {
   const { t } = useTranslation('msp/assets');
   const { mutate } = useSWRConfig();
+  // Provided by MspContactDrawerProvider on the asset detail page. Optional by
+  // design — fall back to a link where no provider is mounted.
+  const contactDrawer = useContactDrawer();
   const [isOpen, setIsOpen] = useState(false);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [saving, setSaving] = useState(false);
@@ -114,16 +118,29 @@ export function AssetAssigneeRow({
         </span>
         <span className="flex items-center gap-2 min-w-0">
           {current.id ? (
-            // packages/assets does not depend on packages/clients, where the
-            // contact quick-view drawer lives, so the name links to the contact
-            // page instead of opening it in place.
-            <Link
-              id="asset-assignee-link"
-              href={`/msp/contacts/${current.id}`}
-              className="font-medium text-[rgb(var(--color-primary-600))] hover:underline truncate text-right"
-            >
-              {current.name ?? t('assetBento.aContact', { defaultValue: 'Contact' })}
-            </Link>
+            contactDrawer ? (
+              // The contact opens over the asset: navigating to the contact
+              // page took the operator off the record they were working on.
+              <button
+                id="asset-assignee-link"
+                type="button"
+                onClick={() => contactDrawer.openContactDrawer(current.id!, {
+                  // A rename in the drawer is a rename of this row.
+                  onChangesSaved: () => void mutate(matchAssetCacheKeys([assetId])),
+                })}
+                className="font-medium text-[rgb(var(--color-primary-600))] hover:underline truncate text-right"
+              >
+                {current.name ?? t('assetBento.aContact', { defaultValue: 'Contact' })}
+              </button>
+            ) : (
+              <Link
+                id="asset-assignee-link"
+                href={`/msp/contacts/${current.id}`}
+                className="font-medium text-[rgb(var(--color-primary-600))] hover:underline truncate text-right"
+              >
+                {current.name ?? t('assetBento.aContact', { defaultValue: 'Contact' })}
+              </Link>
+            )
           ) : (
             <span className="font-medium text-[rgb(var(--color-text-500))] truncate text-right">
               {t('assetBento.unassigned', { defaultValue: 'Unassigned' })}

@@ -695,3 +695,68 @@ raises the unsaved-changes confirmation while leaving the picker open above it.
 Neither picker handles Escape, so the fix belongs to the shared
 `ContactPicker`/`ClientPicker` in `packages/ui` and would land on every surface
 in the product — out of this card's scope.
+
+## Round 10 — drawers both ways, and a dragged status order (2026-10-16)
+
+Two operator notes, both on surfaces this plan built.
+
+**"contact should open in a drawer from asset details page, not go to whole
+contact page and break navigation. and vice versa."** The assignee row
+(FR-C6) linked to `/msp/contacts/[id]`, which threw away the asset the
+operator was reading; the contact page's Assets tile (FR-C6/FR-E12) did the
+same in reverse. Neither was laziness — `packages/assets` may not import
+`packages/clients`, where the contact quick view lives, and the old comment in
+`AssetAssigneeRow` said so.
+
+The way across already existed for clients: `ClientDrawerContext` in
+`@alga-psa/ui`, provided by the composition layer. `ContactDrawerContext` is
+its twin (`openContactDrawer(contactId, { onChangesSaved })`), implemented by
+the new `MspContactDrawerProvider`, which wraps the one hook that already
+knows how to load a contact into the drawer
+(`useContactQuickViewDrawer`). It is mounted in `MspAssetDetailClient` rather
+than in `WorkspaceProviders`: a global mount would pull the contact quick
+view tree into every `/msp` route's manifest, which this repo has paid for
+before. The context stays optional, so `AssetAssigneeRow` still renders the
+link where no provider is mounted — and a rename inside the drawer drops the
+asset's SWR keys, so the row's own copy of the name catches up.
+
+The reverse direction needed no context at all: the asset drawer belongs to
+`packages/assets`. `useAssetDetailDrawer` holds the four pieces of state
+(`AssociatedAssets`, `AssetDashboardClient` and `MspClientAssets` each keep
+their own copy with extra list concerns of their own, so this is a fourth
+caller, not a refactor of the first three), and `ContactAssetsSection` rows
+became buttons that open it.
+
+**"why do we need arrows in asset statuses table? if they are just for show -
+remove them. if they govern order in dropdown - replace with drag and drop."**
+They governed `display_order`, which `listAssetStatusRows` orders by and every
+status select reads — so: drag and drop. Rows are draggable with a
+`GripVertical` handle (`asset-status-drag-handle-<id>`), following
+`StatusColumnsEditor`'s in-repo pattern; the handle is focusable and answers
+ArrowUp/ArrowDown, which keeps the keyboard path the arrow buttons used to be.
+Every column is now `sortable: false` on purpose: the order is the data, and a
+sorted view would let someone drag rows into an order the server cannot store.
+
+`reorderAssetStatuses` (action) → `reorderAssetStatusRows` (registry) writes
+0..n-1 for the whole list in one transaction, because a drag can move a row
+any distance and pairwise `display_order` swaps cannot express that. A list
+naming a status the tenant does not have is refused as `not_found` instead of
+renumbering the rows it recognises. `DataTable` gained an optional
+`rowProps(record, index)` — the same shape as `rowClassName`, minus
+`className`/`onClick` — so the drag handlers reach each `<tr>` without this
+one settings screen hand-rolling its own table. `actions.moveUp`/`moveDown`
+are gone from all eleven locales; `actions.reorder` and
+`actions.dragToReorder` replace them.
+
+Covered by `AssetStatusesManager.reorder.test.tsx` (handle present, arrows
+gone, drag writes the new order, a drag that ends where it started writes
+nothing, the keyboard move, and a refusal reloading the server's order),
+`AssetContactDrawers.test.tsx` (assignee opens the drawer and stays put,
+falls back to the link with no provider, contact page opens the asset
+drawer), and a DB case in `assetStatuses.integration.test.ts` for the
+reorder/stale-list pair. One headless load confirmed nine draggable rows with
+no arrows, and the contact quick view opening over the asset page without
+leaving it.
+
+`features.json` (109) and `tests.json` (157) stay fully `implemented: true`:
+this round changed how the plan's surfaces behave, not what they cover.
