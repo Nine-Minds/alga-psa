@@ -1749,11 +1749,11 @@
       "add": "Ajouter un statut",
       "rename": "Renommer",
       "archive": "Archiver",
-      "moveUp": "Monter",
-      "moveDown": "Descendre",
       "openMenu": "Ouvrir le menu",
       "restore": "Restaurer",
-      "archiveBlocked": "Archiver · {{count}} actif(s) l'utilisent encore"
+      "archiveBlocked": "Archiver · {{count}} actif(s) l'utilisent encore",
+      "reorder": "Réordonner {{label}} — faites glisser ou utilisez les flèches haut et bas",
+      "dragToReorder": "Faites glisser pour réordonner"
     },
     "confirmArchiveTitle": "Archiver ce statut ?",
     "confirmArchiveMessage": "Archiver « {{label}} » ? Il ne sera plus proposé dans les formulaires d'actifs. Vous pourrez le restaurer plus tard.",

@@ -12,6 +12,7 @@ import {
   archiveAssetStatusRow,
   createAssetStatusRow,
   listAssetStatusRows,
+  reorderAssetStatusRows,
   restoreAssetStatusRow,
   updateAssetStatusRow,
   type AssetStatusRegistryError,
@@ -86,6 +87,26 @@ export const updateAssetStatus = withAuth(async (
 
   return withTransaction(knex, async (trx: Knex.Transaction) =>
     toActionResult(await updateAssetStatusRow(trx, tenant, statusId, data))
+  );
+});
+
+/**
+ * Persists a dragged order in one transaction: the status selects everywhere
+ * read `display_order`, so a half-written order would reshuffle every form.
+ */
+export const reorderAssetStatuses = withAuth(async (
+  user,
+  { tenant },
+  orderedIds: string[]
+): Promise<AssetStatusActionResult<AssetStatus[]> | AssetStatusPermissionError> => {
+  const { knex } = await createTenantKnex();
+
+  if (!await canManageAssetStatuses(user)) {
+    return permissionError('Permission denied: Cannot manage asset statuses', 'msp/assets:errors.permissions.manageAssetStatuses');
+  }
+
+  return withTransaction(knex, async (trx: Knex.Transaction) =>
+    toActionResult(await reorderAssetStatusRows(trx, tenant, orderedIds))
   );
 });
 

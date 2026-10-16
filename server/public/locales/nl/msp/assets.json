@@ -1749,11 +1749,11 @@
       "add": "Status toevoegen",
       "rename": "Naam wijzigen",
       "archive": "Archiveren",
-      "moveUp": "Omhoog",
-      "moveDown": "Omlaag",
       "openMenu": "Menu openen",
       "restore": "Herstellen",
-      "archiveBlocked": "Archiveren · {{count}} asset(s) gebruiken hem nog"
+      "archiveBlocked": "Archiveren · {{count}} asset(s) gebruiken hem nog",
+      "reorder": "{{label}} herschikken — sleep of gebruik de pijltjestoetsen omhoog en omlaag",
+      "dragToReorder": "Sleep om te herschikken"
     },
     "confirmArchiveTitle": "Deze status archiveren?",
     "confirmArchiveMessage": "'{{label}}' archiveren? Hij wordt niet meer aangeboden in assetformulieren. U kunt hem later herstellen.",

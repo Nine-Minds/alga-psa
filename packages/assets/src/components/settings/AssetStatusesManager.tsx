@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent } from 'react';
 import { toast } from 'react-hot-toast';
-import { ArrowDown, ArrowUp, MoreVertical } from 'lucide-react';
+import { GripVertical, MoreVertical } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -17,6 +17,7 @@ import {
   archiveAssetStatus,
   createAssetStatus,
   listAssetStatuses,
+  reorderAssetStatuses,
   restoreAssetStatus,
   updateAssetStatus,
 } from '../../actions/assetStatusActions';
@@ -116,27 +117,86 @@ export default function AssetStatusesManager() {
     }
   };
 
-  const reorder = async (status: AssetStatus, direction: -1 | 1) => {
-    const ordered = [...rows].sort((a, b) => a.display_order - b.display_order);
-    const index = ordered.findIndex((row) => row.status_id === status.status_id);
-    const swapWith = ordered[index + direction];
-    if (!swapWith) return;
-
-    const results = await Promise.all([
-      updateAssetStatus(status.status_id, { display_order: swapWith.display_order }),
-      updateAssetStatus(swapWith.status_id, { display_order: status.display_order }),
-    ]);
-    for (const result of results) {
-      if (isActionPermissionError(result)) {
-        toast.error(getErrorMessage(result));
-        return;
-      }
-      if (!result.success) {
-        toast.error(registryErrorMessage(result.error));
-        return;
-      }
+  /**
+   * The table renders `rows` in order and the server stores that order as
+   * `display_order`, which every status select reads — so the list is dragged,
+   * not nudged. The move lands locally first and is written on drop; a refusal
+   * reloads, putting the server's order back on screen.
+   */
+  const commitOrder = useCallback(async (ordered: AssetStatus[]) => {
+    const result = await reorderAssetStatuses(ordered.map((row) => row.status_id));
+    if (isActionPermissionError(result)) {
+      toast.error(getErrorMessage(result));
+      await load();
+      return;
     }
+    if (!result.success) {
+      toast.error(registryErrorMessage(result.error));
+      await load();
+      return;
+    }
+    // Reload rather than trust the returned rows: this table also shows the
+    // in-use count, which the reorder does not recompute.
     await load();
+  }, [load, registryErrorMessage]);
+
+  /**
+   * A drag fires many `dragover` events between renders, so the live order is
+   * kept in a ref: reading it from state would let two events compute the same
+   * move twice.
+   */
+  const orderRef = useRef<AssetStatus[]>(rows);
+  useEffect(() => {
+    orderRef.current = rows;
+  }, [rows]);
+
+  const moveRow = useCallback((fromIndex: number, toIndex: number): AssetStatus[] | null => {
+    const current = orderRef.current;
+    if (fromIndex === toIndex) return null;
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= current.length || toIndex >= current.length) return null;
+    const next = [...current];
+    const [row] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, row);
+    orderRef.current = next;
+    setRows(next);
+    return next;
+  }, []);
+
+  const dragRef = useRef<{ statusId: string; orderAtStart: string } | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  const handleDragStart = (status: AssetStatus) => {
+    dragRef.current = {
+      statusId: status.status_id,
+      orderAtStart: orderRef.current.map((row) => row.status_id).join('|'),
+    };
+    setDraggingId(status.status_id);
+  };
+
+  const handleDragOverRow = (event: DragEvent<HTMLTableRowElement>, index: number) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    event.preventDefault();
+    const from = orderRef.current.findIndex((row) => row.status_id === drag.statusId);
+    if (from === -1 || from === index) return;
+    moveRow(from, index);
+  };
+
+  const handleDragEnd = async () => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    setDraggingId(null);
+    if (!drag) return;
+    const ordered = orderRef.current;
+    // A drag that ended where it started must not write anything.
+    if (ordered.map((row) => row.status_id).join('|') === drag.orderAtStart) return;
+    await commitOrder(ordered);
+  };
+
+  /** Keyboard path for the same move, since a grip cannot be dragged by key. */
+  const moveByKeyboard = async (index: number, direction: -1 | 1) => {
+    const next = moveRow(index, index + direction);
+    if (next) await commitOrder(next);
   };
 
   const confirmArchive = async () => {
@@ -177,10 +237,40 @@ export default function AssetStatusesManager() {
     await load();
   };
 
+  // Sorting is off on every column on purpose: the order IS the data here, and
+  // a sorted view would have the operator drag rows into an order the server
+  // could not store.
   const columns: ColumnDefinition<AssetStatus>[] = [
+    {
+      title: '',
+      dataIndex: 'display_order',
+      id: 'drag_handle',
+      sortable: false,
+      width: '44px',
+      render: (_value, row, index) => (
+        <button
+          id={`asset-status-drag-handle-${row.status_id}`}
+          type="button"
+          title={t('assetStatusSettings.actions.dragToReorder', { defaultValue: 'Drag to reorder' })}
+          onKeyDown={(event: KeyboardEvent<HTMLButtonElement>) => {
+            if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+            event.preventDefault();
+            void moveByKeyboard(index, event.key === 'ArrowUp' ? -1 : 1);
+          }}
+          aria-label={t('assetStatusSettings.actions.reorder', {
+            defaultValue: 'Reorder {{label}} — drag, or press the up and down arrow keys',
+            label: row.label,
+          })}
+          className="cursor-grab rounded p-1 text-[rgb(var(--color-text-400))] hover:bg-[rgb(var(--color-border-100))] hover:text-[rgb(var(--color-text-600))] active:cursor-grabbing"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+      ),
+    },
     {
       title: t('assetStatusSettings.columns.label', { defaultValue: 'Status' }),
       dataIndex: 'label',
+      sortable: false,
       render: (value: string, row) => (
         <span className={row.is_active ? '' : 'text-[rgb(var(--color-text-400))] line-through'}>{value}</span>
       ),
@@ -188,11 +278,13 @@ export default function AssetStatusesManager() {
     {
       title: t('assetStatusSettings.columns.kind', { defaultValue: 'Lifecycle' }),
       dataIndex: 'kind',
+      sortable: false,
       render: (value: string) => t(`assetStatusKinds.${value}`, { defaultValue: value }),
     },
     {
       title: t('assetStatusSettings.columns.builtin', { defaultValue: 'Built-in' }),
       dataIndex: 'is_builtin',
+      sortable: false,
       render: (value: boolean) => (value
         ? t('common.states.yes', { defaultValue: 'Yes' })
         : t('common.states.no', { defaultValue: 'No' })),
@@ -200,6 +292,7 @@ export default function AssetStatusesManager() {
     {
       title: t('assetStatusSettings.columns.inUse', { defaultValue: 'In use' }),
       dataIndex: 'in_use_count',
+      sortable: false,
       render: (value: number | undefined) => String(value ?? 0),
     },
     {
@@ -209,24 +302,6 @@ export default function AssetStatusesManager() {
       width: '14%',
       render: (_value, row) => (
         <div className="flex items-center gap-1">
-          <Button
-            id={`asset-status-move-up-${row.status_id}`}
-            variant="ghost"
-            className="h-8 w-8 p-0"
-            aria-label={t('assetStatusSettings.actions.moveUp', { defaultValue: 'Move up' })}
-            onClick={() => void reorder(row, -1)}
-          >
-            <ArrowUp className="h-4 w-4" />
-          </Button>
-          <Button
-            id={`asset-status-move-down-${row.status_id}`}
-            variant="ghost"
-            className="h-8 w-8 p-0"
-            aria-label={t('assetStatusSettings.actions.moveDown', { defaultValue: 'Move down' })}
-            onClick={() => void reorder(row, 1)}
-          >
-            <ArrowDown className="h-4 w-4" />
-          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button id={`asset-status-actions-menu-${row.status_id}`} variant="ghost" className="h-8 w-8 p-0">
@@ -292,7 +367,20 @@ export default function AssetStatusesManager() {
           {t('assetStatusSettings.empty', { defaultValue: 'No asset statuses yet.' })}
         </p>
       ) : (
-        <DataTable id="asset-statuses-table" data={rows} columns={columns} pagination={false} />
+        <DataTable
+          id="asset-statuses-table"
+          data={rows}
+          columns={columns}
+          pagination={false}
+          rowClassName={(row) => (row.status_id === draggingId ? 'opacity-50' : '')}
+          rowProps={(row, index) => ({
+            draggable: true,
+            onDragStart: () => handleDragStart(row),
+            onDragOver: (event: DragEvent<HTMLTableRowElement>) => handleDragOverRow(event, index),
+            onDrop: (event: DragEvent<HTMLTableRowElement>) => event.preventDefault(),
+            onDragEnd: () => void handleDragEnd(),
+          })}
+        />
       )}
 
       <Dialog

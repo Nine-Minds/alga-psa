@@ -1721,11 +1721,11 @@
       "add": "Lägg till status",
       "rename": "Byt namn",
       "archive": "Arkivera",
-      "moveUp": "Flytta upp",
-      "moveDown": "Flytta ned",
       "openMenu": "Öppna meny",
       "restore": "Återställ",
-      "archiveBlocked": "Arkivera · {{count}} tillgång(ar) använder den fortfarande"
+      "archiveBlocked": "Arkivera · {{count}} tillgång(ar) använder den fortfarande",
+      "reorder": "Ändra ordning på {{label}} — dra, eller använd upp- och nedpiltangenterna",
+      "dragToReorder": "Dra för att ändra ordning"
     },
     "confirmArchiveTitle": "Arkivera denna status?",
     "confirmArchiveMessage": "Arkivera \"{{label}}\"? Den erbjuds inte längre i tillgångsformulären. Du kan återställa den senare.",

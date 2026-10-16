@@ -1749,11 +1749,11 @@
       "add": "Status hinzufügen",
       "rename": "Umbenennen",
       "archive": "Archivieren",
-      "moveUp": "Nach oben",
-      "moveDown": "Nach unten",
       "openMenu": "Menü öffnen",
       "restore": "Wiederherstellen",
-      "archiveBlocked": "Archivieren · {{count}} Asset(s) nutzen ihn noch"
+      "archiveBlocked": "Archivieren · {{count}} Asset(s) nutzen ihn noch",
+      "reorder": "{{label}} neu anordnen – ziehen oder die Pfeiltasten nach oben und unten verwenden",
+      "dragToReorder": "Zum Neuanordnen ziehen"
     },
     "confirmArchiveTitle": "Diesen Status archivieren?",
     "confirmArchiveMessage": "„{{label}}“ archivieren? Er wird in keinem Asset-Formular mehr angeboten. Sie können ihn später wiederherstellen.",

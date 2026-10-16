@@ -1749,11 +1749,11 @@
       "add": "Añadir estado",
       "rename": "Renombrar",
       "archive": "Archivar",
-      "moveUp": "Subir",
-      "moveDown": "Bajar",
       "openMenu": "Abrir menú",
       "restore": "Restaurar",
-      "archiveBlocked": "Archivar · {{count}} activo(s) todavía lo usan"
+      "archiveBlocked": "Archivar · {{count}} activo(s) todavía lo usan",
+      "reorder": "Reordenar {{label}}: arrastre o use las teclas de flecha arriba y abajo",
+      "dragToReorder": "Arrastre para reordenar"
     },
     "confirmArchiveTitle": "¿Archivar este estado?",
     "confirmArchiveMessage": "¿Archivar «{{label}}»? Dejará de ofrecerse en los formularios de activos. Puede restaurarlo más tarde.",

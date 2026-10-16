@@ -1749,11 +1749,11 @@
       "add": "Adicionar status",
       "rename": "Renomear",
       "archive": "Arquivar",
-      "moveUp": "Mover para cima",
-      "moveDown": "Mover para baixo",
       "openMenu": "Abrir menu",
       "restore": "Restaurar",
-      "archiveBlocked": "Arquivar · {{count}} ativo(s) ainda o usam"
+      "archiveBlocked": "Arquivar · {{count}} ativo(s) ainda o usam",
+      "reorder": "Reordenar {{label}} — arraste ou use as teclas de seta para cima e para baixo",
+      "dragToReorder": "Arraste para reordenar"
     },
     "confirmArchiveTitle": "Arquivar este status?",
     "confirmArchiveMessage": "Arquivar \"{{label}}\"? Ele deixa de ser oferecido nos formulários de ativos. Você pode restaurá-lo depois.",

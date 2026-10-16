@@ -197,6 +197,40 @@ export async function updateAssetStatusRow(
 }
 
 /**
+ * Writes the order the operator dragged the statuses into. The ids carry the
+ * whole order, so `display_order` is rewritten as 0..n-1 rather than swapped —
+ * a drag can move a row any distance, which pairwise swaps cannot express.
+ */
+export async function reorderAssetStatusRows(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  orderedIds: string[]
+): Promise<AssetStatusRegistryResult<AssetStatus[]>> {
+  const ids: string[] = [];
+  for (const value of orderedIds ?? []) {
+    const id = String(value ?? '').trim();
+    if (id && !ids.includes(id)) ids.push(id);
+  }
+  if (ids.length === 0) {
+    return fail({ code: 'invalid_status', message: 'No statuses to reorder' });
+  }
+
+  const known: string[] = await statusTable(conn, tenant).whereIn('status_id', ids).pluck('status_id');
+  if (known.length !== ids.length) {
+    // A stale list (someone else archived or added a status meanwhile) would
+    // otherwise renumber the rows that do exist and silently drop the rest.
+    return fail({ code: 'not_found', message: 'Status not found' });
+  }
+
+  const now = new Date().toISOString();
+  for (const [index, statusId] of ids.entries()) {
+    await statusTable(conn, tenant).where({ status_id: statusId }).update({ display_order: index, updated_at: now });
+  }
+
+  return ok(await listAssetStatusRows(conn, tenant, { includeArchived: true }));
+}
+
+/**
  * Archiving, not deleting (FR-B4): a status in use keeps every asset's history
  * honest, so the call is refused with the count of assets still on it.
  */

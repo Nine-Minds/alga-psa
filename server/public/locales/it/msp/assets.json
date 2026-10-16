@@ -1749,11 +1749,11 @@
       "add": "Aggiungi stato",
       "rename": "Rinomina",
       "archive": "Archivia",
-      "moveUp": "Sposta su",
-      "moveDown": "Sposta giù",
       "openMenu": "Apri menu",
       "restore": "Ripristina",
-      "archiveBlocked": "Archivia · {{count}} asset lo usano ancora"
+      "archiveBlocked": "Archivia · {{count}} asset lo usano ancora",
+      "reorder": "Riordina {{label}}: trascina oppure usa i tasti freccia su e giù",
+      "dragToReorder": "Trascina per riordinare"
     },
     "confirmArchiveTitle": "Archiviare questo stato?",
     "confirmArchiveMessage": "Archiviare «{{label}}»? Non verrà più proposto nei moduli degli asset. Potrai ripristinarlo in seguito.",

@@ -1749,11 +1749,11 @@
       "add": "Dodaj status",
       "rename": "Zmień nazwę",
       "archive": "Archiwizuj",
-      "moveUp": "W górę",
-      "moveDown": "W dół",
       "openMenu": "Otwórz menu",
       "restore": "Przywróć",
-      "archiveBlocked": "Archiwizuj · {{count}} zasób/zasoby nadal go używają"
+      "archiveBlocked": "Archiwizuj · {{count}} zasób/zasoby nadal go używają",
+      "reorder": "Zmień kolejność „{{label}}” — przeciągnij lub użyj strzałek w górę i w dół",
+      "dragToReorder": "Przeciągnij, aby zmienić kolejność"
     },
     "confirmArchiveTitle": "Zarchiwizować ten status?",
     "confirmArchiveMessage": "Zarchiwizować „{{label}}”? Nie będzie już oferowany w formularzach zasobów. Można go później przywrócić.",

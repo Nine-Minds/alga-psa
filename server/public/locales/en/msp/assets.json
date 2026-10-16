@@ -1749,11 +1749,11 @@
       "add": "Add status",
       "rename": "Rename",
       "archive": "Archive",
-      "moveUp": "Move up",
-      "moveDown": "Move down",
       "openMenu": "Open menu",
       "restore": "Restore",
-      "archiveBlocked": "Archive · {{count}} asset(s) still on it"
+      "archiveBlocked": "Archive · {{count}} asset(s) still on it",
+      "reorder": "Reorder {{label}} — drag, or press the up and down arrow keys",
+      "dragToReorder": "Drag to reorder"
     },
     "confirmArchiveTitle": "Archive this status?",
     "confirmArchiveMessage": "Archive \"{{label}}\"? It stops being offered on every asset form. You can restore it later.",

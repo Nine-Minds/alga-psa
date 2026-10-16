@@ -346,6 +346,31 @@ describe('asset statuses', () => {
     expect(Object.keys(actions)).not.toContain('deleteAssetStatus');
   });
 
+  // FR-B4: the dragged order is what every status select reads, so the whole
+  // order is rewritten as 0..n-1 rather than swapped pairwise.
+  it('writes a dragged order and refuses a stale one', async () => {
+    await seedTenant();
+    const { reorderAssetStatuses } = await import('@alga-psa/assets/actions/assetStatusActions');
+    const before = await listAssetStatuses({ includeArchived: true }) as any[];
+    const reversed = [...before].reverse().map((status) => status.status_id);
+
+    const result: any = await reorderAssetStatuses(reversed);
+    expect(result.success).toBe(true);
+    expect(result.data.map((status: any) => status.status_id)).toEqual(reversed);
+    expect(result.data.map((status: any) => status.display_order)).toEqual([0, 1, 2, 3, 4]);
+
+    // The list action reads display_order, so the new order is what forms see.
+    const after = await listAssetStatuses({ includeArchived: true }) as any[];
+    expect(after.map((status) => status.status_id)).toEqual(reversed);
+
+    // A list naming a status this tenant does not have renumbers nothing.
+    const stale: any = await reorderAssetStatuses([...reversed.slice(1), randomUUID()]);
+    expect(stale.success).toBe(false);
+    expect(stale.error.code).toBe('not_found');
+    const unchanged = await listAssetStatuses({ includeArchived: true }) as any[];
+    expect(unchanged.map((status) => status.status_id)).toEqual(reversed);
+  });
+
   // FR-B5: what "deployed" means to a metric, including a tenant whose
   // registry has not been seeded (which must not read as "nothing deployed").
   it('lists the deployable slugs and falls back to the builtins', async () => {
