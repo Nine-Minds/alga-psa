@@ -284,6 +284,18 @@
     "platformNotification": {
       "learnMore": "Scopri di più",
       "dismiss": "Ignora notifica"
+    },
+    "integrationHealth": {
+      "inboundEmail": {
+        "authFailure": "Le email in entrata per {{mailbox}} sono in pausa perché le credenziali non funzionano più.",
+        "error": "Le email in entrata per {{mailbox}} hanno segnalato un errore e potrebbero non essere ricevute."
+      },
+      "calendar": {
+        "error": "La sincronizzazione del calendario per {{providerName}} ha segnalato un errore e non è attiva.",
+        "disconnected": "La sincronizzazione del calendario per {{providerName}} è disconnessa e non è attiva."
+      },
+      "review": "Verifica",
+      "dismiss": "Ignora avviso di integrazione"
     }
   },
   "quickCreate": {
