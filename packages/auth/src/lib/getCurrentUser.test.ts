@@ -10,10 +10,13 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
-// getCurrentUser reads the session via the local ./getSession module.
+// getCurrentUser reads the session via the local ./getSession module, and
+// reports a decoded-but-unresolvable session through the same module's
+// rejection log, so that name has to be mocked too.
 vi.mock('./getSession', () => ({
   getSession: vi.fn(),
   getSessionWithRevocationCheck: vi.fn(),
+  logSessionRejection: vi.fn(),
 }));
 
 // User lookups now go through the @alga-psa/db helpers directly.
@@ -27,7 +30,7 @@ import {
   getCurrentUser,
   getCurrentUserWithRevocationCheck,
 } from './getCurrentUser';
-import { getSession, getSessionWithRevocationCheck } from './getSession';
+import { getSession, getSessionWithRevocationCheck, logSessionRejection } from './getSession';
 import { getUserWithRoles } from '@alga-psa/db';
 
 const envSnapshot = { ...process.env };
@@ -36,6 +39,7 @@ beforeEach(() => {
   vi.mocked(getSession).mockReset();
   vi.mocked(getSessionWithRevocationCheck).mockReset();
   vi.mocked(getUserWithRoles).mockReset();
+  vi.mocked(logSessionRejection).mockReset();
 });
 
 afterEach(() => {
@@ -91,6 +95,7 @@ describe('getCurrentUser', () => {
     vi.mocked(getUserWithRoles).mockResolvedValue(null as any);
 
     await expect(getCurrentUser()).resolves.toBeNull();
+    expect(vi.mocked(logSessionRejection)).toHaveBeenCalledWith('user_missing');
   });
 
   it('returns null when the session user has been deactivated', async () => {

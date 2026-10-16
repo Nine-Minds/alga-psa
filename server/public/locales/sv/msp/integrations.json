@@ -124,6 +124,15 @@
           "paymentTerms": "Betalningsvillkor",
           "discounts": "Rabatter"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Tjänstekonton i Desktop",
+        "desktopDiscounts": "Rabatter i Desktop",
+        "desktopAccount": "Intäktskontots namn i Desktop",
+        "description": "Mappa fakturarabatter och krediteringar före export. Mappningen tillhör det här bokföringsföretaget.",
+        "add": "Lägg till mappning",
+        "remove": "Ta bort mappning",
+        "removeConfirm": "Vill du ta bort den här bokföringsmappningen?"
       }
     },
     "calendar": {

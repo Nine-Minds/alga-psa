@@ -1,0 +1,21 @@
+{
+    "filtered_audit_rows": 0,
+    "locked_fixture_cleanup": {
+        "line": 0,
+        "claim": 0,
+        "charge": 0,
+        "detail": 0,
+        "invoice": 0,
+        "contract": 0,
+        "assignment": 0,
+        "configuration": 0
+    },
+    "preexisting_adjustment_fixture": {
+        "tax": 900,
+        "total": 362400,
+        "revision": 40,
+        "subtotal": 361500,
+        "charge_count": 4,
+        "operation_rows": 40
+    }
+}

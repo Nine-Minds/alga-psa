@@ -124,6 +124,15 @@
           "paymentTerms": "Conditions de paiement",
           "discounts": "Remises"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Comptes de services Desktop",
+        "desktopDiscounts": "Remises Desktop",
+        "desktopAccount": "Nom du compte de produits Desktop",
+        "description": "Associez les remises et avoirs avant l’exportation. Cette association appartient à cette société comptable.",
+        "add": "Ajouter une association",
+        "remove": "Supprimer une association",
+        "removeConfirm": "Supprimer cette association comptable ?"
       }
     },
     "calendar": {

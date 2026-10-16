@@ -10,7 +10,6 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { BillingEngine, UnresolvedCatalogPricingError } from '../lib/billing/billingEngine';
 import { reconcileWindowAttribution } from '../lib/billing/contractLineAttributionWriter';
-import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { listUnmaterializedClientCadenceWindowLineIds } from '../lib/billing/clientCadenceWindowMaterialization';
 import {
   getCycleBillingProfileId,
@@ -59,7 +58,8 @@ import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { auditLog } from '@alga-psa/db';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
-import { reconcileAutomaticInvoiceAdjustments } from '../lib/billing/reconcileAutomaticInvoiceDiscounts';
+import { previewAutomaticInvoiceDiscounts, reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
+import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import {
   reconcileContractChangeAdjustmentsForInvoice,
   releaseOrphanedContractAdjustments,
@@ -2572,14 +2572,30 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
   }
 
   const previewTax = await calculatePreviewTax(
-    billingResult.charges,
+    previewCharges,
     client_id,
     cycleEnd,
     client?.tax_region || '',
   );
 
+  const adjustments = await previewAutomaticInvoiceDiscounts(
+    knex, tenant, client_id, previewCharges, previewInvoiceDate,
+  );
+
   const viewModel = await adaptToWasmViewModel(
-    billingResult,
+    {
+      ...billingResult,
+      charges: previewCharges,
+      totalAmount: previewCharges.reduce((sum, charge) => sum + charge.total, 0),
+      discounts: adjustments.discounts.map((discount) => ({
+        tenant,
+        discount_id: discount.discount_id,
+        discount_name: discount.discount_name,
+        discount_type: discount.discount_type,
+        value: discount.value,
+        amount: discount.amount,
+      })),
+    },
     client,
     invoiceItems,
     due_date,
@@ -4140,17 +4156,16 @@ export async function createInvoiceFromBillingResultImpl(
       }
     }
 
-    // Reconcile automatic discounts against the actual persisted (and
-    // reconciled) charge rows through the shared evaluator, with provenance, so
-    // a cancelled/edited true-up cannot leave a stale discount amount behind.
-    const discountMagnitude = await reconcileAutomaticInvoiceAdjustments({
-      trx,
-      tenant,
-      invoiceId: newInvoice!.invoice_id,
-    });
+    // One shared evaluator owns configured automatic discounts. It reads the
+    // persisted rows, so generation, preview and draft refresh all apply the
+    // same scopes, invoice-period eligibility and rounding. Discounts return a
+    // positive magnitude.
+    const { automaticDiscountAmount } =
+      await reconcileAutomaticInvoiceAdjustments(trx, tenant, newInvoice!.invoice_id);
 
-    // Use the subtotal from persisted charges minus the reconciled discounts.
-    const subtotal = calculatedSubtotal - discountMagnitude;
+    // Use the subtotal returned by persistInvoiceCharges minus the shared
+    // automatic discount settlement.
+    const subtotal = calculatedSubtotal - automaticDiscountAmount;
 
     // Leverage the shared tax helper so automated invoices mirror manual invoices
     const calculatedTax = await calculateAndDistributeTax(

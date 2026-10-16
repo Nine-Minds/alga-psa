@@ -1,0 +1,176 @@
+{
+  "evidenceType": "fallback-production-walkthrough",
+  "readiness": "BLOCKED",
+  "timestampUtc": "2026-10-14T02:12:45Z",
+  "environment": {
+    "browser": "Local headless Chrome via Playwright; fallback only, not IDE Open Review",
+    "productionApp": "http://feature-contract-invoices-automatic-adjustments-and-disc.localhost:23185",
+    "health": {
+      "http": 200,
+      "body": {
+        "status": "ok",
+        "version": "1.0.0"
+      }
+    },
+    "applicationRevision": "4571290674fe78f75438e90ec10ae0afc4d6e85a",
+    "productionStamp": "4571290674fe78f75438e90ec10ae0afc4d6e85a+da39a3ee5e6b",
+    "localUpstreamPrRevisionBeforeEvidenceCommit": "4571290674fe78f75438e90ec10ae0afc4d6e85a"
+  },
+  "fallbackSessions": [
+    {
+      "identity": "qa@emeraldcity.oz",
+      "userType": "internal",
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "result": "Authenticated in local Chrome; fallback evidence only"
+    },
+    {
+      "identity": "smoke281.portal@emeraldcity.oz",
+      "userType": "client",
+      "contactId": "164ec170-b852-41a0-b160-e7835a94d17c",
+      "clientId": "5ba78228-ace1-4990-b42f-30739458299a",
+      "role": "Client admin (contacts.is_client_admin=true)",
+      "result": "Authenticated in local Chrome and opened client billing"
+    }
+  ],
+  "checks": {
+    "authenticatedDeepLinks": [
+      {
+        "destination": "Draft invoice",
+        "result": "Invoice preview loaded; adjustment editor required selecting the row in Drafts"
+      },
+      {
+        "destination": "Contract template",
+        "result": "Loaded REVIEW-3499-MITIGATION-TWO-FIXED-LINES"
+      },
+      {
+        "destination": "Client contract Lines",
+        "result": "Loaded REVIEW-3499-UNBILLED-20261012-dcd6e36f-CONTRACT with two lines"
+      },
+      {
+        "destination": "Accounting Exports",
+        "result": "Loaded; preserved delivered batch f4296b3c-5dec-4452-837d-17e4fecdbd53 was visible; no replay"
+      }
+    ],
+    "ownedDraft": {
+      "invoice": "REVIEW-3499-EXPANDED",
+      "invoiceId": "5a1e0000-0000-4000-8000-202610079001",
+      "auditedBaseline": {
+        "amountMinor": 390000,
+        "adjustmentRevision": 8,
+        "generatedCharges": 3,
+        "manualCharges": 0,
+        "payments": 0,
+        "finalized": false
+      },
+      "manualAdjustment": "PR3499 fallback verification adjustment; Asset Tracking; quantity 1; $1.00; non-taxable",
+      "savedAndReloaded": {
+        "amountMinor": 390100,
+        "adjustmentRevision": 9,
+        "generatedCharges": 3,
+        "manualCharges": 1
+      },
+      "repeatedSave": {
+        "amountMinor": 390100,
+        "adjustmentRevision": 10,
+        "generatedCharges": 3,
+        "manualCharges": 1,
+        "duplicateRows": false
+      },
+      "previewAndPdf": {
+        "subtotal": "$3,901.00",
+        "tax": "$0.00",
+        "total": "$3,901.00",
+        "match": true
+      },
+      "restoredAfterRemoveAndSave": {
+        "amountMinor": 390000,
+        "adjustmentRevision": 11,
+        "generatedCharges": 3,
+        "manualCharges": 0,
+        "testRows": 0,
+        "finalized": false
+      }
+    },
+    "portal": {
+      "invoiceDate": "October 13, 2026",
+      "invoice": "SMOKE457-INCREASE",
+      "issueDate": "10/13/2026",
+      "dueDate": "11/12/2026",
+      "amountMinor": 45596,
+      "portalAndPdfTotal": "A$455.96",
+      "trueUpLine": "Cabling: increase (+1 units); 2026-10-13 through 2026-11-01 (end date exclusive); full-period rate AUD $120.00; prorated 19/31 days",
+      "result": "Client admin role opened billing; portal listing, invoice details, and downloaded PDF agree on issue date and total"
+    },
+    "deliveredHistory": {
+      "SMOKE457-INCREASE": {
+        "amountMinor": 45596,
+        "status": "sent",
+        "finalizedAt": "2026-10-13T00:00:00Z"
+      },
+      "SMOKE457-CREDIT": {
+        "amountMinor": 32205,
+        "status": "sent",
+        "finalizedAt": "2026-10-13T00:00:00Z"
+      },
+      "INV-000063": {
+        "amountMinor": 28230,
+        "status": "sent",
+        "finalizedAt": "2026-10-13T00:00:00Z"
+      },
+      "batch": {
+        "id": "f4296b3c-5dec-4452-837d-17e4fecdbd53",
+        "status": "Delivered",
+        "replayed": false
+      },
+      "result": "Read-only production DB audit confirmed retained values; no delivered invoice or batch was changed"
+    },
+    "guide": {
+      "expandableSections": 4,
+      "evidenceLinksCheckedBeforeUpdate": 21,
+      "readiness": "BLOCKED"
+    },
+    "finalizedProtection": {
+      "invoice": "SMOKE457-INCREASE",
+      "applicationView": "Finalized invoice preview displayed; no adjustment editor or edit control. Lifecycle actions were visible but untouched.",
+      "database": "status=sent; finalizedAt=2026-10-13T00:00:00Z; amountMinor=45596",
+      "result": "No delivered invoice was edited or unlocked"
+    }
+  },
+  "openReview": {
+    "freshCardBrowserAttemptUtc": "2026-10-14T02:07:41Z",
+    "freshCardBrowserResult": "Failed: No hub command responder is available for space-new-tab: no responders: 'wf.cli.hub'",
+    "openReviewAttemptUtc": "2026-10-14T02:07:42Z",
+    "openReviewResult": "Failed: No hub command responder is available for workflow-open-review: no responders: 'wf.cli.hub'",
+    "hostPing": "pong",
+    "viewerPeer": {
+      "name": "Rober\u2019s MacBook Pro",
+      "tailscaleIp": "100.70.145.1",
+      "online": false,
+      "lastSeenUtc": "2026-10-14T01:40:00.1Z"
+    },
+    "signedInAs": null,
+    "actualOpenReviewSession": "Not verified; fallback Chrome does not count as Open Review",
+    "blocker": "Alga Dev IDE hub has no command responder and the registered viewer peer is offline; external IDE/viewer restoration is required"
+  },
+  "limitations": [
+    "Fallback walkthrough passed for the listed authenticated destinations and owned draft behavior; signed-in IDE Open Review remains unverified.",
+    "The existing REVIEW-CONTRACT-3499 draft has a legacy unmapped manual charge and rejected a save without changing its baseline. It was not used for mutation; REVIEW-3499-EXPANDED was the owned editable fixture.",
+    "No application source was changed and no application tests/builds were run. This commit records operational evidence only."
+  ],
+  "artifacts": [
+    "04-owned-draft-baseline.png",
+    "05-owned-draft-staged.png",
+    "06-owned-draft-saved.png",
+    "07-adjustment-reloaded.png",
+    "08-adjustment-preview.pdf",
+    "09-owned-draft-restored.png",
+    "11-portal-invoices.png",
+    "12-portal-increase-open.png",
+    "13-portal-SMOKE457-INCREASE.pdf",
+    "deep-link-invoice.png",
+    "deep-link-template.png",
+    "deep-link-client-contract.png",
+    "deep-link-exports.png",
+    "14-delivered-invoice-protected.png"
+  ]
+}

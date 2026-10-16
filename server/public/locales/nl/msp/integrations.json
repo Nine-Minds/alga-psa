@@ -124,6 +124,15 @@
           "paymentTerms": "Betalingsvoorwaarden",
           "discounts": "Kortingen"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Desktop-dienstrekeningen",
+        "desktopDiscounts": "Desktop-kortingen",
+        "desktopAccount": "Naam Desktop-opbrengstrekening",
+        "description": "Koppel factuurkortingen en credits vóór export. De koppeling hoort bij dit boekhoudbedrijf.",
+        "add": "Koppeling toevoegen",
+        "remove": "Koppeling verwijderen",
+        "removeConfirm": "Deze boekhoudkoppeling verwijderen?"
       }
     },
     "calendar": {
