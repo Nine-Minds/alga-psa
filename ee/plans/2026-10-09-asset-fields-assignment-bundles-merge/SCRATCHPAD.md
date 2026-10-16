@@ -842,3 +842,63 @@ The test mock now keys its rows by position like the real table does —
 `AssetStatusesManager.reorder.test.tsx` had hidden the bug with a stable key —
 and a new case replays the operator's repro: two ArrowDowns move the same
 status two places (and the case fails without the focus restore).
+
+## Round 12 — the red lanes, and a board that needed a reload (2026-10-16)
+
+Three checks were red on PR #3763 (`citus / Combined migrations on single-node
+Citus`, `unit / Nx affected unit tests`, and the `Production regression
+readiness` gate that only aggregates them). All of it traced back to this card.
+
+### Two Temporal tests carried their own copy of the seed list
+
+The asset-status group added onboarding seed `11_asset_statuses.cjs`, and two
+tests hand-maintain the list of what onboarding writes:
+
+- `product-upgrade-operations.integration.test.ts` asserted the nine filenames
+  `backfillPsaSeeds` returns; it returns ten now, and `listProductSeedFiles`
+  sorts lexicographically so `11_` lands last. The seed was also added to
+  `seededTables` (so the idempotence re-run covers it) and to
+  `engineCleanupTables`, plus a builtin-slug assertion mirroring the
+  `asset_type_registry` one already there.
+- `tenant-creation-workflow.e2e.test.ts` clears the tables onboarding fills
+  outside the basic rollback. `asset_statuses` was missing, so its FK to
+  `tenants` blocked `rollbackTenantInDB` and the tenant row outlived the test —
+  the CI postgres log said so verbatim
+  (`violates foreign key constraint asset_statuses_tenant_foreign`).
+
+Production `rollbackTenantInDB` was deliberately left alone: by convention it
+does not delete onboarding-seeded rows (`asset_type_registry`, `statuses` and
+`tax_regions` are equally absent) and the tests compensate with explicit lists.
+
+### The delete dialog threw away the destination the operator picked
+
+`DeleteStatusColumnDialog` reset its destination from an effect keyed on
+`moveTargets.length`, so any render that changed the length of the destination
+list overwrote a choice already made and the tasks went to the first column.
+The pick is now held on its own and cleared only when the dialog opens for a
+different column, with a fallback for targets that arrive late or vanish. The
+new regression case fails against the old code with the exact CI symptom
+(`'m1'` instead of `'m3'`).
+
+### The board only believed the move after a reload
+
+The browser check then found the other half: delete a column with three tasks
+in the project edit drawer, pick a destination, Move & Delete, Save and Close —
+and the kanban showed the destination column empty while the list view still
+filed all three tasks under the column that had just been removed. A reload
+fixed it.
+
+`ProjectDetail` re-reads its statuses, its phase fork counts and its tasks
+whenever `statusVersion` changes, and an in-board status edit bumps it
+(`onStatusesChanged`). The edit drawer lives in `ProjectInfo`, a sibling under
+`ProjectPage`, so nothing bumped it there: the status columns came back fresh
+from `getProjectMetadata` while the tasks stayed as they were, still pointing
+at the deleted mapping.
+
+`ProjectInfo` now reports the drawer's close — on Save *and* on Cancel, because
+a deletion inside the drawer is already written by then — `ProjectPage` turns
+that into a `statusRefreshKey`, and `ProjectDetail` folds the key into the same
+`statusVersion` its own edits bump, so the two sources cannot cancel each other
+out. Pinned by `projectStatusRefreshWiring.contract.test.ts`, following the
+contract-test convention `ProjectDetail` already uses (it is far too large to
+mount).

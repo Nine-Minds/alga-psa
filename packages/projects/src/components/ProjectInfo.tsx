@@ -43,6 +43,13 @@ interface ProjectInfoProps {
   onContactChange?: (contactId: string | null) => void;
   onAssignedUserChange?: (userId: string | null) => void;
   onProjectUpdate?: (project: IProject) => void;
+  /**
+   * Fired when the edit drawer closes. Its status-column editor writes
+   * deletions (and the task moves they trigger) straight away, so the board
+   * next to us has to re-read its statuses and tasks or it keeps showing
+   * tasks in a column that no longer exists.
+   */
+  onStatusesChanged?: () => void;
   projectTags?: ITag[];
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
@@ -58,6 +65,7 @@ export default function ProjectInfo({
   onContactChange,
   onAssignedUserChange,
   onProjectUpdate,
+  onStatusesChanged,
   projectTags = [],
   allTagTexts = [],
   onTagsChange
@@ -148,9 +156,13 @@ export default function ProjectInfo({
             onProjectUpdate(updatedProject);
           }
           closeDrawer();
+          onStatusesChanged?.();
         }}
         onCancel={() => {
           closeDrawer();
+          // Cancel abandons only the staged edits; a column deleted inside the
+          // drawer is already written, so the board still needs the re-read.
+          onStatusesChanged?.();
         }}
       />
     );
