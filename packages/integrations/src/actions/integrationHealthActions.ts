@@ -409,9 +409,9 @@ const teamsBotSource: IntegrationHealthSource = async ({ user, tenant, knex }) =
 /**
  * Registry of health sources. Future integrations join by adding a source here.
  *
- * Hudu is deliberately absent: hudu_integrations is readable only through
- * ee/server, which has no importable package alias, so it needs an EE package
- * seam first.
+ * Hudu is deliberately absent: its EE-only storage table is readable only
+ * through ee/server, which has no importable package alias, so it needs an
+ * EE package seam first.
  */
 const INTEGRATION_HEALTH_SOURCES: IntegrationHealthSource[] = [
   inboundEmailSource,
