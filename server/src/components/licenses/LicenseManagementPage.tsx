@@ -167,7 +167,12 @@ function statusPresentation(
           tier: tierLabel(status.tier, t),
           defaultValue: "{{tier}} is active",
         }),
-        description: status.subscription?.phase === "ending"
+        description: status.subscription?.phase === "ending" && status.subscription.cause === "term"
+          ? t("managementPage.status.licensed.descriptionTermEnds", {
+              date: formatDate(status.subscription.endsAt ?? status.expiresAt),
+              defaultValue: "Pro is active through {{date}}, when its fixed term ends.",
+            })
+          : status.subscription?.phase === "ending"
           ? t("managementPage.status.licensed.descriptionEnding", {
               date: formatDate(status.subscription.endsAt ?? status.expiresAt),
               defaultValue:
@@ -603,9 +608,13 @@ export default function LicenseManagementPage() {
                       ? t("managementPage.lapse.lapsedTitle", {
                           defaultValue: "You’re now on the free edition. Resubscribe to restore Pro.",
                         })
-                      : t("managementPage.lapse.endingTitle", {
-                          defaultValue: "Your Pro subscription has been cancelled.",
-                        })}
+                      : status.subscription.cause === "term"
+                        ? t("managementPage.lapse.termEndsTitle", {
+                            defaultValue: "Your Pro term is ending.",
+                          })
+                        : t("managementPage.lapse.endingTitle", {
+                            defaultValue: "Your Pro subscription has been cancelled.",
+                          })}
                   </p>
                   {subscriptionEndDate ? (
                     <p>

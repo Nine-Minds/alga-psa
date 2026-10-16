@@ -50,7 +50,9 @@
     "subscriptionEnding": "Il tuo abbonamento Pro è stato annullato. Pro termina il {{date}}. Riabbonati per mantenere Pro.",
     "subscriptionEndingNoDate": "Il tuo abbonamento Pro è stato annullato. Riabbonati per mantenere Pro.",
     "subscriptionLapsed": "Ora stai usando l'edizione gratuita. Riabbonati per ripristinare Pro.",
-    "resubscribe": "Riabbonati"
+    "resubscribe": "Riabbonati",
+    "termEnds": "Il tuo accesso a Pro termina il {{date}}. Rinnova per mantenere Pro.",
+    "termEndsNoDate": "Il tuo periodo Pro sta per terminare. Rinnova per mantenere Pro."
   },
   "nav": {
     "dashboard": "Dashboard",

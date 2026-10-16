@@ -50,7 +50,9 @@
     "subscriptionEnding": "A sua subscrição Pro foi cancelada. O Pro termina em {{date}}. Subscreva novamente para manter o Pro.",
     "subscriptionEndingNoDate": "A sua subscrição Pro foi cancelada. Subscreva novamente para manter o Pro.",
     "subscriptionLapsed": "Está agora na edição gratuita. Subscreva novamente para restaurar o Pro.",
-    "resubscribe": "Subscrever novamente"
+    "resubscribe": "Subscrever novamente",
+    "termEnds": "O seu acesso ao Pro termina em {{date}}. Renove para manter o Pro.",
+    "termEndsNoDate": "O seu período Pro está a terminar. Renove para manter o Pro."
   },
   "nav": {
     "dashboard": "Painel",

@@ -263,7 +263,8 @@
         "description": "Your paid license is active on this appliance.",
         "descriptionWithExpiry": "Your license is active through {{date}}.",
         "badge": "Licensed",
-        "descriptionEnding": "Your subscription has been cancelled. Pro stays active through {{date}}."
+        "descriptionEnding": "Your subscription has been cancelled. Pro stays active through {{date}}.",
+        "descriptionTermEnds": "Pro is active through {{date}}, when its fixed term ends."
       },
       "licenseExpired": {
         "eyebrow": "License needs attention",
@@ -371,7 +372,8 @@
       "endedOn": "Pro ended on {{date}}.",
       "endsOn": "Pro ends on {{date}}.",
       "dataKept": "Nothing is deleted. Your data stays in place and Pro features turn back on after you resubscribe and refresh the license.",
-      "resubscribe": "Resubscribe"
+      "resubscribe": "Resubscribe",
+      "termEndsTitle": "Your Pro term is ending."
     }
   },
   "errors": {

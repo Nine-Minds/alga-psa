@@ -50,7 +50,9 @@
     "subscriptionEnding": "Uw Pro-abonnement is opgezegd. Pro eindigt op {{date}}. Abonneer opnieuw om Pro te behouden.",
     "subscriptionEndingNoDate": "Uw Pro-abonnement is opgezegd. Abonneer opnieuw om Pro te behouden.",
     "subscriptionLapsed": "U gebruikt nu de gratis editie. Abonneer opnieuw om Pro te herstellen.",
-    "resubscribe": "Opnieuw abonneren"
+    "resubscribe": "Opnieuw abonneren",
+    "termEnds": "Uw Pro-toegang eindigt op {{date}}. Verleng om Pro te behouden.",
+    "termEndsNoDate": "Uw Pro-periode loopt af. Verleng om Pro te behouden."
   },
   "nav": {
     "dashboard": "Dashboard",

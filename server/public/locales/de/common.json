@@ -50,7 +50,9 @@
     "subscriptionEnding": "Ihr Pro-Abonnement wurde gekündigt. Pro endet am {{date}}. Schließen Sie das Abonnement erneut ab, um Pro zu behalten.",
     "subscriptionEndingNoDate": "Ihr Pro-Abonnement wurde gekündigt. Schließen Sie das Abonnement erneut ab, um Pro zu behalten.",
     "subscriptionLapsed": "Sie nutzen jetzt die kostenlose Edition. Schließen Sie das Abonnement erneut ab, um Pro wiederherzustellen.",
-    "resubscribe": "Erneut abonnieren"
+    "resubscribe": "Erneut abonnieren",
+    "termEnds": "Ihr Pro-Zugang endet am {{date}}. Verlängern Sie, um Pro zu behalten.",
+    "termEndsNoDate": "Ihre Pro-Laufzeit endet bald. Verlängern Sie, um Pro zu behalten."
   },
   "nav": {
     "dashboard": "Dashboard",

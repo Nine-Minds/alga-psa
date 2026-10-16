@@ -264,7 +264,8 @@
         "description": "Sua licença paga está ativa neste appliance.",
         "descriptionWithExpiry": "Sua licença está ativa até {{date}}.",
         "badge": "Licenciado",
-        "descriptionEnding": "A sua subscrição foi cancelada. O Pro permanece ativo até {{date}}."
+        "descriptionEnding": "A sua subscrição foi cancelada. O Pro permanece ativo até {{date}}.",
+        "descriptionTermEnds": "O Pro está ativo até {{date}}, quando o prazo fixo termina."
       },
       "licenseExpired": {
         "eyebrow": "A licença requer atenção",
@@ -373,7 +374,8 @@
       "endedOn": "O Pro terminou em {{date}}.",
       "endsOn": "O Pro termina em {{date}}.",
       "dataKept": "Nada é eliminado. Os seus dados permanecem e as funcionalidades Pro voltam a ativar-se depois de subscrever novamente e atualizar a licença.",
-      "resubscribe": "Subscrever novamente"
+      "resubscribe": "Subscrever novamente",
+      "termEndsTitle": "O seu período Pro está a terminar."
     }
   },
   "errors": {

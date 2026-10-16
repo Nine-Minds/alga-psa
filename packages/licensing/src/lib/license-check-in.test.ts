@@ -121,6 +121,21 @@ describe('checkInStateUpdate', () => {
     });
   });
 
+  it('term_ends parses and is stored (and an unknown state parses to null and clears)', () => {
+    expect(parseCheckInSubscription({ state: 'term_ends', cancels_at: '2026-11-01T00:00:00Z' })?.state).toBe('term_ends');
+    expect(parseCheckInSubscription({ state: 'term_endz' })?.state).toBeNull();
+    const r = interpretCheckInResponse(200, {
+      status: 'ok', jwt: 'new', exp: 1,
+      subscription: { state: 'term_ends', cancels_at: '2026-11-01T00:00:00Z' },
+    });
+    expect(checkInStateUpdate(r, 'old', NOW)).toMatchObject({
+      subscription_state: 'term_ends',
+      subscription_cancels_at: new Date('2026-11-01T00:00:00Z'),
+    });
+    const unknown = interpretCheckInResponse(200, { status: 'ok', jwt: 'new', exp: 1, subscription: { state: 'term_endz' } });
+    expect(checkInStateUpdate(unknown, 'old', NOW)).toMatchObject({ subscription_state: null });
+  });
+
   it('cancelled / revoked stores the lapse and NEVER touches the token (grace)', () => {
     const r = interpretCheckInResponse(200, { status: 'revoked', subscription: { state: 'cancelled' } });
     const u = checkInStateUpdate(r, 'old', NOW)!;

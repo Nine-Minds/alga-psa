@@ -263,7 +263,8 @@
         "description": "Ihre kostenpflichtige Lizenz ist auf dieser Appliance aktiv.",
         "descriptionWithExpiry": "Ihre Lizenz ist bis zum {{date}} aktiv.",
         "badge": "Lizenziert",
-        "descriptionEnding": "Ihr Abonnement wurde gekündigt. Pro bleibt bis zum {{date}} aktiv."
+        "descriptionEnding": "Ihr Abonnement wurde gekündigt. Pro bleibt bis zum {{date}} aktiv.",
+        "descriptionTermEnds": "Pro ist bis zum {{date}} aktiv, dann endet die feste Laufzeit."
       },
       "licenseExpired": {
         "eyebrow": "Lizenz erfordert Ihre Aufmerksamkeit",
@@ -371,7 +372,8 @@
       "endedOn": "Pro endete am {{date}}.",
       "endsOn": "Pro endet am {{date}}.",
       "dataKept": "Es wird nichts gelöscht. Ihre Daten bleiben erhalten, und die Pro-Funktionen werden nach erneutem Abonnement und Aktualisierung der Lizenz wieder aktiviert.",
-      "resubscribe": "Erneut abonnieren"
+      "resubscribe": "Erneut abonnieren",
+      "termEndsTitle": "Ihre Pro-Laufzeit endet bald."
     }
   },
   "errors": {

@@ -173,6 +173,7 @@ describe("LicenseManagementPage", () => {
       daysRemaining: 20,
       subscription: {
         phase: "ending",
+        cause: "cancelled",
         endsAt: "2030-01-31T12:00:00.000Z",
         resubscribeUrl: "https://portal.example/resubscribe",
       },
@@ -192,13 +193,31 @@ describe("LicenseManagementPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("words a fixed-term grant end as 'Pro ends on', never as a cancellation", async () => {
+    mockGetLicenseStatus.mockResolvedValue({
+      ...baseStatus,
+      state: "licensed",
+      tier: "pro",
+      connected: true,
+      expiresAt: "2030-01-31T00:00:00.000Z",
+      daysRemaining: 20,
+      subscription: { phase: "ending", cause: "term", endsAt: "2030-01-31T12:00:00.000Z", resubscribeUrl: null },
+    });
+
+    render(<LicenseManagementPage />);
+
+    expect(await screen.findByText("Your Pro term is ending.")).toBeInTheDocument();
+    expect(screen.getByText(/^Pro ends on /)).toBeInTheDocument();
+    expect(screen.queryByText(/has been cancelled/)).not.toBeInTheDocument();
+  });
+
   it("shows the free-edition message after the lapse, without 'contact support'", async () => {
     mockGetLicenseStatus.mockResolvedValue({
       ...baseStatus,
       state: "license_expired",
       tier: "essentials",
       trialUsed: true,
-      subscription: { phase: "lapsed", endsAt: "2025-07-12T00:00:00.000Z", resubscribeUrl: null },
+      subscription: { phase: "lapsed", cause: "cancelled", endsAt: "2025-07-12T00:00:00.000Z", resubscribeUrl: null },
     });
 
     render(<LicenseManagementPage />);

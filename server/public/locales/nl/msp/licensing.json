@@ -263,7 +263,8 @@
         "description": "Uw betaalde licentie is actief op deze appliance.",
         "descriptionWithExpiry": "Uw licentie is actief tot en met {{date}}.",
         "badge": "Gelicentieerd",
-        "descriptionEnding": "Uw abonnement is opgezegd. Pro blijft actief tot {{date}}."
+        "descriptionEnding": "Uw abonnement is opgezegd. Pro blijft actief tot {{date}}.",
+        "descriptionTermEnds": "Pro is actief tot {{date}}, wanneer de vaste looptijd eindigt."
       },
       "licenseExpired": {
         "eyebrow": "Licentie vereist aandacht",
@@ -371,7 +372,8 @@
       "endedOn": "Pro eindigde op {{date}}.",
       "endsOn": "Pro eindigt op {{date}}.",
       "dataKept": "Er wordt niets verwijderd. Uw gegevens blijven staan en de Pro-functies worden weer ingeschakeld nadat u opnieuw abonneert en de licentie vernieuwt.",
-      "resubscribe": "Opnieuw abonneren"
+      "resubscribe": "Opnieuw abonneren",
+      "termEndsTitle": "Uw Pro-periode loopt af."
     }
   },
   "errors": {

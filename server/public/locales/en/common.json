@@ -50,7 +50,9 @@
     "subscriptionEnding": "Your Pro subscription has been cancelled. Pro ends on {{date}}. Resubscribe to keep Pro.",
     "subscriptionEndingNoDate": "Your Pro subscription has been cancelled. Resubscribe to keep Pro.",
     "subscriptionLapsed": "You're now on the free edition. Resubscribe to restore Pro.",
-    "resubscribe": "Resubscribe"
+    "resubscribe": "Resubscribe",
+    "termEnds": "Your Pro access ends on {{date}}. Renew to keep Pro.",
+    "termEndsNoDate": "Your Pro term is ending. Renew to keep Pro."
   },
   "nav": {
     "dashboard": "Dashboard",

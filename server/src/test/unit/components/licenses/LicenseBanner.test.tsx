@@ -102,7 +102,7 @@ const scenarios: Array<{
       tier: 'pro',
       daysRemaining: 25,
       trialUsed: true,
-      subscription: { phase: 'ending', endsAt: '2030-01-31T12:00:00.000Z', resubscribeUrl: null },
+      subscription: { phase: 'ending', cause: 'cancelled', endsAt: '2030-01-31T12:00:00.000Z', resubscribeUrl: null },
     },
     expectedMessage: /^Your Pro subscription has been cancelled\. Pro ends on .*2030.*\. Resubscribe to keep Pro\.$/,
   },
@@ -113,9 +113,20 @@ const scenarios: Array<{
       state: 'licensed',
       tier: 'pro',
       daysRemaining: 25,
-      subscription: { phase: 'ending', endsAt: null, resubscribeUrl: null },
+      subscription: { phase: 'ending', cause: 'cancelled', endsAt: null, resubscribeUrl: null },
     },
     expectedMessage: 'Your Pro subscription has been cancelled. Resubscribe to keep Pro.',
+  },
+  {
+    name: 'fixed-term grant ending (not a cancellation)',
+    status: {
+      ...baseStatus,
+      state: 'licensed',
+      tier: 'pro',
+      daysRemaining: 25,
+      subscription: { phase: 'ending', cause: 'term', endsAt: '2030-01-31T12:00:00.000Z', resubscribeUrl: null },
+    },
+    expectedMessage: /^Your Pro access ends on .*2030.*\. Renew to keep Pro\.$/,
   },
   {
     name: 'lapsed subscription',
@@ -123,7 +134,7 @@ const scenarios: Array<{
       ...baseStatus,
       state: 'license_expired',
       trialUsed: true,
-      subscription: { phase: 'lapsed', endsAt: '2025-07-12T00:00:00.000Z', resubscribeUrl: null },
+      subscription: { phase: 'lapsed', cause: 'cancelled', endsAt: '2025-07-12T00:00:00.000Z', resubscribeUrl: null },
     },
     expectedMessage: "You're now on the free edition. Resubscribe to restore Pro.",
   },
@@ -154,7 +165,7 @@ describe('LicenseBanner', () => {
       state: 'licensed',
       tier: 'pro',
       daysRemaining: 25,
-      subscription: { phase: 'ending', endsAt: '2030-01-31T12:00:00.000Z', resubscribeUrl: 'https://portal.example/r' },
+      subscription: { phase: 'ending', cause: 'cancelled', endsAt: '2030-01-31T12:00:00.000Z', resubscribeUrl: 'https://portal.example/r' },
     };
     mockGetLicenseStatus.mockResolvedValue(ending);
     const { unmount } = render(<LicenseBanner />);

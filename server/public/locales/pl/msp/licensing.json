@@ -265,7 +265,8 @@
         "description": "Płatna licencja jest aktywna na tym urządzeniu.",
         "descriptionWithExpiry": "Licencja jest aktywna do {{date}}.",
         "badge": "Licencja aktywna",
-        "descriptionEnding": "Twoja subskrypcja została anulowana. Pro pozostaje aktywne do {{date}}."
+        "descriptionEnding": "Twoja subskrypcja została anulowana. Pro pozostaje aktywne do {{date}}.",
+        "descriptionTermEnds": "Pro jest aktywne do {{date}}, kiedy kończy się okres stały."
       },
       "licenseExpired": {
         "eyebrow": "Licencja wymaga uwagi",
@@ -375,7 +376,8 @@
       "endedOn": "Pro zakończyło się {{date}}.",
       "endsOn": "Pro kończy się {{date}}.",
       "dataKept": "Nic nie jest usuwane. Dane pozostają na miejscu, a funkcje Pro włączą się ponownie po wznowieniu subskrypcji i odświeżeniu licencji.",
-      "resubscribe": "Wznów subskrypcję"
+      "resubscribe": "Wznów subskrypcję",
+      "termEndsTitle": "Twój okres Pro dobiega końca."
     }
   },
   "errors": {

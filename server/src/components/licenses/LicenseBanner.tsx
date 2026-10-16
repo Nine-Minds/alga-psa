@@ -72,9 +72,13 @@ export default function LicenseBanner() {
     case 'licensed':
       if (subscription?.phase === 'ending') {
         // Cancel known, Pro still running: warn until the lapse.
-        message = subscriptionEndDate
-          ? t('licenseBanner.subscriptionEnding', { defaultValue: 'Your Pro subscription has been cancelled. Pro ends on {{date}}. Resubscribe to keep Pro.', date: subscriptionEndDate })
-          : t('licenseBanner.subscriptionEndingNoDate', { defaultValue: 'Your Pro subscription has been cancelled. Resubscribe to keep Pro.' });
+        message = subscription.cause === 'term'
+          ? subscriptionEndDate
+            ? t('licenseBanner.termEnds', { defaultValue: 'Your Pro access ends on {{date}}. Renew to keep Pro.', date: subscriptionEndDate })
+            : t('licenseBanner.termEndsNoDate', { defaultValue: 'Your Pro term is ending. Renew to keep Pro.' })
+          : subscriptionEndDate
+            ? t('licenseBanner.subscriptionEnding', { defaultValue: 'Your Pro subscription has been cancelled. Pro ends on {{date}}. Resubscribe to keep Pro.', date: subscriptionEndDate })
+            : t('licenseBanner.subscriptionEndingNoDate', { defaultValue: 'Your Pro subscription has been cancelled. Resubscribe to keep Pro.' });
         urgency = daysRemaining !== null && daysRemaining <= 3 ? 'error' : 'warning';
         resubscribeUrl = subscription.resubscribeUrl;
       } else if (daysRemaining !== null && daysRemaining <= 14) {

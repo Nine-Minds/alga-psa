@@ -114,6 +114,7 @@ describe('resolveSelfHostTier — subscription lapse boundary', () => {
     expect(result?.tier).toBe('pro');
     expect(result?.subscription).toEqual({
       phase: 'ending',
+      cause: 'cancelled',
       endsAt: result?.expiresAt,
       resubscribeUrl: 'https://portal.example/resubscribe',
     });
@@ -129,6 +130,21 @@ describe('resolveSelfHostTier — subscription lapse boundary', () => {
     expect(result?.subscription?.endsAt).toEqual(cancelsAt);
   });
 
+  it('term_ends is an ending warning with cause "term" (not a cancellation), using the grant end date', () => {
+    const cancelsAt = new Date(Date.now() + 5 * 86400_000);
+    const result = resolveSelfHostTier(
+      makeRow({ license_token: VALID_PRO_TOKEN, subscription_state: 'term_ends', subscription_cancels_at: cancelsAt }),
+    );
+    expect(result?.state).toBe('licensed');
+    expect(result?.subscription).toMatchObject({ phase: 'ending', cause: 'term', endsAt: cancelsAt });
+  });
+
+  it('active (a comp grant far from its end) yields no warning', () => {
+    const result = resolveSelfHostTier(makeRow({ license_token: VALID_PRO_TOKEN, subscription_state: 'active' }));
+    expect(result?.state).toBe('licensed');
+    expect(result?.subscription).toBeNull();
+  });
+
   it('after exp: essentials / license_expired with the subscription-lapse reason and the exp date', () => {
     const result = resolveSelfHostTier(makeRow({ license_token: EXPIRED_TOKEN, ...cancelled }));
     expect(result?.state).toBe('license_expired');
@@ -140,7 +156,7 @@ describe('resolveSelfHostTier — subscription lapse boundary', () => {
 
   it('legacy lapse (no URL, no cancel date) still resolves with the token exp date', () => {
     const result = resolveSelfHostTier(makeRow({ license_token: EXPIRED_TOKEN, subscription_state: 'cancelled' }));
-    expect(result?.subscription).toEqual({ phase: 'lapsed', endsAt: new Date(1752287153 * 1000), resubscribeUrl: null });
+    expect(result?.subscription).toEqual({ phase: 'lapsed', cause: 'cancelled', endsAt: new Date(1752287153 * 1000), resubscribeUrl: null });
   });
 
   it('an expired token with no cancelled-subscription context stays a generic license_expired', () => {

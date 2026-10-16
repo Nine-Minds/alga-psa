@@ -39,7 +39,7 @@ export type CheckInResult =
   /** Other non-OK status, or an unreadable/unknown 200 body. */
   | { kind: 'rejected'; httpStatus: number };
 
-const SUBSCRIPTION_STATES: readonly SubscriptionStateValue[] = ['active', 'cancel_scheduled', 'cancelled'];
+const SUBSCRIPTION_STATES: readonly SubscriptionStateValue[] = ['active', 'cancel_scheduled', 'term_ends', 'cancelled'];
 const MAX_URL_LENGTH = 2048;
 
 /** Only http(s) URLs are accepted — this value becomes a clickable link. */
@@ -130,7 +130,7 @@ const CLEARED: SubscriptionColumns = {
  *  - ok / no_change with state 'active' or no subscription data → clear the
  *    context (reactivation removes the warning in the same write that stores the
  *    new token).
- *  - ok / no_change with cancel_scheduled|cancelled → store it.
+ *  - ok / no_change with cancel_scheduled|term_ends|cancelled → store it.
  *  - lapsed → store 'cancelled' (a legacy bare `{status:'revoked'}` still marks
  *    the lapse; date and URL are then simply unknown).
  * `license_token` is never touched here for lapsed — soft revocation keeps it.
@@ -147,7 +147,7 @@ export function checkInStateUpdate(
       const tokenFields =
         result.kind === 'ok' && result.jwt && result.jwt !== currentToken ? { license_token: result.jwt } : {};
       const subFields: SubscriptionColumns =
-        sub && (sub.state === 'cancel_scheduled' || sub.state === 'cancelled')
+        sub && (sub.state === 'cancel_scheduled' || sub.state === 'term_ends' || sub.state === 'cancelled')
           ? {
               subscription_state: sub.state,
               subscription_cancels_at: sub.cancelsAt,

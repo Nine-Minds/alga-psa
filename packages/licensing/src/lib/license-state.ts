@@ -42,7 +42,7 @@ export interface LicenseStateRow {
 }
 
 /** Subscription states the check-in contract can report (stored verbatim). */
-export type SubscriptionStateValue = 'active' | 'cancel_scheduled' | 'cancelled';
+export type SubscriptionStateValue = 'active' | 'cancel_scheduled' | 'term_ends' | 'cancelled';
 
 /** Derived licensing state for an install. */
 export type LicenseStateKind =
@@ -64,6 +64,12 @@ export type LicenseStateKind =
  */
 export interface ResolvedSubscription {
   phase: 'ending' | 'lapsed';
+  /**
+   * Why Pro ends: 'cancelled' = the subscription was cancelled; 'term' = a
+   * fixed-term (comp) grant reaches its planned end. Drives the wording only —
+   * a term end must never read as a cancellation.
+   */
+  cause: 'cancelled' | 'term';
   /** When Pro ends (ending) / ended (lapsed). Null only if truly unknown. */
   endsAt: Date | null;
   resubscribeUrl: string | null;
@@ -127,13 +133,13 @@ export async function upsertLicenseState(
  */
 function resolveEndingSubscription(row: LicenseStateRow, tokenExp: Date): ResolvedSubscription | null {
   const sub = row.subscription_state;
-  if (sub !== 'cancelled' && sub !== 'cancel_scheduled') return null;
+  if (sub !== 'cancelled' && sub !== 'cancel_scheduled' && sub !== 'term_ends') return null;
   // Pro runs until the held token's exp even once the subscription is
   // cancelled (soft revocation never hard-cuts), so that is the end date. A
   // scheduled end that is known is more precise while the token is still rolling.
   const cancelsAt = row.subscription_cancels_at ? new Date(row.subscription_cancels_at) : null;
-  const endsAt = sub === 'cancel_scheduled' && cancelsAt ? cancelsAt : tokenExp;
-  return { phase: 'ending', endsAt, resubscribeUrl: row.subscription_resubscribe_url ?? null };
+  const endsAt = sub !== 'cancelled' && cancelsAt ? cancelsAt : tokenExp;
+  return { phase: 'ending', cause: sub === 'term_ends' ? 'term' : 'cancelled', endsAt, resubscribeUrl: row.subscription_resubscribe_url ?? null };
 }
 
 /**
@@ -146,14 +152,15 @@ function licenseExpired(row: LicenseStateRow, tokenExp: Date | null, now: number
   const sub = row.subscription_state;
   const cancelsAt = row.subscription_cancels_at ? new Date(row.subscription_cancels_at) : null;
   const subscriptionEnded =
-    sub === 'cancelled' || (sub === 'cancel_scheduled' && cancelsAt !== null && cancelsAt.getTime() <= now);
+    sub === 'cancelled' ||
+    ((sub === 'cancel_scheduled' || sub === 'term_ends') && cancelsAt !== null && cancelsAt.getTime() <= now);
   return {
     state: 'license_expired',
     tier: 'essentials',
     expiresAt: null,
     daysRemaining: null,
     subscription: subscriptionEnded
-      ? { phase: 'lapsed', endsAt: tokenExp ?? cancelsAt, resubscribeUrl: row.subscription_resubscribe_url ?? null }
+      ? { phase: 'lapsed', cause: sub === 'term_ends' ? 'term' : 'cancelled', endsAt: tokenExp ?? cancelsAt, resubscribeUrl: row.subscription_resubscribe_url ?? null }
       : null,
   };
 }

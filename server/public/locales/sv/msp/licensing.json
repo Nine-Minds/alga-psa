@@ -263,7 +263,8 @@
         "description": "Din betalda licens är aktiv i den här installationen.",
         "descriptionWithExpiry": "Din licens är aktiv till och med {{date}}.",
         "badge": "Licensierad",
-        "descriptionEnding": "Din prenumeration har avslutats. Pro är aktivt till och med {{date}}."
+        "descriptionEnding": "Din prenumeration har avslutats. Pro är aktivt till och med {{date}}.",
+        "descriptionTermEnds": "Pro är aktivt till och med {{date}}, då den fasta perioden upphör."
       },
       "licenseExpired": {
         "eyebrow": "Licensen kräver åtgärd",
@@ -371,7 +372,8 @@
       "endedOn": "Pro upphörde den {{date}}.",
       "endsOn": "Pro upphör den {{date}}.",
       "dataKept": "Inget raderas. Dina data finns kvar och Pro-funktionerna aktiveras igen när du tecknat prenumerationen på nytt och uppdaterat licensen.",
-      "resubscribe": "Teckna igen"
+      "resubscribe": "Teckna igen",
+      "termEndsTitle": "Din Pro-period håller på att ta slut."
     }
   },
   "errors": {

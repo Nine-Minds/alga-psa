@@ -50,6 +50,8 @@ export interface LicenseStatus {
 
 export interface LicenseSubscriptionStatus {
   phase: 'ending' | 'lapsed';
+  /** 'term' = a fixed-term grant reaching its planned end — not a cancellation. */
+  cause: 'cancelled' | 'term';
   endsAt: string | null;
   resubscribeUrl: string | null;
 }
@@ -112,6 +114,7 @@ async function getLicenseStatusForUser(user: LicenseAdminUser): Promise<LicenseS
     subscription: resolved.subscription
       ? {
           phase: resolved.subscription.phase,
+          cause: resolved.subscription.cause,
           endsAt: resolved.subscription.endsAt?.toISOString() ?? null,
           resubscribeUrl: resolved.subscription.resubscribeUrl,
         }

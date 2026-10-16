@@ -50,7 +50,9 @@
     "subscriptionEnding": "Din Pro-prenumeration har avslutats. Pro upphör den {{date}}. Teckna prenumerationen igen för att behålla Pro.",
     "subscriptionEndingNoDate": "Din Pro-prenumeration har avslutats. Teckna prenumerationen igen för att behålla Pro.",
     "subscriptionLapsed": "Du använder nu den kostnadsfria utgåvan. Teckna prenumerationen igen för att återställa Pro.",
-    "resubscribe": "Teckna igen"
+    "resubscribe": "Teckna igen",
+    "termEnds": "Din Pro-åtkomst upphör den {{date}}. Förnya för att behålla Pro.",
+    "termEndsNoDate": "Din Pro-period håller på att ta slut. Förnya för att behålla Pro."
   },
   "nav": {
     "dashboard": "Översikt",
