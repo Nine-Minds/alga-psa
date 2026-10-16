@@ -664,6 +664,18 @@
     "platformNotification": {
       "learnMore": "Läs mer",
       "dismiss": "Stäng avisering"
+    },
+    "integrationHealth": {
+      "inboundEmail": {
+        "authFailure": "Inkommande e-post för {{mailbox}} är pausad eftersom autentiseringsuppgifterna inte längre fungerar.",
+        "error": "Inkommande e-post för {{mailbox}} rapporterade ett fel och tas kanske inte emot."
+      },
+      "calendar": {
+        "error": "Kalendersynkroniseringen för {{providerName}} rapporterade ett fel och synkroniserar inte.",
+        "disconnected": "Kalendersynkroniseringen för {{providerName}} är frånkopplad och synkroniserar inte."
+      },
+      "review": "Granska",
+      "dismiss": "Stäng integrationsavisering"
     }
   },
   "quickCreate": {

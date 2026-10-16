@@ -312,6 +312,18 @@
     "platformNotification": {
       "learnMore": "Meer informatie",
       "dismiss": "Melding sluiten"
+    },
+    "integrationHealth": {
+      "inboundEmail": {
+        "authFailure": "Inkomende e-mail voor {{mailbox}} is gepauzeerd omdat de inloggegevens niet meer werken.",
+        "error": "Inkomende e-mail voor {{mailbox}} heeft een fout gemeld en ontvangt mogelijk geen berichten."
+      },
+      "calendar": {
+        "error": "Kalendersynchronisatie voor {{providerName}} heeft een fout gemeld en synchroniseert niet.",
+        "disconnected": "Kalendersynchronisatie voor {{providerName}} is verbroken en synchroniseert niet."
+      },
+      "review": "Bekijken",
+      "dismiss": "Integratiemelding sluiten"
     }
   },
   "quickCreate": {

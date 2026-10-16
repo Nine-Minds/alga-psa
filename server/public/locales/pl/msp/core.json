@@ -312,6 +312,18 @@
     "platformNotification": {
       "learnMore": "Dowiedz się więcej",
       "dismiss": "Odrzuć powiadomienie"
+    },
+    "integrationHealth": {
+      "inboundEmail": {
+        "authFailure": "E-mail przychodzący dla {{mailbox}} został wstrzymany, ponieważ jego dane logowania przestały działać.",
+        "error": "E-mail przychodzący dla {{mailbox}} zgłosił błąd i może nie odbierać wiadomości."
+      },
+      "calendar": {
+        "error": "Synchronizacja kalendarza dla {{providerName}} zgłosiła błąd i nie działa.",
+        "disconnected": "Synchronizacja kalendarza dla {{providerName}} jest rozłączona i nie działa."
+      },
+      "review": "Sprawdź",
+      "dismiss": "Odrzuć powiadomienie o integracji"
     }
   },
   "quickCreate": {

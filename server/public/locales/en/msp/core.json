@@ -664,6 +664,18 @@
     "platformNotification": {
       "learnMore": "Learn More",
       "dismiss": "Dismiss notification"
+    },
+    "integrationHealth": {
+      "inboundEmail": {
+        "authFailure": "Inbound email for {{mailbox}} is paused — its credentials no longer work.",
+        "error": "Inbound email for {{mailbox}} reported an error and may not be receiving messages."
+      },
+      "calendar": {
+        "error": "Calendar sync for {{providerName}} reported an error and is not syncing.",
+        "disconnected": "Calendar sync for {{providerName}} is disconnected and is not syncing."
+      },
+      "review": "Review",
+      "dismiss": "Dismiss integration alert"
     }
   },
   "quickCreate": {
