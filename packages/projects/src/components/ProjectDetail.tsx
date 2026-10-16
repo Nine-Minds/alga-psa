@@ -784,7 +784,12 @@ export default function ProjectDetail({
     return () => clearTimeout(timer);
   }, [billingHighlightEntryId]);
 
-  // Fetch all project task data on mount (shared by list view, sidebar counts, and filtering)
+  // Fetch all project task data (shared by list view, sidebar counts, and
+  // filtering). It re-reads on statusVersion too: the list view buckets tasks
+  // by `statusesByPhase` and offers that phase's columns in its row status
+  // picker, so a status column added or deleted elsewhere would otherwise keep
+  // listing a column that no longer exists — and keep its tasks under it —
+  // until a page reload.
   useEffect(() => {
     let stale = false;
     const fetchAllTaskData = async () => {
@@ -815,7 +820,7 @@ export default function ProjectDetail({
     };
     fetchAllTaskData();
     return () => { stale = true; };
-  }, [project.project_id]);
+  }, [project.project_id, statusVersion]);
 
   // Filter all project tasks (same predicate as the list view) for phase counts
   const allFilteredTasks = useMemo(

@@ -902,3 +902,37 @@ that into a `statusRefreshKey`, and `ProjectDetail` folds the key into the same
 out. Pinned by `projectStatusRefreshWiring.contract.test.ts`, following the
 contract-test convention `ProjectDetail` already uses (it is far too large to
 mount).
+
+## Round 13 — the list view kept its own copy (2026-10-16)
+
+Round 12 fixed the kanban half; the browser check confirmed it (the three tasks
+appeared under Blocked with no reload) and then found the other half: switching
+to **List** still showed the deleted "In Review" holding all three tasks and
+Blocked holding none, until a reload. An adjacent probe found the same staleness
+from the other direction — a status column added in the drawer was missing from
+a task's status picker until a reload.
+
+Both are one cause. The list view does not read the board's per-phase state: it
+buckets `allProjectTasks` with `statusesByPhase`, and its row status picker
+offers exactly the columns those groups carry
+(`TaskListView.tsx`: `statusesByPhase[phase.phase_id] ?? statuses`, then
+`phaseGroup.statusGroups.map(sg => sg.status)`). Both come from the one
+project-wide fetch in `ProjectDetail` (`getProjectTaskData` +
+`getProjectStatusesByPhase`), and that effect was keyed on `project.project_id`
+alone — mount only. So the column list and the tasks' mapping ids stayed exactly
+as they were loaded, which is precisely what the screenshots show. That fetch now
+watches `statusVersion` like the phase-task and fork-count re-reads beside it.
+
+Second gap, found while confirming the first: the status editor writes adds and
+deletes immediately (`ProjectTaskStatusSettings`: "Adding or deleting a column
+writes immediately" — only the phase scope toggle and the column order are
+staged for Save Changes). Round 12 reported the close from the drawer's Save and
+Cancel handlers, so dismissing it with Escape or the header X — after a delete
+that had already moved tasks — left the board stale again. `ProjectInfo` now
+passes the report as the `onClose` argument of `openDrawer`, which
+`closeDrawer()` fires for every dismissal, Save and Cancel included (they both
+end there), so there is one path instead of two partial ones.
+
+The contract test gained a case for the project-wide re-read (including the
+`TaskListView` coupling it depends on) and its drawer case now pins the
+`onClose` wiring. packages/projects: 104 files / 567 tests green.

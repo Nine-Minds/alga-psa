@@ -156,15 +156,16 @@ export default function ProjectInfo({
             onProjectUpdate(updatedProject);
           }
           closeDrawer();
-          onStatusesChanged?.();
         }}
         onCancel={() => {
           closeDrawer();
-          // Cancel abandons only the staged edits; a column deleted inside the
-          // drawer is already written, so the board still needs the re-read.
-          onStatusesChanged?.();
         }}
-      />
+      />,
+      undefined,
+      // Reported on the drawer's own close rather than from Save/Cancel: the
+      // status-column editor writes its adds and deletes immediately, so a
+      // dismissal with Escape or the header X has to refresh the board too.
+      () => onStatusesChanged?.(),
     );
   };
 

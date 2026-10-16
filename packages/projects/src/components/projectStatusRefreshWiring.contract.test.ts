@@ -14,18 +14,18 @@ import { describe, expect, it } from 'vitest';
 const detailSource = readFileSync(path.resolve(__dirname, 'ProjectDetail.tsx'), 'utf8');
 const infoSource = readFileSync(path.resolve(__dirname, 'ProjectInfo.tsx'), 'utf8');
 const pageSource = readFileSync(path.resolve(__dirname, 'ProjectPage.tsx'), 'utf8');
+const listSource = readFileSync(path.resolve(__dirname, 'TaskListView.tsx'), 'utf8');
 
 describe('status column edits in the edit drawer refresh the board', () => {
-  it('the drawer reports a close on both save and cancel', () => {
+  it('the drawer reports every close, however it was dismissed', () => {
     expect(infoSource).toContain('onStatusesChanged?: () => void;');
-    // Save and Cancel both close the drawer, and a deletion is already written
-    // by then, so both have to report it.
-    const save = infoSource.indexOf('onSave={(updatedProject) => {');
-    const cancel = infoSource.indexOf('onCancel={() => {');
-    expect(save).toBeGreaterThan(-1);
-    expect(cancel).toBeGreaterThan(save);
-    expect(infoSource.slice(save, cancel)).toContain('onStatusesChanged?.();');
-    expect(infoSource.slice(cancel)).toContain('onStatusesChanged?.();');
+    // Save, Cancel, Escape and the header X all end in `closeDrawer()`, which
+    // is what fires the `onClose` argument of `openDrawer` — so reporting it
+    // there covers the dismissals that never reach Save or Cancel.
+    const open = infoSource.indexOf('<ProjectDetailsEdit');
+    expect(open).toBeGreaterThan(-1);
+    const openCall = infoSource.slice(open, infoSource.indexOf('};', open));
+    expect(openCall).toMatch(/\/>,\s*(?:\/\/[^\n]*\n\s*)*undefined,(?:\s*\/\/[^\n]*\n)*\s*\(\) => onStatusesChanged\?\.\(\),/);
   });
 
   it('the page turns that report into a refresh key for the board', () => {
@@ -48,5 +48,21 @@ describe('status column edits in the edit drawer refresh the board', () => {
     // cannot cancel each other out.
     expect(detailSource).toContain('setLocalStatusVersion(v => v + 1)');
     expect(detailSource).not.toContain('setStatusVersion(');
+  });
+
+  it('the project-wide task data re-reads on the same version', () => {
+    // The list view does not use the board's per-phase state: it buckets
+    // `allProjectTasks` with `statusesByPhase`, and its row status picker only
+    // offers the columns those groups carry. Both come from this one fetch, so
+    // it has to watch the version as well or the list keeps a deleted column
+    // (with its tasks still in it) and misses a newly added one.
+    const fetchAll = detailSource.indexOf('const fetchAllTaskData = async () => {');
+    expect(fetchAll).toBeGreaterThan(-1);
+    const fetchAllBlock = detailSource.slice(fetchAll);
+    expect(fetchAllBlock).toContain('getProjectStatusesByPhase(project.project_id)');
+    expect(fetchAllBlock).toMatch(/\}, \[project\.project_id, statusVersion\]\);/);
+    // Pin the coupling the assertion above relies on.
+    expect(listSource).toContain('const phaseStatuses = statusesByPhase[phase.phase_id] ?? statuses;');
+    expect(listSource).toContain('const phaseStatusOptions = phaseGroup.statusGroups.map(sg => sg.status);');
   });
 });
