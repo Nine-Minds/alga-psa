@@ -164,10 +164,17 @@ function press(target: EventTarget, init: KeyboardEventInit & { key: string; cod
   return event;
 }
 
+// The pager paints in the same commit that lands the adjacent-ticket lookup, but
+// its record shortcuts are (re-)registered in that commit's passive effects —
+// until those run the registry still holds the initial, disabled action. Flushing
+// here keeps a press from racing the registration on a loaded machine.
+const flushEffects = () => act(async () => {});
+
 async function renderPage(surface: 'compose' | 'reply' = 'compose') {
   render(<FullPage surface={surface} />);
   // Navigation renders once the adjacent-ticket lookup resolves.
   await screen.findByLabelText('Previous ticket');
+  await flushEffects();
 }
 
 async function openComposerAndType(text: string, surface: 'compose' | 'reply' = 'compose') {
@@ -178,6 +185,9 @@ async function openComposerAndType(text: string, surface: 'compose' | 'reply' = 
   editor.focus();
   editor.textContent = text;
   fireEvent.input(editor);
+  // Same hazard on the way in: the open composer owns its dialog scope from a
+  // passive effect, and the page-level record shortcuts stay live until it runs.
+  await flushEffects();
   return editor;
 }
 
