@@ -798,6 +798,11 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       ) : null}
 
       {timerTile}
+      {!timerTile && props.timeSummarySlot ? (
+        <BentoTile id={`${id}-time-tile`} title={t('bento.tiles.timeLogged', 'Time logged')} icon={<Clock className="h-4 w-4" />}>
+          {props.timeSummarySlot}
+        </BentoTile>
+      ) : null}
 
       {capabilities.billing && !props.hideBilling ? (
         <Suspense fallback={<BentoTileSkeleton id={`${id}-billing-tile-loading`} title={t('bento.tiles.billing', 'Billing')} />}>

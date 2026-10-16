@@ -5,6 +5,9 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import TicketInfo from '../TicketInfo';
+import { TicketDataSourceProvider } from '../TicketDataSourceContext';
+import { composeTicketDataSource } from '../../../lib/ticketDataSource';
+import { nativeTicketDataSource } from '../../../lib/nativeTicketDataSource';
 
 const getTicketStatusesMock = vi.fn();
 
@@ -214,6 +217,34 @@ describe('TicketInfo board change status reselection', () => {
     sla_started_at: null,
     entered_at: new Date('2026-03-14T10:00:00.000Z').toISOString(),
   } as any;
+
+  it('hides the save bar for a read-grant viewer and keeps it natively', async () => {
+    getTicketStatusesMock.mockResolvedValue([{ status_id: 'status-a', name: 'Board A Default', is_closed: false }]);
+    const element = (
+      <TicketInfo
+        id="ticket-info"
+        ticket={baseTicket}
+        conversations={[]}
+        statusOptions={[]}
+        agentOptions={[]}
+        boardOptions={[{ value: 'board-a', label: 'Board A' }]}
+        priorityOptions={[{ value: 'priority-1', label: 'Priority 1' }]}
+        onSelectChange={vi.fn()}
+        onSaveChanges={vi.fn().mockResolvedValue(true)}
+        responseStateTrackingEnabled={false}
+      />
+    );
+    const view = render(element);
+    expect(screen.queryByTestId('ticket-info-save-changes-btn')).not.toBeNull();
+    view.unmount();
+    render(
+      <TicketDataSourceProvider dataSource={composeTicketDataSource(nativeTicketDataSource, { screen: { readOnly: true } })}>
+        {element}
+      </TicketDataSourceProvider>
+    );
+    expect(screen.queryByTestId('ticket-info-save-changes-btn')).toBeNull();
+    expect(screen.queryByTestId('ticket-info-cancel-btn')).toBeNull();
+  });
 
   it('T027: loads ticket status options only for the selected board', async () => {
     getTicketStatusesMock.mockImplementation(async (boardId: string) => {

@@ -85,3 +85,19 @@ it('stays the native data source while the release flag is off and for tickets t
   expect(source.conversation.audiences).toBeUndefined();
   expect(source.slots.coManagedSection).toBeUndefined();
 });
+
+it('hides the native time panel (denied on co_managed tenants) and supplies the effort split slot instead', async () => {
+  mount();
+  await waitFor(() => expect(source.slots.timeSummary).toBeTypeOf('function'));
+  expect(source.capabilities.timeEntry).toBe(false);
+  // Everything else stays native.
+  expect(source.capabilities.sla).toBe(true);
+  expect(source.capabilities.tags).toBe(true);
+});
+
+it('keeps native time capabilities until the co-managed screen has loaded or when the flag is off', async () => {
+  mocks.flag.mockReturnValue({ enabled: false, loading: false, error: null });
+  mount();
+  await act(async () => {});
+  expect(source.slots.timeSummary).toBeUndefined();
+});

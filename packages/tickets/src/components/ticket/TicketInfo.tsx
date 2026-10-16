@@ -2099,6 +2099,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               />
             ) : null}
             <div className="flex-1" />
+            {!dataSource.screen.readOnly && (<>
             <Button
               id={`${id}-cancel-btn`}
               type="button"
@@ -2123,6 +2124,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               </span>
               {!isSaving && <Save className="ml-2 h-4 w-4" />}
             </Button>
+            </>)}
           </div>
           {hasActiveLiveConflict ? (
             <p className="mt-2 text-sm text-amber-700">

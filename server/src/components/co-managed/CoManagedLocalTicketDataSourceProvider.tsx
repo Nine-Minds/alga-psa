@@ -6,6 +6,7 @@ import type { CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import type { CoManagedSharedResource } from '@alga-psa/co-managed';
 import { conversationDocument } from './conversationText';
 import { composeTicketDataSource, type TicketConversationAudiences, type TicketDataSource } from '@alga-psa/tickets/lib/ticketDataSource';
+import { NATIVE_TICKET_CAPABILITIES } from '@alga-psa/tickets/lib/ticketDataSource';
 import { nativeTicketDataSource } from '@alga-psa/tickets/lib/nativeTicketDataSource';
 import { TicketDataSourceProvider } from '@alga-psa/tickets/components/ticket/TicketDataSourceContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -174,6 +175,9 @@ export default function CoManagedLocalTicketDataSourceProvider({ ticketId, child
     };
 
     return composeTicketDataSource(nativeTicketDataSource, {
+      // A co_managed tenant has no native time-entry authority (scheduling_time_actions is denied), so the native
+      // time panel and stopwatch are hidden in both layouts; time is shown as the operational effort split instead.
+      capabilities: { ...NATIVE_TICKET_CAPABILITIES, timeEntry: false },
       comments: { addTicketCommentWithCacheForCurrentUser: addComment, createComment },
       conversation: {
         ...(audiences ? { audiences } : {}),

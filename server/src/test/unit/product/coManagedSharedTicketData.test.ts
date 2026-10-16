@@ -7,7 +7,7 @@ const screen = (fields: Record<string, unknown> = {}) => ({
   summary: { resource, revision: 4, fields: { ticket_number: 'T-1', title: 'Printer', is_closed: false, work_revision: 2, responsibility: 'msp',
     board: ref('board', 'board-1', 'Help desk'), status: ref('status', 'status-1', 'Open'), priority: ref('priority', 'priority-1', 'High'), ...fields } },
   sla: {}, side: 'sponsor' as const, customerName: 'Customer IT', sponsorName: 'MSP', destinationName: 'Escalations',
-  canWrite: true, canEscalate: false, canHandBack: true, canRevoke: false,
+  canWrite: true, canUpdate: true, canEscalate: false, canHandBack: true, canRevoke: false,
 }) as any;
 const editor = (over: Record<string, unknown> = {}) => ({ resource, editableFields: ['title', 'status_id', 'description'],
   values: { title: 'Printer', status_id: 'status-1', priority_id: 'priority-1', url: null, response_state: null, description: 'doc' },
@@ -53,4 +53,11 @@ it('distinguishes a disclosed empty value (null) from an undisclosed one (absent
     statusOptions: page(), priorityOptions: page() });
   expect(result.ticketData.ticket).toMatchObject({ attributes: { description: null }, category_id: null, client_name: null, contact_name: null, due_date: null });
   expect(result.customerAssignee).toBeNull();
+});
+
+it('is read-only for a viewer whose update probe is denied even when the relationship can write', () => {
+  const viewer = { ...screen(), canWrite: true, canUpdate: false };
+  const result = buildSharedTicketData({ resource, screen: viewer, details: { resource, revision: 4, fields: full }, editor: editor({ editableFields: [] }),
+    statusOptions: page('Closed'), priorityOptions: page() });
+  expect(result.screen.canWrite).toBe(false);
 });

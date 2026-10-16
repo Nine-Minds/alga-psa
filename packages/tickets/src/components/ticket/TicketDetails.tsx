@@ -4571,6 +4571,7 @@ const handleClose = () => {
                                 onLoadAllContactsForWatchList={handleLoadAllContactsForWatchList}
                                 surveySummaryCard={effectiveSurveySummaryCard}
                                     hideTimeEntry={effectiveHideTimeEntry}
+                                    timeSummarySlot={timeSummarySlot}
                                     hideMaterials={effectiveHideMaterials}
                                                     onRemoveTeamAssignment={handleRemoveTeamAssignment}
                                     onAssignTeam={handleAssignTeam}

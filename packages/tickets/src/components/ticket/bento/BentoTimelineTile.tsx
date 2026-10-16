@@ -430,6 +430,8 @@ export function BentoTimelineTile({
   const { t } = useTranslation('features/tickets');
   const { t: tCommon } = useTranslation('common');
   const dataSource = useTicketDataSource();
+  // A read-grant viewer (e.g. a view-only co-managed assignment) gets the stream without any compose/reply/edit affordance.
+  const readOnly = dataSource.screen.readOnly === true;
   const { getTicketTimelineEntries } = dataSource.activity;
   const { setTicketLayoutPreference, searchUsersForMentions: nativeSearchUsersForMentions } = dataSource.viewer;
   const { audiences, editor: editorRestrictions } = dataSource.conversation;
@@ -825,6 +827,7 @@ export function BentoTimelineTile({
   // mod+s/mod+Enter sends the draft. The dialog scope only activates while a
   // draft exists, so page-scope shortcuts keep working on a pristine composer.
   usePageCreateShortcut(() => {
+    if (readOnly) return;
     if (!showComposer) openComposer(headerAnchorVisible ? 'top' : 'bottom');
     // Focus after the composer has mounted; no scrolling — it opens where the
     // reader already is.
@@ -851,7 +854,7 @@ export function BentoTimelineTile({
           accentBorderClassName={accent || undefined}
           id={commentId ? `${id}-comment-${commentId}` : `${id}-comment-unknown`}
           conversation={comment}
-          currentUserId={currentUser?.id}
+          currentUserId={readOnly ? undefined : currentUser?.id}
           isEditing={isEditing && currentComment?.comment_id === commentId}
           currentComment={currentComment}
           ticketId={ticketId}
@@ -863,7 +866,7 @@ export function BentoTimelineTile({
           onEdit={() => onEditComment(comment)}
           onDelete={onDeleteComment}
           onReply={
-            onAddReplyComment && commentId
+            !readOnly && onAddReplyComment && commentId
               ? () => setReplyingToCommentId(commentId)
               : undefined
           }
@@ -1126,7 +1129,7 @@ export function BentoTimelineTile({
             </button>
           );
         })}
-        {!showComposer && (
+        {!showComposer && !readOnly && (
           <Button
             id={`${id}-add-comment-btn`}
             className="ml-auto"
@@ -1140,7 +1143,7 @@ export function BentoTimelineTile({
       <StickyComposerDock
         id={`${id}-composer-top`}
         side="top"
-        visible={showComposer && composerPlacement === 'top'}
+        visible={!readOnly && showComposer && composerPlacement === 'top'}
         expanded
       >
         {composer}
@@ -1291,7 +1294,7 @@ export function BentoTimelineTile({
 
       <StickyComposerDock
         id={`${id}-composer-dock`}
-        visible={!replyingToCommentId && (showComposer ? composerPlacement === 'bottom' : !headerAnchorVisible)}
+        visible={!readOnly && !replyingToCommentId && (showComposer ? composerPlacement === 'bottom' : !headerAnchorVisible)}
         expanded={showComposer && composerPlacement === 'bottom'}
         placeholder={
           contactFirstName

@@ -73,7 +73,8 @@ export function buildSharedTicketData(input: {
     ticketData,
     ...(disclosed.customer_assignee !== undefined ? { customerAssignee: disclosed.customer_assignee } : {}),
     screen: {
-      side: screen.side, canWrite: screen.canWrite, canEscalate: screen.canEscalate, canHandBack: screen.canHandBack, canRevoke: screen.canRevoke,
+      side: screen.side, // Per-user authority: a view/oversight assignment can read but its update probe is denied.
+      canWrite: screen.canWrite && screen.canUpdate, canEscalate: screen.canEscalate, canHandBack: screen.canHandBack, canRevoke: screen.canRevoke,
       customerName: screen.customerName, sponsorName: screen.sponsorName, destinationName: screen.destinationName,
       revision: screen.summary.revision, sla: screen.sla,
       ...(typeof fields.work_revision === 'number' ? { work_revision: fields.work_revision } : {}),

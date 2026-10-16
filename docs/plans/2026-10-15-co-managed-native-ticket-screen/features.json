@@ -3,222 +3,222 @@
     "id": "F001",
     "area": "Seam",
     "description": "Define TicketDataSource interface in packages/tickets covering every ticket-scoped read/write TicketDetails and its sections make",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F002",
     "area": "Seam",
     "description": "TicketDataSourceContext + useTicketDataSource hook with a native default built from the existing imported actions",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F003",
     "area": "Seam",
     "description": "TicketCapabilities type delivered by the data source; native default enables every section (existing hide*/isAlgaDeskMode flags still apply)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F004",
     "area": "Seam",
     "description": "TicketDetailsContainer field/batch/comment/description writes go through the data source",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F005",
     "area": "Seam",
     "description": "TicketDetails direct action calls (refresh, board, teams, resources, close checks, comments edit/delete/reply, contacts, recurring source) go through the data source",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F006",
     "area": "Seam",
     "description": "TicketInfo, TicketProperties, TicketConversation, CommentItem, CommentEmailRecipientsControl go through the data source",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F007",
     "area": "Seam",
     "description": "Bento layout (BentoHero, BentoTimelineTile, dataTiles, SlaClocksTile, TicketBentoLayout) goes through the data source",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F008",
     "area": "Seam",
     "description": "Checklist, materials, external links, activity timeline, navigation, email notifications go through the data source or are gated by a capability",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F009",
     "area": "Seam",
     "description": "New capability flags: bundles, delete, tags, credentials, external links, checklist, documents, assets, materials, billing, email logs, activity log, reactions, live, survey, appointment requests, navigation",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F010",
     "area": "Seam",
     "description": "Avatar batch actions are routed through the data source and never receive a foreign tenant",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F011",
     "area": "Seam",
     "description": "window.location.reload / router.refresh / BackNav href / live provider become data-source driven (refresh callback, back href, live capability)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F012",
     "area": "Seam",
     "description": "Native ticket screen behavior unchanged: no extra requests, bootstrap/streams unchanged",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F013",
     "area": "Read",
     "description": "Extend the shared read with description (rich text), requester contact display name, client display name, category ref, due_date and customer assignee display, each redactable by home policy",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F014",
     "area": "Read",
     "description": "Shared-ticket loader server function returns the TicketDetailsContainer ticketData shape from admitted redacted reads only; undisclosed fields absent",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F015",
     "area": "Read",
     "description": "Category option search for the customer board via a co-managed option action (like status/priority)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F016",
     "area": "Edit",
     "description": "Allow description and category_id in editCoManagedTicket (editableFields, baselines, receipts, close rules unchanged)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F017",
     "area": "Edit",
     "description": "Shared data source maps native onTicketUpdate/onBatchTicketUpdate/onUpdateDescription to saveSharedTicketEditAction with per-field expected baselines and stable operation ids; conflict/unknownOutcome surfaced in the native save flow",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F018",
     "area": "Edit",
     "description": "Status/priority/category pickers on shared tickets list the customer's options via the co-managed option search",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F019",
     "area": "Conversation",
     "description": "Native conversation reads shared conversation items (requester + shared_it from the customer store, organization_private from the sponsor store) with organization-qualified author labels",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F020",
     "area": "Conversation",
     "description": "Native composer shows an audience control (Requester / Shared IT teams / Private to <org>) instead of the Internal toggle when the data source reports audiences; default Shared IT on the MSP side",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F021",
     "area": "Conversation",
     "description": "Create, reply, edit, delete and change-audience (disclosure) on shared tickets via the co-managed comment actions with operation ids and expectedUpdatedAt/revision guards",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F022",
     "area": "Conversation",
     "description": "Attachments on shared-ticket comments via the co-managed draft/attachment actions; image/file/mention blocks disabled in the editor for shared tickets",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F023",
     "area": "Conversation",
     "description": "Customer side (local co-managed ticket): native conversation shows and writes audiences (requester/shared_it/private) on co_managed tickets",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F024",
     "area": "CoManaged",
     "description": "Native-styled Co-managed section (Entry properties column and Grid tile): responsibility, customer + MSP SLA clocks, handoff actions",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F025",
     "area": "CoManaged",
     "description": "MSP assignment control (MSP users/teams) inside the Co-managed section, sponsor side; read-only display on the customer side",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F026",
     "area": "CoManaged",
     "description": "Escalate / hand back / take back / revoke dialogs using the native Dialog footer pattern with expectedRevision",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F027",
     "area": "CoManaged",
     "description": "Handoff history drawer in the Co-managed section with paging",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F028",
     "area": "CoManaged",
     "description": "Work signals refresh (callout/badge) after assignment and handoff from the native screen",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F029",
     "area": "Time",
     "description": "Native stopwatch and time-entries list on shared tickets backed by the co-managed time work reference (work_item_type co_managed)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F030",
     "area": "Time",
     "description": "Effort split (customer / MSP / combined) shown in the time summary on both sides",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F031",
     "area": "Time",
     "description": "Co-managed billing profile control available from the shared time entry flow",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F032",
     "area": "Route",
     "description": "MSP route /msp/co-management/tickets/[customerTenant]/[relationshipId]/[ticketId] renders the native screen (server loader + shared data source provider) inside the MSP shell, customer workspace name in the header",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F033",
     "area": "Route",
     "description": "Customer side /msp/tickets/[id] renders the Co-managed section natively and no longer mounts CoManagedTicketPanel",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F034",
     "area": "Route",
     "description": "Shared screen hides: bundles, materials, billing/quick invoice, delete, credentials, external links, email logs, survey, appointment requests, documents, checklist, assets, tags, live updates",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F035",
     "area": "Route",
     "description": "Read-only MSP viewer: every write affordance absent on the shared screen",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F036",
     "area": "Cleanup",
     "description": "Delete CoManagedTicketPanel, CoManagedTicketEditor, CoManagedTicketConversation, CoManagedTicketAssignment and other stacked panel children with no remaining caller; remove dead i18n keys",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F037",
     "area": "Cleanup",
     "description": "i18n for new labels (audience control, co-managed section, effort split) in all locales",
-    "implemented": false
+    "implemented": true
   }
 ]

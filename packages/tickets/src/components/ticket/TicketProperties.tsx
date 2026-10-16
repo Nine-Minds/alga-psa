@@ -105,6 +105,8 @@ interface TicketPropertiesProps {
   onEditTimeEntry?: (entry: { entry_id: string }) => void;
   onDeleteTimeEntry?: (entry: { entry_id: string; user_name: string | null }) => void;
   hideTimeEntry?: boolean;
+  /** Rendered in a Time card when the native time panel is hidden (for example an effort split). */
+  timeSummarySlot?: React.ReactNode;
   hideMaterials?: boolean;
   onLiveDirtyFieldsChange?: (fields: string[]) => void;
   liveHighlightedFields?: string[];
@@ -201,6 +203,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onEditTimeEntry,
   onDeleteTimeEntry,
   hideTimeEntry = false,
+  timeSummarySlot = null,
   hideMaterials = false,
   onLiveDirtyFieldsChange,
   liveHighlightedFields = [],
@@ -626,6 +629,17 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         </div>
       </ContentCard>
       )}
+      {hideTimeEntry && timeSummarySlot ? (
+        <ContentCard
+          id={`${id}-time-summary-card`}
+          collapsible
+          defaultExpanded
+          title={t('properties.timeEntry', 'Time Entry')}
+          headerIcon={<Clock className="w-5 h-5" />}
+        >
+          {timeSummarySlot}
+        </ContentCard>
+      ) : null}
 
       <ContentCard
         id={`${id}-contact-info`}
