@@ -78,20 +78,24 @@ export function extractLanIp(interfaces?: LevelIoNetworkInterface[] | null): str
   return null;
 }
 
+/**
+ * Maps Level's documented `disks` (physical disks: type, model, serial, size)
+ * to storage entries. Level sends no free space, so `free_gb` and
+ * `utilization_percent` are omitted rather than fabricated; consumers render
+ * those disks as capacity-only.
+ */
 export function mapLevelIoDiskUsage(device: LevelIoDevice): RmmStorageInfo[] {
-  return (device.disk_partitions ?? [])
-    .filter((partition) => typeof partition.size === 'number' && partition.size > 0)
-    .map((partition) => {
-      const totalGb = roundTo2((partition.size as number) / BYTES_PER_GB);
-      const freeGb = typeof partition.free_space === 'number' ? roundTo2(partition.free_space / BYTES_PER_GB) : 0;
-      const utilization = totalGb > 0 ? roundTo2(((totalGb - freeGb) / totalGb) * 100) : 0;
-      return {
-        name: partition.mount_point || partition.label || 'disk',
-        total_gb: totalGb,
-        free_gb: freeGb,
-        utilization_percent: utilization,
-      };
+  const storage: RmmStorageInfo[] = [];
+  (device.disks ?? []).forEach((disk, index) => {
+    if (typeof disk?.size !== 'number' || !Number.isFinite(disk.size) || disk.size <= 0) return;
+    const model = disk.model?.trim();
+    const type = disk.disk_type?.trim();
+    storage.push({
+      name: [type, model].filter(Boolean).join(' ') || `Disk ${index + 1}`,
+      total_gb: roundTo2(disk.size / BYTES_PER_GB),
     });
+  });
+  return storage;
 }
 
 export function mapLevelIoDeviceToSnapshot(args: {

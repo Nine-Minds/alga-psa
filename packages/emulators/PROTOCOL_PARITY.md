@@ -168,7 +168,10 @@ and custom-field REST endpoints (all answer 501); custom-field references and
 any alert-specific variables in automations (Level documents none); webhook
 endpoint management through the API; Level's own request-log UI.
 
-Consumer drift found while building the emulator: Level's device schema has
-`disks` (`disk_type`, `model`, `serial_number`, `size`), while Alga's
-`LevelIoDevice` type and device mapper read `disk_partitions`. Against the
-documented API, Alga maps no disks. The emulator serves the documented field.
+Consumer drift (resolved): Level's device schema carries `disks` (`disk_type`,
+`model`, `serial_number`, `size`) and no `disk_partitions`. Alga's
+`LevelIoDevice` type and device mapper read the documented `disks` field, so
+the emulator's payload and Alga's mapping agree. Level reports physical
+capacity only; mapped storage entries carry `total_gb` without `free_gb` or
+`utilization_percent`. `restConsumer.test.ts` runs the mapper against the
+emulator's `disks` payload.
