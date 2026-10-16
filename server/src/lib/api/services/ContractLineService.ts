@@ -73,6 +73,7 @@ import { ConflictError, NotFoundError, UnprocessableEntityError, ValidationError
 import {
   activateClientContractAssignment,
   checkAndReactivateExpiredContract,
+  ClientContractError,
   createClientContractAssignment,
   getClientContractById,
   getClientContractsByContractId,
@@ -1434,21 +1435,22 @@ export class ContractLineService extends BaseService<IContractLine> {
   }
 
   /**
-   * The shared assignment engine reports domain failures as plain Errors; translate them to
-   * the API's HTTP errors instead of letting them surface as 500s.
+   * The shared assignment engine reports domain failures as ClientContractError; translate the
+   * code to the API's HTTP errors instead of letting them surface as 500s.
    */
   private async runAssignmentOperation<T>(operation: () => Promise<T>): Promise<T> {
     try {
       return await operation();
     } catch (error) {
-      if (error instanceof Error) {
-        const message = error.message;
-        if (/not found/i.test(message)) throw new NotFoundError(message);
-        if (/Mixed-currency/i.test(message) || /Start date cannot be changed/i.test(message)) {
-          throw new ConflictError(message);
+      if (error instanceof ClientContractError) {
+        switch (error.code) {
+          case 'NOT_FOUND':
+            throw new NotFoundError(error.message);
+          case 'CONFLICT':
+            throw new ConflictError(error.message);
+          case 'INVALID':
+            throw new ValidationError(error.message);
         }
-        if (/System-managed/i.test(message)) throw new UnprocessableEntityError(message);
-        if (/billing profile|Renewal ticket/i.test(message)) throw new ValidationError(message);
       }
       throw error;
     }

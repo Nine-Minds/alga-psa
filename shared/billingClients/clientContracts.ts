@@ -6,6 +6,22 @@ import type { ClientContractAssignmentCreateInput } from './types';
 import { assertBoardScopedTicketStatusSelection } from '../lib/boardScopedTicketStatusValidation';
 import { deriveClientContractStatus } from './clientContractStatus';
 
+export type ClientContractErrorCode = 'NOT_FOUND' | 'CONFLICT' | 'INVALID';
+
+/**
+ * Domain failure raised by the client-contract assignment engine. Callers (UI actions, REST API)
+ * map `code` to their own error surface instead of matching on message text.
+ */
+export class ClientContractError extends Error {
+  readonly code: ClientContractErrorCode;
+
+  constructor(code: ClientContractErrorCode, message: string) {
+    super(message);
+    this.name = 'ClientContractError';
+    this.code = code;
+  }
+}
+
 type RenewalMode = NonNullable<IClientContract['renewal_mode']>;
 
 const DEFAULT_RENEWAL_MODE: RenewalMode = 'manual';
@@ -506,7 +522,7 @@ export async function createClientContractAssignment(
   const db = tenantDb(knexOrTrx, tenant);
   const clientExists = await db.table('clients').where({ client_id: input.client_id }).first();
   if (!clientExists) {
-    throw new Error(`Client ${input.client_id} not found`);
+    throw new ClientContractError('NOT_FOUND', `Client ${input.client_id} not found`);
   }
 
   const contractQuery = db.table('contracts')
@@ -516,7 +532,7 @@ export async function createClientContractAssignment(
   }
   const contractExists = await contractQuery.first();
   if (!contractExists) {
-    throw new Error(`Contract ${input.contract_id} not found or inactive`);
+    throw new ClientContractError('NOT_FOUND', `Contract ${input.contract_id} not found or inactive`);
   }
 
   if (input.is_active) {
@@ -532,7 +548,7 @@ export async function createClientContractAssignment(
       const contractLabel = mixedCurrencyConflict.contract_name
         ? ` ("${mixedCurrencyConflict.contract_name}")`
         : '';
-      throw new Error(
+      throw new ClientContractError('CONFLICT', 
         `Client already has an active contract in ${mixedCurrencyConflict.currency_code}${contractLabel}. ` +
         `Cannot create a contract in ${targetCurrencyCode}. Mixed-currency contracts for the same client are not supported.`
       );
@@ -548,7 +564,7 @@ export async function createClientContractAssignment(
       .where({ billing_profile_id: billingProfileId })
       .first('client_id');
     if (!profile || profile.client_id !== input.client_id) {
-      throw new Error('That billing profile belongs to a different client.');
+      throw new ClientContractError('INVALID', 'That billing profile belongs to a different client.');
     }
   }
 
@@ -642,7 +658,7 @@ export async function updateClientContractAssignment(
 ): Promise<IClientContract> {
   const existing = await getClientContractById(knexOrTrx, tenant, clientContractId);
   if (!existing) {
-    throw new Error(`Client contract ${clientContractId} not found`);
+    throw new ClientContractError('NOT_FOUND', `Client contract ${clientContractId} not found`);
   }
 
   // Re-pointing a contract at another profile moves every charge it produces,
@@ -652,7 +668,7 @@ export async function updateClientContractAssignment(
       .where({ billing_profile_id: updateData.billing_profile_id })
       .first('client_id');
     if (!profile || profile.client_id !== existing.client_id) {
-      throw new Error('That billing profile belongs to a different client.');
+      throw new ClientContractError('INVALID', 'That billing profile belongs to a different client.');
     }
   }
 
@@ -689,7 +705,7 @@ export async function updateClientContractAssignment(
       .first();
 
     if (contract && contract.is_active) {
-      throw new Error('Start date cannot be changed for active contracts. Set the contract to draft first.');
+      throw new ClientContractError('CONFLICT', 'Start date cannot be changed for active contracts. Set the contract to draft first.');
     }
   }
 
@@ -699,7 +715,7 @@ export async function updateClientContractAssignment(
     .returning('*');
 
   if (!updated) {
-    throw new Error(`Client contract ${clientContractId} not found`);
+    throw new ClientContractError('NOT_FOUND', `Client contract ${clientContractId} not found`);
   }
 
   return normalizeClientContract(updated);
@@ -718,7 +734,7 @@ export async function activateClientContractAssignment(
 ): Promise<IClientContract> {
   const existing = await getClientContractById(knexOrTrx, tenant, clientContractId);
   if (!existing) {
-    throw new Error(`Client contract ${clientContractId} not found`);
+    throw new ClientContractError('NOT_FOUND', `Client contract ${clientContractId} not found`);
   }
 
   const db = tenantDb(knexOrTrx, tenant);
@@ -726,7 +742,7 @@ export async function activateClientContractAssignment(
     .where({ contract_id: existing.contract_id })
     .first('contract_id', 'status', 'is_active', 'currency_code', 'contract_name');
   if (!contract) {
-    throw new Error(`Contract ${existing.contract_id} not found`);
+    throw new ClientContractError('NOT_FOUND', `Contract ${existing.contract_id} not found`);
   }
 
   const needsHeaderActivation = contract.status === 'draft' || contract.is_active === false;
@@ -744,7 +760,7 @@ export async function activateClientContractAssignment(
       const contractLabel = mixedCurrencyConflict.contract_name
         ? ` ("${mixedCurrencyConflict.contract_name}")`
         : '';
-      throw new Error(
+      throw new ClientContractError('CONFLICT', 
         `Client already has an active contract in ${mixedCurrencyConflict.currency_code}${contractLabel}. ` +
         `Cannot create a contract in ${targetCurrencyCode}. Mixed-currency contracts for the same client are not supported.`
       );
