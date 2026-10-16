@@ -109,7 +109,7 @@ export async function moveRmmOrganizationAssets(
       if (!isMissingAssetGroupTable(error)) throw error;
     }
 
-    // `asset_history.changed_by` is nullable since 20261009127000, so a move
+    // `asset_history.changed_by` is nullable since 20261009125200, so a move
     // triggered without a session still shows on the asset's timeline.
     if (removedGroup) {
       await table(trx, tenant, 'asset_history').insert({

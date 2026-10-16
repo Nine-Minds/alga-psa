@@ -178,7 +178,7 @@ export async function setAssetAssignee(
   // "Assigned to Jane Doe" without a second lookup per row — and still read
   // correctly after the contact is renamed or deleted.
   //
-  // `changed_by` is nullable since 20261009127000: RMM sync has no session,
+  // `changed_by` is nullable since 20261009125200: RMM sync has no session,
   // and skipping the row left every auto-assignment invisible on the timeline
   // of the device it had just reassigned.
   const [contactName, previousContactName] = await Promise.all([

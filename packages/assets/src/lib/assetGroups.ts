@@ -87,7 +87,7 @@ async function groupHistory(
     extra?: Record<string, unknown>;
   }
 ): Promise<void> {
-  // `changed_by` is nullable since 20261009127000, so a sessionless caller
+  // `changed_by` is nullable since 20261009125200, so a sessionless caller
   // (sync, a job) still leaves the group change on the timeline.
   await table(trx, tenant, 'asset_history').insert({
     tenant,

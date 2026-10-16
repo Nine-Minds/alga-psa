@@ -236,7 +236,7 @@ describe('setAssetAssignee', () => {
     });
     expect(h.dbState.asset_assignments).toHaveLength(1);
     expect(h.dbState.asset_assignments[0].note).toBe('CORP\\jdoe');
-    // `asset_history.changed_by` is nullable since 20261009127000, so the
+    // `asset_history.changed_by` is nullable since 20261009125200, so the
     // auto-assignment is visible on the timeline and names its provider.
     expect(h.dbState.asset_history).toHaveLength(1);
     expect(h.dbState.asset_history[0]).toMatchObject({
