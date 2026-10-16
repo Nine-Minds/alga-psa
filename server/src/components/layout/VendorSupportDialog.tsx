@@ -91,7 +91,7 @@ export const VendorSupportDialog: React.FC<VendorSupportDialogProps> = ({
         pageUrl: pathname ?? '',
       });
 
-      if (result.success) {
+      if (result.success === true) {
         setSent(true);
       } else {
         outcome = result.error;
