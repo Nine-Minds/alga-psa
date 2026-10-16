@@ -1072,3 +1072,80 @@ Noting these so they are not read as volunteered scope:
 Lifting the projects and ticket work into their own PRs is the reviewer's
 preference and a fair one, but it needs a push and a second PR, neither of
 which is this round's to make.
+
+## Round 16 — the red lanes, verified fix by fix (2026-10-16)
+
+### What is actually red, and why each fix answers it
+
+`gh pr checks 3763` shows four red lanes, all from run `38958408374` against
+pushed head `94a11c7f18`. Two of them are gates with nothing of their own to
+fix: `Production regression readiness` logs `red lanes: citus:failure,
+unit:failure` and `citus / Citus execution complete` is the citus job's own
+rollup. So there are two real failures, and both already have a commit:
+
+- **`unit / Nx affected unit tests`** — `Failed tasks: @alga-psa/projects:test`,
+  one assertion: `ProjectTaskStatusSettings.test.tsx:171`, "requires a
+  destination when the column still holds tasks", received `['m2','m1']` where
+  `['m2','m3']` was expected — the destination pick being reset out from under
+  the operator. Fixed by `1a937f2865`. Re-ran the whole package here, not just
+  that file: **104 files / 567 tests, all pass.**
+- **`citus / Combined migrations on single-node Citus`** — two failures in
+  `ee/temporal-workflows`, both the asset-status onboarding seed showing up in
+  hand-maintained lists:
+  - `product-upgrade-operations`: `expected [ '01_roles.cjs', …(9) ] to deeply
+    equal [ '01_roles.cjs', …(8) ]`, diff `+ "11_asset_statuses.cjs"`. The fix
+    adds that filename last (it sorts after `10_`), which is where
+    `backfillPsaSeeds` returns it.
+  - `tenant-creation-workflow.e2e`: `expected { …(19) } to be undefined`, from
+    `delete from "tenants" … violates foreign key constraint
+    "asset_statuses_tenant_foreign"`. The fix adds `asset_statuses` to the list
+    the test clears *before* `rollbackTenantInDB`, next to
+    `asset_type_registry` which is there for the same reason.
+
+  Both in `da94eca92f`. Checked rather than trusted: the seed is
+  `ee/server/seeds/onboarding/psa/11_asset_statuses.cjs`, its five builtin slugs
+  are exactly the set the test now asserts (`active`, `in_stock`,
+  `maintenance`, `inactive`, `retired`), and the cleanup loop runs before the
+  rollback call, not after.
+
+  The migration chain itself is **not** part of this failure — it completed, and
+  the job's log shows `asset_statuses`, `asset_assignments` and `asset_groups`
+  all `distributed`, with the one composite FK Citus cannot support reported as
+  `asset_groups and client_locations have incompatible distribution - skipping
+  foreign key asset_groups_tenant_location_id_foreign`. That is the deferred
+  `ensureCompositeFk` from round 11 doing its job, and it is the operator's
+  original `create_distributed_table` error staying fixed.
+
+Also confirmed no *other* hand-maintained list went stale with the new tables:
+`tenant-deletion-activities.ts` already carries `asset_statuses`,
+`asset_assignments`, `asset_group_members`, `asset_group_contacts` and
+`asset_groups` in the right order, and `Validate Tenant Management Schema` is
+green.
+
+### FR-B6: ingestion now writes only the two slugs it owns
+
+The last open note from the review. On create, shared ingestion read
+`snapshot.status || (offline ? 'inactive' : 'active')`, and `status` is a loose
+`string` on the contract. Every mapper sends `active` or `inactive` today —
+Level.io, Tanium, NinjaOne and Tactical were each checked — so nothing changes
+in practice, but a provider that invents its own word ("Decommissioned") would
+have landed a slug no `asset_statuses` row defines, and the status select would
+then show an asset a status it cannot offer. Ingestion now accepts only those
+two and otherwise falls back to the connectivity reading.
+`sharedAssetIngestionService.test.ts` pins all four combinations; the two
+"Decommissioned" cases fail against the old expression (verified by reverting
+it and re-running).
+
+### Still outstanding, and whose it is
+
+The branch is **0 behind / 84 ahead** of `origin/main` and `mergeable`;
+`mergeStateStatus: BEHIND` is purely the stale remote head. Every fix above is
+committed. Pushing is the one remaining step and it is not this round's to
+take — the pipeline pushes and watches the run.
+
+Two review notes stay open by choice, both recorded here rather than silently
+dropped: the ~30 `tests.json` ids with no test literally carrying the id (the
+behaviours are covered by descriptively-titled tests), and lifting the
+`packages/projects` / `packages/tickets` work into its own PR. Both are
+housekeeping against a PR the operator wants merged now, and the second needs a
+push either way.

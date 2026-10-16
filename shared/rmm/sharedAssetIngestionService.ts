@@ -271,7 +271,15 @@ export async function ingestNormalizedRmmDeviceSnapshot(
     }
 
     const lastSeenAt = parseIsoDate(snapshot.lastSeenAt);
-    const assetStatus = snapshot.status || (snapshot.lifecycleState === 'offline' ? 'inactive' : 'active');
+    // FR-B6: ingestion owns exactly two lifecycle slugs, `active` and
+    // `inactive`, and writes them only on create. `snapshot.status` is a loose
+    // `string`, so a provider that invents its own word would otherwise land a
+    // slug no asset_statuses row defines; anything else falls back to the
+    // connectivity reading instead.
+    const snapshotStatus = snapshot.status === 'active' || snapshot.status === 'inactive'
+      ? snapshot.status
+      : null;
+    const assetStatus = snapshotStatus ?? (snapshot.lifecycleState === 'offline' ? 'inactive' : 'active');
     const agentStatus = snapshot.agentStatus ?? (snapshot.lifecycleState === 'offline' ? 'offline' : 'online');
     const scopeMapping = await loadScopeMapping(trx, {
       tenant,

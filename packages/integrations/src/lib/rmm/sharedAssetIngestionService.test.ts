@@ -492,4 +492,40 @@ describe('sharedAssetIngestionService', () => {
       system_info: JSON.stringify({ manufacturer: 'Apple', model: 'Mac16,5' }),
     });
   });
+
+  // FR-B6: `snapshot.status` is a loose `string` on the contract. Every mapper
+  // sends `active` or `inactive` today, but a provider word must never become
+  // the new asset's status, because no asset_statuses row would define it.
+  it('ignores a provider status that is not one of the two slugs ingestion owns', async () => {
+    for (const [providerStatus, lifecycleState, expected] of [
+      ['Decommissioned', 'active', 'active'],
+      ['Decommissioned', 'offline', 'inactive'],
+      ['inactive', 'active', 'inactive'],
+      ['active', 'offline', 'active'],
+    ] as Array<[string, 'active' | 'offline', string]>) {
+      const state: DbState = {
+        assets: [],
+        workstation_assets: [],
+        server_assets: [],
+        tenant_external_entity_mappings: [],
+        rmm_organization_mappings: [
+          {
+            tenant: 'tenant_1',
+            integration_id: 'integration_1',
+            external_organization_id: 'scope_1',
+            client_id: 'client_1',
+          },
+        ],
+      };
+
+      const result = await ingestNormalizedRmmDeviceSnapshot({
+        tenant: 'tenant_1',
+        snapshot: buildSnapshot({ status: providerStatus, lifecycleState }),
+        knex: createFakeKnex(state),
+      });
+
+      expect(result.action).toBe('created');
+      expect(state.assets[0].status).toBe(expected);
+    }
+  });
 });
