@@ -44,6 +44,7 @@ const makeQuery = (result: any) => {
   const chain: any = {};
   chain.select = vi.fn(() => chain);
   chain.where = vi.fn(() => chain);
+  chain.orderBy = vi.fn(() => chain);
   chain.first = vi.fn(async () => result);
   return chain;
 };
@@ -54,6 +55,7 @@ const makeListQuery = (rows: any[]) => {
   const chain: any = {};
   chain.select = vi.fn(() => chain);
   chain.where = vi.fn(() => chain);
+  chain.orderBy = vi.fn(() => chain);
   chain.first = vi.fn(async () => rows[0]);
   chain.then = (onFulfilled: any, onRejected: any) => Promise.resolve(rows).then(onFulfilled, onRejected);
   chain.catch = (onRejected: any) => Promise.resolve(rows).catch(onRejected);
@@ -232,10 +234,13 @@ describe('quoteActions', () => {
         return chain;
       }
       if (table === 'clients') {
-        return makeQuery({ billing_email: null });
+        return makeQuery({ client_id: 'client-1', client_name: 'Acme', billing_contact_id: null, billing_email: null });
       }
       if (table === 'contacts') {
         return makeQuery({ email: null });
+      }
+      if (table === 'client_locations') {
+        return makeListQuery([]);
       }
       if (table === 'user_roles' || table === 'team_members' || table === 'users') {
         return makeListQuery([]);

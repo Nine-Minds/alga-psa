@@ -4,6 +4,7 @@ import {
   buildClientCadenceDueSelectionInput,
   buildContractCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
+import { ManualInvoiceError } from '../../../../../packages/billing/src/errors/manualInvoiceErrors';
 
 // Step 5 of the charge-attribution chain reads the client's default billing
 // profile from the database. These suites mock knex, so the read is stubbed —
@@ -1028,14 +1029,12 @@ describe('invoice preview recurring timing', () => {
     });
   });
 
-  it('T045: selector-input preview and generation validation failures map back to canonical execution-window identity only', async () => {
-    mocks.validateClientBillingEmail.mockResolvedValueOnce({
+  it('T045: a missing billing email is advisory for selector-input preview and never gates generation', async () => {
+    mocks.validateClientBillingEmail.mockResolvedValue({
       valid: false,
+      code: 'NO_BILLING_EMAIL',
       error: 'Billing email is required before generating recurring invoices.',
-    });
-    mocks.validateClientBillingEmail.mockResolvedValueOnce({
-      valid: false,
-      error: 'Billing email is required before generating recurring invoices.',
+      params: { clientName: 'Acme Corp' },
     });
 
     const selectorInput = buildContractCadenceDueSelectionInput({
@@ -1046,25 +1045,24 @@ describe('invoice preview recurring timing', () => {
       windowEnd: '2025-03-08',
     });
 
+    // The address is only consumed when the invoice is emailed or a payment
+    // link is created, so the preview renders and carries a warning instead.
     const previewResult = await previewInvoiceForSelectionInput(selectorInput);
-
-    const generationError = await generateInvoiceForSelectionInput(selectorInput).catch((error) => error);
-
     expect(previewResult).toMatchObject({
-      success: false,
-      error: 'Billing email is required before generating recurring invoices.',
-      executionIdentityKey: selectorInput.executionWindow.identityKey,
+      success: true,
+      billingEmailWarning: { code: 'NO_BILLING_EMAIL', params: { clientName: 'Acme Corp' } },
     });
+    expect(previewResult).not.toHaveProperty('error');
     expect(previewResult).not.toHaveProperty('billingCycleId');
-    // The coded validation failure is returned (not re-thrown) as a keyed action
-    // error so the recurring run can recover the structured failure after the
-    // localization boundary rewrites the sentence.
-    expect(generationError).toMatchObject({
-      actionError: 'Billing email is required before generating recurring invoices.',
+    expect(mocks.validateClientBillingEmail).toHaveBeenCalledTimes(1);
+
+    // Generation does not consult the address at all.
+    const generationResult = await generateInvoiceForSelectionInput(selectorInput).catch((error) => error);
+    expect(mocks.validateClientBillingEmail).toHaveBeenCalledTimes(1);
+    expect(generationResult).not.toMatchObject({
       messageKey: 'msp/invoicing:manualInvoices.errors.NO_BILLING_EMAIL',
-      messageParams: { clientName: 'Acme Corp' },
     });
-    expect(generationError).not.toHaveProperty('billingCycleId');
+    expect(JSON.stringify(generationResult ?? null)).not.toContain('Billing email is required');
   });
 
   it('keeps unknown preview failures generic instead of exposing the raw internal message', async () => {
@@ -1110,12 +1108,12 @@ describe('invoice preview recurring timing', () => {
   });
 
   it('routes unsupported coded validation errors to the generic path instead of surfacing them raw', async () => {
-    mocks.validateClientBillingEmail.mockResolvedValue({
-      valid: false,
-      code: 'SERVICE_NOT_FOUND',
-      error: 'Service "service-9" could not be found.',
-      params: { serviceId: 'service-9' },
-    });
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    mocks.calculateBillingForExecutionWindow.mockRejectedValue(
+      new ManualInvoiceError('SERVICE_NOT_FOUND', 'Service "service-9" could not be found.', { serviceId: 'service-9' }),
+    );
 
     const selectorInput = buildContractCadenceDueSelectionInput({
       clientId: 'client-1',
@@ -1139,6 +1137,8 @@ describe('invoice preview recurring timing', () => {
     expect(generationError).toBeInstanceOf(Error);
     expect(generationError).not.toHaveProperty('actionError');
     expect(generationError).not.toHaveProperty('messageKey');
+
+    consoleErrorSpy.mockRestore();
   });
 
   it('T050: selector-input recurring generation still enforces PO-required contract validation', async () => {

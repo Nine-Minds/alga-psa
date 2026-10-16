@@ -377,6 +377,16 @@ export interface IConditionalRule {
 }
 
 /**
+ * Advisory note on a successful preview: the client (or the profile the
+ * invoice bills) has no address to email the invoice to, so it can be
+ * generated but not sent or paid online until one is set.
+ */
+export interface InvoiceBillingEmailWarning {
+  code: 'NO_BILLING_EMAIL';
+  params: { clientName: string };
+}
+
+/**
  * Known, safe recurring-invoice failure codes that may cross the action boundary
  * for localized, actionable UI remediation. Absent for unknown/internal failures,
  * which keep the generic error string. Only allowlisted codes belong here.
@@ -455,6 +465,8 @@ export type PreviewInvoiceResponse = {
    * or its inherited catalog price changed after preview.
    */
   expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
+  /** Set when the billed client/profile has no address to email the invoice to. */
+  billingEmailWarning?: InvoiceBillingEmailWarning;
 } | {
   success: false;
   error: string;
