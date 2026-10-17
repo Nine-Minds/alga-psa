@@ -36,7 +36,13 @@ import type { MobileTheme } from "../ui/themeTokens";
 import { I18nProvider } from "../i18n/I18nProvider";
 import { TimerProvider } from "../features/timer/TimerContext";
 import { CapabilitiesProvider } from "../capabilities/CapabilitiesContext";
-import { isSessionUsable, msUntilExpiry, msUntilRefresh, shouldRefreshOnResume } from "./bootstrapUtils";
+import {
+  isSessionUsable,
+  msUntilExpiry,
+  msUntilRefresh,
+  shouldRefreshOnResume,
+  skipRestoredNavState,
+} from "./bootstrapUtils";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { getActiveRouteName } from "../navigation/activeRoute";
 import { t } from "../i18n/i18n";
@@ -56,20 +62,22 @@ export function AppRoot() {
   const startupStartedAt = useRef(Date.now());
   const startupReported = useRef(false);
   const lastBiometricUnlockAtMs = useRef(0);
+  const freshSignInRef = useRef(false);
 
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
 
   const setSession = useCallback(
     (next: MobileSession | null) => {
-      const signingIn = next !== null && sessionRef.current === null;
+      // A fresh sign-in opens on Home, not on whatever the last session left
+      // behind; relaunch still restores the persisted route. Navigating here
+      // cannot do it — the signed-in navigator is not mounted yet — so the
+      // restore is skipped instead, below.
+      if (next !== null && sessionRef.current === null && !hasHeldDeepLink()) {
+        freshSignInRef.current = true;
+      }
       sessionRef.current = next;
       setDeepLinkSignedIn(next !== null);
       setSessionState(next);
-      // A fresh sign-in opens on Home, not on whatever the last account left
-      // behind; relaunch still restores the persisted route.
-      if (signingIn && !hasHeldDeepLink()) {
-        navigationRef.current?.navigate("Tabs");
-      }
       if (!next) setIsBiometricLocked(false);
       void (next ? storeSession(next) : clearStoredSession());
       setSentryUser(
@@ -78,7 +86,7 @@ export function AppRoot() {
           : null,
       );
     },
-    [clearStoredSession, navigationRef, setSessionState, setIsBiometricLocked, storeSession],
+    [clearStoredSession, setSessionState, setIsBiometricLocked, storeSession],
   );
 
   useEffect(() => {
@@ -139,9 +147,11 @@ export function AppRoot() {
       }
 
       setNavStateLoaded(false);
+      const freshSignIn = freshSignInRef.current;
+      freshSignInRef.current = false;
       // A pending deep link (e.g. a ticket link tapped in an email) must win over
-      // the restored screen; React Navigation ignores links when initialState is set.
-      if (await hasPendingDeepLink()) {
+      // the restored screen, and a sign-in opens on Home.
+      if (skipRestoredNavState({ freshSignIn, pendingDeepLink: await hasPendingDeepLink() })) {
         if (canceled) return;
         setNavInitialState(undefined);
         setNavStateLoaded(true);
