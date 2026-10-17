@@ -431,6 +431,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   rmm_integrations: { scope: 'tenant' },
   rmm_maintenance_windows: { scope: 'tenant' },
   rmm_organization_mappings: { scope: 'tenant' },
+  rmm_webhook_events: { scope: 'tenant' },
   rma_cases: { scope: 'tenant' },
   sales_order_lines: { scope: 'tenant' },
   sales_orders: { scope: 'tenant' },
