@@ -173,5 +173,5 @@ Consumer drift (resolved): Level's device schema carries `disks` (`disk_type`,
 `LevelIoDevice` type and device mapper read the documented `disks` field, so
 the emulator's payload and Alga's mapping agree. Level reports physical
 capacity only; mapped storage entries carry `total_gb` without `free_gb` or
-`utilization_percent`. `restConsumer.test.ts` runs the mapper against the
+`utilization_percent`. `ee/server/src/__tests__/integration/levelioEmulatorApiClient.integration.test.ts` runs the mapper against the
 emulator's `disks` payload.
