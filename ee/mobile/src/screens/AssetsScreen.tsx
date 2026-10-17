@@ -361,37 +361,55 @@ export function AssetsScreen({ navigation }: Props) {
           <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, fontWeight: "700" }}>
             {t("audit.recent", "Recent audits")}
           </Text>
-          {recentAudits.map((item) => (
-            <Pressable
-              key={item.audit_id}
-              testID={`assets-recent-audits-${item.audit_id}`}
-              onPress={() => navigation.navigate("AuditSummary", { auditId: item.audit_id })}
-              accessibilityRole="button"
-              accessibilityLabel={t("audit.recent", "Recent audits")}
-              style={({ pressed }) => ({
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginTop: theme.spacing.sm,
-                padding: theme.spacing.md,
-                borderRadius: theme.borderRadius.md,
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                backgroundColor: theme.colors.card,
-                opacity: pressed ? 0.95 : 1,
-              })}
-            >
-              <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
-                {formatDateShort(item.started_at)}
-              </Text>
-              <Text style={{ ...theme.typography.caption, color: theme.colors.text }}>
-                {t("audit.recentCounts", "{{present}} present · {{missing}} missing", {
-                  present: item.present_count,
-                  missing: item.missing_count,
+          {recentAudits.map((item) => {
+            const open = item.status === "in_progress";
+            return (
+              <Pressable
+                key={item.audit_id}
+                testID={`assets-recent-audits-${item.audit_id}`}
+                // An abandoned run is resumed, not summarised: its counts are
+                // still zero and every device is only expected.
+                onPress={() =>
+                  open
+                    ? navigation.navigate("AuditSession", { auditId: item.audit_id })
+                    : navigation.navigate("AuditSummary", { auditId: item.audit_id })
+                }
+                accessibilityRole="button"
+                accessibilityLabel={t("audit.recent", "Recent audits")}
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: theme.spacing.md,
+                  marginTop: theme.spacing.sm,
+                  padding: theme.spacing.md,
+                  borderRadius: theme.borderRadius.md,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  backgroundColor: theme.colors.card,
+                  opacity: pressed ? 0.95 : 1,
                 })}
-              </Text>
-            </Pressable>
-          ))}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ ...theme.typography.caption, color: theme.colors.text, fontWeight: "600" }} numberOfLines={1}>
+                    {item.client_name ?? t("audit.recent", "Recent audits")}
+                  </Text>
+                  <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }} numberOfLines={1}>
+                    {`${item.location_name ?? t("audit.noLocation", "No location")} • ${formatDateShort(item.started_at)}`}
+                  </Text>
+                </View>
+                <Text style={{ ...theme.typography.caption, color: open ? theme.colors.primary : theme.colors.text }}>
+                  {open
+                    ? t("audit.recentInProgress", "In progress")
+                    : item.status === "cancelled"
+                      ? t("audit.recentCancelled", "Cancelled")
+                      : t("audit.recentCounts", "{{present}} present · {{missing}} missing", {
+                          present: item.present_count,
+                          missing: item.missing_count,
+                        })}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       ) : null}
     </View>

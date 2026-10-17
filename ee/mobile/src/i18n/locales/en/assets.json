@@ -209,6 +209,8 @@
     "done": "Done",
     "recent": "Recent audits",
     "recentCounts": "{{present}} present · {{missing}} missing",
+    "recentInProgress": "In progress",
+    "recentCancelled": "Cancelled",
     "lastAudited": "Last audited",
     "result": {
       "present": "Present",

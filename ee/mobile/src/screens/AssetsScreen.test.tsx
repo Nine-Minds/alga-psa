@@ -250,15 +250,17 @@ describe("AssetsScreen", () => {
     expect(mocks.navigate).toHaveBeenCalledWith("AuditSetup");
   });
 
-  it("T044 lists recent audits with their counts and opens one", async () => {
-    mocks.listAssetAudits.mockResolvedValue({
+  function recentAudit(overrides: Record<string, unknown> = {}) {
+    return {
       ok: true,
       data: {
         data: [
           {
             audit_id: "au-1",
             client_id: "cl-1",
-            location_id: null,
+            client_name: "Emerald City",
+            location_id: "loc-1",
+            location_name: "Main office",
             status: "completed",
             started_by: "user-1",
             started_at: "2026-10-16T09:00:00Z",
@@ -267,19 +269,40 @@ describe("AssetsScreen", () => {
             present_count: 2,
             missing_count: 1,
             unexpected_count: 0,
+            ...overrides,
           },
         ],
         pagination: { page: 1, limit: 10, total: 1 },
       },
-    });
+    };
+  }
+
+  it("T044 lists recent audits with their scope and counts and opens one", async () => {
+    mocks.listAssetAudits.mockResolvedValue(recentAudit());
     const renderer = await renderScreen();
 
     expect(texts(renderer)).toContain("2 present · 1 missing");
+    expect(texts(renderer)).toContain("Emerald City");
+    expect(texts(renderer).some((line) => line.startsWith("Main office • "))).toBe(true);
     await act(async () =>
       renderer.root.find((n) => n.props?.testID === "assets-recent-audits-au-1").props.onPress(),
     );
 
     expect(mocks.navigate).toHaveBeenCalledWith("AuditSummary", { auditId: "au-1" });
+  });
+
+  it("T129 resumes an audit that is still in progress instead of summarising it", async () => {
+    mocks.listAssetAudits.mockResolvedValue(
+      recentAudit({ status: "in_progress", completed_at: null, present_count: 0, missing_count: 0 }),
+    );
+    const renderer = await renderScreen();
+
+    expect(texts(renderer)).toContain("In progress");
+    await act(async () =>
+      renderer.root.find((n) => n.props?.testID === "assets-recent-audits-au-1").props.onPress(),
+    );
+
+    expect(mocks.navigate).toHaveBeenCalledWith("AuditSession", { auditId: "au-1" });
   });
 
   it("opens the scan modal instead when inventory is off", async () => {

@@ -101,6 +101,11 @@ export function AuditSummaryScreen({ navigation, route }: Props) {
         <Text style={{ ...theme.typography.title, color: theme.colors.text }}>
           {t("audit.summaryTitle", "Audit summary")}
         </Text>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
+          {[audit.client_name, audit.location_name ?? t("audit.noLocation", "No location")]
+            .filter(Boolean)
+            .join(" • ")}
+        </Text>
         {audit.completed_at ? (
           <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
             {formatDateTime(audit.completed_at)}
