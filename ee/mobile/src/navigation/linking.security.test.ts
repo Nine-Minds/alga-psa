@@ -46,6 +46,38 @@ describe("deep link hardening", () => {
     }
   });
 
+  it("T097 rejects a project or asset id that is not a uuid", async () => {
+    const ExpoLinking = await import("expo-linking");
+
+    for (const url of [
+      "alga://project/not-a-uuid",
+      "alga://project/11111111-1111-4111-8111",
+      "alga://asset/../../etc/passwd",
+      "alga://asset/",
+    ]) {
+      (ExpoLinking.getInitialURL as any).mockResolvedValueOnce(url);
+      vi.resetModules();
+      const { linking, setDeepLinkSignedIn } = await import("./linking");
+      setDeepLinkSignedIn(true);
+      await expect(linking.getInitialURL?.()).resolves.toBeNull();
+    }
+  });
+
+  it("T097 accepts a uuid project and asset link for a signed-in user", async () => {
+    const ExpoLinking = await import("expo-linking");
+
+    for (const url of [
+      "alga://project/11111111-1111-4111-8111-111111111111",
+      "alga://asset/33333333-3333-4333-8333-333333333333",
+    ]) {
+      (ExpoLinking.getInitialURL as any).mockResolvedValueOnce(url);
+      vi.resetModules();
+      const { linking, setDeepLinkSignedIn } = await import("./linking");
+      setDeepLinkSignedIn(true);
+      await expect(linking.getInitialURL?.()).resolves.toBe(url);
+    }
+  });
+
   it("rejects detail-like paths that are not allowlisted", async () => {
     const ExpoLinking = await import("expo-linking");
     (ExpoLinking.getInitialURL as any).mockResolvedValueOnce("alga://clients/123");

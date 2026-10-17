@@ -89,7 +89,7 @@ describe("DrawerNavigator capability gating", () => {
   it("T076 lists HomeTab first and makes it the initial route", () => {
     const tree = renderDrawer();
     expect(registeredScreens[0]).toBe("HomeTab");
-    const navigator = tree.root.find((node) => node.type === "Navigator");
+    const navigator = tree.root.find((node) => String(node.type) === "Navigator");
     expect(navigator.props.initialRouteName).toBe("HomeTab");
   });
 

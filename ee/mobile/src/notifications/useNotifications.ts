@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef } from "react";
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import * as Application from "expo-application";
-import * as Linking from "expo-linking";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { phase2Features } from "../features/phase2";
@@ -17,48 +16,11 @@ import { getStableDeviceId } from "../device/clientMetadata";
 import { readPushRegistration, shouldRegisterPushToken, writePushRegistration } from "./pushRegistration";
 import { logger } from "../logging/logger";
 import type { RootStackParamList } from "../navigation/types";
-import { SCHEDULE_REMINDER_KIND } from "./scheduleReminders";
 import { resyncScheduleReminders } from "./reminderSync";
-import { resolveReminderTarget } from "./reminderTarget";
+import { navigateFromNotification, type NotificationData } from "./notificationRouting";
 import { getInteraction } from "../api/interactions";
 import { asNotificationPriority, ensurePriorityChannels, foregroundBehaviorFor, shouldToastInForeground } from "./priorityDelivery";
 import { getPushPriorityThreshold } from "../settings/notificationPreferences";
-
-type NotificationData = {
-  ticketId?: string;
-  taskId?: string;
-  kind?: string;
-  url?: string;
-  priority?: string;
-  workItemType?: string | null;
-  workItemId?: string | null;
-};
-
-async function navigateFromNotification(
-  data: NotificationData | undefined,
-  navigation: NativeStackNavigationProp<RootStackParamList>,
-  lookupInteractionTicket: (interactionId: string) => Promise<string | null>,
-): Promise<void> {
-  if (data?.ticketId) {
-    navigation.navigate("TicketDetail", { ticketId: data.ticketId });
-    return;
-  }
-  if (data?.taskId) {
-    navigation.navigate("ProjectTaskDetail", { taskId: data.taskId });
-    return;
-  }
-  if (data?.kind === SCHEDULE_REMINDER_KIND) {
-    // A follow-up booked from a ticket lands back on that ticket; other
-    // entries route through the deep-link layer so the drawer tab resolves
-    // the same way as an external alga://schedule link.
-    const target = await resolveReminderTarget(data, lookupInteractionTicket);
-    if (target.kind === "ticket") {
-      navigation.navigate("TicketDetail", { ticketId: target.ticketId });
-      return;
-    }
-    void Linking.openURL("alga://schedule");
-  }
-}
 
 // Foreground presentation follows the configured priority: high interrupts,
 // normal is announced by the in-app toast below, low only updates the badge.

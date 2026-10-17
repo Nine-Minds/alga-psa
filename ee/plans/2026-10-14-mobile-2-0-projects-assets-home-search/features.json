@@ -695,7 +695,7 @@
   {
     "id": "F078",
     "description": "navigation/linking.ts: alga://project/:projectId \u2192 ProjectDetail; hosted https://<host>/msp/projects/{id} (no taskId) folds to it; with taskId keeps folding to ProjectTaskDetail",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "linking",
     "prdRefs": [
       "FR9"
@@ -704,7 +704,7 @@
   {
     "id": "F079",
     "description": "alga://asset/:assetId \u2192 AssetDetail; hosted /msp/assets/{id} folds to it",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "linking",
     "prdRefs": [
       "FR14"
@@ -713,7 +713,7 @@
   {
     "id": "F080",
     "description": "Push routing: notification data with projectId (and no taskId/ticketId) opens ProjectDetail; data with assetId opens AssetDetail",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "linking",
     "prdRefs": [
       "FR9"
@@ -722,7 +722,7 @@
   {
     "id": "F081",
     "description": "RootNavigator registers ProjectDetail, AuditSetup, AuditSession, AuditSummary, Search routes with HeaderBackButton; navigation/types.ts params; navStatePersistence strips audit session params on restore so a stale audit is reloaded, not assumed",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "linking",
     "prdRefs": [
       "FR9"

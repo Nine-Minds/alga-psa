@@ -19,11 +19,23 @@ const HOSTED_TICKET_URL_RE =
 const HOSTED_PROJECT_TASK_URL_RE =
   /^https:\/\/algapsa\.com\/msp\/projects\/[0-9a-f-]{36}\?(?:.*&)?taskId=([0-9a-f-]{36})(?:[&#].*)?$/i;
 
+// The same project page without a taskId opens the project itself.
+const HOSTED_PROJECT_URL_RE =
+  /^https:\/\/algapsa\.com\/msp\/projects\/([0-9a-f-]{36})(?:[/?#].*)?$/i;
+
+const HOSTED_ASSET_URL_RE =
+  /^https:\/\/algapsa\.com\/msp\/assets\/([0-9a-f-]{36})(?:[/?#].*)?$/i;
+
 export function normalizeHostedTicketUrl(rawUrl: string): string {
   const match = HOSTED_TICKET_URL_RE.exec(rawUrl);
   if (match) return `alga://ticket/${match[1].toLowerCase()}`;
+  // taskId first: a project URL carrying one means the task, not the project.
   const taskMatch = HOSTED_PROJECT_TASK_URL_RE.exec(rawUrl);
-  return taskMatch ? `alga://project-task/${taskMatch[1].toLowerCase()}` : rawUrl;
+  if (taskMatch) return `alga://project-task/${taskMatch[1].toLowerCase()}`;
+  const projectMatch = HOSTED_PROJECT_URL_RE.exec(rawUrl);
+  if (projectMatch) return `alga://project/${projectMatch[1].toLowerCase()}`;
+  const assetMatch = HOSTED_ASSET_URL_RE.exec(rawUrl);
+  return assetMatch ? `alga://asset/${assetMatch[1].toLowerCase()}` : rawUrl;
 }
 
 function isAllowedPath(path: string): boolean {
@@ -40,6 +52,10 @@ function isAllowedPath(path: string): boolean {
   if (ticketMatch) return UUID_RE.test(ticketMatch[1] ?? "");
   const taskMatch = /^project-task\/(.+)$/.exec(path);
   if (taskMatch) return UUID_RE.test(taskMatch[1] ?? "");
+  const projectMatch = /^project\/(.+)$/.exec(path);
+  if (projectMatch) return UUID_RE.test(projectMatch[1] ?? "");
+  const assetMatch = /^asset\/(.+)$/.exec(path);
+  if (assetMatch) return UUID_RE.test(assetMatch[1] ?? "");
   return false;
 }
 
@@ -84,7 +100,20 @@ export async function hasPendingDeepLink(): Promise<boolean> {
 }
 
 function requiresSession(url: string): boolean {
-  return url.startsWith("alga://ticket/") || url.startsWith("alga://project-task/");
+  return (
+    url.startsWith("alga://ticket/") ||
+    url.startsWith("alga://project-task/") ||
+    url.startsWith("alga://project/") ||
+    url.startsWith("alga://asset/")
+  );
+}
+
+/**
+ * Synchronous view of the held link, for callers that run after boot (a fresh
+ * sign-in) and cannot await the cold-start URL.
+ */
+export function hasHeldDeepLink(): boolean {
+  return pendingUrl !== null;
 }
 
 function rejectUrl(url: string, message: string): void {
@@ -138,6 +167,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
       AuthCallback: "auth/callback",
       TicketDetail: "ticket/:ticketId",
       ProjectTaskDetail: "project-task/:taskId",
+      ProjectDetail: "project/:projectId",
+      AssetDetail: "asset/:assetId",
       Tabs: {
         screens: {
           TicketsTab: {

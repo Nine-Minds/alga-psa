@@ -10,7 +10,10 @@
  * re-initialised. Those copies are scrubbed too.
  */
 const TRANSIENT_ROUTE_PARAMS: Record<string, string[]> = {
-  TicketsList: ["clientId", "clientName", "contactId", "contactName"],
+  TicketsList: ["clientId", "clientName", "contactId", "contactName", "assignee"],
+  // An audit session keeps its auditId (the server owns the run), but the
+  // display-only names must not be replayed from a previous launch.
+  AuditSession: ["clientName", "locationName"],
 };
 
 type Params = Record<string, unknown>;

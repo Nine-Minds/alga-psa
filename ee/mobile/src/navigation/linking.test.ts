@@ -171,7 +171,28 @@ describe("hosted ticket links", () => {
     expect(linking.config.screens.ProjectTaskDetail).toBe("project-task/:taskId");
     expect(mod.normalizeHostedTicketUrl("https://algapsa.com/msp/projects/11111111-1111-4111-8111-111111111111?phaseId=x&taskId=22222222-2222-4222-8222-222222222222"))
       .toBe("alga://project-task/22222222-2222-4222-8222-222222222222");
-    expect(mod.normalizeHostedTicketUrl("https://algapsa.com/msp/projects/11111111-1111-4111-8111-111111111111")).toBe("https://algapsa.com/msp/projects/11111111-1111-4111-8111-111111111111");
+    // T095: the same page without a taskId now folds to the project screen.
+    expect(mod.normalizeHostedTicketUrl("https://algapsa.com/msp/projects/11111111-1111-4111-8111-111111111111"))
+      .toBe("alga://project/11111111-1111-4111-8111-111111111111");
+  });
+
+  it("T095 routes project deep links to the project screen", async () => {
+    const mod = await import("./linking");
+    const linking = mod.linking as any;
+    expect(linking.config.screens.ProjectDetail).toBe("project/:projectId");
+    expect(mod.normalizeHostedTicketUrl("https://algapsa.com/msp/projects/11111111-1111-4111-8111-111111111111?tab=phases"))
+      .toBe("alga://project/11111111-1111-4111-8111-111111111111");
+    // A link with uppercase hex still resolves to the lowercased id.
+    expect(mod.normalizeHostedTicketUrl("https://algapsa.com/msp/projects/AAAAAAAA-1111-4111-8111-111111111111"))
+      .toBe("alga://project/aaaaaaaa-1111-4111-8111-111111111111");
+  });
+
+  it("T096 routes asset deep links and folds hosted asset URLs", async () => {
+    const mod = await import("./linking");
+    const linking = mod.linking as any;
+    expect(linking.config.screens.AssetDetail).toBe("asset/:assetId");
+    expect(mod.normalizeHostedTicketUrl("https://algapsa.com/msp/assets/33333333-3333-4333-8333-333333333333"))
+      .toBe("alga://asset/33333333-3333-4333-8333-333333333333");
   });
 
   it("holds a task link tapped while signed out like a ticket link", async () => {

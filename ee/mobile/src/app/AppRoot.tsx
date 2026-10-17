@@ -4,7 +4,7 @@ import { NavigationContainer, useNavigationContainerRef } from "@react-navigatio
 import type { InitialState } from "@react-navigation/native";
 import { getAppConfig, hydrateAppConfig, setActiveBaseUrl } from "../config/appConfig";
 import { clearStoredHost, loadStoredHost, saveStoredHost } from "../config/hostStore";
-import { hasPendingDeepLink, linking, setDeepLinkSignedIn } from "../navigation/linking";
+import { hasHeldDeepLink, hasPendingDeepLink, linking, setDeepLinkSignedIn } from "../navigation/linking";
 import { stripTransientRouteParams } from "../navigation/navStatePersistence";
 import type { RootStackParamList } from "../navigation/types";
 import { RootNavigator } from "../navigation/RootNavigator";
@@ -67,7 +67,7 @@ export function AppRoot() {
       setSessionState(next);
       // A fresh sign-in opens on Home, not on whatever the last account left
       // behind; relaunch still restores the persisted route.
-      if (signingIn && !hasPendingDeepLink()) {
+      if (signingIn && !hasHeldDeepLink()) {
         navigationRef.current?.navigate("Tabs");
       }
       if (!next) setIsBiometricLocked(false);
