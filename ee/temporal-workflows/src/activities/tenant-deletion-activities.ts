@@ -61,14 +61,18 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // === LEVEL 0: Sessions (CRITICAL - must be deleted before users/tenants) ===
   'sessions',
 
-  // === Inventory module (children first; parents stock_locations/vendors last) ===
+  // === Inventory module (children first; parent stock_locations last).
+  // vendors is NOT deleted here even though it is this module's other
+  // top-level parent: 20261009120000 added assets.vendor_id -> vendors
+  // (NO ACTION), and assets sits far below in the Asset details block, so
+  // vendors has to move down with it (see the comment near the assets entry). ===
   'stock_movements', 'stock_transfer_lines', 'rma_cases', 'kit_components',
   'stock_levels', 'product_inventory_settings', 'count_lines', 'vendor_bill_lines',
   'po_landed_costs', 'purchase_order_lines', 'sales_order_lines',
   'document_template_assignments', 'vendor_products', 'ghost_usage_reviews',
   'stock_units', 'count_sessions', 'vendor_bills', 'sales_orders',
   'stock_transfers', 'purchase_orders', 'document_templates',
-  'stock_locations', 'vendors',
+  'stock_locations',
 
   // === LEVEL 1: Leaf tables with no dependencies ===
   // Global search index (no FKs, denormalized projection)
@@ -130,6 +134,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'opportunity_meeting_sessions', 'opportunity_settings', 'opportunities',
 
   // Invoice details
+  // invoice_adjustment_operations is a FK-less manual-save idempotency ledger,
+  // so it can drop with the invoice rows it keys.
+  'invoice_adjustment_operations',
   'invoice_charges', 'invoice_annotations', 'invoice_time_entries', 'invoice_usage_records',
   'invoice_charge_details', 'invoice_charge_fixed_details', 'invoice_items',
   'invoice_autopay_attempts', 'billing_profile_autopay', 'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',
@@ -282,6 +289,17 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Asset type registry: tenant-scoped lookup, RESTRICT FK to tenants (no FK
   // to/from assets), so it must be deleted explicitly before tenants.
   'asset_type_registry',
+  // Asset status registry: tenant-scoped lookup keyed by slug (no FK to/from
+  // assets — assets.status just stores the slug), same shape as asset_type_registry.
+  'asset_statuses',
+  // Assignment history: no FK on asset_id/contact_name_id (see migration
+  // 20261009122000), so position is advisory.
+  'asset_assignments',
+  // Asset groups (bundles / shared workspaces). Members and contacts CASCADE
+  // from asset_groups, so their relative order to it is advisory, but
+  // asset_groups itself has restrictive FKs to clients and client_locations
+  // (both far below, LEVEL 6+), so it must be deleted well before this point.
+  'asset_group_members', 'asset_group_contacts', 'asset_groups',
 
   // Software catalog
   'software_catalog',
@@ -343,16 +361,19 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'contract_line_unit_pricing_revision_history', 'contract_recurring_unit_adjustments',
   'contract_line_unit_pricing_revisions', 'billing_semantics_locks',
   'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
-  'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
+  // Artifacts contain adapter-produced financial bytes and have no cascading
+  // FK to the export batch, so remove them explicitly before the batch rows.
+  'accounting_export_artifacts', 'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)
   'accounting_sync_operations', 'accounting_sync_cycles',
   'contract_line_bucket_services', 'contract_line_buckets',
+  'contract_template_discount_copies',
   'client_contracts', 'contract_line_service_rate_tiers', 'contract_line_service_bucket_config',
   'contract_line_service_hourly_config', 'contract_line_service_hourly_configs', 'contract_line_service_usage_config',
   'contract_line_service_fixed_config', 'contract_line_service_configuration',
   'contract_line_service_defaults', 'contract_pricing_schedules',
   'service_catalog_mode_defaults',
-  'service_rate_tiers', 'service_prices', 'contract_line_discounts', 'discounts',
+  'service_rate_tiers', 'service_prices', 'contract_line_discounts', 'contract_discount_assignments', 'discounts',
   'client_billing_cycles', 'client_billing_settings',
   'contract_line_services', 'contract_lines', 'contracts',
 
@@ -440,6 +461,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Assets must come after asset details
   'asset_maintenance_schedules', 'assets',
+  // vendors: moved out of the inventory module block above because
+  // 20261009120000 added assets.vendor_id -> vendors (NO ACTION), so this
+  // parent now has to be deleted after assets, not before it. The inventory
+  // children that also reference vendors (purchase_orders, vendor_bills,
+  // vendor_products, stock_units, ...) are already deleted earlier up top.
+  'vendors',
 
   // Payment methods
   'payment_methods',

@@ -63,6 +63,23 @@ import {
 } from '@alga-psa/workflow-streams';
 import { v4 as uuidv4 } from 'uuid';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { applyRmmSignedInUserAssignment } from '@alga-psa/shared/rmm/autoAssignFromSignedInUser';
+
+/**
+ * Hardware identity columns NinjaOne owns (FR-A3). Only non-empty values are
+ * written so a device detail payload without a system block never blanks a
+ * manufacturer or model a technician entered.
+ */
+function ninjaOneHardwareIdentityPatch(
+  fields: { manufacturer?: string | null; model?: string | null } | undefined
+): Record<string, string> {
+  const patch: Record<string, string> = {};
+  const manufacturer = typeof fields?.manufacturer === 'string' ? fields.manufacturer.trim() : '';
+  const model = typeof fields?.model === 'string' ? fields.model.trim() : '';
+  if (manufacturer) patch.manufacturer = manufacturer;
+  if (model) patch.model = model;
+  return patch;
+}
 
 /**
  * Sync operation options
@@ -752,6 +769,7 @@ export class NinjaOneSyncEngine {
           status: createRequest.status,
           location: createRequest.location || '',
           serial_number: createRequest.serial_number || '',
+          ...ninjaOneHardwareIdentityPatch(baseAssetData),
           // RMM fields
           rmm_provider: 'ninjaone',
           rmm_device_id: String(device.id),
@@ -792,6 +810,17 @@ export class NinjaOneSyncEngine {
         },
         created_at: now,
         updated_at: now,
+      });
+
+      await applyRmmSignedInUserAssignment(trx, {
+        tenant: this.tenantId,
+        assetId: asset.asset_id,
+        clientId: createRequest.client_id,
+        integrationId: this.integrationId,
+        provider: 'ninjaone',
+        mode: (mapping as { contact_assignment_mode?: string | null }).contact_assignment_mode ?? 'suggest',
+        currentUser: device.lastLoggedInUser ?? null,
+        actorUserId: this.auditUserId,
       });
 
       // Create asset history record (only if we have an audit user)
@@ -855,10 +884,12 @@ export class NinjaOneSyncEngine {
           name: baseFields.name,
           serial_number: baseFields.serial_number || '',
           location: baseFields.location || '',
-          status: baseFields.status,
+          // FR-B6: `status` is the human lifecycle state. Sync sets it on
+          // create only, so an MSP's "In repair" survives every run.
           agent_status: baseFields.agent_status,
           last_seen_at: baseFields.last_seen_at,
           last_rmm_sync_at: now,
+          ...ninjaOneHardwareIdentityPatch(baseFields),
           updated_at: now,
         })
         .returning('*');
@@ -883,6 +914,24 @@ export class NinjaOneSyncEngine {
             ...extensionFields,
           });
         }
+      }
+
+      // FR-D4: assignment from the signed-in user, after the extension row so
+      // the matcher sees the value this run reported.
+      // The asset's own client, not the mapping's: sync no longer moves it
+      // (FR-G5), so a manually moved device matches against where it is now.
+      const assignmentClientId = asset?.client_id ? String(asset.client_id) : mapping.client_id ?? null;
+      if (assignmentClientId) {
+        await applyRmmSignedInUserAssignment(trx, {
+          tenant: this.tenantId,
+          assetId,
+          clientId: assignmentClientId,
+          integrationId: this.integrationId,
+          provider: 'ninjaone',
+          mode: (mapping as { contact_assignment_mode?: string | null }).contact_assignment_mode ?? 'suggest',
+          currentUser: device.lastLoggedInUser ?? null,
+          actorUserId: this.auditUserId,
+        });
       }
 
       // Update external entity mapping
@@ -997,11 +1046,12 @@ export class NinjaOneSyncEngine {
 
     await withTransaction(this.knex!, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, this.tenantId);
-      // Update asset status to inactive
+      // FR-B6: a deleted/tombstoned device is retired; connectivity lives in
+      // agent_status.
       await db.table('assets')
         .where({ asset_id: assetId })
         .update({
-          status: 'inactive',
+          status: 'retired',
           agent_status: 'offline',
           updated_at: now,
         });

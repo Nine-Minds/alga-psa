@@ -139,6 +139,8 @@ export default function AiUsageSection({ packs: propPacks }: AiUsageSectionProps
 
   const [summary, setSummary] = useState<AiAccountSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  // True when the server reports the AI gateway is not configured; the section hides itself.
+  const [unavailable, setUnavailable] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
 
   const [packs, setPacks] = useState<AiTopupPack[]>(propPacks ?? []);
@@ -157,7 +159,11 @@ export default function AiUsageSection({ packs: propPacks }: AiUsageSectionProps
   const loadSummary = useCallback(async () => {
     try {
       const next = await getAiAccountSummary();
-      setSummary(next);
+      if (next.status !== 'ok') {
+        setUnavailable(true);
+        return;
+      }
+      setSummary(next.data);
     } catch (error) {
       toast.error(t('aiUsage.errors.loadSummary', { defaultValue: 'Failed to load AI usage details' }));
     } finally {
@@ -203,8 +209,12 @@ export default function AiUsageSection({ packs: propPacks }: AiUsageSectionProps
           ...(featureFilter !== 'all' ? { feature: featureFilter } : {}),
           ...(fromCursor ? { cursor: fromCursor } : {}),
         });
-        setEvents((prev) => (replace ? page.events : [...prev, ...page.events]));
-        setCursor(page.nextCursor);
+        if (page.status !== 'ok') {
+          setUnavailable(true);
+          return;
+        }
+        setEvents((prev) => (replace ? page.data.events : [...prev, ...page.data.events]));
+        setCursor(page.data.nextCursor);
       } catch (error) {
         toast.error(t('aiUsage.errors.loadHistory', { defaultValue: 'Failed to load usage history' }));
       } finally {
@@ -227,8 +237,13 @@ export default function AiUsageSection({ packs: propPacks }: AiUsageSectionProps
   const handleSubscribe = useCallback(async () => {
     setSubscribing(true);
     try {
-      const { checkoutUrl } = await startAiAddonCheckout();
-      window.location.href = checkoutUrl;
+      const result = await startAiAddonCheckout();
+      if (result.status !== 'ok') {
+        setUnavailable(true);
+        setSubscribing(false);
+        return;
+      }
+      window.location.href = result.data.checkoutUrl;
     } catch (error) {
       toast.error(t('aiUsage.errors.subscribe', { defaultValue: 'Failed to start checkout' }));
       setSubscribing(false);
@@ -239,8 +254,13 @@ export default function AiUsageSection({ packs: propPacks }: AiUsageSectionProps
     async (priceId: string) => {
       setTopupPendingPriceId(priceId);
       try {
-        const { checkoutUrl } = await startAiTopupCheckout(priceId);
-        window.location.href = checkoutUrl;
+        const result = await startAiTopupCheckout(priceId);
+        if (result.status !== 'ok') {
+          setUnavailable(true);
+          setTopupPendingPriceId(null);
+          return;
+        }
+        window.location.href = result.data.checkoutUrl;
       } catch (error) {
         toast.error(t('aiUsage.errors.topup', { defaultValue: 'Failed to start top-up checkout' }));
         setTopupPendingPriceId(null);
@@ -263,7 +283,11 @@ export default function AiUsageSection({ packs: propPacks }: AiUsageSectionProps
           settings.packPriceId = autoPack;
         }
         const updated = await setAiAutoTopup(settings);
-        setSummary(updated);
+        if (updated.status !== 'ok') {
+          setUnavailable(true);
+          return;
+        }
+        setSummary(updated.data);
         toast.success(t('aiUsage.autoTopup.saved', { defaultValue: 'Auto top-up settings saved' }));
       } catch (error) {
         // Revert the optimistic toggle to the persisted value.
@@ -301,6 +325,12 @@ export default function AiUsageSection({ packs: propPacks }: AiUsageSectionProps
       })),
     [packs, t],
   );
+
+  // Gateway not configured for this deployment: nothing actionable for the
+  // user, so hide the section rather than show an error.
+  if (unavailable) {
+    return null;
+  }
 
   if (loading) {
     return (

@@ -1,0 +1,7 @@
+*ContactName,EmailAddress,POAddressLine1,POAddressLine2,POAddressLine3,POAddressLine4,POCity,PORegion,POPostalCode,POCountry,*InvoiceNumber,Reference,*InvoiceDate,*DueDate,Total,InventoryItemCode,*Description,*Quantity,*UnitAmount,Discount,*AccountCode,*TaxType,TrackingName1,TrackingOption1,TrackingName2,TrackingOption2,Currency
+SMOKE Takeover Recurring Products,product-smoke@example.test,,,,,,,,,TAKEOVER-POSTED-20261007,5a1e0000-0000-4000-8000-202610079001,09/23/2026,10/23/2026,,SMOKE-SERVICE-0,Product: SMOKE Prod Users,20,100.00,,400,NONE,Source System,AlgaPSA,External Invoice ID,5a1e0000-0000-4000-8000-202610079001,USD
+,,,,,,,,,,,,,,,SMOKE-SERVICE-1,Product: SMOKE Prod Endpoints,30,50.00,,400,NONE,Source System,AlgaPSA,External Invoice ID,5a1e0000-0000-4000-8000-202610079001,
+,,,,,,,,,,,,,,,SMOKE-SERVICE-2,Product: SMOKE Prod Locations,2,200.00,,400,NONE,Source System,AlgaPSA,External Invoice ID,5a1e0000-0000-4000-8000-202610079001,
+,,,,,,,,,,,,,,,SMOKE-SERVICE-3,Takeover export support,1,150.00,,400,NONE,Source System,AlgaPSA,External Invoice ID,5a1e0000-0000-4000-8000-202610079001,
+,,,,,,,,,,,,,,,SMOKE-SERVICE-3,Takeover later dollar,1,1.00,,400,NONE,Source System,AlgaPSA,External Invoice ID,5a1e0000-0000-4000-8000-202610079001,
+,,,,,,,,,,,,,,,,Takeover 10% discount,1,-405.10,,SMOKE-DISCOUNT,,Source System,AlgaPSA,External Invoice ID,5a1e0000-0000-4000-8000-202610079001,
