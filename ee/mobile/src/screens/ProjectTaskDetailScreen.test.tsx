@@ -19,9 +19,17 @@ const mocks = vi.hoisted(() => ({
   features: { projects: true },
   timer: { status: "idle", session: null, lastStopped: null as { at: number; workItemId: string | null } | null, defaultService: null, client: null, apiKey: null, starting: false, refresh: vi.fn(), start: vi.fn(), openStopModal: vi.fn() },
   authValue: { session: { accessToken: "api-key", tenantId: "tenant-1", user: { id: "user-1" } }, refreshSession: () => Promise.resolve(null) },
+  // Stable identity across renders, like production react-i18next: a fresh t()
+  // a fresh t() each render re-runs effects keyed on it (AgentPickerModal
+  // resets its state there), which spins forever under react-test-renderer.
+  translate: (key: string, defOrOpts?: string | Record<string, unknown>) => {
+    const opts = typeof defOrOpts === "object" ? defOrOpts : undefined;
+    if (opts && "estimated" in opts) return `${opts.estimated} estimated · ${opts.actual} logged`;
+    return key;
+  },
 }));
 
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string, opts?: Record<string, unknown>) => (opts && "estimated" in opts ? `${opts.estimated} estimated · ${opts.actual} logged` : key) }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: mocks.translate }) }));
 vi.mock("../ui/ThemeContext", async () => {
   const { lightTheme } = await import("../ui/themes");
   return { useTheme: () => lightTheme };
@@ -145,7 +153,8 @@ describe("ProjectTaskDetailScreen", () => {
     mocks.getProjectTask.mockResolvedValue({ ok: true, data: { data: { ...task, start_date: "2026-10-05" } } });
     const all = texts(await renderScreen());
     expect(all).toContain("projectTask.startDateLabel");
-    expect(all.indexOf("projectTask.startDateLabel")).toBeLessThan(all.indexOf("projectTask.dueDateLabel"));
+    // The due date moved into the editable Details card below the start date.
+    expect(all.indexOf("projectTask.startDateLabel")).toBeLessThan(all.indexOf("task.dueDate"));
   });
 
   it("times the task with its own service and opens the log-time form against the task", async () => {
@@ -223,7 +232,9 @@ describe("ProjectTaskDetailScreen", () => {
     await act(async () => renderer.root.find((n) => n.props?.testID === "project-task-status").props.onPress());
     await flush();
     expect(mocks.listTaskStatusMappings).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ projectId: "proj-1" }));
-    const picker = renderer.root.find((n) => n.type === ("MockEntityPicker" as never));
+    const picker = renderer.root
+      .findAll((n) => n.type === ("MockEntityPicker" as never))
+      .find((n) => n.props.title === "projectTask.selectStatus")!;
     expect(picker.props.visible).toBe(true);
     expect(picker.props.items.map((item: { label: string }) => item.label)).toEqual(["In Progress", "Done"]);
 

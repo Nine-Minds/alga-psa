@@ -14,6 +14,7 @@ import { MutedUsersScreen } from "../screens/MutedUsersScreen";
 import { ClientDetailScreen } from "../screens/ClientDetailScreen";
 import { ContactDetailScreen } from "../screens/ContactDetailScreen";
 import { ProjectTaskDetailScreen } from "../screens/ProjectTaskDetailScreen";
+import { ProjectDetailScreen } from "../screens/ProjectDetailScreen";
 import { WorkflowTaskDetailScreen } from "../screens/WorkflowTaskDetailScreen";
 import { StockProductDetailScreen } from "../screens/StockProductDetailScreen";
 import { StockUnitDetailScreen } from "../screens/StockUnitDetailScreen";
@@ -41,6 +42,7 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
   const { t: tUserActivities } = useTranslation("userActivities");
   const { t: tInventory } = useTranslation("inventory");
   const { t: tOpportunities } = useTranslation("opportunities");
+  const { t: tProjects } = useTranslation("projects");
   const backLabel = tCommon("back", "Back");
 
   // Register push token and handle notification taps (no-op when feature flag is off)
@@ -125,6 +127,14 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
             component={ProjectTaskDetailScreen}
             options={({ navigation }) => ({
               title: tUserActivities("projectTask.title", "Task"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="ProjectDetail"
+            component={ProjectDetailScreen}
+            options={({ navigation, route }) => ({
+              title: route.params.projectName ?? tProjects("title", "Projects"),
               ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
             })}
           />

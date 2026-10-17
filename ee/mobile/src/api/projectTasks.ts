@@ -20,6 +20,8 @@ export type ProjectTaskDetail = {
   is_closed?: boolean;
   assigned_to?: string | null;
   assigned_user_name?: string | null;
+  priority_id?: string | null;
+  priority_name?: string | null;
   estimated_hours?: number | null;
   actual_hours?: number | null;
   start_date?: string | null;
@@ -80,7 +82,14 @@ export function updateProjectTask(
   params: {
     apiKey: string;
     taskId: string;
-    data: { project_status_mapping_id?: string; task_name?: string; description?: string | null };
+    data: {
+      project_status_mapping_id?: string;
+      task_name?: string;
+      description?: string | null;
+      assigned_to?: string | null;
+      due_date?: string | null;
+      priority_id?: string | null;
+    };
     auditHeaders?: Record<string, string | undefined>;
   },
 ): Promise<ApiResult<SuccessResponse<ProjectTaskDetail>>> {

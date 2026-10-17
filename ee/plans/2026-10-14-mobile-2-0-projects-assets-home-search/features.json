@@ -29,7 +29,7 @@
   {
     "id": "F004",
     "description": "DrawerNavigator renders AssetsTab only when features.assets is true, ProjectsTab only when features.projects is true",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "capabilities",
     "prdRefs": [
       "FR2"
@@ -110,7 +110,7 @@
   {
     "id": "F013",
     "description": "ProjectsScreen (drawer ProjectsTab, id projects-list) lists projects with name, client, status badge, end date and progress bar; paginates on end reached; pull to refresh",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-list",
     "prdRefs": [
       "FR5"
@@ -119,7 +119,7 @@
   {
     "id": "F014",
     "description": "Search box filters by project_name (debounced 300ms); empty query clears",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-list",
     "prdRefs": [
       "FR5"
@@ -128,7 +128,7 @@
   {
     "id": "F015",
     "description": "Filter sheet (id projects-filter-sheet) with status multi-select (default excludes completed and cancelled), client picker (EntityPickerModal), and 'Managed by me' toggle (assigned_to = current user id)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-list",
     "prdRefs": [
       "FR5"
@@ -137,7 +137,7 @@
   {
     "id": "F016",
     "description": "Filter state persisted per user like TicketsList filters and surfaced as a filter count badge on the header button",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-list",
     "prdRefs": [
       "FR5"
@@ -146,7 +146,7 @@
   {
     "id": "F017",
     "description": "Empty state ('No projects match') with Clear filters; error state with Retry; offline shows cached first page",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-list",
     "prdRefs": [
       "FR5"
@@ -155,7 +155,7 @@
   {
     "id": "F018",
     "description": "Row tap navigates to ProjectDetail { projectId, projectName }",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-list",
     "prdRefs": [
       "FR5"
@@ -164,7 +164,7 @@
   {
     "id": "F019",
     "description": "ProjectDetailScreen (root stack 'ProjectDetail', id project-detail) loads getProject + listProjectTasks + listTaskStatusMappings in parallel and renders header: name, client (tap \u2192 ClientDetail), status badge, start/end dates, manager name",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "project-detail",
     "prdRefs": [
       "FR6"
@@ -173,7 +173,7 @@
   {
     "id": "F020",
     "description": "Phases render as sections in wbs order with 'n of m done' and a per-phase progress bar; project-level progress bar under the header",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "project-detail",
     "prdRefs": [
       "FR6"
@@ -182,7 +182,7 @@
   {
     "id": "F021",
     "description": "Task rows show name, assignee avatar/initials, due date (danger colour when past and not closed), status badge from the mapping label; tap \u2192 ProjectTaskDetail { taskId }",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "project-detail",
     "prdRefs": [
       "FR6"
@@ -191,7 +191,7 @@
   {
     "id": "F022",
     "description": "Closed tasks collapse under 'Show n completed' per phase (id project-phase-<phaseId>-show-completed)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "project-detail",
     "prdRefs": [
       "FR6"
@@ -200,7 +200,7 @@
   {
     "id": "F023",
     "description": "Description collapsed with See more (reusing the ticket description expander)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "project-detail",
     "prdRefs": [
       "FR6"
@@ -209,7 +209,7 @@
   {
     "id": "F024",
     "description": "Pull to refresh and resume refresh (useAppResume) reload the three calls; a task edit on ProjectTaskDetail invalidates the project cache so returning shows the change",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "project-detail",
     "prdRefs": [
       "FR6"
@@ -218,7 +218,7 @@
   {
     "id": "F025",
     "description": "Empty project (no phases) shows 'No phases yet. Add phases on the web.'",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "project-detail",
     "prdRefs": [
       "FR6"
@@ -227,7 +227,7 @@
   {
     "id": "F026",
     "description": "CreateTaskModal (id create-task-modal) with name (required), description, assignee (AgentPickerModal), due date (DatePickerField), priority (priorities list), estimated hours; Save disabled until name is non-empty",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "prdRefs": [
       "FR7"
@@ -236,7 +236,7 @@
   {
     "id": "F027",
     "description": "Create posts with project_status_mapping_id = first status mapping of the project (ordered by display order) and inserts the returned task into its phase without reload; toast on success",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "prdRefs": [
       "FR7"
@@ -245,7 +245,7 @@
   {
     "id": "F028",
     "description": "Each phase header '+' (id project-phase-<phaseId>-add-task) opens CreateTaskModal preselecting the phase; hidden when the create request returns 403 once (capability-less fallback)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "prdRefs": [
       "FR7"
@@ -254,7 +254,7 @@
   {
     "id": "F029",
     "description": "ProjectTaskDetail gains a Details card: Assignee row (tap \u2192 AgentPickerModal, Unassign option), Due date row (tap \u2192 DatePickerField, Clear), Priority row (tap \u2192 priority picker), Estimated hours read-only",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "prdRefs": [
       "FR8"
@@ -263,7 +263,7 @@
   {
     "id": "F030",
     "description": "Edits call updateProjectTask with only the changed field, optimistic update, rollback + error toast on failure",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "prdRefs": [
       "FR8"
@@ -272,7 +272,7 @@
   {
     "id": "F031",
     "description": "'Open project' row at the top of ProjectTaskDetail navigates to ProjectDetail; header subtitle shows the project name (from the task's project_name)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "prdRefs": [
       "FR8"
@@ -281,7 +281,7 @@
   {
     "id": "F032",
     "description": "Task detail reads 403 on PUT as read-only: edit rows render without chevrons and show 'Read only' hint",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "prdRefs": [
       "FR8"

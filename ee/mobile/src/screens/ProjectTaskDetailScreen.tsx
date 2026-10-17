@@ -7,6 +7,7 @@ import type { RootStackParamList } from "../navigation/types";
 import { useTheme } from "../ui/ThemeContext";
 import { Badge } from "../ui/components/Badge";
 import { Card } from "../ui/components/Card";
+import { DatePickerField } from "../ui/components/DatePickerField";
 import { EntityPickerModal } from "../ui/components/EntityPickerModal";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { ErrorState, LoadingState } from "../ui/states";
@@ -27,6 +28,7 @@ import {
   type TaskChecklistItem,
   type TaskStatusMapping,
 } from "../api/projectTasks";
+import { listPriorities, type MobilePriority } from "../api/priorities";
 import { getServices, listTimeEntries, type ServiceOption, type TimeEntryListItem } from "../api/timeEntries";
 import type { TicketComment } from "../api/tickets";
 import { getUserDisplayName, listUsers } from "../api/users";
@@ -38,6 +40,7 @@ import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { priorityTone } from "../features/userActivities/activityHelpers";
 import { createCommentApi, taskTarget } from "../features/comments/commentTarget";
+import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
 import { CommentComposer } from "../features/ticketDetail/components/CommentComposer";
 import { CommentsSection } from "../features/ticketDetail/components/CommentsSection";
 import { TimeEntryModal } from "../features/ticketDetail/components/TimeEntryModal";
@@ -66,8 +69,16 @@ export function timeEntryMinutes(entry: Pick<TimeEntryListItem, "billable_durati
   return 0;
 }
 
-export function ProjectTaskDetailScreen({ route }: Props) {
+/** Local date as YYYY-MM-DD; the task's date fields are day-granular. */
+function toDateOnly(date: Date): string {
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+export function ProjectTaskDetailScreen({ navigation, route }: Props) {
   const { t } = useTranslation("userActivities");
+  const { t: tProjects } = useTranslation("projects");
   const { t: tTickets } = useTranslation("tickets");
   const { colors, spacing, typography } = useTheme();
   const { showToast } = useToast();
@@ -107,6 +118,12 @@ export function ProjectTaskDetailScreen({ route }: Props) {
   const [composerCollapsed, setComposerCollapsed] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [assigneeOpen, setAssigneeOpen] = useState(false);
+  const [priorityOpen, setPriorityOpen] = useState(false);
+  const [priorities, setPriorities] = useState<MobilePriority[]>([]);
+  const [detailsUpdating, setDetailsUpdating] = useState(false);
+  // A 403 from the task PUT is the only signal the API gives for "read only".
+  const [detailsReadOnly, setDetailsReadOnly] = useState(false);
 
   const canAct = features.projects;
   const commentApi = useMemo(() => createCommentApi(taskTarget(taskId)), [taskId]);
@@ -296,6 +313,42 @@ export function ProjectTaskDetailScreen({ route }: Props) {
     }
   }, [client, load, session, showToast, statusUpdating, t, taskId]);
 
+  /** One changed field at a time, applied locally first and rolled back on failure. */
+  const updateDetails = useCallback(async (
+    patch: { assigned_to?: string | null; due_date?: string | null; priority_id?: string | null },
+    optimistic: Partial<ProjectTaskDetail>,
+  ) => {
+    if (!client || !session || detailsUpdating) return;
+    const previous = task;
+    setDetailsUpdating(true);
+    setTask((current) => (current ? { ...current, ...optimistic } : current));
+    try {
+      const auditHeaders = await getClientMetadataHeaders();
+      const result = await updateProjectTask(client, { apiKey: session.accessToken, taskId, data: patch, auditHeaders });
+      if (!result.ok) {
+        setTask(previous);
+        if (result.error.kind === "permission") {
+          setDetailsReadOnly(true);
+          showToast({ message: t("projectTask.statusPermission"), tone: "error" });
+          return;
+        }
+        showToast({ message: tProjects("task.updateFailed"), tone: "error" });
+        return;
+      }
+      setTask(result.data.data);
+    } finally {
+      setDetailsUpdating(false);
+    }
+  }, [client, detailsUpdating, session, showToast, t, tProjects, task, taskId]);
+
+  const openPriorityPicker = useCallback(async () => {
+    if (!client || !session) return;
+    setPriorityOpen(true);
+    if (priorities.length > 0) return;
+    const result = await listPriorities(client, { apiKey: session.accessToken, itemType: "project_task" });
+    if (result.ok) setPriorities(result.data.data);
+  }, [client, priorities.length, session]);
+
   const toggleChecklistItem = useCallback(async (item: TaskChecklistItem) => {
     if (!client || !session || checklistBusyId) return;
     const next = !item.completed;
@@ -347,6 +400,7 @@ export function ProjectTaskDetailScreen({ route }: Props) {
   const totalMinutes = entries.reduce((sum, entry) => sum + timeEntryMinutes(entry), 0);
   const actual = totalMinutes > 0 ? totalMinutes : (task ? task.actual_hours ?? 0 : activity?.actualHours ?? 0);
   const canChangeStatus = canAct && Boolean(task?.project_id);
+  const detailsEditable = canAct && !detailsReadOnly && !isOffline;
   const checklistDone = checklist.filter((item) => item.completed).length;
 
   return (
@@ -357,6 +411,32 @@ export function ProjectTaskDetailScreen({ route }: Props) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
         keyboardShouldPersistTaps="handled"
       >
+        {task?.project_id ? (
+          <Pressable
+            testID="project-task-open-project"
+            onPress={() =>
+              navigation.navigate("ProjectDetail", {
+                projectId: task.project_id as string,
+                projectName: task.project_name ?? undefined,
+              })
+            }
+            accessibilityRole="button"
+            accessibilityLabel={tProjects("detail.openProject")}
+            style={({ pressed }) => ({
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: spacing.md,
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Feather name="folder" size={14} color={colors.primary} />
+            <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "700", marginLeft: 4 }} numberOfLines={1}>
+              {task.project_name ?? tProjects("detail.openProject")}
+            </Text>
+            <Feather name="chevron-right" size={14} color={colors.primary} />
+          </Pressable>
+        ) : null}
+
         <Text style={{ ...typography.title, color: colors.text }}>{title}</Text>
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm, marginTop: spacing.md }}>
@@ -383,8 +463,63 @@ export function ProjectTaskDetailScreen({ route }: Props) {
 
         {projectLine ? <Section label={t("projectTask.projectLabel")} value={projectLine} /> : null}
         {startDate ? <Section label={t("projectTask.startDateLabel")} value={formatDateShort(startDate)} /> : null}
-        {dueDate ? <Section label={t("projectTask.dueDateLabel")} value={formatDateShort(dueDate)} /> : null}
-        {assignees.length > 0 ? <Section label={t("projectTask.assignedLabel")} value={assignees.join(", ")} /> : null}
+
+        {task ? (
+          <>
+            <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.lg }}>
+              {tProjects("task.details")}
+              {detailsEditable ? "" : ` • ${tProjects("task.readOnly")}`}
+            </Text>
+            <Card style={{ marginTop: spacing.sm, padding: 0 }}>
+              <DetailRow
+                testID="project-task-assignee"
+                label={tProjects("task.assignee")}
+                value={task.assigned_user_name ?? tProjects("task.none")}
+                editable={detailsEditable}
+                onPress={() => setAssigneeOpen(true)}
+              />
+              <View
+                style={{ padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.borderLight }}
+              >
+                <Text style={{ ...typography.body, color: colors.textSecondary }}>
+                  {tProjects("task.dueDate")}
+                </Text>
+                <View style={{ marginTop: spacing.xs }}>
+                  <DatePickerField
+                    value={task.due_date ? new Date(task.due_date) : undefined}
+                    onChange={(date) => {
+                      const next = date ? toDateOnly(date) : null;
+                      void updateDetails({ due_date: next }, { due_date: next });
+                    }}
+                    clearable
+                    disabled={!detailsEditable}
+                    label={tProjects("task.dueDate")}
+                    placeholder={tProjects("task.none")}
+                  />
+                </View>
+              </View>
+              <DetailRow
+                testID="project-task-priority"
+                label={tProjects("task.priority")}
+                value={task.priority_name ?? tProjects("task.none")}
+                editable={detailsEditable}
+                onPress={() => void openPriorityPicker()}
+              />
+              <DetailRow
+                testID="project-task-estimated-hours"
+                label={tProjects("task.estimatedHours")}
+                value={estimated !== null && estimated > 0 ? formatMinutesDuration(estimated) : t("projectTask.notEstimated")}
+                editable={false}
+                last
+              />
+            </Card>
+          </>
+        ) : (
+          <>
+            {dueDate ? <Section label={t("projectTask.dueDateLabel")} value={formatDateShort(dueDate)} /> : null}
+            {assignees.length > 0 ? <Section label={t("projectTask.assignedLabel")} value={assignees.join(", ")} /> : null}
+          </>
+        )}
         <Section
           label={t("projectTask.hoursLabel")}
           value={t("projectTask.hoursValue", {
@@ -561,6 +696,39 @@ export function ProjectTaskDetailScreen({ route }: Props) {
         onClose={() => timeEntryHook.setTimeEntryOpen(false)}
         onSubmit={() => void timeEntryHook.submitTimeEntry()}
       />
+      <AgentPickerModal
+        visible={assigneeOpen}
+        updating={detailsUpdating}
+        updateError={null}
+        currentAssignedToId={task?.assigned_to ?? null}
+        currentAssignedToName={task?.assigned_user_name ?? null}
+        onSelect={(userId) => {
+          setAssigneeOpen(false);
+          void updateDetails({ assigned_to: userId }, { assigned_to: userId });
+        }}
+        onUnassign={() => {
+          setAssigneeOpen(false);
+          void updateDetails({ assigned_to: null }, { assigned_to: null, assigned_user_name: null });
+        }}
+        onClose={() => setAssigneeOpen(false)}
+        client={client}
+        apiKey={session.accessToken}
+        baseUrl={config.baseUrl}
+      />
+      <EntityPickerModal
+        visible={priorityOpen}
+        title={tProjects("task.selectPriority")}
+        items={priorities.map((item) => ({ id: item.priority_id, label: item.priority_name }))}
+        loading={detailsUpdating}
+        error={null}
+        searchable={false}
+        selectedId={task?.priority_id ?? null}
+        onSelect={(id, label) => {
+          setPriorityOpen(false);
+          void updateDetails({ priority_id: id }, { priority_id: id, priority_name: label });
+        }}
+        onClose={() => setPriorityOpen(false)}
+      />
       <EntityPickerModal
         visible={statusPickerOpen}
         title={t("projectTask.selectStatus")}
@@ -574,6 +742,47 @@ export function ProjectTaskDetailScreen({ route }: Props) {
         onClose={() => setStatusPickerOpen(false)}
       />
     </>
+  );
+}
+
+function DetailRow({
+  label,
+  value,
+  editable,
+  onPress,
+  last,
+  testID,
+}: {
+  label: string;
+  value: string;
+  editable: boolean;
+  onPress?: () => void;
+  last?: boolean;
+  testID?: string;
+}) {
+  const { colors, spacing, typography } = useTheme();
+  return (
+    <Pressable
+      testID={testID}
+      onPress={editable ? onPress : undefined}
+      disabled={!editable}
+      accessibilityRole={editable ? "button" : undefined}
+      accessibilityLabel={editable ? label : undefined}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        padding: spacing.md,
+        borderBottomWidth: last ? 0 : 1,
+        borderBottomColor: colors.borderLight,
+        opacity: pressed && editable ? 0.7 : 1,
+      })}
+    >
+      <Text style={{ ...typography.body, color: colors.textSecondary, flex: 1 }}>{label}</Text>
+      <Text style={{ ...typography.body, color: colors.text, maxWidth: "55%" }} numberOfLines={1}>
+        {value}
+      </Text>
+      {editable ? <Feather name="chevron-right" size={16} color={colors.textSecondary} style={{ marginLeft: 4 }} /> : null}
+    </Pressable>
   );
 }
 

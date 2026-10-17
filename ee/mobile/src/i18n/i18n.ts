@@ -17,6 +17,7 @@ import inventoryEn from "./locales/en/inventory.json";
 import opportunitiesEn from "./locales/en/opportunities.json";
 import assetsEn from "./locales/en/assets.json";
 import interactionsEn from "./locales/en/interactions.json";
+import projectsEn from "./locales/en/projects.json";
 
 function resolveDeviceLocale(): SupportedLocale {
   const tag = Localization.getLocales()[0]?.languageTag;
@@ -45,6 +46,7 @@ const resources = {
     opportunities: opportunitiesEn,
     assets: assetsEn,
     interactions: interactionsEn,
+    projects: projectsEn,
   },
 } as const;
 

@@ -4,6 +4,7 @@ import type { DrawerParamList } from "./types";
 import { TicketsStackNavigator } from "./TicketsStackNavigator";
 import { UserActivitiesScreen } from "../screens/UserActivitiesScreen";
 import { ScheduleScreen } from "../screens/ScheduleScreen";
+import { ProjectsScreen } from "../screens/ProjectsScreen";
 import { InteractionsScreen } from "../screens/InteractionsScreen";
 import { TimeEntriesScreen } from "../screens/TimeEntriesScreen";
 import { ClientsListScreen } from "../screens/ClientsListScreen";
@@ -30,6 +31,7 @@ export function DrawerNavigator() {
   const { t: tSettings } = useTranslation("settings");
   const { t: tInventory } = useTranslation("inventory");
   const { t: tOpportunities } = useTranslation("opportunities");
+  const { t: tProjects } = useTranslation("projects");
   const { features } = useCapabilities();
   return (
     <Drawer.Navigator
@@ -84,6 +86,18 @@ export function DrawerNavigator() {
           ),
         }}
       />
+      {features.projects ? (
+        <Drawer.Screen
+          name="ProjectsTab"
+          component={ProjectsScreen}
+          options={{
+            title: tProjects("title", "Projects"),
+            drawerIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="clipboard-list-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      ) : null}
       <Drawer.Screen
         name="InteractionsTab"
         component={InteractionsScreen}

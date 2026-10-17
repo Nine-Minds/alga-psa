@@ -3,7 +3,7 @@ import type { ApiResult } from "./types";
 import type { PaginatedResponse, SuccessResponse } from "./tickets";
 import type { TaskStatusMapping } from "./projectTasks";
 
-/** The statuses the v1 project filter accepts by name. */
+/** The project lifecycle names the tenant status rows are seeded with. */
 export const PROJECT_STATUSES = [
   "planning",
   "active",
@@ -14,14 +14,6 @@ export const PROJECT_STATUSES = [
 ] as const;
 
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
-
-/** Statuses a technician cares about by default; the finished ones are opt-in. */
-export const DEFAULT_PROJECT_STATUSES: ProjectStatus[] = [
-  "planning",
-  "active",
-  "in_progress",
-  "on_hold",
-];
 
 export type BadgeTone = "neutral" | "info" | "success" | "danger";
 
@@ -34,9 +26,34 @@ const STATUS_TONES: Record<ProjectStatus, BadgeTone> = {
   cancelled: "danger",
 };
 
+/** Accepts a slug or a tenant status name ("On Hold", "In Progress", "Planned"). */
 export function statusTone(status: string | null | undefined): BadgeTone {
   if (!status) return "neutral";
-  return STATUS_TONES[status as ProjectStatus] ?? "neutral";
+  const slug = status.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if (slug === "planned") return "neutral";
+  if (slug === "done") return "success";
+  return STATUS_TONES[slug as ProjectStatus] ?? "neutral";
+}
+
+/** A tenant project status row; `projects.status` holds its status_id. */
+export type ProjectStatusOption = {
+  status_id: string;
+  name: string;
+  is_closed: boolean;
+  order_number?: number;
+};
+
+export function listProjectStatuses(
+  client: ApiClient,
+  params: { apiKey: string; signal?: AbortSignal },
+): Promise<ApiResult<PaginatedResponse<ProjectStatusOption>>> {
+  return client.request<PaginatedResponse<ProjectStatusOption>>({
+    method: "GET",
+    path: "/api/v1/statuses",
+    signal: params.signal,
+    query: { type: "project", limit: 100 },
+    headers: { "x-api-key": params.apiKey },
+  });
 }
 
 export type ProjectListItem = {
@@ -108,10 +125,10 @@ export type ListProjectsParams = {
   page?: number;
   limit?: number;
   project_name?: string;
+  /** A status_id; the column is a FK to statuses, not a name. */
   status?: string;
   client_id?: string;
   assigned_to?: string;
-  is_closed?: boolean;
   signal?: AbortSignal;
 };
 
@@ -130,7 +147,6 @@ export function listProjects(
       status: params.status,
       client_id: params.client_id,
       assigned_to: params.assigned_to,
-      is_closed: params.is_closed,
       sort: "updated_at",
       order: "desc",
     },
@@ -194,6 +210,7 @@ export function createProjectTask(
     projectId: string;
     phaseId: string;
     data: CreateProjectTaskInput;
+    auditHeaders?: Record<string, string | undefined>;
     signal?: AbortSignal;
   },
 ): Promise<ApiResult<SuccessResponse<ProjectTaskSummary>>> {
@@ -211,7 +228,7 @@ export function createProjectTask(
     method: "POST",
     path: `/api/v1/projects/${params.projectId}/phases/${params.phaseId}/tasks`,
     signal: params.signal,
-    headers: { "x-api-key": params.apiKey },
+    headers: { "x-api-key": params.apiKey, ...params.auditHeaders },
     body: params.data,
   });
 }

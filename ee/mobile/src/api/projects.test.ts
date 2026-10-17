@@ -6,6 +6,7 @@ import {
   listProjectPhases,
   listProjectTasks,
   listProjects,
+  listProjectStatuses,
   ORPHAN_PHASE_ID,
   projectProgress,
   statusTone,
@@ -63,7 +64,6 @@ describe("projects api", () => {
         status: undefined,
         client_id: undefined,
         assigned_to: "user-1",
-        is_closed: undefined,
         sort: "updated_at",
         order: "desc",
       },
@@ -178,6 +178,20 @@ describe("projects api", () => {
     expect(projectProgress(sections)).toEqual({ done: 2, total: 4, ratio: 0.5 });
   });
 
+  it("reads tenant project statuses from the statuses route", async () => {
+    const client = mockClient({ ok: true, data: { data: [], pagination: { page: 1, limit: 100, total: 0 } } });
+
+    await listProjectStatuses(client, { apiKey: "key-1" });
+
+    expect(client.request).toHaveBeenCalledWith({
+      method: "GET",
+      path: "/api/v1/statuses",
+      signal: undefined,
+      query: { type: "project", limit: 100 },
+      headers: { "x-api-key": "key-1" },
+    });
+  });
+
   it("T012 maps all six project statuses and falls back to neutral", () => {
     expect(statusTone("planning")).toBe("neutral");
     expect(statusTone("on_hold")).toBe("neutral");
@@ -187,5 +201,9 @@ describe("projects api", () => {
     expect(statusTone("cancelled")).toBe("danger");
     expect(statusTone("something-else")).toBe("neutral");
     expect(statusTone(null)).toBe("neutral");
+    // Tenant status rows are seeded with display names, not slugs.
+    expect(statusTone("In Progress")).toBe("info");
+    expect(statusTone("On Hold")).toBe("neutral");
+    expect(statusTone("Planned")).toBe("neutral");
   });
 });

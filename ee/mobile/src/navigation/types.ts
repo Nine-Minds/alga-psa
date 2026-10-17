@@ -29,6 +29,7 @@ export type RootStackParamList = {
   ContactDetail: { contactId: string; contactName?: string };
   /** Push and deep links only know the id; the activity row seeds the first paint when present. */
   ProjectTaskDetail: { taskId: string; activity?: ProjectTaskActivity };
+  ProjectDetail: { projectId: string; projectName?: string };
   WorkflowTaskDetail: { taskId: string };
   StockProductDetail: { serviceId: string; serviceName?: string };
   StockUnitDetail: { unitId: string };
@@ -46,6 +47,7 @@ export type TicketsStackParamList = {
 
 export type DrawerParamList = {
   TicketsTab: undefined;
+  ProjectsTab: undefined;
   UserActivitiesTab: undefined;
   ScheduleTab: undefined;
   InteractionsTab: undefined;

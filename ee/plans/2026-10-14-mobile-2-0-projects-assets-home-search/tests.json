@@ -38,7 +38,7 @@
   {
     "id": "T005",
     "description": "DrawerNavigator.gating: assets=false hides Assets tab; assets=true shows it; projects=true shows Projects tab",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "capabilities",
     "featureIds": [
       "F004"
@@ -110,7 +110,7 @@
   {
     "id": "T013",
     "description": "ProjectsScreen renders rows from a mocked listProjects response with client name and status badge text",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-list",
     "featureIds": [
       "F013"
@@ -119,7 +119,7 @@
   {
     "id": "T014",
     "description": "ProjectsScreen requests page 2 when the list end is reached and appends rows",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-list",
     "featureIds": [
       "F013"
@@ -128,7 +128,7 @@
   {
     "id": "T015",
     "description": "typing in the search box issues one request with project_name after the debounce window",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-list",
     "featureIds": [
       "F014"
@@ -137,7 +137,7 @@
   {
     "id": "T016",
     "description": "default filter request excludes completed and cancelled statuses",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-list",
     "featureIds": [
       "F015"
@@ -146,7 +146,7 @@
   {
     "id": "T017",
     "description": "'Managed by me' adds assigned_to=<current user id> to the request",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-list",
     "featureIds": [
       "F015"
@@ -155,7 +155,7 @@
   {
     "id": "T018",
     "description": "API error renders the error row and Retry re-issues the request",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-list",
     "featureIds": [
       "F017"
@@ -164,7 +164,7 @@
   {
     "id": "T019",
     "description": "tapping a row navigates to ProjectDetail with projectId",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-list",
     "featureIds": [
       "F018"
@@ -173,7 +173,7 @@
   {
     "id": "T020",
     "description": "ProjectDetailScreen renders name, client, status and manager from mocked responses",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "project-detail",
     "featureIds": [
       "F019"
@@ -182,7 +182,7 @@
   {
     "id": "T021",
     "description": "tapping the client row navigates to ClientDetail with clientId",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "project-detail",
     "featureIds": [
       "F019"
@@ -191,7 +191,7 @@
   {
     "id": "T022",
     "description": "phase section header shows '2 of 5 done' when two tasks have closed mappings",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "project-detail",
     "featureIds": [
       "F020"
@@ -200,7 +200,7 @@
   {
     "id": "T023",
     "description": "a task with a past due date and open mapping renders the due date with the danger style; a closed one does not",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "project-detail",
     "featureIds": [
       "F021"
@@ -209,7 +209,7 @@
   {
     "id": "T024",
     "description": "tapping a task navigates to ProjectTaskDetail with its taskId",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "project-detail",
     "featureIds": [
       "F021"
@@ -218,7 +218,7 @@
   {
     "id": "T025",
     "description": "closed tasks are hidden until 'Show 2 completed' is pressed",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "project-detail",
     "featureIds": [
       "F022"
@@ -227,7 +227,7 @@
   {
     "id": "T026",
     "description": "project with empty phases renders the no-phases empty state",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "project-detail",
     "featureIds": [
       "F025"
@@ -236,7 +236,7 @@
   {
     "id": "T027",
     "description": "returning from a task edit triggers a reload (cache invalidated)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "project-detail",
     "featureIds": [
       "F024"
@@ -245,7 +245,7 @@
   {
     "id": "T028",
     "description": "CreateTaskModal Save stays disabled with an empty name and enables after typing",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "featureIds": [
       "F026"
@@ -254,7 +254,7 @@
   {
     "id": "T029",
     "description": "Save calls createProjectTask with task_name, phase id and the first status mapping id; the new task appears in the phase list",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "featureIds": [
       "F027"
@@ -263,7 +263,7 @@
   {
     "id": "T030",
     "description": "create failure shows an error toast and keeps the modal open with the typed values",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "featureIds": [
       "F027"
@@ -272,7 +272,7 @@
   {
     "id": "T031",
     "description": "Assignee row opens AgentPickerModal; selecting a user calls updateProjectTask with assigned_to",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "featureIds": [
       "F029"
@@ -281,7 +281,7 @@
   {
     "id": "T032",
     "description": "Unassign sends assigned_to null",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "featureIds": [
       "F029"
@@ -290,7 +290,7 @@
   {
     "id": "T033",
     "description": "Due date Clear sends due_date null",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "featureIds": [
       "F029"
@@ -299,7 +299,7 @@
   {
     "id": "T034",
     "description": "a failed update rolls the displayed value back and shows a toast",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "featureIds": [
       "F030"
@@ -308,7 +308,7 @@
   {
     "id": "T035",
     "description": "'Open project' navigates to ProjectDetail with the task's project id",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "featureIds": [
       "F031"
@@ -317,7 +317,7 @@
   {
     "id": "T036",
     "description": "after a 403 on PUT the edit rows render read-only",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "task-edit",
     "featureIds": [
       "F032"

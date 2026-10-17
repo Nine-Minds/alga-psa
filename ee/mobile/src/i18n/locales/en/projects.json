@@ -1,0 +1,82 @@
+{
+  "title": "Projects",
+  "list": {
+    "searchPlaceholder": "Search projects",
+    "loading": "Loading projects",
+    "empty": "No projects match",
+    "emptyHint": "Try clearing the filters.",
+    "clearFilters": "Clear filters",
+    "noAccess": "You don't have access to projects.",
+    "filters": "Filters",
+    "dueOn": "Due {{date}}",
+    "progress": "{{done}} of {{total}} tasks done"
+  },
+  "filters": {
+    "title": "Filter projects",
+    "status": "Status",
+    "client": "Client",
+    "anyClient": "Any client",
+    "selectClient": "Select a client",
+    "managedByMe": "Managed by me",
+    "managedByMeHint": "Only projects where I am the manager",
+    "apply": "Apply",
+    "reset": "Reset",
+    "unableToLoadClients": "Unable to load clients."
+  },
+  "status": {
+    "planning": "Planning",
+    "active": "Active",
+    "in_progress": "In progress",
+    "on_hold": "On hold",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "detail": {
+    "loading": "Loading project",
+    "client": "Client",
+    "manager": "Manager",
+    "unassigned": "Unassigned",
+    "dates": "Dates",
+    "noPhases": "No phases yet. Add phases on the web.",
+    "noTasks": "No tasks in this phase yet.",
+    "phaseDone": "{{done}} of {{total}} done",
+    "showCompleted": "Show {{count}} completed",
+    "hideCompleted": "Hide completed",
+    "seeMore": "See more",
+    "seeLess": "See less",
+    "addTask": "Add task",
+    "openProject": "Open project",
+    "otherPhase": "Other tasks"
+  },
+  "task": {
+    "create": {
+      "title": "New task",
+      "name": "Task name",
+      "namePlaceholder": "What needs doing?",
+      "description": "Description",
+      "assignee": "Assignee",
+      "dueDate": "Due date",
+      "priority": "Priority",
+      "estimatedHours": "Estimated hours",
+      "save": "Create task",
+      "cancel": "Cancel",
+      "created": "Task created",
+      "failed": "Unable to create the task.",
+      "noStatus": "This project has no task statuses yet. Add one on the web."
+    },
+    "details": "Details",
+    "assignee": "Assignee",
+    "dueDate": "Due date",
+    "priority": "Priority",
+    "estimatedHours": "Estimated hours",
+    "none": "None",
+    "unassign": "Unassign",
+    "clear": "Clear",
+    "readOnly": "Read only",
+    "updateFailed": "Unable to save the change.",
+    "selectPriority": "Select a priority"
+  },
+  "errors": {
+    "unableToLoad": "Unable to load."
+  }
+}
