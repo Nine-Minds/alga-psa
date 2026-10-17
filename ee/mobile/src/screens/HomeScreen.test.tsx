@@ -63,6 +63,10 @@ vi.mock("../features/timer/components/ServicePickerModal", () => ({
 vi.mock("../features/interactions/components/LogInteractionEntry", () => ({
   LogInteractionEntry: (props: Record<string, unknown>) => React.createElement("MockLogInteraction", props),
 }));
+vi.mock("../features/schedule/components/ScheduleEntryDetailModal", () => ({
+  ScheduleEntryDetailModal: (props: Record<string, unknown>) =>
+    React.createElement("MockScheduleEntrySheet", props),
+}));
 vi.mock("../network/useNetworkStatus", () => ({
   useNetworkStatus: () =>
     mocks.offline ? { isConnected: false, isInternetReachable: false } : { isConnected: true, isInternetReachable: true },
@@ -178,7 +182,7 @@ describe("HomeScreen", () => {
 
     expect(mocks.listTickets.mock.calls[0][1]).toMatchObject({
       limit: 5,
-      sort: "updated_at",
+      sort: "latest_activity_at",
       filters: { assigned_to: "user-1", is_open: true },
     });
     expect(texts(renderer)).toContain("7");
@@ -195,14 +199,28 @@ describe("HomeScreen", () => {
     });
   });
 
-  it("T080 a ticket schedule row opens the ticket and a task row the task", async () => {
+  it("T080 a schedule row opens the Schedule tab's entry sheet", async () => {
     const renderer = await renderScreen();
 
     await act(async () => renderer.root.find((n) => n.props?.testID === "home-today-s-2").props.onPress());
+
+    // FR27: the shared sheet, not a jump straight into the work item.
+    const sheet = renderer.root.find((n) => n.type === ("MockScheduleEntrySheet" as never));
+    expect(sheet.props.visible).toBe(true);
+    expect(sheet.props.entry.entry_id).toBe("s-2");
+    expect(mocks.navigate).not.toHaveBeenCalled();
+
+    await act(async () => sheet.props.onOpenTicket("tkt-2"));
     expect(mocks.navigate).toHaveBeenCalledWith("TicketDetail", { ticketId: "tkt-2" });
 
     await act(async () => renderer.root.find((n) => n.props?.testID === "home-today-s-1").props.onPress());
+    const taskSheet = renderer.root.find((n) => n.type === ("MockScheduleEntrySheet" as never));
+    expect(taskSheet.props.entry.entry_id).toBe("s-1");
+    await act(async () => taskSheet.props.onOpenProjectTask("task-1"));
     expect(mocks.navigate).toHaveBeenCalledWith("ProjectTaskDetail", { taskId: "task-1" });
+
+    await act(async () => taskSheet.props.onManage());
+    expect(mocks.navigate).toHaveBeenCalledWith("ScheduleTab");
   });
 
   it("T081 asks activities for open items due by the end of today and badges overdue ones", async () => {

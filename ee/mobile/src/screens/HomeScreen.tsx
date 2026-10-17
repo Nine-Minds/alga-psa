@@ -27,6 +27,7 @@ import { ServicePickerModal } from "../features/timer/components/ServicePickerMo
 import { useTimer, useTimerElapsedMs } from "../features/timer/TimerContext";
 import { formatElapsedClock } from "../features/timer/timerLogic";
 import { LogInteractionEntry } from "../features/interactions/components/LogInteractionEntry";
+import { ScheduleEntryDetailModal } from "../features/schedule/components/ScheduleEntryDetailModal";
 import { logger } from "../logging/logger";
 
 type Props = CompositeScreenProps<
@@ -88,6 +89,7 @@ export function HomeScreen({ navigation }: Props) {
   const [activitiesError, setActivitiesError] = useState(false);
   const [servicePickerOpen, setServicePickerOpen] = useState(false);
   const [interactionOpen, setInteractionOpen] = useState(false);
+  const [openEntry, setOpenEntry] = useState<ScheduleEntry | null>(null);
 
   // Offline: paint the last good answer and skip the requests entirely.
   useEffect(() => {
@@ -127,7 +129,8 @@ export function HomeScreen({ navigation }: Props) {
       apiKey,
       page: 1,
       limit: CARD_ROWS,
-      sort: "updated_at",
+      // FR26: the newest conversation first, not the newest row edit.
+      sort: "latest_activity_at",
       order: "desc",
       filters: { assigned_to: userId, is_open: true },
     });
@@ -242,7 +245,7 @@ export function HomeScreen({ navigation }: Props) {
                 <Pressable
                   key={entry.entry_id}
                   testID={`home-today-${entry.entry_id}`}
-                  onPress={() => openScheduleEntry(entry, navigation)}
+                  onPress={() => setOpenEntry(entry)}
                   accessibilityRole="button"
                   accessibilityLabel={entry.title}
                   style={({ pressed }) => ({
@@ -396,6 +399,39 @@ export function HomeScreen({ navigation }: Props) {
         }}
         onClose={() => setServicePickerOpen(false)}
       />
+      {/* FR27: the same sheet the Schedule tab opens, which also resolves an
+          interaction entry's ticket, client and contact. Editing and deleting
+          stay on the Schedule tab, which owns the forms. */}
+      <ScheduleEntryDetailModal
+        visible={openEntry !== null}
+        entry={openEntry}
+        currentUserId={userId ?? null}
+        busy={false}
+        error={null}
+        client={client}
+        apiKey={apiKey ?? null}
+        onOpenTicket={(ticketId) => {
+          setOpenEntry(null);
+          navigation.navigate("TicketDetail", { ticketId });
+        }}
+        onOpenProjectTask={(taskId) => {
+          setOpenEntry(null);
+          navigation.navigate("ProjectTaskDetail", { taskId });
+        }}
+        onOpenClient={(clientId, clientName) => {
+          setOpenEntry(null);
+          navigation.navigate("ClientDetail", { clientId, clientName });
+        }}
+        onOpenContact={(contactId, contactName) => {
+          setOpenEntry(null);
+          navigation.navigate("ContactDetail", { contactId, contactName });
+        }}
+        onManage={() => {
+          setOpenEntry(null);
+          navigation.navigate("ScheduleTab");
+        }}
+        onClose={() => setOpenEntry(null)}
+      />
       <LogInteractionEntry
         visible={interactionOpen}
         client={client}
@@ -415,19 +451,6 @@ function isOverdue(activity: Activity): boolean {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return due.getTime() < today.getTime();
-}
-
-/** Schedule rows open whatever they are attached to, as the Schedule tab does. */
-function openScheduleEntry(entry: ScheduleEntry, navigation: Props["navigation"]): void {
-  if (entry.work_item_type === "ticket" && entry.work_item_id) {
-    navigation.navigate("TicketDetail", { ticketId: entry.work_item_id });
-    return;
-  }
-  if (entry.work_item_type === "project_task" && entry.work_item_id) {
-    navigation.navigate("ProjectTaskDetail", { taskId: entry.work_item_id });
-    return;
-  }
-  navigation.navigate("ScheduleTab");
 }
 
 function openActivity(activity: Activity, navigation: Props["navigation"]): void {

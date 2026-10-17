@@ -203,6 +203,23 @@ describe("SearchScreen", () => {
     expect(mocks.search.mock.calls[0][1].types).toEqual(["ticket", "client", "contact"]);
   });
 
+  it("T125 Retry re-issues the search for the same query", async () => {
+    mocks.search.mockResolvedValue({ ok: false, error: { kind: "server", message: "boom", status: 500 } });
+    const renderer = await renderScreen();
+    await type(renderer, "flagg");
+
+    expect(renderer.root.find((n) => n.props?.testID === "search-error")).toBeTruthy();
+    const callsBefore = mocks.search.mock.calls.length;
+
+    mocks.search.mockResolvedValue(payload([{ type: "client", id: "c-1", title: "Flagg Inc" }]));
+    await act(async () => renderer.root.find((n) => n.props?.testID === "search-retry").props.onPress());
+    await flush();
+
+    expect(mocks.search.mock.calls.length).toBe(callsBefore + 1);
+    expect(mocks.search.mock.calls[callsBefore][1]).toMatchObject({ query: "flagg" });
+    expect(texts(renderer)).toContain("Flagg Inc");
+  });
+
   it("shows the empty state and the offline state", async () => {
     const renderer = await renderScreen();
     await type(renderer, "nothing");

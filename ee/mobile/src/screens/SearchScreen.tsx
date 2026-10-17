@@ -69,6 +69,9 @@ export function SearchScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
+  // Retry has to change something the effect depends on; React bails out of a
+  // setState that lands on the same string, so the query alone cannot do it.
+  const [retryToken, setRetryToken] = useState(0);
 
   const storageKey = config.ok && userId ? recentSearchesKey(config.baseUrl, userId) : null;
 
@@ -156,7 +159,7 @@ export function SearchScreen({ navigation }: Props) {
     })();
 
     return () => controller.abort();
-  }, [apiKey, client, offline, query, rememberQuery, types]);
+  }, [apiKey, client, offline, query, rememberQuery, retryToken, types]);
 
   const loadMore = useCallback(
     async (type: SearchableType) => {
@@ -283,7 +286,7 @@ export function SearchScreen({ navigation }: Props) {
             </Text>
             <Pressable
               testID="search-retry"
-              onPress={() => setQuery((current) => `${current}`)}
+              onPress={() => setRetryToken((current) => current + 1)}
               accessibilityRole="button"
               accessibilityLabel={t("retry", "Retry")}
               hitSlop={8}
