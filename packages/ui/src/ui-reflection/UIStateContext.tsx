@@ -3,69 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { PageState, UIComponent } from './types';
-
-function deepEqualWithCycles(a: unknown, b: unknown, seen = new WeakMap<object, object>()): boolean {
-  if (Object.is(a, b)) {
-    return true;
-  }
-
-  if (a instanceof Date && b instanceof Date) {
-    return a.getTime() === b.getTime();
-  }
-
-  if (
-    typeof a !== 'object' || a === null ||
-    typeof b !== 'object' || b === null
-  ) {
-    return false;
-  }
-
-  const left = a as Record<string, unknown>;
-  const right = b as Record<string, unknown>;
-
-  const seenMatch = seen.get(left);
-  if (seenMatch) {
-    return seenMatch === right;
-  }
-  seen.set(left, right);
-
-  if (Array.isArray(left) || Array.isArray(right)) {
-    if (!Array.isArray(left) || !Array.isArray(right)) {
-      return false;
-    }
-
-    if (left.length !== right.length) {
-      return false;
-    }
-
-    for (let i = 0; i < left.length; i++) {
-      if (!deepEqualWithCycles(left[i], right[i], seen)) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  const leftKeys = Object.keys(left);
-  const rightKeys = Object.keys(right);
-
-  if (leftKeys.length !== rightKeys.length) {
-    return false;
-  }
-
-  for (const key of leftKeys) {
-    if (!Object.prototype.hasOwnProperty.call(right, key)) {
-      return false;
-    }
-
-    if (!deepEqualWithCycles(left[key], right[key], seen)) {
-      return false;
-    }
-  }
-
-  return true;
-}
+import { createUIStateRegistry, UIStateRegistry } from './uiStateRegistry';
 
 /**
  * Context value interface containing the page state and methods to manipulate it
@@ -82,6 +20,13 @@ interface UIStateContextValue {
 
   /** Update an existing component's properties */
   updateComponent: (id: string, partial: Partial<UIComponent>) => void;
+
+  /**
+   * Synchronously rebuild the tree and publish `window.__UI_STATE__` if any
+   * registry mutations are pending. Normally publishing is coalesced to one
+   * per microtask; use this in tests/automation that read state synchronously.
+   */
+  flushUIState: () => void;
 }
 
 /**
@@ -95,58 +40,9 @@ const defaultContextValue: UIStateContextValue = {
   // },
   registerComponent: () => { },
   unregisterComponent: () => { },
-  updateComponent: () => { }
+  updateComponent: () => { },
+  flushUIState: () => { }
 };
-
-// Define a dictionary for all UI components keyed by ID
-type ComponentDict = Record<string, UIComponent>;
-
-/** 
- * Rebuild the entire tree from the component dictionary.
- * - Reset each component's `children` to []
- * - Attach each node to its parent if `parentId` is valid
- * - Otherwise, push it to top-level
- * - Sort children and root components by ordinal for deterministic ordering
- */
-function rebuildTreeFromDictionary(dict: ComponentDict): UIComponent[] {
-  // First, clear out all children arrays
-  for (const key in dict) {
-    dict[key].children = [];
-  }
-
-  const rootComponents: UIComponent[] = [];
-
-  // Attach children to parents
-  for (const key in dict) {
-    const comp = dict[key];
-
-    // If comp has a parent and that parent is in dict, link them
-    if (comp.parentId && dict[comp.parentId]) {
-      dict[comp.parentId].children!.push(comp);
-    } else {
-      // Otherwise, this is top-level
-      rootComponents.push(comp);
-    }
-  }
-
-  // Sort children of each node by ordinal
-  for (const key in dict) {
-    dict[key].children?.sort((a, b) => {
-      const aOrd = a.ordinal ?? 0;
-      const bOrd = b.ordinal ?? 0;
-      return aOrd - bOrd;
-    });
-  }
-
-  // Sort root components by ordinal
-  rootComponents.sort((a, b) => {
-    const aOrd = a.ordinal ?? 0;
-    const bOrd = b.ordinal ?? 0;
-    return aOrd - bOrd;
-  });
-
-  return rootComponents;
-}
 
 /**
  * React context for the UI reflection system
@@ -165,6 +61,24 @@ interface UIStateProviderProps {
 }
 
 let pageState: PageState | null = null;
+let activeRegistry: UIStateRegistry | null = null;
+
+function setPageState(state: PageState) {
+  pageState = state;
+  // Expose page state to window for browser automation access
+  if (typeof window !== 'undefined') {
+    (window as any).__UI_STATE__ = state;
+  }
+}
+
+/**
+ * Module-level synchronous flush for code outside React (tests, automation
+ * helpers): publishes any pending registry mutations to `window.__UI_STATE__`
+ * immediately. No-op when no UIStateProvider has mounted.
+ */
+export function flushUIState(): void {
+  activeRegistry?.flush();
+}
 
 /**
  * Provider component that manages the UI reflection state
@@ -270,23 +184,11 @@ export function UIStateProvider({ children, initialPageState }: {
   // Only send if socket is connected (AI backend is enabled)
   useEffect(() => {
     if (!socketRef.current?.connected) {
-      // Still log state changes for debugging, even without AI backend
-      console.log('📊 [UI-STATE] State updated:', pageState ? {
-        id: pageState.id,
-        title: pageState.title,
-        componentCount: pageState.components?.length || 0
-      } : 'null');
       return;
     }
 
     // Debounce immediate updates by 100ms to handle React StrictMode double-mounting
     const timeoutId = setTimeout(() => {
-      console.log('📤 [UI-STATE] Sending immediate UI_STATE_UPDATE to automation server');
-      console.log('📤 [UI-STATE] Page state:', pageState ? {
-        id: pageState.id,
-        title: pageState.title,
-        componentCount: pageState.components?.length || 0
-      } : 'null');
       socketRef.current?.emit('UI_STATE_UPDATE', pageState);
     }, 100);
 
@@ -297,12 +199,6 @@ export function UIStateProvider({ children, initialPageState }: {
   useEffect(() => {
     const sendPeriodicUpdate = () => {
       if (socketRef.current?.connected && pageState) {
-        console.log('🔄 [UI-STATE] Sending periodic UI_STATE_UPDATE (sync)');
-        console.log('🔄 [UI-STATE] Periodic state:', {
-          id: pageState.id,
-          title: pageState.title,
-          componentCount: pageState.components?.length || 0
-        });
         socketRef.current.emit('UI_STATE_UPDATE', pageState);
       }
     };
@@ -323,221 +219,47 @@ export function UIStateProvider({ children, initialPageState }: {
       // even when AI backend is not connected
       return;
     }
-    console.log('📤 [UI-STATE] Sending initial UI_STATE_UPDATE on connection');
-    console.log('📤 [UI-STATE] Initial page state:', pageState ? {
-      id: pageState.id,
-      title: pageState.title,
-      componentCount: pageState.components?.length || 0
-    } : 'null');
     socketRef.current?.emit('UI_STATE_UPDATE', pageState);
   }, [isConnected, pageState]);
 
-  // Keep a single reference to the dictionary of all components
-  const componentDictRef = useRef<ComponentDict>({});
-  // Track the next available ordinal for deterministic ordering
-  const nextOrdinalRef = useRef(0);
-
-  const setPageState = (state: PageState) => {
-    pageState = state;
-    // Expose page state to window for browser automation access
-    if (typeof window !== 'undefined') {
-      (window as any).__UI_STATE__ = state;
-    }
+  // Registry owns the component dictionary; it applies mutations immediately
+  // and coalesces tree rebuild + publish to once per microtask (or flushUIState()).
+  const registryRef = useRef<UIStateRegistry | null>(null);
+  if (!registryRef.current) {
+    registryRef.current = createUIStateRegistry({ onPublish: setPageState });
   }
+  const registry = registryRef.current;
+  activeRegistry = registry;
 
-  /**
-   * Registers or updates a component in the dictionary,
-   * then rebuilds the entire tree.
-   */
   const registerComponent = useCallback((component: UIComponent | undefined) => {
-    if (!component) {
-      console.log('Attempted to register undefined component');
-      return;
-    }
+    registry.register(component);
+  }, [registry]);
 
-    // Don't skip registration if component already exists - instead update it
-    const isExisting = !!componentDictRef.current[component.id];
-    if (isExisting) {
-      console.log(`🔄 [UI-STATE] Component with ID ${component.id} already exists. Updating registration.`);
-    } else {
-      console.log(`➕ [UI-STATE] Registering new component: ${component.id} (${component.type})`);
-    }
-
-    const dict = { ...componentDictRef.current };
-    const existing = dict[component.id];
-
-    // Set the ordinal based on whether this is a new or existing component
-    const ordinal = !existing ? nextOrdinalRef.current : existing.ordinal;
-
-    // Create the component entry
-    dict[component.id] = {
-      ...(existing || {}),
-      ...component,
-      ordinal
-    } as UIComponent;
-
-    // Increment ordinal for new components
-    if (!existing) {
-      nextOrdinalRef.current++;
-    }
-
-    // Commit the updated dict
-    componentDictRef.current = dict;
-
-    // Rebuild the root array from the dictionary
-    const newRoot = rebuildTreeFromDictionary(dict);
-
-    const nextState: PageState = {
-      id: pageState?.id || 'page',
-      title: pageState?.title || '',
-      components: newRoot
-    };
-
-    if (deepEqualWithCycles(pageState, nextState)) {
-      console.log(`⚪ [UI-STATE] No changes detected for ${component.id}, skipping state update`);
-      return;
-    }
-
-    console.log(`✅ [UI-STATE] State updated with component ${component.id}. Total components: ${nextState.components.length}`);
-    setPageState(nextState);
-  }, []);
-
-  /**
-   * Unregister a component entirely (remove it from dictionary & from the tree).
-   * Also removes its descendants, if desired.
-   */
   const unregisterComponent = useCallback((id: string) => {
-    if (!componentDictRef.current[id]) {
-      console.log(`➖ [UI-STATE] Component with ID ${id} does not exist. Skipping unregistration.`);
-      return;
-    }
-    
-    console.log(`➖ [UI-STATE] Unregistering component: ${id}`);
+    registry.unregister(id);
+  }, [registry]);
 
-    // Make a copy of the dictionary
-    const dict = { ...componentDictRef.current };
-
-    // We can do a DFS or BFS in the dictionary to find all descendants
-    const idsToRemove = getAllDescendants(dict, id);
-
-    // Remove them all
-    for (const removeId of idsToRemove) {
-      delete dict[removeId];
-    }
-
-    // Commit changes
-    componentDictRef.current = dict;
-    const newRoot = rebuildTreeFromDictionary(dict);
-
-    const nextState: PageState = {
-      id: pageState?.id || 'page',
-      title: pageState?.title || '',
-      components: newRoot
-    };
-
-    setPageState(nextState);
-  }, []);
-
-  /**
-   * Update a component's metadata by partial fields.
-   */
   const updateComponent = useCallback((id: string, partial: Partial<UIComponent>) => {
-    const dict = componentDictRef.current;
-    const existing = dict[id];
+    registry.update(id, partial);
+  }, [registry]);
 
-    if (!existing) {
-      return;
-    }
-
-    // Bail out if nothing actually changed
-    const keys = Object.keys(partial) as (keyof UIComponent)[];
-    const hasChanges = keys.some(k => k !== 'type' && k !== 'children' && k !== 'ordinal' && existing[k] !== partial[k]);
-    if (!hasChanges) {
-      return;
-    }
-
-    // Merge partial update, but preserve type, children & ordinal
-    const newDict = { ...dict };
-    newDict[id] = {
-      ...existing,
-      ...partial,
-      type: existing.type,
-      children: existing.children,
-      ordinal: existing.ordinal
-    } as UIComponent;
-
-    componentDictRef.current = newDict;
-    const newRoot = rebuildTreeFromDictionary(newDict);
-    var newPageState: PageState | null = {
-      id: pageState?.id || 'page',
-      title: pageState?.title || '',
-      components: newRoot
-    };
-
-    setPageState(newPageState);
-  }, []);
+  const flushUIState = useCallback(() => {
+    registry.flush();
+  }, [registry]);
 
   // Provide context — memoize to avoid re-rendering all consumers on every state change
   const value = React.useMemo(() => ({
     registerComponent,
     unregisterComponent,
-    updateComponent
-  }), [registerComponent, unregisterComponent, updateComponent]);
+    updateComponent,
+    flushUIState
+  }), [registerComponent, unregisterComponent, updateComponent, flushUIState]);
 
   return (
     <UIStateContext value={value}>
       {children}
     </UIStateContext>
   );
-}
-
-/** Example DFS function to gather IDs of all descendants (including the parent itself). */
-function getAllDescendants(dict: ComponentDict, id: string): string[] {
-  const result: string[] = [];
-  const stack = [id];
-  const visited = new Set<string>();
-  
-  let maxIterations = 100;
-  while (stack.length > 0 && maxIterations > 0) {
-    maxIterations--;
-    const current = stack.pop()!;
-    
-    // Skip if component doesn't exist in dictionary
-    if (!dict[current]) continue;
-    
-    // Check for circular reference
-    if (visited.has(current)) {
-      // This can happen with complex UI structures and is handled gracefully
-      // Only log in development mode to avoid cluttering production logs
-      if (process.env.NODE_ENV === 'development') {
-        console.debug(
-          `Circular reference detected: Component ${current} has already been processed. ` +
-          `Current path: ${Array.from(visited).join(' -> ')} -> ${current}`
-        );
-      }
-      continue;
-  }
-
-    // Mark as visited and add to result
-    visited.add(current);
-    result.push(current);
-    
-    // Add children to stack
-    const childIds = dict[current].children?.map((c): string => c.id) || [];
-    stack.push(...childIds);
-  }
-
-  if (maxIterations <= 0 && stack.length > 0) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn(
-        'Maximum iterations exceeded while gathering descendants. ' +
-        'This indicates either a very deep component tree or a circular reference. ' +
-        `Processed components: ${Array.from(visited).join(' -> ')}`
-      );
-    }
-}
-
-  return result;
 }
 
 /**
