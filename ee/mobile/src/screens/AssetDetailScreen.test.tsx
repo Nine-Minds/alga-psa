@@ -171,6 +171,20 @@ describe("AssetDetailScreen", () => {
     mockListPriorities.mockResolvedValue(ok({ data: [{ priority_id: "prio-1", priority_name: "High" }], pagination }));
   });
 
+  it("T072 shows Last audited only when the payload carries it", async () => {
+    expect(hosts(await renderScreen(), "asset-last-audited")).toHaveLength(0);
+
+    mockGetAsset.mockResolvedValue(
+      ok({ data: { ...asset, last_audited_at: "2026-10-16T10:00:00Z", last_audit_result: "present" } }),
+    );
+    const tree = await renderScreen();
+    expect(hosts(tree, "asset-last-audited")).toHaveLength(1);
+    // The result label comes from assets.audit.result.*; this harness's t()
+    // echoes the key's default, which is the raw slug.
+    expect(allText(tree)).toContain("Last audited");
+    expect(allText(tree)).toMatch(/Oct 16, 2026 . present/);
+  });
+
   it("renders identity from the asset fixture", async () => {
     const tree = await renderScreen();
     const text = allText(tree);

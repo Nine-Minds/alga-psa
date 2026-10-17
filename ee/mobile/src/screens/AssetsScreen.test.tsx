@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   listAssetStatuses: vi.fn(),
   listClients: vi.fn(),
   listClientLocations: vi.fn(),
+  listAssetAudits: vi.fn(),
   navigate: vi.fn(),
   features: { inventory: true, assets: true, assetAudit: true },
   authValue: {
@@ -65,6 +66,10 @@ vi.mock("../api/assets", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api/assets")>()),
   listAssets: (...args: unknown[]) => mocks.listAssets(...args),
   listAssetStatuses: (...args: unknown[]) => mocks.listAssetStatuses(...args),
+}));
+vi.mock("../api/assetAudits", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/assetAudits")>()),
+  listAssetAudits: (...args: unknown[]) => mocks.listAssetAudits(...args),
 }));
 vi.mock("../api/clients", () => ({ listClients: (...args: unknown[]) => mocks.listClients(...args) }));
 vi.mock("../api/referenceData", () => ({
@@ -126,6 +131,10 @@ describe("AssetsScreen", () => {
     mocks.features = { inventory: true, assets: true, assetAudit: true };
     mocks.listAssetStatuses.mockResolvedValue({ ok: true, data: { data: STATUSES } });
     mocks.listClients.mockResolvedValue({ ok: true, data: { data: [{ client_id: "cl-1", client_name: "ECTS" }] } });
+    mocks.listAssetAudits.mockResolvedValue({
+      ok: true,
+      data: { data: [], pagination: { page: 1, limit: 10, total: 0 } },
+    });
     mocks.listClientLocations.mockResolvedValue({
       ok: true,
       data: { data: [{ location_id: "loc-1", location_name: "HQ", city: "Reno" }] },
@@ -223,6 +232,54 @@ describe("AssetsScreen", () => {
     await act(async () => renderer.root.find((n) => n.props?.testID === "assets-scan").props.onPress());
 
     expect(mocks.navigate).toHaveBeenCalledWith("InventoryTab", { segment: "scan" });
+  });
+
+  it("T042 hides the Audit action when the assetAudit capability is false", async () => {
+    mocks.features = { inventory: true, assets: true, assetAudit: false };
+    const renderer = await renderScreen();
+
+    expect(renderer.root.findAll((n) => n.props?.testID === "assets-audit")).toHaveLength(0);
+    expect(mocks.listAssetAudits).not.toHaveBeenCalled();
+  });
+
+  it("shows the Audit action and opens the setup screen when it is true", async () => {
+    const renderer = await renderScreen();
+
+    await act(async () => renderer.root.find((n) => n.props?.testID === "assets-audit").props.onPress());
+
+    expect(mocks.navigate).toHaveBeenCalledWith("AuditSetup");
+  });
+
+  it("T044 lists recent audits with their counts and opens one", async () => {
+    mocks.listAssetAudits.mockResolvedValue({
+      ok: true,
+      data: {
+        data: [
+          {
+            audit_id: "au-1",
+            client_id: "cl-1",
+            location_id: null,
+            status: "completed",
+            started_by: "user-1",
+            started_at: "2026-10-16T09:00:00Z",
+            completed_at: "2026-10-16T10:00:00Z",
+            expected_count: 3,
+            present_count: 2,
+            missing_count: 1,
+            unexpected_count: 0,
+          },
+        ],
+        pagination: { page: 1, limit: 10, total: 1 },
+      },
+    });
+    const renderer = await renderScreen();
+
+    expect(texts(renderer)).toContain("2 present · 1 missing");
+    await act(async () =>
+      renderer.root.find((n) => n.props?.testID === "assets-recent-audits-au-1").props.onPress(),
+    );
+
+    expect(mocks.navigate).toHaveBeenCalledWith("AuditSummary", { auditId: "au-1" });
   });
 
   it("opens the scan modal instead when inventory is off", async () => {

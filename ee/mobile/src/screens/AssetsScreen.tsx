@@ -36,11 +36,13 @@ import {
   type AssetStatusKind,
   type AssetStatusOption,
 } from "../api/assets";
+import { listAssetAudits, type AssetAudit } from "../api/assetAudits";
 import { listClients, type ClientListItem } from "../api/clients";
 import { listClientLocations, type LocationListItem } from "../api/referenceData";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { useTheme } from "../ui/ThemeContext";
+import { formatDateShort } from "../ui/formatters/dateTime";
 import { logger } from "../logging/logger";
 
 type Props = CompositeScreenProps<
@@ -133,6 +135,7 @@ export function AssetsScreen({ navigation }: Props) {
   const [statuses, setStatuses] = useState<AssetStatusOption[]>([]);
   const [statusesLoaded, setStatusesLoaded] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [recentAudits, setRecentAudits] = useState<AssetAudit[]>([]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -154,6 +157,20 @@ export function AssetsScreen({ navigation }: Props) {
       canceled = true;
     };
   }, [apiKey, client]);
+
+  // Recent audits sit above the list so a finished walk is one tap away.
+  useEffect(() => {
+    if (!client || !apiKey || !features.assetAudit) return;
+    let canceled = false;
+    void (async () => {
+      const result = await listAssetAudits(client, { apiKey, page: 1, limit: 10 });
+      if (canceled || !result.ok) return;
+      setRecentAudits(result.data.data ?? []);
+    })();
+    return () => {
+      canceled = true;
+    };
+  }, [apiKey, client, features.assetAudit]);
 
   const selectedStatuses = useMemo(
     () => (filters.statuses.length > 0 ? filters.statuses : defaultStatusSlugs(statuses)),
@@ -325,6 +342,44 @@ export function AssetsScreen({ navigation }: Props) {
           {t("list.count", "{{count}} devices", { count: total })}
         </Text>
       ) : null}
+      {recentAudits.length > 0 ? (
+        <View style={{ marginTop: theme.spacing.md }}>
+          <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, fontWeight: "700" }}>
+            {t("audit.recent", "Recent audits")}
+          </Text>
+          {recentAudits.map((item) => (
+            <Pressable
+              key={item.audit_id}
+              testID={`assets-recent-audits-${item.audit_id}`}
+              onPress={() => navigation.navigate("AuditSummary", { auditId: item.audit_id })}
+              accessibilityRole="button"
+              accessibilityLabel={t("audit.recent", "Recent audits")}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginTop: theme.spacing.sm,
+                padding: theme.spacing.md,
+                borderRadius: theme.borderRadius.md,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.card,
+                opacity: pressed ? 0.95 : 1,
+              })}
+            >
+              <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
+                {formatDateShort(item.started_at)}
+              </Text>
+              <Text style={{ ...theme.typography.caption, color: theme.colors.text }}>
+                {t("audit.recentCounts", "{{present}} present · {{missing}} missing", {
+                  present: item.present_count,
+                  missing: item.missing_count,
+                })}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 
@@ -361,6 +416,21 @@ export function AssetsScreen({ navigation }: Props) {
           paddingTop: theme.spacing.md,
         }}
       >
+        {features.assetAudit ? (
+          <Pressable
+            testID="assets-audit"
+            onPress={() => navigation.navigate("AuditSetup")}
+            accessibilityRole="button"
+            accessibilityLabel={t("list.audit", "Audit")}
+            hitSlop={8}
+            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, opacity: pressed ? 0.7 : 1 })}
+          >
+            <MaterialCommunityIcons name="clipboard-check-outline" size={18} color={theme.colors.primary} />
+            <Text style={{ ...theme.typography.caption, color: theme.colors.primary, fontWeight: "700" }}>
+              {t("list.audit", "Audit")}
+            </Text>
+          </Pressable>
+        ) : null}
         <Pressable
           testID="assets-scan"
           onPress={openScan}

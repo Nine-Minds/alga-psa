@@ -39,6 +39,9 @@ export type RootStackParamList = {
   CountSession: { sessionId: string; locationName?: string };
   PurchaseOrderDetail: { poId: string; poNumber?: string };
   AssetDetail: { assetId: string; assetName?: string };
+  AuditSetup: undefined;
+  AuditSession: { auditId: string };
+  AuditSummary: { auditId: string };
   OpportunityDetail: { opportunityId: string; title?: string };
 };
 

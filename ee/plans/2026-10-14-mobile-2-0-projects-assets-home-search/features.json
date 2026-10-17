@@ -326,7 +326,7 @@
   {
     "id": "F037",
     "description": "Header actions: Scan (id assets-scan) navigates to InventoryTab scan view when features.inventory, else opens a scan-only modal using ScanView; Audit (id assets-audit) visible when features.assetAudit \u2192 AuditSetup",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "assets-list",
     "prdRefs": [
       "FR12"
@@ -344,7 +344,7 @@
   {
     "id": "F039",
     "description": "Assets tab 'Recent audits' row (id assets-recent-audits) lists the last 10 audits (client, location, date, present/missing) and opens AuditSummary",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "assets-list",
     "prdRefs": [
       "FR12"
@@ -434,7 +434,7 @@
   {
     "id": "F049",
     "description": "src/api/assetAudits.ts wraps start, list, get, markItem, unmarkItem, complete, cancel with typed responses",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
       "FR19"
@@ -443,7 +443,7 @@
   {
     "id": "F050",
     "description": "AuditSetupScreen (root 'AuditSetup', id audit-setup): client picker, location picker (client locations + 'No location'), status chips by kind (default deployable + pending), live expected count via a dry listAssets count, Start button disabled until client chosen",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
       "FR20"
@@ -452,7 +452,7 @@
   {
     "id": "F051",
     "description": "AuditSessionScreen (root 'AuditSession' { auditId }, id audit-session) loads the audit, shows progress 'n of m present', segments Remaining / Present / Unexpected with counts",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
       "FR21"
@@ -461,7 +461,7 @@
   {
     "id": "F052",
     "description": "Scan button opens the camera scanner (reused ScanView scanner component) and resolves codes with lookupInventoryCode; an asset result in Remaining \u2192 markItem present (method scan) with haptic + toast; already-present asset \u2192 info toast; non-asset result \u2192 'Not an asset' toast",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
       "FR21"
@@ -470,7 +470,7 @@
   {
     "id": "F053",
     "description": "Scan resolving to an asset outside the snapshot \u2192 markItem unexpected and the row appears under Unexpected with its real client/location",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
       "FR21"
@@ -479,7 +479,7 @@
   {
     "id": "F054",
     "description": "Scan resolving to nothing offers Register asset (existing RegisterAssetModal prefilled with the audit's client and location); on success the new asset is marked present with method register",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
       "FR21"
@@ -488,7 +488,7 @@
   {
     "id": "F055",
     "description": "Remaining rows have 'Mark present' (method manual); Present rows have 'Unmark' (unmarkItem); a search field filters Remaining by name/tag/serial",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
       "FR21"
@@ -497,7 +497,7 @@
   {
     "id": "F056",
     "description": "Finish asks for confirmation listing the remaining count when > 0, then calls complete and navigates to AuditSummary replacing the session route; Cancel audit in the header menu calls cancel after confirmation",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
       "FR21"
@@ -506,7 +506,7 @@
   {
     "id": "F057",
     "description": "Session screen reloads the audit from the server on mount and on resume; an audit found completed on reload redirects to its summary",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
       "FR22"
@@ -515,7 +515,7 @@
   {
     "id": "F058",
     "description": "AuditSummaryScreen (root 'AuditSummary' { auditId }, id audit-summary): counts, Missing list with per-row Create ticket (existing CreateTicketModal preselecting the asset), Unexpected list with real location, Present count, Done \u2192 Assets tab",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
       "FR23"
@@ -524,7 +524,7 @@
   {
     "id": "F059",
     "description": "AssetDetailScreen shows a 'Last audited' row (date, result, auditor) when last_audited_at is present",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
       "FR24"
@@ -533,7 +533,7 @@
   {
     "id": "F060",
     "description": "assets i18n namespace gains every audit string; no hardcoded text",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
       "FR35"

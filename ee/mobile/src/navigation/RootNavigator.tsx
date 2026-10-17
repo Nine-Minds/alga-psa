@@ -23,6 +23,9 @@ import { InventoryAdjustScreen } from "../screens/InventoryAdjustScreen";
 import { CountSessionScreen } from "../screens/CountSessionScreen";
 import { PurchaseOrderDetailScreen } from "../screens/PurchaseOrderDetailScreen";
 import { AssetDetailScreen } from "../screens/AssetDetailScreen";
+import { AuditSetupScreen } from "../screens/AuditSetupScreen";
+import { AuditSessionScreen } from "../screens/AuditSessionScreen";
+import { AuditSummaryScreen } from "../screens/AuditSummaryScreen";
 import { OpportunityDetailScreen } from "../screens/OpportunityDetailScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
@@ -43,6 +46,7 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
   const { t: tInventory } = useTranslation("inventory");
   const { t: tOpportunities } = useTranslation("opportunities");
   const { t: tProjects } = useTranslation("projects");
+  const { t: tAssets } = useTranslation("assets");
   const backLabel = tCommon("back", "Back");
 
   // Register push token and handle notification taps (no-op when feature flag is off)
@@ -199,6 +203,30 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
             component={AssetDetailScreen}
             options={({ navigation, route }) => ({
               title: route.params.assetName ?? tInventory("asset.title", "Asset"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="AuditSetup"
+            component={AuditSetupScreen}
+            options={({ navigation }) => ({
+              title: tAssets("audit.setupTitle", "New audit"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="AuditSession"
+            component={AuditSessionScreen}
+            options={({ navigation }) => ({
+              title: tAssets("audit.sessionTitle", "Audit"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="AuditSummary"
+            component={AuditSummaryScreen}
+            options={({ navigation }) => ({
+              title: tAssets("audit.summaryTitle", "Audit summary"),
               ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
             })}
           />

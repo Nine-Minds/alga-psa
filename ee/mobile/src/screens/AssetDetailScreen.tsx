@@ -71,10 +71,10 @@ function maintenanceDueBadge(
   return null;
 }
 
-function FieldRow({ label, value }: { label: string; value: string }) {
+function FieldRow({ label, value, testID }: { label: string; value: string; testID?: string }) {
   const theme = useTheme();
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: theme.spacing.xs }}>
+    <View testID={testID} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: theme.spacing.xs }}>
       <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>{label}</Text>
       <Text style={{ ...theme.typography.body, color: theme.colors.text, flexShrink: 1, textAlign: "right" }}>{value}</Text>
     </View>
@@ -276,6 +276,22 @@ export function AssetDetailScreen({ route, navigation }: Props) {
             ) : null}
             {asset.purchase_date ? (
               <FieldRow label={t("identity.purchased", "Purchased")} value={formatDateShort(asset.purchase_date)} />
+            ) : null}
+            {/* Written by the site audit (change_type 'audit'); the run itself
+                shows in History below. */}
+            {typeof asset.last_audited_at === "string" && asset.last_audited_at ? (
+              <FieldRow
+                testID="asset-last-audited"
+                label={t("audit.lastAudited", "Last audited")}
+                value={[
+                  formatDateShort(asset.last_audited_at),
+                  typeof asset.last_audit_result === "string" && asset.last_audit_result
+                    ? t(`audit.result.${asset.last_audit_result}`, asset.last_audit_result)
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" • ")}
+              />
             ) : null}
           </View>
         </Card>

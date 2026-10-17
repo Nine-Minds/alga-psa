@@ -371,7 +371,7 @@
   {
     "id": "T042",
     "description": "Audit header action is absent when features.assetAudit is false",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "assets-list",
     "featureIds": [
       "F037"
@@ -389,7 +389,7 @@
   {
     "id": "T044",
     "description": "recent audits row renders counts and opens AuditSummary with the audit id",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "assets-list",
     "featureIds": [
       "F039"
@@ -524,7 +524,7 @@
   {
     "id": "T059",
     "description": "Start is disabled without a client; choosing a client enables it and shows the expected count from the dry count request",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
       "F050"
@@ -533,7 +533,7 @@
   {
     "id": "T060",
     "description": "status chips default to deployable and pending kinds from the registry",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
       "F050"
@@ -542,7 +542,7 @@
   {
     "id": "T061",
     "description": "session renders Remaining with expected items and Present empty from a mocked audit",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
       "F051"
@@ -551,7 +551,7 @@
   {
     "id": "T062",
     "description": "a scan resolving to an expected asset calls markItem with method scan and moves the row to Present",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
       "F052"
@@ -560,7 +560,7 @@
   {
     "id": "T063",
     "description": "a scan resolving to an already-present asset shows the info toast and issues no request",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
       "F052"
@@ -569,7 +569,7 @@
   {
     "id": "T064",
     "description": "a scan resolving to an asset outside the snapshot calls markItem with result unexpected and lists it under Unexpected",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
       "F053"
@@ -578,7 +578,7 @@
   {
     "id": "T065",
     "description": "a scan resolving to none opens RegisterAssetModal; successful registration marks the new asset present with method register",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
       "F054"
@@ -587,7 +587,7 @@
   {
     "id": "T066",
     "description": "Mark present calls markItem with method manual; Unmark calls unmarkItem and moves the row back",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
       "F055"
@@ -596,7 +596,7 @@
   {
     "id": "T067",
     "description": "the search field filters Remaining rows by tag and serial",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
       "F055"
@@ -605,7 +605,7 @@
   {
     "id": "T068",
     "description": "Finish with 2 remaining shows the confirmation naming 2; confirming calls complete and navigates to AuditSummary",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
       "F056"
@@ -614,7 +614,7 @@
   {
     "id": "T069",
     "description": "Finish with 0 remaining completes without a confirmation",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
       "F056"
@@ -623,7 +623,7 @@
   {
     "id": "T070",
     "description": "mount on an audit whose status is completed redirects to AuditSummary",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
       "F057"
@@ -632,7 +632,7 @@
   {
     "id": "T071",
     "description": "summary renders missing rows with Create ticket opening CreateTicketModal preselecting the asset",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
       "F058"
@@ -641,7 +641,7 @@
   {
     "id": "T072",
     "description": "AssetDetail shows Last audited when the payload has last_audited_at and hides it otherwise",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
       "F059"
@@ -650,7 +650,7 @@
   {
     "id": "T073",
     "description": "session screen offline: scan and mark show the offline toast and do not mutate local state",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
       "F051",
