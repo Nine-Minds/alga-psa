@@ -141,10 +141,7 @@
       "viewAll": "Zobacz wszystkie",
       "countLabel": "Zarządzane: {{count}}",
       "emptyShort": "Brak urządzeń",
-      "emptyBody": "Tutaj pojawią się urządzenia zarządzane przez dostawcę.",
-      "healthy": "Sprawne",
-      "inactive": "Nieaktywne",
-      "active": "Aktywne"
+      "emptyBody": "Tutaj pojawią się urządzenia zarządzane przez dostawcę."
     },
     "timeAgo": {
       "justNow": "przed chwilą",
@@ -884,12 +881,9 @@
       "network": "Sieć",
       "unknown": "Inne"
     },
-    "statusWarnTitle": "Niektóre urządzenia nieaktywne",
-    "statusWarnBody": "{{active}} aktywnych · {{inactive}} nieaktywnych",
-    "status": {
-      "active": "Aktywne",
-      "inactive": "Nieaktywne"
-    },
+    "statusAttentionTitle": "Niektóre urządzenia wymagają uwagi",
+    "statusAttentionBody": "{{active}} z {{total}} urządzeń aktywnych",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Szukaj po nazwie, znaczniku lub numerze seryjnym",
     "filters": {
       "allTypes": "Wszystkie typy",
@@ -1027,14 +1021,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Nazwa",
-      "type": "Typ",
-      "status": "Status",
-      "location": "Lokalizacja",
-      "lastUpdated": "Ostatnia aktualizacja"
+      "assignedTo": "Przypisano do"
     },
-    "notAvailable": "Brak",
-    "detailsTitle": "Szczegóły zasobu"
+    "statuses": {
+      "active": "Aktywny",
+      "in_stock": "W magazynie",
+      "maintenance": "W serwisie",
+      "inactive": "Nieaktywny",
+      "retired": "Wycofany"
+    },
+    "unassigned": "Nieprzypisany",
+    "sharedWorkspace": "Współdzielone stanowisko: {{name}}",
+    "sharedWorkspaceLabel": "Współdzielone stanowisko"
   },
   "errors": {
     "account": {

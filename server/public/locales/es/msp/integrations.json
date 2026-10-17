@@ -2917,6 +2917,54 @@
         "errors": {
           "saveFailed": "No se ha podido guardar la programación de sincronización de dispositivos."
         }
+      },
+      "peopleMode": {
+        "label": "Personas",
+        "options": {
+          "off": "Desactivado",
+          "suggest": "Sugerir",
+          "auto": "Asignar automáticamente"
+        },
+        "updateFailed": "No se pudo actualizar el modo de personas"
+      },
+      "signedInUsers": {
+        "title": "Usuarios con sesión iniciada",
+        "description": "Los nombres de usuario que informan los dispositivos de esta organización y el contacto al que se resuelve cada uno.",
+        "empty": "Todavía no se informan usuarios con sesión iniciada.",
+        "noClient": "Asigne esta organización a un cliente antes de asignar sus usuarios.",
+        "refresh": "Actualizar",
+        "selectContact": "Seleccionar contacto",
+        "loadFailed": "No se pudieron cargar los usuarios con sesión iniciada.",
+        "saveFailed": "No se pudo guardar la asignación.",
+        "columns": {
+          "user": "Usuario con sesión iniciada",
+          "devices": "Dispositivos",
+          "method": "Coincidencia por",
+          "contact": "Contacto"
+        },
+        "methods": {
+          "mapped": "Asignación guardada",
+          "email": "Correo electrónico",
+          "username": "Nombre de usuario",
+          "name": "Nombre completo",
+          "none": "Sin coincidencia"
+        }
+      },
+      "clientChange": {
+        "title": "¿Mover los dispositivos de esta organización?",
+        "message": "{{count}} activo(s) se moverán a {{client}}. Se borrarán las asignaciones, los grupos y los perfiles de facturación del cliente anterior.",
+        "confirm": "Mover dispositivos"
+      },
+      "billingProfile": {
+        "label": "Perfil de facturación",
+        "clientDefault": "Predeterminado del cliente",
+        "updateFailed": "No se pudo actualizar el perfil de facturación"
+      },
+      "errors": {
+        "invalidPeopleMode": "Ese no es un modo de personas válido.",
+        "billingProfileUnavailable": "Ese perfil de facturación no está disponible para este cliente.",
+        "mappingNotFound": "Esa asignación ya no existe. Actualice la página e inténtelo de nuevo.",
+        "forbidden": "No tiene permiso para cambiar esto."
       }
     },
     "sso": {

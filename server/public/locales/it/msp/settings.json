@@ -2009,6 +2009,8 @@
   "timeEntry": {
     "title": "Impostazioni registrazione ore",
     "description": "Gestisci le impostazioni di registrazione ore e i periodi temporali",
+    "accessDenied": "Accesso negato: non hai l'autorizzazione per visualizzare i periodi.",
+    "loading": "Caricamento delle impostazioni di registrazione ore...",
     "timePeriods": {
       "title": "Impostazioni dei periodi",
       "description": "Configurare i periodi di fatturazione",

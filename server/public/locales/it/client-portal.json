@@ -141,10 +141,7 @@
       "viewAll": "Vedi tutti",
       "countLabel": "{{count}} gestiti",
       "emptyShort": "Nessun dispositivo",
-      "emptyBody": "I dispositivi gestiti dal tuo provider appariranno qui.",
-      "healthy": "In salute",
-      "inactive": "Inattivo",
-      "active": "Attivo"
+      "emptyBody": "I dispositivi gestiti dal tuo provider appariranno qui."
     },
     "timeAgo": {
       "justNow": "proprio ora",
@@ -884,12 +881,9 @@
       "network": "Rete",
       "unknown": "Altro"
     },
-    "statusWarnTitle": "Alcuni dispositivi inattivi",
-    "statusWarnBody": "{{active}} attivi · {{inactive}} inattivi",
-    "status": {
-      "active": "Attivo",
-      "inactive": "Inattivo"
-    },
+    "statusAttentionTitle": "Alcuni dispositivi richiedono attenzione",
+    "statusAttentionBody": "{{active}} dispositivi attivi su {{total}}",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Cerca per nome, tag o numero di serie",
     "filters": {
       "allTypes": "Tutti i tipi",
@@ -1027,14 +1021,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Nome",
-      "type": "Tipo",
-      "status": "Stato",
-      "location": "Ubicazione",
-      "lastUpdated": "Ultimo aggiornamento"
+      "assignedTo": "Assegnato a"
     },
-    "notAvailable": "N/D",
-    "detailsTitle": "Dettagli asset"
+    "statuses": {
+      "active": "Attivo",
+      "in_stock": "In magazzino",
+      "maintenance": "In manutenzione",
+      "inactive": "Inattivo",
+      "retired": "Dismesso"
+    },
+    "unassigned": "Non assegnato",
+    "sharedWorkspace": "Postazione condivisa: {{name}}",
+    "sharedWorkspaceLabel": "Postazione condivisa"
   },
   "errors": {
     "account": {

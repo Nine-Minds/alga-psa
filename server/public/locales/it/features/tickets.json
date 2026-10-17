@@ -357,7 +357,8 @@
     "pastedImagesDeleteFailed_few": "Impossibile eliminare {{count}} immagini incollate.",
     "pastedImagesDeleteFailed_many": "Impossibile eliminare {{count}} immagini incollate.",
     "pastedImagesDeleted_few": "{{count}} immagini incollate eliminate.",
-    "pastedImagesDeleted_many": "{{count}} immagini incollate eliminate."
+    "pastedImagesDeleted_many": "{{count}} immagini incollate eliminate.",
+    "sharedWorkspaceReadOnly": "Vedi questo ticket perché riguarda un dispositivo di una postazione condivisa. Solo chi lo ha aperto può aggiungere contenuti."
   },
   "conversation": {
     "comments": "Commenti",
@@ -1962,7 +1963,8 @@
       "scheduleTime": "Pianifica tempo",
       "openScheduleEntry": "Apri voce di agenda",
       "acrossEntries_few": "su {{count}} voci",
-      "acrossEntries_many": "su {{count}} voci"
+      "acrossEntries_many": "su {{count}} voci",
+      "changeLocation": "Cambia sede"
     },
     "timeline": {
       "subtitle": "Risposte, tempo e modifiche di sistema in un unico posto",

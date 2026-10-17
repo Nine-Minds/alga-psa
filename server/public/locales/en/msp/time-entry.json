@@ -463,14 +463,24 @@
     },
     "timePeriod": {
       "datesRequired": "Enter valid start and end dates.",
-      "closed": "This time period is closed. Reopen it before making changes."
+      "closed": "This time period is closed. Reopen it before making changes.",
+      "permissions": {
+        "read": "Permission denied: cannot view time periods.",
+        "create": "Permission denied: cannot create time periods.",
+        "update": "Permission denied: cannot update time periods.",
+        "delete": "Permission denied: cannot delete time periods."
+      }
     },
     "timePeriodSettings": {
       "invalidValue": "One of the time period setting values is invalid. Please refresh and try again.",
       "referenceMissing": "The selected time period setting is no longer valid. Please refresh and try again.",
       "duplicate": "A conflicting time period setting already exists.",
       "missingField": "Missing required time period setting field.",
-      "missingFieldNamed": "Missing required time period setting field: {{field}}."
+      "missingFieldNamed": "Missing required time period setting field: {{field}}.",
+      "permissions": {
+        "read": "Permission denied: cannot view time period settings.",
+        "manage": "Permission denied: cannot manage time period settings."
+      }
     },
     "stopwatch": {
       "notFound": "Stopwatch session not found. It may already have been logged or discarded. Please refresh.",

@@ -141,10 +141,7 @@
       "viewAll": "Alle anzeigen",
       "countLabel": "{{count}} verwaltet",
       "emptyShort": "Noch keine Geräte",
-      "emptyBody": "Vom Anbieter verwaltete Geräte erscheinen hier.",
-      "healthy": "Fehlerfrei",
-      "inactive": "Inaktiv",
-      "active": "Aktiv"
+      "emptyBody": "Vom Anbieter verwaltete Geräte erscheinen hier."
     },
     "timeAgo": {
       "justNow": "gerade eben",
@@ -884,12 +881,9 @@
       "network": "Netzwerk",
       "unknown": "Sonstiges"
     },
-    "statusWarnTitle": "Einige Geräte inaktiv",
-    "statusWarnBody": "{{active}} aktiv · {{inactive}} inaktiv",
-    "status": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv"
-    },
+    "statusAttentionTitle": "Einige Geräte brauchen Aufmerksamkeit",
+    "statusAttentionBody": "{{active}} von {{total}} Geräten aktiv",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Suche nach Name, Tag oder Seriennummer",
     "filters": {
       "allTypes": "Alle Typen",
@@ -1027,14 +1021,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Name",
-      "type": "Typ",
-      "status": "Status",
-      "location": "Standort",
-      "lastUpdated": "Zuletzt aktualisiert"
+      "assignedTo": "Zugewiesen an"
     },
-    "notAvailable": "N/V",
-    "detailsTitle": "Asset-Details"
+    "statuses": {
+      "active": "Aktiv",
+      "in_stock": "Auf Lager",
+      "maintenance": "In Wartung",
+      "inactive": "Inaktiv",
+      "retired": "Ausgemustert"
+    },
+    "unassigned": "Nicht zugewiesen",
+    "sharedWorkspace": "Gemeinsamer Arbeitsplatz: {{name}}",
+    "sharedWorkspaceLabel": "Gemeinsamer Arbeitsplatz"
   },
   "errors": {
     "account": {

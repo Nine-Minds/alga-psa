@@ -357,7 +357,8 @@
     "pastedImagesDeleteFailed_few": "{{count}} eingefügte Bilder konnten nicht gelöscht werden.",
     "pastedImagesDeleteFailed_many": "{{count}} eingefügte Bilder konnten nicht gelöscht werden.",
     "pastedImagesDeleted_few": "{{count}} eingefügte Bilder gelöscht.",
-    "pastedImagesDeleted_many": "{{count}} eingefügte Bilder gelöscht."
+    "pastedImagesDeleted_many": "{{count}} eingefügte Bilder gelöscht.",
+    "sharedWorkspaceReadOnly": "Sie sehen dieses Ticket, weil es ein Gerät in einem gemeinsam genutzten Arbeitsplatz betrifft. Nur die Person, die es gemeldet hat, kann etwas hinzufügen."
   },
   "conversation": {
     "comments": "Kommentare",
@@ -1962,7 +1963,8 @@
       "scheduleTime": "Zeit planen",
       "openScheduleEntry": "Zeitplaneintrag öffnen",
       "acrossEntries_few": "über {{count}} Einträge",
-      "acrossEntries_many": "über {{count}} Einträge"
+      "acrossEntries_many": "über {{count}} Einträge",
+      "changeLocation": "Standort ändern"
     },
     "timeline": {
       "subtitle": "Antworten, Zeit und Systemänderungen an einem Ort",

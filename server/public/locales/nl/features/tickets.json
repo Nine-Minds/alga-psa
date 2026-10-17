@@ -357,7 +357,8 @@
     "pastedImagesDeleteFailed_few": "{{count}} geplakte afbeeldingen konden niet worden verwijderd.",
     "pastedImagesDeleteFailed_many": "{{count}} geplakte afbeeldingen konden niet worden verwijderd.",
     "pastedImagesDeleted_few": "{{count}} geplakte afbeeldingen verwijderd.",
-    "pastedImagesDeleted_many": "{{count}} geplakte afbeeldingen verwijderd."
+    "pastedImagesDeleted_many": "{{count}} geplakte afbeeldingen verwijderd.",
+    "sharedWorkspaceReadOnly": "U ziet dit ticket omdat het over een apparaat in een gedeelde werkplek gaat. Alleen degene die het heeft gemeld, kan er iets aan toevoegen."
   },
   "conversation": {
     "comments": "Reacties",
@@ -1962,7 +1963,8 @@
       "scheduleTime": "Tijd inplannen",
       "openScheduleEntry": "Agenda-item openen",
       "acrossEntries_few": "over {{count}} registraties",
-      "acrossEntries_many": "over {{count}} registraties"
+      "acrossEntries_many": "over {{count}} registraties",
+      "changeLocation": "Locatie wijzigen"
     },
     "timeline": {
       "subtitle": "Reacties, tijd en systeemwijzigingen op één plek",

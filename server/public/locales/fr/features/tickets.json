@@ -357,7 +357,8 @@
     "pastedImagesDeleteFailed_few": "Impossible de supprimer {{count}} images collées.",
     "pastedImagesDeleteFailed_many": "Impossible de supprimer {{count}} images collées.",
     "pastedImagesDeleted_few": "{{count}} images collées supprimées.",
-    "pastedImagesDeleted_many": "{{count}} images collées supprimées."
+    "pastedImagesDeleted_many": "{{count}} images collées supprimées.",
+    "sharedWorkspaceReadOnly": "Vous voyez ce ticket parce qu'il concerne un appareil d'un espace partagé. Seule la personne qui l'a créé peut y ajouter quelque chose."
   },
   "conversation": {
     "comments": "Commentaires",
@@ -1962,7 +1963,8 @@
       "scheduleTime": "Planifier du temps",
       "openScheduleEntry": "Ouvrir l’entrée de planning",
       "acrossEntries_few": "sur {{count}} entrées",
-      "acrossEntries_many": "sur {{count}} entrées"
+      "acrossEntries_many": "sur {{count}} entrées",
+      "changeLocation": "Changer d'emplacement"
     },
     "timeline": {
       "subtitle": "Réponses, temps et changements système au même endroit",

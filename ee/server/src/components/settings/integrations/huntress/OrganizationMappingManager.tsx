@@ -1,6 +1,11 @@
 'use client';
 
+import { rmmMappingErrorMessage } from '@alga-psa/integrations/components/settings/integrations/rmmMappingErrors';
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
+import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
+import { RmmOrganizationClientChangeDialog } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationClientChangeDialog';
+import { RmmOrganizationBillingProfileSelect } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationBillingProfileSelect';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   Card,
   CardContent,
@@ -85,19 +90,22 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
   const handleSync = () => {
     startTransition(async () => {
       const result = await syncHuntressOrganizationMappings();
-      if (!result.success) setError(result.error ?? t('integrations.rmm.huntress.errors.sync', { defaultValue: 'Sync failed' }));
+      if (!result.success) setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.huntress.errors.sync', { defaultValue: 'Sync failed' })));
       await load();
       onMappingChanged?.();
     });
   };
 
-  const handleClientChange = (mappingId: string, clientId: string | null) => {
+  // FR-G4: re-pointing an organization moves its devices, so confirm first.
+  const [pendingClientChange, setPendingClientChange] = useState<{ mappingId: string; clientId: string | null } | null>(null);
+
+  const handleClientChangeConfirmed = (mappingId: string, clientId: string | null) => {
     startTransition(async () => {
       const result = await updateHuntressOrganizationMapping(mappingId, {
         client_id: clientId,
         default_contact_id: null,
       });
-      if (!result.success) setError(result.error ?? t('integrations.rmm.huntress.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
+      if (!result.success) setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.huntress.errors.updateMapping', { defaultValue: 'Failed to update mapping' })));
       await load();
       onMappingChanged?.();
     });
@@ -108,24 +116,62 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
       const result = await updateHuntressOrganizationMapping(mappingId, {
         default_contact_id: contactId || null,
       });
-      if (!result.success) setError(result.error ?? t('integrations.rmm.huntress.errors.updateContact', { defaultValue: 'Failed to update default contact' }));
+      if (!result.success) setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.huntress.errors.updateContact', { defaultValue: 'Failed to update default contact' })));
       await load();
       onMappingChanged?.();
     });
   };
+
+  const handlePeopleModeChange = (mappingId: string, mode: string) => {
+    startTransition(async () => {
+      const result = await updateHuntressOrganizationMapping(mappingId, {
+        contact_assignment_mode: mode,
+      });
+      if (!result.success) {
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.peopleMode.updateFailed', { defaultValue: 'Failed to update the people mode' })));
+      }
+      await load();
+      onMappingChanged?.();
+    });
+  };
+
+  // F090: the profile this organization's alert tickets are attributed to.
+  const handleBillingProfileChange = (mappingId: string, billingProfileId: string | null) => {
+    startTransition(async () => {
+      const result = await updateHuntressOrganizationMapping(mappingId, {
+        billing_profile_id: billingProfileId,
+      });
+      if (!result.success) {
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' })));
+      }
+      await load();
+      onMappingChanged?.();
+    });
+  };
+
+  const peopleModeOptions = buildRmmPeopleModeOptions(t);
 
   const handleAutoCreateToggle = (mappingId: string, enabled: boolean) => {
     startTransition(async () => {
       const result = await updateHuntressOrganizationMapping(mappingId, {
         auto_create_tickets: enabled,
       });
-      if (!result.success) setError(result.error ?? t('integrations.rmm.huntress.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
+      if (!result.success) setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.huntress.errors.updateMapping', { defaultValue: 'Failed to update mapping' })));
       await load();
       onMappingChanged?.();
     });
   };
 
   const unmappedCount = mappings.filter((m) => !m.client_id).length;
+
+  const handleClientChange = (mappingId: string, clientId: string | null) => {
+    const current = mappings.find((m) => m.mapping_id === mappingId);
+    if (clientId && current?.client_id && current.client_id !== clientId) {
+      setPendingClientChange({ mappingId: mappingId, clientId: clientId });
+      return;
+    }
+    void handleClientChangeConfirmed(mappingId, clientId);
+  };
 
   const columns: ColumnDefinition<RmmOrganizationMapping>[] = [
     {
@@ -147,6 +193,35 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
           onFilterStateChange={() => {}}
           clientTypeFilter="all"
           onClientTypeFilterChange={() => {}}
+        />
+      ),
+    },
+    {
+      // FR-D8: what sync does with the device's signed-in user.
+      title: t('integrations.rmm.peopleMode.label', { defaultValue: 'People' }),
+      dataIndex: 'contact_assignment_mode',
+      sortable: false,
+      render: (_v, mapping) => (
+        <CustomSelect
+          id={`rmm-org-people-mode-${mapping.mapping_id}`}
+          value={mapping.contact_assignment_mode ?? 'suggest'}
+          onValueChange={(mode) => void handlePeopleModeChange(mapping.mapping_id, mode)}
+          options={peopleModeOptions}
+          className="min-w-[160px]"
+        />
+      ),
+    },
+    {
+      // F090: which profile this organization's alert tickets bill to.
+      title: t('integrations.rmm.billingProfile.label', { defaultValue: 'Billing profile' }),
+      dataIndex: 'billing_profile_id',
+      sortable: false,
+      render: (_v, mapping) => (
+        <RmmOrganizationBillingProfileSelect
+          mappingId={mapping.mapping_id}
+          clientId={mapping.client_id}
+          value={(mapping as { billing_profile_id?: string | null }).billing_profile_id}
+          onChange={(billingProfileId) => handleBillingProfileChange(mapping.mapping_id, billingProfileId)}
         />
       ),
     },
@@ -209,6 +284,17 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
 
   return (
     <>
+    <RmmOrganizationClientChangeDialog
+      mappingId={pendingClientChange?.mappingId ?? null}
+      pendingClientName={clients.find((c) => c.client_id === pendingClientChange?.clientId)?.client_name ?? null}
+      isOpen={Boolean(pendingClientChange)}
+      onCancel={() => setPendingClientChange(null)}
+      onConfirm={() => {
+        const pending = pendingClientChange;
+        setPendingClientChange(null);
+        if (pending) handleClientChangeConfirmed(pending.mappingId, pending.clientId);
+      }}
+    />
     <Card id="huntress-org-mappings">
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -244,12 +330,30 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
             {t('integrations.rmm.huntress.empty', { defaultValue: 'No organizations yet — click "Sync organizations".' })}
           </p>
         ) : (
-          <DataTable
-            id="huntress-org-mappings"
-            data={mappings}
-            columns={columns}
-            pagination
-          />
+          <>
+            <DataTable
+              id="huntress-org-mappings"
+              data={mappings}
+              columns={columns}
+              pagination
+            />
+            {/* FR-D8: one Signed-in users panel per mapped organization. */}
+            {mappings
+              .filter((m) => m.client_id)
+              .map((m) => (
+                <div key={`signed-in-${m.mapping_id}`} className="mt-4 border-t pt-4">
+                  <div className="mb-2 text-sm font-medium">
+                    {m.external_organization_name || m.external_organization_id}
+                  </div>
+                  <RmmUserContactMappingPanel
+                    mappingId={m.mapping_id}
+                    clientId={m.client_id ?? null}
+                    contacts={contacts}
+                    idPrefix={`huntress-signed-in-${m.mapping_id}`}
+                  />
+                </div>
+              ))}
+          </>
         )}
       </CardContent>
     </Card>

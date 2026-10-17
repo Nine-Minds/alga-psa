@@ -22,6 +22,7 @@ vi.mock('../actions/assetActions', () => ({
 }));
 
 vi.mock('../actions/clientLookupActions', () => ({
+  getVendorOptionsForAssets: vi.fn(async () => []),
   getAllClientsForAssets: vi.fn(async () => []),
   getClientLocationsForAssets: vi.fn(async () => []),
   getClientContactsForAssets: vi.fn(async () => [
@@ -31,6 +32,13 @@ vi.mock('../actions/clientLookupActions', () => ({
 
 vi.mock('../actions/assetTypeRegistryActions', () => ({
   getAssetTypes: (...args: unknown[]) => mockGetAssetTypes(...args),
+}));
+
+vi.mock('../actions/assetStatusActions', () => ({
+  listAssetStatuses: vi.fn(async () => [
+    { tenant: 't', status_id: 'st-active', slug: 'active', label: 'Active', kind: 'deployable', is_builtin: true, is_active: true, display_order: 0, created_at: '', updated_at: '' },
+    { tenant: 't', status_id: 'st-inactive', slug: 'inactive', label: 'Inactive', kind: 'undeployable', is_builtin: true, is_active: true, display_order: 1, created_at: '', updated_at: '' },
+  ]),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {

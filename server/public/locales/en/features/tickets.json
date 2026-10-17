@@ -365,7 +365,8 @@
     "pastedImagesDeleteFailed_few": "Could not delete {{count}} pasted images.",
     "pastedImagesDeleteFailed_many": "Could not delete {{count}} pasted images.",
     "pastedImagesDeleted_few": "Deleted {{count}} pasted images.",
-    "pastedImagesDeleted_many": "Deleted {{count}} pasted images."
+    "pastedImagesDeleted_many": "Deleted {{count}} pasted images.",
+    "sharedWorkspaceReadOnly": "You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it."
   },
   "conversation": {
     "comments": "Comments",
@@ -1970,7 +1971,8 @@
       "scheduleTime": "Schedule time",
       "openScheduleEntry": "Open schedule entry",
       "acrossEntries_few": "across {{count}} entries",
-      "acrossEntries_many": "across {{count}} entries"
+      "acrossEntries_many": "across {{count}} entries",
+      "changeLocation": "Change location"
     },
     "timeline": {
       "subtitle": "Replies, time, and system changes in one place",

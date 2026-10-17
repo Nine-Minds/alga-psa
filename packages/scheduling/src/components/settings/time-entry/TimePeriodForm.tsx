@@ -21,6 +21,7 @@ import {
 } from '../../../lib/timePeriodDisplay';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type { TimePeriodPermissions } from './useTimePeriodPermissions';
 
 const isTimePeriodActionError = (
     value: unknown
@@ -52,6 +53,8 @@ interface TimePeriodFormProps {
     existingTimePeriods: ITimePeriodView[];
     selectedPeriod?: ITimePeriodView | null;
     mode?: 'create' | 'edit';
+    /** `time_period` permissions of the viewer; without them the dialog is read-only. */
+    permissions: TimePeriodPermissions;
 }
 
 const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
@@ -64,8 +67,10 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
         settings,
         existingTimePeriods,
         selectedPeriod,
-        mode = 'create'
+        mode = 'create',
+        permissions
     } = props;
+    const canSave = mode === 'edit' ? permissions.update : permissions.create;
     // Define the form state interface
     interface FormState {
         startDate: Temporal.PlainDate | null;
@@ -308,7 +313,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
 
     const mainFooter = settings ? (
         <div className="flex justify-between w-full">
-            {mode === 'edit' && selectedPeriod ? (
+            {mode === 'edit' && selectedPeriod && permissions.delete ? (
                 <Button
                     id='delete-period-button'
                     variant="destructive"
@@ -319,11 +324,13 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
             ) : <div />}
             <div className="flex ml-auto space-x-2">
                 <Button id="close-button" variant="outline" onClick={onClose}>
-                    {t('common:actions.cancel')}
+                    {canSave ? t('common:actions.cancel') : t('common:actions.close')}
                 </Button>
-                <Button id="submit-button" onClick={handleSubmit}>
-                    {mode === 'create' ? t('common:actions.create') : t('common:actions.save')}
-                </Button>
+                {canSave && (
+                    <Button id="submit-button" onClick={handleSubmit}>
+                        {mode === 'create' ? t('common:actions.create') : t('common:actions.save')}
+                    </Button>
+                )}
             </div>
         </div>
     ) : (
@@ -411,13 +418,15 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                                 )}
                             </div>
                         )}
-                        <div className="mb-4">
-                            <Checkbox
-                                label={t('timeEntry.periods.form.overrideDates')}
-                                checked={override}
-                                onChange={(e) => setOverride(e.target.checked)}
-                            />
-                        </div>
+                        {canSave && (
+                            <div className="mb-4">
+                                <Checkbox
+                                    label={t('timeEntry.periods.form.overrideDates')}
+                                    checked={override}
+                                    onChange={(e) => setOverride(e.target.checked)}
+                                />
+                            </div>
+                        )}
                         <div className="mb-4">
                             <Label htmlFor="time-period-start-date-picker">{t('timeEntry.periods.form.startDate')}</Label>
                             <DatePicker
@@ -429,18 +438,20 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                             />
                         </div>
                         <div className="mb-4">
-                            <div className="mb-2">
-                                <Checkbox
-                                    label={t('timeEntry.periods.form.noEndDate')}
-                                    checked={noEndDate}
-                                    onChange={(e) => {
-                                        setNoEndDate(e.target.checked);
-                                        if (e.target.checked) {
-                                            dispatch({ type: 'SET_END_DATE', payload: null });
-                                        }
-                                    }}
-                                />
-                            </div>
+                            {canSave && (
+                                <div className="mb-2">
+                                    <Checkbox
+                                        label={t('timeEntry.periods.form.noEndDate')}
+                                        checked={noEndDate}
+                                        onChange={(e) => {
+                                            setNoEndDate(e.target.checked);
+                                            if (e.target.checked) {
+                                                dispatch({ type: 'SET_END_DATE', payload: null });
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            )}
                             {!noEndDate && (
                                 <>
                                     <Label htmlFor="time-period-end-date-picker">{t('timeEntry.periods.form.endDate')}</Label>

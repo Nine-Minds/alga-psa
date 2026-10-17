@@ -2917,6 +2917,54 @@
         "errors": {
           "saveFailed": "Der Zeitplan für die Gerätesynchronisierung konnte nicht gespeichert werden."
         }
+      },
+      "peopleMode": {
+        "label": "Personen",
+        "options": {
+          "off": "Aus",
+          "suggest": "Vorschlagen",
+          "auto": "Automatisch zuweisen"
+        },
+        "updateFailed": "Der Personen-Modus konnte nicht aktualisiert werden"
+      },
+      "signedInUsers": {
+        "title": "Angemeldete Benutzer",
+        "description": "Die Benutzernamen, die die Geräte dieser Organisation melden, und der jeweils zugeordnete Kontakt.",
+        "empty": "Noch keine angemeldeten Benutzer gemeldet.",
+        "noClient": "Ordnen Sie diese Organisation einem Kunden zu, bevor Sie ihre angemeldeten Benutzer zuordnen.",
+        "refresh": "Aktualisieren",
+        "selectContact": "Kontakt auswählen",
+        "loadFailed": "Angemeldete Benutzer konnten nicht geladen werden.",
+        "saveFailed": "Die Zuordnung konnte nicht gespeichert werden.",
+        "columns": {
+          "user": "Angemeldeter Benutzer",
+          "devices": "Geräte",
+          "method": "Zugeordnet über",
+          "contact": "Kontakt"
+        },
+        "methods": {
+          "mapped": "Gespeicherte Zuordnung",
+          "email": "E-Mail",
+          "username": "Benutzername",
+          "name": "Vollständiger Name",
+          "none": "Keine Übereinstimmung"
+        }
+      },
+      "clientChange": {
+        "title": "Geräte dieser Organisation verschieben?",
+        "message": "{{count}} Asset(s) werden zu {{client}} verschoben. Zuweisungen, Gruppen und Abrechnungsprofile des vorherigen Kunden werden entfernt.",
+        "confirm": "Geräte verschieben"
+      },
+      "billingProfile": {
+        "label": "Abrechnungsprofil",
+        "clientDefault": "Kundenstandard",
+        "updateFailed": "Abrechnungsprofil konnte nicht aktualisiert werden"
+      },
+      "errors": {
+        "invalidPeopleMode": "Das ist kein gültiger Personen-Modus.",
+        "billingProfileUnavailable": "Dieses Abrechnungsprofil ist für diesen Kunden nicht verfügbar.",
+        "mappingNotFound": "Diese Zuordnung existiert nicht mehr. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+        "forbidden": "Sie haben keine Berechtigung, dies zu ändern."
       }
     },
     "sso": {

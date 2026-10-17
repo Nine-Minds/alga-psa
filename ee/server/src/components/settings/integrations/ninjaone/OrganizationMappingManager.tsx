@@ -7,7 +7,12 @@
  * Devices can only be synced for organizations that have a company mapping.
  */
 
+import { rmmMappingErrorMessage } from '@alga-psa/integrations/components/settings/integrations/rmmMappingErrors';
 import React, { useEffect, useRef, useState, useTransition } from 'react';
+import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
+import { RmmOrganizationClientChangeDialog } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationClientChangeDialog';
+import { RmmOrganizationBillingProfileSelect } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationBillingProfileSelect';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -111,7 +116,10 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
     });
   };
 
-  const handleCompanyChange = async (mappingId: string, companyId: string | null) => {
+  // FR-G4: re-pointing an organization moves its devices, so confirm first.
+  const [pendingClientChange, setPendingClientChange] = useState<{ mappingId: string; clientId: string | null } | null>(null);
+
+  const handleCompanyChangeConfirmed = async (mappingId: string, companyId: string | null) => {
     setSavingMappingId(mappingId);
     setError(null);
     setSuccessMessage(null);
@@ -132,7 +140,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
         setSuccessMessage(t('integrations.rmm.ninjaone.success.mappingUpdated', { defaultValue: 'Mapping updated successfully' }));
         onMappingChanged?.();
       } else {
-        setError(result.error ?? t('integrations.rmm.ninjaone.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.ninjaone.errors.updateMapping', { defaultValue: 'Failed to update mapping' })));
       }
     } catch (err) {
       console.error('NinjaOne organization mapping update failed:', err);
@@ -161,7 +169,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
         setSuccessMessage(t('integrations.rmm.ninjaone.success.contactUpdated', { defaultValue: 'Default contact updated successfully' }));
         onMappingChanged?.();
       } else {
-        setError(result.error ?? t('integrations.rmm.ninjaone.errors.updateContact', { defaultValue: 'Failed to update default contact' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.ninjaone.errors.updateContact', { defaultValue: 'Failed to update default contact' })));
       }
     } catch (err) {
       console.error('NinjaOne default contact update failed:', err);
@@ -170,6 +178,54 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
       setSavingMappingId(null);
     }
   };
+
+  const handlePeopleModeChange = async (mappingId: string, mode: string) => {
+    setSavingMappingId(mappingId);
+    setError(null);
+    try {
+      const result = await updateNinjaOneOrganizationMapping(mappingId, {
+        contact_assignment_mode: mode,
+      });
+      if (result.success) {
+        setMappings((prev) =>
+          prev.map((m) => (m.mapping_id === mappingId
+            ? { ...m, contact_assignment_mode: mode as 'off' | 'suggest' | 'auto' }
+            : m))
+        );
+      } else {
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.peopleMode.updateFailed', { defaultValue: 'Failed to update the people mode' })));
+      }
+    } finally {
+      setSavingMappingId(null);
+    }
+  };
+
+  // F090: the profile this organization's alert tickets are attributed to.
+  const handleBillingProfileChange = async (mappingId: string, billingProfileId: string | null) => {
+    setSavingMappingId(mappingId);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const result = await updateNinjaOneOrganizationMapping(mappingId, {
+        billing_profile_id: billingProfileId,
+      });
+      if (result.success) {
+        setMappings((prev) => prev.map((m) => (
+          m.mapping_id === mappingId ? { ...m, billing_profile_id: billingProfileId } : m
+        )));
+        onMappingChanged?.();
+      } else {
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' })));
+      }
+    } catch (err) {
+      console.error('NinjaOne billing profile update failed:', err);
+      setError(t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' }));
+    } finally {
+      setSavingMappingId(null);
+    }
+  };
+
+  const peopleModeOptions = buildRmmPeopleModeOptions(t);
 
   const handleAutoSyncChange = async (mappingId: string, autoSync: boolean) => {
     setSavingMappingId(mappingId);
@@ -187,7 +243,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
           )
         );
       } else {
-        setError(result.error ?? t('integrations.rmm.ninjaone.errors.updateAutoSync', { defaultValue: 'Failed to update auto-sync setting' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.ninjaone.errors.updateAutoSync', { defaultValue: 'Failed to update auto-sync setting' })));
       }
     } catch (err) {
       console.error('NinjaOne auto-sync update failed:', err);
@@ -217,6 +273,15 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
       </Card>
     );
   }
+
+  const handleCompanyChange = (mappingId: string, companyId: string | null) => {
+    const current = mappings.find((m) => m.mapping_id === mappingId);
+    if (companyId && current?.client_id && current.client_id !== companyId) {
+      setPendingClientChange({ mappingId: mappingId, clientId: companyId });
+      return;
+    }
+    void handleCompanyChangeConfirmed(mappingId, companyId);
+  };
 
   const columns: ColumnDefinition<RmmOrganizationMapping>[] = [
     {
@@ -283,6 +348,35 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
       },
     },
     {
+      // FR-D8: what sync does with the device's signed-in user.
+      title: t('integrations.rmm.peopleMode.label', { defaultValue: 'People' }),
+      dataIndex: 'contact_assignment_mode',
+      sortable: false,
+      render: (_v, mapping) => (
+        <CustomSelect
+          id={`rmm-org-people-mode-${mapping.mapping_id}`}
+          value={mapping.contact_assignment_mode ?? 'suggest'}
+          onValueChange={(mode) => handlePeopleModeChange(mapping.mapping_id, mode)}
+          options={peopleModeOptions}
+          className="min-w-[160px]"
+        />
+      ),
+    },
+    {
+      // F090: which profile this organization's alert tickets bill to.
+      title: t('integrations.rmm.billingProfile.label', { defaultValue: 'Billing profile' }),
+      dataIndex: 'billing_profile_id',
+      sortable: false,
+      render: (_v, mapping) => (
+        <RmmOrganizationBillingProfileSelect
+          mappingId={mapping.mapping_id}
+          clientId={mapping.client_id}
+          value={(mapping as { billing_profile_id?: string | null }).billing_profile_id}
+          onChange={(billingProfileId) => void handleBillingProfileChange(mapping.mapping_id, billingProfileId)}
+        />
+      ),
+    },
+    {
       title: t('integrations.rmm.ninjaone.columns.autoSync', { defaultValue: 'Auto-Sync' }),
       dataIndex: 'auto_sync_assets',
       sortable: false,
@@ -327,6 +421,17 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
 
   return (
     <>
+    <RmmOrganizationClientChangeDialog
+      mappingId={pendingClientChange?.mappingId ?? null}
+      pendingClientName={companies.find((c) => c.client_id === pendingClientChange?.clientId)?.client_name ?? null}
+      isOpen={Boolean(pendingClientChange)}
+      onCancel={() => setPendingClientChange(null)}
+      onConfirm={() => {
+        const pending = pendingClientChange;
+        setPendingClientChange(null);
+        if (pending) void handleCompanyChangeConfirmed(pending.mappingId, pending.clientId);
+      }}
+    />
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -397,12 +502,30 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
           </div>
         ) : (
           <div className="rounded-lg border">
-            <DataTable
-              id="ninjaone-org-mappings"
-              data={mappings}
-              columns={columns}
-              pagination
-            />
+            <>
+              <DataTable
+                id="ninjaone-org-mappings"
+                data={mappings}
+                columns={columns}
+                pagination
+              />
+              {/* FR-D8: one Signed-in users panel per mapped organization. */}
+              {mappings
+                .filter((m) => m.client_id)
+                .map((m) => (
+                  <div key={`signed-in-${m.mapping_id}`} className="mt-4 border-t pt-4">
+                    <div className="mb-2 text-sm font-medium">
+                      {m.external_organization_name || m.external_organization_id}
+                    </div>
+                    <RmmUserContactMappingPanel
+                      mappingId={m.mapping_id}
+                      clientId={m.client_id ?? null}
+                      contacts={contacts}
+                      idPrefix={`ninjaone-signed-in-${m.mapping_id}`}
+                    />
+                  </div>
+                ))}
+            </>
           </div>
         )}
 

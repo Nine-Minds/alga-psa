@@ -365,7 +365,8 @@
     "pastedImagesDeleteFailed_few": "Det gick inte att radera {{count}} inklistrade bilder.",
     "pastedImagesDeleteFailed_many": "Det gick inte att radera {{count}} inklistrade bilder.",
     "pastedImagesDeleted_few": "{{count}} inklistrade bilder har raderats.",
-    "pastedImagesDeleted_many": "{{count}} inklistrade bilder har raderats."
+    "pastedImagesDeleted_many": "{{count}} inklistrade bilder har raderats.",
+    "sharedWorkspaceReadOnly": "Du ser det här ärendet eftersom det gäller en enhet i en delad arbetsplats. Bara den som skapade det kan lägga till något."
   },
   "conversation": {
     "comments": "Kommentarer",
@@ -1970,7 +1971,8 @@
       "scheduleTime": "Schemalägg tid",
       "openScheduleEntry": "Öppna schemapost",
       "acrossEntries_few": "fördelat på {{count}} tidposter",
-      "acrossEntries_many": "fördelat på {{count}} tidposter"
+      "acrossEntries_many": "fördelat på {{count}} tidposter",
+      "changeLocation": "Ändra plats"
     },
     "timeline": {
       "subtitle": "Svar, tid och systemändringar på ett ställe",

@@ -2917,6 +2917,54 @@
         "errors": {
           "saveFailed": "Impossible d'enregistrer la planification de la synchronisation des appareils."
         }
+      },
+      "peopleMode": {
+        "label": "Personnes",
+        "options": {
+          "off": "Désactivé",
+          "suggest": "Suggérer",
+          "auto": "Attribution automatique"
+        },
+        "updateFailed": "Impossible de mettre à jour le mode Personnes"
+      },
+      "signedInUsers": {
+        "title": "Utilisateurs connectés",
+        "description": "Les noms d'utilisateur signalés par les appareils de cette organisation et le contact correspondant.",
+        "empty": "Aucun utilisateur connecté signalé pour le moment.",
+        "noClient": "Associez cette organisation à un client avant d'associer ses utilisateurs.",
+        "refresh": "Rafraîchir",
+        "selectContact": "Sélectionner un contact",
+        "loadFailed": "Impossible de charger les utilisateurs connectés.",
+        "saveFailed": "Impossible d'enregistrer l'association.",
+        "columns": {
+          "user": "Utilisateur connecté",
+          "devices": "Appareils",
+          "method": "Associé par",
+          "contact": "Contact"
+        },
+        "methods": {
+          "mapped": "Association enregistrée",
+          "email": "E-mail",
+          "username": "Nom d'utilisateur",
+          "name": "Nom complet",
+          "none": "Aucune correspondance"
+        }
+      },
+      "clientChange": {
+        "title": "Déplacer les appareils de cette organisation ?",
+        "message": "{{count}} actif(s) seront déplacés vers {{client}}. Les attributions, groupes et profils de facturation du client précédent seront effacés.",
+        "confirm": "Déplacer les appareils"
+      },
+      "billingProfile": {
+        "label": "Profil de facturation",
+        "clientDefault": "Valeur par défaut du client",
+        "updateFailed": "Échec de la mise à jour du profil de facturation"
+      },
+      "errors": {
+        "invalidPeopleMode": "Ce mode de gestion des personnes n'est pas valide.",
+        "billingProfileUnavailable": "Ce profil de facturation n'est pas disponible pour ce client.",
+        "mappingNotFound": "Cette association n'existe plus. Actualisez la page et réessayez.",
+        "forbidden": "Vous n'avez pas l'autorisation de modifier cela."
       }
     },
     "sso": {

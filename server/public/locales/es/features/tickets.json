@@ -357,7 +357,8 @@
     "pastedImagesDeleteFailed_few": "No se pudieron eliminar {{count}} imágenes pegadas.",
     "pastedImagesDeleteFailed_many": "No se pudieron eliminar {{count}} imágenes pegadas.",
     "pastedImagesDeleted_few": "Se eliminaron {{count}} imágenes pegadas.",
-    "pastedImagesDeleted_many": "Se eliminaron {{count}} imágenes pegadas."
+    "pastedImagesDeleted_many": "Se eliminaron {{count}} imágenes pegadas.",
+    "sharedWorkspaceReadOnly": "Puede ver este ticket porque trata sobre un dispositivo de un espacio compartido. Solo quien lo creó puede añadir contenido."
   },
   "conversation": {
     "comments": "Comentarios",
@@ -1962,7 +1963,8 @@
       "scheduleTime": "Programar tiempo",
       "openScheduleEntry": "Abrir entrada de agenda",
       "acrossEntries_few": "en {{count}} entradas",
-      "acrossEntries_many": "en {{count}} entradas"
+      "acrossEntries_many": "en {{count}} entradas",
+      "changeLocation": "Cambiar ubicación"
     },
     "timeline": {
       "subtitle": "Respuestas, tiempo y cambios del sistema en un solo lugar",
