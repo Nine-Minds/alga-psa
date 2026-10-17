@@ -44,6 +44,12 @@ export class MigrationPlanner {
     if ((stagedCounts.assets ?? 0) > 0) {
       issues.push(...(await this.checkAssetConfiguration(migrationJobId, configuration)));
     }
+    let productSkuMatched = 0;
+    if ((stagedCounts.products ?? 0) > 0 || (stagedCounts.vendor_products ?? 0) > 0) {
+      const productChecks = await this.checkProductConfiguration(migrationJobId, configuration, stagedCounts);
+      issues.push(...productChecks.issues);
+      productSkuMatched = productChecks.skuMatchedCount;
+    }
     issues.push(...(await this.checkLocationRequirements(migrationJobId)));
     issues.push(...(await this.checkOrphanPlacement(migrationJobId, configuration, stagedCounts)));
 
@@ -54,7 +60,10 @@ export class MigrationPlanner {
       (entityType) => (stagedCounts[entityType] ?? 0) > 0
     ).map((entityType) => {
       const staged = stagedCounts[entityType] ?? 0;
-      const skipped = skipCounts[entityType] ?? 0;
+      // SKU-matched products are mapped to the existing product and left
+      // unchanged (a skip), so they are not creates. Already identity-mapped
+      // rows are excluded from skuMatchedCount, so nothing is counted twice.
+      const skipped = (skipCounts[entityType] ?? 0) + (entityType === 'products' ? productSkuMatched : 0);
       const blocked = blockedCounts[entityType] ?? 0;
       return {
         entityType,
@@ -400,6 +409,147 @@ export class MigrationPlanner {
     }
 
     return issues;
+  }
+
+  /**
+   * Dry-run checks for products and vendor price lists. Read-only apart from
+   * marking records blocked: SKU matches are reported (never created), the
+   * service type needed for NEW products is validated, and money without a
+   * currency requires a configured tenant currency.
+   */
+  private async checkProductConfiguration(
+    migrationJobId: string,
+    configuration: MigrationJobConfiguration,
+    stagedCounts: Partial<Record<AmpEntityType, number>>
+  ): Promise<{ issues: PreflightIssue[]; skuMatchedCount: number }> {
+    const issues: PreflightIssue[] = [];
+    let skuMatchedCount = 0;
+    const db = tenantDb(this.knex, this.tenant);
+    const staged = () => db.table('migration_staged_records').where({ migration_job_id: migrationJobId });
+    // payloadKey is a fixed literal (never user data). The payload side is
+    // trimmed like normalizeProductSku (JS String.trim: any whitespace); the
+    // catalog side is btrim'd exactly as findProductBySkuCore does.
+    const existingSku = (alias: string, payloadKey: 'sku' | 'product_sku') =>
+      `EXISTS (SELECT 1 FROM service_catalog sc WHERE sc.tenant = ? AND sc.item_kind = 'product' AND btrim(sc.sku) = regexp_replace(${alias}.payload ->> '${payloadKey}', '^[[:space:]]+|[[:space:]]+$', '', 'g'))`;
+
+    if ((stagedCounts.products ?? 0) > 0) {
+      const matched = await staged()
+        .where({ entity_type: 'products' })
+        .whereRaw(`COALESCE(btrim(payload ->> 'sku'), '') <> ''`)
+        .whereRaw(existingSku('migration_staged_records', 'sku'), [this.tenant])
+        // Rows already identity-mapped (a re-run) are counted as skips already.
+        .whereNotExists(function notMapped() {
+          this.select(1)
+            .from('migration_identity_mappings as m')
+            .whereRaw('m.tenant = migration_staged_records.tenant')
+            .whereRaw('m.namespace = migration_staged_records.namespace')
+            .whereRaw('m.entity_type = migration_staged_records.entity_type')
+            .whereRaw('m.source_record_id = migration_staged_records.source_record_id');
+        })
+        .orderBy('package_record_id')
+        .select('package_record_id');
+      skuMatchedCount = matched.length;
+      if (matched.length > 0) {
+        issues.push({
+          severity: 'warning',
+          code: 'PRODUCT_SKU_MATCHES_EXISTING',
+          message: `${matched.length} product(s) match an existing product by SKU; they will be mapped to it and left unchanged, not created.`,
+          entityType: 'products',
+          recordCount: matched.length,
+          sampleRecordIds: matched.slice(0, SAMPLE_LIMIT).map((row: { package_record_id: string }) => row.package_record_id),
+        });
+      }
+
+      const unmatchedRow = await staged()
+        .where({ entity_type: 'products' })
+        .whereRaw(`NOT (COALESCE(btrim(payload ->> 'sku'), '') <> '' AND ${existingSku('migration_staged_records', 'sku')})`, [this.tenant])
+        .count({ count: '*' })
+        .first();
+      const toCreate = Number(unmatchedRow?.count ?? 0);
+      const serviceTypeId = configuration.products?.serviceTypeId;
+      if (toCreate > 0 && !serviceTypeId) {
+        issues.push({
+          severity: 'blocking',
+          code: 'CONFIG_PRODUCT_SERVICE_TYPE_REQUIRED',
+          message: `${toCreate} new product(s) need a service type; choose one in Configure.`,
+          entityType: 'products',
+        });
+      } else if (serviceTypeId) {
+        const type = await db.table('service_types').where({ id: serviceTypeId, is_active: true }).first();
+        if (!type) {
+          issues.push({
+            severity: 'blocking',
+            code: 'CONFIG_PRODUCT_SERVICE_TYPE_NOT_FOUND',
+            message: 'The configured product service type does not exist or is inactive in this tenant.',
+            entityType: 'products',
+          });
+        }
+      }
+    }
+
+    if ((stagedCounts.vendor_products ?? 0) > 0) {
+      // A SKU-only offer must resolve to an existing product or to a staged one.
+      const unresolved = await this.blockRecords(
+        migrationJobId,
+        'vendor_products',
+        (query) =>
+          query
+            .whereRaw(`payload ->> 'product_package_record_id' IS NULL`)
+            .whereRaw(
+              `NOT (${existingSku('migration_staged_records', 'product_sku')} OR EXISTS (
+                SELECT 1 FROM migration_staged_records p
+                WHERE p.tenant = migration_staged_records.tenant
+                  AND p.migration_job_id = migration_staged_records.migration_job_id
+                  AND p.entity_type = 'products'
+                  AND btrim(p.payload ->> 'sku') = btrim(migration_staged_records.payload ->> 'product_sku')))`,
+              [this.tenant]
+            ),
+        { code: 'VENDOR_PRODUCT_UNRESOLVED', message: 'No existing or staged product has this product SKU.' }
+      );
+      if (unresolved.count > 0) {
+        issues.push({
+          severity: 'blocking',
+          code: 'VENDOR_PRODUCT_UNRESOLVED',
+          message: `${unresolved.count} vendor price-list row(s) reference a SKU that matches no existing or staged product.`,
+          entityType: 'vendor_products',
+          recordCount: unresolved.count,
+          sampleRecordIds: unresolved.sample,
+        });
+      }
+    }
+
+    // The appliers resolve the tenant currency whenever a currency cell is
+    // blank: every vendor offer needs a cost currency, and every product that
+    // will be created (not SKU-matched) needs one for cost, plus one for the
+    // price when it has a price. Flag exactly those rows.
+    const needsTenantCurrency = await staged()
+      .whereIn('entity_type', ['products', 'vendor_products'])
+      .where((query) =>
+        query
+          .where((q) => q.where({ entity_type: 'vendor_products' }).whereRaw(`payload ->> 'cost_currency' IS NULL`))
+          .orWhere((q) =>
+            q
+              .where({ entity_type: 'products' })
+              .whereRaw(`NOT (COALESCE(btrim(payload ->> 'sku'), '') <> '' AND ${existingSku('migration_staged_records', 'sku')})`, [this.tenant])
+              .where((qq) =>
+                qq
+                  .whereRaw(`payload ->> 'cost_currency' IS NULL`)
+                  .orWhereRaw(`payload ->> 'price_minor' IS NOT NULL AND payload ->> 'price_currency' IS NULL`)
+              )
+          )
+      )
+      .first();
+    if (needsTenantCurrency) {
+      const row = await db.table('default_billing_settings').select('default_currency_code').first();
+      if (!row?.default_currency_code?.trim()) {
+        issues.push({
+          severity: 'blocking',
+          code: 'CONFIG_TENANT_CURRENCY_MISSING',
+          message: 'Some product amounts have no currency and this tenant has no default billing currency; set one in billing settings or add a currency column.',
+        });
+      }
+    }
+    return { issues, skuMatchedCount };
   }
 
   private async checkOrphanPlacement(

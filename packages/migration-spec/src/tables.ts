@@ -13,6 +13,8 @@ export const AMP_ENTITY_TABLES = [
   'tickets',
   'ticket_comments',
   'assets',
+  'products',
+  'vendor_products',
 ] as const;
 
 export const AMP_AUXILIARY_TABLES = [
@@ -114,6 +116,30 @@ export const AMP_TABLE_COLUMNS: Record<AmpTable, readonly string[]> = {
     'model',
     'purchase_date',
   ],
+  products: [
+    ...AMP_ENTITY_IDENTITY_COLUMNS,
+    'name',
+    'sku',
+    'category_name',
+    'unit_of_measure',
+    'price_minor',
+    'price_currency',
+    'cost_minor',
+    'cost_currency',
+    'description',
+    'is_active',
+  ],
+  vendor_products: [
+    ...AMP_ENTITY_IDENTITY_COLUMNS,
+    'product_package_record_id',
+    'product_sku',
+    'vendor_name',
+    'vendor_sku',
+    'unit_cost_minor',
+    'cost_currency',
+    'lead_time_days',
+    'is_preferred',
+  ],
   external_identifiers: [
     'package_record_id',
     'entity_type',
@@ -167,6 +193,13 @@ export const AMP_ENTITY_REFERENCES: Record<
     { column: 'organization_package_record_id', targetTable: 'organizations', required: false },
     { column: 'location_package_record_id', targetTable: 'locations', required: false },
   ],
+  products: [],
+  // product_package_record_id is optional at the reference level because a row
+  // may instead carry product_sku (matched against the tenant catalog at apply
+  // time); the validator enforces "one of the two".
+  vendor_products: [
+    { column: 'product_package_record_id', targetTable: 'products', required: false },
+  ],
 };
 
 export const AMP_DIAGNOSTIC_SEVERITIES = ['info', 'warning'] as const;
@@ -178,3 +211,12 @@ export const AMP_DIAGNOSTIC_SEVERITIES = ['info', 'warning'] as const;
  * data and the contacts applier resolves it against existing tenant clients.
  */
 export const AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY = '__contact_client_name';
+
+/**
+ * Reserved `extension_json` key set by spreadsheet producers when a money
+ * column was parsed against an assumed currency (the tenant default) because
+ * the row's currency cell was blank. The value is the ISO 4217 code whose
+ * minor-unit exponent was used. The applier refuses to apply the amount if the
+ * tenant currency at apply time differs, since the minor-unit scale could differ.
+ */
+export const AMP_ASSUMED_CURRENCY_EXTENSION_KEY = '__assumed_currency';
