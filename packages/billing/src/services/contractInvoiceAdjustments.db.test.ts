@@ -3458,8 +3458,10 @@ describe('accounting adjustment export matrix', () => {
     const realm = ['xero', 'quickbooks_online'].includes(adapterType) ? 'test-realm' : null;
     for (const [kind, local, external] of [['service', miscId, 'MISC'], ['service', serviceId, 'RECURRING'], ['discount', AUTOMATIC_DISCOUNT_MAPPING_ID, 'DISCOUNT'], ['client', clientId, 'CUSTOMER']]) {
       await db('tenant_external_entity_mappings').where({ tenant, integration_type: adapterType, alga_entity_type: kind, alga_entity_id: local }).delete();
+      // A QuickBooks Desktop service/discount mapping's value is the income account; every line also names an item.
+      const desktopItem = adapterType === 'quickbooks_desktop' && kind !== 'client' ? { qbdItem: external } : {};
       await db('tenant_external_entity_mappings').insert({ tenant, integration_type: adapterType, alga_entity_type: kind, alga_entity_id: local,
-        external_entity_id: external, external_realm_id: realm, sync_status: 'manual_link', metadata: JSON.stringify({ xeroTargetKind: 'account', accountCode: external }) });
+        external_entity_id: external, external_realm_id: realm, sync_status: 'manual_link', metadata: JSON.stringify({ xeroTargetKind: 'account', accountCode: external, ...desktopItem }) });
     }
     // The fixed-plan parent is intentionally serviceless. Export its canonical
     // allocated children exactly once while preserving the batch parent identity.
@@ -3555,6 +3557,10 @@ describe('accounting adjustment export matrix', () => {
         const rows = content.split('\n').filter(row => /^(TRNS|SPL)\t/.test(row));
         expect(Math.round(rows.reduce((sum, row) => sum + Number(row.split('\t')[6]), 0) * 100)).toBe(0);
         expect(Number(rows[0].split('\t')[6]) * 100).toBeCloseTo(net);
+        // Every invoice line names an item (INVITEM is the 12th SPL column), never an account-only line.
+        const splRows = rows.filter(row => row.startsWith('SPL\t'));
+        expect(splRows.length).toBeGreaterThan(0);
+        expect(splRows.every(row => row.split('\t')[11].trim().length > 0)).toBe(true);
       } else {
         const { parseCSV } = await import('@alga-psa/core');
         const rows = parseCSV(content, { header: true });

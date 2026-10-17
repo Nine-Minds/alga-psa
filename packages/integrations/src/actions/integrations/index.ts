@@ -71,6 +71,7 @@ export {
   forceFinalizeXeroDisconnect
 } from './xeroActions';
 export { getXeroCsvSettings, saveXeroCsvSettings } from './xeroCsvActions';
+export { getQuickBooksDesktopSettings, updateQuickBooksDesktopSettings } from './quickBooksDesktopActions';
 export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
