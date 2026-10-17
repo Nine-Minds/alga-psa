@@ -1,0 +1,1039 @@
+[
+  {
+    "id": "T001",
+    "description": "capabilities service: PSA user with asset:read and asset:update \u2192 assets=true, assetAudit=true",
+    "implemented": false,
+    "commitGroup": "capabilities",
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "capabilities service: PSA user with asset:read only \u2192 assets=true, assetAudit=false",
+    "implemented": false,
+    "commitGroup": "capabilities",
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "capabilities service: algadesk product \u2192 assets=false and assetAudit=false even with asset permissions",
+    "implemented": false,
+    "commitGroup": "capabilities",
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "parseFeatureCapabilities: payload without assets/assetAudit keys \u2192 both false; payload with assets:'yes' (non-boolean) \u2192 false",
+    "implemented": false,
+    "commitGroup": "capabilities",
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DrawerNavigator.gating: assets=false hides Assets tab; assets=true shows it; projects=true shows Projects tab",
+    "implemented": false,
+    "commitGroup": "capabilities",
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "routeRegistryFilesystemInventory contract test passes with the asset-audits route group present",
+    "implemented": false,
+    "commitGroup": "capabilities",
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "listProjects builds the query string with only the provided filters and parses pagination.total",
+    "implemented": false,
+    "commitGroup": "projects-api",
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "createProjectTask posts to the phase route and rejects (local validation error) when project_status_mapping_id is missing",
+    "implemented": false,
+    "commitGroup": "projects-api",
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "groupTasksByPhase orders phases by wbs_code, counts closed mappings as done, buckets orphan tasks under Other",
+    "implemented": false,
+    "commitGroup": "projects-api",
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "groupTasksByPhase with zero tasks returns every phase with 0/0",
+    "implemented": false,
+    "commitGroup": "projects-api",
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "projectProgress returns ratio 0 for empty and 0.5 for 2 of 4",
+    "implemented": false,
+    "commitGroup": "projects-api",
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "statusTone maps all six project statuses and falls back to neutral for unknown",
+    "implemented": false,
+    "commitGroup": "projects-api",
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "ProjectsScreen renders rows from a mocked listProjects response with client name and status badge text",
+    "implemented": false,
+    "commitGroup": "projects-list",
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "ProjectsScreen requests page 2 when the list end is reached and appends rows",
+    "implemented": false,
+    "commitGroup": "projects-list",
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "typing in the search box issues one request with project_name after the debounce window",
+    "implemented": false,
+    "commitGroup": "projects-list",
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "default filter request excludes completed and cancelled statuses",
+    "implemented": false,
+    "commitGroup": "projects-list",
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "'Managed by me' adds assigned_to=<current user id> to the request",
+    "implemented": false,
+    "commitGroup": "projects-list",
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "API error renders the error row and Retry re-issues the request",
+    "implemented": false,
+    "commitGroup": "projects-list",
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "tapping a row navigates to ProjectDetail with projectId",
+    "implemented": false,
+    "commitGroup": "projects-list",
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "ProjectDetailScreen renders name, client, status and manager from mocked responses",
+    "implemented": false,
+    "commitGroup": "project-detail",
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "tapping the client row navigates to ClientDetail with clientId",
+    "implemented": false,
+    "commitGroup": "project-detail",
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "phase section header shows '2 of 5 done' when two tasks have closed mappings",
+    "implemented": false,
+    "commitGroup": "project-detail",
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "a task with a past due date and open mapping renders the due date with the danger style; a closed one does not",
+    "implemented": false,
+    "commitGroup": "project-detail",
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "tapping a task navigates to ProjectTaskDetail with its taskId",
+    "implemented": false,
+    "commitGroup": "project-detail",
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "closed tasks are hidden until 'Show 2 completed' is pressed",
+    "implemented": false,
+    "commitGroup": "project-detail",
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "project with empty phases renders the no-phases empty state",
+    "implemented": false,
+    "commitGroup": "project-detail",
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "returning from a task edit triggers a reload (cache invalidated)",
+    "implemented": false,
+    "commitGroup": "project-detail",
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "CreateTaskModal Save stays disabled with an empty name and enables after typing",
+    "implemented": false,
+    "commitGroup": "task-edit",
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Save calls createProjectTask with task_name, phase id and the first status mapping id; the new task appears in the phase list",
+    "implemented": false,
+    "commitGroup": "task-edit",
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "create failure shows an error toast and keeps the modal open with the typed values",
+    "implemented": false,
+    "commitGroup": "task-edit",
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Assignee row opens AgentPickerModal; selecting a user calls updateProjectTask with assigned_to",
+    "implemented": false,
+    "commitGroup": "task-edit",
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Unassign sends assigned_to null",
+    "implemented": false,
+    "commitGroup": "task-edit",
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Due date Clear sends due_date null",
+    "implemented": false,
+    "commitGroup": "task-edit",
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "a failed update rolls the displayed value back and shows a toast",
+    "implemented": false,
+    "commitGroup": "task-edit",
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "'Open project' navigates to ProjectDetail with the task's project id",
+    "implemented": false,
+    "commitGroup": "task-edit",
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "after a 403 on PUT the edit rows render read-only",
+    "implemented": false,
+    "commitGroup": "task-edit",
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "listAssets serialises filters and omits undefined ones; listAssetStatuses parses kind",
+    "implemented": false,
+    "commitGroup": "assets-list",
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "AssetsScreen renders rows with asset tag and location from a mocked response",
+    "implemented": false,
+    "commitGroup": "assets-list",
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "location picker is disabled until a client is picked and resets when the client changes",
+    "implemented": false,
+    "commitGroup": "assets-list",
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "default status filter excludes archived kinds when statuses load",
+    "implemented": false,
+    "commitGroup": "assets-list",
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "status badge shows 'In stock' for slug in_stock from the registry and 'Custom Thing' for an unknown slug custom_thing",
+    "implemented": false,
+    "commitGroup": "assets-list",
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Audit header action is absent when features.assetAudit is false",
+    "implemented": false,
+    "commitGroup": "assets-list",
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "row tap navigates to AssetDetail with the assetId",
+    "implemented": false,
+    "commitGroup": "assets-list",
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "recent audits row renders counts and opens AuditSummary with the audit id",
+    "implemented": false,
+    "commitGroup": "assets-list",
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "migration up/down runs on the local EE database; assets gains the two columns; both new tables are distributed",
+    "implemented": false,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "start snapshots only assets of the client with matching location_id and status in the list; location null matches assets with null location",
+    "implemented": false,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "start with no matching assets returns expected_count 0 and an empty items list",
+    "implemented": false,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "markItem twice for the same asset leaves one row and does not change marked_at of the first",
+    "implemented": false,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "markItem for an asset outside the snapshot stores result unexpected",
+    "implemented": false,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "markItem for an asset of another tenant returns 404",
+    "implemented": false,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "complete fills missing = expected minus present and sets present/missing/unexpected counts",
+    "implemented": false,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "complete writes an asset_history row per present and missing asset with change_type audit and sets last_audited_at",
+    "implemented": false,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "complete is atomic: a failing history insert leaves the audit in_progress with no partial rows",
+    "implemented": false,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "cancel on a completed audit returns 409",
+    "implemented": false,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F045"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "POST /api/v1/asset-audits with x-api-key of a user lacking asset:update \u2192 403; with asset:update \u2192 201",
+    "implemented": false,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "POST items on a completed audit \u2192 409",
+    "implemented": false,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "GET /api/v1/asset-audits lists audits for the tenant only (cross-tenant audit not returned)",
+    "implemented": false,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "OpenAPI contract test includes the asset-audits routes and the registry contract test passes",
+    "implemented": false,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "Start is disabled without a client; choosing a client enables it and shows the expected count from the dry count request",
+    "implemented": false,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "status chips default to deployable and pending kinds from the registry",
+    "implemented": false,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "session renders Remaining with expected items and Present empty from a mocked audit",
+    "implemented": false,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "a scan resolving to an expected asset calls markItem with method scan and moves the row to Present",
+    "implemented": false,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "a scan resolving to an already-present asset shows the info toast and issues no request",
+    "implemented": false,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "a scan resolving to an asset outside the snapshot calls markItem with result unexpected and lists it under Unexpected",
+    "implemented": false,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F053"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "a scan resolving to none opens RegisterAssetModal; successful registration marks the new asset present with method register",
+    "implemented": false,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "Mark present calls markItem with method manual; Unmark calls unmarkItem and moves the row back",
+    "implemented": false,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "the search field filters Remaining rows by tag and serial",
+    "implemented": false,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "Finish with 2 remaining shows the confirmation naming 2; confirming calls complete and navigates to AuditSummary",
+    "implemented": false,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "Finish with 0 remaining completes without a confirmation",
+    "implemented": false,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "mount on an audit whose status is completed redirects to AuditSummary",
+    "implemented": false,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F057"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "summary renders missing rows with Create ticket opening CreateTicketModal preselecting the asset",
+    "implemented": false,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "AssetDetail shows Last audited when the payload has last_audited_at and hides it otherwise",
+    "implemented": false,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F059"
+    ]
+  },
+  {
+    "id": "T073",
+    "description": "session screen offline: scan and mark show the offline toast and do not mutate local state",
+    "implemented": false,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F051",
+      "F052",
+      "F055"
+    ]
+  },
+  {
+    "id": "T074",
+    "description": "HomeScreen renders all five cards from mocked responses and collapses Today when there are no entries",
+    "implemented": false,
+    "commitGroup": "home",
+    "featureIds": [
+      "F061"
+    ]
+  },
+  {
+    "id": "T075",
+    "description": "one card's request failing renders that card's error row while the others render data",
+    "implemented": false,
+    "commitGroup": "home",
+    "featureIds": [
+      "F061"
+    ]
+  },
+  {
+    "id": "T076",
+    "description": "DrawerNavigator lists HomeTab first and uses it as initialRouteName",
+    "implemented": false,
+    "commitGroup": "home",
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T077",
+    "description": "My tickets request includes assigned_to=<user id>, is_open=true, sort=latest_activity_at, limit=5",
+    "implemented": false,
+    "commitGroup": "home",
+    "featureIds": [
+      "F063"
+    ]
+  },
+  {
+    "id": "T078",
+    "description": "'View all' navigates to TicketsTab with the assignee filter set to the current user",
+    "implemented": false,
+    "commitGroup": "home",
+    "featureIds": [
+      "F063"
+    ]
+  },
+  {
+    "id": "T079",
+    "description": "Today card requests the local-day window and sorts entries by start",
+    "implemented": false,
+    "commitGroup": "home",
+    "featureIds": [
+      "F064"
+    ]
+  },
+  {
+    "id": "T080",
+    "description": "tapping a ticket entry opens the ticket entry sheet; tapping an interaction entry opens the interaction sheet",
+    "implemented": false,
+    "commitGroup": "home",
+    "featureIds": [
+      "F064"
+    ]
+  },
+  {
+    "id": "T081",
+    "description": "Activities card excludes done items and includes overdue ones",
+    "implemented": false,
+    "commitGroup": "home",
+    "featureIds": [
+      "F065"
+    ]
+  },
+  {
+    "id": "T082",
+    "description": "Running timer card is hidden without an active timer and shows elapsed with one",
+    "implemented": false,
+    "commitGroup": "home",
+    "featureIds": [
+      "F066"
+    ]
+  },
+  {
+    "id": "T083",
+    "description": "Scan quick action is absent when features.inventory is false",
+    "implemented": false,
+    "commitGroup": "home",
+    "featureIds": [
+      "F067"
+    ]
+  },
+  {
+    "id": "T084",
+    "description": "Start timer quick action is absent while a timer runs",
+    "implemented": false,
+    "commitGroup": "home",
+    "featureIds": [
+      "F067"
+    ]
+  },
+  {
+    "id": "T085",
+    "description": "offline: cards render cached data and the offline banner; no requests issued",
+    "implemented": false,
+    "commitGroup": "home",
+    "featureIds": [
+      "F068"
+    ]
+  },
+  {
+    "id": "T086",
+    "description": "search icon navigates to SearchScreen",
+    "implemented": false,
+    "commitGroup": "home",
+    "featureIds": [
+      "F069"
+    ]
+  },
+  {
+    "id": "T087",
+    "description": "search() sends types as a comma-separated list and parses results and nextCursor",
+    "implemented": false,
+    "commitGroup": "search",
+    "featureIds": [
+      "F071"
+    ]
+  },
+  {
+    "id": "T088",
+    "description": "routeForResult maps each supported type to the right screen and params; unknown type \u2192 null",
+    "implemented": false,
+    "commitGroup": "search",
+    "featureIds": [
+      "F072"
+    ]
+  },
+  {
+    "id": "T089",
+    "description": "searchableTypes omits asset without features.assets and project types without features.projects",
+    "implemented": false,
+    "commitGroup": "search",
+    "featureIds": [
+      "F073"
+    ]
+  },
+  {
+    "id": "T090",
+    "description": "typing 'fl' issues one request after the debounce; typing 'f' issues none",
+    "implemented": false,
+    "commitGroup": "search",
+    "featureIds": [
+      "F074"
+    ]
+  },
+  {
+    "id": "T091",
+    "description": "results render grouped in the fixed order; 'More' on clients fetches with types=client and the group's cursor",
+    "implemented": false,
+    "commitGroup": "search",
+    "featureIds": [
+      "F074"
+    ]
+  },
+  {
+    "id": "T092",
+    "description": "tapping a ticket result navigates to TicketDetail",
+    "implemented": false,
+    "commitGroup": "search",
+    "featureIds": [
+      "F074"
+    ]
+  },
+  {
+    "id": "T093",
+    "description": "a completed search is added to recent searches; Clear empties them; sign-out clears storage",
+    "implemented": false,
+    "commitGroup": "search",
+    "featureIds": [
+      "F075"
+    ]
+  },
+  {
+    "id": "T094",
+    "description": "a response for an older query arriving after a newer one is ignored",
+    "implemented": false,
+    "commitGroup": "search",
+    "featureIds": [
+      "F076"
+    ]
+  },
+  {
+    "id": "T095",
+    "description": "linking: alga://project/<uuid> resolves to ProjectDetail with projectId lowercased; /msp/projects/<uuid>?taskId=<uuid> still resolves to ProjectTaskDetail",
+    "implemented": false,
+    "commitGroup": "linking",
+    "featureIds": [
+      "F078"
+    ]
+  },
+  {
+    "id": "T096",
+    "description": "linking: /msp/assets/<uuid> resolves to AssetDetail",
+    "implemented": false,
+    "commitGroup": "linking",
+    "featureIds": [
+      "F079"
+    ]
+  },
+  {
+    "id": "T097",
+    "description": "linking.security: a project id that is not a uuid is rejected",
+    "implemented": false,
+    "commitGroup": "linking",
+    "featureIds": [
+      "F078"
+    ]
+  },
+  {
+    "id": "T098",
+    "description": "push payload {projectId} routes to ProjectDetail; {assetId} to AssetDetail; {taskId} still to ProjectTaskDetail",
+    "implemented": false,
+    "commitGroup": "linking",
+    "featureIds": [
+      "F080"
+    ]
+  },
+  {
+    "id": "T099",
+    "description": "navStatePersistence restore keeps AuditSession route with its auditId (server-authoritative) and drops transient params",
+    "implemented": false,
+    "commitGroup": "linking",
+    "featureIds": [
+      "F081"
+    ]
+  },
+  {
+    "id": "T100",
+    "description": "app.json carries 2.0.0 / 39 / 39",
+    "implemented": false,
+    "commitGroup": "release",
+    "featureIds": [
+      "F082"
+    ]
+  },
+  {
+    "id": "T101",
+    "description": "ee/mobile: npm run lint, npm run typecheck, npm run test all exit 0",
+    "implemented": false,
+    "commitGroup": "release",
+    "featureIds": [
+      "F084"
+    ]
+  },
+  {
+    "id": "T102",
+    "description": "no new t() key without an entry in its namespace (i18n unresolved keys script)",
+    "implemented": false,
+    "commitGroup": "release",
+    "featureIds": [
+      "F084"
+    ]
+  },
+  {
+    "id": "T103",
+    "description": "server unit + contract suites green after regeneration (OpenAPI drift test)",
+    "implemented": false,
+    "commitGroup": "release",
+    "featureIds": [
+      "F085"
+    ]
+  },
+  {
+    "id": "T104",
+    "description": "same key twice \u2192 second call returns the stored 201 body and creates no second comment",
+    "implemented": false,
+    "commitGroup": "outbox-server",
+    "featureIds": [
+      "F087"
+    ]
+  },
+  {
+    "id": "T105",
+    "description": "same key from a different user creates a new record",
+    "implemented": false,
+    "commitGroup": "outbox-server",
+    "featureIds": [
+      "F087"
+    ]
+  },
+  {
+    "id": "T106",
+    "description": "a key older than 24h is treated as new",
+    "implemented": false,
+    "commitGroup": "outbox-server",
+    "featureIds": [
+      "F087"
+    ]
+  },
+  {
+    "id": "T107",
+    "description": "the first request failing with 422 stores nothing, so a retry with the same key runs the handler again",
+    "implemented": false,
+    "commitGroup": "outbox-server",
+    "featureIds": [
+      "F087"
+    ]
+  },
+  {
+    "id": "T108",
+    "description": "time entry and interaction routes honour the header identically (contract test over the three routes)",
+    "implemented": false,
+    "commitGroup": "outbox-server",
+    "featureIds": [
+      "F088"
+    ]
+  },
+  {
+    "id": "T109",
+    "description": "enqueue persists and list returns items in createdAt order after a simulated restart",
+    "implemented": false,
+    "commitGroup": "outbox-mobile",
+    "featureIds": [
+      "F089"
+    ]
+  },
+  {
+    "id": "T110",
+    "description": "posting a comment while offline enqueues it and shows the outbox toast; posting online with a 422 does not enqueue",
+    "implemented": false,
+    "commitGroup": "outbox-mobile",
+    "featureIds": [
+      "F090"
+    ]
+  },
+  {
+    "id": "T111",
+    "description": "runner sends items in order with their Idempotency-Key, removes successes, marks a 409 item failed and continues, stops on a network error",
+    "implemented": false,
+    "commitGroup": "outbox-mobile",
+    "featureIds": [
+      "F091"
+    ]
+  },
+  {
+    "id": "T112",
+    "description": "runner never runs two replays concurrently (reconnect + resume at once)",
+    "implemented": false,
+    "commitGroup": "outbox-mobile",
+    "featureIds": [
+      "F091"
+    ]
+  },
+  {
+    "id": "T113",
+    "description": "ticket comment list shows the pending item with the badge and removes it after a successful replay",
+    "implemented": false,
+    "commitGroup": "outbox-mobile",
+    "featureIds": [
+      "F092"
+    ]
+  },
+  {
+    "id": "T114",
+    "description": "Outbox Retry re-queues a failed item; Discard removes it after confirmation",
+    "implemented": false,
+    "commitGroup": "outbox-mobile",
+    "featureIds": [
+      "F093"
+    ]
+  },
+  {
+    "id": "T115",
+    "description": "sign-out with 2 pending items shows the warning; Discard clears storage",
+    "implemented": false,
+    "commitGroup": "outbox-mobile",
+    "featureIds": [
+      "F094"
+    ]
+  }
+]
