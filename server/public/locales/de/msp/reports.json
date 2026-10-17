@@ -276,18 +276,13 @@
       },
       "bucketUsage": {
         "title": "Nutzung der Stundenkontingente",
-        "description": "Verwendung der Stundenkontingente überwachen und Überziehungen erkennen",
+        "description": "Behalten Sie die Nutzung von Pauschstunden im Blick und erkennen Sie Überschreitungen. Vorausbezahlte Stundenblöcke (Vertrags- und Ad-hoc-Blöcke) werden mit ihrem Verbrauch aufgelistet.",
         "empty": "Keine vertragsbasierten Kontingente gefunden"
       },
       "profitability": {
         "title": "Rentabilitätsbericht",
         "description": "Kunden-, Vertrags- und Ticketmarge auf Basis der konfigurierten internen Kostensätze.",
         "empty": "Keine Rentabilitätsdaten verfügbar"
-      },
-      "hourBlockUsage": {
-        "title": "Nutzung vorausbezahlter Stundenblöcke",
-        "description": "Verfolgung des Verbrauchs ausgegebener vorausbezahlter Stundenblöcke (vertragsgebunden und ad-hoc) und ihrer Auslastung.",
-        "empty": "Keine vorausbezahlten Stundenblöcke ausgegeben"
       }
     },
     "table": {
@@ -315,7 +310,7 @@
       "hourlyRate": "Satz / Std.",
       "expirationDate": "Läuft ab",
       "neverExpires": "Nie",
-      "adhocBlock": "Ad-hoc"
+      "adhocBlock": "Ad hoc"
     },
     "statusValues": {
       "active": "Aktiv",
@@ -426,6 +421,11 @@
         "allAgreements": "Alle Verträge",
         "currency": "Währung"
       }
+    },
+    "columnsMenu": {
+      "label": "Spalten",
+      "title": "Spalten",
+      "reset": "Alle Spalten anzeigen"
     }
   },
   "contractPerformance": {

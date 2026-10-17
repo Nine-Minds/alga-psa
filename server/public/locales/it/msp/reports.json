@@ -276,18 +276,13 @@
       },
       "bucketUsage": {
         "title": "Utilizzo delle ore a pacchetto",
-        "description": "Monitorare l'uso delle ore a pacchetto, individuando situazioni di eccedenza",
+        "description": "Monitora l'utilizzo delle ore a pacchetto e individua le situazioni di eccedenza. I blocchi di ore prepagate (contrattuali e occasionali) sono elencati con il relativo consumo.",
         "empty": "Nessun contratto basato su pacchetti trovato"
       },
       "profitability": {
         "title": "Report di redditività",
         "description": "Margine per cliente, contratto e ticket in base alle tariffe di costo interne configurate.",
         "empty": "Nessun dato di redditività disponibile"
-      },
-      "hourBlockUsage": {
-        "title": "Utilizzo dei blocchi di ore anticipate",
-        "description": "Monitora il consumo dei blocchi di ore anticipate emessi (da contratto o ad hoc) e il loro utilizzo.",
-        "empty": "Nessun blocco di ore anticipate emesso"
       }
     },
     "table": {
@@ -426,6 +421,11 @@
         "allAgreements": "Tutti i contratti",
         "currency": "Valuta"
       }
+    },
+    "columnsMenu": {
+      "label": "Colonne",
+      "title": "Colonne",
+      "reset": "Mostra tutte le colonne"
     }
   },
   "contractPerformance": {

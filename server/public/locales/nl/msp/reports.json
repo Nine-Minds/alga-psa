@@ -276,18 +276,13 @@
       },
       "bucketUsage": {
         "title": "Gebruik van urenbundels",
-        "description": "Gebruik van urenbundels bewaken en overgebruik herkennen",
+        "description": "Volg het gebruik van bucketuren en signaleer overschrijdingen. Voorkochte urenblokken (op contract en ad-hoc) worden vermeld met hun verbruik.",
         "empty": "Geen op bundels gebaseerde contracten gevonden"
       },
       "profitability": {
         "title": "Winstgevendheidsrapport",
         "description": "Marge per klant, contract en ticket op basis van geconfigureerde interne kostentarieven.",
         "empty": "Geen winstgevendheidsgegevens beschikbaar"
-      },
-      "hourBlockUsage": {
-        "title": "Gebruik vooruitbetaalde urenblokken",
-        "description": "Volg de opname van uitgegeven vooruitbetaalde urenblokken (contractgebonden en ad-hoc) en het gebruik.",
-        "empty": "Geen vooruitbetaalde urenblokken uitgegeven"
       }
     },
     "table": {
@@ -426,6 +421,11 @@
         "allAgreements": "Alle contracten",
         "currency": "Valuta"
       }
+    },
+    "columnsMenu": {
+      "label": "Kolommen",
+      "title": "Kolommen",
+      "reset": "Alle kolommen weergeven"
     }
   },
   "contractPerformance": {

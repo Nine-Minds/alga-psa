@@ -276,18 +276,13 @@
       },
       "bucketUsage": {
         "title": "Nyttjandegrad för timpottstimmar",
-        "description": "Följ förbrukningen av timpottstimmar och identifiera överskridanden",
+        "description": "Övervaka användningen av buckettimmar och identifiera överskridanden. Förbetald timblock (avtals- och ad hoc) listas med sin förbrukning.",
         "empty": "Inga avtal med timpotter hittades"
       },
       "profitability": {
         "title": "Lönsamhetsrapport",
         "description": "Marginal per kund, avtal och ärende utifrån konfigurerade interna arbetskostnadssatser.",
         "empty": "Inga lönsamhetsdata tillgängliga"
-      },
-      "hourBlockUsage": {
-        "title": "Användning av förbetalda timblock",
-        "description": "Följ förbrukningen av utfärdade förbetalda timblock (avtalsutfärdade och enstaka) och deras utnyttjande.",
-        "empty": "Inga förbetalda timblock har utfärdats"
       }
     },
     "table": {
@@ -426,6 +421,11 @@
       "fallbacks": {
         "untitledTicket": "Ärende utan titel"
       }
+    },
+    "columnsMenu": {
+      "label": "Kolumner",
+      "title": "Kolumner",
+      "reset": "Visa alla kolumner"
     }
   },
   "contractPerformance": {

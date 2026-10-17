@@ -276,18 +276,13 @@
       },
       "bucketUsage": {
         "title": "Wykorzystanie puli godzin",
-        "description": "Monitoruj wykorzystanie puli godzin i identyfikuj przekroczenia",
+        "description": "Monitoruj wykorzystanie godzin w pakietach i identyfikuj przekroczenia. Opłacone z góry bloki godzin (kontraktowe i doraźne) są wymienione wraz z ich zużyciem.",
         "empty": "Nie znaleziono kontraktów opartych na puli godzin"
       },
       "profitability": {
         "title": "Raport rentowności",
         "description": "Marża według klienta, umowy i zgłoszenia na podstawie skonfigurowanych wewnętrznych stawek kosztów.",
         "empty": "Brak danych o rentowności"
-      },
-      "hourBlockUsage": {
-        "title": "Wykorzystanie przedpłaconych bloków godzin",
-        "description": "Śledź zużycie wydanych przedpłaconych bloków godzin (z kontraktu i doraźnych) oraz ich wykorzystanie.",
-        "empty": "Nie wydano przedpłaconych bloków godzin"
       }
     },
     "table": {
@@ -426,6 +421,11 @@
         "allAgreements": "Wszystkie umowy",
         "currency": "Waluta"
       }
+    },
+    "columnsMenu": {
+      "label": "Kolumny",
+      "title": "Kolumny",
+      "reset": "Pokaż wszystkie kolumny"
     }
   },
   "contractPerformance": {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
@@ -14,9 +14,19 @@ import {
   TrendingUp,
   Clock,
   Building2,
-  AlertCircle
+  AlertCircle,
+  Settings2,
+  RotateCcw
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+} from '@alga-psa/ui/components/DropdownMenu';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import {
   getContractRevenueReport,
   getContractExpirationReport,
@@ -56,11 +66,34 @@ const statusLabel = (value: string, t: Translator): string => (
       : value.charAt(0).toUpperCase() + value.slice(1)
 );
 
+const hourBlockStatusLabel = (value: string, t: Translator): string => (
+  value === 'active'
+    ? t('contractReports.statusValues.active', { defaultValue: 'Active' })
+    : value === 'expired'
+      ? t('contractReports.statusValues.expired', { defaultValue: 'Expired' })
+      : value === 'voided'
+        ? t('contractReports.statusValues.voided', { defaultValue: 'Voided' })
+        : value.charAt(0).toUpperCase() + value.slice(1)
+);
+
 const yesNoLabel = (value: boolean, t: Translator): string => (
   value
     ? t('contractReports.statusValues.yes', { defaultValue: 'Yes' })
     : t('contractReports.statusValues.no', { defaultValue: 'No' })
 );
+
+// Combined Bucket Hours Utilization row: weighted-bucket pool rows plus issued
+// prepaid hour-block rows, discriminated by row_kind. Pool rows render dashes
+// for block-only fields and vice versa.
+type BucketUsageRow = Omit<BucketUsage, 'contract_name' | 'overage_hours'> & Partial<HourBlockUsage> & {
+  contract_name: string | null;
+  overage_hours?: number;
+  row_kind: 'pool' | 'block';
+  id: string;
+};
+
+// User preference: column ids the user hid in the Bucket Hours Utilization table.
+const BUCKET_USAGE_COLUMNS_PREF_KEY = 'billing.reports.bucketUsage.columns';
 
 const ContractReports: React.FC = () => {
   const { t } = useTranslation('msp/reports');
@@ -71,7 +104,6 @@ const ContractReports: React.FC = () => {
   const [expirationData, setExpirationData] = useState<ContractExpiration[]>([]);
   const [bucketUsageData, setBucketUsageData] = useState<BucketUsage[]>([]);
   const [hourBlockUsageData, setHourBlockUsageData] = useState<HourBlockUsage[]>([]);
-  const [hourBlockPage, setHourBlockPage] = useState(1);
   const [summary, setSummary] = useState<ContractReportSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -252,17 +284,103 @@ const ContractReports: React.FC = () => {
     }
   ];
 
-  // Bucket Usage Columns
-  const bucketUsageColumns: ColumnDefinition<BucketUsage>[] = [
-    {
-      title: t('contractReports.table.contract', { defaultValue: 'Contract' }),
-      dataIndex: 'contract_name',
-      render: (value: string) => <span className="font-medium">{value}</span>
-    },
+  // Combined Bucket Hours Utilization rows: weighted pools first, then issued
+  // prepaid blocks. 'id' is what DataTable uses as the stable row key.
+  const bucketUsageRows: BucketUsageRow[] = useMemo(() => {
+    const poolRows: BucketUsageRow[] = bucketUsageData.map((row) => ({
+      ...row,
+      row_kind: 'pool' as const,
+      id: `pool-${row.client_id ?? ''}-${row.contract_name}`
+    }));
+    const blockRows: BucketUsageRow[] = hourBlockUsageData.map((row) => ({
+      ...row,
+      contract_name: row.contract_name ?? null,
+      overage_hours: undefined,
+      row_kind: 'block' as const,
+      id: `block-${row.block_id}`
+    }));
+    return [...poolRows, ...blockRows];
+  }, [bucketUsageData, hourBlockUsageData]);
+
+  const hasPoolRows = bucketUsageData.length > 0;
+  const hasBlockRows = hourBlockUsageData.length > 0;
+
+  // User-chosen hidden columns, persisted server-side per user (like the client
+  // list view preferences). Hidden-by-content is applied on top of this.
+  const { value: userHiddenColumns, setValue: setUserHiddenColumns } = useUserPreference<string[]>(
+    BUCKET_USAGE_COLUMNS_PREF_KEY,
+    { defaultValue: [], localStorageKey: BUCKET_USAGE_COLUMNS_PREF_KEY, debounceMs: 300 }
+  );
+
+  const userHidden = useMemo(() => new Set(userHiddenColumns ?? []), [userHiddenColumns]);
+
+  // Columns the menu offers, in table order, with what content currently forces.
+  const bucketUsageColumnOptions = useMemo(() => [
+    { id: 'client_name', titleKey: 'contractReports.table.client', fallback: 'Client', locked: true },
+    { id: 'contract_name', titleKey: 'contractReports.table.contract', fallback: 'Contract', locked: true },
+    { id: 'service_name', titleKey: 'contractReports.table.service', fallback: 'Service', locked: !hasBlockRows },
+    { id: 'total_hours', titleKey: 'contractReports.table.totalHours', fallback: 'Total Hours', locked: true },
+    { id: 'used_hours', titleKey: 'contractReports.table.usedHours', fallback: 'Used Hours', locked: true },
+    { id: 'remaining_hours', titleKey: 'contractReports.table.remaining', fallback: 'Remaining', locked: true },
+    { id: 'utilization_percentage', titleKey: 'contractReports.table.utilization', fallback: 'Utilization', locked: true },
+    { id: 'overage_hours', titleKey: 'contractReports.table.overage', fallback: 'Overage', locked: !hasPoolRows },
+    { id: 'hourly_rate', titleKey: 'contractReports.table.hourlyRate', fallback: 'Rate / hr', locked: !hasBlockRows },
+    { id: 'expiration_date', titleKey: 'contractReports.table.expirationDate', fallback: 'Expires', locked: !hasBlockRows },
+    { id: 'status', titleKey: 'contractReports.table.status', fallback: 'Status', locked: !hasBlockRows },
+  ], [hasPoolRows, hasBlockRows]);
+
+  const bucketUsageVisibility = useMemo(() => {
+    const visibility: Record<string, boolean> = {};
+    for (const option of bucketUsageColumnOptions) {
+      visibility[option.id] = !option.locked && !userHidden.has(option.id);
+    }
+    return visibility;
+  }, [bucketUsageColumnOptions, userHidden]);
+
+  const toggleBucketUsageColumn = (columnId: string, visible: boolean) => {
+    setUserHiddenColumns((prev) => {
+      const set = new Set(prev ?? []);
+      if (visible) set.delete(columnId); else set.add(columnId);
+      return Array.from(set);
+    });
+  };
+
+  const blockStatusBadge = (value: string) => (
+    <Badge
+      variant={
+        value === 'active' ? 'success' :
+        value === 'expired' ? 'error' :
+        'default-muted'
+      }
+    >
+      {hourBlockStatusLabel(value, t)}
+    </Badge>
+  );
+
+  const dash = <span className="text-muted-foreground">{t('units.dash', { defaultValue: '—' })}</span>;
+
+  // Combined Bucket Hours Utilization Columns (weighted pools + prepaid blocks)
+  const bucketUsageColumns: ColumnDefinition<BucketUsageRow>[] = [
     {
       title: t('contractReports.table.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
       render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />
+    },
+    {
+      title: t('contractReports.table.contract', { defaultValue: 'Contract' }),
+      dataIndex: 'contract_name',
+      render: (value: string | null, record) => record.row_kind === 'block' && !value
+        ? <span className="text-muted-foreground">{t('contractReports.table.adhocBlock', { defaultValue: 'Ad-hoc' })}</span>
+        : value
+          ? <span className="font-medium">{value}</span>
+          : dash
+    },
+    {
+      title: t('contractReports.table.service', { defaultValue: 'Service' }),
+      dataIndex: 'service_name',
+      render: (value: string | undefined, record) => record.row_kind === 'block' && value
+        ? <span className="font-medium">{value}</span>
+        : dash
     },
     {
       title: t('contractReports.table.totalHours', { defaultValue: 'Total Hours' }),
@@ -303,94 +421,34 @@ const ContractReports: React.FC = () => {
     {
       title: t('contractReports.table.overage', { defaultValue: 'Overage' }),
       dataIndex: 'overage_hours',
-      render: (value: number) => (
+      render: (value: number | undefined) => value == null ? dash : (
         <span className={value > 0 ? 'text-red-600 font-semibold' : 'text-muted-foreground'}>
           {value > 0
             ? `+${value} ${t('units.hoursShort', { defaultValue: 'hrs' })}`
             : t('units.dash', { defaultValue: '—' })}
         </span>
       )
-    }
-  ];
-
-  // Hour Block Usage Columns (prepaid blocks: ad-hoc and contract-issued)
-  const hourBlockStatusLabel = (value: string): string => {
-    if (value === 'active') return t('contractReports.statusValues.active', { defaultValue: 'Active' });
-    if (value === 'expired') return t('contractReports.statusValues.expired', { defaultValue: 'Expired' });
-    if (value === 'voided') return t('contractReports.statusValues.voided', { defaultValue: 'Voided' });
-    return value.charAt(0).toUpperCase() + value.slice(1);
-  };
-
-  const hourBlockUsageColumns: ColumnDefinition<HourBlockUsage>[] = [
-    {
-      title: t('contractReports.table.client', { defaultValue: 'Client' }),
-      dataIndex: 'client_name',
-      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />
-    },
-    {
-      title: t('contractReports.table.service', { defaultValue: 'Service' }),
-      dataIndex: 'service_name',
-      render: (value: string) => <span className="font-medium">{value}</span>
-    },
-    {
-      title: t('contractReports.table.contract', { defaultValue: 'Contract' }),
-      dataIndex: 'contract_name',
-      render: (value: string | null) => value ?? <span className="text-muted-foreground">{t('contractReports.table.adhocBlock', { defaultValue: 'Ad-hoc' })}</span>
-    },
-    {
-      title: t('contractReports.table.totalHours', { defaultValue: 'Total Hours' }),
-      dataIndex: 'total_hours',
-      render: (value: number) => `${value} ${t('units.hoursShort', { defaultValue: 'hrs' })}`
-    },
-    {
-      title: t('contractReports.table.usedHours', { defaultValue: 'Used Hours' }),
-      dataIndex: 'used_hours',
-      render: (value: number) => `${value} ${t('units.hoursShort', { defaultValue: 'hrs' })}`
-    },
-    {
-      title: t('contractReports.table.remaining', { defaultValue: 'Remaining' }),
-      dataIndex: 'remaining_hours',
-      render: (value: number) => (
-        <span className={value === 0 ? 'text-red-600 font-semibold' : ''}>
-          {value} {t('units.hoursShort', { defaultValue: 'hrs' })}
-        </span>
-      )
-    },
-    {
-      title: t('contractReports.table.utilization', { defaultValue: 'Utilization' }),
-      dataIndex: 'utilization_percentage',
-      render: (value: number) => (
-        <div className="flex items-center gap-2">
-          <div className="flex-1 bg-[rgb(var(--color-border-200))] rounded-full h-2 max-w-[100px]">
-            <div
-              className={`h-2 rounded-full ${value > 100 ? 'bg-destructive' : value > 80 ? 'bg-warning' : 'bg-success'}`}
-              style={{ width: `${Math.min(value, 100)}%` }}
-            />
-          </div>
-          <span className="text-sm font-medium">{value}{t('units.percent', { defaultValue: '%' })}</span>
-        </div>
-      )
     },
     {
       title: t('contractReports.table.hourlyRate', { defaultValue: 'Rate / hr' }),
       dataIndex: 'hourly_rate',
-      render: (value: number, record) => formatCents(value, record.currency_code)
+      render: (value: number | undefined, record) => record.row_kind === 'block' && value != null
+        ? formatCents(value, record.currency_code ?? tenantCurrency)
+        : dash
     },
     {
       title: t('contractReports.table.expirationDate', { defaultValue: 'Expires' }),
       dataIndex: 'expiration_date',
-      render: (value: string | null) => value
-        ? formatDate(value)
-        : <span className="text-muted-foreground">{t('contractReports.table.neverExpires', { defaultValue: 'Never' })}</span>
+      render: (value: string | null | undefined, record) => record.row_kind !== 'block'
+        ? dash
+        : value
+          ? formatDate(value)
+          : <span className="text-muted-foreground">{t('contractReports.table.neverExpires', { defaultValue: 'Never' })}</span>
     },
     {
       title: t('contractReports.table.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
-      render: (value: string) => (
-        <Badge variant="secondary" className={value === 'active' ? 'border-green-300 text-green-800' : 'border-[rgb(var(--color-border-300))] text-muted-foreground'}>
-          {hourBlockStatusLabel(value)}
-        </Badge>
-      )
+      render: (value: string | undefined, record) => record.row_kind === 'block' && value ? blockStatusBadge(value) : dash
     }
   ];
 
@@ -433,34 +491,30 @@ const ContractReports: React.FC = () => {
     { key: 'autoRenew', header: t('contractReports.table.autoRenew', { defaultValue: 'Auto-Renew' }), render: (row) => yesNoLabel(row.auto_renew, t) },
   ];
 
-  const bucketUsagePrintColumns: PrintableTableColumn<BucketUsage>[] = [
-    { key: 'contract', header: t('contractReports.table.contract', { defaultValue: 'Contract' }), render: (row) => row.contract_name },
-    { key: 'client', header: t('contractReports.table.client', { defaultValue: 'Client' }), render: (row) => row.client_name },
-    { key: 'totalHours', header: t('contractReports.table.totalHours', { defaultValue: 'Total Hours' }), render: (row) => `${row.total_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}` },
-    { key: 'usedHours', header: t('contractReports.table.usedHours', { defaultValue: 'Used Hours' }), render: (row) => `${row.used_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}` },
-    { key: 'remaining', header: t('contractReports.table.remaining', { defaultValue: 'Remaining' }), render: (row) => `${row.remaining_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}` },
-    { key: 'utilization', header: t('contractReports.table.utilization', { defaultValue: 'Utilization' }), render: (row) => `${row.utilization_percentage}${t('units.percent', { defaultValue: '%' })}` },
+  // Keys match the screen table's column ids so one visibility map drives both.
+  const bucketUsagePrintColumns: PrintableTableColumn<BucketUsageRow>[] = [
+    { key: 'client_name', header: t('contractReports.table.client', { defaultValue: 'Client' }), render: (row) => row.client_name },
+    { key: 'contract_name', header: t('contractReports.table.contract', { defaultValue: 'Contract' }), render: (row) => row.contract_name ?? (row.row_kind === 'block' ? t('contractReports.table.adhocBlock', { defaultValue: 'Ad-hoc' }) : t('units.dash', { defaultValue: '—' })) },
+    { key: 'service_name', header: t('contractReports.table.service', { defaultValue: 'Service' }), render: (row) => row.row_kind === 'block' ? (row.service_name ?? t('units.dash', { defaultValue: '—' })) : t('units.dash', { defaultValue: '—' }) },
+    { key: 'total_hours', header: t('contractReports.table.totalHours', { defaultValue: 'Total Hours' }), render: (row) => `${row.total_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}` },
+    { key: 'used_hours', header: t('contractReports.table.usedHours', { defaultValue: 'Used Hours' }), render: (row) => `${row.used_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}` },
+    { key: 'remaining_hours', header: t('contractReports.table.remaining', { defaultValue: 'Remaining' }), render: (row) => `${row.remaining_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}` },
+    { key: 'utilization_percentage', header: t('contractReports.table.utilization', { defaultValue: 'Utilization' }), render: (row) => `${row.utilization_percentage}${t('units.percent', { defaultValue: '%' })}` },
     {
-      key: 'overage',
+      key: 'overage_hours',
       header: t('contractReports.table.overage', { defaultValue: 'Overage' }),
-      render: (row) => (row.overage_hours > 0
+      render: (row) => (row.overage_hours != null && row.overage_hours > 0
         ? `+${row.overage_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}`
         : t('units.dash', { defaultValue: '—' })),
     },
+    { key: 'hourly_rate', header: t('contractReports.table.hourlyRate', { defaultValue: 'Rate / hr' }), render: (row) => row.row_kind === 'block' && row.hourly_rate != null ? formatCents(row.hourly_rate, row.currency_code ?? tenantCurrency) : t('units.dash', { defaultValue: '—' }) },
+    { key: 'expiration_date', header: t('contractReports.table.expirationDate', { defaultValue: 'Expires' }), render: (row) => row.row_kind !== 'block' ? t('units.dash', { defaultValue: '—' }) : row.expiration_date ? formatDate(row.expiration_date) : t('contractReports.table.neverExpires', { defaultValue: 'Never' }) },
+    { key: 'status', header: t('contractReports.table.status', { defaultValue: 'Status' }), render: (row) => row.row_kind === 'block' && row.status ? hourBlockStatusLabel(row.status, t) : t('units.dash', { defaultValue: '—' }) },
   ];
 
-  const hourBlockUsagePrintColumns: PrintableTableColumn<HourBlockUsage>[] = [
-    { key: 'client', header: t('contractReports.table.client', { defaultValue: 'Client' }), render: (row) => row.client_name },
-    { key: 'service', header: t('contractReports.table.service', { defaultValue: 'Service' }), render: (row) => row.service_name },
-    { key: 'contract', header: t('contractReports.table.contract', { defaultValue: 'Contract' }), render: (row) => row.contract_name ?? t('contractReports.table.adhocBlock', { defaultValue: 'Ad-hoc' }) },
-    { key: 'totalHours', header: t('contractReports.table.totalHours', { defaultValue: 'Total Hours' }), render: (row) => `${row.total_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}` },
-    { key: 'usedHours', header: t('contractReports.table.usedHours', { defaultValue: 'Used Hours' }), render: (row) => `${row.used_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}` },
-    { key: 'remaining', header: t('contractReports.table.remaining', { defaultValue: 'Remaining' }), render: (row) => `${row.remaining_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}` },
-    { key: 'utilization', header: t('contractReports.table.utilization', { defaultValue: 'Utilization' }), render: (row) => `${row.utilization_percentage}${t('units.percent', { defaultValue: '%' })}` },
-    { key: 'hourlyRate', header: t('contractReports.table.hourlyRate', { defaultValue: 'Rate / hr' }), render: (row) => formatCents(row.hourly_rate, row.currency_code) },
-    { key: 'expiration', header: t('contractReports.table.expirationDate', { defaultValue: 'Expires' }), render: (row) => row.expiration_date ? formatDate(row.expiration_date) : t('contractReports.table.neverExpires', { defaultValue: 'Never' }) },
-    { key: 'status', header: t('contractReports.table.status', { defaultValue: 'Status' }), render: (row) => hourBlockStatusLabel(row.status) },
-  ];
+  const visibleBucketUsagePrintColumns = bucketUsagePrintColumns.filter(
+    (column) => bucketUsageVisibility[column.key] !== false
+  );
 
   const printSummaryMetrics = [
     { label: t('contractReports.summary.totalMRR.title', { defaultValue: 'Fixed MRR' }), value: currencyAmountsLabel(summary?.fixedMrrByCurrency) },
@@ -770,21 +824,78 @@ const ContractReports: React.FC = () => {
               <h3 className="text-lg font-semibold">
                 {t('contractReports.sections.bucketUsage.title', { defaultValue: 'Bucket Hours Utilization' })}
               </h3>
+              <div className="ml-auto">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      id="bucket-usage-columns-trigger"
+                      variant="outline"
+                      className="flex items-center gap-1.5 h-[38px]"
+                    >
+                      <Settings2 className="h-4 w-4" />
+                      {t('contractReports.columnsMenu.label', { defaultValue: 'Columns' })}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64 p-0">
+                    <div className="px-3 py-2 border-b border-gray-100 dark:border-[rgb(var(--color-border-200))]">
+                      <div className="text-[11px] font-semibold uppercase tracking-wide text-[rgb(var(--color-text-400))]">
+                        {t('contractReports.columnsMenu.title', { defaultValue: 'Columns' })}
+                      </div>
+                    </div>
+                    <div className="max-h-[260px] overflow-y-auto py-1">
+                      {bucketUsageColumnOptions.map((option) => {
+                        const checked = bucketUsageVisibility[option.id] !== false;
+                        return (
+                          <div key={option.id} className="flex items-center gap-2 px-3 py-1.5 text-sm">
+                            <Checkbox
+                              id={`bucket-usage-column-toggle-${option.id}`}
+                              checked={checked}
+                              disabled={option.locked}
+                              onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                                toggleBucketUsageColumn(option.id, event.target.checked)
+                              }
+                              className="m-0"
+                              skipRegistration
+                            />
+                            <span className={`truncate ${option.locked ? 'text-muted-foreground' : ''}`}>
+                              {t(option.titleKey, { defaultValue: option.fallback })}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {(userHiddenColumns?.length ?? 0) > 0 && (
+                      <div className="border-t border-gray-100 dark:border-[rgb(var(--color-border-200))] py-1">
+                        <button
+                          type="button"
+                          id="bucket-usage-columns-reset"
+                          onClick={() => setUserHiddenColumns([])}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[rgb(var(--color-border-50))]"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+                          {t('contractReports.columnsMenu.reset', { defaultValue: 'Show all columns' })}
+                        </button>
+                      </div>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
               {t('contractReports.sections.bucketUsage.description', {
-                defaultValue: 'Monitor bucket hours usage and identify overage situations',
+                defaultValue: 'Monitor bucket hours usage and identify overage situations. Prepaid hour blocks (contract-issued and ad-hoc) are listed with their burn-down.',
               })}
             </p>
-            {bucketUsageData.length === 0 ? (
+            {bucketUsageRows.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">
                 {t('contractReports.sections.bucketUsage.empty', { defaultValue: 'No bucket-based contracts found' })}
               </p>
             ) : (
               <DataTable
                 id="bucket-usage-table"
-                data={bucketUsageData}
+                data={bucketUsageRows}
                 columns={bucketUsageColumns}
+                columnVisibility={bucketUsageVisibility}
                 pagination={true}
                 currentPage={currentPage}
                 onPageChange={setCurrentPage}
@@ -800,52 +911,10 @@ const ContractReports: React.FC = () => {
               defaultValue: 'Monitor bucket hours usage and identify overage situations',
             }),
             <PrintableTable
-              rows={bucketUsageData}
-              columns={bucketUsagePrintColumns}
-              getRowKey={(row) => `${row.contract_name}-${row.client_id ?? ''}`}
+              rows={bucketUsageRows}
+              columns={visibleBucketUsagePrintColumns}
+              getRowKey={(row) => row.id}
               emptyMessage={t('contractReports.sections.bucketUsage.empty', { defaultValue: 'No bucket-based contracts found' })}
-            />
-          )}
-          <Card className="p-6 mt-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Clock className="h-5 w-5 text-blue-600" />
-              <h3 className="text-lg font-semibold">
-                {t('contractReports.sections.hourBlockUsage.title', { defaultValue: 'Prepaid Hour Block Usage' })}
-              </h3>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              {t('contractReports.sections.hourBlockUsage.description', {
-                defaultValue: 'Track burn-down of issued prepaid hour blocks (contract-issued and ad-hoc) and their utilization.',
-              })}
-            </p>
-            {hourBlockUsageData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                {t('contractReports.sections.hourBlockUsage.empty', { defaultValue: 'No prepaid hour blocks issued' })}
-              </p>
-            ) : (
-              <DataTable
-                id="hour-block-usage-table"
-                data={hourBlockUsageData}
-                columns={hourBlockUsageColumns}
-                pagination={true}
-                currentPage={hourBlockPage}
-                onPageChange={setHourBlockPage}
-                pageSize={pageSize}
-                onItemsPerPageChange={handlePageSizeChange}
-              />
-            )}
-          </Card>
-          {printRoot(
-            'hour-block-usage-print',
-            t('contractReports.sections.hourBlockUsage.title', { defaultValue: 'Prepaid Hour Block Usage' }),
-            t('contractReports.sections.hourBlockUsage.description', {
-              defaultValue: 'Track burn-down of issued prepaid hour blocks (contract-issued and ad-hoc) and their utilization.',
-            }),
-            <PrintableTable
-              rows={hourBlockUsageData}
-              columns={hourBlockUsagePrintColumns}
-              getRowKey={(row) => row.block_id}
-              emptyMessage={t('contractReports.sections.hourBlockUsage.empty', { defaultValue: 'No prepaid hour blocks issued' })}
             />
           )}
         </TabsContent>

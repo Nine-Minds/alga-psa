@@ -276,18 +276,13 @@
       },
       "bucketUsage": {
         "title": "Bucket Hours Utilization",
-        "description": "Monitor bucket hours usage and identify overage situations",
+        "description": "Monitor bucket hours usage and identify overage situations. Prepaid hour blocks (contract-issued and ad-hoc) are listed with their burn-down.",
         "empty": "No bucket-based contracts found"
       },
       "profitability": {
         "title": "Profitability Report",
         "description": "Client, agreement, and ticket margin using configured internal labor cost rates.",
         "empty": "No profitability data available"
-      },
-      "hourBlockUsage": {
-        "title": "Prepaid Hour Block Usage",
-        "description": "Track burn-down of issued prepaid hour blocks (contract-issued and ad-hoc) and their utilization.",
-        "empty": "No prepaid hour blocks issued"
       }
     },
     "table": {
@@ -426,6 +421,11 @@
       "fallbacks": {
         "untitledTicket": "Untitled ticket"
       }
+    },
+    "columnsMenu": {
+      "label": "Columns",
+      "title": "Columns",
+      "reset": "Show all columns"
     }
   },
   "contractPerformance": {

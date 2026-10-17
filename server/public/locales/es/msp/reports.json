@@ -276,18 +276,13 @@
       },
       "bucketUsage": {
         "title": "Utilización de horas de paquete",
-        "description": "Supervisar el uso de horas de paquete e identificar situaciones de exceso",
+        "description": "Supervise el uso de horas en bloque e identifique situaciones de sobrepago. Los bloques de horas prepago (de contrato y puntuales) se listan con su consumo.",
         "empty": "No se encontraron contratos basados en paquetes"
       },
       "profitability": {
         "title": "Informe de rentabilidad",
         "description": "Margen por cliente, acuerdo y ticket según las tarifas de costo internas configuradas.",
         "empty": "No hay datos de rentabilidad disponibles"
-      },
-      "hourBlockUsage": {
-        "title": "Uso de bloques de horas prepagadas",
-        "description": "Siga el consumo de los bloques de horas prepagadas emitidos (de contrato o puntuales) y su utilización.",
-        "empty": "No se han emitido bloques de horas prepagadas"
       }
     },
     "table": {
@@ -426,6 +421,11 @@
         "allAgreements": "Todos los acuerdos",
         "currency": "Moneda"
       }
+    },
+    "columnsMenu": {
+      "label": "Columnas",
+      "title": "Columnas",
+      "reset": "Mostrar todas las columnas"
     }
   },
   "contractPerformance": {
