@@ -871,7 +871,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           {!hideInternalTab && audiences && (
             <div className="flex items-center space-x-2">
               <Label htmlFor={`${compId}-audience-select`}>
-                {audiences.controlLabel ?? t('conversation.audience', 'Audience')}
+                {audiences.controlLabel ?? t('namedConversations.audience', 'Visible to')}
               </Label>
               <CustomSelect
                 id={`${compId}-audience-select`}
