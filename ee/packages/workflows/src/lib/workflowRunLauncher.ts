@@ -125,13 +125,14 @@ export const isWorkflowRunLaunchError = (error: unknown): error is WorkflowRunLa
 
 async function resolveVersionRecord(
   knex: Knex,
+  tenant: string,
   workflowId: string,
   workflowVersion?: number | null
 ): Promise<WorkflowDefinitionVersionRecord | null> {
   if (workflowVersion) {
-    return WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(knex, workflowId, workflowVersion);
+    return WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(knex, workflowId, workflowVersion, tenant);
   }
-  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflowId);
+  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflowId, tenant);
   return versions[0] ?? null;
 }
 
@@ -145,7 +146,7 @@ export async function recordFailedWorkflowRunLaunch(
   request: WorkflowRunLaunchFailureRequest
 ): Promise<WorkflowRunLaunchResult> {
   if (request.triggerFireKey) {
-    const existingRun = await WorkflowRunModelV2.getByTriggerFireKey(knex, request.triggerFireKey);
+    const existingRun = await WorkflowRunModelV2.getByTriggerFireKey(knex, request.triggerFireKey, request.tenantId);
     if (existingRun) {
       return {
         runId: existingRun.run_id,
@@ -212,7 +213,12 @@ export async function launchPublishedWorkflowRun(
     }
   }
 
-  const versionRecord = await resolveVersionRecord(knex, request.workflowId, request.workflowVersion);
+  // Every lookup below is tenant-scoped so Citus routes it to one shard; an
+  // unscoped workflow_id/run_id lookup fans out to every shard and opens
+  // internal connections against the shared connection budget.
+  const tenant = workflow.tenant;
+
+  const versionRecord = await resolveVersionRecord(knex, tenant, request.workflowId, request.workflowVersion);
   if (!versionRecord) {
     throw new Error('Workflow has no published versions');
   }
@@ -252,7 +258,7 @@ export async function launchPublishedWorkflowRun(
   }
 
   if (request.triggerFireKey) {
-    const existingRun = await WorkflowRunModelV2.getByTriggerFireKey(knex, request.triggerFireKey);
+    const existingRun = await WorkflowRunModelV2.getByTriggerFireKey(knex, request.triggerFireKey, tenant);
     if (existingRun) {
       return {
         runId: existingRun.run_id,
@@ -285,7 +291,7 @@ export async function launchPublishedWorkflowRun(
       throw error;
     }
 
-    const existingRun = await WorkflowRunModelV2.getByTriggerFireKey(knex, request.triggerFireKey);
+    const existingRun = await WorkflowRunModelV2.getByTriggerFireKey(knex, request.triggerFireKey, tenant);
     if (!existingRun) {
       throw error;
     }
@@ -310,7 +316,7 @@ export async function launchPublishedWorkflowRun(
     await WorkflowRunModelV2.update(knex, runId, {
       temporal_workflow_id: temporalStart.workflowId,
       temporal_run_id: temporalStart.firstExecutionRunId,
-    });
+    }, tenant);
   } catch (error) {
     await WorkflowRunModelV2.update(knex, runId, {
       status: 'FAILED',
@@ -322,7 +328,7 @@ export async function launchPublishedWorkflowRun(
           ? { name: error.name, stack: error.stack }
           : { raw: error }
       }
-    });
+    }, tenant);
     throw new WorkflowRunLaunchError({ runId, workflowVersion: versionRecord.version, cause: error });
   }
 
