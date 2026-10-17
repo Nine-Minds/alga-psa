@@ -23,13 +23,13 @@ Accounting Exports**.
   import and you upload it. Nothing leaves AlgaPSA on its own, and you enter the
   QuickBooks-side identifier for each mapping by hand.
 - **QuickBooks Desktop (IIF).** AlgaPSA writes an IIF file for QuickBooks
-  Desktop's **File → Utilities → Import → IIF Files**. It shares the QuickBooks
-  CSV mappings and adds the account names an IIF invoice needs. See
+  Desktop's **File → Utilities → Import → IIF Files**. It has its own mappings
+  and account settings on the QuickBooks Desktop (IIF) setup card. See
   [Configure QuickBooks Desktop (IIF)](#configure-quickbooks-desktop-iif).
 
 You can keep CSV configured while you use QuickBooks Online. They store their
-mappings separately and do not interfere. QuickBooks Desktop uses the same
-mappings as QuickBooks CSV.
+mappings separately and do not interfere. QuickBooks Desktop also stores its
+mappings separately.
 
 ## Which Intuit app you connect through
 
@@ -211,11 +211,12 @@ Select **QuickBooks Desktop (IIF)** at **Settings → Integrations → Accountin
 1. **IIF export settings.** Enter these names exactly as they appear in your
    Chart of Accounts and Item List:
    - **Accounts Receivable account**: defaults to `Accounts Receivable`.
-   - **Default income account**: required unless every item mapping sets its
-     own.
-   - **Sales tax liability account**: defaults to `Sales Tax Payable`.
-   - **Default sales tax item**: used for taxed invoices whose tax region has
-     no Tax Codes mapping.
+   - **Default income account**: used for items mapped from an export prompt,
+     and for any Services or Discounts mapping without its own account.
+   - **Sales tax liability account**: defaults to `Sales Tax Payable`. Used
+     unless a tax region's Tax Codes mapping names another account.
+   - **Default sales tax item**: used for taxed invoices whose Tax Codes
+     mapping does not name a sales tax item.
    - **New product item type**: the QuickBooks item type an export uses when it
      creates a new item for an AlgaPSA product. The default is **Non-inventory
      Part**: AlgaPSA stays the inventory system of record and QuickBooks only
@@ -223,23 +224,24 @@ Select **QuickBooks Desktop (IIF)** at **Settings → Integrations → Accountin
      inventory asset and cost of goods sold accounts. AlgaPSA's stock receipts
      are not exported, so QuickBooks on-hand quantities will go negative unless
      you also enter stock there.
-2. **Mappings.** The Clients, Items / Services, Tax Codes, Payment Terms, and
-   Discounts tabs are the same mappings QuickBooks CSV uses. Enter QuickBooks
-   Desktop list names.
-   - Every client, service, product and discount on an exported invoice needs
-     a mapping. You don't have to set them all up in advance: the export
-     prompts for anything missing (see
-     [Export invoices and import tax back](#export-invoices-and-import-tax-back)).
-   - On the **Tax Codes** tab, enter each region's QuickBooks Desktop **sales
-     tax item or group name** in the QuickBooks Tax Code field. Regions without
-     a mapping use the default sales tax item.
-   - Unmapped payment terms are left blank.
-3. **Per-item overrides.** Optional. In the mapping metadata editor, add:
-   - `{"qbdIncomeAccount": "Account name"}` to an Items / Services or Discounts
-     mapping, to post that item to a different income account.
-   - `{"qbdSalesTaxItem": "Item name"}` to a Tax Codes mapping, if the same
-     mapping also serves QuickBooks CSV and its tax code field must hold the
-     QuickBooks Online code. The metadata wins for Desktop.
+2. **Mappings.** All QuickBooks Desktop mappings are on the same card. Enter
+   QuickBooks Desktop list names exactly as they appear in your company file:
+   - **Clients**: the QuickBooks Desktop customer each client is invoiced as.
+   - **Items / Services** and **Discounts**: the income account the line posts
+     to, and the **Desktop item name** it uses. The item is required: every
+     invoice line names a QuickBooks item, so lines carry a quantity and rate,
+     reduce inventory, and appear in item reports. Several services can share
+     an account or an item.
+   - **Tax Codes**: each region's sales tax liability account, and optionally
+     its **sales tax item or group**. Regions without an item use the default
+     sales tax item.
+   - **Payment Terms**: the QuickBooks Desktop terms name. Unmapped payment
+     terms are left blank.
+
+   Every client, service, product and discount on an exported invoice needs a
+   mapping with an item. You don't have to set them all up in advance: the
+   export prompts for anything missing (see
+   [Export invoices and import tax back](#export-invoices-and-import-tax-back)).
 
 Each invoice becomes one QuickBooks invoice. Its lines come from the mapped
 items, and it carries one sales tax line for the tax AlgaPSA calculated.
@@ -251,15 +253,17 @@ external tax export without a tax line and keep their taxable flags.
 ## Export invoices and import tax back
 
 Go to **Billing → Accounting Exports** to create an export batch and run it.
-For QuickBooks CSV and QuickBooks Desktop, running the batch downloads the file.
+For QuickBooks CSV and QuickBooks Desktop, download the file from the batch
+details once the batch has run.
 AlgaPSA validates the batch first. A batch missing mappings
 moves to `needs_attention` and lists what to map; add the mappings and run it
 again.
 
 For QuickBooks CSV and QuickBooks Desktop, a batch that stops on unmapped
-clients, services, products or discounts opens a prompt instead. You can also
-reopen it with **Resolve unmapped items** in the batch details. For each entry,
-choose:
+clients, services, products or discounts opens a prompt instead. For QuickBooks
+Desktop this includes services and discounts whose mapping has no item name
+yet. You can also reopen it with **Resolve unmapped items** in the batch
+details. For each entry, choose:
 
 - **Create new**: add it to QuickBooks under the name shown, which you can edit.
   For QuickBooks Desktop, the IIF file defines the new customer (with its

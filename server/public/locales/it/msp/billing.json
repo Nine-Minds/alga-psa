@@ -495,7 +495,7 @@
     },
     "unmapped": {
       "title": "Elementi QuickBooks non mappati",
-      "descriptionDesktop": "Questi elementi non hanno ancora una mappatura QuickBooks. Creali come nuove voci (il file IIF li aggiungerà a QuickBooks Desktop) oppure collegali a una voce QuickBooks esistente con esattamente lo stesso nome. Le scelte vengono salvate come mappature, quindi le prossime esportazioni non lo chiederanno più.",
+      "descriptionDesktop": "Questi elementi richiedono un cliente o un articolo QuickBooks Desktop prima di poter essere esportati. Creali come nuove voci (il file IIF li aggiungerà a QuickBooks Desktop) o collegali a una voce QuickBooks esistente con esattamente lo stesso nome. Le tue scelte vengono salvate come mappature QuickBooks Desktop, quindi le esportazioni future non lo chiederanno di nuovo.",
       "descriptionCsv": "Questi elementi non hanno ancora una mappatura QuickBooks. Esportali con il nome indicato (QuickBooks aggiunge i nuovi nomi durante l'importazione del CSV) oppure collegali a una voce QuickBooks esistente con esattamente lo stesso nome. Le scelte vengono salvate come mappature, quindi le prossime esportazioni non lo chiederanno più.",
       "permissionNotice": "Per salvare le mappature QuickBooks serve la capacità di gestione delle mappature. Chiedi a un amministratore oppure mappa questi elementi dalle impostazioni di QuickBooks.",
       "kinds": {
@@ -518,7 +518,9 @@
       "toast": {
         "saved": "Mappature QuickBooks salvate",
         "saveError": "Impossibile salvare le mappature QuickBooks"
-      }
+      },
+      "postsTo": "Registrato su {{account}}",
+      "postsToDefault": "Registrato sul conto ricavi predefinito"
     }
   },
   "templateRenderer": {
@@ -773,7 +775,8 @@
         "nameTakenByClient": "\"{{qbName}}\" è già mappato a un altro cliente, quindi non può essere usato anche per \"{{algaName}}\". Scegli un altro nome QuickBooks o modifica la mappatura esistente nelle mappature QuickBooks.",
         "nameTakenByItem": "\"{{qbName}}\" è già mappato a un altro articolo, quindi non può essere usato anche per \"{{algaName}}\". Scegli un altro nome QuickBooks o modifica la mappatura esistente nelle mappature QuickBooks.",
         "unsupportedBatch": "Questo batch non è un'esportazione QuickBooks Desktop o QuickBooks CSV.",
-        "nameTakenConcurrently": "Uno di questi nomi QuickBooks è appena stato mappato a un'altra voce. Aggiorna l'elenco e scegli un altro nome."
+        "nameTakenConcurrently": "Uno di questi nomi QuickBooks è appena stato mappato a un'altra voce. Aggiorna l'elenco e scegli un altro nome.",
+        "desktopIncomeAccountRequired": "Imposta il conto ricavi predefinito nelle impostazioni di QuickBooks Desktop prima di mappare articoli da un’esportazione."
       }
     },
     "vendorBill": {

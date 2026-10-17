@@ -24,31 +24,7 @@ import {
 import { QuickBooksUnmappedItemsDialog } from './QuickBooksUnmappedItemsDialog';
 import { useAccountingCapabilities } from '@alga-psa/auth/hooks/useAccountingCapabilities';
 
-type ExportFile = { filename: string; contentType: string; content: string };
-
 const UNMAPPED_ERROR_CODES = new Set(['missing_client_mapping', 'missing_service_mapping', 'missing_discount_mapping']);
-
-/**
- * File-mode adapters (QuickBooks Desktop IIF, QuickBooks CSV) return the
- * generated file in the delivery result; hand it to the browser so executing
- * the batch actually yields the import file.
- */
-function downloadExportFiles(result: { metadata?: Record<string, unknown> } | null | undefined): void {
-  const files = result?.metadata?.files;
-  if (!Array.isArray(files)) return;
-  for (const file of files as ExportFile[]) {
-    if (!file || typeof file.content !== 'string' || typeof file.filename !== 'string') continue;
-    const blob = new Blob([file.content], { type: file.contentType || 'application/octet-stream' });
-    const url = window.URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = file.filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    window.URL.revokeObjectURL(url);
-  }
-}
 
 type AccountingExportStatus =
   | 'pending'
@@ -468,7 +444,6 @@ export default function AccountingExportsTab(): React.JSX.Element {
       toast.success(t('accountingExports.toast.executing', {
         defaultValue: 'Batch execution started',
       }));
-      downloadExportFiles(result);
       await loadBatches();
       await loadBatchDetail(batchId);
     } catch (e) {

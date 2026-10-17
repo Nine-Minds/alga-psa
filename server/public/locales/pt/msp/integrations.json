@@ -133,13 +133,22 @@
         }
       },
       "adjustmentMappings": {
-        "desktopServices": "Contas de serviços Desktop",
-        "desktopDiscounts": "Descontos Desktop",
         "desktopAccount": "Nome da conta de receitas Desktop",
         "description": "Associe descontos e créditos antes de exportar. A associação pertence a esta empresa contabilística.",
         "add": "Adicionar associação",
         "remove": "Remover associação",
-        "removeConfirm": "Remover esta associação contabilística?"
+        "removeConfirm": "Remover esta associação contabilística?",
+        "desktopTaxAccount": "Nome da conta de imposto sobre vendas Desktop",
+        "desktopCustomer": "Nome do cliente Desktop",
+        "desktopTerms": "Nome das condições Desktop",
+        "descriptionTaxCodes": "Cada região fiscal indica o item ou grupo de imposto sobre vendas cobrado pelo QuickBooks Desktop e a conta de passivo em que é lançado.",
+        "descriptionServices": "Cada serviço indica o item do QuickBooks Desktop usado pelas suas linhas de fatura e a conta de receita em que são lançadas.",
+        "descriptionClients": "O cliente do QuickBooks Desktop com o qual cada cliente é faturado. Clientes não mapeados bloqueiam a exportação.",
+        "descriptionPaymentTerms": "As condições do QuickBooks Desktop impressas em cada fatura. Condições não mapeadas ficam em branco.",
+        "desktopItem": "Nome do item Desktop",
+        "desktopItemHelp": "O item exatamente como aparece na lista de itens do QuickBooks Desktop. Cada linha de fatura indica um item, por isso as exportações ficam bloqueadas até que seja definido.",
+        "desktopSalesTaxItem": "Item ou grupo de imposto sobre vendas",
+        "desktopSalesTaxItemHelp": "Deixe em branco para usar o item de imposto sobre vendas padrão das configurações do QuickBooks Desktop."
       }
     },
     "calendar": {
@@ -4068,8 +4077,6 @@
         "loading": "Carregando configurações do QuickBooks Desktop...",
         "savedMessage": "Configurações salvas com sucesso",
         "save": "Salvar configurações",
-        "sharedMappingsNote": "Os mapeamentos de clientes, itens, códigos de imposto, condições de pagamento e descontos são compartilhados com a integração QuickBooks CSV.",
-        "metadataHelp": "Substituições por item: adicione {\"qbdIncomeAccount\": \"Nome da conta\"} a um mapeamento de Itens / Serviços ou Descontos, ou {\"qbdSalesTaxItem\": \"Nome do item\"} a um mapeamento de Códigos de imposto, usando o editor de metadados do mapeamento.",
         "connectionsPermissionNotice": "Você pode visualizar as configurações do QuickBooks Desktop, mas alterá-las exige a capacidade de gerenciar conexões. Peça a um administrador para concedê-la.",
         "errors": {
           "load": "Falha ao carregar as configurações do QuickBooks Desktop",
@@ -4087,11 +4094,11 @@
           "arAccount": "Conta de contas a receber",
           "arAccountHelp": "A conta a receber em que cada fatura é lançada.",
           "defaultIncomeAccount": "Conta de receita padrão",
-          "defaultIncomeAccountHelp": "Usada para linhas de fatura cujo mapeamento não tem metadados \"qbdIncomeAccount\". Obrigatória, a menos que todos os mapeamentos definam uma.",
+          "defaultIncomeAccountHelp": "A conta de receita para itens mapeados a partir de uma exportação e para qualquer mapeamento de Serviços ou Descontos sem conta.",
           "salesTaxPayableAccount": "Conta de imposto sobre vendas a pagar",
-          "salesTaxPayableAccountHelp": "A conta em que a linha de imposto sobre vendas é lançada.",
+          "salesTaxPayableAccountHelp": "A conta em que a linha de imposto sobre vendas é lançada, a menos que o mapeamento de códigos fiscais da região indique outra.",
           "defaultSalesTaxItem": "Item de imposto sobre vendas padrão",
-          "defaultSalesTaxItemHelp": "Item ou grupo de imposto sobre vendas para faturas tributadas cuja região fiscal não tem mapeamento em Códigos de imposto.",
+          "defaultSalesTaxItemHelp": "Item ou grupo de imposto sobre vendas para faturas tributadas cujo mapeamento de códigos fiscais não indica nenhum.",
           "newProductItemType": "Tipo de item para produtos novos",
           "inventoryWarning": "Os recebimentos de estoque do Alga não são exportados, então as quantidades em estoque no QuickBooks ficarão negativas, a menos que você também registre o estoque no QuickBooks.",
           "nonInventoryHelp": "Recomendado: o Alga continua como sistema de referência do estoque e o QuickBooks registra apenas a venda.",
@@ -4100,10 +4107,11 @@
         },
         "mappings": {
           "title": "Mapeamentos do QuickBooks",
-          "description": "Mapeie clientes, serviços, códigos de imposto, condições de pagamento e descontos do Alga para os nomes no arquivo da empresa do QuickBooks Desktop. Clientes não mapeados são exportados com o nome do Alga; condições de pagamento não mapeadas ficam em branco."
+          "description": "Mapeie clientes, serviços, descontos, códigos fiscais e condições de pagamento do Alga para os nomes no arquivo da empresa do QuickBooks Desktop. Cada serviço e desconto precisa de um item do Desktop; condições de pagamento não mapeadas ficam em branco.",
+          "permissionNotice": "Editar mapeamentos do QuickBooks Desktop requer a permissão de gerenciar mapeamentos. Peça a um administrador para concedê-la."
         },
         "exports": {
-          "description": "Crie um lote de exportação do QuickBooks Desktop, execute-o e o arquivo IIF será baixado automaticamente."
+          "description": "Crie um lote de exportação do QuickBooks Desktop, execute-o e, em seguida, baixe o arquivo IIF nos detalhes do lote."
         },
         "newItems": {
           "title": "Itens criados pelas exportações",

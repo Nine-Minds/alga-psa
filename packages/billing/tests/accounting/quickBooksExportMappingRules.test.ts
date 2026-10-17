@@ -108,23 +108,49 @@ describe('validateQuickBooksMappingDecisions', () => {
     ).toBeNull();
   });
 
-  it('rejects linking two entities to the same existing QuickBooks name (one entity per name)', () => {
-    const twoItems = collectUnmappedQuickBooksEntities('quickbooks_desktop', [
-      ...errors,
-      { code: 'missing_service_mapping', resolution_state: 'open', metadata: { alga_entity_id: 'svc-2', alga_name: 'Dell 16 Laptop 2' } }
+  it('rejects linking two CSV entities to the same QuickBooks name, but lets Desktop services share an item', () => {
+    const extra = { code: 'missing_service_mapping', resolution_state: 'open', metadata: { alga_entity_id: 'svc-2', alga_name: 'Dell 16 Laptop 2' } };
+    const decisions = [
+      { algaEntityType: 'service' as const, algaEntityId: 'svc-1', externalName: 'Laptop', mode: 'existing' as const },
+      { algaEntityType: 'service' as const, algaEntityId: 'svc-2', externalName: 'Laptop', mode: 'existing' as const }
+    ];
+    const csvItems = collectUnmappedQuickBooksEntities('quickbooks_csv', [...errors, extra]);
+    expect(validateQuickBooksMappingDecisions('quickbooks_csv', csvItems, decisions))
+      .toMatchObject({ key: 'errors.accountingExport.quickbooksMapping.duplicateItemName', params: { qbName: 'Laptop' } });
+
+    // A Desktop item name is mapping metadata; the mapped value is the account, which services share.
+    const desktopItems = collectUnmappedQuickBooksEntities('quickbooks_desktop', [...errors, extra]);
+    expect(validateQuickBooksMappingDecisions('quickbooks_desktop', desktopItems, decisions)).toBeNull();
+  });
+
+  it('carries an existing Desktop account so the prompt completes that mapping in place', () => {
+    const [entity] = collectUnmappedQuickBooksEntities('quickbooks_desktop', [
+      { code: 'missing_service_mapping', resolution_state: 'open', metadata: { alga_entity_id: 'svc-9', alga_name: 'Backup', desktop_account: 'Backup Income', desktop_mapping_source: 'service' } }
     ]);
-    expect(
-      validateQuickBooksMappingDecisions('quickbooks_desktop', twoItems, [
-        { algaEntityType: 'service', algaEntityId: 'svc-1', externalName: 'Laptop', mode: 'existing' },
-        { algaEntityType: 'service', algaEntityId: 'svc-2', externalName: 'Laptop', mode: 'existing' }
-      ])
-    ).toMatchObject({ key: 'errors.accountingExport.quickbooksMapping.duplicateItemName', params: { qbName: 'Laptop' } });
+    expect(entity).toMatchObject({ desktopAccount: 'Backup Income', desktopMappingInPlace: true });
+
+    const [viaCategory] = collectUnmappedQuickBooksEntities('quickbooks_desktop', [
+      { code: 'missing_service_mapping', resolution_state: 'open', metadata: { alga_entity_id: 'svc-9', alga_name: 'Backup', desktop_account: 'Backup Income', desktop_mapping_source: 'service_category' } }
+    ]);
+    expect(viaCategory).toMatchObject({ desktopAccount: 'Backup Income', desktopMappingInPlace: false });
   });
 });
 
 describe('findQuickBooksNameConflict', () => {
   const pending = collectUnmappedQuickBooksEntities('quickbooks_desktop', errors);
   const stored = (type: string) => (type === 'discount' ? 'discount' : type);
+
+  it('ignores Desktop item names, which are not the mapped value', () => {
+    expect(
+      findQuickBooksNameConflict(
+        pending,
+        [{ algaEntityType: 'service', algaEntityId: 'svc-1', externalName: 'Laptop', mode: 'existing' }],
+        [{ alga_entity_type: 'service', alga_entity_id: 'svc-other', external_entity_id: 'Laptop' }],
+        stored,
+        'quickbooks_desktop'
+      )
+    ).toBeNull();
+  });
 
   it('reports a name already mapped to a different entity of the same type', () => {
     expect(

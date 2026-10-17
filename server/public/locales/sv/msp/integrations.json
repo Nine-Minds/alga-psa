@@ -133,13 +133,22 @@
         }
       },
       "adjustmentMappings": {
-        "desktopServices": "Tjänstekonton i Desktop",
-        "desktopDiscounts": "Rabatter i Desktop",
         "desktopAccount": "Intäktskontots namn i Desktop",
         "description": "Mappa fakturarabatter och krediteringar före export. Mappningen tillhör det här bokföringsföretaget.",
         "add": "Lägg till mappning",
         "remove": "Ta bort mappning",
-        "removeConfirm": "Vill du ta bort den här bokföringsmappningen?"
+        "removeConfirm": "Vill du ta bort den här bokföringsmappningen?",
+        "desktopTaxAccount": "Försäljningsskattekontots namn i Desktop",
+        "desktopCustomer": "Kundens namn i Desktop",
+        "desktopTerms": "Villkorets namn i Desktop",
+        "descriptionTaxCodes": "Varje skatteregion anger den artikel eller grupp för försäljningsskatt som QuickBooks Desktop debiterar och skuldkontot den bokförs på.",
+        "descriptionServices": "Varje tjänst anger den artikel i QuickBooks Desktop som dess fakturarader använder och intäktskontot de bokförs på.",
+        "descriptionClients": "Den kund i QuickBooks Desktop som varje kund faktureras som. Omappade kunder blockerar exporten.",
+        "descriptionPaymentTerms": "Villkoren i QuickBooks Desktop som skrivs ut på varje faktura. Omappade villkor lämnas tomma.",
+        "desktopItem": "Artikelns namn i Desktop",
+        "desktopItemHelp": "Artikeln exakt som den visas i artikellistan i QuickBooks Desktop. Varje fakturarad anger en artikel, så exporter blockeras tills den har angetts.",
+        "desktopSalesTaxItem": "Artikel eller grupp för försäljningsskatt",
+        "desktopSalesTaxItemHelp": "Lämna tomt för att använda standardartikeln för försäljningsskatt från inställningarna för QuickBooks Desktop."
       }
     },
     "calendar": {
@@ -4068,8 +4077,6 @@
         "loading": "Läser in QuickBooks Desktop-inställningar...",
         "savedMessage": "Inställningarna har sparats",
         "save": "Spara inställningar",
-        "sharedMappingsNote": "Mappningar för kunder, artiklar, skattekoder, betalningsvillkor och rabatter delas med QuickBooks CSV-integrationen.",
-        "metadataHelp": "Åsidosättningar per artikel: lägg till {\"qbdIncomeAccount\": \"Kontonamn\"} i en mappning under Artiklar / Tjänster eller Rabatter, eller {\"qbdSalesTaxItem\": \"Artikelnamn\"} i en skattekodsmappning, med mappningens metadataredigerare.",
         "connectionsPermissionNotice": "Du kan visa QuickBooks Desktop-inställningarna, men för att ändra dem krävs behörigheten att hantera anslutningar. Be en administratör att bevilja den.",
         "errors": {
           "load": "Det gick inte att läsa in QuickBooks Desktop-inställningarna",
@@ -4087,11 +4094,11 @@
           "arAccount": "Kundfordringskonto",
           "arAccountHelp": "Kundfordringskontot som varje faktura bokförs på.",
           "defaultIncomeAccount": "Standardintäktskonto",
-          "defaultIncomeAccountHelp": "Används för fakturarader vars mappning saknar \"qbdIncomeAccount\"-metadata. Obligatoriskt om inte varje mappning anger ett.",
+          "defaultIncomeAccountHelp": "Intäktskontot för artiklar som mappas från en export och för varje mappning av tjänster eller rabatter utan konto.",
           "salesTaxPayableAccount": "Konto för utgående försäljningsskatt",
-          "salesTaxPayableAccountHelp": "Kontot som raden för försäljningsskatt bokförs på.",
+          "salesTaxPayableAccountHelp": "Kontot som raden för försäljningsskatt bokförs på, om inte skatteregionens skattekodsmappning anger ett annat.",
           "defaultSalesTaxItem": "Standardartikel för försäljningsskatt",
-          "defaultSalesTaxItemHelp": "Artikel eller grupp för försäljningsskatt för beskattade fakturor vars skatteregion saknar skattekodsmappning.",
+          "defaultSalesTaxItemHelp": "Artikel eller grupp för försäljningsskatt för beskattade fakturor vars skattekodsmappning inte anger någon.",
           "newProductItemType": "Artikeltyp för nya produkter",
           "inventoryWarning": "Lagerinleveranser i Alga exporteras inte, så saldona i QuickBooks blir negativa om du inte också registrerar lagret i QuickBooks.",
           "nonInventoryHelp": "Rekommenderas: Alga förblir lagrets huvudsystem och QuickBooks registrerar bara försäljningen.",
@@ -4100,10 +4107,11 @@
         },
         "mappings": {
           "title": "QuickBooks-mappningar",
-          "description": "Mappa Alga-kunder, tjänster, skattekoder, betalningsvillkor och rabatter till namnen i din QuickBooks Desktop-företagsfil. Omappade kunder exporteras under sitt Alga-namn; omappade betalningsvillkor lämnas tomma."
+          "description": "Mappa Algas kunder, tjänster, rabatter, skattekoder och betalningsvillkor till namnen i företagsfilen i QuickBooks Desktop. Varje tjänst och rabatt behöver en Desktop-artikel; omappade betalningsvillkor lämnas tomma.",
+          "permissionNotice": "Att redigera mappningar för QuickBooks Desktop kräver behörigheten att hantera mappningar. Be en administratör att tilldela den."
         },
         "exports": {
-          "description": "Skapa en exportbatch för QuickBooks Desktop, kör den så laddas IIF-filen ned automatiskt."
+          "description": "Skapa en exportbatch för QuickBooks Desktop och kör den, och ladda sedan ned IIF-filen från batchinformationen."
         },
         "newItems": {
           "title": "Artiklar som skapas av exporter",

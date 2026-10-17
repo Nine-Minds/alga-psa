@@ -133,13 +133,22 @@
         }
       },
       "adjustmentMappings": {
-        "desktopServices": "Comptes de services Desktop",
-        "desktopDiscounts": "Remises Desktop",
         "desktopAccount": "Nom du compte de produits Desktop",
         "description": "Associez les remises et avoirs avant l’exportation. Cette association appartient à cette société comptable.",
         "add": "Ajouter une association",
         "remove": "Supprimer une association",
-        "removeConfirm": "Supprimer cette association comptable ?"
+        "removeConfirm": "Supprimer cette association comptable ?",
+        "desktopTaxAccount": "Nom du compte de taxe de vente Desktop",
+        "desktopCustomer": "Nom du client Desktop",
+        "desktopTerms": "Nom des conditions Desktop",
+        "descriptionTaxCodes": "Chaque région fiscale indique l’article ou le groupe de taxe de vente facturé par QuickBooks Desktop et le compte de passif sur lequel il est comptabilisé.",
+        "descriptionServices": "Chaque service indique l’article QuickBooks Desktop utilisé par ses lignes de facture et le compte de produits sur lequel elles sont comptabilisées.",
+        "descriptionClients": "Le client QuickBooks Desktop sous lequel chaque client est facturé. Les clients sans correspondance bloquent l’exportation.",
+        "descriptionPaymentTerms": "Les conditions QuickBooks Desktop imprimées sur chaque facture. Les conditions sans correspondance restent vides.",
+        "desktopItem": "Nom de l’article Desktop",
+        "desktopItemHelp": "L’article exactement tel qu’il apparaît dans votre liste d’articles QuickBooks Desktop. Chaque ligne de facture indique un article, les exportations sont donc bloquées tant qu’il n’est pas défini.",
+        "desktopSalesTaxItem": "Article ou groupe de taxe de vente",
+        "desktopSalesTaxItemHelp": "Laissez vide pour utiliser l’article de taxe de vente par défaut des paramètres QuickBooks Desktop."
       }
     },
     "calendar": {
@@ -4068,8 +4077,6 @@
         "loading": "Chargement des paramètres QuickBooks Desktop...",
         "savedMessage": "Paramètres enregistrés avec succès",
         "save": "Enregistrer les paramètres",
-        "sharedMappingsNote": "Les correspondances de clients, articles, codes de taxe, conditions de paiement et remises sont partagées avec l'intégration QuickBooks CSV.",
-        "metadataHelp": "Remplacements par article : ajoutez {\"qbdIncomeAccount\": \"Nom du compte\"} à une correspondance Articles / Services ou Remises, ou {\"qbdSalesTaxItem\": \"Nom de l'article\"} à une correspondance de codes de taxe, via l'éditeur de métadonnées de la correspondance.",
         "connectionsPermissionNotice": "Vous pouvez consulter les paramètres QuickBooks Desktop, mais leur modification nécessite la capacité de gestion des connexions. Demandez à un administrateur de vous l'accorder.",
         "errors": {
           "load": "Impossible de charger les paramètres QuickBooks Desktop",
@@ -4087,11 +4094,11 @@
           "arAccount": "Compte clients",
           "arAccountHelp": "Le compte clients sur lequel chaque facture est comptabilisée.",
           "defaultIncomeAccount": "Compte de produits par défaut",
-          "defaultIncomeAccountHelp": "Utilisé pour les lignes de facture dont la correspondance n'a pas de métadonnée \"qbdIncomeAccount\". Obligatoire sauf si chaque correspondance en définit un.",
+          "defaultIncomeAccountHelp": "Le compte de produits des articles mis en correspondance depuis une exportation, et de toute correspondance Services ou Remises sans compte.",
           "salesTaxPayableAccount": "Compte de taxe de vente à payer",
-          "salesTaxPayableAccountHelp": "Le compte sur lequel la ligne de taxe de vente est comptabilisée.",
+          "salesTaxPayableAccountHelp": "Le compte sur lequel la ligne de taxe de vente est comptabilisée, sauf si la correspondance des codes fiscaux de la région en indique un autre.",
           "defaultSalesTaxItem": "Article de taxe de vente par défaut",
-          "defaultSalesTaxItemHelp": "Article ou groupe de taxe de vente pour les factures taxées dont la région fiscale n'a pas de correspondance de code de taxe.",
+          "defaultSalesTaxItemHelp": "Article ou groupe de taxe de vente pour les factures taxées dont la correspondance des codes fiscaux n’en indique aucun.",
           "newProductItemType": "Type d'article pour les nouveaux produits",
           "inventoryWarning": "Les réceptions de stock d'Alga ne sont pas exportées : les quantités en stock dans QuickBooks deviendront négatives, sauf si vous saisissez aussi le stock dans QuickBooks.",
           "nonInventoryHelp": "Recommandé : Alga reste le système de référence pour le stock et QuickBooks n'enregistre que la vente.",
@@ -4100,10 +4107,11 @@
         },
         "mappings": {
           "title": "Correspondances QuickBooks",
-          "description": "Associez les clients, services, codes de taxe, conditions de paiement et remises d'Alga aux noms de votre fichier d'entreprise QuickBooks Desktop. Les clients non associés sont exportés sous leur nom Alga ; les conditions de paiement non associées restent vides."
+          "description": "Faites correspondre les clients, services, remises, codes fiscaux et conditions de paiement d’Alga aux noms de votre fichier d’entreprise QuickBooks Desktop. Chaque service et chaque remise nécessite un article Desktop ; les conditions de paiement sans correspondance restent vides.",
+          "permissionNotice": "La modification des correspondances QuickBooks Desktop nécessite l’autorisation de gérer les correspondances. Demandez-la à un administrateur."
         },
         "exports": {
-          "description": "Créez un lot d'export QuickBooks Desktop, exécutez-le et le fichier IIF se télécharge automatiquement."
+          "description": "Créez un lot d’exportation QuickBooks Desktop, exécutez-le, puis téléchargez le fichier IIF depuis les détails du lot."
         },
         "newItems": {
           "title": "Articles créés par les exports",

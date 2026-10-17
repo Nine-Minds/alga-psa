@@ -133,13 +133,22 @@
         }
       },
       "adjustmentMappings": {
-        "desktopServices": "Konta usług Desktop",
-        "desktopDiscounts": "Rabaty Desktop",
         "desktopAccount": "Nazwa konta przychodów Desktop",
         "description": "Przed eksportem przypisz rabaty i uznania faktur. Przypisanie dotyczy tej firmy księgowej.",
         "add": "Dodaj przypisanie",
         "remove": "Usuń przypisanie",
-        "removeConfirm": "Usunąć to przypisanie księgowe?"
+        "removeConfirm": "Usunąć to przypisanie księgowe?",
+        "desktopTaxAccount": "Nazwa konta podatku od sprzedaży Desktop",
+        "desktopCustomer": "Nazwa klienta Desktop",
+        "desktopTerms": "Nazwa warunków Desktop",
+        "descriptionTaxCodes": "Każdy region podatkowy wskazuje pozycję lub grupę podatku od sprzedaży naliczaną przez QuickBooks Desktop oraz konto zobowiązań, na które jest księgowana.",
+        "descriptionServices": "Każda usługa wskazuje pozycję QuickBooks Desktop używaną w jej wierszach faktury oraz konto przychodów, na które są księgowane.",
+        "descriptionClients": "Klient QuickBooks Desktop, na którego wystawiane są faktury dla każdego klienta. Niezmapowani klienci blokują eksport.",
+        "descriptionPaymentTerms": "Warunki QuickBooks Desktop drukowane na każdej fakturze. Niezmapowane warunki pozostają puste.",
+        "desktopItem": "Nazwa pozycji Desktop",
+        "desktopItemHelp": "Pozycja dokładnie tak, jak widnieje na liście pozycji QuickBooks Desktop. Każdy wiersz faktury wskazuje pozycję, dlatego eksporty są blokowane, dopóki nie zostanie ustawiona.",
+        "desktopSalesTaxItem": "Pozycja lub grupa podatku od sprzedaży",
+        "desktopSalesTaxItemHelp": "Pozostaw puste, aby użyć domyślnej pozycji podatku od sprzedaży z ustawień QuickBooks Desktop."
       }
     },
     "calendar": {
@@ -4068,8 +4077,6 @@
         "loading": "Ładowanie ustawień QuickBooks Desktop...",
         "savedMessage": "Ustawienia zostały zapisane",
         "save": "Zapisz ustawienia",
-        "sharedMappingsNote": "Mapowania klientów, pozycji, kodów podatkowych, warunków płatności i rabatów są współdzielone z integracją QuickBooks CSV.",
-        "metadataHelp": "Nadpisania dla pozycji: dodaj {\"qbdIncomeAccount\": \"Nazwa konta\"} do mapowania Pozycje / Usługi lub Rabaty albo {\"qbdSalesTaxItem\": \"Nazwa pozycji\"} do mapowania kodów podatkowych w edytorze metadanych mapowania.",
         "connectionsPermissionNotice": "Możesz przeglądać ustawienia QuickBooks Desktop, ale ich zmiana wymaga uprawnienia do zarządzania połączeniami. Poproś administratora o jego nadanie.",
         "errors": {
           "load": "Nie udało się wczytać ustawień QuickBooks Desktop",
@@ -4087,11 +4094,11 @@
           "arAccount": "Konto należności",
           "arAccountHelp": "Konto należności, na które księgowana jest każda faktura.",
           "defaultIncomeAccount": "Domyślne konto przychodów",
-          "defaultIncomeAccountHelp": "Używane dla pozycji faktury, których mapowanie nie ma metadanych \"qbdIncomeAccount\". Wymagane, chyba że każde mapowanie je określa.",
+          "defaultIncomeAccountHelp": "Konto przychodów dla pozycji zmapowanych z eksportu oraz dla każdego mapowania usług lub rabatów bez konta.",
           "salesTaxPayableAccount": "Konto zobowiązań z tytułu podatku od sprzedaży",
-          "salesTaxPayableAccountHelp": "Konto, na które księgowana jest linia podatku od sprzedaży.",
+          "salesTaxPayableAccountHelp": "Konto, na które księgowany jest wiersz podatku od sprzedaży, chyba że mapowanie kodów podatkowych regionu wskazuje inne.",
           "defaultSalesTaxItem": "Domyślna pozycja podatku od sprzedaży",
-          "defaultSalesTaxItemHelp": "Pozycja lub grupa podatku od sprzedaży dla opodatkowanych faktur, których region podatkowy nie ma mapowania kodu podatkowego.",
+          "defaultSalesTaxItemHelp": "Pozycja lub grupa podatku od sprzedaży dla opodatkowanych faktur, których mapowanie kodów podatkowych jej nie wskazuje.",
           "newProductItemType": "Typ pozycji dla nowych produktów",
           "inventoryWarning": "Przyjęcia magazynowe z Alga nie są eksportowane, więc stany w QuickBooks staną się ujemne, chyba że wprowadzisz stany również w QuickBooks.",
           "nonInventoryHelp": "Zalecane: Alga pozostaje głównym systemem magazynowym, a QuickBooks rejestruje tylko sprzedaż.",
@@ -4100,10 +4107,11 @@
         },
         "mappings": {
           "title": "Mapowania QuickBooks",
-          "description": "Przypisz klientów, usługi, kody podatkowe, warunki płatności i rabaty Alga do nazw w pliku firmy QuickBooks Desktop. Niezmapowani klienci są eksportowani pod nazwą z Alga; niezmapowane warunki płatności pozostają puste."
+          "description": "Zmapuj klientów, usługi, rabaty, kody podatkowe i warunki płatności Alga na nazwy w pliku firmy QuickBooks Desktop. Każda usługa i rabat wymaga pozycji Desktop; niezmapowane warunki płatności pozostają puste.",
+          "permissionNotice": "Edytowanie mapowań QuickBooks Desktop wymaga uprawnienia do zarządzania mapowaniami. Poproś administratora o jego nadanie."
         },
         "exports": {
-          "description": "Utwórz partię eksportu QuickBooks Desktop, uruchom ją, a plik IIF pobierze się automatycznie."
+          "description": "Utwórz partię eksportu QuickBooks Desktop, uruchom ją, a następnie pobierz plik IIF ze szczegółów partii."
         },
         "newItems": {
           "title": "Pozycje tworzone przez eksporty",

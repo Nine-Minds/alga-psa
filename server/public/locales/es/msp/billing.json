@@ -495,7 +495,7 @@
     },
     "unmapped": {
       "title": "Elementos de QuickBooks sin asignar",
-      "descriptionDesktop": "Estos elementos aún no tienen asignación en QuickBooks. Créelos como entradas nuevas (el archivo IIF los añadirá a QuickBooks Desktop) o vincúlelos a una entrada existente de QuickBooks con exactamente el mismo nombre. Sus elecciones se guardan como asignaciones, por lo que las próximas exportaciones no volverán a preguntar.",
+      "descriptionDesktop": "Estos necesitan un cliente o artículo de QuickBooks Desktop antes de poder exportarse. Créelos como entradas nuevas (el archivo IIF los añadirá a QuickBooks Desktop) o vincúlelos a una entrada existente de QuickBooks con exactamente el mismo nombre. Sus elecciones se guardan como asignaciones de QuickBooks Desktop, por lo que las próximas exportaciones no volverán a preguntar.",
       "descriptionCsv": "Estos elementos aún no tienen asignación en QuickBooks. Expórtelos con el nombre indicado (QuickBooks añade los nombres nuevos al importar el CSV) o vincúlelos a una entrada existente de QuickBooks con exactamente el mismo nombre. Sus elecciones se guardan como asignaciones, por lo que las próximas exportaciones no volverán a preguntar.",
       "permissionNotice": "Para guardar asignaciones de QuickBooks se requiere la capacidad de gestionar asignaciones. Consulte a un administrador o asigne estos elementos desde la configuración de QuickBooks.",
       "kinds": {
@@ -518,7 +518,9 @@
       "toast": {
         "saved": "Asignaciones de QuickBooks guardadas",
         "saveError": "No se pudieron guardar las asignaciones de QuickBooks"
-      }
+      },
+      "postsTo": "Se registra en {{account}}",
+      "postsToDefault": "Se registra en la cuenta de ingresos predeterminada"
     }
   },
   "templateRenderer": {
@@ -773,7 +775,8 @@
         "nameTakenByClient": "\"{{qbName}}\" ya está asignado a otro cliente, por lo que no puede usarse también para \"{{algaName}}\". Elija otro nombre de QuickBooks o cambie la asignación existente en las asignaciones de QuickBooks.",
         "nameTakenByItem": "\"{{qbName}}\" ya está asignado a otro artículo, por lo que no puede usarse también para \"{{algaName}}\". Elija otro nombre de QuickBooks o cambie la asignación existente en las asignaciones de QuickBooks.",
         "unsupportedBatch": "Este lote no es una exportación de QuickBooks Desktop ni de QuickBooks CSV.",
-        "nameTakenConcurrently": "Uno de estos nombres de QuickBooks se acaba de asignar a otra entrada. Actualice la lista y elija otro nombre."
+        "nameTakenConcurrently": "Uno de estos nombres de QuickBooks se acaba de asignar a otra entrada. Actualice la lista y elija otro nombre.",
+        "desktopIncomeAccountRequired": "Defina la cuenta de ingresos predeterminada en la configuración de QuickBooks Desktop antes de asignar artículos desde una exportación."
       }
     },
     "vendorBill": {

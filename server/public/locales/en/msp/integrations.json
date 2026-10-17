@@ -133,13 +133,22 @@
         }
       },
       "adjustmentMappings": {
-        "desktopServices": "Desktop service accounts",
-        "desktopDiscounts": "Desktop discounts",
         "desktopAccount": "Desktop income account name",
         "description": "Map invoice discounts and credits before exporting. The mapping belongs to this accounting company.",
         "add": "Add mapping",
         "remove": "Remove mapping",
-        "removeConfirm": "Remove this accounting mapping?"
+        "removeConfirm": "Remove this accounting mapping?",
+        "desktopTaxAccount": "Desktop sales tax account name",
+        "desktopCustomer": "Desktop customer name",
+        "desktopTerms": "Desktop terms name",
+        "descriptionTaxCodes": "Each tax region names the sales tax item or group QuickBooks Desktop charges and the liability account it posts to.",
+        "descriptionServices": "Each service names the QuickBooks Desktop item its invoice lines use and the income account they post to.",
+        "descriptionClients": "The QuickBooks Desktop customer each client is invoiced as. Unmapped clients block the export.",
+        "descriptionPaymentTerms": "The QuickBooks Desktop terms printed on each invoice. Unmapped terms are left blank.",
+        "desktopItem": "Desktop item name",
+        "desktopItemHelp": "The item exactly as it appears in your QuickBooks Desktop Item List. Every invoice line names an item, so exports are blocked until it is set.",
+        "desktopSalesTaxItem": "Sales tax item or group",
+        "desktopSalesTaxItemHelp": "Leave blank to use the default sales tax item from the QuickBooks Desktop settings."
       }
     },
     "calendar": {
@@ -4068,8 +4077,6 @@
         "loading": "Loading QuickBooks Desktop settings...",
         "savedMessage": "Settings saved successfully",
         "save": "Save settings",
-        "sharedMappingsNote": "Customer, item, tax code, payment term, and discount mappings are shared with the QuickBooks CSV integration.",
-        "metadataHelp": "Per-item overrides: add {\"qbdIncomeAccount\": \"Account name\"} to an Items / Services or Discounts mapping, or {\"qbdSalesTaxItem\": \"Item name\"} to a Tax Codes mapping, using the mapping metadata editor.",
         "connectionsPermissionNotice": "You can view QuickBooks Desktop settings, but changing them requires the manage-connections capability. Ask an administrator to grant it.",
         "errors": {
           "load": "Failed to load QuickBooks Desktop settings",
@@ -4087,11 +4094,11 @@
           "arAccount": "Accounts Receivable account",
           "arAccountHelp": "The A/R account each invoice posts to.",
           "defaultIncomeAccount": "Default income account",
-          "defaultIncomeAccountHelp": "Used for invoice lines whose mapping has no \"qbdIncomeAccount\" metadata. Required unless every mapping sets one.",
+          "defaultIncomeAccountHelp": "The income account for items mapped from an export, and for any Services or Discounts mapping without an account.",
           "salesTaxPayableAccount": "Sales tax liability account",
-          "salesTaxPayableAccountHelp": "The account the sales tax line posts to.",
+          "salesTaxPayableAccountHelp": "The account the sales tax line posts to, unless the tax region's Tax Codes mapping names another.",
           "defaultSalesTaxItem": "Default sales tax item",
-          "defaultSalesTaxItemHelp": "Sales tax item or group for taxed invoices whose tax region has no Tax Codes mapping.",
+          "defaultSalesTaxItemHelp": "Sales tax item or group for taxed invoices whose Tax Codes mapping does not name one.",
           "newProductItemType": "New product item type",
           "inventoryWarning": "Alga stock receipts are not exported, so QuickBooks on-hand quantities will go negative unless you also enter stock in QuickBooks.",
           "nonInventoryHelp": "Recommended: Alga stays the inventory system of record and QuickBooks only records the sale.",
@@ -4100,10 +4107,11 @@
         },
         "mappings": {
           "title": "QuickBooks Mappings",
-          "description": "Map Alga clients, services, tax codes, payment terms, and discounts to the names in your QuickBooks Desktop company file. Unmapped clients export under their Alga name; unmapped payment terms are left blank."
+          "description": "Map Alga clients, services, discounts, tax codes, and payment terms to the names in your QuickBooks Desktop company file. Every service and discount needs a Desktop item; unmapped payment terms are left blank.",
+          "permissionNotice": "Editing QuickBooks Desktop mappings requires the manage-mappings capability. Ask an administrator to grant it."
         },
         "exports": {
-          "description": "Create a QuickBooks Desktop export batch, execute it, and the IIF file downloads automatically."
+          "description": "Create a QuickBooks Desktop export batch and execute it, then download the IIF file from the batch details."
         },
         "newItems": {
           "title": "Items created by exports",

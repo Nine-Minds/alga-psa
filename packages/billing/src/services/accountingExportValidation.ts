@@ -9,7 +9,6 @@ import type {
   AccountingExportServicePeriodSource
 } from '@alga-psa/types';
 import { normalizeAccountingExportCalendarDate } from './accountingExportDateUtils';
-import { resolveMappingAdapterType } from '../adapters/accounting/mappingAdapterType';
 import { AUTOMATIC_DISCOUNT_MAPPING_ID, DISCOUNT_MAPPING_ENTITY_TYPE } from '@alga-psa/types';
 
 /** Adapter lookup for provider-specific rules; AccountingAdapterRegistry satisfies it. */
@@ -168,9 +167,19 @@ export class AccountingExportValidation {
 
     const resolver = await AccountingMappingResolver.create();
     const adapterType = batch.adapter_type;
-    // Desktop resolves through the QuickBooks CSV mappings, exactly as its adapter does.
-    const mappingAdapterType = resolveMappingAdapterType(adapterType);
     const isQuickBooksDesktop = adapterType === 'quickbooks_desktop';
+    // Desktop invoice lines must name an item (see QuickBooksDesktopAdapter), so a
+    // Desktop service/discount mapping without one blocks the batch like a
+    // missing mapping does, and the export prompt fills the item in.
+    const lacksDesktopItem = (mapping: MappingResolution | null): boolean => {
+      if (!isQuickBooksDesktop || !mapping) return false;
+      const item = mapping.metadata?.qbdItem;
+      return typeof item !== 'string' || item.trim().length === 0;
+    };
+    const desktopMappingRef = (mapping: MappingResolution | null): Record<string, unknown> =>
+      isQuickBooksDesktop && mapping
+        ? { desktop_account: mapping.external_entity_id, desktop_mapping_source: mapping.source }
+        : {};
     const isQuickBooks = adapterType === 'quickbooks_online' || adapterType === 'quickbooks_csv';
     // Company sync and mapping resolution stay period-agnostic. Export validation is the first
     // accounting seam that should care about recurring timing, and it must use canonical
@@ -350,7 +359,7 @@ export class AccountingExportValidation {
         }
         const mapping = await resolver.resolveClientMapping({
           tenantId: tenant,
-          adapterType: mappingAdapterType,
+          adapterType,
           clientId: invoice.client_id,
           targetRealm: batch.target_realm
         });
@@ -535,21 +544,24 @@ export class AccountingExportValidation {
       if (isServicelessDiscount && !checkedServiceMappings.has(discountMappingKey)) {
         const mapping = await resolver.resolveDiscountMapping({
           tenantId: tenant,
-          adapterType: mappingAdapterType,
+          adapterType,
           targetRealm: batch.target_realm
         });
-        if (!mapping) {
+        const discountLacksItem = Boolean(mapping) && lacksDesktopItem(mapping);
+        if (!mapping || discountLacksItem) {
           await repo.addError({
             batch_id: batchId,
             line_id: line.line_id,
             code: 'missing_discount_mapping',
-            message:
-              'No mapping for automatic discounts. Map a discount item under Settings → Integrations → Accounting → Discounts.',
+            message: discountLacksItem
+              ? 'The QuickBooks Desktop discount mapping has no item name. Set the item on Settings → Integrations → QuickBooks Desktop → Discounts.'
+              : 'No mapping for automatic discounts. Map a discount item under Settings → Integrations → Accounting → Discounts.',
             metadata: mergeErrorMetadata(line, {
               invoice_charge_id: line.document_line_id,
               alga_entity_type: DISCOUNT_MAPPING_ENTITY_TYPE,
               alga_entity_id: AUTOMATIC_DISCOUNT_MAPPING_ID,
-              alga_name: 'Discount'
+              alga_name: 'Discount',
+              ...desktopMappingRef(mapping)
             })
           });
         }
@@ -560,27 +572,30 @@ export class AccountingExportValidation {
       if (charge.service_id && !checkedServiceMappings.has(serviceMappingKey)) {
         const mapping = await resolver.resolveServiceMapping({
           tenantId: tenant,
-          adapterType: mappingAdapterType,
+          adapterType,
           targetRealm: batch.target_realm,
           serviceId: charge.service_id
         });
+        const serviceLacksItem = Boolean(mapping) && lacksDesktopItem(mapping);
 
-        if (!mapping && !missingServiceMappings.has(serviceMappingKey)) {
+        if ((!mapping || serviceLacksItem) && !missingServiceMappings.has(serviceMappingKey)) {
           const serviceName = serviceNameById.get(charge.service_id) ?? null;
+          const serviceLabel = serviceName ? `"${serviceName}"` : charge.service_id;
           await repo.addError({
             batch_id: batchId,
             line_id: line.line_id,
             code: 'missing_service_mapping',
-            message: serviceName
-              ? `No mapping for service "${serviceName}"`
-              : `No mapping for service ${charge.service_id}`,
+            message: serviceLacksItem
+              ? `The QuickBooks Desktop mapping for service ${serviceLabel} has no item name`
+              : `No mapping for service ${serviceLabel}`,
             metadata: mergeErrorMetadata(line, {
               service_id: charge.service_id,
               service_name: serviceName,
               alga_entity_type: 'service',
               alga_entity_id: charge.service_id,
               alga_name: serviceName,
-              item_kind: serviceKindById.get(charge.service_id) ?? null
+              item_kind: serviceKindById.get(charge.service_id) ?? null,
+              ...desktopMappingRef(mapping)
             })
           });
           missingServiceMappings.add(serviceMappingKey);
@@ -597,7 +612,7 @@ export class AccountingExportValidation {
         if (!checkedTaxRegions.has(cacheKey)) {
           const taxMapping = await resolver.resolveTaxCodeMapping({
             tenantId: tenant,
-            adapterType: mappingAdapterType,
+            adapterType,
             taxRegionId: charge.tax_region,
             targetRealm: batch.target_realm
           });
@@ -684,7 +699,7 @@ export class AccountingExportValidation {
           if (!checkedPaymentTerms.has(paymentKey)) {
             const termMapping = await resolver.resolvePaymentTermMapping({
               tenantId: tenant,
-              adapterType: mappingAdapterType,
+              adapterType,
               paymentTermId: client.payment_terms,
               targetRealm: batch.target_realm
             });

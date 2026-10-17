@@ -1,4 +1,3 @@
-import { createQuickBooksDesktopMappingModule } from '../accounting-mappings/quickBooksDesktopMappingModule';
 import {
   createExternalEntityMapping,
   deleteExternalEntityMapping,
@@ -41,7 +40,7 @@ type PaymentTermOption = {
   name: string;
 };
 
-const PAYMENT_TERMS: PaymentTermOption[] = [
+export const PAYMENT_TERMS: PaymentTermOption[] = [
   { id: 'net_30', name: 'Net 30' },
   { id: 'net_15', name: 'Net 15' },
   { id: 'due_on_receipt', name: 'Due on receipt' }
@@ -72,10 +71,7 @@ export function createCsvMappingModules(t?: TFn): AccountingMappingModule[] {
     createServiceModule(tab('itemsServices', 'Items / Services')),
     createTaxCodeModule(tab('taxCodes', 'Tax Codes')),
     createPaymentTermModule(tab('paymentTerms', 'Payment Terms')),
-    createDiscountModule(tab('discounts', 'Discounts')),
-    createQuickBooksDesktopMappingModule(DISCOUNT_MAPPING_ENTITY_TYPE, t),
-    createQuickBooksDesktopMappingModule('service', t),
-    createQuickBooksDesktopMappingModule('tax_code', t)
+    createDiscountModule(tab('discounts', 'Discounts'))
   ];
 }
 
@@ -252,9 +248,6 @@ function createDiscountModule(tabLabel: string): AccountingMappingModule {
         cancelLabel: 'Cancel'
       }
     },
-    metadata: {
-      enableJsonEditor: true
-    },
     elements: {
       addButton: 'add-qbcsv-discount-mapping-button',
       table: 'qbcsv-discount-mappings-table',
@@ -296,7 +289,6 @@ function createTaxCodeModule(tabLabel: string): AccountingMappingModule {
     externalEntityType: 'TaxCode',
     labels: {
       tab: tabLabel,
-      description: 'QuickBooks CSV: the QuickBooks tax code for the region. QuickBooks Desktop: the sales tax item or group name for the region (TAX and NON are ignored); unmapped regions use the default sales tax item.',
       addButton: 'Add Tax Code Mapping',
       algaColumn: 'Alga Tax Region',
       externalColumn: 'QuickBooks Tax Code',
@@ -304,8 +296,7 @@ function createTaxCodeModule(tabLabel: string): AccountingMappingModule {
         addTitle: 'Add QuickBooks Tax Code Mapping',
         editTitle: 'Edit QuickBooks Tax Code Mapping',
         algaField: 'Alga Tax Region',
-        externalField: 'QuickBooks Tax Code',
-        helpText: 'QuickBooks Desktop: enter the sales tax item or group name exactly as it appears in your Item List.'
+        externalField: 'QuickBooks Tax Code'
       },
       deleteConfirmation: {
         title: 'Delete Tax Code Mapping',

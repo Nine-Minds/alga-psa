@@ -133,13 +133,22 @@
         }
       },
       "adjustmentMappings": {
-        "desktopServices": "Conti servizi Desktop",
-        "desktopDiscounts": "Sconti Desktop",
         "desktopAccount": "Nome conto ricavi Desktop",
         "description": "Associa sconti e crediti prima di esportare. L’associazione appartiene a questa azienda contabile.",
         "add": "Aggiungi associazione",
         "remove": "Rimuovi associazione",
-        "removeConfirm": "Rimuovere questa associazione contabile?"
+        "removeConfirm": "Rimuovere questa associazione contabile?",
+        "desktopTaxAccount": "Nome conto imposta sulle vendite Desktop",
+        "desktopCustomer": "Nome cliente Desktop",
+        "desktopTerms": "Nome termini Desktop",
+        "descriptionTaxCodes": "Ogni regione fiscale indica l’articolo o il gruppo dell’imposta sulle vendite addebitato da QuickBooks Desktop e il conto passivo su cui viene registrato.",
+        "descriptionServices": "Ogni servizio indica l’articolo QuickBooks Desktop usato dalle sue righe di fattura e il conto ricavi su cui vengono registrate.",
+        "descriptionClients": "Il cliente QuickBooks Desktop con cui viene fatturato ogni cliente. I clienti non mappati bloccano l’esportazione.",
+        "descriptionPaymentTerms": "I termini di QuickBooks Desktop stampati su ogni fattura. I termini non mappati restano vuoti.",
+        "desktopItem": "Nome articolo Desktop",
+        "desktopItemHelp": "L’articolo esattamente come appare nell’elenco articoli di QuickBooks Desktop. Ogni riga di fattura indica un articolo, quindi le esportazioni sono bloccate finché non viene impostato.",
+        "desktopSalesTaxItem": "Articolo o gruppo dell’imposta sulle vendite",
+        "desktopSalesTaxItemHelp": "Lascia vuoto per usare l’articolo imposta sulle vendite predefinito delle impostazioni di QuickBooks Desktop."
       }
     },
     "calendar": {
@@ -4068,8 +4077,6 @@
         "loading": "Caricamento delle impostazioni di QuickBooks Desktop...",
         "savedMessage": "Impostazioni salvate correttamente",
         "save": "Salva impostazioni",
-        "sharedMappingsNote": "Le mappature di clienti, articoli, codici fiscali, termini di pagamento e sconti sono condivise con l'integrazione QuickBooks CSV.",
-        "metadataHelp": "Sostituzioni per articolo: aggiungi {\"qbdIncomeAccount\": \"Nome conto\"} a una mappatura Articoli / Servizi o Sconti, oppure {\"qbdSalesTaxItem\": \"Nome articolo\"} a una mappatura dei codici fiscali, tramite l'editor dei metadati della mappatura.",
         "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di QuickBooks Desktop, ma per modificarle serve la capacità di gestione delle connessioni. Chiedi a un amministratore di concedertela.",
         "errors": {
           "load": "Impossibile caricare le impostazioni di QuickBooks Desktop",
@@ -4087,11 +4094,11 @@
           "arAccount": "Conto crediti verso clienti",
           "arAccountHelp": "Il conto crediti su cui viene registrata ogni fattura.",
           "defaultIncomeAccount": "Conto ricavi predefinito",
-          "defaultIncomeAccountHelp": "Usato per le righe di fattura la cui mappatura non ha metadati \"qbdIncomeAccount\". Obbligatorio a meno che ogni mappatura ne imposti uno.",
+          "defaultIncomeAccountHelp": "Il conto ricavi per gli articoli mappati da un’esportazione e per ogni mappatura di Servizi o Sconti senza conto.",
           "salesTaxPayableAccount": "Conto debiti per imposta sulle vendite",
-          "salesTaxPayableAccountHelp": "Il conto su cui viene registrata la riga dell'imposta sulle vendite.",
+          "salesTaxPayableAccountHelp": "Il conto su cui viene registrata la riga dell’imposta sulle vendite, salvo che la mappatura dei codici fiscali della regione ne indichi un altro.",
           "defaultSalesTaxItem": "Articolo imposta sulle vendite predefinito",
-          "defaultSalesTaxItemHelp": "Articolo o gruppo di imposta sulle vendite per fatture tassate la cui regione fiscale non ha una mappatura dei codici fiscali.",
+          "defaultSalesTaxItemHelp": "Articolo o gruppo dell’imposta sulle vendite per le fatture tassate la cui mappatura dei codici fiscali non ne indica uno.",
           "newProductItemType": "Tipo di articolo per i nuovi prodotti",
           "inventoryWarning": "I carichi di magazzino di Alga non vengono esportati, quindi le giacenze in QuickBooks diventeranno negative a meno che tu non registri le scorte anche in QuickBooks.",
           "nonInventoryHelp": "Consigliato: Alga resta il sistema di riferimento per il magazzino e QuickBooks registra solo la vendita.",
@@ -4100,10 +4107,11 @@
         },
         "mappings": {
           "title": "Mappature QuickBooks",
-          "description": "Associa clienti, servizi, codici fiscali, termini di pagamento e sconti di Alga ai nomi nel file aziendale di QuickBooks Desktop. I clienti non mappati vengono esportati con il nome Alga; i termini di pagamento non mappati restano vuoti."
+          "description": "Mappa clienti, servizi, sconti, codici fiscali e termini di pagamento di Alga ai nomi nel file aziendale di QuickBooks Desktop. Ogni servizio e sconto richiede un articolo Desktop; i termini di pagamento non mappati restano vuoti.",
+          "permissionNotice": "Per modificare le mappature di QuickBooks Desktop è necessaria l’autorizzazione alla gestione delle mappature. Chiedi a un amministratore di concederla."
         },
         "exports": {
-          "description": "Crea un batch di esportazione QuickBooks Desktop, eseguilo e il file IIF verrà scaricato automaticamente."
+          "description": "Crea un batch di esportazione QuickBooks Desktop, eseguilo e poi scarica il file IIF dai dettagli del batch."
         },
         "newItems": {
           "title": "Articoli creati dalle esportazioni",

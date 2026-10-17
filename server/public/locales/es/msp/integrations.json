@@ -133,13 +133,22 @@
         }
       },
       "adjustmentMappings": {
-        "desktopServices": "Cuentas de servicios de Desktop",
-        "desktopDiscounts": "Descuentos de Desktop",
         "desktopAccount": "Nombre de cuenta de ingresos de Desktop",
         "description": "Asigne descuentos y créditos de facturas antes de exportar. La asignación pertenece a esta empresa contable.",
         "add": "Añadir asignación",
         "remove": "Eliminar asignación",
-        "removeConfirm": "¿Eliminar esta asignación contable?"
+        "removeConfirm": "¿Eliminar esta asignación contable?",
+        "desktopTaxAccount": "Nombre de cuenta de impuesto sobre ventas de Desktop",
+        "desktopCustomer": "Nombre de cliente de Desktop",
+        "desktopTerms": "Nombre de condiciones de Desktop",
+        "descriptionTaxCodes": "Cada región fiscal indica el artículo o grupo de impuesto sobre ventas que cobra QuickBooks Desktop y la cuenta de pasivo en la que se registra.",
+        "descriptionServices": "Cada servicio indica el artículo de QuickBooks Desktop que usan sus líneas de factura y la cuenta de ingresos en la que se registran.",
+        "descriptionClients": "El cliente de QuickBooks Desktop con el que se factura a cada cliente. Los clientes sin asignar bloquean la exportación.",
+        "descriptionPaymentTerms": "Las condiciones de QuickBooks Desktop impresas en cada factura. Las condiciones sin asignar se dejan en blanco.",
+        "desktopItem": "Nombre de artículo de Desktop",
+        "desktopItemHelp": "El artículo exactamente como aparece en la lista de artículos de QuickBooks Desktop. Cada línea de factura indica un artículo, por lo que las exportaciones se bloquean hasta que se defina.",
+        "desktopSalesTaxItem": "Artículo o grupo de impuesto sobre ventas",
+        "desktopSalesTaxItemHelp": "Déjelo en blanco para usar el artículo de impuesto sobre ventas predeterminado de la configuración de QuickBooks Desktop."
       }
     },
     "calendar": {
@@ -4068,8 +4077,6 @@
         "loading": "Cargando la configuración de QuickBooks Desktop...",
         "savedMessage": "Configuración guardada correctamente",
         "save": "Guardar configuración",
-        "sharedMappingsNote": "Las asignaciones de clientes, artículos, códigos de impuestos, condiciones de pago y descuentos se comparten con la integración QuickBooks CSV.",
-        "metadataHelp": "Anulaciones por artículo: añada {\"qbdIncomeAccount\": \"Nombre de cuenta\"} a una asignación de Artículos / Servicios o Descuentos, o {\"qbdSalesTaxItem\": \"Nombre de artículo\"} a una asignación de Códigos de impuestos, con el editor de metadatos de la asignación.",
         "connectionsPermissionNotice": "Puede ver la configuración de QuickBooks Desktop, pero para cambiarla se requiere la capacidad de gestionar conexiones. Pida a un administrador que se la conceda.",
         "errors": {
           "load": "No se pudo cargar la configuración de QuickBooks Desktop",
@@ -4087,11 +4094,11 @@
           "arAccount": "Cuenta de cuentas por cobrar",
           "arAccountHelp": "La cuenta por cobrar en la que se registra cada factura.",
           "defaultIncomeAccount": "Cuenta de ingresos predeterminada",
-          "defaultIncomeAccountHelp": "Se usa para las líneas de factura cuya asignación no tiene metadatos \"qbdIncomeAccount\". Obligatoria salvo que todas las asignaciones definan una.",
+          "defaultIncomeAccountHelp": "La cuenta de ingresos para los artículos asignados desde una exportación y para cualquier asignación de Servicios o Descuentos sin cuenta.",
           "salesTaxPayableAccount": "Cuenta de impuesto sobre ventas por pagar",
-          "salesTaxPayableAccountHelp": "La cuenta en la que se registra la línea de impuesto sobre ventas.",
+          "salesTaxPayableAccountHelp": "La cuenta en la que se registra la línea de impuesto sobre ventas, salvo que la asignación de códigos fiscales de la región indique otra.",
           "defaultSalesTaxItem": "Artículo de impuesto sobre ventas predeterminado",
-          "defaultSalesTaxItemHelp": "Artículo o grupo de impuesto sobre ventas para facturas con impuestos cuya región fiscal no tiene asignación en Códigos de impuestos.",
+          "defaultSalesTaxItemHelp": "Artículo o grupo de impuesto sobre ventas para facturas con impuestos cuya asignación de códigos fiscales no indica ninguno.",
           "newProductItemType": "Tipo de artículo para productos nuevos",
           "inventoryWarning": "Las recepciones de existencias de Alga no se exportan, por lo que las cantidades disponibles en QuickBooks quedarán en negativo a menos que también registre las existencias en QuickBooks.",
           "nonInventoryHelp": "Recomendado: Alga sigue siendo el sistema de referencia del inventario y QuickBooks solo registra la venta.",
@@ -4100,10 +4107,11 @@
         },
         "mappings": {
           "title": "Asignaciones de QuickBooks",
-          "description": "Asigne clientes, servicios, códigos de impuestos, condiciones de pago y descuentos de Alga a los nombres de su archivo de empresa de QuickBooks Desktop. Los clientes sin asignar se exportan con su nombre en Alga; las condiciones de pago sin asignar quedan en blanco."
+          "description": "Asigne los clientes, servicios, descuentos, códigos fiscales y condiciones de pago de Alga a los nombres de su archivo de empresa de QuickBooks Desktop. Cada servicio y descuento necesita un artículo de Desktop; las condiciones de pago sin asignar se dejan en blanco.",
+          "permissionNotice": "Para editar las asignaciones de QuickBooks Desktop se necesita el permiso para gestionar asignaciones. Pida a un administrador que se lo conceda."
         },
         "exports": {
-          "description": "Cree un lote de exportación de QuickBooks Desktop, ejecútelo y el archivo IIF se descargará automáticamente."
+          "description": "Cree un lote de exportación de QuickBooks Desktop, ejecútelo y, después, descargue el archivo IIF desde los detalles del lote."
         },
         "newItems": {
           "title": "Artículos creados por exportaciones",

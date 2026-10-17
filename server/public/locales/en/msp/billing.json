@@ -495,7 +495,7 @@
     },
     "unmapped": {
       "title": "Unmapped QuickBooks items",
-      "descriptionDesktop": "These have no QuickBooks mapping yet. Create them as new entries (the IIF file will add them to QuickBooks Desktop) or link them to an existing QuickBooks entry with the exact same name. Your choices are saved as mappings, so future exports will not ask again.",
+      "descriptionDesktop": "These need a QuickBooks Desktop customer or item before they can be exported. Create them as new entries (the IIF file will add them to QuickBooks Desktop) or link them to an existing QuickBooks entry with the exact same name. Your choices are saved as QuickBooks Desktop mappings, so future exports will not ask again.",
       "descriptionCsv": "These have no QuickBooks mapping yet. Export them under the name below (QuickBooks adds new names when you import the CSV) or link them to an existing QuickBooks entry with the exact same name. Your choices are saved as mappings, so future exports will not ask again.",
       "permissionNotice": "Saving QuickBooks mappings requires the manage-mappings capability. Ask an administrator, or map these items from the QuickBooks settings.",
       "kinds": {
@@ -518,7 +518,9 @@
       "toast": {
         "saved": "QuickBooks mappings saved",
         "saveError": "Failed to save QuickBooks mappings"
-      }
+      },
+      "postsTo": "Posts to {{account}}",
+      "postsToDefault": "Posts to the default income account"
     }
   },
   "templateRenderer": {
@@ -773,7 +775,8 @@
         "nameTakenByClient": "\"{{qbName}}\" is already mapped to another client, so it cannot also be used for \"{{algaName}}\". Choose a different QuickBooks name, or change the existing mapping in the QuickBooks mappings.",
         "nameTakenByItem": "\"{{qbName}}\" is already mapped to another item, so it cannot also be used for \"{{algaName}}\". Choose a different QuickBooks name, or change the existing mapping in the QuickBooks mappings.",
         "unsupportedBatch": "This batch is not a QuickBooks Desktop or QuickBooks CSV export.",
-        "nameTakenConcurrently": "One of these QuickBooks names was just mapped to another entry. Refresh the list and choose a different name."
+        "nameTakenConcurrently": "One of these QuickBooks names was just mapped to another entry. Refresh the list and choose a different name.",
+        "desktopIncomeAccountRequired": "Set the default income account in the QuickBooks Desktop settings before mapping items from an export."
       }
     },
     "vendorBill": {
