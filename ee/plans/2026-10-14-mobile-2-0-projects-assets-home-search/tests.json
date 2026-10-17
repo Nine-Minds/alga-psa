@@ -1035,5 +1035,96 @@
     "featureIds": [
       "F094"
     ]
+  },
+  {
+    "id": "T116",
+    "description": "markItem leaves an out-of-snapshot asset unexpected when it is marked again",
+    "implemented": true,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F042",
+      "F043"
+    ]
+  },
+  {
+    "id": "T117",
+    "description": "markItem binds marked_at as a value: Citus rejects fn.now() in an ON CONFLICT merge on a distributed table",
+    "implemented": true,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T118",
+    "description": "AuditSetup counts the expected scope with the location applied and one request per status slug, and reports no count for 'No location'",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T119",
+    "description": "a second scan of an asset already recorded as unexpected only toasts",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T120",
+    "description": "Create task sends the estimate in minutes (2.5 hours becomes 150)",
+    "implemented": true,
+    "commitGroup": "task-edit",
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T121",
+    "description": "an assignee, due date or priority edit reloads the enriched task instead of keeping the bare PUT row",
+    "implemented": true,
+    "commitGroup": "task-edit",
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T122",
+    "description": "collectFilteredPage asks once when the server filtered, walks past pages that narrow to nothing, honours the page budget and keeps the resume page",
+    "implemented": true,
+    "commitGroup": "projects-list",
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T123",
+    "description": "a first page that narrows to nothing is walked past and the server's unfiltered total is not shown",
+    "implemented": true,
+    "commitGroup": "projects-list",
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T124",
+    "description": "the recent-searches key is accepted by expo-secure-store and a storage failure never escapes read, write or clear",
+    "implemented": true,
+    "commitGroup": "search",
+    "featureIds": [
+      "F075"
+    ]
+  },
+  {
+    "id": "T125",
+    "description": "the search error Retry re-issues the request for the same query",
+    "implemented": true,
+    "commitGroup": "search",
+    "featureIds": [
+      "F076"
+    ]
   }
 ]

@@ -109,7 +109,7 @@
   },
   {
     "id": "F013",
-    "description": "ProjectsScreen (drawer ProjectsTab, id projects-list) lists projects with name, client, status badge, end date and progress bar; paginates on end reached; pull to refresh",
+    "description": "ProjectsScreen (drawer ProjectsTab, id projects-list) lists projects with name, client, status badge, end date and progress bar; paginates on end reached (walking past server pages that a multi-status filter narrows to nothing, and showing no count while narrowing because the server's total is unfiltered); pull to refresh",
     "implemented": true,
     "commitGroup": "projects-list",
     "prdRefs": [
@@ -226,7 +226,7 @@
   },
   {
     "id": "F026",
-    "description": "CreateTaskModal (id create-task-modal) with name (required), description, assignee (AgentPickerModal), due date (DatePickerField), priority (priorities list), estimated hours; Save disabled until name is non-empty",
+    "description": "CreateTaskModal (id create-task-modal) with name (required), description, assignee (AgentPickerModal), due date (DatePickerField), priority (priorities list), estimated hours (typed in hours, sent as the minutes the column stores); Save disabled until name is non-empty",
     "implemented": true,
     "commitGroup": "task-edit",
     "prdRefs": [
@@ -253,7 +253,7 @@
   },
   {
     "id": "F029",
-    "description": "ProjectTaskDetail gains a Details card: Assignee row (tap \u2192 AgentPickerModal, Unassign option), Due date row (tap \u2192 DatePickerField, Clear), Priority row (tap \u2192 priority picker), Estimated hours read-only",
+    "description": "ProjectTaskDetail gains a Details card: Assignee row (tap \u2192 AgentPickerModal, Unassign option), Due date row (tap \u2192 DatePickerField, Clear), Priority row (tap \u2192 priority picker), Estimated hours read-only; a saved edit reloads the enriched GET payload, since the PUT answers with the bare row",
     "implemented": true,
     "commitGroup": "task-edit",
     "prdRefs": [
@@ -298,7 +298,7 @@
   },
   {
     "id": "F034",
-    "description": "AssetsScreen (drawer AssetsTab, id assets-list) with search box (debounced), rows: name, asset tag, type icon, client, location, status badge; pagination; pull to refresh",
+    "description": "AssetsScreen (drawer AssetsTab, id assets-list) with search box (debounced), rows: name, asset tag, type icon, client, location, status badge; pagination (walks past server pages a multi-status filter narrows to nothing and shows no count while narrowing); pull to refresh",
     "implemented": true,
     "commitGroup": "assets-list",
     "prdRefs": [
@@ -442,7 +442,7 @@
   },
   {
     "id": "F050",
-    "description": "AuditSetupScreen (root 'AuditSetup', id audit-setup): client picker, location picker (client locations + 'No location'), status chips by kind (default deployable + pending), live expected count via a dry listAssets count, Start button disabled until client chosen",
+    "description": "AuditSetupScreen (root 'AuditSetup', id audit-setup): client picker, location picker (required: client locations + 'No location'), status chips by kind (default deployable + pending), expected count counted the way the server snapshots the scope \u2014 one dry listAssets count per status slug with the location applied, and no count for 'No location', which the list API cannot express",
     "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
@@ -568,7 +568,7 @@
   },
   {
     "id": "F064",
-    "description": "Today card loads schedule entries for the device-local day (same window maths as useScheduleWeek), sorted by start; rows show time range and title; tap opens the Schedule tab's entry sheet for that entry type",
+    "description": "Today card loads schedule entries for the device-local day (same window maths as useScheduleWeek), sorted by start; rows show time range and title; tap opens the Schedule tab's ScheduleEntryDetailModal, with Open ticket / Open task / Open in Schedule actions",
     "implemented": true,
     "commitGroup": "home",
     "prdRefs": [
@@ -667,7 +667,7 @@
   },
   {
     "id": "F075",
-    "description": "Recent searches (last 8, on device, keyed by server+user) shown before typing with tap-to-search and Clear; cleared on sign-out and host switch",
+    "description": "Recent searches (last 8, on device, keyed by server+user with the key sanitised for expo-secure-store) shown before typing with tap-to-search and Clear; cleared on sign-out and host switch, and a storage failure never blocks the host switch",
     "implemented": true,
     "commitGroup": "search",
     "prdRefs": [
