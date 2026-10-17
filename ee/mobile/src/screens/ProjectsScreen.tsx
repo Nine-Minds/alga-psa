@@ -370,7 +370,7 @@ export function ProjectsScreen({ navigation }: Props) {
       </View>
       {total != null ? (
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
-          {t("common:countTotal", "{{count}} total", { count: total })}
+          {t("list.count", "{{count}} total", { count: total })}
         </Text>
       ) : null}
     </View>

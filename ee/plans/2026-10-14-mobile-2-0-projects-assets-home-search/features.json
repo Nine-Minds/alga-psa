@@ -731,7 +731,7 @@
   {
     "id": "F082",
     "description": "app.json version 2.0.0, ios.buildNumber 39, android.versionCode 39",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "release",
     "prdRefs": [
       "FR34"
@@ -740,7 +740,7 @@
   {
     "id": "F083",
     "description": "Release notes at ee/docs/plans/2026-10-14-mobile-2-0/RELEASE_NOTES.md covering Home, Projects, Assets + audit, Search (and outbox if shipped)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "release",
     "prdRefs": [
       "FR34"
@@ -749,7 +749,7 @@
   {
     "id": "F084",
     "description": "All new strings in projects/home/search/assets namespaces; i18n unresolved-keys check passes; mobile lint, typecheck, full vitest green",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "release",
     "prdRefs": [
       "FR35"

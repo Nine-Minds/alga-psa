@@ -9,7 +9,8 @@
     "noAccess": "You don't have access to projects.",
     "filters": "Filters",
     "dueOn": "Due {{date}}",
-    "progress": "{{done}} of {{total}} tasks done"
+    "progress": "{{done}} of {{total}} tasks done",
+    "count": "{{count}} total"
   },
   "filters": {
     "title": "Filter projects",

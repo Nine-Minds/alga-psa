@@ -895,7 +895,7 @@
   {
     "id": "T100",
     "description": "app.json carries 2.0.0 / 39 / 39",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "release",
     "featureIds": [
       "F082"
@@ -904,7 +904,7 @@
   {
     "id": "T101",
     "description": "ee/mobile: npm run lint, npm run typecheck, npm run test all exit 0",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "release",
     "featureIds": [
       "F084"
@@ -913,7 +913,7 @@
   {
     "id": "T102",
     "description": "no new t() key without an entry in its namespace (i18n unresolved keys script)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "release",
     "featureIds": [
       "F084"

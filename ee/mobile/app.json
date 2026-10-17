@@ -2,7 +2,7 @@
   "expo": {
     "name": "AlgaPSA",
     "slug": "mobile",
-    "version": "1.6.4",
+    "version": "2.0.0",
     "scheme": "alga",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.nineminds.algapsa",
-      "buildNumber": "38",
+      "buildNumber": "39",
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -26,7 +26,7 @@
     },
     "android": {
       "package": "com.alga.psa.mobile",
-      "versionCode": 38,
+      "versionCode": 39,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
