@@ -265,6 +265,12 @@ export interface ActivityFilters {
    * calendar uses to view other users' calendars). Ignored when equal to the caller.
    */
   targetUserId?: string;
+  /**
+   * Collapse recurring schedule series to their first occurrence (by title, work item id and
+   * work item type) after filtering and before sorting/pagination, so `totalCount` and page
+   * contents count series rather than occurrences.
+   */
+  collapseRecurringSeries?: boolean;
 }
 
 /**

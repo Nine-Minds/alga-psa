@@ -33,6 +33,7 @@ export { fetchWorkflowTaskActivities };
 // to the activity tier, with legacy type-fallback. Kept in its own typed module
 // so it stays independently unit-testable.
 import { mapStoredNotificationPriority } from './notificationPriority';
+import { collapseRecurringSeries } from '../lib/recurringSeries';
 import { whereProjectTaskOnUsersList, whereTicketOnUsersList } from './activityAssignmentScope';
 
 // Enhanced in-memory cache implementation with different TTLs and invalidation
@@ -1254,7 +1255,7 @@ export async function fetchTimeEntryActivities(
 /**
  * Process activities by applying additional filtering, sorting, etc.
  */
-function processActivities(
+export function processActivities(
   activities: Activity[],
   filters: ActivityFilters
 ): Activity[] {
@@ -1339,6 +1340,11 @@ function processActivities(
         filters.assignedTo!.includes(userId)
       );
     });
+  }
+
+  // Collapse recurring series before sorting and pagination so counts are per series.
+  if (filters.collapseRecurringSeries) {
+    filteredActivities = collapseRecurringSeries(filteredActivities);
   }
 
   // Apply sorting

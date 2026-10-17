@@ -52,7 +52,6 @@ import { useActivityCrossFeature } from '@alga-psa/ui/context';
 import { useActivitiesCache } from '../hooks/useActivitiesCache';
 import { useActivitiesInvalidationSignal } from '../hooks/ActivitiesCacheProvider';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
-import { ScheduleActivity } from '@alga-psa/types';
 
 import { ActivitiesTableSkeleton } from './ActivitiesTableSkeleton';
 import { getAllPriorities, getStatuses } from '@alga-psa/reference-data/actions';
@@ -61,6 +60,7 @@ import { findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { DEFAULT_TABLE_TYPES } from './constants';
+import { collapseRecurringSeries } from '../lib/recurringSeries';
 
 interface ActivitiesDataTableSectionProps {
   title?: string;
@@ -90,30 +90,6 @@ function buildLoadedKey(filters: ActivityFilters, viewMode: string): string {
   return JSON.stringify([filters, viewMode]);
 }
 const NO_GROUPS: ActivityGroup[] = [];
-
-function dedupeRecurringActivities(activities: Activity[]): Activity[] {
-  const uniqueUpcomingActivities: Activity[] = [];
-  const addedRecurringSeriesOnPage = new Set<string>();
-
-  for (const activity of activities) {
-    if (activity.type === ActivityType.SCHEDULE) {
-      const scheduleActivity = activity as ScheduleActivity;
-      if (scheduleActivity.isRecurring) {
-        const seriesIdentifier = `${scheduleActivity.title}-${scheduleActivity.workItemId || 'no-item'}-${scheduleActivity.workItemType || 'no-type'}`;
-        if (!addedRecurringSeriesOnPage.has(seriesIdentifier)) {
-          uniqueUpcomingActivities.push(scheduleActivity);
-          addedRecurringSeriesOnPage.add(seriesIdentifier);
-        }
-      } else {
-        uniqueUpcomingActivities.push(activity);
-      }
-    } else {
-      uniqueUpcomingActivities.push(activity);
-    }
-  }
-
-  return uniqueUpcomingActivities;
-}
 
 export function ActivitiesDataTableSection({
   title,
@@ -503,7 +479,7 @@ function formatActivityPrintDate(dateString?: string): string {
     );
 
     const result = await fetchActivities(effectiveFilters, 1, printPageSize);
-    setPrintActivities(dedupeRecurringActivities(result.activities));
+    setPrintActivities(collapseRecurringSeries(result.activities));
   }, [activities.length, getEffectiveFilters, listViewMode, loadActivityGroups, pageSize, totalItems]);
 
   const cleanupPrintActivities = useCallback(() => {
@@ -519,8 +495,11 @@ function formatActivityPrintDate(dateString?: string): string {
     setCurrentPage(1); // Reset to first page when changing page size
   }, []);
 
+  // LEVERAGE: friction recurring-collapse-per-page — the table collapses recurring series
+  // client-side per page, so totalCount counts occurrences and pages can come up short; the
+  // server-side `collapseRecurringSeries` filter key fixes both but changes table pagination.
   const filteredActivitiesForTable = useMemo(() => (
-    dedupeRecurringActivities(activities)
+    collapseRecurringSeries(activities)
   ), [activities]);
 
   // ---- Deep-link focus ------------------------------------------------------------------
