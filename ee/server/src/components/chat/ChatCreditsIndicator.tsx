@@ -36,7 +36,11 @@ async function fetchAccountSummaryCached(force = false): Promise<AiAccountSummar
     return inflight;
   }
   inflight = getAiAccountSummary()
-    .then((value) => {
+    .then((result) => {
+      if (result.status !== 'ok') {
+        throw new Error('AI gateway unavailable');
+      }
+      const value = result.data;
       cached = { at: Date.now(), value };
       inflight = null;
       return value;
