@@ -176,3 +176,35 @@ describe('shared activities cache', () => {
     expect(mocks.getActivities).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('remounting the table section under a surviving shared cache (Cards -> Table toggle)', () => {
+  it('leaves the skeleton and renders rows when the remounted first load is a cache hit', async () => {
+    function Toggle() {
+      const [show, setShow] = React.useState(true);
+      return (
+        <>
+          <button id="toggle" onClick={() => setShow((s) => !s)}>toggle</button>
+          {show && <ActivitiesDataTableSection initialFilters={{ isClosed: false } as any} />}
+        </>
+      );
+    }
+    const { container, queryByTestId, findByTestId } = render(
+      <ActivityDrawerProvider>
+        <Toggle />
+      </ActivityDrawerProvider>
+    );
+    const toggle = () => act(() => { (container.querySelector('#toggle') as HTMLButtonElement).click(); });
+
+    expect(await findByTestId('flat-table')).toBeTruthy();
+    expect(queryByTestId('skeleton')).toBeNull();
+    expect(mocks.getActivities).toHaveBeenCalledTimes(1);
+
+    toggle(); // unmount only the section; provider (and its cache) stays
+    expect(queryByTestId('flat-table')).toBeNull();
+    toggle(); // remount
+
+    expect(await findByTestId('flat-table')).toBeTruthy();
+    expect(queryByTestId('skeleton')).toBeNull();
+    expect(mocks.getActivities).toHaveBeenCalledTimes(1); // second load came from the cache
+  });
+});

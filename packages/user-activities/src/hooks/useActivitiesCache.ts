@@ -130,12 +130,14 @@ export function useActivitiesCache() {
           console.log(`Removed ${toRemove.length} oldest cache entries`);
         }
 
+        return result;
+      } finally {
+        // Clear on hit, miss, or error: a remounted consumer's first fetch is a cache hit
+        // against the shared cache, and a failure should surface empty/error state, not a
+        // permanent skeleton. Stays per hook instance.
         if (isInitialLoad) {
           setIsInitialLoad(false);
         }
-
-        return result;
-      } finally {
         setIsLoading(false);
       }
     },
