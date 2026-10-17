@@ -65,7 +65,14 @@ export function UserActivitiesDashboard() {
   const handleViewAll = (types: ActivityType[]) => {
     // The table opens with the current filters, narrowed to the section's type. This visit
     // only: nothing is persisted until the user edits a filter.
-    setOverrideFilters({ ...filters, types });
+    //
+    // Notifications is the exception: it is not in the filter bar's type set, its rows have no
+    // dueDate (a carried date range would empty the table), and `search` means the notification
+    // category for it. So it opens with exactly its own filters, nothing from the bar.
+    const isNotificationsOnly = types.length === 1 && types[0] === ActivityType.NOTIFICATION;
+    setOverrideFilters(
+      isNotificationsOnly ? { types, isClosed: false } : { ...filters, types }
+    );
     // Switch to the table view ephemerally; do NOT persist the preference.
     setEphemeralView('table');
   };

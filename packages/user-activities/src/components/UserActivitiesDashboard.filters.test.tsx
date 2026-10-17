@@ -96,6 +96,28 @@ describe('UserActivitiesDashboard shared filters', () => {
     expect(mocks.setViewMode).not.toHaveBeenCalled();
   });
 
+  it('Notifications View All opens the table with only types:[NOTIFICATION], isClosed:false', () => {
+    const { container } = render(<UserActivitiesDashboard />);
+    act(() => {
+      mocks.cards.filterState.setFilters({
+        types: [ActivityType.TICKET],
+        isClosed: true,
+        search: 'vpn',
+        dueDateStart: '2026-01-01T00:00:00.000Z',
+        dueDateEnd: '2026-02-01T00:00:00.000Z',
+      });
+    });
+    mocks.setSavedFilters.mockClear();
+
+    act(() => { mocks.cards.onViewAll([ActivityType.NOTIFICATION]); });
+
+    expect(container.querySelector('#table')).toBeTruthy();
+    expect(mocks.table.filterState.filters).toEqual({ types: [ActivityType.NOTIFICATION], isClosed: false });
+    expect(mocks.table.filterState.hasOverride).toBe(true);
+    expect(mocks.setSavedFilters).not.toHaveBeenCalled();
+    expect(mocks.setViewMode).not.toHaveBeenCalled();
+  });
+
   it('clicking the ViewSwitcher ends the View All narrowing', () => {
     const { container } = render(<UserActivitiesDashboard />);
     act(() => { mocks.cards.onViewAll([ActivityType.TICKET]); });
