@@ -33,7 +33,8 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ id, label, 
     {options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}
   </select></label> }));
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({ handleError: mocks.error, getErrorMessage: (e: any) => e.actionError ?? e.permissionError,
-  isActionMessageError: (e: any) => Boolean(e?.actionError), isActionPermissionError: (e: any) => Boolean(e?.permissionError) }));
+  isActionMessageError: (e: any) => Boolean(e?.actionError), isActionPermissionError: (e: any) => Boolean(e?.permissionError),
+  userFacingErrorMessage: (e: any, fallback: string) => e?.permissionError ?? e?.actionError ?? fallback }));
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@alga-psa/tickets/components', () => ({
   TicketDocumentsSection: () => null, TicketAppointmentRequests: () => null, TicketOriginBadge: () => null,
@@ -62,7 +63,7 @@ afterEach(cleanup);
 
 it('keeps portal selection through posting, editing and deletion and guards unfinished work', async () => {
   render(view());
-  const selector = screen.getByLabelText('Conversation');
+  const selector = await screen.findByLabelText('Conversation');
   fireEvent.change(screen.getByLabelText('Reply'), { target: { value: 'Unsent reply' } });
   expect(selector).toBeDisabled();
   fireEvent.change(selector, { target: { value: 'delivery' } });
@@ -89,7 +90,7 @@ it('keeps portal selection through posting, editing and deletion and guards unfi
 it('freezes the old composer during selection, preserves it on failure and drops a late prior-ticket response', async () => {
   const pending = deferred(); mocks.read.mockReturnValueOnce(pending.promise);
   const rendered = render(view());
-  fireEvent.change(screen.getByLabelText('Conversation'), { target: { value: 'delivery' } });
+  fireEvent.change(await screen.findByLabelText('Conversation'), { target: { value: 'delivery' } });
   expect(screen.getByRole('button', { name: 'Post reply' })).toBeDisabled();
   expect(screen.getByRole('group')).toHaveAttribute('inert');
   await act(async () => pending.resolve({ actionError: 'This conversation is unavailable.' }));
@@ -103,10 +104,10 @@ it('freezes the old composer during selection, preserves it on failure and drops
   expect(screen.getByText('default history')).toBeInTheDocument();
 });
 
-it('keeps a single requester view when the UI release flag is off', () => {
+it('keeps a single requester view when the UI release flag is off', async () => {
   mocks.enabled = false; render(view());
+  expect(await screen.findByText('default history')).toBeInTheDocument();
   expect(screen.queryByLabelText('Conversation')).not.toBeInTheDocument();
-  expect(screen.getByText('default history')).toBeInTheDocument();
   expect(mocks.read).not.toHaveBeenCalled();
 });
 
@@ -118,10 +119,10 @@ it('removes prefetched ticket content when the authenticated account changes', (
 });
 
 
-it('focuses only a published message in the selected authorized portal history and disables focus with the release UI', () => {
+it('focuses only a published message in the selected authorized portal history and disables focus with the release UI', async () => {
   mocks.query = 'conversation=default&message=visible';
   const ticket = { ...base, conversations: [{ comment_id: 'visible', note: 'Current requester reply', is_internal: false }] };
-  const mounted = render(view(ticket)); expect(screen.getByLabelText('Focused message')).toHaveTextContent('visible');
+  const mounted = render(view(ticket)); expect(await screen.findByLabelText('Focused message')).toHaveTextContent('visible');
   mocks.query = 'conversation=default&message=private-or-unknown'; mounted.rerender(view(ticket));
   expect(screen.getByLabelText('Focused message')).toBeEmptyDOMElement();
   expect(screen.getByRole('alert')).toHaveTextContent('This message is unavailable in this conversation.');
@@ -134,7 +135,7 @@ it('focuses only a published message in the selected authorized portal history a
 
 it('publishes selector navigation to the URL and follows back/forward while retaining an unfinished edit', async () => {
   const rendered = render(view());
-  fireEvent.change(screen.getByLabelText('Conversation'), { target: { value: 'delivery' } });
+  fireEvent.change(await screen.findByLabelText('Conversation'), { target: { value: 'delivery' } });
   await screen.findByText('delivery history');
   expect(window.location.search).toContain('conversation=delivery'); expect(window.location.search).toContain('tenant=portal-slug');
   mocks.query = window.location.search; rendered.rerender(view());
@@ -173,12 +174,13 @@ it('does not load a foreign URL store or modify a surrounding page when selectin
   expect(mocks.read).not.toHaveBeenCalled();
   rendered.unmount();
   render(<TicketDetails ticketId="ticket" initialTicket={base as any} initialDocuments={[]} initialStatusOptions={[]} isOpen onClose={() => {}} />);
-  fireEvent.change(screen.getByLabelText('Conversation'), { target: { value: 'delivery' } });
+  fireEvent.change(await screen.findByLabelText('Conversation'), { target: { value: 'delivery' } });
   await screen.findByText('delivery history'); expect(window.location.search).toBe('?tenant=portal-slug');
 });
 
 it('retries a denied navigation but rejects a response for another conversation before rendering it', async () => {
-  const rendered = render(view()); mocks.read.mockResolvedValueOnce({ ...base, selectedConversationId: 'unexpected', title: 'Wrong response' });
+  const rendered = render(view()); await screen.findByLabelText('Conversation');
+  mocks.read.mockResolvedValueOnce({ ...base, selectedConversationId: 'unexpected', title: 'Wrong response' });
   mocks.query = 'conversation=delivery&conversationStore=owner'; rendered.rerender(view());
   await screen.findByText('This conversation is unavailable.');
   expect(screen.queryByText('unexpected history')).toBeNull();

@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ read: vi.fn(), statuses: vi.fn() }));
-vi.mock('@alga-psa/client-portal/actions', () => ({ getClientTicketDetails: mocks.read }));
+vi.mock('@alga-psa/client-portal/actions', () => ({ getClientTicketDetails: mocks.read, getClientPortalTicketStatuses: mocks.statuses }));
 vi.mock('@alga-psa/reference-data/actions', () => ({ getTicketStatuses: mocks.statuses }));
 vi.mock('@alga-psa/client-portal/components', () => ({ TicketDetailsContainer: () => null }));
 vi.mock('@/lib/productAccess', () => ({ getCurrentTenantProduct: async () => 'psa' }));
@@ -8,7 +8,8 @@ vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({ getServerTranslation: async
 vi.mock('@alga-psa/ui/components/Alert', () => ({ Alert: () => null, AlertDescription: () => null }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { warn: vi.fn(), error: vi.fn() } }));
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({ getErrorMessage: (value: any) => value.actionError ?? value.permissionError,
-  isActionMessageError: (value: any) => Boolean(value?.actionError), isActionPermissionError: (value: any) => Boolean(value?.permissionError) }));
+  isActionMessageError: (value: any) => Boolean(value?.actionError), isActionPermissionError: (value: any) => Boolean(value?.permissionError),
+  userFacingErrorMessage: (value: any, fallback: string) => value?.permissionError ?? value?.actionError ?? fallback }));
 import TicketPage from '../../../app/client-portal/tickets/[ticketId]/page';
 const page = (query: Record<string, string | string[] | undefined>) => TicketPage({ params: Promise.resolve({ ticketId: 'ticket' }), searchParams: Promise.resolve(query) });
 beforeEach(() => {
