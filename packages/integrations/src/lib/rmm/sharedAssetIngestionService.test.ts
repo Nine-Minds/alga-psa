@@ -25,7 +25,11 @@ let mappingCounter = 0;
 
 function createFakeKnex(state: DbState) {
   function rowsFor(table: string): any[] {
-    return (state as any)[table];
+    // Tables the assignment helper and the group lookup touch are created on
+    // demand so each test only has to seed what it cares about.
+    const key = table.split(' as ')[0];
+    if (!(state as any)[key]) (state as any)[key] = [];
+    return (state as any)[key];
   }
 
   function matches(row: any, where: Record<string, any>) {
@@ -35,7 +39,11 @@ function createFakeKnex(state: DbState) {
   class QueryBuilder {
     private wheres: Array<Record<string, any>> = [];
 
-    constructor(private readonly table: string) {}
+    constructor(table: string) {
+      this.table = table.split(' as ')[0];
+    }
+
+    private readonly table: string;
 
     where(where: Record<string, any>) {
       this.wheres.push(where);
@@ -45,6 +53,34 @@ function createFakeKnex(state: DbState) {
     whereNotNull(col: string) {
       this.wheres.push({ __not_null: col } as any);
       return this;
+    }
+
+    // setAssetAssignee closes the open assignment row (unassigned_at IS NULL)
+    // and the group lookup joins asset_groups; both reach this builder now.
+    whereNull(col: string) {
+      this.wheres.push({ __is_null: col } as any);
+      return this;
+    }
+
+    whereIn(col: string, values: any[]) {
+      this.wheres.push({ __in: { col, values } } as any);
+      return this;
+    }
+
+    join(_table: string, _on: unknown) {
+      return this;
+    }
+
+    select(..._cols: string[]) {
+      return this;
+    }
+
+    orderBy(_col: string, _dir?: string) {
+      return this;
+    }
+
+    then(resolve: (value: any) => void, reject?: (reason: unknown) => void) {
+      return Promise.resolve(this.filtered().map((row) => ({ ...row }))).then(resolve, reject);
     }
 
     andWhere(col: string, value: any) {
@@ -58,6 +94,16 @@ function createFakeKnex(state: DbState) {
         if ('__not_null' in where) {
           const col = (where as any).__not_null;
           rows = rows.filter((row) => row[col] !== null && typeof row[col] !== 'undefined');
+          continue;
+        }
+        if ('__is_null' in where) {
+          const col = (where as any).__is_null;
+          rows = rows.filter((row) => row[col] === null || typeof row[col] === 'undefined');
+          continue;
+        }
+        if ('__in' in where) {
+          const { col, values } = (where as any).__in;
+          rows = rows.filter((row) => values.includes(row[col]));
           continue;
         }
         rows = rows.filter((row) => matches(row, where));
@@ -152,7 +198,7 @@ function buildSnapshot(overrides: Partial<NormalizedRmmExternalDeviceSnapshot> =
 }
 
 describe('sharedAssetIngestionService', () => {
-  it('T002: creates asset + extension + external mapping from normalized snapshot', async () => {
+  it('T002/T139: creates asset + extension + external mapping from the mapping\u2019s client', async () => {
     const state: DbState = {
       assets: [],
       workstation_assets: [],
@@ -241,7 +287,11 @@ describe('sharedAssetIngestionService', () => {
     expect(state.tenant_external_entity_mappings[0].sync_status).toBe('synced');
   });
 
-  it('updates the existing mapping and asset ownership when a device moves to a new mapped scope', async () => {
+  // FR-G5 (alga-2026-0002672): sync used to re-stamp `client_id` on update,
+  // which reverted a manual client move on every run and fought the RMM
+  // organization move. The update path now leaves ownership alone; re-pointing
+  // an organization moves its devices through moveRmmOrganizationAssets.
+  it('T138: leaves asset ownership and the assignee alone when a device appears under a new mapped scope', async () => {
     const state: DbState = {
       assets: [
         {
@@ -295,12 +345,12 @@ describe('sharedAssetIngestionService', () => {
     expect(result.action).toBe('updated');
     expect(state.assets).toHaveLength(1);
     expect(state.assets[0]).toMatchObject({
-      client_id: 'client_new',
+      // Ownership is the operator's to change, not sync's.
+      client_id: 'client_old',
+      contact_name_id: 'contact_of_client_old',
       name: 'Moved Endpoint',
       rmm_organization_id: 'scope_new',
     });
-    // The assignee belonged to the old client, so the move clears it.
-    expect(state.assets[0].contact_name_id).toBeNull();
     expect(state.tenant_external_entity_mappings).toHaveLength(1);
     expect(state.tenant_external_entity_mappings[0]).toMatchObject({
       id: 'map_existing',
@@ -441,5 +491,41 @@ describe('sharedAssetIngestionService', () => {
       installed_software: JSON.stringify([{ name: 'Docker Desktop', version: '4.40.0' }]),
       system_info: JSON.stringify({ manufacturer: 'Apple', model: 'Mac16,5' }),
     });
+  });
+
+  // FR-B6: `snapshot.status` is a loose `string` on the contract. Every mapper
+  // sends `active` or `inactive` today, but a provider word must never become
+  // the new asset's status, because no asset_statuses row would define it.
+  it('ignores a provider status that is not one of the two slugs ingestion owns', async () => {
+    for (const [providerStatus, lifecycleState, expected] of [
+      ['Decommissioned', 'active', 'active'],
+      ['Decommissioned', 'offline', 'inactive'],
+      ['inactive', 'active', 'inactive'],
+      ['active', 'offline', 'active'],
+    ] as Array<[string, 'active' | 'offline', string]>) {
+      const state: DbState = {
+        assets: [],
+        workstation_assets: [],
+        server_assets: [],
+        tenant_external_entity_mappings: [],
+        rmm_organization_mappings: [
+          {
+            tenant: 'tenant_1',
+            integration_id: 'integration_1',
+            external_organization_id: 'scope_1',
+            client_id: 'client_1',
+          },
+        ],
+      };
+
+      const result = await ingestNormalizedRmmDeviceSnapshot({
+        tenant: 'tenant_1',
+        snapshot: buildSnapshot({ status: providerStatus, lifecycleState }),
+        knex: createFakeKnex(state),
+      });
+
+      expect(result.action).toBe('created');
+      expect(state.assets[0].status).toBe(expected);
+    }
   });
 });

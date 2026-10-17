@@ -2893,6 +2893,54 @@
         "errors": {
           "saveFailed": "Não foi possível salvar a programação de sincronização de dispositivos."
         }
+      },
+      "peopleMode": {
+        "label": "Pessoas",
+        "options": {
+          "off": "Desativado",
+          "suggest": "Sugerir",
+          "auto": "Atribuir automaticamente"
+        },
+        "updateFailed": "Não foi possível atualizar o modo de pessoas"
+      },
+      "signedInUsers": {
+        "title": "Usuários conectados",
+        "description": "Os nomes de usuário informados pelos dispositivos desta organização e o contato correspondente a cada um.",
+        "empty": "Nenhum usuário conectado informado ainda.",
+        "noClient": "Associe esta organização a um cliente antes de associar seus usuários.",
+        "refresh": "Atualizar",
+        "selectContact": "Selecionar contato",
+        "loadFailed": "Não foi possível carregar os usuários conectados.",
+        "saveFailed": "Não foi possível salvar a associação.",
+        "columns": {
+          "user": "Usuário conectado",
+          "devices": "Dispositivos",
+          "method": "Associado por",
+          "contact": "Contato"
+        },
+        "methods": {
+          "mapped": "Associação salva",
+          "email": "E-mail",
+          "username": "Nome de usuário",
+          "name": "Nome completo",
+          "none": "Sem correspondência"
+        }
+      },
+      "clientChange": {
+        "title": "Mover os dispositivos desta organização?",
+        "message": "{{count}} ativo(s) serão movidos para {{client}}. Atribuições, grupos e perfis de faturamento do cliente anterior serão removidos.",
+        "confirm": "Mover dispositivos"
+      },
+      "billingProfile": {
+        "label": "Perfil de faturamento",
+        "clientDefault": "Padrão do cliente",
+        "updateFailed": "Falha ao atualizar o perfil de faturamento"
+      },
+      "errors": {
+        "invalidPeopleMode": "Esse não é um modo de pessoas válido.",
+        "billingProfileUnavailable": "Esse perfil de faturamento não está disponível para este cliente.",
+        "mappingNotFound": "Esse vínculo não existe mais. Atualize a página e tente novamente.",
+        "forbidden": "Você não tem permissão para alterar isso."
       }
     },
     "sso": {

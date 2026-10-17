@@ -323,7 +323,8 @@
     "errorWithMessage": "⟦Ḗřřȯř: {{message}}⟧",
     "billingProfileUpdated": "⟦Ɓīŀŀīƞɠ ƥřȯƒīŀḗ ŭƥḓȧŧḗḓ⟧",
     "updateBillingProfileFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƀīŀŀīƞɠ ƥřȯƒīŀḗ⟧",
-    "scheduleOpenFailed": "⟦Ƒȧīŀḗḓ ŧȯ ȯƥḗƞ ŧħḗ şƈħḗḓŭŀḗř⟧"
+    "scheduleOpenFailed": "⟦Ƒȧīŀḗḓ ŧȯ ȯƥḗƞ ŧħḗ şƈħḗḓŭŀḗř⟧",
+    "sharedWorkspaceReadOnly": "⟦Ẏȯŭ ƈȧƞ şḗḗ ŧħīş ŧīƈķḗŧ ƀḗƈȧŭşḗ īŧ īş ȧƀȯŭŧ ȧ ḓḗṽīƈḗ īƞ ȧ ẇȯřķşƥȧƈḗ ẏȯŭ şħȧřḗ. Ȯƞŀẏ ŧħḗ ƥḗřşȯƞ ẇħȯ řȧīşḗḓ īŧ ƈȧƞ ȧḓḓ ŧȯ īŧ.⟧"
   },
   "conversation": {
     "comments": "⟦Ƈȯḿḿḗƞŧş⟧",
@@ -1808,6 +1809,7 @@
       "setClientToAddContact": "⟦Şḗŧ ȧ ƈŀīḗƞŧ ƒīřşŧ ŧȯ ȧḓḓ ȧ ƈȯƞŧȧƈŧ⟧",
       "logInteraction": "⟦Ŀȯɠ ƈȧŀŀ ȯř ḗḿȧīŀ⟧",
       "changeClient": "⟦Ƈħȧƞɠḗ ƈŀīḗƞŧ⟧",
+      "changeLocation": "⟦Ƈħȧƞɠḗ ŀȯƈȧŧīȯƞ⟧",
       "teamFallback": "⟦Ŧḗȧḿ⟧",
       "teamSectionLabel": "⟦Ȧşşīɠƞ ȧ ŧḗȧḿ⟧",
       "addAgentsOrTeam": "⟦Ȧḓḓ ȧɠḗƞŧş ȯř ȧ ŧḗȧḿ…⟧",
