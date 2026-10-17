@@ -9,8 +9,25 @@ describe('CE authorization bundle management placeholder', () => {
       'utf8'
     );
 
-    expect(source).toContain('available on Pro');
-    expect(source).toContain('configure narrowing bundles for roles, teams, users, and API keys');
-    expect(source).toContain('Built-in authorization protections remain active');
+    // The copy is now localized (msp/settings namespace) rather than hardcoded;
+    // assert the wiring plus the English resource it resolves through.
+    expect(source).toContain("useTranslation('msp/settings')");
+    expect(source).toContain('policyManagement.bundleLibrary.upgradeDescription');
+    expect(source).toContain('policyManagement.bundleLibrary.protectionsDescription');
+
+    const en = JSON.parse(
+      fs.readFileSync(
+        path.resolve(process.cwd(), 'public/locales/en/msp/settings.json'),
+        'utf8'
+      )
+    );
+
+    expect(en.policyManagement.bundleLibrary.upgradeDescription).toContain('available on Pro');
+    expect(en.policyManagement.bundleLibrary.upgradeDescription).toContain(
+      'configure narrowing bundles for roles, teams, users, and API keys'
+    );
+    expect(en.policyManagement.bundleLibrary.protectionsDescription).toContain(
+      'Built-in authorization protections remain active'
+    );
   });
 });

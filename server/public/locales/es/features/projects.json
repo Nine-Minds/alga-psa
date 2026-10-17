@@ -85,7 +85,9 @@
     "noService": "Sin servicio",
     "servicePlaceholder": "Seleccionar servicio predeterminado",
     "serviceHelp": "Se usa en los partes de tiempo de las tareas de esta fase cuando la propia tarea no define un servicio.",
-    "serviceDisplayLabel": "Servicio"
+    "serviceDisplayLabel": "Servicio",
+    "taskCount_few": "{{count}} tareas",
+    "taskCount_many": "{{count}} tareas"
   },
   "projectList": {
     "addProject": "Agregar proyecto",
@@ -314,7 +316,9 @@
     "bulkTagsFailure": "No se pudieron añadir etiquetas a las tareas seleccionadas",
     "taskTypeFallback": "Tarea",
     "timeline": "Cronograma",
-    "loadingTimeline": "Cargando cronograma..."
+    "loadingTimeline": "Cargando cronograma...",
+    "bulkTagsSuccess_few": "Etiquetas añadidas a {{count}} tareas",
+    "bulkTagsSuccess_many": "Etiquetas añadidas a {{count}} tareas"
   },
   "taskForm": {
     "addTitle": "Agregar tarea",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "Hereda {{service}} del proyecto.",
     "startDateLabel": "Fecha de inicio",
     "taskStartDateLabel": "Fecha de inicio de la tarea",
-    "startDatePlaceholder": "Seleccionar fecha de inicio"
+    "startDatePlaceholder": "Seleccionar fecha de inicio",
+    "createdTicketsIntro_few": "Has creado {{count}} tickets durante esta sesión:",
+    "createdTicketsIntro_many": "Has creado {{count}} tickets durante esta sesión:",
+    "documentCleanupFailure_few": "No se pudieron eliminar {{count}} documentos y permanecerán en Documentos",
+    "documentCleanupFailure_many": "No se pudieron eliminar {{count}} documentos y permanecerán en Documentos",
+    "documentsCleanupIntro_few": "Tiene {{count}} documentos que fueron {{cleanupType}}:",
+    "documentsCleanupIntro_many": "Tiene {{count}} documentos que fueron {{cleanupType}}:",
+    "ticketCleanupFailure_few": "No se pudieron eliminar {{count}} tickets",
+    "ticketCleanupFailure_many": "No se pudieron eliminar {{count}} tickets"
   },
   "taskDependencies": {
     "title": "Dependencias",
@@ -644,7 +656,13 @@
     },
     "exportSelected": "Exportar {{count}} seleccionada(s)",
     "selectedTasksNotice_one": "Exportando {{count}} tarea seleccionada.",
-    "selectedTasksNotice_other": "Exportando {{count}} tareas seleccionadas."
+    "selectedTasksNotice_other": "Exportando {{count}} tareas seleccionadas.",
+    "phasesSelected_few": "{{selected}} de {{total}} fases seleccionadas",
+    "phasesSelected_many": "{{selected}} de {{total}} fases seleccionadas",
+    "selectedTasksNotice_few": "Exportando {{count}} tareas seleccionadas.",
+    "selectedTasksNotice_many": "Exportando {{count}} tareas seleccionadas.",
+    "success_few": "Se exportaron {{count}} tareas correctamente a CSV.",
+    "success_many": "Se exportaron {{count}} tareas correctamente a CSV."
   },
   "import": {
     "title": "Importar fases y tareas",
@@ -765,7 +783,9 @@
     "statusUnmatchedTooltip": "El estado no coincide con ningún estado existente para esta fase. Resuélvalo en los pasos de mapeo antes de importar.",
     "statusFallbackSuffix": "Predeterminado",
     "statusFallbackTooltip": "Usando el estado predeterminado de respaldo para esta fase.",
-    "inPhaseBadge": "en {{phase}}"
+    "inPhaseBadge": "en {{phase}}",
+    "taskCountLabel_few": "({{count}} tareas)",
+    "taskCountLabel_many": "({{count}} tareas)"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +859,9 @@
       "badgeCount_other": "{{count}} Tareas",
       "badgeCount_one": "{{count}} Tarea",
       "billsToProject": "El tiempo se factura como tiempo del proyecto",
-      "billsToClient": "El tiempo se factura a nivel de cliente"
+      "billsToClient": "El tiempo se factura a nivel de cliente",
+      "badgeCount_few": "{{count}} Tareas",
+      "badgeCount_many": "{{count}} Tareas"
     },
     "bulkMoveTask": {
       "title": "Mover tareas",
@@ -1215,7 +1237,9 @@
       "taskCount_other": "{{count}} tareas",
       "unknownUser": "Desconocido",
       "unknownTask": "Tarea desconocida",
-      "checklistCountTitle": "{{count}} elemento de lista"
+      "checklistCountTitle": "{{count}} elemento de lista",
+      "taskCount_few": "{{count}} tareas",
+      "taskCount_many": "{{count}} tareas"
     },
     "taskForm": {
       "addTitle": "Agregar tarea",
@@ -1625,7 +1649,9 @@
       "submitting": "Añadiendo etiquetas...",
       "confirm_one": "Añadir etiquetas a {{count}} tarea",
       "confirm_other": "Añadir etiquetas a {{count}} tareas",
-      "failedHeading": "No se pudieron añadir etiquetas a las siguientes tareas:"
+      "failedHeading": "No se pudieron añadir etiquetas a las siguientes tareas:",
+      "confirm_few": "Añadir etiquetas a {{count}} tareas",
+      "confirm_many": "Añadir etiquetas a {{count}} tareas"
     }
   },
   "common:actions": {
@@ -1688,7 +1714,9 @@
       "lockedSummary_other": "{{count}} entradas por un total de {{amount}} están bloqueadas y no cambiarán.",
       "edit": "Editar condiciones",
       "saved": "Condiciones de facturación actualizadas",
-      "dialogTitle": "Editar condiciones de facturación"
+      "dialogTitle": "Editar condiciones de facturación",
+      "lockedSummary_few": "{{count}} entradas por un total de {{amount}} están bloqueadas y no cambiarán.",
+      "lockedSummary_many": "{{count}} entradas por un total de {{amount}} están bloqueadas y no cambiarán."
     },
     "setup": {
       "title": "Facturar este proyecto",
@@ -2037,5 +2065,22 @@
     "question": "Las dependencias no son obligatorias, así que puede continuar. ¿Desea hacerlo?",
     "proceed": "Continuar de todos modos",
     "cancel": "Cancelar"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Compacto"
+    },
+    "spacious": {
+      "label": "Espacioso"
+    },
+    "decrease": {
+      "title": "Reducir el ancho de las columnas"
+    },
+    "increase": {
+      "title": "Aumentar el ancho de las columnas"
+    },
+    "reset": {
+      "title": "Restablecer el valor predeterminado"
+    }
   }
 }

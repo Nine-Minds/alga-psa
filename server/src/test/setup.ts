@@ -445,8 +445,19 @@ const i18nMocks = vi.hoisted(() => {
     };
   };
 
+  // Imperative translate(namespace, key, options) outside a React tree
+  // (SchedulingContext's provider-less fallbacks, MentionNode.renderHTML,
+  // ResponseStateBadge's default `t`). Namespace is irrelevant here — same
+  // defaultValue/interpolation contract as mockT.
+  const mockTranslate = (
+    _namespace: string,
+    key: string,
+    options?: { defaultValue?: string; [key: string]: unknown },
+  ) => mockT(key, options);
+
   return {
     mockT,
+    mockTranslate,
     mockI18n,
     mockUseTranslation: () => ({ t: mockT, i18n: mockI18n }),
     mockFormatters,
@@ -466,6 +477,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => ({
   // test that mounts a page through the wrapper throws on the missing export.
   getBootstrapLoadingText: () => 'Loading...',
   I18nProvider: ({ children }: { children: React.ReactNode }) => children,
+  translate: i18nMocks.mockTranslate,
 }));
 
 vi.mock('next/server', async () => {

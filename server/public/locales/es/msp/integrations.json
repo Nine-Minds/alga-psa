@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Función Pro"
+    },
     "accounting": {
       "bulk": {
         "button": "Asignación masiva",
@@ -1232,7 +1235,12 @@
         "recommendedUnsaved": "Recomendado: sin guardar",
         "unsavedChange": "Cambio sin guardar",
         "unsavedNotice": "Estos filtros no se aplicarán hasta que los guardes."
-      }
+      },
+      "proFeature": {
+        "description": "La integración con Microsoft Entra está disponible en AlgaPSA Pro.",
+        "notice": "La integración de identidad de Microsoft Entra es una función de Pro."
+      },
+      "loading": "Cargando la integración con Microsoft Entra…"
     },
     "google": {
       "settings": {
@@ -1303,6 +1311,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "La integración de documentación de TI de Hudu está disponible en AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Origen: Hudu",
         "openInHudu": "Abrir en Hudu",
@@ -2323,6 +2334,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "La integración RMM con NinjaOne está disponible en AlgaPSA Pro."
+        },
         "loading": "Cargando configuración de la integración NinjaOne...",
         "card": {
           "title": "Integración de NinjaOne RMM",
@@ -2600,6 +2614,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "La integración RMM con Tanium está disponible en AlgaPSA Pro."
+        },
         "loading": "Cargando configuración de la integración con Tanium...",
         "actions": {
           "discoverScopes": "Descubrir ámbitos",
@@ -2670,6 +2687,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "La integración RMM con Level.io está disponible en AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Recuperar alertas anteriores",
           "disconnect": "Desconectar",
@@ -2752,6 +2772,10 @@
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Integración con Huntress",
+          "description": "La integración de seguridad con Huntress es una función Pro."
+        },
         "columns": {
           "organization": "Organización de Huntress",
           "client": "Cliente de Alga",
@@ -3511,6 +3535,11 @@
           "regenerate": "Regenerar paquete",
           "regenerating": "Regenerando..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Inicio de sesión en Teams no disponible",
+        "tabTitle": "Pestaña de Teams no disponible",
+        "description": "La integración con Microsoft Teams solo está disponible en Pro."
       }
     },
     "xero": {

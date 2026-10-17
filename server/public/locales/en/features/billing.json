@@ -443,5 +443,12 @@
     "expires": "Expires {{date}}",
     "recentBurn": "Recent usage",
     "timeEntry": "Time entry"
+  },
+  "bucketUsage": {
+    "contractLine": "Bucket Contract Line",
+    "usage": "Usage",
+    "hoursUsed": "{{hours}} hours used",
+    "hoursTotal": "{{hours}} hours total",
+    "rolloverHours": "Includes {{hours}} rollover hours"
   }
 }

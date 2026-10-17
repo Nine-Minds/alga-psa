@@ -85,7 +85,9 @@
     "noService": "Kein Service",
     "servicePlaceholder": "Standard-Service auswählen",
     "serviceHelp": "Wird für Zeiteinträge auf Aufgaben dieser Phase verwendet, wenn die Aufgabe selbst keinen Service festlegt.",
-    "serviceDisplayLabel": "Dienst"
+    "serviceDisplayLabel": "Dienst",
+    "taskCount_few": "{{count}} Aufgaben",
+    "taskCount_many": "{{count}} Aufgaben"
   },
   "projectList": {
     "addProject": "Projekt hinzufügen",
@@ -314,7 +316,9 @@
     "bulkTagsFailure": "Tags konnten nicht zu den ausgewählten Aufgaben hinzugefügt werden",
     "taskTypeFallback": "Aufgabe",
     "timeline": "Zeitplan",
-    "loadingTimeline": "Zeitplan wird geladen..."
+    "loadingTimeline": "Zeitplan wird geladen...",
+    "bulkTagsSuccess_few": "Tags zu {{count}} Aufgaben hinzugefügt",
+    "bulkTagsSuccess_many": "Tags zu {{count}} Aufgaben hinzugefügt"
   },
   "taskForm": {
     "addTitle": "Aufgabe hinzufügen",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "Übernimmt {{service}} vom Projekt.",
     "startDateLabel": "Startdatum",
     "taskStartDateLabel": "Startdatum der Aufgabe",
-    "startDatePlaceholder": "Startdatum auswählen"
+    "startDatePlaceholder": "Startdatum auswählen",
+    "createdTicketsIntro_few": "Sie haben in dieser Sitzung {{count}} Tickets erstellt:",
+    "createdTicketsIntro_many": "Sie haben in dieser Sitzung {{count}} Tickets erstellt:",
+    "documentCleanupFailure_few": "{{count}} Dokumente konnten nicht gelöscht werden und verbleiben in Dokumente",
+    "documentCleanupFailure_many": "{{count}} Dokumente konnten nicht gelöscht werden und verbleiben in Dokumente",
+    "documentsCleanupIntro_few": "Sie haben {{count}} Dokumente, die {{cleanupType}} wurden:",
+    "documentsCleanupIntro_many": "Sie haben {{count}} Dokumente, die {{cleanupType}} wurden:",
+    "ticketCleanupFailure_few": "{{count}} Tickets konnten nicht gelöscht werden",
+    "ticketCleanupFailure_many": "{{count}} Tickets konnten nicht gelöscht werden"
   },
   "taskDependencies": {
     "title": "Abhängigkeiten",
@@ -644,7 +656,13 @@
     },
     "exportSelected": "{{count}} ausgewählte exportieren",
     "selectedTasksNotice_one": "{{count}} ausgewählte Aufgabe wird exportiert.",
-    "selectedTasksNotice_other": "{{count}} ausgewählte Aufgaben werden exportiert."
+    "selectedTasksNotice_other": "{{count}} ausgewählte Aufgaben werden exportiert.",
+    "phasesSelected_few": "{{selected}} von {{total}} Phasen ausgewählt",
+    "phasesSelected_many": "{{selected}} von {{total}} Phasen ausgewählt",
+    "selectedTasksNotice_few": "{{count}} ausgewählte Aufgaben werden exportiert.",
+    "selectedTasksNotice_many": "{{count}} ausgewählte Aufgaben werden exportiert.",
+    "success_few": "{{count}} Aufgaben erfolgreich als CSV exportiert.",
+    "success_many": "{{count}} Aufgaben erfolgreich als CSV exportiert."
   },
   "import": {
     "title": "Phasen und Aufgaben importieren",
@@ -765,7 +783,9 @@
     "statusUnmatchedTooltip": "Der Status entspricht keinem vorhandenen Status für diese Phase. Bitte vor dem Import in den Zuordnungsschritten lösen.",
     "statusFallbackSuffix": "Standard",
     "statusFallbackTooltip": "Verwendung des Standard-Ersatzstatus für diese Phase.",
-    "inPhaseBadge": "Phase {{phase}}"
+    "inPhaseBadge": "Phase {{phase}}",
+    "taskCountLabel_few": "({{count}} Aufgaben)",
+    "taskCountLabel_many": "({{count}} Aufgaben)"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +859,9 @@
       "badgeCount_other": "{{count}} Aufgaben",
       "badgeCount_one": "{{count}} Aufgabe",
       "billsToProject": "Zeit wird als Projektzeit abgerechnet",
-      "billsToClient": "Zeit wird auf Kundenebene abgerechnet"
+      "billsToClient": "Zeit wird auf Kundenebene abgerechnet",
+      "badgeCount_few": "{{count}} Aufgaben",
+      "badgeCount_many": "{{count}} Aufgaben"
     },
     "bulkMoveTask": {
       "title": "Aufgaben verschieben",
@@ -1215,7 +1237,9 @@
       "taskCount_other": "{{count}} Aufgaben",
       "unknownUser": "Unbekannt",
       "unknownTask": "Unbekannte Aufgabe",
-      "checklistCountTitle": "{{count}} Checklistenpunkt"
+      "checklistCountTitle": "{{count}} Checklistenpunkt",
+      "taskCount_few": "{{count}} Aufgaben",
+      "taskCount_many": "{{count}} Aufgaben"
     },
     "taskForm": {
       "addTitle": "Aufgabe hinzufügen",
@@ -1625,7 +1649,9 @@
       "submitting": "Tags werden hinzugefügt...",
       "confirm_one": "Tags zu {{count}} Aufgabe hinzufügen",
       "confirm_other": "Tags zu {{count}} Aufgaben hinzufügen",
-      "failedHeading": "Tags konnten zu den folgenden Aufgaben nicht hinzugefügt werden:"
+      "failedHeading": "Tags konnten zu den folgenden Aufgaben nicht hinzugefügt werden:",
+      "confirm_few": "Tags zu {{count}} Aufgaben hinzufügen",
+      "confirm_many": "Tags zu {{count}} Aufgaben hinzufügen"
     }
   },
   "common:actions": {
@@ -1688,7 +1714,9 @@
       "lockedSummary_other": "{{count}} Einträge mit insgesamt {{amount}} sind gesperrt und ändern sich nicht.",
       "edit": "Konditionen bearbeiten",
       "saved": "Abrechnungskonditionen aktualisiert",
-      "dialogTitle": "Abrechnungskonditionen bearbeiten"
+      "dialogTitle": "Abrechnungskonditionen bearbeiten",
+      "lockedSummary_few": "{{count}} Einträge mit insgesamt {{amount}} sind gesperrt und ändern sich nicht.",
+      "lockedSummary_many": "{{count}} Einträge mit insgesamt {{amount}} sind gesperrt und ändern sich nicht."
     },
     "setup": {
       "title": "Dieses Projekt abrechnen",
@@ -2037,5 +2065,22 @@
     "question": "Abhängigkeiten werden nicht erzwungen, Sie können also fortfahren. Möchten Sie das?",
     "proceed": "Trotzdem fortfahren",
     "cancel": "Abbrechen"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Kompakt"
+    },
+    "spacious": {
+      "label": "Geräumig"
+    },
+    "decrease": {
+      "title": "Spaltenbreite verringern"
+    },
+    "increase": {
+      "title": "Spaltenbreite erhöhen"
+    },
+    "reset": {
+      "title": "Auf Standard zurücksetzen"
+    }
   }
 }

@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Pro-Funktion",
+      "domainsDescription": "Verwaltete Domains erfordern Pro.",
+      "settingsDescription": "Einstellungen für verwaltete E-Mails erfordern Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Verwaltete Domänen konnten nicht geladen werden",
       "loadOutboundSettingsFailed": "Einstellungen für ausgehende E-Mails konnten nicht geladen werden",
@@ -930,6 +935,12 @@
       "copyHostAriaLabel": "Host kopieren",
       "copyFqdnAriaLabel": "Vollständigen Namen kopieren",
       "hostHint": "Tipp: Geben Sie bei Ihrem DNS-Anbieter nur den oben angezeigten Host ein. Die meisten Anbieter (Namecheap, GoDaddy, Cloudflare und andere) fügen „{{domain}}“ automatisch hinzu. Wenn Sie stattdessen den vollständigen Namen einfügen, wird die Domain wiederholt (…{{domain}}.{{domain}}) und der Eintrag wird nie verifiziert."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Pro-Funktion",
+        "description": "Anleitungen für DNS-Einträge erfordern Pro."
+      }
     }
   },
   "inboundRules": {

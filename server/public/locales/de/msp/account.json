@@ -427,5 +427,12 @@
       "loading": "Wird geladen…",
       "loadMore": "Mehr laden"
     }
+  },
+  "communityEdition": {
+    "hostedDescription": "Kontoverwaltung und Abrechnungsfunktionen sind in Pro für gehostete Bereitstellungen verfügbar.",
+    "selfHostedDescription": "Die selbst gehostete Community Edition bietet unbegrenzt viele Benutzer ohne Lizenzbeschränkungen oder Abrechnung."
+  },
+  "page": {
+    "title": "Kontoverwaltung"
   }
 }

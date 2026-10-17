@@ -66,7 +66,8 @@
       "createTicket": "Ticket erstellen",
       "requestAppointment": "Termin anfragen",
       "viewLatestInvoice": "Neueste Rechnung anzeigen",
-      "newServiceRequest": "Neue Service-Anfrage"
+      "newServiceRequest": "Neue Service-Anfrage",
+      "createSupportTicket": "Support-Ticket erstellen"
     },
     "appointments": {
       "title": "Anstehende Termine",
@@ -329,7 +330,25 @@
       "tenant_mismatch": "{{providerEmail}} gehört zum Portal einer anderen Organisation. Melden Sie sich mit Ihrem Passwort an oder wenden Sie sich an Ihren Dienstleister."
     },
     "configurationTitle": "Anmeldung fehlgeschlagen",
-    "configurationMessage": "Die Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es erneut oder wenden Sie sich an Ihren Dienstleister."
+    "configurationMessage": "Die Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es erneut oder wenden Sie sich an Ihren Dienstleister.",
+    "registration": {
+      "messages": {
+        "verified": "Benutzer erfolgreich verifiziert und registriert"
+      },
+      "errors": {
+        "verifyFailed": "Benutzer konnte nicht verifiziert und registriert werden",
+        "invalidToken": "Ungültiges Token",
+        "tokenExpired": "Token abgelaufen",
+        "tokenNotActive": "Token ist noch nicht aktiv",
+        "unknown": "Unbekannter Fehler"
+      },
+      "user": "Benutzer",
+      "clientPortalUser": "Kundenportal-Benutzer",
+      "mspUser": "MSP-Benutzer",
+      "resetExpiration": "1 Stunde",
+      "verificationExpiration": "24 Stunden",
+      "superadminRole": "Superadministratorrolle"
+    }
   },
   "account": {
     "title": "Konto",
@@ -555,7 +574,9 @@
       "invoices": "Rechnungsbenachrichtigungen",
       "announcements": "Systemankündigungen",
       "emailPreferences": "E-Mail",
-      "internalPreferences": "Intern"
+      "internalPreferences": "Intern",
+      "unreadCount_few": "{{count}} ungelesene Benachrichtigungen",
+      "unreadCount_many": "{{count}} ungelesene Benachrichtigungen"
     },
     "actions": {
       "save": "Änderungen speichern",
@@ -833,7 +854,9 @@
     "card": {
       "unread": "Ungelesen",
       "noMessage": "Keine Nachricht"
-    }
+    },
+    "unreadCount_few": "{{count}} ungelesene Benachrichtigungen",
+    "unreadCount_many": "{{count}} ungelesene Benachrichtigungen"
   },
   "sidebar": {
     "goToDashboard": "Zum Dashboard",

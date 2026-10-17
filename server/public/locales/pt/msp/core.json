@@ -811,5 +811,37 @@
   "githubStar": {
     "label": "Marcar com estrela",
     "ariaLabel": "Marcar {{repository}} com estrela no GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "Portal MSP",
+      "dashboard": "Painel",
+      "ticketDetails": "Detalhes do ticket",
+      "tickets": "Tickets",
+      "projectDetails": "Detalhes do projeto",
+      "projects": "Projetos",
+      "clientDetails": "Detalhes do cliente",
+      "clients": "Clientes",
+      "contactDetails": "Detalhes do contato",
+      "contacts": "Contatos",
+      "assetDetails": "Detalhes do ativo",
+      "assets": "Ativos",
+      "billing": "Faturamento",
+      "settings": "Configurações",
+      "settingsSection": "Configurações: {{section}}",
+      "chat": "Bate-papo"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Recurso Pro",
+      "description": "Os recursos de bate-papo com IA exigem o Pro. Faça upgrade para acessar este recurso."
+    },
+    "messages": {
+      "proRequired": "Os recursos de mensagens exigem o Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Os recursos de bate-papo estão disponíveis apenas na Enterprise Edition"
+    }
   }
 }

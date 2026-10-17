@@ -14,8 +14,16 @@ vi.mock('next-auth/react', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: string, options?: Record<string, unknown>) =>
-      (fallback ?? _key).replace('{{count}}', String(options?.count ?? '')),
+    // Callers use two shapes: t(key, fallbackString, options) — this
+    // component's own calls — and the i18next-standard t(key, { defaultValue,
+    // ...interpolations }) used by shared primitives like Dialog. Handle both
+    // so a dialog nested in this tile doesn't crash the mock.
+    t: (_key: string, fallbackOrOptions?: string | Record<string, unknown>, maybeOptions?: Record<string, unknown>) => {
+      const fallback = typeof fallbackOrOptions === 'string' ? fallbackOrOptions : fallbackOrOptions?.defaultValue;
+      const options = typeof fallbackOrOptions === 'string' ? maybeOptions : fallbackOrOptions;
+      const value = String(fallback ?? _key);
+      return value.replace('{{count}}', String(options?.count ?? ''));
+    },
   }),
 }));
 

@@ -7,6 +7,10 @@
     "description": "Für {{feature}} ist Pro erforderlich. Bitte führen Sie ein Upgrade durch, um auf diese Funktion zuzugreifen."
   },
   "settings": {
+    "unavailable": {
+      "title": "Erweiterungseinstellungen nicht verfügbar",
+      "description": "Die Verwaltung von Erweiterungseinstellungen ist in AlgaPSA Pro verfügbar."
+    },
     "title": "Erweiterungsverwaltung",
     "description": "Installieren, konfigurieren und verwalten Sie Erweiterungen, um die Funktionalität von AlgaPSA zu erweitern.",
     "tabs": {
@@ -98,7 +102,12 @@
       "description": "Erweiterungen verwalten"
     },
     "title": "Erweiterungen",
-    "description": "Die Erweiterungsverwaltung ist in Pro verfügbar."
+    "description": "Die Erweiterungsverwaltung ist in Pro verfügbar.",
+    "unavailable": {
+      "metadataTitle": "Erweiterungen (nur EE)",
+      "title": "Erweiterungen nicht verfügbar",
+      "description": "In Pro verfügbar."
+    }
   },
   "detail": {
     "metadataTitle": "Erweiterungen - Pro-Funktion",
@@ -121,7 +130,12 @@
       "description": "Erweiterungsdetails anzeigen"
     },
     "title": "Erweiterungsdetails",
-    "description": "Erweiterungsdetails sind in Pro verfügbar."
+    "description": "Erweiterungsdetails sind in Pro verfügbar.",
+    "unavailable": {
+      "metadataTitle": "Erweiterungsdetails (nur EE)",
+      "title": "Erweiterungsdetails nicht verfügbar",
+      "description": "Diese Seite ist in Pro verfügbar."
+    }
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +143,12 @@
       "description": "Erweiterungseinstellungen konfigurieren"
     },
     "title": "Erweiterungseinstellungen",
-    "description": "Erweiterungseinstellungen sind in Pro verfügbar."
+    "description": "Erweiterungseinstellungen sind in Pro verfügbar.",
+    "unavailable": {
+      "metadataTitle": "Erweiterungseinstellungen (nur EE)",
+      "title": "Erweiterungseinstellungen nicht verfügbar",
+      "description": "Diese Seite ist in Pro verfügbar."
+    }
   },
   "details": {
     "label": "Erweiterungsdetails",
@@ -235,6 +254,10 @@
     "cancel": "Abbrechen"
   },
   "list": {
+    "unavailable": {
+      "title": "Erweiterungen nicht verfügbar",
+      "description": "Die Verwaltung von Erweiterungen ist in AlgaPSA Pro verfügbar."
+    },
     "label": "Erweiterungsverwaltung",
     "heading": "Erweiterungen",
     "loading": "Erweiterungen werden geladen...",
@@ -294,7 +317,20 @@
     "installCompleteError": "Erweiterung abgeschlossen, aber Installation wurde nicht beendet",
     "installUnexpected": "Unerwarteter Fehler während der Installation",
     "finalizeRequireManifest": "Bitte fügen Sie das Manifest-JSON ein, bevor Sie abschließen.",
-    "finalizeProvidedFailed": "Abschluss mit dem bereitgestellten Manifest fehlgeschlagen"
+    "finalizeProvidedFailed": "Abschluss mit dem bereitgestellten Manifest fehlgeschlagen",
+    "pro": {
+      "title": "Erweiterungen (Pro)",
+      "description": "Die Installation und Verwaltung von Erweiterungen sind in AlgaPSA Pro verfügbar.",
+      "featureTitle": "Pro-Funktion",
+      "help": "Das Installationsprogramm für Erweiterungen ist nur in AlgaPSA Pro verfügbar.",
+      "actions": {
+        "learnMore": "Mehr über Pro erfahren"
+      }
+    },
+    "unavailable": {
+      "title": "Installation von Erweiterungen nicht verfügbar",
+      "description": "Die Installation von Erweiterungen ist in AlgaPSA Pro verfügbar."
+    }
   },
   "installSimple": {
     "title": "Erweiterung installieren",
@@ -371,5 +407,19 @@
       "medium": "Änderungsberechtigungen erlauben der Erweiterung, vorhandene Daten zu aktualisieren.",
       "high": "Erweiterte Berechtigungen erlauben der Erweiterung, Vorgänge zu erstellen, zu löschen oder auszuführen."
     }
+  },
+  "iframe": {
+    "title": "Erweiterungs-App",
+    "starting": "Erweiterung wird gestartet",
+    "loadingUi": "Erweiterungsoberfläche wird geladen…",
+    "connecting": "Verbindung zum Laufzeit-Arbeitsbereich wird hergestellt…",
+    "loadFailed": "Diese Erweiterung konnte nicht geladen werden.",
+    "configurationHint": "Überprüfen Sie die Konfiguration der Erweiterung und versuchen Sie es erneut."
+  },
+  "unavailable": {
+    "metadataTitle": "Erweiterungen (nur EE)",
+    "title": "Erweiterung nicht verfügbar",
+    "description": "Das Erweiterungssystem ist in Pro verfügbar und in dieser Community Edition nicht enthalten.",
+    "requestedId": "Angeforderte ID: {{id}}"
   }
 }
