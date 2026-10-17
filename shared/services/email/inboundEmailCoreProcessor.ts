@@ -422,7 +422,7 @@ export async function resolveQuarantinedNamedReply(trx: Knex.Transaction, input:
     (await getEffectsForInbox(trx, input.tenant, input.inboxId)).length) throw new Error('Reply review is no longer current');
   const owner = `review:${input.operationId}`;
   const [claimed] = await home.table('inbound_email_inbox').where('inbox_id', input.inboxId).update({ status: 'processing',
-    lease_owner: owner, lease_token: randomUUID(), lease_version: trx.raw('lease_version + 1'), lease_expires_at: trx.raw("clock_timestamp() + interval '60 seconds'"),
+    lease_owner: owner, lease_token: randomUUID(), lease_version: trx.raw('lease_version + 1'), lease_expires_at: new Date(Date.now() + 60_000),
     attempt_count: trx.raw('attempt_count + 1'), completed_at: null, outcome_kind: null, outcome_reason: null, updated_at: trx.fn.now() }).returning('*');
   const result = await runCommitPhase({ tenantId: input.tenant, inboxId: input.inboxId, owner, trx, inbox: claimed,
     emailData: input.emailData, namedConversationReplyAdmission: input.admission, mode: 'enforce' });

@@ -76,7 +76,7 @@ export async function recoverNativeNamedConversationEmails(db: Knex, tenant: str
       .where('recovery_after', '<=', trx.fn.now()).orderBy('recovery_after').orderBy('operation_id')
       .forUpdate().skipLocked().limit(limit).select('operation_id');
     if (rows.length) await home.table('ticket_conversation_email_operations').whereIn('operation_id', rows.map(row => row.operation_id))
-      .update({ recovery_after: trx.raw("clock_timestamp() + interval '5 minutes'") });
+      .update({ recovery_after: new Date(Date.now() + 5 * 60_000) });
     return rows;
   });
   const result = { processed: 0, deferred: 0 };

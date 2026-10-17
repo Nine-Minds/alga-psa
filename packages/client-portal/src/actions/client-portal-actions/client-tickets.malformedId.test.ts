@@ -125,7 +125,7 @@ describe('client portal ticket actions: malformed ticket ids', () => {
   it.each(BAD_IDS)('addClientTicketComment returns not-found for a malformed parentCommentId %j', async (badParent) => {
     const actions = await import('./client-tickets');
 
-    await expect(actions.addClientTicketComment(VALID_ID, 'reply', false, false, badParent)).resolves.toEqual(NOT_FOUND);
+    await expect(actions.addClientTicketComment(VALID_ID, 'reply', false, false, undefined, badParent)).resolves.toEqual(NOT_FOUND);
     expect(withTransactionMock).not.toHaveBeenCalled();
   });
 

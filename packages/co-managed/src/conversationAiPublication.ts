@@ -25,7 +25,7 @@ export async function publishNamedConversationAiExchange(context: Context, input
     await store.table('co_management_private_comments').insert({ tenant: conversation.storeTenant, comment_id: input.replyId,
       thread_id: input.promptId, parent_comment_id: input.promptId, actor_kind: 'ai', actor_user_id: null,
       actor_display_name: 'AI', actor_organization_name: 'AI', ...reply, created_at: trx.raw('clock_timestamp()') });
-    await store.table('co_management_private_threads').where('thread_id', input.promptId).update({ last_activity_at: trx.raw('clock_timestamp()') });
+    await store.table('co_management_private_threads').where('thread_id', input.promptId).update({ last_activity_at: new Date() });
   } else {
     const referenceId = actor.tenant !== ticket.tenant ? await ensureCoManagedActorReference(context.sharedContext!) : null;
     const reference = referenceId ? await store.table('collaboration_actor_references').where('actor_reference_id', referenceId).first() : null;

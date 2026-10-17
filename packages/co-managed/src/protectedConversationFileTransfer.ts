@@ -52,7 +52,7 @@ export async function transferProtectedConversationFile<C extends ProtectedConve
       .onConflict(['tenant', 'attachment_id']).ignore();
     const row = await owner.table(table).where('attachment_id', file.attachmentId).forUpdate().first();
     validate(row);
-    await owner.table(table).where('attachment_id', file.attachmentId).update({ last_activity_at: context.trx.raw('clock_timestamp()') });
+    await owner.table(table).where('attachment_id', file.attachmentId).update({ last_activity_at: new Date() });
   });
   return withAuthority(async context => {
     if (!context.trx.isTransaction) return conflict();
@@ -62,7 +62,10 @@ export async function transferProtectedConversationFile<C extends ProtectedConve
     if (row.status !== 'ready') {
       await upload(path, file.content, file.mimeType);
       await context.assertWriteAuthority();
-      await query().update({ status: 'ready', ready_at: context.trx.raw('clock_timestamp()'), last_activity_at: context.trx.raw('clock_timestamp()') });
+      // Capture completion after the upload, not at transaction start. Bind the
+      // wall-clock value because Citus forbids VOLATILE functions in UPDATE.
+      const readyAt = new Date();
+      await query().update({ status: 'ready', ready_at: readyAt, last_activity_at: readyAt });
     } else await context.assertWriteAuthority();
     return complete(context, row, file.contentHash);
   });

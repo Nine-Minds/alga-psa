@@ -8,6 +8,7 @@ vi.mock('@alga-psa/db', () => ({ getConnection: async () => ({}), isTenantSuspen
   tenantDb: () => ({ table: (table: string) => {
     runtime.tables.push(table);
     if (table === 'tenant_email_settings') return { first: async () => runtime.settings };
+    if (table === 'email_sender_addresses' || table === 'email_sender_routes') return { select: async () => [] };
     if (table === 'email_sending_logs') return { insert: async () => 1 };
     throw new Error(`Unexpected reviewed email table ${table}`);
   } }) }));

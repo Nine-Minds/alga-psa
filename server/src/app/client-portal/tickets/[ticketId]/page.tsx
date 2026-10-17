@@ -125,15 +125,12 @@ export default async function TicketPage({ params, searchParams }: TicketPagePro
     return (
       <Alert id="ticket-error-message" variant="destructive">
         <AlertDescription>
-          {t('messages.errorWithMessage', {
-            message: query.conversation !== undefined || query.conversationStore !== undefined
-              ? unavailable
-              : userFacingErrorMessage(
-                  error,
-                  t('messages.loadError', { defaultValue: 'Failed to load ticket details' }),
-                ),
-            defaultValue: 'Error: {{message}}',
-          })}
+          {query.conversation !== undefined || query.conversationStore !== undefined
+            ? unavailable
+            : userFacingErrorMessage(
+                error,
+                t('messages.loadError', { defaultValue: 'Failed to load ticket details' }),
+              )}
           {recovery}
         </AlertDescription>
       </Alert>

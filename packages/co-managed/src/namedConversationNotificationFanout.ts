@@ -43,7 +43,7 @@ export async function recoverNamedConversationAttention(db: Knex, tenant: string
       result.failed++;
       // Retain retryability without letting a failing source starve later work.
       await sourceStore.table(EVENTS).where(candidate).whereNull(completedColumn)
-        .update({ [retryColumn]: db.raw("clock_timestamp() + interval '1 minute'") });
+        .update({ [retryColumn]: new Date(Date.now() + 60_000) });
     }
   }
   return result;

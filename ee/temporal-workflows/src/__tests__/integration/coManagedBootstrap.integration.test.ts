@@ -189,6 +189,11 @@ beforeAll(async () => {
     const rows = await source(table).select('*');
     if (rows.length) await db.batchInsert(table, rows, 100);
   }
+  // Explicit IDs copied with reference rows do not advance the serial sequence.
+  // Later migrations insert more templates into this disposable database.
+  await db.raw(`SELECT setval(pg_get_serial_sequence('internal_notification_templates', 'internal_notification_template_id'),
+    COALESCE((SELECT MAX(internal_notification_template_id) FROM internal_notification_templates), 1),
+    EXISTS (SELECT 1 FROM internal_notification_templates))`);
   await replay('20260908225920_create_co_managed_ticket_routing_notifications.cjs');
 }, 120000);
 
@@ -3085,7 +3090,7 @@ it('co-managed admins cannot configure Teams or telephony through direct actions
     const teams = await import('../../../../../packages/integrations/src/actions/integrations/teamsActions');
     const telephony = await import('../../../../../packages/integrations/src/actions/integrations/telephonyActions');
     const availability = await import('../../../../../packages/integrations/src/lib/teamsAvailability');
-    const ee = await import('../../../../../packages/microsoft-teams/src/lib/teams/teamsAvailability');
+    const ee = await import('../../../../../ee/packages/microsoft-teams/src/lib/teams/teamsAvailability');
     const realAuth = await import('../../../../../packages/auth/src/lib/apiKeyUserContext');
     const user = await f.customer.table('users').where('user_id', f.actor.userId).first();
     const expected = { enabled: false, reason: 'product_unavailable' };
@@ -3318,15 +3323,7 @@ describe('co-managed shared metadata reads', () => {
   });
 });
 
-async function ticketHandoffFixture() {
-  const fixture = await sharedWorkFixture();
-  const sessionId = randomUUID();
-  await fixture.customer.table('sessions').insert({ tenant: fixture.actor.tenant, session_id: sessionId, user_id: fixture.actor.userId,
-    expires_at: new Date(Date.now() + 3600000) });
-  const policy = await import('../../../../../packages/co-managed/src/policy');
-  await policy.replaceCoManagedCustomerScope(db, fixture.actor, fixture.target, 2, { visibilityMode: 'escalation_only', boards: [], projects: [] });
-  await policy.replaceCoManagedStaffAssignments(db, fixture.sponsorActor, fixture.target, 3,
-    [{ kind: 'user', principalId: fixture.principal.userId, role: 'technician' }]);
+async function seedHandoffSla(fixture: Pick<Awaited<ReturnType<typeof sharedWorkFixture>>, 'customer' | 'sponsor' | 'principal' | 'resource'>) {
   // Explicit MSP policy and cross-organization priority mappings are part of handoff setup.
   const priorities = await fixture.customer.table('priorities').where('item_type', 'ticket');
   const mspPriorityId = randomUUID(), slaPolicyId = randomUUID();
@@ -3338,6 +3335,18 @@ async function ticketHandoffFixture() {
   await fixture.sponsor.table('co_managed_sla_priority_mappings').insert(priorities.map(priority => ({ tenant: fixture.principal.tenant,
     customer_tenant: fixture.resource.tenant, relationship_id: fixture.resource.relationshipId,
     customer_priority_id: priority.priority_id, msp_priority_id: mspPriorityId })));
+}
+
+async function ticketHandoffFixture() {
+  const fixture = await sharedWorkFixture();
+  const sessionId = randomUUID();
+  await fixture.customer.table('sessions').insert({ tenant: fixture.actor.tenant, session_id: sessionId, user_id: fixture.actor.userId,
+    expires_at: new Date(Date.now() + 3600000) });
+  const policy = await import('../../../../../packages/co-managed/src/policy');
+  await policy.replaceCoManagedCustomerScope(db, fixture.actor, fixture.target, 2, { visibilityMode: 'escalation_only', boards: [], projects: [] });
+  await policy.replaceCoManagedStaffAssignments(db, fixture.sponsorActor, fixture.target, 3,
+    [{ kind: 'user', principalId: fixture.principal.userId, role: 'technician' }]);
+  await seedHandoffSla(fixture);
   return { ...fixture, customerPrincipal: { ...fixture.actor, kind: 'session' as const, sessionId } };
 }
 
@@ -15675,6 +15684,7 @@ describe('named ticket conversation mailbox authority against migrated PostgreSQ
       { expectedRevision: 2, granteeTenant: customerPrincipal.tenant, granteeUserId: customerPrincipal.userId, enabled: true });
     expect(await mail.withNamedConversationMailbox(db, customerPrincipal, ticket, ref, granted.revision, async (_context, mailbox) => mailbox))
       .toMatchObject({ tenant: principal.tenant, id: mailboxId, email: 'support@example.test' });
+    await seedHandoffSla({ customer, sponsor, principal, resource: { kind: 'ticket', tenant: ticket.tenant, id: ticket.ticketId, relationshipId: ticket.relationshipId! } });
     const { handBackCoManagedTicket, escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
     await escalateCoManagedTicket(db, customerPrincipal, { kind: 'ticket', tenant: ticket.tenant, id: ticket.ticketId, relationshipId: ticket.relationshipId },
       { operationId: randomUUID(), expectedRevision: 0, note: 'MSP investigation requested' });
@@ -16838,6 +16848,22 @@ describe('named ticket conversation private editor files against migrated Postgr
   });
 });
 
+const restoreArchiveDownloads: Array<() => void> = [];
+afterEach(() => { for (const restore of restoreArchiveDownloads.splice(0).reverse()) restore(); });
+function useArchiveFixtureObjects(objects: Map<string, Buffer>) {
+  const previous = artifactStorage.download.getMockImplementation();
+  restoreArchiveDownloads.push(() => {
+    artifactStorage.download.mockReset();
+    if (previous) artifactStorage.download.mockImplementation(previous);
+  });
+  // Archive retention and the injected publication transport share real bytes.
+  artifactStorage.download.mockImplementation(async (path: string) => {
+    const bytes = objects.get(path);
+    if (!bytes) throw new Error('Archive fixture object missing');
+    return Buffer.from(bytes);
+  });
+}
+
 async function namedPublicationFilesFixture(kind: 'shared_it' | 'organization_private' | 'native' | 'requester') {
   const f = await namedEmailFixture(kind === 'shared_it' ? 'shared_it' : kind === 'requester' ? 'requester' : 'organization_private', kind === 'native' || kind === 'requester');
   const files = await import('../../../../../packages/co-managed/src/namedConversationEditorFiles');
@@ -16845,6 +16871,7 @@ async function namedPublicationFilesFixture(kind: 'shared_it' | 'organization_pr
   const objects = new Map<string, Buffer>();
   const storage = { upload: vi.fn(async (_store: string, path: string, bytes: Uint8Array) => { objects.set(path, Buffer.from(bytes)); }),
     download: vi.fn(async (path: string) => { const bytes = objects.get(path); if (!bytes) throw new Error('Object missing'); return Buffer.from(bytes); }) };
+  useArchiveFixtureObjects(objects);
   return { ...f, files, publicationFiles, objects, storage };
 }
 
@@ -17841,6 +17868,7 @@ it.each(['schedule', 'resolution', 'past', 'close', 'shared', 'revoked', 'mailbo
   const { recoverNativeNamedConversationEmails } = await import('../../../../../packages/co-managed/src/nativeConversationEmailDelivery');
   const { applyNamedTicketConversationPost } = await import('../../../../../packages/tickets/src/lib/postNamedTicketConversation');
   const events = await import('@alga-psa/event-bus/publishers');
+  const publishEvent = storedEventSpy(events);
   if (scenario !== 'shared') await f.customer.table('tenants').update({ product_code: 'psa' });
   const ticket = scenario === 'shared' ? f.ticket : { tenant: f.ticket.tenant, ticketId: f.ticket.ticketId };
   const previous = await api.getNamedConversationEditorDraft(db, f.customerPrincipal, ticket, f.ref);
@@ -17860,7 +17888,7 @@ it.each(['schedule', 'resolution', 'past', 'close', 'shared', 'revoked', 'mailbo
   const beforeConversation = await api.getNamedTicketConversation(db, f.customerPrincipal, ticket, f.ref);
   const beforeThread = await f.customer.table('comment_threads').where('thread_id', source.thread_id).first();
   const beforeHistory = await api.getNamedTicketConversationMessages(db, f.customerPrincipal, ticket, f.ref);
-  vi.mocked(events.publishEvent).mockClear(); vi.mocked(events.publishWorkflowEvent).mockClear(); f.transport.send.mockClear();
+  publishEvent.mockClear(); vi.mocked(events.publishWorkflowEvent).mockClear(); f.transport.send.mockClear();
   const review = await email.prepareNamedConversationEmail(db, f.customerPrincipal, ticket, f.ref, request, f.transport);
   expect(review.publicationOptions).toEqual(publicationOptions);
   const confirm = () => email.confirmNamedConversationEmail(db, f.customerPrincipal, ticket, f.ref, request.operationId,
@@ -17886,7 +17914,7 @@ it.each(['schedule', 'resolution', 'past', 'close', 'shared', 'revoked', 'mailbo
   expect(await api.getNamedTicketConversationMessages(db, f.customerPrincipal, ticket, f.ref)).toEqual(beforeHistory);
   expect((await api.getNamedConversationEditorDraft(db, f.customerPrincipal, ticket, f.ref))?.content).toBeNull();
   expect(await recoverNativeNamedConversationEmails(db, ticket.tenant, f.transport)).toEqual({ processed: 0, deferred: 0 });
-  expect(f.transport.send).not.toHaveBeenCalled(); expect(events.publishEvent).not.toHaveBeenCalled(); expect(events.publishWorkflowEvent).not.toHaveBeenCalled();
+  expect(f.transport.send).not.toHaveBeenCalled(); expect(publishEvent).not.toHaveBeenCalled(); expect(events.publishWorkflowEvent).not.toHaveBeenCalled();
   const { listNamedScheduledComments } = await import('../../../../../packages/co-managed/src/namedScheduledCommentCommands');
   const listed = await listNamedScheduledComments(db, f.customerPrincipal, ticket, f.ref);
   expect(listed.next).toBeNull(); expect(listed.items).toHaveLength(1);
@@ -17973,7 +18001,7 @@ it.each(['schedule', 'resolution', 'past', 'close', 'shared', 'revoked', 'mailbo
       expect(await f.customer.table('tickets').where('ticket_id', ticket.ticketId).first()).toEqual(beforeTicket);
       expect(f.transport.send).not.toHaveBeenCalled();
     } else {
-      if (scenario === 'event_retry') vi.mocked(events.publishEvent).mockRejectedValueOnce(new Error('Event transport unavailable'));
+      if (scenario === 'event_retry') publishEvent.mockRejectedValueOnce(new Error('Event transport unavailable'));
       if (scenario === 'queue_failure') {
         const { recoverCoManagedScheduledComments } = await import('@alga-psa/jobs/handlers/publishScheduledComment');
         expect(await recoverCoManagedScheduledComments(db, ticket.tenant)).toEqual({ processed: 1, failed: 0 });
@@ -18002,7 +18030,7 @@ it.each(['schedule', 'resolution', 'past', 'close', 'shared', 'revoked', 'mailbo
           publish_state: 'scheduled', scheduled_publish_at: new Date(Date.now() + 60000).toISOString(), scheduled_publish_tz: 'UTC' });
         expect(await f.customer.table('comment_threads').where('thread_id', source.thread_id).first()).toMatchObject({ reply_count: beforeLegacy.reply_count + 1 });
       }
-      const notifications = vi.mocked(events.publishEvent).mock.calls.filter(([event]) => event.eventType === 'TICKET_COMMENT_ADDED');
+      const notifications = publishEvent.mock.calls.filter(([event]) => event.eventType === 'TICKET_COMMENT_ADDED');
       expect(notifications).toHaveLength(scenario === 'event_retry' ? 2 : 1); expect(notifications[0][0].payload).toMatchObject({ suppressContactNotifications: true });
     }
   } finally { ordinary?.mockRestore(); Object.assign(outgoing.namedConversationEmailTransport, original); }
@@ -18892,6 +18920,7 @@ async function namedShareFilesFixture(native = false) {
       request_hash: 'a'.repeat(64), storage_path: path, status: 'ready', ready_at: db.fn.now() });
     files.push({ id, content, path });
   }
+  useArchiveFixtureObjects(objects);
   return { ...f, files, storage, objects };
 }
 

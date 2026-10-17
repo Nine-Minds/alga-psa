@@ -103,6 +103,7 @@ describe('Google unified inbound pointer queue ingress', () => {
         // intake policy on the installation default.
         tenants: [{ tenant: 'tenant-g-1', product_code: 'psa' }],
         co_management_relationships: [],
+        ticket_conversation_email_routes: [],
       };
       return (table: string) => fakeTable({ tables, strict: true }, undefined, table);
     });

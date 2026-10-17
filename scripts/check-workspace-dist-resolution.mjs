@@ -28,6 +28,10 @@ const DEFAULT_ENTRIES = [
   // packages/jobs' coManagedUploadCleanupHandler imports this barrel directly,
   // which makes it the widest graph any plain-Node worker loads.
   'packages/co-managed/dist/index.js',
+  // The email worker imports these subpaths directly. Their entry-only imports
+  // need not be reachable from index.js after tree shaking.
+  'packages/co-managed/dist/inboundNamedConversationAttachments.js',
+  'packages/co-managed/dist/inboundNamedConversationEmail.js',
 ];
 
 const SPECIFIER_PATTERNS = [
