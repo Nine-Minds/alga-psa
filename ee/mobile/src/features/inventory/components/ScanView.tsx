@@ -1,5 +1,5 @@
 import React from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { Linking, Text, Vibration, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -20,8 +20,7 @@ import { RegisterAssetModal } from "./RegisterAssetModal";
 import type { RootStackParamList } from "../../../navigation/types";
 
 import { INVENTORY_BARCODE_TYPES } from "../barcodeTypes";
-
-const SCAN_DEBOUNCE_MS = 1500;
+import { useScanDebounce } from "../scanDebounce";
 
 export function ScanView() {
   const theme = useTheme();
@@ -40,7 +39,7 @@ export function ScanView() {
   const [result, setResult] = useState<InventoryLookupResult | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const lastScanRef = useRef<{ code: string; atMs: number } | null>(null);
+  const scanDebounce = useScanDebounce();
   const { showToast } = useToast();
   const [attachPickerVisible, setAttachPickerVisible] = useState(false);
   const [attachItems, setAttachItems] = useState<EntityPickerItem[]>([]);
@@ -104,21 +103,18 @@ export function ScanView() {
   const onBarcodeScanned = useCallback(
     ({ data }: { data: string }) => {
       if (!data || busy || result) return;
-      const now = Date.now();
-      const last = lastScanRef.current;
-      if (last && last.code === data && now - last.atMs < SCAN_DEBOUNCE_MS) return;
-      lastScanRef.current = { code: data, atMs: now };
+      if (!scanDebounce.accept(data)) return;
       Vibration.vibrate(30);
       void resolveCode(data.trim());
     },
-    [busy, result, resolveCode],
+    [busy, result, resolveCode, scanDebounce],
   );
 
   const dismissResult = useCallback(() => {
     setResult(null);
     setScannedCode(null);
-    lastScanRef.current = null;
-  }, []);
+    scanDebounce.reset();
+  }, [scanDebounce]);
 
   if (!permission) {
     return null;

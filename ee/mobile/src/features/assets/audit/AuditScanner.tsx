@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Modal, Pressable, Text, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -6,12 +6,12 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "../../../ui/ThemeContext";
 import { IconButton, PrimaryButton, TextInput } from "../../../ui/components";
 import { INVENTORY_BARCODE_TYPES } from "../../inventory/barcodeTypes";
-
-const SCAN_DEBOUNCE_MS = 1500;
+import { useScanDebounce } from "../../inventory/scanDebounce";
 
 /**
- * The audit's camera: the same barcode types and debounce as the Inventory
- * scanner, but it only hands the code back — resolving it is the session's job.
+ * The audit's camera: the same barcode types and repeat debounce as the
+ * Inventory scanner, in a modal that only hands the code back — resolving it
+ * is the session's job, and the audit needs no result cards.
  */
 export function AuditScanner({
   visible,
@@ -32,19 +32,16 @@ export function AuditScanner({
   const [torchOn, setTorchOn] = useState(false);
   const [manualMode, setManualMode] = useState(false);
   const [manualCode, setManualCode] = useState("");
-  const lastScanRef = useRef<{ code: string; atMs: number } | null>(null);
+  const scanDebounce = useScanDebounce();
 
   const handleBarcode = useCallback(
     ({ data }: { data: string }) => {
       const code = data?.trim();
       if (!code) return;
-      const last = lastScanRef.current;
-      const now = Date.now();
-      if (last && last.code === code && now - last.atMs < SCAN_DEBOUNCE_MS) return;
-      lastScanRef.current = { code, atMs: now };
+      if (!scanDebounce.accept(code)) return;
       onScan(code);
     },
-    [onScan],
+    [onScan, scanDebounce],
   );
 
   const showCamera = visible && permission?.granted === true && !manualMode;
