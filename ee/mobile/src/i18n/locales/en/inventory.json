@@ -211,6 +211,7 @@
     "loading": "Loading clients…",
     "noClients": "No clients found.",
     "clientLabel": "Client",
+    "locationLabel": "Location",
     "changeClient": "Change",
     "nameLabel": "Device name",
     "namePlaceholder": "e.g. Front desk workstation",

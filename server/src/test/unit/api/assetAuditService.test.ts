@@ -279,6 +279,32 @@ describe('AssetAuditService.markItem', () => {
     expect(Number.isNaN(Date.parse(row.marked_at))).toBe(false);
   });
 
+  it('T126 marks an asset that joined the scope after the snapshot as present', async () => {
+    const audit = await service.start({ client_id: CLIENT, location_id: LOCATION, statuses: ['active'] }, context);
+    // The device a technician registers mid-walk: same client, same location.
+    h.state.assets.push(asset('a-new'));
+
+    const marked = await service.markItem(
+      audit.audit_id,
+      { asset_id: 'a-new', result: 'present', method: 'register' },
+      context,
+    );
+
+    expect(items(audit.audit_id).find((item) => item.asset_id === 'a-new')?.result).toBe('present');
+    // Expected widens with it, so expected stays present + missing on completion.
+    expect(marked.expected_count).toBe(3);
+  });
+
+  it('T127 keeps a device whose status is out of scope unexpected', async () => {
+    const audit = await service.start({ client_id: CLIENT, location_id: LOCATION, statuses: ['active'] }, context);
+    // pg hands jsonb back parsed; the fake stores what the insert was given.
+    h.state.asset_audits[0].statuses = ['active'];
+
+    await service.markItem(audit.audit_id, { asset_id: 'a-3', result: 'present', method: 'scan' }, context);
+
+    expect(items(audit.audit_id).find((item) => item.asset_id === 'a-3')?.result).toBe('unexpected');
+  });
+
   it('T050 rejects an asset of another tenant with 404', async () => {
     const audit = await service.start({ client_id: CLIENT, location_id: LOCATION, statuses: ['active'] }, context);
 

@@ -149,6 +149,7 @@ export type CreateAssetInput = {
   name: string;
   status: string;
   serial_number?: string;
+  location_id?: string;
 };
 
 /** Register a device found in the field as a managed asset. */

@@ -90,6 +90,8 @@ export function registerAssetAuditRoutes(registry: ApiOpenApiRegistry) {
     unexpected_count: zOpenApi.number().int(),
     statuses: zOpenApi.array(zOpenApi.string()).nullable().optional(),
     notes: zOpenApi.string().nullable().optional(),
+    client_name: zOpenApi.string().nullable().optional(),
+    location_name: zOpenApi.string().nullable().optional(),
     items: zOpenApi.array(AuditItem).optional(),
   });
 

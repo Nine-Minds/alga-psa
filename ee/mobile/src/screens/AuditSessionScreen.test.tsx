@@ -79,7 +79,9 @@ function auditWith(items: unknown[], status = "in_progress") {
       data: {
         audit_id: "au-1",
         client_id: "cl-1",
+        client_name: "Emerald City",
         location_id: "loc-1",
+        location_name: "Main office",
         status,
         started_by: "user-1",
         started_at: "2026-10-16T09:00:00Z",
@@ -240,7 +242,7 @@ describe("AuditSessionScreen", () => {
     });
   });
 
-  it("T065 an unknown code offers Register asset and marks the new asset", async () => {
+  it("T065 an unknown code offers Register asset in scope and marks it present", async () => {
     mocks.lookupInventoryCode.mockResolvedValue({ ok: true, data: { data: { type: "none", candidates: [] } } });
     const renderer = await renderScreen();
 
@@ -249,13 +251,21 @@ describe("AuditSessionScreen", () => {
 
     const register = renderer.root.find((n) => n.type === ("MockRegisterAsset" as never));
     expect(register.props.code).toBe("NEW-CODE");
+    // The audit's scope is prefilled: the tech never re-picks the client, and
+    // the device is created at the location being audited.
+    expect(register.props).toMatchObject({
+      clientId: "cl-1",
+      clientName: "Emerald City",
+      locationId: "loc-1",
+      locationName: "Main office",
+    });
 
     await act(async () => register.props.onCreated("a-new", "New PC"));
     await flush();
 
     expect(mocks.markAssetAuditItem).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ assetId: "a-new", method: "register" }),
+      expect.objectContaining({ assetId: "a-new", method: "register", result: "present" }),
     );
   });
 

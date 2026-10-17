@@ -60,6 +60,8 @@ export const assetAuditResponseSchema = z.object({
   unexpected_count: z.number().int(),
   statuses: z.array(z.string()).nullable().optional(),
   notes: z.string().nullable().optional(),
+  client_name: z.string().nullable().optional(),
+  location_name: z.string().nullable().optional(),
   items: z.array(assetAuditItemResponseSchema).optional()
 });
 

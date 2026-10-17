@@ -436,10 +436,15 @@ export function AuditSessionScreen({ navigation, route }: Props) {
           client={client}
           apiKey={apiKey ?? null}
           code={registerCode}
+          clientId={audit.client_id}
+          clientName={audit.client_name ?? null}
+          locationId={audit.location_id}
+          locationName={audit.location_name ?? null}
           onClose={() => setRegisterCode(null)}
           onCreated={(assetId) => {
             setRegisterCode(null);
-            void mark(assetId, "register", "unexpected");
+            // Created inside the audit's scope, so the server counts it present.
+            void mark(assetId, "register");
           }}
         />
       ) : null}

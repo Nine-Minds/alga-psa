@@ -42,6 +42,8 @@ export type AssetAudit = {
   unexpected_count: number;
   statuses?: string[] | null;
   notes?: string | null;
+  client_name?: string | null;
+  location_name?: string | null;
   items?: AssetAuditItem[];
 };
 
