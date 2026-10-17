@@ -118,6 +118,12 @@ export type AccountingMappingTargetConfig = {
   /** Catalog option id a stored mapping row corresponds to. */
   optionIdForMapping: (mapping: ExternalEntityMapping) => string;
   /**
+   * Whether a mapping of this kind holds its target exclusively, i.e. the
+   * server's unique index rejects a second mapping to the same target. The bulk
+   * grid withholds only exclusively-held options from suggestions.
+   */
+  isExclusiveKind: (kindId: string) => boolean;
+  /**
    * Copy rendered (table and edit dialog) when a stored mapping's target no
    * longer exists in the live catalog — the remediation prompt for invalid
    * legacy mappings.
