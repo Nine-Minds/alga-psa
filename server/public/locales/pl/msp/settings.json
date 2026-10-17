@@ -2316,7 +2316,7 @@
           "products": "Produkty (katalog / cennik)",
           "vendorProducts": "Cennik dostawców (koszty dystrybutora)"
         },
-        "productsHint": "Ceny i koszty są odczytywane jako kwoty dziesiętne (np. 1,299.50) z kolumną waluty, jeśli istnieje, w przeciwnym razie z walutą dzierżawcy. Ujemne, nienumeryczne lub zbyt dokładne kwoty są odrzucane i zgłaszane; wiersz jest mimo to importowany. Produkty są dopasowywane do istniejących według SKU; wiersze cennika dostawców odwołują się do produktu przez SKU i tworzą lub dopasowują dostawcę według nazwy."
+        "productsHint": "Ceny i koszty są odczytywane jako kwoty dziesiętne (np. 1,299.50) z kolumną waluty, jeśli istnieje, w przeciwnym razie z walutą organizacji. Ujemne, nienumeryczne lub zbyt dokładne kwoty są odrzucane i zgłaszane; wiersz jest mimo to importowany. Produkty są dopasowywane do istniejących według SKU; wiersze cennika dostawców odwołują się do produktu przez SKU i tworzą lub dopasowują dostawcę według nazwy."
       },
       "configure": {
         "products": {
