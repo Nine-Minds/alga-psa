@@ -25,6 +25,11 @@ import {
   CreateScheduleEntryData,
   UpdateScheduleEntryData
 } from '../schemas/timeSheet';
+import {
+  TIME_SHEET_LIST_DEFAULT_SORT,
+  TIME_SHEET_LIST_SORT_ALIASES,
+  TIME_SHEET_LIST_SORT_KEYS,
+} from '../schemas/timeSheetSort';
 import { publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildScheduleEntryCreatedPayload, buildScheduleEntryDeletedPayload, buildScheduleEntryUpdatedPayload } from '@alga-psa/workflow-streams';
@@ -38,7 +43,7 @@ import {
   resolveCalendarAccess,
   type CalendarAccess,
 } from '@alga-psa/scheduling/lib/calendarAccess';
-import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../middleware/apiMiddleware';
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 /**
  * Normalize a DATE column value to YYYY-MM-DD.
@@ -105,6 +110,37 @@ function throwTimePeriodSettingsApiError(error: unknown): never {
   throw error;
 }
 
+type TimeSheetSortSpec = { column: string; nullable?: boolean };
+
+// LEVERAGE: pattern api-list-sort-allowlist — fifth hand-rolled list-sort allowlist (Ticket, Financial, ContractLine, Team, TimeSheet); a shared per-resource sort declaration is missing below.
+const TIME_SHEET_LIST_SORT_SQL: Record<string, TimeSheetSortSpec> = {
+  period_start: { column: 'time_periods.start_date' },
+  period_end: { column: 'time_periods.end_date' },
+  submitted_at: { column: 'time_sheets.submitted_at', nullable: true },
+  approved_at: { column: 'time_sheets.approved_at', nullable: true },
+  approval_status: { column: 'time_sheets.approval_status' },
+};
+
+export { TIME_SHEET_LIST_SORT_KEYS, TIME_SHEET_LIST_DEFAULT_SORT };
+
+/**
+ * Resolve a caller-supplied sort key to SQL. time_sheets has no created_at column, so
+ * the shared list layer's injected 'created_at' is accepted as an alias of the default.
+ */
+export function resolveTimeSheetListSort(sort: string | undefined): { field: string; spec: TimeSheetSortSpec } {
+  const requested = sort ?? TIME_SHEET_LIST_DEFAULT_SORT;
+  const field = TIME_SHEET_LIST_SORT_ALIASES[requested] ?? requested;
+  const spec = Object.prototype.hasOwnProperty.call(TIME_SHEET_LIST_SORT_SQL, field)
+    ? TIME_SHEET_LIST_SORT_SQL[field]
+    : undefined;
+  if (!spec) {
+    throw new ValidationError(
+      `Unknown sort field: ${requested}. Supported values: ${[...TIME_SHEET_LIST_SORT_KEYS, ...Object.keys(TIME_SHEET_LIST_SORT_ALIASES)].join(', ')}`
+    );
+  }
+  return { field, spec };
+}
+
 export class TimeSheetService extends BaseService<any> {
   constructor() {
     super({
@@ -112,7 +148,7 @@ export class TimeSheetService extends BaseService<any> {
       primaryKey: 'id',
       tenantColumn: 'tenant',
       searchableFields: ['user_id', 'period_id', 'approval_status'],
-      defaultSort: 'created_at',
+      defaultSort: TIME_SHEET_LIST_DEFAULT_SORT,
       defaultOrder: 'desc',
       auditFields: {
         createdBy: 'created_by',
@@ -152,28 +188,37 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
       
+      // Resolve the sort first so a bad key is rejected before touching the database.
+      const { spec: sortSpec } = resolveTimeSheetListSort(options.sort);
+
+      // The controller passes filters as options.filters; direct callers use the third argument.
+      const effectiveFilters = filters ?? (options.filters as TimeSheetFilterData | undefined);
+
       let query = this.buildTenantScopedQuery(knex, context);
-  
+
+      // time_periods is joined exactly once: filters and ORDER BY both reference it.
+      db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id', { type: 'left' });
+
       // Apply filters
-      if (filters) {
-        if (filters.user_id) {
-          query.where(`${this.tableName}.user_id`, filters.user_id);
+      if (effectiveFilters) {
+        if (effectiveFilters.user_id) {
+          query.where(`${this.tableName}.user_id`, effectiveFilters.user_id);
         }
-        if (filters.period_id) {
-          query.where(`${this.tableName}.period_id`, filters.period_id);
+        if (effectiveFilters.period_id) {
+          query.where(`${this.tableName}.period_id`, effectiveFilters.period_id);
         }
-        if (filters.approval_status) {
-          query.where(`${this.tableName}.approval_status`, filters.approval_status);
+        if (effectiveFilters.approval_status) {
+          query.where(`${this.tableName}.approval_status`, effectiveFilters.approval_status);
         }
-        if (filters.approved_by) {
-          query.where(`${this.tableName}.approved_by`, filters.approved_by);
+        if (effectiveFilters.approved_by) {
+          query.where(`${this.tableName}.approved_by`, effectiveFilters.approved_by);
         }
-        if (filters.has_entries !== undefined) {
+        if (effectiveFilters.has_entries !== undefined) {
           const subquery = tenantDb(knex, context.tenant).table('time_entries')
             .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
             .select(knex.raw('1'));
           
-          if (filters.has_entries) {
+          if (effectiveFilters.has_entries) {
             query.whereExists(subquery);
           } else {
             query.whereNotExists(subquery);
@@ -184,12 +229,11 @@ export class TimeSheetService extends BaseService<any> {
       // Add joins for additional data
       db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
       db.tenantJoin(query, 'users as approvers', 'time_sheets.approved_by', 'approvers.user_id', { type: 'left' });
-      db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id', { type: 'left' });
 
       // Range filters (submitted_*, approved_*, period_*) after the time_periods
       // join; unsupported keys such as created_from throw.
-      if (filters) {
-        this.applyRangeFilters(query, filters);
+      if (effectiveFilters) {
+        this.applyRangeFilters(query, effectiveFilters as Record<string, unknown>);
       }
 
       query.select(
@@ -201,29 +245,27 @@ export class TimeSheetService extends BaseService<any> {
       );
   
       // Add computed fields
-      const timeEntrySubquery = tenantDb(knex, context.tenant).table('time_entries')
-        .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
-        .select([
-          knex.raw('SUM(billable_duration) / 60.0 as total_hours'),
-          knex.raw('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0 as billable_hours'),
-          knex.raw('COUNT(*) as entry_count')
-        ])
-        .first();
-  
+      // One correlated scalar subquery per aggregate (each selects exactly one column).
+      const entryAggregate = (expression: string) =>
+        tenantDb(knex, context.tenant).table('time_entries')
+          .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
+          .select(knex.raw(expression))
+          .toQuery();
+
       query.select([
-        knex.raw(`(${timeEntrySubquery.clone().select('total_hours').toQuery()}) as total_hours`),
-        knex.raw(`(${timeEntrySubquery.clone().select('billable_hours').toQuery()}) as billable_hours`),
-        knex.raw(`(${timeEntrySubquery.clone().select('entry_count').toQuery()}) as entry_count`)
+        knex.raw(`(${entryAggregate('SUM(billable_duration) / 60.0')}) as total_hours`),
+        knex.raw(`(${entryAggregate('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0')}) as billable_hours`),
+        knex.raw(`(${entryAggregate('COUNT(*)')}) as entry_count`)
       ]);
   
       // Get total count for pagination
       const countQuery = query.clone().clearSelect().clearOrder().count('* as count');
   
       // Apply sorting
-      const sortField = options.sort || 'created_at';
-      const sortOrder = options.order || 'desc';
-      query.orderBy(`${this.tableName}.${sortField}`, sortOrder);
-  
+      const direction = options.order === 'asc' ? 'asc' : 'desc';
+      query.orderBy(sortSpec.column, direction, sortSpec.nullable ? 'last' : undefined);
+      query.orderBy('time_sheets.id', direction); // unique tie-break for stable pagination
+
       // Apply pagination
       const page = options.page || 1;
       const limit = options.limit || 25;
