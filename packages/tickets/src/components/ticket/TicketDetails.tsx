@@ -598,6 +598,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false, suppression: null });
             setCloseOverrideReason('');
             toast.success(t('messages.ticketClosed', 'Ticket closed'));
+            onSaved?.();
         } catch (error) {
             handleTicketActionError(error, t('messages.closeFailed', 'Failed to close ticket'));
         } finally {
@@ -1457,6 +1458,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 number: ticket.ticket_number,
             }));
 
+            // Notify before closing: closing the drawer unmounts this component.
+            onSaved?.();
+
             if (isInDrawer) {
                 closeDrawer();
                 onClose?.();
@@ -1475,7 +1479,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         } finally {
             setIsTicketDeleteProcessing(false);
         }
-    }, [ticket.ticket_id, ticket.ticket_number, isInDrawer, closeDrawer, onClose, router, searchParams, t]);
+    }, [ticket.ticket_id, ticket.ticket_number, isInDrawer, closeDrawer, onClose, onSaved, router, searchParams, t]);
 
     useEffect(() => {
         if (bootstrapSkips.current.teams) {
@@ -1716,12 +1720,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (result) {
                 setAdditionalAgents(prev => [...prev, result]);
                 toast.success(t('messages.agentAdded'));
+                onSaved?.();
             } else {
                 setTicket(prevTicket => ({
                     ...prevTicket,
                     assigned_to: userId
                 }));
                 toast.success(t('messages.agentAssigned'));
+                onSaved?.();
             }
         } catch (error) {
             handleTicketActionError(error, t('messages.addAgentFailed'));
@@ -1736,6 +1742,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
             setAdditionalAgents(prev => prev.filter(agent => agent.assignment_id !== assignmentId));
             toast.success(t('messages.agentRemoved'));
+            onSaved?.();
         } catch (error) {
             handleTicketActionError(error, t('messages.removeAgentFailed'));
         }
@@ -1871,6 +1878,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (isReturnedActionError(result)) {
                 throw result;
             }
+            // The assignment is durable; notify even if the follow-up fetches fail.
+            onSaved?.();
 
             // If we didn't have team details from local state, fetch them
             if (!teamDetails) {
@@ -1898,7 +1907,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setAdditionalAgents(previousAgents);
             handleTicketActionError(error, t('messages.teamAssignFailed'));
         }
-    }, [ticket, team, additionalAgents, teams]);
+    }, [ticket, team, additionalAgents, teams, onSaved]);
 
     const handleRemoveTeamAssignment = useCallback(async (
         mode: 'remove_all' | 'keep_all' | 'selective',
@@ -1910,6 +1919,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 throw result;
             }
 
+            onSaved?.();
             setTicket(prevTicket => ({
                 ...prevTicket,
                 assigned_team_id: null
@@ -1929,7 +1939,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             console.error('Error removing team assignment:', error);
             handleTicketActionError(error, t('messages.teamRemoveFailed'));
         }
-    }, [ticket.ticket_id]);
+    }, [ticket.ticket_id, onSaved]);
 
     const [editorKey, setEditorKey] = useState(0);
     const refreshTicketDocuments = useCallback(async () => {
@@ -2182,6 +2192,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 throw result;
             }
 
+            onSaved?.();
+
             const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
             if (isReturnedActionError(updatedComments)) {
                 throw updatedComments;
@@ -2259,6 +2271,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (isReturnedActionError(updateResult)) {
                 throw updateResult;
             }
+            onSaved?.();
             await refreshTicketDocuments();
 
             const updatedCommentData = await findCommentById(currentComment.comment_id!);
@@ -2327,6 +2340,7 @@ const handleClose = () => {
             setConversations(prevConversations =>
                 prevConversations.filter(conv => conv.comment_id !== comment.comment_id)
             );
+            onSaved?.();
         } catch (error) {
             console.error("Error deleting comment:", error);
         }
@@ -2535,6 +2549,7 @@ const handleClose = () => {
                 updated_at: new Date().toISOString(),
             }));
             setUpdatedByUser(localActor);
+            onSaved?.();
             return true;
         } catch (error) {
             console.error('Error updating watch list:', error);
@@ -2611,6 +2626,7 @@ const handleClose = () => {
             // Header "Updated … by …": local UI state only; the server stamps the row.
             setTicket(prev => ({ ...prev, updated_at: new Date().toISOString() }));
             setUpdatedByUser(localActor);
+            onSaved?.();
 
             if (newContactId) {
                 const contactData = await getContactByContactNameId(newContactId);
@@ -2942,10 +2958,16 @@ const handleClose = () => {
             handleTicketActionError(error, t('messages.closeFailed', 'Failed to close ticket'));
             return resolutionSaved;
         } finally {
+            // The resolution comment is durable once saved, even when the status
+            // write was blocked, cancelled or failed, so the list row is stale
+            // in every such case. Single call covers all exits.
+            if (resolutionSaved) {
+                onSaved?.();
+            }
             setIsSubmittingResolutionClose(false);
             setIsSubmittingBundlePropagation(false);
         }
-    }, [addResolutionComment, closedStatusOptions, confirmBundlePropagation, localActor, runWithPendingLiveFields, t, ticket.ticket_id]);
+    }, [addResolutionComment, closedStatusOptions, confirmBundlePropagation, localActor, onSaved, runWithPendingLiveFields, t, ticket.ticket_id]);
 
     const handleClientChange = async (newClientId: string) => {
         try {
@@ -2960,6 +2982,8 @@ const handleClose = () => {
                 }
                 return result;
             });
+            // The client change is durable; notify even if follow-up fetches fail.
+            onSaved?.();
             
             const [clientData, contactsData, locationData] = await Promise.all([
                 getClientById(newClientId),
@@ -3001,6 +3025,7 @@ const handleClose = () => {
                 updated_at: new Date().toISOString()
             }));
             setUpdatedByUser(localActor);
+            onSaved?.();
 
             toast.success(t('messages.locationUpdated'));
         } catch (error) {
@@ -3023,6 +3048,7 @@ const handleClose = () => {
                 updated_at: new Date().toISOString()
             }));
             setUpdatedByUser(localActor);
+            onSaved?.();
 
             toast.success(t('messages.billingProfileUpdated', 'Billing profile updated'));
         } catch (error) {
@@ -3055,6 +3081,7 @@ const handleClose = () => {
             setConversations(prevConversations =>
                 prevConversations.filter(conv => conv.comment_id !== commentToDelete.commentId)
             );
+            onSaved?.();
 
             if (deleteImages && commentToDelete.imageDocuments.length > 0 && ticket.ticket_id) {
                 try {
@@ -3116,11 +3143,12 @@ const handleClose = () => {
                 return;
             }
             toast.success(t('messages.removedFromBundle'));
+            onSaved?.();
             router.refresh();
         } catch (error) {
             handleTicketActionError(error, t('messages.removeFromBundleFailed'));
         }
-    }, [router]);
+    }, [router, onSaved, t]);
 
     const handleUnbundleMaster = useCallback(async () => {
         if (!ticket.ticket_id) return;
@@ -3131,11 +3159,12 @@ const handleClose = () => {
                 return;
             }
             toast.success(t('messages.bundleRemoved'));
+            onSaved?.();
             router.refresh();
         } catch (error) {
             handleTicketActionError(error, t('messages.unbundleFailed'));
         }
-    }, [ticket.ticket_id, router]);
+    }, [ticket.ticket_id, router, onSaved, t]);
 
     const performAddChildToBundle = useCallback(async (childTicketId: string, onClosedMaster?: ClosedMasterChoice) => {
         if (!ticket.ticket_id) return;
@@ -3149,10 +3178,11 @@ const handleClose = () => {
             return;
         }
         toast.success(t('messages.addedToBundle'));
+        onSaved?.();
         setAddChildTicketNumber('');
         resetChildTicketPickerState();
         router.refresh();
-    }, [ticket.ticket_id, t, router, resetChildTicketPickerState]);
+    }, [ticket.ticket_id, t, router, resetChildTicketPickerState, onSaved]);
 
     // Fetch the master's closed context before linking. An open master links
     // straight away; a closed master must go through the explicit choice
@@ -3356,12 +3386,13 @@ const handleClose = () => {
                 return;
             }
             toast.success(t('messages.promotedMaster'));
+            onSaved?.();
             router.push(`/msp/tickets/${childTicketId}`);
             router.refresh();
         } catch (error) {
             handleTicketActionError(error, t('messages.promoteMasterFailed'));
         }
-    }, [ticket.ticket_id, router]);
+    }, [ticket.ticket_id, router, onSaved, t]);
 
     const handleToggleBundleMode = useCallback(async () => {
         if (!ticket.ticket_id || !bundle?.isBundleMaster) return;
@@ -3374,13 +3405,14 @@ const handleClose = () => {
                 return;
             }
             toast.success(t('messages.bundleSettingsUpdated'));
+            onSaved?.();
             router.refresh();
         } catch (error) {
             handleTicketActionError(error, t('messages.updateBundleSettingsFailed'));
         } finally {
             setIsUpdatingBundleSettings(false);
         }
-    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, router]);
+    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, router, onSaved, t]);
 
     if (!tenant) {
         return (
