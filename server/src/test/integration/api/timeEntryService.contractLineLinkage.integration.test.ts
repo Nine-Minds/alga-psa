@@ -295,4 +295,33 @@ describe('TimeEntryService create/update contract-line linkage (real DB)', () =>
     expect(Number(row.billable_duration)).toBe(0);
     expect(await bucketRowCount(seed.clientId)).toBe(0);
   });
+
+  it('(g) DELETE reverses the bucket draw back to its prior value (G1)', async () => {
+    const seed = await seedClient(['bucket']);
+    const { ctx } = await newUser('g');
+    const first = await asTenant(() => service.create(body(seed.ticketId, 8) as any, ctx));
+    const before = await bucketMinutes(seed.clientId);
+    expect(before).toBe(60);
+
+    const second = await asTenant(() => service.create(body(seed.ticketId, 9) as any, ctx));
+    expect(await bucketMinutes(seed.clientId)).toBe(before + 60);
+
+    await asTenant(() => service.delete(second.entry_id, ctx));
+    expect(await entryRow(second.entry_id)).toBeFalsy();
+    expect(await bucketMinutes(seed.clientId)).toBe(before);
+    expect(await entryRow(first.entry_id)).toBeTruthy();
+  });
+
+  it('(h) bulk DELETE reverses the bucket draw for every entry', async () => {
+    const seed = await seedClient(['bucket']);
+    const { ctx } = await newUser('h');
+    const a = await asTenant(() => service.create(body(seed.ticketId, 10) as any, ctx));
+    const b = await asTenant(() => service.create(body(seed.ticketId, 11) as any, ctx));
+    expect(await bucketMinutes(seed.clientId)).toBe(120);
+
+    const results = await asTenant(() =>
+      service.bulkDeleteTimeEntries({ entry_ids: [a.entry_id, b.entry_id] } as any, ctx));
+    expect(results.every((r: any) => r.success)).toBe(true);
+    expect(await bucketMinutes(seed.clientId)).toBe(0);
+  });
 });

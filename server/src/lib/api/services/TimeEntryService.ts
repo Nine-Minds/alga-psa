@@ -36,9 +36,9 @@ import {
   type StopwatchSessionView,
 } from '@alga-psa/scheduling/lib/stopwatch/stopwatchCore';
 import { mapStopwatchError, publishLoggedSessionEvents } from './StopwatchApiService';
-import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 import {
   getWorkItemBillingContext,
+  deleteTimeEntryCore,
   persistTimeEntry,
   publishPersistedTimeEntryEvents,
   type PersistedTimeEntry,
@@ -519,10 +519,9 @@ export class TimeEntryService extends BaseService<any> {
     }
 
     await knex.transaction(async (trx) => {
-      await tenantDb(trx, context.tenant).table('time_entries')
-        .where({ [this.primaryKey]: id })
-        .del();
-      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, existing, null);
+      // Shared with the UI deleteTimeEntry action: reverses the bucket draw and
+      // hour-block burn, deletes the row and recalculates project-task hours.
+      await deleteTimeEntryCore(trx, context.tenant, id);
     });
 
     // Publish event

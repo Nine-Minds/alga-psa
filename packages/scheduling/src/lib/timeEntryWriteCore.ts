@@ -718,3 +718,100 @@ export async function persistTimeEntry(
     },
   };
 }
+
+
+/**
+ * Shared time-entry delete core. Used by the UI `deleteTimeEntry` action and
+ * the REST `TimeEntryService.delete` (single and bulk) so the billing
+ * reversals cannot drift apart.
+ *
+ * Runs inside the caller's transaction (the caller commits):
+ *  1. load the row (throws 'Time entry not found'),
+ *  2. optional caller `guard(entry)` (delegation/invoiced/approval checks),
+ *  3. reverse the bucket draw (adjustTimeSpanDraw, -1, under the entry's own
+ *     client and contract_line_id; only when it has a service and billable
+ *     minutes and its work item resolves to a client),
+ *  4. reverse the hour-block burn (best-effort, unconditional),
+ *  5. delete the row and recalculate project-task actual hours.
+ *
+ * Permission checks and event publishing stay with the caller (publish only
+ * after commit).
+ */
+export async function deleteTimeEntryCore(
+  trx: Knex.Transaction,
+  tenant: string,
+  entryId: string,
+  options: { guard?: (entry: any) => Promise<void> | void } = {},
+): Promise<{ timeEntry: any; deleteCount: number }> {
+  const trxTenantDb = tenantDb(trx, tenant) as any;
+  const timeEntry = await trxTenantDb.table('time_entries')
+    .where({ entry_id: entryId })
+    .first();
+
+  if (!timeEntry) {
+    throw new Error('Time entry not found');
+  }
+
+  if (options.guard) {
+    await options.guard(timeEntry);
+  }
+
+  // --- Bucket Usage Update Logic (Before Delete) ---
+  if (timeEntry.service_id && (timeEntry.billable_duration || 0) > 0) {
+    let clientId: string | null = null;
+    if (timeEntry.work_item_id && timeEntry.work_item_type) {
+      clientId = await getClientIdForWorkItem(trx, tenant, timeEntry.work_item_id as string, timeEntry.work_item_type as string);
+    }
+
+    if (clientId && timeEntry.service_id) {
+      // Scope-resolution gate + weighted burn, resolved under the deleted
+      // entry's OWN client and line (negative on delete).
+      try {
+        const reversedDelta = await adjustTimeSpanDraw(
+          trx,
+          tenant,
+          clientId,
+          {
+            service_id: timeEntry.service_id,
+            start_time: timeEntry.start_time,
+            end_time: timeEntry.end_time,
+            billable_duration: timeEntry.billable_duration,
+            contract_line_id: timeEntry.contract_line_id ?? null,
+          },
+          -1,
+        );
+        if (reversedDelta !== 0) {
+          console.log(`Successfully decremented bucket usage for deleted entry ${entryId} (weighted delta ${reversedDelta})`);
+        }
+      } catch (bucketError) {
+        console.error(`Error updating bucket usage for deleted time entry ${entryId}:`, bucketError);
+        // Re-throwing ensures data consistency; preserve the typed code.
+        if (isBucketUsageError(bucketError)) {
+          throw bucketError;
+        }
+        throw new Error(`Bucket usage update failed while deleting time entry ${entryId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+      }
+    }
+  }
+  // --- End Bucket Usage Update Logic ---
+
+  // --- Hour-block burn reversal ---
+  // Restore the minutes the deleted entry drew from any hour blocks. Best-
+  // effort like the save path: failures are logged and the nightly reconcile
+  // converges. Runs unconditionally (an entry may carry block allocations
+  // without being contract-covered).
+  try {
+    await reverseTimeEntryAllocations(trx, tenant, entryId);
+  } catch (blockReverseError) {
+    console.error(`Error reversing hour-block burn for deleted time entry ${entryId}:`, blockReverseError);
+  }
+  // --- End Hour-block burn reversal ---
+
+  const deleteCount = await trxTenantDb.table('time_entries')
+    .where({ entry_id: entryId })
+    .delete();
+
+  await recalculateProjectTaskActualHoursForEntryChange(trx, tenant, timeEntry, null);
+
+  return { timeEntry, deleteCount };
+}
