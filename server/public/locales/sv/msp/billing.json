@@ -495,7 +495,7 @@
     },
     "unmapped": {
       "title": "Omappade QuickBooks-poster",
-      "descriptionDesktop": "Dessa saknar ännu QuickBooks-mappning. Skapa dem som nya poster (IIF-filen lägger till dem i QuickBooks Desktop) eller koppla dem till en befintlig QuickBooks-post med exakt samma namn. Dina val sparas som mappningar, så framtida exporter frågar inte igen.",
+      "descriptionDesktop": "Dessa behöver en kund eller artikel i QuickBooks Desktop innan de kan exporteras. Skapa dem som nya poster (IIF-filen lägger till dem i QuickBooks Desktop) eller länka dem till en befintlig QuickBooks-post med exakt samma namn. Dina val sparas som mappningar för QuickBooks Desktop, så framtida exporter frågar inte igen.",
       "descriptionCsv": "Dessa saknar ännu QuickBooks-mappning. Exportera dem under namnet nedan (QuickBooks lägger till nya namn när du importerar CSV-filen) eller koppla dem till en befintlig QuickBooks-post med exakt samma namn. Dina val sparas som mappningar, så framtida exporter frågar inte igen.",
       "permissionNotice": "För att spara QuickBooks-mappningar krävs behörigheten att hantera mappningar. Be en administratör, eller mappa posterna i QuickBooks-inställningarna.",
       "kinds": {
@@ -518,7 +518,9 @@
       "toast": {
         "saved": "QuickBooks-mappningar sparade",
         "saveError": "Det gick inte att spara QuickBooks-mappningarna"
-      }
+      },
+      "postsTo": "Bokförs på {{account}}",
+      "postsToDefault": "Bokförs på standardintäktskontot"
     }
   },
   "templateRenderer": {
@@ -773,7 +775,8 @@
         "nameTakenByClient": "\"{{qbName}}\" är redan mappat till en annan kund och kan därför inte också användas för \"{{algaName}}\". Välj ett annat QuickBooks-namn eller ändra den befintliga mappningen under QuickBooks-mappningar.",
         "nameTakenByItem": "\"{{qbName}}\" är redan mappat till en annan artikel och kan därför inte också användas för \"{{algaName}}\". Välj ett annat QuickBooks-namn eller ändra den befintliga mappningen under QuickBooks-mappningar.",
         "unsupportedBatch": "Den här batchen är ingen QuickBooks Desktop- eller QuickBooks CSV-export.",
-        "nameTakenConcurrently": "Ett av dessa QuickBooks-namn mappades just till en annan post. Uppdatera listan och välj ett annat namn."
+        "nameTakenConcurrently": "Ett av dessa QuickBooks-namn mappades just till en annan post. Uppdatera listan och välj ett annat namn.",
+        "desktopIncomeAccountRequired": "Ange standardintäktskontot i inställningarna för QuickBooks Desktop innan du mappar artiklar från en export."
       }
     },
     "vendorBill": {

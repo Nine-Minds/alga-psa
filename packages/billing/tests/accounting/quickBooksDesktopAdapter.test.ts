@@ -31,6 +31,8 @@ const harness = vi.hoisted(() => {
   const knex: any = (table: string) => builder(table, rows[table] ?? []);
   knex.raw = (sql: string, bindings?: unknown[]) => ({ sql, bindings });
   knex.fn = { now: () => 'now()' };
+  // expandAccountingExportCharges probes for the contract-change adjustments table.
+  knex.schema = { hasTable: async () => false };
   const tenantDb = () => ({ table: (table: string) => builder(table, rows[table] ?? []) });
 
   const mappings = {
@@ -184,8 +186,8 @@ async function transformContent(ctx: AccountingExportAdapterContext) {
 
 beforeEach(() => {
   for (const key of Object.keys(harness.rows)) delete harness.rows[key];
-  harness.mappings.services = { 'svc-1': { external_entity_id: 'qb-1', metadata: { name: 'Consulting' } } };
-  harness.mappings.discount = { external_entity_id: 'Discount', metadata: null };
+  harness.mappings.services = { 'svc-1': { external_entity_id: 'Services Income', metadata: { qbdItem: 'Consulting' } } };
+  harness.mappings.discount = { external_entity_id: 'Services Income', metadata: { qbdItem: 'Discount' } };
   harness.mappings.taxRegions = {};
   harness.mappings.terms = { net_30: { external_entity_id: 'Net 30' } };
   harness.mappings.clients = {};
@@ -231,7 +233,7 @@ describe('QuickBooksDesktopAdapter IIF transform', () => {
     expect(field(rows, '!SPL', spl, 'TAXABLE')).toBe('N');
     expect(field(rows, '!SPL', spl, 'MEMO')).toBe('Managed services');
 
-    expect(harness.resolverCalls.every((call) => call.adapterType === 'quickbooks_csv')).toBe(true);
+    expect(harness.resolverCalls.every((call) => call.adapterType === 'quickbooks_desktop')).toBe(true);
     expect(result.documents).toHaveLength(1);
     expect(result.documents[0].lineIds).toEqual(['line-1']);
   });
@@ -248,15 +250,33 @@ describe('QuickBooksDesktopAdapter IIF transform', () => {
     expect(field(rows, '!TRNS', rows[3], 'TERMS')).toBe('');
   });
 
-  it('prefers the mapping qbdIncomeAccount over the default income account', async () => {
+  it('posts each line to its mapping account and falls back to the default income account', async () => {
     harness.rows.invoices = [invoice()];
     harness.rows.invoice_charges = [charge()];
-    harness.mappings.services['svc-1'].metadata.qbdIncomeAccount = 'Consulting Income';
+    harness.mappings.services['svc-1'].external_entity_id = 'Consulting Income';
 
     const { rows } = await transformContent(
       context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
     );
     expect(field(rows, '!SPL', rows[4], 'ACCNT')).toBe('Consulting Income');
+
+    harness.mappings.services['svc-1'].external_entity_id = '';
+    const fallback = await transformContent(
+      context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
+    );
+    expect(field(fallback.rows, '!SPL', fallback.rows[4], 'ACCNT')).toBe('Services Income');
+  });
+
+  it('fails closed when a service or discount mapping names no Desktop item', async () => {
+    harness.rows.invoices = [invoice()];
+    harness.rows.invoice_charges = [charge()];
+    harness.mappings.services['svc-1'].metadata = { name: 'Consulting' };
+
+    await expect(
+      new QuickBooksDesktopAdapter().transform(
+        context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
+      )
+    ).rejects.toThrow(/empty item name/);
   });
 
   it('keeps every invoice in its own TRNS/ENDTRNS block and every transaction balanced', async () => {
@@ -306,7 +326,7 @@ describe('QuickBooksDesktopAdapter IIF transform', () => {
       charge({ tax_amount: 500, is_taxable: true, tax_region: 'CA' }),
       charge({ item_id: 'charge-2', net_amount: 4000, total_price: 4000, quantity: 1, unit_price: 4000, tax_amount: 300, is_taxable: true, tax_region: 'CA' })
     ];
-    harness.mappings.taxRegions = { CA: { external_entity_id: 'TAX', metadata: { qbdSalesTaxItem: 'CA Sales Tax' } } };
+    harness.mappings.taxRegions = { CA: { external_entity_id: 'Sales Tax Payable', metadata: { qbdSalesTaxItem: 'CA Sales Tax' } } };
 
     const { rows } = await transformContent(
       context([
@@ -325,10 +345,10 @@ describe('QuickBooksDesktopAdapter IIF transform', () => {
     expect(field(rows, '!SPL', rows[4], 'TAXABLE')).toBe('Y');
   });
 
-  it('falls back to the default sales tax item when the region mapping has none', async () => {
+  it('falls back to the default sales tax item when the region mapping names none', async () => {
     harness.rows.invoices = [invoice()];
     harness.rows.invoice_charges = [charge({ tax_amount: 500, tax_region: 'NV' })];
-    harness.mappings.taxRegions = { NV: { external_entity_id: 'TAX', metadata: null } };
+    harness.mappings.taxRegions = { NV: { external_entity_id: 'NV Tax Payable', metadata: null } };
 
     const { rows } = await transformContent(
       context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
@@ -336,32 +356,29 @@ describe('QuickBooksDesktopAdapter IIF transform', () => {
     expect(field(rows, '!SPL', rows[5], 'INVITEM')).toBe('State Tax');
   });
 
-  it('uses the tax code mapping value as the sales tax item, ahead of the default', async () => {
+  it('posts the tax line to the region mapping account, else the sales tax liability setting', async () => {
     harness.rows.invoices = [invoice()];
     harness.rows.invoice_charges = [charge({ tax_amount: 500, tax_region: 'PA' })];
-    harness.mappings.taxRegions = { PA: { external_entity_id: 'PA Sales Tax', metadata: null } };
+    harness.mappings.taxRegions = { PA: { external_entity_id: 'PA Tax Payable', metadata: { qbdSalesTaxItem: 'PA Group' } } };
 
     const { rows } = await transformContent(
       context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
     );
-    expect(field(rows, '!SPL', rows[5], 'INVITEM')).toBe('PA Sales Tax');
-  });
-
-  it('prefers qbdSalesTaxItem metadata over the mapping value', async () => {
-    harness.rows.invoices = [invoice()];
-    harness.rows.invoice_charges = [charge({ tax_amount: 500, tax_region: 'PA' })];
-    harness.mappings.taxRegions = { PA: { external_entity_id: 'PA Sales Tax', metadata: { qbdSalesTaxItem: 'PA Group' } } };
-
-    const { rows } = await transformContent(
-      context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
-    );
+    expect(field(rows, '!SPL', rows[5], 'ACCNT')).toBe('PA Tax Payable');
     expect(field(rows, '!SPL', rows[5], 'INVITEM')).toBe('PA Group');
+
+    harness.mappings.taxRegions = {};
+    const unmapped = await transformContent(
+      context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
+    );
+    expect(field(unmapped.rows, '!SPL', unmapped.rows[5], 'ACCNT')).toBe('Sales Tax Payable');
+    expect(field(unmapped.rows, '!SPL', unmapped.rows[5], 'INVITEM')).toBe('State Tax');
   });
 
-  it('never uses a QuickBooks Online pseudo tax code as the Desktop sales tax item', async () => {
+  it('never treats the mapping account as the sales tax item', async () => {
     harness.rows.invoices = [invoice()];
     harness.rows.invoice_charges = [charge({ tax_amount: 500, tax_region: 'NJ' })];
-    harness.mappings.taxRegions = { NJ: { external_entity_id: 'non', metadata: null } };
+    harness.mappings.taxRegions = { NJ: { external_entity_id: 'NJ Tax Payable', metadata: null } };
 
     await expect(
       transformContent(
@@ -377,8 +394,8 @@ describe('QuickBooksDesktopAdapter IIF transform', () => {
       charge({ item_id: 'charge-2', tax_amount: 300, tax_region: 'NV' })
     ];
     harness.mappings.taxRegions = {
-      CA: { external_entity_id: 'TAX', metadata: { qbdSalesTaxItem: 'CA Sales Tax' } },
-      NV: { external_entity_id: 'TAX', metadata: { qbdSalesTaxItem: 'NV Sales Tax' } }
+      CA: { external_entity_id: 'Sales Tax Payable', metadata: { qbdSalesTaxItem: 'CA Sales Tax' } },
+      NV: { external_entity_id: 'Sales Tax Payable', metadata: { qbdSalesTaxItem: 'NV Sales Tax' } }
     };
 
     await expect(
@@ -389,6 +406,27 @@ describe('QuickBooksDesktopAdapter IIF transform', () => {
         ])
       )
     ).rejects.toMatchObject({ code: 'QBD_MIXED_SALES_TAX_ITEMS' });
+  });
+
+  it('fails an invoice whose tax regions post to different tax accounts', async () => {
+    harness.rows.invoices = [invoice()];
+    harness.rows.invoice_charges = [
+      charge({ tax_amount: 500, tax_region: 'CA' }),
+      charge({ item_id: 'charge-2', tax_amount: 300, tax_region: 'NV' })
+    ];
+    harness.mappings.taxRegions = {
+      CA: { external_entity_id: 'CA Tax Payable', metadata: { qbdSalesTaxItem: 'West Group' } },
+      NV: { external_entity_id: 'NV Tax Payable', metadata: { qbdSalesTaxItem: 'West Group' } }
+    };
+
+    await expect(
+      transformContent(
+        context([
+          { document_id: 'inv-1', document_line_id: 'charge-1' },
+          { document_id: 'inv-1', document_line_id: 'charge-2' }
+        ])
+      )
+    ).rejects.toMatchObject({ code: 'QBD_MIXED_SALES_TAX_ACCOUNTS' });
   });
 
   it('omits the tax split for externally taxed invoices but still flags taxable lines', async () => {
@@ -454,6 +492,7 @@ describe('QuickBooksDesktopAdapter IIF transform', () => {
   it('fails closed when no income account is configured', async () => {
     harness.rows.invoices = [invoice()];
     harness.rows.invoice_charges = [charge()];
+    harness.mappings.services['svc-1'].external_entity_id = '';
 
     await expect(
       transformContent(
@@ -486,7 +525,6 @@ describe('QuickBooksDesktopAdapter IIF transform', () => {
   it('applies default account names when settings are absent', async () => {
     harness.rows.invoices = [invoice()];
     harness.rows.invoice_charges = [charge()];
-    harness.mappings.services['svc-1'].metadata.qbdIncomeAccount = 'Sales';
 
     const { rows } = await transformContent(
       context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }], {})
@@ -510,7 +548,7 @@ describe('QuickBooksDesktopAdapter list records for items created by the export 
     harness.rows.invoice_charges = [charge()];
     harness.rows.service_catalog = [{ service_id: 'svc-1', service_name: 'Consulting', description: 'Hourly consulting', default_rate: 5000, item_kind: 'service' }];
     harness.mappings.clients = { 'client-1': { external_entity_id: 'Acme Corp', metadata: created() } };
-    harness.mappings.services = { 'svc-1': { external_entity_id: 'Consulting', metadata: created() } };
+    harness.mappings.services = { 'svc-1': { external_entity_id: 'Services Income', metadata: created({ qbdItem: 'Consulting' }) } };
 
     const { rows } = await transformContent(
       context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
@@ -537,7 +575,7 @@ describe('QuickBooksDesktopAdapter list records for items created by the export 
     harness.rows.invoice_charges = [charge()];
     harness.rows.service_catalog = [{ service_id: 'svc-1', service_name: 'Laptop', item_kind: 'product' }];
     harness.rows.product_inventory_settings = [{ service_id: 'svc-1', average_cost: 42000 }];
-    harness.mappings.services = { 'svc-1': { external_entity_id: 'Laptop', metadata: created() } };
+    harness.mappings.services = { 'svc-1': { external_entity_id: 'Services Income', metadata: created({ qbdItem: 'Laptop' }) } };
     const lines = [{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }];
 
     const nonInventory = await transformContent(context(lines));
@@ -561,7 +599,7 @@ describe('QuickBooksDesktopAdapter list records for items created by the export 
       charge(),
       charge({ item_id: 'charge-2', service_id: null, is_discount: true, quantity: 1, unit_price: null, net_amount: -500, total_price: -500, description: 'Loyalty discount' })
     ];
-    harness.mappings.discount = { external_entity_id: 'Loyalty Discount', metadata: created() };
+    harness.mappings.discount = { external_entity_id: 'Services Income', metadata: created({ qbdItem: 'Loyalty Discount' }) };
 
     const { rows } = await transformContent(
       context([
@@ -582,7 +620,7 @@ describe('QuickBooksDesktopAdapter list records for items created by the export 
       'client-1': { external_entity_id: 'Acme Corp', metadata: created({ qbdCreateInBatch: 'batch-0', qbdListRecordBatch: 'batch-0' }) }
     };
     harness.mappings.services = {
-      'svc-1': { external_entity_id: 'Consulting', source: 'service_category', metadata: created({ qbdCreateInBatch: 'batch-0' }) }
+      'svc-1': { external_entity_id: 'Services Income', source: 'service_category', metadata: created({ qbdCreateInBatch: 'batch-0', qbdItem: 'Consulting' }) }
     };
 
     const { rows } = await transformContent(
@@ -619,7 +657,7 @@ describe('QuickBooksDesktopAdapter list records for items created by the export 
     harness.rows.invoices = [invoice()];
     harness.rows.invoice_charges = [charge()];
     harness.mappings.clients = { 'client-1': { external_entity_id: 'Acme Corp', metadata: created() } };
-    harness.mappings.services = { 'svc-1': { external_entity_id: 'Consulting', metadata: created() } };
+    harness.mappings.services = { 'svc-1': { external_entity_id: 'Services Income', metadata: created({ qbdItem: 'Consulting' }) } };
 
     const adapter = await QuickBooksDesktopAdapter.create();
     const ctx = context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }]);
@@ -627,8 +665,8 @@ describe('QuickBooksDesktopAdapter list records for items created by the export 
 
     const stamped = harness.updates.filter((u) => u.table === 'tenant_external_entity_mappings');
     expect(stamped.map((u) => u.where.find((w: any[]) => w[0] === 'where' && typeof w[1] === 'object')?.[1])).toEqual([
-      { integration_type: 'quickbooks_csv', alga_entity_type: 'client', alga_entity_id: 'client-1' },
-      { integration_type: 'quickbooks_csv', alga_entity_type: 'service', alga_entity_id: 'svc-1' }
+      { integration_type: 'quickbooks_desktop', alga_entity_type: 'client', alga_entity_id: 'client-1' },
+      { integration_type: 'quickbooks_desktop', alga_entity_type: 'service', alga_entity_id: 'svc-1' }
     ]);
     expect(stamped[0].where).toEqual(expect.arrayContaining([['whereRaw', "metadata ->> 'qbdListRecordBatch' IS NULL"]]));
     expect(stamped[0].patch.metadata.bindings).toEqual(['batch-1']);

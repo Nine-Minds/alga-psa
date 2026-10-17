@@ -495,7 +495,7 @@
     },
     "unmapped": {
       "title": "Nicht zugeordnete QuickBooks-Einträge",
-      "descriptionDesktop": "Für diese Einträge gibt es noch keine QuickBooks-Zuordnung. Legen Sie sie neu an (die IIF-Datei fügt sie zu QuickBooks Desktop hinzu) oder verknüpfen Sie sie mit einem vorhandenen QuickBooks-Eintrag mit genau demselben Namen. Ihre Auswahl wird als Zuordnung gespeichert, damit künftige Exporte nicht erneut fragen.",
+      "descriptionDesktop": "Diese benötigen einen QuickBooks Desktop-Kunden oder -Artikel, bevor sie exportiert werden können. Legen Sie sie als neue Einträge an (die IIF-Datei fügt sie QuickBooks Desktop hinzu) oder verknüpfen Sie sie mit einem vorhandenen QuickBooks-Eintrag mit genau demselben Namen. Ihre Auswahl wird als QuickBooks Desktop-Zuordnung gespeichert, sodass künftige Exporte nicht erneut fragen.",
       "descriptionCsv": "Für diese Einträge gibt es noch keine QuickBooks-Zuordnung. Exportieren Sie sie unter dem unten stehenden Namen (QuickBooks legt neue Namen beim CSV-Import an) oder verknüpfen Sie sie mit einem vorhandenen QuickBooks-Eintrag mit genau demselben Namen. Ihre Auswahl wird als Zuordnung gespeichert, damit künftige Exporte nicht erneut fragen.",
       "permissionNotice": "Zum Speichern von QuickBooks-Zuordnungen ist die Berechtigung zum Verwalten von Zuordnungen erforderlich. Wenden Sie sich an einen Administrator oder ordnen Sie diese Einträge in den QuickBooks-Einstellungen zu.",
       "kinds": {
@@ -518,7 +518,9 @@
       "toast": {
         "saved": "QuickBooks-Zuordnungen gespeichert",
         "saveError": "QuickBooks-Zuordnungen konnten nicht gespeichert werden"
-      }
+      },
+      "postsTo": "Bucht auf {{account}}",
+      "postsToDefault": "Bucht auf das Standard-Erlöskonto"
     }
   },
   "templateRenderer": {
@@ -773,7 +775,8 @@
         "nameTakenByClient": "„{{qbName}}\" ist bereits einem anderen Kunden zugeordnet und kann daher nicht auch für „{{algaName}}\" verwendet werden. Wählen Sie einen anderen QuickBooks-Namen oder ändern Sie die bestehende Zuordnung in den QuickBooks-Zuordnungen.",
         "nameTakenByItem": "„{{qbName}}\" ist bereits einem anderen Artikel zugeordnet und kann daher nicht auch für „{{algaName}}\" verwendet werden. Wählen Sie einen anderen QuickBooks-Namen oder ändern Sie die bestehende Zuordnung in den QuickBooks-Zuordnungen.",
         "unsupportedBatch": "Dieser Stapel ist kein QuickBooks Desktop- oder QuickBooks CSV-Export.",
-        "nameTakenConcurrently": "Einer dieser QuickBooks-Namen wurde gerade einem anderen Eintrag zugeordnet. Aktualisieren Sie die Liste und wählen Sie einen anderen Namen."
+        "nameTakenConcurrently": "Einer dieser QuickBooks-Namen wurde gerade einem anderen Eintrag zugeordnet. Aktualisieren Sie die Liste und wählen Sie einen anderen Namen.",
+        "desktopIncomeAccountRequired": "Legen Sie das Standard-Erlöskonto in den QuickBooks Desktop-Einstellungen fest, bevor Sie Artikel aus einem Export zuordnen."
       }
     },
     "vendorBill": {

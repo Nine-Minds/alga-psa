@@ -28,8 +28,8 @@ vi.mock('./useAccountingCapabilities', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/integrations/components/csv/CSVMappingManager', () => ({
-  CSVMappingManager: () => <div data-testid="csv-mapping-manager" />,
+vi.mock('@alga-psa/integrations/components/accounting-mappings/QuickBooksDesktopMappingManager', () => ({
+  QuickBooksDesktopMappingManager: () => <div data-testid="qbd-mapping-manager" />,
 }));
 
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({

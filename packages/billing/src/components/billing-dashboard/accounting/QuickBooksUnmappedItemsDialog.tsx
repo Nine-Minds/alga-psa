@@ -123,7 +123,7 @@ export function QuickBooksUnmappedItemsDialog({
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
             {isDesktop
-              ? t('accountingExports.unmapped.descriptionDesktop', { defaultValue: 'These have no QuickBooks mapping yet. Create them as new entries (the IIF file will add them to QuickBooks Desktop) or link them to an existing QuickBooks entry with the exact same name. Your choices are saved as mappings, so future exports will not ask again.' })
+              ? t('accountingExports.unmapped.descriptionDesktop', { defaultValue: 'These need a QuickBooks Desktop customer or item before they can be exported. Create them as new entries (the IIF file will add them to QuickBooks Desktop) or link them to an existing QuickBooks entry with the exact same name. Your choices are saved as QuickBooks Desktop mappings, so future exports will not ask again.' })
               : t('accountingExports.unmapped.descriptionCsv', { defaultValue: 'These have no QuickBooks mapping yet. Export them under the name below (QuickBooks adds new names when you import the CSV) or link them to an existing QuickBooks entry with the exact same name. Your choices are saved as mappings, so future exports will not ask again.' })}
           </p>
 
@@ -153,6 +153,13 @@ export function QuickBooksUnmappedItemsDialog({
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium" title={entity.algaName}>{entity.algaName}</div>
                     <div className="text-xs text-muted-foreground">{kindLabel(entity)}</div>
+                    {isDesktop && entity.algaEntityType !== 'client' ? (
+                      <div className="truncate text-xs text-muted-foreground" id={`${idBase}-account`}>
+                        {entity.desktopAccount
+                          ? t('accountingExports.unmapped.postsTo', { defaultValue: 'Posts to {{account}}', account: entity.desktopAccount })
+                          : t('accountingExports.unmapped.postsToDefault', { defaultValue: 'Posts to the default income account' })}
+                      </div>
+                    ) : null}
                   </div>
                   <CustomSelect
                     id={`${idBase}-mode`}

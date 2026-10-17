@@ -4,7 +4,7 @@ import React, { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ExternalLink, FileText, Monitor } from 'lucide-react';
-import { CSVMappingManager } from '@alga-psa/integrations/components/csv/CSVMappingManager';
+import { QuickBooksDesktopMappingManager } from '@alga-psa/integrations/components/accounting-mappings/QuickBooksDesktopMappingManager';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
@@ -35,10 +35,10 @@ const toKebabCase = (value: string) => value.replace(/[A-Z]/g, (letter) => `-${l
 /**
  * QuickBooks Desktop (IIF) Integration Settings
  *
- * Desktop exports reuse the QuickBooks CSV mappings for customer, item, term,
- * and tax names, and add the account and sales tax item names an IIF invoice
- * needs. QuickBooks Desktop creates any name it does not recognise on import,
- * so these must match the company file exactly.
+ * The account and sales tax item defaults an IIF invoice needs, plus every
+ * QuickBooks Desktop mapping (clients, services, discounts, tax codes and
+ * terms) in one place. QuickBooks Desktop creates any name it does not
+ * recognise on import, so these must match the company file exactly.
  */
 const QuickBooksDesktopIntegrationSettings: React.FC = () => {
   const { t } = useTranslation('msp/integrations');
@@ -133,18 +133,18 @@ const QuickBooksDesktopIntegrationSettings: React.FC = () => {
     {
       key: 'defaultIncomeAccount',
       label: t('integrations.qbd.settings.fields.defaultIncomeAccount', { defaultValue: 'Default income account' }),
-      help: t('integrations.qbd.settings.fields.defaultIncomeAccountHelp', { defaultValue: 'Used for invoice lines whose mapping has no "qbdIncomeAccount" metadata. Required unless every mapping sets one.' }),
+      help: t('integrations.qbd.settings.fields.defaultIncomeAccountHelp', { defaultValue: 'The income account for items mapped from an export, and for any Services or Discounts mapping without an account.' }),
       required: true
     },
     {
       key: 'salesTaxPayableAccount',
       label: t('integrations.qbd.settings.fields.salesTaxPayableAccount', { defaultValue: 'Sales tax liability account' }),
-      help: t('integrations.qbd.settings.fields.salesTaxPayableAccountHelp', { defaultValue: 'The account the sales tax line posts to.' })
+      help: t('integrations.qbd.settings.fields.salesTaxPayableAccountHelp', { defaultValue: 'The account the sales tax line posts to, unless the tax region\'s Tax Codes mapping names another.' })
     },
     {
       key: 'defaultSalesTaxItem',
       label: t('integrations.qbd.settings.fields.defaultSalesTaxItem', { defaultValue: 'Default sales tax item' }),
-      help: t('integrations.qbd.settings.fields.defaultSalesTaxItemHelp', { defaultValue: 'Sales tax item or group for taxed invoices whose tax region has no Tax Codes mapping.' })
+      help: t('integrations.qbd.settings.fields.defaultSalesTaxItemHelp', { defaultValue: 'Sales tax item or group for taxed invoices whose Tax Codes mapping does not name one.' })
     }
   ];
 
@@ -189,9 +189,6 @@ const QuickBooksDesktopIntegrationSettings: React.FC = () => {
               {t('integrations.qbd.settings.warning.description', { defaultValue: 'QuickBooks Desktop adds any customer, item, account, or term name it does not recognise when importing an IIF file, and IIF imports cannot be undone. Make sure every name below and in the mappings matches your company file exactly, and try your first import on a backup copy.' })}
             </AlertDescription>
           </Alert>
-          <p className="text-sm text-muted-foreground">
-            {t('integrations.qbd.settings.sharedMappingsNote', { defaultValue: 'Customer, item, tax code, payment term, and discount mappings are shared with the QuickBooks CSV integration.' })}
-          </p>
         </CardContent>
       </Card>
 
@@ -277,9 +274,6 @@ const QuickBooksDesktopIntegrationSettings: React.FC = () => {
               </div>
             ) : null}
           </div>
-          <p className="text-xs text-muted-foreground">
-            {t('integrations.qbd.settings.metadataHelp', { defaultValue: 'Per-item overrides: add {"qbdIncomeAccount": "Account name"} to an Items / Services or Discounts mapping, or {"qbdSalesTaxItem": "Item name"} to a Tax Codes mapping, using the mapping metadata editor.' })}
-          </p>
         </CardContent>
         {canManageConnections ? (
           <CardFooter className="justify-end">
@@ -294,16 +288,16 @@ const QuickBooksDesktopIntegrationSettings: React.FC = () => {
         <CardHeader>
           <CardTitle>{t('integrations.qbd.settings.mappings.title', { defaultValue: 'QuickBooks Mappings' })}</CardTitle>
           <CardDescription>
-            {t('integrations.qbd.settings.mappings.description', { defaultValue: 'Map Alga clients, services, tax codes, payment terms, and discounts to the names in your QuickBooks Desktop company file. Unmapped clients export under their Alga name; unmapped payment terms are left blank.' })}
+            {t('integrations.qbd.settings.mappings.description', { defaultValue: 'Map Alga clients, services, discounts, tax codes, and payment terms to the names in your QuickBooks Desktop company file. Every service and discount needs a Desktop item; unmapped payment terms are left blank.' })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {caps.mappingsManage ? (
-            <CSVMappingManager />
+            <QuickBooksDesktopMappingManager />
           ) : (
             <Alert variant="info" id="qbd-mapping-permission-notice">
               <AlertDescription>
-                {t('integrations.csv.settings.qbo.mappings.permissionNotice', { defaultValue: 'Editing CSV mappings requires the manage-mappings capability. Ask an administrator to grant it.' })}
+                {t('integrations.qbd.settings.mappings.permissionNotice', { defaultValue: 'Editing QuickBooks Desktop mappings requires the manage-mappings capability. Ask an administrator to grant it.' })}
               </AlertDescription>
             </Alert>
           )}
@@ -317,7 +311,7 @@ const QuickBooksDesktopIntegrationSettings: React.FC = () => {
             {t('integrations.csv.settings.exports.title', { defaultValue: 'Accounting Exports' })}
           </CardTitle>
           <CardDescription>
-            {t('integrations.qbd.settings.exports.description', { defaultValue: 'Create a QuickBooks Desktop export batch, execute it, and the IIF file downloads automatically.' })}
+            {t('integrations.qbd.settings.exports.description', { defaultValue: 'Create a QuickBooks Desktop export batch and execute it, then download the IIF file from the batch details.' })}
           </CardDescription>
         </CardHeader>
         {caps.exportsExecute && (

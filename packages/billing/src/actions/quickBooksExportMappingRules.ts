@@ -13,6 +13,14 @@ export interface UnmappedQuickBooksEntity {
   itemKind: string | null;
   proposedName: string;
   maxNameLength: number;
+  /**
+   * QuickBooks Desktop service/discount only: the account an existing mapping
+   * already posts to, when that mapping lacks only its item name. Null when
+   * there is no mapping yet.
+   */
+  desktopAccount?: string | null;
+  /** True when that existing Desktop mapping is a direct row the prompt can complete in place. */
+  desktopMappingInPlace?: boolean;
 }
 
 export interface QuickBooksMappingDecision {
@@ -85,6 +93,10 @@ export function collectUnmappedQuickBooksEntities(adapterType: string, errors: E
       (typeof metadata.client_name === 'string' && metadata.client_name) ||
       (entityType === 'discount' ? 'Discount' : algaEntityId);
     const maxNameLength = maxQuickBooksNameLength(adapterType, entityType);
+    const desktopAccount =
+      typeof metadata.desktop_account === 'string' && metadata.desktop_account.trim()
+        ? metadata.desktop_account.trim()
+        : null;
 
     byKey.set(key, {
       algaEntityType: entityType,
@@ -92,7 +104,15 @@ export function collectUnmappedQuickBooksEntities(adapterType: string, errors: E
       algaName,
       itemKind: typeof metadata.item_kind === 'string' ? metadata.item_kind : null,
       proposedName: proposeQuickBooksName(algaName, maxNameLength),
-      maxNameLength
+      maxNameLength,
+      ...(adapterType === 'quickbooks_desktop' && entityType !== 'client'
+        ? {
+            desktopAccount,
+            desktopMappingInPlace:
+              desktopAccount !== null &&
+              (metadata.desktop_mapping_source === 'service' || metadata.desktop_mapping_source === 'discount')
+          }
+        : {})
     });
   }
   return Array.from(byKey.values());
@@ -169,10 +189,12 @@ export function validateQuickBooksMappingDecisions(
       }
       createdNames.add(nameKey);
     }
-    // Mappings are one Alga entity per QuickBooks name within an entity type
-    // (idx_unique_external_mapping), whether the entry is new or existing.
+    // CSV mappings are one Alga entity per QuickBooks name within an entity type
+    // (idx_unique_external_mapping), and so are Desktop customers. A Desktop
+    // item name lives in metadata, and several services may share one item.
+    const sharesItemNames = adapterType === 'quickbooks_desktop' && decision.algaEntityType !== 'client';
     const mappedKey = `${decision.algaEntityType}:${name}`;
-    if (mappedNames.has(mappedKey)) {
+    if (!sharesItemNames && mappedNames.has(mappedKey)) {
       return decision.algaEntityType === 'client'
         ? problem(
             'duplicateClientName',
@@ -205,9 +227,12 @@ export function findQuickBooksNameConflict(
   pending: UnmappedQuickBooksEntity[],
   decisions: QuickBooksMappingDecision[],
   existing: ExistingQuickBooksMappingRow[],
-  storedEntityType: (type: UnmappedEntityType) => string
+  storedEntityType: (type: UnmappedEntityType) => string,
+  adapterType?: string
 ): QuickBooksMappingProblem | null {
   for (const decision of decisions) {
+    // Desktop item names are metadata, not the mapped value, so only customers can clash.
+    if (adapterType === 'quickbooks_desktop' && decision.algaEntityType !== 'client') continue;
     const name = decision.externalName.trim();
     const owner = existing.find(
       (row) =>

@@ -27,7 +27,6 @@ import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { reconcileExportLineQuantity } from './exportLineQuantity';
-import { getQuickBooksItemName } from './quickBooksItemName';
 
 const QBO_CSV_MAX_QUANTITY_DECIMALS = 6;
 
@@ -614,7 +613,14 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
   }
 
   private getItemName(mapping: { external_entity_id: string; metadata?: Record<string, any> | null }): string {
-    return getQuickBooksItemName(mapping);
+    // Try to get a display name from metadata, otherwise use the external_entity_id
+    const metadata = mapping.metadata;
+    if (metadata) {
+      if (typeof metadata.name === 'string') return metadata.name;
+      if (typeof metadata.display_name === 'string') return metadata.display_name;
+      if (typeof metadata.item_name === 'string') return metadata.item_name;
+    }
+    return mapping.external_entity_id;
   }
 
   private formatDate(value?: string | Date | null): string {

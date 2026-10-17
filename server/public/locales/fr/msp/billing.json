@@ -495,7 +495,7 @@
     },
     "unmapped": {
       "title": "Éléments QuickBooks non associés",
-      "descriptionDesktop": "Ces éléments n'ont pas encore de correspondance QuickBooks. Créez-les comme nouvelles entrées (le fichier IIF les ajoutera à QuickBooks Desktop) ou associez-les à une entrée QuickBooks existante portant exactement le même nom. Vos choix sont enregistrés comme correspondances : les prochains exports ne vous le redemanderont pas.",
+      "descriptionDesktop": "Ces éléments nécessitent un client ou un article QuickBooks Desktop avant de pouvoir être exportés. Créez-les comme nouvelles entrées (le fichier IIF les ajoutera à QuickBooks Desktop) ou associez-les à une entrée QuickBooks existante portant exactement le même nom. Vos choix sont enregistrés comme correspondances QuickBooks Desktop ; les prochaines exportations ne vous les redemanderont pas.",
       "descriptionCsv": "Ces éléments n'ont pas encore de correspondance QuickBooks. Exportez-les sous le nom ci-dessous (QuickBooks ajoute les nouveaux noms lors de l'import du CSV) ou associez-les à une entrée QuickBooks existante portant exactement le même nom. Vos choix sont enregistrés comme correspondances : les prochains exports ne vous le redemanderont pas.",
       "permissionNotice": "L'enregistrement des correspondances QuickBooks nécessite la capacité de gestion des correspondances. Demandez à un administrateur, ou associez ces éléments depuis les paramètres QuickBooks.",
       "kinds": {
@@ -518,7 +518,9 @@
       "toast": {
         "saved": "Correspondances QuickBooks enregistrées",
         "saveError": "Impossible d'enregistrer les correspondances QuickBooks"
-      }
+      },
+      "postsTo": "Comptabilisé sur {{account}}",
+      "postsToDefault": "Comptabilisé sur le compte de produits par défaut"
     }
   },
   "templateRenderer": {
@@ -773,7 +775,8 @@
         "nameTakenByClient": "« {{qbName}} » est déjà associé à un autre client et ne peut donc pas être utilisé aussi pour « {{algaName}} ». Choisissez un autre nom QuickBooks ou modifiez la correspondance existante dans les correspondances QuickBooks.",
         "nameTakenByItem": "« {{qbName}} » est déjà associé à un autre article et ne peut donc pas être utilisé aussi pour « {{algaName}} ». Choisissez un autre nom QuickBooks ou modifiez la correspondance existante dans les correspondances QuickBooks.",
         "unsupportedBatch": "Ce lot n'est pas un export QuickBooks Desktop ou QuickBooks CSV.",
-        "nameTakenConcurrently": "L'un de ces noms QuickBooks vient d'être associé à une autre entrée. Actualisez la liste et choisissez un autre nom."
+        "nameTakenConcurrently": "L'un de ces noms QuickBooks vient d'être associé à une autre entrée. Actualisez la liste et choisissez un autre nom.",
+        "desktopIncomeAccountRequired": "Définissez le compte de produits par défaut dans les paramètres QuickBooks Desktop avant de faire correspondre des articles depuis une exportation."
       }
     },
     "vendorBill": {

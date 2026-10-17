@@ -7,11 +7,14 @@
  * charge crediting its income account with the mapped item, quantity and rate,
  * an optional SPL row for Alga's sales tax, and ENDTRNS.
  *
- * Names are resolved through the QuickBooks CSV mappings (shared, as xero_csv
- * shares the xero mappings) plus the QuickBooks Desktop settings for the
- * account names IIF needs. QuickBooks creates any list entry an IIF file names
- * that it does not already know, so every name must resolve to a configured
- * value; nothing falls back to an Alga identifier.
+ * Names come from the QuickBooks Desktop mappings (integration_type
+ * 'quickbooks_desktop'): a Services/Discounts mapping's value is the income
+ * account the line posts to and its metadata.qbdItem is the item the line
+ * names; a Tax Codes mapping's value is the tax account and its
+ * metadata.qbdSalesTaxItem the sales tax item. The QuickBooks Desktop settings
+ * supply the defaults. QuickBooks creates any list entry an IIF file names that
+ * it does not already know, so every name must resolve to a configured value;
+ * nothing falls back to an Alga identifier, and every invoice line names an item.
  */
 
 import logger from '@alga-psa/core/logger';
@@ -34,20 +37,16 @@ import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { reconcileExportLineQuantity } from './exportLineQuantity';
-import { getQuickBooksItemName } from './quickBooksItemName';
 import { buildQuickBooksCsvMemo } from './quickBooksCSVAdapter';
-import { resolveMappingAdapterType } from './mappingAdapterType';
 
-/** Mappings are maintained on the QuickBooks CSV setup and shared with Desktop. */
-const MAPPING_ADAPTER_TYPE = resolveMappingAdapterType('quickbooks_desktop');
+/** Desktop reads its own mappings (Settings → Integrations → QuickBooks Desktop). */
+const MAPPING_ADAPTER_TYPE = 'quickbooks_desktop';
 const IIF_MAX_QUANTITY_DECIMALS = 5;
 // QuickBooks Desktop list-name limits, per ':'-separated segment.
 const MAX_CUSTOMER_NAME_LENGTH = 41;
 const MAX_ITEM_NAME_LENGTH = 31;
 const MAX_ACCOUNT_NAME_LENGTH = 31;
 const IIF_LINE_ENDING = '\r\n';
-// QuickBooks Online tax codes a shared quickbooks_csv tax mapping may hold; never a Desktop item name.
-const QBO_PSEUDO_TAX_CODES = new Set(['TAX', 'NON']);
 
 const TRNS_FIELDS = [
   'TRNSID', 'TRNSTYPE', 'DATE', 'ACCNT', 'NAME', 'AMOUNT', 'DOCNUM', 'MEMO', 'TOPRINT', 'DUEDATE', 'TERMS', 'PONUM'
@@ -345,6 +344,7 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
       let amountCents = 0;
       let taxCents = 0;
       const taxItems = new Set<string>();
+      const taxAccounts = new Set<string>();
 
       for (const line of exportLines) {
         if (!line.document_line_id) {
@@ -377,23 +377,28 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
           throw new AppError(
             'QBD_MAPPING_MISSING',
             isServicelessDiscount
-              ? 'QuickBooks Desktop export: no mapping for discount lines. Configure the Discounts mapping before export.'
-              : `QuickBooks Desktop export: no item mapping for service ${charge.service_id}. Configure the Items / Services mapping before export.`,
+              ? 'QuickBooks Desktop export: no mapping for discount lines. Add one on the QuickBooks Desktop Discounts tab before export.'
+              : `QuickBooks Desktop export: no mapping for service ${charge.service_id}. Add one on the QuickBooks Desktop Services tab before export.`,
             { serviceId: charge.service_id ?? null, invoiceId }
           );
         }
 
-        const itemName = sanitizeIifField(getQuickBooksItemName(itemMapping));
+        // Every line names an item: an account-only invoice line has no item,
+        // quantity or rate in QuickBooks, never reduces inventory, and is left
+        // out of item reports, so a mapping without an item fails the export.
+        const itemName = sanitizeIifField(nonEmptyString(itemMapping.metadata?.qbdItem) ?? '');
         this.assertListName(itemName, MAX_ITEM_NAME_LENGTH, 'item', invoiceNumber,
-          'Map the service to the exact QuickBooks Desktop item name.');
+          isServicelessDiscount
+            ? 'Set the QuickBooks Desktop item name on the Discounts mapping.'
+            : 'Set the QuickBooks Desktop item name on the Services mapping.');
 
         const incomeAccount = sanitizeIifField(
-          nonEmptyString(itemMapping.metadata?.qbdIncomeAccount) ?? settings.defaultIncomeAccount
+          nonEmptyString(itemMapping.external_entity_id) ?? settings.defaultIncomeAccount
         );
         if (!incomeAccount) {
           throw new AppError(
             'QBD_INCOME_ACCOUNT_MISSING',
-            `QuickBooks Desktop export: no income account for item "${itemName}". Set the default income account in the QuickBooks Desktop settings or "qbdIncomeAccount" on the mapping.`
+            `QuickBooks Desktop export: no income account for item "${itemName}". Set the account on the mapping or the default income account in the QuickBooks Desktop settings.`
           );
         }
         this.assertListName(incomeAccount, MAX_ACCOUNT_NAME_LENGTH, 'account', invoiceNumber,
@@ -429,7 +434,9 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
         const taxable = Boolean(charge.is_taxable) || toCents(charge.tax_amount) > 0;
 
         if (lineTax !== 0) {
-          taxItems.add(await this.resolveSalesTaxItem(resolver, tenantId, context, charge, settings, invoiceNumber));
+          const salesTax = await this.resolveSalesTax(resolver, tenantId, context, charge, settings, invoiceNumber);
+          taxItems.add(salesTax.item);
+          taxAccounts.add(salesTax.account);
         }
 
         amountCents += lineAmount;
@@ -465,14 +472,21 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
             `QuickBooks Desktop export: invoice ${invoiceNumber} has tax regions mapped to different sales tax items (${Array.from(taxItems).join(', ')}). QuickBooks Desktop allows one sales tax item or group per invoice.`
           );
         }
+        if (taxAccounts.size > 1) {
+          throw new AppError(
+            'QBD_MIXED_SALES_TAX_ACCOUNTS',
+            `QuickBooks Desktop export: invoice ${invoiceNumber} has tax regions mapped to different tax accounts (${Array.from(taxAccounts).join(', ')}). The invoice's single sales tax line can post to only one account.`
+          );
+        }
         const [taxItem] = Array.from(taxItems);
-        this.assertListName(settings.salesTaxPayableAccount, MAX_ACCOUNT_NAME_LENGTH, 'account', invoiceNumber,
+        const [taxAccount] = Array.from(taxAccounts);
+        this.assertListName(taxAccount, MAX_ACCOUNT_NAME_LENGTH, 'account', invoiceNumber,
           'Use the exact QuickBooks Desktop sales tax liability account name.');
         splRows.push({
           SPLID: '',
           TRNSTYPE: 'INVOICE',
           DATE: date,
-          ACCNT: settings.salesTaxPayableAccount,
+          ACCNT: taxAccount,
           NAME: '',
           AMOUNT: minorUnitsToPlainDecimalText(-taxCents, 'en-US', currency),
           DOCNUM: invoiceNumber,
@@ -776,14 +790,14 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
     return list.find((row) => row.is_billing_address) ?? list.find((row) => row.is_default) ?? list[0] ?? null;
   }
 
-  private async resolveSalesTaxItem(
+  private async resolveSalesTax(
     resolver: AccountingMappingResolver,
     tenantId: string,
     context: AccountingExportAdapterContext,
     charge: DbCharge,
     settings: QuickBooksDesktopAdapterSettings,
     invoiceNumber: string
-  ): Promise<string> {
+  ): Promise<{ item: string; account: string }> {
     const taxMapping = charge.tax_region
       ? await resolver.resolveTaxCodeMapping({
           tenantId,
@@ -792,25 +806,25 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
           targetRealm: context.batch.target_realm
         })
       : null;
-    // Desktop has no per-line tax code in IIF, only one sales tax *item* per
-    // invoice. A region's item is metadata.qbdSalesTaxItem, else the mapping's
-    // own value (what a Desktop-only tenant types in the Tax Code field), unless
-    // that value is a QuickBooks Online pseudo code (TAX/NON) kept for CSV use.
-    const mappedValue = nonEmptyString(taxMapping?.external_entity_id);
-    const mappedItem =
-      mappedValue && !QBO_PSEUDO_TAX_CODES.has(mappedValue.toUpperCase()) ? mappedValue : null;
+    // IIF has no per-line tax code, only one sales tax *item* (or group) per
+    // invoice, posted to its liability account. The Tax Codes mapping names the
+    // account (its value) and the item (metadata.qbdSalesTaxItem); the settings
+    // supply both defaults.
     const item = sanitizeIifField(
-      nonEmptyString(taxMapping?.metadata?.qbdSalesTaxItem) ?? mappedItem ?? settings.defaultSalesTaxItem
+      nonEmptyString(taxMapping?.metadata?.qbdSalesTaxItem) ?? settings.defaultSalesTaxItem
     );
     if (!item) {
       throw new AppError(
         'QBD_SALES_TAX_ITEM_MISSING',
-        `QuickBooks Desktop export: invoice ${invoiceNumber} has sales tax${charge.tax_region ? ` for region ${charge.tax_region}` : ''} but no sales tax item. Set the default sales tax item in the QuickBooks Desktop settings, or map the region on the Tax Codes tab to the QuickBooks Desktop sales tax item name.`
+        `QuickBooks Desktop export: invoice ${invoiceNumber} has sales tax${charge.tax_region ? ` for region ${charge.tax_region}` : ''} but no sales tax item. Set the sales tax item on the QuickBooks Desktop Tax Codes mapping for the region, or the default sales tax item in the QuickBooks Desktop settings.`
       );
     }
     this.assertListName(item, MAX_ITEM_NAME_LENGTH, 'item', invoiceNumber,
       'Use the exact QuickBooks Desktop sales tax item or group name.');
-    return item;
+    const account = sanitizeIifField(
+      nonEmptyString(taxMapping?.external_entity_id) ?? settings.salesTaxPayableAccount
+    );
+    return { item, account };
   }
 
   private assertListName(name: string, maxLength: number, kind: string, invoiceNumber: string, hint: string): void {

@@ -495,7 +495,7 @@
     },
     "unmapped": {
       "title": "Niezmapowane pozycje QuickBooks",
-      "descriptionDesktop": "Te pozycje nie mają jeszcze mapowania QuickBooks. Utwórz je jako nowe wpisy (plik IIF doda je do QuickBooks Desktop) albo połącz z istniejącym wpisem QuickBooks o dokładnie tej samej nazwie. Wybory są zapisywane jako mapowania, więc kolejne eksporty nie będą o to pytać.",
+      "descriptionDesktop": "Te elementy wymagają klienta lub pozycji QuickBooks Desktop, zanim będzie można je wyeksportować. Utwórz je jako nowe wpisy (plik IIF doda je do QuickBooks Desktop) lub połącz z istniejącym wpisem QuickBooks o dokładnie takiej samej nazwie. Twoje wybory zostaną zapisane jako mapowania QuickBooks Desktop, więc kolejne eksporty nie będą o nie pytać.",
       "descriptionCsv": "Te pozycje nie mają jeszcze mapowania QuickBooks. Wyeksportuj je pod nazwą poniżej (QuickBooks dodaje nowe nazwy podczas importu CSV) albo połącz z istniejącym wpisem QuickBooks o dokładnie tej samej nazwie. Wybory są zapisywane jako mapowania, więc kolejne eksporty nie będą o to pytać.",
       "permissionNotice": "Zapisywanie mapowań QuickBooks wymaga uprawnienia do zarządzania mapowaniami. Poproś administratora albo zmapuj te pozycje w ustawieniach QuickBooks.",
       "kinds": {
@@ -518,7 +518,9 @@
       "toast": {
         "saved": "Zapisano mapowania QuickBooks",
         "saveError": "Nie udało się zapisać mapowań QuickBooks"
-      }
+      },
+      "postsTo": "Księgowane na {{account}}",
+      "postsToDefault": "Księgowane na domyślne konto przychodów"
     }
   },
   "templateRenderer": {
@@ -773,7 +775,8 @@
         "nameTakenByClient": "„{{qbName}}\" jest już zmapowana do innego klienta, więc nie można jej użyć także dla „{{algaName}}\". Wybierz inną nazwę QuickBooks lub zmień istniejące mapowanie w mapowaniach QuickBooks.",
         "nameTakenByItem": "„{{qbName}}\" jest już zmapowana do innej pozycji, więc nie można jej użyć także dla „{{algaName}}\". Wybierz inną nazwę QuickBooks lub zmień istniejące mapowanie w mapowaniach QuickBooks.",
         "unsupportedBatch": "Ta partia nie jest eksportem QuickBooks Desktop ani QuickBooks CSV.",
-        "nameTakenConcurrently": "Jedna z tych nazw QuickBooks została właśnie zmapowana do innego wpisu. Odśwież listę i wybierz inną nazwę."
+        "nameTakenConcurrently": "Jedna z tych nazw QuickBooks została właśnie zmapowana do innego wpisu. Odśwież listę i wybierz inną nazwę.",
+        "desktopIncomeAccountRequired": "Ustaw domyślne konto przychodów w ustawieniach QuickBooks Desktop przed mapowaniem pozycji z eksportu."
       }
     },
     "vendorBill": {

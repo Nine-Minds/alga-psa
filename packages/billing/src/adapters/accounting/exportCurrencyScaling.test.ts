@@ -58,11 +58,11 @@ vi.mock('../../services/accountingMappingResolver', () => ({
   AccountingMappingResolver: class {
     resolveServiceMapping = vi.fn(async () => ({
         external_entity_id: 'item-1',
-        metadata: { name: 'Consulting', itemCode: 'CONS', accountCode: '200', taxType: 'OUTPUT' }
+        metadata: { name: 'Consulting', itemCode: 'CONS', accountCode: '200', taxType: 'OUTPUT', qbdItem: 'Consulting' }
       }));
     resolveDiscountMapping = vi.fn(async () => ({
       external_entity_id: 'discount-1',
-      metadata: { name: 'Discount', accountCode: '200', taxType: 'NONE' }
+      metadata: { name: 'Discount', accountCode: '200', taxType: 'NONE', qbdItem: 'Discount' }
     }));
     resolveTaxCodeMapping = vi.fn(async () => null);
     resolvePaymentTermMapping = vi.fn(async () => null);

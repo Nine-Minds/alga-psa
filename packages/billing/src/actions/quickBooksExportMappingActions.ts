@@ -13,7 +13,6 @@ import { AUTOMATIC_DISCOUNT_MAPPING_ID, DISCOUNT_MAPPING_ENTITY_TYPE } from '@al
 import logger from '@alga-psa/core/logger';
 import { AccountingExportRepository } from '../repositories/accountingExportRepository';
 import { SyncMappingLedger } from '../services/accountingSync/syncMappingLedger';
-import { resolveMappingAdapterType } from '../adapters/accounting/mappingAdapterType';
 import {
   QUICKBOOKS_FILE_ADAPTERS,
   collectUnmappedQuickBooksEntities,
@@ -70,10 +69,13 @@ export const getUnmappedQuickBooksEntities = withAuth(async (
 });
 
 /**
- * Save the user's decision for each unmapped entity as a QuickBooks CSV
- * mapping (shared with QuickBooks Desktop), so later exports never ask again.
- * "create" on a Desktop batch also tags the mapping with the batch id so that
- * batch's IIF file defines the new customer/item before using it.
+ * Save the user's decision for each unmapped entity as a mapping of the
+ * batch's own integration type, so later exports never ask again. On a Desktop
+ * batch a service/discount decision names the QuickBooks item (metadata.qbdItem)
+ * while the mapping's value stays the income account it posts to; an existing
+ * account-only Desktop mapping is completed in place. "create" on a Desktop
+ * batch also tags the mapping with the batch id so that batch's IIF file
+ * defines the new customer/item before using it.
  */
 export const saveQuickBooksExportMappings = withAuth(async (
   user,
@@ -97,9 +99,29 @@ export const saveQuickBooksExportMappings = withAuth(async (
   }
 
   const isDesktop = batch.adapter_type === 'quickbooks_desktop';
-  const integrationType = resolveMappingAdapterType(batch.adapter_type);
+  const integrationType = batch.adapter_type;
   const storedEntityType = (type: QuickBooksMappingDecision['algaEntityType']) =>
     type === 'discount' ? DISCOUNT_MAPPING_ENTITY_TYPE : type;
+  const pendingByKey = new Map(pending.map((entity) => [`${entity.algaEntityType}:${entity.algaEntityId}`, entity]));
+  const isDesktopItem = (decision: QuickBooksMappingDecision) => isDesktop && decision.algaEntityType !== 'client';
+
+  // A new Desktop service/discount mapping needs the income account it posts
+  // to: the existing mapping's, else the Desktop default income account.
+  let defaultIncomeAccount = '';
+  if (decisions.some((decision) => isDesktopItem(decision) && !pendingByKey.get(`${decision.algaEntityType}:${decision.algaEntityId}`)?.desktopAccount)) {
+    // Loaded only on this path: the integrations runtime is heavy, and every
+    // importer of these actions (the Accounting Exports tab) would otherwise pay for it.
+    // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- the Desktop default income account is integration-owned tenant settings, read the same way accountingExportService reads them
+    const { getQuickBooksDesktopSettingsForTenant } = await import('@alga-psa/integrations/runtime');
+    defaultIncomeAccount = (await getQuickBooksDesktopSettingsForTenant(tenant)).defaultIncomeAccount;
+    if (!defaultIncomeAccount) {
+      return actionError(
+        'Set the default income account in the QuickBooks Desktop settings before mapping items from an export.',
+        'msp/billing:errors.accountingExport.quickbooksMapping.desktopIncomeAccountRequired'
+      );
+    }
+  }
+
   const { knex } = await createTenantKnex();
 
   // idx_unique_external_mapping allows one Alga entity per QuickBooks name and
@@ -116,7 +138,7 @@ export const saveQuickBooksExportMappings = withAuth(async (
         query.whereNull('external_realm_id');
       }
     });
-  const conflict = findQuickBooksNameConflict(pending, decisions, existing, storedEntityType);
+  const conflict = findQuickBooksNameConflict(pending, decisions, existing, storedEntityType, batch.adapter_type);
   if (conflict) {
     return toActionError(conflict);
   }
@@ -126,18 +148,45 @@ export const saveQuickBooksExportMappings = withAuth(async (
       const ledger = new SyncMappingLedger(trx, tenant, integrationType);
       for (const decision of decisions) {
         const isDiscount = decision.algaEntityType === 'discount';
+        const algaEntityId = isDiscount ? AUTOMATIC_DISCOUNT_MAPPING_ID : decision.algaEntityId;
+        const name = decision.externalName.trim();
+        const entity = pendingByKey.get(`${decision.algaEntityType}:${decision.algaEntityId}`);
+        const metadata = {
+          linked_via: 'accounting_export',
+          export_batch_id: batchId,
+          ...(isDesktopItem(decision) ? { qbdItem: name } : {}),
+          ...(decision.mode === 'create' ? { createdByExport: true } : {}),
+          ...(decision.mode === 'create' && isDesktop ? { qbdCreateInBatch: batchId } : {})
+        };
+
+        if (isDesktopItem(decision) && entity?.desktopMappingInPlace) {
+          // Keep the account (and any other metadata) the user already set; add the item.
+          await tenantDb(trx, tenant).table('tenant_external_entity_mappings')
+            .where({
+              integration_type: integrationType,
+              alga_entity_type: storedEntityType(decision.algaEntityType),
+              alga_entity_id: algaEntityId
+            })
+            .modify((query) => {
+              if (batch.target_realm) {
+                query.where('external_realm_id', batch.target_realm);
+              } else {
+                query.whereNull('external_realm_id');
+              }
+            })
+            .update({
+              metadata: trx.raw("COALESCE(metadata, '{}'::jsonb) || ?::jsonb", [JSON.stringify(metadata)])
+            });
+          continue;
+        }
+
         await ledger.insert({
           algaEntityType: storedEntityType(decision.algaEntityType),
-          algaEntityId: isDiscount ? AUTOMATIC_DISCOUNT_MAPPING_ID : decision.algaEntityId,
-          externalEntityId: decision.externalName.trim(),
+          algaEntityId,
+          externalEntityId: isDesktopItem(decision) ? (entity?.desktopAccount ?? defaultIncomeAccount) : name,
           targetRealm: batch.target_realm ?? null,
           syncStatus: 'manual_link',
-          metadata: {
-            linked_via: 'accounting_export',
-            export_batch_id: batchId,
-            ...(decision.mode === 'create' ? { createdByExport: true } : {}),
-            ...(decision.mode === 'create' && isDesktop ? { qbdCreateInBatch: batchId } : {})
-          }
+          metadata
         });
       }
     });
