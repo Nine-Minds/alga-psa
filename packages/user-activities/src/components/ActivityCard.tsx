@@ -30,10 +30,12 @@ interface ActivityCardProps {
   onViewDetails: (activity: Activity) => void;
   onActionComplete?: () => void;
   renderExtra?: () => React.ReactNode;
+  /** Viewing another user's activities: hides the action menu (the drawer still opens). */
+  readOnly?: boolean;
 }
 
 
-export function ActivityCard({ activity, onViewDetails, onActionComplete, renderExtra }: ActivityCardProps) {
+export function ActivityCard({ activity, onViewDetails, onActionComplete, renderExtra, readOnly = false }: ActivityCardProps) {
   const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
   // Color mapping based on activity type
@@ -91,13 +93,15 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
         </div>
         <div className="flex items-center gap-2">
           {getPriorityDot()}
-          <div onClick={(e) => e.stopPropagation()}>
-            <ActivityActionMenu 
-              activity={activity}
-              onActionComplete={onActionComplete}
-              onViewDetails={onViewDetails}
-            />
-          </div>
+          {!readOnly && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <ActivityActionMenu 
+                activity={activity}
+                onActionComplete={onActionComplete}
+                onViewDetails={onViewDetails}
+              />
+            </div>
+          )}
         </div>
       </div>
       
@@ -138,7 +142,7 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
 
 // Specialized activity card components
 
-export function ScheduleCard({ activity, onViewDetails, onActionComplete }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void }) {
+export function ScheduleCard({ activity, onViewDetails, onActionComplete, readOnly }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void; readOnly?: boolean }) {
   const { openActivityDrawer } = useActivityDrawer();
   
   return (
@@ -146,6 +150,7 @@ export function ScheduleCard({ activity, onViewDetails, onActionComplete }: { ac
       activity={activity}
       onViewDetails={onViewDetails}
       onActionComplete={onActionComplete}
+      readOnly={readOnly}
       renderExtra={() => (
         <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs">
@@ -159,7 +164,7 @@ export function ScheduleCard({ activity, onViewDetails, onActionComplete }: { ac
   );
 }
 
-export function ProjectTaskCard({ activity, onViewDetails, onActionComplete }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void }) {
+export function ProjectTaskCard({ activity, onViewDetails, onActionComplete, readOnly }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void; readOnly?: boolean }) {
   const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
   const projectTask = activity as any; // Type assertion for project-specific fields
@@ -169,6 +174,7 @@ export function ProjectTaskCard({ activity, onViewDetails, onActionComplete }: {
       activity={activity}
       onViewDetails={onViewDetails}
       onActionComplete={onActionComplete}
+      readOnly={readOnly}
       renderExtra={() => (
         <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs">
@@ -185,7 +191,7 @@ export function ProjectTaskCard({ activity, onViewDetails, onActionComplete }: {
   );
 }
 
-export function TicketCard({ activity, onViewDetails, onActionComplete }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void }) {
+export function TicketCard({ activity, onViewDetails, onActionComplete, readOnly }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void; readOnly?: boolean }) {
   const { openActivityDrawer } = useActivityDrawer();
   const ticket = activity as any; // Type assertion for ticket-specific fields
   
@@ -194,6 +200,7 @@ export function TicketCard({ activity, onViewDetails, onActionComplete }: { acti
       activity={activity}
       onViewDetails={onViewDetails}
       onActionComplete={onActionComplete}
+      readOnly={readOnly}
       renderExtra={() => (
         <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs">
@@ -208,7 +215,7 @@ export function TicketCard({ activity, onViewDetails, onActionComplete }: { acti
   );
 }
 
-export function TimeEntryCard({ activity, onViewDetails, onActionComplete }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void }) {
+export function TimeEntryCard({ activity, onViewDetails, onActionComplete, readOnly }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void; readOnly?: boolean }) {
   const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
   const timeEntry = activity as any; // Type assertion for time entry-specific fields
@@ -218,6 +225,7 @@ export function TimeEntryCard({ activity, onViewDetails, onActionComplete }: { a
       activity={activity}
       onViewDetails={onViewDetails}
       onActionComplete={onActionComplete}
+      readOnly={readOnly}
       renderExtra={() => (
         <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs">
@@ -236,7 +244,7 @@ export function TimeEntryCard({ activity, onViewDetails, onActionComplete }: { a
   );
 }
 
-export function WorkflowTaskCard({ activity, onViewDetails, onActionComplete }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void }) {
+export function WorkflowTaskCard({ activity, onViewDetails, onActionComplete, readOnly }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void; readOnly?: boolean }) {
   const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
   const workflowTask = activity as any; // Type assertion for workflow task-specific fields
@@ -246,6 +254,7 @@ export function WorkflowTaskCard({ activity, onViewDetails, onActionComplete }: 
       activity={activity}
       onViewDetails={onViewDetails}
       onActionComplete={onActionComplete}
+      readOnly={readOnly}
       renderExtra={() => (
         <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs">
