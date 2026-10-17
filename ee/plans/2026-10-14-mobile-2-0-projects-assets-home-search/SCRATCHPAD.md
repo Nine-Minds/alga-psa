@@ -41,6 +41,9 @@ Working memory for the 2.0 mobile release. Short bullets; update earlier notes w
 - (2026-10-16) Drawer wiring for the two new tabs lands with their screens (groups `projects-list` and `assets-list`) instead of as group-1 placeholders — same end state (F004/T005), no throwaway placeholder screens.
 - (2026-10-16) Existing server capability tests assert the whole `features` object with `toEqual`, so adding flags means touching 5 assertions; added an `ASSETS_ALL` spread next to `CRM_ALL`.
 
+- (2026-10-16) **PRD correction**: `GET /api/v1/projects/{id}` returns the bare project row — the controller's `getById()` calls `ProjectService.getById`, NOT `getWithDetails`, so there are **no** phases/assigned_user/statistics in the payload. ProjectDetail therefore fans out to `/projects/{id}` + `/projects/{id}/phases` + `/projects/{id}/tasks` + `/projects/{id}/task-status-mappings`.
+- (2026-10-16) `/projects/{id}/phases` and `/projects/{id}/tasks` answer `{ data: [...] }` **unpaginated** (`createSuccessResponse(array)`), and tasks are raw `project_tasks.*` — no `status_name`, no `is_closed`, no `assigned_user_name`. Status labels and done-ness come from the task-status-mappings call; assignee names from `listUsers`.
+
 ## Commands / Runbooks
 
 - Mobile: `cd ee/mobile && npm run test` (regenerates editor HTML first), `npm run lint`, `npm run typecheck`. Dev against local server: `EXPO_PUBLIC_ALGA_BASE_URL=http://<mac-ip>:3000 npx expo start`. Local server must be EE (`server/.env.local` edition override to community makes mobile refuse) and migrated from `server/` (`npm run migrate:ee`; root `npm run migrate` has no knexfile).

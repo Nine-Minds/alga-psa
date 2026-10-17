@@ -47,7 +47,7 @@
   {
     "id": "F006",
     "description": "src/api/projects.ts listProjects(client, {apiKey, page, limit, project_name, status, client_id, assigned_to, is_closed}) \u2192 GET /api/v1/projects with pagination meta",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-api",
     "prdRefs": [
       "FR4"
@@ -56,7 +56,7 @@
   {
     "id": "F007",
     "description": "getProject(client, {apiKey, projectId}) \u2192 GET /api/v1/projects/{id} typed with phases, assigned_user, client, counts",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-api",
     "prdRefs": [
       "FR4"
@@ -65,7 +65,7 @@
   {
     "id": "F008",
     "description": "listProjectTasks(client, {apiKey, projectId}) \u2192 GET /api/v1/projects/{id}/tasks typed ProjectTaskSummary (task_id, phase_id, task_name, assigned_to, assigned_user_name, due_date, priority_id, project_status_mapping_id, wbs_code, is_closed)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-api",
     "prdRefs": [
       "FR4"
@@ -74,7 +74,7 @@
   {
     "id": "F009",
     "description": "createProjectTask(client, {apiKey, projectId, phaseId, body}) \u2192 POST /api/v1/projects/{id}/phases/{phaseId}/tasks; body requires task_name and project_status_mapping_id",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-api",
     "prdRefs": [
       "FR4"
@@ -83,7 +83,7 @@
   {
     "id": "F010",
     "description": "Project types module exports ProjectStatus union and a statusTone(status) helper mapping to badge tones (planning/on_hold neutral, active/in_progress info, completed success, cancelled danger)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-api",
     "prdRefs": [
       "FR4"
@@ -92,7 +92,7 @@
   {
     "id": "F011",
     "description": "groupTasksByPhase(phases, tasks, statusMappings) pure helper returns phases in wbs order with tasks, doneCount, totalCount; tasks whose mapping is_closed count as done; tasks with unknown phase_id go to an 'Other' bucket last",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-api",
     "prdRefs": [
       "FR4"
@@ -101,7 +101,7 @@
   {
     "id": "F012",
     "description": "projectProgress(phases) pure helper returns {done,total,ratio} with ratio 0 when total is 0",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-api",
     "prdRefs": [
       "FR4"

@@ -56,7 +56,7 @@
   {
     "id": "T007",
     "description": "listProjects builds the query string with only the provided filters and parses pagination.total",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-api",
     "featureIds": [
       "F006"
@@ -65,7 +65,7 @@
   {
     "id": "T008",
     "description": "createProjectTask posts to the phase route and rejects (local validation error) when project_status_mapping_id is missing",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-api",
     "featureIds": [
       "F009"
@@ -74,7 +74,7 @@
   {
     "id": "T009",
     "description": "groupTasksByPhase orders phases by wbs_code, counts closed mappings as done, buckets orphan tasks under Other",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-api",
     "featureIds": [
       "F011"
@@ -83,7 +83,7 @@
   {
     "id": "T010",
     "description": "groupTasksByPhase with zero tasks returns every phase with 0/0",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-api",
     "featureIds": [
       "F011"
@@ -92,7 +92,7 @@
   {
     "id": "T011",
     "description": "projectProgress returns ratio 0 for empty and 0.5 for 2 of 4",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-api",
     "featureIds": [
       "F012"
@@ -101,7 +101,7 @@
   {
     "id": "T012",
     "description": "statusTone maps all six project statuses and falls back to neutral for unknown",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "projects-api",
     "featureIds": [
       "F010"
