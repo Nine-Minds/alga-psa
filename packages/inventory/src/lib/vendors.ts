@@ -86,7 +86,7 @@ export async function createOrMatchVendorCore(
   const existing = await findVendorByNameCore(trx, tenant, vendorName);
   if (existing) return { vendor: existing, created: false };
   const result = await createVendorCore(trx, tenant, { vendor_name: vendorName });
-  if (!result.ok) {
+  if (result.ok === false) {
     throw new Error(
       result.code === 'name_required' ? 'Vendor name is required' : `A vendor named "${result.name}" already exists`,
     );

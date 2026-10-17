@@ -91,7 +91,7 @@ export const createVendor = withAuth(
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const result = await createVendorCore(trx, tenant, input);
-      if (result.ok) return result.vendor;
+      if (result.ok === true) return result.vendor;
       if (result.code === 'name_required') {
         return actionError('Vendor name is required', 'features/inventory:errors.vendors.nameRequired');
       }

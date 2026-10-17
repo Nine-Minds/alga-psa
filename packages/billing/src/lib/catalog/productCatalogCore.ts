@@ -119,8 +119,10 @@ export async function createProductCore(
       item_kind: 'product',
     })),
     tenant,
+    // service_catalog.default_rate is read as a required number; a missing,
+    // null or blank price is stored as 0 (same invariant as the REST schema).
     default_rate:
-      typeof rest.default_rate === 'string' ? parseFloat(rest.default_rate) || 0 : rest.default_rate,
+      typeof rest.default_rate === 'string' ? parseFloat(rest.default_rate) || 0 : (rest.default_rate ?? 0),
     // Omitted inherits the tenant default; explicit null stays non-taxable.
     tax_rate_id: await resolveCatalogTaxRateIdForCreate(trx, tenant, rest.tax_rate_id, undefined, {
       lock: true,
@@ -188,6 +190,9 @@ export async function updateProductCore(
   const normalizedUpdateData: Record<string, any> = {
     ...updateData,
     ...(await resolveCatalogUnitForUpdate(trx, tenant, updateData)),
+    // An omitted default_rate leaves the price untouched; an explicit null
+    // would write NULL, which the read schema rejects, so it becomes 0.
+    ...(updateData.default_rate === null ? { default_rate: 0 } : {}),
     ...(updateData.barcode !== undefined
       ? { barcode: normalizeGtin(updateData.barcode ?? '') || null }
       : {}),

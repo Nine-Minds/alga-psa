@@ -67,6 +67,16 @@ describe('ProductMigrationApplier', () => {
     });
   });
 
+  it('creates a priceless row without a price so the core applies its default_rate 0', async () => {
+    for (const price of [undefined, null]) {
+      mocks.createProductCore.mockClear();
+      await new ProductMigrationApplier().apply(trx, context(), { ...base, name: 'No Price', sku: 'NP-1', price_minor: price });
+      const input = mocks.createProductCore.mock.calls[0][2];
+      expect(input).not.toHaveProperty('prices');
+      expect(input.default_rate ?? null).toBeNull(); // normalised to 0 in createProductCore (productCatalogCore.test.ts)
+    }
+  });
+
   it('keeps an explicit currency and rejects an unsupported one', async () => {
     await new ProductMigrationApplier().apply(trx, context(), { ...base, name: 'A', price_minor: 100, price_currency: 'EUR', cost_minor: 50, cost_currency: 'EUR' });
     expect(mocks.createProductCore.mock.calls[0][2]).toMatchObject({ cost_currency: 'EUR', prices: [{ currency_code: 'EUR', rate: 100 }] });

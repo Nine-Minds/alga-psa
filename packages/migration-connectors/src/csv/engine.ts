@@ -370,7 +370,7 @@ export function buildEntityRows(
           continue;
         }
         const parsed = parseMoneyToMinorUnits(value, currency);
-        if (!parsed.ok) {
+        if (parsed.ok === false) {
           warn(
             'CSV_INVALID_MONEY',
             `"${value}" in column "${header}" is not a valid ${currency} amount: ${MONEY_FAILURE_MESSAGES[parsed.reason]}; the value was dropped.`

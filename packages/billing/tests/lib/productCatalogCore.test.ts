@@ -39,6 +39,19 @@ describe('productCatalogCore', () => {
     });
   });
 
+  it('stores default_rate 0 when a product is created without a price', async () => {
+    const insert = vi.fn(() => ({ returning: async () => [{ service_id: 's1' }] }));
+    vi.mocked(tenantDb).mockReturnValue({ table: () => ({ insert }) } as never);
+    for (const input of [{}, { default_rate: undefined }, { default_rate: null }, { default_rate: '' }]) {
+      insert.mockClear();
+      await createProductCore({} as never, 't', { cost_currency: 'USD', service_name: 'x', ...input } as never);
+      expect((insert.mock.calls[0] as unknown[])[0]).toMatchObject({ default_rate: 0 });
+    }
+    insert.mockClear();
+    await createProductCore({} as never, 't', { cost_currency: 'USD', service_name: 'x', default_rate: 1250 } as never);
+    expect((insert.mock.calls[0] as unknown[])[0]).toMatchObject({ default_rate: 1250 });
+  });
+
   it('reports a missing or non-product row as not_found', async () => {
     vi.mocked(tenantDb).mockReturnValue({
       table: () => ({ where: () => ({ select: () => ({ first: async () => ({ item_kind: 'service' }) }) }) }),
