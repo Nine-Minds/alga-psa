@@ -398,7 +398,7 @@
   {
     "id": "T045",
     "description": "migration up/down runs on the local EE database; assets gains the two columns; both new tables are distributed",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "featureIds": [
       "F040"
@@ -407,7 +407,7 @@
   {
     "id": "T046",
     "description": "start snapshots only assets of the client with matching location_id and status in the list; location null matches assets with null location",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "featureIds": [
       "F041"
@@ -416,7 +416,7 @@
   {
     "id": "T047",
     "description": "start with no matching assets returns expected_count 0 and an empty items list",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "featureIds": [
       "F041"
@@ -425,7 +425,7 @@
   {
     "id": "T048",
     "description": "markItem twice for the same asset leaves one row and does not change marked_at of the first",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "featureIds": [
       "F042"
@@ -434,7 +434,7 @@
   {
     "id": "T049",
     "description": "markItem for an asset outside the snapshot stores result unexpected",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "featureIds": [
       "F042"
@@ -443,7 +443,7 @@
   {
     "id": "T050",
     "description": "markItem for an asset of another tenant returns 404",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "featureIds": [
       "F042"
@@ -452,7 +452,7 @@
   {
     "id": "T051",
     "description": "complete fills missing = expected minus present and sets present/missing/unexpected counts",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "featureIds": [
       "F043"
@@ -461,7 +461,7 @@
   {
     "id": "T052",
     "description": "complete writes an asset_history row per present and missing asset with change_type audit and sets last_audited_at",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "featureIds": [
       "F044"
@@ -470,7 +470,7 @@
   {
     "id": "T053",
     "description": "complete is atomic: a failing history insert leaves the audit in_progress with no partial rows",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "featureIds": [
       "F044"
@@ -479,7 +479,7 @@
   {
     "id": "T054",
     "description": "cancel on a completed audit returns 409",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "featureIds": [
       "F045"
@@ -488,7 +488,7 @@
   {
     "id": "T055",
     "description": "POST /api/v1/asset-audits with x-api-key of a user lacking asset:update \u2192 403; with asset:update \u2192 201",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "featureIds": [
       "F046"
@@ -497,7 +497,7 @@
   {
     "id": "T056",
     "description": "POST items on a completed audit \u2192 409",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "featureIds": [
       "F047"
@@ -506,7 +506,7 @@
   {
     "id": "T057",
     "description": "GET /api/v1/asset-audits lists audits for the tenant only (cross-tenant audit not returned)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "featureIds": [
       "F046"
@@ -515,7 +515,7 @@
   {
     "id": "T058",
     "description": "OpenAPI contract test includes the asset-audits routes and the registry contract test passes",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "featureIds": [
       "F048"

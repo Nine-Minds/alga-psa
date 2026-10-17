@@ -353,7 +353,7 @@
   {
     "id": "F040",
     "description": "Migration creates asset_audits and asset_audit_items (tenant in PK, distributed by tenant via tenantDb.cjs, no RLS) and adds assets.last_audited_at timestamptz null + assets.last_audit_result text null",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "prdRefs": [
       "FR15"
@@ -362,7 +362,7 @@
   {
     "id": "F041",
     "description": "AssetAuditService.start(context, {client_id, location_id|null, statuses[]}) snapshots expected assets (tenant, client, location match incl. null, status in list), inserts the audit with expected_count, returns audit + expected items",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "prdRefs": [
       "FR16"
@@ -371,7 +371,7 @@
   {
     "id": "F042",
     "description": "AssetAuditService.markItem(context, auditId, {asset_id, result present|unexpected, method}) upserts the item (idempotent on tenant+audit+asset), validates audit in_progress and asset in tenant; an asset not in the expected snapshot is stored as unexpected regardless of requested result",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "prdRefs": [
       "FR16"
@@ -380,7 +380,7 @@
   {
     "id": "F043",
     "description": "AssetAuditService.unmarkItem removes an item; complete() inserts missing items for expected minus present, sets counts, status completed, completed_at",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "prdRefs": [
       "FR16"
@@ -389,7 +389,7 @@
   {
     "id": "F044",
     "description": "complete() writes one asset_history row per item (change_type 'audit', changes {audit_id, result, location_id, method}) and updates assets.last_audited_at/last_audit_result for present and missing assets, inside one transaction",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "prdRefs": [
       "FR16"
@@ -398,7 +398,7 @@
   {
     "id": "F045",
     "description": "cancel() sets status cancelled (only from in_progress); get() returns audit with items joined to asset name/tag/location; list() returns newest first with optional client_id filter and pagination",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "prdRefs": [
       "FR16"
@@ -407,7 +407,7 @@
   {
     "id": "F046",
     "description": "Routes: POST/GET /api/v1/asset-audits, GET /api/v1/asset-audits/{id}, POST /api/v1/asset-audits/{id}/items, DELETE /api/v1/asset-audits/{id}/items/{assetId}, POST /api/v1/asset-audits/{id}/complete, POST /api/v1/asset-audits/{id}/cancel via ApiAssetAuditController with zod schemas",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "prdRefs": [
       "FR17"
@@ -416,7 +416,7 @@
   {
     "id": "F047",
     "description": "Permissions: asset:read for list/get; asset:update for start, items, complete, cancel; mutations on a non in_progress audit return 409",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "prdRefs": [
       "FR17"
