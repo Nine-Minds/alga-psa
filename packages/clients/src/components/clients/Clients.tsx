@@ -279,7 +279,7 @@ const ClientResults = memo(({
     let cancelled = false;
     void (async () => {
       try {
-        const counts = await getClientOpenTicketCounts();
+        const counts = await getClientOpenTicketCounts(clients.map((c) => c.client_id));
         if (!cancelled) {
           setOpenTicketCounts(counts);
         }
