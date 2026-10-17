@@ -2300,14 +2300,15 @@
         "nothingImportedBody": "Deze uitvoering heeft geen nieuwe records gemaakt. Elke rij kwam overeen met iets dat al bestond, dus er is niets gewijzigd.",
         "claimedBySamePackage": "Al gemigreerd door dit pakket",
         "claimedByOtherPackage": "Al gemigreerd door {{file}}",
-        "claimedByExistingEntity": "Gekoppeld aan een bestaande entiteit"
+        "claimedByExistingEntity": "Gekoppeld aan een bestaande entiteit",
+        "matchedBySku": "Op SKU gekoppeld aan een bestaand product"
       },
       "spreadsheet": {
         "entities": {
           "products": "Producten (catalogus / prijslijst)",
           "vendorProducts": "Leveranciersprijslijst (distributiekosten)"
         },
-        "productsHint": "Prijzen en kosten worden gelezen als decimale bedragen (bijvoorbeeld 1,299.50) met de valutakolom indien aanwezig, anders met de tenantvaluta. Rijen met negatieve, niet-numerieke of te nauwkeurige bedragen worden gemeld en overgeslagen. Producten worden op SKU gekoppeld aan bestaande producten; rijen van de leveranciersprijslijst verwijzen via SKU naar een product en maken de leverancier aan of koppelen die op naam."
+        "productsHint": "Prijzen en kosten worden gelezen als decimale bedragen (bijvoorbeeld 1,299.50) met de valutakolom indien aanwezig, anders met de tenantvaluta. Negatieve, niet-numerieke of te nauwkeurige bedragen worden verwijderd en gemeld; de rij wordt toch geïmporteerd. Producten worden op SKU gekoppeld aan bestaande producten; rijen van de leveranciersprijslijst verwijzen via SKU naar een product en maken de leverancier aan of koppelen die op naam."
       },
       "configure": {
         "products": {

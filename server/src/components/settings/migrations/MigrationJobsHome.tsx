@@ -326,7 +326,7 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
               ]} />
               <p className="text-xs text-muted-foreground">Canonical headers are recognized automatically. Other columns can be mapped to custom asset-type fields during Configure. Contacts accept common spellings such as Name, First Name, Last Name, Email, Phone, Title, and Client; legacy asset names such as Asset Name, Asset Type, and Serial Number are preserved through the AMP flow.</p>
               {(entityType === 'products' || entityType === 'vendor_products') && (
-                <p className="text-xs text-muted-foreground">{t('importExport.migration.spreadsheet.productsHint', { defaultValue: 'Prices and costs are read as decimal amounts (for example 1,299.50) using the currency column when present, otherwise the tenant currency. Rows with negative, non-numeric or over-precise amounts are reported and skipped. Products match existing products by SKU; vendor price-list rows reference a product by SKU and create or match the vendor by name.' })}</p>
+                <p className="text-xs text-muted-foreground">{t('importExport.migration.spreadsheet.productsHint', { defaultValue: 'Prices and costs are read as decimal amounts (for example 1,299.50) using the currency column when present, otherwise the tenant currency. Negative, non-numeric or over-precise amounts are dropped and reported; the row is still imported. Products match existing products by SKU; vendor price-list rows reference a product by SKU and create or match the vendor by name.' })}</p>
               )}
             </div>
           )}

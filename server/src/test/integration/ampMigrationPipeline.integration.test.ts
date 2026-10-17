@@ -1300,6 +1300,13 @@ describe('AMP migration pipeline integration', () => {
       expect(preflight.plan.map((entry) => entry.entityType)).toEqual(['products', 'vendor_products']);
       expect(preflight.issues.map((issue) => issue.code)).toEqual(['PRODUCT_SKU_MATCHES_EXISTING']);
       expect(preflight.issues[0].sampleRecordIds).toEqual(['p-exist']);
+      // The SKU-matched product is a skip/match, not a create: 1 matched + 1 new.
+      expect(preflight.plan.find((entry) => entry.entityType === 'products')).toMatchObject({
+        stagedCount: 2,
+        toSkipIdentityMapped: 1,
+        toCreate: 1,
+        blocked: 0,
+      });
       const catalogAfterDryRun = await tenantTable(fixture.tenantId, 'service_catalog').count({ count: '*' }).first();
       expect(Number(catalogAfterDryRun?.count)).toBe(Number(catalogBefore?.count));
       expect(Number((await tenantTable(fixture.tenantId, 'vendors').count({ count: '*' }).first())?.count)).toBe(0);
@@ -1337,10 +1344,18 @@ describe('AMP migration pipeline integration', () => {
       const matched = outcomes.filter((row: any) => row.action === 'skipped');
       expect(matched).toHaveLength(1);
       expect(matched[0].target_entity_id).toBe(existingId);
+      // The report carries the SKU-match reason to the UI; identity-mapped re-runs do not.
+      const reported = await new MigrationReportService(db, fixture.tenantId).getOutcomeRecords(migrationJobId, { action: 'skipped' });
+      expect(reported).toHaveLength(1);
+      expect(reported[0].claimedBy).toMatchObject({ matchReason: 'sku_match' });
 
       // Re-running creates nothing new: the identity ledger skips every record.
       const rerun = await new MigrationDomainApplier(db, fixture.tenantId).applyJob(migrationJobId, fixture.ownerUserId);
       expect(rerun).toEqual({ cancelled: false, created: 0, skipped: 5, failed: 0 });
+      const rerunSkips = await new MigrationReportService(db, fixture.tenantId).getOutcomeRecords(migrationJobId, { action: 'skipped' });
+      const rerunAttemptSkips = rerunSkips.filter((row) => row.attempt === Math.max(...rerunSkips.map((r) => r.attempt)));
+      expect(rerunAttemptSkips).toHaveLength(5);
+      for (const row of rerunAttemptSkips) expect(row.claimedBy?.matchReason).toBeNull();
       expect(await tenantTable(fixture.tenantId, 'vendor_products')).toHaveLength(3);
       expect(await tenantTable(fixture.tenantId, 'vendors')).toHaveLength(2);
     }, HOOK_TIMEOUT);
@@ -1417,6 +1432,74 @@ describe('AMP migration pipeline integration', () => {
       const outcome = await tenantTable(fixture.tenantId, 'migration_record_outcomes').where({ migration_job_id: migrationJobId, action: 'failed' }).first();
       expect(JSON.stringify(outcome.errors)).toContain('assuming USD');
       expect(await tenantTable(fixture.tenantId, 'service_catalog').where({ sku: 'ASSUMED-1' })).toHaveLength(0);
+    }, HOOK_TIMEOUT);
+
+    it('preflight matches vendor price-list rows to existing products by product_sku and still blocks unknown SKUs', async () => {
+      const fixture = await createFixture();
+      const serviceTypeId = await productFixture(fixture);
+      const existingId = await seedExistingProduct(fixture, serviceTypeId);
+      const vendorRows = (extra: AmpPackageRows['vendor_products'] = []): AmpPackageRows => ({
+        vendor_products: [
+          // Whitespace around the SKU must not defeat the match (normalizeProductSku trims).
+          { package_record_id: 'vp-ok', source_record_id: 'src-vp-ok', external_identifier_namespace: NS, product_sku: ' EXIST-1 ', vendor_name: 'Ingram Micro', vendor_sku: 'IM-2', unit_cost_minor: 4000 },
+          ...(extra ?? []),
+        ],
+      });
+
+      const readyJob = await stageProducts(fixture, vendorRows(), serviceTypeId);
+      const ready = await new MigrationPlanner(db, fixture.tenantId).preflight(readyJob);
+      expect(ready.issues.map((issue) => issue.code)).not.toContain('VENDOR_PRODUCT_UNRESOLVED');
+      expect(ready.state).toBe('ready');
+      expect(ready.plan).toEqual([
+        expect.objectContaining({ entityType: 'vendor_products', stagedCount: 1, blocked: 0, toCreate: 1 }),
+      ]);
+
+      const result = await new MigrationDomainApplier(db, fixture.tenantId).applyJob(readyJob, fixture.ownerUserId);
+      expect(result).toEqual({ cancelled: false, created: 1, skipped: 0, failed: 0 });
+      const offers = await tenantTable(fixture.tenantId, 'vendor_products');
+      expect(offers).toHaveLength(1);
+      expect(offers[0].service_id).toBe(existingId);
+
+      const mixedJob = await stageProducts(
+        fixture,
+        vendorRows([
+          { package_record_id: 'vp-bad', source_record_id: 'src-vp-bad', external_identifier_namespace: NS, product_sku: 'NOPE-9', vendor_name: 'Ingram Micro', unit_cost_minor: 1 },
+        ]),
+        serviceTypeId
+      );
+      const mixed = await new MigrationPlanner(db, fixture.tenantId).preflight(mixedJob);
+      expect(mixed.state).toBe('blocked');
+      const unresolved = mixed.issues.filter((issue) => issue.code === 'VENDOR_PRODUCT_UNRESOLVED');
+      expect(unresolved).toHaveLength(1);
+      expect(unresolved[0].sampleRecordIds).toEqual(['vp-bad']);
+      expect(mixed.plan.find((entry) => entry.entityType === 'vendor_products')).toMatchObject({ stagedCount: 2, blocked: 1, toSkipIdentityMapped: 1, toCreate: 0 }); // vp-ok already applied above
+    }, HOOK_TIMEOUT);
+
+    it('counts SKU matches as skips in the products plan: 2 existing + 1 new gives toCreate=1', async () => {
+      const fixture = await createFixture();
+      const serviceTypeId = await productFixture(fixture);
+      await seedExistingProduct(fixture, serviceTypeId);
+      await db.transaction((trx) =>
+        createProductCore(trx, fixture.tenantId, { service_name: 'Second Existing', custom_service_type_id: serviceTypeId, sku: 'EXIST-2', cost_currency: 'JPY', default_rate: 0 })
+      );
+      const rows: AmpPackageRows = {
+        products: [
+          { package_record_id: 'p-1', source_record_id: 'src-p-1', external_identifier_namespace: NS, name: 'A', sku: 'EXIST-1', price_minor: 1 },
+          { package_record_id: 'p-2', source_record_id: 'src-p-2', external_identifier_namespace: NS, name: 'B', sku: 'EXIST-2', price_minor: 1 },
+          { package_record_id: 'p-3', source_record_id: 'src-p-3', external_identifier_namespace: NS, name: 'C', sku: 'NEW-3', price_minor: 1 },
+        ],
+      };
+      const migrationJobId = await stageProducts(fixture, rows, serviceTypeId);
+      const planner = new MigrationPlanner(db, fixture.tenantId);
+      const first = await planner.preflight(migrationJobId);
+      expect(first.plan).toEqual([
+        expect.objectContaining({ entityType: 'products', stagedCount: 3, toSkipIdentityMapped: 2, toCreate: 1 }),
+      ]);
+
+      // After apply the matched rows are also identity-mapped: a re-preflight must not count them twice.
+      await new MigrationDomainApplier(db, fixture.tenantId).applyJob(migrationJobId, fixture.ownerUserId);
+      const again = await planner.preflight(migrationJobId);
+      expect(again.plan[0]).toMatchObject({ stagedCount: 3, toSkipIdentityMapped: 3, toCreate: 0 });
     }, HOOK_TIMEOUT);
   });
 });

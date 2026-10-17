@@ -117,12 +117,22 @@ export interface MigrationOutcomeSummary {
   failed: number;
 }
 
+/**
+ * Machine-readable prefix of the outcome warning an applier writes when it
+ * matched an existing product by SKU; the report service turns it into
+ * MigrationOutcomeClaim.matchReason.
+ */
+// LEVERAGE: friction outcome-structured-reason — migration_record_outcomes has no reason column, so a skip's cause rides as a prefixed free-text warning.
+export const SKU_MATCH_WARNING_PREFIX = 'sku_match: ';
+
 /** The prior migration whose identity mapping claimed a skipped record. */
 export interface MigrationOutcomeClaim {
   migrationJobId: string;
   sourceFileName: string | null;
   /** True when the claim's package matches the reporting job's package. */
   samePackage: boolean;
+  /** Why the record was skipped when it was matched rather than identity-mapped; null for identity re-runs. */
+  matchReason: 'sku_match' | null;
 }
 
 export interface MigrationOutcomeRecord {

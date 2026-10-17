@@ -30,6 +30,7 @@ import { createOrMatchVendorCore } from '@alga-psa/inventory/lib/vendors';
 import { upsertVendorProductCore } from '@alga-psa/inventory/lib/vendorProducts';
 import { isSupportedCurrency } from '@alga-psa/core/formatters';
 import type { ApplierContext } from './context';
+import { SKU_MATCH_WARNING_PREFIX } from '../types';
 
 export interface AppliedTarget {
   targetEntityType: string;
@@ -562,7 +563,7 @@ export class ProductMigrationApplier implements EntityApplier {
           targetEntityType: this.targetEntityType,
           targetEntityId: existing.service_id,
           matchedExisting: true,
-          warnings: [`Matched existing product "${existing.service_name}" by SKU ${sku}; it was left unchanged.`],
+          warnings: [`${SKU_MATCH_WARNING_PREFIX}Matched existing product "${existing.service_name}" by SKU ${sku}; it was left unchanged.`],
         };
       }
     }

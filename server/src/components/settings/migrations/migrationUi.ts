@@ -134,6 +134,11 @@ export function migrationClaimLabel(
   if (!claim) {
     return null;
   }
+  if (claim.matchReason === 'sku_match') {
+    return translate('importExport.migration.results.matchedBySku', {
+      defaultValue: 'Matched existing product by SKU',
+    });
+  }
   if (claim.samePackage) {
     return translate('importExport.migration.results.claimedBySamePackage', {
       defaultValue: 'Already migrated by this package',
