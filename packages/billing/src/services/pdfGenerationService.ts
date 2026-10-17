@@ -23,6 +23,7 @@ import {
   resolveEmailLocale,
 } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 
+import { enrichContractChangeDescriptions } from '../lib/billing/contractChangeInvoiceProjection.server';
 import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
 import { enrichInvoiceViewModelWithLocations } from '../lib/adapters/invoiceAdapters.server';
 import { OPTIONAL_INCLUDED_LABEL, OPTIONAL_PENDING_LABEL, mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
@@ -1067,7 +1068,8 @@ export class PDFGenerationService {
   }
 
   private async getInvoiceForRendering(knex: Knex | Knex.Transaction, invoiceId: string): Promise<any> {
-    return Invoice.getFullInvoiceById(knex, this.tenant, invoiceId);
+    const invoice = await Invoice.getFullInvoiceById(knex, this.tenant, invoiceId);
+    return invoice ? enrichContractChangeDescriptions(knex, this.tenant, invoiceId, invoice) : invoice;
   }
 
   private async getInvoiceTemplates(knex: Knex | Knex.Transaction): Promise<any[]> {

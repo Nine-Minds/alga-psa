@@ -127,6 +127,15 @@
           "paymentTerms": "Condições de pagamento",
           "discounts": "Descontos"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Contas de serviços Desktop",
+        "desktopDiscounts": "Descontos Desktop",
+        "desktopAccount": "Nome da conta de receitas Desktop",
+        "description": "Associe descontos e créditos antes de exportar. A associação pertence a esta empresa contabilística.",
+        "add": "Adicionar associação",
+        "remove": "Remover associação",
+        "removeConfirm": "Remover esta associação contabilística?"
       }
     },
     "calendar": {

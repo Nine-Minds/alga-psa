@@ -1,0 +1,1 @@
+TAKEOVER-POSTED-20260927|390000|7|3|390000|3|Product: SMOKE Prod Users=200000; Product: SMOKE Prod Endpoints=150000; Product: SMOKE Prod Locations=40000

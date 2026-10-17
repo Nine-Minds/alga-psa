@@ -161,29 +161,41 @@ describe('getResolvedInvoiceTemplateId client-portal resolution', () => {
     await expect(getResolvedInvoiceTemplateId(invoiceId)).resolves.toBe(tenantDefault);
   });
 
-  it('T003: returns null for another client\'s invoice in the same tenant', async () => {
+  it('T003: denies another client\'s invoice in the same tenant', async () => {
     const otherClientId = await seedClient(trx, tenant, null);
     const invoiceId = await seedInvoice(trx, tenant, otherClientId, 'finalized');
 
-    await expect(getResolvedInvoiceTemplateId(invoiceId)).resolves.toBeNull();
+    await expect(getResolvedInvoiceTemplateId(invoiceId)).resolves.toEqual({
+      permissionError: 'Permission denied: invoice access denied',
+      messageKey: 'msp/invoicing:errors.permissions.invoiceAccess',
+    });
   });
 
-  it('T003: returns null for a draft invoice', async () => {
+  it('T003: denies a draft invoice', async () => {
     const invoiceId = await seedInvoice(trx, tenant, clientId, 'draft');
 
-    await expect(getResolvedInvoiceTemplateId(invoiceId)).resolves.toBeNull();
+    await expect(getResolvedInvoiceTemplateId(invoiceId)).resolves.toEqual({
+      permissionError: 'Permission denied: invoice access denied',
+      messageKey: 'msp/invoicing:errors.permissions.invoiceAccess',
+    });
   });
 
-  it('T003: returns null for an invoice outside the authenticated tenant', async () => {
+  it('T003: denies an invoice outside the authenticated tenant', async () => {
     const foreignInvoiceId = await seedInvoice(trx, foreignTenant, foreignClientId, 'finalized');
 
-    await expect(getResolvedInvoiceTemplateId(foreignInvoiceId)).resolves.toBeNull();
+    await expect(getResolvedInvoiceTemplateId(foreignInvoiceId)).resolves.toEqual({
+      permissionError: 'Permission denied: invoice access denied',
+      messageKey: 'msp/invoicing:errors.permissions.invoiceAccess',
+    });
   });
 
-  it('T003: returns null when the caller lacks billing read permission', async () => {
+  it('T003: denies access when the caller lacks billing read permission', async () => {
     context.billingRead = false;
     const invoiceId = await seedInvoice(trx, tenant, clientId, 'finalized');
 
-    await expect(getResolvedInvoiceTemplateId(invoiceId)).resolves.toBeNull();
+    await expect(getResolvedInvoiceTemplateId(invoiceId)).resolves.toEqual({
+      permissionError: 'Permission denied: billing read required',
+      messageKey: 'msp/billing:errors.permissions.billingRead',
+    });
   });
 });

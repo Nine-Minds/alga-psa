@@ -230,12 +230,14 @@
       "selectService": "Wybierz usługę",
       "taxable": "(Podlegający opodatkowaniu)",
       "nonTaxable": "(Niepodlegające opodatkowaniu)",
-      "calculatedOnSave": "(obliczane przy zapisie)"
+      "calculatedOnSave": "(obliczane przy zapisie)",
+      "credit": "Kredyt"
     },
     "expanded": {
       "discount": "Rabat",
       "item": "Pozycja {{number}}",
-      "markedForRemoval": "Oznaczone do usunięcia"
+      "markedForRemoval": "Oznaczone do usunięcia",
+      "credit": "Kredyt"
     },
     "fields": {
       "service": "Usługa",
@@ -247,10 +249,18 @@
       "applyDiscountTo": "Zastosuj rabat do",
       "entireInvoice": "Cała faktura",
       "rate": "Stawka ({{currencySymbol}})",
-      "description": "Opis"
+      "description": "Opis",
+      "creditUnit": "Kredyt na jednostkę ({{currencySymbol}})",
+      "taxTreatment": "Traktowanie podatkowe",
+      "nonTaxable": "Niepodlegające opodatkowaniu",
+      "location": "Lokalizacja",
+      "clientDefaultLocation": "Domyślny klienta",
+      "billingProfile": "Profil rozliczeniowy",
+      "clientDefaultProfile": "Domyślny klienta"
     },
     "placeholders": {
-      "discountDescription": "np. rabat za wcześniejszą płatność"
+      "discountDescription": "np. rabat za wcześniejszą płatność",
+      "creditDescription": "np. kredyt goodwill"
     },
     "actions": {
       "add": "Dodaj",
@@ -267,11 +277,15 @@
       "invoiceTotal": "{{percentage}}% sumy faktury",
       "amount": "Kwota: -{{currencySymbol}}{{amount}}",
       "appliedTo": "Dotyczy: {{description}}",
-      "subtotal": "Suma częściowa: {{currencySymbol}}{{amount}}"
+      "subtotal": "Suma częściowa: {{currencySymbol}}{{amount}}",
+      "credit": "Kredyt"
     },
     "options": {
       "percentage": "Procent",
       "fixedAmount": "Stała kwota"
+    },
+    "errors": {
+      "serviceRequired": "Przypisz usługę do tej pozycji przed zapisaniem."
     }
   },
   "contractLineServices": {
@@ -459,7 +473,8 @@
       "executeError": "Nie udało się wykonać partii",
       "cancelled": "Partia anulowana",
       "cancelError": "Nie udało się anulować partii",
-      "realmRequired": "Wybierz połączoną firmę księgową przed utworzeniem eksportu."
+      "realmRequired": "Wybierz połączoną firmę księgową przed utworzeniem eksportu.",
+      "artifactDownloadError": "Nie można pobrać tego pliku eksportu."
     },
     "status": {
       "pending": "Oczekujące",
@@ -470,6 +485,12 @@
       "failed": "Niepowodzenie",
       "cancelled": "Anulowane",
       "needsAttention": "Wymaga uwagi"
+    },
+    "artifacts": {
+      "title": "Dostarczone pliki",
+      "download": "Pobierz",
+      "unavailable": "Ten historyczny pakiet nie zawiera zapisanego pliku. Można go odzyskać tylko przez ponowne wykonanie eksportu.",
+      "storageFallback": "Zapisano w kopii zapasowej bazy danych"
     }
   },
   "templateRenderer": {
