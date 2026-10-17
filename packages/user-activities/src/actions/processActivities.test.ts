@@ -41,11 +41,11 @@ const fixture = () => [
 ];
 
 describe('processActivities collapseRecurringSeries', () => {
-  it('collapses before sorting, so the surviving occurrence is the first in input order and counts are per series', () => {
+  it('collapses after sorting, so the earliest-due occurrence survives regardless of input order, and counts are per series', () => {
+    // fixture() feeds the occurrences out of order (r3, r1, r2).
     const out = processActivities(fixture(), { collapseRecurringSeries: true });
-    // r3 is the first occurrence in input order and is what survives the collapse.
-    expect(out.map((a) => a.id)).toEqual(['r3', 'one']);
-    expect(out).toHaveLength(2);
+    expect(out.map((a) => a.id)).toEqual(['r1', 'one']);
+    expect(out).toHaveLength(2); // totalCount = out.length in fetchActivities: series, not occurrences
   });
 
   it('leaves recurring duplicates alone without the flag (table path unchanged)', () => {
@@ -58,7 +58,7 @@ describe('processActivities collapseRecurringSeries', () => {
       collapseRecurringSeries: true,
       dueDateStart: '2026-03-02T00:00:00.000Z',
     });
-    expect(out.map((a) => a.id)).toEqual(['r3', 'one']);
+    expect(out.map((a) => a.id)).toEqual(['r2', 'one']);
     const out2 = processActivities(fixture(), {
       collapseRecurringSeries: true,
       dueDateEnd: '2026-03-02T00:00:00.000Z',

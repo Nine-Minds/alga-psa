@@ -137,6 +137,29 @@ describe('ActivitiesCardsView inline filters', () => {
     expect(container.querySelector('#tickets-activities-card')).toBeTruthy();
   });
 
+  it('places the bar after Notifications and before the activity sections, in both layouts', () => {
+    const before = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    for (const focus of [false, true]) {
+      const { container, unmount } = render(<Harness focus={focus} />);
+      const header = container.querySelector('#cards-notifications-header')!;
+      const bar = container.querySelector('#activities-search-input')!;
+      const schedule = container.querySelector('#schedule-activities-card');
+      expect(before(header, bar)).toBe(true);
+      if (schedule) expect(before(bar, schedule)).toBe(true);
+      if (!focus) expect(before(bar, container.querySelector('#tickets-activities-card')!)).toBe(true);
+      unmount();
+    }
+  });
+
+  it('keeps the bar above the remaining sections when Schedule is hidden', () => {
+    const { container } = render(<Harness />);
+    fireEvent.click(container.querySelector('#activity-type-schedule')!);
+    expect(container.querySelector('#schedule-activities-card')).toBeNull();
+    const bar = container.querySelector('#activities-search-input')!;
+    const tickets = container.querySelector('#tickets-activities-card')!;
+    expect(!!(bar.compareDocumentPosition(tickets) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+  });
+
   it('View All passes the section type', () => {
     const onViewAll = vi.fn();
     render(<Harness onViewAll={onViewAll} />);

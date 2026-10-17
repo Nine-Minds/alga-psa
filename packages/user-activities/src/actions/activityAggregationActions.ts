@@ -1342,13 +1342,15 @@ export function processActivities(
     });
   }
 
-  // Collapse recurring series before sorting and pagination so counts are per series.
+  // Apply sorting
+  sortActivities(filteredActivities, filters.sortBy, filters.sortDirection);
+
+  // Collapse recurring series AFTER sorting (the fetcher's occurrence order is not guaranteed,
+  // so the survivor is the first in sort order, i.e. the earliest due under the default sort)
+  // and BEFORE pagination (the caller slices afterwards) so counts are per series.
   if (filters.collapseRecurringSeries) {
     filteredActivities = collapseRecurringSeries(filteredActivities);
   }
-
-  // Apply sorting
-  sortActivities(filteredActivities, filters.sortBy, filters.sortDirection);
 
   return filteredActivities;
 }

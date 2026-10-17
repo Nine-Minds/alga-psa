@@ -114,8 +114,8 @@ export function ActivitiesCardsView({ filterState, filterOptions, focusNotificat
     // Focus layout: one collapsible card per section, notifications on top.
     return (
       <div className="space-y-6">
-        {filterBar}
         {notifications}
+        {filterBar}
         {schedule}
         {shows(ActivityType.TICKET) && (
           <Card>
@@ -162,8 +162,8 @@ export function ActivitiesCardsView({ filterState, filterOptions, focusNotificat
 
   return (
     <div className="space-y-6">
-      {filterBar}
       {notifications}
+      {filterBar}
       {schedule}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {shows(ActivityType.TICKET) && (
