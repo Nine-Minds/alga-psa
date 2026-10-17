@@ -261,6 +261,28 @@ describe("ProjectDetailScreen", () => {
     expect(mocks.showToast).toHaveBeenCalledWith({ message: "Task created", tone: "success" });
   });
 
+  it("T120 sends the estimate in minutes, the unit the column stores", async () => {
+    mocks.createProjectTask.mockResolvedValue({
+      ok: true,
+      data: { data: { task_id: "t-new", phase_id: "ph-1", task_name: "Label patch panel" } },
+    });
+    const renderer = await renderScreen();
+
+    await act(async () => renderer.root.find((n) => n.props?.testID === "project-phase-ph-1-add-task").props.onPress());
+    await flush();
+    await act(async () => renderer.root.find((n) => n.props?.testID === "create-task-name").props.onChangeText("Label patch panel"));
+    await act(async () =>
+      renderer.root.find((n) => n.props?.testID === "create-task-estimated-hours").props.onChangeText("2.5"),
+    );
+    await act(async () => renderer.root.find((n) => n.props?.testID === "create-task-save").props.onPress());
+    await flush();
+
+    expect(mocks.createProjectTask).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ data: expect.objectContaining({ estimated_hours: 150 }) }),
+    );
+  });
+
   it("T030 keeps the modal open with an error when the create fails", async () => {
     mocks.createProjectTask.mockResolvedValue({ ok: false, error: { kind: "server", message: "boom", status: 500 } });
     const renderer = await renderScreen();

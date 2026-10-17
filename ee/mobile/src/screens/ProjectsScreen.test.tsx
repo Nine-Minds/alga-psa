@@ -222,6 +222,30 @@ describe("ProjectsScreen", () => {
     expect(all).toContain("Cabling");
   });
 
+  it("T123 walks past a page that narrows to nothing and hides the server's total", async () => {
+    mocks.listProjects.mockResolvedValueOnce(
+      projectsPage([{ project_id: "p-9", project_name: "Finished thing", client_id: "cl-1", status: "st-done" }], {
+        hasNext: true,
+        total: 40,
+      }),
+    );
+    mocks.listProjects.mockResolvedValueOnce(
+      projectsPage([{ project_id: "p-1", project_name: "Office move", client_id: "cl-1", status: "st-open" }], {
+        page: 2,
+        total: 40,
+      }),
+    );
+
+    const renderer = await renderScreen();
+
+    expect(mocks.listProjects.mock.calls.map(([, params]) => params.page)).toEqual([1, 2]);
+    const all = texts(renderer);
+    expect(all).toContain("Office move");
+    expect(all).not.toContain("Finished thing");
+    // 40 counts every status the server knows; a narrowed list claims no total.
+    expect(all).not.toContain("40 total");
+  });
+
   it("T018 renders the error row with Retry and re-issues the request", async () => {
     mocks.listProjects.mockResolvedValue({ ok: false, error: { kind: "server", message: "boom", status: 500 } });
     const renderer = await renderScreen();

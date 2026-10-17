@@ -200,6 +200,7 @@ export type CreateProjectTaskInput = {
   assigned_to?: string;
   due_date?: string;
   priority_id?: string;
+  /** Minutes, despite the name: project_tasks.estimated_hours is a bigint of minutes. */
   estimated_hours?: number;
 };
 

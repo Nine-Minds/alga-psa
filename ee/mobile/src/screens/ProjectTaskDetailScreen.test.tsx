@@ -244,6 +244,31 @@ describe("ProjectTaskDetailScreen", () => {
     expect(mocks.showToast).toHaveBeenCalledWith({ message: "projectTask.statusUpdated", tone: "success" });
   });
 
+  it("T121 reloads the task after an edit, since the PUT answers with the bare row", async () => {
+    // ProjectService.updateTask returns project_tasks.* only: no project id,
+    // no project, assignee, status or priority names.
+    mocks.updateProjectTask.mockResolvedValue({
+      ok: true,
+      data: { data: { task_id: "task-1", phase_id: "phase-1", due_date: "2026-10-20" } },
+    });
+    const renderer = await renderScreen();
+    expect(mocks.getProjectTask).toHaveBeenCalledTimes(1);
+
+    const dueDateField = renderer.root.findAll((n) => Boolean(n.props?.clearable) && typeof n.props?.onChange === "function")[0];
+    await act(async () => dueDateField.props.onChange(new Date(2026, 9, 20)));
+    await flush();
+
+    expect(mocks.updateProjectTask).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ taskId: "task-1", data: { due_date: "2026-10-20" } }),
+    );
+    expect(mocks.getProjectTask).toHaveBeenCalledTimes(2);
+    // The enriched rows survive the edit.
+    expect(renderer.root.find((n) => n.props?.testID === "project-task-open-project")).toBeTruthy();
+    expect(texts(renderer)).toContain("HQ refresh • Deploy");
+    expect(texts(renderer)).toContain("Sam Lee");
+  });
+
   it("ticks checklist items and shows progress", async () => {
     const renderer = await renderScreen();
     expect(texts(renderer).some((text) => text.includes("projectTask.checklistProgress"))).toBe(true);

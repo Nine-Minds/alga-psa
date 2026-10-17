@@ -335,11 +335,13 @@ export function ProjectTaskDetailScreen({ navigation, route }: Props) {
         showToast({ message: tProjects("task.updateFailed"), tone: "error" });
         return;
       }
-      setTask(result.data.data);
+      // The PUT answers with the bare project_tasks row; only the GET carries
+      // the project, phase, assignee and status names this screen reads.
+      await load();
     } finally {
       setDetailsUpdating(false);
     }
-  }, [client, detailsUpdating, session, showToast, t, tProjects, task, taskId]);
+  }, [client, detailsUpdating, load, session, showToast, t, tProjects, task, taskId]);
 
   const openPriorityPicker = useCallback(async () => {
     if (!client || !session) return;

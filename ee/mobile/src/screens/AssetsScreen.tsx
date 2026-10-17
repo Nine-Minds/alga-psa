@@ -37,6 +37,7 @@ import {
   type AssetStatusOption,
 } from "../api/assets";
 import { listAssetAudits, type AssetAudit } from "../api/assetAudits";
+import { collectFilteredPage } from "../api/narrowedPaging";
 import { listClients, type ClientListItem } from "../api/clients";
 import { listClientLocations, type LocationListItem } from "../api/referenceData";
 import { useNetworkStatus } from "../network/useNetworkStatus";
@@ -197,47 +198,60 @@ export function AssetsScreen({ navigation }: Props) {
       const controller = new AbortController();
       abortRef.current = controller;
 
-      // The v1 list takes one status slug; a multi-select asks for all of them
-      // and narrows client-side.
+      // The v1 list takes one status slug; a multi-select asks the server for
+      // nothing and narrows on the device, so the page is filled from as many
+      // server pages as it takes.
       const singleStatus = selectedStatuses.length === 1 ? selectedStatuses[0] : undefined;
+      const selected = new Set(selectedStatuses);
+      const narrowing = !singleStatus && selected.size > 0;
 
-      const result = await listAssets(client, {
-        apiKey,
-        page: pageToLoad,
-        limit: PAGE_SIZE,
-        search: search || undefined,
-        client_id: filters.clientId ?? undefined,
-        location_id: filters.locationId ?? undefined,
-        status: singleStatus,
-        asset_type: filters.assetType ?? undefined,
-        signal: controller.signal,
+      const collected = await collectFilteredPage<AssetListItem>({
+        startPage: pageToLoad,
+        keep: narrowing ? (asset) => selected.has(asset.status) : undefined,
+        loadPage: async (page) => {
+          const result = await listAssets(client, {
+            apiKey,
+            page,
+            limit: PAGE_SIZE,
+            search: search || undefined,
+            client_id: filters.clientId ?? undefined,
+            location_id: filters.locationId ?? undefined,
+            status: singleStatus,
+            asset_type: filters.assetType ?? undefined,
+            signal: controller.signal,
+          });
+
+          if (controller.signal.aborted) return null;
+          if (!result.ok) {
+            if (result.error.kind === "canceled") return null;
+            logger.warn("Asset list fetch failed", { error: result.error });
+            if (result.error.kind === "permission") {
+              setItems([]);
+              setHasNext(false);
+              setNoAccess(true);
+              return null;
+            }
+            setError(t("list.unableToLoad", "Unable to load."));
+            return null;
+          }
+
+          const pagination = result.data.pagination;
+          return {
+            items: result.data.data,
+            page: pagination.page,
+            hasNext: pagination.page * pagination.limit < pagination.total,
+            total: pagination.total,
+          };
+        },
       });
 
       if (abortRef.current === controller) abortRef.current = null;
-      if (controller.signal.aborted) return;
+      if (!collected || controller.signal.aborted) return;
 
-      if (!result.ok) {
-        if (result.error.kind === "canceled") return;
-        logger.warn("Asset list fetch failed", { error: result.error });
-        if (result.error.kind === "permission") {
-          setItems([]);
-          setHasNext(false);
-          setNoAccess(true);
-          return;
-        }
-        setError(t("list.unableToLoad", "Unable to load."));
-        return;
-      }
-
-      const selected = new Set(selectedStatuses);
-      const next = singleStatus
-        ? result.data.data
-        : result.data.data.filter((asset) => selected.size === 0 || selected.has(asset.status));
-      const pagination = result.data.pagination;
-      setItems((current) => (replace ? next : [...current, ...next]));
-      setPage(pagination.page);
-      setTotal(pagination.total);
-      setHasNext(pagination.page * pagination.limit < pagination.total);
+      setItems((current) => (replace ? collected.items : [...current, ...collected.items]));
+      setPage(collected.page);
+      setTotal(collected.total);
+      setHasNext(collected.hasNext);
     },
     [apiKey, client, filters.assetType, filters.clientId, filters.locationId, search, selectedStatuses, statusesLoaded, t],
   );

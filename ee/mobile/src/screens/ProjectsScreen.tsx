@@ -35,6 +35,7 @@ import {
   type ProjectListItem,
   type ProjectStatusOption,
 } from "../api/projects";
+import { collectFilteredPage } from "../api/narrowedPaging";
 import { getCachedProjects, setCachedProjects } from "../cache/projectsCache";
 import { getSecureJson, setSecureJson } from "../storage/secureStorage";
 import { useNetworkStatus } from "../network/useNetworkStatus";
@@ -204,47 +205,60 @@ export function ProjectsScreen({ navigation }: Props) {
       abortRef.current = controller;
 
       // The v1 list takes a single status_id; a multi-select sends none and
-      // narrows client-side so "any of these four" still works.
+      // narrows on the device, so the page is filled from as many server pages
+      // as it takes and the server's total — which counts every status — is not
+      // shown.
       const singleStatus = selectedStatusIds.length === 1 ? selectedStatusIds[0] : undefined;
+      const selected = new Set<string>(selectedStatusIds);
+      const narrowing = !singleStatus && selected.size > 0;
 
-      const result = await listProjects(client, {
-        apiKey,
-        page: pageToLoad,
-        limit: PAGE_SIZE,
-        project_name: search || undefined,
-        status: singleStatus,
-        client_id: filters.clientId ?? undefined,
-        assigned_to: filters.managedByMe ? userId : undefined,
-        signal: controller.signal,
+      const collected = await collectFilteredPage<ProjectListItem>({
+        startPage: pageToLoad,
+        keep: narrowing ? (project) => selected.has(project.status) : undefined,
+        loadPage: async (page) => {
+          const result = await listProjects(client, {
+            apiKey,
+            page,
+            limit: PAGE_SIZE,
+            project_name: search || undefined,
+            status: singleStatus,
+            client_id: filters.clientId ?? undefined,
+            assigned_to: filters.managedByMe ? userId : undefined,
+            signal: controller.signal,
+          });
+
+          if (controller.signal.aborted) return null;
+          if (!result.ok) {
+            if (result.error.kind === "canceled") return null;
+            logger.warn("Project list fetch failed", { error: result.error });
+            if (result.error.kind === "permission") {
+              setItems([]);
+              setHasNext(false);
+              setNoAccess(true);
+              return null;
+            }
+            setError(t("errors.unableToLoad", "Unable to load."));
+            return null;
+          }
+
+          return {
+            items: result.data.data,
+            page: result.data.pagination.page,
+            hasNext: result.data.pagination.hasNext,
+            total: result.data.pagination.total,
+          };
+        },
       });
 
       if (abortRef.current === controller) abortRef.current = null;
-      if (controller.signal.aborted) return;
+      if (!collected || controller.signal.aborted) return;
 
-      if (!result.ok) {
-        if (result.error.kind === "canceled") return;
-        logger.warn("Project list fetch failed", { error: result.error });
-        if (result.error.kind === "permission") {
-          setItems([]);
-          setHasNext(false);
-          setNoAccess(true);
-          return;
-        }
-        setError(t("errors.unableToLoad", "Unable to load."));
-        return;
-      }
-
-      const selected = new Set<string>(selectedStatusIds);
-      const next = singleStatus
-        ? result.data.data
-        : result.data.data.filter((project) => selected.size === 0 || selected.has(project.status));
-      const merged = replace ? next : [...items, ...next];
-      setItems(merged);
-      setPage(result.data.pagination.page);
-      setTotal(result.data.pagination.total);
-      setHasNext(result.data.pagination.hasNext);
+      setItems(replace ? collected.items : [...items, ...collected.items]);
+      setPage(collected.page);
+      setTotal(collected.total);
+      setHasNext(collected.hasNext);
       if (pageToLoad === 1) {
-        setCachedProjects(cacheKey, { items: next, total: result.data.pagination.total });
+        setCachedProjects(cacheKey, { items: collected.items, total: collected.total });
       }
     },
     [

@@ -91,7 +91,10 @@ export function CreateTaskModal({
     if (!client || !apiKey || !phaseId || !statusMappingId) return;
     setSubmitting(true);
     setError(null);
+    // project_tasks.estimated_hours is a bigint of minutes, whatever its name
+    // says, so the hours typed here are converted before they are sent.
     const hours = Number.parseFloat(estimatedHours);
+    const estimatedMinutes = Number.isFinite(hours) && hours > 0 ? Math.round(hours * 60) : null;
     const auditHeaders = await getClientMetadataHeaders();
     const result = await createProjectTask(client, {
       apiKey,
@@ -104,7 +107,7 @@ export function CreateTaskModal({
         ...(assignee ? { assigned_to: assignee.id } : {}),
         ...(dueDate ? { due_date: toDateOnly(dueDate) } : {}),
         ...(priority ? { priority_id: priority.priority_id } : {}),
-        ...(Number.isFinite(hours) && hours > 0 ? { estimated_hours: hours } : {}),
+        ...(estimatedMinutes !== null ? { estimated_hours: estimatedMinutes } : {}),
       },
       auditHeaders,
     });
