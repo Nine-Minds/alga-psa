@@ -209,7 +209,35 @@
       "ariaLabel": "Zasoby i pomoc",
       "title": "Zasoby",
       "documentation": "Dokumentacja",
-      "support": "Skontaktuj się z pomocą techniczną"
+      "support": "Skontaktuj się z pomocą techniczną",
+      "submitTicket": "Wyślij zgłoszenie do Nine Minds"
+    },
+    "supportDialog": {
+      "title": "Wyślij zgłoszenie do Nine Minds",
+      "intro": "Pomoc techniczna Nine Minds otrzyma to jako zgłoszenie i odpowie e-mailem.",
+      "categoryLabel": "W czym potrzebujesz pomocy?",
+      "categories": {
+        "bug": "Coś nie działa",
+        "question": "Pytanie",
+        "billing": "Rozliczenia",
+        "feature": "Propozycja funkcji"
+      },
+      "subjectLabel": "Temat",
+      "descriptionLabel": "Co się stało?",
+      "descriptionPlaceholder": "Podaj, czego oczekiwałeś, co się stało oraz którego klienta lub której faktury to dotyczy.",
+      "replyTo": "Odpowiedzi trafią na adres {{email}}",
+      "success": "Wysłano do pomocy technicznej Nine Minds. Odpowiedzi trafią na adres {{email}}.",
+      "submit": "Wyślij do Nine Minds",
+      "sending": "Wysyłanie…",
+      "cancel": "Anuluj",
+      "close": "Zamknij",
+      "fallbackLink": "Skontaktuj się z pomocą techniczną na nineminds.com",
+      "errors": {
+        "invalidInput": "Wpisz temat o długości co najmniej 3 znaków i opis o długości co najmniej 20 znaków.",
+        "rateLimited": "Właśnie wysłałeś zgłoszenie. Odczekaj minutę przed wysłaniem następnego.",
+        "emailNotConfigured": "Ta instalacja nie ma skonfigurowanej poczty wychodzącej, więc zgłoszenia nie udało się wysłać.",
+        "sendFailed": "Nie udało się wysłać zgłoszenia. Spróbuj ponownie."
+      }
     },
     "jobs": {
       "ariaLabel": "Wyświetl aktywność zadań w tle",
