@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { resolveSelfHostTier, type LicenseStateRow } from './license-state';
 import { clearLicenseVerifyCache } from './verify-license';
+import { checkInStateUpdate, interpretCheckInResponse } from './license-check-in';
 
 // Fixture tokens from verify-license.test.ts (signed with v1-test key).
 const VALID_PRO_TOKEN =
@@ -187,3 +188,69 @@ describe('resolveSelfHostTier — subscription lapse boundary', () => {
   });
 });
 
+
+// A Stripe cancel request is now mirrored to alga-license, which reports it as
+// `cancel_scheduled` + a real `cancels_at` while the subscription still runs.
+// These walk the wire body through parse -> persisted columns -> resolved state.
+describe('cancel_scheduled check-in, end to end', () => {
+  beforeEach(() => clearLicenseVerifyCache());
+
+  const CANCELS_AT = new Date(Date.now() + 9 * 86400_000);
+  const NOW = new Date();
+  const persist = (body: unknown, current: LicenseStateRow) => {
+    const update = checkInStateUpdate(interpretCheckInResponse(200, body), current.license_token, NOW);
+    return { ...current, ...update } as LicenseStateRow;
+  };
+
+  it('is persisted and resolves to an ending warning dated by cancels_at, not the token exp', () => {
+    const row = persist(
+      {
+        status: 'ok',
+        jwt: VALID_PRO_TOKEN,
+        exp: 1815359153,
+        subscription: { state: 'cancel_scheduled', cancels_at: CANCELS_AT.toISOString(), resubscribe_url: 'https://portal.example/resubscribe' },
+      },
+      makeRow({ license_token: VALID_PRO_TOKEN }),
+    );
+    expect(row).toMatchObject({ subscription_state: 'cancel_scheduled', subscription_cancels_at: CANCELS_AT });
+
+    const result = resolveSelfHostTier(row);
+    expect(result?.state).toBe('licensed');
+    expect(result?.tier).toBe('pro');
+    expect(result?.subscription).toEqual({
+      phase: 'ending',
+      cause: 'cancelled',
+      endsAt: CANCELS_AT,
+      resubscribeUrl: 'https://portal.example/resubscribe',
+    });
+    expect(result?.subscription?.endsAt).not.toEqual(result?.expiresAt);
+  });
+
+  it('a later active check-in after a resubscribe clears the warning', () => {
+    const scheduled = persist(
+      { status: 'ok', jwt: VALID_PRO_TOKEN, exp: 1815359153, subscription: { state: 'cancel_scheduled', cancels_at: CANCELS_AT.toISOString(), resubscribe_url: 'https://portal.example/r' } },
+      makeRow({ license_token: VALID_PRO_TOKEN }),
+    );
+    expect(resolveSelfHostTier(scheduled)?.subscription?.phase).toBe('ending');
+
+    // no_change with an explicit active verdict also clears (not just a re-signed token)
+    const resubscribed = persist({ status: 'no_change', subscription: { state: 'active' } }, scheduled);
+    expect(resubscribed).toMatchObject({
+      subscription_state: null,
+      subscription_cancels_at: null,
+      subscription_resubscribe_url: null,
+    });
+    const result = resolveSelfHostTier(resubscribed);
+    expect(result?.state).toBe('licensed');
+    expect(result?.subscription).toBeNull();
+  });
+
+  it('a stored cancel date that has passed with an expired token resolves as a lapse', () => {
+    const past = new Date(Date.now() - 86400_000);
+    const row = persist(
+      { status: 'no_change', subscription: { state: 'cancel_scheduled', cancels_at: past.toISOString() } },
+      makeRow({ license_token: EXPIRED_TOKEN }),
+    );
+    expect(resolveSelfHostTier(row)?.subscription).toMatchObject({ phase: 'lapsed', cause: 'cancelled' });
+  });
+});

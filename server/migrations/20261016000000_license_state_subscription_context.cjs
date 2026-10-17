@@ -5,8 +5,9 @@
  * license_state singleton so the License page and the app-wide banner can warn
  * before a Pro subscription lapses and explain the downgrade afterwards.
  *
- * subscription_state               — 'active' | 'cancel_scheduled' | 'cancelled' (null = none known)
- * subscription_cancels_at          — when the subscription ends/ended, if the server knows
+ * subscription_state               — 'cancel_scheduled' | 'term_ends' | 'cancelled' (null = none known or healthy)
+ * subscription_cancels_at          — when the subscription ends/ended, if the server knows (for cancel_scheduled
+ *                                    this is the mirrored Stripe cancel_at / current_period_end)
  * subscription_resubscribe_url     — where to resubscribe
  * subscription_context_updated_at  — when the context was last written by a check-in
  *
