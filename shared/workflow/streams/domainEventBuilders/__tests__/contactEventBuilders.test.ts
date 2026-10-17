@@ -5,7 +5,7 @@ import {
   contactMergedEventPayloadSchema,
   contactPrimarySetEventPayloadSchema,
   contactUpdatedEventPayloadSchema,
-} from '../../../runtime/schemas/crmEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildContactArchivedPayload,
   buildContactCreatedPayload,

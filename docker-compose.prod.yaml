@@ -50,3 +50,18 @@ services:
       IMAP_FETCH_DELAY_MS: ${IMAP_FETCH_DELAY_MS:-0}
       IMAP_EVENT_CHANNEL_BY_TENANT: ${IMAP_EVENT_CHANNEL_BY_TENANT:-false}
       IMAP_OAUTH_AUTH_MECHANISM: ${IMAP_OAUTH_AUTH_MECHANISM:-XOAUTH2}
+
+  # Production publishes no data-plane ports. To reach them from the host on
+  # purpose, add docker-compose.expose-infra.yaml as the last -f file.
+  # Requires Docker Compose 2.24 or later (!reset).
+  postgres:
+    ports: !reset []
+
+  redis:
+    ports: !reset []
+
+  pgbouncer:
+    ports: !reset []
+
+  ai-gateway-postgres:
+    ports: !reset []

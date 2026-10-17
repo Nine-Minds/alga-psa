@@ -7,7 +7,7 @@ import {
   deriveDateTriggerTiming,
   nextAnnualOccurrenceOnOrAfter,
 } from '../dateTriggerOccurrence';
-import { dateTriggerPayloadSchemaRefs, dateTriggerPayloadSchemas } from '../schemas/dateTriggerPayloadSchemas';
+import { dateTriggerPayloadSchemaRefs, dateTriggerPayloadSchemas } from '@alga-psa/event-schemas';
 
 describe('date trigger occurrence', () => {
   it('fires on the occurrence date plus the offset: "30 days before" is -30', () => {

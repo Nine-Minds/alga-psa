@@ -408,12 +408,13 @@ const QuotesTab: React.FC = () => {
       setError(getErrorMessage(result));
       return;
     }
-    const { pdfData, quoteNumber } = result as { pdfData: number[]; quoteNumber: string };
+    const { pdfData, fileName } = result as { pdfData: number[]; fileName: string };
+    // LEVERAGE: pattern pdf-blob-download — keep this established download flow aligned with the other quote screens.
     const blob = new Blob([new Uint8Array(pdfData)], { type: 'application/pdf' });
     const blobUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = blobUrl;
-    link.setAttribute('download', `${quoteNumber}.pdf`);
+    link.setAttribute('download', fileName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

@@ -219,6 +219,22 @@ vi.mock('server/src/lib/utils/transactionUtils', () => ({
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(async () => undefined),
   publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
+}));
+// Billing actions import the typed publishers directly; keep that module inert too (journey personas use
+// non-uuid ids that the real workflow-event contract would reject).
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(async () => undefined),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 // Capture server-side payment-link failures for the cause-retention assertion.

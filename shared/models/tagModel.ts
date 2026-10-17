@@ -239,9 +239,23 @@ export class TagModel {
       created_at: now
     };
 
-    await db.table('tag_definitions').insert(definition);
+    // Race-safe: tag_definitions is unique on (tenant, tag_text, tagged_type). A
+    // concurrent creator's row wins silently (ON CONFLICT DO NOTHING) and we
+    // re-read it. Catching a 23505 instead would not work: a failed insert
+    // aborts the enclosing Postgres transaction, so the re-read could not run.
+    await db.table('tag_definitions')
+      .insert(definition)
+      .onConflict(['tenant', 'tag_text', 'tagged_type'])
+      .ignore();
 
-    return definition;
+    const stored = await db.table<TagDefinition>('tag_definitions')
+      .where({
+        tag_text: tagText,
+        tagged_type: taggedType,
+      })
+      .first();
+
+    return stored ?? definition;
   }
 
   /**

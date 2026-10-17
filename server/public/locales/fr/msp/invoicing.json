@@ -147,6 +147,7 @@
       "preview": {
         "title": "Aperçu de la facture",
         "description": "Ceci est un aperçu de l'apparence de la facture une fois finalisée.",
+        "noBillingEmailWarning": "{{clientName}} n'a pas d'e-mail de facturation. La facture peut être générée, mais elle ne pourra pas être envoyée par e-mail ni payée en ligne tant que vous n'aurez pas défini un contact de facturation, un e-mail de facturation du client ou un e-mail sur le site de facturation ou par défaut.",
         "summary_one": "Facture {{count}} sélectionnée",
         "summary_other": "Factures {{count}} sélectionnées",
         "summaryCombined": "Cette sélection générera une facture combinée.",
@@ -332,7 +333,8 @@
       "title": "Éléments de campagne automatisés",
       "service": "Service",
       "total": "Total",
-      "unknownService": "Service inconnu"
+      "unknownService": "Service inconnu",
+      "period": "Période"
     },
     "lineItems": {
       "manual": "Éléments de campagne manuels",
@@ -345,7 +347,10 @@
       "saveChanges": "Enregistrer les modifications",
       "processing": "Traitement...",
       "generateSalesOrderInvoice": "Générer la facture de la commande client",
-      "clearSalesOrderSource": "Effacer la commande client source"
+      "clearSalesOrderSource": "Effacer la commande client source",
+      "addPartialPeriodCharge": "Ajouter des frais de période partielle",
+      "reauthenticate": "Se reconnecter",
+      "retrySave": "Réessayer l’enregistrement"
     },
     "labels": {
       "total": "Total",
@@ -385,14 +390,23 @@
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Cette fenêtre de facturation comporte des éléments facturables, mais {{services}} n'a aucune utilisation déclarée pour la période de service du {{periodStart}} au {{periodEnd}}. Enregistrez d'abord l'utilisation, ou confirmez explicitement la génération sans elle — les services non déclarés resteront facturables plus tard.",
       "USAGE_PERIOD_TOTAL_STALE": "L'aperçu est obsolète : {{details}}. Relancez l'aperçu pour voir les chiffres actuels, puis générez à nouveau.",
       "USAGE_CALCULATION_ERROR": "L'utilisation de {{services}} sur la période de service du {{periodStart}} au {{periodEnd}} est enregistrée mais n'a pas pu être tarifée. Corrigez la tarification du service (prix catalogue dans la devise du contrat, tarif personnalisé ou paliers de tarifs), puis réessayez. N'enregistrez pas d'utilisation de remplacement.",
+      "RECURRING_PERIODS_NOT_MATERIALIZED": "Les périodes de service de cette fenêtre de facturation n'ont pas encore été générées. Utilisez Tout corriger sur la page des factures automatiques, ou régénérez-les dans Facturation > Périodes de service, puis relancez l'aperçu.",
+      "NO_ACTIVE_CONTRACT_LINES": "Aucune ligne de contrat n'est active pour cette période de facturation. Vérifiez les dates de début et de fin du contrat et que le contrat est actif.",
+      "NOTHING_TO_BILL": "Rien n'est prêt à être facturé pour cette fenêtre. Les lignes facturées à terme échu ne peuvent l'être qu'après la fin de leur période de service ; vérifiez donc l'échéance de facturation et les dates.",
+      "FIXED_LINE_RATE_UNRESOLVED": "La ligne à tarif forfaitaire {{lines}} n'a pas de tarif. Définissez un tarif sur la ligne de contrat (ou un prix pour ses services dans la devise du contrat), puis réessayez.",
+      "FIXED_LINE_NO_SERVICES": "La ligne à tarif fixe {{lines}} a un tarif mais aucun service sur lequel le facturer. Ajoutez un service à la ligne de contrat, puis réessayez.",
       "SOURCE_ALREADY_BILLED": "Certains éléments sélectionnés ne sont plus facturables (déjà facturés, non approuvés ou supprimés). Actualisez et réessayez.",
       "SOURCE_NOT_ELIGIBLE": "Un élément sélectionné n'appartient pas à ce ticket ou n'est plus éligible. Actualisez et réessayez.",
       "SOURCE_CURRENCY_MISMATCH": "Certains produits sélectionnés sont facturés dans une autre devise que celle de ce client et ne peuvent pas être ajoutés. Facturez-les séparément dans leur devise.",
+      "CLIENT_CONTRACT_NOT_FOUND": "Le contrat sélectionné n’appartient pas au client de cette facture.",
+      "SERVICE_REQUIRED": "Attribuez un service à cette ligne avant d’enregistrer.",
       "RECURRING_PRICING_STALE": "L'aperçu n'est plus à jour : {{details}}. Relancez l'aperçu pour afficher les montants actuels, puis générez de nouveau.",
-      "BILLING_PROFILE_NOT_FOUND": "Le profil de facturation sélectionné n'est pas disponible pour ce client. Actualisez la page et réessayez."
+      "BILLING_PROFILE_NOT_FOUND": "Le profil de facturation sélectionné n'est pas disponible pour ce client. Actualisez la page et réessayez.",
+      "sessionExpired": "Votre session a expiré. Vos modifications sont toujours ici, mais elles n’ont pas été enregistrées. Reconnectez-vous dans un nouvel onglet, puis réessayez l’enregistrement.",
+      "saveRefreshFailed": "Vos modifications ont été enregistrées, mais la page de la facture n’a pas pu s’actualiser complètement. Rechargez la page pour afficher la facture enregistrée."
     },
     "warnings": {
-      "noBillingEmail": "Ce client n'a pas d'adresse e-mail de facturation. Ajoutez un contact de facturation, une adresse e-mail de facturation du client ou une adresse e-mail à son emplacement de facturation ou par défaut avant de générer la facture."
+      "noBillingEmail": "Ce client n'a pas d'e-mail de facturation. La facture peut être générée, mais elle ne pourra pas être envoyée par e-mail ni payée en ligne tant que vous n'aurez pas défini un contact de facturation, un e-mail de facturation du client ou un e-mail sur le site de facturation ou par défaut."
     },
     "errorFallback": {
       "title": "Quelque chose s'est mal passé",
@@ -400,6 +414,48 @@
     },
     "salesOrderContext": {
       "summary": "Quantité prête à être facturée : {{quantity}} article(s) sur {{lineCount}} ligne(s). La facture provisoire sera liée à la commande client."
+    },
+    "draftAdjustments": {
+      "title": "Ajustements de facture",
+      "description": "Ajoutez des frais, des remises ou des crédits ponctuels. Les frais de contrat générés restent en lecture seule ; corrigez le contrat source ou ajoutez un ajustement."
+    },
+    "partialPeriod": {
+      "title": "Frais de période partielle",
+      "help": "Calculé comme unités × prix unitaire de la période × jours couverts / jours de la période complète. Les saisies sont conservées avec le poste pour qu'il reste compréhensible.",
+      "direction": "Sens",
+      "increase": "Augmentation",
+      "decrease": "Diminution (crédit)",
+      "units": "Unités",
+      "unitPrice": "Prix unitaire",
+      "coveredDays": "Jours couverts",
+      "fullPeriodDays": "Jours de la période complète",
+      "description": "Description (facultatif)",
+      "reason": "Motif (facultatif)",
+      "previewUnavailable": "Saisissez un calcul valide.",
+      "resolvedAmount": "Montant calculé : {{amount}}",
+      "addCharge": "Ajouter des frais",
+      "creditDescription": "Crédit : {{proration}}",
+      "errors": {
+        "units": "Les unités doivent être supérieures à zéro.",
+        "unitPrice": "Le prix unitaire doit être un nombre.",
+        "invalid": "Saisissez une période partielle valide.",
+        "source": "Choisissez un service facturé dont la période de service est sans ambiguïté."
+      },
+      "source": "Sélectionner un service facturé",
+      "effectiveDate": "Date d’effet",
+      "sourceRate": "Tarif {{rate}}",
+      "permanentChangeNudge": "S’agit-il d’un changement permanent ? Enregistrez-le plutôt dans le contrat.",
+      "overlapConfirm": "Un ajustement automatique de contrat chevauche déjà cette période. Ajouter quand même cet ajustement manuel distinct ?",
+      "invoiceDescription": {
+        "increase": "{{description}} — {{units}} {{unitLabel}} supplémentaires, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — avoir pour {{units}} {{unitLabel}} en moins, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Ajustement de service"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}} : configurez l’association des remises avant d’exporter {{description}}.",
+      "service": "{{adapter}} : attribuez un service associé à {{description}} avant l’exportation.",
+      "unavailable": "La préparation comptable n’a pas pu être vérifiée. Vérifiez les associations avant l’exportation."
     },
     "hints": {
       "billingProfile": "La facture et ses lignes sont facturées à ce profil."
@@ -734,6 +790,7 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "Votre session a expiré pendant le chargement de cette facture. Reconnectez-vous, puis rechargez l’aperçu.",
     "title": "Aperçu de la facture",
     "templatePlaceholder": "Sélectionnez le modèle de facture...",
     "labels": {
@@ -2317,6 +2374,7 @@
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "Votre session a expiré pendant le chargement des détails de la facture. Reconnectez-vous, puis rechargez les détails.",
     "title": "Détails de la facture",
     "description": "Modifiez les métadonnées du brouillon de facture avant sa finalisation.",
     "actions": {
@@ -2483,5 +2541,15 @@
     "saving": "Enregistrement…",
     "saveCorrection": "Enregistrer la correction",
     "save": "Enregistrer"
+  },
+  "draftInvoiceAdjustments": {
+    "sessionExpired": "Votre session a expiré pendant le chargement des ajustements de facture. Reconnectez-vous, puis rechargez cette facture.",
+    "signIn": "Se connecter",
+    "retry": "Recharger",
+    "blockedTitle": "Ajustements de facture indisponibles",
+    "blocked": {
+      "exported": "Cette facture est synchronisée avec un système comptable. Annulez-la ou émettez un crédit distinct au lieu de modifier ses lignes.",
+      "exporting": "Un export comptable de cette facture est en cours de préparation. Attendez qu’il soit terminé avant de modifier la facture."
+    }
   }
 }

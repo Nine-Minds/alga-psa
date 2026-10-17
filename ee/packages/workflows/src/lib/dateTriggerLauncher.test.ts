@@ -9,7 +9,7 @@ vi.mock('@alga-psa/workflows/runtime/core', () => ({
 vi.mock('./workflowRunLauncher', () => ({ launchPublishedWorkflowRun: mocks.launch }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { info: mocks.loggerInfo, warn: vi.fn(), error: vi.fn() } }));
 
-import { buildDateTriggerFireKey, getDateTriggerOccurrenceRange, launchDateTriggeredWorkflows } from './dateTriggerLauncher';
+import { buildDateTriggerFireKey, getDateTriggerOccurrenceRange, hashDateTriggerParams, launchDateTriggeredWorkflows } from './dateTriggerLauncher';
 
 describe('date trigger launcher', () => {
   beforeEach(() => {
@@ -183,5 +183,86 @@ describe('date trigger launcher', () => {
     });
 
     expect(mocks.launch).toHaveBeenCalledTimes(2);
+  });
+
+  describe('condition sources (ticket.status_age)', () => {
+    const statusAgeParams = { statusName: 'Waiting for client', days: 7, repeatEveryDays: null };
+    const occurrence = (entityId: string, cycleKey = '2026-09-10T09:00:00.000Z', occursOn = '2026-09-17') => ({
+      entityId, clientId: 'client-1', occursOn, cycleKey,
+      payload: {
+        ticketId: '11111111-1111-4111-8111-111111111111', ticketNumber: 'T-1', title: 't', statusId: '22222222-2222-4222-8222-222222222222',
+        statusName: 'Waiting for client', boardId: '33333333-3333-4333-8333-333333333333', boardName: 'Support',
+        enteredStatusAt: cycleKey, daysInStatus: 13, repeatIndex: 0,
+      },
+    });
+    const setup = (occurrences: unknown[], existingKeys: string[] = []) => {
+      const findOccurrences = vi.fn().mockResolvedValue(occurrences);
+      const source = { id: 'ticket.status_age', findOccurrences } as any;
+      mocks.published.mockResolvedValue([{
+        workflow: { workflow_id: 'wf-1' },
+        definition: { trigger: { type: 'date', source: source.id, offsetDays: 0, localTime: '00:00', params: statusAgeParams }, payloadSchemaRef: 'payload.TicketStatusAge.v1' },
+      }]);
+      const select = vi.fn().mockResolvedValue(existingKeys.map((trigger_fire_key) => ({ trigger_fire_key })));
+      const knex = vi.fn(() => ({ where: () => ({ whereIn: () => ({ select }) }) })) as any;
+      return { source, findOccurrences, knex, select };
+    };
+    const run = (source: any, knex: any, today = '2026-09-23') => launchDateTriggeredWorkflows({
+      tenantId: 'tenant', today, now: new Date(`${today}T12:00:00Z`), timezone: 'UTC', knex, sources: [source],
+    });
+
+    it('passes validated params and today, skips the window, and fires an occurrence far older than the lookback', async () => {
+      const { source, findOccurrences, knex } = setup([occurrence('t-1', '2026-01-02T09:00:00.000Z', '2026-01-09')]);
+      await run(source, knex);
+      expect(findOccurrences).toHaveBeenCalledWith(knex, 'tenant', '2026-09-23', '2026-09-23', {
+        params: { statusName: 'waiting for client', days: 7, boardId: null, repeatEveryDays: null, requireNoActivity: false },
+        today: '2026-09-23', timezone: 'UTC',
+      });
+      expect(mocks.launch).toHaveBeenCalledTimes(1);
+      const call = mocks.launch.mock.calls[0][1];
+      expect(call.triggerFireKey).toMatch(/^date:wf-1:ticket\.status_age:t-1:2026-01-09:0:2026-01-02T09:00:00\.000Z:[0-9a-f]{16}$/);
+      expect(call.payload).toMatchObject({ occursOn: '2026-01-09', fireDate: '2026-01-09', offsetDays: 0 });
+    });
+
+    it('does not re-launch occurrences whose fire key already exists', async () => {
+      const first = setup([occurrence('t-1')]);
+      await run(first.source, first.knex);
+      const key = mocks.launch.mock.calls[0][1].triggerFireKey;
+      mocks.launch.mockClear();
+      const second = setup([occurrence('t-1'), occurrence('t-2')], [key]);
+      await run(second.source, second.knex);
+      expect(mocks.launch).toHaveBeenCalledTimes(1);
+      expect(mocks.launch.mock.calls[0][1].triggerFireKey).toContain(':t-2:');
+    });
+
+    it('a different anchor timestamp or different params is a different fire key', () => {
+      const params = { statusName: 'waiting for client', days: 7, boardId: null, repeatEveryDays: null, requireNoActivity: false };
+      const a = buildDateTriggerFireKey('wf', 'ticket.status_age', 't', '2026-09-17', 0, { cycleKey: '2026-09-10T09:00:00.000Z', params });
+      const sameDayReentry = buildDateTriggerFireKey('wf', 'ticket.status_age', 't', '2026-09-17', 0, { cycleKey: '2026-09-10T15:00:00.000Z', params });
+      const otherParams = buildDateTriggerFireKey('wf', 'ticket.status_age', 't', '2026-09-17', 0, { cycleKey: '2026-09-10T09:00:00.000Z', params: { ...params, days: 8 } });
+      expect(new Set([a, sameDayReentry, otherParams]).size).toBe(3);
+    });
+
+    it('hashes params the same regardless of key order', () => {
+      expect(hashDateTriggerParams({ a: 1, b: { c: 2, d: null } })).toBe(hashDateTriggerParams({ b: { d: null, c: 2 }, a: 1 }));
+      expect(hashDateTriggerParams({ a: 1 })).not.toBe(hashDateTriggerParams({ a: 2 }));
+    });
+
+    it('skips workflows whose params are missing or invalid', async () => {
+      const { source, findOccurrences, knex } = setup([occurrence('t-1')]);
+      mocks.published.mockResolvedValue([{
+        workflow: { workflow_id: 'wf-1' },
+        definition: { trigger: { type: 'date', source: source.id, offsetDays: 0, localTime: '00:00', params: { statusName: '', days: 0 } }, payloadSchemaRef: 'payload.TicketStatusAge.v1' },
+      }]);
+      await run(source, knex);
+      expect(findOccurrences).not.toHaveBeenCalled();
+      expect(mocks.launch).not.toHaveBeenCalled();
+    });
+  });
+
+  it('keeps the exact fire keys of every window source (no params, no cycle suffix)', () => {
+    expect(buildDateTriggerFireKey('wf', 'client.anniversary', 'c', '2026-10-23', -30)).toBe('date:wf:client.anniversary:c:2026-10-23:-30');
+    expect(buildDateTriggerFireKey('wf', 'contract.renewal_decision', 'cc', '2026-12-01', -60)).toBe('date:wf:contract.renewal_decision:cc:2026-12-01:-60');
+    expect(buildDateTriggerFireKey('wf', 'contract.end', 'cc', '2026-12-31', 0)).toBe('date:wf:contract.end:cc:2026-12-31:0');
+    expect(buildDateTriggerFireKey('wf', 'asset.warranty_end', 'a', '2027-01-15', 14)).toBe('date:wf:asset.warranty_end:a:2027-01-15:14');
   });
 });

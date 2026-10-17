@@ -87,6 +87,7 @@ export async function setupTestUserWithPermissions(
     'role',
     'permission',
     'time_entry',
+    'time_period',
     'service',
     'storage',
   ];

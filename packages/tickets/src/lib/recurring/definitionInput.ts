@@ -46,6 +46,7 @@ export const titleTemplateSchema = z
 /** BlockNote document, the same JSON the quick-add ticket dialog serializes. */
 const blockNoteSchema = z.array(z.record(z.string(), z.unknown()));
 
+// LEVERAGE: pattern ticket-template-fields — the title/description/board/category/priority/tags/checklist group is also carried by ticket_templates (lib/ticketTemplates.ts); a definition should reference a ticket template instead of embedding its own copy
 export const recurringTicketDefinitionInputSchema = z
   .object({
     name: z.string().trim().min(1, 'Name is required').max(200),

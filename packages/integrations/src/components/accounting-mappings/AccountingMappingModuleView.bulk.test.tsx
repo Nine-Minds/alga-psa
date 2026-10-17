@@ -23,7 +23,7 @@ const externalTarget = {
   kindForMapping: (m: any) => (m.metadata?.xeroTargetKind === 'account' ? 'account' : 'item'),
   optionIdForMapping: (m: any) =>
     `${m.metadata?.xeroTargetKind === 'account' ? 'account' : 'item'}:${m.external_entity_id}`,
-  externalIdForOption: (id: string) => id.slice(id.indexOf(':') + 1),
+  isExclusiveKind: (kindId: string) => kindId === 'item',
   invalidNotice: 'invalid'
 };
 
@@ -355,24 +355,78 @@ describe('AccountingMappingModuleView bulk grid', () => {
       expect(await screen.findByText('Item · Power BI Pro (PBI)')).toBeInTheDocument();
     });
 
-    it('compares persisted ids, so account:200 is held by a mapping stored as 200', async () => {
+    const salesLoad = (heldKind: 'account' | 'item' | null, heldCode = '200') => ({
+      mappings: [
+        {
+          id: 'm-1',
+          alga_entity_id: 'svc-sales-1',
+          external_entity_id: heldCode,
+          metadata: heldKind ? { xeroTargetKind: heldKind } : {}
+        }
+      ],
+      algaEntities: [
+        { id: 'svc-sales-1', name: 'Sales', baseName: 'Sales' },
+        { id: 'svc-sales-2', name: 'Sales', baseName: 'Sales' }
+      ],
+      externalEntities: [
+        { id: 'account:200', name: 'Revenue account · Sales (200)', kind: 'account', code: '200', baseName: 'Sales' }
+      ]
+    });
+
+    it('still suggests and pre-ticks a shared account for the twin of a service holding it', async () => {
+      loadMock.mockResolvedValue(salesLoad('account'));
+      await openBulk();
+      expect(screen.getByTestId(`${P}-suggested-svc-sales-2`)).toBeInTheDocument();
+      expect(el(`${P}-select-svc-sales-2`).checked).toBe(true);
+    });
+
+    it('a held account:200 does not block an item:200 suggestion', async () => {
       loadMock.mockResolvedValue({
-        mappings: [
-          { id: 'm-1', alga_entity_id: 'svc-other', external_entity_id: '200', metadata: { xeroTargetKind: 'item' } }
-        ],
+        ...salesLoad('account'),
         algaEntities: [
-          { id: 'svc-other', name: 'Other', baseName: 'Other' },
-          { id: 'svc-sales', name: 'Sales', baseName: 'Sales' }
+          { id: 'svc-sales-1', name: 'Sales', baseName: 'Sales' },
+          { id: 'svc-item', name: 'Item two hundred', baseName: 'Item two hundred' }
         ],
-        externalEntities: [
-          item('200', 'Item two hundred'),
-          { id: 'account:200', name: 'Revenue account · Sales (200)', kind: 'account', code: '200', baseName: 'Sales' }
-        ]
+        externalEntities: [item('200', 'Item two hundred')]
       });
       await openBulk();
-      expect(screen.queryByTestId(`${P}-suggested-svc-sales`)).not.toBeInTheDocument();
-      expect(screen.queryByTestId(`${P}-possible-svc-sales`)).not.toBeInTheDocument();
-      expect(el(`${P}-select-svc-sales`).checked).toBe(false);
+      expect(screen.getByTestId(`${P}-suggested-svc-item`)).toBeInTheDocument();
+    });
+
+    it('a held item still blocks the same item for another service', async () => {
+      loadMock.mockResolvedValue({
+        ...salesLoad('item', '200'),
+        externalEntities: [item('200', 'Sales')]
+      });
+      await openBulk();
+      expect(screen.queryByTestId(`${P}-suggested-svc-sales-2`)).not.toBeInTheDocument();
+      expect(el(`${P}-select-svc-sales-2`).checked).toBe(false);
+    });
+
+    it('a legacy kind-less mapping holds the matching item', async () => {
+      loadMock.mockResolvedValue({ ...salesLoad(null), externalEntities: [item('200', 'Sales')] });
+      await openBulk();
+      expect(screen.queryByTestId(`${P}-suggested-svc-sales-2`)).not.toBeInTheDocument();
+    });
+
+    it('without a target config, a held external id excludes that option', async () => {
+      loadMock.mockResolvedValue({
+        mappings: [{ id: 'm-1', alga_entity_id: 'svc-sales-1', external_entity_id: 'Q1', metadata: {} }],
+        algaEntities: [
+          { id: 'svc-sales-1', name: 'Sales', baseName: 'Sales' },
+          { id: 'svc-sales-2', name: 'Sales', baseName: 'Sales' }
+        ],
+        externalEntities: [{ id: 'Q1', name: 'Sales' }]
+      });
+      render(
+        <AccountingMappingModuleView
+          module={buildModule({ externalTarget: undefined })}
+          context={context}
+        />
+      );
+      fireEvent.click(await screen.findByText('Bulk map'));
+      await screen.findByTestId(`${P}-grid`);
+      expect(screen.queryByTestId(`${P}-suggested-svc-sales-2`)).not.toBeInTheDocument();
     });
 
     it('drops suggestions for targets that were just saved, after the reload', async () => {

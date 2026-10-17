@@ -11,9 +11,9 @@ export async function createBrowserInvoiceTicketSourceFixture(db: Knex, identity
       await tx('recurring_service_periods').insert({
         tenant: identity.tenant, record_id: randomUUID(),
         schedule_key: buildRecurringServicePeriodScheduleKey({ tenant: identity.tenant,
-          obligationType: 'client_contract_line', obligationId: lineId, cadenceOwner: 'client', duePosition: 'arrears' }),
+          obligationId: lineId, cadenceOwner: 'client', duePosition: 'arrears' }),
         period_key: buildRecurringServicePeriodPeriodKey({ start: '2026-08-01', end: '2026-09-01' }),
-        revision: 1, obligation_id: lineId, obligation_type: 'client_contract_line', charge_family: chargeFamily,
+        revision: 1, obligation_id: lineId, charge_family: chargeFamily,
         cadence_owner: 'client', due_position: 'arrears', lifecycle_state: 'generated',
         service_period_start: '2026-08-01T00:00:00Z', service_period_end: '2026-09-01T00:00:00Z',
         invoice_window_start: '2026-09-01T00:00:00Z', invoice_window_end: '2026-10-01T00:00:00Z',

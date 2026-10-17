@@ -9,8 +9,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert'
 import { ITimePeriodSettings } from '@alga-psa/types';
 import { getActiveTimePeriodSettings, updateTimePeriodSettings, createTimePeriodSettings, deleteTimePeriodSettings } from '../../../actions/time-period-settings-actions/timePeriodSettingsActions';
-import { ISO8601String } from '@alga-psa/types';
-import { formatISO, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import {
   getErrorMessage,
@@ -20,6 +19,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type { TimePeriodPermissions } from './useTimePeriodPermissions';
 
 type FrequencyUnit = 'day' | 'week' | 'month' | 'year';
 
@@ -67,8 +67,14 @@ function isReturnedActionError(value: unknown): value is ActionMessageError | Ac
   return isActionMessageError(value) || isActionPermissionError(value);
 }
 
-const TimePeriodSettings: React.FC = () => {
+interface TimePeriodSettingsProps {
+  /** `time_period` permissions of the viewer; `manage` governs the settings CRUD. */
+  permissions: TimePeriodPermissions;
+}
+
+const TimePeriodSettings: React.FC<TimePeriodSettingsProps> = ({ permissions }) => {
   const { t } = useTranslation(['msp/settings', 'common']);
+  const canManage = permissions.manage;
   const [settings, setSettings] = useState<ITimePeriodSettings[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +87,6 @@ const TimePeriodSettings: React.FC = () => {
     frequency: 1,
     frequency_unit: defaultFrequencyUnit,
     is_active: true,
-    effective_from: formatISO(new Date()) as ISO8601String,
   });
 
   useEffect(() => {
@@ -152,7 +157,6 @@ const TimePeriodSettings: React.FC = () => {
         frequency: 1,
         frequency_unit: defaultFrequencyUnit,
         is_active: true,
-        effective_from: formatISO(new Date()) as ISO8601String,
       });
       setShowNewSettingForm(false);
       setHasAttemptedSubmit(false);
@@ -242,9 +246,10 @@ const TimePeriodSettings: React.FC = () => {
               setting={setting}
               onUpdate={handleUpdateSetting}
               onDelete={handleDeleteSetting}
+              canManage={canManage}
             />
           ))}
-          {showNewSettingForm ? (
+          {!canManage ? null : showNewSettingForm ? (
             <NewTimePeriodSettingForm
               newSetting={newSetting}
               setNewSetting={setNewSetting}
@@ -510,9 +515,10 @@ interface TimePeriodSettingItemProps {
   setting: ITimePeriodSettings;
   onUpdate: (setting: ITimePeriodSettings) => void;
   onDelete: (id: string) => void;
+  canManage: boolean;
 }
 
-const TimePeriodSettingItem: React.FC<TimePeriodSettingItemProps> = ({ setting, onUpdate, onDelete }) => {
+const TimePeriodSettingItem: React.FC<TimePeriodSettingItemProps> = ({ setting, onUpdate, onDelete, canManage }) => {
   const { t } = useTranslation(['msp/settings', 'common']);
   const { monthName, weekDayName, monthOptions, weekDayOptions, frequencyUnitOptions } = useTimePeriodLabels(t);
   const [editedSetting, setEditedSetting] = useState<ITimePeriodSettings>({
@@ -826,10 +832,12 @@ const TimePeriodSettingItem: React.FC<TimePeriodSettingItemProps> = ({ setting, 
           )}
           <p>{t('timeEntry.timePeriods.summary.effectiveFrom', { value: parseISO(setting.effective_from).toLocaleString() })}</p>
           <p>{t('timeEntry.timePeriods.summary.effectiveTo', { value: setting.effective_to ? parseISO(setting.effective_to).toLocaleString() : t('timeEntry.timePeriods.summary.noEnd') })}</p>
-          <div className="space-x-2 mt-2">
-            <Button id="edit-setting-button" onClick={() => setIsEditing(true)}>{t('common:actions.edit')}</Button>
-            <Button id="delete-setting-button" onClick={() => onDelete(setting.time_period_settings_id)} variant="destructive">{t('common:actions.delete')}</Button>
-          </div>
+          {canManage && (
+            <div className="space-x-2 mt-2">
+              <Button id="edit-setting-button" onClick={() => setIsEditing(true)}>{t('common:actions.edit')}</Button>
+              <Button id="delete-setting-button" onClick={() => onDelete(setting.time_period_settings_id)} variant="destructive">{t('common:actions.delete')}</Button>
+            </div>
+          )}
         </>
       )}
     </div>

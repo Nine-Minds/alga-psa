@@ -264,7 +264,8 @@
       "lines": "Avtalsrader",
       "overview": "Översikt",
       "pricing": "Prisscheman",
-      "simulator": "Simulera"
+      "simulator": "Simulera",
+      "discounts": "Rabatter"
     },
     "validation": {
       "billingFrequencyRequired": "Faktureringsintervall krävs.",
@@ -539,7 +540,8 @@
       "name": "Namn",
       "rate": "Taxa",
       "services": "Tjänster",
-      "type": "Typ"
+      "type": "Typ",
+      "dates": "Datum"
     },
     "configuration": {
       "description": "Inställningar som gäller för den här avtalsraden",
@@ -550,7 +552,15 @@
       "minutesValue": "{{count}} min",
       "roundUpToNearest": "Avrunda uppåt till närmaste (minuter)",
       "title": "Avtalsradsinställningar",
-      "usageInfo": "Förbrukningsbaserade avtalsrader konfigureras per tjänst med enhetstaxor."
+      "usageInfo": "Förbrukningsbaserade avtalsrader konfigureras per tjänst med enhetstaxor.",
+      "invoiceText": "Fakturaradstext",
+      "invoiceTextPlaceholder": "Visas på fakturan; radens namn används som standard",
+      "invoiceTextDefault": "Använder radens namn",
+      "startDate": "Startdatum",
+      "endDate": "Slutdatum",
+      "inheritsContract": "Avtalets start",
+      "inheritsContractEnd": "Avtalets slut",
+      "billedEditExplanation": "Efter att en rad har fakturerats kan fakturatext och raddatum fortfarande redigeras. Start- och slutdatum får inte utesluta tjänsteperioder som redan fakturerats eller reserverats för fakturering. Pris- och antalsändringar gäller framåt i tiden."
     },
     "customRate": "Anpassad",
     "description": {
@@ -566,13 +576,14 @@
       "selectAbove": "Välj en avtalsrad ovan för att komma igång."
     },
     "errors": {
-      "cannotEditWithInvoices": "Avtalsraden kan inte redigeras: det finns fakturor kopplade till avtalet. Avtalsrader kan inte redigeras när fakturor har skapats.",
       "failedToCheckEditable": "Det gick inte att kontrollera om avtalet kan redigeras",
       "failedToLoad": "Det gick inte att läsa in avtalsrader",
       "failedToRefresh": "Det gick inte att uppdatera avtalsraderna",
       "failedToRemove": "Det gick inte att ta bort avtalsraden",
       "failedToUpdate": "Det gick inte att uppdatera avtalsraden",
-      "failedToResetRate": "Det gick inte att återställa radens taxa"
+      "failedToResetRate": "Det gick inte att återställa radens taxa",
+      "protectedStartDate": "Startdatum måste vara senast {{boundary}} för att inkludera skyddad tjänstehistorik.",
+      "protectedEndDate": "Slutdatum måste vara tidigast {{boundary}} för att inkludera skyddad tjänstehistorik."
     },
     "loading": {
       "contractLines": "Läser in avtalsrader",
@@ -694,7 +705,10 @@
     },
     "fields": {
       "billingTimingQuestion": "När ska raden debiteras?",
-      "rate": "Taxa"
+      "rate": "Taxa",
+      "invoiceText": "Fakturaradstext",
+      "invoiceTextPlaceholder": "Visas på fakturan; radens namn används som standard",
+      "invoiceTextHelp": "Den här texten visas ordagrant på den återkommande fakturaraden."
     },
     "sections": {
       "billingTiming": "Faktureringstidpunkt",
@@ -887,7 +901,12 @@
     "fixedServicesPricingExplanation": "Vid paketfördelning delas radens grundavgift. Återkommande användarlicenser debiteras med avtalat antal × enhetstaxa varje period utan förbrukningsposter.",
     "recurringQuantity": "Återkommande antal",
     "allocationQuantity": "Fördelningsantal",
-    "bundleBaseRateHelp": "Återkommande avgift för tjänster med paketpris. Återkommande användarlicenser debiteras separat med antal × enhetstaxa."
+    "bundleBaseRateHelp": "Återkommande avgift för tjänster med paketpris. Återkommande användarlicenser debiteras separat med antal × enhetstaxa.",
+    "invoiceTextLabel": "Fakturaradstext",
+    "invoiceTextPlaceholder": "Visas på fakturan; radens namn används som standard",
+    "invoiceTextHelp": "Den här texten visas ordagrant på den återkommande fakturaraden.",
+    "startDateLabel": "Radens startdatum",
+    "endDateLabel": "Radens slutdatum"
   },
   "pricingSchedules": {
     "list": {
@@ -1230,6 +1249,7 @@
       "usageBasedPlans": "Förbrukningsbaserade avtalsrader",
       "recurringQuantityLabel": "Återkommande antal:",
       "unitRateLabel": "Enhetspris:",
+      "hourlyRateLabel": "Timtaxa:",
       "unitRateFromCatalog": "Katalogpris i kundens valuta",
       "unitAmountLabel": "Återkommande belopp:",
       "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
@@ -1259,6 +1279,9 @@
     },
     "loadingTemplate": "Läser in mall…",
     "servicesLabel": "Tjänster",
+    "summary": {
+      "clientCurrency": "Kundens valuta"
+    },
     "templateBadge": "Mall",
     "templateNotFound": "Avtalsmallen hittades inte",
     "templateSnapshotTitle": "Ögonblicksbild av mallen",
@@ -1303,6 +1326,21 @@
       "hypothetical": "Hypotetisk kundprofil",
       "open": "Simulera",
       "title": "Mallsimulering"
+    },
+    "discounts": {
+      "title": "Standardrabatter för avtal",
+      "help": "Varje kundavtal får en egen redigerbar kopia. Avtalsövergripande rabatter gäller för avtalets berättigade rader.",
+      "invalid": "Ange ett namn, ett positivt värde och ett startdatum.",
+      "remove": "Ta bort",
+      "name": "Rabattnamn",
+      "percentage": "Procent",
+      "fixed": "Fast belopp",
+      "value": "Värde",
+      "startDate": "Gäller från",
+      "endDate": "Gäller till (valfritt)",
+      "add": "Lägg till standardrabatt",
+      "chooseLine": "Välj en mallrad",
+      "chooseService": "Välj en tjänst"
     }
   },
   "quickStart": {
@@ -1423,6 +1461,7 @@
       "hourlyServices": "Timdebiterade tjänster",
       "products": "Produkter",
       "reviewCreate": "Granska och skapa",
+      "templateLines": "Mallrader",
       "usageBasedServices": "Förbrukningsbaserade tjänster"
     },
     "title": {
@@ -1461,7 +1500,8 @@
       "unsupportedRecurringAuthoringCombination": "Den här kombinationen stöds inte för återkommande tjänster av typen {{lineType}}: schemat för avtalets årsdag stöder för närvarande faktureringsintervallen {{supportedFrequencies}}. {{billingFrequency}} stöds inte ännu. Använd ett av de intervall som stöds eller fakturera enligt kundens faktureringsschema.",
       "recurringUnitRateRequired": "Ange ett enhetspris för varje återkommande tjänst.",
       "recurringQuantityWholeNumber": "Det återkommande antalet måste vara ett heltal.",
-      "fixedQuantityInvalid": "Antalet måste vara noll eller större."
+      "fixedQuantityInvalid": "Antalet måste vara noll eller större.",
+      "fixedLineNoService": "Den fasta raden \"{{lineName}}\" har ett återkommande belopp men ingen tjänst att fakturera det på. Lägg till en tjänst innan du slutför."
     },
     "nav": {
       "back": "Tillbaka",
@@ -1475,6 +1515,27 @@
     "simulation": {
       "description": "Testa det osparade utkastet med antagen aktivitet. Simuleringen sparar eller utfärdar inget.",
       "title": "Simulera innan du skapar"
+    },
+    "fixedLines": {
+      "addLine": "Lägg till fast rad",
+      "nameLabel": "Radnamn (valfritt)",
+      "namePlaceholder": "Fast rad {{number}}",
+      "removeLine": "Ta bort fast rad",
+      "noServiceWarning": "Den här raden har ett återkommande belopp men ingen tjänst att fakturera det på. Lägg till en tjänst innan du slutför; du kan fortfarande spara den som utkast."
+    },
+    "recurringChange": {
+      "title": "Bekräfta ändring av återkommande summa",
+      "message": "Detta ändrar avtalets uppskattade månatliga återkommande värde från {{before}} till {{after}}.",
+      "confirm": "Bekräfta och fortsätt",
+      "cancel": "Tillbaka"
+    },
+    "discounts": {
+      "help": "Avtalsövergripande rabatter gäller varje berättigad avgift som avtalet fakturerar. De skapas tillsammans med avtalet när du slutför konfigurationen, och simuleringen nedan prissätter dem.",
+      "draftDialog": {
+        "title": "Spara utkastet utan rabatter?",
+        "message": "Ett sparat utkast behåller bara sina rader, så rabatterna som lagts till här sparas inte med det. Slutför konfigurationen för att skapa dem tillsammans med avtalet, eller lägg till dem senare på avtalets flik Rabatter.",
+        "confirm": "Spara utkastet ändå"
+      }
     }
   },
   "wizardBasics": {
@@ -1655,6 +1716,10 @@
       "recurringQuantityLabel": "Återkommande antal",
       "allocationQuantityLabel": "Tilldelningsantal",
       "noCurrencyPrice": "Inget pris i {{currency}} i katalogen. Ange ett enhetspris."
+    },
+    "advanceSuggestion": {
+      "message": "Vid efterskottsfakturering kan den här raden inte faktureras förrän dess första tjänsteperiod har avslutats. Vid förskottsfakturering enligt avtalets intervall faktureras den i stället på startdatumet.",
+      "action": "Fakturera i förskott enligt avtalets intervall"
     }
   },
   "wizardProducts": {
@@ -1784,7 +1849,8 @@
       "fixedFeeServices": "Tjänster med fast avgift",
       "products": "Produkter",
       "hourlyServices": "Timdebiterade tjänster",
-      "usageBasedServices": "Förbrukningsbaserade tjänster"
+      "usageBasedServices": "Förbrukningsbaserade tjänster",
+      "fixedFeeServicesNumbered": "Tjänster med fast avgift ({{number}})"
     },
     "fields": {
       "client": "Kund",
@@ -1862,16 +1928,6 @@
         "contractAnniversary": "Avtalets årsdag",
         "clientBillingSchedule": "Kundens faktureringsschema"
       },
-      "firstInvoice": {
-        "contract": {
-          "advance": "Första fakturan: fakturera i det intervall enligt avtalets årsdag som inleder den första tjänsteperioden som omfattas.",
-          "arrears": "Första fakturan: fakturera i nästa intervall enligt avtalets årsdag efter att den första tjänsteperioden som omfattas har avslutats."
-        },
-        "client": {
-          "advance": "Första fakturan: fakturera i den första faktureringsperioden i kundens faktureringsschema som omfattar tjänsteperioden.",
-          "arrears": "Första fakturan: fakturera i nästa faktureringsperiod i kundens faktureringsschema efter att den första tjänsteperioden som omfattas har avslutats."
-        }
-      },
       "partialPeriod": {
         "enabled": "För delperioder anpassas den återkommande avgiften till den del av tjänsteperioden som omfattas.",
         "disabled": "För delperioder behålls hela den återkommande avgiften även när avtalsdatumen infaller under en tjänsteperiod."
@@ -1914,7 +1970,8 @@
     "total": {
       "title": "Uppskattat månadsbelopp",
       "description": "Endast fasta avgifter. Timdebiterade och förbrukningsbaserade tjänster debiteras separat efter faktisk förbrukning.",
-      "perMonth": "per månad"
+      "perMonth": "per månad",
+      "savedDraftValue": "Sparat utkastvärde: {{amount}}"
     },
     "finalChecklist": {
       "title": "Innan du slutför:",
@@ -1923,6 +1980,29 @@
       "itemDates": "Kontrollera start- och slutdatum",
       "itemEditLater": "Kom ihåg: du kan redigera avtalet senare vid behov"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Mallrader",
+    "description": "Varje rad i mallen skapas på avtalet med eget namn, faktureringsintervall, egna tjänster och taxor. Ändra något nedan för att åsidosätta det enbart för det här avtalet; orörda värden kopieras från mallen. Taxorna anges i {{currency}}.",
+    "loading": "Läser in mallrader…",
+    "noTemplate": "Välj en mall i det första steget.",
+    "emptyTemplate": "Den här mallen saknar rader, så det finns inget att skapa.",
+    "bucketPools_one": "{{count}} timpott kopierad från mallen",
+    "bucketPools_other": "{{count}} timpottar kopierade från mallen",
+    "lineName": "Radnamn",
+    "billingFrequency": "Faktureringsintervall",
+    "fixedBaseRate": "Fast grundtaxa",
+    "fixedBaseRateHint": "Mallens taxa {{rate}}. Lämna tomt för att behålla den.",
+    "fixedBaseRateNone": "Mallen anger ingen radtaxa; tjänsterna följer sina katalogpriser.",
+    "minimumBillableTime": "Minsta debiterbara tid (minuter)",
+    "roundUpToNearest": "Avrunda uppåt till närmaste (minuter)",
+    "quantity": "Antal",
+    "hourlyRate": "Timtaxa",
+    "unitRate": "Enhetstaxa",
+    "serviceRate": "Tjänstetaxa",
+    "noCurrencyPrice": "Inget pris i {{currency}} för den här tjänsten. Ange en taxa, annars kan avtalet inte skapas.",
+    "templateRateNote": "Från mallen (beloppet har ingen valutamärkning).",
+    "reviewTitle": "Rader som skapats från mallen"
   },
   "templateWizard": {
     "title": {
@@ -2555,7 +2635,8 @@
       "conflict": "Avtalsändringen står i konflikt med en befintlig post. Ladda om sidan och försök igen.",
       "notAllowed": "Ett av avtalsvärdena är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt avtalsfält saknas.",
-      "missingFieldNamed": "Ett obligatoriskt avtalsfält saknas: {{field}}."
+      "missingFieldNamed": "Ett obligatoriskt avtalsfält saknas: {{field}}.",
+      "deleteFailed": "Något gick fel när avtalet skulle raderas. Ange referensen {{ref}} när du kontaktar supporten."
     },
     "wizard": {
       "permissions": {
@@ -2571,7 +2652,10 @@
       "missingClient": "Avtalsutkastet saknar kundtilldelning",
       "invalidStartDate": "Avtalsutkastet har ett ogiltigt startdatum",
       "recordInvalid": "En av de valda posterna i avtalsguiden är inte längre giltig. Ladda om sidan och försök igen.",
-      "duplicate": "En matchande post finns redan i avtalsguiden."
+      "duplicate": "En matchande post finns redan i avtalsguiden.",
+      "resumeUnsupportedShape": "Det här utkastet kan inte återupptas i guiden utan att dess priser ändras: {{lines}}",
+      "fixedLineNoService": "Den fasta raden \"{{lineName}}\" har ett återkommande belopp men ingen tjänst att fakturera det på. Lägg till en tjänst innan du slutför.",
+      "standingTerms": "Det här utkastet har löpande rabattvillkor. Redigera flikarna Rader och Rabatter för att bevara villkoren."
     },
     "pricingSchedule": {
       "endAfterEffective": "Slutdatum måste vara efter datumet då ändringen börjar gälla",
@@ -2596,6 +2680,104 @@
       "activatedContractIdRequired": "ID för det aktiverade förnyelseavtalet krävs.",
       "contractNotActive": "Det aktiverade förnyelseavtalet är inte längre aktivt. Ladda om sidan och försök igen.",
       "manualRetryDueOnly": "Manuellt återförsök är bara tillgängligt för förnyelsecykler vars förnyelsedatum har nåtts."
+    }
+  },
+  "wizardFirstInvoice": {
+    "loading": "Kontrollerar kundens faktureringsschema…",
+    "arrearsPreviewNote": "Fram till dess finns det inget att fakturera för den här raden i en förhandsgranskning av fakturan för kunden.",
+    "unavailable": {
+      "missingStartDate": "Välj ett startdatum för att se när avtalet faktureras första gången.",
+      "unsupportedFrequency": "Inget datum för första fakturan visas eftersom fakturering enligt avtalets intervall inte stöder den här frekvensen. Välj en frekvens som stöds eller fakturera enligt kundens schema.",
+      "clientSchedule": "Den här raden faktureras enligt kundens faktureringsschema. Schemat kunde inte läsas in, så inget datum visas."
+    },
+    "contract": {
+      "arrears": "Faktureras i efterskott enligt avtalets intervall: den första fakturan blir tillgänglig {{date}}, när den första tjänsteperioden avslutas.",
+      "advance": "Faktureras i förskott enligt avtalets intervall: den första fakturan är tillgänglig från {{date}}, avtalets startdatum."
+    },
+    "client": {
+      "arrears": "Faktureras i efterskott enligt kundens faktureringsschema: den första fakturan blir tillgänglig {{date}}, när kundens aktuella faktureringsperiod avslutas.",
+      "advance": "Faktureras i förskott enligt kundens faktureringsschema: den första fakturan är tillgänglig från {{date}}, början av den faktureringsperiod hos kunden som omfattar avtalets startdatum."
+    }
+  },
+  "wizardCreated": {
+    "title": "Avtal skapat",
+    "heading": "{{contractName}} har skapats",
+    "firstInvoiceHeading": "Första fakturan",
+    "done": "Klar"
+  },
+  "sellHourBlockNote": {
+    "text": "En timpott i avtalet fakturerar bara överförbrukning. Om du vill ta betalt för ett timblock i förskott använder du Sälj timblock under Timblock på fliken Faktureringsöversikt för kunden."
+  },
+  "contractDiscounts": {
+    "title": "Rabatter",
+    "description": "Varje kundavtal har en egen redigerbar kopia. Avtalsövergripande rabatter gäller för berättigade avgifter på avtalets representerade rader.",
+    "loading": "Läser in rabatter…",
+    "empty": "Inga rabatter har konfigurerats för det här avtalet ännu.",
+    "actions": {
+      "add": "Lägg till rabatt",
+      "attach": "Koppla",
+      "detach": "Koppla bort från det här avtalet",
+      "toggleActive": "Ändra rabattstatus",
+      "pickShared": "Koppla befintlig rabatt",
+      "cancel": "Avbryt",
+      "save": "Spara",
+      "saving": "Sparar…"
+    },
+    "columns": {
+      "name": "Namn",
+      "value": "Värde",
+      "scope": "Omfattning",
+      "line": "Avtalsrad",
+      "dates": "Datum",
+      "status": "Status"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "attachment": {
+      "shared": "Avtalskoppling",
+      "line": "Radkoppling"
+    },
+    "scopes": {
+      "invoice": "Alla berättigade avgifter",
+      "contract": "Det här avtalet",
+      "service": "En tjänst",
+      "line": "En avtalsrad"
+    },
+    "values": {
+      "unnamedLine": "Namnlös rad"
+    },
+    "types": {
+      "percentage": "Procent",
+      "fixed": "Fast belopp"
+    },
+    "fields": {
+      "name": "Namn",
+      "namePlaceholder": "t.ex. Lojalitetsrabatt 10 %",
+      "type": "Typ",
+      "percentValue": "Procent (0–100)",
+      "fixedValue": "Belopp",
+      "startDate": "Startdatum",
+      "endDate": "Slutdatum",
+      "line": "Avtalsrad",
+      "linePlaceholder": "Valfritt: begränsa rabatten till en rad",
+      "scope": "Omfattning",
+      "priority": "Prioritet",
+      "priorityPlaceholder": "Valfritt",
+      "service": "Tjänst",
+      "servicePlaceholder": "Välj en tjänst",
+      "active": "Aktiv"
+    },
+    "dialog": {
+      "createTitle": "Lägg till rabatt",
+      "editTitle": "Redigera rabatt",
+      "contractAttachmentLineScopeLocked": "Den här rabatten är kopplad till kundavtalet. Koppla bort den och skapa en radbegränsad rabatt om den bara ska gälla en rad."
+    },
+    "sharedEditNotice": "Ändringar påverkar bara det här kundavtalet. Ändringar i mallen påverkar inte befintliga avtalskopior.",
+    "errors": {
+      "loadFailed": "Det gick inte att läsa in rabatterna.",
+      "saveFailed": "Det gick inte att spara rabatten."
     }
   }
 }

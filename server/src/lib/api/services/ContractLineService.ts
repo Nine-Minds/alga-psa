@@ -18,7 +18,7 @@ import { getFixedServiceBasisIssue, isUnitFixedService } from '@alga-psa/billing
 import ContractLine from '@alga-psa/billing/models/contractLine';
 import ContractLineFixedConfig from '@alga-psa/billing/models/contractLineFixedConfig';
 import { ContractLineServiceConfigurationService } from '@alga-psa/billing/services';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers';
 import {
   addContractLine as repositoryAddContractLine,
   removeContractLine as repositoryRemoveContractLine,
@@ -371,7 +371,8 @@ export class ContractLineService extends BaseService<IContractLine> {
         };
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: CONTRACT_LINE_CREATED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'CONTRACT_LINE_CREATED',
         payload: {
           tenantId: context.tenant,
@@ -1213,6 +1214,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         .insert(contractLineData)
         .returning('*');
 
+      // LEVERAGE: pattern template-clone-substrate — legacy clone path; see cloneTemplateLineToContract (alga-2026-0002371).
       // Clone services and configuration from template
       await cloneTemplateContractLine(trx, {
         tenant: context.tenant,

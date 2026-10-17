@@ -1,3 +1,5 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
+
 function snakeToCamel(value: string): string {
   return value.replace(/_([a-z])/g, (_, c) => String(c).toUpperCase());
 }
@@ -87,15 +89,15 @@ export function buildAssetCreatedPayload(params: {
   createdAt?: Date | string;
   assetType?: string;
   serialNumber?: string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'ASSET_CREATED'> {
+  return builtWorkflowPayload('ASSET_CREATED', {
     assetId: params.assetId,
     ...(params.clientId ? { clientId: params.clientId } : {}),
     ...(params.createdByUserId ? { createdByUserId: params.createdByUserId } : {}),
     ...(params.createdAt ? { createdAt: normalizeChangeValue(params.createdAt) } : {}),
     ...(params.assetType ? { assetType: params.assetType } : {}),
     ...(params.serialNumber ? { serialNumber: params.serialNumber } : {}),
-  };
+  });
 }
 
 export function buildAssetUpdatedPayload(params: {
@@ -105,7 +107,7 @@ export function buildAssetUpdatedPayload(params: {
   updatedPaths: string[];
   updatedByUserId?: string;
   updatedAt?: Date | string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'ASSET_UPDATED'> {
   const updatedFields: string[] = [];
   const changes: Record<string, { previous: unknown; new: unknown }> = {};
 
@@ -122,13 +124,13 @@ export function buildAssetUpdatedPayload(params: {
     };
   }
 
-  return {
+  return builtWorkflowPayload('ASSET_UPDATED', {
     assetId: params.assetId,
     ...(params.updatedByUserId ? { updatedByUserId: params.updatedByUserId } : {}),
     ...(params.updatedAt ? { updatedAt: normalizeChangeValue(params.updatedAt) } : {}),
     ...(updatedFields.length ? { updatedFields } : {}),
     ...(Object.keys(changes).length ? { changes } : {}),
-  };
+  });
 }
 
 export function buildAssetAssignedPayload(params: {
@@ -138,15 +140,15 @@ export function buildAssetAssignedPayload(params: {
   newOwnerType: string;
   newOwnerId: string;
   assignedAt?: Date | string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'ASSET_ASSIGNED'> {
+  return builtWorkflowPayload('ASSET_ASSIGNED', {
     assetId: params.assetId,
     ...(params.previousOwnerType ? { previousOwnerType: params.previousOwnerType } : {}),
     ...(params.previousOwnerId ? { previousOwnerId: params.previousOwnerId } : {}),
     newOwnerType: params.newOwnerType,
     newOwnerId: params.newOwnerId,
     ...(params.assignedAt ? { assignedAt: normalizeChangeValue(params.assignedAt) } : {}),
-  };
+  });
 }
 
 export function buildAssetUnassignedPayload(params: {
@@ -155,14 +157,14 @@ export function buildAssetUnassignedPayload(params: {
   previousOwnerId: string;
   unassignedAt?: Date | string;
   reason?: string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'ASSET_UNASSIGNED'> {
+  return builtWorkflowPayload('ASSET_UNASSIGNED', {
     assetId: params.assetId,
     previousOwnerType: params.previousOwnerType,
     previousOwnerId: params.previousOwnerId,
     ...(params.unassignedAt ? { unassignedAt: normalizeChangeValue(params.unassignedAt) } : {}),
     ...(params.reason ? { reason: params.reason } : {}),
-  };
+  });
 }
 
 export function buildAssetWarrantyExpiringPayload(params: {
@@ -170,12 +172,12 @@ export function buildAssetWarrantyExpiringPayload(params: {
   expiresAt: Date | string;
   daysUntilExpiry: number;
   clientId?: string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'ASSET_WARRANTY_EXPIRING'> {
+  return builtWorkflowPayload('ASSET_WARRANTY_EXPIRING', {
     assetId: params.assetId,
     expiresAt: normalizeChangeValue(params.expiresAt),
     daysUntilExpiry: params.daysUntilExpiry,
     ...(params.clientId ? { clientId: params.clientId } : {}),
-  };
+  });
 }
 

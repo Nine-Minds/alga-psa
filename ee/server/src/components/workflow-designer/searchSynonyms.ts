@@ -21,7 +21,7 @@ export const WORKFLOW_SEARCH_SYNONYM_GROUPS: readonly (readonly string[])[] = [
   ['asset', 'assets', 'configuration', 'configurations'],
   ['client', 'clients', 'customer', 'customers', 'company', 'companies', 'account', 'accounts'],
   ['contact', 'contacts', 'person', 'people', 'end user'],
-  ['user', 'users', 'technician', 'technicians', 'tech', 'techs', 'agent', 'agents', 'staff', 'member'],
+  ['user', 'users', 'technician', 'technicians', 'tech', 'techs', 'agent', 'agents', 'staff', 'member', 'engineer', 'engineers', 'resource', 'resources'],
   ['team', 'teams', 'group', 'groups'],
   ['priority', 'priorities', 'urgency', 'severity', 'urgent', 'critical'],
   ['status', 'statuses', 'state', 'stage'],

@@ -22,13 +22,16 @@ describe('contract authoring decoupling checklist guards', () => {
   });
 
   it('T004: template/draft resume paths preserve decoupled selections and mode-default prefill support', () => {
-    expect(contractWizardActionsSource).toContain('getContractTemplateSnapshotForClientWizard');
+    expect(contractWizardActionsSource).toContain('getContractTemplateLinesForClientWizard');
     expect(contractWizardActionsSource).toContain('getDraftContractForResume');
     expect(contractWizardActionsSource).toContain('fetchModeDefaultRatesByServiceId');
   });
 
   it('T005: contract-line service attach validates by target line mode instead of service-type billing coupling', () => {
-    expect(contractLineServiceActionsSource).toContain('resolveContractLineServiceConfigurationType(');
+    // Live and template lines share one policy resolver:
+    // resolveContractLineServiceConfig wraps
+    // resolveContractLineServiceConfigurationType plus the per-type defaults.
+    expect(contractLineServiceActionsSource).toMatch(/resolveContractLineServiceConfig(?:urationType)?\(/);
     expect(contractLineServiceActionsSource).not.toContain('service_type_billing_method');
     expect(contractLineServiceActionsSource).not.toContain('Only fixed billing method services can be attached to this template line.');
   });

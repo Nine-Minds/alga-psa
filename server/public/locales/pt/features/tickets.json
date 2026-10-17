@@ -52,7 +52,6 @@
     "button": "Filtros",
     "unassigned": "Não atribuído",
     "category": "Filtrar por categoria",
-    "clearFilters": "Limpar filtros",
     "assignee": "Responsável",
     "allAssignees": "Todos os responsáveis",
     "responseState": "Estado de resposta",
@@ -136,6 +135,7 @@
     "assignedTo": "Atribuído a",
     "requester": "Solicitante",
     "client": "Cliente",
+    "contact": "Contato",
     "dueDate": "Data de vencimento",
     "resolution": "Resolução",
     "timeSpent": "Tempo gasto",
@@ -177,6 +177,8 @@
     "tags": "Etiquetas",
     "sla": "SLA",
     "updated": "Atualizado",
+    "updatedAtBy": "Atualizado {{time}} por {{name}}",
+    "byName": "por {{name}}",
     "openInNewTab": "Abrir em nova aba",
     "actions": "Ações",
     "linkedAssets": "Ativos vinculados",
@@ -211,7 +213,10 @@
     "printOptions": "Opções de impressão",
     "duplicate": "Duplicar",
     "rowActions": "Ações",
-    "openMenu": "Abrir menu"
+    "openMenu": "Abrir menu",
+    "moreActions": "Mais ações",
+    "createTemplate": "Criar modelo a partir do ticket",
+    "createWorkflowFromTicket": "Criar fluxo de trabalho a partir do ticket"
   },
   "messages": {
     "noTickets": "Nenhum ticket encontrado",
@@ -310,7 +315,8 @@
     "errorWithMessage": "Erro: {{message}}",
     "billingProfileUpdated": "Perfil de faturamento atualizado",
     "updateBillingProfileFailed": "Falha ao atualizar o perfil de faturamento",
-    "scheduleOpenFailed": "Não foi possível abrir o agendador"
+    "scheduleOpenFailed": "Não foi possível abrir o agendador",
+    "sharedWorkspaceReadOnly": "Você vê este chamado porque ele trata de um dispositivo de um espaço compartilhado. Apenas quem o abriu pode adicionar conteúdo."
   },
   "conversation": {
     "comments": "Comentários",
@@ -376,7 +382,13 @@
     "schedule": "Agendar",
     "scheduled": "Agendado",
     "showMore": "Mostrar mais",
-    "showLess": "Mostrar menos"
+    "showLess": "Mostrar menos",
+    "ccBcc": "Cc/Cco",
+    "cc": "Cc",
+    "bcc": "Cco",
+    "ccBccInvalid": "Corrija os endereços destacados antes de enviar.",
+    "ccBccTooMany": "No máximo {{max}} destinatários Cc e Cco podem ser copiados em um comentário.",
+    "ccBccNotSentOnInternal": "Cc e Cco não são enviados com uma nota interna. Desative Interna para usá-los."
   },
   "responseState": {
     "awaitingYourResponse": "Aguardando sua resposta",
@@ -441,7 +453,8 @@
       "loading": "Carregando...",
       "clientNotFound": "Cliente não encontrado.",
       "clientRendererMissing": "Os detalhes do cliente não estão disponíveis neste contexto.",
-      "clientLoadFailed": "Falha ao carregar o cliente."
+      "clientLoadFailed": "Falha ao carregar o cliente.",
+      "contactRendererMissing": "Os detalhes do contato não estão disponíveis neste contexto."
     },
     "filters": {
       "allAssignees": "Todos os responsáveis",
@@ -751,6 +764,8 @@
       "failure": "Falha ao atualizar o status dos tickets selecionados",
       "failedHeading": "Não foi possível atualizar o status nos seguintes tickets:",
       "resolutionLabel": "Comentário de resolução (opcional)",
+      "resolutionLabelRequired": "Comentário de resolução",
+      "resolutionRequiredHint": "Este quadro exige um comentário de resolução antes de os tickets poderem ser fechados.",
       "resolutionPlaceholder": "Descreva como esses tickets foram resolvidos",
       "resolutionHelper": "Salvo como a resolução em cada ticket selecionado e atende aos quadros que exigem uma antes do fechamento."
     },
@@ -829,7 +844,16 @@
     "duplicateChecklistHeading": "Lista de verificação de #{{number}}",
     "duplicateChecklistRequired": "(obrigatório)",
     "duplicateCopyChecklist": "Copiar itens da lista de verificação (desmarcados)",
-    "duplicateCustomFieldsNote": "Os valores dos campos personalizados são copiados de #{{number}}."
+    "duplicateCustomFieldsNote": "Os valores dos campos personalizados são copiados de #{{number}}.",
+    "templateLabel": "Modelo",
+    "templateNone": "Nenhum",
+    "templateLoadFailed": "Não foi possível carregar o modelo. Tente novamente.",
+    "fromTemplatePill": "A partir do modelo: {{name}}",
+    "templateChecklistHeading": "Checklist do modelo: {{name}}",
+    "templateCustomFieldsNote": "Os valores dos campos personalizados são copiados do modelo.",
+    "templateReplaceTitle": "Substituir as suas alterações?",
+    "templateReplaceMessage": "Aplicar um modelo substitui o título, a descrição e outros campos que preencheu.",
+    "templateReplaceConfirm": "Aplicar modelo"
   },
   "itil": {
     "calculatedPriority": "Prioridade (calculada)",
@@ -968,9 +992,6 @@
     "closeTicketNowTitle": "Fechar o ticket agora?",
     "closeTicketNowPrompt": "Este comentário agora é a resolução. Escolha um status de fechamento para fechar o ticket ou deixe-o aberto.",
     "leaveTicketOpen": "Deixar aberto",
-    "timerActiveElsewhereTitle": "Timer ativo em outra janela",
-    "timerTakeoverMessage": "O timer deste ticket está ativo em outra janela. Deseja assumir e substituí-lo aqui?",
-    "replaceHere": "Substituir aqui",
     "noActiveTimePeriodTitle": "Nenhum período de tempo ativo",
     "noActiveTimePeriodMessage": "Nenhum período de tempo ativo encontrado. Os períodos de tempo precisam ser configurados no painel de cobrança antes de adicionar entradas de tempo.",
     "goToTimePeriodsSetup": "Ir para a configuração de períodos de tempo",
@@ -986,15 +1007,7 @@
   },
   "properties": {
     "timeEntry": "Entrada de tempo",
-    "ticketTimer": "Temporizador de tickets - #{{ticketNumber}}",
-    "timerActiveElsewhere": "Timer ativo em outra janela",
-    "start": "Começar",
-    "pause": "Pausa",
-    "reset": "Reiniciar",
-    "enterWorkDescription": "Insira a descrição do trabalho",
-    "liveTimerDisabled": "O cronômetro do ticket ao vivo está desativado para este quadro.",
     "addTimeEntry": "Adicionar entrada de tempo",
-    "trackedIntervals": "Intervalos rastreados",
     "contactInfo": "Informações de contato",
     "noContactSelected": "Nenhum contato selecionado",
     "selectOrChangeContact": "Selecione ou altere o contato",
@@ -1584,7 +1597,8 @@
     },
     "autoClose": "Será fechado automaticamente em {{date}}, a menos que haja nova atividade.",
     "autoCloseWarned": "O cliente foi avisado.",
-    "duplicatedFrom": "Duplicado de #{{number}}"
+    "duplicatedFrom": "Duplicado de #{{number}}",
+    "fromTemplate": "A partir do modelo: {{name}}"
   },
   "invalidTicketData": "Dados de ticket inválidos",
   "timeEntries": {
@@ -1739,9 +1753,7 @@
       "viewAll": "Ver todos",
       "viewAllCount": "Ver todos os {{count}}",
       "timeLogged": "Tempo registrado",
-      "workDescription": "Descrição do trabalho",
       "addTimeEntry": "Adicionar entrada de tempo",
-      "trackedIntervals": "Intervalos rastreados",
       "teamAndWatchers": "Equipe e observadores",
       "addAgent": "Adicionar um agente…",
       "timeline": "Linha do tempo",
@@ -1752,7 +1764,6 @@
       "opened": "Aberto",
       "viaSource": "via {{source}}",
       "noContactOnTicket": "Nenhum contato neste ticket",
-      "whatAreYouWorkingOn": "No que você está trabalhando?",
       "agentFallback": "Agente",
       "removeAgent": "Remover {{name}}",
       "noAdditionalAgents": "Nenhum agente adicional",
@@ -1779,8 +1790,6 @@
       "acrossEntries_one": "em {{count}} entrada",
       "acrossEntries_other": "em {{count}} entradas",
       "team": "Equipe",
-      "startTimer": "Iniciar cronômetro",
-      "timerLockedHint": "Outro cronômetro já está em execução",
       "billable": "Faturável",
       "nothingBillable": "Nada faturável ainda",
       "editContact": "Editar contato",
@@ -1792,6 +1801,7 @@
       "setClientToAddContact": "Defina um cliente primeiro para adicionar um contato",
       "logInteraction": "Registrar chamada ou e-mail",
       "changeClient": "Alterar cliente",
+      "changeLocation": "Alterar localização",
       "teamFallback": "Equipe",
       "teamSectionLabel": "Atribuir uma equipe",
       "addAgentsOrTeam": "Adicionar agentes ou uma equipe…",
@@ -1900,7 +1910,8 @@
       "noStatusChange": "Não alterar o status",
       "showAllActivity": "Mostrar toda a atividade",
       "collapseActivity": "Recolher atividade anterior",
-      "replyingToComment": "Respondendo a {{name}}"
+      "replyingToComment": "Respondendo a {{name}}",
+      "createdFromTemplate": "{{actor}} criou este ticket a partir do modelo \"{{name}}\""
     }
   },
   "notifications": {
@@ -2298,6 +2309,102 @@
       "monthlyOnDay": "{{every}} no {{day}}",
       "monthlyOnNthWeekday": "{{every}}, {{ordinal}}: {{weekday}}",
       "yearly": "Todo ano em {{day}} de {{month}}"
+    }
+  },
+  "stopwatch": {
+    "boardDisabled": "O cronômetro está desativado para este quadro.",
+    "pausedElsewhereTicket": "Pausado em outro ticket: {{label}}",
+    "runningElsewhereTicket": "Em andamento em outro ticket: {{label}}",
+    "pausedElsewhereTask": "Pausado em outra tarefa: {{label}}",
+    "runningElsewhereTask": "Em andamento em outra tarefa: {{label}}",
+    "switch": "Mudar para cá",
+    "start": "Iniciar cronômetro",
+    "resume": "Retomar cronômetro",
+    "pause": "Pausar cronômetro",
+    "stop": "Parar e registrar o tempo",
+    "discard": "Descartar cronômetro",
+    "pausedHint": "Pausado. Retome para continuar registrando ou pare para registrar o tempo.",
+    "workDescription": "Descrição do trabalho",
+    "whatAreYouWorkingOn": "No que você está trabalhando?"
+  },
+  "templates": {
+    "loading": "A carregar…",
+    "list": {
+      "title": "Modelos de tickets",
+      "new": "Novo modelo",
+      "empty": "Ainda não há modelos de tickets. Abra um ticket e escolha \"Criar modelo a partir do ticket\", ou crie um de raiz.",
+      "showInactive": "Mostrar inativos",
+      "deleted": "Modelo eliminado",
+      "deleteTitle": "Eliminar modelo",
+      "deleteMessage": "Eliminar \"{{name}}\"? Os tickets já criados a partir dele não são alterados.",
+      "columns": {
+        "name": "Nome",
+        "title": "Título do ticket",
+        "board": "Quadro",
+        "checklist": "Itens da checklist",
+        "status": "Estado"
+      }
+    },
+    "status": {
+      "active": "Ativo",
+      "inactive": "Inativo"
+    },
+    "actions": {
+      "edit": "Editar",
+      "newTicket": "Novo ticket a partir do modelo",
+      "activate": "Ativar",
+      "deactivate": "Desativar",
+      "delete": "Eliminar",
+      "cancel": "Cancelar"
+    },
+    "sections": {
+      "details": "Modelo",
+      "ticket": "Ticket",
+      "checklist": "Lista de verificação",
+      "customFields": "Campos personalizados"
+    },
+    "fields": {
+      "name": "Nome do modelo",
+      "notes": "Notas",
+      "notesHelp": "Apenas para a sua equipa. Não é copiado para os tickets.",
+      "title": "Título do ticket",
+      "description": "Descrição",
+      "descriptionPlaceholder": "Descrição"
+    },
+    "checklist": {
+      "empty": "Sem itens de checklist.",
+      "itemName": "Item da checklist",
+      "required": "Obrigatório",
+      "moveUp": "Mover para cima",
+      "moveDown": "Mover para baixo",
+      "remove": "Remover item",
+      "add": "Adicionar item"
+    },
+    "customFields": {
+      "empty": "Sem valores de campos personalizados.",
+      "name": "Nome do campo",
+      "value": "Valor",
+      "remove": "Remover campo",
+      "add": "Adicionar campo"
+    },
+    "editor": {
+      "back": "Modelos de tickets",
+      "newTitle": "Novo modelo de ticket",
+      "created": "Modelo criado",
+      "saved": "Modelo guardado",
+      "saving": "A guardar…",
+      "save": "Guardar",
+      "fromTicket": "Preenchido a partir do ticket #{{number}}. Nada é guardado até clicar em Guardar.",
+      "inlineImages": "A descrição contém imagens que pertencem ao ticket de origem. Podem deixar de ser apresentadas se esse ticket for eliminado. Remova-as ou carregue-as novamente se o modelo deve sobreviver ao ticket.",
+      "viewOnly": "Pode ver este modelo, mas não o alterar.",
+      "referenceProblems": "Alguns campos deste modelo apontam para itens que já não existem. Ficam em branco quando o modelo é usado. Corrija-os e guarde:"
+    },
+    "errors": {
+      "notFound": "Modelo de ticket não encontrado",
+      "duplicateName": "Já existe um modelo com o nome {{name}}",
+      "invalidReferences": "O modelo refere um quadro, categoria ou prioridade que não está disponível",
+      "notAvailable": "Os modelos de tickets não estão disponíveis",
+      "subcategoryNeedsCategory": "Uma subcategoria requer uma categoria"
     }
   }
 }

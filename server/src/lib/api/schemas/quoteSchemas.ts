@@ -81,6 +81,8 @@ export const createQuoteApiSchema = z.object({
   quote_date: quoteDateSchema.optional().nullable(),
   valid_until: quoteDateSchema.optional().nullable(),
   po_number: z.string().trim().max(255).optional().nullable(),
+  recurring_section_title: z.string().trim().max(255).optional().nullable().transform((value) => value || null),
+  onetime_section_title: z.string().trim().max(255).optional().nullable().transform((value) => value || null),
   opportunity_id: uuidSchema.optional().nullable(),
   internal_notes: z.string().optional().nullable(),
   client_notes: z.string().optional().nullable(),
@@ -129,7 +131,7 @@ export const sendQuoteSchema = z.object({
 });
 
 export const approvalRequestChangesSchema = z.object({
-  reason: z.string().min(1).max(2000),
+  reason: z.string().trim().min(1, 'reason is required').max(2000),
 });
 
 export const convertQuoteSchema = z.object({

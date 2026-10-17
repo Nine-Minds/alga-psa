@@ -1,5 +1,7 @@
 'use server';
 
+import { WorkflowEventPublisher } from '@alga-psa/shared/workflow/adapters/workflowEventPublisher';
+import { contactSuppressedTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
@@ -1309,7 +1311,10 @@ export const createTicketFromTelephonyCall = withAuth(async (
         tenant,
         trx,
         {},
-        undefined,
+        contactSuppressedTicketCreation(
+          new WorkflowEventPublisher({ transaction: trx }),
+          'manual telephony tickets never sent a client-facing new-ticket notification before TICKET_CREATED became mandatory'
+        ),
         undefined,
         (user as any)?.user_id,
         3,

@@ -1,7 +1,6 @@
 'use client'
 
 
-import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -10,29 +9,20 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IContract } from '@alga-psa/types';
-import { IContractLinePreset } from '@alga-psa/types';
 import { createContract, updateContract } from '@alga-psa/billing/actions/contractActions';
-import { getContractLinePresets, copyPresetToContractLine } from '@alga-psa/billing/actions/contractLinePresetActions';
+import { copyPresetToContractLine } from '@alga-psa/billing/actions/contractLinePresetActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { IClient } from '@alga-psa/types';
 import { createClientContractForBilling, getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import {
-  useBillingFrequencyOptions,
-  useContractLineTypeOptions,
-} from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
-import { HelpCircle, Info, Plus, XCircle, ChevronDown, ChevronUp, Search, Coins } from 'lucide-react';
+import { HelpCircle, Info, Coins } from 'lucide-react';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
 import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
-import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { Badge } from '@alga-psa/ui/components/Badge';
-import { getContractLinePresetServices, getContractLinePresetServiceCounts, getContractLinePresetFixedConfig } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { IContractLinePresetService, IContractLinePresetFixedConfig } from '@alga-psa/types';
-import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useQuickAddClient } from '@alga-psa/ui/context';
@@ -41,20 +31,13 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { ContractLinePresetPicker } from './ContractLinePresetPicker';
+import { useContractLinePresetSelection } from './useContractLinePresetSelection';
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
 
 const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
-
-interface ContractLinePresetServiceWithName extends IContractLinePresetService {
-  service_name?: string;
-  default_rate?: number;
-}
-
-interface PresetServiceOverrides {
-  custom_rate?: number;
-}
 
 interface ContractDialogProps {
   onContractSaved: () => void;
@@ -76,10 +59,9 @@ export function ContractDialog({
   initialClientId,
 }: ContractDialogProps) {
   const { t } = useTranslation('msp/contracts');
-  const { money, symbol } = useCurrencyFormat();
+  const { symbol } = useCurrencyFormat();
   const { renderQuickAddClient } = useQuickAddClient();
   const billingFrequencyOptions = useBillingFrequencyOptions();
-  const contractLineTypeOptions = useContractLineTypeOptions();
   const renewalModeOptions = [
     { value: 'manual', label: t('renewal.modes.manual', { defaultValue: 'Manual renewal' }) },
     { value: 'auto', label: t('renewal.modes.auto', { defaultValue: 'Auto-renew' }) },
@@ -120,33 +102,23 @@ export function ContractDialog({
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
 
-  // Contract line presets state
-  const [availableContractLinePresets, setAvailableContractLinePresets] = useState<IContractLinePreset[]>([]);
-  const [selectedContractLinePresetIds, setSelectedContractLinePresetIds] = useState<Set<string>>(new Set());
-  const [isLoadingContractLinePresets, setIsLoadingContractLinePresets] = useState(false);
-  const [contractLinePresetSearchTerm, setContractLinePresetSearchTerm] = useState('');
-  const [contractLinePresetTypeFilter, setContractLinePresetTypeFilter] = useState<string>('all');
-  const [expandedContractLinePresets, setExpandedContractLinePresets] = useState<Record<string, boolean>>({});
-  const [contractLinePresetServices, setContractLinePresetServices] = useState<Record<string, ContractLinePresetServiceWithName[]>>({});
-  const [contractLinePresetFixedConfigs, setContractLinePresetFixedConfigs] = useState<Record<string, IContractLinePresetFixedConfig | null>>({});
-  const [contractLinePresetServiceCounts, setContractLinePresetServiceCounts] = useState<Record<string, number>>({});
-
-  // Rate overrides for presets (stores in cents)
-  const [presetRateOverrides, setPresetRateOverrides] = useState<Record<string, number | null>>({});
-  const [presetRateInputs, setPresetRateInputs] = useState<Record<string, string>>({});
-
-  // Service overrides for each preset
-  const [presetServiceOverrides, setPresetServiceOverrides] = useState<Record<string, Record<string, PresetServiceOverrides>>>({});
-  const [presetServiceInputs, setPresetServiceInputs] = useState<Record<string, Record<string, { rate: string }>>>({});
-
-  // Hourly preset configuration overrides
-  const [hourlyPresetOverrides, setHourlyPresetOverrides] = useState<Record<string, { minimum_billable_time?: number; round_up_to_nearest?: number }>>({});
-  const [hourlyPresetInputs, setHourlyPresetInputs] = useState<Record<string, { minimum_billable_time: string; round_up_to_nearest: string }>>({});
+  // Contract line preset selection, rate editing and overrides (shared with
+  // AddContractLinesDialog).
+  const presetSelection = useContractLinePresetSelection({
+    onActionError: (message) => setValidationErrors([message]),
+  });
+  const {
+    availablePresets: availableContractLinePresets,
+    isLoading: isLoadingContractLinePresets,
+    selectedPresetIds: selectedContractLinePresetIds,
+    buildPresetOverrides,
+    reset: resetPresetSelection,
+  } = presetSelection;
 
   // Load clients and contract line presets when the dialog opens
   useEffect(() => {
     if (open) {
-      void Promise.all([loadClients(), loadContractLinePresets()]);
+      void Promise.all([loadClients(), presetSelection.loadPresets()]);
       if (initialClientId) {
         setClientId(initialClientId);
       }
@@ -169,28 +141,6 @@ export function ContractDialog({
     }
   };
 
-  const loadContractLinePresets = async () => {
-    setIsLoadingContractLinePresets(true);
-    try {
-      // Service counts for every preset arrive in one round trip, alongside the
-      // presets themselves rather than after them.
-      const [presets, counts] = await Promise.all([
-        getContractLinePresets(),
-        getContractLinePresetServiceCounts(),
-      ]);
-      if (isReturnedActionError(presets)) {
-        setValidationErrors([getErrorMessage(presets)]);
-        return;
-      }
-      setAvailableContractLinePresets(presets);
-      setContractLinePresetServiceCounts(isReturnedActionError(counts) ? {} : counts);
-    } catch (error) {
-      console.error('Error loading contract line presets:', error);
-    } finally {
-      setIsLoadingContractLinePresets(false);
-    }
-  };
-
   // Update form when editingContract changes
   useEffect(() => {
     if (editingContract) {
@@ -206,135 +156,6 @@ export function ContractDialog({
       setValidationErrors([]);
     }
   };
-
-  const toggleContractLinePreset = (presetId: string) => {
-    const newSet = new Set(selectedContractLinePresetIds);
-    if (newSet.has(presetId)) {
-      newSet.delete(presetId);
-    } else {
-      newSet.add(presetId);
-    }
-    setSelectedContractLinePresetIds(newSet);
-  };
-
-  const toggleExpandContractLinePreset = async (presetId: string) => {
-    const isExpanded = expandedContractLinePresets[presetId];
-
-    setExpandedContractLinePresets(prev => ({
-      ...prev,
-      [presetId]: !isExpanded
-    }));
-
-    // Load services and fixed config if expanding and not already loaded
-    if (!isExpanded && !contractLinePresetServices[presetId]) {
-      try {
-        // Load services
-        const services = await getContractLinePresetServices(presetId);
-        if (isReturnedActionError(services)) {
-          setValidationErrors([getErrorMessage(services)]);
-          return;
-        }
-
-        // Load all service details to get names and rates
-        const allServices = await getServices(1, 999, { item_kind: 'any' });
-        const serviceMap = new Map(allServices.services.map((s) => [s.service_id, s]));
-
-        // Enhance services with names and default rates
-        const enhancedServices: ContractLinePresetServiceWithName[] = services.map(service => {
-          const serviceDetails = serviceMap.get(service.service_id);
-          return {
-            ...service,
-            service_name: serviceDetails?.service_name || 'Unknown Service',
-            default_rate: serviceDetails?.default_rate || 0
-          };
-        });
-
-        setContractLinePresetServices(prev => ({
-          ...prev,
-          [presetId]: enhancedServices
-        }));
-
-        // Initialize service input states with current rates
-        const serviceInputs: Record<string, { rate: string }> = {};
-        enhancedServices.forEach(service => {
-          // Both custom_rate and default_rate are stored in cents in the database
-          // If custom_rate exists, use it; otherwise use default_rate
-          // Note: custom_rate might come as a string from the database, so we need to convert it
-          const customRateValue = service.custom_rate !== undefined && service.custom_rate !== null
-            ? (typeof service.custom_rate === 'string' ? parseFloat(service.custom_rate) : service.custom_rate)
-            : null;
-
-          const rateInCents = customRateValue !== null
-            ? customRateValue
-            : (service.default_rate || 0);
-
-          serviceInputs[service.service_id] = {
-            rate: (rateInCents / 100).toFixed(2)
-          };
-        });
-
-        setPresetServiceInputs(prev => ({
-          ...prev,
-          [presetId]: serviceInputs
-        }));
-
-        // Load config for type-specific presets
-        const preset = availableContractLinePresets.find(p => p.preset_id === presetId);
-
-        if (preset?.contract_line_type === 'Fixed') {
-          const fixedConfig = await getContractLinePresetFixedConfig(presetId);
-          if (isReturnedActionError(fixedConfig)) {
-            setValidationErrors([getErrorMessage(fixedConfig)]);
-            return;
-          }
-          setContractLinePresetFixedConfigs(prev => ({
-            ...prev,
-            [presetId]: fixedConfig
-          }));
-
-          // Initialize preset rate input if it has a base_rate
-          if (fixedConfig?.base_rate !== null && fixedConfig?.base_rate !== undefined) {
-            setPresetRateInputs(prev => ({
-              ...prev,
-              [presetId]: (fixedConfig.base_rate! / 100).toFixed(2)
-            }));
-          }
-        } else if (preset?.contract_line_type === 'Hourly') {
-          // Initialize hourly preset configuration from preset defaults
-          setHourlyPresetInputs(prev => ({
-            ...prev,
-            [presetId]: {
-              minimum_billable_time: preset.minimum_billable_time?.toString() || '15',
-              round_up_to_nearest: preset.round_up_to_nearest?.toString() || '15'
-            }
-          }));
-
-          setHourlyPresetOverrides(prev => ({
-            ...prev,
-            [presetId]: {
-              minimum_billable_time: preset.minimum_billable_time ?? 15,
-              round_up_to_nearest: preset.round_up_to_nearest ?? 15
-            }
-          }));
-        }
-      } catch (error) {
-        console.error(`Error loading services for contract line preset ${presetId}:`, error);
-      }
-    }
-  };
-
-  const filteredContractLinePresets = availableContractLinePresets.filter((preset) => {
-    // Search filter
-    const matchesSearch = !contractLinePresetSearchTerm ||
-      preset.preset_name?.toLowerCase().includes(contractLinePresetSearchTerm.toLowerCase()) ||
-      preset.billing_frequency?.toLowerCase().includes(contractLinePresetSearchTerm.toLowerCase()) ||
-      preset.contract_line_type?.toLowerCase().includes(contractLinePresetSearchTerm.toLowerCase());
-
-    // Type filter
-    const matchesType = contractLinePresetTypeFilter === 'all' || preset.contract_line_type === contractLinePresetTypeFilter;
-
-    return matchesSearch && matchesType;
-  });
 
   const handleSubmit = async (e: React.FormEvent, saveAsActive: boolean = true) => {
     e.preventDefault();
@@ -426,43 +247,9 @@ export function ContractDialog({
       // Add selected contract line presets to the contract (copy them into actual contract lines)
       if (contract && selectedContractLinePresetIds.size > 0) {
         const copyResults = await Promise.all(
-          Array.from(selectedContractLinePresetIds).map(presetId => {
-            const overrides: {
-              base_rate?: number | null;
-              services?: Record<string, { custom_rate?: number }>;
-              minimum_billable_time?: number;
-              round_up_to_nearest?: number;
-            } = {};
-
-            // Add base_rate override for Fixed type presets
-            if (presetRateOverrides[presetId] !== undefined) {
-              overrides.base_rate = presetRateOverrides[presetId];
-            }
-
-            // Add hourly configuration overrides
-            const hourlyConfig = hourlyPresetOverrides[presetId];
-            if (hourlyConfig) {
-              if (hourlyConfig.minimum_billable_time !== undefined) {
-                overrides.minimum_billable_time = hourlyConfig.minimum_billable_time;
-              }
-              if (hourlyConfig.round_up_to_nearest !== undefined) {
-                overrides.round_up_to_nearest = hourlyConfig.round_up_to_nearest;
-              }
-            }
-
-            // Add service-level overrides (custom_rate)
-            const serviceOverrides = presetServiceOverrides[presetId];
-            if (serviceOverrides && Object.keys(serviceOverrides).length > 0) {
-              overrides.services = {};
-              for (const [serviceId, override] of Object.entries(serviceOverrides)) {
-                overrides.services[serviceId] = {
-                  custom_rate: override.custom_rate
-                };
-              }
-            }
-
-            return copyPresetToContractLine(contract!.contract_id, presetId, Object.keys(overrides).length > 0 ? overrides : undefined);
-          })
+          Array.from(selectedContractLinePresetIds).map(presetId =>
+            copyPresetToContractLine(contract!.contract_id, presetId, buildPresetOverrides(presetId))
+          )
         );
         const expectedCopyError = copyResults.find(isReturnedActionError);
         if (expectedCopyError) {
@@ -527,12 +314,7 @@ export function ContractDialog({
     setPoNumber('');
     setPoAmountInput('');
     setPoAmount(undefined);
-    setSelectedContractLinePresetIds(new Set());
-    setContractLinePresetSearchTerm('');
-    setContractLinePresetTypeFilter('all');
-    setExpandedContractLinePresets({});
-    setPresetRateOverrides({});
-    setPresetRateInputs({});
+    resetPresetSelection();
     setHasAttemptedSubmit(false);
     setValidationErrors([]);
   };
@@ -900,594 +682,24 @@ export function ContractDialog({
                   })}
                 </div>
               ) : (
-                <>
-                  {/* Search and Filter Row */}
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
-                    {/* Search Input */}
-                    <div className="relative flex-1 min-w-[200px]">
-                      <Search
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"
-                        aria-hidden="true"
-                      />
-                      <Input
-                        type="text"
-                        placeholder={t('contractDialog.presets.searchPlaceholder', {
-                          defaultValue: 'Search contract line presets...',
-                        })}
-                        value={contractLinePresetSearchTerm}
-                        onChange={(e) => setContractLinePresetSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-
-                    {/* Type Filter */}
-                    <div className="w-48">
-                      <CustomSelect
-                        id="contract-line-preset-type-filter"
-                        options={[
-                          { value: 'all', label: t('contractDialog.presets.allTypes', { defaultValue: 'All types' }) },
-                          ...contractLineTypeOptions.map(({ value, label }) => ({
-                            value,
-                            label
-                          }))
-                        ]}
-                        value={contractLinePresetTypeFilter}
-                        onValueChange={(value) => setContractLinePresetTypeFilter(value)}
-                        placeholder={t('contractDialog.presets.typePlaceholder', {
-                          defaultValue: 'Select type',
-                        })}
-                      />
-                    </div>
-
-                    {/* Clear filters button */}
-                    {(contractLinePresetSearchTerm || contractLinePresetTypeFilter !== 'all') && (
-                      <Button
-                        id="clear-preset-filters-button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setContractLinePresetSearchTerm('');
-                          setContractLinePresetTypeFilter('all');
-                        }}
-                      >
-                        <XCircle className="h-4 w-4 mr-1" />
-                        {t('contractDialog.presets.resetFilters', { defaultValue: 'Reset' })}
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Contract Line Presets List */}
-                  <div className="max-h-64 overflow-y-auto border rounded-md p-2 space-y-1">
-                    {filteredContractLinePresets.length === 0 ? (
-                      <div className="text-sm text-muted-foreground p-2">
-                        {t('contractDialog.presets.noMatches', {
-                          defaultValue: 'No contract line presets match your search.',
-                        })}
-                      </div>
-                    ) : (
-                      filteredContractLinePresets.map((preset) => {
-                        if (!preset.preset_id) return null;
-                        const isExpanded = expandedContractLinePresets[preset.preset_id];
-                        const services = contractLinePresetServices[preset.preset_id] || [];
-                        const serviceCount = contractLinePresetServiceCounts[preset.preset_id] || 0;
-
-                        const fixedConfig = contractLinePresetFixedConfigs[preset.preset_id];
-
-                        return (
-                          <div key={preset.preset_id} className="border rounded bg-card shadow-sm">
-                            {/* Main row - now fully clickable */}
-                            <div
-                              className="flex items-center gap-3 p-3 hover:bg-muted cursor-pointer transition-colors"
-                              onClick={() => preset.preset_id && toggleExpandContractLinePreset(preset.preset_id)}
-                            >
-                              <div
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Checkbox
-                                  id={`preset-${preset.preset_id}`}
-                                  checked={selectedContractLinePresetIds.has(preset.preset_id)}
-                                  onChange={() => preset.preset_id && toggleContractLinePreset(preset.preset_id)}
-                                />
-                              </div>
-                              <div className="flex-1">
-                                <div className="font-medium text-sm text-[rgb(var(--color-text-900))]">{preset.preset_name}</div>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <Badge
-                                    variant={
-                                      preset.contract_line_type === 'Fixed'
-                                        ? 'info'
-                                        : preset.contract_line_type === 'Hourly'
-                                        ? 'success'
-                                        : preset.contract_line_type === 'Usage'
-                                        ? 'warning'
-                                        : 'default-muted'
-                                    }
-                                  >
-                                    {preset.contract_line_type}
-                                  </Badge>
-                                  <span className="text-xs text-muted-foreground">{preset.billing_frequency}</span>
-                                  {serviceCount > 0 && (
-                                    <span className="text-xs text-muted-foreground">
-                                      • {serviceCount === 1
-                                        ? t('contractDialog.presets.serviceCountSingle', {
-                                          count: serviceCount,
-                                          defaultValue: '{{count}} service',
-                                        })
-                                        : t('contractDialog.presets.serviceCountPlural', {
-                                          count: serviceCount,
-                                          defaultValue: '{{count}} services',
-                                        })}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="text-muted-foreground">
-                                {isExpanded ? (
-                                  <ChevronUp className="h-5 w-5" />
-                                ) : (
-                                  <ChevronDown className="h-5 w-5" />
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Expanded details */}
-                            {isExpanded && (
-                              <div className="px-5 py-4 bg-muted border-t space-y-4">
-                                {/* Fixed Rate Configuration for Fixed type presets */}
-                                {preset.contract_line_type === 'Fixed' && (
-                                  <div className="bg-card rounded-md p-4 border border-[rgb(var(--color-border-200))]">
-                                    <div className="flex items-center justify-between mb-3">
-                                      <Label className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
-                                        {t('contractDialog.presetDetails.fixedRateConfiguration', {
-                                          defaultValue: 'Fixed Rate Configuration',
-                                        })}
-                                      </Label>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <div className="text-sm">
-                                        <span className="font-medium text-[rgb(var(--color-text-700))]">
-                                          {t('contractDialog.presetDetails.defaultBaseRate', {
-                                            defaultValue: 'Default Base Rate:',
-                                          })}
-                                        </span>
-                                        <span className="ml-2 text-[rgb(var(--color-text-900))] font-semibold">
-                                          {fixedConfig?.base_rate !== null && fixedConfig?.base_rate !== undefined
-                                            ? money(Number(fixedConfig.base_rate))
-                                            : t('contractDialog.presetDetails.notSet', {
-                                              defaultValue: 'Not set',
-                                            })}
-                                        </span>
-                                      </div>
-                                      <div>
-                                        <Label htmlFor={`rate-override-${preset.preset_id}`} className="text-sm font-medium text-[rgb(var(--color-text-700))]">
-                                          {t('contractDialog.presetDetails.overrideBaseRate', {
-                                            defaultValue: 'Override Base Rate',
-                                          })}
-                                        </Label>
-                                        <div className="relative mt-1.5">
-                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
-                                          <Input
-                                            id={`rate-override-${preset.preset_id}`}
-                                            type="text"
-                                            inputMode="decimal"
-                                            value={presetRateInputs[preset.preset_id] || ''}
-                                            onChange={(e) => {
-                                              const value = e.target.value.replace(/[^0-9.]/g, '');
-                                              const decimalCount = (value.match(/\./g) || []).length;
-                                              if (decimalCount <= 1) {
-                                                setPresetRateInputs({
-                                                  ...presetRateInputs,
-                                                  [preset.preset_id]: value
-                                                });
-                                              }
-                                            }}
-                                            onBlur={() => {
-                                              const inputValue = presetRateInputs[preset.preset_id] || '';
-                                              if (inputValue.trim() === '' || inputValue === '.') {
-                                                const newInputs = { ...presetRateInputs };
-                                                delete newInputs[preset.preset_id];
-                                                setPresetRateInputs(newInputs);
-
-                                                const newOverrides = { ...presetRateOverrides };
-                                                delete newOverrides[preset.preset_id];
-                                                setPresetRateOverrides(newOverrides);
-                                              } else {
-                                                const dollars = parseFloat(inputValue) || 0;
-                                                const cents = Math.round(dollars * 100);
-                                                setPresetRateOverrides({
-                                                  ...presetRateOverrides,
-                                                  [preset.preset_id]: cents
-                                                });
-                                                setPresetRateInputs({
-                                                  ...presetRateInputs,
-                                                  [preset.preset_id]: (cents / 100).toFixed(2)
-                                                });
-                                              }
-                                            }}
-                                            placeholder={fixedConfig?.base_rate
-                                              ? t('contractDialog.presetDetails.defaultRatePlaceholder', {
-                                                defaultValue: 'Default: ${{rate}}',
-                                                rate: (fixedConfig.base_rate / 100).toFixed(2),
-                                              })
-                                              : t('contractDialog.presetDetails.enterBaseRate', {
-                                                defaultValue: 'Enter base rate',
-                                              })}
-                                            className="pl-8 h-9 text-sm"
-                                          />
-                                        </div>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                          {t('contractDialog.presetDetails.leaveBlankDefaultRate', {
-                                            defaultValue: 'Leave blank to use the default rate',
-                                          })}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Services Configuration */}
-                                <div className="bg-card rounded-md p-4 border border-[rgb(var(--color-border-200))]">
-                                  <Label className="text-sm font-semibold text-[rgb(var(--color-text-900))] mb-3 block">
-                                    {preset.contract_line_type === 'Fixed'
-                                      ? t('contractDialog.presetDetails.servicesIncludedReference', {
-                                        defaultValue: 'Services Included (Reference)',
-                                      })
-                                      : t('contractDialog.presetDetails.servicesConfiguration', {
-                                        defaultValue: 'Services Configuration',
-                                      })}
-                                  </Label>
-                                  {services.length === 0 ? (
-                                    <div className="text-sm text-muted-foreground italic">
-                                      {t('contractDialog.presetDetails.noServicesConfigured', {
-                                        defaultValue: 'No services configured for this preset',
-                                      })}
-                                    </div>
-                                  ) : preset.contract_line_type === 'Fixed' ? (
-                                    /* For Fixed presets, show services as read-only reference */
-                                    <div className="space-y-2">
-                                      <p className="text-xs text-muted-foreground mb-3">
-                                        {t('contractDialog.presetDetails.fixedServicesReferenceHelp', {
-                                          defaultValue: 'These services are included for reference only. The fixed rate above determines the billing amount.',
-                                        })}
-                                      </p>
-                                      {services.map((service) => (
-                                        <div key={service.service_id} className="bg-muted rounded-md p-2 border border-[rgb(var(--color-border-200))]">
-                                          <div className="flex items-center justify-between">
-                                            <span className="text-sm text-[rgb(var(--color-text-900))]">{service.service_name}</span>
-                                            {service.quantity && service.quantity > 1 && (
-                                              <span className="text-xs text-muted-foreground">
-                                                {t('contractDialog.presetDetails.quantityShort', {
-                                                  defaultValue: 'Qty: {{quantity}}',
-                                                  quantity: service.quantity,
-                                                })}
-                                              </span>
-                                            )}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  ) : preset.contract_line_type === 'Hourly' ? (
-                                    /* For Hourly presets, show hourly configuration fields */
-                                    <div className="space-y-4">
-                                      {/* Hourly Configuration */}
-                                      <div className="bg-muted rounded-md p-3 border border-[rgb(var(--color-border-200))]">
-                                        <Label className="text-xs font-semibold text-[rgb(var(--color-text-900))] mb-2 block">
-                                          {t('contractDialog.presetDetails.timeBillingConfiguration', {
-                                            defaultValue: 'Time Billing Configuration',
-                                          })}
-                                        </Label>
-                                        <div className="grid grid-cols-2 gap-3">
-                                          <div>
-                                            <Label htmlFor={`min-billable-${preset.preset_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
-                                              {t('contractDialog.presetDetails.minimumBillableMinutes', {
-                                                defaultValue: 'Minimum billable minutes',
-                                              })}
-                                            </Label>
-                                            <Input
-                                              id={`min-billable-${preset.preset_id}`}
-                                              type="number"
-                                              min="0"
-                                              step="1"
-                                              value={hourlyPresetInputs[preset.preset_id]?.minimum_billable_time || '15'}
-                                              onChange={(e) => {
-                                                setHourlyPresetInputs(prev => ({
-                                                  ...prev,
-                                                  [preset.preset_id]: {
-                                                    ...(prev[preset.preset_id] || { minimum_billable_time: '15', round_up_to_nearest: '15' }),
-                                                    minimum_billable_time: e.target.value
-                                                  }
-                                                }));
-                                              }}
-                                              onBlur={() => {
-                                                const value = Math.max(0, parseInt(hourlyPresetInputs[preset.preset_id]?.minimum_billable_time || '15') || 0);
-                                                setHourlyPresetOverrides(prev => ({
-                                                  ...prev,
-                                                  [preset.preset_id]: {
-                                                    ...(prev[preset.preset_id] || {}),
-                                                    minimum_billable_time: value
-                                                  }
-                                                }));
-                                                setHourlyPresetInputs(prev => ({
-                                                  ...prev,
-                                                  [preset.preset_id]: {
-                                                    ...(prev[preset.preset_id] || { minimum_billable_time: '15', round_up_to_nearest: '15' }),
-                                                    minimum_billable_time: value.toString()
-                                                  }
-                                                }));
-                                              }}
-                                              className="h-9 text-sm mt-1"
-                                            />
-                                          </div>
-                                          <div>
-                                            <Label htmlFor={`round-up-${preset.preset_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
-                                              {t('contractDialog.presetDetails.roundUpToNearestMinutes', {
-                                                defaultValue: 'Round up to nearest (minutes)',
-                                              })}
-                                            </Label>
-                                            <Input
-                                              id={`round-up-${preset.preset_id}`}
-                                              type="number"
-                                              min="0"
-                                              step="1"
-                                              value={hourlyPresetInputs[preset.preset_id]?.round_up_to_nearest || '15'}
-                                              onChange={(e) => {
-                                                setHourlyPresetInputs(prev => ({
-                                                  ...prev,
-                                                  [preset.preset_id]: {
-                                                    ...(prev[preset.preset_id] || { minimum_billable_time: '15', round_up_to_nearest: '15' }),
-                                                    round_up_to_nearest: e.target.value
-                                                  }
-                                                }));
-                                              }}
-                                              onBlur={() => {
-                                                const value = Math.max(0, parseInt(hourlyPresetInputs[preset.preset_id]?.round_up_to_nearest || '15') || 0);
-                                                setHourlyPresetOverrides(prev => ({
-                                                  ...prev,
-                                                  [preset.preset_id]: {
-                                                    ...(prev[preset.preset_id] || {}),
-                                                    round_up_to_nearest: value
-                                                  }
-                                                }));
-                                                setHourlyPresetInputs(prev => ({
-                                                  ...prev,
-                                                  [preset.preset_id]: {
-                                                    ...(prev[preset.preset_id] || { minimum_billable_time: '15', round_up_to_nearest: '15' }),
-                                                    round_up_to_nearest: value.toString()
-                                                  }
-                                                }));
-                                              }}
-                                              className="h-9 text-sm mt-1"
-                                            />
-                                          </div>
-                                        </div>
-                                      </div>
-
-                                      {/* Services with hourly rates */}
-                                      <div>
-                                        <Label className="text-xs font-semibold text-[rgb(var(--color-text-900))] mb-2 block">
-                                          {t('contractDialog.presetDetails.servicesHourlyRates', {
-                                            defaultValue: 'Services & Hourly Rates',
-                                          })}
-                                        </Label>
-                                        <div className="space-y-2">
-                                          {services.map((service) => {
-                                            const customRateValue = service.custom_rate !== undefined && service.custom_rate !== null
-                                              ? (typeof service.custom_rate === 'string' ? parseFloat(service.custom_rate) : service.custom_rate)
-                                              : null;
-
-                                            const rateInCents = customRateValue !== null
-                                              ? customRateValue
-                                              : (service.default_rate || 0);
-
-                                            const serviceInputs = presetServiceInputs[preset.preset_id]?.[service.service_id] || {
-                                              rate: (rateInCents / 100).toFixed(2)
-                                            };
-
-                                            return (
-                                              <div key={service.service_id} className="bg-muted rounded-md p-3 border border-[rgb(var(--color-border-200))]">
-                                                <div className="font-medium text-sm text-[rgb(var(--color-text-900))] mb-2">{service.service_name}</div>
-                                                <div>
-                                                  <Label htmlFor={`hourly-rate-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
-                                                    {t('contractDialog.presetDetails.hourlyRate', {
-                                                      defaultValue: 'Hourly Rate',
-                                                    })}
-                                                  </Label>
-                                                  <div className="relative mt-1">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
-                                                    <Input
-                                                      id={`hourly-rate-${preset.preset_id}-${service.service_id}`}
-                                                      type="text"
-                                                      inputMode="decimal"
-                                                      value={serviceInputs.rate}
-                                                      onChange={(e) => {
-                                                        const value = e.target.value.replace(/[^0-9.]/g, '');
-                                                        const decimalCount = (value.match(/\./g) || []).length;
-                                                        if (decimalCount <= 1) {
-                                                          const newInputs = {
-                                                            ...presetServiceInputs,
-                                                            [preset.preset_id]: {
-                                                              ...(presetServiceInputs[preset.preset_id] || {}),
-                                                              [service.service_id]: {
-                                                                ...serviceInputs,
-                                                                rate: value
-                                                              }
-                                                            }
-                                                          };
-                                                          setPresetServiceInputs(newInputs);
-                                                        }
-                                                      }}
-                                                      onBlur={() => {
-                                                        const dollars = parseFloat(serviceInputs.rate) || 0;
-                                                        const cents = Math.round(dollars * 100);
-                                                        const newOverrides = {
-                                                          ...presetServiceOverrides,
-                                                          [preset.preset_id]: {
-                                                            ...(presetServiceOverrides[preset.preset_id] || {}),
-                                                            [service.service_id]: {
-                                                              ...(presetServiceOverrides[preset.preset_id]?.[service.service_id] || {}),
-                                                              custom_rate: cents
-                                                            }
-                                                          }
-                                                        };
-                                                        setPresetServiceOverrides(newOverrides);
-                                                        const newInputs = {
-                                                          ...presetServiceInputs,
-                                                          [preset.preset_id]: {
-                                                            ...(presetServiceInputs[preset.preset_id] || {}),
-                                                            [service.service_id]: {
-                                                              ...serviceInputs,
-                                                              rate: (cents / 100).toFixed(2)
-                                                            }
-                                                          }
-                                                        };
-                                                        setPresetServiceInputs(newInputs);
-                                                      }}
-                                                      placeholder={(service.default_rate! / 100).toFixed(2)}
-                                                      className="pl-8 h-9 text-sm"
-                                                    />
-                                                  </div>
-                                                  <p className="text-xs text-muted-foreground mt-0.5">
-                                                    {t('contractDialog.presetDetails.defaultRateValue', {
-                                                      defaultValue: 'Default: ${{rate}}',
-                                                      rate: (service.default_rate! / 100).toFixed(2),
-                                                    })}
-                                                  </p>
-                                                </div>
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    /* For Usage presets, show rate and unit of measure — usage bills from recorded usage, never a configured quantity */
-                                    <div className="space-y-3">
-                                      <p className="text-xs text-muted-foreground">
-                                        {t('contractDialog.presetDetails.usageRecordDrivenNote', {
-                                          defaultValue:
-                                            'Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill these services.',
-                                        })}
-                                      </p>
-                                      {services.map((service) => {
-                                        // Fallback: calculate rate if not in state yet
-                                        // Note: custom_rate might come as a string from the database
-                                        const customRateValue = service.custom_rate !== undefined && service.custom_rate !== null
-                                          ? (typeof service.custom_rate === 'string' ? parseFloat(service.custom_rate) : service.custom_rate)
-                                          : null;
-
-                                        const rateInCents = customRateValue !== null
-                                          ? customRateValue
-                                          : (service.default_rate || 0);
-
-                                        const serviceInputs = presetServiceInputs[preset.preset_id]?.[service.service_id] || {
-                                          rate: (rateInCents / 100).toFixed(2)
-                                        };
-
-                                        return (
-                                          <div key={service.service_id} className="bg-muted rounded-md p-3 border border-[rgb(var(--color-border-200))]">
-                                            <div className="font-medium text-sm text-[rgb(var(--color-text-900))] mb-2">{service.service_name}</div>
-                                            <div className="grid grid-cols-2 gap-3">
-                                              <div>
-                                                <Label htmlFor={`rate-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
-                                                  {t('contractDialog.presetDetails.ratePerUnit', {
-                                                    defaultValue: 'Rate (per unit)',
-                                                  })}
-                                                </Label>
-                                                <div className="relative mt-1">
-                                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
-                                                  <Input
-                                                    id={`rate-${preset.preset_id}-${service.service_id}`}
-                                                    type="text"
-                                                    inputMode="decimal"
-                                                    value={serviceInputs.rate}
-                                                    onChange={(e) => {
-                                                      const value = e.target.value.replace(/[^0-9.]/g, '');
-                                                      const decimalCount = (value.match(/\./g) || []).length;
-                                                      if (decimalCount <= 1) {
-                                                        const newInputs = {
-                                                          ...presetServiceInputs,
-                                                          [preset.preset_id]: {
-                                                            ...(presetServiceInputs[preset.preset_id] || {}),
-                                                            [service.service_id]: {
-                                                              ...serviceInputs,
-                                                              rate: value
-                                                            }
-                                                          }
-                                                        };
-                                                        setPresetServiceInputs(newInputs);
-                                                      }
-                                                    }}
-                                                    onBlur={() => {
-                                                      const dollars = parseFloat(serviceInputs.rate) || 0;
-                                                      const cents = Math.round(dollars * 100);
-                                                      const newOverrides = {
-                                                        ...presetServiceOverrides,
-                                                        [preset.preset_id]: {
-                                                          ...(presetServiceOverrides[preset.preset_id] || {}),
-                                                          [service.service_id]: {
-                                                            ...(presetServiceOverrides[preset.preset_id]?.[service.service_id] || {}),
-                                                            custom_rate: cents
-                                                          }
-                                                        }
-                                                      };
-                                                      setPresetServiceOverrides(newOverrides);
-                                                      const newInputs = {
-                                                        ...presetServiceInputs,
-                                                        [preset.preset_id]: {
-                                                          ...(presetServiceInputs[preset.preset_id] || {}),
-                                                          [service.service_id]: {
-                                                            ...serviceInputs,
-                                                            rate: (cents / 100).toFixed(2)
-                                                          }
-                                                        }
-                                                      };
-                                                      setPresetServiceInputs(newInputs);
-                                                    }}
-                                                    placeholder={(service.default_rate! / 100).toFixed(2)}
-                                                    className="pl-8 h-9 text-sm"
-                                                  />
-                                                </div>
-                                                <p className="text-xs text-muted-foreground mt-0.5">
-                                                  {t('contractDialog.presetDetails.defaultRateValue', {
-                                                    defaultValue: 'Default: ${{rate}}',
-                                                    rate: (service.default_rate! / 100).toFixed(2),
-                                                  })}
-                                                </p>
-                                              </div>
-                                              <div>
-                                                <Label htmlFor={`unit-measure-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
-                                                  {t('contractDialog.presetDetails.unitOfMeasure', {
-                                                    defaultValue: 'Unit of Measure',
-                                                  })}
-                                                </Label>
-                                                <Input
-                                                  id={`unit-measure-${preset.preset_id}-${service.service_id}`}
-                                                  type="text"
-                                                  value={service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label}
-                                                  disabled
-                                                  className="h-9 text-sm mt-1 bg-muted"
-                                                />
-                                                <p className="text-xs text-muted-foreground mt-0.5">
-                                                  {t('contractDialog.presetDetails.unitOfMeasureHint', {
-                                                    defaultValue: 'e.g., GB, API call, user',
-                                                  })}
-                                                </p>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </>
+                <ContractLinePresetPicker
+                  selection={presetSelection}
+                  typeFilterId="contract-line-preset-type-filter"
+                  resetFiltersId="clear-preset-filters-button"
+                  filtersClassName="flex flex-wrap items-center gap-2 mb-3"
+                  listClassName="max-h-64 overflow-y-auto border rounded-md p-2 space-y-1"
+                  labels={{
+                    searchPlaceholder: t('contractDialog.presets.searchPlaceholder', {
+                      defaultValue: 'Search contract line presets...',
+                    }),
+                    noneAvailable: t('contractDialog.presets.empty', {
+                      defaultValue: 'No contract line presets available. You can add them later.',
+                    }),
+                    noMatches: t('contractDialog.presets.noMatches', {
+                      defaultValue: 'No contract line presets match your search.',
+                    }),
+                  }}
+                />
               )}
 
               {selectedContractLinePresetIds.size > 0 && (

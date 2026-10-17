@@ -12,7 +12,9 @@ import {
 } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { applyAssetVisibilityFilter, applyProjectVisibilityFilter } from '@alga-psa/authorization/portal/visibility';
+import { listDeployableStatusSlugs } from '@alga-psa/assets/lib/assetStatusRegistry';
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
+import { hasClientProjectReadPermission } from './clientProjectPermissions';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 
 export interface DashboardMetrics {
@@ -189,6 +191,9 @@ export const getDashboardMetrics = withAuth(async (
 
     const userContactId = user.contact_id;
     const { knex } = await createTenantKnex();
+    // Project tiles and project activity ride on the same role-based gate the
+    // portal projects routes enforce.
+    const canReadProjects = await hasClientProjectReadPermission(knex, user, tenant);
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
@@ -225,16 +230,18 @@ export const getDashboardMetrics = withAuth(async (
           { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes' }
         ).count('ticket_id as count') as unknown as Promise<Array<{ count: string }>>,
 
-        // Get active projects count
-        applyProjectVisibilityFilter(
-          scopedDb.table('projects')
-            .where({
-              'projects.client_id': clientId,
-              'is_inactive': false
-            }),
-          visibility,
-          { contactColumn: 'projects.contact_name_id' }
-        ).count('project_id as count') as unknown as Promise<Array<{ count: string }>>,
+        // Get active projects count (only for roles granted project:read)
+        canReadProjects
+          ? applyProjectVisibilityFilter(
+              scopedDb.table('projects')
+                .where({
+                  'projects.client_id': clientId,
+                  'is_inactive': false
+                }),
+              visibility,
+              { contactColumn: 'projects.contact_name_id' }
+            ).count('project_id as count') as unknown as Promise<Array<{ count: string }>>
+          : Promise.resolve([{ count: '0' }]),
 
         // Pending invoice counts remain financial-document / invoice-state
         // metrics. They should not silently pivot to recurring coverage dates.
@@ -245,17 +252,26 @@ export const getDashboardMetrics = withAuth(async (
           .whereNull('finalized_at')
           .count('* as count') as unknown as Promise<Array<{ count: string }>>,
 
-        // Get active assets count
-        applyAssetVisibilityFilter(
-          scopedDb.table('assets')
-            .where({
-              'assets.client_id': clientId
-            }),
-          visibility,
-          { contactColumn: 'assets.contact_name_id' }
-        )
-          .andWhere('status', '!=', 'inactive')
-          .count('* as count') as unknown as Promise<Array<{ count: string }>>,
+        // Active assets: FR-B5 reads "deployed" from the status registry's
+        // `deployable` kind, not from "anything but the literal inactive" —
+        // a device in a custom "In repair" status is not out there working.
+        (async () => {
+          const deployableSlugs = await listDeployableStatusSlugs(trx, tenant);
+          return applyAssetVisibilityFilter(
+            scopedDb.table('assets')
+              .where({
+                'assets.client_id': clientId
+              }),
+            visibility,
+            {
+              contactColumn: 'assets.contact_name_id',
+              // FR-E7: shared-workspace members count for their users too.
+              sharedWorkspace: { assetIdColumn: 'assets.asset_id', tenantColumn: 'assets.tenant' },
+            }
+          )
+            .whereIn('status', deployableSlugs)
+            .count('* as count') as unknown as Promise<Array<{ count: string }>>;
+        })(),
 
         // Total service request submissions for this client (any status).
         scopedDb.table('service_request_submissions')
@@ -300,6 +316,9 @@ export const getRecentActivity = withAuth(async (
 
     const userContactId = user.contact_id;
     const { knex } = await createTenantKnex();
+    // Project tiles and project activity ride on the same role-based gate the
+    // portal projects routes enforce.
+    const canReadProjects = await hasClientProjectReadPermission(knex, user, tenant);
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
@@ -409,15 +428,17 @@ export const getRecentActivity = withAuth(async (
         .orderBy('updated_at', 'desc')
         .limit(3);
 
-      // Recent project updates for this client.
-      const projects = await applyProjectVisibilityFilter(
-        scopedDb.table('projects').where({ client_id: clientId }),
-        visibility,
-        { contactColumn: 'projects.contact_name_id' }
-      )
-        .select(['project_name as name', 'description', 'updated_at as timestamp'])
-        .orderBy('updated_at', 'desc')
-        .limit(3);
+      // Recent project updates for this client (only for roles granted project:read).
+      const projects = canReadProjects
+        ? await applyProjectVisibilityFilter(
+            scopedDb.table('projects').where({ client_id: clientId }),
+            visibility,
+            { contactColumn: 'projects.contact_name_id' }
+          )
+            .select(['project_name as name', 'description', 'updated_at as timestamp'])
+            .orderBy('updated_at', 'desc')
+            .limit(3)
+        : [];
 
       // Recent service request submissions.
       const serviceRequests = await scopedDb.table('service_request_submissions')

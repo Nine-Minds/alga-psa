@@ -74,6 +74,8 @@ vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({
 }));
 vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
   withDataAutomationId: ({ id }: { id: string }) => ({ 'data-testid': id }),
+  // The Cc/Bcc control pulls in ReflectionContainer, which needs this HOC.
+  withUIReflectionId: (Component: unknown) => Component,
 }));
 vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
   useDocumentsCrossFeature: () => ({ deleteDocument: vi.fn() }),

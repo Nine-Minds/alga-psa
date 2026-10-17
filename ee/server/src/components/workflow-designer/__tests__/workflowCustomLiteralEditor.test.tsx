@@ -33,6 +33,23 @@ describe('custom literal editors', () => {
     })).toBeNull();
   });
 
+  it('shows the email users editor for fixed users and the field editor for computed parts', () => {
+    const editor = renderWorkflowCustomLiteralEditor('email-user-recipients', {
+      idPrefix: 'mail',
+      value: { role_names: ['Technician'] },
+      onChange: vi.fn(),
+    });
+    expect(editor).not.toBeNull();
+    render(<>{editor}</>);
+    expect(screen.getByText('Email everyone with these roles')).toBeTruthy();
+
+    expect(renderWorkflowCustomLiteralEditor('email-user-recipients', {
+      idPrefix: 'mail',
+      value: { user_ids: { $expr: 'vars.users' } } as never,
+      onChange: vi.fn(),
+    })).toBeNull();
+  });
+
   it('shows the email recipients editor for fixed addresses', () => {
     expect(renderWorkflowCustomLiteralEditor('email-recipients', {
       idPrefix: 'to',

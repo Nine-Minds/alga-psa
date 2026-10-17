@@ -18,6 +18,8 @@ Only the Alga side is narrowed to unmapped rows. On the external side, nothing r
 
 ### Which targets are unavailable
 
+> **Superseded by migration `20261013120000`:** the index is now partial. Xero account targets are shareable, items stay one-to-one, and `item:200`/`account:200` do not collide. The grid uses `isExclusiveKind` (replacing `externalIdForOption`) and withholds only exclusively-held option ids; the text below is the original premise.
+
 The server enforces this unique index:
 
 ```

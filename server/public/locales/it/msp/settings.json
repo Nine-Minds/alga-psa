@@ -423,7 +423,8 @@
       "placeholders": {
         "teamName": "Inserisci il nome del team",
         "selectTeamLead": "Seleziona un responsabile del team",
-        "selectUserToAdd": "Seleziona un utente da aggiungere"
+        "selectUserToAdd": "Seleziona un utente da aggiungere",
+        "noTeamLead": "Non assegnato"
       },
       "alert": {
         "unsavedChanges": "Sono presenti modifiche non salvate"
@@ -673,8 +674,8 @@
           "suppressAiHelp": "Solo componente aggiuntivo Enterprise AI Assistant. Se non disponibile, le risposte riaprono normalmente."
         },
         "liveTimer": {
-          "label": "Attiva timer ticket in tempo reale",
-          "help": "Mostra il timer in tempo reale e gli intervalli registrati sui ticket di questa bacheca. L'inserimento manuale del tempo rimane disponibile."
+          "label": "Mostra il cronometro sui ticket",
+          "help": "Mostra i controlli del cronometro sui ticket di questa bacheca. Disattivare per nascondere qui il cronometro; l'inserimento manuale del tempo rimane disponibile. Un cronometro già in esecuzione continua a funzionare."
         },
         "clientPortalVisible": {
           "label": "Visibile nel portale clienti",
@@ -821,6 +822,27 @@
           "appearanceHelp": "Fissaggio della scheda e visualizzazione elenco predefinita della bacheca",
           "assignment": "Assegnazione e SLA",
           "assignmentHelp": "Instradamento predefinito, SLA e responsabile della bacheca",
+          "notifications": "Notifiche",
+          "notificationsHelp": "Avvisa i tecnici dei nuovi ticket e dei cambi di stato e imposta gli osservatori predefiniti",
+          "notificationsRulesLabel": "Regole di notifica",
+          "notificationsRulesHelp": "I destinatari ricevono una notifica per evento. Non vengono aggiunti come osservatori.",
+          "notificationsAddRule": "Aggiungi regola",
+          "notificationsRuleTitle": "Regola {{number}}",
+          "notificationsRuleEnabled": "Attivata",
+          "notificationsRemoveRule": "Rimuovi regola",
+          "notificationsOnCreate": "Quando viene creato un ticket su questa bacheca",
+          "notificationsOnStatus": "Quando un ticket passa allo stato",
+          "notificationsNoStatuses": "Gli stati possono essere selezionati dopo aver salvato la bacheca.",
+          "notificationsRecipients": "Notifica a",
+          "notificationsRecipientsPlaceholder": "Seleziona utenti e team...",
+          "notificationsRecipientsHelp": "I membri del team vengono determinati a ogni invio di una notifica.",
+          "notificationsDefaultWatchers": "Osservatori predefiniti",
+          "notificationsDefaultWatchersPlaceholder": "Seleziona utenti...",
+          "notificationsDefaultWatchersHelp": "Aggiunti all'elenco degli osservatori di ogni nuovo ticket di questa bacheca e avvisati di ogni aggiornamento successivo.",
+          "notificationsTriggerRequired": "Ogni regola di notifica richiede almeno un attivatore: la creazione di un ticket o uno stato.",
+          "notificationsRecipientRequired": "Ogni regola di notifica richiede almeno un utente o un team da notificare.",
+          "notificationsFetchFailed": "Impossibile caricare le impostazioni di notifica",
+          "notificationsStatusRemapFailed": "La bacheca è stata creata, ma lo stato di una regola di notifica non ha potuto essere associato alla nuova bacheca. Aggiungi di nuovo le regole di notifica.",
           "inbound": "Email e risposte in arrivo",
           "inboundHelp": "Riapri i ticket quando i clienti rispondono via email",
           "close": "Regole di chiusura",
@@ -830,7 +852,7 @@
           "statuses": "Priorità e stati",
           "statusesHelp": "Priorità predefinita e gli stati dei ticket per questa bacheca",
           "display": "Visualizzazione e comportamento",
-          "displayHelp": "Timer dal vivo e tipo di bacheca"
+          "displayHelp": "Cronometro e tipo di bacheca"
         },
         "saveChanges": "Salva modifiche",
         "unsaved": "Non salvato",
@@ -1825,6 +1847,12 @@
         "useLogo": "Usa il mio logo nell'intestazione delle email",
         "logoWide": "Logo largo",
         "logoDefault": "Logo quadrato",
+        "logoArtwork": "Versione del logo",
+        "logoArtworkAuto": "In base all'intestazione",
+        "logoArtworkLight": "Logo per sfondo chiaro",
+        "logoArtworkDark": "Logo per sfondo scuro",
+        "logoArtworkAutoDark": "La modalità automatica considera scura questa intestazione e usa il logo per sfondo scuro.",
+        "logoArtworkAutoLight": "La modalità automatica considera chiara questa intestazione e usa il logo per sfondo chiaro.",
         "noLogo": "Carica un logo in Impostazioni → Portale clienti → Branding per usarlo qui.",
         "showAttribution": "Mostra «Powered by AlgaPSA» nel piè di pagina"
       }
@@ -1933,6 +1961,8 @@
   "timeEntry": {
     "title": "Impostazioni registrazione ore",
     "description": "Gestisci le impostazioni di registrazione ore e i periodi temporali",
+    "accessDenied": "Accesso negato: non hai l'autorizzazione per visualizzare i periodi.",
+    "loading": "Caricamento delle impostazioni di registrazione ore...",
     "timePeriods": {
       "title": "Impostazioni dei periodi",
       "description": "Configurare i periodi di fatturazione",
@@ -2030,7 +2060,7 @@
       "openMenu": "Apri menu",
       "columns": {
         "startDate": "Data di inizio",
-        "endDate": "Data di fine",
+        "endDate": "Ultimo giorno",
         "actions": "Azioni"
       },
       "form": {
@@ -2042,7 +2072,8 @@
         "startDate": "Data di inizio",
         "startDatePlaceholder": "Seleziona la data di inizio",
         "noEndDate": "Nessuna data di fine",
-        "endDate": "Data di fine",
+        "endDate": "Ultimo giorno del periodo",
+        "endDateHelp": "Il periodo include questo giorno.",
         "endDatePlaceholder": "Seleziona la data di fine",
         "deletePeriod": "Elimina periodo",
         "confirmDeleteTitle": "Conferma eliminazione",
@@ -2056,7 +2087,7 @@
         "noSettings": "Nessuna impostazione dei periodi disponibile. Impossibile creare un nuovo periodo.",
         "settingsRequired": "Impossibile gestire un periodo senza impostazioni.",
         "startDateRequired": "È necessario indicare una data di inizio.",
-        "startBeforeEnd": "La data di inizio deve precedere la data di fine.",
+        "startBeforeEnd": "La data di fine non può essere precedente alla data di inizio.",
         "overlap": "Il periodo si sovrappone a un periodo esistente.",
         "overlapRetry": "Questo periodo si sovrappone a uno esistente. Scegli date diverse.",
         "create": "Impossibile creare il periodo.",

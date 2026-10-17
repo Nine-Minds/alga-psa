@@ -179,7 +179,7 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
       [germanAdmin, 'telemetry.toggles.allowUserOptOut.title', 30],
       [germanAdmin, 'email.providerConfig.options.smtp', 40],
       [germanTimeEntry, 'timePeriodList.columns.hoursEntered', 24],
-      [germanTimeEntry, 'timeSheetHeader.labels.showIntervals', 24],
+      [germanTimeEntry, 'timeSheetHeader.labels.showSuggestions', 24],
     ];
 
     for (const [source, key, maxLength] of lengthChecks) {

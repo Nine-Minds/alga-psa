@@ -116,4 +116,18 @@ describe('handleTicketCreated notification suppression (integration)', () => {
 
     expect(sent.map((email) => email.to)).toEqual(['watcher@example.com']);
   });
+
+  it('sends no assignee email when internal notifications are suppressed (the client is still emailed)', async () => {
+    await runWithTenant(tenant, () => handleTicketCreated(event({ suppressInternalNotifications: true })));
+    expect(sent.map((email) => email.to)).toEqual(['client@example.com']);
+  });
+
+  it('returns quietly with no send and no error when both audiences are suppressed', async () => {
+    await expect(
+      runWithTenant(tenant, () =>
+        handleTicketCreated(event({ suppressContactNotifications: true, suppressInternalNotifications: true }))
+      )
+    ).resolves.toBeUndefined();
+    expect(sent).toHaveLength(0);
+  });
 });

@@ -24,6 +24,7 @@ interface ServiceItem {
 interface TemplateServicePreviewSectionProps {
   services: ServiceItem[];
   serviceType: 'fixed' | 'products' | 'hourly' | 'usage';
+  // LEVERAGE: pattern clamped-number-input — the input's onChange clamps to min, so the field can't be cleared while typing; use QuantityInput
   onQuantityChange?: (serviceId: string, quantity: number) => void;
   onRemoveService: (serviceId: string, fromPresetId?: string) => void;
 }

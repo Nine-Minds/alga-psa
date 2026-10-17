@@ -5,14 +5,16 @@ import { tenantDb } from '@alga-psa/db';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { withWorkflowPicker, withWorkflowNotFoundPolicy, withWorkflowRequireOneOf } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker, withWorkflowNotFoundPolicy, withWorkflowRequireOneOf } from '@alga-psa/event-schemas';
 import { ContactModel, clearContactLinksBeforeDelete } from '../../../../models/contactModel';
 import type {
   ContactEmailAddressInput as ContactModelEmailInput,
   ContactPhoneNumberInput as ContactModelPhoneInput,
 } from '../../../../interfaces/contact.interfaces';
 import { buildContactArchivedPayload, buildContactCreatedPayload, buildContactUpdatedPayload } from '../../../streams/domainEventBuilders/contactEventBuilders';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { buildInteractionLoggedPayload, buildNoteCreatedPayload } from '../../../streams/domainEventBuilders/crmInteractionNoteEventBuilders';
+import { ticketUpdateStamp } from '../../../../lib/tickets/ticketUpdateStamp';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -618,29 +620,16 @@ async function appendContactNoteBlock(
 const maybeWorkflowActor = (userId: string): { actorType: 'USER'; actorUserId: string } =>
   ({ actorType: 'USER', actorUserId: userId });
 
-async function publishWorkflowDomainEvent(params: {
-  eventType: string;
-  payload: Record<string, unknown>;
+async function publishWorkflowDomainEvent<T extends WorkflowCatalogEventType>(params: {
+  eventType: T;
+  payload: BuiltWorkflowPayload<T>;
   tenantId: string;
   occurredAt: string;
   actorUserId: string;
   idempotencyKey: string;
 }): Promise<void> {
   try {
-    const publishers = (await import('@alga-psa/event-bus/publishers')) as unknown as {
-      publishWorkflowEvent?: (value: {
-        eventType: string;
-        payload: Record<string, unknown>;
-        ctx: {
-          tenantId: string;
-          occurredAt: string;
-          actor: { actorType: 'USER'; actorUserId: string };
-        };
-        idempotencyKey: string;
-      }) => Promise<unknown>;
-    };
-    if (!publishers.publishWorkflowEvent) return;
-
+    const publishers = await import('@alga-psa/event-bus/publishers');
     await publishers.publishWorkflowEvent({
       eventType: params.eventType,
       payload: params.payload,
@@ -1467,7 +1456,7 @@ export function registerContactActions(): void {
         const previousContactId = ticket.contact_name_id ?? null;
         await tenantScopedTable(tx, 'tickets')
           .where({ ticket_id: input.ticket_id })
-          .update({ contact_name_id: input.contact_id, updated_at: new Date().toISOString() });
+          .update({ contact_name_id: input.contact_id, ...ticketUpdateStamp(tx.trx, tx.actorUserId) });
 
         const after = await ensureTicketExists(ctx, tx, input.ticket_id);
 

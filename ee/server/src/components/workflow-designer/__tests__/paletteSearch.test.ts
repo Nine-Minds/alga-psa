@@ -158,6 +158,18 @@ describe('workflow designer palette search helpers', () => {
       expect(scorePaletteSearchMatch({ label: 'Create Quote', keywords: ['remark'] }, 'note')).toBeNull();
     });
 
+    it('finds Send Email for "email engineer", "email technician", "email assignee" and "email resource"', () => {
+      const withEmail = [
+        ...catalog,
+        action('email.send', 'Send Email', ['to', 'users', 'ticket_id', 'subject'], "Send an email to addresses, users, roles, or a ticket's assigned technicians"),
+        action('notifications.send_in_app', 'Send In-App Notification', ['recipients', 'title', 'body']),
+      ];
+      for (const query of ['email engineer', 'email technician', 'email assignee', 'email resource']) {
+        const top = rankPaletteSearchResults(withEmail, query).map((item) => item.id).slice(0, 3);
+        expect(top, query).toContain('email.send');
+      }
+    });
+
     it('ranks by tier: exact > prefix > words > ids > description > fields', () => {
       const score = (label: string, query: string, extra: Partial<Parameters<typeof scorePaletteSearchMatch>[0]> = {}) =>
         scorePaletteSearchMatch({ label, ...extra }, query) ?? -1;

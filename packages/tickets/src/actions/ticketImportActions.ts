@@ -1,5 +1,6 @@
 'use server';
 
+import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
@@ -788,7 +789,7 @@ export const importTickets = withAuth(async (
       const result = await TicketModel.createTicket(
         createInput, tenant, trx,
         { skipLocationValidation: true, skipCategoryValidation: true, skipSubcategoryValidation: true },
-        undefined, undefined, user.user_id
+        silentTicketCreation('bulk import of existing tickets'), undefined, user.user_id
       );
 
       if (isClosed && result.ticket_id) {

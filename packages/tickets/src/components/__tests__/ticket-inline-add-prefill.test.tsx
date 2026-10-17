@@ -98,6 +98,9 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
       <div data-testid="client-picker">
         <div data-testid="client-picker-value">{selectedClientId}</div>
         <div data-testid="client-picker-count">{clients.length}</div>
+        <button type="button" onClick={() => onSelect('client-2')}>
+          Pick other client
+        </button>
         {onAddNew ? (
           <button type="button" onClick={onAddNew}>
             + Add new client
@@ -581,6 +584,19 @@ vi.mock('../useQuickAddRichTextUploadSession', async () => {
 });
 
 vi.mock('../../lib/ticketRichText', () => ({
+  extractTicketRichTextPlainText: (value: unknown): string => {
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (!Array.isArray(value)) {
+      return '';
+    }
+    return value
+      .map((block: { content?: Array<{ text?: string }> }) =>
+        (block.content ?? []).map((item) => item.text ?? '').join(''),
+      )
+      .join('\n');
+  },
   parseTicketRichTextContent: (value: string) => {
     if (!value) {
       return [];
@@ -978,6 +994,40 @@ describe('QuickAddTicket prefills', () => {
     await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
     const algadeskFormData = addTicketMock.mock.calls[0][0] as FormData;
     expect(algadeskFormData.get('asset_id')).toBeNull();
+  });
+
+  it('honours a client change when the dialog opened with one prefilled', async () => {
+    getTicketFormDataMock.mockResolvedValue({
+      users: [],
+      boards: [{ board_id: 'board-1', board_name: 'Support' }],
+      priorities: [{ priority_id: 'priority-1', priority_name: 'High' }],
+      clients: [
+        { client_id: 'client-1', client_name: 'Acme', client_type: 'company' },
+        { client_id: 'client-2', client_name: 'Emerald City', client_type: 'company' },
+      ],
+      statuses: [{ status_id: 'status-1', name: 'Open' }],
+      selectedClient: { client_id: 'client-1', client_type: 'company' },
+    });
+
+    render(
+      <QuickAddTicket
+        open={true}
+        onOpenChange={() => undefined}
+        onTicketAdded={() => undefined}
+        assetId="asset-123"
+        assetName="Router A"
+      />
+    );
+
+    await waitFor(() => expect(screen.getByTestId('client-picker-value')).toHaveTextContent('client-1'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pick other client' }));
+
+    // The picker is enabled, so the choice sticks instead of snapping back,
+    // and the newly chosen client's contacts are fetched (the prefilled
+    // branch skips that fetch).
+    await waitFor(() => expect(screen.getByTestId('client-picker-value')).toHaveTextContent('client-2'));
+    await waitFor(() => expect(getContactsByClientMock).toHaveBeenCalledWith('client-2', 'all'));
   });
 
 });

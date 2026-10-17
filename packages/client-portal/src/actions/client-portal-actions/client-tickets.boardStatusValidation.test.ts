@@ -14,6 +14,11 @@ const enforceTicketCloseRulesMock = vi.fn();
 const ticketModelGetDefaultStatusIdMock = vi.fn();
 const ticketModelCreateTicketWithRetryMock = vi.fn();
 
+vi.mock('@alga-psa/shared/lib/tickets/ticketLifecycleEvents', () => ({
+  publishTicketTransitionsAfterCommit: vi.fn(async () => []),
+  captureTicketTransitionSnapshot: vi.fn(async () => null),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
@@ -59,6 +64,11 @@ vi.mock('@alga-psa/analytics', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: (...args: any[]) => publishEventMock(...args),
   publishWorkflowEvent: (...args: any[]) => publishWorkflowEventMock(...args),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@shared/lib/ticketActivity', () => ({
@@ -328,6 +338,7 @@ describe('client portal board-scoped ticket status validation', () => {
     });
     expect(ticketUpdates).toHaveLength(0);
     expect(publishEventMock).not.toHaveBeenCalled();
+    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
   });
 
   it('T001: updateTicketStatus accepts a default-selectable board status and updates the ticket', async () => {
@@ -358,7 +369,7 @@ describe('client portal board-scoped ticket status validation', () => {
       status_id: 'board-1-in-progress',
       is_closed: false,
     });
-    expect(publishEventMock).toHaveBeenCalledWith(
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: 'TICKET_UPDATED' })
     );
   });
@@ -393,6 +404,7 @@ describe('client portal board-scoped ticket status validation', () => {
     );
     expect(ticketUpdates).toHaveLength(0);
     expect(publishEventMock).not.toHaveBeenCalled();
+    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
     expect(publishWorkflowEventMock).not.toHaveBeenCalled();
     expect(enforceTicketCloseRulesMock).not.toHaveBeenCalled();
   });

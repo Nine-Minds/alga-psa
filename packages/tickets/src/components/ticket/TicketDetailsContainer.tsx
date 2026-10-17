@@ -21,6 +21,7 @@ import {
 } from '../../actions/optimizedTicketActions';
 import TicketDetails from './TicketDetails';
 import type { TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
+import type { CommentEmailRecipientsPayload } from './CommentEmailRecipientsControl';
 import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { persistTicketDescriptionUpdate } from './ticketDescriptionUpdate';
@@ -48,6 +49,7 @@ interface TicketDetailsContainerProps {
     contacts: any[];
     contactInfo: any;
     createdByUser: any;
+    updatedByUser?: any;
     board: any;
     additionalAgents: any[];
     availableAgents: any[];
@@ -89,8 +91,8 @@ interface TicketDetailsContainerProps {
   renderContactDetails?: React.ComponentProps<typeof TicketDetails>['renderContactDetails'];
   renderCreateProjectTask?: React.ComponentProps<typeof TicketDetails>['renderCreateProjectTask'];
   renderQuickInvoice?: React.ComponentProps<typeof TicketDetails>['renderQuickInvoice'];
+  renderCreateWorkflowFromTicket?: React.ComponentProps<typeof TicketDetails>['renderCreateWorkflowFromTicket'];
   renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
-  renderIntervalManagement?: React.ComponentProps<typeof TicketDetails>['renderIntervalManagement'];
   isAlgaDeskMode?: boolean;
   hideSlaStatus?: boolean;
   hideBilling?: boolean;
@@ -120,8 +122,8 @@ export default function TicketDetailsContainer({
   renderContactDetails,
   renderCreateProjectTask,
   renderQuickInvoice,
+  renderCreateWorkflowFromTicket,
   renderClientDetails,
-  renderIntervalManagement,
   isAlgaDeskMode = false,
   hideSlaStatus = false,
   hideBilling = false,
@@ -261,6 +263,7 @@ export default function TicketDetailsContainer({
     isResolution: boolean,
     closesTicket: boolean = false,
     schedule?: { publishAt: string; timeZone: string } | null,
+    emailRecipients?: CommentEmailRecipientsPayload,
   ) => {
     if (!session?.user) {
       toast.error(t('errors.authRequiredComment', 'You must be logged in to add comments'));
@@ -277,6 +280,7 @@ export default function TicketDetailsContainer({
         closesTicket,
         undefined,
         schedule,
+        emailRecipients,
       );
       if (isReturnedActionError(newComment)) {
         throw newComment;
@@ -329,6 +333,7 @@ export default function TicketDetailsContainer({
       initialContacts={ticketData.contacts}
       initialContactInfo={ticketData.contactInfo}
       initialCreatedByUser={ticketData.createdByUser}
+      initialUpdatedByUser={ticketData.updatedByUser ?? null}
       initialBoard={ticketData.board}
       initialAdditionalAgents={ticketData.additionalAgents}
       initialAvailableAgents={ticketData.availableAgents}
@@ -353,8 +358,8 @@ export default function TicketDetailsContainer({
       renderContactDetails={renderContactDetails}
       renderCreateProjectTask={renderCreateProjectTask}
       renderQuickInvoice={renderQuickInvoice}
+      renderCreateWorkflowFromTicket={renderCreateWorkflowFromTicket}
       renderClientDetails={renderClientDetails}
-      renderIntervalManagement={renderIntervalManagement}
       isAlgaDeskMode={isAlgaDeskMode}
       hideSlaStatus={hideSlaStatus}
       hideBilling={hideBilling}

@@ -296,6 +296,22 @@ export interface IDiscount extends TenantEntity {
   discount_type: 'percentage' | 'fixed';
   value: number;
   amount?: number;
+  /**
+   * Explicit eligible scope. Null preserves the legacy invoice-wide behavior
+   * (a contract-line link stays an eligibility trigger, not an implicit
+   * narrowing). Set by configured automatic discounts that opt into a scope.
+   */
+  scope?: 'invoice' | 'contract' | 'service' | 'item' | null;
+  /** Contract assignment a `contract`-scoped discount resolves against. */
+  client_contract_id?: string | null;
+  /** Contract line a legacy/eligibility-linked discount is associated with. */
+  contract_line_id?: string | null;
+  /** Service a `service`-scoped discount resolves against. */
+  scope_service_id?: string | null;
+  /** Charge item an `item`-scoped discount resolves against. */
+  applies_to_item_id?: string | null;
+  /** Persisted evaluation order; lower runs first. */
+  priority?: number | null;
 }
 
 export interface IAdjustment extends TenantEntity {
@@ -375,6 +391,30 @@ export interface IBillingResult extends TenantEntity {
    * record and from calculation errors.
    */
   usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+  /**
+   * Fixed-fee contract lines that could not be priced (no resolvable rate, or
+   * a rate with no service to bill it on). A line listed here is NOT billed by
+   * this result, and previewing/generating from it must be refused with the
+   * blocker's coded reason (FIXED_LINE_RATE_UNRESOLVED / FIXED_LINE_NO_SERVICES) — never
+   * shortened silently. A line whose rate legitimately resolves to zero is not
+   * listed.
+   */
+  fixedLineBlockers?: IFixedLineBlocker[];
+}
+
+export type FixedLineBlockerCode =
+  | 'FIXED_LINE_RATE_UNRESOLVED'
+  | 'FIXED_LINE_NO_SERVICES';
+
+export interface IFixedLineBlocker {
+  /**
+   * FIXED_LINE_RATE_UNRESOLVED: the line has no resolvable rate.
+   * FIXED_LINE_NO_SERVICES: the line has a rate but no service to bill it on.
+   */
+  code: FixedLineBlockerCode;
+  message: string;
+  contractLineId: string;
+  contractLineName: string;
 }
 
 export interface IClientContractLine extends TenantEntity {
@@ -484,6 +524,8 @@ export interface IServicePrice extends TenantEntity {
   rate: number; // Amount in minor units (cents)
   /** Calendar date (`YYYY-MM-DD`) the price takes effect; the epoch when untagged. */
   effective_date?: string | null;
+  /** Explicit primary order within the price's window; 0 is the primary price. */
+  display_order?: number;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }
@@ -557,6 +599,10 @@ export interface IContractLine extends TenantEntity {
   location_id?: string | null;
   is_custom?: boolean; // Whether this is a custom contract line (not from preset)
   is_active?: boolean;
+  /** Authored line start (inclusive); null inherits the contract assignment start. */
+  start_date?: ISO8601String | null;
+  /** Authored line end (exclusive, half-open); null inherits the contract assignment end. */
+  end_date?: ISO8601String | null;
   // Hourly contract line fields (contract-line-level, same for all services)
   hourly_rate?: number | null; // Deprecated: Use service-level hourly_rate instead
   minimum_billable_time?: number | null; // Minimum time to bill for hourly services

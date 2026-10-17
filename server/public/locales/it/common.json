@@ -172,6 +172,10 @@
         "updateComments": "Permessi insufficienti per aggiornare i commenti",
         "deleteComments": "Permessi insufficienti per eliminare i commenti",
         "viewDocuments": "Autorizzazioni insufficienti per visualizzare i documenti del ticket"
+      },
+      "projects": {
+        "read": "Permessi insufficienti per visualizzare i progetti",
+        "readDetails": "Permessi insufficienti per visualizzare i dettagli del progetto"
       }
     },
     "tags": {
@@ -1619,6 +1623,12 @@
     "threecxDialing": "Chiamata in corso dal tuo interno 3CX",
     "threecxFailed": "Il centralino non è riuscito a effettuare la chiamata"
   },
+  "unsavedChangesGuard": {
+    "title": "Annullare le modifiche non salvate?",
+    "message": "Hai modifiche non salvate che andranno perse se chiudi. Vuoi annullarle?",
+    "discard": "Annulla modifiche",
+    "keepEditing": "Continua a modificare"
+  },
   "editor": {
     "attachFiles": "Allega file",
     "uploadingFiles": "Caricamento dei file…",
@@ -1740,5 +1750,9 @@
     "customPlaceholder": "Assegna un nome a questa unità",
     "register": "Aggiungi",
     "selectPlaceholder": "Seleziona un’unità"
+  },
+  "emailRecipients": {
+    "remove": "Rimuovi {{email}}",
+    "placeholder": "Digita un indirizzo e premi Invio"
   }
 }

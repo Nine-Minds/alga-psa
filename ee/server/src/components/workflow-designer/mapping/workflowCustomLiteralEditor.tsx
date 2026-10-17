@@ -9,7 +9,7 @@ import {
   readEmailRecipientsLiteral,
   readNotificationRecipientsLiteral,
   WorkflowEmailRecipientsEditor,
-  WorkflowNotificationRecipientsEditor,
+  WorkflowUserRecipientsEditor,
 } from '../WorkflowRecipientEditors';
 
 type CustomLiteralEditorProps = {
@@ -39,7 +39,13 @@ export const renderWorkflowCustomLiteralEditor = (
     case 'notification-recipients': {
       const recipients = readNotificationRecipientsLiteral(value);
       return recipients ? (
-        <WorkflowNotificationRecipientsEditor idPrefix={idPrefix} value={recipients} onChange={onChange} disabled={disabled} />
+        <WorkflowUserRecipientsEditor idPrefix={idPrefix} value={recipients} onChange={onChange} disabled={disabled} purpose="notify" />
+      ) : null;
+    }
+    case 'email-user-recipients': {
+      const recipients = readNotificationRecipientsLiteral(value);
+      return recipients ? (
+        <WorkflowUserRecipientsEditor idPrefix={idPrefix} value={recipients} onChange={onChange} disabled={disabled} purpose="email" />
       ) : null;
     }
     case 'email-recipients': {

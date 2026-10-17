@@ -11,6 +11,7 @@ import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { applyProjectVisibilityFilter } from '@alga-psa/authorization/portal/visibility';
 import { getPortalVisibilityForUser } from '../../lib/clientAuth';
+import { hasClientProjectReadPermission } from './clientProjectPermissions';
 
 type ClientTaskDocument = {
   document_id: string;
@@ -53,6 +54,7 @@ async function getProjectWithConfigInternal(
   const { knex } = await createTenantKnex();
   if (user.user_type !== 'client') return null;
   if (!user.contact_id) return null;
+  if (!(await hasClientProjectReadPermission(knex, user, tenant))) return null;
 
   // The visibility resolver (not a hand-rolled contact -> client lookup) says
   // which client this is and whether projects are narrowed to the contact.
@@ -505,6 +507,9 @@ export const uploadClientTaskDocument = withAuth(async (
   if (user.user_type !== 'client') {
     return { success: false, error: 'Not authorized' };
   }
+  if (!(await hasClientProjectReadPermission(knex, user, tenant))) {
+    return { success: false, error: 'Not authorized' };
+  }
 
   // Who is this portal user and which projects may they see?
   if (!user.contact_id) {
@@ -605,6 +610,9 @@ export const getClientTaskDocuments = withAuth(async (
 ) => {
   const { knex } = await createTenantKnex();
   if (user.user_type !== 'client') {
+    return { success: false, error: 'Not authorized' };
+  }
+  if (!(await hasClientProjectReadPermission(knex, user, tenant))) {
     return { success: false, error: 'Not authorized' };
   }
 

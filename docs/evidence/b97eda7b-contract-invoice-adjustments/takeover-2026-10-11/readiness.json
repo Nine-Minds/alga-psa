@@ -1,0 +1,95 @@
+{
+  "checkedAt": "2026-10-11T23:07:00Z",
+  "pr": 3499,
+  "checkpointRevision": "e612e1fd63be514e449d81d72dbe26e5112a4fc1",
+  "applicationBuildStamp": "0826a475429d25fe5a3647ef6a5e7df7c241e7cf+da39a3ee5e6b",
+  "status": "source repairs verified; production rollout and fleet activation pending",
+  "sourceRepairs": [
+    "preserve fixed-service template line identity through wizard submission",
+    "evaluate pre-generation discounts through shared settlement policies and fixed-parent consolidation"
+  ],
+  "production": {
+    "currency": "AUD",
+    "clientA": {
+      "invoiceId": "7c0f201e-ada6-458f-8463-6b3d4ffbdc78",
+      "number": "INV-000041",
+      "totalMinor": 27160,
+      "contractBaseMinor": 32000,
+      "discountsMinor": [
+        -3840,
+        -2500
+      ],
+      "manualMinor": 1500,
+      "ledgerMinor": [
+        25660,
+        1500
+      ],
+      "repeatChargeIdentityAndLedgerStable": true,
+      "downloadedPdfMatches": true
+    },
+    "clientB": {
+      "invoiceId": "cc1b7023-0c3a-4f7d-b271-d78eadb9c8c2",
+      "number": "INV-000042",
+      "totalMinor": 24460,
+      "lineBaseMinor": 12000,
+      "excludedSiblingMinor": 20000,
+      "discountsMinor": [
+        -3840,
+        -2500,
+        -1200
+      ],
+      "ledgerMinor": [
+        24460
+      ],
+      "repeatChargeIdentityAndLedgerStable": true,
+      "downloadedPdfMatches": true,
+      "billedClaims": 2,
+      "readyCandidatesAfterGeneration": 0
+    },
+    "taxSource": "pending_external",
+    "generateNetworkReplay": "not performed; billed period excluded from UI, duplicate-prevention behavioral tests pass",
+    "preGenerationPreviewRepairLive": false,
+    "fixedServiceWizardRepairLive": false
+  },
+  "openReview": {
+    "repairCommit": "69cb91dd5b58a5aa5560e2c7a0b11aa5ae6cd562",
+    "precedingCommit": "df8e9c219b38049f60fca8bd332e698181ddc46b",
+    "focusedTestsPassed": 25,
+    "activated": false,
+    "accessFailure": "Mac100.70.145.1:22 refused; list-terminals --allTabs empty",
+    "handoff": "Mac ghostty-pane-ide: npm run deploy:publish, then absent/existing/repeated/authenticated checks"
+  },
+  "qboDeliveredHistory": {
+    "invoice": "5a1e0000-0000-4000-8000-202610079004",
+    "batch": "3ac31e06-9479-4f5d-9c73-170a880d80d9",
+    "simulator": "invoice-21",
+    "minorUnits": 385000,
+    "state": "preserved"
+  },
+  "knownBaselineFailures": "2 QBO allocation-tax tests: actual462 expected418, reproduced unchanged checkpoint",
+  "notClaimed": [
+    "portal",
+    "combined companion",
+    "new source repairs deployed"
+  ],
+  "validation": {
+    "billingTypecheck": "passed with8GB heap",
+    "serverTypecheck": "passed with12GB heap",
+    "billingBuild": "passed",
+    "wizardUi": 5,
+    "evaluator": 32,
+    "previewAndDuplicateActions": 33,
+    "wizardPreviewSettlementDatabase": 2,
+    "fullAdjustmentDatabase": {
+      "passed": 62,
+      "failed": 2,
+      "baselineReproduced": true
+    },
+    "eslintErrors": 0,
+    "servedCurrentGuideLinks": {
+      "passed": 7,
+      "status": 200
+    },
+    "isolatedTestDatabase": "removed after verification"
+  }
+}

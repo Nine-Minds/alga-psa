@@ -36,6 +36,23 @@ describe('normalizeEmailBrandingInput', () => {
     expect(palette.hideAttribution).toBe(true);
   });
 
+  it('keeps a pinned logo artwork and drops auto or junk', () => {
+    const pinned = normalizeEmailBrandingInput(
+      { primary: '#b4552f', logo: { variant: 'wide', artwork: 'dark' } },
+      true,
+    );
+    expect(pinned.logo).toEqual({ variant: 'wide', artwork: 'dark' });
+
+    const auto = normalizeEmailBrandingInput({ primary: '#b4552f', logo: { variant: 'wide', artwork: 'auto' } }, true);
+    expect(auto.logo).toEqual({ variant: 'wide' });
+
+    const junk = normalizeEmailBrandingInput(
+      { primary: '#b4552f', logo: { variant: 'default', artwork: 'neon' as any } },
+      true,
+    );
+    expect(junk.logo).toEqual({ variant: 'default' });
+  });
+
   it('drops logo and attribution on Community while keeping the colors', () => {
     const palette = normalizeEmailBrandingInput(
       { primary: '#b4552f', secondary: '#3f4d8a', logo: { variant: 'wide' }, hideAttribution: true },

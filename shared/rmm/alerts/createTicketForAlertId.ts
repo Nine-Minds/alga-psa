@@ -57,6 +57,7 @@ export async function createTicketForAlertId(
   let clientId: string | null = null;
   let organizationName: string | null = null;
   let mappingDefaultContactId: string | null = null;
+  let mappingBillingProfileId: string | null = null;
   if (alert.asset_id) {
     const asset = await db.table('assets')
       .where({ asset_id: alert.asset_id })
@@ -76,9 +77,10 @@ export async function createTicketForAlertId(
         integration_id: alert.integration_id,
         external_organization_id: externalOrgId,
       })
-      .first('client_id', 'external_organization_name', 'default_contact_id');
+      .first('client_id', 'external_organization_name', 'default_contact_id', 'billing_profile_id');
     organizationName = orgMapping?.external_organization_name ?? null;
     mappingDefaultContactId = orgMapping?.default_contact_id ?? null;
+    mappingBillingProfileId = orgMapping?.billing_profile_id ?? null;
     if (!clientId) clientId = orgMapping?.client_id ?? null;
   }
   if (!clientId) {
@@ -113,6 +115,7 @@ export async function createTicketForAlertId(
       assetId: alert.asset_id,
       organizationName,
       mappingDefaultContactId,
+      mappingBillingProfileId,
     });
     await trxDb.table('rmm_alerts')
       .where({ alert_id: alertId })

@@ -5,9 +5,15 @@ import { tenantDb } from '@alga-psa/db';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 import { TicketModel } from '../../../../models/ticketModel';
+import { ticketStatusClockPatch } from '../../../../lib/ticketStatusClock';
+import {
+  captureTicketTransitionSnapshot,
+  publishTicketTransitionsAfterCommit,
+} from '../../../../lib/tickets/ticketLifecycleEvents';
+import { createTicketWithSideEffects } from '../../../../services/tickets/createTicketWithSideEffects';
 import { auditCloseRulesBypassIfGated } from '../../../../lib/ticketCloseRules';
 import { TICKET_ACTIVITY_ACTOR, TICKET_ACTIVITY_SOURCE } from '../../../../lib/ticketActivity';
-import { applyChecklistTemplateToTicket } from '../../../../lib/ticketChecklists';
+import { addChecklistItemsToTicket, applyChecklistTemplateToTicket, type AddChecklistItemInput } from '../../../../lib/ticketChecklists';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -23,13 +29,14 @@ import {
   attachDocumentToTicket,
   type TenantTxContext,
 } from './shared';
+import { getCurrentTicketAdditionalUserIds } from './userRecipients';
 import {
   WORKFLOW_COMMENT_VISIBILITY_LABELS,
   withWorkflowExplicitChoice,
   withWorkflowJsonSchemaMetadata,
   withWorkflowPicker,
   withWorkflowNotFoundPolicy,
-} from '../../jsonSchemaMetadata';
+} from '@alga-psa/event-schemas';
 import { orderTicketCommentsNewestFirst, whereCustomerAuthoredComment } from './ticketComments';
 
 /**
@@ -44,6 +51,32 @@ const commentVisibilityChoice = () =>
     'Who can see this comment?',
     WORKFLOW_COMMENT_VISIBILITY_LABELS
   );
+
+/**
+ * One-off Cc/Bcc on a workflow-authored comment. Same shape and designer
+ * editor as `email.send`'s recipient lists, so a literal list and an
+ * expression resolving to a list both work.
+ */
+const commentEmailRecipientListSchema = (label: 'Cc' | 'Bcc') =>
+  withWorkflowJsonSchemaMetadata(
+    z.array(z.object({ email: z.string().email(), name: z.string().optional() })).optional(),
+    `Optional ${label} recipients for this comment's email only (public comments)`,
+    { 'x-workflow-editor': { kind: 'custom', custom: { component: 'email-recipients' } } }
+  );
+
+/**
+ * Marker publisher: TicketModel.createComment only needs a non-inbound
+ * publisher to persist the TICKET_COMMENT_ADDED publication intent in the same
+ * transaction. The after-commit dispatcher then delivers it like any other
+ * comment event, so no method on it is ever called here.
+ */
+const workflowCommentEventPublisher = {
+  publishTicketCreated: async () => undefined,
+  publishTicketUpdated: async () => undefined,
+  publishTicketClosed: async () => undefined,
+  publishCommentCreated: async () => undefined,
+  publishTicketAssigned: async () => undefined,
+} as unknown as import('@alga-psa/types').IEventPublisher;
 
 const workflowTicketAssignmentPrimaryTypeSchema = z.enum(['user', 'team', 'queue']);
 
@@ -119,22 +152,6 @@ function tenantScopedTable(
 ): Knex.QueryBuilder {
   return tenantDb(tx.trx, tx.tenantId).table(table);
 }
-
-const getCurrentTicketAdditionalUserIds = async (
-  tx: { tenantId: string; trx: any },
-  ticketId: string
-): Promise<string[]> => {
-  const rows = await tenantScopedTable(tx, 'ticket_resources')
-    .where('ticket_id', ticketId)
-    .whereNotNull('additional_user_id')
-    .select('additional_user_id');
-
-  return uniqueStrings(
-    rows
-      .map((row: { additional_user_id: string | null }) => row.additional_user_id)
-      .filter((userId: string | null): userId is string => typeof userId === 'string' && userId.length > 0)
-  );
-};
 
 const resolveWorkflowTicketAssignment = async (
   tx: { tenantId: string; trx: any },
@@ -356,34 +373,6 @@ const reconcileWorkflowTicketAdditionalUsers = async (
   );
 };
 
-const generateTagColors = (text: string): { backgroundColor: string; textColor: string } => {
-  let hash = 0;
-  for (let i = 0; i < text.length; i += 1) {
-    hash = text.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  const hue = Math.abs(hash) % 360;
-  const saturation = 70;
-  const lightness = 85;
-
-  const hslToHex = (h: number, s: number, l: number): string => {
-    const normalizedLightness = l / 100;
-    const a = (s * Math.min(normalizedLightness, 1 - normalizedLightness)) / 100;
-    const f = (n: number) => {
-      const k = (n + h / 30) % 12;
-      const color = normalizedLightness - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-      return Math.round(255 * color).toString(16).padStart(2, '0');
-    };
-
-    return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
-  };
-
-  return {
-    backgroundColor: hslToHex(hue, saturation, lightness),
-    textColor: '#2C3E50',
-  };
-};
-
 const normalizeTicketTags = (tags: string[] | undefined): string[] => {
   if (!Array.isArray(tags)) return [];
 
@@ -398,89 +387,6 @@ const normalizeTicketTags = (tags: string[] | undefined): string[] => {
   });
 
   return normalized;
-};
-
-const ensureTicketTagMappings = async (
-  tx: TenantTxContext,
-  ticketId: string,
-  tags: string[] | undefined
-): Promise<void> => {
-  const normalizedTags = normalizeTicketTags(tags);
-  if (normalizedTags.length === 0) {
-    return;
-  }
-
-  for (const tagText of normalizedTags) {
-    const { backgroundColor, textColor } = generateTagColors(tagText);
-
-    let definition = await tenantScopedTable(tx, 'tag_definitions')
-      .where({
-        tag_text: tagText,
-        tagged_type: 'ticket',
-      })
-      .first();
-
-    if (!definition) {
-      const definitionRow = {
-        tenant: tx.tenantId,
-        tag_id: uuidv4(),
-        tag_text: tagText,
-        tagged_type: 'ticket',
-        board_id: null,
-        background_color: backgroundColor,
-        text_color: textColor,
-      };
-
-      try {
-        await tenantScopedTable(tx, 'tag_definitions').insert(definitionRow);
-        definition = definitionRow;
-      } catch (error: unknown) {
-        const errorCode =
-          typeof error === 'object' && error !== null && 'code' in error
-            ? String((error as { code?: unknown }).code)
-            : undefined;
-        const errorMessage = error instanceof Error ? error.message : String(error);
-
-        if (errorCode === '23505' || /duplicate|unique/i.test(errorMessage)) {
-          definition = await tenantScopedTable(tx, 'tag_definitions')
-            .where({
-              tag_text: tagText,
-              tagged_type: 'ticket',
-            })
-            .first();
-        } else {
-          throw error;
-        }
-      }
-    }
-
-    if (!definition?.tag_id) {
-      throw new Error(`Failed to resolve ticket tag definition for "${tagText}"`);
-    }
-
-    try {
-      await tenantScopedTable(tx, 'tag_mappings').insert({
-        tenant: tx.tenantId,
-        mapping_id: uuidv4(),
-        tag_id: definition.tag_id,
-        tagged_id: ticketId,
-        tagged_type: 'ticket',
-        created_by: tx.actorUserId,
-      });
-    } catch (error: unknown) {
-      const errorCode =
-        typeof error === 'object' && error !== null && 'code' in error
-          ? String((error as { code?: unknown }).code)
-          : undefined;
-      const errorMessage = error instanceof Error ? error.message : String(error);
-
-      if (errorCode === '23505' || /duplicate|unique/i.test(errorMessage)) {
-        continue;
-      }
-
-      throw error;
-    }
-  }
 };
 
 export function registerTicketActions(): void {
@@ -544,6 +450,15 @@ export function registerTicketActions(): void {
         filename: z.string().optional(),
         visibility: z.enum(['public', 'internal']).optional()
       })).optional().describe('Optional attachments (documents)'),
+      notify: z.object({
+        internal: z.boolean().default(true)
+          .describe('Notify the assignee or dispatch team (in-app and email) that the ticket was created'),
+        contact: withWorkflowExplicitChoice(
+          z.boolean().default(false),
+          'Email and notify the customer that the ticket was created',
+          'Should the customer be told this ticket was created?'
+        ),
+      }).optional().describe('Who is notified that this ticket was created. SLA, search, webhooks and event-triggered workflows always run.'),
       idempotency_key: z.string().optional().describe('Optional external idempotency key')
     }),
     outputSchema: z.object({
@@ -605,11 +520,17 @@ export function registerTicketActions(): void {
         input.assignment,
       );
 
-      let created: any;
+      let created: { ticketId: string; ticketNumber: string };
       try {
-        // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (packages/tickets/src/lib/createTicketWithSideEffects.ts)
-        created = await TicketModel.createTicket(
-          {
+        created = await createTicketWithSideEffects(tx.trx, tx.tenantId, {
+          actor: {
+            type: 'workflow',
+            userId: tx.actorUserId,
+            runId: ctx.runId,
+            workflowId: tx.workflowId,
+            lineage: tx.lineage,
+          },
+          ticket: {
             title: input.title,
             description: input.description ?? '',
             client_id: input.client_id,
@@ -619,37 +540,41 @@ export function registerTicketActions(): void {
             status_id: input.status_id,
             priority_id: input.priority_id,
             assigned_to: resolvedAssignment.assignedTo ?? undefined,
-            assigned_team_id: resolvedAssignment.assignedTeamId ?? undefined,
             category_id: input.category_id ?? undefined,
             subcategory_id: input.subcategory_id ?? undefined,
-            entered_by: tx.actorUserId,
-            attributes: mergedAttributes
+            source: 'workflow',
+            attributes: mergedAttributes,
           },
-          tx.tenantId,
-          tx.trx,
-          {},
-          undefined,
-          undefined,
-          tx.actorUserId
-        );
+          // The service adds the team's members; the workflow passes only the
+          // explicit `support` agents, which keeps the resolved set unchanged.
+          teamId: resolvedAssignment.assignedTeamId,
+          additionalAgentIds: resolvedAssignment.additionalUsers
+            .filter((user) => user.role === 'support')
+            .map((user) => user.userId),
+          tags: normalizedTags,
+          // Absent `notify` keeps today's behaviour: no customer email. Internal
+          // notifications are on unless the author turns them off.
+          notificationSuppression: {
+            suppressInternalNotifications: input.notify?.internal === false,
+            suppressContactNotifications: input.notify?.contact !== true,
+          },
+        });
       } catch (error) {
         rethrowAsStandardError(ctx, error);
       }
 
-      await ensureTicketTagMappings(tx, created.ticket_id, normalizedTags);
-
-      await reconcileWorkflowTicketAdditionalUsers(
-        tx,
-        created.ticket_id,
-        resolvedAssignment.assignedTo,
-        resolvedAssignment.additionalUsers
-      );
+      const createdTicket = await tenantScopedTable(tx, 'tickets')
+        .where({ ticket_id: created.ticketId })
+        .first();
+      if (!createdTicket) {
+        throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Created ticket could not be reloaded' });
+      }
 
       if (input.initial_comment?.body) {
         try {
           await TicketModel.createComment(
             {
-              ticket_id: created.ticket_id,
+              ticket_id: created.ticketId,
               content: input.initial_comment.body,
               is_internal: input.initial_comment.visibility === 'internal',
               is_resolution: false,
@@ -670,7 +595,7 @@ export function registerTicketActions(): void {
 
       if (input.attachments?.length) {
         for (const attachment of input.attachments) {
-          await attachDocumentToTicket(ctx, tx, created.ticket_id, {
+          await attachDocumentToTicket(ctx, tx, created.ticketId, {
             source: attachment.source,
             filename: attachment.filename ?? null,
             visibility: attachment.visibility
@@ -680,16 +605,16 @@ export function registerTicketActions(): void {
 
       await writeRunAudit(ctx, tx, {
         operation: 'workflow_action:tickets.create',
-        changedData: { ticket_id: created.ticket_id, ticket_number: created.ticket_number },
-        details: { action_id: 'tickets.create', action_version: 1, ticket_id: created.ticket_id }
+        changedData: { ticket_id: created.ticketId, ticket_number: created.ticketNumber },
+        details: { action_id: 'tickets.create', action_version: 1, ticket_id: created.ticketId }
       });
 
       return {
-        ticket_id: created.ticket_id,
-        ticket_number: created.ticket_number,
-        url: (created as any).url ?? null,
-        created_at: created.entered_at,
-        status_id: created.status_id,
+        ticket_id: created.ticketId,
+        ticket_number: created.ticketNumber,
+        url: null,
+        created_at: new Date(createdTicket.entered_at).toISOString(),
+        status_id: createdTicket.status_id,
         priority_id: input.priority_id
       };
     })
@@ -710,6 +635,8 @@ export function registerTicketActions(): void {
         source: attachmentSourceSchema,
         filename: z.string().optional()
       })).optional().describe('Optional attachments (added to ticket)'),
+      cc: commentEmailRecipientListSchema('Cc'),
+      bcc: commentEmailRecipientListSchema('Bcc'),
       idempotency_key: z.string().optional().describe('Optional external idempotency key')
     }),
     outputSchema: z.object({
@@ -729,21 +656,41 @@ export function registerTicketActions(): void {
 
       const content = input.mentions?.length ? buildBlockNoteWithMentions({ body: input.body, mentions: input.mentions }) : input.body;
 
+      const isInternalComment = input.visibility === 'internal';
+      const ccAddresses = (input.cc ?? []).map((recipient) => recipient.email);
+      const bccAddresses = (input.bcc ?? []).map((recipient) => recipient.email);
+      const hasEmailRecipients = ccAddresses.length > 0 || bccAddresses.length > 0;
+      if (hasEmailRecipients && isInternalComment) {
+        throwActionError(ctx, {
+          category: 'ValidationError',
+          code: 'VALIDATION_ERROR',
+          message: 'Cc/Bcc recipients cannot be added to an internal comment'
+        });
+      }
+
       let created: any;
       try {
         created = await TicketModel.createComment(
           {
             ticket_id: input.ticket_id,
             content,
-            is_internal: input.visibility === 'internal',
+            is_internal: isInternalComment,
             is_resolution: false,
             author_type: 'system',
             author_id: tx.actorUserId,
-            metadata: { source: 'workflow', run_id: ctx.runId, step_path: ctx.stepPath }
+            // `metadata.source = 'workflow'` is the persisted workflow-origin marker: the ticket.status_age
+            // no-activity clock ignores such comments, so a workflow's own comment can't re-arm itself.
+            // Not `is_system_generated`: that would also make the comment uneditable and change how its
+            // author renders, which is user-visible.
+            metadata: { source: 'workflow', run_id: ctx.runId, step_path: ctx.stepPath },
+            ...(hasEmailRecipients ? { emailRecipients: { cc: ccAddresses, bcc: bccAddresses } } : {})
           },
           tx.tenantId,
           tx.trx,
-          undefined,
+          // A workflow comment is silent by default. Explicit Cc/Bcc are an
+          // instruction to mail someone, so the comment publishes
+          // TICKET_COMMENT_ADDED and the normal subscriber delivery applies.
+          hasEmailRecipients ? workflowCommentEventPublisher : undefined,
           undefined,
           tx.actorUserId
         );
@@ -931,6 +878,7 @@ export function registerTicketActions(): void {
             .delete();
         }
 
+        const transitionBefore = await captureTicketTransitionSnapshot(tx.trx, tx.tenantId, input.ticket_id);
         updated = await TicketModel.updateTicket(
           input.ticket_id,
           {
@@ -956,6 +904,13 @@ export function registerTicketActions(): void {
           undefined,
           tx.actorUserId
         );
+
+        await publishTicketTransitionsAfterCommit(tx.trx, {
+          tenant: tx.tenantId,
+          before: transitionBefore,
+          actorUserId: tx.actorUserId ?? undefined,
+          correlationId: ctx.runId,
+        });
 
         if (resolvedAssignment) {
           await reconcileWorkflowTicketAdditionalUsers(
@@ -1088,6 +1043,7 @@ export function registerTicketActions(): void {
           .where('ticket_id', input.ticket_id)
           .delete();
 
+        const transitionBefore = await captureTicketTransitionSnapshot(tx.trx, tx.tenantId, input.ticket_id);
         updated = await TicketModel.updateTicket(
           input.ticket_id,
           {
@@ -1102,6 +1058,13 @@ export function registerTicketActions(): void {
           undefined,
           tx.actorUserId
         );
+
+        await publishTicketTransitionsAfterCommit(tx.trx, {
+          tenant: tx.tenantId,
+          before: transitionBefore,
+          actorUserId: tx.actorUserId ?? undefined,
+          correlationId: ctx.runId,
+        });
 
         await reconcileWorkflowTicketAdditionalUsers(
           tx,
@@ -1257,11 +1220,14 @@ export function registerTicketActions(): void {
         TICKET_ACTIVITY_SOURCE.WORKFLOW
       );
 
+      const transitionBefore = await captureTicketTransitionSnapshot(tx.trx, tx.tenantId, input.ticket_id);
       // Update ticket closure fields.
       await tenantScopedTable(tx, 'tickets')
         .where('ticket_id', input.ticket_id)
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
         .update({
           status_id: closedStatus.status_id,
+          ...ticketStatusClockPatch(tx.trx, closedStatus.status_id as string),
           is_closed: true,
           closed_at: nowIso,
           closed_by: tx.actorUserId,
@@ -1269,6 +1235,13 @@ export function registerTicketActions(): void {
           updated_at: nowIso,
           updated_by: tx.actorUserId
         });
+
+      await publishTicketTransitionsAfterCommit(tx.trx, {
+        tenant: tx.tenantId,
+        before: transitionBefore,
+        actorUserId: tx.actorUserId ?? undefined,
+        correlationId: ctx.runId,
+      });
 
       if (input.public_note) {
         await TicketModel.createComment(
@@ -1927,6 +1900,57 @@ export function registerTicketActions(): void {
         applied: applyResult.applied,
         items_added: applyResult.itemsAdded
       };
+    })
+  });
+
+  // ---------------------------------------------------------------------------
+  // tickets.add_checklist_items
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'tickets.add_checklist_items',
+    version: 1,
+    inputSchema: z.object({
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
+      items: z.array(z.object({
+        item_name: z.string().trim().min(1).describe('Checklist item text'),
+        description: z.string().optional().describe('Optional item details'),
+        is_required: z.boolean().default(false).describe('Required items gate ticket closure')
+      })).min(1).describe('Checklist items to append, in order')
+    }),
+    outputSchema: z.object({
+      ticket_id: uuidSchema,
+      added: z.array(z.object({
+        checklist_item_id: uuidSchema,
+        item_name: z.string()
+      }))
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Add checklist items',
+      category: 'Business Operations',
+      description: 'Append ad-hoc checklist items (unchecked, unassigned) to a ticket'
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+
+      const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
+      if (!ticket) {
+        throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
+      }
+
+      const added = await addChecklistItemsToTicket(tx.trx, tx.tenantId, input.ticket_id, input.items as AddChecklistItemInput[], {
+        source: 'workflow',
+        createdBy: tx.actorUserId ?? null
+      });
+
+      await writeRunAudit(ctx, tx, {
+        operation: 'workflow_action:tickets.add_checklist_items',
+        changedData: { ticket_id: input.ticket_id, items_added: added.length },
+        details: { action_id: 'tickets.add_checklist_items', action_version: 1 }
+      });
+
+      return { ticket_id: input.ticket_id, added };
     })
   });
 }

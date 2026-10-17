@@ -1,0 +1,90 @@
+{
+  "checkedAt": "2026-10-11T22:54:09.051Z",
+  "invoice": {
+    "invoice_id": "7c0f201e-ada6-458f-8463-6b3d4ffbdc78",
+    "invoice_number": "INV-000041",
+    "status": "draft",
+    "subtotal": 27160,
+    "tax": 0,
+    "total_amount": "27160",
+    "currency_code": "AUD",
+    "tax_source": "pending_external",
+    "draft_adjustment_revision": 1
+  },
+  "charges": [
+    {
+      "item_id": "2d221b97-25fb-4729-a6d5-013699524bbb",
+      "description": "REVIEW-3499-MITIGATION-DEFAULT-FIXED-25",
+      "net_amount": "-2500",
+      "is_manual": false,
+      "adjustment_source_kind": "discount",
+      "adjustment_source_id": "87d512dd-de77-4792-8bbc-b03d98c48dd9",
+      "adjustment_base_amount": "32000",
+      "adjustment_scope": "contract",
+      "adjustment_period_start": "2026-09-01T04:00:00.000Z",
+      "adjustment_period_end": "2026-10-01T04:00:00.000Z"
+    },
+    {
+      "item_id": "66f3e801-12c8-4f2a-8fbf-0559a5a510e8",
+      "description": "REVIEW-3499 intentional manual addition",
+      "net_amount": "1500",
+      "is_manual": true,
+      "adjustment_source_kind": "manual_adjustment",
+      "adjustment_source_id": null,
+      "adjustment_base_amount": null,
+      "adjustment_scope": null,
+      "adjustment_period_start": null,
+      "adjustment_period_end": null
+    },
+    {
+      "item_id": "a09c53be-110e-49fa-8609-234d215035d3",
+      "description": "Product: Cabling",
+      "net_amount": "12000",
+      "is_manual": false,
+      "adjustment_source_kind": null,
+      "adjustment_source_id": null,
+      "adjustment_base_amount": null,
+      "adjustment_scope": null,
+      "adjustment_period_start": null,
+      "adjustment_period_end": null
+    },
+    {
+      "item_id": "a3e74fa7-f7ed-4c71-86d9-f40ca79ee9f7",
+      "description": "REVIEW-3499-MITIGATION-TWO-FIXED-LINES - Fixed Fee",
+      "net_amount": "20000",
+      "is_manual": false,
+      "adjustment_source_kind": null,
+      "adjustment_source_id": null,
+      "adjustment_base_amount": null,
+      "adjustment_scope": null,
+      "adjustment_period_start": null,
+      "adjustment_period_end": null
+    },
+    {
+      "item_id": "b66418a8-3271-4ab7-805d-88ac8728217a",
+      "description": "REVIEW-3499-MITIGATION-DEFAULT-12P",
+      "net_amount": "-3840",
+      "is_manual": false,
+      "adjustment_source_kind": "discount",
+      "adjustment_source_id": "ecdd1ce0-62fd-4d48-948e-8a42da77557e",
+      "adjustment_base_amount": "32000",
+      "adjustment_scope": "contract",
+      "adjustment_period_start": "2026-09-01T04:00:00.000Z",
+      "adjustment_period_end": "2026-10-01T04:00:00.000Z"
+    }
+  ],
+  "ledger": [
+    {
+      "transaction_id": "15415e44-6616-4c69-af81-ca26c213ea77",
+      "type": "invoice_generated",
+      "amount": "25660",
+      "status": "completed"
+    },
+    {
+      "transaction_id": "b668da55-ff96-4f6c-9737-470bd70573d9",
+      "type": "invoice_adjustment",
+      "amount": "1500",
+      "status": "completed"
+    }
+  ]
+}

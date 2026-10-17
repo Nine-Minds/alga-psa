@@ -423,7 +423,8 @@
       "placeholders": {
         "teamName": "Ange teamnamn",
         "selectTeamLead": "Välj en teamledare",
-        "selectUserToAdd": "Välj en användare att lägga till"
+        "selectUserToAdd": "Välj en användare att lägga till",
+        "noTeamLead": "Inte tilldelad"
       },
       "alert": {
         "unsavedChanges": "Du har osparade ändringar"
@@ -673,8 +674,8 @@
           "suppressAiHelp": "Endast för tillägget Enterprise AI Assistant. Om tillägget inte är tillgängligt öppnas ärenden igen som vanligt vid svar."
         },
         "liveTimer": {
-          "label": "Aktivera löpande timer för ärenden",
-          "help": "Visar den löpande timern och registrerade intervall för ärenden på tavlan. Manuell tidregistrering är fortsatt tillgänglig."
+          "label": "Visa stoppur på ärenden",
+          "help": "Visar stoppursknapparna på ärenden på tavlan. Stäng av för att dölja stoppuret här; manuell tidregistrering är fortsatt tillgänglig. Ett stoppur som redan går fortsätter att gå."
         },
         "clientPortalVisible": {
           "label": "Synlig i kundportalen",
@@ -821,6 +822,27 @@
           "appearanceHelp": "Fästa flikar och tavlans standardlistvy",
           "assignment": "Tilldelning och SLA",
           "assignmentHelp": "Standardtilldelning, SLA och tavelansvarig",
+          "notifications": "Aviseringar",
+          "notificationsHelp": "Meddela tekniker om nya ärenden och statusändringar och ange standardbevakare",
+          "notificationsRulesLabel": "Aviseringsregler",
+          "notificationsRulesHelp": "Mottagare får en avisering per händelse. De läggs inte till som bevakare.",
+          "notificationsAddRule": "Lägg till regel",
+          "notificationsRuleTitle": "Regel {{number}}",
+          "notificationsRuleEnabled": "Aktiverad",
+          "notificationsRemoveRule": "Ta bort regel",
+          "notificationsOnCreate": "När ett ärende skapas på den här tavlan",
+          "notificationsOnStatus": "När ett ärende får status",
+          "notificationsNoStatuses": "Statusar kan väljas när tavlan har sparats.",
+          "notificationsRecipients": "Avisera",
+          "notificationsRecipientsPlaceholder": "Välj användare och team...",
+          "notificationsRecipientsHelp": "Teammedlemmar slås upp varje gång en avisering skickas.",
+          "notificationsDefaultWatchers": "Standardbevakare",
+          "notificationsDefaultWatchersPlaceholder": "Välj användare...",
+          "notificationsDefaultWatchersHelp": "Läggs till i bevakarlistan för varje nytt ärende på den här tavlan och aviseras om alla senare uppdateringar.",
+          "notificationsTriggerRequired": "Varje aviseringsregel behöver minst en utlösare: att ett ärende skapas eller en status.",
+          "notificationsRecipientRequired": "Varje aviseringsregel behöver minst en användare eller ett team att avisera.",
+          "notificationsFetchFailed": "Det gick inte att läsa in aviseringsinställningarna",
+          "notificationsStatusRemapFailed": "Tavlan skapades, men statusen för en aviseringsregel kunde inte matchas mot den nya tavlan. Lägg till aviseringsreglerna igen.",
           "inbound": "E-post och inkommande svar",
           "inboundHelp": "Öppna ärenden igen när kunder svarar via e-post",
           "close": "Stängningsregler",
@@ -830,7 +852,7 @@
           "statuses": "Prioriteter och statusar",
           "statusesHelp": "Standardprioritet och ärendestatusar för tavlan",
           "display": "Visning och beteende",
-          "displayHelp": "Löpande timer och taveltyp"
+          "displayHelp": "Stoppur och taveltyp"
         },
         "saveChanges": "Spara ändringar",
         "unsaved": "Osparat",
@@ -1825,6 +1847,12 @@
         "useLogo": "Använd min logotyp i e-posthuvudet",
         "logoWide": "Bred logotyp",
         "logoDefault": "Kvadratisk logotyp",
+        "logoArtwork": "Logotypversion",
+        "logoArtworkAuto": "Följ sidhuvudet",
+        "logoArtworkLight": "Logotyp för ljus bakgrund",
+        "logoArtworkDark": "Logotyp för mörk bakgrund",
+        "logoArtworkAutoDark": "Automatiskt läser sidhuvudet som mörkt och använder logotypen för mörk bakgrund.",
+        "logoArtworkAutoLight": "Automatiskt läser sidhuvudet som ljust och använder logotypen för ljus bakgrund.",
         "noLogo": "Ladda upp en logotyp under Inställningar → Kundportal → Varumärkesprofil för att använda den här.",
         "showAttribution": "Visa ”Drivs av AlgaPSA” i sidfoten"
       }
@@ -1933,6 +1961,8 @@
   "timeEntry": {
     "title": "Inställningar för tidregistrering",
     "description": "Hantera inställningar för tidregistrering och tidsperioder",
+    "accessDenied": "Åtkomst nekad: du har inte behörighet att visa tidsperioder.",
+    "loading": "Läser in inställningar för tidregistrering…",
     "timePeriods": {
       "title": "Inställningar för tidsperioder",
       "description": "Konfigurera tidsperioder för fakturering",
@@ -2030,7 +2060,7 @@
       "openMenu": "Öppna meny",
       "columns": {
         "startDate": "Startdatum",
-        "endDate": "Slutdatum",
+        "endDate": "Sista dagen",
         "actions": "Åtgärder"
       },
       "form": {
@@ -2042,7 +2072,8 @@
         "startDate": "Startdatum",
         "startDatePlaceholder": "Välj startdatum",
         "noEndDate": "Inget slutdatum",
-        "endDate": "Slutdatum",
+        "endDate": "Sista dagen i perioden",
+        "endDateHelp": "Perioden inkluderar denna dag.",
         "endDatePlaceholder": "Välj slutdatum",
         "deletePeriod": "Radera period",
         "confirmDeleteTitle": "Bekräfta radering",
@@ -2056,7 +2087,7 @@
         "noSettings": "Inga tidsperiodsinställningar är tillgängliga. Det går inte att skapa en ny tidsperiod.",
         "settingsRequired": "Det går inte att hantera tidsperioden utan inställningar.",
         "startDateRequired": "Startdatum måste anges.",
-        "startBeforeEnd": "Startdatum måste infalla före slutdatum.",
+        "startBeforeEnd": "Slutdatumet får inte vara före startdatumet.",
         "overlap": "Tidsperioden överlappar en befintlig period.",
         "overlapRetry": "Tidsperioden överlappar en befintlig period. Välj andra datum.",
         "create": "Det gick inte att skapa tidsperioden.",

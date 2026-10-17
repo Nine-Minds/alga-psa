@@ -25,6 +25,7 @@ vi.mock('@alga-psa/db/admin.js', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  ensureMiscellaneousService: vi.fn().mockResolvedValue('miscellaneous-service'),
   tenantDb: () => ({
     table: (table: string) => ({
       insert: async (value: Record<string, unknown>) => {

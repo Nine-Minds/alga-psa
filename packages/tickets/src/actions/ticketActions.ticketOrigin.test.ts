@@ -53,6 +53,11 @@ vi.mock('@alga-psa/validation', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(),
   publishWorkflowEvent: vi.fn(),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus', () => ({
@@ -72,7 +77,7 @@ vi.mock('@alga-psa/shared/models/ticketModel', () => ({
   TicketModel: {},
 }));
 
-vi.mock('../lib/adapters/TicketModelEventPublisher', () => ({
+vi.mock('@alga-psa/shared/services/tickets/ticketModelEventPublisher', () => ({
   TicketModelEventPublisher: class {},
 }));
 
@@ -92,7 +97,7 @@ vi.mock('../lib/workflowTicketCommunicationEvents', () => ({
   buildTicketCommunicationWorkflowEvents: vi.fn(() => []),
 }));
 
-vi.mock('../lib/workflowTicketSlaStageEvents', () => ({
+vi.mock('@alga-psa/shared/services/tickets/ticketSlaStageEvents', () => ({
   buildTicketResolutionSlaStageCompletionEvent: vi.fn(() => null),
   buildTicketResolutionSlaStageEnteredEvent: vi.fn(() => null),
 }));

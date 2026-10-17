@@ -77,11 +77,10 @@ describe('Contract-cadence coverage audit', () => {
     await context.db('recurring_service_periods').insert({
       record_id: uuidv4(),
       tenant: context.tenantId,
-      schedule_key: `schedule:${context.tenantId}:contract_line:${input.obligationId}:contract:arrears`,
+      schedule_key: `schedule:${context.tenantId}:${input.obligationId}:contract:arrears`,
       period_key: input.periodKey ?? `period:${input.serviceStart}:${input.serviceEnd}`,
       revision: 1,
       obligation_id: input.obligationId,
-      obligation_type: 'contract_line',
       charge_family: 'fixed',
       cadence_owner: 'contract',
       due_position: 'arrears',

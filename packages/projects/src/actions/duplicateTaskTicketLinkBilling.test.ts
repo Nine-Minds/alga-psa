@@ -115,8 +115,14 @@ vi.mock('../models/taskDependency', () => ({ default: {} }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(),
   publishWorkflowEvent: vi.fn(),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...((await importOriginal()) as any),
   buildProjectTaskAssignedPayload: vi.fn(() => ({})),
   buildProjectTaskCompletedPayload: vi.fn(() => ({})),
   buildProjectTaskCreatedPayload: vi.fn(() => ({})),

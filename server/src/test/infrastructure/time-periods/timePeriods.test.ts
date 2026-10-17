@@ -3,6 +3,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { ITimePeriodSettings, ITimePeriod } from '../../../interfaces/timeEntry.interfaces';
 import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods, createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
+import { createTimePeriodSettings } from '@alga-psa/scheduling/actions/time-period-settings-actions/timePeriodSettingsActions';
+import { ensureTimePeriodCoversDate } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
+import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from '../../../types/types.d';
 import * as tenantModule from '../../../lib/tenant';
 import { TestContext } from '../../../../test-utils/testContext';
@@ -72,8 +75,10 @@ describe('Time Periods Infrastructure', () => {
     // Get tenant from context
     tenantId = context.tenantId;
 
-    // Set up mocks
-    setupCommonMocks({ tenantId });
+    // Set up mocks. The period actions are gated on `time_period:*` and the fixture
+    // user carries no roles, so grant the checks here; refusals have their own suites
+    // (packages/scheduling/tests/timePeriod*Actions.permissions.test.ts).
+    setupCommonMocks({ tenantId, permissionCheck: () => true });
     vi.spyOn(tenantModule, 'getTenantForCurrentRequest').mockResolvedValue(tenantId);
   });
 
@@ -399,6 +404,172 @@ describe('Time Periods Infrastructure', () => {
       const result = await runWithTenant(tenantId, () => createNextTimePeriod(settings, 5));
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('first period on any day (#3206)', () => {
+    const sundayWeekly = (effectiveFrom: string): ITimePeriodSettings => ({
+      time_period_settings_id: uuidv4(),
+      start_day: 7,
+      end_day: 0,
+      frequency: 1,
+      frequency_unit: 'week',
+      is_active: true,
+      effective_from: effectiveFrom,
+      effective_to: undefined,
+      created_at: createTestDateISO({}),
+      updated_at: createTestDateISO({}),
+      tenant: tenantId,
+    });
+
+    const insertSetting = async (setting: ITimePeriodSettings) => {
+      await tenantTable(context, 'time_period_settings').insert(withSettingsDefaults(setting));
+    };
+
+    const storedPeriods = async () => {
+      const rows = await tenantTable(context, 'time_periods').orderBy('start_date', 'asc');
+      return rows.map((r: any) => [toPlainDate(r.start_date).toString(), toPlainDate(r.end_date).toString()]);
+    };
+
+    afterEach(() => {
+      unfreezeTime();
+    });
+
+    it('15. createNextTimePeriod bootstraps on a non-start day', async () => {
+      freezeTime({ year: 2024, month: 1, day: 17 }); // Wednesday
+      const setting = sundayWeekly(createTestDateISO({ year: 2023, month: 1, day: 1 }));
+      await insertSetting(setting);
+
+      const result = await runWithTenant(tenantId, () => createNextTimePeriod([setting], 5));
+
+      expect(result).not.toBeNull();
+      // [01-14, 01-21) is the current week; 01-21 is within 5 days, so 01-21..01-28 follows.
+      expect(await storedPeriods()).toEqual([
+        ['2024-01-14', '2024-01-21'],
+        ['2024-01-21', '2024-01-28'],
+      ]);
+    });
+
+    it('16. bootstrap honours the threshold for a future effective_from', async () => {
+      const today = Temporal.PlainDate.from('2024-01-17');
+      const far = sundayWeekly('2024-02-04T00:00:00.000Z'); // 18 days out
+      await insertSetting(far);
+      expect(await runWithTenant(tenantId, () => createNextTimePeriod([far], 5, { today }))).toBeNull();
+      expect(await storedPeriods()).toEqual([]);
+
+      const near = { ...far, effective_from: '2024-01-21T00:00:00.000Z' }; // 4 days out
+      const result = await runWithTenant(tenantId, () => createNextTimePeriod([near], 5, { today }));
+      expect(result).not.toBeNull();
+      expect((await storedPeriods())[0]).toEqual(['2024-01-21', '2024-01-28']);
+    });
+
+    it('17. ensureTimePeriodCoversDate creates the current period once and no-ops without settings', async () => {
+      const date = Temporal.PlainDate.from('2024-01-17');
+
+      await ensureTimePeriodCoversDate(context.db, tenantId, date);
+      expect(await storedPeriods()).toEqual([]); // no settings
+
+      await insertSetting(sundayWeekly(createTestDateISO({ year: 2023, month: 1, day: 1 })));
+      await ensureTimePeriodCoversDate(context.db, tenantId, date);
+      expect(await storedPeriods()).toEqual([['2024-01-14', '2024-01-21']]);
+
+      await ensureTimePeriodCoversDate(context.db, tenantId, date);
+      expect(await storedPeriods()).toEqual([['2024-01-14', '2024-01-21']]);
+    });
+
+    it('18. ensureTimePeriodCoversDate fills a two-week gap through the containing period', async () => {
+      await insertSetting(sundayWeekly(createTestDateISO({ year: 2023, month: 1, day: 1 })));
+      await tenantTable(context, 'time_periods').insert({
+        period_id: uuidv4(),
+        tenant: tenantId,
+        start_date: '2023-12-24',
+        end_date: '2023-12-31',
+      });
+
+      await ensureTimePeriodCoversDate(context.db, tenantId, Temporal.PlainDate.from('2024-01-17'));
+
+      expect(await storedPeriods()).toEqual([
+        ['2023-12-24', '2023-12-31'],
+        ['2023-12-31', '2024-01-07'],
+        ['2024-01-07', '2024-01-14'],
+        ['2024-01-14', '2024-01-21'],
+      ]);
+    });
+
+    describe('effective_from default (createTimePeriodSettings)', () => {
+      const weeklyInput = { frequency: 1, frequency_unit: 'week' as const, start_day: 7, end_day: 0 };
+
+      const useUserTimeZone = async (timezone: string) => {
+        await tenantTable(context, 'users').where({ user_id: context.userId }).update({ timezone });
+        setupCommonMocks({ tenantId, userId: context.userId, user: context.user, permissionCheck: () => true });
+      };
+
+      it('19. (a) mid-week save with no effective_from starts at the current week start', async () => {
+        await useUserTimeZone('UTC');
+        freezeTime('2026-10-10T15:00:00.000Z'); // Saturday
+
+        const created: any = await createTimePeriodSettings(weeklyInput);
+        expect(String(created.effective_from).slice(0, 10)).toBe('2026-10-04');
+
+        const today = Temporal.PlainDate.from('2026-10-10');
+        await runWithTenant(tenantId, () => createNextTimePeriod([created], 0, { today }));
+        expect(await storedPeriods()).toEqual([['2026-10-04', '2026-10-11']]);
+      });
+
+      it('20. (b) late-evening save in America/New_York still covers the local today', async () => {
+        await useUserTimeZone('America/New_York');
+        freezeTime('2026-10-11T02:30:00.000Z'); // Sat 22:30 in New York; UTC date is already 10/11
+
+        const created: any = await createTimePeriodSettings(weeklyInput);
+        expect(String(created.effective_from).slice(0, 10)).toBe('2026-10-04'); // a UTC-based default would be 2026-10-11
+
+        const localToday = Temporal.PlainDate.from('2026-10-10');
+        await ensureTimePeriodCoversDate(context.db, tenantId, localToday);
+        expect(await storedPeriods()).toEqual([['2026-10-04', '2026-10-11']]);
+      });
+
+      it('21. (c) explicit past effective_from is honored unchanged', async () => {
+        await useUserTimeZone('America/New_York');
+        freezeTime('2026-10-11T02:30:00.000Z');
+
+        const created: any = await createTimePeriodSettings({ ...weeklyInput, effective_from: '2026-09-01' });
+        expect(String(created.effective_from).slice(0, 10)).toBe('2026-09-01');
+
+        await ensureTimePeriodCoversDate(context.db, tenantId, Temporal.PlainDate.from('2026-10-10'));
+        const periods = await storedPeriods();
+        expect(periods[periods.length - 1]).toEqual(['2026-10-04', '2026-10-11']);
+      });
+
+      it('22. (c) explicit future effective_from starts there and creates nothing for today', async () => {
+        await useUserTimeZone('America/New_York');
+        freezeTime('2026-10-11T02:30:00.000Z');
+
+        const created: any = await createTimePeriodSettings({ ...weeklyInput, effective_from: '2026-10-18' });
+        expect(String(created.effective_from).slice(0, 10)).toBe('2026-10-18');
+
+        const today = Temporal.PlainDate.from('2026-10-10');
+        await ensureTimePeriodCoversDate(context.db, tenantId, today);
+        expect(await storedPeriods()).toEqual([]);
+
+        await runWithTenant(tenantId, () => createNextTimePeriod([created], 14, { today }));
+        expect((await storedPeriods())[0]).toEqual(['2026-10-18', '2026-10-25']);
+      });
+
+      it('23. back-dated default overlapping a setting that ended earlier this week is rejected', async () => {
+        await useUserTimeZone('UTC');
+        freezeTime('2026-10-10T15:00:00.000Z');
+        // Existing weekly setting ended 10/06 (mid-week). Old default (10/10) would not overlap;
+        // the aligned default (10/04) does, and weekly overlap semantics are date-range based.
+        const existing = { ...sundayWeekly('2026-09-01T00:00:00.000Z'), effective_to: '2026-10-06T00:00:00.000Z' };
+        await insertSetting(existing);
+
+        const result: any = await createTimePeriodSettings(weeklyInput);
+        expect(result.effective_from).toBeUndefined();
+        expect(result.actionError).toMatch(/overlaps/i);
+
+        const explicit: any = await createTimePeriodSettings({ ...weeklyInput, effective_from: '2026-10-10' });
+        expect(String(explicit.effective_from).slice(0, 10)).toBe('2026-10-10');
+      });
     });
   });
 });

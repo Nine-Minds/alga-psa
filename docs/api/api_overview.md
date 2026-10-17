@@ -185,6 +185,12 @@ Beyond the primary assignee set via `PUT /tickets/{id}/assignment`, a ticket can
 
 **Permissions:** all five routes require `ticket:update`.
 
+#### Ticket Comment Cc/Bcc
+
+Agents can Cc or Bcc one-off external email addresses when posting a public ticket comment, without adding those addresses to the ticket's ongoing watch list. Pass `cc` and/or `bcc` arrays of email strings in the request body of `POST /api/v1/tickets/{id}/comments`. Both arrays are validated: addresses are trimmed and deduplicated, a single address in both lists is promoted to `cc`, the combined count must not exceed 20 recipients, and one-off recipients are rejected on internal notes. The resolved list is persisted in the comment's `email_recipients` metadata field and returned on comment read responses; client-portal contacts can see `cc` addresses but not `bcc` entries. When the ticket has no requester email or the requester is the comment author, AlgaPSA sends a direct fallback email to the one-off recipients rather than dropping them. A one-off recipient who replies to the thread is recognized on that conversation but is never added to the ticket's permanent watch list.
+
+**Permissions:** posting a comment with Cc/Bcc requires `ticket:update`.
+
 #### Ticket Location Address
 
 The single-ticket detail endpoint `GET /api/v1/tickets/{id}` includes `location_address` alongside `location_name` in its response. `location_address` is the full formatted postal address of the ticket's linked location — `address_line1`, `city`, `state_province`, `postal_code`, and `country_name` joined with commas — or `null` if the location has no address data. Use this field when building map links or displaying location context in field-service workflows; the location name alone is a poor geocoding input.
@@ -212,6 +218,30 @@ After a merge, a target client may carry multiple billing profiles — one per a
 | `PUT` | `/clients/{id}/billing-profiles/{profileId}/contacts` | Replace the full contact list for a billing profile |
 
 A contact designated as a profile manager with `can_view_profile_tickets: true` gains read access to tickets attributed to that billing profile. Clients that have only one billing profile do not require profile contact management and behave exactly as before.
+
+#### Time Periods
+
+Time periods are the billing or pay windows that time sheets are filed against. The REST API lets you list, create, and manage these windows programmatically.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `GET` | `/time-periods` | List all time periods for the tenant |
+| `GET` | `/time-periods/current` | Return the period currently in effect; pass `?date=YYYY-MM-DD` to resolve a specific date instead of today |
+| `GET` | `/time-periods/{id}` | Retrieve a single period |
+| `POST` | `/time-periods` | Create a new period |
+| `PUT` | `/time-periods/{id}` | Update a period's `start_date` or `end_date` |
+| `DELETE` | `/time-periods/{id}` | Delete a period (only when it is open) |
+| `POST` | `/time-periods/{id}/close` | Lock the period so no further time-sheet edits are accepted; subsequent `PUT` or `DELETE` return `409` |
+| `POST` | `/time-periods/{id}/reopen` | Unlock a closed period to allow corrections |
+
+**Key behaviors for `POST` and `PUT`:**
+- `is_current` is **derived and read-only**. The period whose window contains today is automatically flagged `is_current: true` in responses. Sending `is_current` in a write body is silently ignored.
+- Dates must be `YYYY-MM-DD`. Datetime strings (e.g. `2027-03-08T23:30:00Z`) are accepted and silently truncated to the calendar date as written (not converted to UTC). Invalid date strings and `start_date == end_date` return `400`.
+- A period whose date range overlaps an existing period returns `409 Conflict`. Periods that share only a boundary day (touching but not overlapping) are allowed.
+- `PUT` and `DELETE` on a closed period return `409` with the message `"Time period is closed; reopen it first"`.
+- Unknown period IDs return `404`; malformed (non-UUID) IDs return `400`. `close` is idempotent.
+
+**Permissions:** all time-period write endpoints require the `time_management` write permission.
 
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.

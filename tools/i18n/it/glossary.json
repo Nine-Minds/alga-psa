@@ -2358,7 +2358,8 @@
       "Terabyte",
       "Volume",
       "Auto",
-      "auto | 50% | 120px"
+      "auto | 50% | 120px",
+      "Cc"
     ],
     "caseInsensitive": [
       "account",

@@ -195,6 +195,15 @@ describe('suggestMappingTargets', () => {
       expect(result.has('s1')).toBe(false);
     });
 
+    it('a held account:200 does not block an item:200 suggestion', () => {
+      const result = suggestMappingTargets(
+        [svc('s1', 'Hosting Plan')],
+        [item('200', 'Hosting Plan'), account('200', 'Sales')],
+        taken('account:200')
+      );
+      expect(result.get('s1')).toMatchObject({ externalId: 'item:200', kind: 'item' });
+    });
+
     it('never fuzzy-suggests an unavailable target', () => {
       const algas = [svc('s1', 'Power BI Pro Annual')];
       const externals = [item('PBIP', 'Power BI Pro Annual Plan')];

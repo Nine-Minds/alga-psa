@@ -10,6 +10,7 @@ import type { AlertProps } from '@alga-psa/types';
 import { Ticket, FileText, Eye, History } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isValidTenantSlug } from '@alga-psa/validation';
+import { oauthMappingFailureFallbackMessage, parseOAuthMappingFailureCode } from '../lib/sso/types';
 
 type TenantBranding = {
   primaryColor: string;
@@ -35,6 +36,10 @@ export default function ClientPortalSignIn({ branding, portalDomain, tenantSlug:
   const callbackUrl = searchParams?.get('callbackUrl') || '/client-portal/dashboard';
   const error = searchParams?.get('error');
   const registered = searchParams?.get('registered');
+  // SSO mapping failures carry why they failed and which email the provider
+  // presented, so the page can say more than "Access Denied".
+  const reason = parseOAuthMappingFailureCode(searchParams?.get('reason'));
+  const providerEmail = searchParams?.get('providerEmail') ?? '';
   // Same precedence as portalDomain below: the page resolves the tenant (from the
   // `?tenant=` slug or from the vanity host's portal_domains row) and hands it
   // down, and the query parameter is only the fallback for the handoff
@@ -53,8 +58,22 @@ export default function ClientPortalSignIn({ branding, portalDomain, tenantSlug:
     if (error === 'AccessDenied') {
       setAlertInfo({
         type: 'error',
-        title: t('auth.accessDeniedTitle', 'Access Denied'),
-        message: t('auth.accessDeniedMessage', 'You do not have permission to access the client portal.')
+        title: reason
+          ? t('auth.ssoNoMatchTitle', 'SSO sign-in failed')
+          : t('auth.accessDeniedTitle', 'Access Denied'),
+        message: reason
+          ? t(`auth.ssoNoMatch.${reason}`, {
+              providerEmail,
+              defaultValue: oauthMappingFailureFallbackMessage(reason, 'client', providerEmail),
+            })
+          : t('auth.accessDeniedMessage', 'You do not have permission to access the client portal.')
+      });
+      setIsAlertOpen(true);
+    } else if (error === 'Configuration') {
+      setAlertInfo({
+        type: 'error',
+        title: t('auth.configurationTitle', 'Sign-in failed'),
+        message: t('auth.configurationMessage', 'Sign-in failed. Please try again or contact support.')
       });
       setIsAlertOpen(true);
     } else if (error === 'SessionRevoked') {
@@ -72,7 +91,7 @@ export default function ClientPortalSignIn({ branding, portalDomain, tenantSlug:
       });
       setIsAlertOpen(true);
     }
-  }, [error, registered, t]);
+  }, [error, registered, reason, providerEmail, t]);
 
   const handle2FA = (_twoFactorCode: string) => {
     setIsOpen2FA(false);

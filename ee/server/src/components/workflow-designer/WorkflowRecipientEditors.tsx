@@ -6,9 +6,13 @@ import { X } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { parseEmailRecipients } from '@alga-psa/ui/lib/emailRecipients';
 import type { InputMapping, MappingValue } from '@alga-psa/workflows/runtime';
 
 import { WorkflowActionInputFixedMultiPicker } from './WorkflowActionInputFixedPicker';
+
+// Chip parsing moved to @alga-psa/ui so the ticket comment Cc/Bcc input shares it.
+export { parseEmailRecipients };
 
 // Recipient pickers here have no dependencies; a shared constant keeps their props stable.
 const NO_DEPENDENCY_MAPPING: InputMapping = {};
@@ -71,27 +75,36 @@ export const writeNotificationRecipientsLiteral = (recipients: NotificationRecip
 export const parseRoleNames = (text: string): string[] =>
   Array.from(new Set(text.split(/[,;]/).map((name) => name.trim()).filter(Boolean)));
 
-/** One-level "Notify users / roles" editor for Send In-App Notification's recipients. */
-export const WorkflowNotificationRecipientsEditor: React.FC<{
+/**
+ * One-level "users / roles" editor. `purpose` selects the copy: 'notify' for Send In-App
+ * Notification's recipients, 'email' for the users and roles Send Email addresses.
+ */
+export const WorkflowUserRecipientsEditor: React.FC<{
   idPrefix: string;
   value: NotificationRecipientsLiteral;
   onChange: (value: MappingValue) => void;
   disabled?: boolean;
-}> = ({ idPrefix, value, onChange, disabled }) => {
+  purpose: 'notify' | 'email';
+}> = ({ idPrefix, value, onChange, disabled, purpose }) => {
   const { t } = useTranslation('msp/workflows');
+  const copyKey = purpose === 'email' ? 'emailUserRecipientsEditor' : 'notificationRecipientsEditor';
+  const usersLabel = purpose === 'email' ? 'Email users' : 'Notify users';
+  const rolesLabel = purpose === 'email' ? 'Email everyone with these roles' : 'Notify everyone with these roles';
+  const emptyHint =
+    purpose === 'email' ? 'Choose users or roles, or pick a ticket below.' : 'Choose at least one user or role to notify.';
   const [roleNamesText, setRoleNamesText] = useState(() => value.roleNames.join(', '));
   const update = (next: NotificationRecipientsLiteral) => onChange(writeNotificationRecipientsLiteral(next));
 
   return (
-    <div className="space-y-3" id={`${idPrefix}-notification-recipients`}>
+    <div className="space-y-3" id={`${idPrefix}-${purpose === 'email' ? 'email-user-recipients' : 'notification-recipients'}`}>
       <WorkflowActionInputFixedMultiPicker
         idPrefix={`${idPrefix}-users`}
         field={{
-          name: t('notificationRecipientsEditor.users', { defaultValue: 'Notify users' }),
+          name: t(`${copyKey}.users`, { defaultValue: usersLabel }),
           editor: {
             kind: 'picker',
             picker: { resource: 'user' },
-            fixedValueHint: t('notificationRecipientsEditor.usersHint', { defaultValue: 'Search users' }),
+            fixedValueHint: t(`${copyKey}.usersHint`, { defaultValue: 'Search users' }),
           },
         }}
         values={value.userIds}
@@ -100,15 +113,15 @@ export const WorkflowNotificationRecipientsEditor: React.FC<{
         disabled={disabled}
       />
       <div className="space-y-1">
-        <Label htmlFor={`${idPrefix}-roles-literal-picker`}>{t('notificationRecipientsEditor.roles', { defaultValue: 'Notify everyone with these roles' })}</Label>
+        <Label htmlFor={`${idPrefix}-roles-literal-picker`}>{t(`${copyKey}.roles`, { defaultValue: rolesLabel })}</Label>
         <WorkflowActionInputFixedMultiPicker
           idPrefix={`${idPrefix}-roles`}
           field={{
-            name: t('notificationRecipientsEditor.roles', { defaultValue: 'Notify everyone with these roles' }),
+            name: t(`${copyKey}.roles`, { defaultValue: rolesLabel }),
             editor: {
               kind: 'picker',
               picker: { resource: 'role' },
-              fixedValueHint: t('notificationRecipientsEditor.rolesHint', { defaultValue: 'Add a role' }),
+              fixedValueHint: t(`${copyKey}.rolesHint`, { defaultValue: 'Add a role' }),
             },
           }}
           values={value.roleIds}
@@ -119,9 +132,9 @@ export const WorkflowNotificationRecipientsEditor: React.FC<{
       </div>
       <Input
         id={`${idPrefix}-role-names`}
-        label={t('notificationRecipientsEditor.roleNames', { defaultValue: 'Role names (optional)' })}
+        label={t(`${copyKey}.roleNames`, { defaultValue: 'Role names (optional)' })}
         value={roleNamesText}
-        placeholder={t('notificationRecipientsEditor.roleNamesPlaceholder', {
+        placeholder={t(`${copyKey}.roleNamesPlaceholder`, {
           defaultValue: 'e.g. Technician, Dispatcher (matched by name when the workflow runs)',
         })}
         onChange={(event) => {
@@ -132,7 +145,7 @@ export const WorkflowNotificationRecipientsEditor: React.FC<{
       />
       {value.userIds.length + value.roleIds.length + value.roleNames.length === 0 && (
         <p className="text-[11px] text-[rgb(var(--color-text-500))]">
-          {t('notificationRecipientsEditor.empty', { defaultValue: 'Choose at least one user or role to notify.' })}
+          {t(`${copyKey}.empty`, { defaultValue: emptyHint })}
         </p>
       )}
     </div>
@@ -145,7 +158,7 @@ export const WorkflowNotificationRecipientsEditor: React.FC<{
 
 export type EmailRecipient = { email: string; name?: string };
 
-const EMAIL_PATTERN = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+
 
 /** Reads a fixed list of email recipients; null when the list or an entry is computed. */
 export const readEmailRecipientsLiteral = (value: MappingValue | undefined | null): EmailRecipient[] | null => {
@@ -164,29 +177,6 @@ export const readEmailRecipientsLiteral = (value: MappingValue | undefined | nul
 
 export const writeEmailRecipientsLiteral = (recipients: EmailRecipient[]): MappingValue =>
   recipients.map((recipient) => (recipient.name ? { email: recipient.email, name: recipient.name } : { email: recipient.email }));
-
-/**
- * Parses typed or pasted addresses: comma, semicolon or newline separated, each either
- * `ada@example.com` or `Ada Lovelace <ada@example.com>`. Returns valid recipients and the entries
- * that aren't addresses.
- */
-export const parseEmailRecipients = (text: string): { recipients: EmailRecipient[]; invalid: string[] } => {
-  const recipients: EmailRecipient[] = [];
-  const invalid: string[] = [];
-  for (const raw of text.split(/[,;\n]/)) {
-    const entry = raw.trim();
-    if (!entry) continue;
-    const named = /^(.*?)\s*<([^>]+)>$/.exec(entry);
-    const email = (named ? named[2] : entry).trim();
-    const name = named ? named[1].trim().replace(/^"|"$/g, '') : '';
-    if (EMAIL_PATTERN.test(email)) {
-      recipients.push(name ? { email, name } : { email });
-    } else {
-      invalid.push(entry);
-    }
-  }
-  return { recipients, invalid };
-};
 
 /** A list of email recipients: type or paste addresses, remove them from the chips. */
 export const WorkflowEmailRecipientsEditor: React.FC<{

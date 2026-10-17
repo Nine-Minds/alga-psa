@@ -105,9 +105,46 @@ check_seeds_status() {
     fi
 }
 
+# Refuse to continue if pg_hba.conf has any rule that skips password
+# authentication (legacy `trust` entries) or cannot be parsed.
+# The postgres container repairs legacy entries before it starts listening;
+# this check makes sure a regression never reaches the application.
+# LEVERAGE: pattern pg-hba-auth-check — CE and EE setup entrypoints each query pg_hba_file_rules; a shared setup lib would own this
+assert_no_trust_auth() {
+    # Same host selection as the other admin operations: setup talks to Postgres
+    # directly, never through PgBouncer (wait_for_postgres exports the result).
+    local PG_ADMIN_HOST=${DB_HOST_ADMIN:-${DB_HOST:-postgres}}
+    local PG_ADMIN_PORT=${DB_PORT_ADMIN:-${DB_PORT:-5432}}
+    if [ "$PG_ADMIN_HOST" = "pgbouncer" ]; then
+        PG_ADMIN_HOST=postgres
+        PG_ADMIN_PORT=5432
+    fi
+    local PG_PASSWORD
+    PG_PASSWORD=$(get_admin_password)
+
+    log "Checking pg_hba.conf requires password authentication..."
+    local offending
+    if ! offending=$(PGPASSWORD="${PG_PASSWORD}" psql -X -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d postgres -tA -F ' | ' -c \
+        "SELECT line_number, type, database, user_name, address, auth_method, COALESCE(error, '') FROM pg_hba_file_rules WHERE auth_method = 'trust' OR error IS NOT NULL ORDER BY line_number" 2>&1); then
+        log "ERROR: Could not read pg_hba_file_rules: ${offending}"
+        exit 1
+    fi
+
+    if [ -n "$offending" ]; then
+        log "ERROR: pg_hba.conf has rules that do not require a password or cannot be parsed (line | type | database | user | address | method | error):"
+        echo "$offending" | while IFS= read -r row; do log "  $row"; done
+        log "Fix: set the method of those rules to md5 and reload (SELECT pg_reload_conf();)."
+        log "     With the bundled compose files, recreate the postgres container (docker compose ... up -d postgres); it repairs legacy entries on start."
+        log "     See 'Postgres authentication' in docs/getting-started/setup_guide.md."
+        exit 1
+    fi
+    log "pg_hba.conf requires password authentication."
+}
+
 # Main setup process
 main() {
     wait_for_postgres
+    assert_no_trust_auth
 
     log "Creating database..."
     log "Running create_database.js with timeout protection..."
@@ -294,5 +331,7 @@ EOF
     exit 0
 }
 
-# Execute main function
-main
+# Execute main function (skipped when sourced, so the helpers can be tested)
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    main
+fi

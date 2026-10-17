@@ -84,7 +84,6 @@
     "button": "Filtry",
     "unassigned": "Nieprzypisane",
     "category": "Filtruj według kategorii",
-    "clearFilters": "Wyczyść filtry",
     "assignee": "Przypisany do",
     "allAssignees": "Wszyscy przypisani",
     "responseState": "Stan odpowiedzi",
@@ -168,6 +167,7 @@
     "assignedTo": "Przypisane do",
     "requester": "Zgłaszający",
     "client": "Klient",
+    "contact": "Kontakt",
     "dueDate": "Termin",
     "resolution": "Rozwiązanie",
     "timeSpent": "Poświęcony czas",
@@ -209,6 +209,8 @@
     "tags": "Tagi",
     "sla": "SLA",
     "updated": "Zaktualizowano",
+    "updatedAtBy": "Zaktualizowano {{time}} przez {{name}}",
+    "byName": "przez {{name}}",
     "openInNewTab": "Otwórz w nowej karcie",
     "actions": "Akcje",
     "linkedAssets": "Powiązane zasoby",
@@ -243,7 +245,10 @@
     "printOptions": "Opcje drukowania",
     "duplicate": "Duplikuj",
     "rowActions": "Akcje",
-    "openMenu": "Otwórz menu"
+    "openMenu": "Otwórz menu",
+    "moreActions": "Więcej akcji",
+    "createTemplate": "Utwórz szablon ze zgłoszenia",
+    "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -352,7 +357,8 @@
     "errorWithMessage": "Błąd: {{message}}",
     "billingProfileUpdated": "Zaktualizowano profil rozliczeniowy",
     "updateBillingProfileFailed": "Nie udało się zaktualizować profilu rozliczeniowego",
-    "scheduleOpenFailed": "Nie udało się otworzyć planera"
+    "scheduleOpenFailed": "Nie udało się otworzyć planera",
+    "sharedWorkspaceReadOnly": "Widzisz to zgłoszenie, ponieważ dotyczy urządzenia we wspólnym stanowisku. Tylko osoba, która je zgłosiła, może coś dodać."
   },
   "conversation": {
     "comments": "Komentarze",
@@ -418,7 +424,13 @@
     "schedule": "Zaplanuj",
     "scheduled": "Zaplanowano",
     "showMore": "Pokaż więcej",
-    "showLess": "Pokaż mniej"
+    "showLess": "Pokaż mniej",
+    "ccBcc": "Dw/Udw",
+    "cc": "Dw",
+    "bcc": "Udw",
+    "ccBccInvalid": "Popraw wyróżnione adresy przed wysłaniem.",
+    "ccBccTooMany": "W jednym komentarzu można skopiować maksymalnie {{max}} odbiorców Dw i Udw.",
+    "ccBccNotSentOnInternal": "Dw i Udw nie są wysyłane z notatką wewnętrzną. Wyłącz opcję Wewnętrzna, aby ich użyć."
   },
   "responseState": {
     "awaitingYourResponse": "Oczekuje na Twoją odpowiedź",
@@ -483,7 +495,8 @@
       "loading": "Ładowanie...",
       "clientNotFound": "Nie znaleziono klienta.",
       "clientRendererMissing": "Szczegóły klienta są niedostępne w tym kontekście.",
-      "clientLoadFailed": "Nie udało się załadować klienta."
+      "clientLoadFailed": "Nie udało się załadować klienta.",
+      "contactRendererMissing": "Szczegóły kontaktu są niedostępne w tym kontekście."
     },
     "filters": {
       "allAssignees": "Wszyscy przypisani",
@@ -839,6 +852,8 @@
       "failure": "Nie udało się zaktualizować statusu",
       "failedHeading": "Status nie został zaktualizowany w następujących zgłoszeniach:",
       "resolutionLabel": "Komentarz rozwiązania (opcjonalnie)",
+      "resolutionLabelRequired": "Komentarz rozwiązania",
+      "resolutionRequiredHint": "Ta tablica wymaga komentarza rozwiązania przed zamknięciem zgłoszeń.",
       "resolutionPlaceholder": "Opisz, jak rozwiązano te zgłoszenia",
       "resolutionHelper": "Zapisywany jako rozwiązanie w każdym wybranym zgłoszeniu i spełnia wymagania tablic, które wymagają go przed zamknięciem.",
       "confirm_few": "Zaktualizuj {{count}} zgłoszenia",
@@ -941,7 +956,16 @@
     "duplicateChecklistHeading": "Lista kontrolna z #{{number}}",
     "duplicateChecklistRequired": "(wymagane)",
     "duplicateCopyChecklist": "Kopiuj elementy listy kontrolnej (niezaznaczone)",
-    "duplicateCustomFieldsNote": "Wartości pól niestandardowych są kopiowane ze zgłoszenia #{{number}}."
+    "duplicateCustomFieldsNote": "Wartości pól niestandardowych są kopiowane ze zgłoszenia #{{number}}.",
+    "templateLabel": "Szablon",
+    "templateNone": "Brak",
+    "templateLoadFailed": "Nie udało się wczytać szablonu. Spróbuj ponownie.",
+    "fromTemplatePill": "Z szablonu: {{name}}",
+    "templateChecklistHeading": "Lista kontrolna z szablonu: {{name}}",
+    "templateCustomFieldsNote": "Wartości pól niestandardowych są kopiowane z szablonu.",
+    "templateReplaceTitle": "Zastąpić wprowadzone zmiany?",
+    "templateReplaceMessage": "Zastosowanie szablonu zastąpi tytuł, opis i inne wprowadzone pola.",
+    "templateReplaceConfirm": "Zastosuj szablon"
   },
   "itil": {
     "calculatedPriority": "Priorytet (obliczony)",
@@ -1080,9 +1104,6 @@
     "closeTicketNowTitle": "Zamknąć zgłoszenie teraz?",
     "closeTicketNowPrompt": "Ten komentarz jest teraz rozwiązaniem. Wybierz status zamknięcia, aby zamknąć zgłoszenie, albo pozostaw je otwarte.",
     "leaveTicketOpen": "Pozostaw otwarte",
-    "timerActiveElsewhereTitle": "Licznik aktywny w innym miejscu",
-    "timerTakeoverMessage": "Licznik tego zgłoszenia jest aktywny w innym oknie. Czy chcesz go przejąć i zastąpić tutaj?",
-    "replaceHere": "Zastąp tutaj",
     "noActiveTimePeriodTitle": "Brak aktywnego okresu rozliczeniowego",
     "noActiveTimePeriodMessage": "Nie znaleziono aktywnego okresu rozliczeniowego. Okresy rozliczeniowe muszą zostać skonfigurowane w panelu rozliczeń przed dodaniem wpisów czasu.",
     "goToTimePeriodsSetup": "Przejdź do konfiguracji okresów rozliczeniowych",
@@ -1098,15 +1119,7 @@
   },
   "properties": {
     "timeEntry": "Wpis czasu",
-    "ticketTimer": "Timer zgłoszenia - nr {{ticketNumber}}",
-    "timerActiveElsewhere": "Minutnik jest aktywny w innym oknie",
-    "start": "Rozpocznij",
-    "pause": "Pauza",
-    "reset": "Resetuj",
-    "enterWorkDescription": "Wpisz opis pracy",
-    "liveTimerDisabled": "Minutnik zgłoszeń na żywo jest wyłączony dla tej tablicy.",
     "addTimeEntry": "Dodaj wpis czasu",
-    "trackedIntervals": "Śledzone interwały",
     "contactInfo": "Informacje kontaktowe",
     "noContactSelected": "Nie wybrano kontaktu",
     "selectOrChangeContact": "Wybierz lub zmień kontakt",
@@ -1722,7 +1735,8 @@
     },
     "autoClose": "Zostanie automatycznie zamknięte {{date}}, jeśli nie pojawi się nowa aktywność.",
     "autoCloseWarned": "Klient został powiadomiony.",
-    "duplicatedFrom": "Zduplikowano ze zgłoszenia #{{number}}"
+    "duplicatedFrom": "Zduplikowano ze zgłoszenia #{{number}}",
+    "fromTemplate": "Z szablonu: {{name}}"
   },
   "invalidTicketData": "Nieprawidłowe dane zgłoszenia",
   "timeEntries": {
@@ -1883,9 +1897,7 @@
       "viewAll": "Zobacz wszystkie",
       "viewAllCount": "Zobacz wszystkie {{count}}",
       "timeLogged": "Zarejestrowany czas",
-      "workDescription": "Opis pracy",
       "addTimeEntry": "Dodaj wpis czasu",
-      "trackedIntervals": "Śledzone interwały",
       "teamAndWatchers": "Zespół i obserwujący",
       "addAgent": "Dodaj agenta…",
       "timeline": "Oś czasu",
@@ -1896,7 +1908,6 @@
       "opened": "Otwarto",
       "viaSource": "przez {{source}}",
       "noContactOnTicket": "Brak kontaktu w tym zgłoszeniu",
-      "whatAreYouWorkingOn": "Nad czym pracujesz?",
       "agentFallback": "Agent",
       "removeAgent": "Usuń {{name}}",
       "noAdditionalAgents": "Brak dodatkowych agentów",
@@ -1925,8 +1936,6 @@
       "acrossEntries_many": "w {{count}} wpisach",
       "acrossEntries_other": "w {{count}} wpisach",
       "team": "Zespół",
-      "startTimer": "Uruchom licznik czasu",
-      "timerLockedHint": "Inny licznik czasu jest już uruchomiony",
       "billable": "Rozliczalne",
       "nothingBillable": "Brak pozycji do rozliczenia",
       "editContact": "Edytuj kontakt",
@@ -1938,6 +1947,7 @@
       "setClientToAddContact": "Najpierw wybierz klienta, aby dodać kontakt",
       "logInteraction": "Zarejestruj rozmowę lub e-mail",
       "changeClient": "Zmień klienta",
+      "changeLocation": "Zmień lokalizację",
       "teamFallback": "Zespół",
       "teamSectionLabel": "Przypisz zespół",
       "addAgentsOrTeam": "Dodaj agentów lub zespół…",
@@ -2046,7 +2056,8 @@
       "noStatusChange": "Nie zmieniaj statusu",
       "showAllActivity": "Pokaż całą aktywność",
       "collapseActivity": "Zwiń starszą aktywność",
-      "replyingToComment": "Odpowiedź dla {{name}}"
+      "replyingToComment": "Odpowiedź dla {{name}}",
+      "createdFromTemplate": "{{actor}} utworzył(a) to zgłoszenie z szablonu „{{name}}”"
     }
   },
   "notifications": {
@@ -2444,6 +2455,102 @@
       "monthlyOnDay": "{{every}}, {{day}}",
       "monthlyOnNthWeekday": "{{every}}, {{ordinal}} {{weekday}}",
       "yearly": "Co rok (miesiąc: {{month}}, dzień: {{day}})"
+    }
+  },
+  "stopwatch": {
+    "boardDisabled": "Stoper jest wyłączony dla tej tablicy.",
+    "pausedElsewhereTicket": "Wstrzymany przy innym zgłoszeniu: {{label}}",
+    "runningElsewhereTicket": "Działa przy innym zgłoszeniu: {{label}}",
+    "pausedElsewhereTask": "Wstrzymany przy innym zadaniu: {{label}}",
+    "runningElsewhereTask": "Działa przy innym zadaniu: {{label}}",
+    "switch": "Przełącz tutaj",
+    "start": "Uruchom stoper",
+    "resume": "Wznów stoper",
+    "pause": "Wstrzymaj stoper",
+    "stop": "Zatrzymaj i zapisz czas",
+    "discard": "Odrzuć stoper",
+    "pausedHint": "Wstrzymano. Wznów, aby kontynuować, lub zatrzymaj, aby zapisać czas.",
+    "workDescription": "Opis pracy",
+    "whatAreYouWorkingOn": "Nad czym pracujesz?"
+  },
+  "templates": {
+    "loading": "Ładowanie…",
+    "list": {
+      "title": "Szablony zgłoszeń",
+      "new": "Nowy szablon",
+      "empty": "Brak szablonów zgłoszeń. Otwórz zgłoszenie i wybierz „Utwórz szablon ze zgłoszenia” albo utwórz szablon od podstaw.",
+      "showInactive": "Pokaż nieaktywne",
+      "deleted": "Szablon usunięty",
+      "deleteTitle": "Usuń szablon",
+      "deleteMessage": "Usunąć „{{name}}”? Zgłoszenia już utworzone z tego szablonu nie zostaną zmienione.",
+      "columns": {
+        "name": "Nazwa",
+        "title": "Tytuł zgłoszenia",
+        "board": "Tablica",
+        "checklist": "Pozycje listy kontrolnej",
+        "status": "Status"
+      }
+    },
+    "status": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny"
+    },
+    "actions": {
+      "edit": "Edytuj",
+      "newTicket": "Nowe zgłoszenie z szablonu",
+      "activate": "Aktywuj",
+      "deactivate": "Dezaktywuj",
+      "delete": "Usuń",
+      "cancel": "Anuluj"
+    },
+    "sections": {
+      "details": "Szablon",
+      "ticket": "Zgłoszenie",
+      "checklist": "Lista kontrolna",
+      "customFields": "Pola niestandardowe"
+    },
+    "fields": {
+      "name": "Nazwa szablonu",
+      "notes": "Notatki",
+      "notesHelp": "Tylko dla Twojego zespołu. Nie jest kopiowane do zgłoszeń.",
+      "title": "Tytuł zgłoszenia",
+      "description": "Opis",
+      "descriptionPlaceholder": "Opis"
+    },
+    "checklist": {
+      "empty": "Brak pozycji listy kontrolnej.",
+      "itemName": "Pozycja listy kontrolnej",
+      "required": "Wymagane",
+      "moveUp": "W górę",
+      "moveDown": "W dół",
+      "remove": "Usuń pozycję",
+      "add": "Dodaj pozycję"
+    },
+    "customFields": {
+      "empty": "Brak wartości pól niestandardowych.",
+      "name": "Nazwa pola",
+      "value": "Wartość",
+      "remove": "Usuń pole",
+      "add": "Dodaj pole"
+    },
+    "editor": {
+      "back": "Szablony zgłoszeń",
+      "newTitle": "Nowy szablon zgłoszenia",
+      "created": "Szablon utworzony",
+      "saved": "Szablon zapisany",
+      "saving": "Zapisywanie…",
+      "save": "Zapisz",
+      "fromTicket": "Wstępnie wypełniono ze zgłoszenia #{{number}}. Nic nie zostanie zapisane, dopóki nie klikniesz Zapisz.",
+      "inlineImages": "Opis zawiera obrazy należące do zgłoszenia źródłowego. Mogą przestać się wyświetlać po usunięciu tego zgłoszenia. Usuń je lub wgraj ponownie, jeśli szablon ma przetrwać zgłoszenie.",
+      "viewOnly": "Możesz wyświetlić ten szablon, ale nie możesz go zmieniać.",
+      "referenceProblems": "Niektóre pola tego szablonu wskazują elementy, które już nie istnieją. Przy użyciu szablonu pozostaną puste. Popraw je i zapisz:"
+    },
+    "errors": {
+      "notFound": "Nie znaleziono szablonu zgłoszenia",
+      "duplicateName": "Szablon o nazwie {{name}} już istnieje",
+      "invalidReferences": "Szablon odwołuje się do tablicy, kategorii lub priorytetu, który jest niedostępny",
+      "notAvailable": "Szablony zgłoszeń są niedostępne",
+      "subcategoryNeedsCategory": "Podkategoria wymaga kategorii"
     }
   }
 }

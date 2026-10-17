@@ -1,4 +1,5 @@
 import { beforeAll, afterAll, describe, it, expect, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,6 +16,8 @@ import {
 import { createUser } from '../../../test-utils/testDataFactory';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import { Temporal } from '@js-temporal/polyfill';
+import { createRequire } from 'node:module';
+import { isPeriodAlreadyInvoiced } from '@alga-psa/billing/lib/billing/pricing/isPeriodAlreadyInvoiced';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { ATTRIBUTION_TABLES } from '@alga-psa/billing/lib/billing/contractLineAttributionWriter';
 import Invoice from '@alga-psa/billing/models/invoice';
@@ -88,6 +91,11 @@ async function hasSchemaTable(connection: Knex, tableName: string): Promise<bool
     .first('table_name');
   return Boolean(row);
 }
+
+vi.mock('next/server', async () => ({
+  ...await import('next/dist/server/web/spec-extension/request'),
+  ...await import('next/dist/server/web/spec-extension/response'),
+}));
 
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
@@ -496,7 +504,6 @@ it('T153: DB-backed annual client-cadence recurring invoices preserve longer-fre
       sourceObligation: {
         tenant: tenantId,
         obligationId: line.contractLineId,
-        obligationType: 'client_contract_line',
         chargeFamily: 'fixed',
       },
       duePosition: line.duePosition,
@@ -613,7 +620,6 @@ it('T029: billed recurring service periods link back to invoice charge detail ro
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -1122,7 +1128,6 @@ it('T020/T030: billed recurring service periods link back to invoice charge deta
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -1203,7 +1208,6 @@ it('T069: hourly recurring charges bill approved time entries that fall inside a
     sourceObligation: {
       tenant: tenantId,
       obligationId: hourlyLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'hourly',
     },
     duePosition: 'advance',
@@ -1295,7 +1299,6 @@ it('T070: hourly recurring charges with no billable time inside the service peri
     sourceObligation: {
       tenant: tenantId,
       obligationId: hourlyLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'hourly',
     },
     duePosition: 'advance',
@@ -1367,7 +1370,6 @@ it('T001/T004: recurring due-work marks a contract-hourly window as approval-blo
     sourceObligation: {
       tenant: tenantId,
       obligationId: hourlyLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'hourly',
     },
     duePosition: 'advance',
@@ -1443,7 +1445,6 @@ it('parity: recurring due-work blocks uniquely assignable unassigned hourly time
     sourceObligation: {
       tenant: tenantId,
       obligationId: hourlyLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'hourly',
     },
     duePosition: 'advance',
@@ -1595,7 +1596,6 @@ it('T002: recurring due-work does not block a window for unrelated non-approved 
     sourceObligation: {
       tenant: tenantId,
       obligationId: hourlyLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'hourly',
     },
     duePosition: 'advance',
@@ -1677,7 +1677,6 @@ it('T003/T008/T017: mixed-charge recurring windows are blocked in full by matchi
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -1695,7 +1694,6 @@ it('T003/T008/T017: mixed-charge recurring windows are blocked in full by matchi
     sourceObligation: {
       tenant: tenantId,
       obligationId: hourlyLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'hourly',
     },
     duePosition: 'advance',
@@ -1773,7 +1771,6 @@ it('T009/T011: server-side guard re-checks approval state at generation time and
     sourceObligation: {
       tenant: tenantId,
       obligationId: hourlyLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'hourly',
     },
     duePosition: 'advance',
@@ -2272,7 +2269,6 @@ it('T021: deleting a recurring invoice clears service-period invoice linkage and
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2341,6 +2337,340 @@ it('T021: deleting a recurring invoice clears service-period invoice linkage and
   expect(invoiceableRows.map((row) => row.record_id)).toEqual([materializationPlan.records[0].recordId]);
 }, HOOK_TIMEOUT);
 
+// ---------------------------------------------------------------------------
+// alga0002228: REST DELETE /api/v1/invoices/:id shares the UI's delete engine.
+// The controller is exercised with authenticate/checkPermission stubbed to a
+// context for a real tenant user; everything below the controller (service,
+// shared delete engine, DB) is real.
+// ---------------------------------------------------------------------------
+async function createRestInvoiceHarness() {
+  const { ApiInvoiceController } = await import('../../lib/api/controllers/ApiInvoiceController');
+  const { InvoiceService } = await import('../../lib/api/services/InvoiceService');
+  const userId = await createUser(db, tenantId, { user_type: 'internal' });
+  const context = { tenant: tenantId, userId, user: { user_id: userId, user_type: 'internal' } } as any;
+
+  class TestInvoiceController extends ApiInvoiceController {
+    protected async authenticate(req: NextRequest) {
+      return Object.assign(req, { context }) as any;
+    }
+    protected async checkPermission() {}
+    protected runWithApiKeyContext<T>(_req: any, fn: () => Promise<T>): Promise<T> {
+      return fn();
+    }
+  }
+
+  // BaseService resolves its connection through the real tenant AsyncLocalStorage
+  // context; this file mocks @alga-psa/db's runWithTenant to a passthrough.
+  const { runWithTenant: realRunWithTenant } = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
+  const inTenant = <T,>(fn: () => Promise<T>): Promise<T> =>
+    withRealTransactions(() => realRunWithTenant(tenantId, fn));
+
+  const controller = new TestInvoiceController();
+  const service = new InvoiceService();
+  const restDelete = (invoiceId: string) =>
+    inTenant(() =>
+      controller.delete()(new NextRequest(`http://localhost/api/v1/invoices/${invoiceId}`, { method: 'DELETE' })),
+    );
+  return { context, service, restDelete, userId, inTenant };
+}
+
+async function insertPlainInvoice(clientId: string, status: 'draft' | 'sent' = 'draft') {
+  const invoiceId = uuidv4();
+  const now = '2026-03-18T15:15:00.000Z';
+  await tenantTable(db, tenantId, 'invoices').insert({
+    invoice_id: invoiceId,
+    tenant: tenantId,
+    client_id: clientId,
+    invoice_number: `INV-${invoiceId.slice(0, 8)}`,
+    invoice_date: now,
+    due_date: now,
+    subtotal: 1000,
+    tax: 0,
+    total_amount: 1000,
+    status,
+    currency_code: 'USD',
+    created_at: now,
+    updated_at: now,
+  });
+  const chargeIds: string[] = [];
+  for (const description of ['Manual line A', 'Manual line B']) {
+    const itemId = uuidv4();
+    chargeIds.push(itemId);
+    await tenantTable(db, tenantId, 'invoice_charges').insert({
+      item_id: itemId,
+      tenant: tenantId,
+      invoice_id: invoiceId,
+      description,
+      quantity: 1,
+      unit_price: 5,
+      total_price: 5,
+      net_amount: 5,
+      tax_amount: 0,
+      is_manual: true,
+      created_at: now,
+      updated_at: now,
+    });
+  }
+  return { invoiceId, chargeIds };
+}
+
+const NOT_DRAFT_DELETE_MESSAGE = 'Only draft invoices can be deleted; void the invoice instead.';
+const HAS_PAYMENTS_DELETE_MESSAGE = 'Invoices with recorded payments cannot be deleted';
+
+it('T-REST-DEL-1: REST DELETE of a fresh recurring draft removes it, releases its periods, and the window is due and regenerable again', async () => {
+  setupCommonMocks({ tenantId, userId: 'rest-delete-recurring-user', permissionCheck: () => true });
+  const { restDelete, service, context, inTenant } = await createRestInvoiceHarness();
+
+  const { contextLike, currentPeriodStart, nextPeriodStart } = await createClientWithRecurringCycles({
+    clientName: 'REST Delete Recurring Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-03-12',
+    currentPeriodStart: '2025-04-12',
+    nextPeriodStart: '2025-05-12',
+  });
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'REST Delete Service',
+    planName: 'REST Delete Plan',
+    baseRateCents: 245,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+  const plan = materializeContractCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T18:30:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: `${currentPeriodStart}T00:00:00Z`,
+    sourceObligation: { tenant: tenantId, obligationId: fixedLine.contractLineId, chargeFamily: 'fixed' },
+    duePosition: 'advance',
+    sourceRuleVersion: `${fixedLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-rest-delete',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(plan.records[0]);
+
+  const selectorInput = buildContractCadenceDueSelectionInput({
+    clientId: contextLike.clientId,
+    contractId: fixedLine.contractId,
+    contractLineId: fixedLine.contractLineId,
+    windowStart: `${currentPeriodStart}T00:00:00Z`,
+    windowEnd: `${nextPeriodStart}T00:00:00Z`,
+  });
+  const generated = await generateInvoiceForSelectionInput(selectorInput);
+  expect(generated).toBeTruthy();
+  const invoiceId = generated!.invoice_id;
+
+  const chargeIds = await tenantTable(db, tenantId, 'invoice_charges')
+    .where({ tenant: tenantId, invoice_id: invoiceId })
+    .pluck('item_id');
+  expect(chargeIds.length).toBeGreaterThan(0);
+
+  // Recurring drafts cannot have their items replaced through update().
+  await expect(
+    inTenant(() =>
+      service.update(invoiceId, { items: [{ description: 'x', quantity: 1, unit_price: 1 }] } as any, context),
+    ),
+  ).rejects.toMatchObject({ statusCode: 409 });
+  expect(
+    await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).pluck('item_id'),
+  ).toHaveLength(chargeIds.length);
+
+  const response = await restDelete(invoiceId);
+  expect(response.status).toBe(204);
+
+  // The audit row is written through onBeforeCommit, atomically with the delete.
+  const auditRow = await tenantTable(db, tenantId, 'audit_logs')
+    .where({ tenant: tenantId, table_name: 'invoices', record_id: invoiceId, operation: 'DELETE' })
+    .first();
+  expect(auditRow).toBeTruthy();
+  expect(auditRow.details).toMatchObject({ action: 'invoice.deleted' });
+
+  expect(await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
+  expect(await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
+  expect(
+    await tenantTable(db, tenantId, 'invoice_charge_details').whereIn('item_id', chargeIds).first(),
+  ).toBeUndefined();
+  expect(await tenantTable(db, tenantId, 'transactions').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
+
+  const reopened = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, record_id: plan.records[0].recordId })
+    .first(['lifecycle_state', 'invoice_id', 'invoice_charge_id', 'invoice_charge_detail_id', 'invoice_linked_at']);
+  expect(reopened).toMatchObject({
+    lifecycle_state: 'locked',
+    invoice_id: null,
+    invoice_charge_id: null,
+    invoice_charge_detail_id: null,
+    invoice_linked_at: null,
+  });
+
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'REST Delete Recurring Client',
+  });
+  const dueRow = dueWork.invoiceCandidates
+    .flatMap((candidate) => candidate.members)
+    .find((row) =>
+      row.contractLineId === fixedLine.contractLineId
+      && normalizeDateValue(row.invoiceWindowStart) === currentPeriodStart
+      && normalizeDateValue(row.invoiceWindowEnd) === nextPeriodStart,
+    );
+  expect(dueRow).toBeTruthy();
+
+  const regenerated = await generateInvoiceForSelectionInput(dueRow!.selectorInput);
+  expect(regenerated).toBeTruthy();
+  expect(regenerated!.invoice_id).not.toBe(invoiceId);
+}, HOOK_TIMEOUT);
+
+it('T-REST-DEL-2: REST DELETE of a non-recurring draft removes the invoice and its charges', async () => {
+  const { restDelete } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Delete Manual Client' });
+  const { invoiceId } = await insertPlainInvoice(contextLike.clientId);
+
+  const response = await restDelete(invoiceId);
+  expect(response.status).toBe(204);
+
+  expect(await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
+  expect(await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
+}, HOOK_TIMEOUT);
+
+it('T-REST-DEL-3: REST DELETE of a finalized invoice answers 409 and leaves the invoice untouched', async () => {
+  const { restDelete, service, context, inTenant } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Delete Finalized Client' });
+  const { invoiceId, chargeIds } = await insertPlainInvoice(contextLike.clientId);
+
+  await inTenant(() => service.finalizeInvoice({ invoice_id: invoiceId } as any, context));
+  const before = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(before.finalized_at).toBeTruthy();
+
+  const response = await restDelete(invoiceId);
+  expect(response.status).toBe(409);
+  const body = await response.json();
+  expect(body.error.code).toBe('CONFLICT');
+  expect(body.error.message).toBe(NOT_DRAFT_DELETE_MESSAGE);
+
+  const after = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(after).toBeTruthy();
+  expect(after.status).toBe(before.status);
+  expect(after.status).not.toBe('cancelled');
+  expect(String(after.finalized_at)).toBe(String(before.finalized_at));
+  const charges = await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).pluck('item_id');
+  expect(charges.sort()).toEqual([...chargeIds].sort());
+}, HOOK_TIMEOUT);
+
+async function expectRestDeleteRefused(
+  restDelete: (id: string) => Promise<Response>,
+  invoiceId: string,
+  chargeIds: string[],
+  expectedStatus: string,
+  expectedMessage: string = NOT_DRAFT_DELETE_MESSAGE,
+) {
+  const response = await restDelete(invoiceId);
+  expect(response.status).toBe(409);
+  const body = await response.json();
+  expect(body.error.code).toBe('CONFLICT');
+  expect(body.error.message).toBe(expectedMessage);
+
+  const after = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(after).toBeTruthy();
+  expect(after.status).toBe(expectedStatus);
+  const charges = await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).pluck('item_id');
+  expect(charges.sort()).toEqual([...chargeIds].sort());
+}
+
+it.each([
+  ['T-REST-DEL-5', 'sent'],
+  ['T-REST-DEL-6', 'paid'],
+])('%s: REST DELETE of a %s invoice with NULL finalized_at answers 409 and leaves it untouched', async (_id, status) => {
+  const { restDelete } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: `REST Delete ${status} Client` });
+  const { invoiceId, chargeIds } = await insertPlainInvoice(contextLike.clientId);
+  await tenantTable(db, tenantId, 'invoices')
+    .where({ tenant: tenantId, invoice_id: invoiceId })
+    .update({ status, finalized_at: null });
+
+  await expectRestDeleteRefused(restDelete, invoiceId, chargeIds, status);
+}, HOOK_TIMEOUT);
+
+it('T-REST-DEL-7: REST DELETE of a draft that has a recorded payment answers 409 and keeps the payment', async () => {
+  const { restDelete } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Delete Paid Draft Client' });
+  const { invoiceId, chargeIds } = await insertPlainInvoice(contextLike.clientId);
+  const paymentId = uuidv4();
+  await tenantTable(db, tenantId, 'invoice_payments').insert({
+    payment_id: paymentId,
+    tenant: tenantId,
+    invoice_id: invoiceId,
+    amount: 500,
+    payment_method: 'check',
+    status: 'completed',
+  });
+
+  await expectRestDeleteRefused(restDelete, invoiceId, chargeIds, 'draft', HAS_PAYMENTS_DELETE_MESSAGE);
+  const payment = await tenantTable(db, tenantId, 'invoice_payments')
+    .where({ tenant: tenantId, payment_id: paymentId })
+    .first();
+  expect(payment).toBeTruthy();
+}, HOOK_TIMEOUT);
+
+it('T-REST-DEL-4: REST DELETE of an unknown invoice id answers 404', async () => {
+  const { restDelete, service, context, inTenant } = await createRestInvoiceHarness();
+  const response = await restDelete(uuidv4());
+  expect(response.status).toBe(404);
+
+  // The service itself (past the controller's getById pre-check) also maps a
+  // missing invoice to NotFound rather than silently succeeding.
+  await expect(inTenant(() => service.delete(uuidv4(), context))).rejects.toMatchObject({ statusCode: 404 });
+}, HOOK_TIMEOUT);
+
+it('T-REST-UPD-1: REST update writes a header-only change without a missing-column error and replaces invoice_charges for a non-recurring draft', async () => {
+  const { service, context, inTenant } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Update Client' });
+  const { invoiceId, chargeIds } = await insertPlainInvoice(contextLike.clientId);
+
+  await inTenant(() => service.update(invoiceId, { due_date: '2026-06-30' } as any, context));
+  const headerOnly = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(normalizeDateValue(headerOnly.due_date)).toBe('2026-06-30');
+
+  const serviceId = await createTestService(contextLike, {});
+  await inTenant(() =>
+    service.update(
+      invoiceId,
+      { items: [{ service_id: serviceId, description: 'Replacement line', quantity: 2, unit_price: 7 }] } as any,
+      context,
+    ),
+  );
+  const charges = await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId });
+  expect(charges).toHaveLength(1);
+  expect(charges[0].description).toBe('Replacement line');
+  expect(chargeIds).not.toContain(charges[0].item_id);
+
+  // A finalized invoice may not have its items replaced.
+  await inTenant(() => service.finalizeInvoice({ invoice_id: invoiceId } as any, context));
+  await expect(
+    inTenant(() => service.update(invoiceId, { items: [{ description: 'x', quantity: 1, unit_price: 1 }] } as any, context)),
+  ).rejects.toMatchObject({ statusCode: 409 });
+}, HOOK_TIMEOUT);
+
+it('T-REST-STATUS-1: sendInvoice on a finalized invoice no longer fails on the missing invoices.updated_by column', async () => {
+  const { service, context, inTenant } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Status Client' });
+  const { invoiceId } = await insertPlainInvoice(contextLike.clientId);
+  await inTenant(() => service.finalizeInvoice({ invoice_id: invoiceId } as any, context));
+
+  await inTenant(() =>
+    service.sendInvoice({ invoice_id: invoiceId, email_addresses: ['billing@example.com'], include_pdf: false } as any, context),
+  );
+  const sent = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(sent.status).toBe('sent');
+
+  // recordPayment is intentionally not asserted here: it has a separate, pre-existing
+  // defect (invoice_payments.created_by does not exist), outside alga0002228's scope.
+}, HOOK_TIMEOUT);
+
 it('T051/T078: invoiced-history reader returns client-cadence recurring invoices with service-period metadata after the hard cutover', async () => {
   setupCommonMocks({ tenantId, userId: 'client-history-user', permissionCheck: () => true });
 
@@ -2374,7 +2704,6 @@ it('T051/T078: invoiced-history reader returns client-cadence recurring invoices
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2458,7 +2787,6 @@ it('T052/T079/T084: invoiced-history reader returns bridge-free contract-cadence
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2539,7 +2867,6 @@ it('T082: DB-backed recurring invoice code treats materialized service periods a
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2590,7 +2917,8 @@ it('T082: DB-backed recurring invoice code treats materialized service periods a
 
   expect(preview).toMatchObject({
     success: false,
-    error: 'Recurring service periods were not materialized for this recurring execution window.',
+    code: 'RECURRING_PERIODS_NOT_MATERIALIZED',
+    error: expect.stringContaining("Service periods haven't been generated"),
   });
 }, HOOK_TIMEOUT);
 
@@ -2635,7 +2963,6 @@ it('T105: due-work candidates are non-generateable when a client-cadence window 
     sourceObligation: {
       tenant: tenantId,
       obligationId: firstLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2652,7 +2979,6 @@ it('T105: due-work candidates are non-generateable when a client-cadence window 
     sourceObligation: {
       tenant: tenantId,
       obligationId: secondLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2739,7 +3065,6 @@ it('T104: generation blocks partially materialized client-cadence windows when e
     sourceObligation: {
       tenant: tenantId,
       obligationId: firstLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2756,7 +3081,6 @@ it('T104: generation blocks partially materialized client-cadence windows when e
     sourceObligation: {
       tenant: tenantId,
       obligationId: secondLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2797,7 +3121,9 @@ it('T104: generation blocks partially materialized client-cadence windows when e
   await expect(
     generateInvoiceForSelectionInput(blockedMember!.selectorInput),
   ).resolves.toEqual({
-    actionError: 'Recurring service periods were not materialized for this recurring execution window.',
+    actionError:
+      "Service periods haven't been generated for this billing window yet. Use Fix all on the Automatic Invoices page, or check Billing > Service Periods, then preview again.",
+    messageKey: 'msp/invoicing:manualInvoices.errors.RECURRING_PERIODS_NOT_MATERIALIZED',
   });
 }, HOOK_TIMEOUT);
 
@@ -2834,7 +3160,6 @@ it('T033/T078: reversing a client-cadence recurring invoice repairs service-peri
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2904,7 +3229,6 @@ it('T034/T079: reversing a contract-cadence recurring invoice repairs service-pe
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2968,7 +3292,6 @@ it('T085: hard-deleting recurring invoices reopens linked service periods withou
     sourceObligation: {
       tenant: tenantId,
       obligationId: clientFixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3030,7 +3353,6 @@ it('T085: hard-deleting recurring invoices reopens linked service periods withou
     sourceObligation: {
       tenant: tenantId,
       obligationId: contractFixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3100,7 +3422,6 @@ it('T017/T019/T050/T077/T080/T084: recurring contract-cadence preview, generatio
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3214,7 +3535,6 @@ it('T345: invoicing a second contract-cadence contract in the same window does n
     sourceObligation: {
       tenant: tenantId,
       obligationId: firstLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3267,7 +3587,6 @@ it('T345: invoicing a second contract-cadence contract in the same window does n
     sourceObligation: {
       tenant: tenantId,
       obligationId: secondLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3446,6 +3765,137 @@ it('T016/T018/T049/T076/T080/T087: recurring client-cadence preview, generation,
   expect(normalizeDateValue(historyRow?.invoiceWindowEnd)).toBe(nextPeriodStart);
 }, HOOK_TIMEOUT);
 
+  describe('alga0002072: periods persisted under the legacy contract_line label', () => {
+    const collapse = createRequire(import.meta.url)(
+      '../../../migrations/20261010120000_collapse_recurring_service_period_obligation_type.cjs',
+    );
+
+    async function seedLegacyShapedClientLine(clientName: string, userId: string) {
+      setupCommonMocks({ tenantId, userId, permissionCheck: () => true });
+      const { contextLike, currentPeriodStart, nextPeriodStart } = await createClientWithRecurringCycles({
+        clientName,
+        billingCycle: 'monthly',
+        previousPeriodStart: '2024-12-01',
+        currentPeriodStart: '2025-01-01',
+        nextPeriodStart: '2025-02-01',
+      });
+      const line = await createFixedContractLine(contextLike, {
+        serviceName: `${clientName} Service`,
+        planName: `${clientName} Plan`,
+        baseRateCents: 211,
+        startDate: currentPeriodStart,
+        billingTiming: 'advance',
+        billingFrequency: 'monthly',
+        cadenceOwner: 'client',
+      });
+      await syncContractLineRecurringPeriods(line.contractLineId);
+      return { line, currentPeriodStart, nextPeriodStart };
+    }
+
+    const canonicalKey = (lineId: string) => `schedule:${tenantId}:${lineId}:client:advance`;
+    const legacyKey = (lineId: string) => `schedule:${tenantId}:contract_line:${lineId}:client:advance`;
+
+    async function dueRowsFor(clientName: string, lineId: string, from: string, to: string) {
+      const dueWork = await getAvailableRecurringDueWorkAction({
+        page: 1, pageSize: 20, searchTerm: clientName, dateRange: { from, to },
+      });
+      return dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
+        .filter((row) => row.scheduleKey === canonicalKey(lineId));
+    }
+
+    it('regression: a client-cadence period persisted as contract_line is selected, invoiced and linked exactly once after collapse', async () => {
+      const clientName = 'Legacy Label Regression Client';
+      const { line, currentPeriodStart, nextPeriodStart } = await seedLegacyShapedClientLine(clientName, 'legacy-label-user');
+
+      // Pre-migration shape: legacy 6-segment key (the obligation_type column no longer exists in the
+      // test schema, so the key is the only label carrier). Then run the migration's per-tenant rewrite.
+      await tenantTable(db, tenantId, 'recurring_service_periods')
+        .where({ tenant: tenantId, obligation_id: line.contractLineId })
+        .update({ schedule_key: legacyKey(line.contractLineId) });
+      const summary = await collapse.collapseTenant(db, tenantId, { log: () => undefined });
+      expect(summary.rewritten).toBeGreaterThan(0);
+
+      const rows = await tenantTable(db, tenantId, 'recurring_service_periods')
+        .where({ tenant: tenantId, obligation_id: line.contractLineId });
+      expect(rows.every((row) => row.schedule_key === canonicalKey(line.contractLineId))).toBe(true);
+
+      // selected exactly once, under the canonical key
+      const windowRows = (await dueRowsFor(clientName, line.contractLineId, currentPeriodStart, nextPeriodStart))
+        .filter((row) => normalizeDateValue(row.invoiceWindowStart) === currentPeriodStart);
+      expect(windowRows).toHaveLength(1);
+      expect(windowRows[0].scheduleKey).toBe(canonicalKey(line.contractLineId));
+      const dueRecord = rows.find((row) => normalizeDateValue(row.invoice_window_start) === currentPeriodStart
+        && row.lifecycle_state !== 'superseded')!;
+
+      // invoiced and linked exactly once
+      const invoice = await generateInvoiceForSelectionInput(windowRows[0].selectorInput);
+      expect(invoice).toBeTruthy();
+      expect((invoice as any).actionError).toBeUndefined();
+      const countDetails = async () => Number((await db('invoice_charge_details as d')
+        .join('invoice_charges as c', function joinCharges() { this.on('c.item_id', 'd.item_id').andOn('c.tenant', 'd.tenant'); })
+        .where({ 'c.tenant': tenantId, 'c.invoice_id': invoice!.invoice_id })
+        .count('* as n').first())!.n);
+      expect(await countDetails()).toBe(1);
+      const linked = await tenantTable(db, tenantId, 'recurring_service_periods')
+        .where({ tenant: tenantId, record_id: dueRecord.record_id })
+        .first(['lifecycle_state', 'invoice_id', 'invoice_charge_detail_id']);
+      expect(linked).toMatchObject({ lifecycle_state: 'billed', invoice_id: invoice!.invoice_id });
+      expect(linked!.invoice_charge_detail_id).toBeTruthy();
+      const detail = await db('invoice_charge_details')
+        .where({ tenant: tenantId, item_detail_id: linked!.invoice_charge_detail_id }).first();
+      expect(detail).toBeTruthy();
+
+      // the second generate hits the duplicate guard and creates nothing
+      const second = await generateInvoiceForSelectionInput(windowRows[0].selectorInput);
+      expect((second as any).actionError).toMatch(/already exists for this recurring execution window/);
+      expect(await countDetails()).toBe(1);
+      const client = await db('clients').where({ tenant: tenantId, client_name: clientName }).first();
+      const invoiceCount = await db('invoices').where({ tenant: tenantId, client_id: client.client_id }).count('* as n').first();
+      expect(Number(invoiceCount!.n)).toBe(1);
+
+      expect(await isPeriodAlreadyInvoiced(db, tenantId, line.contractLineId,
+        { start: currentPeriodStart, end: nextPeriodStart })).toBe(true);
+    }, HOOK_TIMEOUT);
+
+    it('regression (collision): with both labels present the superseded loser is never selected as due', async () => {
+      const clientName = 'Legacy Label Collision Client';
+      const { line, currentPeriodStart, nextPeriodStart } = await seedLegacyShapedClientLine(clientName, 'legacy-collision-user');
+      const canonicalRow = await tenantTable(db, tenantId, 'recurring_service_periods')
+        .where({ tenant: tenantId, obligation_id: line.contractLineId })
+        .whereRaw('invoice_window_start = ?', [currentPeriodStart])
+        .first();
+      expect(canonicalRow).toBeTruthy();
+
+      // An unbilled twin written under the contract_line label for the same period.
+      const loserId = uuidv4();
+      const { created_at: _c, updated_at: _u, ...twin } = canonicalRow;
+      await tenantTable(db, tenantId, 'recurring_service_periods').insert({
+        ...twin, record_id: loserId, schedule_key: legacyKey(line.contractLineId), revision: 1,
+      });
+
+      const summary = await collapse.collapseTenant(db, tenantId, { log: () => undefined });
+      expect(summary.collisionGroups).toBeGreaterThanOrEqual(1);
+      // Both twins are identical in state/label/time, so the deterministic tiebreak (smallest record_id) picks
+      // the winner; exactly one of the pair must lose and carry the collapse reason.
+      const pair = await tenantTable(db, tenantId, 'recurring_service_periods')
+        .whereIn('record_id', [loserId, canonicalRow.record_id]);
+      const superseded = pair.filter((row) => row.lifecycle_state === 'superseded');
+      expect(superseded).toHaveLength(1);
+      expect(superseded[0].reason_code).toBe('obligation_label_collapse');
+      expect(pair.map((row) => row.schedule_key)).toEqual([canonicalKey(line.contractLineId), canonicalKey(line.contractLineId)]);
+      const live = await tenantTable(db, tenantId, 'recurring_service_periods')
+        .where({ tenant: tenantId, obligation_id: line.contractLineId })
+        .whereNot({ lifecycle_state: 'superseded' })
+        .whereRaw('invoice_window_start = ?', [currentPeriodStart]);
+      expect(live).toHaveLength(1);
+
+      const dueRows = (await dueRowsFor(clientName, line.contractLineId, currentPeriodStart, nextPeriodStart))
+        .filter((row) => normalizeDateValue(row.invoiceWindowStart) === currentPeriodStart);
+      expect(dueRows).toHaveLength(1);
+      expect(dueRows[0].scheduleKey).toBe(canonicalKey(line.contractLineId));
+    }, HOOK_TIMEOUT);
+  });
+
 it('T108: recurring due-work assertions validate candidate-level contracts directly without flattening invoiceCandidates members', async () => {
   setupCommonMocks({ tenantId, userId: 'candidate-contract-assertions-user', permissionCheck: () => true });
 
@@ -3478,7 +3928,6 @@ it('T108: recurring due-work assertions validate candidate-level contracts direc
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3549,7 +3998,6 @@ it('T080: mixed batch generation from AutomaticInvoices discovers and generates 
     sourceObligation: {
       tenant: tenantId,
       obligationId: clientLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3592,7 +4040,6 @@ it('T080: mixed batch generation from AutomaticInvoices discovers and generates 
     sourceObligation: {
       tenant: tenantId,
       obligationId: contractLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3688,7 +4135,6 @@ it('T079: deleting a contract-cadence recurring invoice makes the same execution
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3772,7 +4218,6 @@ it('T078: reversing a client-cadence recurring invoice restores due selection by
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3997,7 +4442,6 @@ it('T176: DB-backed mixed cadence-owner billing groups same-window due work into
       // The engine resolves obligations by joining contract_lines on
       // obligation_id, so the live contract_line_id is the canonical id.
       obligationId: clientCadenceLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -4018,7 +4462,6 @@ it('T176: DB-backed mixed cadence-owner billing groups same-window due work into
       // Contract-cadence rows are persisted with the live contract_line_id and
       // the 'contract_line' obligation type that the invoice engine queries.
       obligationId: contractCadenceLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -4142,7 +4585,6 @@ it('T316/T323/T324/T327: DB-backed persisted service-period regeneration, billed
   const sourceObligation = {
     tenant: tenantId,
     obligationId: fixedLine.clientContractLineId,
-    obligationType: 'client_contract_line',
     chargeFamily: 'fixed',
   } as const;
 
@@ -4270,7 +4712,6 @@ it('T316/T323/T324/T327: DB-backed persisted service-period regeneration, billed
     .where({
       tenant: tenantId,
       obligation_id: fixedLine.clientContractLineId,
-      obligation_type: 'client_contract_line',
     })
     .whereIn('lifecycle_state', ['generated', 'edited', 'locked'])
     .where('invoice_window_start', currentPeriodStart)
@@ -4381,7 +4822,6 @@ it('T316/T323/T324/T327: DB-backed persisted service-period regeneration, billed
     .where({
       tenant: tenantId,
       obligation_id: fixedLine.clientContractLineId,
-      obligation_type: 'client_contract_line',
     })
     .whereIn('lifecycle_state', ['generated', 'edited', 'locked'])
     .where('invoice_window_start', currentPeriodStart)
@@ -4453,7 +4893,6 @@ it('T320/T301: DB-backed billing-staff inspection and edit flows list future cli
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -4582,7 +5021,6 @@ it('T321: DB-backed boundary edits move due selection without rewriting already 
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -4735,7 +5173,6 @@ it('T322/T328: DB-backed skipped client-cadence periods block invoice generation
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -4849,7 +5286,6 @@ it('T325: DB-backed future contract-cadence service periods can be inspected and
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -4990,7 +5426,6 @@ it('T326: DB-backed mixed cadence-owner recurring obligations materialize distin
     sourceObligation: {
       tenant: tenantId,
       obligationId: clientCadenceLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -5008,7 +5443,6 @@ it('T326: DB-backed mixed cadence-owner recurring obligations materialize distin
     sourceObligation: {
       tenant: tenantId,
       obligationId: contractCadenceLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -6106,7 +6540,6 @@ async function upsertRecurringServicePeriodRecord(record: IRecurringServicePerio
       period_key: record.periodKey,
       revision: record.revision,
       obligation_id: record.sourceObligation.obligationId,
-      obligation_type: record.sourceObligation.obligationType,
       charge_family: record.sourceObligation.chargeFamily,
       cadence_owner: record.cadenceOwner,
       due_position: record.duePosition,
@@ -6136,7 +6569,6 @@ async function upsertRecurringServicePeriodRecord(record: IRecurringServicePerio
       period_key: record.periodKey,
       revision: record.revision,
       obligation_id: record.sourceObligation.obligationId,
-      obligation_type: record.sourceObligation.obligationType,
       charge_family: record.sourceObligation.chargeFamily,
       cadence_owner: record.cadenceOwner,
       due_position: record.duePosition,
@@ -6197,7 +6629,6 @@ function mapRecurringServicePeriodRowToRecord(row: any): IRecurringServicePeriod
     sourceObligation: {
       tenant: row.tenant,
       obligationId: row.obligation_id,
-      obligationType: row.obligation_type,
       chargeFamily: row.charge_family,
     },
     cadenceOwner: row.cadence_owner,
@@ -6256,7 +6687,6 @@ async function loadRecurringServicePeriodRecords(params: {
       'period_key',
       'revision',
       'obligation_id',
-      'obligation_type',
       'charge_family',
       'cadence_owner',
       'due_position',

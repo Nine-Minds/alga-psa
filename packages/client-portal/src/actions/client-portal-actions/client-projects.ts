@@ -6,9 +6,11 @@ import { Knex } from 'knex';
 import { IProject } from '@alga-psa/types';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { applyProjectVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/authorization/portal/visibility';
 import { getPortalVisibilityForUser } from '../../lib/clientAuth';
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
+import { hasClientProjectReadPermission } from './clientProjectPermissions';
 
 /**
  * The portal user's visibility context, from the shared resolver - avoids nested
@@ -35,6 +37,14 @@ export const getClientProjectDetails = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     const scopedDb = tenantDb(knex, tenant);
+
+    const canRead = await hasClientProjectReadPermission(knex, user, tenant);
+    if (!canRead) {
+      return permissionError(
+        'Insufficient permissions to view project details',
+        'common:errors.permissions.projects.readDetails'
+      );
+    }
 
     const visibility = await getVisibilityFromUser(knex, user, tenant);
     if (!visibility) {
@@ -100,6 +110,14 @@ export const getClientProjects = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     const scopedDb = tenantDb(knex, tenant);
+
+    const canRead = await hasClientProjectReadPermission(knex, user, tenant);
+    if (!canRead) {
+      return permissionError(
+        'Insufficient permissions to view projects',
+        'common:errors.permissions.projects.read'
+      );
+    }
 
     const visibility = await getVisibilityFromUser(knex, user, tenant);
     if (!visibility) {

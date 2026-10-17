@@ -14,6 +14,7 @@ import {
   serializeRichEditorJson,
 } from "../../ticketRichText/helpers";
 import { ActionChip } from "./ActionChip";
+import { CommentEmailRecipients, type CommentRecipientSearch } from "./CommentEmailRecipients";
 import { ScheduleCommentModal } from "./ScheduleCommentModal";
 import { formatDateTimeWithRelative } from "../../../ui/formatters/dateTime";
 import { MAX_COMMENT_LENGTH } from "../types";
@@ -47,6 +48,11 @@ export function CommentComposer({
   mentionAuthToken,
   scheduleAt,
   onChangeScheduleAt,
+  cc,
+  bcc,
+  onChangeCc,
+  onChangeBcc,
+  onSearchRecipients,
   variant = "ticket",
 }: {
   draftContent: string;
@@ -71,6 +77,13 @@ export function CommentComposer({
   mentionAuthToken?: string;
   /** Withhold the (client-visible) comment until this instant. */
   scheduleAt?: Date | null;
+  /** One-off Cc/Bcc for this comment's email (public ticket comments only). */
+  cc?: string[];
+  bcc?: string[];
+  onChangeCc?: (next: string[]) => void;
+  onChangeBcc?: (next: string[]) => void;
+  /** Contact lookup behind the Cc/Bcc suggestion list. */
+  onSearchRecipients?: CommentRecipientSearch;
   /** Task comments are always internal and never scheduled, so those controls are hidden. */
   variant?: "ticket" | "task";
   onChangeScheduleAt?: (value: Date | null) => void;
@@ -173,6 +186,16 @@ export function CommentComposer({
               />
             ) : null}
           </View>
+          {variant === "ticket" && onChangeCc && onChangeBcc ? (
+            <CommentEmailRecipients
+              isInternal={isInternal}
+              cc={cc ?? []}
+              bcc={bcc ?? []}
+              onChangeCc={onChangeCc}
+              onChangeBcc={onChangeBcc}
+              searchRecipients={onSearchRecipients}
+            />
+          ) : null}
           {canSchedule && isInternal ? (
             <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
               {t("comments.scheduleInternalBlocked")}

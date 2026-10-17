@@ -27,6 +27,10 @@ export const createTicketFromAssetSchema = z.object({
   priority_id: z.string().uuid(),
   asset_id: z.string().uuid(),
   client_id: z.string().uuid(),
+  /** FR-E8: the asset's assignee, or a shared workspace's single user. */
+  contact_name_id: z.string().uuid().nullable().optional(),
+  /** FR-F2: an explicit pick wins; omitted means "inherit from the asset". */
+  billing_profile_id: z.string().uuid().nullable().optional(),
 });
 
 export const ticketSchema = z.object({
@@ -71,6 +75,8 @@ export const ticketSchema = z.object({
   response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional(),
   // Provenance for a ticket created via "Duplicate". Create-only; no FK.
   duplicated_from_ticket_id: z.string().uuid().nullable().optional(),
+  // Provenance for a ticket created from a ticket template. Create-only; no FK.
+  created_from_template_id: z.string().uuid().nullable().optional(),
 });
 
 export const ticketUpdateSchema = ticketSchema.partial().omit({
@@ -80,6 +86,10 @@ export const ticketUpdateSchema = ticketSchema.partial().omit({
   entered_by: true,
   entered_at: true,
   duplicated_from_ticket_id: true,
+  created_from_template_id: true,
+  // Server-owned audit columns, stamped by ticketUpdateStamp.
+  updated_at: true,
+  updated_by: true,
 });
 
 export const ticketAttributesQuerySchema = z.object({
@@ -135,6 +145,13 @@ export const ticketListItemSchema = baseTicketSchema.extend({
   bundle_master_ticket_number: z.string().nullable().optional(),
   bundle_distinct_client_count: z.number().int().nonnegative().optional(),
   latest_activity_at: z.string().nullable().optional(),
+  latest_activity_actor: z
+    .object({
+      kind: z.enum(['user', 'client_user', 'contact', 'email_sender', 'system']),
+      name: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
   // ITIL-specific fields for list items (for priority calculation)
   itil_impact: z.number().int().min(1).max(5).nullable().optional(),
   itil_urgency: z.number().int().min(1).max(5).nullable().optional(),

@@ -118,11 +118,11 @@ export type AccountingMappingTargetConfig = {
   /** Catalog option id a stored mapping row corresponds to. */
   optionIdForMapping: (mapping: ExternalEntityMapping) => string;
   /**
-   * Persisted `external_entity_id` for a catalog option id. This is the key the
-   * external-target unique index enforces, so it (not the option id) is what
-   * decides whether two options collide.
+   * Whether a mapping of this kind holds its target exclusively, i.e. the
+   * server's unique index rejects a second mapping to the same target. The bulk
+   * grid withholds only exclusively-held options from suggestions.
    */
-  externalIdForOption: (optionId: string) => string;
+  isExclusiveKind: (kindId: string) => boolean;
   /**
    * Copy rendered (table and edit dialog) when a stored mapping's target no
    * longer exists in the live catalog — the remediation prompt for invalid

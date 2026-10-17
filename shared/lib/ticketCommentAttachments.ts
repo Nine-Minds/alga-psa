@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb, getConnection, registerAfterCommit } from '@alga-psa/db';
 import { randomUUID } from 'node:crypto';
+import { resolveTicketEventActor, scrubLegacyTicketIdActor, ticketEventActorFields } from '@alga-psa/event-schemas';
 
 type Connection = Knex | Knex.Transaction;
 
@@ -64,13 +65,18 @@ export async function dispatchCommentPublication(conn: Connection, tenant: strin
   const comment = await db.table('comments').where({ comment_id: commentId, publish_state: 'published' })
     .whereNull('deleted_at').whereNull('scheduled_publish_dispatched_at').first();
   if (!comment?.scheduled_publish_event_id || !comment.comment_publication_payload) return;
-  const payload = comment.comment_publication_payload;
+  // Intents persisted before ticket events stopped using the ticket id as the actor
+  // carry userId/actorUserId === ticketId. Heal them (a narrow data fix, not a schema rule).
+  const payload = scrubLegacyTicketIdActor(comment.comment_publication_payload);
+  const { userId: persistedUserId, actorType: _t, actorUserId: _u, actorContactId: _c, ...persisted } = payload;
   // Intents persisted before the producer-side fix can be missing the author
   // identity the event schema requires. Heal them here from the comment row so
   // they publish instead of failing validation on every reconcile pass.
   const author = payload.comment?.author ?? await resolveCommentAuthorDisplay(conn, tenant, comment);
-  await publish({ eventType: 'TICKET_COMMENT_ADDED', payload: { ...payload,
-    userId: payload.userId ?? comment.user_id ?? comment.ticket_id,
+  // Identity comes from the persisted real user, else the comment row. No ticket-id fallback.
+  const actor = resolveTicketEventActor({ userId: persistedUserId ?? comment.user_id, contactId: comment.contact_id });
+  await publish({ eventType: 'TICKET_COMMENT_ADDED', payload: { ...persisted,
+    ...ticketEventActorFields(actor),
     comment: { ...payload.comment, content: comment.note, isInternal: comment.is_internal, author },
   } }, { eventId: comment.scheduled_publish_event_id, strict: true });
   await db.table('comments').where({ comment_id: commentId, scheduled_publish_event_id: comment.scheduled_publish_event_id })

@@ -205,4 +205,16 @@ describe('rankSourcesForTarget', () => {
     const bulk = selectBulkApplicableSuggestions(suggestions, targets, (name) => name === 'body');
     expect(bulk.map((s) => s.targetField)).toEqual(['ticket_id']);
   });
+
+  it("suggests a ticket trigger's payload.ticketId for Send Email's ticket_id picker", () => {
+    const suggestions = findAutoMappingSuggestions(
+      [{ name: 'ticket_id', type: 'string' }],
+      [
+        { path: 'payload.ticketId', type: 'string' },
+        { path: 'payload.clientId', type: 'string' },
+      ],
+      {}
+    );
+    expect(suggestions[0]).toMatchObject({ targetField: 'ticket_id', sourcePath: 'payload.ticketId', expression: 'payload.ticketId' });
+  });
 });

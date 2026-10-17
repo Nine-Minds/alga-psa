@@ -281,6 +281,9 @@
       },
       "recurring": {
         "title": "Ticket ricorrenti"
+      },
+      "templates": {
+        "title": "Modelli di ticket"
       }
     },
     "timeEntry": {

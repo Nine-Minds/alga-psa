@@ -65,12 +65,9 @@
       "network": "Nätverk",
       "unknown": "Annat"
     },
-    "statusWarnTitle": "Vissa enheter är inaktiva",
-    "statusWarnBody": "{{active}} aktiva · {{inactive}} inaktiva",
-    "status": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv"
-    },
+    "statusAttentionTitle": "Vissa enheter behöver åtgärdas",
+    "statusAttentionBody": "{{active}} av {{total}} enheter aktiva",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Sök efter namn, inventarienummer eller serienummer",
     "filters": {
       "allTypes": "Alla typer",
@@ -175,10 +172,7 @@
       "viewAll": "Visa alla",
       "countLabel": "Antal hanterade: {{count}}",
       "emptyShort": "Inga enheter ännu",
-      "emptyBody": "Enheter som din IT-leverantör hanterar visas här.",
-      "healthy": "Fungerar normalt",
-      "inactive": "Inaktiv",
-      "active": "Aktiv"
+      "emptyBody": "Enheter som din IT-leverantör hanterar visas här."
     },
     "quickActions": {
       "title": "Snabbåtgärder",
@@ -377,7 +371,17 @@
         "verifiedContact": "Verifierad e-postadress för kontakten",
         "validPassword": "Giltigt lösenord"
       }
-    }
+    },
+    "ssoNoMatchTitle": "SSO-inloggningen misslyckades",
+    "ssoNoMatch": {
+      "no_matching_user": "Inget kundportalskonto matchar {{providerEmail}}. Logga in med ditt lösenord eller kontakta din tjänsteleverantör.",
+      "missing_email": "Din identitetsleverantör returnerade ingen e-postadress, så inget kundportalskonto kunde matchas. Logga in med ditt lösenord eller kontakta din tjänsteleverantör.",
+      "inactive_user": "Kundportalskontot för {{providerEmail}} är inaktivt. Kontakta din tjänsteleverantör för att aktivera det igen.",
+      "user_type_mismatch": "{{providerEmail}} är inget kundportalskonto. Kontakta din tjänsteleverantör.",
+      "tenant_mismatch": "{{providerEmail}} tillhör en annan organisations portal. Logga in med ditt lösenord eller kontakta din tjänsteleverantör."
+    },
+    "configurationTitle": "Inloggningen misslyckades",
+    "configurationMessage": "Inloggningen misslyckades. Försök igen eller kontakta din tjänsteleverantör."
   },
   "account": {
     "title": "Konto",
@@ -1000,14 +1004,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Namn",
-      "type": "Typ",
-      "status": "Status",
-      "location": "Plats",
-      "lastUpdated": "Senast uppdaterad"
+      "assignedTo": "Tilldelad till"
     },
-    "notAvailable": "Saknas",
-    "detailsTitle": "Enhetsdetaljer"
+    "statuses": {
+      "active": "Aktiv",
+      "in_stock": "I lager",
+      "maintenance": "Under underhåll",
+      "inactive": "Inaktiv",
+      "retired": "Utfasad"
+    },
+    "unassigned": "Ej tilldelad",
+    "sharedWorkspace": "Delad arbetsplats: {{name}}",
+    "sharedWorkspaceLabel": "Delad arbetsplats"
   },
   "errors": {
     "account": {

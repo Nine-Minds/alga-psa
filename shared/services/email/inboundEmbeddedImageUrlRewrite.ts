@@ -18,6 +18,7 @@
 import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
 import type { EmbeddedImageUrlMapping } from './processInboundEmailArtifacts';
 import { withTenantAdminTransaction } from './tenantAdminTransaction';
+import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
 
 export function normalizeEmbeddedContentId(value: string | undefined | null): string {
   if (!value) return '';
@@ -189,7 +190,7 @@ function parseTicketAttributes(raw: unknown): Record<string, unknown> {
 
 interface BodyAccessor {
   read: (db: any) => Promise<string | null>;
-  write: (db: any, content: string) => Promise<void>;
+  write: (db: any, content: string, trx: any) => Promise<void>;
 }
 
 function commentAccessor(commentId: string): BodyAccessor {
@@ -198,7 +199,7 @@ function commentAccessor(commentId: string): BodyAccessor {
       const row = await db.table('comments').where({ comment_id: commentId }).first('note');
       return row?.note ?? null;
     },
-    write: async (db: any, content: string) => {
+    write: async (db: any, content: string, _trx: any) => {
       await db.table('comments')
         .where({ comment_id: commentId })
         .update({ note: content, updated_at: new Date() });
@@ -214,14 +215,14 @@ function ticketDescriptionAccessor(ticketId: string): BodyAccessor {
       const description = parseTicketAttributes(row.attributes).description;
       return typeof description === 'string' ? description : null;
     },
-    write: async (db: any, content: string) => {
+    write: async (db: any, content: string, trx: any) => {
       const row = await db.table('tickets').where({ ticket_id: ticketId }).first('attributes');
       if (!row) return;
       const attributes = parseTicketAttributes(row.attributes);
       attributes.description = content;
       await db.table('tickets')
         .where({ ticket_id: ticketId })
-        .update({ attributes: JSON.stringify(attributes), updated_at: new Date() });
+        .update({ attributes: JSON.stringify(attributes), ...ticketUpdateStamp(trx, null) });
     },
   };
 }
@@ -262,7 +263,7 @@ export async function applyEmbeddedImageUrlMappingsToStoredBodies(
       : ticketDescriptionAccessor(target.id);
 
     try {
-      await withTenantAdminTransaction(args.tenantId, async (_trx: any, db: any) => {
+      await withTenantAdminTransaction(args.tenantId, async (trx: any, db: any) => {
         const current = await accessor.read(db);
         if (!current) return;
 
@@ -278,7 +279,7 @@ export async function applyEmbeddedImageUrlMappingsToStoredBodies(
         }
 
         if (next === current) return;
-        await accessor.write(db, next);
+        await accessor.write(db, next, trx);
       });
     } catch (error) {
       console.warn('inboundEmbeddedImageUrlRewrite: stored body rewrite failed (continuing)', {

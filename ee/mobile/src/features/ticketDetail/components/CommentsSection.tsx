@@ -28,6 +28,7 @@ import {
   type FlattenedThreadNode,
 } from "../commentThreads";
 import { isTokenOnlyComment } from "../tokenOnlyComments";
+import { CommentEmailRecipientLines } from "./CommentEmailRecipients";
 import { ExpandableComment } from "./ExpandableComment";
 
 const QUICK_EMOJIS = ['👍', '👎', '❤️', '😂', '🎉', '👀'];
@@ -754,6 +755,9 @@ export function CommentsSection({
                     </View>
                   )}
                 </View>
+                {!isSystemEventComment ? (
+                  <CommentEmailRecipientLines emailRecipients={c.email_recipients} />
+                ) : null}
                 {isEditingThis ? (
                   <>
                     <View style={{ marginTop: spacing.xs }}>

@@ -8,6 +8,8 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
+import { closeOpenAssignmentsForContact } from './assetAssignmentModel';
+import { clearGroupContactLinksForContact } from './assetGroupContactModel';
 import {
   CONTACT_PHONE_CANONICAL_TYPES,
   type ContactPhoneCanonicalType,
@@ -67,6 +69,12 @@ export async function clearContactLinksBeforeDelete(
   await scoped.table('assets')
     .where({ contact_name_id: contactId })
     .update({ contact_name_id: null });
+  // FR-C5: the assignments the contact held are closed, not deleted — "who had
+  // this laptop in March" must survive the person leaving.
+  await closeOpenAssignmentsForContact(db, tenant, contactId);
+  // FR-E6: the contact stops being a workspace user; a deleted bundle owner
+  // leaves its members unassigned.
+  await clearGroupContactLinksForContact(db, tenant, contactId);
 }
 
 /**
@@ -135,6 +143,8 @@ export async function assertValidContactManager(
   }
 }
 
+// LEVERAGE: pattern contact-row-input-schema — API (server/src/lib/api/schemas/contact.ts) and model
+// each define the phone/email row input shape
 const phoneRowInputSchema = z.object({
   contact_phone_number_id: z.string().uuid().optional(),
   phone_number: z.string().trim().min(1, 'Phone number is required'),

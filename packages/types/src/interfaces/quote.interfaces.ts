@@ -99,6 +99,8 @@ export interface IQuote extends TenantEntity {
   version: number;
   parent_quote_id?: string | null;
   po_number?: string | null;
+  recurring_section_title?: string | null;
+  onetime_section_title?: string | null;
   subtotal: number;
   discount_total: number;
   tax: number;
@@ -169,6 +171,10 @@ export interface QuoteConversionPreview {
   available_actions: Array<'contract' | 'invoice' | 'both'>;
   /** An existing sales order must be reconciled before creating the remaining invoice. */
   invoice_error?: string | null;
+  /** Set when a recurring item cannot become a billable contract line; contract conversion is unavailable. */
+  contract_blocked_reason?: string | null;
+  /** Description of the service-less recurring item behind `contract_blocked_reason`, for localized display. */
+  contract_blocked_item_description?: string | null;
   contract_items: QuoteConversionPreviewItem[];
   /** One-time items an invoice conversion would bill right now — mirrors the
    *  runtime exclusion of product lines already claimed by a sales order. */
@@ -276,6 +282,12 @@ export interface QuoteViewModelCadenceGroup {
   /** Localized band label; English fallback is emitted by the adapter. */
   name?: string | null;
   /**
+   * Set when `name` came from the quote's own `recurring_section_title` /
+   * `onetime_section_title` instead of the cadence vocabulary, so the document
+   * label localization leaves the author's wording alone.
+   */
+  name_is_custom?: boolean;
+  /**
    * Localized "{{cadence}} Total" band-footer label (e.g. "Monthly Total").
    * English fallback (`${name} Total`) is emitted by the adapter and replaced
    * with the localized template by the PDF service.
@@ -303,6 +315,8 @@ export interface QuoteViewModel {
   status?: QuoteStatus | null;
   version: number;
   po_number?: string | null;
+  recurring_section_title?: string | null;
+  onetime_section_title?: string | null;
   currency_code: string;
   subtotal: number;
   discount_total: number;

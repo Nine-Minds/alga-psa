@@ -423,7 +423,8 @@
       "placeholders": {
         "teamName": "Enter team name",
         "selectTeamLead": "Select a team lead",
-        "selectUserToAdd": "Select a user to add"
+        "selectUserToAdd": "Select a user to add",
+        "noTeamLead": "Not assigned"
       },
       "alert": {
         "unsavedChanges": "You have unsaved changes"
@@ -673,8 +674,8 @@
           "suppressAiHelp": "Enterprise AI Assistant add-on only. If unavailable, replies reopen normally."
         },
         "liveTimer": {
-          "label": "Enable live ticket timer",
-          "help": "Shows the live timer and tracked intervals on tickets in this board. Manual time entry remains available."
+          "label": "Show stopwatch on tickets",
+          "help": "Shows the stopwatch controls on tickets in this board. Turn this off to hide the stopwatch here; manual time entry stays available. A stopwatch that is already running keeps running."
         },
         "clientPortalVisible": {
           "label": "Visible in client portal",
@@ -821,6 +822,27 @@
           "appearanceHelp": "Tab pinning and the board's default list view",
           "assignment": "Assignment & SLA",
           "assignmentHelp": "Default routing, SLA and board manager",
+          "notifications": "Notifications",
+          "notificationsHelp": "Notify technicians about new tickets and status changes, and set default watchers",
+          "notificationsRulesLabel": "Notification rules",
+          "notificationsRulesHelp": "Recipients get one notification per event. They are not added as watchers.",
+          "notificationsAddRule": "Add rule",
+          "notificationsRuleTitle": "Rule {{number}}",
+          "notificationsRuleEnabled": "Enabled",
+          "notificationsRemoveRule": "Remove rule",
+          "notificationsOnCreate": "When a ticket is created on this board",
+          "notificationsOnStatus": "When a ticket enters",
+          "notificationsNoStatuses": "Statuses can be selected once the board has been saved.",
+          "notificationsRecipients": "Notify",
+          "notificationsRecipientsPlaceholder": "Select users and teams...",
+          "notificationsRecipientsHelp": "Team members are looked up each time a notification is sent.",
+          "notificationsDefaultWatchers": "Default watchers",
+          "notificationsDefaultWatchersPlaceholder": "Select users...",
+          "notificationsDefaultWatchersHelp": "Added to the watch list of every new ticket on this board, and notified of every later update.",
+          "notificationsTriggerRequired": "Each notification rule needs at least one trigger: ticket creation or a status.",
+          "notificationsRecipientRequired": "Each notification rule needs at least one user or team to notify.",
+          "notificationsFetchFailed": "Failed to load notification settings",
+          "notificationsStatusRemapFailed": "The board was created, but a notification rule status could not be matched to the new board. Re-add the notification rules.",
           "inbound": "Email & inbound replies",
           "inboundHelp": "Reopen tickets when clients reply by email",
           "close": "Close rules",
@@ -830,7 +852,7 @@
           "statuses": "Priorities & statuses",
           "statusesHelp": "Default priority and the ticket statuses for this board",
           "display": "Display & behaviour",
-          "displayHelp": "Live timer and board type"
+          "displayHelp": "Stopwatch and board type"
         },
         "saveChanges": "Save Changes",
         "unsaved": "Unsaved",
@@ -1825,6 +1847,12 @@
         "useLogo": "Use my logo in the email header",
         "logoWide": "Wide logo",
         "logoDefault": "Square logo",
+        "logoArtwork": "Logo artwork",
+        "logoArtworkAuto": "Match the header",
+        "logoArtworkLight": "Light-background logo",
+        "logoArtworkDark": "Dark-background logo",
+        "logoArtworkAutoDark": "Automatic reads this header as dark and uses the dark-background logo.",
+        "logoArtworkAutoLight": "Automatic reads this header as light and uses the light-background logo.",
         "noLogo": "Upload a logo in Settings → Client Portal → Branding to use it here.",
         "showAttribution": "Show \"Powered by AlgaPSA\" in the footer"
       }
@@ -1933,6 +1961,8 @@
   "timeEntry": {
     "title": "Time Entry Settings",
     "description": "Manage your time entry settings and time periods",
+    "accessDenied": "Access Denied: You do not have permission to view time periods.",
+    "loading": "Loading time entry settings...",
     "timePeriods": {
       "title": "Time Period Settings",
       "description": "Configure billing time period settings",
@@ -2030,7 +2060,7 @@
       "openMenu": "Open menu",
       "columns": {
         "startDate": "Start Date",
-        "endDate": "End Date",
+        "endDate": "Last Day",
         "actions": "Actions"
       },
       "form": {
@@ -2042,7 +2072,8 @@
         "startDate": "Start Date",
         "startDatePlaceholder": "Select start date",
         "noEndDate": "No End Date",
-        "endDate": "End Date",
+        "endDate": "Last Day of Period",
+        "endDateHelp": "The period includes this day.",
         "endDatePlaceholder": "Select end date",
         "deletePeriod": "Delete Period",
         "confirmDeleteTitle": "Confirm Delete",
@@ -2056,7 +2087,7 @@
         "noSettings": "No time period settings available. Unable to create a new time period.",
         "settingsRequired": "Cannot manage time period without settings.",
         "startDateRequired": "Start date must be provided.",
-        "startBeforeEnd": "Start date must be before end date.",
+        "startBeforeEnd": "End date cannot be before the start date.",
         "overlap": "The time period overlaps with an existing period.",
         "overlapRetry": "This time period overlaps with an existing one. Please choose different dates.",
         "create": "Failed to create time period.",

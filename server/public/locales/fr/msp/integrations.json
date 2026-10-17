@@ -124,6 +124,15 @@
           "paymentTerms": "Conditions de paiement",
           "discounts": "Remises"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Comptes de services Desktop",
+        "desktopDiscounts": "Remises Desktop",
+        "desktopAccount": "Nom du compte de produits Desktop",
+        "description": "Associez les remises et avoirs avant l’exportation. Cette association appartient à cette société comptable.",
+        "add": "Ajouter une association",
+        "remove": "Supprimer une association",
+        "removeConfirm": "Supprimer cette association comptable ?"
       }
     },
     "calendar": {
@@ -2884,6 +2893,54 @@
         "errors": {
           "saveFailed": "Impossible d'enregistrer la planification de la synchronisation des appareils."
         }
+      },
+      "peopleMode": {
+        "label": "Personnes",
+        "options": {
+          "off": "Désactivé",
+          "suggest": "Suggérer",
+          "auto": "Attribution automatique"
+        },
+        "updateFailed": "Impossible de mettre à jour le mode Personnes"
+      },
+      "signedInUsers": {
+        "title": "Utilisateurs connectés",
+        "description": "Les noms d'utilisateur signalés par les appareils de cette organisation et le contact correspondant.",
+        "empty": "Aucun utilisateur connecté signalé pour le moment.",
+        "noClient": "Associez cette organisation à un client avant d'associer ses utilisateurs.",
+        "refresh": "Rafraîchir",
+        "selectContact": "Sélectionner un contact",
+        "loadFailed": "Impossible de charger les utilisateurs connectés.",
+        "saveFailed": "Impossible d'enregistrer l'association.",
+        "columns": {
+          "user": "Utilisateur connecté",
+          "devices": "Appareils",
+          "method": "Associé par",
+          "contact": "Contact"
+        },
+        "methods": {
+          "mapped": "Association enregistrée",
+          "email": "E-mail",
+          "username": "Nom d'utilisateur",
+          "name": "Nom complet",
+          "none": "Aucune correspondance"
+        }
+      },
+      "clientChange": {
+        "title": "Déplacer les appareils de cette organisation ?",
+        "message": "{{count}} actif(s) seront déplacés vers {{client}}. Les attributions, groupes et profils de facturation du client précédent seront effacés.",
+        "confirm": "Déplacer les appareils"
+      },
+      "billingProfile": {
+        "label": "Profil de facturation",
+        "clientDefault": "Valeur par défaut du client",
+        "updateFailed": "Échec de la mise à jour du profil de facturation"
+      },
+      "errors": {
+        "invalidPeopleMode": "Ce mode de gestion des personnes n'est pas valide.",
+        "billingProfileUnavailable": "Ce profil de facturation n'est pas disponible pour ce client.",
+        "mappingNotFound": "Cette association n'existe plus. Actualisez la page et réessayez.",
+        "forbidden": "Vous n'avez pas l'autorisation de modifier cela."
       }
     },
     "sso": {
@@ -3980,6 +4037,8 @@
       "managePermission": "Autorisation refusée : vous n’avez pas l’autorisation de gérer les correspondances comptables.",
       "loadFailed": "Impossible de charger les données de correspondance. Veuillez réessayer.",
       "duplicate": "Une correspondance existe déjà pour cette entité. Modifiez plutôt la correspondance existante.",
+      "duplicateTarget": "Cette cible est déjà associée à une autre entité dans cette organisation. Choisissez une autre cible.",
+      "duplicateXeroItem": "Cet article Xero est déjà associé à un autre service. Un article ne peut être associé qu'à un seul service ; pour facturer plusieurs services avec le même code, associez-les plutôt à un compte de produits.",
       "saveFailed": "Impossible d’enregistrer la correspondance. Veuillez réessayer.",
       "idRequiredForUpdate": "L’identifiant de la correspondance est obligatoire pour la mise à jour.",
       "noUpdateData": "Aucune donnée de mise à jour fournie.",

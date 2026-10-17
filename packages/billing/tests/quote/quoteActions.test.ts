@@ -44,6 +44,7 @@ const makeQuery = (result: any) => {
   const chain: any = {};
   chain.select = vi.fn(() => chain);
   chain.where = vi.fn(() => chain);
+  chain.orderBy = vi.fn(() => chain);
   chain.first = vi.fn(async () => result);
   return chain;
 };
@@ -54,6 +55,7 @@ const makeListQuery = (rows: any[]) => {
   const chain: any = {};
   chain.select = vi.fn(() => chain);
   chain.where = vi.fn(() => chain);
+  chain.orderBy = vi.fn(() => chain);
   chain.first = vi.fn(async () => rows[0]);
   chain.then = (onFulfilled: any, onRejected: any) => Promise.resolve(rows).then(onFulfilled, onRejected);
   chain.catch = (onRejected: any) => Promise.resolve(rows).catch(onRejected);
@@ -74,6 +76,10 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
+  withOptionalAuth:
+    (fn: any) =>
+    (...args: any[]) =>
+      fn(currentUser, { tenant: TENANT_ID }, ...args),
   withAuth:
     (fn: any) =>
     (...args: any[]) =>
@@ -215,6 +221,16 @@ const templateQuote = {
   ],
 };
 
+// Compiling the quoteActions module graph takes seconds, and every test below
+// reaches it through `await import(...)`. Left to the first test, that whole
+// compile is charged to one test's timeout — which is how T042 (the first one)
+// hit "Test timed out in 20000ms" on a loaded CI runner while the other fifty
+// finished in single-digit milliseconds. Warm the module cache here, during
+// file evaluation, which is not on the test clock; the per-test imports below
+// then resolve from cache. The mock factories above are already defined at
+// this point, so they still intercept the graph.
+await import('../../src/actions/quoteActions');
+
 describe('quoteActions', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -232,10 +248,13 @@ describe('quoteActions', () => {
         return chain;
       }
       if (table === 'clients') {
-        return makeQuery({ billing_email: null });
+        return makeQuery({ client_id: 'client-1', client_name: 'Acme', billing_contact_id: null, billing_email: null });
       }
       if (table === 'contacts') {
         return makeQuery({ email: null });
+      }
+      if (table === 'client_locations') {
+        return makeListQuery([]);
       }
       if (table === 'user_roles' || table === 'team_members' || table === 'users') {
         return makeListQuery([]);
@@ -819,6 +838,26 @@ describe('quoteActions', () => {
   });
 
 
+  it('requestQuoteApprovalChanges rejects a blank comment without touching the quote', async () => {
+    const { requestQuoteApprovalChanges } = await import('../../src/actions/quoteActions');
+    const result = await requestQuoteApprovalChanges(QUOTE_ID, '   ');
+
+    expect(result).toMatchObject({ actionError: 'A comment is required when requesting quote changes' });
+    expect(Quote.update).not.toHaveBeenCalled();
+    expect(QuoteActivity.create).not.toHaveBeenCalled();
+  });
+
+  it('requestQuoteApprovalChanges requires quotes:approve permission', async () => {
+    hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => (
+      !(resource === 'quotes' && action === 'approve')
+    ));
+    const { requestQuoteApprovalChanges } = await import('../../src/actions/quoteActions');
+    const result = await requestQuoteApprovalChanges(QUOTE_ID, 'Please revise');
+
+    expect(result).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+    expect(Quote.update).not.toHaveBeenCalled();
+  });
+
   it('T122: approveQuote requires quotes:approve permission', async () => {
     hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => (
       !(resource === 'quotes' && action === 'approve')
@@ -1266,7 +1305,7 @@ describe('quoteActions', () => {
     const sendableQuote = {
       quote_id: QUOTE_ID,
       quote_number: 'Q-0001',
-      title: 'Quote',
+      title: 'Estimate',
       total_amount: 5000,
       currency_code: 'USD',
       valid_until: '2026-03-20T00:00:00.000Z',
@@ -1286,7 +1325,32 @@ describe('quoteActions', () => {
       subject: 'Quote Q-0001 from Acme MSP',
       html: expect.stringContaining('Q-0001'),
       text: expect.stringContaining('Valid Until:'),
-      attachments: [expect.objectContaining({ filename: 'Quote_Q-0001.pdf', content: Buffer.from('pdf-content') })],
+      attachments: [expect.objectContaining({ filename: 'Estimate.pdf', content: Buffer.from('pdf-content') })],
+    }));
+  });
+
+  it('uses the quote number fallback for a blank-title email attachment', async () => {
+    const blankTitleQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: '   ',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(blankTitleQuote as any)
+      .mockResolvedValueOnce({ ...blankTitleQuote, status: 'sent' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+    expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+      attachments: [expect.objectContaining({ filename: 'Quote_Q-0001.pdf' })],
     }));
   });
 

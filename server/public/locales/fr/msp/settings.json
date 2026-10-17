@@ -423,7 +423,8 @@
       "placeholders": {
         "teamName": "Saisir le nom de l'équipe",
         "selectTeamLead": "Sélectionner un chef d'équipe",
-        "selectUserToAdd": "Sélectionner un utilisateur à ajouter"
+        "selectUserToAdd": "Sélectionner un utilisateur à ajouter",
+        "noTeamLead": "Non assigné"
       },
       "alert": {
         "unsavedChanges": "Vous avez des modifications non enregistrées"
@@ -673,8 +674,8 @@
           "suppressAiHelp": "Module complémentaire Enterprise AI Assistant uniquement. Si indisponible, les réponses rouvrent normalement."
         },
         "liveTimer": {
-          "label": "Activer le minuteur de ticket en direct",
-          "help": "Affiche le minuteur en direct et les intervalles suivis sur les tickets de ce tableau. La saisie manuelle du temps reste disponible."
+          "label": "Afficher le chronomètre sur les tickets",
+          "help": "Affiche les commandes du chronomètre sur les tickets de ce tableau. Désactivez cette option pour masquer le chronomètre ici ; la saisie manuelle du temps reste disponible. Un chronomètre déjà en cours continue de tourner."
         },
         "clientPortalVisible": {
           "label": "Visible dans le portail client",
@@ -821,6 +822,27 @@
           "appearanceHelp": "Épinglage de l'onglet et vue de liste par défaut du tableau",
           "assignment": "Attribution et SLA",
           "assignmentHelp": "Routage par défaut, SLA et responsable du tableau",
+          "notifications": "Notifications",
+          "notificationsHelp": "Avertir les techniciens des nouveaux tickets et des changements de statut, et définir les observateurs par défaut",
+          "notificationsRulesLabel": "Règles de notification",
+          "notificationsRulesHelp": "Les destinataires reçoivent une notification par événement. Ils ne sont pas ajoutés comme observateurs.",
+          "notificationsAddRule": "Ajouter une règle",
+          "notificationsRuleTitle": "Règle {{number}}",
+          "notificationsRuleEnabled": "Activée",
+          "notificationsRemoveRule": "Supprimer la règle",
+          "notificationsOnCreate": "Lorsqu'un ticket est créé sur ce tableau",
+          "notificationsOnStatus": "Lorsqu'un ticket passe au statut",
+          "notificationsNoStatuses": "Les statuts peuvent être sélectionnés une fois le tableau enregistré.",
+          "notificationsRecipients": "Notifier",
+          "notificationsRecipientsPlaceholder": "Sélectionner des utilisateurs et des équipes...",
+          "notificationsRecipientsHelp": "Les membres de l'équipe sont déterminés à chaque envoi de notification.",
+          "notificationsDefaultWatchers": "Observateurs par défaut",
+          "notificationsDefaultWatchersPlaceholder": "Sélectionner des utilisateurs...",
+          "notificationsDefaultWatchersHelp": "Ajoutés à la liste de suivi de chaque nouveau ticket de ce tableau et notifiés de chaque mise à jour ultérieure.",
+          "notificationsTriggerRequired": "Chaque règle de notification nécessite au moins un déclencheur : la création d'un ticket ou un statut.",
+          "notificationsRecipientRequired": "Chaque règle de notification nécessite au moins un utilisateur ou une équipe à notifier.",
+          "notificationsFetchFailed": "Échec du chargement des paramètres de notification",
+          "notificationsStatusRemapFailed": "Le tableau a été créé, mais le statut d'une règle de notification n'a pas pu être associé au nouveau tableau. Ajoutez à nouveau les règles de notification.",
           "inbound": "E-mail et réponses entrantes",
           "inboundHelp": "Rouvrir les tickets lorsque les clients répondent par e-mail",
           "close": "Règles de clôture",
@@ -830,7 +852,7 @@
           "statuses": "Priorités et statuts",
           "statusesHelp": "Priorité par défaut et statuts de ticket pour ce tableau",
           "display": "Affichage et comportement",
-          "displayHelp": "Minuteur en direct et type de tableau"
+          "displayHelp": "Chronomètre et type de tableau"
         },
         "saveChanges": "Enregistrer les modifications",
         "unsaved": "Non enregistré",
@@ -1825,6 +1847,12 @@
         "useLogo": "Utiliser mon logo dans l'en-tête des courriels",
         "logoWide": "Logo large",
         "logoDefault": "Logo carré",
+        "logoArtwork": "Version du logo",
+        "logoArtworkAuto": "Selon l'en-tête",
+        "logoArtworkLight": "Logo pour fond clair",
+        "logoArtworkDark": "Logo pour fond sombre",
+        "logoArtworkAutoDark": "Le mode automatique considère cet en-tête comme sombre et utilise le logo pour fond sombre.",
+        "logoArtworkAutoLight": "Le mode automatique considère cet en-tête comme clair et utilise le logo pour fond clair.",
         "noLogo": "Téléversez un logo dans Paramètres → Portail client → Image de marque pour l'utiliser ici.",
         "showAttribution": "Afficher « Powered by AlgaPSA » dans le pied de page"
       }
@@ -1933,6 +1961,8 @@
   "timeEntry": {
     "title": "Paramètres de saisie du temps",
     "description": "Gérez vos paramètres de saisie du temps et les périodes de temps",
+    "accessDenied": "Accès refusé : vous n’avez pas l’autorisation de consulter les périodes.",
+    "loading": "Chargement des paramètres de saisie du temps...",
     "timePeriods": {
       "title": "Paramètres des périodes",
       "description": "Configurez les périodes de facturation",
@@ -2030,7 +2060,7 @@
       "openMenu": "Ouvrir le menu",
       "columns": {
         "startDate": "Date de début",
-        "endDate": "Date de fin",
+        "endDate": "Dernier jour",
         "actions": "Actions"
       },
       "form": {
@@ -2042,7 +2072,8 @@
         "startDate": "Date de début",
         "startDatePlaceholder": "Sélectionner la date de début",
         "noEndDate": "Aucune date de fin",
-        "endDate": "Date de fin",
+        "endDate": "Dernier jour de la période",
+        "endDateHelp": "La période inclut ce jour.",
         "endDatePlaceholder": "Sélectionner la date de fin",
         "deletePeriod": "Supprimer la période",
         "confirmDeleteTitle": "Confirmer la suppression",
@@ -2056,7 +2087,7 @@
         "noSettings": "Aucun paramètre de période disponible. Impossible de créer une nouvelle période.",
         "settingsRequired": "Impossible de gérer une période sans paramètres.",
         "startDateRequired": "Une date de début doit être indiquée.",
-        "startBeforeEnd": "La date de début doit précéder la date de fin.",
+        "startBeforeEnd": "La date de fin ne peut pas être antérieure à la date de début.",
         "overlap": "La période chevauche une période existante.",
         "overlapRetry": "Cette période en chevauche une autre. Veuillez choisir d’autres dates.",
         "create": "Impossible de créer la période.",

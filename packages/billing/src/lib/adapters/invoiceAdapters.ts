@@ -593,6 +593,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         if (!useLegacyMajorUnits) {
           return Math.trunc(numeric);
         }
+        // LEVERAGE: pattern currency-minor-units — local *100 parser assumes a 2-digit currency; should use core toMinorUnits keyed on the invoice currency (alga0002091 follow-up)
         return Math.round(numeric * 100);
       };
 
@@ -645,6 +646,12 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
             : {}),
           location_id: item.location_id ?? null,
           location: null,
+          isDiscount: Boolean(item.is_discount),
+          discountType: item.is_discount ? (item.discount_type ?? 'fixed') : null,
+          adjustmentSourceKind: item.adjustment_source_kind ?? null,
+          adjustmentScope: item.adjustment_scope ?? null,
+          adjustmentReason: item.adjustment_reason ?? null,
+          manualLineMetadata: item.manual_line_metadata ?? null,
         };
       });
       const computedSubtotal = normalizedItems.reduce((sum, item) => sum + item.total, 0);

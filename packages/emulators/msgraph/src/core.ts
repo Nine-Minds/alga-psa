@@ -250,6 +250,19 @@ export interface CapturedSendMail {
   receivedAt: string;
 }
 
+/**
+ * The identity Graph `/me` reports: the account whoever holds the delegated
+ * token signed in as. Entra hands out a `mail` that need not match the
+ * `userPrincipalName` (an `.onmicrosoft.com` UPN beside a vanity mail address
+ * is the common case), so both are settable with the `signed-in-user` seeder.
+ */
+export interface SignedInUser {
+  id: string;
+  mail: string;
+  userPrincipalName: string;
+  displayName?: string;
+}
+
 /** Defaults for inbound activity injection; tune with the `configure` action. */
 export interface BotConfig {
   /** Where injected activities are POSTed (the app's bot endpoint). */
@@ -385,6 +398,12 @@ export interface SeedChatInput {
 
 export const EMULATED_TENANT_ID = '11111111-2222-4333-8444-555555555555';
 
+const DEFAULT_SIGNED_IN_USER: SignedInUser = {
+  id: 'emulated-user',
+  userPrincipalName: 'support@example.test',
+  mail: 'support@example.test',
+};
+
 const DEFAULT_BOT_CONFIG: BotConfig = {
   targetUrl: 'http://localhost:3000/api/teams/bot/messages',
   serviceUrl: 'http://localhost:4010',
@@ -431,6 +450,7 @@ export class MsGraphCore implements EmulatorCore {
   /** Notification delivery results per call record, for the state view. */
   readonly callRecordDeliveries = new Map<string, unknown[]>();
   readonly seedPresets = new Map<string, SeedPreset>();
+  signedInUser: SignedInUser = { ...DEFAULT_SIGNED_IN_USER };
   defaultActor: DefaultActor = {};
   readonly botConversations = new Map<string, BotConversation>();
   readonly capturedBotActivities: CapturedBotActivity[] = [];
@@ -484,6 +504,7 @@ export class MsGraphCore implements EmulatorCore {
     this.callArtifacts.clear();
     this.callRecordDeliveries.clear();
     this.seedPresets.clear();
+    this.signedInUser = { ...DEFAULT_SIGNED_IN_USER };
     this.defaultActor = {};
     this.botConversations.clear();
     this.capturedBotActivities.length = 0;
@@ -726,6 +747,15 @@ export class MsGraphCore implements EmulatorCore {
 
   listOrganizations(): GraphOrganization[] {
     return [...this.organizations.values()];
+  }
+
+  /** Partial update: unset fields keep the identity Graph already reported. */
+  setSignedInUser(input: Partial<SignedInUser>): SignedInUser {
+    this.signedInUser = {
+      ...this.signedInUser,
+      ...Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined)),
+    };
+    return this.signedInUser;
   }
 
   addDirectoryUser(input: SeedDirectoryUserInput): GraphDirectoryUser {
@@ -1443,6 +1473,7 @@ export class MsGraphCore implements EmulatorCore {
       callRecords: [...this.callRecords.values()],
       callArtifacts: [...this.callArtifacts.entries()],
       seedPresets: [...this.seedPresets.values()],
+      signedInUser: this.signedInUser,
       defaultActor: this.defaultActor,
       accessTokenTtlSeconds: this.accessTokenTtlSeconds,
       rotateRefreshTokens: this.rotateRefreshTokens,
@@ -1492,6 +1523,7 @@ export class MsGraphCore implements EmulatorCore {
     loadEntries(this.callArtifacts, snapshot.callArtifacts);
     load(this.seedPresets, snapshot.seedPresets, (row) => row.name);
 
+    this.signedInUser = { ...DEFAULT_SIGNED_IN_USER, ...(snapshot.signedInUser ?? {}) };
     this.defaultActor = snapshot.defaultActor ?? {};
     if (typeof snapshot.accessTokenTtlSeconds === 'number') this.accessTokenTtlSeconds = snapshot.accessTokenTtlSeconds;
     if (typeof snapshot.rotateRefreshTokens === 'boolean') this.rotateRefreshTokens = snapshot.rotateRefreshTokens;

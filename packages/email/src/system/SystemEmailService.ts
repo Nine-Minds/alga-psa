@@ -243,11 +243,21 @@ export class SystemEmailService extends BaseEmailService {
   }
 
   /**
-   * Replace template variables using Handlebars
+   * Replace template variables using Handlebars.
+   *
+   * Handlebars HTML-escapes `{{var}}` by default, which is correct for the
+   * HTML body only. Subject and plain-text parts are NOT HTML: render them with
+   * `noEscape: true` so values like URLs (`?requestId=<uuid>` -> `&#x3D;`) or
+   * names containing `"`/`&` render literally. Same rule as
+   * server/src/lib/notifications/sendEventEmail.ts.
    */
-  private replaceVariables(template: string, data: Record<string, any>): string {
+  private replaceVariables(
+    template: string,
+    data: Record<string, any>,
+    options: { noEscape?: boolean } = {}
+  ): string {
     try {
-      const compiledTemplate = Handlebars.compile(template);
+      const compiledTemplate = Handlebars.compile(template, { noEscape: options.noEscape === true });
       return compiledTemplate(data);
     } catch (error) {
       console.error('[SystemEmailService] Error compiling template with Handlebars:', error);
@@ -357,10 +367,11 @@ export class SystemEmailService extends BaseEmailService {
 
     if (dbTemplate) {
       // Use database template and replace variables
+      // LEVERAGE: pattern system-email-render-triple — subject/html/text render triple repeated in every DB-template sender; a missing renderDbTemplate() layer
       template = {
-        subject: this.replaceVariables(dbTemplate.subject, data),
+        subject: this.replaceVariables(dbTemplate.subject, data, { noEscape: true }),
         html: this.replaceVariables(dbTemplate.html, data),
-        text: this.replaceVariables(dbTemplate.text || '', data)
+        text: this.replaceVariables(dbTemplate.text || '', data, { noEscape: true })
       };
     } else {
       // Fall back to hardcoded template
@@ -395,10 +406,11 @@ export class SystemEmailService extends BaseEmailService {
 
     if (dbTemplate) {
       // Use database template and replace variables
+      // LEVERAGE: pattern system-email-render-triple — subject/html/text render triple repeated in every DB-template sender; a missing renderDbTemplate() layer
       template = {
-        subject: this.replaceVariables(dbTemplate.subject, data),
+        subject: this.replaceVariables(dbTemplate.subject, data, { noEscape: true }),
         html: this.replaceVariables(dbTemplate.html, data),
-        text: this.replaceVariables(dbTemplate.text || '', data)
+        text: this.replaceVariables(dbTemplate.text || '', data, { noEscape: true })
       };
     } else {
       // Fall back to hardcoded template
@@ -447,10 +459,11 @@ export class SystemEmailService extends BaseEmailService {
 
     if (dbTemplate) {
       // Use database template and replace variables
+      // LEVERAGE: pattern system-email-render-triple — subject/html/text render triple repeated in every DB-template sender; a missing renderDbTemplate() layer
       template = {
-        subject: this.replaceVariables(dbTemplate.subject, data),
+        subject: this.replaceVariables(dbTemplate.subject, data, { noEscape: true }),
         html: this.replaceVariables(dbTemplate.html, data),
-        text: this.replaceVariables(dbTemplate.text || '', data)
+        text: this.replaceVariables(dbTemplate.text || '', data, { noEscape: true })
       };
     } else {
       // Fall back to basic template
@@ -484,10 +497,11 @@ export class SystemEmailService extends BaseEmailService {
 
     if (dbTemplate) {
       // Use database template and replace variables
+      // LEVERAGE: pattern system-email-render-triple — subject/html/text render triple repeated in every DB-template sender; a missing renderDbTemplate() layer
       template = {
-        subject: this.replaceVariables(dbTemplate.subject, data),
+        subject: this.replaceVariables(dbTemplate.subject, data, { noEscape: true }),
         html: this.replaceVariables(dbTemplate.html, data),
-        text: this.replaceVariables(dbTemplate.text || '', data)
+        text: this.replaceVariables(dbTemplate.text || '', data, { noEscape: true })
       };
     } else {
       // Fall back to basic template
@@ -530,10 +544,11 @@ export class SystemEmailService extends BaseEmailService {
       return { success: false, error: 'Template not found: appointment-assigned-technician' };
     }
 
+    // LEVERAGE: pattern system-email-render-triple — subject/html/text render triple repeated in every DB-template sender; a missing renderDbTemplate() layer
     const template: SystemEmailTemplate = {
-      subject: this.replaceVariables(dbTemplate.subject, data),
+      subject: this.replaceVariables(dbTemplate.subject, data, { noEscape: true }),
       html: this.replaceVariables(dbTemplate.html, data),
-      text: this.replaceVariables(dbTemplate.text || '', data)
+      text: this.replaceVariables(dbTemplate.text || '', data, { noEscape: true })
     };
 
     const attachments = options?.icsAttachment ? [{
@@ -569,10 +584,11 @@ export class SystemEmailService extends BaseEmailService {
 
     if (dbTemplate) {
       // Use database template and replace variables
+      // LEVERAGE: pattern system-email-render-triple — subject/html/text render triple repeated in every DB-template sender; a missing renderDbTemplate() layer
       template = {
-        subject: this.replaceVariables(dbTemplate.subject, data),
+        subject: this.replaceVariables(dbTemplate.subject, data, { noEscape: true }),
         html: this.replaceVariables(dbTemplate.html, data),
-        text: this.replaceVariables(dbTemplate.text || '', data)
+        text: this.replaceVariables(dbTemplate.text || '', data, { noEscape: true })
       };
     } else {
       // Fall back to basic template
@@ -608,10 +624,11 @@ export class SystemEmailService extends BaseEmailService {
 
     if (dbTemplate) {
       // Use database template and replace variables
+      // LEVERAGE: pattern system-email-render-triple — subject/html/text render triple repeated in every DB-template sender; a missing renderDbTemplate() layer
       template = {
-        subject: this.replaceVariables(dbTemplate.subject, data),
+        subject: this.replaceVariables(dbTemplate.subject, data, { noEscape: true }),
         html: this.replaceVariables(dbTemplate.html, data),
-        text: this.replaceVariables(dbTemplate.text || '', data)
+        text: this.replaceVariables(dbTemplate.text || '', data, { noEscape: true })
       };
     } else {
       // Fall back to basic template

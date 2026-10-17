@@ -214,6 +214,10 @@
         "updateComments": "Otillräckliga behörigheter för att uppdatera kommentarer",
         "deleteComments": "Otillräckliga behörigheter för att radera kommentarer",
         "viewDocuments": "Otillräckliga behörigheter för att visa ärendedokument"
+      },
+      "projects": {
+        "read": "Otillräckliga behörigheter för att visa projekt",
+        "readDetails": "Otillräckliga behörigheter för att visa projektdetaljer"
       }
     },
     "tags": {
@@ -1619,6 +1623,12 @@
     "threecxDialing": "Ringer från din 3CX-anknytning",
     "threecxFailed": "Det gick inte att ringa samtalet via telefonväxeln"
   },
+  "unsavedChangesGuard": {
+    "title": "Förkasta osparade ändringar?",
+    "message": "Du har osparade ändringar som går förlorade om du stänger detta. Vill du förkasta dem?",
+    "discard": "Förkasta ändringar",
+    "keepEditing": "Fortsätt redigera"
+  },
   "editor": {
     "attachFiles": "Bifoga filer",
     "uploadingFiles": "Laddar upp filer…",
@@ -1740,5 +1750,9 @@
     "customPlaceholder": "Namnge enheten",
     "register": "Lägg till",
     "selectPlaceholder": "Välj en måttenhet"
+  },
+  "emailRecipients": {
+    "remove": "Ta bort {{email}}",
+    "placeholder": "Skriv en adress och tryck på Retur"
   }
 }

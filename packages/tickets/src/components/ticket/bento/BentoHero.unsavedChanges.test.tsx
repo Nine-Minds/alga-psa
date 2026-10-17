@@ -61,6 +61,7 @@ vi.mock('../../CategoryPicker', () => ({
 
 vi.mock('@alga-psa/ui/context', () => ({
   useRegisterUnsavedChanges: (...args: unknown[]) => useRegisterUnsavedChangesMock(...args),
+  useOptionalActivityCrossFeature: () => null,
 }));
 
 vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({

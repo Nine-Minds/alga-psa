@@ -147,6 +147,8 @@ if (typeof document !== 'undefined') {
 // require('dotenv').config(), so the first suite that reaches it (e.g. the
 // search-backfill script) dumps the developer's whole server/.env into the
 // shared fork and every later Microsoft OAuth assertion reads the emulator.
+// MICROSOFT_SSO_EMULATOR_MODE is the gate those base URLs need before Microsoft
+// *sign-in* follows them, so a leaked value flips the provider the same way.
 // TZ shifts every date the process formats — a timezone test that sets it
 // and doesn't restore turns later files' date assertions off by a day.
 const GUARDED_ENV_VARS = [
@@ -158,6 +160,7 @@ const GUARDED_ENV_VARS = [
   'MICROSOFT_LOGIN_BASE_URL',
   'MICROSOFT_GRAPH_BASE_URL',
   'MICROSOFT_GRAPH_BETA_BASE_URL',
+  'MICROSOFT_SSO_EMULATOR_MODE',
   'TZ',
 ] as const;
 type GuardedEnvVar = (typeof GUARDED_ENV_VARS)[number];
@@ -541,11 +544,21 @@ vi.mock('@alga-psa/auth', async () => {
     };
   };
 
+  // Real class, not a stub: callers narrow with `instanceof` to turn an
+  // authentication rejection into a serializable action result.
+  class AuthenticationError extends Error {
+    constructor(message: string = 'User not authenticated') {
+      super(message);
+      this.name = 'AuthenticationError';
+    }
+  }
+
   // Every name that production code value-imports from '@alga-psa/auth' must
   // exist here — a missing one makes vitest throw at the import binding and
   // every API test 500s (see the runWithApiKeyUser nightly break). The
   // authGlobalMock contract test enumerates prod imports and enforces this.
   return {
+    AuthenticationError,
     getSession: vi.fn().mockResolvedValue(null),
     getSessionWithRevocationCheck: vi.fn().mockResolvedValue(null),
     getCurrentUser,

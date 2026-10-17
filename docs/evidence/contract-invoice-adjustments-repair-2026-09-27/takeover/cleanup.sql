@@ -1,0 +1,26 @@
+-- Remove only fixtures created by this takeover. Each mutation is tenant-scoped.
+BEGIN;
+CREATE TEMP TABLE owned_invoice ON COMMIT DROP AS SELECT tenant,invoice_id FROM invoices WHERE tenant='6d178771-ad9a-4d43-8809-83992745f8f9' AND invoice_id='5a1e0000-0000-4000-8000-202609279004' AND invoice_number='TAKEOVER-POSTED-20260927';
+CREATE TEMP TABLE owned_charges ON COMMIT DROP AS SELECT c.tenant,c.item_id FROM invoice_charges c JOIN owned_invoice i USING(tenant,invoice_id);
+DELETE FROM invoice_charge_fixed_details f USING invoice_charge_details d,owned_charges c WHERE f.tenant=c.tenant AND d.tenant=c.tenant AND d.item_id=c.item_id AND f.item_detail_id=d.item_detail_id;
+DELETE FROM invoice_charge_details d USING owned_charges c WHERE d.tenant=c.tenant AND d.item_id=c.item_id;
+DELETE FROM invoice_charges d USING owned_charges c WHERE d.tenant=c.tenant AND d.item_id=c.item_id;
+DELETE FROM invoice_adjustment_operations o USING owned_invoice i WHERE o.tenant=i.tenant AND o.invoice_id=i.invoice_id;
+DELETE FROM transactions t USING owned_invoice i WHERE t.tenant=i.tenant AND t.invoice_id=i.invoice_id;
+DELETE FROM invoices d USING owned_invoice i WHERE d.tenant=i.tenant AND d.invoice_id=i.invoice_id;
+CREATE TEMP TABLE owned_contracts ON COMMIT DROP AS SELECT tenant,contract_id FROM contracts WHERE tenant='6d178771-ad9a-4d43-8809-83992745f8f9' AND contract_id IN ('b9d6cdd4-fca6-4f8e-885c-cac5fabc6f66','f9e6a54f-4ce4-44ee-9d5c-68e3ac77a055') AND contract_name IN ('TAKEOVER Copy A 20260927','TAKEOVER Copy B 20260927');
+CREATE TEMP TABLE owned_discounts ON COMMIT DROP AS SELECT cp.tenant,cp.discount_id FROM contract_template_discount_copies cp JOIN client_contracts cc USING(tenant,client_contract_id) JOIN owned_contracts c USING(tenant,contract_id);
+DELETE FROM discounts d USING owned_discounts o WHERE d.tenant=o.tenant AND d.discount_id=o.discount_id;
+DELETE FROM client_contracts cc USING owned_contracts c WHERE cc.tenant=c.tenant AND cc.contract_id=c.contract_id;
+DELETE FROM contract_lines cl USING owned_contracts c WHERE cl.tenant=c.tenant AND cl.contract_id=c.contract_id;
+DELETE FROM contracts d USING owned_contracts c WHERE d.tenant=c.tenant AND d.contract_id=c.contract_id;
+DELETE FROM contract_template_line_service_configuration WHERE tenant='6d178771-ad9a-4d43-8809-83992745f8f9' AND template_line_id IN ('5a1e0000-0000-4000-8000-202609279002','5a1e0000-0000-4000-8000-202609279003');
+DELETE FROM contract_template_line_services WHERE tenant='6d178771-ad9a-4d43-8809-83992745f8f9' AND template_line_id IN ('5a1e0000-0000-4000-8000-202609279002','5a1e0000-0000-4000-8000-202609279003');
+DELETE FROM contract_template_lines WHERE tenant='6d178771-ad9a-4d43-8809-83992745f8f9' AND template_id='5a1e0000-0000-4000-8000-202609279001';
+DELETE FROM contract_templates WHERE tenant='6d178771-ad9a-4d43-8809-83992745f8f9' AND template_id='5a1e0000-0000-4000-8000-202609279001' AND template_name='TAKEOVER Discount Copy 20260927';
+COMMIT;
+SELECT count(*) AS owned_invoices FROM invoices WHERE invoice_id='5a1e0000-0000-4000-8000-202609279004';
+SELECT count(*) AS owned_transactions FROM transactions WHERE invoice_id='5a1e0000-0000-4000-8000-202609279004';
+SELECT count(*) AS owned_contracts FROM contracts WHERE contract_id IN ('b9d6cdd4-fca6-4f8e-885c-cac5fabc6f66','f9e6a54f-4ce4-44ee-9d5c-68e3ac77a055');
+SELECT count(*) AS owned_templates FROM contract_templates WHERE template_id='5a1e0000-0000-4000-8000-202609279001';
+SELECT invoice_number,total_amount,draft_adjustment_revision FROM invoices WHERE invoice_id IN ('5a1e0000-0000-4000-8000-0000000000a1','d8816325-32a7-4a58-b000-ff987b99f6fe');

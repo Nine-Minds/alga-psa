@@ -65,12 +65,9 @@
       "network": "Network",
       "unknown": "Other"
     },
-    "statusWarnTitle": "Some devices inactive",
-    "statusWarnBody": "{{active}} active · {{inactive}} inactive",
-    "status": {
-      "active": "Active",
-      "inactive": "Inactive"
-    },
+    "statusAttentionTitle": "Some devices need attention",
+    "statusAttentionBody": "{{active}} of {{total}} devices active",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Search by name, tag, or serial",
     "filters": {
       "allTypes": "All types",
@@ -175,10 +172,7 @@
       "viewAll": "View all",
       "countLabel": "{{count}} managed",
       "emptyShort": "No devices yet",
-      "emptyBody": "Devices your provider manages will appear here.",
-      "healthy": "Healthy",
-      "inactive": "Inactive",
-      "active": "Active"
+      "emptyBody": "Devices your provider manages will appear here."
     },
     "quickActions": {
       "title": "Quick Actions",
@@ -377,7 +371,17 @@
         "verifiedContact": "Verified contact email",
         "validPassword": "Valid password"
       }
-    }
+    },
+    "ssoNoMatchTitle": "SSO sign-in failed",
+    "ssoNoMatch": {
+      "no_matching_user": "No client portal account matches {{providerEmail}}. Sign in with your password or contact your service provider.",
+      "missing_email": "Your identity provider did not return an email address, so no client portal account could be matched. Sign in with your password or contact your service provider.",
+      "inactive_user": "The client portal account for {{providerEmail}} is inactive. Contact your service provider to reactivate it.",
+      "user_type_mismatch": "{{providerEmail}} is not a client portal account. Contact your service provider.",
+      "tenant_mismatch": "{{providerEmail}} belongs to a different organization's portal. Sign in with your password or contact your service provider."
+    },
+    "configurationTitle": "Sign-in failed",
+    "configurationMessage": "Sign-in failed. Please try again or contact your service provider."
   },
   "account": {
     "title": "Account",
@@ -1000,14 +1004,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Name",
-      "type": "Type",
-      "status": "Status",
-      "location": "Location",
-      "lastUpdated": "Last Updated"
+      "assignedTo": "Assigned to"
     },
-    "notAvailable": "N/A",
-    "detailsTitle": "Asset Details"
+    "statuses": {
+      "active": "Active",
+      "in_stock": "In stock",
+      "maintenance": "In maintenance",
+      "inactive": "Inactive",
+      "retired": "Retired"
+    },
+    "unassigned": "Unassigned",
+    "sharedWorkspace": "Shared workspace: {{name}}",
+    "sharedWorkspaceLabel": "Shared workspace"
   },
   "errors": {
     "account": {

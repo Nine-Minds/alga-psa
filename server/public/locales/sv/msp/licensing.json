@@ -57,56 +57,55 @@
     "confirmation": {
       "title": "Bekräfta licensuppdatering",
       "increaseDescription": "Granska uppgifterna om ökningen av antalet licenser innan du bekräftar.",
-      "decreaseDescription": "Granska uppgifterna om minskningen av antalet licenser. Ändringarna träder i kraft vid slutet av din faktureringsperiod.",
       "currentMonthlyCost": "Nuvarande månadskostnad",
       "currentLicenseCount": "Nuvarande antal licenser",
       "newMonthlyCost": "Ny månadskostnad",
       "newLicenseCount": "Nytt antal licenser",
       "monthlyIncrease": "Ökning per månad",
-      "monthlySavings": "Besparing per månad",
       "paymentMethod": "Betalningsmetod",
       "changePaymentMethod": "Ändra",
       "immediateChargeTitle": "Omedelbar debitering",
       "immediateChargeDescription": "Du debiteras nu det proportionellt beräknade beloppet {{amountDue}}.",
       "prorationDescription": "Proportionell beräkning: {{amount}} för resten av den här faktureringsperioden",
-      "scheduledTitle": "Schemalagt till periodens slut",
-      "scheduledDescription": "Minskningen av antalet licenser träder i kraft {{date}}, vid slutet av din nuvarande faktureringsperiod.",
-      "scheduledKeepAccess": "Du behåller tillgången till alla {{count}} licenser fram till dess.",
       "cancel": "Avbryt",
       "confirmPayNow": "Bekräfta och betala nu",
-      "confirmSchedule": "Bekräfta schemaläggning"
+      "confirm": "Bekräfta",
+      "trialTitle": "Ingen kostnad under din provperiod",
+      "trialDescription": "Din provperiod fortsätter som tidigare. Faktureringen börjar med {{amount}} den {{date}}."
     },
     "usage": {
       "title": "Nuvarande licensanvändning",
       "licensesUsed": "licenser används"
     },
     "fields": {
-      "totalLicenseCount": "Totalt antal licenser"
+      "licensesToAdd": "Licenser att lägga till"
     },
     "help": {
-      "totalLicenseCount": "Ange det nya totala antalet licenser (minst {{minimum}}). Nuvarande antal: {{current}}",
-      "reduceViaAccount": "Gå till kontohanteringen för att minska antalet licenser",
-      "quantityWarning": "Varning: Du har {{used}} användare men anger {{quantity}} som totalt antal"
+      "licensesToAdd": "Ange hur många licenser du vill lägga till. Din nya summa uppdateras nedan."
     },
     "pricing": {
       "pricePerLicense": "Pris per licens:",
-      "quantity": "Antal:",
-      "total": "Totalt:"
+      "addedCost": "Tillagd kostnad:",
+      "newTotal": "Ny summa:"
     },
     "actions": {
       "creatingCheckout": "Förbereder betalning…",
-      "noChange": "Ingen ändring",
-      "updateToTotal": "Uppdatera till totalt {{quantity}} ({{difference}} {{licenseLabel}})"
+      "addLicenses": "Lägg till {{count}} {{licenseLabel}}"
     },
     "info": {
-      "totalQuantity": "Detta anger det totala antalet licenser i ditt abonnemang (inte ett tillägg till nuvarande licenser)",
       "increasingImmediate": "Fler licenser: Omedelbar tillgång med proportionellt beräknad avgift",
-      "billedMonthly": "Licenser debiteras månadsvis och kan sägas upp när som helst"
+      "billedMonthly": "Licenser debiteras månadsvis och kan sägas upp när som helst",
+      "addsToTotal": "Licenser läggs till din nuvarande summa. Gå till Kontohantering för att minska antalet licenser."
     },
     "solo": {
       "title": "Solo inkluderar en användare",
       "description": "Solo-abonnemanget är avsett för en enda användare och stöder inte fler licenser. Uppgradera till Pro för att lägga till fler användare i ditt team.",
       "upgradeCta": "Uppgradera till Pro"
+    },
+    "summary": {
+      "currentLicenses": "Nuvarande licenser",
+      "licensesToAdd": "Licenser att lägga till",
+      "newTotal": "Ny summa"
     }
   },
   "removalModal": {

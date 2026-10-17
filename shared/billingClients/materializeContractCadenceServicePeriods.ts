@@ -153,7 +153,6 @@ export function materializeContractCadenceServicePeriods(
     && servicePeriods[servicePeriods.length - 1].end.slice(0, 10) < horizon.targetHorizonEnd;
   const scheduleKey = buildRecurringServicePeriodScheduleKey({
     tenant: input.sourceObligation.tenant,
-    obligationType: input.sourceObligation.obligationType,
     obligationId: input.sourceObligation.obligationId,
     cadenceOwner: 'contract',
     duePosition: input.duePosition,

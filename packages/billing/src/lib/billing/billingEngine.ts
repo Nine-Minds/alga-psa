@@ -39,6 +39,7 @@ import {
   IRecurringServicePeriod,
   IRecurringServicePeriodRecord,
   IUsageServicePeriodStatus,
+  FixedLineBlockerCode,
   BillingCycleType,
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
   RECURRING_RANGE_SEMANTICS,
@@ -85,17 +86,11 @@ import {
   resolveContractCadenceAnchorDate,
   resolveContractCadenceInvoiceWindowForServicePeriod,
 } from "@alga-psa/shared/billingClients/contractCadenceServicePeriods";
-import {
-  buildPostDropRecurringObligationCandidates,
-  buildClientCadencePostDropObligationRef,
-  CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
-  POST_DROP_RECURRING_OBLIGATION_TYPES,
-} from "@alga-psa/shared/billingClients/postDropRecurringObligationIdentity";
 // Removed TaxService import as it's no longer directly used here
 // Import necessary functions from invoiceService
 import {
   calculateAndDistributeTax,
-  updateInvoiceTotalsAndRecordTransaction,
+  reconcileInvoiceAdjustmentTransaction,
   getClientDetails,
 } from "../../services/invoiceService";
 import { v4 as uuidv4 } from "uuid";
@@ -138,6 +133,7 @@ import {
   toRecurringUnitRevisionCandidate,
 } from "@alga-psa/shared/billingClients/recurringUnitPricing";
 import { resolveMemberRate } from "@alga-psa/shared/billingClients/resolveFixedLineRate";
+import { whereLiveRecurringContractLine } from "@alga-psa/shared/billingClients/liveClientCadenceRecurringLine";
 import {
   buildContractLineAttributionDecision,
   resolveDeterministicContractLineSelection,
@@ -156,6 +152,7 @@ import {
 } from "../../models/projectBillingModelUtils";
 import { isProjectMaterialEligible } from "@alga-psa/inventory/lib";
 import { joinEffectiveServicePrice } from "./pricing/joinEffectiveServicePrice";
+import { resolveContractLineBillingWindow } from "./contractLineWindow";
 import {
   contractAdjustmentDateOnly,
   reconcileContractChangeAdjustmentsForInvoice,
@@ -163,6 +160,7 @@ import {
   resolveContractChangeChargesForWindow,
   type ContractChangeLedgerRow,
 } from "./reconcileContractChangeAdjustments";
+import { describeContractChange } from "./contractChangeDescription";
 import { reconcileAutomaticInvoiceAdjustments } from "./reconcileAutomaticInvoiceDiscounts";
 // Workflow imports removed as event emission is moved back to the calling action
 
@@ -298,6 +296,8 @@ type FixedChargeLineStaticInputs = {
   contractLineDetails: any;
   planServices: any[];
   fallbackService: any | null;
+  /** planServices is empty because every member is a product/license. */
+  hasProductMembers: boolean;
   /**
    * True when no base rate resolves from any source, which makes the line
    * price to nothing in EVERY window (see computeFixedCharges' base-rate
@@ -1378,7 +1378,6 @@ export class BillingEngine {
     const dueRows = await db
       .table("recurring_service_periods")
       .whereIn("obligation_id", eligibleLineIds)
-      .whereIn("obligation_type", [...POST_DROP_RECURRING_OBLIGATION_TYPES])
       .whereIn("lifecycle_state", [
         ...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
       ])
@@ -1391,7 +1390,6 @@ export class BillingEngine {
       .select(
         "record_id",
         "obligation_id",
-        "obligation_type",
         "charge_family",
         "cadence_owner",
         "due_position",
@@ -1405,8 +1403,7 @@ export class BillingEngine {
       const existingMaterializedRow = await db
         .table("recurring_service_periods")
         .whereIn("obligation_id", eligibleLineIds)
-        .whereIn("obligation_type", [...POST_DROP_RECURRING_OBLIGATION_TYPES])
-        .whereNotIn("lifecycle_state", ["archived", "superseded"])
+          .whereNotIn("lifecycle_state", ["archived", "superseded"])
         .first("record_id");
 
       return existingMaterializedRow ? {} : null;
@@ -1418,7 +1415,6 @@ export class BillingEngine {
         sourceObligation: {
           tenant: this.tenant!,
           obligationId: row.obligation_id,
-          obligationType: row.obligation_type,
           chargeFamily: row.charge_family,
         },
         cadenceOwner: row.cadence_owner,
@@ -2091,10 +2087,30 @@ export class BillingEngine {
       canonical,
     );
 
-    const usageStatusField =
-      usageServicePeriodStatuses.length > 0
+    // Coded, unpriceable fixed lines travel with the result (like usage
+    // statuses) so preview and generation refuse instead of billing short.
+    const fixedLineBlockers = (canonical.diagnostics ?? []).flatMap(
+      (diagnostic) =>
+        (diagnostic.code === "FIXED_LINE_RATE_UNRESOLVED" ||
+          diagnostic.code === "FIXED_LINE_NO_SERVICES") &&
+        diagnostic.contractLineId
+          ? [
+              {
+                code: diagnostic.code as FixedLineBlockerCode,
+                message: diagnostic.message,
+                contractLineId: diagnostic.contractLineId,
+                contractLineName:
+                  diagnostic.contractLineName ?? diagnostic.contractLineId,
+              },
+            ]
+          : [],
+    );
+    const usageStatusField = {
+      ...(usageServicePeriodStatuses.length > 0
         ? { usageServicePeriodStatuses }
-        : {};
+        : {}),
+      ...(fixedLineBlockers.length > 0 ? { fixedLineBlockers } : {}),
+    };
 
     return projectBillingContext
       ? {
@@ -2521,10 +2537,12 @@ export class BillingEngine {
       "cl.contract_line_id",
     );
 
+    // System-managed default contracts are not excluded: they carry ad-hoc time.
+    whereLiveRecurringContractLine(eligibleLinesQuery, { excludeSystemManagedDefault: false }, { cc: "cc", ct: "c", cl: "cl" });
+
     const rows = await eligibleLinesQuery
       .where({
         "cc.client_id": input.clientId,
-        "cc.is_active": true,
         "cls.service_id": input.serviceId,
       })
       .where("cc.start_date", "<=", input.workDate)
@@ -3234,10 +3252,14 @@ export class BillingEngine {
       "c.contract_id",
     );
 
+    // Same definition of a live line as the period materializer and the
+    // materialization guard (cc + contract + line all active). System-managed
+    // default contracts are not excluded: they carry ad-hoc time.
+    whereLiveRecurringContractLine(clientContractLinesQuery, { excludeSystemManagedDefault: false }, { cc: "cc", ct: "c", cl: "cl" });
+
     const clientContractLines = await clientContractLinesQuery
       .where({
         "cc.client_id": clientId,
-        "cc.is_active": true,
         "cc.tenant": this.tenant,
       })
       // [start, end) semantics: a contract starting exactly on period end is not active within the period.
@@ -3255,7 +3277,12 @@ export class BillingEngine {
         "cl.service_category",
         "cc.start_date",
         "cc.end_date",
-        "cc.is_active",
+        // The line's own flag (the scope guarantees the assignment is active
+        // too), so the `line.is_active` checks downstream test the line.
+        "cl.is_active",
+        // Authored line bounds narrow the assignment window; resolved below.
+        "cl.start_date as line_start_date",
+        "cl.end_date as line_end_date",
         "cc.client_contract_id",
         "cc.template_contract_id",
         "c.contract_id",
@@ -3282,12 +3309,23 @@ export class BillingEngine {
       JSON.stringify(clientContractLines, null, 2),
     );
 
-    // Convert dates from the DB into plain ISO strings and normalize values
+    // Convert dates from the DB into plain ISO strings and normalize values.
+    // `start_date`/`end_date` stay the contract assignment window (the cadence
+    // anchor is the assignment start, matching the service-period materializer);
+    // the authored line bounds are carried separately as a coverage window. The
+    // assignment end is an inclusive last day, the line end is half-open, so the
+    // intersection is computed in exclusive space.
     clientContractLines.forEach((plan: any) => {
-      plan.start_date = toISODate(toPlainDate(plan.start_date));
-      plan.end_date = plan.end_date
-        ? toISODate(toPlainDate(plan.end_date))
-        : null;
+      const billingWindow = resolveContractLineBillingWindow(
+        { start_date: plan.start_date, end_date: plan.end_date },
+        { start_date: plan.line_start_date, end_date: plan.line_end_date },
+      );
+      plan.start_date = billingWindow.anchorStart;
+      plan.end_date = billingWindow.inclusiveEnd;
+      plan.coverage_start_date = billingWindow.coverageStart;
+      plan.coverage_end_date = billingWindow.coverageEndExclusive;
+      delete plan.line_start_date;
+      delete plan.line_end_date;
 
       // Normalize billing_timing default
       plan.billing_timing = (plan.billing_timing ?? "arrears") as
@@ -3812,6 +3850,7 @@ export class BillingEngine {
       (lineId) => (planServicesByLineId.get(lineId) ?? []).length === 0,
     );
     const fallbackServiceByLineId = new Map<string, any>();
+    let productMemberLineIds = new Set<string>();
     if (fallbackLineIds.length > 0) {
       const fallbackServiceQuery = db.table<any>(
         "contract_line_services as cls_fallback",
@@ -3860,6 +3899,9 @@ export class BillingEngine {
           fallbackServiceByLineId.set(lineId, fallbackService);
         }
       }
+      productMemberLineIds = await this.loadProductMemberLineIds(
+        fallbackLineIds.filter((lineId) => !fallbackServiceByLineId.has(lineId)),
+      );
     }
 
     for (const line of pendingLines) {
@@ -3876,6 +3918,9 @@ export class BillingEngine {
             ? (fallbackServiceByLineId.get(line.client_contract_line_id) ??
               null)
             : null,
+        hasProductMembers:
+          planServices.length === 0 &&
+          productMemberLineIds.has(line.client_contract_line_id),
         unpriceable: isFixedLineUnpriceable(
           line,
           contractLineDetails,
@@ -3889,11 +3934,43 @@ export class BillingEngine {
     return staticInputsByLineId;
   }
 
+  /**
+   * Which of these contract lines have at least one product/license member.
+   * Those members bill through the product/license charge families, so a fixed
+   * line made only of them has nothing to bill as a fixed fee (and must not be
+   * reported as unpriceable). One batched query; empty input runs none.
+   */
+  private async loadProductMemberLineIds(
+    contractLineIds: string[],
+  ): Promise<Set<string>> {
+    if (contractLineIds.length === 0) {
+      return new Set();
+    }
+    const db = tenantDb(this.knex, this.tenant!);
+    const query = db.table<any>("contract_line_services as cls_product");
+    db.tenantJoin(
+      query,
+      "service_catalog as sc_product",
+      "sc_product.service_id",
+      "cls_product.service_id",
+    );
+    const rows = await query
+      .whereIn("cls_product.contract_line_id", contractLineIds)
+      .where({ "cls_product.tenant": this.tenant })
+      .where("sc_product.item_kind", "product")
+      .distinct("cls_product.contract_line_id as contract_line_id");
+    return new Set(rows.map((row: any) => row.contract_line_id as string));
+  }
+
   /** Per-line plan services (and product-only fallback) for the generation path. */
   private async queryFixedChargeLineServices(
     clientContractLine: IClientContractLine,
     asOf: string,
-  ): Promise<{ planServices: any[]; fallbackService: any | null }> {
+  ): Promise<{
+    planServices: any[];
+    fallbackService: any | null;
+    hasProductMembers: boolean;
+  }> {
     const db = tenantDb(this.knex, this.tenant!);
     const tenant = this.tenant;
 
@@ -4006,7 +4083,16 @@ export class BillingEngine {
           )) ?? null;
     }
 
-    return { planServices, fallbackService };
+    const hasProductMembers =
+      planServices.length === 0 &&
+      fallbackService === null &&
+      (
+        await this.loadProductMemberLineIds([
+          clientContractLine.client_contract_line_id,
+        ])
+      ).has(clientContractLine.client_contract_line_id);
+
+    return { planServices, fallbackService, hasProductMembers };
   }
 
   /** Load every pricing schedule for the window's contracts in one query. */
@@ -4418,7 +4504,7 @@ export class BillingEngine {
           })
           .first();
 
-    const { planServices, fallbackService } =
+    const { planServices, fallbackService, hasProductMembers } =
       preloaded ??
       (await this.queryFixedChargeLineServices(
         clientContractLine,
@@ -4579,6 +4665,7 @@ export class BillingEngine {
         customRateSource,
         planServices: effectivePlanServices,
         fallbackService,
+        hasProductMembers,
         billingProfile: await this.loadChargeProfileAssignments(
           clientId,
           clientContractLine,
@@ -4876,18 +4963,31 @@ export class BillingEngine {
     const cadenceOwner = isSystemManagedDefault
       ? "client"
       : resolveCadenceOwner(clientContractLine.cadence_owner);
-    const sourceObligation = buildClientCadencePostDropObligationRef({
-      contractLineId: clientContractLine.client_contract_line_id,
-      chargeFamily: "fixed",
-      tenant: this.tenant ?? undefined,
-    });
+    const sourceObligation = {
+      obligationId: clientContractLine.client_contract_line_id,
+      chargeFamily: "fixed" as const,
+      ...(this.tenant ? { tenant: this.tenant } : {}),
+    };
+    // Coverage window: the effective (assignment ∩ authored line) window. The
+    // start is the later of the two and the end is already half-open
+    // (`coverage_end_date`), so an authored line end is never extended by a day.
+    // Callers that do not populate the coverage fields (legacy direct callers)
+    // fall back to the assignment window, preserving prior behavior.
+    const coverageLine = clientContractLine as IClientContractLine & {
+      coverage_start_date?: string | null;
+      coverage_end_date?: string | null;
+    };
     const activityWindow = {
-      start: clientContractLine.start_date
-        ? toISODate(toPlainDate(clientContractLine.start_date))
-        : undefined,
-      end: clientContractLine.end_date
-        ? toISODate(toPlainDate(clientContractLine.end_date).add({ days: 1 }))
-        : undefined,
+      start: coverageLine.coverage_start_date
+        ? toISODate(toPlainDate(coverageLine.coverage_start_date))
+        : clientContractLine.start_date
+          ? toISODate(toPlainDate(clientContractLine.start_date))
+          : undefined,
+      end: coverageLine.coverage_end_date
+        ? toISODate(toPlainDate(coverageLine.coverage_end_date))
+        : clientContractLine.end_date
+          ? toISODate(toPlainDate(clientContractLine.end_date).add({ days: 1 }))
+          : undefined,
       semantics: RECURRING_RANGE_SEMANTICS,
     };
 
@@ -6905,7 +7005,16 @@ export class BillingEngine {
         billing_profile_source: profile?.source,
         config_id: String(row.config_id),
         client_contract_line_id: contractLineId,
-        serviceName: `Mid-period quantity change: ${service?.service_name ?? "recurring item"}`,
+        serviceName: describeContractChange(service?.service_name ?? "recurring item", {
+          adjustment_period_start: row.adjustment_period_start,
+          adjustment_period_end: row.adjustment_period_end,
+          mid_period_effective_date: row.mid_period_effective_date,
+          quantity_delta: row.quantity_delta,
+          unit_rate_cents: row.unit_rate_cents,
+          covered_days: row.covered_days,
+          full_period_days: row.full_period_days,
+          amount_cents: row.amount_cents,
+        }, billingCurrency),
         quantity: Math.abs(Number(row.quantity_delta)),
         rate: Number(row.unit_rate_cents),
         total,
@@ -7273,36 +7382,12 @@ export class BillingEngine {
     const servicePeriodEndExclusive = toISODate(
       toPlainDate(servicePeriodEnd).add({ days: 1 }),
     );
-    const obligationCandidates = buildPostDropRecurringObligationCandidates({
-      contractLineId: clientContractLineId,
-      chargeFamily: "fixed",
-    });
-
     const recurringLinkedCharge = await db
       .table("recurring_service_periods")
       .where("charge_family", "fixed")
       .where("due_position", billingTiming)
       .whereNotNull("invoice_id")
-      .where(function matchObligationCandidates() {
-        for (const [index, candidate] of obligationCandidates.entries()) {
-          if (index === 0) {
-            this.where(function matchCandidate() {
-              this.where("obligation_type", candidate.obligationType).andWhere(
-                "obligation_id",
-                candidate.obligationId,
-              );
-            });
-            continue;
-          }
-
-          this.orWhere(function matchCandidate() {
-            this.where("obligation_type", candidate.obligationType).andWhere(
-              "obligation_id",
-              candidate.obligationId,
-            );
-          });
-        }
-      })
+      .where("obligation_id", clientContractLineId)
       .where("service_period_start", servicePeriodStart)
       .where(function matchServicePeriodEnd() {
         this.where("service_period_end", servicePeriodEnd).orWhere(
@@ -7388,54 +7473,51 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const connection = existingTransaction ?? this.knex;
-    const db = tenantDb(connection, tenant);
-
-    console.log(`Recalculating invoice ${invoiceId}`);
-
-    const invoice = await db
-      .table("invoices")
-      .where({
-        invoice_id: invoiceId,
-        tenant,
-      })
-      .first();
-
-    if (!invoice) {
-      throw new Error(`Invoice ${invoiceId} not found in tenant ${tenant}`);
-    }
-
-    const client = await db
-      .table("clients")
-      .where({
-        client_id: invoice.client_id,
-        tenant,
-      })
-      .first();
-
-    if (!client) {
-      throw new Error(
-        `Client ${invoice.client_id} not found in tenant ${tenant}`,
-      );
-    }
-
-    // Removed direct use of TaxService here.
-    // Removed subtotal and totalTax accumulation logic.
-
-    console.log("Starting invoice recalculation:", {
-      invoiceId,
-      client: {
-        id: client.client_id,
-        name: client.client_name,
-        isTaxExempt: client.is_tax_exempt,
-        // region_code is still on client table for default fallback, but not primary source for service tax
-      },
-    });
-
-    // Recalculation is intentionally financial-only. Canonical recurring
-    // invoice_charge_details rows remain the persisted source of service-period
-    // truth after invoice creation; this path should only update tax and totals.
     const recalculate = async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
+      console.log(`Recalculating invoice ${invoiceId}`);
+
+      const invoice = await db
+        .table("invoices")
+        .where({
+          invoice_id: invoiceId,
+          tenant,
+        })
+        .forUpdate()
+        .first();
+
+      if (!invoice) {
+        throw new Error(`Invoice ${invoiceId} not found in tenant ${tenant}`);
+      }
+
+      const client = await db
+        .table("clients")
+        .where({
+          client_id: invoice.client_id,
+          tenant,
+        })
+        .first();
+
+      if (!client) {
+        throw new Error(
+          `Client ${invoice.client_id} not found in tenant ${tenant}`,
+        );
+      }
+
+      // Removed direct use of TaxService here.
+      // Removed subtotal and totalTax accumulation logic.
+
+      console.log("Starting invoice recalculation:", {
+        invoiceId,
+        client: {
+          id: client.client_id,
+          name: client.client_name,
+          isTaxExempt: client.is_tax_exempt,
+          // region_code is still on client table for default fallback, but not primary source for service tax
+        },
+      });
+
       // Draft reconciliation: converge any pending/edited/cancelled mid-period
       // true-up onto this editable draft, then re-derive automatic discounts
       // from the reconciled rows through the shared evaluator, before tax.
@@ -7458,32 +7540,30 @@ export class BillingEngine {
         `[recalculateInvoice] Finished calculateAndDistributeTax for invoice ${invoiceId}`,
       );
 
-      // Step 2: Update invoice totals and record the transaction using the service function
-      console.log(
-        `[recalculateInvoice] Calling updateInvoiceTotalsAndRecordTransaction for invoice ${invoiceId}`,
+      // Canonical detail periods remain untouched. Reconcile the principal
+      // already posted at generation, rather than posting the full total again.
+      const finalItems = await tenantDb(trx, tenant)
+        .table("invoice_charges")
+        .where({ invoice_id: invoiceId })
+        .select("net_amount", "tax_amount");
+      const subtotal = finalItems.reduce(
+        (sum: number, item: { net_amount: unknown }) => sum + Number(item.net_amount ?? 0),
+        0,
       );
-      await updateInvoiceTotalsAndRecordTransaction(
-        trx,
-        invoiceId,
-        client, // Pass client object
-        tenant, // Pass tenant
-        invoice.invoice_number, // Pass invoice number
-        undefined,
-        {
-          transactionType: "invoice_adjustment",
-          description: `Adjusted invoice ${invoice.invoice_number}`,
-        },
+      const tax = finalItems.reduce(
+        (sum: number, item: { tax_amount: unknown }) => sum + Number(item.tax_amount ?? 0),
+        0,
       );
-      console.log(
-        `[recalculateInvoice] Finished updateInvoiceTotalsAndRecordTransaction for invoice ${invoiceId}`,
-      );
+      await tenantDb(trx, tenant)
+        .table("invoices")
+        .where({ invoice_id: invoiceId })
+        .update({
+          subtotal: Math.round(subtotal),
+          tax: Math.round(tax),
+          total_amount: Math.round(subtotal + tax),
+        });
 
-      // Note: The original logic for processing discount items and updating their net_amount
-      // based on percentages is removed. It's assumed that calculateAndDistributeTax
-      // handles the correct net amounts and tax distribution, including discounts.
-      // If discount amounts need recalculation based on the new subtotal *before* tax distribution,
-      // that logic would need to be added back here or integrated into calculateAndDistributeTax.
-      // For now, we follow the instruction to delegate fully.
+      await reconcileInvoiceAdjustmentTransaction(trx, tenant, invoice, Math.round(subtotal + tax));
     };
 
     if (existingTransaction) {

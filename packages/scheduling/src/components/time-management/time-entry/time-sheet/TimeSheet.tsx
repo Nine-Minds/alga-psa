@@ -39,7 +39,15 @@ import {
 } from './types';
 import { TimeSheetComments } from '../../approvals/TimeSheetComments';
 import { WorkItemDrawer } from './WorkItemDrawer';
-import { IntervalSection } from '../../interval-tracking/IntervalSection';
+import { SuggestedEntriesSection } from './SuggestedEntriesSection';
+import {
+    dismissAllTimeEntrySuggestionsForDay,
+    dismissTimeEntrySuggestion,
+    getTimeEntrySuggestions,
+} from '../../../../actions/workTrailActions';
+import type { TimeEntrySuggestion } from '../../../../lib/workTrail/deriveSuggestions';
+import { suggestedEntryTimes } from '../../../../lib/workTrail/suggestionTimes';
+import { periodLastInclusiveDay } from '../../../../lib/timeEntryPeriodSelection';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
@@ -227,7 +235,10 @@ export function TimeSheet({
     onBack
 }: TimeSheetProps): React.JSX.Element {
     const { t } = useTranslation('msp/time-entry');
-    const [showIntervals, setShowIntervals] = useState(false);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [suggestions, setSuggestions] = useState<TimeEntrySuggestion[]>([]);
+    const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+    const [suggestionsBusy, setSuggestionsBusy] = useState(false);
     const [dateNavigator, setDateNavigator] = useState<TimeSheetDateNavigatorState | null>(null);
     const isLoadingTimeSheetData = false;
     const [timeSheet, setTimeSheet] = useState<ITimeSheetView>(initialTimeSheet);
@@ -568,6 +579,102 @@ export function TimeSheet({
         return 'saved';
     };
 
+    // Suggestions are only offered to a viewer who may edit the sheet (owner or allowed delegate).
+    const suggestionsEnabled =
+        (timeSheet.approval_status === 'DRAFT' || timeSheet.approval_status === 'CHANGES_REQUESTED') &&
+        !(isDelegated && !allowDelegatedEditing);
+    const suggestionPeriodStart = timeSheet.time_period?.start_date;
+    const suggestionPeriodEnd = timeSheet.time_period?.end_date;
+    const suggestionUserId = timeSheet.user_id;
+
+    const loadSuggestions = useCallback(async () => {
+        if (!suggestionsEnabled || !suggestionPeriodStart || !suggestionPeriodEnd) {
+            setSuggestions([]);
+            return;
+        }
+        try {
+            const result = await getTimeEntrySuggestions({
+                userId: suggestionUserId,
+                startDate: suggestionPeriodStart.slice(0, 10),
+                endDate: periodLastInclusiveDay(suggestionPeriodEnd),
+            });
+            if (isActionMessageError(result) || isActionPermissionError(result)) {
+                // Suggestions are a convenience; a denial just means there is nothing to offer.
+                setSuggestions([]);
+                return;
+            }
+            setSuggestions(result);
+        } catch (error) {
+            console.error('Failed to load time entry suggestions:', error);
+            setSuggestions([]);
+        }
+    }, [suggestionsEnabled, suggestionPeriodStart, suggestionPeriodEnd, suggestionUserId]);
+
+    useEffect(() => {
+        let cancelled = false;
+        setSuggestionsLoading(true);
+        loadSuggestions().finally(() => {
+            if (!cancelled) setSuggestionsLoading(false);
+        });
+        return () => { cancelled = true; };
+    }, [loadSuggestions]);
+
+    const handleLogSuggestion = useCallback((suggestion: TimeEntrySuggestion) => {
+        const { start, end } = suggestedEntryTimes(suggestion);
+        handleAddEntryForCell({
+            workItem: {
+                work_item_id: suggestion.ticket_id,
+                type: 'ticket',
+                name: suggestion.title,
+                title: suggestion.title,
+                description: '',
+                ticket_number: suggestion.ticket_number,
+                client_name: suggestion.client_name,
+            } as IExtendedWorkItem,
+            date: suggestion.work_date,
+            entries: [],
+            defaultStartTime: formatISO(start),
+            defaultEndTime: formatISO(end),
+            notice: t('suggestions.estimatedNotice', {
+                defaultValue: 'These times are estimated from your activity on this ticket. Adjust them to match the time you actually worked.',
+            }),
+        });
+    }, [handleAddEntryForCell, t]);
+
+    const handleDismissSuggestion = useCallback(async (suggestion: TimeEntrySuggestion) => {
+        setSuggestionsBusy(true);
+        try {
+            const result = await dismissTimeEntrySuggestion({
+                userId: suggestionUserId,
+                ticketId: suggestion.ticket_id,
+                workDate: suggestion.work_date,
+            });
+            if (isActionMessageError(result) || isActionPermissionError(result)) {
+                toast.error(getErrorMessage(result));
+            }
+            await loadSuggestions();
+        } catch (error) {
+            handleError(error, t('suggestions.dismissFailed', { defaultValue: 'Failed to dismiss suggestion' }));
+        } finally {
+            setSuggestionsBusy(false);
+        }
+    }, [loadSuggestions, suggestionUserId, t]);
+
+    const handleDismissSuggestionDay = useCallback(async (workDate: string) => {
+        setSuggestionsBusy(true);
+        try {
+            const result = await dismissAllTimeEntrySuggestionsForDay({ userId: suggestionUserId, workDate });
+            if (isActionMessageError(result) || isActionPermissionError(result)) {
+                toast.error(getErrorMessage(result));
+            }
+            await loadSuggestions();
+        } catch (error) {
+            handleError(error, t('suggestions.dismissFailed', { defaultValue: 'Failed to dismiss suggestion' }));
+        } finally {
+            setSuggestionsBusy(false);
+        }
+    }, [loadSuggestions, suggestionUserId, t]);
+
     const refreshTimeSheetData = useCallback(async () => {
         const [fetchedTimeEntries, fetchedWorkItems] = await Promise.all([
             fetchTimeEntriesForTimeSheet(timeSheet.id),
@@ -583,13 +690,15 @@ export function TimeSheet({
         const fetchedWorkItemsByType = groupWorkItemsByType(fetchedWorkItems);
         setWorkItemsByType(fetchedWorkItemsByType);
         applyTimeEntryUpdates(fetchedTimeEntries, fetchedWorkItemsByType);
+        // A saved or deleted entry changes which suggestions still apply.
+        void loadSuggestions();
 
         return {
             fetchedTimeEntries,
             fetchedWorkItems,
             fetchedWorkItemsByType,
         };
-    }, [applyTimeEntryUpdates, timeSheet.id]);
+    }, [applyTimeEntryUpdates, loadSuggestions, timeSheet.id]);
 
     const submitQuickAdd = useCallback(async () => {
         if (!activeQuickAdd) {
@@ -908,8 +1017,9 @@ export function TimeSheet({
                 onReopenForEdits={onReopenForEdits}
                 onSubmit={handleSubmitTimeSheet}
                 onBack={onBack}
-                showIntervals={showIntervals}
-                onToggleIntervals={() => setShowIntervals(!showIntervals)}
+                showSuggestions={showSuggestions}
+                onToggleSuggestions={suggestionsEnabled ? () => setShowSuggestions(!showSuggestions) : undefined}
+                suggestionCount={suggestions.length}
                 dateNavigator={effectiveDateNavigator}
                 viewMode={viewMode}
                 onViewModeChange={handleViewModeChange}
@@ -931,13 +1041,16 @@ export function TimeSheet({
                 </div>
             )}
             
-            {/* Show intervals section if enabled */}
-            {showIntervals && timeSheet.time_period && (
+            {/* Work-trail suggestions, shown only to a viewer who may edit this sheet */}
+            {showSuggestions && suggestionsEnabled && timeSheet.time_period && (
                 <div className="mb-8">
-                    <IntervalSection
-                        userId={timeSheet.user_id}
-                        timePeriod={timeSheet.time_period}
-                        onCreateTimeEntry={effectiveIsEditable ? handleSaveTimeEntry : async (_timeEntry) => {}}
+                    <SuggestedEntriesSection
+                        suggestions={suggestions}
+                        isLoading={suggestionsLoading}
+                        isBusy={suggestionsBusy}
+                        onLogTime={handleLogSuggestion}
+                        onDismiss={handleDismissSuggestion}
+                        onDismissDay={handleDismissSuggestionDay}
                     />
                 </div>
             )}
@@ -995,6 +1108,7 @@ export function TimeSheet({
                     defaultStartTime={selectedCell.defaultStartTime ? parseISO(selectedCell.defaultStartTime) : undefined}
                     timeSheetId={timeSheet.id}
                     inDrawer={false}
+                    notice={selectedCell.notice}
                     onTimeEntriesUpdate={(entries) => {
                         applyTimeEntryUpdates(entries as ITimeEntryWithWorkItem[]);
                     }}

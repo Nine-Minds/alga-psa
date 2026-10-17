@@ -423,7 +423,8 @@
       "placeholders": {
         "teamName": "Ingrese el nombre del equipo",
         "selectTeamLead": "Seleccionar un líder de equipo",
-        "selectUserToAdd": "Seleccionar un usuario para agregar"
+        "selectUserToAdd": "Seleccionar un usuario para agregar",
+        "noTeamLead": "Sin asignar"
       },
       "alert": {
         "unsavedChanges": "Tiene cambios sin guardar"
@@ -673,8 +674,8 @@
           "suppressAiHelp": "Solo complemento Enterprise AI Assistant. Si no está disponible, las respuestas reabren normalmente."
         },
         "liveTimer": {
-          "label": "Activar temporizador de tickets en vivo",
-          "help": "Muestra el temporizador en vivo y los intervalos registrados en los tickets de este tablero. La entrada manual de tiempo sigue disponible."
+          "label": "Mostrar cronómetro en los tickets",
+          "help": "Muestra los controles del cronómetro en los tickets de este tablero. Desactívelo para ocultar el cronómetro aquí; la entrada manual de tiempo sigue disponible. Un cronómetro que ya está en marcha sigue funcionando."
         },
         "clientPortalVisible": {
           "label": "Visible en el portal de clientes",
@@ -821,6 +822,27 @@
           "appearanceHelp": "Anclaje de pestaña y vista de lista predeterminada del tablero",
           "assignment": "Asignación y SLA",
           "assignmentHelp": "Enrutamiento predeterminado, SLA y responsable del tablero",
+          "notifications": "Notificaciones",
+          "notificationsHelp": "Avisar a los técnicos de tickets nuevos y cambios de estado, y definir observadores predeterminados",
+          "notificationsRulesLabel": "Reglas de notificación",
+          "notificationsRulesHelp": "Los destinatarios reciben una notificación por evento. No se añaden como observadores.",
+          "notificationsAddRule": "Añadir regla",
+          "notificationsRuleTitle": "Regla {{number}}",
+          "notificationsRuleEnabled": "Activada",
+          "notificationsRemoveRule": "Eliminar regla",
+          "notificationsOnCreate": "Cuando se crea un ticket en este tablero",
+          "notificationsOnStatus": "Cuando un ticket pasa al estado",
+          "notificationsNoStatuses": "Los estados se pueden seleccionar una vez guardado el tablero.",
+          "notificationsRecipients": "Notificar a",
+          "notificationsRecipientsPlaceholder": "Seleccionar usuarios y equipos...",
+          "notificationsRecipientsHelp": "Los miembros del equipo se consultan cada vez que se envía una notificación.",
+          "notificationsDefaultWatchers": "Observadores predeterminados",
+          "notificationsDefaultWatchersPlaceholder": "Seleccionar usuarios...",
+          "notificationsDefaultWatchersHelp": "Se añaden a la lista de seguimiento de cada ticket nuevo de este tablero y reciben todas las actualizaciones posteriores.",
+          "notificationsTriggerRequired": "Cada regla de notificación necesita al menos un desencadenante: la creación de un ticket o un estado.",
+          "notificationsRecipientRequired": "Cada regla de notificación necesita al menos un usuario o equipo a quien notificar.",
+          "notificationsFetchFailed": "No se pudo cargar la configuración de notificaciones",
+          "notificationsStatusRemapFailed": "Se creó el tablero, pero no se pudo asociar el estado de una regla de notificación con el nuevo tablero. Vuelva a agregar las reglas de notificación.",
           "inbound": "Correo y respuestas entrantes",
           "inboundHelp": "Reabrir tickets cuando los clientes respondan por correo electrónico",
           "close": "Reglas de cierre",
@@ -830,7 +852,7 @@
           "statuses": "Prioridades y estados",
           "statusesHelp": "Prioridad predeterminada y los estados de ticket de este tablero",
           "display": "Visualización y comportamiento",
-          "displayHelp": "Temporizador en vivo y tipo de tablero"
+          "displayHelp": "Cronómetro y tipo de tablero"
         },
         "saveChanges": "Guardar cambios",
         "unsaved": "Sin guardar",
@@ -1825,6 +1847,12 @@
         "useLogo": "Usar mi logo en el encabezado del correo electrónico",
         "logoWide": "Logo ancho",
         "logoDefault": "Logo cuadrado",
+        "logoArtwork": "Versión del logo",
+        "logoArtworkAuto": "Según el encabezado",
+        "logoArtworkLight": "Logo para fondo claro",
+        "logoArtworkDark": "Logo para fondo oscuro",
+        "logoArtworkAutoDark": "El modo automático considera oscuro este encabezado y usa el logo para fondo oscuro.",
+        "logoArtworkAutoLight": "El modo automático considera claro este encabezado y usa el logo para fondo claro.",
         "noLogo": "Cargue un logo en Configuración → Portal de clientes → Marca para usarlo aquí.",
         "showAttribution": "Mostrar «Powered by AlgaPSA» en el pie de página"
       }
@@ -1933,6 +1961,8 @@
   "timeEntry": {
     "title": "Configuración de registro de tiempo",
     "description": "Administre la configuración de registro de tiempo y los períodos de tiempo",
+    "accessDenied": "Acceso denegado: no tiene permiso para ver los períodos de tiempo.",
+    "loading": "Cargando la configuración de registro de tiempo...",
     "timePeriods": {
       "title": "Configuración de períodos de tiempo",
       "description": "Configure los períodos de tiempo de facturación",
@@ -2030,7 +2060,7 @@
       "openMenu": "Abrir menú",
       "columns": {
         "startDate": "Fecha de inicio",
-        "endDate": "Fecha de fin",
+        "endDate": "Último día",
         "actions": "Acciones"
       },
       "form": {
@@ -2042,7 +2072,8 @@
         "startDate": "Fecha de inicio",
         "startDatePlaceholder": "Seleccione la fecha de inicio",
         "noEndDate": "Sin fecha de fin",
-        "endDate": "Fecha de fin",
+        "endDate": "Último día del período",
+        "endDateHelp": "El período incluye este día.",
         "endDatePlaceholder": "Seleccione la fecha de fin",
         "deletePeriod": "Eliminar período",
         "confirmDeleteTitle": "Confirmar eliminación",
@@ -2056,7 +2087,7 @@
         "noSettings": "No hay configuración de períodos de tiempo disponible. No se puede crear un nuevo período.",
         "settingsRequired": "No se puede gestionar el período de tiempo sin configuración.",
         "startDateRequired": "Debe indicar una fecha de inicio.",
-        "startBeforeEnd": "La fecha de inicio debe ser anterior a la fecha de fin.",
+        "startBeforeEnd": "La fecha de fin no puede ser anterior a la fecha de inicio.",
         "overlap": "El período de tiempo se solapa con un período existente.",
         "overlapRetry": "Este período de tiempo se solapa con otro existente. Elija fechas diferentes.",
         "create": "No se pudo crear el período de tiempo.",

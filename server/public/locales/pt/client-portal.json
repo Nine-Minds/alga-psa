@@ -59,12 +59,9 @@
       "network": "Rede",
       "unknown": "Outro"
     },
-    "statusWarnTitle": "Alguns dispositivos inativos",
-    "statusWarnBody": "{{active}} ativo · {{inactive}} inativo",
-    "status": {
-      "active": "Ativo",
-      "inactive": "Inativo"
-    },
+    "statusAttentionTitle": "Alguns dispositivos precisam de atenção",
+    "statusAttentionBody": "{{active}} de {{total}} dispositivos ativos",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Pesquise por nome, tag ou série",
     "filters": {
       "allTypes": "Todos os tipos",
@@ -169,10 +166,7 @@
       "viewAll": "Ver tudo",
       "countLabel": "{{count}} gerenciado",
       "emptyShort": "Nenhum dispositivo ainda",
-      "emptyBody": "Os dispositivos gerenciados pelo seu provedor aparecerão aqui.",
-      "healthy": "Saudável",
-      "inactive": "Inativo",
-      "active": "Ativo"
+      "emptyBody": "Os dispositivos gerenciados pelo seu provedor aparecerão aqui."
     },
     "quickActions": {
       "title": "Ações rápidas",
@@ -371,7 +365,17 @@
         "verifiedContact": "E-mail de contato verificado",
         "validPassword": "Senha válida"
       }
-    }
+    },
+    "ssoNoMatchTitle": "Falha no login com SSO",
+    "ssoNoMatch": {
+      "no_matching_user": "Nenhuma conta do portal do cliente corresponde a {{providerEmail}}. Faça login com sua senha ou fale com seu prestador de serviços.",
+      "missing_email": "Seu provedor de identidade não retornou um e-mail, portanto nenhuma conta do portal do cliente pôde ser identificada. Faça login com sua senha ou fale com seu prestador de serviços.",
+      "inactive_user": "A conta do portal do cliente para {{providerEmail}} está inativa. Fale com seu prestador de serviços para reativá-la.",
+      "user_type_mismatch": "{{providerEmail}} não é uma conta do portal do cliente. Fale com seu prestador de serviços.",
+      "tenant_mismatch": "{{providerEmail}} pertence ao portal de outra organização. Faça login com sua senha ou fale com seu prestador de serviços."
+    },
+    "configurationTitle": "Falha no login",
+    "configurationMessage": "O login falhou. Tente novamente ou fale com seu prestador de serviços."
   },
   "account": {
     "title": "Conta",
@@ -994,14 +998,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Nome",
-      "type": "Tipo",
-      "status": "Status",
-      "location": "Local",
-      "lastUpdated": "Última atualização"
+      "assignedTo": "Atribuído a"
     },
-    "notAvailable": "N/D",
-    "detailsTitle": "Detalhes do ativo"
+    "statuses": {
+      "active": "Ativo",
+      "in_stock": "Em estoque",
+      "maintenance": "Em manutenção",
+      "inactive": "Inativo",
+      "retired": "Desativado"
+    },
+    "unassigned": "Não atribuído",
+    "sharedWorkspace": "Espaço compartilhado: {{name}}",
+    "sharedWorkspaceLabel": "Espaço compartilhado"
   },
   "errors": {
     "account": {

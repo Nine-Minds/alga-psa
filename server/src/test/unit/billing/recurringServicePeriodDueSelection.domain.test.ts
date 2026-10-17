@@ -111,7 +111,6 @@ describe('recurring service period due selection', () => {
       sourceObligation: {
         tenant: 'tenant-1',
         obligationId: 'line-1',
-        obligationType: 'contract_line',
         chargeFamily: 'product',
       },
       invoiceWindow: { start: '2025-03-08', end: '2025-04-08', semantics: 'half_open' },

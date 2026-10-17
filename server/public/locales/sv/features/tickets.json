@@ -60,7 +60,6 @@
     "button": "Filter",
     "unassigned": "Ej tilldelat",
     "category": "Filtrera efter kategori",
-    "clearFilters": "Rensa filter",
     "assignee": "Ansvarig",
     "allAssignees": "Alla ansvariga",
     "responseState": "Svarsstatus",
@@ -144,6 +143,7 @@
     "assignedTo": "Tilldelat till",
     "requester": "Beställare",
     "client": "Kund",
+    "contact": "Kontakt",
     "dueDate": "Måldatum",
     "resolution": "Lösning",
     "timeSpent": "Nedlagd tid",
@@ -185,6 +185,8 @@
     "tags": "Taggar",
     "sla": "SLA",
     "updated": "Uppdaterad",
+    "updatedAtBy": "Uppdaterad {{time}} av {{name}}",
+    "byName": "av {{name}}",
     "openInNewTab": "Öppna i ny flik",
     "actions": "Åtgärder",
     "linkedAssets": "Kopplade tillgångar",
@@ -219,7 +221,10 @@
     "printOptions": "Utskriftsalternativ",
     "duplicate": "Duplicera",
     "rowActions": "Åtgärder",
-    "openMenu": "Öppna meny"
+    "openMenu": "Öppna meny",
+    "moreActions": "Fler åtgärder",
+    "createTemplate": "Skapa mall från ärende",
+    "createWorkflowFromTicket": "Skapa arbetsflöde från ärende"
   },
   "messages": {
     "noTickets": "Inga ärenden hittades",
@@ -318,7 +323,8 @@
     "errorWithMessage": "Fel: {{message}}",
     "billingProfileUpdated": "Faktureringsprofilen har uppdaterats",
     "updateBillingProfileFailed": "Det gick inte att uppdatera faktureringsprofilen",
-    "scheduleOpenFailed": "Det gick inte att öppna schemaläggaren"
+    "scheduleOpenFailed": "Det gick inte att öppna schemaläggaren",
+    "sharedWorkspaceReadOnly": "Du ser det här ärendet eftersom det gäller en enhet i en delad arbetsplats. Bara den som skapade det kan lägga till något."
   },
   "conversation": {
     "comments": "Kommentarer",
@@ -384,7 +390,13 @@
     "schedule": "Schemalägg",
     "scheduled": "Schemalagd",
     "showMore": "Visa mer",
-    "showLess": "Visa mindre"
+    "showLess": "Visa mindre",
+    "ccBcc": "Kopia/Hemlig kopia",
+    "cc": "Kopia",
+    "bcc": "Hemlig kopia",
+    "ccBccInvalid": "Rätta de markerade adresserna innan du skickar.",
+    "ccBccTooMany": "Högst {{max}} mottagare med kopia och hemlig kopia kan kopieras på en kommentar.",
+    "ccBccNotSentOnInternal": "Kopia och hemlig kopia skickas inte med en intern anteckning. Stäng av Intern för att använda dem."
   },
   "responseState": {
     "awaitingYourResponse": "Väntar på ditt svar",
@@ -449,7 +461,8 @@
       "loading": "Läser in…",
       "clientNotFound": "Kunden hittades inte.",
       "clientRendererMissing": "Kunduppgifter är inte tillgängliga i det här sammanhanget.",
-      "clientLoadFailed": "Det gick inte att läsa in kunden."
+      "clientLoadFailed": "Det gick inte att läsa in kunden.",
+      "contactRendererMissing": "Kontaktuppgifter är inte tillgängliga i det här sammanhanget."
     },
     "filters": {
       "allAssignees": "Alla ansvariga",
@@ -759,6 +772,8 @@
       "failure": "Det gick inte att uppdatera status för de markerade ärendena",
       "failedHeading": "Det gick inte att uppdatera status för följande ärenden:",
       "resolutionLabel": "Lösningskommentar (valfritt)",
+      "resolutionLabelRequired": "Lösningskommentar",
+      "resolutionRequiredHint": "Den här tavlan kräver en lösningskommentar innan ärenden kan stängas.",
       "resolutionPlaceholder": "Beskriv hur dessa ärenden löstes",
       "resolutionHelper": "Sparas som lösningen på varje markerat ärende och uppfyller tavlor som kräver en innan stängning."
     },
@@ -837,7 +852,16 @@
     "duplicateChecklistHeading": "Checklista från #{{number}}",
     "duplicateChecklistRequired": "(obligatorisk)",
     "duplicateCopyChecklist": "Kopiera checklistpunkter (obockade)",
-    "duplicateCustomFieldsNote": "Värden för anpassade fält kopieras från #{{number}}."
+    "duplicateCustomFieldsNote": "Värden för anpassade fält kopieras från #{{number}}.",
+    "templateLabel": "Mall",
+    "templateNone": "Ingen",
+    "templateLoadFailed": "Mallen kunde inte läsas in. Försök igen.",
+    "fromTemplatePill": "Från mall: {{name}}",
+    "templateChecklistHeading": "Checklista från mall: {{name}}",
+    "templateCustomFieldsNote": "Värden för anpassade fält kopieras från mallen.",
+    "templateReplaceTitle": "Ersätta dina ändringar?",
+    "templateReplaceMessage": "Att använda en mall ersätter rubrik, beskrivning och andra fält du har fyllt i.",
+    "templateReplaceConfirm": "Använd mall"
   },
   "itil": {
     "calculatedPriority": "Prioritet (beräknad)",
@@ -976,9 +1000,6 @@
     "closeTicketNowTitle": "Stäng ärendet nu?",
     "closeTicketNowPrompt": "Den här kommentaren är nu lösningen. Välj en stängningsstatus för att stänga ärendet, eller låt det vara öppet.",
     "leaveTicketOpen": "Lämna öppet",
-    "timerActiveElsewhereTitle": "Timern är aktiv i ett annat fönster",
-    "timerTakeoverMessage": "Ärendets timer är aktiv i ett annat fönster. Vill du ta över och ersätta den här?",
-    "replaceHere": "Ersätt här",
     "noActiveTimePeriodTitle": "Ingen aktiv tidsperiod",
     "noActiveTimePeriodMessage": "Ingen aktiv tidsperiod hittades. Tidsperioder måste konfigureras i faktureringsöversikten innan tidposter läggs till.",
     "goToTimePeriodsSetup": "Gå till inställningar för tidsperioder",
@@ -994,15 +1015,7 @@
   },
   "properties": {
     "timeEntry": "Tidpost",
-    "ticketTimer": "Ärendetimer – #{{ticketNumber}}",
-    "timerActiveElsewhere": "Timern är aktiv i ett annat fönster",
-    "start": "Starta",
-    "pause": "Pausa",
-    "reset": "Återställ",
-    "enterWorkDescription": "Ange arbetsbeskrivning",
-    "liveTimerDisabled": "Ärendetimern i realtid är inaktiverad för den här tavlan.",
     "addTimeEntry": "Lägg till tidpost",
-    "trackedIntervals": "Registrerade intervall",
     "contactInfo": "Kontaktuppgifter",
     "noContactSelected": "Ingen kontakt har valts",
     "selectOrChangeContact": "Välj eller ändra kontakt",
@@ -1592,7 +1605,8 @@
     },
     "autoClose": "Stängs automatiskt {{date}} om ingen ny aktivitet sker.",
     "autoCloseWarned": "Kunden har varnats.",
-    "duplicatedFrom": "Duplicerat från #{{number}}"
+    "duplicatedFrom": "Duplicerat från #{{number}}",
+    "fromTemplate": "Från mall: {{name}}"
   },
   "invalidTicketData": "Ogiltiga ärendedata",
   "timeEntries": {
@@ -1749,9 +1763,7 @@
       "timeLogged": "Registrerad tid",
       "acrossEntries_one": "fördelat på {{count}} tidpost",
       "acrossEntries_other": "fördelat på {{count}} tidposter",
-      "workDescription": "Arbetsbeskrivning",
       "addTimeEntry": "Lägg till tidpost",
-      "trackedIntervals": "Registrerade intervall",
       "teamAndWatchers": "Team och bevakare",
       "addAgent": "Lägg till en handläggare…",
       "timeline": "Tidslinje",
@@ -1762,7 +1774,6 @@
       "opened": "Öppnat",
       "viaSource": "via {{source}}",
       "noContactOnTicket": "Ingen kontakt i det här ärendet",
-      "whatAreYouWorkingOn": "Vad arbetar du med?",
       "agentFallback": "Handläggare",
       "removeAgent": "Ta bort {{name}}",
       "noAdditionalAgents": "Inga ytterligare handläggare",
@@ -1787,8 +1798,6 @@
       "addDocument": "Lägg till ett dokument",
       "timeLoggedPerDay": "Registrerad tid per dag: {{details}}",
       "team": "Team",
-      "startTimer": "Starta timer",
-      "timerLockedHint": "En annan timer är redan igång",
       "billable": "Debiterbart",
       "nothingBillable": "Inget debiterbart ännu",
       "editContact": "Redigera kontakt",
@@ -1800,6 +1809,7 @@
       "setClientToAddContact": "Ange en kund först för att lägga till en kontakt",
       "logInteraction": "Registrera samtal eller e-post",
       "changeClient": "Ändra kund",
+      "changeLocation": "Ändra plats",
       "teamFallback": "Team",
       "teamSectionLabel": "Tilldela ett team",
       "addAgentsOrTeam": "Lägg till handläggare eller ett team…",
@@ -1908,7 +1918,8 @@
       "noStatusChange": "Ändra inte status",
       "showAllActivity": "Visa all aktivitet",
       "collapseActivity": "Fäll ihop äldre aktivitet",
-      "replyingToComment": "Svarar {{name}}"
+      "replyingToComment": "Svarar {{name}}",
+      "createdFromTemplate": "{{actor}} skapade detta ärende från mallen \"{{name}}\""
     }
   },
   "externalLinks": {
@@ -2298,6 +2309,102 @@
       "monthlyOnDay": "{{every}} på {{day}}",
       "monthlyOnNthWeekday": "{{every}} på {{ordinal}} {{weekday}}",
       "yearly": "Varje år den {{day}} {{month}}"
+    }
+  },
+  "stopwatch": {
+    "boardDisabled": "Stoppuret är avstängt för den här tavlan.",
+    "pausedElsewhereTicket": "Pausat på ett annat ärende: {{label}}",
+    "runningElsewhereTicket": "Pågår på ett annat ärende: {{label}}",
+    "pausedElsewhereTask": "Pausat på en annan uppgift: {{label}}",
+    "runningElsewhereTask": "Pågår på en annan uppgift: {{label}}",
+    "switch": "Byt hit",
+    "start": "Starta stoppur",
+    "resume": "Återuppta stoppur",
+    "pause": "Pausa stoppur",
+    "stop": "Stoppa och logga tid",
+    "discard": "Kassera stoppur",
+    "pausedHint": "Pausat. Återuppta för att fortsätta spåra eller stoppa för att logga tiden.",
+    "workDescription": "Arbetsbeskrivning",
+    "whatAreYouWorkingOn": "Vad arbetar du med?"
+  },
+  "templates": {
+    "loading": "Läser in…",
+    "list": {
+      "title": "Ärendemallar",
+      "new": "Ny mall",
+      "empty": "Inga ärendemallar än. Öppna ett ärende och välj \"Skapa mall från ärende\", eller skapa en från grunden.",
+      "showInactive": "Visa inaktiva",
+      "deleted": "Mallen har tagits bort",
+      "deleteTitle": "Ta bort mall",
+      "deleteMessage": "Ta bort \"{{name}}\"? Ärenden som redan skapats från den ändras inte.",
+      "columns": {
+        "name": "Namn",
+        "title": "Ärenderubrik",
+        "board": "Tavla",
+        "checklist": "Checklistpunkter",
+        "status": "Status"
+      }
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "actions": {
+      "edit": "Redigera",
+      "newTicket": "Nytt ärende från mall",
+      "activate": "Aktivera",
+      "deactivate": "Inaktivera",
+      "delete": "Ta bort",
+      "cancel": "Avbryt"
+    },
+    "sections": {
+      "details": "Mall",
+      "ticket": "Ärende",
+      "checklist": "Checklista",
+      "customFields": "Anpassade fält"
+    },
+    "fields": {
+      "name": "Mallnamn",
+      "notes": "Anteckningar",
+      "notesHelp": "Endast för ditt team. Kopieras inte till ärenden.",
+      "title": "Ärenderubrik",
+      "description": "Beskrivning",
+      "descriptionPlaceholder": "Beskrivning"
+    },
+    "checklist": {
+      "empty": "Inga checklistpunkter.",
+      "itemName": "Checklistpunkt",
+      "required": "Obligatoriskt",
+      "moveUp": "Flytta upp",
+      "moveDown": "Flytta ned",
+      "remove": "Ta bort punkt",
+      "add": "Lägg till punkt"
+    },
+    "customFields": {
+      "empty": "Inga värden för anpassade fält.",
+      "name": "Fältnamn",
+      "value": "Värde",
+      "remove": "Ta bort fält",
+      "add": "Lägg till fält"
+    },
+    "editor": {
+      "back": "Ärendemallar",
+      "newTitle": "Ny ärendemall",
+      "created": "Mallen har skapats",
+      "saved": "Mallen har sparats",
+      "saving": "Sparar…",
+      "save": "Spara",
+      "fromTicket": "Förifyllt från ärende #{{number}}. Inget sparas förrän du klickar på Spara.",
+      "inlineImages": "Beskrivningen innehåller bilder som tillhör källärendet. De kan sluta visas om ärendet tas bort. Ta bort dem eller ladda upp dem igen om mallen ska finnas kvar efter ärendet.",
+      "viewOnly": "Du kan visa den här mallen men inte ändra den.",
+      "referenceProblems": "Vissa fält i den här mallen pekar på sådant som inte längre finns. De lämnas tomma när mallen används. Rätta dem och spara:"
+    },
+    "errors": {
+      "notFound": "Ärendemallen hittades inte",
+      "duplicateName": "Det finns redan en mall med namnet {{name}}",
+      "invalidReferences": "Mallen refererar till en tavla, kategori eller prioritet som inte är tillgänglig",
+      "notAvailable": "Ärendemallar är inte tillgängliga",
+      "subcategoryNeedsCategory": "En underkategori kräver en kategori"
     }
   }
 }

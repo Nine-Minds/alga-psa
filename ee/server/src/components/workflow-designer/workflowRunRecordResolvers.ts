@@ -59,6 +59,8 @@ export const WORKFLOW_RUN_RECORD_SOURCES: WorkflowRecordSources = {
       'board_id', 'board_name', 'status_id', 'status_name', 'priority_id', 'category_id', 'subcategory_id',
       'assigned_to', 'assigned_to_name', 'assigned_team_id', 'assignee_type', 'new_assignee_type',
       'due_date', 'entered_at', 'created_at', 'is_closed',
+      // When the ticket entered its current status (ticket.status_age run payloads).
+      'status_changed_at', 'entered_status_at',
       // Message events carry the comment id: the ticket's latest customer reply.
       'message_id', 'comment_id', 'received_at',
     ],
@@ -104,6 +106,8 @@ export const WORKFLOW_RUN_RECORD_SOURCES: WorkflowRecordSources = {
         due_date: ticket.due_date,
         entered_at: ticket.entered_at,
         created_at: ticket.entered_at,
+        status_changed_at: ticket.status_changed_at ?? ticket.entered_at,
+        entered_status_at: ticket.status_changed_at ?? ticket.entered_at,
         is_closed: ticket.is_closed,
         message_id: reply?.comment_id ?? null,
         comment_id: reply?.comment_id ?? null,
