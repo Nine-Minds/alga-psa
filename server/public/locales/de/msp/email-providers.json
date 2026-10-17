@@ -1131,7 +1131,10 @@
       "duplicateShortName": "Eine Konfiguration mit diesem Kurznamen existiert bereits",
       "createFailed": "Die Standardwerte für eingehende Tickets konnten nicht erstellt werden. Bitte versuchen Sie es erneut.",
       "notFound": "Standardkonfiguration nicht gefunden",
-      "updateFailed": "Die Standardwerte für eingehende Tickets konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut."
+      "updateFailed": "Die Standardwerte für eingehende Tickets konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "locationRequiresClient": "Wählen Sie zuerst eine Firma aus, bevor Sie einen Standort auswählen",
+      "locationClientMismatch": "Der ausgewählte Standort gehört nicht zur ausgewählten Firma",
+      "referencedByProviders": "Diese Konfiguration wird noch von folgenden E-Mail-Anbietern verwendet: {{providers}}. Wählen Sie bei diesen Anbietern andere Standardwerte für eingehende Tickets aus, bevor Sie sie löschen."
     },
     "ticketFieldOptions": {
       "permissionDenied": "Berechtigung verweigert: Ticketfeldoptionen können nicht gelesen werden",

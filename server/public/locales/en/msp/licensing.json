@@ -492,6 +492,13 @@
         "team": "Teams"
       }
     },
+    "section": {
+      "title": "Co-managed",
+      "viewHistory": "View handoff history",
+      "responsible": "Responsible",
+      "change": "Change",
+      "privateTo": "Private to {{organization}}"
+    },
     "ticket": {
       "title": "Co-managed ticket",
       "escalate": "Escalate to MSP",
@@ -668,6 +675,7 @@
         "notReady": "Some files are not ready. Retry to finish uploading and send the same message.",
         "preparationFailed": "Could not read the selected files. Select them again or remove them before retrying.",
         "abandoned": "This draft was discarded. Save again to create a new message with the selected files.",
+        "audienceUnavailable": "Files cannot be attached to messages for this audience. Remove the files or choose another audience.",
         "cancelUnknownOutcome": "We could not confirm cancellation. Retry to check the same cancellation request.",
         "canceling": "Canceling…"
       }

@@ -26,6 +26,7 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, tenant: string) => ({
     table: (table: string) => ({
       where: () => ({
+        first: vi.fn(async () => null),
         select: () => ({
           first: vi.fn(async () => null),
         }),

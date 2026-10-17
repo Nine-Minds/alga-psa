@@ -52,7 +52,6 @@
     "button": "Filtres",
     "unassigned": "Non attribué",
     "category": "Filtrer par catégorie",
-    "clearFilters": "Effacer les filtres",
     "removeFilterChip": "Supprimer le filtre : {{label}}",
     "assignee": "Destinataire",
     "allAssignees": "Tous les destinataires",
@@ -217,7 +216,8 @@
     "rowActions": "Actions",
     "openMenu": "Ouvrir le menu",
     "moreActions": "Plus d'actions",
-    "createTemplate": "Créer un modèle à partir du ticket"
+    "createTemplate": "Créer un modèle à partir du ticket",
+    "createWorkflowFromTicket": "Créer un workflow à partir du ticket"
   },
   "messages": {
     "noTickets": "Aucun ticket trouvé",
@@ -2525,6 +2525,8 @@
     "runningElsewhereTicket": "En cours sur un autre ticket : {{label}}",
     "pausedElsewhereTask": "En pause sur une autre tâche : {{label}}",
     "runningElsewhereTask": "En cours sur une autre tâche : {{label}}",
+    "pausedElsewhereShared": "En pause sur un autre élément partagé : {{label}}",
+    "runningElsewhereShared": "En cours sur un autre élément partagé : {{label}}",
     "switch": "Basculer ici",
     "start": "Démarrer le chronomètre",
     "resume": "Reprendre le chronomètre",

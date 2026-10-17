@@ -492,6 +492,13 @@
         "team": "Team"
       }
     },
+    "section": {
+      "title": "Samförvaltning",
+      "viewHistory": "Visa överlämningshistorik",
+      "responsible": "Ansvarig",
+      "change": "Ändra",
+      "privateTo": "Privat för {{organization}}"
+    },
     "ticket": {
       "title": "Samförvaltat ärende",
       "escalate": "Eskalera till MSP",
@@ -668,6 +675,7 @@
         "notReady": "Vissa filer är inte klara. Försök igen för att slutföra uppladdningen och skicka samma meddelande.",
         "preparationFailed": "Det gick inte att läsa de valda filerna. Välj dem igen eller ta bort dem innan du försöker igen.",
         "abandoned": "Utkastet har kastats. Spara igen för att skapa ett nytt meddelande med de valda filerna.",
+        "audienceUnavailable": "Filer kan inte bifogas till meddelanden för den här målgruppen. Ta bort filerna eller välj en annan målgrupp.",
         "cancelUnknownOutcome": "Det gick inte att bekräfta avbrytandet. Försök igen för att kontrollera samma avbrytandebegäran.",
         "canceling": "Avbryter…"
       }

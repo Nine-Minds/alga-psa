@@ -9,6 +9,7 @@ import { useContentCardVariant } from '@alga-psa/ui/components';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { formatMinutesAsHoursAndMinutes, getUserTimeZone, workedMinutes } from '@alga-psa/core';
 import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
+import { useTicketDataSource } from './TicketDataSourceContext';
 import type {
   TicketTimeEntriesSummary,
   TicketTimeEntrySummaryEntry,
@@ -70,7 +71,8 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
   // Inside the Grid layout's "Time logged" tile the tile header already names
   // the section, so this panel renders as quiet rows instead of a second header.
   const isBento = useContentCardVariant() === 'bento';
-  const { fetchTimeEntriesForTicket } = useSchedulingCallbacks();
+  const { fetchTimeEntriesForTicket: fetchNativeTimeEntries } = useSchedulingCallbacks();
+  const fetchTimeEntriesForTicket = useTicketDataSource().time.fetchTimeEntries ?? fetchNativeTimeEntries;
   const initialData = initialSummary ? use(initialSummary) : null;
   const [summary, setSummary] = useState<TicketTimeEntriesSummary | null>(initialData);
   const [loading, setLoading] = useState(!initialSummary);

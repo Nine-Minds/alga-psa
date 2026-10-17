@@ -1,5 +1,4 @@
-import { CoManagedFeatureBoundary } from '@/components/co-managed/CoManagedFeatureBoundary';
-import CoManagedTicketPanel from '@/components/co-managed/CoManagedTicketPanel';
+import CoManagedLocalTicketDataSourceProvider from '@/components/co-managed/CoManagedLocalTicketDataSourceProvider';
 import React from 'react';
 import { cache } from 'react';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
@@ -26,7 +25,7 @@ import { getTicketAutoCloseState } from '@alga-psa/tickets/actions/close-rules/c
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { listTicketMaterials } from '@alga-psa/tickets/actions/materialCatalogActions';
 import { hasAdminSettingsViewAccess } from '@alga-psa/tickets/components/ticket/commentMetadataDebug';
-import type { TicketScreenBootstrap } from '@alga-psa/tickets/lib/ticketScreenBootstrap';
+import { hasWorkflowManageAccess, type TicketScreenBootstrap } from '@alga-psa/tickets/lib/ticketScreenBootstrap';
 import { getAdjacentTicketIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { parseReturnFilters, DEFAULT_TICKET_LIST_FILTERS } from '@alga-psa/tickets/lib/ticketFilterUtils';
 import { listEntityAssets } from '@alga-psa/assets/actions/assetActions';
@@ -177,6 +176,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       externalLinks: isReturnedActionError(externalLinks) ? null : externalLinks,
       autoCloseState,
       canViewCommentMetadataDebug: permissions ? hasAdminSettingsViewAccess(permissions) : null,
+      canManageWorkflows: permissions ? hasWorkflowManageAccess(permissions) : null,
       teams: safeTeams,
       displaySettings,
       tags: safeTags,
@@ -232,19 +232,23 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
         </Suspense>
       ) : null;
     
+    const ticketScreen = (
+      <Suspense fallback={<TicketDetailsSkeleton />}>
+        <MspTicketDetailsContainerClient
+          ticketData={ticketData as any}
+          surveySummary={surveySummary ?? null}
+          associatedAssets={associatedAssets}
+          isAlgaDeskMode={isAlgaDesk}
+          bootstrap={bootstrap}
+          linkedTasksStream={linkedTasksStream}
+        />
+      </Suspense>
+    );
     const detailsContent = (
       <div id="ticket-details-container" className="bg-[rgb(var(--color-app-ground))]">
-        {productCode === 'co_managed' && <CoManagedFeatureBoundary><CoManagedTicketPanel target={{ kind: 'local', ticketId: id }} /></CoManagedFeatureBoundary>}
-        <Suspense fallback={<TicketDetailsSkeleton />}>
-          <MspTicketDetailsContainerClient
-            ticketData={ticketData as any}
-            surveySummary={surveySummary ?? null}
-            associatedAssets={associatedAssets}
-            isAlgaDeskMode={isAlgaDesk}
-            bootstrap={bootstrap}
-            linkedTasksStream={linkedTasksStream}
-          />
-        </Suspense>
+        {productCode === 'co_managed'
+          ? <CoManagedLocalTicketDataSourceProvider ticketId={id}>{ticketScreen}</CoManagedLocalTicketDataSourceProvider>
+          : ticketScreen}
       </div>
     );
 

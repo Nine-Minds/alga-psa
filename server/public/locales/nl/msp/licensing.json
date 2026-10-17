@@ -492,6 +492,13 @@
         "team": "Teams"
       }
     },
+    "section": {
+      "title": "Gezamenlijk beheer",
+      "viewHistory": "Overdrachtsgeschiedenis bekijken",
+      "responsible": "Verantwoordelijke",
+      "change": "Wijzigen",
+      "privateTo": "Privé voor {{organization}}"
+    },
     "ticket": {
       "title": "Ticket in gezamenlijk beheer",
       "escalate": "Escaleren naar MSP",
@@ -668,6 +675,7 @@
         "notReady": "Sommige bestanden zijn nog niet klaar. Probeer opnieuw om de upload te voltooien en hetzelfde bericht te verzenden.",
         "preparationFailed": "De geselecteerde bestanden konden niet worden gelezen. Selecteer ze opnieuw of verwijder ze voordat u het opnieuw probeert.",
         "abandoned": "Dit concept is verwijderd. Sla opnieuw op om een nieuw bericht met de geselecteerde bestanden te maken.",
+        "audienceUnavailable": "Aan berichten voor dit publiek kunnen geen bestanden worden toegevoegd. Verwijder de bestanden of kies een ander publiek.",
         "cancelUnknownOutcome": "We konden de annulering niet bevestigen. Probeer opnieuw om hetzelfde annuleringsverzoek te controleren.",
         "canceling": "Annuleren…"
       }

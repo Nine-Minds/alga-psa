@@ -8,6 +8,7 @@ export * from './departure';
 export * from './policy';
 export * from './sharedWork';
 export * from './sharedWorkRead';
+export * from './sharedTicketDetails';
 export * from './effortTotals';
 export * from './ticketHandoffs';
 export { CoManagedSlaSetupError, recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from './ticketSla';

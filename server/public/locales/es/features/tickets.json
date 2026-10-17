@@ -52,7 +52,6 @@
     "button": "Filtros",
     "unassigned": "Sin asignar",
     "category": "Filtrar por categoría",
-    "clearFilters": "Limpiar filtros",
     "removeFilterChip": "Quitar filtro: {{label}}",
     "assignee": "Asignado",
     "allAssignees": "Todos los asignados",
@@ -217,7 +216,8 @@
     "rowActions": "Acciones",
     "openMenu": "Abrir menú",
     "moreActions": "Más acciones",
-    "createTemplate": "Crear plantilla desde el ticket"
+    "createTemplate": "Crear plantilla desde el ticket",
+    "createWorkflowFromTicket": "Crear flujo de trabajo desde el ticket"
   },
   "messages": {
     "noTickets": "No se encontraron tickets",
@@ -2525,6 +2525,8 @@
     "runningElsewhereTicket": "En marcha en otro ticket: {{label}}",
     "pausedElsewhereTask": "En pausa en otra tarea: {{label}}",
     "runningElsewhereTask": "En marcha en otra tarea: {{label}}",
+    "pausedElsewhereShared": "En pausa en otro elemento compartido: {{label}}",
+    "runningElsewhereShared": "En curso en otro elemento compartido: {{label}}",
     "switch": "Cambiar aquí",
     "start": "Iniciar cronómetro",
     "resume": "Reanudar cronómetro",

@@ -1,6 +1,6 @@
 'use client';
 
-import { discardCommentAttachmentDrafts } from '../../actions/comment-actions/commentAttachmentDraftActions';
+import { useTicketDataSource } from './TicketDataSourceContext';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -10,7 +10,6 @@ import {
   renameClipboardImageForUpload,
   validateClipboardImageFile,
 } from '../../lib/clipboardImageUtils';
-import { deleteDraftClipboardImages as deleteDraftClipboardImagesInternal } from '../../actions/comment-actions/clipboardImageDraftActions';
 import { resolveDocumentViewUrl as resolveDefaultDocumentViewUrl } from '../../lib/documentViewUrl';
 
 export interface TicketRichTextDraftClipboardImage {
@@ -56,6 +55,16 @@ export function useTicketRichTextUploadSession({
   toastApi = toast,
 }: UseTicketRichTextUploadSessionOptions) {
   const { t } = useTranslation('features/tickets');
+  const {
+    discardCommentAttachmentDrafts,
+    deleteDraftClipboardImages: deleteDraftClipboardImagesInternal,
+  } = useTicketDataSource().comments;
+  const editorRestrictions = useTicketDataSource().conversation.editor;
+  // Comment editors share one upload channel for images and files, so either
+  // restriction turns uploads off (the editor then offers no attachment UI).
+  const uploadsRestricted = Boolean(
+    commentAttachments && (editorRestrictions?.disallowImages || editorRestrictions?.disallowFiles),
+  );
   const [draftClipboardImages, setDraftClipboardImages] = useState<TicketRichTextDraftClipboardImage[]>(
     []
   );
@@ -307,6 +316,8 @@ export function useTicketRichTextUploadSession({
   }, [
     componentLabel,
     deleteDraftClipboardImagesAction,
+    discardCommentAttachmentDrafts,
+    deleteDraftClipboardImagesInternal,
     pendingUploads,
     commentAttachments,
     draftClipboardImages,
@@ -326,7 +337,10 @@ export function useTicketRichTextUploadSession({
     resetDraftTracking,
     showDraftCancelDialog,
     setShowDraftCancelDialog,
-    uploadFile,
+    // Typed as always-present for existing callers, who only hand it to an
+    // editor prop; restricted comment editors receive undefined so the editor
+    // offers no attachment UI at all.
+    uploadFile: (uploadsRestricted ? undefined : uploadFile) as typeof uploadFile,
     deleteTrackedDraftClipboardImages,
   };
 }

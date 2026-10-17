@@ -565,7 +565,8 @@
       "exportCsv": "CSV exporteren",
       "exportJson": "JSON exporteren",
       "close": "Sluiten",
-      "viewRunDetails": "Uitvoeringsdetails bekijken"
+      "viewRunDetails": "Uitvoeringsdetails bekijken",
+      "backToEvents": "Terug naar gebeurtenissen"
     },
     "table": {
       "schemaConflict": "catalogus ≠ indiening",
@@ -627,7 +628,8 @@
     },
     "actions": {
       "refresh": "Vernieuwen",
-      "loadMore": "Meer laden"
+      "loadMore": "Meer laden",
+      "backToList": "Terug naar dead-letter"
     },
     "table": {
       "columns": {
@@ -3284,5 +3286,29 @@
       "label": "Causaliteitsdiepte overschreden",
       "hint": "De keten van veroorzaakte gebeurtenissen overschreed de maximale diepte; overgeslagen om op hol geslagen lussen te voorkomen."
     }
+  },
+  "createFromTicket": {
+    "title": "Workflow maken van ticket",
+    "description": "Maakt een conceptworkflow waarvan de eerste stap een ticket zoals #{{number}} aanmaakt. Er wordt niets gepubliceerd.",
+    "cancel": "Annuleren",
+    "creating": "Aanmaken…",
+    "submit": "Concept maken en ontwerper openen",
+    "nameLabel": "Workflownaam",
+    "triggerLabel": "Trigger",
+    "triggerManual": "Handmatig (op verzoek uitvoeren)",
+    "ticketCreatedWarning": "Deze workflow maakt een ticket aan, en een nieuw ticket activeert deze trigger opnieuw. Voeg vóór het publiceren een voorwaarde toe om een lus te voorkomen.",
+    "includeLegend": "Overnemen uit het ticket",
+    "propertiesAlways": "Titel, beschrijving, klant, contactpersoon, bord, categorie en prioriteit worden altijd overgenomen.",
+    "includeAssignment": "Toewijzing",
+    "includeTags": "Labels",
+    "includeCustomFields": "Aangepaste velden",
+    "includeChecklist": "Controlelijst",
+    "errors": {
+      "nameRequired": "Workflownaam is vereist",
+      "generic": "Het conceptworkflow kon niet worden aangemaakt"
+    },
+    "includeCustomFieldsCount": "Aangepaste velden ({{n}})",
+    "includeChecklistCount": "Controlelijst ({{total}} items: {{templates}} uit sjablonen / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Items uit sjablonen worden opnieuw toegepast vanuit het huidige sjabloon, dus wijzigingen op dit ticket worden niet overgenomen."
   }
 }

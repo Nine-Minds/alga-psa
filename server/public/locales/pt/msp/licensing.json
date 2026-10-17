@@ -494,6 +494,13 @@
         "team": "Equipas"
       }
     },
+    "section": {
+      "title": "Cogerenciamento",
+      "viewHistory": "Ver histórico de transferências",
+      "responsible": "Responsável",
+      "change": "Alterar",
+      "privateTo": "Privado para {{organization}}"
+    },
     "ticket": {
       "title": "Chamado cogerenciado",
       "escalate": "Escalar para o MSP",
@@ -670,6 +677,7 @@
         "notReady": "Alguns arquivos não estão prontos. Tente novamente para concluir o envio e publicar a mesma mensagem.",
         "preparationFailed": "Não foi possível ler os arquivos selecionados. Selecione-os novamente ou remova-os antes de tentar de novo.",
         "abandoned": "Este rascunho foi descartado. Salve novamente para criar uma nova mensagem com os arquivos selecionados.",
+        "audienceUnavailable": "Não é possível anexar arquivos a mensagens para este público. Remova os arquivos ou escolha outro público.",
         "cancelUnknownOutcome": "Não foi possível confirmar o cancelamento. Tente novamente para verificar a mesma solicitação de cancelamento.",
         "canceling": "Cancelando…"
       }

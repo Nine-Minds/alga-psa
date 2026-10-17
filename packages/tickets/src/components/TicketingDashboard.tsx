@@ -2397,11 +2397,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 </ListToolbarEnd>
               </ListToolbarRow>
 
-              <ListFilterChips
-                chips={activeFilterChips}
-                clearLabel={t('filters.clearFilters', 'Clear filters')}
-                onClear={handleResetFilters}
-              />
+              <ListFilterChips chips={activeFilterChips} />
 
               {showFilters && (
               <ListFilterPanel>

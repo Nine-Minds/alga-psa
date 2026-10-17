@@ -16,7 +16,7 @@ export const getSharedTicketEditorAction = withAuth(async (user, { tenant }, res
 });
 
 export const searchSharedTicketEditOptionsAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource,
-  input: { field: 'status_id' | 'priority_id'; search?: string; afterId?: string }) => {
+  input: { field: 'status_id' | 'priority_id' | 'category_id'; search?: string; afterId?: string }) => {
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
   return searchCoManagedTicketEditOptions(knex, actor, resource, input);
 });

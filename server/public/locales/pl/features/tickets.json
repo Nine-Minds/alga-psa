@@ -84,7 +84,6 @@
     "button": "Filtry",
     "unassigned": "Nieprzypisane",
     "category": "Filtruj według kategorii",
-    "clearFilters": "Wyczyść filtry",
     "removeFilterChip": "Usuń filtr: {{label}}",
     "assignee": "Przypisany do",
     "allAssignees": "Wszyscy przypisani",
@@ -249,7 +248,8 @@
     "rowActions": "Akcje",
     "openMenu": "Otwórz menu",
     "moreActions": "Więcej akcji",
-    "createTemplate": "Utwórz szablon ze zgłoszenia"
+    "createTemplate": "Utwórz szablon ze zgłoszenia",
+    "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -2671,6 +2671,8 @@
     "runningElsewhereTicket": "Działa przy innym zgłoszeniu: {{label}}",
     "pausedElsewhereTask": "Wstrzymany przy innym zadaniu: {{label}}",
     "runningElsewhereTask": "Działa przy innym zadaniu: {{label}}",
+    "pausedElsewhereShared": "Wstrzymano przy innym współdzielonym elemencie: {{label}}",
+    "runningElsewhereShared": "Trwa przy innym współdzielonym elemencie: {{label}}",
     "switch": "Przełącz tutaj",
     "start": "Uruchom stoper",
     "resume": "Wznów stoper",

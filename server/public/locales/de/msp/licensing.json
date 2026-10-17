@@ -492,6 +492,13 @@
         "team": "Teams"
       }
     },
+    "section": {
+      "title": "Co-Managed",
+      "viewHistory": "Übergabeverlauf anzeigen",
+      "responsible": "Verantwortlich",
+      "change": "Ändern",
+      "privateTo": "Privat für {{organization}}"
+    },
     "ticket": {
       "title": "Co-Managed-Ticket",
       "escalate": "An MSP eskalieren",
@@ -668,6 +675,7 @@
         "notReady": "Einige Dateien sind noch nicht bereit. Versuchen Sie es erneut, um den Upload abzuschließen und dieselbe Nachricht zu senden.",
         "preparationFailed": "Die ausgewählten Dateien konnten nicht gelesen werden. Wählen Sie sie erneut aus oder entfernen Sie sie vor dem nächsten Versuch.",
         "abandoned": "Dieser Entwurf wurde verworfen. Speichern Sie erneut, um eine neue Nachricht mit den ausgewählten Dateien zu erstellen.",
+        "audienceUnavailable": "An Nachrichten für diese Zielgruppe können keine Dateien angehängt werden. Entfernen Sie die Dateien oder wählen Sie eine andere Zielgruppe.",
         "cancelUnknownOutcome": "Die Stornierung konnte nicht bestätigt werden. Versuchen Sie es erneut, um dieselbe Anfrage zu prüfen.",
         "canceling": "Wird abgebrochen…"
       }

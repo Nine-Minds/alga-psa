@@ -5,6 +5,9 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BentoTimelineTile } from './BentoTimelineTile';
+import { TicketDataSourceProvider } from '../TicketDataSourceContext';
+import { composeTicketDataSource } from '../../../lib/ticketDataSource';
+import { nativeTicketDataSource } from '../../../lib/nativeTicketDataSource';
 
 type BentoTimelineTileProps = React.ComponentProps<typeof BentoTimelineTile>;
 
@@ -378,4 +381,24 @@ it('routes history replies and guarded edits to named composition without a lega
   composition.beforeEdit.mockResolvedValue(true);
   fireEvent.click(screen.getByRole('button', { name: 'History edit' }));
   await waitFor(() => expect(onEditComment).toHaveBeenCalledWith(comment));
+});
+
+describe('BentoTimelineTile read-only viewer', () => {
+  const readOnlySource = composeTicketDataSource(nativeTicketDataSource, { screen: { readOnly: true } });
+
+  it('offers no compose affordance to a read-grant viewer', () => {
+    render(
+      <TicketDataSourceProvider dataSource={readOnlySource}>
+        <BentoTimelineTile {...defaultProps} />
+      </TicketDataSourceProvider>,
+    );
+    expect(document.getElementById('ticket-timeline-add-comment-btn')).toBeNull();
+    expect(document.getElementById('ticket-timeline-composer-dock')).toBeNull();
+    expect(document.getElementById('ticket-timeline-composer-top')).toBeNull();
+  });
+
+  it('keeps the Add Comment affordance natively', () => {
+    render(<BentoTimelineTile {...defaultProps} />);
+    expect(document.getElementById('ticket-timeline-add-comment-btn')).not.toBeNull();
+  });
 });

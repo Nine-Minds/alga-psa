@@ -8,7 +8,7 @@ import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { getSharedEffortTotalsAction, type CoManagedEffortTarget } from '@/lib/actions/coManagedTimeActions';
 import { CoManagedFeatureBoundary } from './CoManagedFeatureBoundary';
 
-type Props = { target: CoManagedEffortTarget; refreshKey?: number };
+type Props = { target: CoManagedEffortTarget; refreshKey?: number; /** `inline` is the borderless split shown under a native time summary. */ variant?: 'card' | 'inline' };
 
 export default function CoManagedEffort(props: Props) {
   const { data: session, status } = useSession();
@@ -17,7 +17,7 @@ export default function CoManagedEffort(props: Props) {
   return <CoManagedFeatureBoundary><Effort key={JSON.stringify([user.tenant, user.id, props.target])} {...props} /></CoManagedFeatureBoundary>;
 }
 
-function Effort({ target, refreshKey }: Props) {
+function Effort({ target, refreshKey, variant = 'card' }: Props) {
   const { t } = useTranslation('msp/licensing'), { formatNumber } = useFormatters();
   const qualifiedTarget = useRef(target);
   const [totals, setTotals] = useState<CoManagedEffortTotals | null>(null);
@@ -33,6 +33,15 @@ function Effort({ target, refreshKey }: Props) {
   const fields = ['customerMinutes', 'mspMinutes', 'combinedMinutes'] as const;
   const identity = target.kind === 'shared' ? `${target.resource.tenant}-${target.resource.kind}-${target.resource.id}`
     : target.kind === 'local_project' ? `project-${target.projectId}` : `task-${target.taskId}`;
+  if (variant === 'inline') return <div className="mt-2 space-y-1" id={`co-effort-split-${identity}`} aria-label={t('coManaged.effort.title')}>
+    <p className="text-xs font-medium text-muted-foreground">{t('coManaged.effort.title')}</p>
+    {error ? <p role="alert" className="text-xs">{t('coManaged.effort.error')}</p> : !totals ? <p role="status" className="text-xs text-muted-foreground">{t('coManaged.loading')}</p> :
+      <dl className="grid grid-cols-3 gap-2">{fields.map(field => <div key={field}>
+        <dt className="text-xs text-muted-foreground">{t(`coManaged.effort.${field}`)}</dt>
+        <dd className="text-sm font-semibold tabular-nums">{totals[field] === null ? t('coManaged.effort.unavailable')
+          : t('coManaged.effort.hours', { value: formatNumber(totals[field] / 60, { maximumFractionDigits: 2 }) })}</dd>
+      </div>)}</dl>}
+  </div>;
   return <section className="space-y-3 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4" aria-label={t('coManaged.effort.title')}>
     <div className="flex items-center justify-between gap-3">
       <h2 className="font-semibold">{t('coManaged.effort.title')}</h2>

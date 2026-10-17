@@ -92,6 +92,7 @@ import {
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../lib/workflowTicketCommunicationEvents';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
+import type { TicketWorkflowBlueprint } from '@alga-psa/shared/workflow/runtime/designer/draftFromTicket';
 import {
   copyChecklistFromSource,
   countDuplicableCustomFields,
@@ -386,8 +387,8 @@ async function loadAuthorizedDuplicateSourceRow(
 }
 
 /**
- * The tag and checklist loads shared by the two "copy from a ticket" readers
- * (`getTicketDuplicateSource` and `getTicketTemplateDraftFromTicket`). Callers have already
+ * The tag and checklist loads shared by the "copy from a ticket" readers
+ * (`loadTicketCloneSource` and `getTicketTemplateDraftFromTicket`). Callers have already
  * authorized the source row.
  */
 async function loadTicketCopySources(trx: Knex.Transaction, tenant: string, ticketId: string) {
@@ -891,6 +892,91 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
   }
 });
 
+interface CloneSourceChecklistRow {
+  item_name: string;
+  description: string | null;
+  is_required: boolean;
+  template_id: string | null;
+}
+
+/**
+ * The one query block both "Duplicate ticket" and "Create workflow from ticket" read a source
+ * ticket with. Callers must already have authorized the row (loadAuthorizedDuplicateSourceRow).
+ * Returns the duplicate-form shape plus the raw checklist rows (with description and
+ * template_id) for the workflow blueprint.
+ */
+async function loadTicketCloneSource(
+  trx: Knex.Transaction,
+  tenant: string,
+  source: ITicket & { ticket_id: string }
+): Promise<{ duplicate: TicketDuplicateSource; checklistRows: CloneSourceChecklistRow[] }> {
+  const [client, contact, additionalAgentRows, { tagRows, checklistRows }] = await Promise.all([
+    tenantScopedTable(trx, 'clients', tenant)
+      .where({ client_id: source.client_id })
+      .select('client_id', 'client_name', 'client_type')
+      .first(),
+    source.contact_name_id
+      ? tenantScopedTable(trx, 'contacts', tenant)
+          .where({ contact_name_id: source.contact_name_id })
+          .select('contact_name_id', 'full_name')
+          .first()
+      : Promise.resolve(undefined),
+    (() => {
+      const query = tenantScopedTable(trx, 'ticket_resources as tr', tenant);
+      tenantDb(trx, tenant).tenantJoin(query, 'users as u', 'tr.additional_user_id', 'u.user_id', { type: 'left' });
+      return query
+        .where('tr.ticket_id', source.ticket_id)
+        .orderBy('tr.assigned_at', 'asc')
+        .select('tr.additional_user_id as user_id', 'u.first_name', 'u.last_name');
+    })(),
+    loadTicketCopySources(trx, tenant, source.ticket_id),
+  ]);
+
+  const attributes = (source.attributes ?? {}) as Record<string, unknown>;
+
+  const duplicate = {
+    ticket_id: source.ticket_id,
+    ticket_number: source.ticket_number,
+    title: source.title,
+    description: typeof attributes.description === 'string' ? attributes.description : '',
+    client: {
+      id: source.client_id as string,
+      name: client?.client_name ?? '',
+      type: client?.client_type ?? null,
+    },
+    contact: source.contact_name_id
+      ? { id: source.contact_name_id, name: contact?.full_name ?? '' }
+      : null,
+    location_id: source.location_id ?? null,
+    board_id: source.board_id ?? null,
+    category_id: source.category_id ?? null,
+    subcategory_id: source.subcategory_id ?? null,
+    priority_id: source.priority_id ?? null,
+    itil_impact: source.itil_impact ?? null,
+    itil_urgency: source.itil_urgency ?? null,
+    assigned_to: source.assigned_to ?? null,
+    assigned_team_id: source.assigned_team_id ?? null,
+    additional_agents: additionalAgentRows.map((row: { user_id: string; first_name: string | null; last_name: string | null }) => ({
+      user_id: row.user_id,
+      first_name: row.first_name ?? null,
+      last_name: row.last_name ?? null,
+    })),
+    tags: tagRows.map((tag) => ({
+      tag_id: tag.tag_id,
+      tag_text: tag.tag_text,
+      background_color: tag.background_color ?? null,
+      text_color: tag.text_color ?? null,
+    })),
+    checklist: checklistRows.map((row: CloneSourceChecklistRow) => ({
+      item_name: row.item_name,
+      is_required: row.is_required,
+    })),
+    custom_field_count: countDuplicableCustomFields(source.attributes),
+  } satisfies TicketDuplicateSource;
+
+  return { duplicate, checklistRows };
+}
+
 /**
  * Everything the create-ticket form needs to prefill a duplicate of an existing
  * ticket. MSP (internal) users only, and the caller must be able both to read the
@@ -918,69 +1004,7 @@ export const getTicketDuplicateSource = withAuth(async (
 
       const source = await loadAuthorizedDuplicateSourceRow(trx, tenant, user as IUserWithRoles, ticketId);
 
-      const [client, contact, additionalAgentRows, { tagRows, checklistRows }] = await Promise.all([
-        tenantScopedTable(trx, 'clients', tenant)
-          .where({ client_id: source.client_id })
-          .select('client_id', 'client_name', 'client_type')
-          .first(),
-        source.contact_name_id
-          ? tenantScopedTable(trx, 'contacts', tenant)
-              .where({ contact_name_id: source.contact_name_id })
-              .select('contact_name_id', 'full_name')
-              .first()
-          : Promise.resolve(undefined),
-        (() => {
-          const query = tenantScopedTable(trx, 'ticket_resources as tr', tenant);
-          tenantDb(trx, tenant).tenantJoin(query, 'users as u', 'tr.additional_user_id', 'u.user_id', { type: 'left' });
-          return query
-            .where('tr.ticket_id', source.ticket_id)
-            .orderBy('tr.assigned_at', 'asc')
-            .select('tr.additional_user_id as user_id', 'u.first_name', 'u.last_name');
-        })(),
-        loadTicketCopySources(trx, tenant, source.ticket_id),
-      ]);
-
-      const attributes = (source.attributes ?? {}) as Record<string, unknown>;
-
-      return {
-        ticket_id: source.ticket_id,
-        ticket_number: source.ticket_number,
-        title: source.title,
-        description: typeof attributes.description === 'string' ? attributes.description : '',
-        client: {
-          id: source.client_id as string,
-          name: client?.client_name ?? '',
-          type: client?.client_type ?? null,
-        },
-        contact: source.contact_name_id
-          ? { id: source.contact_name_id, name: contact?.full_name ?? '' }
-          : null,
-        location_id: source.location_id ?? null,
-        board_id: source.board_id ?? null,
-        category_id: source.category_id ?? null,
-        subcategory_id: source.subcategory_id ?? null,
-        priority_id: source.priority_id ?? null,
-        itil_impact: source.itil_impact ?? null,
-        itil_urgency: source.itil_urgency ?? null,
-        assigned_to: source.assigned_to ?? null,
-        assigned_team_id: source.assigned_team_id ?? null,
-        additional_agents: additionalAgentRows.map((row: { user_id: string; first_name: string | null; last_name: string | null }) => ({
-          user_id: row.user_id,
-          first_name: row.first_name ?? null,
-          last_name: row.last_name ?? null,
-        })),
-        tags: tagRows.map((tag) => ({
-          tag_id: tag.tag_id,
-          tag_text: tag.tag_text,
-          background_color: tag.background_color ?? null,
-          text_color: tag.text_color ?? null,
-        })),
-        checklist: checklistRows.map((row: { item_name: string; is_required: boolean }) => ({
-          item_name: row.item_name,
-          is_required: row.is_required,
-        })),
-        custom_field_count: countDuplicableCustomFields(source.attributes),
-      } satisfies TicketDuplicateSource;
+      return (await loadTicketCloneSource(trx, tenant, source)).duplicate;
     });
   } catch (error) {
     const expected = ticketActionErrorFrom(error);
@@ -1040,6 +1064,83 @@ export const getTicketTemplateDraftFromTicket = withAuth(async (
       return expected;
     }
     console.error('Error in getTicketTemplateDraftFromTicket:', error);
+    throw error;
+  }
+});
+
+/**
+ * Everything "Create workflow from ticket" needs about a source ticket (alga-2026-0002502):
+ * the duplicate-source fields plus allowlisted custom-field values and checklist provenance
+ * (description, template id/name/active). MSP users only; ticket:read plus row-level read
+ * authorization. ticket:create is deliberately not required: the draft is authored here and
+ * the created workflow checks it at run time. Whether the caller may author workflows is
+ * enforced by the composing EE action, not by this package.
+ */
+export const getTicketWorkflowBlueprint = withAuth(async (
+  user,
+  { tenant },
+  ticketId: string
+): Promise<TicketWorkflowBlueprint | TicketActionError> => {
+  try {
+    if (user.user_type !== 'internal') {
+      return permissionError('Permission denied: operation not available in client portal');
+    }
+
+    const { knex: db } = await createTenantKnex();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view ticket');
+      }
+
+      const source = await loadAuthorizedDuplicateSourceRow(trx, tenant, user as IUserWithRoles, ticketId);
+      const { duplicate, checklistRows } = await loadTicketCloneSource(trx, tenant, source);
+
+      const templateIds = Array.from(
+        new Set(checklistRows.map((row) => row.template_id).filter((id): id is string => Boolean(id)))
+      );
+      const templateRows: { template_id: string; name: string; is_active: boolean }[] = templateIds.length
+        ? await tenantScopedTable(trx, 'checklist_templates', tenant)
+            .whereIn('template_id', templateIds)
+            .select('template_id', 'name', 'is_active')
+        : [];
+      const templatesById = new Map(templateRows.map((row) => [row.template_id, row]));
+
+      return {
+        ticket_id: duplicate.ticket_id,
+        ticket_number: duplicate.ticket_number,
+        title: duplicate.title,
+        description: duplicate.description,
+        client: duplicate.client,
+        contact: duplicate.contact,
+        location_id: duplicate.location_id,
+        board_id: duplicate.board_id,
+        category_id: duplicate.category_id,
+        subcategory_id: duplicate.subcategory_id,
+        priority_id: duplicate.priority_id,
+        assigned_to: duplicate.assigned_to,
+        assigned_team_id: duplicate.assigned_team_id,
+        additional_agents: duplicate.additional_agents,
+        tags: duplicate.tags.map((tag) => ({ tag_id: tag.tag_id, tag_text: tag.tag_text })),
+        custom_fields: (pickDuplicableAttributes(source.attributes).custom_fields ?? {}) as Record<string, unknown>,
+        checklist: checklistRows.map((row) => {
+          const template = row.template_id ? templatesById.get(row.template_id) : undefined;
+          return {
+            item_name: row.item_name,
+            description: row.description ?? null,
+            is_required: row.is_required,
+            template_id: row.template_id ?? null,
+            template_name: template?.name ?? null,
+            template_is_active: template ? Boolean(template.is_active) : null,
+          };
+        }),
+      } satisfies TicketWorkflowBlueprint;
+    });
+  } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error in getTicketWorkflowBlueprint:', error);
     throw error;
   }
 });

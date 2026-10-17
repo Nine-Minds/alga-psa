@@ -1230,6 +1230,7 @@
       "usageBasedPlans": "Verbruiksplannen",
       "recurringQuantityLabel": "Terugkerende hoeveelheid:",
       "unitRateLabel": "Eenheidstarief:",
+      "hourlyRateLabel": "Uurtarief:",
       "unitRateFromCatalog": "Catalogusprijs in de valuta van de klant",
       "unitAmountLabel": "Terugkerend bedrag:",
       "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"

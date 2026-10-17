@@ -1131,7 +1131,10 @@
       "duplicateShortName": "A configuration with this short name already exists",
       "createFailed": "Failed to create inbound ticket defaults. Please try again.",
       "notFound": "Defaults configuration not found",
-      "updateFailed": "Failed to update inbound ticket defaults. Please try again."
+      "updateFailed": "Failed to update inbound ticket defaults. Please try again.",
+      "locationRequiresClient": "Select a client before selecting a location",
+      "locationClientMismatch": "The selected location does not belong to the selected client",
+      "referencedByProviders": "This configuration is still used by the following email providers: {{providers}}. Select different inbound ticket defaults on those providers before deleting it."
     },
     "ticketFieldOptions": {
       "permissionDenied": "Permission denied: Cannot read ticket field options",

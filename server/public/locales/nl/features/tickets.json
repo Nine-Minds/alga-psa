@@ -52,7 +52,6 @@
     "button": "Filters",
     "unassigned": "Niet toegewezen",
     "category": "Filter op categorie",
-    "clearFilters": "Filters wissen",
     "removeFilterChip": "Filter verwijderen: {{label}}",
     "assignee": "Toegewezene",
     "allAssignees": "Alle toegewezen personen",
@@ -217,7 +216,8 @@
     "rowActions": "Acties",
     "openMenu": "Menu openen",
     "moreActions": "Meer acties",
-    "createTemplate": "Sjabloon maken van ticket"
+    "createTemplate": "Sjabloon maken van ticket",
+    "createWorkflowFromTicket": "Workflow maken van ticket"
   },
   "messages": {
     "noTickets": "Geen tickets gevonden",
@@ -2525,6 +2525,8 @@
     "runningElsewhereTicket": "Loopt op een ander ticket: {{label}}",
     "pausedElsewhereTask": "Gepauzeerd op een andere taak: {{label}}",
     "runningElsewhereTask": "Loopt op een andere taak: {{label}}",
+    "pausedElsewhereShared": "Gepauzeerd op een ander gedeeld item: {{label}}",
+    "runningElsewhereShared": "Actief op een ander gedeeld item: {{label}}",
     "switch": "Hier naartoe wisselen",
     "start": "Stopwatch starten",
     "resume": "Stopwatch hervatten",

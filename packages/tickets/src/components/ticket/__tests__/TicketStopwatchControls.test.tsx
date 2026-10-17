@@ -9,6 +9,8 @@ import {
   type StopwatchContextValue,
 } from '@alga-psa/ui/context';
 import { TicketStopwatchControls } from '../TicketStopwatchControls';
+import { TicketDataSourceProvider } from '../TicketDataSourceContext';
+import { nativeTicketDataSource } from '../../../lib/nativeTicketDataSource';
 
 vi.mock('@alga-psa/ui', () => ({
   useDrawer: () => ({ openDrawer: vi.fn(), closeDrawer: vi.fn(), replaceDrawer: vi.fn() }),
@@ -174,5 +176,52 @@ describe('TicketStopwatchControls', () => {
 
     fireEvent.blur(screen.getByPlaceholderText('What are you working on?'));
     expect(value.updateNotes).toHaveBeenCalledWith('Replaced toner');
+  });
+
+  describe('shared (co_managed) work item resolved by the data source', () => {
+    const sharedSource = (workItemType: any, workItemId: string): any => ({
+      ...nativeTicketDataSource,
+      time: { resolveWorkItem: () => ({ workItemType, workItemId }) },
+    });
+    const renderShared = (value: StopwatchContextValue, dataSource: any) =>
+      render(
+        <StopwatchContextProvider value={value}>
+          <TicketDataSourceProvider dataSource={dataSource}>
+            <TicketStopwatchControls id="t" ticketId="customer-ticket" enabled timeDescription=" shared " onTimeDescriptionChange={vi.fn()} />
+          </TicketDataSourceProvider>
+        </StopwatchContextProvider>,
+      );
+
+    it('starts a co_managed clock on the work reference, never on the customer ticket id', () => {
+      const value = makeValue(null);
+      renderShared(value, sharedSource('co_managed', 'reference-1'));
+
+      fireEvent.click(screen.getByTestId('t-stopwatch-start'));
+      expect(value.start).toHaveBeenCalledWith(
+        { workItemType: 'co_managed', workItemId: 'reference-1', notes: 'shared' },
+        expect.any(Function),
+      );
+    });
+
+    it('treats a co_managed session on this reference as this item, and Stop hands it to the launcher', () => {
+      const value = makeValue(makeSession({ work_item_type: 'co_managed', work_item_id: 'reference-1' }));
+      renderShared(value, sharedSource('co_managed', 'reference-1'));
+
+      expect(document.getElementById('t-stopwatch-elsewhere')).toBeNull();
+      fireEvent.click(screen.getByTestId('t-stopwatch-stop'));
+      expect(value.requestStop).toHaveBeenCalledWith(expect.any(Function));
+    });
+
+    it('names a shared clock running elsewhere', () => {
+      const value = makeValue(makeSession({ work_item_type: 'co_managed', work_item_id: 'reference-2', ticket_number: '300', work_item_title: 'Shared VPN' }));
+      renderShared(value, sharedSource('ticket', 'ticket-1'));
+
+      expect(document.getElementById('t-stopwatch-elsewhere')).toHaveTextContent('Running on another shared item: #300 Shared VPN');
+    });
+
+    it('stays hidden for work item types the stopwatch cannot track (a shared item not yet resolved)', () => {
+      renderShared(makeValue(null), sharedSource('ad_hoc', ''));
+      expect(screen.queryByTestId('t-stopwatch-start')).toBeNull();
+    });
   });
 });

@@ -2747,7 +2747,7 @@ export async function updateTicketInTransaction(
         : { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user.user_id, displayName: formatLiveUpdateDisplayName(user) };
     if (collaboration) {
       // LEVERAGE: friction qualified-ticket-mutation — routing/assignment and bundle fan-out need their own qualified authority before joining this core.
-      const allowed = new Set(['title', 'url', 'status_id', 'priority_id', 'due_date', 'response_state']);
+      const allowed = new Set(['title', 'url', 'status_id', 'priority_id', 'due_date', 'response_state', 'category_id', 'subcategory_id', 'attributes']);
       if (requestedFields.some(key => !allowed.has(key))) throw new Error('Unsupported shared ticket edit fields');
       await collaboration.assertWriteAuthority(trx);
     }
@@ -2760,6 +2760,18 @@ export async function updateTicketInTransaction(
 
     if (!currentTicket) {
       throw new Error('Ticket not found');
+    }
+
+    if (collaboration) {
+      // A shared edit may clear the subcategory and rewrite only the rich-text
+      // description inside attributes; the rest of the document (e.g. the watch
+      // list) is customer-owned and must be carried over unchanged.
+      if ('subcategory_id' in data && data.subcategory_id !== null) throw new Error('Shared ticket edits can only clear the subcategory');
+      if ('attributes' in data) {
+        const { description: _next, ...nextRest } = (data.attributes ?? {}) as Record<string, unknown>;
+        const { description: _current, ...currentRest } = (currentTicket.attributes ?? {}) as Record<string, unknown>;
+        if (JSON.stringify(nextRest) !== JSON.stringify(currentRest)) throw new Error('Shared ticket edits can only change the description attribute');
+      }
     }
 
     // Bundled child tickets lock workflow fields by default

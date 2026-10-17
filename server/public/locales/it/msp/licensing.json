@@ -494,6 +494,13 @@
         "team": "Team"
       }
     },
+    "section": {
+      "title": "Cogestione",
+      "viewHistory": "Visualizza cronologia dei passaggi",
+      "responsible": "Responsabile",
+      "change": "Modifica",
+      "privateTo": "Privato per {{organization}}"
+    },
     "ticket": {
       "title": "Ticket cogestito",
       "escalate": "Inoltra all’MSP",
@@ -670,6 +677,7 @@
         "notReady": "Alcuni file non sono pronti. Riprova per completare il caricamento e inviare lo stesso messaggio.",
         "preparationFailed": "Impossibile leggere i file selezionati. Selezionali di nuovo o rimuovili prima di riprovare.",
         "abandoned": "Questa bozza è stata eliminata. Salva di nuovo per creare un nuovo messaggio con i file selezionati.",
+        "audienceUnavailable": "Non è possibile allegare file ai messaggi per questo pubblico. Rimuovi i file o scegli un altro pubblico.",
         "cancelUnknownOutcome": "Impossibile confermare l’annullamento. Riprova per verificare la stessa richiesta di annullamento.",
         "canceling": "Annullamento…"
       }

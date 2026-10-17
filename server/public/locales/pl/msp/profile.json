@@ -503,6 +503,8 @@
         "sending": "Wysyłanie…",
         "rotateSecret": "Rotuj sekret",
         "rotating": "Rotacja…",
+        "retryFailed": "Ponów nieudane dostarczenia",
+        "retryingFailed": "Ponawianie…",
         "back": "Wstecz do webhooków"
       },
       "deliveries": {
@@ -544,6 +546,8 @@
         "stateChangeFailed": "Nie udało się zaktualizować stanu webhooka.",
         "retryQueued": "Ponowienie w kolejce dla zdarzenia {{eventId}}.",
         "retryFailed": "Nie udało się ponowić dostarczenia.",
+        "retryFailedQueued": "{{queued}} dostarczeń w kolejce do ponowienia, {{skipped}} pominiętych.",
+        "retryFailedFailed": "Nie udało się ponowić nieudanych dostarczeń.",
         "invalidHeaderLine": "Nieprawidłowa linia nagłówka: \"{{line}}\"",
         "invalidRetryConfig": "Konfiguracja ponowień musi być obiektem JSON"
       },

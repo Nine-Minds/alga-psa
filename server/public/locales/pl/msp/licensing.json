@@ -496,6 +496,13 @@
         "team": "Zespoły"
       }
     },
+    "section": {
+      "title": "Współzarządzanie",
+      "viewHistory": "Wyświetl historię przekazań",
+      "responsible": "Odpowiedzialny",
+      "change": "Zmień",
+      "privateTo": "Prywatne dla {{organization}}"
+    },
     "ticket": {
       "title": "Zgłoszenie współzarządzane",
       "escalate": "Eskaluj do MSP",
@@ -674,6 +681,7 @@
         "notReady": "Niektóre pliki nie są gotowe. Spróbuj ponownie, aby dokończyć przesyłanie i wysłać tę samą wiadomość.",
         "preparationFailed": "Nie można odczytać wybranych plików. Wybierz je ponownie lub usuń przed ponowną próbą.",
         "abandoned": "Ten szkic został odrzucony. Zapisz ponownie, aby utworzyć nową wiadomość z wybranymi plikami.",
+        "audienceUnavailable": "Do wiadomości dla tych odbiorców nie można dołączać plików. Usuń pliki lub wybierz innych odbiorców.",
         "cancelUnknownOutcome": "Nie można potwierdzić anulowania. Spróbuj ponownie, aby sprawdzić to samo żądanie anulowania.",
         "canceling": "Anulowanie…"
       }

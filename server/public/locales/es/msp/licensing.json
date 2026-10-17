@@ -494,6 +494,13 @@
         "team": "Equipos"
       }
     },
+    "section": {
+      "title": "Cogestión",
+      "viewHistory": "Ver historial de traspasos",
+      "responsible": "Responsable",
+      "change": "Cambiar",
+      "privateTo": "Privado para {{organization}}"
+    },
     "ticket": {
       "title": "Ticket cogestionado",
       "escalate": "Escalar al MSP",
@@ -670,6 +677,7 @@
         "notReady": "Algunos archivos no están listos. Reintente para terminar la carga y enviar el mismo mensaje.",
         "preparationFailed": "No se pudieron leer los archivos seleccionados. Selecciónelos de nuevo o quítelos antes de reintentar.",
         "abandoned": "Se descartó este borrador. Guarde de nuevo para crear un mensaje nuevo con los archivos seleccionados.",
+        "audienceUnavailable": "No se pueden adjuntar archivos a los mensajes de esta audiencia. Quite los archivos o elija otra audiencia.",
         "cancelUnknownOutcome": "No pudimos confirmar la cancelación. Reintente para comprobar la misma solicitud de cancelación.",
         "canceling": "Cancelando…"
       }
