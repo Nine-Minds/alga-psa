@@ -217,6 +217,29 @@ describe("AuditSessionScreen", () => {
     );
   });
 
+  it("T119 a second scan of an unexpected asset only toasts, so it cannot be promoted", async () => {
+    mocks.getAssetAudit.mockResolvedValue(
+      auditWith([
+        ...EXPECTED_ITEMS,
+        { asset_id: "a-9", result: "unexpected", asset_name: "Stray", asset_tag: "A-9" },
+      ]),
+    );
+    mocks.lookupInventoryCode.mockResolvedValue({
+      ok: true,
+      data: { data: { type: "asset", asset: { asset_id: "a-9" } } },
+    });
+    const renderer = await renderScreen();
+
+    await act(async () => scanner(renderer).props.onScan("CODE-9"));
+    await flush();
+
+    expect(mocks.markAssetAuditItem).not.toHaveBeenCalled();
+    expect(mocks.showToast).toHaveBeenCalledWith({
+      message: "Already recorded as unexpected",
+      tone: "info",
+    });
+  });
+
   it("T065 an unknown code offers Register asset and marks the new asset", async () => {
     mocks.lookupInventoryCode.mockResolvedValue({ ok: true, data: { data: { type: "none", candidates: [] } } });
     const renderer = await renderScreen();

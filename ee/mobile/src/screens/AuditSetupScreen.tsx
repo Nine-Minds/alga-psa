@@ -10,7 +10,7 @@ import { EntityPickerModal, type EntityPickerItem } from "../ui/components/Entit
 import { ErrorState } from "../ui/states";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
-import { createApiClient } from "../api";
+import { createApiClient, type ApiClient } from "../api";
 import { listAssetStatuses, listAssets, type AssetStatusKind, type AssetStatusOption } from "../api/assets";
 import { startAssetAudit } from "../api/assetAudits";
 import { listClients, type ClientListItem } from "../api/clients";
@@ -30,6 +30,36 @@ export function defaultAuditStatuses(statuses: AssetStatusOption[]): string[] {
 
 /** The "No location" choice; the API takes null for "assets with no location". */
 export const NO_LOCATION_ID = "__none__";
+
+/**
+ * Size of the scope the audit is about to snapshot, counted the way the server
+ * builds it. The v1 list takes one status slug at a time and the slugs partition
+ * the assets, so the scope is the sum of the per-status totals. "No location" is
+ * the one scope the list cannot express — it has no null-location filter — so it
+ * reports no count rather than one that disagrees with the snapshot.
+ */
+export async function countExpectedAssets(
+  client: ApiClient,
+  params: { apiKey: string; clientId: string; locationId: string; statuses: string[]; signal?: AbortSignal },
+): Promise<number | null> {
+  if (params.locationId === NO_LOCATION_ID) return null;
+  const slugs: Array<string | undefined> = params.statuses.length > 0 ? params.statuses : [undefined];
+  let total = 0;
+  for (const status of slugs) {
+    const result = await listAssets(client, {
+      apiKey: params.apiKey,
+      page: 1,
+      limit: 1,
+      client_id: params.clientId,
+      location_id: params.locationId,
+      status,
+      signal: params.signal,
+    });
+    if (!result.ok) return null;
+    total += result.data.pagination.total;
+  }
+  return total;
+}
 
 export function AuditSetupScreen({ navigation }: Props) {
   const { t } = useTranslation("assets");
@@ -103,27 +133,25 @@ export function AuditSetupScreen({ navigation }: Props) {
     [apiKey, client],
   );
 
-  // A dry one-row request answers "how many devices will this audit expect?"
+  // Dry one-row requests answer "how many devices will this audit expect?"
   // without pulling the list.
   useEffect(() => {
-    if (!client || !apiKey || !clientId) {
+    if (!client || !apiKey || !clientId || !locationId) {
       setExpectedCount(null);
       return;
     }
     let canceled = false;
     void (async () => {
       setCounting(true);
-      const result = await listAssets(client, {
+      const count = await countExpectedAssets(client, {
         apiKey,
-        page: 1,
-        limit: 1,
-        client_id: clientId,
-        location_id: locationId && locationId !== NO_LOCATION_ID ? locationId : undefined,
-        status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
+        clientId,
+        locationId,
+        statuses: selectedStatuses,
       });
       if (canceled) return;
       setCounting(false);
-      setExpectedCount(result.ok ? result.data.pagination.total : null);
+      setExpectedCount(count);
     })();
     return () => {
       canceled = true;
@@ -131,14 +159,14 @@ export function AuditSetupScreen({ navigation }: Props) {
   }, [apiKey, client, clientId, locationId, selectedStatuses]);
 
   const start = useCallback(async () => {
-    if (!client || !apiKey || !clientId) return;
+    if (!client || !apiKey || !clientId || !locationId) return;
     setStarting(true);
     setError(null);
     const result = await startAssetAudit(client, {
       apiKey,
       data: {
         client_id: clientId,
-        location_id: locationId && locationId !== NO_LOCATION_ID ? locationId : null,
+        location_id: locationId === NO_LOCATION_ID ? null : locationId,
         statuses: selectedStatuses,
       },
     });
@@ -178,7 +206,7 @@ export function AuditSetupScreen({ navigation }: Props) {
         <Row
           testID="audit-setup-location"
           label={t("list.location", "Location")}
-          value={locationName ?? t("audit.anyLocation", "All of this client's devices")}
+          value={locationName ?? t("audit.pickLocation", "Pick a location")}
           disabled={!clientId}
           onPress={() => {
             if (!clientId) return;
@@ -242,7 +270,7 @@ export function AuditSetupScreen({ navigation }: Props) {
           </View>
         ))}
 
-        {clientId ? (
+        {clientId && locationId ? (
           <Text
             testID="audit-setup-expected"
             style={{ ...theme.typography.body, color: theme.colors.text, marginTop: theme.spacing.lg }}
@@ -269,7 +297,7 @@ export function AuditSetupScreen({ navigation }: Props) {
         <PrimaryButton
           testID="audit-setup-start"
           onPress={() => void start()}
-          disabled={!clientId || starting}
+          disabled={!clientId || !locationId || starting}
         >
           {t("audit.start", "Start audit")}
         </PrimaryButton>

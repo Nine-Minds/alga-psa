@@ -206,15 +206,25 @@ export function AuditSessionScreen({ navigation, route }: Props) {
       }
 
       const assetId = result.asset.asset_id;
-      const already = segments.present.find((item) => item.asset_id === assetId);
+      // A device already recorded — present or unexpected — is only confirmed
+      // back to the technician; the server never promotes an unexpected one.
+      const already =
+        segments.present.find((item) => item.asset_id === assetId) ??
+        segments.unexpected.find((item) => item.asset_id === assetId);
       if (already) {
-        showToast({ message: t("audit.alreadyPresent", "Already marked present"), tone: "info" });
+        showToast({
+          message:
+            already.result === "unexpected"
+              ? t("audit.alreadyUnexpected", "Already recorded as unexpected")
+              : t("audit.alreadyPresent", "Already marked present"),
+          tone: "info",
+        });
         return;
       }
       const inScope = segments.remaining.some((item) => item.asset_id === assetId);
       await mark(assetId, "scan", inScope ? "present" : "unexpected");
     },
-    [apiKey, client, mark, offline, segments.present, segments.remaining, showToast, t],
+    [apiKey, client, mark, offline, segments.present, segments.remaining, segments.unexpected, showToast, t],
   );
 
   const finish = useCallback(async () => {

@@ -97,6 +97,14 @@ async function pickClient(renderer: ReactTestRenderer) {
   await flush();
 }
 
+async function pickLocation(renderer: ReactTestRenderer, id: string, label: string) {
+  await act(async () => renderer.root.find((n) => n.props?.testID === "audit-setup-location").props.onPress());
+  await flush();
+  const picker = renderer.root.findAll((n) => n.props?.onSelect && n.props?.title === "Select a location")[0];
+  await act(async () => picker.props.onSelect(id, label));
+  await flush();
+}
+
 describe("AuditSetupScreen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -114,15 +122,46 @@ describe("AuditSetupScreen", () => {
     expect(defaultAuditStatuses(STATUSES)).toEqual(["active", "in_stock", "maintenance"]);
   });
 
-  it("T059 enables Start only with a client and shows the expected count", async () => {
+  it("T059 enables Start only once a client and a location are chosen", async () => {
     const renderer = await renderScreen();
 
     expect(renderer.root.find((n) => n.props?.testID === "audit-setup-start").props.disabled).toBe(true);
 
     await pickClient(renderer);
+    expect(renderer.root.find((n) => n.props?.testID === "audit-setup-start").props.disabled).toBe(true);
+
+    await pickLocation(renderer, "loc-1", "HQ");
 
     expect(renderer.root.find((n) => n.props?.testID === "audit-setup-start").props.disabled).toBe(false);
-    expect(texts(renderer)).toContain("16 devices expected");
+    // Three default status slugs, each counted against the chosen location.
+    expect(texts(renderer)).toContain("48 devices expected");
+  });
+
+  it("T118 counts the scope the server will snapshot: location filter, one request per status", async () => {
+    const renderer = await renderScreen();
+    await pickClient(renderer);
+    mocks.listAssets.mockClear();
+    await pickLocation(renderer, "loc-1", "HQ");
+
+    const scopes = mocks.listAssets.mock.calls.map(([, params]) => ({
+      client_id: params.client_id,
+      location_id: params.location_id,
+      status: params.status,
+    }));
+    expect(scopes).toEqual([
+      { client_id: "cl-1", location_id: "loc-1", status: "active" },
+      { client_id: "cl-1", location_id: "loc-1", status: "in_stock" },
+      { client_id: "cl-1", location_id: "loc-1", status: "maintenance" },
+    ]);
+  });
+
+  it("T118 reports no count for the No location scope the list cannot express", async () => {
+    const renderer = await renderScreen();
+    await pickClient(renderer);
+    await pickLocation(renderer, NO_LOCATION_ID, "No location");
+
+    expect(texts(renderer)).toContain("Device count unavailable.");
+    expect(texts(renderer)).not.toContain("16 devices expected");
   });
 
   it("the location row stays disabled until a client is chosen", async () => {
@@ -136,11 +175,7 @@ describe("AuditSetupScreen", () => {
   it("starts the audit with the chosen scope and replaces the route with the session", async () => {
     const renderer = await renderScreen();
     await pickClient(renderer);
-
-    await act(async () => renderer.root.find((n) => n.props?.testID === "audit-setup-location").props.onPress());
-    await flush();
-    const locationPicker = renderer.root.findAll((n) => n.props?.onSelect && n.props?.title === "Select a location")[0];
-    await act(async () => locationPicker.props.onSelect("loc-1", "HQ"));
+    await pickLocation(renderer, "loc-1", "HQ");
 
     await act(async () => renderer.root.find((n) => n.props?.testID === "audit-setup-start").props.onPress());
     await flush();
@@ -163,6 +198,7 @@ describe("AuditSetupScreen", () => {
     const locationPicker = renderer.root.findAll((n) => n.props?.onSelect && n.props?.title === "Select a location")[0];
     expect(locationPicker.props.items[0].id).toBe(NO_LOCATION_ID);
     await act(async () => locationPicker.props.onSelect(NO_LOCATION_ID, "No location"));
+    await flush();
 
     await act(async () => renderer.root.find((n) => n.props?.testID === "audit-setup-start").props.onPress());
     await flush();
@@ -177,6 +213,7 @@ describe("AuditSetupScreen", () => {
     mocks.startAssetAudit.mockResolvedValue({ ok: false, error: { kind: "server", message: "boom", status: 500 } });
     const renderer = await renderScreen();
     await pickClient(renderer);
+    await pickLocation(renderer, "loc-1", "HQ");
 
     await act(async () => renderer.root.find((n) => n.props?.testID === "audit-setup-start").props.onPress());
     await flush();
