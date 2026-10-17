@@ -83,6 +83,13 @@ export interface SendEmailParams {
     commentId?: string;
     threadId?: string;
     conversationToken?: string;
+    /**
+     * Default true. When false, no reply token is minted, no reply markers are added to the
+     * body and no `email_reply_tokens` row is persisted. The `[Ticket #N]` subject and the
+     * thread headers are kept, so a reply is matched by thread headers (which check the
+     * sender) rather than by a token (which does not).
+     */
+    issueReplyToken?: boolean;
   };
   from?: EmailAddress;
   /**
@@ -530,8 +537,10 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     text += attachmentDownloadText;
 
     let replyPayload: ReplyMarkerPayload | null = null;
-    let effectiveReplyContext = params.replyContext;
-    if (params.replyContext?.ticketId || params.replyContext?.projectId) {
+    // `issueReplyToken` is an sendEventEmail-only option; it never reaches the email service.
+    const { issueReplyToken, ...replyContextForService } = params.replyContext ?? {};
+    let effectiveReplyContext = params.replyContext ? replyContextForService : undefined;
+    if (issueReplyToken !== false && (params.replyContext?.ticketId || params.replyContext?.projectId)) {
       replyPayload = {
         token: params.replyContext.conversationToken || randomUUID(),
         ticketId: params.replyContext.ticketId,
@@ -540,7 +549,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         threadId: params.replyContext.threadId,
       };
       effectiveReplyContext = {
-        ...params.replyContext,
+        ...replyContextForService,
         conversationToken: replyPayload.token,
       };
 

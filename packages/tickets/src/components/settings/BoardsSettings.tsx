@@ -41,6 +41,7 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import { EmailRecipientsInput } from '@alga-psa/ui/components/EmailRecipientsInput';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { getTeams } from '@alga-psa/teams/actions/team-actions/teamActions';
@@ -133,6 +134,7 @@ interface EditableNotificationRule {
   status_ids: string[];
   user_ids: string[];
   team_ids: string[];
+  email_addresses: string[];
   is_enabled: boolean;
 }
 
@@ -143,6 +145,7 @@ function createEmptyNotificationRule(index: number): EditableNotificationRule {
     status_ids: [],
     user_ids: [],
     team_ids: [],
+    email_addresses: [],
     is_enabled: true,
   };
 }
@@ -597,6 +600,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
   const [autoCloseRulesForm, setAutoCloseRulesForm] = useState<EditableAutoCloseRule[]>([]);
   const [removedAutoCloseRuleIds, setRemovedAutoCloseRuleIds] = useState<string[]>([]);
   const [notificationRules, setNotificationRules] = useState<EditableNotificationRule[]>([]);
+  // Free-text entries the chip input rejected, keyed by rule temp_id. Not persisted; any entry blocks save.
+  const [invalidNotificationEmails, setInvalidNotificationEmails] = useState<Record<string, string[]>>({});
   const [defaultWatcherUserIds, setDefaultWatcherUserIds] = useState<string[]>([]);
   // Accordion editor: per-section collapse state + dirty tracking against an on-open baseline
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(collapsedExceptFirstSection);
@@ -856,6 +861,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             status_ids: rule.status_ids,
             user_ids: rule.user_ids,
             team_ids: rule.team_ids,
+            email_addresses: rule.email_addresses ?? [],
             is_enabled: rule.is_enabled,
           }))
         );
@@ -902,6 +908,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     setCloseRulesForm(createEmptyCloseRulesForm());
     setAutoCloseRulesForm([]);
     setNotificationRules([]);
+    setInvalidNotificationEmails({});
     setDefaultWatcherUserIds([]);
 
     await reloadBoardEditorData(board);
@@ -1087,6 +1094,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
         status_ids: rule.status_ids,
         user_ids: rule.user_ids,
         team_ids: rule.team_ids,
+        email_addresses: rule.email_addresses,
         is_enabled: rule.is_enabled,
       })),
       default_watcher_user_ids: defaultWatcherUserIds,
@@ -1134,8 +1142,12 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           failInSection('notifications', t('ticketing.boards.editor.sections.notificationsTriggerRequired', 'Each notification rule needs at least one trigger: ticket creation or a status.'));
           return;
         }
-        if (rule.user_ids.length === 0 && rule.team_ids.length === 0) {
-          failInSection('notifications', t('ticketing.boards.editor.sections.notificationsRecipientRequired', 'Each notification rule needs at least one user or team to notify.'));
+        if ((invalidNotificationEmails[rule.temp_id] ?? []).length > 0) {
+          failInSection('notifications', t('ticketing.boards.editor.sections.notificationsEmailInvalid', 'Fix or remove the invalid email addresses in the notification rules.'));
+          return;
+        }
+        if (rule.user_ids.length === 0 && rule.team_ids.length === 0 && rule.email_addresses.length === 0) {
+          failInSection('notifications', t('ticketing.boards.editor.sections.notificationsRecipientRequired', 'Each notification rule needs at least one user, team or email address to notify.'));
           return;
         }
       }
@@ -1462,6 +1474,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     setIsLoadingBoardStatuses(false);
     setIsLoadingCloseRules(false);
     setNotificationRules([]);
+    setInvalidNotificationEmails({});
     setDefaultWatcherUserIds([]);
     setCollapsedSections(collapsedExceptFirstSection());
     setFormSnapshot(null);
@@ -2285,6 +2298,29 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                     <p className="text-xs text-muted-foreground mt-1">
                       {t('ticketing.boards.editor.sections.notificationsRecipientsHelp', 'Team members are looked up each time a notification is sent.')}
                     </p>
+
+                    <div className="mt-3">
+                      <Label htmlFor={`board-notification-rule-${index}-emails`}>
+                        {t('ticketing.boards.editor.sections.notificationsEmails', 'Email addresses')}
+                      </Label>
+                      <EmailRecipientsInput
+                        id={`board-notification-rule-${index}-emails`}
+                        value={rule.email_addresses.map((email) => ({ email }))}
+                        onChange={(chips) => updateRule({ email_addresses: chips.map((chip) => chip.email) })}
+                        invalidEntries={invalidNotificationEmails[rule.temp_id] ?? []}
+                        onInvalidEntriesChange={(entries) =>
+                          setInvalidNotificationEmails((prev) => ({ ...prev, [rule.temp_id]: entries }))
+                        }
+                        placeholder={t('ticketing.boards.editor.sections.notificationsEmailsPlaceholder', 'Add a distribution list or shared mailbox...')}
+                      />
+                      <p
+                        id={`board-notification-rule-${index}-emails-warning`}
+                        className="mt-1 flex items-start gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-700"
+                      >
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span>{t('ticketing.boards.editor.sections.notificationsEmailsHelp', 'These addresses receive the full ticket details for every matching ticket on this board, even though they are not Alga users and no permission check applies. Use for distribution lists you control. To notify a person who has an Alga account, choose them above instead.')}</span>
+                      </p>
+                    </div>
                   </div>
                 </div>
               );
