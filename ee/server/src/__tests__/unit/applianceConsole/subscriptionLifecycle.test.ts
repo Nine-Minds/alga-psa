@@ -6,7 +6,7 @@ vi.mock('@alga-psa/core/logger', () => ({
 
 const c4 = vi.hoisted(() => ({
   AlgaLicenseHttpError: class AlgaLicenseHttpError extends Error {
-    constructor(message: string, readonly status: number) {
+    constructor(message: string, readonly status: number, readonly code?: string) {
       super(message);
     }
   },
@@ -45,6 +45,10 @@ function subscription(overrides: Record<string, unknown> = {}): any {
 function event(type: string, object: unknown, previous_attributes?: Record<string, unknown>): any {
   return { id: 'evt_1', type, created: 1_789_000_000, data: { object, ...(previous_attributes ? { previous_attributes } : {}) } };
 }
+
+// alga-license's real "no entitlement" 404 carries code 'not_found'; Fastify's unknown-route 404 has none.
+const notFound = () => new c4.AlgaLicenseHttpError('HTTP 404 — No active entitlement (not_found)', 404, 'not_found');
+const routeMissing = () => new c4.AlgaLicenseHttpError('HTTP 404 Route not found', 404);
 
 function deps() {
   return {
@@ -241,7 +245,7 @@ describe('appliance subscription lifecycle', () => {
   it('treats a C4 404 on reactivate as nothing to do: warns, action none, no seat sync, no throw', async () => {
     const active = subscription();
     stripe.subscriptions.retrieve.mockResolvedValue(active);
-    c4.reactivateApplianceEntitlement.mockRejectedValue(new c4.AlgaLicenseHttpError('HTTP 404 not_found', 404));
+    c4.reactivateApplianceEntitlement.mockRejectedValue(notFound());
     const outcome = await handleApplianceSubscriptionEvent(event('customer.subscription.updated', active, { status: 'unpaid' }), stripe, deps());
     expect(outcome).toMatchObject({ handled: true, action: 'none' });
     expect(outcome.seats).toBeUndefined();
@@ -284,7 +288,7 @@ describe('appliance subscription lifecycle', () => {
     };
 
     it('sync-seats: 404 resolves with action none, no seats, and a warning', async () => {
-      c4.updateApplianceEntitlementSeats.mockRejectedValue(new c4.AlgaLicenseHttpError('HTTP 404 No active entitlement', 404));
+      c4.updateApplianceEntitlementSeats.mockRejectedValue(notFound());
       const outcome = await handleApplianceSubscriptionEvent(seatChange(), stripe, deps());
       expect(outcome).toMatchObject({ handled: true, action: 'none' });
       expect(outcome.seats).toBeUndefined();
@@ -303,7 +307,7 @@ describe('appliance subscription lifecycle', () => {
     });
 
     it('reactivate: a seat-sync 404 keeps action reactivate with no seats', async () => {
-      c4.updateApplianceEntitlementSeats.mockRejectedValue(new c4.AlgaLicenseHttpError('HTTP 404 No active entitlement', 404));
+      c4.updateApplianceEntitlementSeats.mockRejectedValue(notFound());
       const outcome = await handleApplianceSubscriptionEvent(reactivation(), stripe, deps());
       expect(outcome).toMatchObject({ handled: true, action: 'reactivate' });
       expect(outcome.seats).toBeUndefined();
@@ -314,6 +318,57 @@ describe('appliance subscription lifecycle', () => {
     it('reactivate: a generic seat-sync error is rethrown', async () => {
       c4.updateApplianceEntitlementSeats.mockRejectedValue(new Error('network down'));
       await expect(handleApplianceSubscriptionEvent(reactivation(), stripe, deps())).rejects.toThrow('network down');
+    });
+  });
+
+  describe('route-missing 404 (no not_found code) is retryable, not tolerated', () => {
+    const seatChange = () => {
+      const active = subscription();
+      stripe.subscriptions.retrieve.mockResolvedValue(active);
+      return event('customer.subscription.updated', active, { items: {} });
+    };
+    const reactivation = () => {
+      const active = subscription();
+      stripe.subscriptions.retrieve.mockResolvedValue(active);
+      return event('customer.subscription.updated', active, { status: 'unpaid' });
+    };
+    const loudError = () =>
+      expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('alga-license lacks route — deploy alga-license first'));
+
+    it('reactivate: route-missing 404 throws, skips seat sync and state mirror, logs the cause', async () => {
+      c4.reactivateApplianceEntitlement.mockRejectedValue(routeMissing());
+      await expect(handleApplianceSubscriptionEvent(reactivation(), stripe, deps())).rejects.toThrow('HTTP 404');
+      expect(c4.updateApplianceEntitlementSeats).not.toHaveBeenCalled();
+      expect(c4.syncApplianceSubscriptionState).not.toHaveBeenCalled();
+      loudError();
+    });
+
+    it('sync-seats: route-missing 404 throws and logs the cause', async () => {
+      c4.updateApplianceEntitlementSeats.mockRejectedValue(routeMissing());
+      await expect(handleApplianceSubscriptionEvent(seatChange(), stripe, deps())).rejects.toThrow('HTTP 404');
+      loudError();
+    });
+
+    it('post-reactivate seat sync: route-missing 404 throws and logs the cause', async () => {
+      c4.updateApplianceEntitlementSeats.mockRejectedValue(routeMissing());
+      await expect(handleApplianceSubscriptionEvent(reactivation(), stripe, deps())).rejects.toThrow('HTTP 404');
+      expect(c4.reactivateApplianceEntitlement).toHaveBeenCalledWith('sub_app');
+      loudError();
+    });
+
+    it('state mirror: route-missing 404 throws and logs the cause', async () => {
+      c4.syncApplianceSubscriptionState.mockRejectedValue(routeMissing());
+      await expect(handleApplianceSubscriptionEvent(seatChange(), stripe, deps())).rejects.toThrow('HTTP 404');
+      loudError();
+    });
+
+    it('operator-revoked but Stripe-live sub: seat change is tolerated (real not_found), no reactivate', async () => {
+      c4.updateApplianceEntitlementSeats.mockRejectedValue(notFound());
+      const outcome = await handleApplianceSubscriptionEvent(seatChange(), stripe, deps());
+      expect(outcome).toMatchObject({ handled: true, action: 'none' });
+      expect(c4.reactivateApplianceEntitlement).not.toHaveBeenCalled();
+      expect(c4.revokeApplianceEntitlement).not.toHaveBeenCalled();
+      expect(logger.error).not.toHaveBeenCalled();
     });
   });
 
@@ -425,7 +480,7 @@ describe('appliance subscription lifecycle', () => {
     it('reactivate 404 is a no-op but the state mirror still runs', async () => {
       const active = subscription();
       stripe.subscriptions.retrieve.mockResolvedValue(active);
-      c4.reactivateApplianceEntitlement.mockRejectedValue(new c4.AlgaLicenseHttpError('HTTP 404', 404));
+      c4.reactivateApplianceEntitlement.mockRejectedValue(notFound());
       await handleApplianceSubscriptionEvent(event('customer.subscription.updated', active, { status: 'unpaid' }), stripe, deps());
       expect(c4.syncApplianceSubscriptionState).toHaveBeenCalledTimes(1);
     });

@@ -164,7 +164,7 @@ function decideAction(
     const cameBackToLife =
       LIVE_STATUSES.has(sub.status) && typeof previous.status === 'string' && LAPSED_STATUSES.has(previous.status);
     if (cameBackToLife) {
-      // C4's seat PATCH only updates an ACTIVE entitlement (404 otherwise), so the
+      // C4's seat PATCH only updates an ACTIVE entitlement (404 not_found otherwise), so the
       // entitlement is re-enabled first; `seats` (if any) is synced afterwards.
       return seats != null ? { action: 'reactivate', seats } : { action: 'reactivate' };
     }
@@ -180,12 +180,32 @@ function decideAction(
 }
 
 /**
- * Seat sync that treats an alga-license 404 as terminal. The 404 means the
- * entitlement is inactive or absent (e.g. operator soft-revoke), which a retry
- * cannot fix, so surfacing it would make Stripe redeliver forever (5xx retry loop).
- * Every other error rethrows so Stripe retries. Returns false when skipped.
+ * True only for alga-license's real "no entitlement" answer: 404 with the JSON
+ * body code `not_found` (e.g. operator soft-revoke, or not provisioned yet). A
+ * retry cannot fix that, so it is tolerated. A 404 WITHOUT the code is Fastify's
+ * unknown-route reply: the deployed alga-license lacks the route, which a retry
+ * (after deploying alga-license) does fix, so it must propagate.
  */
-async function syncSeatsTolerating404(
+export function isEntitlementNotFound(err: unknown): boolean {
+  return err instanceof AlgaLicenseHttpError && err.status === 404 && err.code === 'not_found';
+}
+
+/** Log an alga-license failure that looks like a missing route, so the cause is obvious. */
+function logIfRouteMissing(err: unknown, what: string, subId: string): void {
+  if (err instanceof AlgaLicenseHttpError && err.status === 404 && !isEntitlementNotFound(err)) {
+    logger.error(
+      `[ApplianceLifecycle] ${what} for ${subId} got a 404 with no not_found code: alga-license lacks route — deploy alga-license first (event will be retried)`,
+    );
+  }
+}
+
+/**
+ * Seat sync that tolerates only a real entitlement-not-found 404 (see
+ * isEntitlementNotFound), which a retry cannot fix and would otherwise make
+ * Stripe redeliver forever. Every other error, including a route-missing 404,
+ * rethrows so Stripe retries. Returns false when skipped.
+ */
+async function syncSeatsTolerantOfNotFound(
   deps: ApplianceLifecycleDeps,
   tenantId: string,
   subId: string,
@@ -195,7 +215,10 @@ async function syncSeatsTolerating404(
     await deps.syncSeats(tenantId, seats);
     return true;
   } catch (err) {
-    if (!(err instanceof AlgaLicenseHttpError && err.status === 404)) throw err;
+    if (!isEntitlementNotFound(err)) {
+      logIfRouteMissing(err, `seat sync (tenant=${tenantId})`, subId);
+      throw err;
+    }
     logger.warn(`[ApplianceLifecycle] alga-license entitlement inactive or absent for ${subId} (tenant=${tenantId}); seats not synced`);
     return false;
   }
@@ -238,10 +261,14 @@ export async function handleApplianceSubscriptionEvent(
     try {
       await deps.reactivate(sub.id);
     } catch (err) {
-      // No C4 entitlement for this sub (e.g. not provisioned yet): nothing to
-      // re-enable, and retrying would only fail again. Anything else is a real
-      // failure and must propagate so Stripe retries.
-      if (!(err instanceof AlgaLicenseHttpError && err.status === 404)) throw err;
+      // C4 says it has no entitlement for this sub (404 + code not_found, e.g.
+      // not provisioned yet): nothing to re-enable, and retrying would only fail
+      // again. Anything else (5xx, network, or a 404 from a missing route) is a
+      // real failure and must propagate so Stripe retries.
+      if (!isEntitlementNotFound(err)) {
+        logIfRouteMissing(err, 'reactivate', sub.id);
+        throw err;
+      }
       logger.warn(`[ApplianceLifecycle] no alga-license entitlement to reactivate for ${sub.id} (tenant=${tenantId ?? 'unknown'}); skipping`);
       outcome.action = 'none';
       outcome.seats = undefined;
@@ -252,7 +279,7 @@ export async function handleApplianceSubscriptionEvent(
         logger.warn(`[ApplianceLifecycle] cannot sync seats for ${sub.id}: no tenant id in subscription metadata`);
         outcome.seats = undefined;
       } else {
-        if (!(await syncSeatsTolerating404(deps, tenantId, sub.id, decision.seats))) outcome.seats = undefined;
+        if (!(await syncSeatsTolerantOfNotFound(deps, tenantId, sub.id, decision.seats))) outcome.seats = undefined;
       }
     }
   } else if (decision.action === 'sync-seats') {
@@ -260,7 +287,7 @@ export async function handleApplianceSubscriptionEvent(
       logger.warn(`[ApplianceLifecycle] cannot sync seats for ${sub.id}: no tenant id in subscription metadata`);
       outcome.action = 'none';
     } else {
-      if (!(await syncSeatsTolerating404(deps, tenantId, sub.id, decision.seats!))) {
+      if (!(await syncSeatsTolerantOfNotFound(deps, tenantId, sub.id, decision.seats!))) {
         outcome.action = 'none';
         outcome.seats = undefined;
       }
@@ -271,7 +298,12 @@ export async function handleApplianceSubscriptionEvent(
   // After revoke/seats: a failure here must not skip those, and Stripe's retry
   // re-runs all three idempotently.
   if (decision.state) {
-    await deps.syncState(sub.id, decision.state);
+    try {
+      await deps.syncState(sub.id, decision.state);
+    } catch (err) {
+      logIfRouteMissing(err, 'subscription-state mirror', sub.id);
+      throw err;
+    }
   }
 
   if (deps.audit) {
