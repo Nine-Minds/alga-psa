@@ -123,6 +123,31 @@ export class TimeSheetService extends BaseService<any> {
     });
   }
 
+  /**
+   * time_sheets has no created_at/updated_at, so the common created_ and
+   * updated_ range keys are unsupported and rejected by `applyRangeFilters`. The
+   * supported ranges map to the sheet's submitted/approved timestamps and, via
+   * the time_periods join, the period window.
+   */
+  protected rangeFilterColumns(): Record<string, string | null> {
+    return {
+      // time_sheets has no created_at/updated_at: declare the common keys as
+      // unsupported so they are rejected instead of silently ignored.
+      created_from: null,
+      created_to: null,
+      updated_from: null,
+      updated_to: null,
+      submitted_from: `${this.tableName}.submitted_at`,
+      submitted_to: `${this.tableName}.submitted_at`,
+      approved_from: `${this.tableName}.approved_at`,
+      approved_to: `${this.tableName}.approved_at`,
+      period_start_from: 'time_periods.start_date',
+      period_start_to: 'time_periods.start_date',
+      period_end_from: 'time_periods.end_date',
+      period_end_to: 'time_periods.end_date',
+    };
+  }
+
   async list(options: ListOptions, context: ServiceContext, filters?: TimeSheetFilterData): Promise<ListResult<any>> {
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
@@ -140,42 +165,8 @@ export class TimeSheetService extends BaseService<any> {
         if (filters.approval_status) {
           query.where(`${this.tableName}.approval_status`, filters.approval_status);
         }
-        if (filters.submitted_from) {
-          query.where(`${this.tableName}.submitted_at`, '>=', filters.submitted_from);
-        }
-        if (filters.submitted_to) {
-          query.where(`${this.tableName}.submitted_at`, '<=', filters.submitted_to);
-        }
-        if (filters.approved_from) {
-          query.where(`${this.tableName}.approved_at`, '>=', filters.approved_from);
-        }
-        if (filters.approved_to) {
-          query.where(`${this.tableName}.approved_at`, '<=', filters.approved_to);
-        }
         if (filters.approved_by) {
           query.where(`${this.tableName}.approved_by`, filters.approved_by);
-        }
-        if (filters.period_start_from) {
-          db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id')
-            .where('time_periods.start_date', '>=', filters.period_start_from);
-        }
-        if (filters.period_start_to) {
-          if (!query.toString().includes('time_periods')) {
-            db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
-          }
-          query.where('time_periods.start_date', '<=', filters.period_start_to);
-        }
-        if (filters.period_end_from) {
-          if (!query.toString().includes('time_periods')) {
-            db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
-          }
-          query.where('time_periods.end_date', '>=', filters.period_end_from);
-        }
-        if (filters.period_end_to) {
-          if (!query.toString().includes('time_periods')) {
-            db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
-          }
-          query.where('time_periods.end_date', '<=', filters.period_end_to);
         }
         if (filters.has_entries !== undefined) {
           const subquery = tenantDb(knex, context.tenant).table('time_entries')
@@ -194,6 +185,12 @@ export class TimeSheetService extends BaseService<any> {
       db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
       db.tenantJoin(query, 'users as approvers', 'time_sheets.approved_by', 'approvers.user_id', { type: 'left' });
       db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id', { type: 'left' });
+
+      // Range filters (submitted_*, approved_*, period_*) after the time_periods
+      // join; unsupported keys such as created_from throw.
+      if (filters) {
+        this.applyRangeFilters(query, filters);
+      }
 
       query.select(
           `${this.tableName}.*`,
