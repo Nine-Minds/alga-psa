@@ -343,7 +343,7 @@
   },
   {
     "id": "F039",
-    "description": "Assets tab 'Recent audits' row (id assets-recent-audits) lists the last 10 audits (client, location, date, present/missing) and opens AuditSummary",
+    "description": "Assets tab 'Recent audits' row (id assets-recent-audits) lists the last 10 audits (client, location, date, present/missing or In progress) and opens AuditSummary \u2014 an in-progress run reopens AuditSession instead",
     "implemented": true,
     "commitGroup": "assets-list",
     "prdRefs": [
@@ -370,7 +370,7 @@
   },
   {
     "id": "F042",
-    "description": "AssetAuditService.markItem(context, auditId, {asset_id, result present|unexpected, method}) upserts the item (idempotent on tenant+audit+asset), validates audit in_progress and asset in tenant; an asset not in the expected snapshot is stored as unexpected regardless of requested result",
+    "description": "AssetAuditService.markItem(context, auditId, {asset_id, result present|unexpected, method}) upserts the item (idempotent on tenant+audit+asset), validates audit in_progress and asset in tenant; an asset outside the audit's scope is stored as unexpected regardless of requested result, while an asset that joined the scope after the snapshot (a field registration) is stored present and widens expected_count",
     "implemented": true,
     "commitGroup": "audit-server",
     "prdRefs": [
@@ -397,7 +397,7 @@
   },
   {
     "id": "F045",
-    "description": "cancel() sets status cancelled (only from in_progress); get() returns audit with items joined to asset name/tag/location; list() returns newest first with optional client_id filter and pagination",
+    "description": "cancel() sets status cancelled (only from in_progress); get() returns audit with client/location names and items joined to asset name/tag/location; list() returns newest first with the same names, optional client_id filter and pagination",
     "implemented": true,
     "commitGroup": "audit-server",
     "prdRefs": [
@@ -460,7 +460,7 @@
   },
   {
     "id": "F052",
-    "description": "Scan button opens the camera scanner (reused ScanView scanner component) and resolves codes with lookupInventoryCode; an asset result in Remaining \u2192 markItem present (method scan) with haptic + toast; already-present asset \u2192 info toast; non-asset result \u2192 'Not an asset' toast",
+    "description": "Scan button opens the audit scanner modal \u2014 the Inventory scanner's barcode types and repeat debounce (features/inventory/scanDebounce) in a code-only surface, since ScanView itself owns the inventory lookup and result cards \u2014 and resolves codes with lookupInventoryCode; an asset result in Remaining \u2192 markItem present (method scan) with haptic + toast; already-present asset \u2192 info toast; non-asset result \u2192 'Not an asset' toast",
     "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
@@ -478,7 +478,7 @@
   },
   {
     "id": "F054",
-    "description": "Scan resolving to nothing offers Register asset (existing RegisterAssetModal prefilled with the audit's client and location); on success the new asset is marked present with method register",
+    "description": "Scan resolving to nothing offers Register asset (existing RegisterAssetModal prefilled with the audit's client and location, so the device is created at the audited location); on success the new asset is marked present with method register",
     "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [

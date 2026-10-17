@@ -577,7 +577,7 @@
   },
   {
     "id": "T065",
-    "description": "a scan resolving to none opens RegisterAssetModal; successful registration marks the new asset present with method register",
+    "description": "a scan resolving to none opens RegisterAssetModal prefilled with the audit's client and location; successful registration marks the new asset present with method register",
     "implemented": true,
     "commitGroup": "audit-mobile",
     "featureIds": [
@@ -912,7 +912,7 @@
   },
   {
     "id": "T102",
-    "description": "no new t() key without an entry in its namespace (i18n unresolved keys script)",
+    "description": "no new t() key without an entry in its namespace (spot check across the four new/extended namespaces)",
     "implemented": true,
     "commitGroup": "release",
     "featureIds": [
@@ -1125,6 +1125,60 @@
     "commitGroup": "search",
     "featureIds": [
       "F076"
+    ]
+  },
+  {
+    "id": "T126",
+    "description": "markItem records an asset that joined the scope after the snapshot as present and widens expected_count",
+    "implemented": true,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T127",
+    "description": "markItem keeps a device whose status is outside the audit's scope unexpected",
+    "implemented": true,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T128",
+    "description": "RegisterAssetModal with an audit scope skips the client picker and posts the audited location_id",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T129",
+    "description": "a recent audit still in progress reopens AuditSession instead of the summary",
+    "implemented": true,
+    "commitGroup": "assets-list",
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T130",
+    "description": "a sign-in skips the restored route (Home wins) while a relaunch still replays it",
+    "implemented": true,
+    "commitGroup": "home",
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T131",
+    "description": "the shared scan debounce swallows a repeat of the same code and reset re-arms it",
+    "implemented": true,
+    "commitGroup": "audit-mobile",
+    "featureIds": [
+      "F052"
     ]
   }
 ]
