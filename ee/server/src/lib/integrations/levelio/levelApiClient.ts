@@ -9,7 +9,10 @@
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 export const LEVELIO_API_KEY_SECRET = 'levelio_api_key';
+/** Shared secret for the automation path (`X-Alga-Webhook-Secret` header). */
 export const LEVELIO_WEBHOOK_SECRET_KEY = 'levelio_webhook_secret';
+/** Per-tenant HMAC key for native Settings -> Webhooks (`X-Level-Signature`). */
+export const LEVELIO_WEBHOOK_SIGNING_SECRET_KEY = 'levelio_webhook_signing_secret';
 export const DEFAULT_LEVELIO_BASE_URL = 'https://api.level.io';
 
 export interface LevelIoGroup {

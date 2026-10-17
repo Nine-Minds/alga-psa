@@ -305,7 +305,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'software_catalog',
 
   // RMM
-  'rmm_maintenance_windows', 'rmm_alert_rules', 'rmm_alerts', 'rmm_organization_mappings', 'rmm_integrations',
+  'rmm_webhook_events', 'rmm_maintenance_windows', 'rmm_alert_rules', 'rmm_alerts', 'rmm_organization_mappings', 'rmm_integrations',
 
   // Survey
   'survey_responses', 'survey_invitations', 'survey_triggers', 'survey_templates',
