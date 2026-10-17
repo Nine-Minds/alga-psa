@@ -1,6 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -38,6 +40,16 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
           'La synchronisation du calendrier pour {{providerName}} a signalé une erreur.',
         'banners.integrationHealth.calendar.disconnected':
           'La synchronisation du calendrier pour {{providerName}} est déconnectée.',
+        'banners.integrationHealth.rmm.syncError':
+          '{{providerName}} a signalé une erreur de synchronisation.',
+        'banners.integrationHealth.rmm.reconnectRequired':
+          '{{providerName}} doit être reconnecté.',
+        'banners.integrationHealth.accounting.reconnectRequired':
+          '{{providerName}} doit être reconnecté avant la synchronisation comptable.',
+        'banners.integrationHealth.accounting.syncError':
+          'La dernière synchronisation avec {{providerName}} ne s\'est pas terminée.',
+        'banners.integrationHealth.teams.botCredentialsMissing':
+          'Le bot {{providerName}} ne peut pas répondre.',
         'banners.integrationHealth.review': 'Vérifier',
         'banners.integrationHealth.dismiss': "Ignorer l'alerte d'intégration",
       };
@@ -85,6 +97,73 @@ const calendarAlert = {
   detail: 'primary',
   href: '/msp/profile?tab=calendar',
 };
+
+const rmmSyncErrorAlert = {
+  id: 'rmm-int-1-rmm_sync_error',
+  integration: 'rmm' as const,
+  severity: 'error' as const,
+  reason: 'rmm_sync_error' as const,
+  providerName: 'NinjaOne',
+  detail: 'NinjaOne returned HTTP 500',
+  href: '/msp/settings/integrations?category=rmm',
+};
+
+const rmmReconnectAlert = {
+  id: 'rmm-int-2-rmm_reconnect_required',
+  integration: 'rmm' as const,
+  severity: 'error' as const,
+  reason: 'rmm_reconnect_required' as const,
+  providerName: 'Tactical RMM',
+  detail: 'Tactical RMM',
+  href: '/msp/settings/integrations?category=rmm',
+};
+
+const accountingReconnectAlert = {
+  id: 'accounting-xero-conn-1-accounting_reconnect_required',
+  integration: 'accounting' as const,
+  severity: 'error' as const,
+  reason: 'accounting_reconnect_required' as const,
+  providerName: 'Xero',
+  detail: 'Contoso Books',
+  href: '/msp/settings/integrations?category=accounting',
+};
+
+const accountingSyncErrorAlert = {
+  id: 'accounting-quickbooks_online-4620816-accounting_sync_error',
+  integration: 'accounting' as const,
+  severity: 'warning' as const,
+  reason: 'accounting_sync_error' as const,
+  providerName: 'QuickBooks Online',
+  detail: '4620816',
+  href: '/msp/settings/integrations?category=accounting',
+};
+
+const teamsBotAlert = {
+  id: 'teams_bot-teams_bot_credentials_missing',
+  integration: 'teams_bot' as const,
+  severity: 'warning' as const,
+  reason: 'teams_bot_credentials_missing' as const,
+  providerName: 'Microsoft Teams',
+  detail: '',
+  href: '/msp/settings/integrations?category=communication',
+};
+
+/** Every reason the banner can render, and the key its copy comes from. */
+const MESSAGE_KEYS = [
+  'banners.integrationHealth.inboundEmail.authFailure',
+  'banners.integrationHealth.inboundEmail.error',
+  'banners.integrationHealth.calendar.error',
+  'banners.integrationHealth.calendar.disconnected',
+  'banners.integrationHealth.rmm.syncError',
+  'banners.integrationHealth.rmm.reconnectRequired',
+  'banners.integrationHealth.accounting.reconnectRequired',
+  'banners.integrationHealth.accounting.syncError',
+  'banners.integrationHealth.teams.botCredentialsMissing',
+  'banners.integrationHealth.review',
+  'banners.integrationHealth.dismiss',
+];
+
+const LOCALES = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'sv', 'xx', 'yy'];
 
 describe('IntegrationHealthBanner i18n wiring', () => {
   beforeEach(() => {
@@ -141,6 +220,59 @@ describe('IntegrationHealthBanner i18n wiring', () => {
       expect(document.getElementById(`integration-health-alert-${calendarAlert.id}`)).not.toBeNull();
     });
     expect(document.getElementById(`integration-health-alert-${emailAlert.id}`)).toBeNull();
+  });
+
+  it('renders localized copy for the RMM, accounting and Teams reasons', async () => {
+    getIntegrationHealthAlerts.mockResolvedValue([
+      rmmSyncErrorAlert,
+      rmmReconnectAlert,
+      accountingReconnectAlert,
+      accountingSyncErrorAlert,
+      teamsBotAlert,
+    ]);
+
+    render(<IntegrationHealthBanner />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('NinjaOne a signalé une erreur de synchronisation.')
+      ).toBeInTheDocument();
+    });
+    expect(screen.getByText('Tactical RMM doit être reconnecté.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Xero doit être reconnecté avant la synchronisation comptable.')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("La dernière synchronisation avec QuickBooks Online ne s'est pas terminée.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Le bot Microsoft Teams ne peut pas répondre.')
+    ).toBeInTheDocument();
+
+    const reviewLinks = screen.getAllByText('Vérifier').map((button) => button.closest('a'));
+    expect(reviewLinks.map((link) => link?.getAttribute('href'))).toEqual([
+      '/msp/settings/integrations?category=rmm',
+      '/msp/settings/integrations?category=rmm',
+      '/msp/settings/integrations?category=accounting',
+      '/msp/settings/integrations?category=accounting',
+      '/msp/settings/integrations?category=communication',
+    ]);
+  });
+
+  it('ships every banner message key in every shipped locale', () => {
+    for (const locale of LOCALES) {
+      const pack = JSON.parse(
+        fs.readFileSync(
+          path.resolve(__dirname, `../../../../public/locales/${locale}/msp/core.json`),
+          'utf8'
+        )
+      );
+
+      for (const key of MESSAGE_KEYS) {
+        const value = key.split('.').reduce<any>((node, segment) => node?.[segment], pack);
+        expect(typeof value, `${locale} is missing ${key}`).toBe('string');
+      }
+    }
   });
 
   it('renders nothing when every integration is healthy', async () => {
