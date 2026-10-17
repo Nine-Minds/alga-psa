@@ -102,6 +102,8 @@ export function TicketsListScreen({ navigation, route }: Props) {
   const clientFilterName = route.params?.clientName;
   const contactFilterId = route.params?.contactId;
   const contactFilterName = route.params?.contactName;
+  // Home ▸ My tickets ▸ View all arrives with the assignee preset.
+  const assigneePreset = route.params?.assignee;
   const config = useMemo(() => getAppConfig(), []);
   const { session, refreshSession, logout } = useAuth();
   const listAbortRef = useRef<AbortController | null>(null);
@@ -172,6 +174,11 @@ export function TicketsListScreen({ navigation, route }: Props) {
     if (!filtersLoaded || !userId) return;
     void setSecureJson(`alga.mobile.tickets.filters.${userId}`, filters);
   }, [filters, filtersLoaded, session?.user?.id]);
+
+  useEffect(() => {
+    if (!filtersLoaded || !assigneePreset) return;
+    setFilters((current) => (current.assignee === assigneePreset ? current : { ...current, assignee: assigneePreset }));
+  }, [assigneePreset, filtersLoaded]);
 
   const { statusOptions, statusOptionsLoaded, statusOptionsLoading, statusOptionsError } = useTicketStatusOptions({
     client,

@@ -6,8 +6,8 @@ const registeredScreens: string[] = [];
 
 vi.mock("@react-navigation/drawer", () => ({
   createDrawerNavigator: () => ({
-    Navigator: (props: { children?: React.ReactNode }) =>
-      React.createElement("Navigator", null, props.children),
+    Navigator: (props: { children?: React.ReactNode; initialRouteName?: string }) =>
+      React.createElement("Navigator", { initialRouteName: props.initialRouteName }, props.children),
     Screen: (props: { name: string }) => {
       registeredScreens.push(props.name);
       return null;
@@ -29,6 +29,7 @@ vi.mock("../screens/InventoryScreen", () => ({ InventoryScreen: () => null }));
 vi.mock("../screens/OpportunitiesScreen", () => ({ OpportunitiesScreen: () => null }));
 vi.mock("../screens/ProjectsScreen", () => ({ ProjectsScreen: () => null }));
 vi.mock("../screens/AssetsScreen", () => ({ AssetsScreen: () => null }));
+vi.mock("../screens/HomeScreen", () => ({ HomeScreen: () => null, HomeSearchButton: () => null }));
 vi.mock("./TicketsStackNavigator", () => ({ TicketsStackNavigator: () => null }));
 vi.mock("../features/timer/components/HeaderTimerChip", () => ({ HeaderTimerChip: () => null }));
 
@@ -83,6 +84,13 @@ describe("DrawerNavigator capability gating", () => {
     expect(registeredScreens).toContain("ProjectsTab");
     expect(registeredScreens).not.toContain("AssetsTab");
     expect(registeredScreens.indexOf("ProjectsTab")).toBeGreaterThan(registeredScreens.indexOf("ScheduleTab"));
+  });
+
+  it("T076 lists HomeTab first and makes it the initial route", () => {
+    const tree = renderDrawer();
+    expect(registeredScreens[0]).toBe("HomeTab");
+    const navigator = tree.root.find((node) => node.type === "Navigator");
+    expect(navigator.props.initialRouteName).toBe("HomeTab");
   });
 
   it("T005 shows AssetsTab when the assets capability is true", () => {

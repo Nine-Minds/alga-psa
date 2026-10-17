@@ -1,7 +1,9 @@
+import { View } from "react-native";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { DrawerParamList } from "./types";
 import { TicketsStackNavigator } from "./TicketsStackNavigator";
+import { HomeScreen, HomeSearchButton } from "../screens/HomeScreen";
 import { UserActivitiesScreen } from "../screens/UserActivitiesScreen";
 import { ScheduleScreen } from "../screens/ScheduleScreen";
 import { ProjectsScreen } from "../screens/ProjectsScreen";
@@ -34,9 +36,11 @@ export function DrawerNavigator() {
   const { t: tOpportunities } = useTranslation("opportunities");
   const { t: tProjects } = useTranslation("projects");
   const { t: tAssets } = useTranslation("assets");
+  const { t: tHome } = useTranslation("home");
   const { features } = useCapabilities();
   return (
     <Drawer.Navigator
+      initialRouteName="HomeTab"
       screenOptions={{
         drawerActiveTintColor: theme.colors.primary,
         drawerInactiveTintColor: theme.colors.textSecondary,
@@ -57,6 +61,22 @@ export function DrawerNavigator() {
         headerRight: () => <HeaderTimerChip />,
       }}
     >
+      <Drawer.Screen
+        name="HomeTab"
+        component={HomeScreen}
+        options={({ navigation }) => ({
+          title: tHome("title", "Home"),
+          drawerIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="home-outline" size={size} color={color} />
+          ),
+          headerRight: () => (
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <HomeSearchButton onPress={() => navigation.getParent()?.navigate("Search")} />
+              <HeaderTimerChip />
+            </View>
+          ),
+        })}
+      />
       <Drawer.Screen
         name="TicketsTab"
         component={TicketsStackNavigator}

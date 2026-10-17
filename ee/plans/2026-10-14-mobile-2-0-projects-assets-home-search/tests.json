@@ -661,7 +661,7 @@
   {
     "id": "T074",
     "description": "HomeScreen renders all five cards from mocked responses and collapses Today when there are no entries",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "featureIds": [
       "F061"
@@ -670,7 +670,7 @@
   {
     "id": "T075",
     "description": "one card's request failing renders that card's error row while the others render data",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "featureIds": [
       "F061"
@@ -679,7 +679,7 @@
   {
     "id": "T076",
     "description": "DrawerNavigator lists HomeTab first and uses it as initialRouteName",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "featureIds": [
       "F062"
@@ -688,7 +688,7 @@
   {
     "id": "T077",
     "description": "My tickets request includes assigned_to=<user id>, is_open=true, sort=latest_activity_at, limit=5",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "featureIds": [
       "F063"
@@ -697,7 +697,7 @@
   {
     "id": "T078",
     "description": "'View all' navigates to TicketsTab with the assignee filter set to the current user",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "featureIds": [
       "F063"
@@ -706,7 +706,7 @@
   {
     "id": "T079",
     "description": "Today card requests the local-day window and sorts entries by start",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "featureIds": [
       "F064"
@@ -715,7 +715,7 @@
   {
     "id": "T080",
     "description": "tapping a ticket entry opens the ticket entry sheet; tapping an interaction entry opens the interaction sheet",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "featureIds": [
       "F064"
@@ -724,7 +724,7 @@
   {
     "id": "T081",
     "description": "Activities card excludes done items and includes overdue ones",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "featureIds": [
       "F065"
@@ -733,7 +733,7 @@
   {
     "id": "T082",
     "description": "Running timer card is hidden without an active timer and shows elapsed with one",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "featureIds": [
       "F066"
@@ -742,7 +742,7 @@
   {
     "id": "T083",
     "description": "Scan quick action is absent when features.inventory is false",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "featureIds": [
       "F067"
@@ -751,7 +751,7 @@
   {
     "id": "T084",
     "description": "Start timer quick action is absent while a timer runs",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "featureIds": [
       "F067"
@@ -760,7 +760,7 @@
   {
     "id": "T085",
     "description": "offline: cards render cached data and the offline banner; no requests issued",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "featureIds": [
       "F068"
@@ -769,7 +769,7 @@
   {
     "id": "T086",
     "description": "search icon navigates to SearchScreen",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "featureIds": [
       "F069"
@@ -778,7 +778,7 @@
   {
     "id": "T087",
     "description": "search() sends types as a comma-separated list and parses results and nextCursor",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "search",
     "featureIds": [
       "F071"
@@ -787,7 +787,7 @@
   {
     "id": "T088",
     "description": "routeForResult maps each supported type to the right screen and params; unknown type \u2192 null",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "search",
     "featureIds": [
       "F072"
@@ -796,7 +796,7 @@
   {
     "id": "T089",
     "description": "searchableTypes omits asset without features.assets and project types without features.projects",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "search",
     "featureIds": [
       "F073"
@@ -805,7 +805,7 @@
   {
     "id": "T090",
     "description": "typing 'fl' issues one request after the debounce; typing 'f' issues none",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "search",
     "featureIds": [
       "F074"
@@ -814,7 +814,7 @@
   {
     "id": "T091",
     "description": "results render grouped in the fixed order; 'More' on clients fetches with types=client and the group's cursor",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "search",
     "featureIds": [
       "F074"
@@ -823,7 +823,7 @@
   {
     "id": "T092",
     "description": "tapping a ticket result navigates to TicketDetail",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "search",
     "featureIds": [
       "F074"
@@ -832,7 +832,7 @@
   {
     "id": "T093",
     "description": "a completed search is added to recent searches; Clear empties them; sign-out clears storage",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "search",
     "featureIds": [
       "F075"
@@ -841,7 +841,7 @@
   {
     "id": "T094",
     "description": "a response for an older query arriving after a newer one is ignored",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "search",
     "featureIds": [
       "F076"

@@ -39,6 +39,7 @@ export type RootStackParamList = {
   CountSession: { sessionId: string; locationName?: string };
   PurchaseOrderDetail: { poId: string; poNumber?: string };
   AssetDetail: { assetId: string; assetName?: string };
+  Search: undefined;
   AuditSetup: undefined;
   AuditSession: { auditId: string };
   AuditSummary: { auditId: string };
@@ -46,11 +47,21 @@ export type RootStackParamList = {
 };
 
 export type TicketsStackParamList = {
-  TicketsList: { clientId?: string; clientName?: string; contactId?: string; contactName?: string } | undefined;
+  TicketsList:
+    | {
+        clientId?: string;
+        clientName?: string;
+        contactId?: string;
+        contactName?: string;
+        /** Preset for the assignee filter; Home's My tickets card sends "me". */
+        assignee?: "any" | "me" | "unassigned";
+      }
+    | undefined;
 };
 
 export type DrawerParamList = {
-  TicketsTab: undefined;
+  HomeTab: undefined;
+  TicketsTab: { screen?: "TicketsList"; params?: TicketsStackParamList["TicketsList"] } | undefined;
   ProjectsTab: undefined;
   UserActivitiesTab: undefined;
   ScheduleTab: undefined;

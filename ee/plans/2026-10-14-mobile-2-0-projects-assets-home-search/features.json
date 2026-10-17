@@ -542,7 +542,7 @@
   {
     "id": "F061",
     "description": "HomeScreen (drawer 'HomeTab', first entry, id home) with cards Running timer, Today, My tickets, Activities, Quick actions; each card has its own loading/error row with Retry and collapses when empty",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "prdRefs": [
       "FR25"
@@ -551,7 +551,7 @@
   {
     "id": "F062",
     "description": "Drawer order: Home, Tickets, Activities, Schedule, Projects*, Interactions, Time Entries, Clients, Contacts, Assets*, Inventory*, Opportunities*, Settings; Home is initialRouteName; sign-in resets navigation to Home",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "prdRefs": [
       "FR25"
@@ -560,7 +560,7 @@
   {
     "id": "F063",
     "description": "My tickets card calls listTickets with assigned_to = current user, is_open=true, sort=latest_activity_at, limit=5, fields=mobile_list; header shows pagination.total; rows reuse the ticket list row; 'View all' opens TicketsTab with the assignee filter preset to me",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "prdRefs": [
       "FR26"
@@ -569,7 +569,7 @@
   {
     "id": "F064",
     "description": "Today card loads schedule entries for the device-local day (same window maths as useScheduleWeek), sorted by start; rows show time range and title; tap opens the Schedule tab's entry sheet for that entry type",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "prdRefs": [
       "FR27"
@@ -578,7 +578,7 @@
   {
     "id": "F065",
     "description": "Activities card loads activities due today or overdue (not done), 5 rows, 'View all' opens UserActivitiesTab",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "prdRefs": [
       "FR28"
@@ -587,7 +587,7 @@
   {
     "id": "F066",
     "description": "Running timer card shows the active work item title and elapsed (useTimerElapsedMs) with Stop opening the existing StopTimerModal; hidden when no timer runs",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "prdRefs": [
       "FR25"
@@ -596,7 +596,7 @@
   {
     "id": "F067",
     "description": "Quick actions: New ticket \u2192 CreateTicket; Scan \u2192 InventoryTab scan view (hidden when features.inventory is false); Log interaction \u2192 LogInteractionEntry flow; Start timer \u2192 ServicePickerModal then start with no work item (hidden while a timer runs)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "prdRefs": [
       "FR29"
@@ -605,7 +605,7 @@
   {
     "id": "F068",
     "description": "Cards read from TTL cache (homeCache.ts, 5 min) when offline with the offline banner; pull to refresh and useAppResume refresh all cards",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "prdRefs": [
       "FR30"
@@ -614,7 +614,7 @@
   {
     "id": "F069",
     "description": "Home header: search icon (id home-search) \u2192 SearchScreen; existing HeaderTimerChip stays",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "prdRefs": [
       "FR25"
@@ -623,7 +623,7 @@
   {
     "id": "F070",
     "description": "home i18n namespace",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "home",
     "prdRefs": [
       "FR35"
@@ -632,7 +632,7 @@
   {
     "id": "F071",
     "description": "src/api/search.ts search(client, {apiKey, query, types, limit, cursor}) \u2192 GET /api/v1/search; SearchResult type {type, id, title, subtitle, url}; nextCursor parsed",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "search",
     "prdRefs": [
       "FR31"
@@ -641,7 +641,7 @@
   {
     "id": "F072",
     "description": "routeForResult(result) pure helper maps ticket/client/contact/asset/project/project_task to navigation targets and returns null for others",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "search",
     "prdRefs": [
       "FR31"
@@ -650,7 +650,7 @@
   {
     "id": "F073",
     "description": "searchableTypes(features) pure helper returns ticket, client, contact always; asset when features.assets; project and project_task when features.projects",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "search",
     "prdRefs": [
       "FR33"
@@ -659,7 +659,7 @@
   {
     "id": "F074",
     "description": "SearchScreen (root 'Search', id search): auto-focused field, 300ms debounce, min 2 chars, grouped results in order tickets, clients, contacts, assets, projects, project tasks with up to 5 per group and 'More' per group fetching the next page for that type only",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "search",
     "prdRefs": [
       "FR32"
@@ -668,7 +668,7 @@
   {
     "id": "F075",
     "description": "Recent searches (last 8, on device, keyed by server+user) shown before typing with tap-to-search and Clear; cleared on sign-out and host switch",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "search",
     "prdRefs": [
       "FR32"
@@ -677,7 +677,7 @@
   {
     "id": "F076",
     "description": "Empty ('No results for \u2026'), error with Retry, offline state; a stale response (older query) is discarded",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "search",
     "prdRefs": [
       "FR32"
@@ -686,7 +686,7 @@
   {
     "id": "F077",
     "description": "search i18n namespace",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "search",
     "prdRefs": [
       "FR35"

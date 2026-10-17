@@ -23,6 +23,7 @@ import { InventoryAdjustScreen } from "../screens/InventoryAdjustScreen";
 import { CountSessionScreen } from "../screens/CountSessionScreen";
 import { PurchaseOrderDetailScreen } from "../screens/PurchaseOrderDetailScreen";
 import { AssetDetailScreen } from "../screens/AssetDetailScreen";
+import { SearchScreen } from "../screens/SearchScreen";
 import { AuditSetupScreen } from "../screens/AuditSetupScreen";
 import { AuditSessionScreen } from "../screens/AuditSessionScreen";
 import { AuditSummaryScreen } from "../screens/AuditSummaryScreen";
@@ -47,6 +48,7 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
   const { t: tOpportunities } = useTranslation("opportunities");
   const { t: tProjects } = useTranslation("projects");
   const { t: tAssets } = useTranslation("assets");
+  const { t: tSearch } = useTranslation("search");
   const backLabel = tCommon("back", "Back");
 
   // Register push token and handle notification taps (no-op when feature flag is off)
@@ -203,6 +205,14 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
             component={AssetDetailScreen}
             options={({ navigation, route }) => ({
               title: route.params.assetName ?? tInventory("asset.title", "Asset"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="Search"
+            component={SearchScreen}
+            options={({ navigation }) => ({
+              title: tSearch("title", "Search"),
               ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
             })}
           />

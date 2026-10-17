@@ -18,6 +18,8 @@ import opportunitiesEn from "./locales/en/opportunities.json";
 import assetsEn from "./locales/en/assets.json";
 import interactionsEn from "./locales/en/interactions.json";
 import projectsEn from "./locales/en/projects.json";
+import homeEn from "./locales/en/home.json";
+import searchEn from "./locales/en/search.json";
 
 function resolveDeviceLocale(): SupportedLocale {
   const tag = Localization.getLocales()[0]?.languageTag;
@@ -47,6 +49,8 @@ const resources = {
     assets: assetsEn,
     interactions: interactionsEn,
     projects: projectsEn,
+    home: homeEn,
+    search: searchEn,
   },
 } as const;
 
