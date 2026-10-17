@@ -14,7 +14,24 @@ export interface NormalizedRmmExternalScopeSnapshot {
 export type NormalizedRmmDeviceType = 'workstation' | 'server' | 'network_device' | 'mobile_device' | 'unknown';
 export type NormalizedRmmDeviceLifecycleState = 'active' | 'offline' | 'deleted' | 'tombstoned';
 
+export type NormalizedRmmNetworkDeviceType = 'switch' | 'router' | 'firewall' | 'access_point' | 'load_balancer';
+
+/**
+ * Details written to `network_device_assets`. `deviceType` is required because
+ * the column is NOT NULL; ingestion rejects a snapshot that carries a
+ * `networkDevice` block without one rather than inventing a default.
+ */
+export interface NormalizedRmmNetworkDeviceSnapshot {
+  deviceType: NormalizedRmmNetworkDeviceType;
+  managementIp?: string | null;
+  firmwareVersion?: string | null;
+  portCount?: number | null;
+  supportsPoe?: boolean | null;
+  portConfig?: Record<string, unknown> | null;
+}
+
 export interface NormalizedRmmDeviceExtensionSnapshot {
+  networkDevice?: NormalizedRmmNetworkDeviceSnapshot;
   osType?: string | null;
   osVersion?: string | null;
   agentVersion?: string | null;

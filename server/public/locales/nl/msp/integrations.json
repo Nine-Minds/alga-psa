@@ -2751,6 +2751,90 @@
           "url": "Webhook-URL"
         }
       },
+      "unifi": {
+        "actions": {
+          "saveConfiguration": "Configuratie opslaan",
+          "testConnection": "Verbinding testen",
+          "disconnect": "Verbinding verbreken",
+          "discoverSites": "Sites ontdekken",
+          "runDeviceSync": "Apparaatsynchronisatie uitvoeren",
+          "checkOfflineNow": "Offline apparaten nu controleren",
+          "saveAlerting": "Meldingsinstellingen opslaan"
+        },
+        "alerting": {
+          "title": "Offline-meldingen",
+          "description": "Een apparaat dat langer offline blijft dan de respijtperiode genereert een melding en, als uw meldingsregels dat bepalen, een ticket. De melding wordt opgelost zodra het apparaat weer online is.",
+          "graceMinutes": "Offline-respijtperiode (minuten)",
+          "graceHelp": "Hoe lang een apparaat onafgebroken offline moet zijn voordat een melding wordt gegenereerd. Gebruik 0 om direct te melden.",
+          "rulesNote": "Ticketaanmaak, prioriteiten en automatisch oplossen stelt u in bij de meldingsregels hieronder."
+        },
+        "connection": {
+          "title": "UniFi-verbinding",
+          "description": "Maak verbinding met een UniFi-API-sleutel. Gebruik Site Manager om alle consoles van uw account te bereiken, of Lokale controller voor een controller die u rechtstreeks kunt bereiken. Geadopteerde gateways, switches en access points worden gesynchroniseerd.",
+          "syncLabel": "Synchronisatie: {{status}}",
+          "syncLabelWithError": "Synchronisatie: {{status}} ({{error}})",
+          "connectedAt": "Verbonden: {{time}}",
+          "never": "nooit"
+        },
+        "errors": {
+          "loadSettings": "UniFi-instellingen laden mislukt",
+          "loadMappings": "UniFi-sitekoppelingen laden mislukt",
+          "loadSummary": "UniFi-verbindingsoverzicht laden mislukt",
+          "loadState": "UniFi-integratiestatus laden mislukt",
+          "saveConfiguration": "UniFi-configuratie opslaan mislukt",
+          "testConnectionFailed": "Verbindingstest mislukt",
+          "disconnectFailed": "UniFi-integratie verbreken mislukt",
+          "siteSyncFailed": "Sites ontdekken mislukt",
+          "deviceSyncFailed": "Apparaatsynchronisatie mislukt",
+          "updateMappingFailed": "Koppeling bijwerken mislukt",
+          "reconnectRequired": "UniFi heeft de opgeslagen API-sleutel geweigerd. Plak een nieuwe sleutel en sla op om de synchronisatie te hervatten.",
+          "alertCheckFailed": "Offline-controle mislukt",
+          "saveAlertingFailed": "Meldingsinstellingen opslaan mislukt",
+          "invalidGraceMinutes": "Voer een geheel aantal minuten in tussen 0 en 1440."
+        },
+        "fields": {
+          "apiKey": "API-sleutel ({{state}})",
+          "apiKeyStateSaved": "opgeslagen",
+          "apiKeyStateRequired": "vereist",
+          "apiKeyPlaceholderExisting": "Sleutel opgeslagen. Voer een nieuwe sleutel in om deze te vervangen",
+          "apiKeyPlaceholderNew": "Plak uw UniFi-API-sleutel",
+          "connectionMode": "Verbindingsmodus",
+          "modeSiteManager": "Site Manager (cloud)",
+          "modeLocal": "Lokale controller",
+          "localBaseUrl": "Controller-URL",
+          "localBaseUrlPlaceholder": "https://unifi.example.com"
+        },
+        "mappings": {
+          "site": "UniFi-site",
+          "siteIdLabel": "ID: {{id}}",
+          "mappedClient": "Gekoppelde klant",
+          "defaultContact": "Standaardcontact",
+          "selectContact": "Contact selecteren",
+          "autoSync": "Automatisch synchroniseren",
+          "autoSyncEnabled": "Ingeschakeld",
+          "autoSyncDisabled": "Uitgeschakeld"
+        },
+        "status": {
+          "label": "Status: ",
+          "connected": "Verbonden",
+          "disconnected": "Niet verbonden",
+          "reconnectRequired": "Opnieuw verbinden vereist"
+        },
+        "success": {
+          "configurationSaved": "UniFi-configuratie opgeslagen",
+          "connectionTestSucceeded": "Verbinding met UniFi geslaagd",
+          "disconnected": "UniFi-integratie losgekoppeld",
+          "siteSyncCompleted": "Sites ontdekken voltooid: {{processed}} verwerkt, {{created}} aangemaakt, {{updated}} bijgewerkt",
+          "deviceSyncCompleted": "Apparaatsynchronisatie voltooid: {{processed}} verwerkt, {{created}} aangemaakt, {{updated}} bijgewerkt",
+          "alertCheckCompleted": "Offline-controle voltooid",
+          "alertingSaved": "Meldingsinstellingen opgeslagen"
+        },
+        "sync": {
+          "title": "Synchronisatie en sitekoppelingen",
+          "description": "Ontdek UniFi-sites en koppel elke site aan een klant. Apparaten op niet-gekoppelde sites worden overgeslagen.",
+          "summary": "{{mappedSites}} gekoppelde sites · {{devices}} apparaten · {{activeAlerts}} actieve meldingen"
+        }
+      },
       "huntress": {
         "columns": {
           "organization": "Huntress-organisatie",

@@ -53,4 +53,42 @@ describe('RMM integrations tenant-scoped query contracts', () => {
     expect(source).not.toContain(".where({ tenant, window_id: input.windowId })");
     expect(source).not.toContain(".where({ tenant, status_type: 'ticket', is_closed: true })");
   });
+  it('keeps every UniFi action tier-gated, RBAC-checked and tenantDb-scoped', () => {
+    const actions = readSource('../../../../../ee/server/src/lib/actions/integrations/uniFiActions.ts');
+    const sync = readSource('../../../../../ee/server/src/lib/integrations/unifi/sync/syncEngine.ts');
+    const fetcher = readSource('../../../../../ee/server/src/lib/integrations/unifi/alerts/reconciliationFetcher.ts');
+
+    const exported = [...actions.matchAll(/^export const (\w+) = (\w+)\(/gm)];
+    expect(exported.map((m) => m[1])).toEqual(
+      expect.arrayContaining([
+        'getUniFiSettings',
+        'saveUniFiConfiguration',
+        'testUniFiConnection',
+        'disconnectUniFiIntegration',
+        'syncUniFiSites',
+        'listUniFiSiteMappings',
+        'updateUniFiSiteMapping',
+        'triggerUniFiFullSync',
+        'syncUniFiSingleDevice',
+        'runUniFiAlertCheckNow',
+        'getUniFiConnectionSummary',
+      ])
+    );
+    for (const [, name, wrapper] of exported) {
+      expect(wrapper, name).toBe('withAdvancedAssetsAccess');
+    }
+    // Every action body checks system_settings RBAC (read for getters, update otherwise).
+    expect((actions.match(/hasPermission\(user as any, 'system_settings', '(read|update)'\)/g) ?? []).length).toBe(
+      exported.length
+    );
+    expect(actions).toContain('assertTierAccess(TIER_FEATURES.ADVANCED_ASSETS)');
+
+    const combined = `${actions}\n${sync}\n${fetcher}`;
+    expect(actions).toContain("import { tenantDb } from '@alga-psa/db';");
+    expect(sync).toContain("import { tenantDb } from '@alga-psa/db';");
+    for (const table of ['assets', 'clients', 'rmm_alerts', 'rmm_integrations', 'rmm_organization_mappings', 'tenant_external_entity_mappings']) {
+      expect(combined).not.toMatch(new RegExp(`\\b(?:knex|trx|deps\\.knex)\\s*\\(\\s*['"]${table}['"]\\s*\\)`));
+    }
+    expect(combined).not.toMatch(/\.where\(\{\s*tenant/);
+  });
 });

@@ -2751,6 +2751,90 @@
           "url": "URL du webhook"
         }
       },
+      "unifi": {
+        "actions": {
+          "saveConfiguration": "Enregistrer la configuration",
+          "testConnection": "Tester la connexion",
+          "disconnect": "Déconnecter",
+          "discoverSites": "Découvrir les sites",
+          "runDeviceSync": "Lancer la synchronisation des appareils",
+          "checkOfflineNow": "Vérifier les appareils hors ligne maintenant",
+          "saveAlerting": "Enregistrer les paramètres d'alerte"
+        },
+        "alerting": {
+          "title": "Alertes hors ligne",
+          "description": "Un appareil qui reste hors ligne plus longtemps que le délai de grâce déclenche une alerte et, si vos règles d'alerte le prévoient, un ticket. L'alerte est résolue lorsque l'appareil revient en ligne.",
+          "graceMinutes": "Délai de grâce hors ligne (minutes)",
+          "graceHelp": "Durée pendant laquelle un appareil doit rester hors ligne en continu avant qu'une alerte ne soit déclenchée. Utilisez 0 pour alerter immédiatement.",
+          "rulesNote": "La création de tickets, les priorités et la résolution automatique se configurent dans les règles d'alerte ci-dessous."
+        },
+        "connection": {
+          "title": "Connexion UniFi",
+          "description": "Connectez-vous avec une clé d'API UniFi. Utilisez Site Manager pour accéder à toutes les consoles de votre compte, ou Contrôleur local pour un contrôleur directement accessible. Les passerelles, commutateurs et points d'accès adoptés sont synchronisés.",
+          "syncLabel": "Synchronisation : {{status}}",
+          "syncLabelWithError": "Synchronisation : {{status}} ({{error}})",
+          "connectedAt": "Connecté : {{time}}",
+          "never": "jamais"
+        },
+        "errors": {
+          "loadSettings": "Échec du chargement des paramètres UniFi",
+          "loadMappings": "Échec du chargement des correspondances de sites UniFi",
+          "loadSummary": "Échec du chargement du résumé de connexion UniFi",
+          "loadState": "Échec du chargement de l'état de l'intégration UniFi",
+          "saveConfiguration": "Échec de l'enregistrement de la configuration UniFi",
+          "testConnectionFailed": "Échec du test de connexion",
+          "disconnectFailed": "Échec de la déconnexion de l'intégration UniFi",
+          "siteSyncFailed": "Échec de la découverte des sites",
+          "deviceSyncFailed": "Échec de la synchronisation des appareils",
+          "updateMappingFailed": "Échec de la mise à jour de la correspondance",
+          "reconnectRequired": "UniFi a rejeté la clé d'API enregistrée. Collez une nouvelle clé et enregistrez pour reprendre la synchronisation.",
+          "alertCheckFailed": "Échec de la vérification hors ligne",
+          "saveAlertingFailed": "Échec de l'enregistrement des paramètres d'alerte",
+          "invalidGraceMinutes": "Saisissez un nombre entier de minutes compris entre 0 et 1440."
+        },
+        "fields": {
+          "apiKey": "Clé d'API ({{state}})",
+          "apiKeyStateSaved": "enregistrée",
+          "apiKeyStateRequired": "obligatoire",
+          "apiKeyPlaceholderExisting": "Clé enregistrée. Saisissez une nouvelle clé pour la remplacer",
+          "apiKeyPlaceholderNew": "Collez votre clé d'API UniFi",
+          "connectionMode": "Mode de connexion",
+          "modeSiteManager": "Site Manager (cloud)",
+          "modeLocal": "Contrôleur local",
+          "localBaseUrl": "URL du contrôleur",
+          "localBaseUrlPlaceholder": "https://unifi.example.com"
+        },
+        "mappings": {
+          "site": "Site UniFi",
+          "siteIdLabel": "ID : {{id}}",
+          "mappedClient": "Client associé",
+          "defaultContact": "Contact par défaut",
+          "selectContact": "Sélectionner un contact",
+          "autoSync": "Synchronisation automatique",
+          "autoSyncEnabled": "Activée",
+          "autoSyncDisabled": "Désactivée"
+        },
+        "status": {
+          "label": "Statut : ",
+          "connected": "Connecté",
+          "disconnected": "Non connecté",
+          "reconnectRequired": "Reconnexion requise"
+        },
+        "success": {
+          "configurationSaved": "Configuration UniFi enregistrée",
+          "connectionTestSucceeded": "Connexion à UniFi réussie",
+          "disconnected": "Intégration UniFi déconnectée",
+          "siteSyncCompleted": "Découverte des sites terminée : {{processed}} traités, {{created}} créés, {{updated}} mis à jour",
+          "deviceSyncCompleted": "Synchronisation des appareils terminée : {{processed}} traités, {{created}} créés, {{updated}} mis à jour",
+          "alertCheckCompleted": "Vérification hors ligne terminée",
+          "alertingSaved": "Paramètres d'alerte enregistrés"
+        },
+        "sync": {
+          "title": "Synchronisation et correspondances de sites",
+          "description": "Découvrez les sites UniFi et associez chacun à un client. Les appareils des sites non associés sont ignorés.",
+          "summary": "{{mappedSites}} sites associés · {{devices}} appareils · {{activeAlerts}} alertes actives"
+        }
+      },
       "huntress": {
         "columns": {
           "organization": "Organisation Huntress",

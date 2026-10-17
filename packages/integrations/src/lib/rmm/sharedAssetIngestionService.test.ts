@@ -16,6 +16,7 @@ type DbState = {
   assets: Array<any>;
   workstation_assets: Array<any>;
   server_assets: Array<any>;
+  network_device_assets?: Array<any>;
   tenant_external_entity_mappings: Array<any>;
   rmm_organization_mappings: Array<any>;
 };
@@ -440,6 +441,113 @@ describe('sharedAssetIngestionService', () => {
       disk_usage: JSON.stringify([{ name: '/', total_gb: 995, free_gb: 20, utilization_percent: 39 }]),
       installed_software: JSON.stringify([{ name: 'Docker Desktop', version: '4.40.0' }]),
       system_info: JSON.stringify({ manufacturer: 'Apple', model: 'Mac16,5' }),
+    });
+  });
+
+  describe('network_device extension', () => {
+    function networkState(): DbState {
+      return {
+        assets: [],
+        workstation_assets: [],
+        server_assets: [],
+        network_device_assets: [],
+        tenant_external_entity_mappings: [],
+        rmm_organization_mappings: [
+          { tenant: 'tenant_1', integration_id: 'integration_1', external_organization_id: 'scope_1', client_id: 'client_1' },
+        ],
+      };
+    }
+
+    it('upserts network_device_assets for a network_device snapshot', async () => {
+      const state = networkState();
+      const result = await ingestNormalizedRmmDeviceSnapshot({
+        tenant: 'tenant_1',
+        knex: createFakeKnex(state),
+        snapshot: buildSnapshot({
+          provider: 'unifi',
+          assetType: 'network_device',
+          extension: {
+            networkDevice: {
+              deviceType: 'access_point',
+              managementIp: '10.0.0.9',
+              firmwareVersion: '7.0.1',
+              portCount: 2,
+              supportsPoe: false,
+            },
+          },
+        }),
+      });
+
+      expect(result.action).toBe('created');
+      expect(state.network_device_assets).toHaveLength(1);
+      expect(state.network_device_assets![0]).toMatchObject({
+        tenant: 'tenant_1',
+        device_type: 'access_point',
+        management_ip: '10.0.0.9',
+        firmware_version: '7.0.1',
+        port_count: 2,
+        supports_poe: false,
+      });
+      // Workstation/server tables are untouched.
+      expect(state.workstation_assets).toHaveLength(0);
+      expect(state.server_assets).toHaveLength(0);
+    });
+
+    it('does not clobber optional columns the snapshot leaves undefined on re-sync', async () => {
+      const state = networkState();
+      const knex = createFakeKnex(state);
+      const base = { provider: 'unifi' as const, assetType: 'network_device' as const };
+      await ingestNormalizedRmmDeviceSnapshot({
+        tenant: 'tenant_1',
+        knex,
+        snapshot: buildSnapshot({
+          ...base,
+          extension: { networkDevice: { deviceType: 'switch', managementIp: '10.0.0.2', portCount: 24 } },
+        }),
+      });
+      const second = await ingestNormalizedRmmDeviceSnapshot({
+        tenant: 'tenant_1',
+        knex,
+        snapshot: buildSnapshot({
+          ...base,
+          extension: { networkDevice: { deviceType: 'switch', firmwareVersion: '9.9' } },
+        }),
+      });
+
+      expect(second.action).toBe('updated');
+      expect(state.network_device_assets![0]).toMatchObject({
+        device_type: 'switch',
+        management_ip: '10.0.0.2',
+        port_count: 24,
+        firmware_version: '9.9',
+      });
+    });
+
+    it('throws when a networkDevice block has no deviceType instead of defaulting', async () => {
+      const state = networkState();
+      await expect(
+        ingestNormalizedRmmDeviceSnapshot({
+          tenant: 'tenant_1',
+          knex: createFakeKnex(state),
+          snapshot: buildSnapshot({
+            provider: 'unifi',
+            assetType: 'network_device',
+            extension: { networkDevice: { managementIp: '10.0.0.2' } as any },
+          }),
+        })
+      ).rejects.toThrow(/missing a valid deviceType/);
+      expect(state.network_device_assets).toHaveLength(0);
+    });
+
+    it('keeps writing no extension row for network_device snapshots without a networkDevice block', async () => {
+      const state = networkState();
+      const result = await ingestNormalizedRmmDeviceSnapshot({
+        tenant: 'tenant_1',
+        knex: createFakeKnex(state),
+        snapshot: buildSnapshot({ provider: 'ninjaone', assetType: 'network_device', extension: { lanIp: '10.0.0.1' } }),
+      });
+      expect(result.action).toBe('created');
+      expect(state.network_device_assets).toHaveLength(0);
     });
   });
 });

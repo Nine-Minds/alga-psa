@@ -17,7 +17,7 @@ export function registerRmmIntegrationRoutes(registry: ApiOpenApiRegistry) {
       provider: zOpenApi
         .string()
         .describe(
-          'RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.'
+          'RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, unifi, or huntress. Scheduled device sync is available for all but huntress, which exposes no device listing.'
         ),
     })
   );
