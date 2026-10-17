@@ -8,7 +8,7 @@ import { AsyncClientPicker, type PickerClientOption } from './AsyncClientPicker'
 import { ClientTagsProvider } from '../context/ClientTagsContext';
 
 vi.mock('../ui-reflection/useAutomationIdAndRegister', () => ({
-  useAutomationIdAndRegister: () => ({ automationIdProps: {}, updateMetadata: vi.fn() }),
+  useAutomationIdAndRegister: (info: any) => ({ automationIdProps: { id: info.id }, updateMetadata: vi.fn() }),
 }));
 vi.mock('./CustomSelect', () => ({
   default: ({ id, value, onValueChange, options }: any) => (
@@ -163,6 +163,45 @@ describe('AsyncClientPicker', () => {
     await waitFor(() => expect(searchClients).toHaveBeenCalledTimes(4));
     expect(searchClients.mock.calls[3][0]).toMatchObject({ status: 'inactive', clientType: 'individual', tags: ['vip'], page: 0 });
     expect(fetchClientTags).not.toHaveBeenCalled();
+  });
+
+  it('does not refetch when a new but equal disabled Set / tooltip arrives while open', async () => {
+    const searchClients = vi.fn(async (_p?: any) => ({ clients: mk(2), total: 2 }));
+    const ui = (set: Set<string>, tip: string) => (
+      <ClientTagsProvider value={{ fetchClientTags, fetchClientTagOptions }}>
+        <AsyncClientPicker id="cp" onSelect={vi.fn()} selectedClientId={null} debounceMs={0}
+          searchClients={searchClients} disabledClientIds={set} disabledTooltip={tip} />
+      </ClientTagsProvider>
+    );
+    const { rerender } = render(ui(new Set(['Client-0']), 'A'));
+    open();
+    await screen.findByText('Client 0');
+    expect(searchClients).toHaveBeenCalledTimes(1);
+    rerender(ui(new Set(['Client-0']), 'B'));
+    rerender(ui(new Set(['Client-0']), 'B'));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(searchClients).toHaveBeenCalledTimes(1);
+  });
+
+  it('exposes the trigger as `${id}-trigger`', () => {
+    renderPicker({ searchClients: vi.fn(async (_p?: any) => ({ clients: [], total: 0 })) });
+    expect(screen.getByRole('combobox').getAttribute('id')).toBe('cp-trigger');
+  });
+
+  it('does not fetch when filters change while closed', async () => {
+    const searchClients = vi.fn(async (_p?: any) => ({ clients: mk(1), total: 1 }));
+    const ui = (state: 'active' | 'all') => (
+      <AsyncClientPicker id="cp" onSelect={vi.fn()} selectedClientId={null} debounceMs={0}
+        searchClients={searchClients} filterState={state} />
+    );
+    const { rerender } = render(ui('active'));
+    rerender(ui('all'));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(searchClients).not.toHaveBeenCalled();
+    open();
+    await screen.findByText('Client 0');
+    expect(searchClients).toHaveBeenCalledTimes(1);
+    expect(searchClients.mock.calls[0][0]).toMatchObject({ status: 'all' });
   });
 
   it('renders the add-new footer and fires onAddNew', async () => {

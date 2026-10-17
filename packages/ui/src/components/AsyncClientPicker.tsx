@@ -224,6 +224,13 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
     };
   }, [selectedClientId, known, remember]);
 
+  // Disabled state is presentation only: read through refs and keyed by content, so a new-but-equal
+  // Set (or a tooltip change) from a parent re-render never re-issues the server query.
+  const disabledRef = useRef(disabledClientIds);
+  disabledRef.current = disabledClientIds;
+  const tooltipRef = useRef(disabledTooltip);
+  tooltipRef.current = disabledTooltip;
+  const disabledKey = disabledClientIds ? Array.from(disabledClientIds).sort().join(',') : '';
   const excludeKey = excludeIds?.join(',') ?? '';
   const tagsKey = selectedTags.join('\u0000');
 
@@ -241,7 +248,8 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
       });
       remember(result.clients);
       const options: SelectOption[] = result.clients.map((client) => {
-        const isDisabled = disabledClientIds?.has(client.client_id) ?? false;
+        const isDisabled = disabledRef.current?.has(client.client_id) ?? false;
+        const disabledTooltip = tooltipRef.current;
         return {
           value: client.client_id,
           label: client.client_name,
@@ -264,7 +272,7 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
       return { options, total: result.total };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [status, clientType, tagsKey, excludeKey, disabledClientIds, disabledTooltip, remember]
+    [status, clientType, tagsKey, excludeKey, disabledKey, remember]
   );
 
   const selected = selectedClientId ? known[selectedClientId] : undefined;
@@ -281,6 +289,7 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   return (
     <AsyncSearchableSelect
       id={id}
+      triggerId={`${id}-trigger`}
       value={selectedClientId ?? ''}
       onChange={(value) => {
         if (value !== selectedClientId && !disabledClientIds?.has(value)) onSelect(value);

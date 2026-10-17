@@ -55,6 +55,8 @@ interface AsyncSearchableSelectProps {
   footerContent?: (args: { search: string; close: () => void }) => React.ReactNode;
   /** Content rendered between the search input and the list (e.g. filter controls). Mounted only while open. */
   headerContent?: React.ReactNode;
+  /** Overrides the DOM id of the trigger button (defaults to the registered automation id). */
+  triggerId?: string;
   /** Leading visual shown on the trigger next to the selected label. */
   selectedIcon?: React.ReactNode;
 }
@@ -82,6 +84,7 @@ export function AsyncSearchableSelect({
   footerContent,
   headerContent,
   selectedIcon,
+  triggerId,
 }: AsyncSearchableSelectProps & AutomationProps): React.JSX.Element {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t('form.selectPlaceholder', { defaultValue: 'Select...' });
@@ -442,6 +445,7 @@ export function AsyncSearchableSelect({
           }}
           disabled={disabled}
           {...automationIdProps}
+          {...(triggerId ? { id: triggerId } : {})}
         >
           <span className="flex items-center gap-2 min-w-0">
             {value ? selectedIcon : null}
