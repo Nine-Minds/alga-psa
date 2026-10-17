@@ -46,7 +46,13 @@
     "licenseWrongTenant": "Questa licenza è stata emessa per un’appliance diversa e non è valida qui. L’installazione utilizza le funzionalità Essentials.",
     "manageLicense": "Gestisci licenza",
     "ariaLabel": "Stato della licenza",
-    "dismiss": "Chiudi"
+    "dismiss": "Chiudi",
+    "subscriptionEnding": "Il tuo abbonamento Pro è stato annullato. Pro termina il {{date}}. Riabbonati per mantenere Pro.",
+    "subscriptionEndingNoDate": "Il tuo abbonamento Pro è stato annullato. Riabbonati per mantenere Pro.",
+    "subscriptionLapsed": "Ora stai usando l'edizione gratuita. Riabbonati per ripristinare Pro.",
+    "resubscribe": "Riabbonati",
+    "termEnds": "Il tuo accesso a Pro termina il {{date}}. Rinnova per mantenere Pro.",
+    "termEndsNoDate": "Il tuo periodo Pro sta per terminare. Rinnova per mantenere Pro."
   },
   "nav": {
     "dashboard": "Dashboard",

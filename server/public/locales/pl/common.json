@@ -58,7 +58,13 @@
     "licenseWrongTenant": "Ta licencja została wydana dla innego urządzenia i nie jest tutaj ważna. Instalacja korzysta z funkcji Essentials.",
     "manageLicense": "Zarządzaj licencją",
     "ariaLabel": "Status licencji",
-    "dismiss": "Zamknij"
+    "dismiss": "Zamknij",
+    "subscriptionEnding": "Twoja subskrypcja Pro została anulowana. Pro kończy się {{date}}. Wznów subskrypcję, aby zachować Pro.",
+    "subscriptionEndingNoDate": "Twoja subskrypcja Pro została anulowana. Wznów subskrypcję, aby zachować Pro.",
+    "subscriptionLapsed": "Korzystasz teraz z wersji bezpłatnej. Wznów subskrypcję, aby przywrócić Pro.",
+    "resubscribe": "Wznów subskrypcję",
+    "termEnds": "Twój dostęp do Pro kończy się {{date}}. Odnów, aby zachować Pro.",
+    "termEndsNoDate": "Twój okres Pro dobiega końca. Odnów, aby zachować Pro."
   },
   "nav": {
     "dashboard": "Panel",

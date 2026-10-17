@@ -47,7 +47,15 @@ export type LicenseVerifyFailReason =
 /** Result of verifyLicense(). */
 export type LicenseVerifyResult =
   | { valid: true; claims: LicenseClaims }
-  | { valid: false; reason: LicenseVerifyFailReason };
+  | {
+      valid: false;
+      reason: LicenseVerifyFailReason;
+      /**
+       * Only on `reason: 'expired'`: the (signature-verified) token's `exp`, in
+       * unix seconds, so callers can say when a lapsed license ended.
+       */
+      expiredAt?: number;
+    };
 
 /**
  * Type guard for a failed verification result (the member carrying `reason`).
@@ -56,6 +64,6 @@ export type LicenseVerifyResult =
  */
 export function isLicenseVerifyFailure(
   result: LicenseVerifyResult,
-): result is { valid: false; reason: LicenseVerifyFailReason } {
+): result is { valid: false; reason: LicenseVerifyFailReason; expiredAt?: number } {
   return !result.valid;
 }

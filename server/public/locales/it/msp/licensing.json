@@ -263,7 +263,9 @@
         "title": "{{tier}} è attivo",
         "description": "La tua licenza a pagamento è attiva su questa appliance.",
         "descriptionWithExpiry": "La tua licenza è attiva fino al {{date}}.",
-        "badge": "Con licenza"
+        "badge": "Con licenza",
+        "descriptionEnding": "Il tuo abbonamento è stato annullato. Pro resta attivo fino al {{date}}.",
+        "descriptionTermEnds": "Pro è attivo fino al {{date}}, quando termina la durata fissa."
       },
       "licenseExpired": {
         "eyebrow": "La licenza richiede attenzione",
@@ -288,6 +290,12 @@
         "title": "Stai usando Essentials",
         "description": "Essentials è attivo su questa appliance. Continua a usare il set principale di funzionalità oppure avvia un unico periodo di prova Pro di 15 giorni.",
         "badge": "Essentials attivo"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Abbonamento terminato",
+        "title": "Ora stai usando l'edizione gratuita",
+        "description": "Il tuo abbonamento Pro è terminato. I dati vengono conservati e le funzioni Pro si riattivano quando ti riabboni.",
+        "badge": "Edizione gratuita"
       }
     },
     "trialCta": {
@@ -352,7 +360,22 @@
       "activateLicenseKey": "Impossibile attivare la chiave di licenza.",
       "activateClaimCode": "Impossibile attivare il codice di attivazione.",
       "startTrial": "Impossibile avviare il periodo di prova.",
-      "refreshLicense": "Impossibile aggiornare la licenza."
+      "refreshLicense": "Impossibile aggiornare la licenza.",
+      "credentialRevoked": "Le credenziali di licenza di questa appliance sono state revocate. Ricollegala con un nuovo codice di attivazione dal portale delle licenze.",
+      "subscriptionEnding": "Il tuo abbonamento Pro è stato annullato. Pro termina il {{date}}.",
+      "subscriptionEndingNoDate": "Il tuo abbonamento Pro è stato annullato.",
+      "subscriptionEnded": "Il tuo abbonamento Pro è terminato. Questa appliance usa l'edizione gratuita.",
+      "resubscribeAt": "Riabbonati su {{url}}.",
+      "resubscribeToRestore": "Riabbonati per ripristinare Pro."
+    },
+    "lapse": {
+      "lapsedTitle": "Ora stai usando l'edizione gratuita. Riabbonati per ripristinare Pro.",
+      "endingTitle": "Il tuo abbonamento Pro è stato annullato.",
+      "endedOn": "Pro è terminato il {{date}}.",
+      "endsOn": "Pro termina il {{date}}.",
+      "dataKept": "Non viene eliminato nulla. I dati restano al loro posto e le funzioni Pro si riattivano dopo il riabbonamento e l'aggiornamento della licenza.",
+      "resubscribe": "Riabbonati",
+      "termEndsTitle": "Il tuo periodo Pro sta per terminare."
     }
   },
   "errors": {

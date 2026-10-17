@@ -46,7 +46,13 @@
     "licenseWrongTenant": "This license was issued for a different appliance and is not valid here. The install is running Essentials features.",
     "manageLicense": "Manage License",
     "ariaLabel": "License status",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "subscriptionEnding": "Your Pro subscription has been cancelled. Pro ends on {{date}}. Resubscribe to keep Pro.",
+    "subscriptionEndingNoDate": "Your Pro subscription has been cancelled. Resubscribe to keep Pro.",
+    "subscriptionLapsed": "You're now on the free edition. Resubscribe to restore Pro.",
+    "resubscribe": "Resubscribe",
+    "termEnds": "Your Pro access ends on {{date}}. Renew to keep Pro.",
+    "termEndsNoDate": "Your Pro term is ending. Renew to keep Pro."
   },
   "nav": {
     "dashboard": "Dashboard",

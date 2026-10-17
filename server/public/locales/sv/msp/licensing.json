@@ -262,7 +262,9 @@
         "title": "{{tier}} är aktivt",
         "description": "Din betalda licens är aktiv i den här installationen.",
         "descriptionWithExpiry": "Din licens är aktiv till och med {{date}}.",
-        "badge": "Licensierad"
+        "badge": "Licensierad",
+        "descriptionEnding": "Din prenumeration har avslutats. Pro är aktivt till och med {{date}}.",
+        "descriptionTermEnds": "Pro är aktivt till och med {{date}}, då den fasta perioden upphör."
       },
       "licenseExpired": {
         "eyebrow": "Licensen kräver åtgärd",
@@ -287,6 +289,12 @@
         "title": "Du använder Essentials",
         "description": "Essentials är aktivt i den här installationen. Fortsätt använda grundfunktionerna eller starta en 15 dagars provperiod för Pro, som bara kan startas en gång.",
         "badge": "Essentials är aktivt"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Prenumerationen har upphört",
+        "title": "Du använder nu den kostnadsfria utgåvan",
+        "description": "Din Pro-prenumeration har upphört. Dina data finns kvar och Pro-funktionerna aktiveras igen när du tecknar prenumerationen på nytt.",
+        "badge": "Kostnadsfri utgåva"
       }
     },
     "trialCta": {
@@ -350,7 +358,22 @@
       "activateLicenseKey": "Det gick inte att aktivera licensnyckeln.",
       "activateClaimCode": "Det gick inte att aktivera aktiveringskoden.",
       "startTrial": "Det gick inte att starta provperioden.",
-      "refreshLicense": "Det gick inte att uppdatera licensen."
+      "refreshLicense": "Det gick inte att uppdatera licensen.",
+      "credentialRevoked": "Licensuppgifterna för den här apparaten har återkallats. Anslut den igen med en ny aktiveringskod från licensportalen.",
+      "subscriptionEnding": "Din Pro-prenumeration har avslutats. Pro upphör den {{date}}.",
+      "subscriptionEndingNoDate": "Din Pro-prenumeration har avslutats.",
+      "subscriptionEnded": "Din Pro-prenumeration har upphört. Den här apparaten använder den kostnadsfria utgåvan.",
+      "resubscribeAt": "Teckna igen på {{url}}.",
+      "resubscribeToRestore": "Teckna prenumerationen igen för att återställa Pro."
+    },
+    "lapse": {
+      "lapsedTitle": "Du använder nu den kostnadsfria utgåvan. Teckna prenumerationen igen för att återställa Pro.",
+      "endingTitle": "Din Pro-prenumeration har avslutats.",
+      "endedOn": "Pro upphörde den {{date}}.",
+      "endsOn": "Pro upphör den {{date}}.",
+      "dataKept": "Inget raderas. Dina data finns kvar och Pro-funktionerna aktiveras igen när du tecknat prenumerationen på nytt och uppdaterat licensen.",
+      "resubscribe": "Teckna igen",
+      "termEndsTitle": "Din Pro-period håller på att ta slut."
     }
   },
   "errors": {

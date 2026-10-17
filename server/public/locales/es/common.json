@@ -46,7 +46,13 @@
     "licenseWrongTenant": "Esta licencia se emitió para un dispositivo diferente y no es válida aquí. La instalación usa las funciones Essentials.",
     "manageLicense": "Administrar licencia",
     "ariaLabel": "Estado de la licencia",
-    "dismiss": "Descartar"
+    "dismiss": "Descartar",
+    "subscriptionEnding": "Su suscripción Pro se ha cancelado. Pro finaliza el {{date}}. Vuelva a suscribirse para conservar Pro.",
+    "subscriptionEndingNoDate": "Su suscripción Pro se ha cancelado. Vuelva a suscribirse para conservar Pro.",
+    "subscriptionLapsed": "Ahora usa la edición gratuita. Vuelva a suscribirse para restaurar Pro.",
+    "resubscribe": "Volver a suscribirse",
+    "termEnds": "Su acceso a Pro termina el {{date}}. Renueve para conservar Pro.",
+    "termEndsNoDate": "Su periodo de Pro está por terminar. Renueve para conservar Pro."
   },
   "nav": {
     "dashboard": "Panel",

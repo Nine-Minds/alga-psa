@@ -262,7 +262,9 @@
         "title": "{{tier}} ist aktiv",
         "description": "Ihre kostenpflichtige Lizenz ist auf dieser Appliance aktiv.",
         "descriptionWithExpiry": "Ihre Lizenz ist bis zum {{date}} aktiv.",
-        "badge": "Lizenziert"
+        "badge": "Lizenziert",
+        "descriptionEnding": "Ihr Abonnement wurde gekündigt. Pro bleibt bis zum {{date}} aktiv.",
+        "descriptionTermEnds": "Pro ist bis zum {{date}} aktiv, dann endet die feste Laufzeit."
       },
       "licenseExpired": {
         "eyebrow": "Lizenz erfordert Ihre Aufmerksamkeit",
@@ -287,6 +289,12 @@
         "title": "Sie verwenden Essentials",
         "description": "Essentials ist auf dieser Appliance aktiv. Nutzen Sie weiterhin den zentralen Funktionsumfang oder starten Sie einmalig eine 15-tägige Pro-Testversion.",
         "badge": "Essentials aktiv"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Abonnement beendet",
+        "title": "Sie nutzen jetzt die kostenlose Edition",
+        "description": "Ihr Pro-Abonnement ist beendet. Ihre Daten bleiben erhalten, und die Pro-Funktionen werden mit einem neuen Abonnement wieder aktiviert.",
+        "badge": "Kostenlose Edition"
       }
     },
     "trialCta": {
@@ -350,7 +358,22 @@
       "activateLicenseKey": "Der Lizenzschlüssel konnte nicht aktiviert werden.",
       "activateClaimCode": "Der Aktivierungscode konnte nicht aktiviert werden.",
       "startTrial": "Die Testversion konnte nicht gestartet werden.",
-      "refreshLicense": "Die Lizenz konnte nicht aktualisiert werden."
+      "refreshLicense": "Die Lizenz konnte nicht aktualisiert werden.",
+      "credentialRevoked": "Die Lizenz-Zugangsdaten dieser Appliance wurden widerrufen. Verbinden Sie sie mit einem neuen Aktivierungscode aus dem Lizenzportal erneut.",
+      "subscriptionEnding": "Ihr Pro-Abonnement wurde gekündigt. Pro endet am {{date}}.",
+      "subscriptionEndingNoDate": "Ihr Pro-Abonnement wurde gekündigt.",
+      "subscriptionEnded": "Ihr Pro-Abonnement ist beendet. Diese Appliance nutzt die kostenlose Edition.",
+      "resubscribeAt": "Erneut abonnieren unter {{url}}.",
+      "resubscribeToRestore": "Schließen Sie das Abonnement erneut ab, um Pro wiederherzustellen."
+    },
+    "lapse": {
+      "lapsedTitle": "Sie nutzen jetzt die kostenlose Edition. Schließen Sie das Abonnement erneut ab, um Pro wiederherzustellen.",
+      "endingTitle": "Ihr Pro-Abonnement wurde gekündigt.",
+      "endedOn": "Pro endete am {{date}}.",
+      "endsOn": "Pro endet am {{date}}.",
+      "dataKept": "Es wird nichts gelöscht. Ihre Daten bleiben erhalten, und die Pro-Funktionen werden nach erneutem Abonnement und Aktualisierung der Lizenz wieder aktiviert.",
+      "resubscribe": "Erneut abonnieren",
+      "termEndsTitle": "Ihre Pro-Laufzeit endet bald."
     }
   },
   "errors": {

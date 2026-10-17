@@ -17,11 +17,14 @@ import { StaleActionBanner } from '@alga-psa/ui/components/StaleActionBanner';
 interface AlgaDeskMspShellProps {
   children: React.ReactNode;
   initialSidebarCollapsed?: boolean;
+  /** Rendered across the top of the content column, above the header. */
+  topBanner?: React.ReactNode;
 }
 
 export default function AlgaDeskMspShell({
   children,
   initialSidebarCollapsed = false,
+  topBanner,
 }: AlgaDeskMspShellProps): React.JSX.Element {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -75,6 +78,7 @@ export default function AlgaDeskMspShell({
           onMenuItemClick={handleMenuItemClick}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
+          {topBanner}
           <Header
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
