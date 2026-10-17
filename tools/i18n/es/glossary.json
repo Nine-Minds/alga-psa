@@ -2415,7 +2415,8 @@
       "Auto",
       "Normal (400)",
       "auto | 50% | 120px",
-      "Cc"
+      "Cc",
+      "{{size}} GB"
     ],
     "caseInsensitive": [
       "api",

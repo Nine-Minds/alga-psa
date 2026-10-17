@@ -468,7 +468,7 @@ export function AssetBentoLayout({
                   <BentoGauge
                     percent={disk?.utilization_percent}
                     label={disk ? `${t('assetBento.disk', { defaultValue: 'Disk' })} ${disk.name}` : t('assetBento.disk', { defaultValue: 'Disk' })}
-                    caption={disk ? `${disk.free_gb} GB free of ${disk.total_gb} GB` : undefined}
+                    caption={disk ? (disk.free_gb != null ? `${disk.free_gb} GB free of ${disk.total_gb} GB` : `${disk.total_gb} GB`) : undefined}
                   />
                 </div>
                 <div className="mt-3 space-y-1.5 border-t border-[rgb(var(--color-border-100))] pt-3 text-sm">
