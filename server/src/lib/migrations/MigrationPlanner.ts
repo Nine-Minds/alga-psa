@@ -44,8 +44,11 @@ export class MigrationPlanner {
     if ((stagedCounts.assets ?? 0) > 0) {
       issues.push(...(await this.checkAssetConfiguration(migrationJobId, configuration)));
     }
+    let productSkuMatched = 0;
     if ((stagedCounts.products ?? 0) > 0 || (stagedCounts.vendor_products ?? 0) > 0) {
-      issues.push(...(await this.checkProductConfiguration(migrationJobId, configuration, stagedCounts)));
+      const productChecks = await this.checkProductConfiguration(migrationJobId, configuration, stagedCounts);
+      issues.push(...productChecks.issues);
+      productSkuMatched = productChecks.skuMatchedCount;
     }
     issues.push(...(await this.checkLocationRequirements(migrationJobId)));
     issues.push(...(await this.checkOrphanPlacement(migrationJobId, configuration, stagedCounts)));
@@ -57,7 +60,10 @@ export class MigrationPlanner {
       (entityType) => (stagedCounts[entityType] ?? 0) > 0
     ).map((entityType) => {
       const staged = stagedCounts[entityType] ?? 0;
-      const skipped = skipCounts[entityType] ?? 0;
+      // SKU-matched products are mapped to the existing product and left
+      // unchanged (a skip), so they are not creates. Already identity-mapped
+      // rows are excluded from skuMatchedCount, so nothing is counted twice.
+      const skipped = (skipCounts[entityType] ?? 0) + (entityType === 'products' ? productSkuMatched : 0);
       const blocked = blockedCounts[entityType] ?? 0;
       return {
         entityType,
@@ -415,20 +421,34 @@ export class MigrationPlanner {
     migrationJobId: string,
     configuration: MigrationJobConfiguration,
     stagedCounts: Partial<Record<AmpEntityType, number>>
-  ): Promise<PreflightIssue[]> {
+  ): Promise<{ issues: PreflightIssue[]; skuMatchedCount: number }> {
     const issues: PreflightIssue[] = [];
+    let skuMatchedCount = 0;
     const db = tenantDb(this.knex, this.tenant);
     const staged = () => db.table('migration_staged_records').where({ migration_job_id: migrationJobId });
-    const existingSku = (alias: string) =>
-      `EXISTS (SELECT 1 FROM service_catalog sc WHERE sc.tenant = ? AND sc.item_kind = 'product' AND btrim(sc.sku) = btrim(${alias}.payload ->> 'sku'))`;
+    // payloadKey is a fixed literal (never user data). The payload side is
+    // trimmed like normalizeProductSku (JS String.trim: any whitespace); the
+    // catalog side is btrim'd exactly as findProductBySkuCore does.
+    const existingSku = (alias: string, payloadKey: 'sku' | 'product_sku') =>
+      `EXISTS (SELECT 1 FROM service_catalog sc WHERE sc.tenant = ? AND sc.item_kind = 'product' AND btrim(sc.sku) = regexp_replace(${alias}.payload ->> '${payloadKey}', '^[[:space:]]+|[[:space:]]+$', '', 'g'))`;
 
     if ((stagedCounts.products ?? 0) > 0) {
       const matched = await staged()
         .where({ entity_type: 'products' })
         .whereRaw(`COALESCE(btrim(payload ->> 'sku'), '') <> ''`)
-        .whereRaw(existingSku('migration_staged_records'), [this.tenant])
+        .whereRaw(existingSku('migration_staged_records', 'sku'), [this.tenant])
+        // Rows already identity-mapped (a re-run) are counted as skips already.
+        .whereNotExists(function notMapped() {
+          this.select(1)
+            .from('migration_identity_mappings as m')
+            .whereRaw('m.tenant = migration_staged_records.tenant')
+            .whereRaw('m.namespace = migration_staged_records.namespace')
+            .whereRaw('m.entity_type = migration_staged_records.entity_type')
+            .whereRaw('m.source_record_id = migration_staged_records.source_record_id');
+        })
         .orderBy('package_record_id')
         .select('package_record_id');
+      skuMatchedCount = matched.length;
       if (matched.length > 0) {
         issues.push({
           severity: 'warning',
@@ -442,7 +462,7 @@ export class MigrationPlanner {
 
       const unmatchedRow = await staged()
         .where({ entity_type: 'products' })
-        .whereRaw(`NOT (COALESCE(btrim(payload ->> 'sku'), '') <> '' AND ${existingSku('migration_staged_records')})`, [this.tenant])
+        .whereRaw(`NOT (COALESCE(btrim(payload ->> 'sku'), '') <> '' AND ${existingSku('migration_staged_records', 'sku')})`, [this.tenant])
         .count({ count: '*' })
         .first();
       const toCreate = Number(unmatchedRow?.count ?? 0);
@@ -476,7 +496,7 @@ export class MigrationPlanner {
           query
             .whereRaw(`payload ->> 'product_package_record_id' IS NULL`)
             .whereRaw(
-              `NOT (${existingSku('migration_staged_records')} OR EXISTS (
+              `NOT (${existingSku('migration_staged_records', 'product_sku')} OR EXISTS (
                 SELECT 1 FROM migration_staged_records p
                 WHERE p.tenant = migration_staged_records.tenant
                   AND p.migration_job_id = migration_staged_records.migration_job_id
@@ -510,7 +530,7 @@ export class MigrationPlanner {
           .orWhere((q) =>
             q
               .where({ entity_type: 'products' })
-              .whereRaw(`NOT (COALESCE(btrim(payload ->> 'sku'), '') <> '' AND ${existingSku('migration_staged_records')})`, [this.tenant])
+              .whereRaw(`NOT (COALESCE(btrim(payload ->> 'sku'), '') <> '' AND ${existingSku('migration_staged_records', 'sku')})`, [this.tenant])
               .where((qq) =>
                 qq
                   .whereRaw(`payload ->> 'cost_currency' IS NULL`)
@@ -529,7 +549,7 @@ export class MigrationPlanner {
         });
       }
     }
-    return issues;
+    return { issues, skuMatchedCount };
   }
 
   private async checkOrphanPlacement(
