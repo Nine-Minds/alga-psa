@@ -11,7 +11,9 @@ import { WorkflowTasksSection } from './WorkflowTasksSection';
 import { NotificationsSection } from './NotificationsSection';
 import { ActivitiesDataTableSection } from './ActivitiesDataTableSection';
 import { LayoutGrid, List, ChevronDown, ChevronUp } from 'lucide-react';
-import { ActivityFilters as ActivityFiltersType, ActivityType } from '@alga-psa/types';
+import { ActivityType } from '@alga-psa/types';
+import { useActivityFilterState } from '../hooks/useActivityFilterState';
+import { useActivityFilterOptions } from '../hooks/useActivityFilterOptions';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { Card, CardHeader } from '@alga-psa/ui/components/Card';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -58,7 +60,11 @@ export function UserActivitiesDashboard() {
   // The ViewSwitcher remains the only thing that writes the preference.
   const [ephemeralView, setEphemeralView] = useState<UserActivitiesViewMode | null>(null);
 
-  const [tableInitialFilters, setTableInitialFilters] = useState<ActivityFiltersType | null>(null); // State for specific filters
+  // One filter model for the whole screen: the table and the cards share it, so switching
+  // views keeps the filters and "View All" carries them over.
+  const filterState = useActivityFilterState();
+  const filterOptions = useActivityFilterOptions(filterState.filters.types);
+  const { filters, hasOverride, setOverrideFilters, clearOverride } = filterState;
 
   // Collapsible sections state
   const [expandedSections, setExpandedSections] = useState({
@@ -92,8 +98,9 @@ export function UserActivitiesDashboard() {
 
   // Generic handler for "View All" clicks
   const handleViewAll = (types: ActivityType[]) => {
-    const filters: ActivityFiltersType = { types, isClosed: false };
-    setTableInitialFilters(filters);
+    // The table opens with the current filters, narrowed to the section's type. This visit
+    // only: nothing is persisted until the user edits a filter.
+    setOverrideFilters({ ...filters, types });
     // Switch to the table view ephemerally; do NOT persist the preference.
     setEphemeralView('table');
   };
@@ -105,14 +112,6 @@ export function UserActivitiesDashboard() {
   const handleViewAllWorkflowTasks = () => handleViewAll([ActivityType.WORKFLOW_TASK]);
   const handleViewAllNotifications = () => handleViewAll([ActivityType.NOTIFICATION]);
 
-
-  // Determine the filters to apply to the table.
-  // When no explicit "View All" filters were passed, hand the table an EMPTY object so it
-  // hydrates from the user's saved preferences (due/created dates, client, tags, search, …).
-  // Injecting default types here would make the table's `hasExplicitFilters` true and
-  // permanently bypass that hydration — silently dropping every persisted filter on reload.
-  // The table falls back to its own DEFAULT_FILTERS when the user has no saved preference.
-  const currentTableFilters: ActivityFiltersType = tableInitialFilters || {};
 
   // The section resolved the deep link (highlighted, or reported not found): consume the param
   // so a refresh / back navigation doesn't repeat it, and pin the table view for this visit
@@ -128,18 +127,17 @@ export function UserActivitiesDashboard() {
     }
   }, [pathname, router, searchParams]);
 
-  // Table view content - Defined before use and memoized to prevent unnecessary re-renders
-  const tableViewContent = useMemo(() => (
+  const tableViewContent = (
     <ActivitiesDataTableSection
-      title={tableInitialFilters
+      title={hasOverride
         ? t('dashboard.filteredTitle', { defaultValue: 'Filtered Activities' })
         : t('dashboard.allActivitiesTitle', { defaultValue: 'All Activities' })}
-      initialFilters={currentTableFilters}
       id="all-activities-table-section"
       focusActivityKey={focusActivityKey}
       onFocusConsumed={handleFocusConsumed}
+      filterState={filterState}
+      filterOptions={filterOptions}
     />
-  ), [currentTableFilters, tableInitialFilters, t, focusActivityKey, handleFocusConsumed]
   );
 
   // Card view content - Defined before use and memoized to prevent unnecessary re-renders
@@ -226,9 +224,8 @@ export function UserActivitiesDashboard() {
     setViewModePreference(newView);
     // An explicit switch also wins over any ephemeral/focus override this visit.
     setEphemeralView(newView);
-    if (newView === 'table') {
-      setTableInitialFilters(null); // Reset specific filters when switching to table view
-    }
+    // An explicit switch ends any View All narrowing, in both directions.
+    clearOverride();
   };
 
   // Effective view mode: an ephemeral override wins, else the activity deep link forces the

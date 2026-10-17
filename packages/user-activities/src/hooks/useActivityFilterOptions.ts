@@ -26,9 +26,19 @@ export interface ActivityFilterOptions {
   projectTaskTags: ITag[];
 }
 
+// The dashboard hosts this hook above any provider-dependent child, so a missing composition
+// provider must degrade to "no client/project options" instead of crashing the whole screen.
+function useCrossFeatureOrNull(): ReturnType<typeof useActivityCrossFeature> | null {
+  try {
+    return useActivityCrossFeature();
+  } catch {
+    return null;
+  }
+}
+
 /** Option data for `ActivitiesTableFilters`. Priorities load only for a single prioritized type. */
 export function useActivityFilterOptions(types: ActivityType[] | undefined): ActivityFilterOptions {
-  const ctx = useActivityCrossFeature();
+  const ctx = useCrossFeatureOrNull();
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [projects, setProjects] = useState<ProjectWithPhases[]>([]);
@@ -54,6 +64,7 @@ export function useActivityFilterOptions(types: ActivityType[] | undefined): Act
 
   // Load clients for the shared client filter on mount
   useEffect(() => {
+    if (!ctx) return;
     ctx.getAllClients(false)
       .then((data: unknown) => {
         if (!isActionPermissionError(data)) {
@@ -65,6 +76,7 @@ export function useActivityFilterOptions(types: ActivityType[] | undefined): Act
 
   // Load projects with phases + statuses for the filter tree on mount
   useEffect(() => {
+    if (!ctx) return;
     ctx.getProjectsWithPhases()
       .then((data: unknown) => {
         if (!isActionPermissionError(data)) {
