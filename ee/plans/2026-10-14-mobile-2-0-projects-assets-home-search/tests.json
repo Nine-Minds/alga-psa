@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "capabilities service: PSA user with asset:read and asset:update \u2192 assets=true, assetAudit=true",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "capabilities",
     "featureIds": [
       "F001"
@@ -11,7 +11,7 @@
   {
     "id": "T002",
     "description": "capabilities service: PSA user with asset:read only \u2192 assets=true, assetAudit=false",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "capabilities",
     "featureIds": [
       "F001"
@@ -20,7 +20,7 @@
   {
     "id": "T003",
     "description": "capabilities service: algadesk product \u2192 assets=false and assetAudit=false even with asset permissions",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "capabilities",
     "featureIds": [
       "F001"
@@ -29,7 +29,7 @@
   {
     "id": "T004",
     "description": "parseFeatureCapabilities: payload without assets/assetAudit keys \u2192 both false; payload with assets:'yes' (non-boolean) \u2192 false",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "capabilities",
     "featureIds": [
       "F003"
@@ -47,7 +47,7 @@
   {
     "id": "T006",
     "description": "routeRegistryFilesystemInventory contract test passes with the asset-audits route group present",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "capabilities",
     "featureIds": [
       "F005"

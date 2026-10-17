@@ -33,6 +33,14 @@ Working memory for the 2.0 mobile release. Short bullets; update earlier notes w
 - (2026-10-14) Mobile has no global search API wrapper and no Home screen today; offline = `network/isOffline.ts` + `useNetworkStatus` + TTL caches (`cache/*.ts`), no write queue.
 - (2026-10-14) ECTS 2026-10-09 PDF "AlgaPSA Open Tasks" lists 5 web-side requests (custom fields, vendor contacts, hide projects from portal, custom menu, multiple project contacts). None are mobile; not in this plan.
 
+## Implementation log
+
+- (2026-10-16) Branch `feature/mobile_v2_projects_assets` cut from the local tip of `feature/asset_assignments_bundles_merge` (016f83f169); verified HEAD contains it.
+- (2026-10-16) `/api/v1/search` is already a **documented unruled API group** in `routeRegistryFilesystemInventory.contract.test.ts` (`KNOWN_UNRULED_API_GROUPS['/api/v1/search'] = 'v1 search'`), so F005 only needed `/api/v1/asset-audits` in `api_psa_only`. No registry change for search.
+- (2026-10-16) `ee/mobile/node_modules` is empty in a fresh worktree; `npm ci` from `ee/mobile` works as-is (no lockfile rebuild needed with npm 11 locally).
+- (2026-10-16) Drawer wiring for the two new tabs lands with their screens (groups `projects-list` and `assets-list`) instead of as group-1 placeholders — same end state (F004/T005), no throwaway placeholder screens.
+- (2026-10-16) Existing server capability tests assert the whole `features` object with `toEqual`, so adding flags means touching 5 assertions; added an `ASSETS_ALL` spread next to `CRM_ALL`.
+
 ## Commands / Runbooks
 
 - Mobile: `cd ee/mobile && npm run test` (regenerates editor HTML first), `npm run lint`, `npm run typecheck`. Dev against local server: `EXPO_PUBLIC_ALGA_BASE_URL=http://<mac-ip>:3000 npx expo start`. Local server must be EE (`server/.env.local` edition override to community makes mobile refuse) and migrated from `server/` (`npm run migrate:ee`; root `npm run migrate` has no knexfile).

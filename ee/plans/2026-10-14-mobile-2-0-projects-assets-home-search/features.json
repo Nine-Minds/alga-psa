@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "MobileCapabilitiesService returns features.assets (asset:read) and features.assetAudit (asset:read AND asset:update) in the PSA product block; both false for other products",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "capabilities",
     "prdRefs": [
       "FR1"
@@ -11,7 +11,7 @@
   {
     "id": "F002",
     "description": "OpenAPI mobileCapabilitiesV1 documents the assets and assetAudit flags",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "capabilities",
     "prdRefs": [
       "FR1"
@@ -20,7 +20,7 @@
   {
     "id": "F003",
     "description": "Mobile FeatureCapabilities type + EMPTY_FEATURE_CAPABILITIES gain assets and assetAudit; parseFeatureCapabilities defaults them to false",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "capabilities",
     "prdRefs": [
       "FR2"
@@ -38,7 +38,7 @@
   {
     "id": "F005",
     "description": "productSurfaceRegistry api_psa_only staticPrefixes include /api/v1/asset-audits; /api/v1/search confirmed listed in a group reachable with x-api-key",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "capabilities",
     "prdRefs": [
       "FR3"

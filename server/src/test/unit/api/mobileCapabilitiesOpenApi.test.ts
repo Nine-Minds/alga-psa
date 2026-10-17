@@ -26,4 +26,14 @@ describe('mobile capabilities OpenAPI', () => {
       expect(theme.properties[mode].$ref).toBe('#/components/schemas/MobileThemeSeedTokensV1');
     }
   });
+
+  it('documents the assets and assetAudit feature flags', () => {
+    const document = buildMobileCapabilitiesDocument();
+    const features = document.components?.schemas?.MobileCapabilitiesSuccessV1
+      .properties.data.properties.features;
+
+    expect(Object.keys(features.properties)).toContain('assets');
+    expect(Object.keys(features.properties)).toContain('assetAudit');
+    expect(features.properties.assetAudit.description).toContain('asset:update');
+  });
 });
