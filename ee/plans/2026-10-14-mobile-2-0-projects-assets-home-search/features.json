@@ -730,7 +730,7 @@
   },
   {
     "id": "F082",
-    "description": "app.json version 2.0.0, ios.buildNumber 39, android.versionCode 39",
+    "description": "app.json version 2.0.0, ios.buildNumber 39, android.versionCode 39, with package.json and package-lock.json on the same version so verify:expo-config passes",
     "implemented": true,
     "commitGroup": "release",
     "prdRefs": [

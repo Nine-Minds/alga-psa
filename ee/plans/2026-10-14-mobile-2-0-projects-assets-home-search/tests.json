@@ -894,7 +894,7 @@
   },
   {
     "id": "T100",
-    "description": "app.json carries 2.0.0 / 39 / 39",
+    "description": "app.json carries 2.0.0 / 39 / 39 and package.json + package-lock.json agree (repoScaffold version parity; verify:expo-config green)",
     "implemented": true,
     "commitGroup": "release",
     "featureIds": [

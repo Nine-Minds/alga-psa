@@ -62,6 +62,10 @@ Working memory for the 2.0 mobile release. Short bullets; update earlier notes w
 - (2026-10-16) **Deferred as planned**: `outbox-server` and `outbox-mobile` (F086–F094, T104–T115) stay `implemented: false` for the follow-up card.
 - (2026-10-16) **Left false, blocked not skipped**: F048 (its OpenAPI route definitions ARE written and asserted; only the CE/EE spec regeneration is missing), F085 and T103 — all three need `sdk/scripts/generate-openapi.ts` to run, which this worktree cannot do (see the billing/shared dist note above). Re-run the regen and flip them in an environment with the workspace packages built.
 
+- (2026-10-16) **A version bump is three files, not one.** `npm run verify:expo-config` pipes `expo config` into `scripts/verify-expo-config.mjs`, which hard-fails unless `app.json` `version` equals `ee/mobile/package.json` `version`. Bumping only `app.json` broke that gate (it passes at the base commit), so 2.0.0 also lands in `package.json` and in both `version` fields of `package-lock.json` (root and `packages[""]`) — the same three-file shape as the 1.6.3 and 1.6.4 bumps (`f6f0d906ba`, `d3335c7c1b`). The gate also pins iOS build / Android versionCode >= 30 and asserts camera audio stays disabled, so it is worth running after any `app.json` edit.
+
+- (2026-10-16) The `packages/billing` dist defect is a tsup **config** problem, not staleness: a clean `npm run build` in `packages/billing` still emits `import ... from "../billing/billingMutationLock"` with no extension, and `lib/billing/billingMutationLock` is not in the tsup entry list at all, so Node ESM cannot resolve it. Rebuilding the package does not unblock the spec regen; fixing it means touching `packages/billing/tsup.config.ts`, which is outside this card.
+
 ## Commands / Runbooks
 
 - Mobile: `cd ee/mobile && npm run test` (regenerates editor HTML first), `npm run lint`, `npm run typecheck`. Dev against local server: `EXPO_PUBLIC_ALGA_BASE_URL=http://<mac-ip>:3000 npx expo start`. Local server must be EE (`server/.env.local` edition override to community makes mobile refuse) and migrated from `server/` (`npm run migrate:ee`; root `npm run migrate` has no knexfile).
