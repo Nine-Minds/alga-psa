@@ -85,6 +85,10 @@ export interface IBoard extends TenantEntity {
   inbound_reply_reopen_cutoff_hours?: number;
   inbound_reply_reopen_status_id?: string | null;
   inbound_reply_ai_ack_suppression_enabled?: boolean;
+  // Applies the reopen policy above to named-conversation side (vendor/Shared IT)
+  // email replies as well. Default off; has no effect unless the master
+  // inbound_reply_reopen_enabled switch is also on.
+  inbound_reply_reopen_side_conversations_enabled?: boolean;
 
   // Show the stopwatch on tickets in this board (null/undefined resolves to enabled; see boardLiveTicketTimer.ts)
   enable_live_ticket_timer?: boolean;

@@ -1148,5 +1148,32 @@
         "users": "Kan de gebruikers niet laden. Probeer het opnieuw."
       }
     }
+  },
+  "replyReview": {
+    "loadError": "Vastgehouden antwoorden konden niet worden geladen. Er is toestemming voor postvakbeheer vereist.",
+    "openError": "Dit antwoord kon niet worden geopend. Vernieuw om te controleren of het nog wordt vastgehouden.",
+    "resolved": "Antwoord toegevoegd aan het geselecteerde gesprek.",
+    "resolveError": "De toewijzing kon niet worden bevestigd. Probeer opnieuw om dezelfde bewerking te controleren of vernieuw voor de huidige stand.",
+    "sharedIt": "Gedeelde IT",
+    "private": "Privé binnen organisatie",
+    "title": "Vastgehouden gespreksantwoorden",
+    "refresh": "Vernieuwen",
+    "description": "Controleer antwoorden waarvan het gesprek niet kon worden bevestigd en kies waar ze thuishoren.",
+    "loading": "Laden…",
+    "back": "Terug naar vastgehouden antwoorden",
+    "from": "Van",
+    "to": "Aan",
+    "unverified": "De afzenderauthenticatie kon niet worden geverifieerd of het bericht is onbruikbaar. Dit antwoord blijft vastgehouden.",
+    "destination": "Doelgesprek",
+    "chooseDestination": "Gesprek kiezen",
+    "noDestinations": "Er zijn geen leveranciersgesprekken met schrijftoegang beschikbaar voor dit postvak.",
+    "retry": "Toewijzing opnieuw proberen",
+    "resolve": "Antwoord toevoegen aan gesprek",
+    "empty": "Er wachten geen gespreksantwoorden op controle.",
+    "noSubject": "(Geen onderwerp)",
+    "review": "Controleren",
+    "previous": "Vorige",
+    "next": "Volgende",
+    "nav": "Vastgehouden antwoorden"
   }
 }

@@ -19,11 +19,11 @@ const view = (current = comment) => <CoManagedPortalAttachmentsProvider><TicketC
 const pending = () => { let resolve!: (value: any) => void; const promise = new Promise<any>(done => { resolve = done; }); return { promise, resolve }; };
 beforeEach(() => { vi.resetAllMocks(); mocks.session = { user: { tenant: 'customer', id: 'requester', user_type: 'client' } }; mocks.flag.mockReturnValue({ enabled: true }); mocks.load.mockResolvedValue(data()); });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
-it('renders literal requester filenames with owner-local URLs through the actual composition slot', async () => {
-  render(view()); const link = await screen.findByRole('link', { name: '<Report>.txt' });
+it.each([undefined, 'selected'])('renders literal requester filenames with the selected container (%s) through the composition slot', async conversationId => {
+  render(view({ ...comment, conversation_id: conversationId })); const link = await screen.findByRole('link', { name: '<Report>.txt' });
   const url = new URL(link.getAttribute('href')!, 'https://alga.test'); expect(url.pathname).toBe('/api/client-portal/conversation-attachments/file');
-  expect(Object.fromEntries(url.searchParams)).toEqual({ ticketId: 'ticket', threadId: 'thread', commentId: 'comment' }); expect(document.querySelector('report')).toBeNull();
-  expect(mocks.load).toHaveBeenCalledWith({ ticketId: 'ticket', threadId: 'thread', commentId: 'comment' });
+  expect(Object.fromEntries(url.searchParams)).toEqual({ ticketId: 'ticket', threadId: 'thread', commentId: 'comment', ...(conversationId ? { conversationId } : {}) }); expect(document.querySelector('report')).toBeNull();
+  expect(mocks.load).toHaveBeenCalledWith({ ticketId: 'ticket', threadId: 'thread', commentId: 'comment', ...(conversationId ? { conversationId } : {}) });
 });
 it.each(['disabled', 'loading', 'error'])('does not load feature attachments when the release flag is %s', kind => {
   mocks.flag.mockReturnValue({ enabled: kind !== 'disabled', loading: kind === 'loading', error: kind === 'error' }); render(view()); expect(mocks.load).not.toHaveBeenCalled();
@@ -59,4 +59,14 @@ it('discards in-flight filenames when the same requester receives a new tracked 
   const first = pending(); mocks.load.mockReturnValueOnce(first.promise); const rendered = render(view());
   (mocks.session as any).session_id = 'renewed-session'; mocks.load.mockResolvedValue({ ...data(), attachments: [] });
   await act(async () => { rendered.rerender(view()); }); await act(async () => { first.resolve(data()); }); expect(screen.queryByRole('link')).toBeNull();
+});
+
+it('drops an earlier container’s pending file list when the selected conversation changes', async () => {
+  const first = pending(); mocks.load.mockReturnValueOnce(first.promise);
+  const rendered = render(view({ ...comment, conversation_id: 'first' }));
+  mocks.load.mockResolvedValue({ ...data(), attachments: [] });
+  await act(async () => { rendered.rerender(view({ ...comment, conversation_id: 'second' })); });
+  await act(async () => first.resolve(data()));
+  expect(mocks.load).toHaveBeenLastCalledWith({ ticketId: 'ticket', threadId: 'thread', commentId: 'comment', conversationId: 'second' });
+  expect(screen.queryByRole('link')).toBeNull();
 });

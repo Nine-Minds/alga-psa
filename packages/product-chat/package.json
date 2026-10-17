@@ -5,7 +5,8 @@
   "exports": {
     "./ee/entry": "./ee/entry.tsx",
     "./oss/entry": "./oss/entry.tsx",
-    "./context": "./context.tsx"
+    "./context": "./context.tsx",
+    "./conversation-inference": "./conversationInference.ts"
   },
   "dependencies": {},
   "devDependencies": {}

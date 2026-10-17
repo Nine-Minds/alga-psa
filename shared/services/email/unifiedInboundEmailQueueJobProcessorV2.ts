@@ -1,3 +1,4 @@
+import type { NamedConversationReplyAdmission } from './namedConversationReplyAdmission';
 /**
  * V2 durable inbound job dispatcher. Maps V2 work types to their fenced
  * handlers and registers the Postgres lease so the consumer heartbeat renews
@@ -48,7 +49,7 @@ export async function renewPostgresLeaseForV2Job(
 export async function processUnifiedInboundEmailDurableJob(
   job: UnifiedInboundEmailQueueJobV2,
   ctx: InboundV2JobContext,
-  options: { qualifiedReplyAdmission?: EmailReplyAdmission; qualifiedReplyArtifacts?: QualifiedReplyArtifactProcessor; retainConversationEvent?: InboundConversationEventRetainer } = {}
+  options: { namedConversationReplyAdmission?: NamedConversationReplyAdmission; qualifiedReplyAdmission?: EmailReplyAdmission; qualifiedReplyArtifacts?: QualifiedReplyArtifactProcessor; namedReplyArtifacts?: QualifiedReplyArtifactProcessor; retainConversationEvent?: InboundConversationEventRetainer } = {}
 ): Promise<InboundEmailQueueDisposition> {
   const mode = await getInboundDurableModeForTenant(job.tenantId);
   if (mode === 'off') {
@@ -59,11 +60,11 @@ export async function processUnifiedInboundEmailDurableJob(
   }
   switch (job.workType) {
     case 'process_inbox':
-      return handleProcessInbox(job, ctx, mode, options.qualifiedReplyAdmission, options.retainConversationEvent);
+      return handleProcessInbox(job, ctx, mode, options.qualifiedReplyAdmission, options.retainConversationEvent, options.namedConversationReplyAdmission);
     case 'stage_ingress':
       return handleStageIngress(job, ctx);
     case 'process_artifact':
-      return handleProcessArtifact(job, ctx, options.qualifiedReplyArtifacts);
+      return handleProcessArtifact(job, ctx, options.qualifiedReplyArtifacts, options.namedReplyArtifacts);
     case 'publish_outbox':
       return handlePublishOutbox(job, ctx);
     case 'republish_outbox_event':
@@ -74,13 +75,14 @@ export async function processUnifiedInboundEmailDurableJob(
 }
 
 async function handleProcessInbox(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext,
-  mode: Exclude<InboundEmailDurableMode, 'off'>, qualifiedReplyAdmission?: EmailReplyAdmission, retainConversationEvent?: InboundConversationEventRetainer): Promise<InboundEmailQueueDisposition> {
+  mode: Exclude<InboundEmailDurableMode, 'off'>, qualifiedReplyAdmission?: EmailReplyAdmission, retainConversationEvent?: InboundConversationEventRetainer, namedConversationReplyAdmission?: NamedConversationReplyAdmission): Promise<InboundEmailQueueDisposition> {
   const owner = newInboundProcessorOwner();
   return processInboundInbox({
     tenantId: job.tenantId,
     inboxId: job.recordId,
     owner,
     qualifiedReplyAdmission,
+    namedConversationReplyAdmission,
     retainConversationEvent,
     leaseTtlMs: getDurableLeaseTtlMs(),
     mode: mode === 'enforce' ? 'enforce' : 'shadow',
@@ -96,9 +98,9 @@ async function handleStageIngress(job: UnifiedInboundEmailQueueJobV2, ctx: Inbou
   return processIngressStageJob(job, ctx);
 }
 
-async function handleProcessArtifact(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext, qualifiedReplyArtifacts?: QualifiedReplyArtifactProcessor): Promise<InboundEmailQueueDisposition> {
+async function handleProcessArtifact(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext, qualifiedReplyArtifacts?: QualifiedReplyArtifactProcessor, namedReplyArtifacts?: QualifiedReplyArtifactProcessor): Promise<InboundEmailQueueDisposition> {
   const { processInboundArtifactJob } = await import('./inboundEmailArtifactWorker');
-  return processInboundArtifactJob(job, ctx, qualifiedReplyArtifacts);
+  return processInboundArtifactJob(job, ctx, qualifiedReplyArtifacts, namedReplyArtifacts);
 }
 
 async function handlePublishOutbox(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext): Promise<InboundEmailQueueDisposition> {

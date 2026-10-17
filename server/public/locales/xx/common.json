@@ -1,4 +1,7 @@
 {
+  "listToolbar": {
+    "removeFilter": "⟦Řḗḿȯṽḗ {{label}}⟧"
+  },
   "phone": {
     "extension": "⟦ḗẋŧ.⟧"
   },

@@ -2068,8 +2068,9 @@
     {
       "term": "citaat",
       "preferred": "offerte",
-      "reason": "Wrong sense for a sales quote; citaat is a textual quotation.",
-      "enWhen": "\\bquot(e|es|ed|ing)\\b"
+      "reason": "Wrong sense for a sales quote; citaat is a textual quotation. The conversation sharing control quotes message text, not a sales document.",
+      "enWhen": "\\bquot(e|es|ed|ing)\\b",
+      "keyUnless": "^features/tickets:namedConversations\\.share\\.quote$"
     },
     {
       "term": "citaten",

@@ -1,11 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ upload: vi.fn(), remove: vi.fn(), list: vi.fn(), hint: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(),
+const mocks = vi.hoisted(() => ({ upload: vi.fn(), remove: vi.fn(), list: vi.fn(), namedList: vi.fn(), hint: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(),
   user: { user_id: 'home-user', tenant: 'home-tenant', user_type: 'internal' }, knex: {},
   Forbidden: class extends Error {}, Lifecycle: class extends Error {}, Command: class extends Error { constructor(public code: string) { super(code); } } }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => (...args: any[]) => fn(mocks.user, { tenant: mocks.user.tenant }, ...args), getSession: mocks.session, getApiKeyUserOverride: mocks.override }));
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.db }));
 vi.mock('@alga-psa/licensing', () => ({ CoManagedLifecycleError: mocks.Lifecycle }));
-vi.mock('@alga-psa/co-managed', () => ({ CoManagedSharedWorkError: mocks.Forbidden, CoManagedAttachmentError: mocks.Command, listCoManagedConversationAttachments: mocks.list, canManageCoManagedConversationAttachments: mocks.hint, removeCoManagedConversationAttachment: mocks.remove }));
+vi.mock('@alga-psa/co-managed', () => ({ CoManagedSharedWorkError: mocks.Forbidden, CoManagedAttachmentError: mocks.Command, listCoManagedConversationAttachments: mocks.list, listNamedConversationAttachments: mocks.namedList, canManageCoManagedConversationAttachments: mocks.hint, removeCoManagedConversationAttachment: mocks.remove }));
 vi.mock('../../../lib/co-managed/conversationAttachments', () => ({ uploadConversationAttachment: mocks.upload }));
 import { removeCoManagedAttachmentAction, uploadCoManagedAttachmentAction, listCoManagedAttachmentsAction, getCoManagedAttachmentsScreenAction } from '../../../lib/actions/coManagedAttachmentActions';
 const resource = { tenant: 'customer', relationshipId: 'relationship', kind: 'ticket' as const, id: 'ticket' };
@@ -60,4 +60,17 @@ it('keeps removal available when upload transport is disabled, while respecting 
     mocks.hint.mockResolvedValue(false);
     expect(await getCoManagedAttachmentsScreenAction(resource, comment)).toMatchObject({ canUpload: false, canRemove: false });
   } finally { if (old === undefined) delete process.env.SERVER_ACTIONS_BODY_LIMIT; else process.env.SERVER_ACTIONS_BODY_LIMIT = old; }
+});
+
+it('reads named requester files without borrowing relationship-scoped removal authority', async () => {
+  const conversation = { storeTenant: 'customer', conversationId: 'requester' };
+  mocks.hint.mockResolvedValue(true); mocks.list.mockResolvedValue([{ attachmentId: 'legacy' }]);
+  mocks.namedList.mockResolvedValue([{ attachmentId: 'legacy' }, { attachmentId: 'received' }]);
+  const result = await getCoManagedAttachmentsScreenAction(resource, comment, conversation);
+  expect(result.attachments).toEqual([{ attachmentId: 'legacy' }, { attachmentId: 'received' }]);
+  expect(result.removableAttachmentIds).toEqual(['legacy']);
+  expect(mocks.namedList).toHaveBeenCalledWith(mocks.knex, expect.objectContaining({ tenant: 'home-tenant', userId: 'home-user' }),
+    { tenant: 'customer', ticketId: 'ticket', relationshipId: 'relationship' }, conversation, comment);
+  mocks.namedList.mockRejectedValue(new mocks.Forbidden());
+  await expect(getCoManagedAttachmentsScreenAction(resource, comment, conversation)).rejects.toBeInstanceOf(mocks.Forbidden);
 });

@@ -1,5 +1,6 @@
 'use server';
 
+import { attachNativeRootToConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
@@ -2113,6 +2114,8 @@ export const addTicketComment = withAuth(async (
         created_at: nowIso,
         ...(resolvedEmailRecipients ? { metadata: { email_recipients: resolvedEmailRecipients } } : {}),
       }).returning('*');
+
+      await attachNativeRootToConversation({ trx, ticket: { tenant, ticketId }, storeTenant: tenant }, generatedIds.thread_id);
 
       await reconcileCommentAttachments(trx, tenant, newComment.comment_id, user.user_id);
 

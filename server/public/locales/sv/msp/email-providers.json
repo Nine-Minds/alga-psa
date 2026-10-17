@@ -1148,5 +1148,32 @@
         "users": "Det gick inte att läsa in användare. Försök igen."
       }
     }
+  },
+  "replyReview": {
+    "loadError": "Det gick inte att läsa in kvarhållna svar. Behörighet att administrera brevlådan krävs.",
+    "openError": "Det gick inte att öppna svaret. Uppdatera för att kontrollera om det fortfarande hålls kvar.",
+    "resolved": "Svaret har lagts till i den valda konversationen.",
+    "resolveError": "Tilldelningen kunde inte bekräftas. Försök igen för att kontrollera samma åtgärd eller uppdatera för att granska aktuellt tillstånd.",
+    "sharedIt": "Delad IT",
+    "private": "Privat inom organisationen",
+    "title": "Kvarhållna konversationssvar",
+    "refresh": "Uppdatera",
+    "description": "Granska svar vars konversation inte kunde bekräftas och välj sedan var de hör hemma.",
+    "loading": "Läser in…",
+    "back": "Tillbaka till kvarhållna svar",
+    "from": "Från",
+    "to": "Till",
+    "unverified": "Avsändarens autentisering kunde inte verifieras eller meddelandet kan inte användas. Svaret hålls fortsatt kvar.",
+    "destination": "Målkonversation",
+    "chooseDestination": "Välj en konversation",
+    "noDestinations": "Inga leverantörskonversationer med skrivåtkomst är tillgängliga för den här brevlådan.",
+    "retry": "Försök tilldela igen",
+    "resolve": "Lägg till svar i konversation",
+    "empty": "Inga konversationssvar väntar på granskning.",
+    "noSubject": "(Inget ämne)",
+    "review": "Granska",
+    "previous": "Föregående",
+    "next": "Nästa",
+    "nav": "Kvarhållna svar"
   }
 }

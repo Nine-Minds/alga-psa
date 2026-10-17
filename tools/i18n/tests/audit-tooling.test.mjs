@@ -18,6 +18,25 @@ const {
 } = require('../lib/translation-utils.cjs');
 const { compareBaseline, runAudit } = require('../audit.cjs');
 
+for (const [locale, term] of Object.entries({ de: 'Zitat', fr: 'citation', it: 'citazione', nl: 'citaat', pl: 'cytat', pt: 'citação' })) {
+  test(`${locale} distinguishes quoted message text from a sales quote`, (t) => {
+    const root = mkdtempSync(join(tmpdir(), 'conversation-quote-audit-'));
+    t.after(() => rmSync(root, { recursive: true, force: true }));
+    const pack = JSON.parse(readFileSync(new URL(
+      `../../../server/public/locales/${locale}/features/tickets.json`, import.meta.url,
+    ), 'utf8'));
+    for (const language of ['en', locale]) {
+      mkdirSync(join(root, language, 'features'), { recursive: true });
+      writeFileSync(join(root, language, 'features/tickets.json'), JSON.stringify({
+        namedConversations: { share: { quote: language === 'en' ? 'Format as a quote' : pack.namedConversations.share.quote } },
+        salesQuote: language === 'en' ? 'Sales quote' : term,
+      }));
+    }
+    const { report } = runAudit({ locale, localesDir: root, writeReport: false });
+    assert.deepEqual(report.namespaces[0].forbiddenViolations.map(({ key }) => key), ['salesQuote']);
+  });
+}
+
 test('Swedish default time-entry service settings have localized copy at both scopes', () => {
   for (const [namespace, path] of [
     ['billing-settings', ['general', 'timeEntryService']],

@@ -18,6 +18,7 @@ import { addGradientFallback } from './branding/gradientFallback';
 import { embedBrandLogo } from './inlineBrandLogo';
 import { SupportedLocale } from './lib/localeConfig';
 import type { Knex } from 'knex';
+import { reviewedEmailMessageHash, type ReviewedEmailIntent } from './reviewedEmail';
 import type { OutboundMailClass, TenantEmailSettings } from '@alga-psa/types';
 
 const tenantScopedTable = (knex: Knex | Knex.Transaction, table: string, tenant: string) =>
@@ -92,6 +93,9 @@ export interface BaseEmailParams {
   /** A durable authorization-aware caller must re-load content and recipients
    * before retrying. Do not put its rendered message in a generic retry queue. */
   retryPolicy?: 'queue' | 'caller';
+  /** Explicit conversation mail keeps its reviewed envelope and RFC headers. */
+  reviewed?: ReviewedEmailIntent;
+  threading?: 'conversation';
   /**
    * Optional entity association context for downstream logging/analytics.
    * These are persisted to `email_sending_logs` when available.
@@ -527,6 +531,7 @@ export abstract class BaseEmailService {
     }
 
     let emailMessage: ProviderEmailMessage | null = null;
+    let transportAttempted = false;
 
     try {
       let subject: string;
@@ -551,7 +556,8 @@ export abstract class BaseEmailService {
       }
 
       // Get from address
-      const from = this.convertToProviderAddress(this.getFromAddress(params));
+      const requestedFrom = this.convertToProviderAddress(this.getFromAddress(params));
+      const from = params.reviewed && emailProvider.resolveFromAddress ? emailProvider.resolveFromAddress(requestedFrom) : requestedFrom;
       // Log resolved From for visibility (email + name)
       logger.info(`[${this.getServiceName()}] Using From address:`, {
         email: from.email,
@@ -566,7 +572,9 @@ export abstract class BaseEmailService {
         ?? (params.entityType === 'ticket' ? params.entityId : undefined);
 
       let commentThreadHeaderContext: CommentThreadReplyHeaderContext | null = null;
-      if (effectiveTicketId) {
+      if (params.reviewed && params.threading === 'conversation') {
+        // The conversation publication owns this complete header set.
+      } else if (effectiveTicketId) {
         // Ticket-scoped threading: every ticket email shares one per-ticket anchor.
         await applyTicketThreadHeaders({
           tenantId: params.tenantId,
@@ -627,6 +635,11 @@ export abstract class BaseEmailService {
         microsoftProviderId: params.resolvedMicrosoftProviderId,
       };
 
+      if (params.reviewed && reviewedEmailMessageHash(emailMessage) !== params.reviewed.messageHash) {
+        return { success: false, error: 'The reviewed email changed. Review it again before sending.',
+          metadata: { deliveryStatus: 'not_attempted', retryable: false, errorCode: 'review_changed' } };
+      }
+
       // Outbound email lifecycle workflow events (F071). Best-effort: publishing
       // must never block or fail the actual send.
       const tenantId = params.tenantId || 'system';
@@ -672,6 +685,7 @@ export abstract class BaseEmailService {
       }
 
       // Send via provider
+      transportAttempted = true;
       const result = await emailProvider.sendEmail(emailMessage, params.tenantId || 'system');
 
       // Best-effort: persist provider-level send result for auditing/debugging.
@@ -755,7 +769,7 @@ export abstract class BaseEmailService {
         providerId: result.providerId,
         providerType: result.providerType,
         sentAt: result.sentAt,
-        metadata: result.metadata
+        metadata: params.reviewed ? { ...result.metadata, deliveryStatus: result.success ? 'delivered' : 'unknown', ...(result.success ? {} : { retryable: false }) } : result.metadata
       };
     } catch (error) {
       // Best-effort: log provider failure if we made it to message construction.
@@ -824,10 +838,12 @@ export abstract class BaseEmailService {
         error: error instanceof Error ? error.message : 'Unknown error',
         providerId: emailProvider.providerId,
         providerType: emailProvider.providerType,
-        metadata: error && typeof error === 'object' && (error as any).name === 'EmailProviderError' ? {
-          retryable: (error as any).isRetryable, errorCode: (error as any).errorCode,
-          ...((error as any).metadata || {}),
-        } : undefined,
+        ...(error && typeof error === 'object' && (error as any).name === 'EmailProviderError' ? {
+          metadata: {
+            retryable: (error as any).isRetryable, errorCode: (error as any).errorCode,
+            ...((error as any).metadata || {}),
+          },
+        } : params.reviewed ? { metadata: { deliveryStatus: transportAttempted ? 'unknown' : 'not_attempted', retryable: false } } : {}),
       };
     }
   }

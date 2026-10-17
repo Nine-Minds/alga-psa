@@ -678,7 +678,9 @@
           "statusPlaceholder": "Selecione o status de reabertura",
           "statusUseDefault": "Usar o status aberto padrão do quadro",
           "suppressAiLabel": "Suprimir reabertura para respostas ACK curtas (IA)",
-          "suppressAiHelp": "Somente complemento Enterprise IA Assistant. Se não estiver disponível, as respostas reabrem normalmente."
+          "suppressAiHelp": "Somente complemento Enterprise IA Assistant. Se não estiver disponível, as respostas reabrem normalmente.",
+          "sideConversationsLabel": "Aplicar esta política às respostas por e-mail de conversas secundárias",
+          "sideConversationsHelp": "As respostas de conversas com fornecedores e de TI compartilhada usam a mesma política de limite temporal, status e supressão acima. Desativada por padrão, esta opção só tem efeito se a política acima também estiver ativada."
         },
         "liveTimer": {
           "label": "Mostrar cronômetro nos tickets",

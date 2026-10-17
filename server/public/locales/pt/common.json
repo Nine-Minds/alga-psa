@@ -1,4 +1,7 @@
 {
+  "listToolbar": {
+    "removeFilter": "Remover {{label}}"
+  },
   "phone": {
     "extension": "ramal"
   },

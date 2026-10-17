@@ -1,12 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { fakeTable } from '@alga-psa/db/testing';
 
 let providerRow: any;
 const tableReads: string[] = [];
+const conversationRoutes: Record<string, any>[] = [];
+const ingressRows: Record<string, any>[] = [];
 
 const getAdminConnectionMock = vi.fn(async () => knexMock);
 const enqueueUnifiedInboundEmailQueueJobMock = vi.fn();
+const enqueueInboundEmailDurableJobMock = vi.fn();
 
 // Table doubles come from the shared db test layer. This handler reads the
 // provider, the workspace product gate, and the co-managed inbound policy;
@@ -23,9 +26,21 @@ const knexMock = vi.fn((table: string) => {
       // durable-intake policy both read these.
       tenants: [{ tenant: providerRow?.tenant ?? 'tenant-1', product_code: 'psa' }],
       co_management_relationships: [],
+      ticket_conversation_email_routes: conversationRoutes,
+      inbound_email_ingress: ingressRows,
+    },
+    perTable: {
+      inbound_email_ingress: {
+        onInsert: rows => {
+          const inserted = rows.map(row => ({ ...row, ingress_id: 'ingress-imap-1' }));
+          ingressRows.push(...inserted);
+          return inserted;
+        },
+      },
     },
   }, undefined, table.split(' ')[0]);
 });
+Object.assign(knexMock, { fn: { now: () => new Date() } });
 
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: (...args: any[]) => getAdminConnectionMock(...args),
@@ -35,9 +50,14 @@ vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
   enqueueUnifiedInboundEmailQueueJob: (...args: any[]) => enqueueUnifiedInboundEmailQueueJobMock(...args),
 }));
 
+vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueueV2', () => ({
+  enqueueInboundEmailDurableJob: (...args: any[]) => enqueueInboundEmailDurableJobMock(...args),
+}));
+
 describe('IMAP webhook handoff', () => {
   beforeEach(() => {
-    process.env.IMAP_WEBHOOK_SECRET = 'imap-secret';
+    vi.stubEnv('IMAP_WEBHOOK_SECRET', 'imap-secret');
+    vi.stubEnv('UNIFIED_INBOUND_EMAIL_DURABLE_MODE', 'off');
     providerRow = {
       id: 'provider-imap-1',
       tenant: 'tenant-1',
@@ -45,6 +65,9 @@ describe('IMAP webhook handoff', () => {
       mailbox: 'support@example.com',
     };
     tableReads.length = 0;
+    conversationRoutes.length = 0;
+    ingressRows.length = 0;
+    enqueueInboundEmailDurableJobMock.mockReset().mockResolvedValue(undefined);
     getAdminConnectionMock.mockClear();
     enqueueUnifiedInboundEmailQueueJobMock.mockReset();
     enqueueUnifiedInboundEmailQueueJobMock.mockResolvedValue({
@@ -53,6 +76,7 @@ describe('IMAP webhook handoff', () => {
     });
     knexMock.mockClear();
   });
+  afterEach(() => vi.unstubAllEnvs());
 
   function makePointerRequest(
     pointerOverrides: Record<string, any> = {},
@@ -123,6 +147,41 @@ describe('IMAP webhook handoff', () => {
       reason: 'Provider inbound ingestion is paused',
     });
     expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+  });
+
+  it('retained conversation routes require durable ingress even when the rollout is off', async () => {
+    conversationRoutes.push({ tenant: providerRow.tenant, mailbox_id: providerRow.id });
+    enqueueInboundEmailDurableJobMock.mockImplementation(async () => {
+      expect(ingressRows).toEqual([expect.objectContaining({
+        tenant: providerRow.tenant,
+        provider_id: providerRow.id,
+        provider_type: 'imap',
+        status: 'received',
+      })]);
+    });
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+
+    const response = await POST(makePointerRequest());
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ handoff: 'durable_ingress', ingressId: 'ingress-imap-1' });
+    expect(enqueueInboundEmailDurableJobMock).toHaveBeenCalledExactlyOnceWith({
+      workType: 'stage_ingress', tenantId: providerRow.tenant, recordId: 'ingress-imap-1',
+    });
+    expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+  });
+
+  it('another tenant conversation route does not change the legacy pointer handoff', async () => {
+    conversationRoutes.push({ tenant: 'other-tenant', mailbox_id: providerRow.id });
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+
+    const response = await POST(makePointerRequest());
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ handoff: 'unified_pointer_queue' });
+    expect(enqueueUnifiedInboundEmailQueueJobMock).toHaveBeenCalledOnce();
+    expect(enqueueInboundEmailDurableJobMock).not.toHaveBeenCalled();
+    expect(ingressRows).toEqual([]);
   });
 
   it('T006: IMAP callback success waits for durable enqueue completion', async () => {

@@ -36,6 +36,8 @@ export interface HybridThreadNodeProps<TComment> {
    * Applies to the root level only; omit to always render every reply.
    */
   autoCollapseAfter?: number;
+  /** Reveal a currently authorized message in this group when following a link. */
+  revealCommentId?: string | null;
 }
 
 const MAX_VISUAL_DEPTH = 4;
@@ -119,10 +121,14 @@ export function HybridThreadNode<TComment>({
   onOpenPanel,
   depth = 0,
   autoCollapseAfter,
+  revealCommentId,
 }: HybridThreadNodeProps<TComment>): React.ReactElement | null {
   const { t } = useTranslation('common');
   const [isExpanded, setIsExpanded] = React.useState(true);
   const [showAllChildren, setShowAllChildren] = React.useState(false);
+  React.useEffect(() => {
+    if (revealCommentId) { setIsExpanded(true); setShowAllChildren(true); }
+  }, [revealCommentId]);
   const commentId = getCommentId(comment);
   const children = commentId ? group.childrenByParentId.get(commentId) ?? [] : [];
   const prevChildCountRef = React.useRef(children.length);
@@ -208,6 +214,7 @@ export function HybridThreadNode<TComment>({
                     onOpenPanel={onOpenPanel}
                     depth={depth + 1}
                     autoCollapseAfter={autoCollapseAfter}
+                    revealCommentId={revealCommentId}
                   />
                 );
               })}

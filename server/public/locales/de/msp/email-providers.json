@@ -1148,5 +1148,32 @@
         "users": "Die Benutzer konnten nicht geladen werden. Bitte versuchen Sie es erneut."
       }
     }
+  },
+  "replyReview": {
+    "loadError": "Zurückgehaltene Antworten konnten nicht geladen werden. Eine Berechtigung zur Postfachverwaltung ist erforderlich.",
+    "openError": "Diese Antwort konnte nicht geöffnet werden. Aktualisieren Sie, um zu prüfen, ob sie noch zurückgehalten wird.",
+    "resolved": "Antwort zur ausgewählten Unterhaltung hinzugefügt.",
+    "resolveError": "Die Zuordnung konnte nicht bestätigt werden. Versuchen Sie es erneut, um denselben Vorgang zu prüfen, oder aktualisieren Sie den aktuellen Stand.",
+    "sharedIt": "Gemeinsame IT",
+    "private": "Organisationsintern",
+    "title": "Zurückgehaltene Unterhaltungsantworten",
+    "refresh": "Aktualisieren",
+    "description": "Prüfen Sie Antworten, deren Unterhaltung nicht bestätigt werden konnte, und wählen Sie die Zuordnung.",
+    "loading": "Wird geladen…",
+    "back": "Zurück zu zurückgehaltenen Antworten",
+    "from": "Von",
+    "to": "An",
+    "unverified": "Die Absenderauthentifizierung konnte nicht geprüft werden oder die Nachricht ist unbrauchbar. Diese Antwort bleibt zurückgehalten.",
+    "destination": "Zielunterhaltung",
+    "chooseDestination": "Unterhaltung auswählen",
+    "noDestinations": "Für dieses Postfach sind keine beschreibbaren Lieferantenunterhaltungen verfügbar.",
+    "retry": "Zuordnung erneut versuchen",
+    "resolve": "Antwort zur Unterhaltung hinzufügen",
+    "empty": "Keine Unterhaltungsantworten warten auf Prüfung.",
+    "noSubject": "(Kein Betreff)",
+    "review": "Prüfen",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "nav": "Zurückgehaltene Antworten"
   }
 }

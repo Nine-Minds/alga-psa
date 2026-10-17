@@ -1593,6 +1593,7 @@ export async function createCommentFromEmail(
     ticket_id: string;
     content: string;
     parent_comment_id?: string;
+    conversation_id?: string;
     collaboration_audience?: 'requester' | 'shared_it' | 'organization_private';
     format?: string;
     source?: string;
@@ -1668,6 +1669,7 @@ export async function createCommentFromEmail(
         ticket_id: commentData.ticket_id,
         content,
         parent_comment_id: commentData.parent_comment_id,
+        conversation_id: commentData.conversation_id,
         is_internal: commentData.collaboration_audience ? commentData.collaboration_audience !== 'requester' : false,
         collaboration_audience: commentData.collaboration_audience,
         is_resolution: false,

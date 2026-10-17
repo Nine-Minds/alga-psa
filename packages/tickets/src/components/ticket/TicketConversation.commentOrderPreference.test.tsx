@@ -8,6 +8,10 @@ import { TICKET_CONVERSATION_ORDER_STORAGE_KEY } from './ticketConversationOrder
 
 type TicketConversationProps = React.ComponentProps<typeof TicketConversation>;
 
+const replyNavigation = vi.hoisted(() => ({ query: '', replace: vi.fn() }));
+vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(replyNavigation.query), useRouter: () => ({ replace: replyNavigation.replace }) }));
+beforeEach(() => { replyNavigation.query = ''; replyNavigation.replace.mockClear(); });
+
 vi.mock('next/dynamic', () => ({
   default: () => () => null,
 }));

@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
 import React from 'react';
+import { createInstance } from 'i18next';
+import frenchTickets from '../../../../../server/public/locales/fr/features/tickets.json';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import TicketConversation from './TicketConversation';
@@ -10,20 +12,19 @@ import { nativeTicketDataSource } from '../../lib/nativeTicketDataSource';
 
 type TicketConversationProps = React.ComponentProps<typeof TicketConversation>;
 
+const translation = vi.hoisted(() => ({ t: vi.fn() }));
+
 vi.mock('next/dynamic', () => ({
   default: () => () => null,
 }));
 
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ replace: vi.fn() }),
+}));
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({
-    t: (_key: string, fallback?: string | Record<string, unknown>) => {
-      // Mirror i18next's t(key, options) form where options carries defaultValue.
-      if (fallback && typeof fallback === 'object') {
-        fallback = typeof fallback.defaultValue === 'string' ? fallback.defaultValue : undefined;
-      }
-      return typeof fallback === 'string' ? fallback : _key;
-    },
-  }),
+  useTranslation: () => ({ t: translation.t }),
 }));
 
 vi.mock('@alga-psa/ui/components/Switch', () => ({
@@ -195,6 +196,31 @@ describe('TicketConversation composer with a co-managed audience control (T009)'
     });
     localStorageMock.clear();
     vi.clearAllMocks();
+    translation.t.mockImplementation((_key: string, fallback?: string | Record<string, unknown>) => {
+      if (fallback && typeof fallback === 'object') {
+        fallback = typeof fallback.defaultValue === 'string' ? fallback.defaultValue : undefined;
+      }
+      return typeof fallback === 'string' ? fallback : _key;
+    });
+  });
+
+  it('localizes the default audience label when the source supplies no control label', async () => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: 'fr', fallbackLng: false, defaultNS: 'features/tickets',
+      resources: { fr: { 'features/tickets': frenchTickets } },
+    });
+    translation.t.mockImplementation(i18n.t.bind(i18n));
+    const source = composeTicketDataSource(audienceSource, {
+      conversation: {
+        audiences: { ...audienceSource.conversation.audiences!, controlLabel: undefined },
+      },
+    });
+    const { container } = renderConversation({}, source);
+    fireEvent.click(container.querySelector('#ticket-conversation-show-comment-editor-btn')!);
+
+    await screen.findByTestId('ticket-conversation-audience-select');
+    expect(container.querySelector('label[for="ticket-conversation-audience-select"]')?.textContent).toBe('Visible par');
   });
 
   it('shows the audience control (not the Internal toggle) and sends the chosen audience with the comment', async () => {

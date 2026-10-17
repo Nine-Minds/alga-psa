@@ -8,6 +8,10 @@ import TicketConversation from './TicketConversation';
 
 type TicketConversationProps = React.ComponentProps<typeof TicketConversation>;
 
+const replyNavigation = vi.hoisted(() => ({ query: '', replace: vi.fn() }));
+vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(replyNavigation.query), useRouter: () => ({ replace: replyNavigation.replace }) }));
+beforeEach(() => { replyNavigation.query = ''; replyNavigation.replace.mockClear(); });
+
 vi.mock('next/dynamic', () => ({
   default: () => () => null,
 }));
@@ -652,4 +656,25 @@ describe('TicketConversation threaded reply e2e contract', () => {
     expect(addReplyCommentMock).not.toHaveBeenCalled();
     expect(screen.getByTestId('existing-reply').closest('.thread-children')).toHaveClass('depth-1');
   });
+});
+
+it('opens the existing requester reply composer from an admitted All activity link without publishing', async () => {
+  replyNavigation.query = 'replyTo=comment-1&replyThread=thread-1';
+  const onReply = vi.fn();
+  render(<TicketConversation {...defaultProps} onAddReplyComment={onReply} />);
+  await waitFor(() => expect(replyNavigation.replace).toHaveBeenCalled());
+  expect(screen.getByTestId('inline-reply-editor')).toBeInTheDocument();
+  expect(onReply).not.toHaveBeenCalled();
+});
+
+it('uses named composition for entry-view replies and leaves the thread drawer without a second composer', async () => {
+  const user = userEvent.setup();
+  const composition = { ready: true, beforeEdit: vi.fn().mockResolvedValue(true), reply: vi.fn().mockResolvedValue(true), afterChange: vi.fn() };
+  render(<TicketConversation {...defaultProps} composition={composition} />);
+  expect(screen.queryByRole('button', { name: 'Add Comment' })).toBeNull();
+  await user.click(screen.getByRole('button', { name: 'Reply to comment' }));
+  await waitFor(() => expect(composition.reply).toHaveBeenCalledWith(defaultProps.conversations[0]));
+  expect(document.getElementById('ticket-1-conversation-reply-comment-1')).toBeNull();
+  expect(screen.queryByTestId('inline-reply-editor')).toBeNull();
+  expect(defaultProps.onAddReplyComment).not.toHaveBeenCalled();
 });

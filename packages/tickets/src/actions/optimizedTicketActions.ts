@@ -1,5 +1,6 @@
 'use server';
 
+import { attachNativeRootToConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication, reconcileCommentAttachments } from '@alga-psa/shared/lib/ticketCommentAttachments';
@@ -77,7 +78,7 @@ import {
 } from '@alga-psa/shared/lib/ticketActivity';
 import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { enforceTicketCloseRules, type CloseRuleBypassSource } from '../lib/validateTicketClosure';
-import { maybeReopenBundleMasterFromChildReply, mirrorCommentToChild } from './ticketBundleUtils';
+import { applyTicketBundleCommentEffects } from '../lib/ticketBundleCommentEffects';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -3645,6 +3646,8 @@ export async function addTicketCommentInTransaction(
 
     await reconcileCommentAttachments(trx, tenant, newComment.comment_id!, user.user_id);
 
+    await attachNativeRootToConversation({ trx, ticket: { tenant, ticketId }, storeTenant: tenant }, threadId);
+
   // Update ticket response state based on comment visibility and author (F005-F008)
   if (!isScheduled) {
     await updateTicketResponseStateFromComment(
@@ -3657,44 +3660,10 @@ export async function addTicketCommentInTransaction(
     );
   }
 
-  // Bundle child→master reopen: a public reply on a bundled child can
-  // reopen the closed master when reopen_on_child_reply is set. This
-  // mirrors the wiring in commentActions.createComment so the optimized
-  // MSP-side comment path doesn't silently skip the reopen.
+  // The same publication engine serves reviewed named Requester sends.
+  // This legacy entry retains its existing tenant-wide comment admission.
   if (!isInternal && !isScheduled) {
-    await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, user.user_id ?? null);
-  }
-
-  // If this is a bundle master in sync_updates mode, mirror public comments to children (idempotent).
-  if (!isInternal && !isScheduled) {
-    const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-      .where({ master_ticket_id: ticketId })
-      .first();
-
-    if (bundleSettings?.mode === 'sync_updates') {
-      const children = await tenantScopedTable(trx, 'tickets', tenant)
-        .select('ticket_id')
-        .where({ master_ticket_id: ticketId });
-
-      for (const child of children) {
-        // The mirror write lives in ticketBundleUtils.mirrorCommentToChild so
-        // the sync_updates shape is defined once. Carry the source author
-        // (user, contact, author_type) so the mirrored child comment resolves
-        // to the real author instead of showing as unknown.
-        await mirrorCommentToChild(trx, tenant, {
-          sourceComment: {
-            comment_id: newCommentId,
-            note: content,
-            markdown_content: markdownContent,
-            user_id: newComment.user_id ?? null,
-            contact_id: newComment.contact_id ?? null,
-            author_type: newComment.author_type,
-          },
-          childTicketId: child.ticket_id,
-          isResolution,
-        });
-      }
-    }
+    await applyTicketBundleCommentEffects(trx, tenant, newCommentId, user.user_id ?? null);
   }
 
   // Publish comment added event after the comment transaction commits.

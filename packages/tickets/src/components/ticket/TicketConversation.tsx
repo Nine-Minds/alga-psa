@@ -1,5 +1,8 @@
 'use client';
 
+import type { RequesterHistoryComposition } from './conversations/NativeRequesterConversation';
+import { useConversationReplyLink } from './conversations/useConversationReplyLink';
+
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -74,6 +77,8 @@ import {
 } from './CommentEmailRecipientsControl';
 
 interface TicketConversationProps {
+  focusedMessageId?: string | null;
+  composition?: RequesterHistoryComposition;
   id?: string;
   ticket: ITicket;
   conversations: IComment[];
@@ -149,6 +154,7 @@ const defaultNotificationSuppression = (): TicketNotificationSuppressionValue =>
 });
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
+  focusedMessageId: requestedMessageId,
   id,
   ticket,
   conversations,
@@ -181,6 +187,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   defaultNewestFirst = false,
   canViewCommentMetadataDebug = false,
   reactionRefreshVersion = 0,
+  composition,
   externalLinksByCommentId = {},
   allowEmailRecipients = false,
   readOnly = false,
@@ -244,6 +251,14 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
   const [openPanelCommentId, setOpenPanelCommentId] = useState<string | null>(null);
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const focusedMessageId = composition?.focusedMessageId ?? requestedMessageId;
+  useEffect(() => { if (focusedMessageId) onTabChange(ALL_COMMENTS_TAB_ID); }, [focusedMessageId]);
+  const replyLinkError = useConversationReplyLink(!composition && !showEditor && !isEditing && !isSubmitting && !replyingToCommentId, target => {
+    const source = conversations.find(item => item.comment_id === target.commentId && item.thread_id === target.threadId &&
+      !item.deleted_at && !item.is_internal && (!item.publish_state || item.publish_state === 'published'));
+    if (!source) return false;
+    setReplyingToCommentId(target.commentId); return true;
+  });
   const drawerReturnFocusRef = useRef<HTMLElement | null>(null);
 
   const openCommentThreadPanel = useCallback((commentId: string) => {
@@ -415,10 +430,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     composeUploadSession.requestDiscard();
   };
 
-  usePageCreateShortcut(() => { handleAddCommentClick(headerAnchorVisible ? 'top' : 'bottom'); }, { enabled: !showEditor && !readOnly });
+  usePageCreateShortcut(() => { handleAddCommentClick(headerAnchorVisible ? 'top' : 'bottom'); }, { enabled: !composition && !showEditor && !readOnly });
   useDialogSubmitShortcut(() => { void handleSubmitComment(); }, {
-    active: showEditor,
-    enabled: !isSubmitting,
+    active: !composition && showEditor,
+    enabled: !composition && !isSubmitting,
   });
 
   const toggleCommentOrder = () => {
@@ -591,6 +606,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       return (
       <>
         <CommentItem
+          focusedMessageId={focusedMessageId}
           id={mergedConversation.comment_id ? `comment-${mergedConversation.comment_id}` : `${id}-comment-unknown`}
           conversation={mergedConversation}
           currentUserId={readOnly ? null : currentUser?.id}
@@ -602,10 +618,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           onContentChange={onContentChange}
           onSave={updates => { if (!existingCommentUploadSession.isUploading) onSave(updates); }}
           onClose={existingCommentUploadSession.requestDiscard}
-          onEdit={() => onEdit(mergedConversation)}
-          onDelete={onDelete}
-          onReply={readOnly ? undefined : () => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
-          hideInternalTab={hideInternalTab}
+          onEdit={async () => { if (!composition || await composition.beforeEdit()) onEdit(mergedConversation); }}
+          onDelete={async comment => { if (!composition || await composition.beforeEdit()) onDelete(comment); }}
+          onReply={composition ? composition.ready && mergedConversation.publish_state !== 'scheduled' ? async () => { if (await composition.reply(mergedConversation)) closeCommentThreadPanel(); } : undefined : readOnly ? undefined : () => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
+          hideInternalTab={hideInternalTab || Boolean(composition)}
+          mutationsDisabled={Boolean(composition && !composition.ready && !(isEditing && currentComment?.comment_id === mergedConversation.comment_id))}
+          beforeScheduleChange={composition?.beforeEdit}
+          onScheduleChanged={composition?.afterChange}
           uploadFile={existingCommentUploadSession.uploadFile}
           reactions={dataSource.capabilities.reactions ? reactionsMap[mergedConversation.comment_id || ''] || [] : undefined}
           onToggleReaction={dataSource.capabilities.reactions ? handleToggleReaction : undefined}
@@ -613,7 +632,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
           externalLinks={externalLinksByCommentId[mergedConversation.comment_id || ''] ?? []}
         />
-        {replyingToCommentId === mergedConversation.comment_id && mergedConversation.comment_id && (
+        {!mergedConversation.deleted_at && composition?.renderDetails?.(mergedConversation)}
+        {!composition && replyingToCommentId === mergedConversation.comment_id && mergedConversation.comment_id && (
           <InlineReplyComposer
             id={`${compId}-reply-${mergedConversation.comment_id}`}
             parentCommentId={mergedConversation.comment_id}
@@ -684,6 +704,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             renderComment={(comment) => renderCommentItem(comment)}
             onOpenPanel={openCommentThreadPanel}
             autoCollapseAfter={3}
+            revealCommentId={group.comments.some(comment => comment.comment_id === focusedMessageId) ? focusedMessageId : null}
           />
         )}
       />
@@ -754,7 +775,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                 onClose={() => {}}
                 onEdit={() => {}}
                 onDelete={() => {}}
-                hideInternalTab={hideInternalTab}
+                hideInternalTab={hideInternalTab || Boolean(composition)}
                 canViewCommentMetadataDebug={canViewCommentMetadataDebug}
                 externalLinks={externalLinksByCommentId[conversation.comment_id || ''] ?? []}
               />
@@ -850,7 +871,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           {!hideInternalTab && audiences && (
             <div className="flex items-center space-x-2">
               <Label htmlFor={`${compId}-audience-select`}>
-                {audiences.controlLabel ?? t('conversation.audience', 'Audience')}
+                {audiences.controlLabel ?? t('namedConversations.audience', 'Visible to')}
               </Label>
               <CustomSelect
                 id={`${compId}-audience-select`}
@@ -1016,9 +1037,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   return (
     <div {...withDataAutomationId({ id })} className={`${styles['card']}`}>
       <div className="p-6">
+        {replyLinkError && <p role="alert">{t('namedConversations.replyUnavailable', 'This reply target is unavailable. Your saved draft is unchanged.')}</p>}
         <div ref={headerAnchorRef} className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">{t('conversation.comments', 'Comments')}</h2>
-          {!showEditor && !readOnly && (
+          {!composition && !showEditor && !readOnly && (
             <Button
               id={`${compId}-show-comment-editor-btn`}
               onClick={() => handleAddCommentClick('top')}
@@ -1030,7 +1052,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         <StickyComposerDock
           id={`${compId}-composer-top`}
           side="top"
-          visible={!readOnly && showEditor && editorPlacement === 'top'}
+          visible={!composition && !readOnly && showEditor && editorPlacement === 'top'}
           expanded
         >
           <div className="p-3">{composerBlock}</div>
@@ -1055,7 +1077,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             composer right here rather than sending the reader back up. */}
         <StickyComposerDock
           id={`${compId}-composer-dock`}
-          visible={readOnly ? false : showEditor ? editorPlacement === 'bottom' : !headerAnchorVisible}
+          visible={!composition && !readOnly && (showEditor ? editorPlacement === 'bottom' : !headerAnchorVisible)}
           expanded={showEditor && editorPlacement === 'bottom'}
           placeholder={t('conversation.typeComment', 'Type your comment here...')}
           onExpand={() => handleAddCommentClick('bottom')}
@@ -1086,7 +1108,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         group={openPanelThreadGroup}
         getCommentId={(comment) => comment.comment_id}
         renderComment={(comment) => renderCommentItem(comment)}
-        canReply={!readOnly}
+        canReply={!composition && !readOnly}
         replyParentCommentId={openPanelComment?.comment_id ?? null}
         replyRoomName={(parentCommentId) => `ticket-${ticket.ticket_id}-reply-${parentCommentId}`}
         initialInternal={Boolean(openPanelComment?.is_internal ?? openPanelThreadGroup?.root.is_internal)}

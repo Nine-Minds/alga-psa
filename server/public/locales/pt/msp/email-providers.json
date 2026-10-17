@@ -1148,5 +1148,32 @@
         "users": "Falha ao carregar os usuários. Tente novamente."
       }
     }
+  },
+  "replyReview": {
+    "loadError": "Não foi possível carregar as respostas retidas. É necessária permissão para administrar a caixa de e-mail.",
+    "openError": "Não foi possível abrir esta resposta. Atualize para verificar se ela continua retida.",
+    "resolved": "Resposta adicionada à conversa selecionada.",
+    "resolveError": "Não foi possível confirmar a atribuição. Tente novamente para verificar a mesma operação ou atualize para revisar o estado atual.",
+    "sharedIt": "TI compartilhada",
+    "private": "Privado da organização",
+    "title": "Respostas de conversa retidas",
+    "refresh": "Atualizar",
+    "description": "Revise as respostas cuja conversa não foi confirmada e escolha a conversa de destino.",
+    "loading": "Carregando…",
+    "back": "Voltar às respostas retidas",
+    "from": "De",
+    "to": "Para",
+    "unverified": "Não foi possível verificar a autenticação do remetente ou a mensagem não é utilizável. Esta resposta permanece retida.",
+    "destination": "Conversa de destino",
+    "chooseDestination": "Escolher uma conversa",
+    "noDestinations": "Nenhuma conversa com fornecedores está disponível para escrita nesta caixa de e-mail.",
+    "retry": "Tentar atribuição novamente",
+    "resolve": "Adicionar resposta à conversa",
+    "empty": "Nenhuma resposta de conversa está aguardando revisão.",
+    "noSubject": "(Sem assunto)",
+    "review": "Revisar",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "nav": "Respostas retidas"
   }
 }

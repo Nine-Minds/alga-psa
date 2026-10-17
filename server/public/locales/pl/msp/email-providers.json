@@ -1148,5 +1148,32 @@
         "users": "Nie udało się wczytać użytkowników. Spróbuj ponownie."
       }
     }
+  },
+  "replyReview": {
+    "loadError": "Nie udało się wczytać wstrzymanych odpowiedzi. Wymagane jest uprawnienie do zarządzania skrzynką.",
+    "openError": "Nie udało się otworzyć tej odpowiedzi. Odśwież, aby sprawdzić, czy nadal jest wstrzymana.",
+    "resolved": "Odpowiedź dodana do wybranej rozmowy.",
+    "resolveError": "Nie udało się potwierdzić przypisania. Ponów, aby sprawdzić tę samą operację, lub odśwież bieżący stan.",
+    "sharedIt": "Wspólne IT",
+    "private": "Prywatne w organizacji",
+    "title": "Wstrzymane odpowiedzi w rozmowach",
+    "refresh": "Odśwież",
+    "description": "Sprawdź odpowiedzi, których rozmowy nie udało się potwierdzić, i wybierz ich miejsce docelowe.",
+    "loading": "Wczytywanie…",
+    "back": "Wróć do wstrzymanych odpowiedzi",
+    "from": "Od",
+    "to": "Do",
+    "unverified": "Nie udało się zweryfikować uwierzytelnienia nadawcy lub wiadomość nie nadaje się do użycia. Ta odpowiedź pozostaje wstrzymana.",
+    "destination": "Rozmowa docelowa",
+    "chooseDestination": "Wybierz rozmowę",
+    "noDestinations": "Brak rozmów z dostawcami z prawem zapisu dostępnych dla tej skrzynki.",
+    "retry": "Ponów przypisanie",
+    "resolve": "Dodaj odpowiedź do rozmowy",
+    "empty": "Żadne odpowiedzi w rozmowach nie oczekują na sprawdzenie.",
+    "noSubject": "(Bez tematu)",
+    "review": "Sprawdź",
+    "previous": "Poprzednia",
+    "next": "Następna",
+    "nav": "Wstrzymane odpowiedzi"
   }
 }

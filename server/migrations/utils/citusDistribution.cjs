@@ -9,6 +9,16 @@ async function isDistributed(knex, tableName) {
   const r = await knex.raw(`SELECT EXISTS (SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass) AS is_distributed;`, [tableName]);
   return Boolean(r.rows?.[0]?.is_distributed);
 }
+// A distributed referrer cannot point at a local table, including one registered
+// in Citus metadata. Callers must also keep hash-distributed FK pairs colocated.
+async function supportsDistributedForeignKeyTarget(knex, tableName) {
+  if (!(await canCreateDistributedTable(knex))) return true;
+  const r = await knex.raw(`SELECT EXISTS (
+    SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass
+      AND (partmethod = 'h' OR (partmethod = 'n' AND repmodel = 't'))
+  ) AS supported`, [tableName]);
+  return Boolean(r.rows?.[0]?.supported);
+}
 async function ensureTenantDistribution(knex, tableName) {
   if (!(await canCreateDistributedTable(knex))) return;
   if (await isDistributed(knex, tableName)) return;
@@ -24,4 +34,4 @@ async function supportsTriggers(knex, tableName) {
   if (!(await canCreateDistributedTable(knex))) return true;
   return !(await isDistributed(knex, tableName));
 }
-module.exports = { canCreateDistributedTable, isDistributed, ensureTenantDistribution, supportsTriggers };
+module.exports = { canCreateDistributedTable, isDistributed, ensureTenantDistribution, supportsTriggers, supportsDistributedForeignKeyTarget };

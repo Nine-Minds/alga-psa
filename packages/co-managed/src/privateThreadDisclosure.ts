@@ -2,6 +2,7 @@ import { coManagedAttachmentParent } from './attachmentParent';
 import { createHash, randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { ensureDefaultTicketConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, isCoManagedUuid, type CoManagedSessionActor } from './sharedWorkIdentity';
 import type { CoManagedSharedResource, CoManagedSharedWorkContext } from './sharedWork';
@@ -143,7 +144,7 @@ export async function discloseCoManagedPrivateThread(db: Knex, inputActor: CoMan
       const actorRefs = new Map<string, string>();
       for (const comment of source.comments) {
         if (!mapping[comment.comment_id]) conflict();
-        if (!actorRefs.has(comment.actor_user_id)) {
+        if (comment.actor_kind !== 'ai' && !actorRefs.has(comment.actor_user_id)) {
           const previous = await customer.table('collaboration_actor_references').where({ actor_tenant: actor.tenant, actor_user_id: comment.actor_user_id }).forShare().first();
           let id = previous?.actor_reference_id;
           if (!id) {
@@ -157,7 +158,10 @@ export async function discloseCoManagedPrivateThread(db: Knex, inputActor: CoMan
       }
       await assertCoManagedSessionUnexpired(trx, actor); await assertCoManagedOperationalWrite(trx, resource.tenant);
       const clock = await trx.raw('SELECT clock_timestamp() AS value'), appliedAt = (clock.rows[0].value as Date).toISOString();
-      await customer.table('comment_threads').insert({ tenant: resource.tenant, thread_id: operationId, ...coManagedAttachmentParent(resource), root_comment_id: operationId,
+      const destination = resource.kind === 'project_task' ? undefined : await ensureDefaultTicketConversation({ trx, storeTenant: resource.tenant,
+        ticket: { tenant: resource.tenant, ticketId: resource.id } }, request.audience);
+      await customer.table('comment_threads').insert({ tenant: resource.tenant, ...(destination ? { conversation_id: destination.conversationId } : {}),
+        thread_id: operationId, ...coManagedAttachmentParent(resource), root_comment_id: operationId,
         is_internal: request.audience !== 'requester', collaboration_audience: request.audience, reply_count: source.comments.length - 1,
         created_at: source.thread.created_at_exact, last_activity_at: appliedAt, created_by: null });
       const ordered: any[] = [], remaining = [...source.comments];
@@ -167,8 +171,10 @@ export async function discloseCoManagedPrivateThread(db: Knex, inputActor: CoMan
       }
       for (const comment of ordered) await customer.table(resource.kind === 'project_task' ? 'project_task_comments' : 'comments').insert({ tenant: resource.tenant,
         [resource.kind === 'project_task' ? 'task_comment_id' : 'comment_id']: mapping[comment.comment_id], [resource.kind === 'project_task' ? 'task_id' : 'ticket_id']: resource.id,
-        thread_id: operationId, parent_comment_id: comment.parent_comment_id ? mapping[comment.parent_comment_id] : null, user_id: null, author_type: 'internal',
-        actor_reference_id: actorRefs.get(comment.actor_user_id), actor_display_name: comment.actor_display_name, actor_organization_name: comment.actor_organization_name,
+        thread_id: operationId, parent_comment_id: comment.parent_comment_id ? mapping[comment.parent_comment_id] : null, user_id: null,
+        author_type: comment.actor_kind === 'ai' ? 'ai' : 'internal',
+        ...(comment.actor_kind === 'ai' ? { is_system_generated: true } : { actor_reference_id: actorRefs.get(comment.actor_user_id),
+          actor_display_name: comment.actor_display_name, actor_organization_name: comment.actor_organization_name }),
         note: comment.deleted_at ? '' : comment.note, markdown_content: comment.deleted_at ? '' : comment.markdown_content,
         ...(resource.kind === 'project_task' ? { collaboration_revision: comment.revision } : { contact_id: null, is_internal: request.audience !== 'requester', is_resolution: false, publish_state: 'published' }), created_at: comment.created_at_exact, updated_at: appliedAt, deleted_at: comment.deleted_at_exact });
       for (const file of source.files) {

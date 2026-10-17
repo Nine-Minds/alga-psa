@@ -586,14 +586,14 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       expect(await addClientTicketComment(ticket, note(pdf.file), false, false)).toBe(true);
       const root = await table('comments').where({ user_id: clientUser }).first();
       const reply = await upload('portal-reply.webm', 'video/webm', 12, clientUser);
-      expect(await addClientTicketComment(ticket, note(reply.file), false, false, root.comment_id)).toBe(true);
+      expect(await addClientTicketComment(ticket, note(reply.file), false, false, undefined, root.comment_id)).toBe(true);
       const child = await table('comments').where({ parent_comment_id: root.comment_id }).first();
       expect(child.thread_id).toBe(root.thread_id);
       expect((await table('ticket_comment_attachments').where({ document_id: reply.document }).first()).comment_id).toBe(child.comment_id);
       expect(child.comment_publication_payload).toBeTruthy();
       expect((await table('comment_threads').where({ thread_id: root.thread_id }).first()).reply_count).toBe(1);
       await table('comments').where({ comment_id: root.comment_id }).update({ is_internal: true });
-      expect(await addClientTicketComment(ticket, note(reply.file), false, false, root.comment_id)).not.toBe(true);
+      expect(await addClientTicketComment(ticket, note(reply.file), false, false, undefined, root.comment_id)).not.toBe(true);
     } finally { connection.mockRestore(); publish.mockRestore(); update.mockRestore(); }
   });
   it.each(['same-client', 'other-client', 'no-mirror', 'client-email', 'no-attachment', 'provider-limited', 'failed-retry',

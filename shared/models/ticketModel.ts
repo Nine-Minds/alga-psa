@@ -5,6 +5,7 @@ import { persistCommentPublication, resolveCommentAuthorDisplay } from '../lib/t
  * server actions and used by both server actions and workflow actions.
  */
 
+import { attachNativeRootToConversation } from '../lib/tickets/namedConversations';
 import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
@@ -136,6 +137,7 @@ export const createCommentSchema = z.object({
   parent_comment_id: z.string().uuid('Parent comment ID must be a valid UUID').optional(),
   is_internal: z.boolean().optional(),
   collaboration_audience: z.enum(['requester', 'shared_it', 'organization_private']).optional(),
+  conversation_id: z.string().uuid().optional(),
   is_resolution: z.boolean().optional(),
   is_system_generated: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
@@ -250,6 +252,7 @@ export interface CreateCommentValidationInput {
   ticket_id: string;
   content: string;
   parent_comment_id?: string;
+  conversation_id?: string;
   is_internal?: boolean;
   is_resolution?: boolean;
   is_system_generated?: boolean;
@@ -279,6 +282,7 @@ export interface CreateCommentInput {
   ticket_id: string;
   content: string;
   parent_comment_id?: string;
+  conversation_id?: string;
   is_internal?: boolean;
   collaboration_audience?: 'requester' | 'shared_it' | 'organization_private';
   is_resolution?: boolean;
@@ -1612,6 +1616,7 @@ export class TicketModel {
       : resolveCommentAudience({ collaboration_audience: validatedData.collaboration_audience, is_internal: commentIsInternal });
     if (validatedData.collaboration_audience && currentAudience !== validatedData.collaboration_audience) throw new Error('Reply audience changed');
     await db.table('comments').insert(baseCommentData);
+    await attachNativeRootToConversation({ trx, ticket: { tenant, ticketId: validatedData.ticket_id }, storeTenant: tenant }, threadId, validatedData.conversation_id);
     await reconcileCommentAttachments(trx, tenant, commentId, userId || validatedData.author_id || '');
 
     if (parentCommentId) {

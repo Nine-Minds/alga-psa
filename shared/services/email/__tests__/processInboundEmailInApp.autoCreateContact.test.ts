@@ -99,7 +99,13 @@ vi.mock('@alga-psa/db', () => ({
   withAdminTransaction: (callback: (trx: any) => Promise<any>) =>
     withAdminTransactionMock(callback),
   tenantDb: (conn: any, tenant: string) => ({
-    table: (table: string) => conn(table).where({ tenant }),
+    // Tables the test intercepts flow through the mocked connection; any other
+    // tenant-scoped read (e.g. named-correspondent admission) resolves empty.
+    table: (table: string) => {
+      const resolved = conn(table);
+      if (resolved && typeof resolved.where === 'function') return resolved.where({ tenant });
+      return makeQueryBuilder(undefined).where({ tenant });
+    },
   }),
 }));
 

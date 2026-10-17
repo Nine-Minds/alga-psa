@@ -2,8 +2,9 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
+import { TicketConversationError, type TicketConversationReference } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { CoManagedAttachmentError, CoManagedSharedWorkError, listCoManagedConversationAttachments, canManageCoManagedConversationAttachments, removeCoManagedConversationAttachment,
-  type CoManagedSharedResource, type CoManagedCommentReference, type CoManagedAttachmentReference } from '@alga-psa/co-managed';
+  listNamedConversationAttachments, type CoManagedSharedResource, type CoManagedCommentReference, type CoManagedAttachmentReference } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { coManagedAttachmentUploadLimit } from '../co-managed/attachmentUploadLimit';
@@ -13,13 +14,17 @@ export const listCoManagedAttachmentsAction = withAuth(async (user, { tenant }, 
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
   return listCoManagedConversationAttachments(knex, actor, resource, comment);
 });
-export const getCoManagedAttachmentsScreenAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, comment: CoManagedCommentReference) => {
+export const getCoManagedAttachmentsScreenAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, comment: CoManagedCommentReference, conversation?: TicketConversationReference) => {
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  if (conversation && conversation.storeTenant !== comment.storeTenant) throw new TicketConversationError('CONVERSATION_FORBIDDEN');
   // Acquire update hints before the separate read transaction, avoiding a lock upgrade.
   const canManage = await canManageCoManagedConversationAttachments(knex, actor, resource, comment);
-  const attachments = await listCoManagedConversationAttachments(knex, actor, resource, comment);
+  const managed = await listCoManagedConversationAttachments(knex, actor, resource, comment);
+  const attachments = conversation ? await listNamedConversationAttachments(knex, actor,
+    { tenant: resource.tenant, ticketId: resource.id, relationshipId: resource.relationshipId }, conversation, comment) : managed;
   const maxBytes = coManagedAttachmentUploadLimit();
-  return { attachments, canUpload: canManage && maxBytes > 0, canRemove: canManage, maxBytes, actor: { tenant: actor.tenant, userId: actor.userId } };
+  return { attachments, canUpload: canManage && maxBytes > 0, canRemove: canManage,
+    removableAttachmentIds: canManage ? managed.map(file => file.attachmentId) : [], maxBytes, actor: { tenant: actor.tenant, userId: actor.userId } };
 });
 export const uploadCoManagedAttachmentAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource,
   comment: CoManagedCommentReference, attachmentId: string, form: FormData) => {

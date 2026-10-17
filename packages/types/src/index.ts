@@ -30,6 +30,7 @@ export * from './lib/tenancy';
 export * from './lib/onboardingWizard';
 export * from './lib/knowledgeBase';
 export * from './lib/senderActionResult';
+export * from './lib/conversationAiError';
 export * from './lib/externalSystems';
 export * from './search';
 export * from './deletion';

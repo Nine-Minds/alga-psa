@@ -169,14 +169,11 @@ describe('provider setup reachability', () => {
     // an empty main). This assertion keeps the route from re-acquiring its own
     // gate if that shell-wide blanking is ever given the fallback it lacks.
     const page = code('server/src/app/msp/co-management/providers/page.tsx');
-    const entry = code('packages/integrations/src/components/email/EmailProviderConfiguration.tsx');
-
+    // The entry component now also hosts a flag-gated reply-review section.
+    // EmailProviderConfiguration.resync.test.tsx renders the Providers button
+    // with that flag disabled; scanning the entire component rejects unrelated
+    // feature gates without testing whether the button remains reachable.
     for (const flagReference of ['release-v1-6-feature', 'useFeatureFlag', 'CoManagedFeatureBoundary']) {
-      expect(
-        entry.includes(flagReference),
-        `the Open Providers entry point references ${flagReference}; if the entry point becomes `
-        + 'flag-gated, revisit whether the destination should be too',
-      ).toBe(false);
       expect(
         page.includes(flagReference),
         `the provider route references ${flagReference} while its entry point does not — with the flag `

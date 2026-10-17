@@ -1,4 +1,7 @@
 {
+  "listToolbar": {
+    "removeFilter": "Rimuovi {{label}}"
+  },
   "phone": {
     "extension": "int."
   },
