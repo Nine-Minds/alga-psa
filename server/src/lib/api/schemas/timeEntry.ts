@@ -34,6 +34,15 @@ const baseTimeEntrySchema = z.object({
   notes: z.string().optional(),
   service_id: uuidSchema.optional().describe('Required on create (it drives billing); cannot be cleared on update.'),
   tax_region: z.string().optional(),
+  tax_rate_id: uuidSchema.nullable().optional().describe(
+    'Optional. Stored as given, like the UI save path; the API does not compute tax.'
+  ),
+  contract_line_id: uuidSchema.optional().describe(
+    'Optional. Must be one of the contract lines eligible for the work item\'s client, the service and the work date, else 400. ' +
+    'When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 ' +
+    '(details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. ' +
+    'Ignored for non-billable entries.'
+  ),
   is_billable: z.boolean().optional().default(true)
 });
 
