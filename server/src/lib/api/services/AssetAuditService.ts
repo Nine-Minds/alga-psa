@@ -148,12 +148,18 @@ export class AssetAuditService extends BaseService<any> {
         .where({ audit_id: auditId, asset_id: data.asset_id })
         .first('result', 'marked_at');
 
-      const inSnapshot = Boolean(existing);
+      // Only a snapshot row can become `present`. An `unexpected` row proves the
+      // asset was never in scope, so re-scanning it must not promote it.
+      const inSnapshot = Boolean(existing) && existing.result !== 'unexpected';
       const result: AssetAuditItemResult = inSnapshot ? 'present' : 'unexpected';
 
       if (existing && existing.result === result && existing.marked_at) {
         return { ...audit, items: await this.loadItems(trx, context.tenant, auditId) };
       }
+
+      // Citus rejects non-IMMUTABLE functions in the DO UPDATE SET of an insert
+      // on a distributed table, so the mark time is bound as a value.
+      const markedAt = new Date().toISOString();
 
       await scoped(trx, context.tenant, 'asset_audit_items')
         .insert({
@@ -162,14 +168,14 @@ export class AssetAuditService extends BaseService<any> {
           asset_id: data.asset_id,
           result,
           method: data.method,
-          marked_at: trx.fn.now(),
+          marked_at: markedAt,
           marked_by: context.userId,
         })
         .onConflict(['tenant', 'audit_id', 'asset_id'])
         .merge({
           result,
           method: data.method,
-          marked_at: trx.fn.now(),
+          marked_at: markedAt,
           marked_by: context.userId,
         });
 

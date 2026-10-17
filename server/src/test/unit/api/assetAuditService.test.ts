@@ -135,7 +135,10 @@ const h = vi.hoisted(() => {
 
   const knex: any = (table: string) => new QB(table);
   knex.raw = (sql: string, bindings: unknown) => ({ sql, bindings });
-  knex.fn = { now: () => '2026-10-16T12:00:00.000Z' };
+  // Not a string on purpose: fn.now() is SQL, and Citus rejects it in the DO
+  // UPDATE SET of an insert on a distributed table. A test asserting that a
+  // stored timestamp is an ISO string therefore fails if it creeps back in.
+  knex.fn = { now: () => ({ sql: 'CURRENT_TIMESTAMP' }) };
   knex.transaction = async (callback: (trx: any) => Promise<any>) => callback(knex);
 
   return {
@@ -251,6 +254,29 @@ describe('AssetAuditService.markItem', () => {
 
     const row = items(audit.audit_id).find((item) => item.asset_id === 'a-5');
     expect(row?.result).toBe('unexpected');
+  });
+
+  it('T116 keeps an unexpected asset unexpected when it is scanned again', async () => {
+    const audit = await service.start({ client_id: CLIENT, location_id: LOCATION, statuses: ['active'] }, context);
+    await service.markItem(audit.audit_id, { asset_id: 'a-5', result: 'present', method: 'scan' }, context);
+
+    await service.markItem(audit.audit_id, { asset_id: 'a-5', result: 'present', method: 'manual' }, context);
+
+    const rows = items(audit.audit_id).filter((item) => item.asset_id === 'a-5');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].result).toBe('unexpected');
+  });
+
+  it('T117 binds marked_at as a value, since Citus forbids SQL functions in a merge', async () => {
+    const audit = await service.start({ client_id: CLIENT, location_id: LOCATION, statuses: ['active'] }, context);
+
+    // Every expected asset already has a snapshot row, so a mark always takes
+    // the ON CONFLICT path.
+    await service.markItem(audit.audit_id, { asset_id: 'a-1', result: 'present', method: 'scan' }, context);
+
+    const row = items(audit.audit_id).find((item) => item.asset_id === 'a-1')!;
+    expect(typeof row.marked_at).toBe('string');
+    expect(Number.isNaN(Date.parse(row.marked_at))).toBe(false);
   });
 
   it('T050 rejects an asset of another tenant with 404', async () => {
