@@ -1578,7 +1578,8 @@
         "warrantyEnd": "Fine della garanzia",
         "agent": "Agente",
         "patching": "Patch",
-        "coverage": "Copertura"
+        "coverage": "Copertura",
+        "assignedTo": "Assegnato a"
       },
       "details": {
         "local": "Locale",
@@ -1625,7 +1626,28 @@
         "workstation": "Stazione di lavoro"
       },
       "loadError": "Impossibile caricare gli asset in questo momento.",
-      "retry": "Riprova"
+      "retry": "Riprova",
+      "views": {
+        "assets": "Asset",
+        "groups": "Gruppi"
+      },
+      "groups": {
+        "newGroup": "Nuovo gruppo",
+        "drawerTitle": "Gruppo di asset",
+        "name": "Nome",
+        "kind": "Tipo",
+        "kinds": {
+          "bundle": "Pacchetto",
+          "shared_workspace": "Postazione condivisa"
+        },
+        "columns": {
+          "name": "Nome",
+          "kind": "Tipo",
+          "location": "Sede",
+          "members": "Membri",
+          "people": "Persone"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Aggiungi ticket",
@@ -1982,7 +2004,15 @@
     "accountingApply": "Applica la selezione",
     "accountingSkip": "Rimanda",
     "accountingRemapped": "Corrispondenze contabili reindirizzate",
-    "accountingSkipped": "{{count}} corrispondenza/e non è stato possibile reindirizzarle: vanno ricollegate manualmente."
+    "accountingSkipped": "{{count}} corrispondenza/e non è stato possibile reindirizzarle: vanno ricollegate manualmente.",
+    "assetsDescription": "Questi dispositivi e le organizzazioni RMM passano al cliente di destinazione. Le sincronizzazioni successive li mantengono su quel cliente.",
+    "assetsTotal": "Asset",
+    "assetGroups": "Gruppi di asset",
+    "deviceCount": "{{count}} dispositivi",
+    "billingStrategyHeading": "Profilo di fatturazione per il lavoro e i dispositivi trasferiti",
+    "billingStrategySource": "Profilo di fatturazione di {{source}}, mantenuto come profilo separato su {{target}}",
+    "billingStrategyTarget": "Profilo di fatturazione predefinito di {{target}}",
+    "billingStrategyHelp": "Si applica a {{tickets}} ticket, {{projects}} progetto/i, {{assets}} asset e {{mappings}} gruppo/i di dispositivi RMM senza un profilo di fatturazione proprio. Le righe con un profilo esplicito lo mantengono, mentre fatture, cicli di fatturazione, pagamenti e crediti restano sempre sul profilo unito."
   },
   "billingProfileContacts": {
     "title": "Contatti del profilo",

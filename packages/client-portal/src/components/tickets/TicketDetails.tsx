@@ -96,6 +96,12 @@ export function TicketDetails({
   // Local overrides for comments to ensure immediate UI reflection
   const [commentOverrides, setCommentOverrides] = useState<Record<string, { note?: string; updated_at?: string }>>({});
   const [statusOptions] = useState<IStatus[]>(initialStatusOptions);
+  /**
+   * FR-E7b: a ticket visible only because it is about a device in my shared
+   * workspace is read-only — the write actions resolve it without the
+   * workspace clause and answer "Ticket not found".
+   */
+  const canInteract = (ticket as { can_interact?: boolean }).can_interact !== false;
   // Re-derive on every current-status change: the server seeds the initial list
   // with the ticket's current restricted status, but once the ticket moves the
   // restricted status must stop being offered as a target without a reload.
@@ -597,6 +603,18 @@ export function TicketDetails({
             </div>
           </div>
 
+          {!canInteract && (
+            <div
+              id="portal-ticket-workspace-readonly"
+              className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+            >
+              {t(
+                'messages.sharedWorkspaceReadOnly',
+                'You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it.'
+              )}
+            </div>
+          )}
+
           {/* Ticket Details Section */}
           <div className="bg-white border border-gray-200 rounded-3xl p-6 space-y-5">
             {/* Title */}
@@ -614,6 +632,7 @@ export function TicketDetails({
               <div className="flex items-center gap-3">
                 <CustomSelect
                   value={ticket.status_id || ''}
+                  disabled={!canInteract}
                   options={portalStatusOptions.map((status) => ({
                     value: status.status_id || '',
                     label: status.name || ''
@@ -893,6 +912,7 @@ export function TicketDetails({
                 currentUser={currentUser}
                 activeTab={activeTab === 'internal' ? 'all-comments' : activeTab}
                 hideInternalTab={true}
+                readOnly={!canInteract}
                 isEditing={isEditing}
                 currentComment={currentComment}
                 editorKey={editorKey}

@@ -315,7 +315,8 @@
     "errorWithMessage": "Fehler: {{message}}",
     "billingProfileUpdated": "Abrechnungsprofil aktualisiert",
     "updateBillingProfileFailed": "Abrechnungsprofil konnte nicht aktualisiert werden",
-    "scheduleOpenFailed": "Der Planer konnte nicht geöffnet werden"
+    "scheduleOpenFailed": "Der Planer konnte nicht geöffnet werden",
+    "sharedWorkspaceReadOnly": "Sie sehen dieses Ticket, weil es ein Gerät in einem gemeinsam genutzten Arbeitsplatz betrifft. Nur die Person, die es gemeldet hat, kann etwas hinzufügen."
   },
   "conversation": {
     "comments": "Kommentare",
@@ -1800,6 +1801,7 @@
       "setClientToAddContact": "Zuerst einen Kunden festlegen, um einen Kontakt hinzuzufügen",
       "logInteraction": "Anruf oder E-Mail erfassen",
       "changeClient": "Kunde ändern",
+      "changeLocation": "Standort ändern",
       "teamFallback": "Team",
       "teamSectionLabel": "Team zuweisen",
       "addAgentsOrTeam": "Bearbeiter oder ein Team hinzufügen…",

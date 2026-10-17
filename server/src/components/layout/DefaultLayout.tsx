@@ -21,6 +21,7 @@ import { QuickAskProvider } from './QuickAskContext';
 // surveys…) without it; this lightweight, fetch-on-demand provider fills that gap.
 import { MspClientTagsProvider } from '@alga-psa/msp-composition/clients/MspClientTagsProvider';
 import { PlatformNotificationBanner } from './PlatformNotificationBanner';
+import { IntegrationHealthBanner } from '@alga-psa/integrations/components/IntegrationHealthBanner';
 import GlobalShortcutLayer from './GlobalShortcutLayer';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { useTier } from 'server/src/context/TierContext';
@@ -454,6 +455,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
               setRightSidebarOpen={setRightSidebarOpen}
             />
             <PlatformNotificationBanner />
+            <IntegrationHealthBanner />
             <StaleActionBanner />
             <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
               <Body>{children}</Body>

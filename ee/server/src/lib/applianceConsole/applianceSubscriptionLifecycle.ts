@@ -15,7 +15,9 @@ import {
   AlgaLicenseHttpError,
   reactivateApplianceEntitlement,
   revokeApplianceEntitlement,
+  syncApplianceSubscriptionState,
   updateApplianceEntitlementSeats,
+  type ApplianceSubscriptionState,
 } from './algaLicenseAdminClient';
 import { findPerSeatItem } from './stripeBilling';
 
@@ -34,6 +36,8 @@ export interface ApplianceLifecycleOutcome {
   subscriptionId: string | null;
   action: LifecycleAction;
   seats?: number;
+  /** Set for subscription.* events: the state mirrored to C4. */
+  state?: ApplianceSubscriptionState;
 }
 
 export interface ApplianceLifecycleDeps {
@@ -41,6 +45,8 @@ export interface ApplianceLifecycleDeps {
   /** Re-enable a revoked entitlement, keyed by subscription id (idempotent in C4). */
   reactivate: (stripeSubId: string) => Promise<unknown>;
   syncSeats: (tenantId: string, seats: number) => Promise<unknown>;
+  /** Mirror the subscription snapshot onto the C4 entitlement (display only, never revokes). */
+  syncState: (stripeSubId: string, state: ApplianceSubscriptionState) => Promise<unknown>;
   audit?: (details: Record<string, unknown>) => Promise<void>;
 }
 
@@ -48,6 +54,7 @@ const defaultDeps: ApplianceLifecycleDeps = {
   revoke: revokeApplianceEntitlement,
   reactivate: reactivateApplianceEntitlement,
   syncSeats: updateApplianceEntitlementSeats,
+  syncState: syncApplianceSubscriptionState,
 };
 
 export function isApplianceSubscription(sub: { metadata?: Stripe.Metadata | null } | null | undefined): boolean {
@@ -84,25 +91,67 @@ export async function resolveApplianceSubscription(
 }
 
 /**
+ * Snapshot of the subscription for C4's display mirror. A deleted event always
+ * mirrors `canceled` (Stripe's payload already says so, but don't depend on it).
+ * `current_period_end` is per-item in this Stripe API version; fall back to the
+ * legacy subscription-level field for older API versions.
+ */
+export function subscriptionStateSnapshot(event: Stripe.Event, sub: Stripe.Subscription): ApplianceSubscriptionState {
+  const deleted = event.type === 'customer.subscription.deleted';
+  const periodEnd =
+    sub.items?.data?.[0]?.current_period_end ??
+    (sub as unknown as { current_period_end?: number }).current_period_end ??
+    null;
+  return {
+    status: deleted ? 'canceled' : sub.status,
+    cancel_at_period_end: !!sub.cancel_at_period_end,
+    cancel_at: sub.cancel_at ?? null,
+    canceled_at: sub.canceled_at ?? (deleted ? event.created ?? null : null),
+    current_period_end: periodEnd,
+  };
+}
+
+const isSubscriptionEvent = (event: Stripe.Event) => event.type.startsWith('customer.subscription.');
+
+/**
  * Pure decision: what does this event mean for the C4 entitlement?
+ *
+ * Actions: 'revoke' (the subscription actually ends: deleted, or updated into a
+ * LAPSED status), 'reactivate' (updated back to a LIVE status from a LAPSED
+ * `previous_attributes.status`; carries `seats` when a per-seat line exists so
+ * the seat sync can follow), 'sync-seats' (items changed on a live sub), 'none'.
+ * A cancel *request* (`cancel_at_period_end` false→true, or `cancel_at` set) and
+ * its undo leave the customer paid-through, so they fall through to 'none' (or a
+ * seat sync) and are only mirrored via `state`.
  *
  * Status is read from `sub`, which the handler refreshes from Stripe for
  * `updated` events, so a stale payload cannot flip the decision. Reactivation is
- * gated on an actual lapsed→live transition (`previous_attributes.status`), where
- * the previous status must be one of the lapsed statuses this handler revokes on
- * (unpaid/canceled/incomplete_expired). past_due/incomplete/paused never caused a
- * revoke here, so recovering from them must not re-enable an operator revoke; they
- * fall through to sync-seats (items changed) or none. An operator may soft-revoke an entitlement while the Stripe sub is still active,
- * and routine updates (renewals, period rollovers, metadata edits) must not undo
- * that. Out-of-order delivery stays safe because the decision uses fresh state and
- * revoke/reactivate are idempotent: a stale lapse event whose fresh status is live
- * does not revoke, and a stale `updated(active, prev unpaid)` whose fresh status
- * is canceled revokes instead of reactivating.
+ * gated on an actual lapsed→live transition: the previous status must be one of
+ * the lapsed statuses this handler revokes on (unpaid/canceled/incomplete_expired).
+ * past_due/incomplete/paused never caused a revoke here, so recovering from them
+ * must not re-enable an operator revoke; they fall through to sync-seats (items
+ * changed) or none. An operator may soft-revoke an entitlement while the Stripe
+ * sub is still active, and routine updates (renewals, period rollovers, metadata
+ * edits) must not undo that. Out-of-order delivery stays safe because the
+ * decision uses fresh state and revoke/reactivate are idempotent: a stale lapse
+ * event whose fresh status is live does not revoke, and a stale
+ * `updated(active, prev unpaid)` whose fresh status is canceled revokes instead
+ * of reactivating.
  */
 export function decideLifecycleAction(
   event: Stripe.Event,
   sub: Stripe.Subscription,
   env: NodeJS.ProcessEnv = process.env,
+): { action: LifecycleAction; seats?: number; state?: ApplianceSubscriptionState } {
+  const state = isSubscriptionEvent(event) ? subscriptionStateSnapshot(event, sub) : undefined;
+  const decision = decideAction(event, sub, env);
+  return state ? { ...decision, state } : decision;
+}
+
+function decideAction(
+  event: Stripe.Event,
+  sub: Stripe.Subscription,
+  env: NodeJS.ProcessEnv,
 ): { action: LifecycleAction; seats?: number } {
   if (event.type === 'customer.subscription.deleted') return { action: 'revoke' };
 
@@ -133,7 +182,7 @@ export function decideLifecycleAction(
 /**
  * Seat sync that treats an alga-license 404 as terminal. The 404 means the
  * entitlement is inactive or absent (e.g. operator soft-revoke), which a retry
- * cannot fix, so surfacing it would make Stripe redeliver forever (503 loop).
+ * cannot fix, so surfacing it would make Stripe redeliver forever (5xx retry loop).
  * Every other error rethrows so Stripe retries. Returns false when skipped.
  */
 async function syncSeatsTolerating404(
@@ -176,6 +225,7 @@ export async function handleApplianceSubscriptionEvent(
     subscriptionId: sub.id,
     action: decision.action,
     seats: decision.seats,
+    state: decision.state,
   };
 
   logger.info(`[ApplianceLifecycle] ${event.type} sub=${sub.id} tenant=${tenantId ?? 'unknown'} action=${decision.action}`);
@@ -217,6 +267,13 @@ export async function handleApplianceSubscriptionEvent(
     }
   }
 
+  // Mirror on every subscription event (not just transitions) so C4 self-heals.
+  // After revoke/seats: a failure here must not skip those, and Stripe's retry
+  // re-runs all three idempotently.
+  if (decision.state) {
+    await deps.syncState(sub.id, decision.state);
+  }
+
   if (deps.audit) {
     await deps.audit({
       event_id: event.id,
@@ -226,6 +283,7 @@ export async function handleApplianceSubscriptionEvent(
       action: outcome.action,
       seats: outcome.seats ?? null,
       status: sub.status,
+      cancel_at_period_end: decision.state?.cancel_at_period_end ?? null,
     }).catch(() => undefined);
   }
 

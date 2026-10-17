@@ -3,7 +3,7 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClient, IClientLocation, IContact } from '@alga-psa/types';
-import { withAuth } from '@alga-psa/auth';
+import { hasPermission, withAuth } from '@alga-psa/auth';
 import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 
@@ -125,4 +125,55 @@ export const getClientContactsForAssets = withAuth(async (
       })
       .orderBy('full_name', 'asc');
   }) as unknown as IContact[];
+});
+
+/**
+ * Suppliers an asset can be bought from: the tenant's inventory `vendors`.
+ * Scoped to the asset surfaces (hence `asset` read, not `vendor` read) so a
+ * technician without inventory permissions can still pick a supplier.
+ */
+export const getVendorOptionsForAssets = withAuth(async (
+  user,
+  { tenant },
+  currentVendorId?: string | null
+): Promise<Array<{ vendor_id: string; vendor_name: string }>> => {
+  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  if (!await hasPermission(user, 'asset', 'read')) return [];
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return tenantScopedTable(trx, tenant, 'vendors')
+      .select('vendor_id', 'vendor_name')
+      .where(function (this: Knex.QueryBuilder) {
+        this.where({ is_active: true });
+        // Keep the stored supplier visible even once it is deactivated.
+        if (currentVendorId) {
+          this.orWhere({ vendor_id: currentVendorId });
+        }
+      })
+      .orderBy('vendor_name', 'asc');
+  }) as unknown as Array<{ vendor_id: string; vendor_name: string }>;
+});
+
+/**
+ * FR-F4: the client's active billing profiles, for the asset form's Billing
+ * profile select. The select only appears when there is more than one, so a
+ * single-profile client is never asked a question with one answer.
+ */
+export const getClientBillingProfilesForAssets = withAuth(async (
+  user,
+  { tenant },
+  clientId: string
+): Promise<Array<{ billing_profile_id: string; name: string; is_default: boolean }>> => {
+  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  if (!await hasPermission(user, 'asset', 'read')) return [];
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return tenantScopedTable(trx, tenant, 'client_billing_profiles')
+      .select('billing_profile_id', 'name', 'is_default')
+      .where({ client_id: clientId, is_active: true })
+      .orderBy('is_default', 'desc')
+      .orderBy('name', 'asc');
+  }) as unknown as Array<{ billing_profile_id: string; name: string; is_default: boolean }>;
 });

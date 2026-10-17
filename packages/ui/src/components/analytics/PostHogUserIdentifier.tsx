@@ -16,7 +16,7 @@ export function PostHogUserIdentifier() {
 
     // PostHog can be initialized async (after hydration). In some cases (especially in prod),
     // calling identify immediately can be dropped or later overwritten.
-    // Wait until the client is fully loaded, then identify and reload feature flags.
+    // Wait until the client is fully loaded, then identify (which reloads feature flags).
     let cancelled = false;
     const waitForPostHogAndIdentify = () => {
       if (cancelled) return;
@@ -47,8 +47,11 @@ export function PostHogUserIdentifier() {
       const currentDistinctId = typeof (posthog as any).get_distinct_id === 'function'
         ? (posthog as any).get_distinct_id()
         : undefined;
+      // identify() stores $set props under $stored_person_properties, not as a
+      // top-level property. Reading the wrong key made every mount look like a
+      // mismatch and cost two extra /flags requests per page load.
       const currentTenant = typeof (posthog as any).get_property === 'function'
-        ? (posthog as any).get_property('tenant')
+        ? (posthog as any).get_property('$stored_person_properties')?.tenant
         : undefined;
 
       if (
@@ -106,11 +109,12 @@ export function PostHogUserIdentifier() {
           });
         }
 
+        // identify() already reloads flags (new distinct_id, or changed person
+        // properties), so no explicit reloadFeatureFlags() here.
         lastIdentifiedRef.current = expectedDistinctId;
-        posthog.reloadFeatureFlags();
 
         if (process.env.NODE_ENV === 'development') {
-          console.log('[PostHog] User identified, feature flags reloaded');
+          console.log('[PostHog] User identified, feature flags reloading');
         }
       }
     };

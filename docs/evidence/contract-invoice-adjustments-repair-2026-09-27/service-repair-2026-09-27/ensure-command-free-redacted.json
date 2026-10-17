@@ -1,0 +1,15 @@
+{
+  "created": false,
+  "resumed": null,
+  "service": {
+    "name": "dev-server",
+    "sessionId": "card-service:b97eda7b-0e3f-4b09-be80-6b57f934d8a5:dev-server:12",
+    "cwd": "/home/robert/alga-copies/feature-contract-invoices-automatic-adjustments-and-disc/server",
+    "command": "NODE_OPTIONS=--max-old-space-size=8192 HOST=0.0.0.0 PORT=3185 npm run dev:turbo",
+    "status": "live",
+    "readiness": {
+      "port": 3185,
+      "path": "/api/health"
+    }
+  }
+}

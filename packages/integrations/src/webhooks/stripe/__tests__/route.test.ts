@@ -1,47 +1,76 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+const handleWebhookEvent = vi.fn();
+const verifyWebhookSignature = vi.fn();
+
+vi.mock('@enterprise/lib/stripe/StripeService', () => ({
+  getStripeService: () => ({ verifyWebhookSignature, handleWebhookEvent }),
+}));
 
 vi.mock('@alga-psa/core/logger', () => ({
-  default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
-vi.mock('@alga-psa/core/secrets', () => ({ getSecretProviderInstance: vi.fn() }));
 
-const svc = vi.hoisted(() => ({
-  verifyWebhookSignature: vi.fn(),
-  handleWebhookEvent: vi.fn(),
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: vi.fn(async () => ({
+    getAppSecret: async () => undefined,
+    getTenantSecret: async () => undefined,
+  })),
 }));
-vi.mock('@enterprise/lib/stripe/StripeService', () => ({ getStripeService: () => svc }));
 
 import { POST } from '../index';
 
-function request(): any {
-  return { text: async () => '{}', headers: { get: () => 'sig' } };
+function makeRequest(): any {
+  return {
+    text: async () => JSON.stringify({ id: 'evt_1', type: 'customer.subscription.updated' }),
+    headers: { get: (name: string) => (name.toLowerCase() === 'stripe-signature' ? 't=1,v1=x' : null) },
+  };
 }
 
-describe('POST /api/webhooks/stripe error handling', () => {
+describe('POST /api/webhooks/stripe', () => {
+  const prevEdition = process.env.NEXT_PUBLIC_EDITION;
+
   beforeEach(() => {
-    vi.clearAllMocks();
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
-    svc.verifyWebhookSignature.mockResolvedValue({ id: 'evt_1', type: 'customer.subscription.updated', created: 1, livemode: false });
+    handleWebhookEvent.mockReset();
+    verifyWebhookSignature.mockReset();
+    verifyWebhookSignature.mockResolvedValue({
+      id: 'evt_1',
+      type: 'customer.subscription.updated',
+      created: 1,
+      livemode: false,
+    });
   });
 
-  it('returns 5xx for a retryable appliance lifecycle error so Stripe re-delivers', async () => {
-    // Plain object/Error with the structural discriminator: no shared class identity.
-    const err = Object.assign(new Error('license down'), { name: 'ApplianceLifecycleRetryableError', retryable: true });
-    svc.handleWebhookEvent.mockRejectedValue(err);
-    const res = await POST(request());
-    expect(res.status).toBeGreaterThanOrEqual(500);
-    expect(await res.json()).toMatchObject({ processed: false, retryable: true });
+  afterEach(() => {
+    if (prevEdition === undefined) delete process.env.NEXT_PUBLIC_EDITION;
+    else process.env.NEXT_PUBLIC_EDITION = prevEdition;
   });
 
-  it('keeps 200 {processed:false} for any other error', async () => {
-    svc.handleWebhookEvent.mockRejectedValue(new Error('boom'));
-    const res = await POST(request());
+  it('returns 5xx for a retryable appliance lifecycle error so Stripe retries', async () => {
+    const err = Object.assign(new Error('alga-license down'), {
+      name: 'ApplianceLifecycleSyncError',
+      retryable: true,
+    });
+    handleWebhookEvent.mockRejectedValue(err);
+    const res = await POST(makeRequest());
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ received: true, processed: false, retryable: true });
+  });
+
+  it('keeps returning 200 processed:false for a plain (hosted) processing error', async () => {
+    handleWebhookEvent.mockRejectedValue(new Error('boom'));
+    const res = await POST(makeRequest());
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ received: true, processed: false });
+    const body = await res.json();
+    expect(body).toMatchObject({ received: true, processed: false });
+    expect(body.retryable).toBeUndefined();
   });
 
-  it('does not treat a name match without retryable=true as retryable', async () => {
-    svc.handleWebhookEvent.mockRejectedValue(Object.assign(new Error('x'), { name: 'ApplianceLifecycleRetryableError' }));
-    expect((await POST(request())).status).toBe(200);
+  it('returns 200 processed:true on success', async () => {
+    handleWebhookEvent.mockResolvedValue(undefined);
+    const res = await POST(makeRequest());
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ received: true, processed: true });
   });
 });

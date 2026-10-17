@@ -10,11 +10,12 @@ import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import { resolveUserTimeZone } from '@alga-psa/db';
 import { defaultEffectiveFrom } from '../../lib/timePeriodSuggester';
-import { withAuth } from '@alga-psa/auth';
+import { hasPermission, withAuth } from '@alga-psa/auth';
 import {
   actionError,
   isActionMessageError,
   isActionPermissionError,
+  permissionError,
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
@@ -86,12 +87,39 @@ function timePeriodSettingsActionErrorFrom(error: unknown, fallback: string): Ti
   return actionError(fallback);
 }
 
+// Time period settings decide every tenant's time-sheet cadence, so reading them needs
+// `time_period:read` and changing them needs `time_period:manage` — the same split the
+// v1 API applies in ApiTimeSheetController.
+const TIME_PERIOD_SETTINGS_PERMISSION_MESSAGES: Record<'read' | 'manage', string> = {
+  read: 'Permission denied: cannot view time period settings.',
+  manage: 'Permission denied: cannot manage time period settings.',
+};
+
+async function timePeriodSettingsPermissionError(
+  user: Parameters<typeof hasPermission>[0],
+  action: 'read' | 'manage',
+  db: Knex | Knex.Transaction
+): Promise<ActionPermissionError | null> {
+  if (await hasPermission(user, 'time_period', action, db)) {
+    return null;
+  }
+  return permissionError(
+    TIME_PERIOD_SETTINGS_PERMISSION_MESSAGES[action],
+    `msp/time-entry:errors.timePeriodSettings.permissions.${action}`
+  );
+}
+
 export const getActiveTimePeriodSettings = withAuth(async (
-  _user,
+  user,
   { tenant }
 ): Promise<TimePeriodSettingsActionResult<ITimePeriodSettings[]>> => {
   try {
     const { knex: db } = await createTenantKnex();
+
+    const denied = await timePeriodSettingsPermissionError(user, 'read', db);
+    if (denied) {
+      return denied;
+    }
 
     const activeSettings = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await tenantScopedTable<ITimePeriodSettings>(trx, 'time_period_settings', tenant)
@@ -118,12 +146,17 @@ export const getActiveTimePeriodSettings = withAuth(async (
 });
 
 export const updateTimePeriodSettings = withAuth(async (
-  _user,
+  user,
   { tenant },
   settings: ITimePeriodSettings
 ): Promise<TimePeriodSettingsActionResult<void>> => {
   try {
     const { knex: db } = await createTenantKnex();
+
+    const denied = await timePeriodSettingsPermissionError(user, 'manage', db);
+    if (denied) {
+      return denied;
+    }
 
     // Validate input settings
     const validatedSettings = validateData(timePeriodSettingsSchema, {
@@ -172,6 +205,11 @@ export const createTimePeriodSettings = withAuth(async (
 ): Promise<TimePeriodSettingsActionResult<ITimePeriodSettings>> => {
   try {
     const { knex: db } = await createTenantKnex();
+
+    const denied = await timePeriodSettingsPermissionError(user, 'manage', db);
+    if (denied) {
+      return denied;
+    }
 
     let effectiveFrom: string;
     if (settings.effective_from) {
@@ -255,12 +293,17 @@ export const createTimePeriodSettings = withAuth(async (
 });
 
 export const deleteTimePeriodSettings = withAuth(async (
-  _user,
+  user,
   { tenant },
   settingId: string
 ): Promise<TimePeriodSettingsActionResult<void>> => {
   try {
     const { knex: db } = await createTenantKnex();
+
+    const denied = await timePeriodSettingsPermissionError(user, 'manage', db);
+    if (denied) {
+      return denied;
+    }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const deleted = await tenantScopedTable(trx, 'time_period_settings', tenant)

@@ -42,7 +42,11 @@ describe('quote action authorization parity contracts', () => {
 
     expect(source).toContain('export const getQuoteConversionPreview = withAuth(async (');
     expect(source).toContain('export const getQuoteByConvertedContractId = withAuth(async (');
-    expect(source).toContain('export const getQuoteByConvertedInvoiceId = withAuth(async (');
+    // The invoice read is reached from a draft invoice page that may outlive
+    // its session, so it keeps the same withAuth read check but hands the
+    // caller a serializable "unauthenticated" result instead of a thrown
+    // error Next would sanitize beyond recognition.
+    expect(source).toContain('export const getQuoteByConvertedInvoiceId = withSerializableAuth(withAuth(async (');
     expect(source).toContain('export const getQuotePdfFileId = withAuth(async (');
     expect(source).toContain('export const downloadQuotePdf = withAuth(async (');
     expect(source).toContain('export const renderQuotePreview = withAuth(async (');

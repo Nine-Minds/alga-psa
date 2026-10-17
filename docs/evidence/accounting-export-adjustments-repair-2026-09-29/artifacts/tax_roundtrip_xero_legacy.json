@@ -1,0 +1,111 @@
+{
+  "adapter": "xero",
+  "provider": "mocked Xero response",
+  "providerResponse": {
+    "invoiceId": "TAX-xero-1c4aead7",
+    "invoiceNumber": "TAX-xero-1c4aead7",
+    "status": "AUTHORISED",
+    "currencyCode": "USD",
+    "total": 366435,
+    "totalTax": 435,
+    "subTotal": 366000,
+    "lineItems": [
+      {
+        "lineItemId": "xero-line-0",
+        "lineAmount": 195000,
+        "taxAmount": 200,
+        "taxType": "OUTPUT"
+      },
+      {
+        "lineItemId": "xero-line-1",
+        "lineAmount": 195000,
+        "taxAmount": 210,
+        "taxType": "OUTPUT"
+      },
+      {
+        "lineItemId": "xero-line-2",
+        "lineAmount": -39000,
+        "taxAmount": 0,
+        "taxType": "OUTPUT"
+      },
+      {
+        "lineItemId": "xero-line-3",
+        "lineAmount": 15000,
+        "taxAmount": 25,
+        "taxType": "OUTPUT"
+      }
+    ]
+  },
+  "legacyLineage": true,
+  "fetchedForImport": [
+    {
+      "lineId": "bd021d26-6b07-43d7-9fa2-0510fe7bd3f2",
+      "externalLineId": "xero-line-0",
+      "taxAmount": 200,
+      "taxCode": "OUTPUT",
+      "taxRate": 0.10256410256410256
+    },
+    {
+      "lineId": "f6738616-a2b3-4565-a28e-becf573064b2",
+      "externalLineId": "xero-line-1",
+      "taxAmount": 210,
+      "taxCode": "OUTPUT",
+      "taxRate": 0.10769230769230768
+    },
+    {
+      "lineId": "38de6218-2369-449b-a191-02df1091b8f1",
+      "externalLineId": "xero-line-2",
+      "taxAmount": 0,
+      "taxCode": "OUTPUT"
+    },
+    {
+      "lineId": "818b9756-e745-419b-91a9-7783a957aa2f",
+      "externalLineId": "xero-line-3",
+      "taxAmount": 25,
+      "taxCode": "OUTPUT",
+      "taxRate": 0.16666666666666669
+    }
+  ],
+  "exportedParent": "c8047495-32e9-43fd-961c-61fbed9796ae",
+  "allocations": [
+    {
+      "chargeId": "bd021d26-6b07-43d7-9fa2-0510fe7bd3f2",
+      "parentChargeId": "c8047495-32e9-43fd-961c-61fbed9796ae",
+      "xeroLineItemId": "xero-line-0",
+      "allocationDetailId": "bd021d26-6b07-43d7-9fa2-0510fe7bd3f2"
+    },
+    {
+      "chargeId": "f6738616-a2b3-4565-a28e-becf573064b2",
+      "parentChargeId": "c8047495-32e9-43fd-961c-61fbed9796ae",
+      "xeroLineItemId": "xero-line-1",
+      "allocationDetailId": "f6738616-a2b3-4565-a28e-becf573064b2"
+    }
+  ],
+  "importResult": {
+    "success": true,
+    "invoiceId": "1c4aead7-219f-4e8d-91b1-3eb526031c33",
+    "importId": "fdfc1c5d-a34a-49e6-a833-b8e46cc6cbca",
+    "originalTax": 110,
+    "importedTax": 435,
+    "difference": 325,
+    "chargesUpdated": 3
+  },
+  "importedAmountsCents": {
+    "parentTax": 410,
+    "manualChargeTax": 25,
+    "discountTax": 0,
+    "invoiceSubtotal": 366000,
+    "invoiceTax": 435,
+    "invoiceTotal": 366435
+  },
+  "repeatedImport": {
+    "success": false,
+    "invoiceId": "1c4aead7-219f-4e8d-91b1-3eb526031c33",
+    "originalTax": 0,
+    "importedTax": 0,
+    "difference": 0,
+    "chargesUpdated": 0,
+    "error": "Invoice tax source is 'external', expected 'pending_external'"
+  },
+  "repeatImportCount": 1
+}

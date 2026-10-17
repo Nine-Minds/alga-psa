@@ -458,14 +458,24 @@
     },
     "timePeriod": {
       "datesRequired": "Wprowadź prawidłowe daty rozpoczęcia i zakończenia.",
-      "closed": "Ten okres jest zamknięty. Otwórz go ponownie przed wprowadzeniem zmian."
+      "closed": "Ten okres jest zamknięty. Otwórz go ponownie przed wprowadzeniem zmian.",
+      "permissions": {
+        "read": "Odmowa uprawnień: nie można wyświetlić okresów.",
+        "create": "Odmowa uprawnień: nie można tworzyć okresów.",
+        "update": "Odmowa uprawnień: nie można aktualizować okresów.",
+        "delete": "Odmowa uprawnień: nie można usuwać okresów."
+      }
     },
     "timePeriodSettings": {
       "invalidValue": "Jedna z wartości ustawienia okresu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
       "referenceMissing": "Wybrane ustawienie okresu nie jest już prawidłowe. Odśwież stronę i spróbuj ponownie.",
       "duplicate": "Istnieje już sprzeczne ustawienie okresu.",
       "missingField": "Brakuje wymaganego pola ustawienia okresu.",
-      "missingFieldNamed": "Brakuje wymaganego pola ustawienia okresu: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola ustawienia okresu: {{field}}.",
+      "permissions": {
+        "read": "Odmowa uprawnień: nie można wyświetlić ustawień okresów rozliczeniowych.",
+        "manage": "Odmowa uprawnień: nie można zarządzać ustawieniami okresów rozliczeniowych."
+      }
     },
     "stopwatch": {
       "notFound": "Nie znaleziono sesji stopera. Mogła zostać już zapisana lub odrzucona. Odśwież stronę.",

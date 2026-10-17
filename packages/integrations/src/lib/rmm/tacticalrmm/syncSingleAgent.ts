@@ -2,7 +2,8 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { TacticalRmmClient, normalizeTacticalBaseUrl } from './tacticalApiClient';
 import { computeTacticalAgentStatus } from './agentStatus';
-import { buildTacticalExtensionPatch, extractHardware, upsertTacticalAssetExtension } from './deviceSync';
+import { buildTacticalAssetIdentityPatch, buildTacticalExtensionPatch, extractHardware, upsertTacticalAssetExtension } from './deviceSync';
+import { applyRmmSignedInUserAssignment } from '@alga-psa/shared/rmm/autoAssignFromSignedInUser';
 
 const PROVIDER = 'tacticalrmm' as const;
 
@@ -89,7 +90,7 @@ export async function syncTacticalSingleAgentForTenant(args: {
 
   const assetRow = await scopedDb.table('assets')
     .whereRaw('assets.asset_id::text = ?', [assetIdText])
-    .first(['asset_type']);
+    .first(['asset_type', 'client_id']);
 
   await scopedDb.table('assets')
     .whereRaw('assets.asset_id::text = ?', [assetIdText])
@@ -102,6 +103,7 @@ export async function syncTacticalSingleAgentForTenant(args: {
       last_seen_at: lastSeen ? new Date(lastSeen) : null,
       last_rmm_sync_at: knex.fn.now(),
       ...(hardware.serial_number ? { serial_number: hardware.serial_number } : {}),
+      ...buildTacticalAssetIdentityPatch(hardware),
     });
 
   await upsertTacticalAssetExtension(knex, {
@@ -110,6 +112,30 @@ export async function syncTacticalSingleAgentForTenant(args: {
     assetId: assetIdText,
     patch: extensionPatch,
   });
+
+  // FR-D4: the single-agent refresh honours the organization's people mode
+  // too, or an "auto" organization would only assign on a full sync.
+  const orgMapping = externalOrgId
+    ? await scopedDb.table('rmm_organization_mappings')
+        .where({ external_organization_id: externalOrgId })
+        .first(['client_id', 'contact_assignment_mode', 'integration_id'])
+    : null;
+  const assignmentClientId = assetRow?.client_id
+    ? String(assetRow.client_id)
+    : orgMapping?.client_id
+      ? String(orgMapping.client_id)
+      : null;
+  if (assignmentClientId && orgMapping?.integration_id) {
+    await applyRmmSignedInUserAssignment(knex, {
+      tenant,
+      assetId: assetIdText,
+      clientId: assignmentClientId,
+      integrationId: String(orgMapping.integration_id),
+      provider: PROVIDER,
+      mode: orgMapping.contact_assignment_mode ?? 'suggest',
+      currentUser: extensionPatch.current_user as string | null,
+    });
+  }
 
   await scopedDb.table('tenant_external_entity_mappings')
     .where({ id: mapping.id })
