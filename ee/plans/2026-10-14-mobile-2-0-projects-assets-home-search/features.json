@@ -290,7 +290,7 @@
   {
     "id": "F033",
     "description": "src/api/assets.ts listAssets(client, {apiKey, page, limit, search, client_id, location_id, status, asset_type}) \u2192 GET /api/v1/assets; listAssetStatuses \u2192 GET /api/v1/asset-statuses (slug, label, kind, display_order)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "assets-list",
     "prdRefs": [
       "FR11"
@@ -299,7 +299,7 @@
   {
     "id": "F034",
     "description": "AssetsScreen (drawer AssetsTab, id assets-list) with search box (debounced), rows: name, asset tag, type icon, client, location, status badge; pagination; pull to refresh",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "assets-list",
     "prdRefs": [
       "FR12"
@@ -308,7 +308,7 @@
   {
     "id": "F035",
     "description": "Filter sheet (id assets-filter-sheet): client (EntityPickerModal), location (client locations, enabled after a client is chosen, cleared when client changes), status chips grouped by kind (default: all statuses with kind != archived), asset type",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "assets-list",
     "prdRefs": [
       "FR12"
@@ -317,7 +317,7 @@
   {
     "id": "F036",
     "description": "Status badge shows the registry label for the asset's slug; unknown slug (older server) shows the slug title-cased",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "assets-list",
     "prdRefs": [
       "FR13"
@@ -335,7 +335,7 @@
   {
     "id": "F038",
     "description": "Empty, error and offline states consistent with Tickets; row tap \u2192 AssetDetail { assetId, assetName }",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "assets-list",
     "prdRefs": [
       "FR12"

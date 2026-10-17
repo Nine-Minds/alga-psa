@@ -3,7 +3,9 @@
     "loading": "Loading device"
   },
   "errors": {
-    "unableToLoad": "Unable to load this device."
+    "unableToLoad": "Unable to load this device.",
+    "configuration": "Configuration error",
+    "signedOut": "Signed out"
   },
   "common": {
     "retry": "Retry",
@@ -103,5 +105,46 @@
     "title": "Stock provenance",
     "body": "This device was deployed from your stock.",
     "viewHistory": "View stock history"
+  },
+  "list": {
+    "title": "Assets",
+    "searchPlaceholder": "Search devices",
+    "loading": "Loading devices",
+    "empty": "No devices match",
+    "clearFilters": "Clear filters",
+    "noAccess": "You don't have access to assets.",
+    "unableToLoad": "Unable to load.",
+    "unableToLoadClients": "Unable to load clients.",
+    "offline": "You are offline.",
+    "count": "{{count}} devices",
+    "filters": "Filters",
+    "filterTitle": "Filter devices",
+    "client": "Client",
+    "anyClient": "Any client",
+    "selectClient": "Select a client",
+    "location": "Location",
+    "anyLocation": "Any location",
+    "selectLocation": "Select a location",
+    "status": "Status",
+    "statusKind": {
+      "deployable": "Deployable",
+      "pending": "Pending",
+      "undeployable": "Not deployable",
+      "archived": "Archived"
+    },
+    "type": "Type",
+    "anyType": "Any type",
+    "selectType": "Select a type",
+    "assetType": {
+      "workstation": "Workstation",
+      "server": "Server",
+      "network_device": "Network device",
+      "mobile_device": "Mobile device",
+      "printer": "Printer"
+    },
+    "reset": "Reset",
+    "apply": "Apply",
+    "scan": "Scan",
+    "audit": "Audit"
   }
 }

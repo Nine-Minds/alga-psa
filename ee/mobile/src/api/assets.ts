@@ -53,6 +53,95 @@ export type AssetDetail = {
   maintenance_schedules?: MaintenanceSchedule[];
 } & Record<string, unknown>;
 
+/** A row of the tenant asset status registry (`/api/v1/asset-statuses`). */
+export type AssetStatusKind = "deployable" | "pending" | "undeployable" | "archived";
+
+export type AssetStatusOption = {
+  slug: string;
+  label: string;
+  kind: AssetStatusKind;
+  display_order?: number;
+  is_active?: boolean;
+};
+
+export type AssetListItem = {
+  asset_id: string;
+  asset_tag: string;
+  name: string;
+  asset_type?: string | null;
+  status: string;
+  client_id: string;
+  client_name?: string | null;
+  location_id?: string | null;
+  location?: string | null;
+  serial_number?: string | null;
+  last_audited_at?: string | null;
+  last_audit_result?: string | null;
+};
+
+export type ListAssetsParams = {
+  apiKey: string;
+  page?: number;
+  limit?: number;
+  search?: string;
+  client_id?: string;
+  location_id?: string;
+  status?: string;
+  asset_type?: string;
+  signal?: AbortSignal;
+};
+
+/** The asset list envelope carries page/limit/total but no hasNext flag. */
+export type AssetPaginatedResponse<T> = {
+  data: T[];
+  pagination: { page: number; limit: number; total: number; totalPages?: number };
+  meta?: unknown;
+};
+
+export function listAssets(
+  client: ApiClient,
+  params: ListAssetsParams,
+): Promise<ApiResult<AssetPaginatedResponse<AssetListItem>>> {
+  return client.request<AssetPaginatedResponse<AssetListItem>>({
+    method: "GET",
+    path: "/api/v1/assets",
+    signal: params.signal,
+    query: {
+      page: params.page,
+      limit: params.limit,
+      search: params.search || undefined,
+      client_id: params.client_id,
+      location_id: params.location_id,
+      status: params.status,
+      asset_type: params.asset_type,
+      sort: "name",
+      order: "asc",
+    },
+    headers: { "x-api-key": params.apiKey },
+  });
+}
+
+export function listAssetStatuses(
+  client: ApiClient,
+  params: { apiKey: string; includeArchived?: boolean; signal?: AbortSignal },
+): Promise<ApiResult<AssetEnvelope<AssetStatusOption[]>>> {
+  return client.request<AssetEnvelope<AssetStatusOption[]>>({
+    method: "GET",
+    path: "/api/v1/asset-statuses",
+    signal: params.signal,
+    query: params.includeArchived ? { include_archived: true } : undefined,
+    headers: { "x-api-key": params.apiKey },
+  });
+}
+
+/** Registry label for a slug; an unknown slug (older server) reads title-cased. */
+export function assetStatusLabel(slug: string | null | undefined, statuses: AssetStatusOption[]): string {
+  if (!slug) return "";
+  const match = statuses.find((status) => status.slug === slug);
+  if (match) return match.label;
+  return slug.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export type CreateAssetInput = {
   client_id: string;
   asset_type: string;

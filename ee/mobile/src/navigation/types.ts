@@ -1,5 +1,6 @@
 import type { TicketRichTextQaScenario } from "../qa/ticketRichTextQa";
 import type { ProjectTaskActivity } from "../api/activities";
+import type { InventorySegment } from "../features/inventory/segments";
 
 export type RootStackParamList = {
   SignIn: undefined;
@@ -54,7 +55,8 @@ export type DrawerParamList = {
   TimeEntriesTab: undefined;
   ClientsTab: undefined;
   ContactsTab: undefined;
-  InventoryTab: undefined;
+  InventoryTab: { segment?: InventorySegment } | undefined;
+  AssetsTab: undefined;
   OpportunitiesTab: undefined;
   SettingsTab: undefined;
 };

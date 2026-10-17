@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  assetStatusLabel,
   createAsset,
+  listAssetStatuses,
+  listAssets,
   getAssetNotes,
   getAssetSoftware,
   recordAssetMaintenance,
@@ -79,5 +82,69 @@ describe("assets api", () => {
         body: { blockData },
       }),
     );
+  });
+});
+
+describe("asset list and status registry", () => {
+  it("T037 serialises the filters it was given and omits the rest", async () => {
+    const client = mockClient({ ok: true, data: { data: [], pagination: { page: 1, limit: 50, total: 0 } } });
+
+    await listAssets(client, {
+      apiKey: "key-1",
+      page: 2,
+      limit: 50,
+      search: "dell",
+      client_id: "cl-1",
+      status: "active",
+    });
+
+    expect(client.request).toHaveBeenCalledWith({
+      method: "GET",
+      path: "/api/v1/assets",
+      signal: undefined,
+      query: {
+        page: 2,
+        limit: 50,
+        search: "dell",
+        client_id: "cl-1",
+        location_id: undefined,
+        status: "active",
+        asset_type: undefined,
+        sort: "name",
+        order: "asc",
+      },
+      headers: { "x-api-key": "key-1" },
+    });
+  });
+
+  it("T037 reads the status registry and keeps each row's kind", async () => {
+    const client = mockClient({
+      ok: true,
+      data: {
+        data: [
+          { slug: "in_stock", label: "In stock", kind: "deployable", display_order: 2 },
+          { slug: "retired", label: "Retired", kind: "archived", display_order: 5 },
+        ],
+      },
+    });
+
+    const result = await listAssetStatuses(client, { apiKey: "key-1" });
+
+    expect(client.request).toHaveBeenCalledWith({
+      method: "GET",
+      path: "/api/v1/asset-statuses",
+      signal: undefined,
+      query: undefined,
+      headers: { "x-api-key": "key-1" },
+    });
+    expect(result.ok && result.data.data.map((status) => status.kind)).toEqual(["deployable", "archived"]);
+  });
+
+  it("T041 labels a known slug from the registry and title-cases an unknown one", () => {
+    const statuses = [{ slug: "in_stock", label: "In stock", kind: "deployable" as const }];
+
+    expect(assetStatusLabel("in_stock", statuses)).toBe("In stock");
+    expect(assetStatusLabel("custom_thing", statuses)).toBe("Custom Thing");
+    expect(assetStatusLabel(null, statuses)).toBe("");
   });
 });

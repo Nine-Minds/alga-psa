@@ -9,6 +9,7 @@ import { InteractionsScreen } from "../screens/InteractionsScreen";
 import { TimeEntriesScreen } from "../screens/TimeEntriesScreen";
 import { ClientsListScreen } from "../screens/ClientsListScreen";
 import { ContactsListScreen } from "../screens/ContactsListScreen";
+import { AssetsScreen } from "../screens/AssetsScreen";
 import { InventoryScreen } from "../screens/InventoryScreen";
 import { OpportunitiesScreen } from "../screens/OpportunitiesScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
@@ -32,6 +33,7 @@ export function DrawerNavigator() {
   const { t: tInventory } = useTranslation("inventory");
   const { t: tOpportunities } = useTranslation("opportunities");
   const { t: tProjects } = useTranslation("projects");
+  const { t: tAssets } = useTranslation("assets");
   const { features } = useCapabilities();
   return (
     <Drawer.Navigator
@@ -138,6 +140,18 @@ export function DrawerNavigator() {
           ),
         }}
       />
+      {features.assets ? (
+        <Drawer.Screen
+          name="AssetsTab"
+          component={AssetsScreen}
+          options={{
+            title: tAssets("list.title", "Assets"),
+            drawerIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="devices" size={size} color={color} />
+            ),
+          }}
+        />
+      ) : null}
       {features.inventory ? (
         <Drawer.Screen
           name="InventoryTab"

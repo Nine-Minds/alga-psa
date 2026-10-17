@@ -326,7 +326,7 @@
   {
     "id": "T037",
     "description": "listAssets serialises filters and omits undefined ones; listAssetStatuses parses kind",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "assets-list",
     "featureIds": [
       "F033"
@@ -335,7 +335,7 @@
   {
     "id": "T038",
     "description": "AssetsScreen renders rows with asset tag and location from a mocked response",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "assets-list",
     "featureIds": [
       "F034"
@@ -344,7 +344,7 @@
   {
     "id": "T039",
     "description": "location picker is disabled until a client is picked and resets when the client changes",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "assets-list",
     "featureIds": [
       "F035"
@@ -353,7 +353,7 @@
   {
     "id": "T040",
     "description": "default status filter excludes archived kinds when statuses load",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "assets-list",
     "featureIds": [
       "F035"
@@ -362,7 +362,7 @@
   {
     "id": "T041",
     "description": "status badge shows 'In stock' for slug in_stock from the registry and 'Custom Thing' for an unknown slug custom_thing",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "assets-list",
     "featureIds": [
       "F036"
@@ -380,7 +380,7 @@
   {
     "id": "T043",
     "description": "row tap navigates to AssetDetail with the assetId",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "assets-list",
     "featureIds": [
       "F038"

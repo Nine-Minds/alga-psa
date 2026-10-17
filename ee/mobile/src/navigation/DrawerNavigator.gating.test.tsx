@@ -28,10 +28,11 @@ vi.mock("../screens/SettingsScreen", () => ({ SettingsScreen: () => null }));
 vi.mock("../screens/InventoryScreen", () => ({ InventoryScreen: () => null }));
 vi.mock("../screens/OpportunitiesScreen", () => ({ OpportunitiesScreen: () => null }));
 vi.mock("../screens/ProjectsScreen", () => ({ ProjectsScreen: () => null }));
+vi.mock("../screens/AssetsScreen", () => ({ AssetsScreen: () => null }));
 vi.mock("./TicketsStackNavigator", () => ({ TicketsStackNavigator: () => null }));
 vi.mock("../features/timer/components/HeaderTimerChip", () => ({ HeaderTimerChip: () => null }));
 
-let features = { inventory: false, opportunities: false, projects: false };
+let features = { inventory: false, opportunities: false, projects: false, assets: false };
 vi.mock("../capabilities/CapabilitiesContext", () => ({
   useCapabilities: () => ({ features, loaded: true, refresh: vi.fn() }),
 }));
@@ -49,7 +50,7 @@ function renderDrawer(): ReactTestRenderer {
 
 describe("DrawerNavigator capability gating", () => {
   beforeEach(() => {
-    features = { inventory: false, opportunities: false, projects: false };
+    features = { inventory: false, opportunities: false, projects: false, assets: false };
   });
 
   it("hides Inventory, Opportunities and Projects tabs when capabilities are false", () => {
@@ -57,28 +58,38 @@ describe("DrawerNavigator capability gating", () => {
     expect(registeredScreens).not.toContain("InventoryTab");
     expect(registeredScreens).not.toContain("OpportunitiesTab");
     expect(registeredScreens).not.toContain("ProjectsTab");
+    expect(registeredScreens).not.toContain("AssetsTab");
     expect(registeredScreens).toContain("TicketsTab");
     expect(registeredScreens).toContain("SettingsTab");
   });
 
   it("shows InventoryTab when the inventory capability is true", () => {
-    features = { inventory: true, opportunities: false, projects: false };
+    features = { inventory: true, opportunities: false, projects: false, assets: false };
     renderDrawer();
     expect(registeredScreens).toContain("InventoryTab");
     expect(registeredScreens).not.toContain("OpportunitiesTab");
   });
 
   it("shows OpportunitiesTab when the opportunities capability is true", () => {
-    features = { inventory: false, opportunities: true, projects: false };
+    features = { inventory: false, opportunities: true, projects: false, assets: false };
     renderDrawer();
     expect(registeredScreens).toContain("OpportunitiesTab");
     expect(registeredScreens).not.toContain("InventoryTab");
   });
 
   it("T005 shows ProjectsTab when the projects capability is true", () => {
-    features = { inventory: false, opportunities: false, projects: true };
+    features = { inventory: false, opportunities: false, projects: true, assets: false };
     renderDrawer();
     expect(registeredScreens).toContain("ProjectsTab");
+    expect(registeredScreens).not.toContain("AssetsTab");
     expect(registeredScreens.indexOf("ProjectsTab")).toBeGreaterThan(registeredScreens.indexOf("ScheduleTab"));
+  });
+
+  it("T005 shows AssetsTab when the assets capability is true", () => {
+    features = { inventory: false, opportunities: false, projects: false, assets: true };
+    renderDrawer();
+    expect(registeredScreens).toContain("AssetsTab");
+    expect(registeredScreens).not.toContain("ProjectsTab");
+    expect(registeredScreens.indexOf("AssetsTab")).toBeGreaterThan(registeredScreens.indexOf("ContactsTab"));
   });
 });
