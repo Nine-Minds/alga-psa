@@ -1,0 +1,67 @@
+name: levelio-automation-alga-template
+description: >-
+  A Level monitor automation whose HTTP Request action posts the payload
+  template Alga's settings screen hands out (getLevelIoWebhookInfo, as of
+  2026-10-15) with the X-Alga-Webhook-Secret header. Level does not know
+  {{alert_id}}, {{device_id}} and the rest, so it sends them as literal text:
+  three different alerts on two devices arrive byte-identical. Against the
+  2026-10-15 route each gets a 200, but all three collapse into one
+  rmm_alerts row and no ticket is created. The target defaults to
+  webhook-sink; point it at Alga's /api/webhooks/levelio?tenant=<id> to
+  reproduce live.
+steps:
+  - reset: levelio
+  - seed: levelio/group
+    params: { id: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMQ, name: Acme Corp }
+  - seed: levelio/group
+    params: { id: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMg, name: Branch Office, parentId: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMQ }
+  - seed: levelio/device
+    params:
+      id: Z2lkOi8vbGV2ZWwvRGV2aWNlLzE
+      hostname: WS-01
+      groupId: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMg
+      serial_number: SN-WS-01
+  - seed: levelio/device
+    params:
+      id: Z2lkOi8vbGV2ZWwvRGV2aWNlLzI
+      hostname: SRV-01
+      role: server
+      groupId: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMQ
+      serial_number: SN-SRV-01
+  - seed: levelio/automation
+    params:
+      id: alga-alert-forwarder
+      name: Forward alerts to Alga
+      url: http://localhost:4030/api/webhooks/levelio?tenant=algasim-tenant
+      method: POST
+      contentType: application/json
+      headers:
+        - { key: X-Alga-Webhook-Secret, value: algasim-alga-webhook-secret }
+      body: |-
+        {
+          "event": "alert.triggered",
+          "alert_id": "{{alert_id}}",
+          "device_id": "{{device_id}}",
+          "hostname": "{{hostname}}",
+          "name": "{{alert_name}}",
+          "severity": "{{severity}}",
+          "description": "{{description}}"
+        }
+  - action: levelio/fire-alert
+    params:
+      deviceId: Z2lkOi8vbGV2ZWwvRGV2aWNlLzE
+      name: CPU
+      description: CPU usage above 90% for 15 minutes
+      severity: critical
+  - action: levelio/fire-alert
+    params:
+      deviceId: Z2lkOi8vbGV2ZWwvRGV2aWNlLzI
+      name: Low disk space
+      description: Disk free < 5.0%
+      severity: warning
+  - action: levelio/fire-alert
+    params:
+      deviceId: Z2lkOi8vbGV2ZWwvRGV2aWNlLzE
+      name: Memory
+      description: Memory usage above 95%
+      severity: critical
