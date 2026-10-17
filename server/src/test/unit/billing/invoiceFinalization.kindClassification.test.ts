@@ -16,6 +16,7 @@ function createMockDb() {
     let filteredRows = rows;
 
     const builder: any = {
+      join() { return builder; },
       where(criteria: Record<string, any>) {
         filteredRows = rows.filter((row) =>
           Object.entries(criteria).every(([key, expected]) => row[key] === expected),

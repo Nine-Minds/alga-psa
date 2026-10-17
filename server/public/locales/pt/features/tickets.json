@@ -315,7 +315,8 @@
     "errorWithMessage": "Erro: {{message}}",
     "billingProfileUpdated": "Perfil de faturamento atualizado",
     "updateBillingProfileFailed": "Falha ao atualizar o perfil de faturamento",
-    "scheduleOpenFailed": "Não foi possível abrir o agendador"
+    "scheduleOpenFailed": "Não foi possível abrir o agendador",
+    "sharedWorkspaceReadOnly": "Você vê este chamado porque ele trata de um dispositivo de um espaço compartilhado. Apenas quem o abriu pode adicionar conteúdo."
   },
   "conversation": {
     "comments": "Comentários",
@@ -1800,6 +1801,7 @@
       "setClientToAddContact": "Defina um cliente primeiro para adicionar um contato",
       "logInteraction": "Registrar chamada ou e-mail",
       "changeClient": "Alterar cliente",
+      "changeLocation": "Alterar localização",
       "teamFallback": "Equipe",
       "teamSectionLabel": "Atribuir uma equipe",
       "addAgentsOrTeam": "Adicionar agentes ou uma equipe…",

@@ -1,0 +1,42 @@
+Takeover validation, 2026-10-11
+
+PASS: billing typecheck (NODE_OPTIONS=--max-old-space-size=8192 npm run typecheck --workspace=@alga-psa/billing).
+The first default-heap attempt exhausted Node's 4GB heap; the 8GB run completed successfully.
+PASS: server typecheck (NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit -p server/tsconfig.json).
+PASS: billing build (npm run build --workspace=@alga-psa/billing).
+PASS: ESLint on the six changed source/test files: 0 errors; 231 warnings under existing no-explicit-any rules.
+PASS: git diff --check.
+
+PASS: packages/billing/tests/contractWizardFixedLines.test.tsx: 5 tests.
+Non-vacuous: removing the source_template_line_id fix makes the submission test fail (received undefined IDs).
+PASS: packages/billing/src/lib/billing/compute/{invoiceAutomaticAdjustments,contractInvoiceAdjustments}.test.ts: 32 tests.
+PASS: server preview/duplicate/selectorInputGenerate suites: 33 tests (22 + 1 + 10).
+Non-vacuous: restoring pre-fix invoiceGeneration.ts makes the new preview test fail
+with legacy -3200 instead of configured -400 and -2500; repair restored afterward.
+PASS: final DB wizard/preview/settlement cases: 2 tests, including two fixed allocations on one line.
+
+Broader DB run: 62 passed, 2 failed of64 in contractInvoiceAdjustments.db.test.ts.
+The two failures are QBO fixed allocation tax round trips (legacy lineage false/true):
+  parent.external_tax_amount actual462, expected418.
+Baseline check temporarily restored all three production source files and the DB test
+from untouched checkpoint e612e1fd63be514e449d81d72dbe26e5112a4fc1, then ran
+-t 'round-trips fixed allocation tax': same two QBO failures, both Xero cases passed.
+All repair files were restored afterward. Assertions were not relaxed.
+DB commands used TEST_DB_NAME=test_adjustments_takeover_3499, never the production server database.
+
+PASS: separate Alga Dev review-pane-backend/card-review tests: 25 (5 +20).
+Repository HEAD and upstream:69cb91dd5b58a5aa5560e2c7a0b11aa5ae6cd562.
+No fleet activation; Mac100.70.145.1:22 refused, no available remote terminal panes.
+
+Production browser and independent read-only DB assertions:
+- Client A: 5 charges, two distinct discount sources, manual1500 retained,
+  ledger25660+1500=27160 AUD; repeat save leaves IDs/amounts/posting count unchanged.
+- Client B: generated from ready September selection, line base12000 excludes
+  sibling20000; discounts3840/2500/1200, total/principal24460 AUD.
+  Repeat save stable; two billed claims; zero ready/combinable candidates after refresh.
+- Actual UI-downloaded PDFs parse to271.60 and244.60; tax is pending external.
+- QBO preserved batch remains delivered, invoice total385000, revision0 (read-only).
+
+Production remains0826a475429d25fe5a3647ef6a5e7df7c241e7cf+da39a3ee5e6b.
+The new preview and fixed-service copy source repairs have not been deployed or UI-smoked.
+No app server started/restarted. No shared client credentials or delivered history changed.

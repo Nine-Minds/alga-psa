@@ -43,6 +43,13 @@ interface ProjectInfoProps {
   onContactChange?: (contactId: string | null) => void;
   onAssignedUserChange?: (userId: string | null) => void;
   onProjectUpdate?: (project: IProject) => void;
+  /**
+   * Fired when the edit drawer closes. Its status-column editor writes
+   * deletions (and the task moves they trigger) straight away, so the board
+   * next to us has to re-read its statuses and tasks or it keeps showing
+   * tasks in a column that no longer exists.
+   */
+  onStatusesChanged?: () => void;
   projectTags?: ITag[];
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
@@ -58,6 +65,7 @@ export default function ProjectInfo({
   onContactChange,
   onAssignedUserChange,
   onProjectUpdate,
+  onStatusesChanged,
   projectTags = [],
   allTagTexts = [],
   onTagsChange
@@ -147,12 +155,22 @@ export default function ProjectInfo({
           if (onProjectUpdate) {
             onProjectUpdate(updatedProject);
           }
+          onStatusesChanged?.();
           closeDrawer();
         }}
         onCancel={() => {
+          onStatusesChanged?.();
           closeDrawer();
         }}
-      />
+      />,
+      undefined,
+      // The status-column editor writes its adds and deletes immediately, so
+      // every dismissal has to refresh the board — including Escape and the
+      // header X, which never reach Save or Cancel. Those two go through this
+      // `onClose`; Save and Cancel report for themselves because the
+      // `closeDrawer` they captured is the one from before this drawer opened
+      // (it is memoized on the current history entry) and so skips `onClose`.
+      () => onStatusesChanged?.(),
     );
   };
 

@@ -872,8 +872,14 @@ class NinjaOneSyncWorker {
         'tenant_external_entity_mappings.integration_type': 'ninjaone',
         'tenant_external_entity_mappings.alga_entity_type': 'asset',
         'tenant_external_entity_mappings.external_entity_id': String(deviceId),
-        'assets.status': 'active',
       })
+      // FR-B5: the lookup skips retired devices, not "everything but the
+      // literal `active` slug" — a device an MSP marked "In repair" is still
+      // the device this NinjaOne id points at.
+      .whereNotIn(
+        'assets.status',
+        db.table('asset_statuses').where({ kind: 'archived' }).select('slug')
+      )
       .select({
         alga_entity_id: 'tenant_external_entity_mappings.alga_entity_id',
         external_entity_id: 'tenant_external_entity_mappings.external_entity_id',

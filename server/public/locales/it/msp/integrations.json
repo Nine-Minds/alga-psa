@@ -124,6 +124,15 @@
           "paymentTerms": "Termini di pagamento",
           "discounts": "Sconti"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Conti servizi Desktop",
+        "desktopDiscounts": "Sconti Desktop",
+        "desktopAccount": "Nome conto ricavi Desktop",
+        "description": "Associa sconti e crediti prima di esportare. L’associazione appartiene a questa azienda contabile.",
+        "add": "Aggiungi associazione",
+        "remove": "Rimuovi associazione",
+        "removeConfirm": "Rimuovere questa associazione contabile?"
       }
     },
     "calendar": {
@@ -2884,6 +2893,54 @@
         "errors": {
           "saveFailed": "Impossibile salvare la pianificazione della sincronizzazione dei dispositivi."
         }
+      },
+      "peopleMode": {
+        "label": "Persone",
+        "options": {
+          "off": "Disattivato",
+          "suggest": "Suggerisci",
+          "auto": "Assegna automaticamente"
+        },
+        "updateFailed": "Impossibile aggiornare la modalità Persone"
+      },
+      "signedInUsers": {
+        "title": "Utenti connessi",
+        "description": "I nomi utente segnalati dai dispositivi di questa organizzazione e il contatto a cui ciascuno corrisponde.",
+        "empty": "Nessun utente connesso segnalato finora.",
+        "noClient": "Associa questa organizzazione a un cliente prima di associare i suoi utenti.",
+        "refresh": "Aggiorna",
+        "selectContact": "Seleziona contatto",
+        "loadFailed": "Impossibile caricare gli utenti connessi.",
+        "saveFailed": "Impossibile salvare l'associazione.",
+        "columns": {
+          "user": "Utente connesso",
+          "devices": "Dispositivi",
+          "method": "Associato tramite",
+          "contact": "Contatto"
+        },
+        "methods": {
+          "mapped": "Associazione salvata",
+          "email": "E-mail",
+          "username": "Nome utente",
+          "name": "Nome completo",
+          "none": "Nessuna corrispondenza"
+        }
+      },
+      "clientChange": {
+        "title": "Spostare i dispositivi di questa organizzazione?",
+        "message": "{{count}} asset verranno spostati su {{client}}. Assegnazioni, gruppi e profili di fatturazione del cliente precedente verranno rimossi.",
+        "confirm": "Sposta dispositivi"
+      },
+      "billingProfile": {
+        "label": "Profilo di fatturazione",
+        "clientDefault": "Predefinito del cliente",
+        "updateFailed": "Aggiornamento del profilo di fatturazione non riuscito"
+      },
+      "errors": {
+        "invalidPeopleMode": "Questa modalità persone non è valida.",
+        "billingProfileUnavailable": "Questo profilo di fatturazione non è disponibile per questo cliente.",
+        "mappingNotFound": "Questa associazione non esiste più. Aggiorna la pagina e riprova.",
+        "forbidden": "Non hai il permesso di modificare questo elemento."
       }
     },
     "sso": {
@@ -3980,6 +4037,8 @@
       "managePermission": "Autorizzazione negata: non si dispone dell’autorizzazione per gestire le mappature contabili.",
       "loadFailed": "Impossibile caricare i dati di mappatura. Riprovare.",
       "duplicate": "Esiste già una mappatura per questa entità. Modificare invece la mappatura esistente.",
+      "duplicateTarget": "Questa destinazione è già associata a un'altra entità in questa organizzazione. Scegli una destinazione diversa.",
+      "duplicateXeroItem": "Questo articolo Xero è già associato a un altro servizio. Un articolo può essere associato a un solo servizio; per fatturare più servizi con lo stesso codice, associali a un conto di ricavo.",
       "saveFailed": "Impossibile salvare la mappatura. Riprovare.",
       "idRequiredForUpdate": "Per l’aggiornamento è necessario l’ID della mappatura.",
       "noUpdateData": "Nessun dato di aggiornamento fornito.",

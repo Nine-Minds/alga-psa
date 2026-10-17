@@ -107,6 +107,22 @@ const clampSize = (size: number, minSize: number, maxSize: number): number => (
   Math.min(Math.max(size, minSize), maxSize)
 );
 
+// Absolute floor for a declared `minWidth`, so a typo can't collapse a column.
+const MIN_WIDTH_FLOOR = 40;
+
+// Only px/rem are honored for `minWidth`; a percent (or bare number) is ignored because a
+// minimum has to be a fixed size that doesn't depend on the container.
+const parseMinWidth = (
+  minWidth: string | undefined,
+  layout: ColumnLayoutContext
+): number | undefined => {
+  if (!minWidth) return undefined;
+  const trimmed = minWidth.trim();
+  if (!trimmed.endsWith('px') && !trimmed.endsWith('rem')) return undefined;
+  const parsed = parseColumnWidth(trimmed, layout);
+  return parsed === undefined ? undefined : Math.max(parsed, MIN_WIDTH_FLOOR);
+};
+
 export const getColumnSizeConfig = (
   column: ColumnDefinition<any>,
   layout: ColumnLayoutContext = DEFAULT_COLUMN_LAYOUT
@@ -115,22 +131,19 @@ export const getColumnSizeConfig = (
   const isPercentWidth = getPercentWidth(column.width) !== undefined;
   const parsedWidth = parseColumnWidth(column.width, layout);
   const titleLength = typeof column.title === 'string' ? column.title.length : 12;
+  const declaredMin = parseMinWidth(column.minWidth, layout);
 
   if (COMPACT_COLUMN_IDS.has(columnId)) {
     // A selection column only ever holds a checkbox — keep it at checkbox width regardless
     // of any declared percentage.
     if (SELECTION_COLUMN_IDS.has(columnId)) {
-      return {
-        size: clampSize(parsedWidth ?? 48, 44, 56),
-        minSize: 44,
-        maxSize: 56,
-      };
+      const floor = declaredMin ?? 44;
+      const size = clampSize(parsedWidth ?? 48, floor, Math.max(56, floor));
+      return { size, minSize: Math.min(floor, size), maxSize: Math.max(56, floor) };
     }
-    return {
-      size: clampSize(parsedWidth ?? 64, 56, 180),
-      minSize: 56,
-      maxSize: 180,
-    };
+    const floor = declaredMin ?? 56;
+    const size = clampSize(parsedWidth ?? 64, floor, Math.max(180, floor));
+    return { size, minSize: Math.min(floor, size), maxSize: Math.max(180, floor) };
   }
 
   // A percent width expresses a proportion, not a hard size: never let it squeeze a column
@@ -142,22 +155,19 @@ export const getColumnSizeConfig = (
     const preferred = parsedWidth !== undefined
       ? (isPercentWidth ? Math.max(parsedWidth, naturalSize) : parsedWidth)
       : naturalSize;
-    return {
-      size: clampSize(preferred, 180, 720),
-      minSize: 180,
-      maxSize: 720,
-    };
+    const floor = declaredMin ?? 180;
+    const size = clampSize(preferred, floor, 720);
+    return { size, minSize: Math.min(floor, size), maxSize: 720 };
   }
 
   const naturalSize = Math.max(DEFAULT_COLUMN_SIZE, Math.min(280, titleLength * 12 + 72));
   const preferred = parsedWidth !== undefined
     ? (isPercentWidth ? Math.max(parsedWidth, naturalSize) : parsedWidth)
     : naturalSize;
-  return {
-    size: clampSize(preferred, 96, 520),
-    minSize: 96,
-    maxSize: 520,
-  };
+  // A declared minWidth replaces the 96px floor for this column.
+  const floor = declaredMin ?? 96;
+  const size = clampSize(preferred, floor, 520);
+  return { size, minSize: Math.min(floor, size), maxSize: 520 };
 };
 
 export interface ColumnFitResult {
@@ -170,6 +180,14 @@ export interface ColumnFitResult {
 // Decides which columns fit a container of the given width. Columns are accumulated in
 // priority order using their real sizes (not a uniform estimate) so the visible set never
 // exceeds the container width and the table doesn't scroll horizontally.
+//
+// Columns that declare `minWidth` are shrinkable: admission counts them at their minimum size
+// (fixed columns at their preferred size), so they give up space before any column is hidden.
+// Once the admitted set is known, any overflow of the preferred total is spread across the
+// admitted shrinkable columns in proportion to their slack (size - minSize), floored, with the
+// rounding remainder taken from the last shrinkable column(s) and never below minSize. The
+// visible total then equals the container width. Without any `minWidth` there are no
+// shrinkable columns and the result is exactly the plain greedy fit.
 export const computeColumnFit = (
   columns: ColumnDefinition<any>[],
   containerWidth: number,
@@ -207,25 +225,58 @@ export const computeColumnFit = (
     return 0;
   });
 
+  // LEVERAGE: friction datatable-fit-no-flex-columns — the fit has no notion of a flexible
+  // column; shrinking is opt-in per column via `minWidth` rather than the table sharing space.
   // Greedily include columns (highest priority first) until the next one would overflow.
+  // Shrinkable columns (declared minWidth, minSize < size) are counted at minSize.
   const visible = new Set<string>();
   const sizeOverrides: Record<string, number> = {};
+  const admitted: { id: string; size: number; minSize: number; shrinkable: boolean }[] = [];
   let usedWidth = 0;
   for (const col of prioritizedColumns) {
     const colId = getColumnId(col);
     const { size, minSize } = getColumnSizeConfig(col, layout);
-    if (visible.size > 0 && usedWidth + size > containerWidth) {
+    const shrinkable = !!col.minWidth && minSize < size;
+    const countedSize = shrinkable ? minSize : size;
+    if (visible.size > 0 && usedWidth + countedSize > containerWidth) {
       // The column doesn't fit at its preferred size, but if it can shrink into the
       // remaining space without going below its minimum, show it there instead of hiding it.
       const remaining = containerWidth - usedWidth;
       if (remaining >= minSize) {
         sizeOverrides[colId] = remaining;
         visible.add(colId);
+        admitted.push({ id: colId, size: remaining, minSize, shrinkable: false });
       }
       break;
     }
-    usedWidth += size;
+    usedWidth += countedSize;
     visible.add(colId);
+    admitted.push({ id: colId, size, minSize, shrinkable });
+  }
+
+  // Spread the overflow of the preferred total across the shrinkable columns by slack.
+  const shrinkables = admitted.filter(c => c.shrinkable);
+  if (shrinkables.length > 0) {
+    const preferredTotal = admitted.reduce((sum, c) => sum + c.size, 0);
+    const deficit = preferredTotal - containerWidth;
+    if (deficit > 0) {
+      const totalSlack = shrinkables.reduce((sum, c) => sum + (c.size - c.minSize), 0);
+      const cuts = shrinkables.map(c => Math.min(
+        c.size - c.minSize,
+        Math.floor((deficit * (c.size - c.minSize)) / totalSlack)
+      ));
+      // Rounding remainder goes to the last shrinkable column (spilling backwards only if
+      // that column would drop below its minSize).
+      let remainder = deficit - cuts.reduce((sum, cut) => sum + cut, 0);
+      for (let i = shrinkables.length - 1; i >= 0 && remainder > 0; i--) {
+        const extra = Math.min(remainder, shrinkables[i].size - shrinkables[i].minSize - cuts[i]);
+        cuts[i] += extra;
+        remainder -= extra;
+      }
+      shrinkables.forEach((c, i) => {
+        if (cuts[i] > 0) sizeOverrides[c.id] = c.size - cuts[i];
+      });
+    }
   }
 
   return {

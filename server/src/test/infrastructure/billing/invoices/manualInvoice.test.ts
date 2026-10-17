@@ -506,8 +506,7 @@ describe('Manual Invoice Generation', () => {
     it('rejects invalid service IDs', async () => {
       const invalidServiceId = uuidv4();
       
-      await expectNotFound(
-        () => generateManualInvoiceOrThrow({
+      await expect(generateManualInvoiceOrThrow({
           clientId: context.clientId,
           items: [{
             service_id: invalidServiceId,
@@ -515,9 +514,7 @@ describe('Manual Invoice Generation', () => {
             description: 'Test Service',
             rate: 1000
           }]
-        }),
-        'Service'
-      );
+        })).rejects.toThrow(/selected service.*not available/i);
     });
   });
 
@@ -765,7 +762,7 @@ describe('Manual Invoice Generation', () => {
         client_id: context.clientId,
         type: 'invoice_adjustment',
         status: 'completed',
-        amount: '2178' // Updated amount including tax (pg numeric -> string)
+        amount: String(Number(updatedInvoice.total_amount) - Number(initialInvoice.total_amount)) // Only the posted principal delta.
       });
     });
 
@@ -1047,7 +1044,7 @@ describe('Manual Invoice Generation', () => {
         client_id: context.clientId,
         type: 'invoice_adjustment',
         status: 'completed',
-        amount: '3267' // Updated amount including tax, rounded up (pg numeric -> string)
+        amount: String(Number(updatedInvoice.total_amount) - Number(initialInvoice.total_amount)) // Only the posted principal delta.
       });
     });
     
@@ -1135,7 +1132,7 @@ describe('Manual Invoice Generation', () => {
         client_id: context.clientId,
         type: 'invoice_adjustment',
         status: 'completed',
-        amount: '1089' // Updated amount after item removal (pg numeric -> string)
+        amount: String(Number(updatedInvoice.total_amount) - Number(initialInvoice.total_amount)) // Removal reverses only the posted delta.
       });      
     });
 
@@ -1368,10 +1365,11 @@ describe('Manual Invoice Generation', () => {
       
       // Find the adjustment transaction for the final discount update by the expected amount
       const discountAdjustment = transactions.find((transaction: ITransaction) =>
-        transaction.type === 'invoice_adjustment' && Number(transaction.amount) === 1678);
+        transaction.type === 'invoice_adjustment' && Number(transaction.amount) === 133);
       expect(discountAdjustment).toBeDefined();
       expect((discountAdjustment as ITransaction).type).toBe('invoice_adjustment');
-      expect(Number((discountAdjustment as ITransaction).amount)).toBe(1678);
+      expect(Number((discountAdjustment as ITransaction).amount)).toBe(133);
+      expect(transactions.reduce((sum, row) => sum + Number(row.amount), 0)).toBe(1678);
     });    
   });
 });
