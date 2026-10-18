@@ -79,7 +79,7 @@ export default function CoManagedPoolEditor({ showTotals = false, className, ref
             {state.graceEndsAt && <p role="status">{t(state.isReadOnly ? 'coManaged.readOnly' : 'coManaged.grace', { date: formatDate(new Date(state.graceEndsAt)) })}</p>}
             {!state.isPro && <p>{t('coManaged.proRequired')}</p>}
             {!state.selfHosted && (state.purchase?.canResume ? <div className="flex flex-wrap items-center gap-3">
-              <p className="text-sm text-muted-foreground">{t('coManaged.pendingCapacity', { defaultValue: 'A purchase of {{quantity}} seats is pending.', quantity: state.purchase.pending?.quantity ?? quantity })}</p>
+              <p className="text-sm text-muted-foreground">{t('coManaged.pendingCapacity', { defaultValue: 'A purchase of {{count}} seats is pending.', count: state.purchase.pending?.quantity ?? quantity })}</p>
               <Button id="co-managed-resume-purchase" disabled={busy} onClick={() => void confirmPurchase(state.purchase?.pending?.quantity)}>
                 {t('coManaged.resumePurchase')}
               </Button>

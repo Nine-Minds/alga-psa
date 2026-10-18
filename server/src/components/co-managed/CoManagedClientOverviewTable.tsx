@@ -107,8 +107,8 @@ export default function CoManagedClientOverviewTable({ className, refreshVersion
               <TableCell className="font-medium tabular-nums">{row.ended || row.state === 'cancelled'
                 ? t('coManaged.client.seatsReleased', { defaultValue: 'Seats released' })
                 : row.usedSeats != null
-                ? t('coManaged.client.seatUsage', { defaultValue: '{{used}} of {{allocated}} technician seats', used: row.usedSeats, allocated: row.seats })
-                : t('coManaged.client.seatAllocation', { defaultValue: '{{allocated}} allocated technician seats', allocated: row.seats })}</TableCell>
+                ? t('coManaged.client.seatUsage', { defaultValue: '{{used}} of {{count}} technician seats', used: row.usedSeats, count: row.seats })
+                : t('coManaged.client.seatAllocation', { defaultValue: '{{count}} allocated technician seats', count: row.seats })}</TableCell>
               <TableCell><Button id={`co-managed-overview-manage-${row.operationId}`} variant="outline" size="sm" asChild>
                 <Link href={href}>{row.state === 'active' && !row.ended ? t('coManaged.policy.manage', { defaultValue: 'Manage' }) : t('coManaged.client.viewDetails', { defaultValue: 'View details' })}</Link>
               </Button></TableCell>

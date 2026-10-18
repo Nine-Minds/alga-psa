@@ -54,8 +54,8 @@ export default function CoManagedClientSummary({ view, idPrefix, selectedRelatio
     );
   }
   const seats = selected.usedSeats != null
-    ? t('coManaged.client.seatUsage', { defaultValue: '{{used}} of {{allocated}} technician seats', used: selected.usedSeats, allocated: selected.seats })
-    : t('coManaged.client.seatAllocation', { defaultValue: '{{allocated}} allocated technician seats', allocated: selected.seats });
+    ? t('coManaged.client.seatUsage', { defaultValue: '{{used}} of {{count}} technician seats', used: selected.usedSeats, count: selected.seats })
+    : t('coManaged.client.seatAllocation', { defaultValue: '{{count}} allocated technician seats', count: selected.seats });
   return (
     <span id={`${idPrefix}-summary`} className="flex items-center gap-3 text-sm text-[rgb(var(--color-text-600))]">
       <span className="font-medium text-[rgb(var(--color-text-800))]">

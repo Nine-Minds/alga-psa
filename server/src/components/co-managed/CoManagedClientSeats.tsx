@@ -203,8 +203,8 @@ export default function CoManagedClientSeats({ operationId, clientId, relationsh
       <Dialog id={`${idPrefix}-shortfall-review`} isOpen={review !== null} onClose={() => { if (!busy) setReview(null); }}
         title={t('coManaged.confirmTitle', { defaultValue: 'Review purchase' })}>
         {review && <div className="space-y-4">
-          <p>{t('coManaged.shortfall.review', { defaultValue: 'Add {{additional}} seats to the sponsor pool (new total {{total}}).',
-            additional: shortfall, total: review.target })}</p>
+          <p>{t('coManaged.shortfall.review', { defaultValue: 'Add {{count}} seats to the sponsor pool (new total {{total}}).',
+            count: shortfall, total: review.target })}</p>
           <p>{t('coManaged.monthlyTotal', { count: review.target, amount: formatCurrency(review.monthlyTotal / 100, review.currency) })}</p>
           <p>{t('coManaged.dueNow', { amount: formatCurrency(review.amountDue / 100, review.currency) })}</p>
           <Button id={`${idPrefix}-shortfall-confirm`} disabled={busy} onClick={() => void confirmPurchase(review)}>

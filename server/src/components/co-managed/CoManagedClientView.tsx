@@ -86,8 +86,8 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
                 {selected.ended || selected.state === 'cancelled'
                   ? t('coManaged.client.seatsReleased', { defaultValue: 'Seats released' })
                   : selected.usedSeats != null
-                  ? t('coManaged.client.seatUsage', { defaultValue: '{{used}} of {{allocated}} technician seats', used: selected.usedSeats, allocated: selected.seats })
-                  : t('coManaged.client.seatAllocation', { defaultValue: '{{allocated}} allocated technician seats', allocated: selected.seats })}
+                  ? t('coManaged.client.seatUsage', { defaultValue: '{{used}} of {{count}} technician seats', used: selected.usedSeats, count: selected.seats })
+                  : t('coManaged.client.seatAllocation', { defaultValue: '{{count}} allocated technician seats', count: selected.seats })}
               </dd>
             </div>
             <div>
