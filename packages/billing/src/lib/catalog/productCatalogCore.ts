@@ -23,8 +23,9 @@ import {
 } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
 import { resolveCatalogTaxRateIdForCreate } from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { writeServiceCatalogPricing } from './serviceCatalogPricing';
+import { splitServicePricesByEffectiveDate } from '../../models/service';
 
-export type ProductCatalogCoreErrorCode = 'sku_conflict' | 'barcode_conflict' | 'not_found';
+export type ProductCatalogCoreErrorCode = 'sku_conflict' | 'barcode_conflict' | 'not_found' | 'validation';
 
 export class ProductCatalogCoreError extends Error {
   constructor(
@@ -54,12 +55,36 @@ function rethrowProductUniqueViolation(error: unknown): never {
   throw error;
 }
 
+const CURRENCY_WITH_PRICES_MESSAGE =
+  'currency_code cannot be combined with prices; send either the currency_code + default_rate shorthand or prices[]';
+const CURRENCY_NEEDS_RATE_MESSAGE = 'default_rate is required when currency_code is sent';
+
+/**
+ * `currency_code` is shorthand for one price (`{ currency_code, default_rate }`
+ * == `prices: [{ currency_code, rate: default_rate }]`); it is never a
+ * service_catalog column. Both rates are integer minor units, so no conversion.
+ */
+function assertCurrencyShorthand(
+  currencyCode: unknown,
+  explicitPrices: unknown,
+  defaultRate: unknown
+): void {
+  if (currencyCode === undefined) return;
+  if (explicitPrices !== undefined) {
+    throw new ProductCatalogCoreError('validation', CURRENCY_WITH_PRICES_MESSAGE);
+  }
+  if (defaultRate === undefined) {
+    throw new ProductCatalogCoreError('validation', CURRENCY_NEEDS_RATE_MESSAGE);
+  }
+}
+
 /** Free-form product fields. `cost_currency` must already be resolved by the caller. */
 export type ProductCoreInput = Record<string, any> & {
   cost_currency: string;
   prices?: unknown;
   scheduled_prices?: unknown;
   unit_of_measure?: string | null;
+  currency_code?: string;
 };
 
 export interface ProductCoreWriteResult<TRow = any> {
@@ -102,12 +127,18 @@ export async function createProductCore(
   input: ProductCoreInput
 ): Promise<ProductCoreWriteResult> {
   const {
-    prices,
+    currency_code: currencyCode,
+    prices: explicitPrices,
     scheduled_prices: scheduledPrices,
     billing_method: _billingMethod,
     unit_of_measure: unitOfMeasure,
     ...rest
   } = input;
+  assertCurrencyShorthand(currencyCode, explicitPrices, rest.default_rate);
+  const prices =
+    currencyCode !== undefined
+      ? [{ currency_code: currencyCode, rate: Number(rest.default_rate) }]
+      : explicitPrices;
 
   const productData = {
     ...rest,
@@ -171,12 +202,14 @@ export async function updateProductCore(
   patch: Record<string, any>
 ): Promise<{ serviceId: string; changedFields: string[] }> {
   const {
-    prices,
+    currency_code: currencyCode,
+    prices: explicitPrices,
     scheduled_prices: scheduledPrices,
     billing_method: _billingMethod,
     service_type_name: _serviceTypeName,
     ...updateData
   } = patch;
+  assertCurrencyShorthand(currencyCode, explicitPrices, updateData.default_rate);
 
   const existing = await tenantDb(trx, tenant)
     .table('service_catalog')
@@ -185,6 +218,24 @@ export async function updateProductCore(
     .first();
   if (!existing || existing.item_kind !== 'product') {
     throw new ProductCatalogCoreError('not_found', 'Resource not found or permission denied');
+  }
+
+  // Shorthand: upsert one currency as the primary price and keep the rest of the
+  // current window (the writer replaces the whole window, so pass the full list).
+  let prices = explicitPrices;
+  if (currencyCode !== undefined) {
+    const currentRows = await tenantDb(trx, tenant)
+      .table('service_prices')
+      .where('service_id', serviceId)
+      .select('*')
+      .orderBy([{ column: 'display_order' }, { column: 'currency_code' }]);
+    const { current } = splitServicePricesByEffectiveDate(currentRows);
+    prices = [
+      { currency_code: currencyCode, rate: Number(updateData.default_rate) },
+      ...current
+        .filter((price: any) => price.currency_code !== currencyCode)
+        .map((price: any) => ({ currency_code: price.currency_code, rate: Number(price.rate) })),
+    ];
   }
 
   const normalizedUpdateData: Record<string, any> = {

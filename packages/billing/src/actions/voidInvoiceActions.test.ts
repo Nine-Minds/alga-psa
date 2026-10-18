@@ -110,6 +110,7 @@ function makeVoidHarness(options: VoidHarnessOptions = {}) {
       return builder;
     });
     builder.where = record('where');
+    builder.join = vi.fn(() => builder);
     builder.whereIn = record('whereIn');
     builder.orderBy = record('orderBy');
     builder.forUpdate = record('forUpdate');

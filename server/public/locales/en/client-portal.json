@@ -65,12 +65,9 @@
       "network": "Network",
       "unknown": "Other"
     },
-    "statusWarnTitle": "Some devices inactive",
-    "statusWarnBody": "{{active}} active · {{inactive}} inactive",
-    "status": {
-      "active": "Active",
-      "inactive": "Inactive"
-    },
+    "statusAttentionTitle": "Some devices need attention",
+    "statusAttentionBody": "{{active}} of {{total}} devices active",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Search by name, tag, or serial",
     "filters": {
       "allTypes": "All types",
@@ -175,10 +172,7 @@
       "viewAll": "View all",
       "countLabel": "{{count}} managed",
       "emptyShort": "No devices yet",
-      "emptyBody": "Devices your provider manages will appear here.",
-      "healthy": "Healthy",
-      "inactive": "Inactive",
-      "active": "Active"
+      "emptyBody": "Devices your provider manages will appear here."
     },
     "quickActions": {
       "title": "Quick Actions",
@@ -1010,14 +1004,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Name",
-      "type": "Type",
-      "status": "Status",
-      "location": "Location",
-      "lastUpdated": "Last Updated"
+      "assignedTo": "Assigned to"
     },
-    "notAvailable": "N/A",
-    "detailsTitle": "Asset Details"
+    "statuses": {
+      "active": "Active",
+      "in_stock": "In stock",
+      "maintenance": "In maintenance",
+      "inactive": "Inactive",
+      "retired": "Retired"
+    },
+    "unassigned": "Unassigned",
+    "sharedWorkspace": "Shared workspace: {{name}}",
+    "sharedWorkspaceLabel": "Shared workspace"
   },
   "errors": {
     "account": {

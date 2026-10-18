@@ -58,6 +58,8 @@ vi.mock('@alga-psa/billing/actions/contractLineServiceActions', () => ({
 
 vi.mock('@alga-psa/billing/actions/contractLineAction', () => ({
   updateContractLine: actionMocks.updateContractLine,
+  // No billed history: the lines stay editable.
+  hasContractLineProtectedHistory: vi.fn(async () => false),
 }));
 
 vi.mock('@alga-psa/billing/actions/contractLineMappingActions', () => ({

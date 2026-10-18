@@ -124,6 +124,15 @@
           "paymentTerms": "Condiciones de pago",
           "discounts": "Descuentos"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Cuentas de servicios de Desktop",
+        "desktopDiscounts": "Descuentos de Desktop",
+        "desktopAccount": "Nombre de cuenta de ingresos de Desktop",
+        "description": "Asigne descuentos y créditos de facturas antes de exportar. La asignación pertenece a esta empresa contable.",
+        "add": "Añadir asignación",
+        "remove": "Eliminar asignación",
+        "removeConfirm": "¿Eliminar esta asignación contable?"
       }
     },
     "calendar": {
@@ -2733,10 +2742,25 @@
           "copied": "Copiado",
           "copy": "Copiar",
           "description": "Level no puede registrar webhooks mediante su API. En Level, cree una automatización con una acción HTTP POST usando la URL, el encabezado y el payload siguientes para enviar alertas a Alga en tiempo real.",
+          "fallbackDescription": "Use esta alternativa solo cuando no pueda usar los webhooks nativos de Configuración → Webhooks en Level. Cree una automatización con una acción HTTP POST con la URL, el encabezado y la carga de abajo para enviar alertas a Alga.",
+          "fallbackNameHint": "Edite el valor \"name\" en cada automatización. Junto con el dispositivo identifica la alerta, por lo que las repeticiones con el mismo nombre en el mismo dispositivo se tratan como una sola alerta.",
+          "fallbackTitle": "Alternativa: solicitud HTTP de automatización",
           "header": "Encabezado: {{name}}",
           "hideSecret": "Ocultar secreto",
           "loading": "Los detalles del webhook se cargan después de configurar la integración.",
+          "nativeDescription": "En Level, abra Configuración → Webhooks, añada un webhook con la URL y la clave de firma de abajo y active los eventos indicados. Level firma cada entrega y Alga verifica la firma.",
+          "nativeEvents": "Eventos que activar",
+          "nativeEventsHelp": "Active alert_active y alert_resolved. Los demás eventos se confirman y se ignoran.",
+          "nativeSigningSecret": "Clave de firma",
+          "nativeTitle": "Webhook nativo (recomendado)",
           "payload": "Plantilla de payload",
+          "regenerateCancel": "Cancelar",
+          "regenerateConfirmLabel": "Regenerar",
+          "regenerateConfirmMessage": "Los webhooks existentes de Level fallarán con 401 hasta que pegue la nueva clave de firma en la configuración de webhooks de Level. Level reintenta los envíos, pero pueden perderse si no se actualiza la clave.",
+          "regenerateConfirmTitle": "¿Regenerar la clave de firma?",
+          "regenerateConfirmed": "Clave de firma regenerada. Actualícela en la configuración de webhooks de Level.",
+          "regenerateFailed": "No se pudo regenerar la clave de firma",
+          "regenerateSecret": "Regenerar clave",
           "showSecret": "Mostrar secreto",
           "title": "Webhook de alertas",
           "url": "URL del webhook"
@@ -2884,6 +2908,54 @@
         "errors": {
           "saveFailed": "No se ha podido guardar la programación de sincronización de dispositivos."
         }
+      },
+      "peopleMode": {
+        "label": "Personas",
+        "options": {
+          "off": "Desactivado",
+          "suggest": "Sugerir",
+          "auto": "Asignar automáticamente"
+        },
+        "updateFailed": "No se pudo actualizar el modo de personas"
+      },
+      "signedInUsers": {
+        "title": "Usuarios con sesión iniciada",
+        "description": "Los nombres de usuario que informan los dispositivos de esta organización y el contacto al que se resuelve cada uno.",
+        "empty": "Todavía no se informan usuarios con sesión iniciada.",
+        "noClient": "Asigne esta organización a un cliente antes de asignar sus usuarios.",
+        "refresh": "Actualizar",
+        "selectContact": "Seleccionar contacto",
+        "loadFailed": "No se pudieron cargar los usuarios con sesión iniciada.",
+        "saveFailed": "No se pudo guardar la asignación.",
+        "columns": {
+          "user": "Usuario con sesión iniciada",
+          "devices": "Dispositivos",
+          "method": "Coincidencia por",
+          "contact": "Contacto"
+        },
+        "methods": {
+          "mapped": "Asignación guardada",
+          "email": "Correo electrónico",
+          "username": "Nombre de usuario",
+          "name": "Nombre completo",
+          "none": "Sin coincidencia"
+        }
+      },
+      "clientChange": {
+        "title": "¿Mover los dispositivos de esta organización?",
+        "message": "{{count}} activo(s) se moverán a {{client}}. Se borrarán las asignaciones, los grupos y los perfiles de facturación del cliente anterior.",
+        "confirm": "Mover dispositivos"
+      },
+      "billingProfile": {
+        "label": "Perfil de facturación",
+        "clientDefault": "Predeterminado del cliente",
+        "updateFailed": "No se pudo actualizar el perfil de facturación"
+      },
+      "errors": {
+        "invalidPeopleMode": "Ese no es un modo de personas válido.",
+        "billingProfileUnavailable": "Ese perfil de facturación no está disponible para este cliente.",
+        "mappingNotFound": "Esa asignación ya no existe. Actualice la página e inténtelo de nuevo.",
+        "forbidden": "No tiene permiso para cambiar esto."
       }
     },
     "sso": {

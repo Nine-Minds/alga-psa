@@ -50,6 +50,7 @@ import { useMyActivityGroups } from './MyActivityGroupsProvider';
 import { ActivityGroupMenuScope } from './ActivityGroupMenuScope';
 import { useActivityCrossFeature } from '@alga-psa/ui/context';
 import { useActivitiesCache } from '../hooks/useActivitiesCache';
+import { useActivitiesInvalidationSignal } from '../hooks/ActivitiesCacheProvider';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { ScheduleActivity } from '@alga-psa/types';
 
@@ -442,6 +443,16 @@ function formatActivityPrintDate(dateString?: string): string {
     invalidateCache();
     loadActivities();
   }, [loadActivities, invalidateCache]);
+
+  // Refetch when another consumer of the shared cache (the activity drawer) reports a change.
+  // Skip the initial value so mounting doesn't trigger a duplicate load.
+  const { version: invalidationVersion } = useActivitiesInvalidationSignal();
+  const lastHandledInvalidationVersion = useRef(invalidationVersion);
+  useEffect(() => {
+    if (invalidationVersion === lastHandledInvalidationVersion.current) return;
+    lastHandledInvalidationVersion.current = invalidationVersion;
+    handleRefresh();
+  }, [invalidationVersion, handleRefresh]);
 
   const handleAddAdHoc = useCallback(async () => {
     const title = adHocTitle.trim();

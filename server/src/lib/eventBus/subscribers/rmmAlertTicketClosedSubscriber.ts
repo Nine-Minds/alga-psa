@@ -186,18 +186,28 @@ async function resetEnabledForAlert(
 }
 
 /**
- * CE-safe adapter resolution: explicit registrations win; the NinjaOne
- * adapter loads lazily from the EE tree and is absent in CE builds.
+ * CE-safe adapter resolution: explicit registrations win; the NinjaOne and
+ * Level adapters load lazily from the EE tree and are absent in CE builds.
  */
 async function resolveAdapter(provider: string): Promise<RmmAlertOutboundAdapter | undefined> {
   const registered = getRmmAlertOutboundAdapter(provider);
   if (registered) return registered;
+  // LEVERAGE: pattern rmm-outbound-adapter-resolution — per-provider lazy @enterprise import + try/catch; a provider-keyed loader map would replace each branch
   if (provider === 'ninjaone') {
     try {
       // Resolves to the real adapter in EE builds and a CE stub exporting
       // undefined otherwise.
       const mod = await import('@enterprise/lib/integrations/ninjaone/alerts/outboundAdapter');
       return mod.ninjaOneAlertOutboundAdapter ?? undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  // LEVERAGE: pattern rmm-outbound-adapter-resolution — second occurrence of the same lazy-import branch
+  if (provider === 'levelio') {
+    try {
+      const mod = await import('@enterprise/lib/integrations/levelio/alerts/outboundAdapter');
+      return mod.levelIoAlertOutboundAdapter ?? undefined;
     } catch {
       return undefined;
     }

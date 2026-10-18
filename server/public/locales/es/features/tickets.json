@@ -315,7 +315,8 @@
     "errorWithMessage": "Error: {{message}}",
     "billingProfileUpdated": "Perfil de facturación actualizado",
     "updateBillingProfileFailed": "No se pudo actualizar el perfil de facturación",
-    "scheduleOpenFailed": "No se pudo abrir el programador"
+    "scheduleOpenFailed": "No se pudo abrir el programador",
+    "sharedWorkspaceReadOnly": "Puede ver este ticket porque trata sobre un dispositivo de un espacio compartido. Solo quien lo creó puede añadir contenido."
   },
   "conversation": {
     "comments": "Comentarios",
@@ -1800,6 +1801,7 @@
       "setClientToAddContact": "Primero seleccione un cliente para agregar un contacto",
       "logInteraction": "Registrar llamada o correo",
       "changeClient": "Cambiar cliente",
+      "changeLocation": "Cambiar ubicación",
       "teamFallback": "Equipo",
       "teamSectionLabel": "Asignar un equipo",
       "addAgentsOrTeam": "Agregar agentes o un equipo…",

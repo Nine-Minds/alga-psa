@@ -25,6 +25,7 @@ type FilterOptions = {
 function mapProductCoreError(error: unknown): never {
   if (error instanceof ProductCatalogCoreError) {
     if (error.code === 'not_found') throw new NotFoundError(error.message);
+    if (error.code === 'validation') throw new ValidationError(error.message);
     throw new ConflictError(error.message);
   }
   if (isServiceCatalogPricingError(error)) {
@@ -222,8 +223,8 @@ export class ProductCatalogService extends BaseService<IService> {
       unit_of_measure,
       ...rest
     } = rawData;
-    // default_rate mirrors the primary price (prices[0]); the schema defaults an
-    // omitted default_rate to 0, so the writer's mirror is what sets it.
+    // currency_code (single-price shorthand) rides in `rest`; createProductCore
+    // owns its expansion into prices[] and keeps it out of the insert.
 
     // DD-2/F-2: resolve the product cost currency when not explicitly provided.
     // Products are tenant-scoped (no client_id), so precedence is:

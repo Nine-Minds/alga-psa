@@ -75,6 +75,7 @@ import { locationAddressSql } from './locationAddressSql';
 import { inboundSenderLabel } from './ticketCommentAuthor';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
+import { resolveAssetTicketContactOptions } from '@alga-psa/shared/models/assetTicketContactModel';
 import { ticketStatusClockPatch } from '@shared/lib/ticketStatusClock';
 import {
   CommentEmailRecipientsError,
@@ -2291,6 +2292,16 @@ export class TicketService extends BaseService<ITicket> {
       // read the newly-created ticket on their own connections.
       const analyticsTracker = new ServerAnalyticsTracker();
 
+      // FR-E8: a caller that named nobody (the mobile modal, any API client)
+      // gets the asset's person when the asset names exactly one — its
+      // assignee, or a shared workspace with a single user. Several users stay
+      // ambiguous and the ticket keeps no contact.
+      let contactNameId = data.contact_name_id ?? null;
+      if (!contactNameId) {
+        const options = await resolveAssetTicketContactOptions(trx, context.tenant, data.asset_id);
+        if (options.length === 1) contactNameId = options[0].contact_name_id;
+      }
+
       // Use shared TicketModel for asset ticket creation
       const ticketResult = await TicketModel.createTicketFromAsset(
         {
@@ -2300,7 +2311,10 @@ export class TicketService extends BaseService<ITicket> {
           status_id: data.status_id,
           board_id: data.board_id,
           asset_id: data.asset_id,
-          client_id: data.client_id
+          client_id: data.client_id,
+          contact_name_id: contactNameId,
+          // FR-F2: omitted lets the model inherit the asset's profile.
+          billing_profile_id: data.billing_profile_id ?? null
         },
         context.userId,
         context.tenant,
