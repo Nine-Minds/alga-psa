@@ -122,6 +122,7 @@
     },
     "substeps": {
       "dataImport": "Slutför din första import eller skapa 5 kontakter",
+      "dataImportCoManaged": "Skapa 5 beställarkontakter",
       "identity": {
         "addProvider": "Lägg till en SSO-leverantör",
         "linkTeamMember": "Koppla den första teammedlemmen"
@@ -172,16 +173,21 @@
       "portal": {
         "title": "Konfigurera kundportalen",
         "description": "Konfigurera portalen så att kunder kan logga in på din domän med din grafiska profil.",
+        "coManagedTitle": "Konfigurera beställarportalen",
+        "coManagedDescription": "Konfigurera portalen där dina anställda skickar och följer IT-ärenden, på din domän med din grafiska profil.",
         "cta": "Öppna portalinställningar"
       },
       "dataImport": {
         "title": "Importera grunddata",
         "description": "Lägg till kontakter så att du kan börja arbeta för kunder och hålla arbetsflödena igång.",
+        "coManagedTitle": "Lägg till beställare",
+        "coManagedDescription": "Lägg till kontakter för de personer som ditt IT-team stöttar så att deras ärenden når ditt team.",
         "cta": "Skapa kontakter"
       },
       "calendar": {
         "title": "Kalendersynkronisering",
         "description": "Anslut Google- eller Outlook-kalendrar för att samordna resursplanering och kundbokningar.",
+        "coManagedDescription": "Anslut Google- eller Outlook-kalendrar för att samordna teamets scheman och bokningar.",
         "cta": "Konfigurera kalender"
       },
       "email": {
@@ -193,7 +199,7 @@
     "blockers": {
       "identity": {
         "linkedAccountsUnavailable": "Det går inte att verifiera kopplade teammedlemmar just nu.",
-        "noLinkedUsers": "Inga användare är kopplade till en identitetsleverantör ännu. Be en MSP-administratör att ansluta Google eller Microsoft.",
+        "noLinkedUsers": "Inga användare är kopplade till en identitetsleverantör ännu. Be en administratör att ansluta Google eller Microsoft.",
         "addProviderCredentials": "Lägg till autentiseringsuppgifter för Google Workspace eller Microsoft 365 för att aktivera SSO för ditt team.",
         "configurationUnavailable": "Konfiguration av SSO-leverantörer är inte tillgänglig i den här miljön.",
         "loadFailed": "Det gick inte att läsa in status för SSO-konfigurationen."

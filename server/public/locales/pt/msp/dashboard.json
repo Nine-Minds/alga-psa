@@ -122,6 +122,7 @@
     },
     "substeps": {
       "dataImport": "Conclua sua primeira importação OU crie 5 contatos",
+      "dataImportCoManaged": "Crie 5 contatos de solicitantes",
       "identity": {
         "addProvider": "Adicione um provedor de SSO",
         "linkTeamMember": "Vincule o primeiro membro da equipe"
@@ -172,16 +173,21 @@
       "portal": {
         "title": "Configurar o Portal do Cliente",
         "description": "Configure seu portal para que os clientes possam fazer login em seu domínio com sua marca.",
+        "coManagedTitle": "Configurar o Portal de Solicitantes",
+        "coManagedDescription": "Configure o portal onde seus funcionários enviam e acompanham solicitações de TI, em seu domínio com sua marca.",
         "cta": "Abra as configurações do portal"
       },
       "dataImport": {
         "title": "Importar dados principais",
         "description": "Adicione contatos para começar a trabalhar para clientes e manter os fluxos de trabalho em andamento.",
+        "coManagedTitle": "Adicionar solicitantes",
+        "coManagedDescription": "Adicione contatos das pessoas que sua equipe de TI atende para que as solicitações delas cheguem à sua equipe.",
         "cta": "Criar contatos"
       },
       "calendar": {
         "title": "Sincronização de calendário",
         "description": "Conecte os calendários do Google ou do Outlook para manter o envio e os compromissos do cliente alinhados.",
+        "coManagedDescription": "Conecte os calendários do Google ou do Outlook para manter os horários e compromissos da sua equipe alinhados.",
         "cta": "Configurar calendário"
       },
       "email": {
@@ -193,7 +199,7 @@
     "blockers": {
       "identity": {
         "linkedAccountsUnavailable": "Não é possível verificar os membros da equipe vinculados no momento.",
-        "noLinkedUsers": "Nenhum usuário está vinculado a um provedor de identidade ainda. Peça a um administrador MSP para conectar o Google ou a Microsoft.",
+        "noLinkedUsers": "Nenhum usuário está vinculado a um provedor de identidade ainda. Peça a um administrador para conectar o Google ou a Microsoft.",
         "addProviderCredentials": "Adicione credenciais do Google Workspace ou Microsoft 365 para ativar o SSO para sua equipe.",
         "configurationUnavailable": "A configuração do provedor SSO não está disponível neste ambiente.",
         "loadFailed": "Não foi possível carregar o status de configuração do SSO."

@@ -91,6 +91,7 @@
     },
     "substeps": {
       "dataImport": "Schließen Sie Ihren ersten Import ab ODER erstellen Sie 5 Kontakte",
+      "dataImportCoManaged": "Erstellen Sie 5 Anfragenden-Kontakte",
       "identity": {
         "addProvider": "Einen SSO-Anbieter hinzufügen",
         "linkTeamMember": "Das erste Teammitglied verknüpfen"
@@ -141,16 +142,21 @@
       "portal": {
         "title": "Kundenportal einrichten",
         "description": "Konfigurieren Sie Ihr Portal, damit sich Kunden auf Ihrer Domain mit Ihrem Branding anmelden können.",
+        "coManagedTitle": "Anfragerportal einrichten",
+        "coManagedDescription": "Konfigurieren Sie das Portal, in dem Ihre Mitarbeitenden IT-Anfragen stellen und verfolgen, auf Ihrer Domain mit Ihrem Branding.",
         "cta": "Portaleinstellungen öffnen"
       },
       "dataImport": {
         "title": "Kerndaten importieren",
         "description": "Fügen Sie Kontakte hinzu, damit Sie für Kunden arbeiten und Workflows in Bewegung halten können.",
+        "coManagedTitle": "Anfragende hinzufügen",
+        "coManagedDescription": "Fügen Sie Kontakte für die Personen hinzu, die Ihr IT-Team betreut, damit deren Anfragen bei Ihrem Team ankommen.",
         "cta": "Kontakte erstellen"
       },
       "calendar": {
         "title": "Kalendersynchronisierung",
         "description": "Verbinden Sie Google- oder Outlook-Kalender, damit Einsatzplanung und Kundentermine abgestimmt bleiben.",
+        "coManagedDescription": "Verbinden Sie Google- oder Outlook-Kalender, damit die Zeitpläne und Termine Ihres Teams abgestimmt bleiben.",
         "cta": "Kalender konfigurieren"
       },
       "email": {
@@ -162,7 +168,7 @@
     "blockers": {
       "identity": {
         "linkedAccountsUnavailable": "Verknüpfte Teammitglieder können derzeit nicht überprüft werden.",
-        "noLinkedUsers": "Es sind noch keine Benutzer mit einem Identitätsanbieter verknüpft. Bitten Sie einen MSP-Administrator, Google oder Microsoft zu verbinden.",
+        "noLinkedUsers": "Es sind noch keine Benutzer mit einem Identitätsanbieter verknüpft. Bitten Sie einen Administrator, Google oder Microsoft zu verbinden.",
         "addProviderCredentials": "Fügen Sie Google-Workspace- oder Microsoft-365-Zugangsdaten hinzu, um SSO für Ihr Team zu aktivieren.",
         "configurationUnavailable": "Die SSO-Anbieterkonfiguration ist in dieser Umgebung nicht verfügbar.",
         "loadFailed": "Der Status der SSO-Konfiguration konnte nicht geladen werden."

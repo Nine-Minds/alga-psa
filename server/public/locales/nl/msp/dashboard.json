@@ -91,6 +91,7 @@
     },
     "substeps": {
       "dataImport": "Voltooi uw eerste import OF maak 5 contacten aan",
+      "dataImportCoManaged": "Maak 5 aanvragerscontacten aan",
       "identity": {
         "addProvider": "SSO-provider toevoegen",
         "linkTeamMember": "Het eerste teamlid koppelen"
@@ -141,16 +142,21 @@
       "portal": {
         "title": "Klantenportaal instellen",
         "description": "Configureer uw portaal zodat klanten zich op uw domein kunnen aanmelden met uw huisstijl.",
+        "coManagedTitle": "Aanvragersportaal instellen",
+        "coManagedDescription": "Configureer het portaal waar uw medewerkers IT-verzoeken indienen en volgen, op uw domein met uw huisstijl.",
         "cta": "Portalinstellingen openen"
       },
       "dataImport": {
         "title": "Kerngegevens importeren",
         "description": "Voeg contacten toe, zodat u klanten kunt bedienen en workflows actief blijven.",
+        "coManagedTitle": "Aanvragers toevoegen",
+        "coManagedDescription": "Voeg contacten toe voor de mensen die uw IT-team ondersteunt, zodat hun verzoeken bij uw team terechtkomen.",
         "cta": "Contacten aanmaken"
       },
       "calendar": {
         "title": "Kalendersynchronisatie",
         "description": "Verbind Google- of Outlook-agenda's om planning en klantafspraken op elkaar af te stemmen.",
+        "coManagedDescription": "Verbind Google- of Outlook-agenda's om de planning en afspraken van uw team op elkaar af te stemmen.",
         "cta": "Kalender configureren"
       },
       "email": {
@@ -162,7 +168,7 @@
     "blockers": {
       "identity": {
         "linkedAccountsUnavailable": "Gekoppelde teamleden kunnen op dit moment niet worden gecontroleerd.",
-        "noLinkedUsers": "Er zijn nog geen gebruikers gekoppeld aan een identiteitsprovider. Vraag een MSP-beheerder om Google of Microsoft te koppelen.",
+        "noLinkedUsers": "Er zijn nog geen gebruikers gekoppeld aan een identiteitsprovider. Vraag een beheerder om Google of Microsoft te koppelen.",
         "addProviderCredentials": "Voeg Google Workspace- of Microsoft 365-gegevens toe om SSO voor uw team in te schakelen.",
         "configurationUnavailable": "De configuratie van de SSO-provider is niet beschikbaar in deze omgeving.",
         "loadFailed": "De status van de SSO-configuratie kon niet worden geladen."

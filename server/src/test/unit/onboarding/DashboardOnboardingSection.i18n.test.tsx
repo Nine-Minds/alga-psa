@@ -31,6 +31,9 @@ const translations: Record<string, string> = {
   'onboarding.progress.messageInProgress': 'Continue FR',
   'onboarding.stepLabel': 'ETAPE {{index}} FR',
   'onboarding.substeps.dataImport': 'Sous-etape import FR',
+  'onboarding.substeps.dataImportCoManaged': 'Creez 5 demandeurs FR',
+  'onboarding.steps.portal.coManagedTitle': 'Portail des demandeurs FR',
+  'onboarding.steps.dataImport.coManagedTitle': 'Ajouter des demandeurs FR',
   'onboarding.substeps.identity.addProvider': 'Ajouter un fournisseur SSO FR',
   'onboarding.substeps.identity.linkTeamMember': 'Lier le premier membre FR',
   'onboarding.blockers.identity.noLinkedUsers': 'Aucun utilisateur lie FR',
@@ -207,6 +210,21 @@ describe('DashboardOnboardingSection i18n wiring', () => {
     expect(screen.queryByText('Description complete FR')).not.toBeInTheDocument();
   });
 
+  it('frames the co-managed portal and contacts steps around requesters', () => {
+    const { unmount } = render(<DashboardOnboardingSection steps={mixedSteps} productCode="co_managed" />);
+    expect(screen.getByText('Portail des demandeurs FR')).toBeInTheDocument();
+    expect(screen.getByText('Ajouter des demandeurs FR')).toBeInTheDocument();
+    expect(screen.getByText('Creez 5 demandeurs FR')).toBeInTheDocument();
+    expect(screen.queryByText('Portail FR')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sous-etape import FR')).not.toBeInTheDocument();
+    unmount();
+
+    render(<DashboardOnboardingSection steps={mixedSteps} />);
+    expect(screen.getByText('Portail FR')).toBeInTheDocument();
+    expect(screen.getByText('Sous-etape import FR')).toBeInTheDocument();
+    expect(screen.queryByText('Portail des demandeurs FR')).not.toBeInTheDocument();
+  });
+
   it('does not offer section hide while onboarding is incomplete', () => {
     render(<DashboardOnboardingSection steps={mixedSteps} />);
     expect(screen.queryByRole('button', { name: 'Hide section' })).not.toBeInTheDocument();
@@ -229,7 +247,7 @@ describe('DashboardOnboardingSection i18n wiring', () => {
             status: 'in_progress',
             lastUpdated: null,
             progressValue: 50,
-            blocker: 'No users are linked to an identity provider yet. Ask an MSP admin to connect Google or Microsoft.',
+            blocker: 'No users are linked to an identity provider yet. Ask an administrator to connect Google or Microsoft.',
             blockerKey: 'onboarding.blockers.identity.noLinkedUsers',
             blockerValues: {},
             meta: {},

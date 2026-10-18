@@ -67,7 +67,7 @@ const checklistStepWithSubstep = {
   ...STEP_DEFINITIONS.identity_sso,
   status: 'in_progress',
   lastUpdated: null,
-  blocker: 'No users are linked to an identity provider yet. Ask an MSP admin to connect Google or Microsoft.',
+  blocker: 'No users are linked to an identity provider yet. Ask an administrator to connect Google or Microsoft.',
   blockerKey: 'onboarding.blockers.identity.noLinkedUsers',
   blockerValues: {},
   progressValue: 50,

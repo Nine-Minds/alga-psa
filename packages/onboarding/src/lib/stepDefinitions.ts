@@ -6,7 +6,10 @@ import {
   CalendarCheck2,
   MailCheck,
 } from 'lucide-react';
+import { CALENDAR_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import type { OnboardingStepId } from '../actions/onboarding-progress';
+
+export type OnboardingProductCode = 'psa' | 'co_managed';
 
 export interface StepDefinition {
   id: OnboardingStepId;
@@ -19,6 +22,9 @@ export interface StepDefinition {
   ctaLabel: string;
   ctaLabelKey: string;
   analyticsTarget: string;
+  /** Completion criterion shown under the description, when the substeps don't say it. */
+  caption?: string;
+  captionKey?: string;
 }
 
 export const STEP_DEFINITIONS: Record<OnboardingStepId, StepDefinition> = {
@@ -57,6 +63,8 @@ export const STEP_DEFINITIONS: Record<OnboardingStepId, StepDefinition> = {
     ctaLabel: 'Create Contacts',
     ctaLabelKey: 'onboarding.steps.dataImport.cta',
     analyticsTarget: 'data_import',
+    caption: 'Complete your first import OR create 5 contacts',
+    captionKey: 'onboarding.substeps.dataImport',
   },
   calendar_sync: {
     id: 'calendar_sync',
@@ -65,7 +73,8 @@ export const STEP_DEFINITIONS: Record<OnboardingStepId, StepDefinition> = {
     description: 'Connect Google or Outlook calendars to keep dispatch and client appointments aligned.',
     descriptionKey: 'onboarding.steps.calendar.description',
     icon: CalendarCheck2,
-    ctaHref: '/msp/settings?tab=integrations&category=calendar',
+    // Product-neutral: the integrations page is denied to co-managed workspaces.
+    ctaHref: CALENDAR_SETUP_ENTRY_PATH,
     ctaLabel: 'Configure Calendar',
     ctaLabelKey: 'onboarding.steps.calendar.cta',
     analyticsTarget: 'calendar_sync',
@@ -83,3 +92,38 @@ export const STEP_DEFINITIONS: Record<OnboardingStepId, StepDefinition> = {
     analyticsTarget: 'managed_email',
   },
 };
+
+type StepCopyOverride = Partial<Pick<StepDefinition,
+  'title' | 'titleKey' | 'description' | 'descriptionKey' | 'caption' | 'captionKey'>>;
+
+/**
+ * A co-managed workspace is a customer's internal IT department: its portal
+ * serves the organization's own employees (requesters), and its contacts are
+ * those requesters rather than an MSP's clients. The steps and their
+ * completion checks are the same; only the framing differs.
+ */
+const CO_MANAGED_STEP_OVERRIDES: Partial<Record<OnboardingStepId, StepCopyOverride>> = {
+  client_portal_domain: {
+    title: 'Set Up Requester Portal',
+    titleKey: 'onboarding.steps.portal.coManagedTitle',
+    description: 'Configure the portal where your employees submit and follow IT requests, on your domain with your branding.',
+    descriptionKey: 'onboarding.steps.portal.coManagedDescription',
+  },
+  data_import: {
+    title: 'Add Requesters',
+    titleKey: 'onboarding.steps.dataImport.coManagedTitle',
+    description: 'Add contacts for the people your IT team supports so their requests reach your team.',
+    descriptionKey: 'onboarding.steps.dataImport.coManagedDescription',
+    caption: 'Create 5 requester contacts',
+    captionKey: 'onboarding.substeps.dataImportCoManaged',
+  },
+  calendar_sync: {
+    description: 'Connect Google or Outlook calendars to keep your team\'s schedules and appointments aligned.',
+    descriptionKey: 'onboarding.steps.calendar.coManagedDescription',
+  },
+};
+
+export function getStepDefinitions(productCode: OnboardingProductCode = 'psa'): StepDefinition[] {
+  const overrides = productCode === 'co_managed' ? CO_MANAGED_STEP_OVERRIDES : {};
+  return Object.values(STEP_DEFINITIONS).map((definition) => ({ ...definition, ...overrides[definition.id] }));
+}

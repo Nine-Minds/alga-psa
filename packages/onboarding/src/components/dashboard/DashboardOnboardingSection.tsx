@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Progress } from '@alga-psa/ui/components/Progress';
-import { STEP_DEFINITIONS, type StepDefinition } from '@alga-psa/onboarding/lib';
+import { getStepDefinitions, type StepDefinition } from '@alga-psa/onboarding/lib';
 import {
   dismissDashboardOnboardingStep,
   restoreDashboardOnboardingStep,
@@ -201,7 +201,6 @@ const QuickStartCard = ({
   const Icon = step.icon;
   const status = getQuickStartStatus(t)[step.status];
   const isDisabled = !step.isActionable;
-  const isImportStep = step.id === 'data_import';
 
   const cardBody = (
     <div className="flex h-full flex-col">
@@ -221,11 +220,9 @@ const QuickStartCard = ({
         <div className="min-w-0">
           <h3 className="text-base font-semibold leading-6 text-slate-900">{step.title}</h3>
           <p className="mt-1 text-sm leading-5 text-slate-600">{step.description}</p>
-          {isImportStep ? (
+          {step.caption ? (
             <p className="mt-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-              {t('onboarding.substeps.dataImport', {
-                defaultValue: 'Complete your first import OR create 5 contacts',
-              })}
+              {step.captionKey ? t(step.captionKey, { defaultValue: step.caption }) : step.caption}
             </p>
           ) : null}
           {Array.isArray(step.substeps) && step.substeps.length > 0 ? (
@@ -352,7 +349,10 @@ export default function DashboardOnboardingSection({
   }, [stepStates, initialDismissedStepIds]);
 
   const dismissedStepIdSet = useMemo(() => new Set<OnboardingStepId>(dismissedStepIds), [dismissedStepIds]);
-  const steps = useMemo(() => enrichSteps(stepStates, dismissedStepIdSet), [stepStates, dismissedStepIdSet]);
+  const steps = useMemo(
+    () => enrichSteps(stepStates, dismissedStepIdSet, productCode),
+    [stepStates, dismissedStepIdSet, productCode]
+  );
   const visibleSteps = useMemo(() => steps.filter((step) => !step.dismissed), [steps]);
   const hiddenSteps = useMemo(() => steps.filter((step) => step.dismissed), [steps]);
   const translatedVisibleSteps = useMemo(
@@ -680,13 +680,14 @@ function buildSummary(steps: OnboardingStep[]): OnboardingProgressSummary {
 
 function enrichSteps(
   stepStates: OnboardingStepServerState[],
-  dismissedStepIds: Set<OnboardingStepId>
+  dismissedStepIds: Set<OnboardingStepId>,
+  productCode: 'psa' | 'co_managed'
 ): OnboardingStep[] {
   const stateById = new Map<OnboardingStepId, OnboardingStepServerState>(
     stepStates.map((state) => [state.id, state])
   );
 
-  return Object.values(STEP_DEFINITIONS).map((definition) => {
+  return getStepDefinitions(productCode).map((definition) => {
     const state = stateById.get(definition.id);
     const isDismissed = dismissedStepIds.has(definition.id) || state?.dismissed === true;
     const status = isDismissed ? 'complete' : (state?.status ?? 'not_started');

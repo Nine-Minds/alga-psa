@@ -139,7 +139,7 @@ describe('MSP dashboard locale batch 2b-1', () => {
       'onboarding.steps.email.description': 'Set up inbound ticket email and verify an outbound sending domain for reliable delivery.',
       'onboarding.steps.email.cta': 'Configure Email',
       'onboarding.blockers.identity.linkedAccountsUnavailable': 'Unable to verify linked team members right now.',
-      'onboarding.blockers.identity.noLinkedUsers': 'No users are linked to an identity provider yet. Ask an MSP admin to connect Google or Microsoft.',
+      'onboarding.blockers.identity.noLinkedUsers': 'No users are linked to an identity provider yet. Ask an administrator to connect Google or Microsoft.',
       'onboarding.blockers.identity.addProviderCredentials': 'Add Google Workspace or Microsoft 365 credentials to enable SSO for your team.',
       'onboarding.blockers.identity.configurationUnavailable': 'SSO provider configuration is unavailable in this environment.',
       'onboarding.blockers.identity.loadFailed': 'Unable to load SSO configuration status.',

@@ -21,7 +21,7 @@ import { resolveProductCode } from './productCodes';
  * destination keeps its own product route rule, and the server actions behind
  * each page keep their own RBAC and tenant-ownership guards.
  */
-export const PRODUCT_NAV_TARGETS = ['providers', 'mailbox'] as const;
+export const PRODUCT_NAV_TARGETS = ['providers', 'mailbox', 'calendar'] as const;
 
 export type ProductNavTarget = (typeof PRODUCT_NAV_TARGETS)[number];
 
@@ -58,6 +58,17 @@ export const PRODUCT_NAV_DESTINATIONS: Record<ProductNavTarget, Record<ProductCo
     algadesk: '/msp/settings/email',
     co_managed: '/msp/settings/email',
   },
+  // Calendar sync providers. PSA reaches them through Integrations -> Calendar;
+  // co-managed reaches the same CalendarIntegrationsSettings through the
+  // profile's calendar tab, since the integrations page stays denied to it.
+  // AlgaDesk has no calendar sync (the profile tab is excluded for it) and
+  // renders no onboarding checklist, so it lands on the profile root rather
+  // than on a denied page.
+  calendar: {
+    psa: '/msp/settings/integrations?category=calendar',
+    algadesk: '/msp/profile',
+    co_managed: '/msp/profile?tab=calendar',
+  },
 };
 
 export function resolveProductNavDestination(
@@ -67,6 +78,7 @@ export function resolveProductNavDestination(
   return PRODUCT_NAV_DESTINATIONS[target][resolveProductCode(productCode).productCode];
 }
 
-/** Convenience aliases for the two current targets. */
+/** Convenience aliases for the current targets. */
 export const PROVIDER_SETUP_ENTRY_PATH = productNavHref('providers');
 export const MAILBOX_SETUP_ENTRY_PATH = productNavHref('mailbox');
+export const CALENDAR_SETUP_ENTRY_PATH = productNavHref('calendar');

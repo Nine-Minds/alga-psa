@@ -122,6 +122,7 @@
     },
     "substeps": {
       "dataImport": "Complete your first import OR create 5 contacts",
+      "dataImportCoManaged": "Create 5 requester contacts",
       "identity": {
         "addProvider": "Add an SSO provider",
         "linkTeamMember": "Link the first team member"
@@ -172,16 +173,21 @@
       "portal": {
         "title": "Set Up Customer Portal",
         "description": "Configure your portal so customers can sign in on your domain with your branding.",
+        "coManagedTitle": "Set Up Requester Portal",
+        "coManagedDescription": "Configure the portal where your employees submit and follow IT requests, on your domain with your branding.",
         "cta": "Open Portal Settings"
       },
       "dataImport": {
         "title": "Import Core Data",
         "description": "Add contacts so you can start working for clients and keep workflows moving.",
+        "coManagedTitle": "Add Requesters",
+        "coManagedDescription": "Add contacts for the people your IT team supports so their requests reach your team.",
         "cta": "Create Contacts"
       },
       "calendar": {
         "title": "Calendar Sync",
         "description": "Connect Google or Outlook calendars to keep dispatch and client appointments aligned.",
+        "coManagedDescription": "Connect Google or Outlook calendars to keep your team's schedules and appointments aligned.",
         "cta": "Configure Calendar"
       },
       "email": {
@@ -193,7 +199,7 @@
     "blockers": {
       "identity": {
         "linkedAccountsUnavailable": "Unable to verify linked team members right now.",
-        "noLinkedUsers": "No users are linked to an identity provider yet. Ask an MSP admin to connect Google or Microsoft.",
+        "noLinkedUsers": "No users are linked to an identity provider yet. Ask an administrator to connect Google or Microsoft.",
         "addProviderCredentials": "Add Google Workspace or Microsoft 365 credentials to enable SSO for your team.",
         "configurationUnavailable": "SSO provider configuration is unavailable in this environment.",
         "loadFailed": "Unable to load SSO configuration status."

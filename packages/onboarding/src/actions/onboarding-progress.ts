@@ -173,7 +173,7 @@ async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServ
           blockerKey: 'onboarding.blockers.identity.linkedAccountsUnavailable',
         }
       : {
-          blocker: 'No users are linked to an identity provider yet. Ask an MSP admin to connect Google or Microsoft.',
+          blocker: 'No users are linked to an identity provider yet. Ask an administrator to connect Google or Microsoft.',
           blockerKey: 'onboarding.blockers.identity.noLinkedUsers',
         };
 

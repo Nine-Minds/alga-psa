@@ -91,6 +91,7 @@
     },
     "substeps": {
       "dataImport": "Ukończ pierwszy import LUB utwórz 5 kontaktów",
+      "dataImportCoManaged": "Utwórz 5 kontaktów zgłaszających",
       "identity": {
         "addProvider": "Dodaj dostawcę SSO",
         "linkTeamMember": "Połącz pierwszego członka zespołu"
@@ -141,16 +142,21 @@
       "portal": {
         "title": "Skonfiguruj portal klienta",
         "description": "Skonfiguruj portal tak, aby klienci mogli logować się w twojej domenie z twoim brandingiem.",
+        "coManagedTitle": "Skonfiguruj portal zgłaszających",
+        "coManagedDescription": "Skonfiguruj portal, w którym twoi pracownicy zgłaszają i śledzą prośby IT, w twojej domenie z twoim brandingiem.",
         "cta": "Otwórz ustawienia portalu"
       },
       "dataImport": {
         "title": "Importuj dane podstawowe",
         "description": "Dodaj kontakty, aby zacząć pracować dla klientów i utrzymać przepływy w ruchu.",
+        "coManagedTitle": "Dodaj zgłaszających",
+        "coManagedDescription": "Dodaj kontakty osób, które wspiera twój zespół IT, aby ich zgłoszenia trafiały do twojego zespołu.",
         "cta": "Utwórz kontakty"
       },
       "calendar": {
         "title": "Synchronizacja kalendarza",
         "description": "Połącz kalendarze Google lub Outlook, aby utrzymać zgodność planowania i spotkań z klientami.",
+        "coManagedDescription": "Połącz kalendarze Google lub Outlook, aby utrzymać zgodność harmonogramów i spotkań twojego zespołu.",
         "cta": "Skonfiguruj kalendarz"
       },
       "email": {
@@ -162,7 +168,7 @@
     "blockers": {
       "identity": {
         "linkedAccountsUnavailable": "Nie można teraz zweryfikować połączonych członków zespołu.",
-        "noLinkedUsers": "Żaden użytkownik nie jest jeszcze połączony z dostawcą tożsamości. Poproś administratora MSP o podłączenie Google lub Microsoft.",
+        "noLinkedUsers": "Żaden użytkownik nie jest jeszcze połączony z dostawcą tożsamości. Poproś administratora o podłączenie Google lub Microsoft.",
         "addProviderCredentials": "Dodaj poświadczenia Google Workspace lub Microsoft 365, aby włączyć SSO dla swojego zespołu.",
         "configurationUnavailable": "Konfiguracja dostawcy SSO jest niedostępna w tym środowisku.",
         "loadFailed": "Nie udało się załadować stanu konfiguracji SSO."
