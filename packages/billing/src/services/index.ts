@@ -12,7 +12,7 @@ export {
 } from './invoiceBillingRecipientService';
 export { ensureInvoiceEmailLinks } from './ensureInvoiceEmailLinks';
 export { BillingEngine } from '../lib/billing/billingEngine';
-export { recalculateQuoteFinancials } from './quoteCalculationService';
+export { recalculateQuoteFinancials, resolveQuoteItemTaxesIfIncluded } from './quoteCalculationService';
 export {
   PDFGenerationService,
   createPDFGenerationService,

@@ -137,3 +137,89 @@ export function summarizeQuoteTotals<T extends QuoteItemInclusionInput & { is_di
     optional_total: optionalSubtotal + optionalTax,
   };
 }
+
+export type ComputeQuoteTotalsItem = QuoteTotalsRowInput & {
+  id: string;
+  /** Grouping key for `perGroup` (e.g. location id); rows sharing a key are summed together. */
+  groupKey?: string | null;
+  /**
+   * Tax the row carries when included, in minor units, already resolved by the
+   * server's tax engine (region, composite/threshold rates and `Math.ceil`
+   * rounding all live there). Tax is computed per row on its gross amount, so
+   * it does not depend on which other rows are selected.
+   */
+  taxAmountIfIncluded?: number | string | null;
+};
+
+export interface ComputeQuoteTotalsGroup {
+  subtotal: number;
+  discountTotal: number;
+  tax: number;
+  totalAmount: number;
+}
+
+export interface ComputeQuoteTotalsResult {
+  subtotal: number;
+  discountTotal: number;
+  tax: number;
+  totalAmount: number;
+  perGroup: Map<string, ComputeQuoteTotalsGroup>;
+  /** Resolved reduction per included discount row id. */
+  discountAmountById: Map<string, number>;
+}
+
+/**
+ * Pure, synchronous derivation of a quote's totals from rows whose tax is
+ * already resolved. Used by `recalculateQuoteFinancials` (which resolves tax
+ * through the DB) and by the client portal's local optional-item preview, so
+ * both produce the same figures for the same selection.
+ */
+export function computeQuoteTotals(items: ComputeQuoteTotalsItem[]): ComputeQuoteTotalsResult {
+  const allocation = allocateIncludedQuoteDiscounts(items, (item) => item.id);
+  const discountAmountById = new Map<string, number>();
+  for (const result of allocation.discounts) {
+    discountAmountById.set(result.discountId, result.resolvedAmount);
+  }
+
+  const summary = summarizeQuoteTotals(items, {
+    amountOf: (item) => rowGrossAmount(item),
+    taxOf: (item) => toFiniteNumber(item.taxAmountIfIncluded),
+    discountTotal: allocation.totalDiscount,
+  });
+
+  // Per-group figures: bases by their group key, discounts by the group of
+  // the base rows they reduced (allocations carry the base id).
+  const groupOf = new Map(items.map((item) => [item.id, item.groupKey ?? ''] as const));
+  const perGroup = new Map<string, ComputeQuoteTotalsGroup>();
+  const groupEntry = (key: string): ComputeQuoteTotalsGroup => {
+    let entry = perGroup.get(key);
+    if (!entry) {
+      entry = { subtotal: 0, discountTotal: 0, tax: 0, totalAmount: 0 };
+      perGroup.set(key, entry);
+    }
+    return entry;
+  };
+  for (const item of items) {
+    if (item.is_discount || !isQuoteItemIncluded(item)) continue;
+    const entry = groupEntry(item.groupKey ?? '');
+    entry.subtotal += rowGrossAmount(item);
+    entry.tax += toFiniteNumber(item.taxAmountIfIncluded);
+  }
+  for (const discount of allocation.discounts) {
+    for (const part of discount.allocations) {
+      groupEntry(groupOf.get(part.baseItemId) ?? '').discountTotal += part.amount;
+    }
+  }
+  for (const entry of perGroup.values()) {
+    entry.totalAmount = entry.subtotal - entry.discountTotal + entry.tax;
+  }
+
+  return {
+    subtotal: summary.subtotal,
+    discountTotal: summary.discount_total,
+    tax: summary.tax,
+    totalAmount: summary.total_amount,
+    perGroup,
+    discountAmountById,
+  };
+}

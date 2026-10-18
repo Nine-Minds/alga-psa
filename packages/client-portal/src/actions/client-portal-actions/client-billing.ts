@@ -27,7 +27,7 @@ import { InvoiceViewModel, IInvoiceTemplate } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
 import Quote from '@alga-psa/billing/models/quote';
 import QuoteActivity from '@alga-psa/billing/models/quoteActivity';
-import { recalculateQuoteFinancials } from '@alga-psa/billing/services';
+import { recalculateQuoteFinancials, resolveQuoteItemTaxesIfIncluded } from '@alga-psa/billing/services';
 import { withAuth } from '@alga-psa/auth';
 import { scheduleInvoiceEmailAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobStatus } from '@alga-psa/types';
@@ -569,6 +569,18 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
         return actionError('Quote not found or access denied', 'client-portal:errors.billing.quoteNotFound');
       }
 
+      // Read-only: resolved per-row tax so the portal can preview optional-item
+      // toggles locally with the same math as the server. Only needed while the
+      // client can still change selections.
+      if (updatedQuote.status === 'sent' && updatedQuote.quote_items?.length) {
+        const taxByItemId = await resolveQuoteItemTaxesIfIncluded(trx, tenant, quoteId);
+        updatedQuote.quote_items = updatedQuote.quote_items.map((item) =>
+          taxByItemId.has(item.quote_item_id)
+            ? { ...item, tax_amount_if_included: taxByItemId.get(item.quote_item_id)! }
+            : item
+        );
+      }
+
       return updatedQuote;
     });
   } catch (error) {
@@ -577,46 +589,6 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
       return expected;
     }
     console.error('Error fetching client quote details:', error);
-    throw error;
-  }
-});
-
-export const updateClientQuoteSelections = withAuth(async (
-  user,
-  { tenant },
-  quoteId: string,
-  selectedOptionalQuoteItemIds: string[]
-): Promise<ClientBillingActionResult<IQuote>> => {
-  const knex = await getConnection(tenant);
-
-  try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
-      if (isClientBillingActionError(quote)) {
-        return quote;
-      }
-
-      await persistOptionalQuoteSelections(
-        trx,
-        tenant,
-        quoteId,
-        quote.quote_items || [],
-        selectedOptionalQuoteItemIds
-      );
-
-      const updatedQuote = await Quote.getById(trx, tenant, quoteId);
-      if (!updatedQuote) {
-        return actionError('Quote is no longer available. Refresh the quote and try again.', 'client-portal:errors.billing.quoteStale');
-      }
-
-      return updatedQuote;
-    });
-  } catch (error) {
-    const expected = billingActionErrorFrom(error);
-    if (expected) {
-      return expected;
-    }
-    console.error('Error updating client quote selections:', error);
     throw error;
   }
 });
