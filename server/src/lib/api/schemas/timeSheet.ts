@@ -14,7 +14,7 @@ import {
   dateSchema,
   isoDateSchema
 } from './common';
-import { approvalStatusSchema, timeEntryResponseSchema } from './timeEntry';
+import { approvalStatusSchema, timeEntryResponseSchema, workItemTypeSchema } from './timeEntry';
 
 // Time period frequency schema
 // Time periods are half-open [start_date, end_date).
@@ -287,6 +287,42 @@ const queryStringArray = <T extends z.ZodTypeAny>(item: T) =>
       .filter((part) => part !== '');
   }, z.array(item).optional());
 
+// One row of GET /time-sheets/{id}/entries (and search include_entries): exactly the
+// time_entries columns as TimeSheetService.getTimeSheetEntries serializes them to JSON.
+// pg returns timestamptz as Date (ISO datetime) and integer as number; work_date (a DATE
+// column) is formatted to YYYY-MM-DD by the service. There is no numeric column here.
+export const timeSheetEntryRowSchema = z.object({
+  tenant: uuidSchema,
+  entry_id: uuidSchema,
+  user_id: uuidSchema,
+  start_time: z.string().datetime().nullable(),
+  end_time: z.string().datetime(),
+  notes: z.string().nullable(),
+  work_item_id: uuidSchema.nullable(),
+  billable_duration: z.number().int().nullable(),
+  work_item_type: workItemTypeSchema.nullable(),
+  // time_entries.approval_status is a DB enum that also allows REJECTED
+  approval_status: z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'CHANGES_REQUESTED']).nullable(),
+  time_sheet_id: uuidSchema.nullable(),
+  created_at: z.string().datetime().nullable(),
+  updated_at: z.string().datetime().nullable(),
+  service_id: uuidSchema.nullable(),
+  tax_region: z.string().nullable(),
+  invoiced: z.boolean().nullable(),
+  tax_rate_id: uuidSchema.nullable(),
+  contract_line_id: uuidSchema.nullable(),
+  work_date: isoDateSchema,
+  work_timezone: z.string(),
+  created_by: uuidSchema.nullable(),
+  updated_by: uuidSchema.nullable(),
+  contract_line_source: z
+    .enum(['explicit', 'auto_unique_service', 'auto_bucket_overlay', 'unresolved', 'reconciled_at_generation', 'auto_billing_profile'])
+    .nullable(),
+  contract_line_unresolved_reason: z.enum(['ambiguous', 'no_match', 'error']).nullable(),
+  catalog_pricing_acknowledged_at: z.string().datetime().nullable(),
+  catalog_pricing_acknowledged_by: uuidSchema.nullable(),
+});
+
 // One row of GET /time-sheets/search: exactly time_sheets.* plus the joined user_name.
 // (time_sheets has no notes/created_at/updated_at columns, so this is not timeSheetResponseSchema.)
 export const timeSheetSearchRowSchema = z.object({
@@ -299,7 +335,7 @@ export const timeSheetSearchRowSchema = z.object({
   approved_at: z.string().datetime().nullable(),
   approved_by: uuidSchema.nullable(),
   user_name: z.string(),
-  time_entries: z.array(timeEntryResponseSchema).optional(),
+  time_entries: z.array(timeSheetEntryRowSchema).optional(),
 });
 
 // Time sheet search schema

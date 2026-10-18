@@ -1375,8 +1375,11 @@ export class TimeSheetService extends BaseService<any> {
   async getTimeSheetEntries(timeSheetId: string, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
       
+      // work_date is a DATE column; node-pg would turn it into a JS Date (serialized as an
+      // ISO datetime), so format it in SQL. The later alias overrides the `*` value.
       return tenantDb(knex, context.tenant).table('time_entries')
         .where({ time_sheet_id: timeSheetId })
+        .select('time_entries.*', knex.raw("to_char(work_date, 'YYYY-MM-DD') as work_date"))
         .orderBy('start_time');
     }
 
@@ -1384,25 +1387,39 @@ export class TimeSheetService extends BaseService<any> {
   async getTimeSheetSummary(timeSheetId: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      const stats = await tenantDb(knex, context.tenant).table('time_entries')
+      // worked_minutes is the real duration (end - start); billable_duration is the billed
+      // subset in minutes, so non-billable hours are the difference.
+      const rows = await tenantDb(knex, context.tenant).table('time_entries')
         .where({ time_sheet_id: timeSheetId })
         .select([
-          knex.raw('SUM(billable_duration) / 60.0 as total_hours'),
-          knex.raw('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0 as billable_hours'),
-          knex.raw('COUNT(*) as entry_count')
-        ])
-        .first() as any;
-  
-      const totalHours = parseFloat(stats?.total_hours || '0');
-      const billableHours = parseFloat(stats?.billable_hours || '0');
+          knex.raw("COALESCE(work_item_type, 'unknown') as work_item_type"),
+          knex.raw("to_char(work_date, 'YYYY-MM-DD') as work_date"),
+          knex.raw('COALESCE(EXTRACT(EPOCH FROM (end_time - start_time)) / 60.0, 0) as worked_minutes'),
+          knex.raw('COALESCE(billable_duration, 0) as billable_minutes')
+        ]) as any[];
+
+      let workedMinutes = 0;
+      let billableMinutes = 0;
+      const entriesByType: Record<string, number> = {};
+      const entriesByDay: Record<string, number> = {};
+      for (const row of rows) {
+        const worked = Number(row.worked_minutes);
+        workedMinutes += worked;
+        billableMinutes += Number(row.billable_minutes);
+        entriesByType[row.work_item_type] = (entriesByType[row.work_item_type] ?? 0) + worked / 60;
+        entriesByDay[row.work_date] = (entriesByDay[row.work_date] ?? 0) + worked / 60;
+      }
+
+      const totalHours = workedMinutes / 60;
+      const billableHours = billableMinutes / 60;
   
       return {
         total_hours: totalHours,
         billable_hours: billableHours,
         non_billable_hours: totalHours - billableHours,
-        entries_by_type: {}, // Would calculate from entries
-        entries_by_day: {}, // Would calculate from entries
-        approval_ready: parseInt(stats?.entry_count || '0') > 0
+        entries_by_type: entriesByType,
+        entries_by_day: entriesByDay,
+        approval_ready: rows.length > 0
       };
     }
 

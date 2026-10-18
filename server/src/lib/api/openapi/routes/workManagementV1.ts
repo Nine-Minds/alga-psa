@@ -10,9 +10,9 @@ import {
   createTimePeriodSchema,
   timeSheetSearchRowSchema,
   timeSheetSummaryResponseSchema,
+  timeSheetEntryRowSchema,
   updateTimePeriodSchema,
 } from '../../schemas/timeSheet';
-import { timeEntryResponseSchema } from '../../schemas/timeEntry';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import {
   activeStopwatchQuerySchema,
@@ -484,7 +484,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   // same zod schemas the controller/service use, so docs cannot drift).
   const TimeSheetEntriesResponse = registry.registerSchema(
     'WorkV1TimeSheetEntriesResponse',
-    zOpenApi.object({ data: zOpenApi.array(timeEntryResponseSchema) }),
+    zOpenApi.object({ data: zOpenApi.array(timeSheetEntryRowSchema) }),
   );
   const TimeSheetSummaryResponse = registry.registerSchema(
     'WorkV1TimeSheetSummaryResponse',

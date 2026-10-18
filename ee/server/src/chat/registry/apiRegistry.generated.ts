@@ -51787,9 +51787,34 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "items": {
                   "type": "object",
                   "properties": {
+                    "tenant": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
                     "entry_id": {
                       "type": "string",
                       "format": "uuid"
+                    },
+                    "user_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "start_time": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "end_time": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "notes": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "work_item_id": {
                       "type": [
@@ -51798,8 +51823,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       ],
                       "format": "uuid"
                     },
+                    "billable_duration": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
                     "work_item_type": {
-                      "type": "string",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
                       "enum": [
                         "ticket",
                         "project_task",
@@ -51808,33 +51842,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "interaction"
                       ]
                     },
-                    "start_time": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "end_time": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "work_date": {
-                      "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                    },
-                    "work_timezone": {
-                      "type": "string"
-                    },
-                    "billable_duration": {
-                      "type": "number"
-                    },
-                    "notes": {
+                    "approval_status": {
                       "type": [
                         "string",
                         "null"
+                      ],
+                      "enum": [
+                        "DRAFT",
+                        "SUBMITTED",
+                        "APPROVED",
+                        "REJECTED",
+                        "CHANGES_REQUESTED"
                       ]
-                    },
-                    "user_id": {
-                      "type": "string",
-                      "format": "uuid"
                     },
                     "time_sheet_id": {
                       "type": [
@@ -51843,14 +51862,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       ],
                       "format": "uuid"
                     },
-                    "approval_status": {
-                      "type": "string",
-                      "enum": [
-                        "DRAFT",
-                        "SUBMITTED",
-                        "APPROVED",
-                        "CHANGES_REQUESTED"
-                      ]
+                    "created_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "updated_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
                     },
                     "service_id": {
                       "type": [
@@ -51865,12 +51889,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "null"
                       ]
                     },
-                    "contract_line_id": {
+                    "invoiced": {
                       "type": [
-                        "string",
+                        "boolean",
                         "null"
-                      ],
-                      "format": "uuid"
+                      ]
                     },
                     "tax_rate_id": {
                       "type": [
@@ -51879,62 +51902,101 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       ],
                       "format": "uuid"
                     },
-                    "tax_percentage": {
+                    "contract_line_id": {
                       "type": [
-                        "number",
+                        "string",
                         "null"
-                      ]
-                    },
-                    "created_at": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "updated_at": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "tenant": {
-                      "type": "string",
+                      ],
                       "format": "uuid"
                     },
-                    "user_name": {
+                    "work_date": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "work_timezone": {
                       "type": "string"
                     },
-                    "work_item_title": {
-                      "type": "string"
+                    "created_by": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
                     },
-                    "service_name": {
-                      "type": "string"
+                    "updated_by": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
                     },
-                    "client_name": {
-                      "type": "string"
+                    "contract_line_source": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "explicit",
+                        "auto_unique_service",
+                        "auto_bucket_overlay",
+                        "unresolved",
+                        "reconciled_at_generation",
+                        "auto_billing_profile"
+                      ]
                     },
-                    "duration_hours": {
-                      "type": "number"
+                    "contract_line_unresolved_reason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "ambiguous",
+                        "no_match",
+                        "error"
+                      ]
                     },
-                    "is_billable": {
-                      "type": "boolean"
+                    "catalog_pricing_acknowledged_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "catalog_pricing_acknowledged_by": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
                     }
                   },
                   "required": [
+                    "tenant",
                     "entry_id",
-                    "work_item_id",
-                    "work_item_type",
+                    "user_id",
                     "start_time",
                     "end_time",
-                    "billable_duration",
                     "notes",
-                    "user_id",
-                    "time_sheet_id",
+                    "work_item_id",
+                    "billable_duration",
+                    "work_item_type",
                     "approval_status",
-                    "service_id",
-                    "tax_region",
-                    "contract_line_id",
-                    "tax_rate_id",
-                    "tax_percentage",
+                    "time_sheet_id",
                     "created_at",
                     "updated_at",
-                    "tenant"
+                    "service_id",
+                    "tax_region",
+                    "invoiced",
+                    "tax_rate_id",
+                    "contract_line_id",
+                    "work_date",
+                    "work_timezone",
+                    "created_by",
+                    "updated_by",
+                    "contract_line_source",
+                    "contract_line_unresolved_reason",
+                    "catalog_pricing_acknowledged_at",
+                    "catalog_pricing_acknowledged_by"
                   ]
                 }
               }
@@ -52270,9 +52332,34 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "object",
             "properties": {
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
               "entry_id": {
                 "type": "string",
                 "format": "uuid"
+              },
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "start_time": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "end_time": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
               "work_item_id": {
                 "type": [
@@ -52281,8 +52368,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 ],
                 "format": "uuid"
               },
+              "billable_duration": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
               "work_item_type": {
-                "type": "string",
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "enum": [
                   "ticket",
                   "project_task",
@@ -52291,33 +52387,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "interaction"
                 ]
               },
-              "start_time": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "end_time": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "work_date": {
-                "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-              },
-              "work_timezone": {
-                "type": "string"
-              },
-              "billable_duration": {
-                "type": "number"
-              },
-              "notes": {
+              "approval_status": {
                 "type": [
                   "string",
                   "null"
+                ],
+                "enum": [
+                  "DRAFT",
+                  "SUBMITTED",
+                  "APPROVED",
+                  "REJECTED",
+                  "CHANGES_REQUESTED"
                 ]
-              },
-              "user_id": {
-                "type": "string",
-                "format": "uuid"
               },
               "time_sheet_id": {
                 "type": [
@@ -52326,14 +52407,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 ],
                 "format": "uuid"
               },
-              "approval_status": {
-                "type": "string",
-                "enum": [
-                  "DRAFT",
-                  "SUBMITTED",
-                  "APPROVED",
-                  "CHANGES_REQUESTED"
-                ]
+              "created_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "updated_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
               },
               "service_id": {
                 "type": [
@@ -52348,12 +52434,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "null"
                 ]
               },
-              "contract_line_id": {
+              "invoiced": {
                 "type": [
-                  "string",
+                  "boolean",
                   "null"
-                ],
-                "format": "uuid"
+                ]
               },
               "tax_rate_id": {
                 "type": [
@@ -52362,62 +52447,101 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 ],
                 "format": "uuid"
               },
-              "tax_percentage": {
+              "contract_line_id": {
                 "type": [
-                  "number",
+                  "string",
                   "null"
-                ]
-              },
-              "created_at": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "updated_at": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "tenant": {
-                "type": "string",
+                ],
                 "format": "uuid"
               },
-              "user_name": {
+              "work_date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "work_timezone": {
                 "type": "string"
               },
-              "work_item_title": {
-                "type": "string"
+              "created_by": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
               },
-              "service_name": {
-                "type": "string"
+              "updated_by": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
               },
-              "client_name": {
-                "type": "string"
+              "contract_line_source": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "explicit",
+                  "auto_unique_service",
+                  "auto_bucket_overlay",
+                  "unresolved",
+                  "reconciled_at_generation",
+                  "auto_billing_profile"
+                ]
               },
-              "duration_hours": {
-                "type": "number"
+              "contract_line_unresolved_reason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "ambiguous",
+                  "no_match",
+                  "error"
+                ]
               },
-              "is_billable": {
-                "type": "boolean"
+              "catalog_pricing_acknowledged_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "catalog_pricing_acknowledged_by": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
               }
             },
             "required": [
+              "tenant",
               "entry_id",
-              "work_item_id",
-              "work_item_type",
+              "user_id",
               "start_time",
               "end_time",
-              "billable_duration",
               "notes",
-              "user_id",
-              "time_sheet_id",
+              "work_item_id",
+              "billable_duration",
+              "work_item_type",
               "approval_status",
-              "service_id",
-              "tax_region",
-              "contract_line_id",
-              "tax_rate_id",
-              "tax_percentage",
+              "time_sheet_id",
               "created_at",
               "updated_at",
-              "tenant"
+              "service_id",
+              "tax_region",
+              "invoiced",
+              "tax_rate_id",
+              "contract_line_id",
+              "work_date",
+              "work_timezone",
+              "created_by",
+              "updated_by",
+              "contract_line_source",
+              "contract_line_unresolved_reason",
+              "catalog_pricing_acknowledged_at",
+              "catalog_pricing_acknowledged_by"
             ]
           }
         }
