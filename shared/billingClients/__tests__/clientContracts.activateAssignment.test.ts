@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, type Mock } from 'vitest';
 
-import { activateClientContractAssignment } from '../clientContracts';
+import { activateClientContractAssignment, ContractAlreadyActiveScheduledError } from '../clientContracts';
 
 /**
  * "Set to Active" used to flip only client_contracts.is_active. The contract header stayed
@@ -212,7 +212,11 @@ describe('activateClientContractAssignment', () => {
         'tenant-1',
         'client-contract-1',
       ),
-    ).rejects.toThrow('Contract is already active and starts on 2099-10-22; there is nothing to activate.');
+    ).rejects.toMatchObject({
+      name: 'ContractAlreadyActiveScheduledError',
+      startDate: '2099-10-22',
+      message: 'Contract is already active and starts on 2099-10-22; there is nothing to activate.',
+    });
     expect(updateAssignment).not.toHaveBeenCalled();
   });
 });

@@ -293,6 +293,7 @@ const Contracts: React.FC = () => {
       const result = await activateClientContractForBilling(clientContractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
+        await fetchContracts();
         return;
       }
       toast.success(t('contractsList.toasts.contractActivated', { defaultValue: 'Contract activated' }));

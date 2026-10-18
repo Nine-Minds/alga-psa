@@ -229,6 +229,8 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       const result = await activateClientContractForBilling(clientContractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
+        await fetchClientContracts();
+        onRefreshNeeded?.();
         return;
       }
       toast.success(t('contractsList.toasts.contractActivated', { defaultValue: 'Contract activated' }));

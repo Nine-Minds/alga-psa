@@ -677,6 +677,21 @@ export async function updateClientContractAssignment(
 }
 
 /**
+ * Activation was requested for an assignment that is already confirmed and active but has not
+ * started yet. Typed so the server-action boundary can map it to a localized expected error
+ * without matching on the message text.
+ */
+export class ContractAlreadyActiveScheduledError extends Error {
+  readonly startDate: string;
+
+  constructor(startDate: string) {
+    super(`Contract is already active and starts on ${startDate}; there is nothing to activate.`);
+    this.name = 'ContractAlreadyActiveScheduledError';
+    this.startDate = startDate;
+  }
+}
+
+/**
  * Promote a draft assignment to active. "Set to Active" used to flip only
  * client_contracts.is_active, which left contracts.status = 'draft' behind, so the derived
  * status stayed Draft and the action looked like a no-op. Activation belongs to the contract
@@ -706,8 +721,8 @@ export async function activateClientContractAssignment(
   // instead of reporting a success the user cannot see any effect of (activation never moves
   // start_date; that is deliberately unchanged).
   if (!needsHeaderActivation && existing.is_active && existing.assignment_status === 'scheduled') {
-    throw new Error(
-      `Contract is already active and starts on ${tryNormalizeDateOnly(existing.start_date) ?? String(existing.start_date)}; there is nothing to activate.`
+    throw new ContractAlreadyActiveScheduledError(
+      tryNormalizeDateOnly(existing.start_date) ?? String(existing.start_date)
     );
   }
 
