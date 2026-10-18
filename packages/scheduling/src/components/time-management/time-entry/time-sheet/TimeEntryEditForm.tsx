@@ -182,7 +182,13 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   const showContractLineSelector =
     contractLineAmbiguous ||
     ((eligibleContractLines?.length ?? 0) > 1 && entry?.contract_line_source === 'explicit');
-  const prevServiceIdRef = useRef<string | undefined | null>(undefined);
+  // What the chosen contract line was chosen under. A saved line is only dropped
+  // when one of these genuinely changes AFTER the first load of this entry; the
+  // first eligibility load and clientId resolving (null -> id) never clear it.
+  const lineBasisRef = useRef<{ key: string; serviceId: string | null; workDate: string | null; clientId: string | null } | null>(null);
+  // Set when a basis change is seen; survives superseded (cancelled) loads and is
+  // consumed only by a load that completes and can check the new list.
+  const lineNeedsRevalidationRef = useRef(false);
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     if (entry?.start_time) {
       // Represent the entry's subject calendar day as a local-midnight Date so
@@ -323,6 +329,18 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     fetchClientId();
   }, [entry?.client_id, entry?.work_item_id, clientId]); // Added work_item_id and clientId dependencies
 
+  // Subject-zone calendar day of the entry (YYYY-MM-DD), the unit eligibility is judged in.
+  const workDate = useMemo(() => {
+    if (!entry?.start_time) return null;
+    try {
+      return useSubjectZone
+        ? workDateInTimeZone(entry.start_time, workTimeZone)
+        : formatISO(parseISO(entry.start_time), { representation: 'date' });
+    } catch {
+      return null;
+    }
+  }, [entry?.start_time, useSubjectZone, workTimeZone]);
+
   // Load eligible contract lines and set default tax region when service or client ID changes
   useEffect(() => {
     let cancelled = false;
@@ -349,6 +367,25 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
       // 2. Load Eligible Contract Lines (dependent on service and client)
       if (cancelled) return;
+      const basisKey = String(entry?.entry_id ?? entry?.tempId ?? '');
+      const prevBasis = lineBasisRef.current;
+      if (prevBasis && prevBasis.key === basisKey) {
+        const serviceChanged = prevBasis.serviceId !== (entry?.service_id ?? null);
+        const dateChanged = prevBasis.workDate !== workDate;
+        // clientId resolving asynchronously (null -> id) is not a change.
+        const clientChanged = Boolean(prevBasis.clientId && clientId && prevBasis.clientId !== clientId);
+        if (serviceChanged || dateChanged || clientChanged) {
+          lineNeedsRevalidationRef.current = true;
+        }
+      } else {
+        lineNeedsRevalidationRef.current = false; // first load of this entry
+      }
+      lineBasisRef.current = {
+        key: basisKey,
+        serviceId: entry?.service_id ?? null,
+        workDate,
+        clientId: clientId ?? prevBasis?.clientId ?? null,
+      };
       if (!entry?.service_id) {
         console.log('No service ID available, cannot load contract lines');
         setEligibleContractLines([]);
@@ -365,13 +402,13 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
             entry.start_time ?? selectedDate.toISOString()
           ) as EligiblePlanUI[];
           if (cancelled) return;
-          const entryDate = entry.start_time ? new Date(entry.start_time) : new Date(); // Use current date if start_time not set yet
-
+          // Date-only, inclusive window: the work date against YYYY-MM-DD
+          // start/end. (new Date('2026-03-31') is UTC midnight and would drop a
+          // line on its last day.)
           const filteredPlans = plans.filter(plan => {
-            const start = new Date(plan.start_date as string);
-            const end = plan.end_date ? new Date(plan.end_date as string) : null;
-            // Ensure entryDate is valid before comparison
-            return !isNaN(entryDate.getTime()) && start <= entryDate && (!end || end >= entryDate);
+            const start = String(plan.start_date).slice(0, 10);
+            const end = plan.end_date ? String(plan.end_date).slice(0, 10) : null;
+            return !workDate || (start <= workDate && (!end || end >= workDate));
           });
 
           currentEligiblePlans = filteredPlans;
@@ -385,7 +422,10 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
           // timeEntryWriteCore, so auto-picks are left to the server resolver
           // (auto_unique_service / auto_bucket_overlay / auto_billing_profile).
           const current = latestEntry.current;
+          const needsRevalidation = lineNeedsRevalidationRef.current;
+          lineNeedsRevalidationRef.current = false;
           if (
+            needsRevalidation &&
             current?.contract_line_id &&
             !currentEligiblePlans.some(plan => plan.client_contract_line_id === current.contract_line_id)
           ) {
@@ -410,7 +450,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       loadDataAndSetDefaults();
     }
     return () => { cancelled = true; };
-  }, [entry?.entry_id, entry?.tempId, entry?.work_item_id, entry?.service_id, clientId, entry?.start_time, index, onUpdateEntry]);
+  }, [entry?.entry_id, entry?.tempId, entry?.work_item_id, entry?.service_id, clientId, entry?.start_time, workDate, index, onUpdateEntry]);
 
 const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDuration: number) => {
   const durationToSet = Math.max(0, newDuration);

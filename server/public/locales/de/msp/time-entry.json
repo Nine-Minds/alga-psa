@@ -401,7 +401,6 @@
     "noContract": "Für diesen Service wurde keine Vertragszeile gefunden. Die Zeit wird an den systemverwalteten Standardvertrag weitergeleitet.",
     "contract": "Vertrag: {{name}}",
     "defaultContract": "Systemverwalteter Standardvertrag",
-    "multipleLines": "Mehrere Vertragszeilen verfügbar – Standardauswahl verwenden",
     "multipleEligible": "Für dieses Datum kommen mehrere Vertragspositionen infrage. Wählen Sie eine Vertragsposition, um die Zuordnung zu speichern."
   },
   "billableLegend": {

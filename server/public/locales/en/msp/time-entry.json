@@ -401,7 +401,6 @@
     "noContract": "No contract line found for this service. Time will be routed to the system-managed default contract.",
     "contract": "Contract: {{name}}",
     "defaultContract": "System-managed default contract",
-    "multipleLines": "Multiple contract lines available - using default selection",
     "multipleEligible": "Multiple contract lines are eligible for this date. Select a contract line to persist assignment."
   },
   "billableLegend": {

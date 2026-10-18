@@ -76,3 +76,35 @@ it('unambiguous service: no picker and nothing sent (server resolves with an aut
   expect(screen.queryByTestId('contract-line-0')).toBeNull();
   expect(update).not.toHaveBeenCalled();
 });
+
+it('opening a saved entry whose line ends on its work date does not clear or dirty it (incl. clientId resolving)', async () => {
+  // end_date is a date-only string (UTC midnight when parsed) and the entry is mid-afternoon the same day.
+  mocks.plans.mockResolvedValue([
+    { ...line('line-1', 'Support', 'Gold'), end_date: '2026-08-10' },
+    line('line-2', 'Projects'),
+  ]);
+  const update = vi.fn();
+  const saved = { ...entry, start_time: '2026-08-10T15:00:00Z', end_time: '2026-08-10T16:00:00Z',
+    contract_line_id: 'line-1', contract_line_source: 'explicit' };
+  const view = render(<TimeEntryEditForm {...props(saved, update)} />);
+  await waitFor(() => expect(mocks.plans).toHaveBeenCalled());
+  await act(async () => {});
+  view.rerender(<TimeEntryEditForm {...props({ ...saved }, update)} />);
+  await act(async () => {});
+  expect((screen.getByTestId('contract-line-0') as HTMLSelectElement).value).toBe('line-1');
+  expect(update).not.toHaveBeenCalled();
+});
+
+it('changing the service to one that excludes the chosen line clears it', async () => {
+  mocks.plans.mockImplementation(async (_c: string, service: string) =>
+    service === 'service-1' ? [line('line-1', 'Support'), line('line-2', 'Projects')] : [line('line-9', 'Other'), line('line-8', 'Else')]);
+  const update = vi.fn();
+  const saved = { ...entry, contract_line_id: 'line-1', contract_line_source: 'explicit' };
+  const view = render(<TimeEntryEditForm {...props(saved, update)} />);
+  await screen.findByTestId('contract-line-0');
+  await act(async () => {});
+  expect(update).not.toHaveBeenCalled();
+  view.rerender(<TimeEntryEditForm {...props({ ...saved, service_id: 'service-2' }, update)} />);
+  await waitFor(() => expect(update).toHaveBeenCalled());
+  expect(update.mock.calls.at(-1)![1]).toMatchObject({ service_id: 'service-2', contract_line_id: null, isDirty: true });
+});

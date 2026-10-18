@@ -401,7 +401,6 @@
     "noContract": "Nie znaleziono pozycji umowy dla tej usługi. Czas zostanie przekierowany do domyślnej umowy zarządzanej przez system.",
     "contract": "Kontrakt: {{name}}",
     "defaultContract": "Domyślna umowa zarządzana przez system",
-    "multipleLines": "Dostępnych jest wiele linii kontraktu - przy użyciu wyboru domyślnego",
     "multipleEligible": "Dla tej daty kwalifikuje się wiele pozycji kontraktu. Wybierz pozycję kontraktu, aby zapisać przypisanie."
   },
   "billableLegend": {

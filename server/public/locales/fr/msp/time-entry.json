@@ -401,7 +401,6 @@
     "noContract": "Aucune ligne de contrat trouvée pour ce service. Le temps sera acheminé vers le contrat par défaut géré par le système.",
     "contract": "Contrat: {{name}}",
     "defaultContract": "Contrat par défaut géré par le système",
-    "multipleLines": "Plusieurs lignes de contrat disponibles - en utilisant la sélection par défaut",
     "multipleEligible": "Plusieurs lignes de contrat sont admissibles à cette date. Sélectionnez une ligne de contrat pour enregistrer l'affectation."
   },
   "billableLegend": {

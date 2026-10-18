@@ -27,7 +27,7 @@ import { IExtendedWorkItem } from '@alga-psa/types';
 import { TimeEntryProvider, useTimeEntry } from './TimeEntryProvider';
 import TimeEntrySkeletons from './TimeEntrySkeletons';
 import SingleTimeEntryForm from './SingleTimeEntryForm';
-import { validateTimeEntry } from './utils';
+import { contractLineFieldsForWrite, validateTimeEntry } from './utils';
 import { useSchedulingCrossFeatureOptional } from '../../../../context/SchedulingCrossFeatureContext';
 import { TimeEntrySaveRejectedError } from '../../../../lib/timeEntrySaveAdapter';
 import type { CatalogPeriod } from '../../../../lib/timeEntryPeriodSelection';
@@ -214,15 +214,8 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         approval_status: 'DRAFT' as TimeSheetStatus,
         service_id: entry.service_id || undefined,
         tax_region: entry.tax_region || undefined,
-        // timeEntryWriteCore stamps any supplied contract_line_id as 'explicit'.
-        // An entry whose line was chosen by the server resolver (auto_*) must
-        // not be promoted to 'explicit' just by re-saving, so omit the id and
-        // let the resolver re-run. User-picked ('explicit') lines are sent.
-        // Known gap: the resolver may pick a different line than before if
-        // contracts changed since the original save.
-        ...(entry.contract_line_source?.startsWith('auto_')
-          ? { contract_line_id: null, contract_line_source: undefined }
-          : {}),
+        // Never echo a server-resolved (auto_*) line back: see contractLineFieldsForWrite.
+        ...contractLineFieldsForWrite(entry, 'resave'),
       };
 
       await onSave(timeEntry);

@@ -228,3 +228,25 @@ export function getTimeEntryWorkDate(entry: TimeEntryDateSource): string {
 export function isTimeEntryOnWorkDate(entry: TimeEntryDateSource, dateKey: string): boolean {
   return getTimeEntryWorkDate(entry) === dateKey;
 }
+
+/**
+ * Which contract_line_id a write may carry. timeEntryWriteCore stamps ANY supplied
+ * id as contract_line_source='explicit' and only runs the resolver when none is
+ * sent, so an id the server picked itself (auto_*) must never be echoed back.
+ *
+ * - Re-saving the same entry: omit the id only for auto_* lines (legacy entries
+ *   with an id but no recorded source keep theirs).
+ * - Copying onto a NEW entry (quick add): carry the id only when a person chose
+ *   it ('explicit'); the line was valid for another entry/date, not necessarily
+ *   this one, so anything else is left to the resolver.
+ */
+export function contractLineFieldsForWrite(
+  entry: { contract_line_id?: string | null; contract_line_source?: string | null },
+  mode: 'resave' | 'copy-to-new-entry',
+): { contract_line_id?: string | null; contract_line_source?: undefined } {
+  const source = entry.contract_line_source ?? null;
+  const carry = mode === 'copy-to-new-entry' ? source === 'explicit' : !source?.startsWith('auto_');
+  return carry
+    ? { contract_line_id: entry.contract_line_id ?? undefined }
+    : { contract_line_id: mode === 'resave' ? null : undefined, contract_line_source: undefined };
+}

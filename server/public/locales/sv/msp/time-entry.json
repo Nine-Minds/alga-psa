@@ -401,7 +401,6 @@
     "noContract": "Ingen avtalsrad hittades för den här tjänsten. Tiden kommer att kopplas till standardavtalet som hanteras av systemet.",
     "contract": "Avtal: {{name}}",
     "defaultContract": "Standardavtal som hanteras av systemet",
-    "multipleLines": "Flera avtalsrader är tillgängliga – standardvalet används",
     "multipleEligible": "Flera avtalsrader är giltiga för detta datum. Välj en avtalsrad för att spara tilldelningen."
   },
   "billableLegend": {

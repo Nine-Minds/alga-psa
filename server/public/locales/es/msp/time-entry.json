@@ -401,7 +401,6 @@
     "noContract": "No se encontró ninguna línea de contrato para este servicio. El tiempo se asignará al contrato predeterminado gestionado por el sistema.",
     "contract": "Contrato: {{name}}",
     "defaultContract": "Contrato predeterminado gestionado por el sistema",
-    "multipleLines": "Múltiples líneas de contrato disponibles: usando la selección predeterminada",
     "multipleEligible": "Varias líneas de contrato son elegibles para esta fecha. Seleccione una línea de contrato para guardar la asignación."
   },
   "billableLegend": {

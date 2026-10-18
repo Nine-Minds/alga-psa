@@ -401,7 +401,6 @@
     "noContract": "Er is geen contractregel gevonden voor deze service. De tijd wordt doorgestuurd naar het systeembeheerde standaardcontract.",
     "contract": "Contract: {{name}}",
     "defaultContract": "Systeembeheerd standaardcontract",
-    "multipleLines": "Meerdere contractregels beschikbaar - met standaardselectie",
     "multipleEligible": "Meerdere contractregels komen in aanmerking voor deze datum. Selecteer een contractregel om de toewijzing op te slaan."
   },
   "billableLegend": {
