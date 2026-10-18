@@ -30,7 +30,8 @@
           "mapped": "Zugeordnet",
           "noResult": "Für diese Zeile wurde kein Ergebnis zurückgegeben.",
           "pending": "Ausstehend",
-          "saved": "Gespeichert"
+          "saved": "Gespeichert",
+          "missingField": "{{field}} fehlt"
         },
         "suggested": "Vorgeschlagen",
         "toSave": "{{total}} zu speichern"

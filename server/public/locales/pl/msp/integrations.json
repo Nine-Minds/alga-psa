@@ -30,7 +30,8 @@
           "mapped": "Zmapowane",
           "noResult": "Nie zwrócono wyniku dla tego wiersza.",
           "pending": "Oczekuje",
-          "saved": "Zapisano"
+          "saved": "Zapisano",
+          "missingField": "Brak: {{field}}"
         },
         "suggested": "Sugerowane",
         "toSave": "Do zapisania: {{total}}"

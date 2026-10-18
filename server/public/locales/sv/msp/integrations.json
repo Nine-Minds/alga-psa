@@ -30,7 +30,8 @@
           "mapped": "Mappad",
           "noResult": "Inget resultat returnerades för den här raden.",
           "pending": "Väntar",
-          "saved": "Sparad"
+          "saved": "Sparad",
+          "missingField": "{{field}} saknas"
         },
         "suggested": "Föreslagen",
         "toSave": "{{total}} att spara"

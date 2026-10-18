@@ -30,7 +30,8 @@
           "mapped": "Mapped",
           "noResult": "No result was returned for this row.",
           "pending": "Pending",
-          "saved": "Saved"
+          "saved": "Saved",
+          "missingField": "Needs {{field}}"
         },
         "suggested": "Suggested",
         "toSave": "{{total}} to save"

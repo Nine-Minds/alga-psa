@@ -656,3 +656,75 @@ describe('AccountingMappingModuleView bulk grid without a provider catalog', () 
     ]);
   });
 });
+
+describe('AccountingMappingModuleView bulk grid with metadata fields (QuickBooks Desktop)', () => {
+  const DP = 'quickbooks_desktop-service-mapping-bulk';
+  const desktopModule = () =>
+    buildModule({
+      id: 'quickbooks_desktop-service-mapping',
+      adapterType: 'quickbooks_desktop',
+      externalTarget: undefined,
+      createMany: undefined,
+      labels: {
+        tab: 'Items / Services',
+        addButton: 'Add mapping',
+        algaColumn: 'Items / Services',
+        externalColumn: 'Desktop income account name',
+        dialog: { addTitle: 'Add', editTitle: 'Edit', algaField: 'Items / Services', externalField: 'Desktop income account name' },
+        deleteConfirmation: { title: 'Delete', message: () => 'Delete?' }
+      },
+      metadata: { fields: [{ key: 'qbdItem', label: 'Desktop item name', required: true }] }
+    } as Partial<AccountingMappingModule>);
+
+  beforeAll(() => {
+    if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
+  });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    const base = loadResult(['svc-mapped']);
+    loadMock.mockResolvedValue({
+      ...base,
+      mappings: base.mappings.map((m) => ({ ...m, external_entity_id: 'Services Income', metadata: { qbdItem: 'Done Item' } })),
+      externalEntities: []
+    });
+    createMock.mockResolvedValue({ id: 'new' });
+  });
+  afterEach(() => cleanup());
+
+  async function openDesktopBulk() {
+    render(<AccountingMappingModuleView module={desktopModule()} context={{ realmId: null }} />);
+    fireEvent.click(await screen.findByText('Bulk map'));
+    await screen.findByTestId(`${DP}-grid`);
+  }
+
+  it('shows writable account and item name columns, and saves a row only when both are filled', async () => {
+    await openDesktopBulk();
+    expect(screen.getByText('Desktop income account name')).toBeInTheDocument();
+    expect(screen.getByText('Desktop item name')).toBeInTheDocument();
+
+    fireEvent.change(el(`${DP}-external-svc-host`), { target: { value: 'Services Income' } });
+    expect(screen.getByTestId(`${DP}-status-svc-host`)).toHaveTextContent('Needs Desktop item name');
+    expect(screen.getByTestId(`${DP}-count`)).toHaveTextContent('0 to save');
+
+    fireEvent.change(el(`${DP}-field-qbdItem-svc-host`), { target: { value: '  Web Hosting  ' } });
+    expect(screen.getByTestId(`${DP}-status-svc-host`)).toHaveTextContent('Pending');
+    expect(screen.getByTestId(`${DP}-count`)).toHaveTextContent('1 to save');
+
+    await act(async () => {
+      fireEvent.click(saveAll());
+    });
+    await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
+    expect(createMock.mock.calls[0][1]).toEqual(expect.objectContaining({
+      algaEntityId: 'svc-host',
+      externalEntityId: 'Services Income',
+      metadata: { qbdItem: 'Web Hosting' }
+    }));
+  });
+
+  it('shows the stored item name on mapped rows', async () => {
+    await openDesktopBulk();
+    fireEvent.click(document.getElementById(`${DP}-filter`)!);
+    fireEvent.click(await screen.findByText('All'));
+    expect(await screen.findByText('Done Item')).toBeInTheDocument();
+  });
+});

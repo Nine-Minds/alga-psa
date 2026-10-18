@@ -30,7 +30,8 @@
           "mapped": "Gekoppeld",
           "noResult": "Voor deze rij is geen resultaat teruggegeven.",
           "pending": "In afwachting",
-          "saved": "Opgeslagen"
+          "saved": "Opgeslagen",
+          "missingField": "{{field}} ontbreekt"
         },
         "suggested": "Voorgesteld",
         "toSave": "{{total}} op te slaan"

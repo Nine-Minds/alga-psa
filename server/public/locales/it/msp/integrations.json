@@ -30,7 +30,8 @@
           "mapped": "Mappato",
           "noResult": "Nessun risultato restituito per questa riga.",
           "pending": "In sospeso",
-          "saved": "Salvato"
+          "saved": "Salvato",
+          "missingField": "Manca {{field}}"
         },
         "suggested": "Suggerito",
         "toSave": "{{total}} da salvare"

@@ -242,6 +242,9 @@ Select **QuickBooks Desktop (IIF)** at **Settings → Integrations → Accountin
    mapping with an item. You don't have to set them all up in advance: the
    export prompts for anything missing (see
    [Export invoices and import tax back](#export-invoices-and-import-tax-back)).
+   To map many services at once, use **Bulk map** on the Items / Services tab:
+   enter the income account and the Desktop item name on each row. A row is
+   saved only when both are filled.
 
 Each invoice becomes one QuickBooks invoice. Its lines come from the mapped
 items, and it carries one sales tax line for the tax AlgaPSA calculated.
