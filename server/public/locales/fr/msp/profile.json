@@ -500,6 +500,8 @@
         "sending": "Envoi…",
         "rotateSecret": "Faire tourner la clé",
         "rotating": "Rotation…",
+        "retryFailed": "Réessayer les livraisons échouées",
+        "retryingFailed": "Nouvelle tentative…",
         "back": "Retour aux webhooks"
       },
       "deliveries": {
@@ -541,6 +543,8 @@
         "stateChangeFailed": "Impossible de mettre à jour l'état du webhook.",
         "retryQueued": "Nouvelle tentative en file d'attente pour l'événement {{eventId}}.",
         "retryFailed": "Impossible de réessayer la livraison.",
+        "retryFailedQueued": "{{queued}} livraisons mises en file d'attente pour une nouvelle tentative, {{skipped}} ignorées.",
+        "retryFailedFailed": "Impossible de réessayer les livraisons échouées.",
         "invalidHeaderLine": "Ligne d'en-tête non valide : \"{{line}}\"",
         "invalidRetryConfig": "La configuration des nouvelles tentatives doit être un objet JSON"
       },

@@ -28,6 +28,9 @@ type ClientCadenceRecurringObligationRow = {
   contract_id: string;
   start_date: unknown;
   end_date: unknown;
+  /** Authored line bounds, intersected with the assignment in the planner. */
+  line_start_date?: unknown;
+  line_end_date?: unknown;
   contract_line_type: string | null;
   billing_timing: string | null;
 };
@@ -374,6 +377,8 @@ async function loadClientCadenceRecurringObligations(
       'cl.contract_id as contract_id',
       'cc.start_date',
       'cc.end_date',
+      'cl.start_date as line_start_date',
+      'cl.end_date as line_end_date',
       'cl.contract_line_type',
       'cl.billing_timing',
     );
@@ -502,14 +507,22 @@ async function computeClientCadenceRegeneration(
     // Scoped to the line's contract: another contract's invoices must not
     // suppress this line's periods; its own contract's ledger still limits it.
     const billedBoundaryEnd = billedBoundaryByContract.get(obligation.contract_id) ?? null;
-    const obligationStart =
+    const assignmentStart =
       normalizeDateOnlyValue(obligation.start_date) ?? ensureUtcMidnightIsoDate(materializedAt);
+    const lineStart = normalizeDateOnlyValue(obligation.line_start_date);
+    const obligationStart = lineStart && compareIsoDateOnly(lineStart, assignmentStart) > 0
+      ? lineStart
+      : assignmentStart;
     const regenerationStart = resolveClientCadenceObligationStart({
       assignmentStart: obligationStart,
       billedBoundaryEnd,
       fallbackStart: materializedAt,
     });
-    const obligationEnd = normalizeDateOnlyValue(obligation.end_date);
+    const assignmentEnd = normalizeDateOnlyValue(obligation.end_date);
+    const lineEnd = normalizeDateOnlyValue(obligation.line_end_date);
+    const obligationEnd = assignmentEnd && lineEnd
+      ? (compareIsoDateOnly(lineEnd, assignmentEnd) < 0 ? lineEnd : assignmentEnd)
+      : (lineEnd ?? assignmentEnd);
 
     if (obligationEnd && compareIsoDateOnly(obligationEnd, regenerationStart) <= 0) {
       continue;

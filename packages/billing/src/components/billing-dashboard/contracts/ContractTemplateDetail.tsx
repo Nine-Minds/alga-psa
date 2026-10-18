@@ -35,6 +35,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Input } from "@alga-psa/ui/components/Input";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import TemplateDefaultDiscountsPanel from "./TemplateDefaultDiscountsPanel";
 
 import { IContract, IContractAssignmentSummary } from "@alga-psa/types";
 import type { DetailedContractLine } from "../../../repositories/contractLineRepository";
@@ -1467,6 +1468,13 @@ const ContractTemplateDetail: React.FC = () => {
         </section>
       </div>
 
+      <TemplateDefaultDiscountsPanel
+        templateId={contract.contract_id}
+        definitions={templateMetadata.default_discounts ?? []}
+        lines={templateLines}
+        onSaved={() => void loadTemplate(contract.contract_id)}
+      />
+
       <Card className="mt-4">
         <CardHeader>
           <CardTitle className="text-base font-semibold text-[rgb(var(--color-text-800))]">
@@ -2030,6 +2038,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
     contractLineId: string,
     rateCents: number,
     billingTiming: "arrears" | "advance",
+    invoiceLineDescription: string | null,
   ) => {
     try {
       const result = await updateContractLineRate(
@@ -2037,6 +2046,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
         contractLineId,
         rateCents,
         billingTiming,
+        invoiceLineDescription,
       );
       if (isReturnedActionError(result)) {
         throw new Error(getErrorMessage(result));
@@ -2094,12 +2104,26 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
                           defaultValue: "{{count}} services",
                         })}
                   </Badge>
-                  <Badge variant="secondary" className="text-xs">
-                    {t("templateDetail.composition.fixedFeeRate", {
-                      defaultValue: "Fixed Fee Rate:",
-                    })}{" "}
-                    {formatTemplateRate(line.rate)}
-                  </Badge>
+                  {/* Only a fixed fee line carries a line-level rate; an
+                      hourly/usage line prices per service, so its badge shows
+                      only when the template actually stored a line rate. */}
+                  {(line.contract_line_type === "Fixed" ||
+                    line.rate != null) && (
+                    <Badge variant="secondary" className="text-xs">
+                      {line.contract_line_type === "Hourly"
+                        ? t("templateDetail.composition.hourlyRateLabel", {
+                            defaultValue: "Hourly rate:",
+                          })
+                        : line.contract_line_type === "Usage"
+                          ? t("templateDetail.composition.unitRateLabel", {
+                              defaultValue: "Unit rate:",
+                            })
+                          : t("templateDetail.composition.fixedFeeRate", {
+                              defaultValue: "Fixed Fee Rate:",
+                            })}{" "}
+                      {formatTemplateRate(line.rate)}
+                    </Badge>
+                  )}
                   {line.contract_line_type === "Fixed" && (
                     <Button
                       id={`edit-rate-${line.contract_line_id}`}
@@ -2150,6 +2174,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
             rate: editingLine.rate ?? undefined,
             billing_timing: editingLine.billing_timing,
             contract_line_type: editingLine.contract_line_type,
+            invoice_line_description: editingLine.invoice_line_description ?? null,
           }}
           onClose={() => setEditingLine(null)}
           onSave={handleSaveRate}
@@ -2158,5 +2183,6 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
     </Card>
   );
 };
+
 
 export default ContractTemplateDetail;

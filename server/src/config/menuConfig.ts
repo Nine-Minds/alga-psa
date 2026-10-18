@@ -116,7 +116,8 @@ export const navigationSections: NavigationSection[] = [
         icon: Ticket,
         subItems: [
           { name: 'All Tickets', translationKey: 'nav.ticketsAll', icon: Ticket, href: '/msp/tickets' },
-          { name: 'Recurring Tickets', translationKey: 'nav.ticketsRecurring', icon: Repeat, href: '/msp/tickets/recurring', requiredPermission: 'recurring_ticket:read' }
+          { name: 'Recurring Tickets', translationKey: 'nav.ticketsRecurring', icon: Repeat, href: '/msp/tickets/recurring', requiredPermission: 'recurring_ticket:read' },
+          { name: 'Ticket Templates', translationKey: 'nav.ticketsTemplates', icon: LayoutTemplate, href: '/msp/tickets/templates', requiredPermission: 'ticket_template:read' }
         ]
       },
       {

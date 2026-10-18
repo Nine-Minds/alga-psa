@@ -6,11 +6,15 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { Knex } from 'knex';
 import { isAxiosUnauthorized, TacticalRmmClient, normalizeTacticalBaseUrl } from '../../lib/rmm/tacticalrmm/tacticalApiClient';
 import { computeTacticalAgentStatus } from '../../lib/rmm/tacticalrmm/agentStatus';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
+import { isRmmContactAssignmentMode } from '@alga-psa/shared/rmm/userMatching';
+import { countRmmOrganizationAssets, moveRmmOrganizationAssets } from '@alga-psa/shared/rmm/moveRmmOrganizationAssets';
+import { resolveMappingBillingProfileId } from '@alga-psa/shared/rmm/mappingBillingProfile';
 import {
   TACTICAL_WEBHOOK_HEADER_NAME,
   TACTICAL_API_KEY_SECRET,
@@ -626,6 +630,8 @@ export const listTacticalRmmOrganizationMappings = withAuth(async (
     external_organization_name: string | null;
     client_id: string | null;
     default_contact_id: string | null;
+    contact_assignment_mode: string;
+    billing_profile_id: string | null;
     company_name?: string | null;
     auto_sync_assets: boolean;
     metadata?: Record<string, unknown> | null;
@@ -658,6 +664,8 @@ export const listTacticalRmmOrganizationMappings = withAuth(async (
         'rom.external_organization_name',
         'rom.client_id',
         'rom.default_contact_id',
+        'rom.contact_assignment_mode',
+        'rom.billing_profile_id',
         'rom.auto_sync_assets',
         'rom.metadata',
         knex.raw('c.client_name as company_name'),
@@ -673,7 +681,16 @@ export const listTacticalRmmOrganizationMappings = withAuth(async (
 export const updateTacticalRmmOrganizationMapping = withAuth(async (
   user,
   { tenant },
-  input: { mappingId: string; clientId?: string | null; defaultContactId?: string | null; autoSyncAssets?: boolean }
+  input: {
+    mappingId: string;
+    clientId?: string | null;
+    defaultContactId?: string | null;
+    autoSyncAssets?: boolean;
+    /** FR-D3: off | suggest | auto. */
+    contactAssignmentMode?: string;
+    /** FR-F1: the organization's billing profile, or null. */
+    billingProfileId?: string | null;
+  }
 ): Promise<{ success: boolean; error?: string }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
@@ -684,11 +701,47 @@ export const updateTacticalRmmOrganizationMapping = withAuth(async (
     if (typeof input.clientId !== 'undefined') patch.client_id = input.clientId;
     if (typeof input.defaultContactId !== 'undefined') patch.default_contact_id = input.defaultContactId || null;
     if (typeof input.autoSyncAssets !== 'undefined') patch.auto_sync_assets = input.autoSyncAssets;
-    if (!Object.keys(patch).length) return { success: true };
+    if (typeof input.contactAssignmentMode !== 'undefined') {
+      if (!isRmmContactAssignmentMode(input.contactAssignmentMode)) {
+        return { success: false, error: 'Invalid people mode' };
+      }
+      patch.contact_assignment_mode = input.contactAssignmentMode;
+    }
+    if (!Object.keys(patch).length && typeof input.billingProfileId === 'undefined') {
+      return { success: true };
+    }
 
-    await tenantScopedTable(knex, 'rmm_organization_mappings', tenant)
-      .where({ mapping_id: input.mappingId })
-      .update({ ...patch, updated_at: knex.fn.now() });
+    // FR-G4: a client change moves the organization's assets in the same
+    // transaction as the mapping update, so the two can never disagree.
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const existing = await tenantScopedTable(trx, 'rmm_organization_mappings', tenant)
+        .where({ mapping_id: input.mappingId })
+        .first(['client_id', 'integration_id', 'external_organization_id']);
+
+      // FR-F1: validated against the client the mapping ends up on, and
+      // cleared by a client change whatever else the patch carries.
+      const billingProfileId = await resolveMappingBillingProfileId(trx, tenant, {
+        existingClientId: existing?.client_id ?? null,
+        nextClientId: input.clientId,
+        billingProfileId: input.billingProfileId,
+      });
+      if (typeof billingProfileId !== 'undefined') patch.billing_profile_id = billingProfileId;
+
+      await tenantScopedTable(trx, 'rmm_organization_mappings', tenant)
+        .where({ mapping_id: input.mappingId })
+        .update({ ...patch, updated_at: trx.fn.now() });
+
+      const nextClientId = typeof patch.client_id === 'undefined' ? undefined : patch.client_id;
+      if (nextClientId && existing && String(existing.client_id ?? '') !== String(nextClientId)) {
+        await moveRmmOrganizationAssets(trx, tenant, {
+          integrationId: String(existing.integration_id),
+          provider: PROVIDER,
+          externalOrganizationId: String(existing.external_organization_id),
+          newClientId: String(nextClientId),
+          actorUserId: (user as { user_id?: string }).user_id ?? null,
+        });
+      }
+    });
 
     return { success: true };
   } catch (err) {

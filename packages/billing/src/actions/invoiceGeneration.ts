@@ -10,7 +10,6 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { BillingEngine, UnresolvedCatalogPricingError } from '../lib/billing/billingEngine';
 import { reconcileWindowAttribution } from '../lib/billing/contractLineAttributionWriter';
-import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { listUnmaterializedClientCadenceWindowLineIds } from '../lib/billing/clientCadenceWindowMaterialization';
 import {
   getCycleBillingProfileId,
@@ -36,6 +35,7 @@ import {
   IInvoice,
   IRecurringDueSelectionInput,
   PreviewInvoiceResponse,
+  InvoiceBillingEmailWarning,
   RecurringInvoiceFailureCode,
   InvoiceViewModel,
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
@@ -58,7 +58,8 @@ import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { auditLog } from '@alga-psa/db';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
-import { reconcileAutomaticInvoiceAdjustments } from '../lib/billing/reconcileAutomaticInvoiceDiscounts';
+import { previewAutomaticInvoiceDiscounts, reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
+import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import {
   reconcileContractChangeAdjustmentsForInvoice,
   releaseOrphanedContractAdjustments,
@@ -2301,6 +2302,8 @@ interface BuiltPreviewInvoice {
    * scheduled sources, which generation treats as a reviewed (empty) set.
    */
   expectedRecurringPricingSources: IExpectedRecurringPricingSource[];
+  /** Set when the billed client/profile has no address to email the invoice to. */
+  billingEmailWarning?: InvoiceBillingEmailWarning;
 }
 
 async function buildPreviewInvoiceForSelectionInputs(params: {
@@ -2333,22 +2336,22 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     .select('client_name')
     .first();
 
+  // Advisory: the preview still renders without an address, the dialog just
+  // warns that the invoice cannot be emailed or paid online until one is set.
+  let billingEmailWarning: InvoiceBillingEmailWarning | undefined;
   if (clientForValidation) {
     const emailValidation = await validateClientBillingEmail(
       knex,
       tenant,
       client_id,
       clientForValidation.client_name,
+      selectedProfileId,
     );
     if (!emailValidation.valid) {
-      throw withRecurringWindowErrorContext(
-        new ManualInvoiceError(
-          emailValidation.code ?? 'NO_BILLING_EMAIL',
-          emailValidation.error ?? 'Client billing email is required',
-          emailValidation.params ?? { clientName: clientForValidation.client_name },
-        ),
-        canonicalSelection,
-      );
+      billingEmailWarning = {
+        code: 'NO_BILLING_EMAIL',
+        params: { clientName: clientForValidation.client_name },
+      };
     }
   }
 
@@ -2612,14 +2615,30 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
   }
 
   const previewTax = await calculatePreviewTax(
-    billingResult.charges,
+    previewCharges,
     client_id,
     cycleEnd,
     client?.tax_region || '',
   );
 
+  const adjustments = await previewAutomaticInvoiceDiscounts(
+    knex, tenant, client_id, previewCharges, previewInvoiceDate,
+  );
+
   const viewModel = await adaptToWasmViewModel(
-    billingResult,
+    {
+      ...billingResult,
+      charges: previewCharges,
+      totalAmount: previewCharges.reduce((sum, charge) => sum + charge.total, 0),
+      discounts: adjustments.discounts.map((discount) => ({
+        tenant,
+        discount_id: discount.discount_id,
+        discount_name: discount.discount_name,
+        discount_type: discount.discount_type,
+        value: discount.value,
+        amount: discount.amount,
+      })),
+    },
     client,
     invoiceItems,
     due_date,
@@ -2641,6 +2660,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       : {}),
     ...(expectedUsagePeriodTotals.length > 0 ? { expectedUsagePeriodTotals } : {}),
     expectedRecurringPricingSources,
+    ...(billingEmailWarning ? { billingEmailWarning } : {}),
   };
 }
 
@@ -2813,6 +2833,8 @@ export type RecurringGroupedPreviewResponse = {
      * pass back through generation as expectedUsagePeriodTotals.
      */
     expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+    /** Set when the billed client/profile has no address to email the invoice to. */
+    billingEmailWarning?: InvoiceBillingEmailWarning;
     /**
      * Reviewed recurring revision/catalog sources for scheduled charges, to
      * pass back through generation as expectedRecurringPricingSources. Always
@@ -2884,6 +2906,7 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
             ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
             : {}),
           expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
+          ...(preview.billingEmailWarning ? { billingEmailWarning: preview.billingEmailWarning } : {}),
         };
       }),
     );
@@ -2960,6 +2983,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
         ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
         : {}),
       expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
+      ...(preview.billingEmailWarning ? { billingEmailWarning: preview.billingEmailWarning } : {}),
     };
   } catch (error) {
     logPreviewInvoiceFailure(
@@ -3050,6 +3074,7 @@ export const previewInvoice = withAuth(async (
         ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
         : {}),
       expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
+      ...(preview.billingEmailWarning ? { billingEmailWarning: preview.billingEmailWarning } : {}),
     };
   } catch (error) {
     logPreviewInvoiceFailure(
@@ -3438,23 +3463,6 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
   const cycleStart = normalizedSelectorInput.windowStart;
   const cycleEnd = normalizedSelectorInput.windowEnd;
 
-  const clientForValidation = await tenantDb(knex, tenant).table('clients')
-    .where({ client_id })
-    .select('client_name')
-    .first();
-  if (clientForValidation) {
-    const emailValidation = await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
-    if (!emailValidation.valid) {
-      throw withRecurringWindowErrorContext(
-        new ManualInvoiceError(
-          emailValidation.code ?? 'NO_BILLING_EMAIL',
-          emailValidation.error ?? 'Client billing email is required',
-          emailValidation.params ?? { clientName: clientForValidation.client_name },
-        ),
-        normalizedSelectorInput,
-      );
-    }
-  }
 
   for (const selectorInput of params.normalizedSelectorInputs) {
     const existingInvoice = await findExistingRecurringInvoiceForSelectionInput({
@@ -4191,17 +4199,16 @@ export async function createInvoiceFromBillingResultImpl(
       }
     }
 
-    // Reconcile automatic discounts against the actual persisted (and
-    // reconciled) charge rows through the shared evaluator, with provenance, so
-    // a cancelled/edited true-up cannot leave a stale discount amount behind.
-    const discountMagnitude = await reconcileAutomaticInvoiceAdjustments({
-      trx,
-      tenant,
-      invoiceId: newInvoice!.invoice_id,
-    });
+    // One shared evaluator owns configured automatic discounts. It reads the
+    // persisted rows, so generation, preview and draft refresh all apply the
+    // same scopes, invoice-period eligibility and rounding. Discounts return a
+    // positive magnitude.
+    const { automaticDiscountAmount } =
+      await reconcileAutomaticInvoiceAdjustments(trx, tenant, newInvoice!.invoice_id);
 
-    // Use the subtotal from persisted charges minus the reconciled discounts.
-    const subtotal = calculatedSubtotal - discountMagnitude;
+    // Use the subtotal returned by persistInvoiceCharges minus the shared
+    // automatic discount settlement.
+    const subtotal = calculatedSubtotal - automaticDiscountAmount;
 
     // Leverage the shared tax helper so automated invoices mirror manual invoices
     const calculatedTax = await calculateAndDistributeTax(

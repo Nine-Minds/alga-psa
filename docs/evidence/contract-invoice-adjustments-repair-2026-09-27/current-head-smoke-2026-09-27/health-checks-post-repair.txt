@@ -1,0 +1,14 @@
+Supervised service port 3185, current worktree, saved Turbopack command.
+Ten consecutive requests during the smoke session; all HTTP 200:
+200 0.009170s
+200 0.009961s
+200 0.007883s
+200 0.007630s
+200 0.013732s
+200 0.006985s
+200 0.006995s
+200 0.009272s
+200 0.007767s
+200 0.006852s
+Final observed next-server RSS: 546772 KiB, uptime 03:34:55.
+After smoke, restoring the template service permission caused the supervisor to stop the service; port 3185 then refused connections. This is expected after the supervised session ended.

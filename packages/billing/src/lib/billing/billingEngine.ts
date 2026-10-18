@@ -91,7 +91,7 @@ import {
 // Import necessary functions from invoiceService
 import {
   calculateAndDistributeTax,
-  updateInvoiceTotalsAndRecordTransaction,
+  reconcileInvoiceAdjustmentTransaction,
   getClientDetails,
 } from "../../services/invoiceService";
 import { v4 as uuidv4 } from "uuid";
@@ -153,6 +153,7 @@ import {
 } from "../../models/projectBillingModelUtils";
 import { isProjectMaterialEligible } from "@alga-psa/inventory/lib";
 import { joinEffectiveServicePrice } from "./pricing/joinEffectiveServicePrice";
+import { resolveContractLineBillingWindow } from "./contractLineWindow";
 import {
   contractAdjustmentDateOnly,
   reconcileContractChangeAdjustmentsForInvoice,
@@ -160,6 +161,7 @@ import {
   resolveContractChangeChargesForWindow,
   type ContractChangeLedgerRow,
 } from "./reconcileContractChangeAdjustments";
+import { describeContractChange } from "./contractChangeDescription";
 import { reconcileAutomaticInvoiceAdjustments } from "./reconcileAutomaticInvoiceDiscounts";
 // Workflow imports removed as event emission is moved back to the calling action
 
@@ -3279,6 +3281,9 @@ export class BillingEngine {
         // The line's own flag (the scope guarantees the assignment is active
         // too), so the `line.is_active` checks downstream test the line.
         "cl.is_active",
+        // Authored line bounds narrow the assignment window; resolved below.
+        "cl.start_date as line_start_date",
+        "cl.end_date as line_end_date",
         "cc.client_contract_id",
         "cc.template_contract_id",
         "c.contract_id",
@@ -3305,12 +3310,23 @@ export class BillingEngine {
       JSON.stringify(clientContractLines, null, 2),
     );
 
-    // Convert dates from the DB into plain ISO strings and normalize values
+    // Convert dates from the DB into plain ISO strings and normalize values.
+    // `start_date`/`end_date` stay the contract assignment window (the cadence
+    // anchor is the assignment start, matching the service-period materializer);
+    // the authored line bounds are carried separately as a coverage window. The
+    // assignment end is an inclusive last day, the line end is half-open, so the
+    // intersection is computed in exclusive space.
     clientContractLines.forEach((plan: any) => {
-      plan.start_date = toISODate(toPlainDate(plan.start_date));
-      plan.end_date = plan.end_date
-        ? toISODate(toPlainDate(plan.end_date))
-        : null;
+      const billingWindow = resolveContractLineBillingWindow(
+        { start_date: plan.start_date, end_date: plan.end_date },
+        { start_date: plan.line_start_date, end_date: plan.line_end_date },
+      );
+      plan.start_date = billingWindow.anchorStart;
+      plan.end_date = billingWindow.inclusiveEnd;
+      plan.coverage_start_date = billingWindow.coverageStart;
+      plan.coverage_end_date = billingWindow.coverageEndExclusive;
+      delete plan.line_start_date;
+      delete plan.line_end_date;
 
       // Normalize billing_timing. Hourly/Usage lines always bill in arrears, so a
       // stale stored 'advance' can never reach the timing selection or the
@@ -4955,13 +4971,26 @@ export class BillingEngine {
       chargeFamily: "fixed" as const,
       ...(this.tenant ? { tenant: this.tenant } : {}),
     };
+    // Coverage window: the effective (assignment ∩ authored line) window. The
+    // start is the later of the two and the end is already half-open
+    // (`coverage_end_date`), so an authored line end is never extended by a day.
+    // Callers that do not populate the coverage fields (legacy direct callers)
+    // fall back to the assignment window, preserving prior behavior.
+    const coverageLine = clientContractLine as IClientContractLine & {
+      coverage_start_date?: string | null;
+      coverage_end_date?: string | null;
+    };
     const activityWindow = {
-      start: clientContractLine.start_date
-        ? toISODate(toPlainDate(clientContractLine.start_date))
-        : undefined,
-      end: clientContractLine.end_date
-        ? toISODate(toPlainDate(clientContractLine.end_date).add({ days: 1 }))
-        : undefined,
+      start: coverageLine.coverage_start_date
+        ? toISODate(toPlainDate(coverageLine.coverage_start_date))
+        : clientContractLine.start_date
+          ? toISODate(toPlainDate(clientContractLine.start_date))
+          : undefined,
+      end: coverageLine.coverage_end_date
+        ? toISODate(toPlainDate(coverageLine.coverage_end_date))
+        : clientContractLine.end_date
+          ? toISODate(toPlainDate(clientContractLine.end_date).add({ days: 1 }))
+          : undefined,
       semantics: RECURRING_RANGE_SEMANTICS,
     };
 
@@ -6979,7 +7008,16 @@ export class BillingEngine {
         billing_profile_source: profile?.source,
         config_id: String(row.config_id),
         client_contract_line_id: contractLineId,
-        serviceName: `Mid-period quantity change: ${service?.service_name ?? "recurring item"}`,
+        serviceName: describeContractChange(service?.service_name ?? "recurring item", {
+          adjustment_period_start: row.adjustment_period_start,
+          adjustment_period_end: row.adjustment_period_end,
+          mid_period_effective_date: row.mid_period_effective_date,
+          quantity_delta: row.quantity_delta,
+          unit_rate_cents: row.unit_rate_cents,
+          covered_days: row.covered_days,
+          full_period_days: row.full_period_days,
+          amount_cents: row.amount_cents,
+        }, billingCurrency),
         quantity: Math.abs(Number(row.quantity_delta)),
         rate: Number(row.unit_rate_cents),
         total,
@@ -7438,54 +7476,51 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const connection = existingTransaction ?? this.knex;
-    const db = tenantDb(connection, tenant);
-
-    console.log(`Recalculating invoice ${invoiceId}`);
-
-    const invoice = await db
-      .table("invoices")
-      .where({
-        invoice_id: invoiceId,
-        tenant,
-      })
-      .first();
-
-    if (!invoice) {
-      throw new Error(`Invoice ${invoiceId} not found in tenant ${tenant}`);
-    }
-
-    const client = await db
-      .table("clients")
-      .where({
-        client_id: invoice.client_id,
-        tenant,
-      })
-      .first();
-
-    if (!client) {
-      throw new Error(
-        `Client ${invoice.client_id} not found in tenant ${tenant}`,
-      );
-    }
-
-    // Removed direct use of TaxService here.
-    // Removed subtotal and totalTax accumulation logic.
-
-    console.log("Starting invoice recalculation:", {
-      invoiceId,
-      client: {
-        id: client.client_id,
-        name: client.client_name,
-        isTaxExempt: client.is_tax_exempt,
-        // region_code is still on client table for default fallback, but not primary source for service tax
-      },
-    });
-
-    // Recalculation is intentionally financial-only. Canonical recurring
-    // invoice_charge_details rows remain the persisted source of service-period
-    // truth after invoice creation; this path should only update tax and totals.
     const recalculate = async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
+      console.log(`Recalculating invoice ${invoiceId}`);
+
+      const invoice = await db
+        .table("invoices")
+        .where({
+          invoice_id: invoiceId,
+          tenant,
+        })
+        .forUpdate()
+        .first();
+
+      if (!invoice) {
+        throw new Error(`Invoice ${invoiceId} not found in tenant ${tenant}`);
+      }
+
+      const client = await db
+        .table("clients")
+        .where({
+          client_id: invoice.client_id,
+          tenant,
+        })
+        .first();
+
+      if (!client) {
+        throw new Error(
+          `Client ${invoice.client_id} not found in tenant ${tenant}`,
+        );
+      }
+
+      // Removed direct use of TaxService here.
+      // Removed subtotal and totalTax accumulation logic.
+
+      console.log("Starting invoice recalculation:", {
+        invoiceId,
+        client: {
+          id: client.client_id,
+          name: client.client_name,
+          isTaxExempt: client.is_tax_exempt,
+          // region_code is still on client table for default fallback, but not primary source for service tax
+        },
+      });
+
       // Draft reconciliation: converge any pending/edited/cancelled mid-period
       // true-up onto this editable draft, then re-derive automatic discounts
       // from the reconciled rows through the shared evaluator, before tax.
@@ -7508,32 +7543,30 @@ export class BillingEngine {
         `[recalculateInvoice] Finished calculateAndDistributeTax for invoice ${invoiceId}`,
       );
 
-      // Step 2: Update invoice totals and record the transaction using the service function
-      console.log(
-        `[recalculateInvoice] Calling updateInvoiceTotalsAndRecordTransaction for invoice ${invoiceId}`,
+      // Canonical detail periods remain untouched. Reconcile the principal
+      // already posted at generation, rather than posting the full total again.
+      const finalItems = await tenantDb(trx, tenant)
+        .table("invoice_charges")
+        .where({ invoice_id: invoiceId })
+        .select("net_amount", "tax_amount");
+      const subtotal = finalItems.reduce(
+        (sum: number, item: { net_amount: unknown }) => sum + Number(item.net_amount ?? 0),
+        0,
       );
-      await updateInvoiceTotalsAndRecordTransaction(
-        trx,
-        invoiceId,
-        client, // Pass client object
-        tenant, // Pass tenant
-        invoice.invoice_number, // Pass invoice number
-        undefined,
-        {
-          transactionType: "invoice_adjustment",
-          description: `Adjusted invoice ${invoice.invoice_number}`,
-        },
+      const tax = finalItems.reduce(
+        (sum: number, item: { tax_amount: unknown }) => sum + Number(item.tax_amount ?? 0),
+        0,
       );
-      console.log(
-        `[recalculateInvoice] Finished updateInvoiceTotalsAndRecordTransaction for invoice ${invoiceId}`,
-      );
+      await tenantDb(trx, tenant)
+        .table("invoices")
+        .where({ invoice_id: invoiceId })
+        .update({
+          subtotal: Math.round(subtotal),
+          tax: Math.round(tax),
+          total_amount: Math.round(subtotal + tax),
+        });
 
-      // Note: The original logic for processing discount items and updating their net_amount
-      // based on percentages is removed. It's assumed that calculateAndDistributeTax
-      // handles the correct net amounts and tax distribution, including discounts.
-      // If discount amounts need recalculation based on the new subtotal *before* tax distribution,
-      // that logic would need to be added back here or integrated into calculateAndDistributeTax.
-      // For now, we follow the instruction to delegate fully.
+      await reconcileInvoiceAdjustmentTransaction(trx, tenant, invoice, Math.round(subtotal + tax));
     };
 
     if (existingTransaction) {

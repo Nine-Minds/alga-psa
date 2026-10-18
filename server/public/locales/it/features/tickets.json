@@ -52,7 +52,6 @@
     "button": "Filtri",
     "unassigned": "Non assegnato",
     "category": "Filtra per categoria",
-    "clearFilters": "Pulisci filtri",
     "assignee": "Assegnatario",
     "allAssignees": "Tutti gli assegnatari",
     "responseState": "Stato risposta",
@@ -214,7 +213,10 @@
     "printOptions": "Opzioni di stampa",
     "duplicate": "Duplica",
     "rowActions": "Azioni",
-    "openMenu": "Apri menu"
+    "openMenu": "Apri menu",
+    "moreActions": "Altre azioni",
+    "createTemplate": "Crea modello dal ticket",
+    "createWorkflowFromTicket": "Crea workflow dal ticket"
   },
   "messages": {
     "noTickets": "Nessun ticket trovato",
@@ -313,7 +315,8 @@
     "errorWithMessage": "Errore: {{message}}",
     "billingProfileUpdated": "Profilo di fatturazione aggiornato",
     "updateBillingProfileFailed": "Impossibile aggiornare il profilo di fatturazione",
-    "scheduleOpenFailed": "Impossibile aprire il pianificatore"
+    "scheduleOpenFailed": "Impossibile aprire il pianificatore",
+    "sharedWorkspaceReadOnly": "Vedi questo ticket perché riguarda un dispositivo di una postazione condivisa. Solo chi lo ha aperto può aggiungere contenuti."
   },
   "conversation": {
     "comments": "Commenti",
@@ -841,7 +844,16 @@
     "duplicateChecklistHeading": "Checklist di #{{number}}",
     "duplicateChecklistRequired": "(obbligatorio)",
     "duplicateCopyChecklist": "Copia gli elementi della checklist (non selezionati)",
-    "duplicateCustomFieldsNote": "I valori dei campi personalizzati vengono copiati da #{{number}}."
+    "duplicateCustomFieldsNote": "I valori dei campi personalizzati vengono copiati da #{{number}}.",
+    "templateLabel": "Modello",
+    "templateNone": "Nessuno",
+    "templateLoadFailed": "Impossibile caricare il modello. Riprova.",
+    "fromTemplatePill": "Da modello: {{name}}",
+    "templateChecklistHeading": "Checklist dal modello: {{name}}",
+    "templateCustomFieldsNote": "I valori dei campi personalizzati vengono copiati dal modello.",
+    "templateReplaceTitle": "Sostituire le modifiche?",
+    "templateReplaceMessage": "Applicando un modello vengono sostituiti titolo, descrizione e gli altri campi inseriti.",
+    "templateReplaceConfirm": "Applica modello"
   },
   "itil": {
     "calculatedPriority": "Priorità (calcolata)",
@@ -1585,7 +1597,8 @@
     },
     "autoClose": "Verrà chiuso automaticamente il {{date}} salvo nuove attività.",
     "autoCloseWarned": "Il cliente è stato avvisato.",
-    "duplicatedFrom": "Duplicato da #{{number}}"
+    "duplicatedFrom": "Duplicato da #{{number}}",
+    "fromTemplate": "Da modello: {{name}}"
   },
   "invalidTicketData": "Dati del ticket non validi",
   "timeEntries": {
@@ -1788,6 +1801,7 @@
       "setClientToAddContact": "Imposta prima un cliente per aggiungere un contatto",
       "logInteraction": "Registra chiamata o email",
       "changeClient": "Cambia cliente",
+      "changeLocation": "Cambia sede",
       "teamFallback": "Team",
       "teamSectionLabel": "Assegna un team",
       "addAgentsOrTeam": "Aggiungi agenti o un team…",
@@ -1896,7 +1910,8 @@
       "noStatusChange": "Non modificare lo stato",
       "showAllActivity": "Mostra tutta l'attività",
       "collapseActivity": "Comprimi attività precedente",
-      "replyingToComment": "Rispondendo a {{name}}"
+      "replyingToComment": "Rispondendo a {{name}}",
+      "createdFromTemplate": "{{actor}} ha creato questo ticket dal modello \"{{name}}\""
     }
   },
   "notifications": {
@@ -2311,5 +2326,85 @@
     "pausedHint": "In pausa. Riprendi per continuare a tracciare, oppure ferma per registrare il tempo.",
     "workDescription": "Descrizione del lavoro",
     "whatAreYouWorkingOn": "Su cosa stai lavorando?"
+  },
+  "templates": {
+    "loading": "Caricamento…",
+    "list": {
+      "title": "Modelli di ticket",
+      "new": "Nuovo modello",
+      "empty": "Nessun modello di ticket. Apri un ticket e scegli \"Crea modello dal ticket\", oppure creane uno da zero.",
+      "showInactive": "Mostra inattivi",
+      "deleted": "Modello eliminato",
+      "deleteTitle": "Elimina modello",
+      "deleteMessage": "Eliminare \"{{name}}\"? I ticket già creati da questo modello non vengono modificati.",
+      "columns": {
+        "name": "Nome",
+        "title": "Titolo del ticket",
+        "board": "Bacheca",
+        "checklist": "Voci della checklist",
+        "status": "Stato"
+      }
+    },
+    "status": {
+      "active": "Attivo",
+      "inactive": "Inattivo"
+    },
+    "actions": {
+      "edit": "Modifica",
+      "newTicket": "Nuovo ticket da modello",
+      "activate": "Attiva",
+      "deactivate": "Disattiva",
+      "delete": "Elimina",
+      "cancel": "Annulla"
+    },
+    "sections": {
+      "details": "Modello",
+      "ticket": "Ticket",
+      "checklist": "Lista di controllo",
+      "customFields": "Campi personalizzati"
+    },
+    "fields": {
+      "name": "Nome del modello",
+      "notes": "Note",
+      "notesHelp": "Solo per il tuo team. Non vengono copiate nei ticket.",
+      "title": "Titolo del ticket",
+      "description": "Descrizione",
+      "descriptionPlaceholder": "Descrizione"
+    },
+    "checklist": {
+      "empty": "Nessuna voce di checklist.",
+      "itemName": "Voce della checklist",
+      "required": "Obbligatorio",
+      "moveUp": "Sposta su",
+      "moveDown": "Sposta giù",
+      "remove": "Rimuovi voce",
+      "add": "Aggiungi voce"
+    },
+    "customFields": {
+      "empty": "Nessun valore di campo personalizzato.",
+      "name": "Nome del campo",
+      "value": "Valore",
+      "remove": "Rimuovi campo",
+      "add": "Aggiungi campo"
+    },
+    "editor": {
+      "back": "Modelli di ticket",
+      "newTitle": "Nuovo modello di ticket",
+      "created": "Modello creato",
+      "saved": "Modello salvato",
+      "saving": "Salvataggio…",
+      "save": "Salva",
+      "fromTicket": "Precompilato dal ticket #{{number}}. Non viene salvato nulla finché non fai clic su Salva.",
+      "inlineImages": "La descrizione contiene immagini che appartengono al ticket di origine. Potrebbero non essere più visualizzate se quel ticket viene eliminato. Rimuovile o ricaricale se il modello deve sopravvivere al ticket.",
+      "viewOnly": "Puoi visualizzare questo modello ma non modificarlo.",
+      "referenceProblems": "Alcuni campi di questo modello puntano a elementi che non esistono più. Restano vuoti quando il modello viene usato. Correggili e salva:"
+    },
+    "errors": {
+      "notFound": "Modello di ticket non trovato",
+      "duplicateName": "Esiste già un modello chiamato {{name}}",
+      "invalidReferences": "Il modello fa riferimento a una bacheca, una categoria o una priorità non disponibile",
+      "notAvailable": "I modelli di ticket non sono disponibili",
+      "subcategoryNeedsCategory": "Una sottocategoria richiede una categoria"
+    }
   }
 }

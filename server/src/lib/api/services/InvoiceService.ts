@@ -41,8 +41,11 @@ import {
 } from '@alga-psa/billing/actions/invoiceGeneration.constants';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
-import { clearPrepaidReplenishmentForInvoice } from '@alga-psa/billing/lib/prepaidAutoReplenishment';
-import { settlePrepaidReplenishmentInvoice } from '@alga-psa/billing/actions/invoiceModification';
+import {
+  settlePrepaidReplenishmentInvoice,
+  deleteInvoiceWithKnex,
+} from '@alga-psa/billing/actions/invoiceModification';
+import { ExpectedInvoiceActionError, InvoiceNotDraftError, InvoiceHasPaymentsError } from '@alga-psa/billing/lib/invoiceDeletionErrors';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
@@ -276,6 +279,27 @@ export class InvoiceService extends BaseService<IInvoice> {
     this.taxService = new TaxService();
     this.billingEngine = new BillingEngine();
     this.storageService = new StorageService();
+  }
+
+  /**
+   * Range keys the invoice list accepts: the common created_ and updated_ keys
+   * plus the invoice due/finalized date windows. Any other `_from`/`_to` key is
+   * rejected by `applyRangeFilters` rather than silently dropped.
+   */
+  protected rangeFilterColumns(): Record<string, string> {
+    return {
+      ...super.rangeFilterColumns(),
+      created_from: 'invoices.created_at',
+      created_to: 'invoices.created_at',
+      updated_from: 'invoices.updated_at',
+      updated_to: 'invoices.updated_at',
+      invoice_date_from: 'invoices.invoice_date',
+      invoice_date_to: 'invoices.invoice_date',
+      due_date_from: 'invoices.due_date',
+      due_date_to: 'invoices.due_date',
+      finalized_date_from: 'invoices.finalized_at',
+      finalized_date_to: 'invoices.finalized_at',
+    };
   }
 
   // Helper to get PDF service for specific tenant
@@ -634,12 +658,33 @@ export class InvoiceService extends BaseService<IInvoice> {
         throw new ConflictError('Cannot modify paid invoice status');
       }
 
-      // Prepare update data
-      const updateData: any = {
-        ...data,
-        updated_by: context.userId,
-        updated_at: new Date()
-      };
+      // Item replacement rewrites invoice_charges, so it is only valid for drafts
+      // that are not tied to recurring service periods. Check before any write.
+      if (data.items) {
+        if (existing.finalized_at) {
+          throw new ConflictError('Items can only be replaced on draft invoices');
+        }
+        const hasRecurringLinkage = await tenantDb(trx, context.tenant).table('recurring_service_periods')
+          .where({ invoice_id: id })
+          .first('record_id');
+        const chargeIds = await tenantDb(trx, context.tenant).table('invoice_charges')
+          .where({ invoice_id: id })
+          .pluck('item_id');
+        const hasRecurringDetails = chargeIds.length > 0
+          ? await tenantDb(trx, context.tenant).table('invoice_charge_details')
+            .whereIn('item_id', chargeIds)
+            .first('item_detail_id')
+          : undefined;
+        if (hasRecurringLinkage || hasRecurringDetails) {
+          throw new ConflictError(
+            'Items of recurring invoices cannot be replaced; delete the draft and regenerate it instead'
+          );
+        }
+      }
+
+      // Prepare update data. `items` is not an invoices column; it is handled below.
+      const { items: _items, ...headerData } = data;
+      const updateData: any = await this.addUpdateAuditFields(trx, headerData, context, 'invoices');
 
       // Remove undefined values
       Object.keys(updateData).forEach(key => {
@@ -655,11 +700,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       // Update line items if provided
       if (data.items) {
-        const replacedItemIds = await tenantDb(trx, context.tenant).table('invoice_line_items')
+        const replacedItemIds = await tenantDb(trx, context.tenant).table('invoice_charges')
           .where({ invoice_id: id })
           .pluck('item_id');
 
-        await tenantDb(trx, context.tenant).table('invoice_line_items')
+        await tenantDb(trx, context.tenant).table('invoice_charges')
           .where({ invoice_id: id })
           .del();
 
@@ -830,109 +875,57 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   /**
-   * Delete an invoice (soft delete if has payments)
+   * Delete a draft invoice. Delegates to the same engine as the UI's
+   * hardDeleteInvoice so both surfaces share one delete behaviour (releases
+   * recurring periods, time/usage links, credits, etc.). Finalized invoices are
+   * refused with a 409; they must be voided, never deleted or soft-cancelled.
    */
   async delete(id: string, context: ServiceContext): Promise<void> {
     await this.validatePermissions(context, 'invoice', 'delete');
 
     const { knex } = await this.getKnex();
-    const deferredEvents: DeferredEvent[] = [];
-    
-    await withTransaction(knex, async (trx) => {
-      const invoice = await tenantDb(trx, context.tenant).table('invoices')
-        .where({ invoice_id: id })
-        .first();
 
-      if (!invoice) {
-        throw new NotFoundError('Invoice not found');
-      }
+    // Read before the engine removes the charges the provenance is derived from.
+    const recurringProvenance = await withTransaction(knex, (trx) =>
+      this.getInvoiceRecurringProvenance(trx, context.tenant, id)
+    );
 
-      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, id);
-      const hasCanonicalRecurringDetailPeriods =
-        recurringProvenance?.authoritativePeriodSource === 'canonical_detail_rows' &&
-        (recurringProvenance.detailPeriodCount ?? 0) > 0;
-
-      // Check if invoice has payments
-      const hasPayments = await tenantDb(trx, context.tenant).table('invoice_payments')
-        .where({ invoice_id: id })
-        .first();
-
-      const occurredAt = new Date().toISOString();
-      const softCancelled = Boolean(
-        hasPayments ||
-        invoice.status === 'paid' ||
-        hasCanonicalRecurringDetailPeriods
-      );
-
-      await clearPrepaidReplenishmentForInvoice(trx, context.tenant, id);
-
-      if (softCancelled) {
-        // Soft delete - mark as cancelled
-        await tenantDb(trx, context.tenant).table('invoices')
-          .where({ invoice_id: id })
-          .update({
-            status: 'cancelled',
-            updated_by: context.userId,
-            updated_at: new Date()
+    let result: { deleted: boolean };
+    try {
+      result = await deleteInvoiceWithKnex(knex, context.tenant, id, context.userId, {
+        requireDraft: true,
+        // Audit row commits atomically with the delete.
+        onBeforeCommit: async (trx) => {
+          // auditLog silently skips when the tenant GUC is unset; scope it to this trx.
+          await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', context.tenant]);
+          await auditLog(trx, {
+            userId: context.userId,
+            operation: 'DELETE',
+            tableName: 'invoices',
+            recordId: id,
+            changedData: {},
+            details: {
+              action: 'invoice.deleted',
+              ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
+            },
           });
-      } else {
-        // Hard delete if no payments
-        await tenantDb(trx, context.tenant).table('invoice_line_items')
-          .where({ invoice_id: id })
-          .del();
-        
-        await tenantDb(trx, context.tenant).table('invoices')
-          .where({ invoice_id: id })
-          .del();
+        },
+      });
+    } catch (error) {
+      if (error instanceof InvoiceNotDraftError || error instanceof InvoiceHasPaymentsError) {
+        throw new ConflictError(error.message);
       }
+      if (error instanceof ExpectedInvoiceActionError) {
+        throw new ConflictError(error.message);
+      }
+      throw error;
+    }
 
-      // Audit log
-	      await auditLog(trx, {
-	        userId: context.userId,
-	        operation: 'DELETE',
-	        tableName: 'invoices',
-	        recordId: id,
-	        changedData: {},
-	        details: {
-            action: 'invoice.deleted',
-            ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
-          }
-	      });
+    if (!result.deleted) {
+      throw new NotFoundError('Invoice not found');
+    }
 
-	      if (softCancelled && String(invoice.status) !== 'cancelled') {
-	        deferredEvents.push(() => publishWorkflowEvent({
-	          eventType: 'INVOICE_STATUS_CHANGED',
-	          payload: buildInvoiceStatusChangedPayload({
-	            invoiceId: id,
-	            previousStatus: String(invoice.status),
-	            newStatus: 'cancelled',
-	            changedAt: occurredAt,
-              recurringProvenance,
-	          }),
-	          ctx: {
-	            tenantId: context.tenant,
-	            occurredAt,
-	            actor: { actorType: 'USER', actorUserId: context.userId },
-	          },
-	        }));
-	      }
-
-	      // Publish event
-	      deferredEvents.push(() => publishEvent({
-	        eventType: 'INVOICE_DELETED',
-	        payload: {
-	          tenantId: context.tenant,
-	          invoiceId: id,
-	          userId: context.userId,
-	          timestamp: occurredAt
-	        }
-	      }));
-    });
-
-    await publishDeferredEvents(deferredEvents);
-    // Deletion may hard-delete an unissued invoice or mark an invoice with
-    // payment history cancelled. In either case, stop any pending auto-pay
-    // workflow after the transaction has committed.
+    // A draft has no auto-pay workflow; kept so any pending one is stopped.
     await notifyInvoiceTerminalStatus({ knex, tenantId: context.tenant, invoiceId: id, newStatus: 'cancelled' });
   }
 
@@ -963,11 +956,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Validate invoice has required data
-      const hasInvoiceChargesTable = await trx.schema.hasTable('invoice_charges');
-      const lineItems = hasInvoiceChargesTable
-        ? await InvoiceModel.getInvoiceCharges(trx, context.tenant, data.invoice_id)
-        : await tenantDb(trx, context.tenant).table('invoice_line_items')
-          .where({ invoice_id: data.invoice_id });
+      const lineItems = await InvoiceModel.getInvoiceCharges(trx, context.tenant, data.invoice_id);
 
       if (!lineItems.length) {
         throw new ConflictError('Invoice must have line items to be finalized');
@@ -978,18 +967,13 @@ export class InvoiceService extends BaseService<IInvoice> {
       const taxAmount = lineItems.reduce((sum: number, item: any) => sum + Number(item.tax_amount || 0), 0);
       const totalAmount = subtotal + taxAmount;
 
-      const invoiceUpdate: Record<string, any> = {
+      const invoiceUpdate = await this.addUpdateAuditFields(trx, {
         status: 'sent', // Change to sent instead of finalized
         subtotal,
         tax: taxAmount,
         total_amount: totalAmount,
         finalized_at: data.finalized_at || new Date().toISOString().split('T')[0],
-        updated_at: new Date()
-      };
-
-      if (await trx.schema.hasColumn('invoices', 'updated_by')) {
-        invoiceUpdate.updated_by = context.userId;
-      }
+      }, context, 'invoices');
 
       // Update invoice status and amounts
       await tenantDb(trx, context.tenant).table('invoices')
@@ -1084,11 +1068,11 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Update invoice status
       await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
-        .update({
+        .update(await this.filterAuditFields(trx, {
           status: 'sent',
           updated_by: context.userId,
           updated_at: new Date()
-        });
+        }, 'invoices'));
 
       // Send email notifications if specified
       if (data.email_addresses?.length) {
@@ -1267,11 +1251,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
-        .update({
+        .update(await this.filterAuditFields(trx, {
           status: newStatus,
           updated_by: context.userId,
           updated_at: new Date()
-        });
+        }, 'invoices'));
 
       if (newStatus === 'paid') {
         await settlePrepaidReplenishmentInvoice(trx, context.tenant, data.invoice_id);
@@ -1435,11 +1419,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 
         await tenantDb(trx, context.tenant).table('invoices')
           .where({ invoice_id: data.invoice_id })
-          .update({
+          .update(await this.filterAuditFields(trx, {
             status: newStatus,
             updated_by: context.userId,
             updated_at: new Date()
-          });
+          }, 'invoices'));
 
         if (newStatus === 'paid') {
           await settlePrepaidReplenishmentInvoice(trx, context.tenant, data.invoice_id);
@@ -1615,11 +1599,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
-        .update({
+        .update(await this.filterAuditFields(trx, {
           status: newStatus,
           updated_by: context.userId,
           updated_at: new Date()
-        });
+        }, 'invoices'));
 
         const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
 
@@ -1715,12 +1699,12 @@ export class InvoiceService extends BaseService<IInvoice> {
 
           await tenantDb(trx, context.tenant).table('invoices')
             .where({ invoice_id: invoiceId })
-            .update({
+            .update(await this.filterAuditFields(trx, {
               status: data.status,
               finalized_at: data.finalized_at,
               updated_by: context.userId,
               updated_at: new Date()
-            });
+            }, 'invoices'));
 
           results.updated_count++;
           const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, invoiceId);
@@ -1879,8 +1863,12 @@ export class InvoiceService extends BaseService<IInvoice> {
       try {
         await this.delete(invoiceId, context);
         results.deleted_count++;
-      } catch {
-        results.errors.push(`Error deleting invoice ${invoiceId}: delete failed.`);
+      } catch (err) {
+        if (err instanceof ConflictError || err instanceof NotFoundError) {
+          results.errors.push(`${invoiceId}: ${err.message}`);
+        } else {
+          results.errors.push(`Error deleting invoice ${invoiceId}: delete failed.`);
+        }
       }
     }
 
@@ -2234,8 +2222,13 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private applyInvoiceFilters(query: Knex.QueryBuilder, filters: InvoiceFilter): Knex.QueryBuilder {
+    // Common created_*/updated_* plus invoice/due/finalized windows. Unsupported
+    // range keys throw rather than returning unfiltered invoices.
+    this.applyRangeFilters(query, filters);
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
+      if (key.endsWith('_from') || key.endsWith('_to')) return;
 
       switch (key) {
         case 'status':
@@ -2254,18 +2247,6 @@ export class InvoiceService extends BaseService<IInvoice> {
           break;
         case 'invoice_number':
           query.whereILike('invoices.invoice_number', `%${value}%`);
-          break;
-        case 'invoice_date_from':
-          query.where('invoices.invoice_date', '>=', value);
-          break;
-        case 'invoice_date_to':
-          query.where('invoices.invoice_date', '<=', value);
-          break;
-        case 'due_date_from':
-          query.where('invoices.due_date', '>=', value);
-          break;
-        case 'due_date_to':
-          query.where('invoices.due_date', '<=', value);
           break;
         case 'min_amount':
           query.where('invoices.total_amount', '>=', value);

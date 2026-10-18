@@ -423,7 +423,8 @@
       "placeholders": {
         "teamName": "Teamname eingeben",
         "selectTeamLead": "Teamleiter auswählen",
-        "selectUserToAdd": "Benutzer zum Hinzufügen auswählen"
+        "selectUserToAdd": "Benutzer zum Hinzufügen auswählen",
+        "noTeamLead": "Nicht zugewiesen"
       },
       "alert": {
         "unsavedChanges": "Sie haben ungespeicherte Änderungen"
@@ -1960,6 +1961,8 @@
   "timeEntry": {
     "title": "Zeiterfassungseinstellungen",
     "description": "Verwalten Sie Ihre Zeiterfassungseinstellungen und Zeiträume",
+    "accessDenied": "Zugriff verweigert: Sie haben keine Berechtigung, Zeiträume anzuzeigen.",
+    "loading": "Zeiterfassungseinstellungen werden geladen...",
     "timePeriods": {
       "title": "Abrechnungszeitraum-Einstellungen",
       "description": "Abrechnungszeiträume konfigurieren",

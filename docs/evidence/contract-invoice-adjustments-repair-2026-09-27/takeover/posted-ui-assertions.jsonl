@@ -1,0 +1,6 @@
+{"phase":"before","total_amount":"390000","posted":"390000","adjustment_count":"0"}
+{"phase":"added","total_amount":"405000","posted":"405000","adjustment_count":"1"}
+{"phase":"repeat","total_amount":"405000","posted":"405000","adjustment_count":"1"}
+{"phase":"edited","total_amount":"420000","posted":"420000","adjustment_count":"2"}
+{"phase":"removed","total_amount":"390000","posted":"390000","adjustment_count":"3"}
+{"phase":"repeat-removed","total_amount":"390000","posted":"390000","adjustment_count":"3"}

@@ -3,6 +3,7 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getConnection, runWithTenant, withTransaction } from '@alga-psa/db';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { resolveClientPortalDocument } from '@alga-psa/client-portal/lib/clientDocumentAccess';
+import { isInlineTextDocumentMimeType } from '@alga-psa/core';
 import type { IUser } from '@alga-psa/types';
 
 // LEVERAGE: pattern document-byte-serving
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!authorized.file_id) return NextResponse.json({ error: 'This document has no uploaded file.', code: 'no_file' }, { status: 404 });
     const disposition = request.nextUrl.searchParams.get('disposition') === 'inline' ? 'inline' : 'attachment';
     const mime = String(authorized.mime_type || 'application/octet-stream').toLowerCase();
-    if (disposition === 'inline' && !(mime === 'application/pdf' || (mime.startsWith('image/') && mime !== 'image/svg+xml'))) return NextResponse.json({ error: 'Preview is unavailable for this file type.', code: 'unsupported_preview' }, { status: 415 });
+    if (disposition === 'inline' && !(mime === 'application/pdf' || (mime.startsWith('image/') && mime !== 'image/svg+xml') || isInlineTextDocumentMimeType(mime))) return NextResponse.json({ error: 'Preview is unavailable for this file type.', code: 'unsupported_preview' }, { status: 415 });
     const stored = await StorageService.downloadFile(authorized.file_id).catch(() => null);
     if (!stored?.buffer) return NextResponse.json({ error: 'The uploaded file is missing from storage.', code: 'missing_file' }, { status: 404 });
     const originalName = stored.metadata.original_name?.split(/[\\/]/).pop()?.trim();

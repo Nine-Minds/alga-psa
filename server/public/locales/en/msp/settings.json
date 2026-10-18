@@ -423,7 +423,8 @@
       "placeholders": {
         "teamName": "Enter team name",
         "selectTeamLead": "Select a team lead",
-        "selectUserToAdd": "Select a user to add"
+        "selectUserToAdd": "Select a user to add",
+        "noTeamLead": "Not assigned"
       },
       "alert": {
         "unsavedChanges": "You have unsaved changes"
@@ -1960,6 +1961,8 @@
   "timeEntry": {
     "title": "Time Entry Settings",
     "description": "Manage your time entry settings and time periods",
+    "accessDenied": "Access Denied: You do not have permission to view time periods.",
+    "loading": "Loading time entry settings...",
     "timePeriods": {
       "title": "Time Period Settings",
       "description": "Configure billing time period settings",

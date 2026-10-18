@@ -7,6 +7,7 @@ import { Activity, ActivityType } from "@alga-psa/types";
 import { useDrawer } from "@alga-psa/ui";
 import { ActivityDetailViewerDrawer } from "./ActivityDetailViewerDrawer";
 import { useActivitiesCache } from "../hooks/useActivitiesCache";
+import { ActivitiesCacheProvider, useActivitiesInvalidationSignal } from "../hooks/ActivitiesCacheProvider";
 
 /**
  * Context for managing activity drawer state
@@ -24,10 +25,20 @@ const ActivityDrawerContext = createContext<ActivityDrawerContextType | undefine
  * and renders the ActivityDetailViewerDrawer when an activity is selected
  */
 export function ActivityDrawerProvider({ children }: { children: ReactNode }) {
+  // The shared cache must wrap the inner provider because it also consumes the cache hook.
+  return (
+    <ActivitiesCacheProvider>
+      <ActivityDrawerProviderInner>{children}</ActivityDrawerProviderInner>
+    </ActivitiesCacheProvider>
+  );
+}
+
+function ActivityDrawerProviderInner({ children }: { children: ReactNode }) {
   const { openDrawer, closeDrawer } = useDrawer();
   const router = useRouter();
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const { invalidateCache } = useActivitiesCache();
+  const { notifyInvalidated } = useActivitiesInvalidationSignal();
   
   // Memoize the selectedActivityId to prevent unnecessary re-renders
   const selectedActivityId = useMemo(() =>
@@ -50,9 +61,11 @@ export function ActivityDrawerProvider({ children }: { children: ReactNode }) {
       // site passes the bare ActivityType.
       invalidateCache(selectedActivity.type);
     }
+    // Tell the list (subscribed to the shared invalidation version) to refetch.
+    notifyInvalidated();
     setSelectedActivity(null);
     closeDrawer();
-  }, [closeDrawer, invalidateCache, selectedActivity]);
+  }, [closeDrawer, invalidateCache, notifyInvalidated, selectedActivity]);
   
   const openActivityDrawer = useCallback((activity: Activity) => {
     // Marketing publish items are not schedule entries, so the schedule drawer

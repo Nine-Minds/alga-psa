@@ -425,7 +425,8 @@
       "placeholders": {
         "teamName": "Wprowadź nazwę zespołu",
         "selectTeamLead": "Wybierz lidera zespołu",
-        "selectUserToAdd": "Wybierz użytkownika do dodania"
+        "selectUserToAdd": "Wybierz użytkownika do dodania",
+        "noTeamLead": "Nieprzypisany"
       },
       "alert": {
         "unsavedChanges": "Mają Państwo niezapisane zmiany"
@@ -1966,6 +1967,8 @@
   "timeEntry": {
     "title": "Ustawienia wpisów czasu",
     "description": "Zarządzanie ustawieniami wpisów czasu i okresami rozliczeniowymi",
+    "accessDenied": "Brak dostępu: nie masz uprawnień do wyświetlania okresów.",
+    "loading": "Ładowanie ustawień wpisów czasu...",
     "timePeriods": {
       "title": "Ustawienia okresów rozliczeniowych",
       "description": "Skonfiguruj okresy rozliczeniowe",

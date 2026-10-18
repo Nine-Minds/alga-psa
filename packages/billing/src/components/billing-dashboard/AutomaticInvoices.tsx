@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertTriangle, X, MoreVertical, Eye, ChevronRight, ChevronDown, Check, Link2, Clock, Hourglass, Wrench, FileText, Filter } from 'lucide-react';
 import type {
   IExpectedRecurringPricingSource,
+  InvoiceBillingEmailWarning,
   IExpectedUsagePeriodTotal,
   IRecurringDueSelectionInput,
   IRecurringDueWorkInvoiceCandidate,
@@ -801,6 +802,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
       expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
       expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
+      billingEmailWarning?: InvoiceBillingEmailWarning;
     }>;
     invoiceCount: number;
     billingCycleId: string | null;
@@ -3544,6 +3546,22 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       defaultValue: `Invoice ${previewIndex + 1}`,
                     })}
                   </h3>
+                  {previewEntry.billingEmailWarning && (
+                    // The invoice still generates; it just cannot be emailed or
+                    // paid online until the client has an address.
+                    <Alert
+                      id={`preview-no-billing-email-warning-${previewEntry.previewGroupKey}`}
+                      variant="warning"
+                      data-testid={`preview-no-billing-email-${previewEntry.previewGroupKey}`}
+                    >
+                      <AlertDescription>
+                        {t('automaticInvoices.dialogs.preview.noBillingEmailWarning', {
+                          clientName: previewEntry.billingEmailWarning.params.clientName,
+                          defaultValue: `${previewEntry.billingEmailWarning.params.clientName} has no billing email. The invoice can be generated, but it cannot be emailed or paid online until you set a billing contact, a client billing email, or an email on the billing or default location.`,
+                        })}
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   {(previewEntry.usageServicePeriodStatuses?.length ?? 0) > 0 && (() => {
                     const usageStatuses = previewEntry.usageServicePeriodStatuses ?? [];
                     const actionableStatuses = usageStatuses.filter(

@@ -925,7 +925,7 @@ describe('Client Portal Documents Integration Tests', () => {
   });
 
   describe('Client portal content, file, and export routes use live visibility queries', () => {
-    it('forwards valid uploaded PDF and PNG bytes with safe preview headers and usable attachment names', async () => {
+    it('forwards valid uploaded PDF, PNG, and text bytes with safe preview headers and usable attachment names', async () => {
       const clientId = await createClient(db, tenantId, 'Preview Route Client');
       createdIds.clientIds.push(clientId);
       const contactId = await createContact(db, tenantId, clientId, 'preview-route@test.com');
@@ -952,6 +952,7 @@ describe('Client Portal Documents Integration Tests', () => {
       const fixtures = [
         { name: 'Quarterly Report', fileName: 'quarterly-report.pdf', mime: 'application/pdf', bytes: validPdfBytes },
         { name: 'Site Photo', fileName: 'site-photo.png', mime: 'image/png', bytes: validPngBytes },
+        { name: 'Server Notes', fileName: 'server-notes.txt', mime: 'text/plain', bytes: Buffer.from('server rebooted at 02:00\nall clear\n') },
       ];
       expectUsablePdf(fixtures[0].bytes);
       const documentIds: string[] = [];

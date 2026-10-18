@@ -9,7 +9,7 @@ class MockBaseService<T> {
     throw new Error('getKnex mock not provided');
   }
 
-  addCreateAuditFields(data: Record<string, unknown>, context: { tenant: string }) {
+  async addCreateAuditFields(_conn: unknown, data: Record<string, unknown>, context: { tenant: string }) {
     return {
       ...data,
       tenant: context.tenant,
@@ -21,7 +21,7 @@ class MockBaseService<T> {
     return data;
   }
 
-  addUpdateAuditFields(data: Record<string, unknown>) {
+  async addUpdateAuditFields(_conn: unknown, data: Record<string, unknown>) {
     return { ...data };
   }
 }

@@ -96,6 +96,7 @@ function buildDependencyResult(
     type: config.type,
     count,
     label,
+    blocking: config.blocking !== false,
     viewUrl: config.viewUrlTemplate ? buildViewUrl(config.viewUrlTemplate, entityId) : undefined
   };
 }
@@ -115,15 +116,21 @@ export async function validateDeletion(
     }
   }
 
-  if (dependencies.length === 0) {
+  // A dependency the delete clears itself (an asset assignment, say) is worth
+  // reporting but must not block: refusing the delete over it would mean the
+  // cleanup it describes never runs, and a leaver with a laptop could never be
+  // deleted at all.
+  const blocking = dependencies.filter((dependency) => dependency.blocking !== false);
+
+  if (blocking.length === 0) {
     return {
       canDelete: true,
-      dependencies: [],
+      dependencies,
       alternatives: []
     };
   }
 
-  const dependencyLabels = dependencies
+  const dependencyLabels = blocking
     .map((dependency) => formatLabelWithCount(dependency.label, dependency.count))
     .join(', ');
 

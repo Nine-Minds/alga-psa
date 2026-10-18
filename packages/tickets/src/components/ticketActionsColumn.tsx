@@ -2,11 +2,14 @@ import React from 'react';
 import type { ColumnDefinition, ITicketListItem } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
-import { MoreVertical, Copy } from 'lucide-react';
+import { MoreVertical, Copy, LayoutTemplate } from 'lucide-react';
 
 interface CreateTicketActionsColumnOptions {
   t: (key: string, defaultValue: string) => string;
   onDuplicate: (ticketId: string) => void;
+  /** "Create template from ticket"; the item is only rendered when `canCreateTemplate` is true. */
+  onCreateTemplate?: (ticketId: string) => void;
+  canCreateTemplate?: boolean;
 }
 
 /**
@@ -19,6 +22,8 @@ interface CreateTicketActionsColumnOptions {
 export function createTicketActionsColumn({
   t,
   onDuplicate,
+  onCreateTemplate,
+  canCreateTemplate = false,
 }: CreateTicketActionsColumnOptions): ColumnDefinition<ITicketListItem> {
   return {
     title: <span className="sr-only">{t('actions.rowActions', 'Actions')}</span>,
@@ -64,6 +69,18 @@ export function createTicketActionsColumn({
                 <Copy className="h-4 w-4 mr-2" />
                 {t('actions.duplicate', 'Duplicate')}
               </DropdownMenuItem>
+              {canCreateTemplate && onCreateTemplate && (
+                <DropdownMenuItem
+                  id="create-template-ticket-menu-item"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onCreateTemplate(ticketId);
+                  }}
+                >
+                  <LayoutTemplate className="h-4 w-4 mr-2" />
+                  {t('actions.createTemplate', 'Create template from ticket')}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

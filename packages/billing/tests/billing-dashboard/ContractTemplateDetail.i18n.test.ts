@@ -92,6 +92,8 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
       'templateDetail.composition.manageTemplateServices',
       'templateDetail.composition.addContractLinesBeforeManaging',
       'templateDetail.composition.fixedFeeRate',
+      'templateDetail.composition.hourlyRateLabel',
+      'templateDetail.composition.unitRateLabel',
       'templateDetail.composition.editRate',
       'templateDetail.composition.notSet',
     ];

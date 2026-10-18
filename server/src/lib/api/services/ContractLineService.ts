@@ -335,7 +335,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       const { knex } = await this.getKnex();
       
       const result = await withTransaction(knex, async (trx) => {
-        const planData = this.addCreateAuditFields(data, context);
+        const planData = await this.addCreateAuditFields(trx, data, context);
         planData.contract_line_id = uuidv4();
 
         const baseRate = (data as any).base_rate ?? planData.custom_rate ?? null;
@@ -403,7 +403,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         const existingPlan = await this.getExistingPlan(id, context, trx);
         
         // Prepare update data
-        const updateData = this.addUpdateAuditFields(data, context);
+        const updateData = await this.addUpdateAuditFields(trx, data, context);
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
           lineType: (data as any).contract_line_type ?? existingPlan.contract_line_type ?? null,
           cadenceOwner: data.cadence_owner,
@@ -455,7 +455,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         await this.validatePlanUpdate(id, data, existingPlan, context, trx);
         
         // Prepare update data
-        const updateData = this.addUpdateAuditFields(data, context);
+        const updateData = await this.addUpdateAuditFields(trx, data, context);
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
           lineType: (data as any).contract_line_type ?? existingPlan.contract_line_type ?? null,
           cadenceOwner: data.cadence_owner,
@@ -985,24 +985,22 @@ export class ContractLineService extends BaseService<IContractLine> {
       // `client_id` is the public alias for the owning client; it maps onto
       // `owner_client_id` below and must not re-enter the insert via `...rest`.
       const { contract_description, client_id: _clientId, ...rest } = data as any;
-      const contractData = await this.filterAuditFields(
+      const contractData = await this.addCreateAuditFields(
         trx,
-        this.addCreateAuditFields(
-          {
-            contract_id: uuidv4(),
-            ...rest,
-            contract_description,
-            owner_client_id: ownerClientId,
-            start_date: data.start_date,
-            end_date: data.end_date,
-            // The owning client is enforced, so this is a non-template contract.
-            // Explicitly flag it (the column defaults to true) so non-template
-            // listings/reports that filter on is_template don't silently drop it.
-            is_template: false,
-            status: data.status ?? 'draft',
-          },
-          context
-        ),
+        {
+          contract_id: uuidv4(),
+          ...rest,
+          contract_description,
+          owner_client_id: ownerClientId,
+          start_date: data.start_date,
+          end_date: data.end_date,
+          // The owning client is enforced, so this is a non-template contract.
+          // Explicitly flag it (the column defaults to true) so non-template
+          // listings/reports that filter on is_template don't silently drop it.
+          is_template: false,
+          status: data.status ?? 'draft',
+        },
+        context,
         'contracts'
       );
 
@@ -1193,7 +1191,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         cadence_owner: templateLine.cadence_owner,
       }, templateLine.contract_line_type);
       const newContractLineId = uuidv4();
-      const contractLineData = this.addCreateAuditFields({
+      const contractLineData = await this.addCreateAuditFields(trx, {
         contract_line_id: newContractLineId,
         contract_id: targetContractId,
         contract_line_name: templateLine.contract_line_name,
@@ -1270,7 +1268,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       // Check if there are pending invoices or active usage
       await this.validateSafeUnassignment(clientContractLineId, assignment.client_id, context, trx);
 
-      const updateData = this.addUpdateAuditFields({
+      const updateData = await this.addUpdateAuditFields(trx, {
         is_active: false
       }, context);
 
@@ -1306,7 +1304,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       }
       
       // Update plan activation status
-      const updateData = this.addUpdateAuditFields({
+      const updateData = await this.addUpdateAuditFields(trx, {
         is_active: data.is_active
       }, context);
       updateData.cadence_owner = resolveCadenceOwner(plan.cadence_owner);
@@ -1355,7 +1353,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       };
       
       delete newPlanData.tenant; // Will be set by addCreateAuditFields
-      const auditedData = this.addCreateAuditFields(newPlanData, context);
+      const auditedData = await this.addCreateAuditFields(trx, newPlanData, context);
       
       const [newPlan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(await this.filterAuditFields(trx, auditedData)).returning('*');
       
@@ -1383,11 +1381,11 @@ export class ContractLineService extends BaseService<IContractLine> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      const templateData = this.addCreateAuditFields({
+      const templateData = await this.addCreateAuditFields(trx, {
         template_id: uuidv4(),
         ...data,
         created_by: context.userId
-      }, context);
+      }, context, 'plan_templates');
       
       const [template] = await tenantDb(trx, context.tenant).table('plan_templates').insert(templateData).returning('*');
       
@@ -1430,7 +1428,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       }
       
       // Create plan from template
-      const planData = this.addCreateAuditFields({
+      const planData = await this.addCreateAuditFields(trx, {
         contract_line_id: uuidv4(),
         contract_line_name: data.contract_line_name,
         contract_line_type: template.contract_line_type,
@@ -1574,7 +1572,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           await this.validatePlanCreation(planData, context, trx);
           
           // Create plan
-          const auditedData = this.addCreateAuditFields({
+          const auditedData = await this.addCreateAuditFields(trx, {
             contract_line_id: uuidv4(),
             ...planData
           }, context);

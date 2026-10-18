@@ -16,11 +16,11 @@ class MockBaseService<T> {
     return data;
   }
 
-  addUpdateAuditFields(data: Record<string, unknown>) {
+  async addUpdateAuditFields(_conn: unknown, data: Record<string, unknown>) {
     return { ...data };
   }
 
-  addCreateAuditFields(data: Record<string, unknown>) {
+  async addCreateAuditFields(_conn: unknown, data: Record<string, unknown>) {
     return { ...data };
   }
 }
