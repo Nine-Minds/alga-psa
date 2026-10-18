@@ -494,14 +494,13 @@ export async function getCoManagedManagementStatus(db: Knex, actor: CoManagedSes
         ? await customer.table('user_invitations').where({ invitation_id: operation.administrator_invitation_id }).first('expires_at', 'email', 'used_at') : null;
       const awaitingAdministrator = Boolean(invitation && !invitation.used_at && !await customer.table('users').where('user_type', 'internal')
         .whereRaw('lower(trim(email)) = ?', [invitation.email.trim().toLowerCase()]).first('user_id'));
-      const customerClaimed = Boolean(invitation?.used_at || await customer.table('users').first('user_id'));
       const invitationExpired = awaitingAdministrator && new Date(invitation.expires_at).getTime() <= Date.now();
       items.push({ operationId: operation.operation_id as string,
         workspaceName: hidden(context, workspaceNames) ? null : operation.request.workspaceName as string,
         administratorEmail: hidden(context, administratorEmails) ? null : operation.request.administrator.email as string,
         seats: Number(allocation?.seats ?? operation.request.seats), canManage,
         canChangeSeats: Boolean(canManage && allocation && allocation.state !== 'released' && operation.state === 'pending_acceptance' && ['active', 'pending_acceptance'].includes(relationship?.state)),
-        canCancel: Boolean(canManage && allocation?.state === 'reserved' && !customerClaimed && ['provisioning', 'pending_acceptance'].includes(relationship?.state) &&
+        canCancel: Boolean(canManage && allocation?.state === 'reserved' && ['provisioning', 'pending_acceptance'].includes(relationship?.state) &&
           ['queued', 'provisioning', 'failed', 'pending_acceptance'].includes(operation.state)),
         cleanupFailed: operation.error_code === 'PROVISIONING_CLEANUP_FAILED',
         state: (operation.state === 'cancelled' ? 'cancelled' : ['active', 'terminated'].includes(relationship?.state) ? relationship.state : operation.state) as string,

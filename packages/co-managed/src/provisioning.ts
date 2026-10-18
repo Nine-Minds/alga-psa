@@ -36,7 +36,7 @@ export interface CoManagedProvisioningOperation {
 export class CoManagedProvisioningError extends Error {
   constructor(public readonly code: 'INVALID_REQUEST' | 'OPERATION_CONFLICT' | 'OPERATION_NOT_FOUND' |
     'ACTOR_NOT_FOUND' | 'DESTINATION_NOT_FOUND' | 'OPERATION_CLOSED' | 'RELATIONSHIP_ACTIVE' |
-    'CLEANUP_INCOMPLETE' | 'ADMINISTRATOR_CLAIMED' | 'RESERVATION_NOT_FOUND' | 'CAPACITY_UNAVAILABLE' |
+    'CLEANUP_INCOMPLETE' | 'RESERVATION_NOT_FOUND' | 'CAPACITY_UNAVAILABLE' |
     'ADMINISTRATOR_EMAIL_IN_USE') {
     super({ INVALID_REQUEST: 'Provide a workspace name, customer administrator, and valid provisioning details.',
       OPERATION_CONFLICT: 'This provisioning operation was started with different details.',
@@ -45,7 +45,6 @@ export class CoManagedProvisioningError extends Error {
       OPERATION_CLOSED: 'This provisioning operation cannot run in its current state.',
       RELATIONSHIP_ACTIVE: 'An accepted relationship must use the customer departure process.',
       CLEANUP_INCOMPLETE: 'Customer workspace cleanup must complete before releasing its seats.',
-      ADMINISTRATOR_CLAIMED: 'The customer administrator has claimed this workspace. Use the customer departure process.',
       RESERVATION_NOT_FOUND: 'The provisioning reservation is no longer valid.',
       CAPACITY_UNAVAILABLE: 'Restore the sponsoring Pro license and co-managed capacity before provisioning.',
       ADMINISTRATOR_EMAIL_IN_USE: 'This administrator email already belongs to a user in another workspace. Use a different email address.',
@@ -188,8 +187,11 @@ async function assertProvisioningCleanupEligible(trx: Knex.Transaction, operatio
     relationship_id: operation.relationship_id, state: 'reserved',
   }).forUpdate().first();
   if (!allocation) throw new CoManagedProvisioningError('RESERVATION_NOT_FOUND');
-  const invitation = await customer.table('user_invitations').where('invitation_id', operation.administrator_invitation_id).forUpdate().first('used_at');
-  if (invitation?.used_at || await customer.table('users').first('user_id')) throw new CoManagedProvisioningError('ADMINISTRATOR_CLAIMED');
+  // A claimed administrator account does not block cancellation: until the
+  // customer accepts, the workspace is the MSP's unactivated proposal, and
+  // cleanup deletes the account along with it. Acceptance holds the same
+  // relationship lock and requires pending_acceptance, so the two cannot both win.
+  await customer.table('user_invitations').where('invitation_id', operation.administrator_invitation_id).forUpdate().first('used_at');
   if (await customer.table('co_management_relationships').whereNot('relationship_id', operation.relationship_id).first())
     throw new CoManagedProvisioningError('RESERVATION_NOT_FOUND');
 }

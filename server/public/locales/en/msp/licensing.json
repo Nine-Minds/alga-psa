@@ -398,16 +398,18 @@
       "accept": "Accept and activate workspace",
       "administratorRequired": "A local workspace administrator must accept this relationship before your team can begin.",
       "preparing": "Your workspace is still being prepared. Refresh to check its status.",
+      "cancelled": "{{sponsor}} cancelled this workspace setup. The workspace will not be activated, and your account will be removed. Contact {{sponsor}} if you expected to use it.",
       "error": "Unable to activate or load this relationship. Refresh to review the current scope before trying again.",
-      "refresh": "Refresh relationship"
+      "refresh": "Refresh relationship",
+      "signOut": "Sign out"
     },
     "provisioning": {
       "cancelSetup": "Cancel setup",
       "cancelTitle": "Cancel workspace setup?",
-      "cancelDescription": "This deletes the unclaimed customer workspace. Seats remain reserved until cleanup completes.",
+      "cancelDescription": "This deletes the customer workspace before it is activated, including the administrator's account if they have already signed up. Seats remain reserved until cleanup completes.",
       "confirmCancel": "Delete workspace and cancel",
       "keepSetup": "Keep setup",
-      "cancelError": "Setup could not be cancelled. Refresh to check whether the customer has claimed the workspace.",
+      "cancelError": "Setup could not be cancelled. Refresh to check whether the customer has already accepted the relationship.",
       "cleanupPending": "Cleanup is pending. Seats remain reserved until it finishes.",
       "cleanupFailed": "Cleanup did not finish. Seats remain reserved; you can retry safely.",
       "retryCleanup": "Retry cleanup",

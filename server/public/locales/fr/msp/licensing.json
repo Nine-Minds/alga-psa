@@ -401,16 +401,18 @@
       "accept": "Accepter et activer l’espace de travail",
       "administratorRequired": "Un administrateur local de l’espace de travail doit accepter cette relation avant que votre équipe puisse commencer.",
       "preparing": "Votre espace de travail est encore en préparation. Actualisez pour vérifier son statut.",
+      "cancelled": "{{sponsor}} a annulé la configuration de cet espace de travail. L’espace de travail ne sera pas activé et votre compte sera supprimé. Contactez {{sponsor}} si vous comptiez l’utiliser.",
       "error": "Impossible d’activer ou de charger cette relation. Actualisez pour examiner le périmètre actuel avant de réessayer.",
-      "refresh": "Actualiser la relation"
+      "refresh": "Actualiser la relation",
+      "signOut": "Se déconnecter"
     },
     "provisioning": {
       "cancelSetup": "Annuler la configuration",
       "cancelTitle": "Annuler la configuration de cet espace ?",
-      "cancelDescription": "Cette action supprime l’espace client non revendiqué. Les postes restent réservés jusqu’à la fin du nettoyage.",
+      "cancelDescription": "Cette action supprime l’espace de travail du client avant son activation, y compris le compte de l’administrateur s’il s’est déjà inscrit. Les postes restent réservés jusqu’à la fin du nettoyage.",
       "confirmCancel": "Supprimer l’espace et annuler",
       "keepSetup": "Conserver la configuration",
-      "cancelError": "Impossible d’annuler la configuration. Actualisez pour vérifier si le client a revendiqué l’espace.",
+      "cancelError": "La configuration n’a pas pu être annulée. Actualisez pour vérifier si le client a déjà accepté la relation.",
       "cleanupPending": "Nettoyage en attente. Les postes restent réservés jusqu’à sa fin.",
       "cleanupFailed": "Le nettoyage n’est pas terminé. Les postes restent réservés ; vous pouvez réessayer sans risque.",
       "retryCleanup": "Relancer le nettoyage",

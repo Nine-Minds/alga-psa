@@ -8,6 +8,7 @@ import { requestCoManagedProvisioningCleanup, runCoManagedProvisioningCleanup,
 import { bootstrapCoManagedWorkspace } from '../../../db/co-managed-provisioning-operations';
 import { deleteCoManagedProvisioningRows } from '../../../db/co-managed-provisioning-cleanup';
 import { cleanupCoManagedCustomer } from '../../../activities/co-managed-provisioning-activities';
+import { acceptCoManagedRelationship, getCoManagedAcceptanceState } from '../../../../../../packages/co-managed/src/acceptance';
 import { TENANT_TABLES_DELETION_ORDER } from '../../../activities/tenant-deletion-activities';
 
 export function registerCoManagedProvisioningCleanupTests(getDb: () => Knex, prepare: () => Promise<CoManagedProvisioningOperation>) {
@@ -86,29 +87,39 @@ export function registerCoManagedProvisioningCleanupTests(getDb: () => Knex, pre
       } finally { await f.db.schema.dropTable(table); }
       await f.cleanup(); expect(await f.stored()).toMatchObject({ state: 'cancelled', error_code: null });
     });
-    it('does not delete a workspace after its initial administrator signs up while acceptance is still pending', async () => {
-      const f = await fixture(), create = await signup(f); await create();
-      const users = await f.customer.table('users');
+    it('cancels after the initial administrator signs up but before acceptance, deleting the account with the workspace', async () => {
+      // Until the customer accepts, the workspace is the MSP's unactivated
+      // proposal. A claimed administrator must not strand it (and its seats)
+      // with no way for either side to end it.
+      const f = await fixture(), create = await signup(f); const user = await create();
       expect(await f.customer.table('co_management_relationships').first()).toMatchObject({ state: 'pending_acceptance' });
-      await expect(f.cancel()).rejects.toMatchObject({ code: 'ADMINISTRATOR_CLAIMED' });
-      // The destructive worker and direct acknowledgment also defend a stale/altered cleanup state.
-      await f.home.table('co_managed_provisioning_operations').update({ state: 'cleanup_requested' });
-      await expect(f.cleanup()).rejects.toMatchObject({ code: 'ADMINISTRATOR_CLAIMED' });
-      await expect(completeCoManagedProvisioningCleanup(f.db, f.operation.tenant, f.operation.operation_id)).rejects.toMatchObject({ code: 'ADMINISTRATOR_CLAIMED' });
-      expect(await f.customer.table('users')).toEqual(users); expect(await f.customer.table('tenants')).toHaveLength(1);
-      expect(await f.allocation()).toMatchObject({ state: 'reserved' });
+      await f.cancel();
+      expect(await getCoManagedAcceptanceState(f.db, { tenant: f.operation.customer_tenant, userId: user.user_id }))
+        .toMatchObject({ state: 'cancelled' });
+      await expect(acceptCoManagedRelationship(f.db, { tenant: f.operation.customer_tenant, userId: user.user_id },
+        { relationshipId: f.operation.relationship_id, revision: 1, scopeFingerprint: 'stale' })).rejects.toThrow();
+      await f.cleanup();
+      expect(await f.customer.table('users')).toEqual([]); expect(await f.customer.table('tenants')).toEqual([]);
+      expect(await f.allocation()).toMatchObject({ state: 'released' });
+      expect(await f.stored()).toMatchObject({ state: 'cancelled' });
+      expect(await f.customer.table('co_management_relationships').first()).toMatchObject({ state: 'terminated' });
     });
-    it('serializes first signup against cancellation so only one can claim the workspace', async () => {
+    it('serializes first signup against cancellation so a cancelled workspace cannot be claimed', async () => {
       const f = await fixture(), create = await signup(f);
-      const outcomes = await Promise.allSettled([create(), f.cancel()]);
-      expect(outcomes.filter(result => result.status === 'fulfilled')).toHaveLength(1);
-      if (outcomes[0].status === 'fulfilled') {
-        expect(await f.customer.table('users')).toHaveLength(1);
-        expect(await f.stored()).toMatchObject({ state: 'pending_acceptance' });
-      } else {
-        expect(await f.customer.table('users')).toEqual([]); await f.cleanup();
-        expect(await f.stored()).toMatchObject({ state: 'cancelled' });
-      }
+      const [signup_, cancel] = await Promise.allSettled([create(), f.cancel()]);
+      // Cancellation wins either way; signup only succeeds if it committed first.
+      expect(cancel.status).toBe('fulfilled');
+      expect(await f.stored()).toMatchObject({ state: 'cleanup_requested' });
+      expect(await f.customer.table('users')).toHaveLength(signup_.status === 'fulfilled' ? 1 : 0);
+      await f.cleanup();
+      expect(await f.customer.table('users')).toEqual([]);
+      expect(await f.stored()).toMatchObject({ state: 'cancelled' });
+    });
+    it('refuses signup once cancellation was requested', async () => {
+      const f = await fixture(), create = await signup(f);
+      await f.cancel();
+      await expect(create()).rejects.toThrow();
+      expect(await f.customer.table('users')).toEqual([]);
     });
     it('rejects a foreign sponsor, missing cancellation request and accepted relationship before deleting rows', async () => {
       const f = await fixture();

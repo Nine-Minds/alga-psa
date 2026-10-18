@@ -703,9 +703,7 @@ describe('co-managed provisioning request and worker lifecycle', () => {
     const input = await requestFixture(), operation = await prepareCoManagedProvisioning(db, input);
     const customer = tenantDb(db, operation.customer_tenant);
     await customer.table('tenants').insert({ tenant: operation.customer_tenant, product_code: 'co_managed' });
-    // Residual workspace data, not a user: a customer user row means the
-    // administrator claimed the workspace, and cleanup then refuses outright
-    // with ADMINISTRATOR_CLAIMED in favour of the departure process.
+    // Residual workspace data must be deleted before seats are released.
     await customer.table('clients').insert({ tenant: operation.customer_tenant, client_id: randomUUID() });
     await requestCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId);
     await expect(runCoManagedProvisioningStep(db, input.sponsorTenant, input.operationId, 'seeds', vi.fn())).rejects.toMatchObject({ code: 'OPERATION_CLOSED' });

@@ -401,16 +401,18 @@
       "accept": "Accetta e attiva lo spazio di lavoro",
       "administratorRequired": "Un amministratore locale dello spazio di lavoro deve accettare questa relazione prima che il tuo team possa iniziare.",
       "preparing": "Lo spazio di lavoro è ancora in preparazione. Aggiorna per controllarne lo stato.",
+      "cancelled": "{{sponsor}} ha annullato la configurazione di questo spazio di lavoro. Lo spazio di lavoro non verrà attivato e il tuo account verrà rimosso. Contatta {{sponsor}} se prevedevi di usarlo.",
       "error": "Impossibile attivare o caricare questa relazione. Aggiorna per rivedere l’ambito attuale prima di riprovare.",
-      "refresh": "Aggiorna la relazione"
+      "refresh": "Aggiorna la relazione",
+      "signOut": "Esci"
     },
     "provisioning": {
       "cancelSetup": "Annulla configurazione",
       "cancelTitle": "Annullare la configurazione dello spazio?",
-      "cancelDescription": "Lo spazio del cliente non ancora rivendicato verrà eliminato. Le postazioni restano riservate fino al termine della pulizia.",
+      "cancelDescription": "Questa operazione elimina lo spazio di lavoro del cliente prima dell’attivazione, incluso l’account dell’amministratore se si è già registrato. Le postazioni restano riservate fino al completamento della pulizia.",
       "confirmCancel": "Elimina spazio e annulla",
       "keepSetup": "Mantieni configurazione",
-      "cancelError": "Impossibile annullare la configurazione. Aggiorna per verificare se il cliente ha rivendicato lo spazio.",
+      "cancelError": "Impossibile annullare la configurazione. Aggiorna per verificare se il cliente ha già accettato la relazione.",
       "cleanupPending": "Pulizia in attesa. Le postazioni restano riservate fino al termine.",
       "cleanupFailed": "Pulizia non completata. Le postazioni restano riservate; puoi riprovare in sicurezza.",
       "retryCleanup": "Riprova pulizia",

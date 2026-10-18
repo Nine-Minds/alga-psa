@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { signOut } from 'next-auth/react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -39,6 +40,7 @@ export default function CoManagedAcceptanceBoundary({ children }: { children: Re
         {error && <p role="alert" className="text-destructive">{t('coManaged.acceptance.error')}</p>}
         {!state && !error && <p role="status">{t('coManaged.loading')}</p>}
         {state?.state === 'unavailable' && <p>{t('coManaged.acceptance.preparing')}</p>}
+        {state?.state === 'cancelled' && <p>{t('coManaged.acceptance.cancelled', { sponsor: state.sponsorName })}</p>}
         {state?.state === 'pending_acceptance' && <>
           <p>{t('coManaged.acceptance.description', { sponsor: state.scope.sponsorName })}</p>
           <p>{t(state.scope.visibilityMode === 'board_scope'
@@ -56,6 +58,9 @@ export default function CoManagedAcceptanceBoundary({ children }: { children: Re
         </>}
         {(error || state?.state === 'unavailable' || (state?.state === 'pending_acceptance' && !state.canAccept)) && <Button id="co-managed-refresh-acceptance" variant="outline"
           onClick={() => void reload()} disabled={busy}>{t('coManaged.acceptance.refresh')}</Button>}
+        {/* This screen replaces the whole MSP shell, header and user menu included. */}
+        <Button id="co-managed-acceptance-sign-out" variant="ghost" disabled={busy}
+          onClick={() => void signOut({ callbackUrl: '/auth/msp/signin', redirect: true })}>{t('coManaged.acceptance.signOut')}</Button>
       </CardContent>
     </Card>
   </div>;

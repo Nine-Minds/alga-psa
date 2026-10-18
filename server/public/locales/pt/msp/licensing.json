@@ -401,16 +401,18 @@
       "accept": "Aceitar e ativar o espaço de trabalho",
       "administratorRequired": "Um administrador local do espaço de trabalho precisa aceitar esta relação antes que sua equipe comece.",
       "preparing": "Seu espaço de trabalho ainda está sendo preparado. Atualize para verificar o status.",
+      "cancelled": "{{sponsor}} cancelou a configuração deste espaço de trabalho. O espaço de trabalho não será ativado e sua conta será removida. Entre em contato com {{sponsor}} se você esperava usá-lo.",
       "error": "Não foi possível ativar nem carregar esta relação. Atualize para revisar o escopo atual antes de tentar de novo.",
-      "refresh": "Atualizar relação"
+      "refresh": "Atualizar relação",
+      "signOut": "Sair"
     },
     "provisioning": {
       "cancelSetup": "Cancelar configuração",
       "cancelTitle": "Cancelar a configuração do espaço?",
-      "cancelDescription": "Esta ação elimina o espaço do cliente ainda não reivindicado. Os assentos permanecem reservados até a limpeza terminar.",
+      "cancelDescription": "Isso exclui o espaço de trabalho do cliente antes de ser ativado, incluindo a conta do administrador, se ele já tiver se cadastrado. Os assentos permanecem reservados até a limpeza ser concluída.",
       "confirmCancel": "Eliminar espaço e cancelar",
       "keepSetup": "Manter configuração",
-      "cancelError": "Não foi possível cancelar a configuração. Atualize para verificar se o cliente reivindicou o espaço.",
+      "cancelError": "Não foi possível cancelar a configuração. Atualize para verificar se o cliente já aceitou o relacionamento.",
       "cleanupPending": "Limpeza pendente. Os assentos permanecem reservados até terminar.",
       "cleanupFailed": "A limpeza não terminou. Os assentos permanecem reservados; pode tentar novamente com segurança.",
       "retryCleanup": "Repetir limpeza",

@@ -18,6 +18,7 @@ export interface CoManagedAcceptanceScope {
 }
 export type CoManagedAcceptanceState =
   | { state: 'unavailable' | 'active' | 'terminated' }
+  | { state: 'cancelled'; sponsorName: string }
   | { state: 'pending_acceptance'; relationshipId: string; revision: number;
       canAccept: boolean; scope: CoManagedAcceptanceScope; scopeFingerprint: string };
 
@@ -76,7 +77,19 @@ export async function getCoManagedAcceptanceState(db: Knex, actor: CoManagedCust
     const canAccept = await customerAdministrator(trx, actor);
     const relationship = await tenantDb(trx, actor.tenant).table('co_management_relationships')
       .orderBy('created_at', 'desc').first();
-    if (!relationship || relationship.state === 'provisioning') return { state: 'unavailable' };
+    if (!relationship) return { state: 'unavailable' };
+    if (['provisioning', 'pending_acceptance'].includes(relationship.state)) {
+      // The MSP may cancel until acceptance; the relationship only ends once
+      // cleanup has deleted the workspace, so read the sponsor's operation.
+      const sponsor = tenantDb(trx, relationship.sponsor_tenant);
+      const operation = await sponsor.table('co_managed_provisioning_operations')
+        .where({ relationship_id: relationship.relationship_id, customer_tenant: actor.tenant }).first('state');
+      if (operation && ['cleanup_requested', 'cancelled'].includes(operation.state)) {
+        const owner = await sponsor.table('tenants').first('client_name');
+        return { state: 'cancelled', sponsorName: owner?.client_name ?? '' };
+      }
+    }
+    if (relationship.state === 'provisioning') return { state: 'unavailable' };
     if (relationship.state === 'active' || relationship.state === 'terminated') return { state: relationship.state };
     const scope = await readScope(trx, relationship);
     return { state: 'pending_acceptance', relationshipId: relationship.relationship_id, revision: relationship.revision,

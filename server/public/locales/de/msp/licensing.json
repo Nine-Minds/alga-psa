@@ -398,16 +398,18 @@
       "accept": "Annehmen und Workspace aktivieren",
       "administratorRequired": "Ein lokaler Workspace-Administrator muss diese Beziehung annehmen, bevor Ihr Team beginnen kann.",
       "preparing": "Ihr Workspace wird noch vorbereitet. Aktualisieren Sie die Ansicht, um den Status zu prüfen.",
+      "cancelled": "{{sponsor}} hat die Einrichtung dieses Arbeitsbereichs abgebrochen. Der Arbeitsbereich wird nicht aktiviert, und Ihr Konto wird entfernt. Wenden Sie sich an {{sponsor}}, wenn Sie ihn nutzen wollten.",
       "error": "Diese Beziehung konnte nicht aktiviert oder geladen werden. Aktualisieren Sie die Ansicht, um den aktuellen Umfang zu prüfen, bevor Sie es erneut versuchen.",
-      "refresh": "Beziehung aktualisieren"
+      "refresh": "Beziehung aktualisieren",
+      "signOut": "Abmelden"
     },
     "provisioning": {
       "cancelSetup": "Einrichtung abbrechen",
       "cancelTitle": "Workspace-Einrichtung abbrechen?",
-      "cancelDescription": "Der noch nicht beanspruchte Kunden-Workspace wird gelöscht. Plätze bleiben bis zum Abschluss der Bereinigung reserviert.",
+      "cancelDescription": "Dadurch wird der Kundenarbeitsbereich vor der Aktivierung gelöscht, einschließlich des Administratorkontos, falls sich der Administrator bereits registriert hat. Die Plätze bleiben reserviert, bis die Bereinigung abgeschlossen ist.",
       "confirmCancel": "Workspace löschen und abbrechen",
       "keepSetup": "Einrichtung beibehalten",
-      "cancelError": "Die Einrichtung konnte nicht abgebrochen werden. Aktualisieren Sie die Ansicht, um zu prüfen, ob der Kunde den Workspace bereits beansprucht hat.",
+      "cancelError": "Die Einrichtung konnte nicht abgebrochen werden. Aktualisieren Sie die Ansicht, um zu prüfen, ob der Kunde die Beziehung bereits akzeptiert hat.",
       "cleanupPending": "Bereinigung ausstehend. Plätze bleiben bis zum Abschluss reserviert.",
       "cleanupFailed": "Die Bereinigung wurde nicht abgeschlossen. Plätze bleiben reserviert; Sie können es erneut versuchen.",
       "retryCleanup": "Bereinigung wiederholen",

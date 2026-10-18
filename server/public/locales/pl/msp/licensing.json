@@ -404,16 +404,18 @@
       "accept": "Zaakceptuj i aktywuj obszar roboczy",
       "administratorRequired": "Lokalny administrator obszaru roboczego musi zaakceptować tę współpracę, zanim Twój zespół zacznie pracę.",
       "preparing": "Twój obszar roboczy jest jeszcze przygotowywany. Odśwież, aby sprawdzić jego stan.",
+      "cancelled": "{{sponsor}} anulował konfigurację tego obszaru roboczego. Obszar roboczy nie zostanie aktywowany, a twoje konto zostanie usunięte. Skontaktuj się z {{sponsor}}, jeśli zamierzałeś z niego korzystać.",
       "error": "Nie można aktywować ani wczytać tej współpracy. Odśwież, aby sprawdzić bieżący zakres, zanim spróbujesz ponownie.",
-      "refresh": "Odśwież współpracę"
+      "refresh": "Odśwież współpracę",
+      "signOut": "Wyloguj się"
     },
     "provisioning": {
       "cancelSetup": "Anuluj konfigurację",
       "cancelTitle": "Anulować konfigurację przestrzeni?",
-      "cancelDescription": "Spowoduje to usunięcie nieprzejętej przestrzeni klienta. Stanowiska pozostaną zarezerwowane do zakończenia czyszczenia.",
+      "cancelDescription": "Spowoduje to usunięcie obszaru roboczego klienta przed jego aktywacją, w tym konta administratora, jeśli już się zarejestrował. Stanowiska pozostaną zarezerwowane do zakończenia czyszczenia.",
       "confirmCancel": "Usuń przestrzeń i anuluj",
       "keepSetup": "Zachowaj konfigurację",
-      "cancelError": "Nie udało się anulować konfiguracji. Odśwież, aby sprawdzić, czy klient przejął przestrzeń.",
+      "cancelError": "Nie udało się anulować konfiguracji. Odśwież, aby sprawdzić, czy klient już zaakceptował relację.",
       "cleanupPending": "Czyszczenie oczekuje. Stanowiska pozostają zarezerwowane do jego zakończenia.",
       "cleanupFailed": "Czyszczenie nie zostało zakończone. Stanowiska pozostają zarezerwowane; możesz bezpiecznie ponowić próbę.",
       "retryCleanup": "Ponów czyszczenie",

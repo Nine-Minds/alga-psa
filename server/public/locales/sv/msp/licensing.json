@@ -398,16 +398,18 @@
       "accept": "Godkänn och aktivera arbetsytan",
       "administratorRequired": "En lokal administratör för arbetsytan måste godkänna relationen innan ert team kan komma igång.",
       "preparing": "Er arbetsyta förbereds fortfarande. Uppdatera för att kontrollera dess status.",
+      "cancelled": "{{sponsor}} har avbrutit konfigurationen av den här arbetsytan. Arbetsytan aktiveras inte och ditt konto tas bort. Kontakta {{sponsor}} om du räknade med att använda den.",
       "error": "Det gick inte att aktivera eller läsa in relationen. Uppdatera för att granska det aktuella omfånget innan du försöker igen.",
-      "refresh": "Uppdatera relation"
+      "refresh": "Uppdatera relation",
+      "signOut": "Logga ut"
     },
     "provisioning": {
       "cancelSetup": "Avbryt konfigurationen",
       "cancelTitle": "Avbryta konfigurationen av arbetsytan?",
-      "cancelDescription": "Detta raderar kundens ej övertagna arbetsyta. Licenserna förblir reserverade tills rensningen är klar.",
+      "cancelDescription": "Detta tar bort kundens arbetsyta innan den aktiveras, inklusive administratörens konto om administratören redan har registrerat sig. Licenserna förblir reserverade tills rensningen är klar.",
       "confirmCancel": "Radera arbetsytan och avbryt",
       "keepSetup": "Behåll konfigurationen",
-      "cancelError": "Det gick inte att avbryta konfigurationen. Uppdatera för att kontrollera om kunden har tagit över arbetsytan.",
+      "cancelError": "Konfigurationen kunde inte avbrytas. Uppdatera för att se om kunden redan har godkänt relationen.",
       "cleanupPending": "Rensning väntar. Licenserna förblir reserverade tills den är klar.",
       "cleanupFailed": "Rensningen slutfördes inte. Licenserna förblir reserverade; du kan försöka igen utan risk.",
       "retryCleanup": "Försök rensa igen",

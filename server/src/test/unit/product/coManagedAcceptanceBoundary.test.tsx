@@ -3,12 +3,13 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CoManagedWorkspaceBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
-const mocks = vi.hoisted(() => ({ flag: vi.fn(), review: vi.fn(), accept: vi.fn() }));
+const mocks = vi.hoisted(() => ({ flag: vi.fn(), review: vi.fn(), accept: vi.fn(), signOut: vi.fn() }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({
   getCustomerCoManagedAcceptance: mocks.review, acceptCustomerCoManagedRelationship: mocks.accept,
 }));
-const translate = (key: string) => key;
+vi.mock('next-auth/react', () => ({ signOut: mocks.signOut, useSession: () => ({ data: null, status: 'unauthenticated' }) }));
+const translate = (key: string, options?: { sponsor?: string }) => options?.sponsor ? `${key}:${options.sponsor}` : key;
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: translate }), useOptionalI18n: () => null }));
 const review = { state: 'pending_acceptance', relationshipId: 'relationship', revision: 1, scopeFingerprint: 'hash', canAccept: true,
   scope: { sponsorName: 'MSP', visibilityMode: 'board_scope', escalationBoard: { id: 'destination', name: 'Escalations' },
@@ -45,6 +46,17 @@ describe('initial customer scope review', () => {
     mocks.review.mockResolvedValue({ ...review, canAccept: false }); workspace();
     await screen.findByText('coManaged.acceptance.administratorRequired');
     expect(screen.queryByRole('button', { name: 'coManaged.acceptance.accept' })).toBeNull();
+  });
+  it('tells the invitee the MSP cancelled the setup instead of offering acceptance', async () => {
+    mocks.review.mockResolvedValue({ state: 'cancelled', sponsorName: 'Oz' }); workspace();
+    await screen.findByText('coManaged.acceptance.cancelled:Oz');
+    expect(screen.queryByRole('button', { name: 'coManaged.acceptance.accept' })).toBeNull();
+    expect(screen.queryByText('Workspace content')).toBeNull();
+  });
+  it('lets the invitee sign out, since this screen replaces the header and user menu', async () => {
+    mocks.review.mockResolvedValue({ state: 'unavailable' }); workspace();
+    fireEvent.click(await screen.findByRole('button', { name: 'coManaged.acceptance.signOut' }));
+    expect(mocks.signOut).toHaveBeenCalledWith({ callbackUrl: '/auth/msp/signin', redirect: true });
   });
   it('does not ask a requester portal to perform administrator acceptance', () => {
     render(<CoManagedWorkspaceBoundary productCode="co_managed"><p>Requester portal</p></CoManagedWorkspaceBoundary>);

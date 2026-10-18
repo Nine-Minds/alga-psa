@@ -294,6 +294,29 @@ describe('client recovery', () => {
       invitationExpired deliveryFailed={false} idPrefix="r" onChanged={vi.fn()} />);
     expect(await screen.findByRole('button', { name: 'Resend invitation' })).toBeInTheDocument();
   });
+
+  it('confirms before cancelling, because cancelling deletes the unactivated workspace', async () => {
+    render(<CoManagedClientRecovery operationId="op" state="pending_acceptance" canRetry={false} canCancel
+      invitationExpired={false} deliveryFailed={false} idPrefix="r" onChanged={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel setup' }));
+    expect(mocks.cancel).not.toHaveBeenCalled();
+    expect(screen.getByText('coManaged.provisioning.cancelDescription')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.keepSetup' }));
+    expect(mocks.cancel).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel setup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.confirmCancel' }));
+    await waitFor(() => expect(mocks.cancel).toHaveBeenCalledWith('op'));
+  });
+
+  it('reports a failed cancellation as a cancellation, not a retry', async () => {
+    mocks.cancel.mockRejectedValueOnce(new Error('denied'));
+    render(<CoManagedClientRecovery operationId="op" state="pending_acceptance" canRetry={false} canCancel
+      invitationExpired={false} deliveryFailed={false} idPrefix="r" onChanged={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel setup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.confirmCancel' }));
+    expect(await screen.findByText(/Setup could not be cancelled/)).toBeInTheDocument();
+    expect(screen.queryByText(/Could not recover this setup/)).not.toBeInTheDocument();
+  });
 });
 
 describe('client relationship view sections', () => {

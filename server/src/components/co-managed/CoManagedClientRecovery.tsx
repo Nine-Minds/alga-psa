@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { retryCoManagedProvisioningAction, cancelCoManagedProvisioningAction } from '@enterprise/lib/actions/coManagedProvisioningActions';
 
@@ -22,14 +23,22 @@ export default function CoManagedClientRecovery({ operationId, state, canRetry, 
   const { t } = useTranslation('msp/licensing');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const run = async (action: () => Promise<{ enqueued: boolean }>) => {
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const run = async (action: () => Promise<{ enqueued: boolean }>, failure: string) => {
     setBusy(true); setError(null);
     try {
       const result = await action();
       if (!result.enqueued) setError(t('coManaged.provisioning.workerUnavailable', { defaultValue: 'The provisioning worker is unavailable. Try again.' }));
       await onChanged();
-    } catch { setError(t('coManaged.provisioning.retryError', { defaultValue: 'Could not recover this setup. Try again.' })); }
+    } catch { setError(failure); }
     finally { setBusy(false); }
+  };
+  const retry = () => run(() => retryCoManagedProvisioningAction(operationId),
+    t('coManaged.provisioning.retryError', { defaultValue: 'Could not recover this setup. Try again.' }));
+  const cancel = async () => {
+    await run(() => cancelCoManagedProvisioningAction(operationId), t('coManaged.provisioning.cancelError',
+      { defaultValue: 'Setup could not be cancelled. Refresh to check whether the customer has already accepted the relationship.' }));
+    setConfirmingCancel(false);
   };
   const retryLabel = state === 'cleanup_requested' ? t('coManaged.provisioning.retryCleanup', { defaultValue: 'Retry cleanup' })
     : invitationExpired ? t('coManaged.provisioning.resendInvitation', { defaultValue: 'Resend invitation' })
@@ -41,17 +50,32 @@ export default function CoManagedClientRecovery({ operationId, state, canRetry, 
       <div className="flex flex-wrap gap-2">
         {canRetry && (
           <Button id={`${idPrefix}-retry`} variant="outline" size="sm" disabled={busy}
-            onClick={() => void run(() => retryCoManagedProvisioningAction(operationId))}>
+            onClick={() => void retry()}>
             {retryLabel}
           </Button>
         )}
         {canCancel && (
           <Button id={`${idPrefix}-cancel`} variant="outline" size="sm" disabled={busy}
-            onClick={() => void run(() => cancelCoManagedProvisioningAction(operationId))}>
+            onClick={() => setConfirmingCancel(true)}>
             {t('coManaged.provisioning.cancelSetup', { defaultValue: 'Cancel setup' })}
           </Button>
         )}
       </div>
+      {/* Cancelling deletes the unactivated workspace, including an administrator who already signed up. */}
+      <Dialog id={`${idPrefix}-cancel-confirm`} isOpen={confirmingCancel} onClose={() => { if (!busy) setConfirmingCancel(false); }}
+        title={t('coManaged.provisioning.cancelTitle', { defaultValue: 'Cancel workspace setup?' })}>
+        <div className="space-y-4">
+          <p>{t('coManaged.provisioning.cancelDescription')}</p>
+          <div className="flex gap-2">
+            <Button id={`${idPrefix}-cancel-confirm-button`} disabled={busy} onClick={() => void cancel()}>
+              {t('coManaged.provisioning.confirmCancel')}
+            </Button>
+            <Button id={`${idPrefix}-cancel-keep`} variant="outline" disabled={busy} onClick={() => setConfirmingCancel(false)}>
+              {t('coManaged.provisioning.keepSetup')}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }
