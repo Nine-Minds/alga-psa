@@ -1149,7 +1149,8 @@
       "unknown": "Nieznany",
       "unifiedMemory": "{{size}}GB Pamięci zunifikowanej",
       "memoryUsed": " ({{size}}GB używane)",
-      "freeStorage": "{{size}} GB wolnego miejsca"
+      "freeStorage": "{{size}} GB wolnego miejsca",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "Brak dostępnych danych sprzętowych",
     "emptyStorage": "Nie wykryto dysków pamięci masowej"

@@ -1149,7 +1149,8 @@
       "unknown": "Unbekannt",
       "unifiedMemory": "{{size}}GB Einheitlicher Speicher",
       "memoryUsed": "({{size}}GB verwendet)",
-      "freeStorage": "{{size}} GB frei"
+      "freeStorage": "{{size}} GB frei",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "Keine Hardwaredaten verfügbar",
     "emptyStorage": "Keine Speicherlaufwerke erkannt"
