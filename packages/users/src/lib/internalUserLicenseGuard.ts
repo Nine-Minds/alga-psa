@@ -68,7 +68,10 @@ export async function checkInternalUserLicenseLimit(
     }
   }
 
-  if (trx.isTransaction) tenantRow = await tenantDb(trx, tenant).table('tenants').forUpdate().first('licensed_user_count', 'plan', 'product_code');
+  // NO KEY UPDATE, not FOR UPDATE: see assertCoManagedSeatAdmission. The
+  // invitation transaction sends email while holding this lock, and the email
+  // log insert on another connection needs a key-share lock on this row.
+  if (trx.isTransaction) tenantRow = await tenantDb(trx, tenant).table('tenants').forNoKeyUpdate().first('licensed_user_count', 'plan', 'product_code');
   if (!tenantRow) throw new Error(`Tenant not found: ${tenant}`);
   if (options?.existingUserId) {
     const existing = await tenantDb(trx, tenant).table('users').where('user_id', options.existingUserId).first('user_type', 'is_inactive');

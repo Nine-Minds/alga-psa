@@ -417,6 +417,21 @@ describe('customer technician allocation admission', () => {
     await expect(createCustomerTechnician(actor.tenant)).rejects.toMatchObject({ code: 'CO_MANAGED_SEAT_LIMIT' });
     expect(await db.transaction(trx => countCoManagedCommittedSeats(trx, actor.tenant))).toBe(2);
   });
+  it('lets another connection reference the customer tenant while an invitation holds the admission lock', async () => {
+    // Team invitations send their email inside the admission transaction, and the
+    // email log row is written on another connection with a foreign key to the
+    // tenant. A FOR UPDATE admission lock blocked that insert while the
+    // transaction waited for the send, hanging every invitation.
+    const { actor, input } = await readyForAcceptance();
+    await acceptCoManagedRelationship(db, actor, input);
+    await db.transaction(async trx => {
+      await assertCoManagedSeatAdmission(trx, actor.tenant, { email: 'lock@example.test', kind: 'invitation' });
+      await db.transaction(async other => {
+        await other.raw("SET LOCAL lock_timeout = '2s'");
+        await other.raw('SELECT 1 FROM tenants WHERE tenant = ? FOR KEY SHARE', [actor.tenant]);
+      });
+    });
+  });
   it('does not charge requesters or expired invitations as technician seats', async () => {
     const { customer, actor, input } = await readyForAcceptance();
     await acceptCoManagedRelationship(db, actor, input);

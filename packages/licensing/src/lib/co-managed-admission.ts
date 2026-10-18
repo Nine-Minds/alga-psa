@@ -36,7 +36,12 @@ export async function lockCoManagedSeatScope(trx: Knex.Transaction, customerTena
   const allocation = await sponsor.table('co_managed_allocations').where({ allocation_id: operation.allocation_id,
     customer_tenant: customerTenant, relationship_id: relationship.relationship_id }).whereNot('state', 'released').first();
   if (!allocation) throw new CoManagedAdmissionError('CO_MANAGED_ALLOCATION_CONFLICT');
-  await customer.table('tenants').forUpdate().first();
+  // NO KEY UPDATE still serializes admissions (it conflicts with itself and
+  // with FOR UPDATE) but, unlike FOR UPDATE, lets other connections insert rows
+  // that reference this tenant. Callers send invitation email inside this
+  // transaction, and the email log is written on its own connection: a FOR
+  // UPDATE here blocked that insert while the transaction waited for the send.
+  await customer.table('tenants').forNoKeyUpdate().first();
   return { sponsorTenant: found.sponsor_tenant as string, entitlement, owner, operation, relationship, allocation };
 }
 

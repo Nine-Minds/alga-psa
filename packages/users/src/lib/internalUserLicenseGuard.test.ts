@@ -17,7 +17,7 @@ function fakeTrx(input: { plan: string | null; licensedUserCount: number | null;
   const conn = ((table: string) => {
     if (table === 'tenants') {
       const tenantRow = { licensed_user_count: input.licensedUserCount, plan: input.plan, product_code: input.productCode };
-      return { first: async (..._fields: any[]) => tenantRow, forUpdate: () => ({ first: async (..._f: any[]) => tenantRow }) };
+      return { first: async (..._fields: any[]) => tenantRow, forNoKeyUpdate: () => ({ first: async (..._f: any[]) => tenantRow }) };
     }
 
     if (table === 'users') {
