@@ -432,6 +432,7 @@
       "lastName": "Sobrenome do administrador",
       "email": "Email do administrador",
       "capacity": "{{count}} assentos disponíveis. Inclua o administrador inicial nesta alocação.",
+      "noSeatsAvailable": "Não há assentos disponíveis: todos os {{count}} assentos comprados estão alocados. Adicione assentos ao pool ou reduza a alocação de outro espaço de trabalho.",
       "visibility": "Acesso a tickets proposto",
       "board_scope": "Supervisão do quadro inicial do service desk",
       "escalation_only": "Somente tickets escalados",

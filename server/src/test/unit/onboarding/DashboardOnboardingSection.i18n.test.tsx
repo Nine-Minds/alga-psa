@@ -18,6 +18,8 @@ const translations: Record<string, string> = {
   'onboarding.incompleteTitle': 'Configurer FR',
   'onboarding.completeDescription': 'Description complete FR',
   'onboarding.incompleteDescription': 'Description incomplete FR',
+  'onboarding.coManagedCompleteDescription': 'Espace IT pret FR',
+  'onboarding.coManagedIncompleteDescription': 'Terminez votre espace IT FR',
   'onboarding.badges.complete': 'Complete FR',
   'onboarding.badges.notStarted': 'Pas commence FR',
   'onboarding.badges.inProgress': 'En cours FR',
@@ -192,6 +194,17 @@ describe('DashboardOnboardingSection i18n wiring', () => {
     expect(screen.getByText('Fini FR')).toBeInTheDocument();
     expect(screen.getByText('Complete FR')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Hide section' })).toBeInTheDocument();
+  });
+
+  it('describes a co-managed customer workspace instead of the MSP dashboard', () => {
+    const { unmount } = render(<DashboardOnboardingSection steps={mixedSteps} productCode="co_managed" />);
+    expect(screen.getByText('Terminez votre espace IT FR')).toBeInTheDocument();
+    expect(screen.queryByText('Description incomplete FR')).not.toBeInTheDocument();
+    unmount();
+
+    render(<DashboardOnboardingSection steps={allComplete} productCode="co_managed" />);
+    expect(screen.getByText('Espace IT pret FR')).toBeInTheDocument();
+    expect(screen.queryByText('Description complete FR')).not.toBeInTheDocument();
   });
 
   it('does not offer section hide while onboarding is incomplete', () => {

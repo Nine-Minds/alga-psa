@@ -73,6 +73,8 @@
     "incompleteTitle": "Dokończ konfigurację",
     "completeDescription": "Możesz już korzystać z pełnego doświadczenia pulpitu MSP.",
     "incompleteDescription": "Wykonaj każdy krok, aby odblokować pełne doświadczenie pulpitu MSP.",
+    "coManagedCompleteDescription": "Twój obszar roboczy IT jest gotowy do użycia.",
+    "coManagedIncompleteDescription": "Wykonaj każdy krok, aby dokończyć konfigurację obszaru roboczego IT.",
     "stepLabel": "KROK {{index}}",
     "badges": {
       "complete": "Ukończono",

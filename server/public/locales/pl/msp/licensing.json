@@ -434,6 +434,7 @@
       "lastName": "Nazwisko administratora",
       "email": "Adres e-mail administratora",
       "capacity": "Dostępnych stanowisk: {{count}}. Uwzględnij pierwszego administratora w tym przydziale.",
+      "noSeatsAvailable": "Brak dostępnych stanowisk: wszystkie zakupione stanowiska ({{count}}) są przydzielone. Dodaj stanowiska do puli lub zmniejsz przydział innego obszaru roboczego.",
       "visibility": "Proponowany dostęp do zgłoszeń",
       "board_scope": "Nadzór nad początkową tablicą service desk",
       "escalation_only": "Tylko eskalowane zgłoszenia",

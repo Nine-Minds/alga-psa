@@ -430,6 +430,7 @@
       "lastName": "Nachname des Administrators",
       "email": "E-Mail-Adresse des Administrators",
       "capacity": "{{count}} Plätze verfügbar. Rechnen Sie den ersten Administrator in diese Zuteilung ein.",
+      "noSeatsAvailable": "Keine Plätze verfügbar: Alle {{count}} gekauften Plätze sind zugeteilt. Fügen Sie dem Pool Plätze hinzu oder verringern Sie die Zuteilung eines anderen Arbeitsbereichs.",
       "visibility": "Vorgeschlagener Ticketzugriff",
       "board_scope": "Überblick über das anfängliche Servicedesk-Board",
       "escalation_only": "Nur eskalierte Tickets",

@@ -430,6 +430,7 @@
       "lastName": "Administrator last name",
       "email": "Administrator email",
       "capacity": "{{count}} seats available. Include the initial administrator in this allocation.",
+      "noSeatsAvailable": "No seats are available: all {{count}} purchased seats are allocated. Add seats to the pool or reduce another workspace's allocation.",
       "visibility": "Proposed ticket access",
       "board_scope": "Oversight of the initial service desk board",
       "escalation_only": "Escalated tickets only",

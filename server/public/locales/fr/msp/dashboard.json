@@ -73,6 +73,8 @@
     "incompleteTitle": "Terminez votre configuration",
     "completeDescription": "Vous êtes prêt à utiliser l'expérience complète du tableau de bord MSP.",
     "incompleteDescription": "Suivez chaque étape pour débloquer l'expérience complète du tableau de bord MSP.",
+    "coManagedCompleteDescription": "Votre espace de travail informatique est prêt à l'emploi.",
+    "coManagedIncompleteDescription": "Suivez chaque étape pour terminer la configuration de votre espace de travail informatique.",
     "stepLabel": "ÉTAPE {{index}}",
     "badges": {
       "complete": "Terminé",

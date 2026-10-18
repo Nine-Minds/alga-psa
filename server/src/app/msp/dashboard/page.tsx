@@ -35,20 +35,21 @@ async function DashboardPage() {
   // fail the page, so a lookup problem falls back to the stock title.
   const welcome = await getDashboardWelcomeSettingsAction().catch(() => null);
   const welcomeCompanyName = welcome?.useCompanyName ? welcome.companyName : null;
+  const dashboardProduct = productCode === 'co_managed' ? 'co_managed' : 'psa';
 
   return (
     <DashboardContainer
       onboardingSection={
         isEnterprise ? (
           <Suspense fallback={<DashboardOnboardingSkeleton />}>
-            <DashboardOnboardingSlot />
+            <DashboardOnboardingSlot productCode={dashboardProduct} />
           </Suspense>
         ) : undefined
       }
       initialMobileAppCardDismissed={mobileAppCardDismissed}
       selfHost={selfHost}
       welcomeCompanyName={welcomeCompanyName}
-      productCode={productCode === 'co_managed' ? 'co_managed' : 'psa'}
+      productCode={dashboardProduct}
     />
   );
 }

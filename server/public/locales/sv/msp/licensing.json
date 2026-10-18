@@ -430,6 +430,7 @@
       "lastName": "Administratörens efternamn",
       "email": "Administratörens e-postadress",
       "capacity": "{{count}} licenser tillgängliga. Inkludera den första administratören i den här tilldelningen.",
+      "noSeatsAvailable": "Inga licenser tillgängliga: alla {{count}} köpta licenser är tilldelade. Lägg till licenser i poolen eller minska en annan arbetsytas tilldelning.",
       "visibility": "Föreslagen ärendeåtkomst",
       "board_scope": "Överblick över den första servicedesk-tavlan",
       "escalation_only": "Endast eskalerade ärenden",

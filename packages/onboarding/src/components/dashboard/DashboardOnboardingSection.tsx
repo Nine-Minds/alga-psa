@@ -35,6 +35,7 @@ interface DashboardOnboardingSectionProps {
   steps: OnboardingStepServerState[];
   className?: string;
   initialDismissedStepIds?: OnboardingStepId[];
+  productCode?: 'psa' | 'co_managed';
 }
 
 interface OnboardingStep extends StepDefinition, OnboardingStepServerState {
@@ -334,6 +335,7 @@ export default function DashboardOnboardingSection({
   steps: stepStates,
   className,
   initialDismissedStepIds = EMPTY_DISMISSED_STEP_IDS,
+  productCode = 'psa',
 }: DashboardOnboardingSectionProps) {
   const { t } = useTranslation(['msp/dashboard', 'msp/core']);
   const posthog = usePostHog();
@@ -507,13 +509,21 @@ export default function DashboardOnboardingSection({
             ) : null}
           </div>
           <p className="mt-1 text-sm text-slate-600">
-            {isOnboardingComplete
-              ? t('onboarding.completeDescription', {
-                  defaultValue: "You're ready to use the full MSP dashboard experience.",
-                })
-              : t('onboarding.incompleteDescription', {
-                  defaultValue: 'Work through each step to unlock the full MSP dashboard experience.',
-                })}
+            {productCode === 'co_managed'
+              ? isOnboardingComplete
+                ? t('onboarding.coManagedCompleteDescription', {
+                    defaultValue: 'Your IT workspace is ready to use.',
+                  })
+                : t('onboarding.coManagedIncompleteDescription', {
+                    defaultValue: 'Work through each step to finish setting up your IT workspace.',
+                  })
+              : isOnboardingComplete
+                ? t('onboarding.completeDescription', {
+                    defaultValue: "You're ready to use the full MSP dashboard experience.",
+                  })
+                : t('onboarding.incompleteDescription', {
+                    defaultValue: 'Work through each step to unlock the full MSP dashboard experience.',
+                  })}
           </p>
         </div>
         <div className="flex items-center gap-3">

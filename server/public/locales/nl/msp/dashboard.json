@@ -73,6 +73,8 @@
     "incompleteTitle": "Voltooi uw configuratie",
     "completeDescription": "U bent klaar om de volledige MSP-dashboardervaring te gebruiken.",
     "incompleteDescription": "Werk elke stap af om de volledige MSP-dashboardervaring vrij te schakelen.",
+    "coManagedCompleteDescription": "Uw IT-werkruimte is klaar voor gebruik.",
+    "coManagedIncompleteDescription": "Werk elke stap af om het instellen van uw IT-werkruimte te voltooien.",
     "stepLabel": "STAP {{index}}",
     "badges": {
       "complete": "Voltooid",

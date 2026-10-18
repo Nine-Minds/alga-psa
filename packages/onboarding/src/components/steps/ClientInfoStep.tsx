@@ -82,6 +82,9 @@ export function ClientInfoStep({
       .catch((error) => console.error('Failed to load countries:', error));
   }, []);
 
+  const addressRequired = productCode === 'co_managed';
+  const requiredMarker = addressRequired ? <> <span className="text-red-500">*</span></> : null;
+
   const companyAddressSection = (
     <div className="space-y-4 pt-4 border-t">
       <div className="space-y-1">
@@ -102,11 +105,11 @@ export function ClientInfoStep({
         <Label htmlFor="companyAddressLine1">
           {t('clientInfoStep.address.fields.addressLine1.label', {
             defaultValue: 'Address Line 1'
-          })}
+          })}{requiredMarker}
         </Label>
         <Input
           id="companyAddressLine1"
-          required={productCode === 'co_managed'}
+          required={addressRequired}
           value={data.companyAddressLine1 || ''}
           onChange={(e) => updateData({ companyAddressLine1: e.target.value })}
           placeholder={t('clientInfoStep.address.fields.addressLine1.placeholder', {
@@ -136,11 +139,11 @@ export function ClientInfoStep({
           <Label htmlFor="companyCity">
             {t('clientInfoStep.address.fields.city.label', {
               defaultValue: 'City'
-            })}
+            })}{requiredMarker}
           </Label>
           <Input
             id="companyCity"
-            required={productCode === 'co_managed'}
+            required={addressRequired}
             value={data.companyCity || ''}
             onChange={(e) => updateData({ companyCity: e.target.value })}
           />
@@ -177,7 +180,7 @@ export function ClientInfoStep({
         <Label htmlFor="company-country-picker">
           {t('clientInfoStep.address.fields.country.label', {
             defaultValue: 'Country'
-          })}
+          })}{requiredMarker}
         </Label>
         <CountryPicker
           id="company-country-picker"

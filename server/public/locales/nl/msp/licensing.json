@@ -430,6 +430,7 @@
       "lastName": "Achternaam van de beheerder",
       "email": "E-mailadres van de beheerder",
       "capacity": "{{count}} plaatsen beschikbaar. Reken de eerste beheerder mee in deze toewijzing.",
+      "noSeatsAvailable": "Geen plaatsen beschikbaar: alle {{count}} gekochte plaatsen zijn toegewezen. Voeg plaatsen toe aan de pool of verlaag de toewijzing van een andere werkruimte.",
       "visibility": "Voorgestelde tickettoegang",
       "board_scope": "Overzicht van het eerste servicedeskbord",
       "escalation_only": "Alleen geëscaleerde tickets",

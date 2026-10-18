@@ -432,6 +432,7 @@
       "lastName": "Cognome dell’amministratore",
       "email": "Email dell’amministratore",
       "capacity": "{{count}} postazioni disponibili. Conta anche l’amministratore iniziale in questa assegnazione.",
+      "noSeatsAvailable": "Nessuna postazione disponibile: tutte le {{count}} postazioni acquistate sono assegnate. Aggiungi postazioni al pool o riduci l’assegnazione di un altro spazio di lavoro.",
       "visibility": "Accesso ai ticket proposto",
       "board_scope": "Supervisione della bacheca iniziale del service desk",
       "escalation_only": "Solo ticket in escalation",

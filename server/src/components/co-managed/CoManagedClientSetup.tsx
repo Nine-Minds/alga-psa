@@ -48,6 +48,12 @@ export default function CoManagedClientSetup({ clientId, clientName, idPrefix, o
     onDirtyChange?.(true);
   }, [form, onDirtyChange]);
 
+  // A rejection usually means the pool changed under this form; re-read it so
+  // the seat hint matches what the server just enforced.
+  const reloadCapacity = async () => {
+    try { setCapacity(await getCoManagedBillingState()); } catch { /* the rejection message already explains */ }
+  };
+
   useEffect(() => {
     let cancelled = false;
     void Promise.all([getCoManagedProvisioningOptions('', clientId), getCoManagedBillingState()]).then(([result, billing]) => {
@@ -61,6 +67,10 @@ export default function CoManagedClientSetup({ clientId, clientName, idPrefix, o
     form.administrator.lastName.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.administrator.email) &&
     form.escalationBoardId.length > 0 && Number.isInteger(form.seats) && form.seats >= 1 && capacity?.isPro && capacity.canGrow && form.seats <= capacity.available;
 
+  // canGrow is also false for a full pool; only a verified, fully allocated pool
+  // is "no seats left" rather than an eligibility problem.
+  const poolFull = Boolean(capacity?.isPro && !capacity.isReadOnly && capacity.capacity > 0 && capacity.allocated === capacity.capacity);
+
   const submit = async () => {
     if (!submitted.current && !valid) return;
     const request = submitted.current ?? { ...form, clientId, operationId: operationId.current };
@@ -71,6 +81,7 @@ export default function CoManagedClientSetup({ clientId, clientName, idPrefix, o
         // An acknowledged rejection is correctable; the operation ID is retained.
         submitted.current = null;
         setError(provisioningRejectionMessage(result.errorCode, t));
+        await reloadCapacity();
         return;
       }
       submitted.current = null;
@@ -113,9 +124,12 @@ export default function CoManagedClientSetup({ clientId, clientName, idPrefix, o
             <Input id={`${idPrefix}-seats`} required type="number" min={1} max={capacity?.available ?? 0} step={1} value={form.seats}
               onChange={(event) => setForm({ ...form, seats: Number(event.target.value) })} />
           </div>
-          {capacity && <p role="status" className="text-sm text-muted-foreground">{!capacity.isPro || !capacity.canGrow
-            ? t('coManaged.provisioning.ineligible', { defaultValue: 'An active Pro license and verified co-managed capacity are required to create a workspace.' })
-            : t('coManaged.provisioning.capacity', { count: capacity.available })}</p>}
+          {capacity && <p role="status" className="text-sm text-muted-foreground">{poolFull
+            ? t('coManaged.provisioning.noSeatsAvailable', { count: capacity.capacity,
+              defaultValue: 'No seats are available: all {{count}} purchased seats are allocated. Add seats to the pool or reduce another workspace\'s allocation.' })
+            : !capacity.isPro || !capacity.canGrow
+              ? t('coManaged.provisioning.ineligible', { defaultValue: 'An active Pro license and verified co-managed capacity are required to create a workspace.' })
+              : t('coManaged.provisioning.capacity', { count: capacity.available })}</p>}
           <CustomSelect id={`${idPrefix}-visibility`} label={t('coManaged.provisioning.visibility', { defaultValue: 'Visibility' })}
             value={form.visibilityMode}
             options={(['board_scope', 'escalation_only'] as const).map((mode) => ({ value: mode, label: t(`coManaged.provisioning.${mode}`) }))}

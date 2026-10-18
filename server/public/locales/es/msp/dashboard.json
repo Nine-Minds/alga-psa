@@ -73,6 +73,8 @@
     "incompleteTitle": "Complete su configuración",
     "completeDescription": "Ya puede usar la experiencia completa del panel MSP.",
     "incompleteDescription": "Completa cada paso para desbloquear la experiencia completa del panel MSP.",
+    "coManagedCompleteDescription": "Su espacio de trabajo de TI está listo para usar.",
+    "coManagedIncompleteDescription": "Completa cada paso para terminar de configurar tu espacio de trabajo de TI.",
     "stepLabel": "PASO {{index}}",
     "badges": {
       "complete": "Completado",

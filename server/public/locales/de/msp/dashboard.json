@@ -73,6 +73,8 @@
     "incompleteTitle": "Schließen Sie Ihre Einrichtung ab",
     "completeDescription": "Sie können jetzt das vollständige MSP-Dashboard-Erlebnis nutzen.",
     "incompleteDescription": "Arbeiten Sie jeden Schritt ab, um das vollständige MSP-Dashboard-Erlebnis freizuschalten.",
+    "coManagedCompleteDescription": "Ihr IT-Arbeitsbereich ist einsatzbereit.",
+    "coManagedIncompleteDescription": "Arbeiten Sie jeden Schritt ab, um die Einrichtung Ihres IT-Arbeitsbereichs abzuschließen.",
     "stepLabel": "SCHRITT {{index}}",
     "badges": {
       "complete": "Abgeschlossen",

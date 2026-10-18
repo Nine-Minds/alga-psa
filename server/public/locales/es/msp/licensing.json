@@ -432,6 +432,7 @@
       "lastName": "Apellidos del administrador",
       "email": "Correo electrónico del administrador",
       "capacity": "{{count}} puestos disponibles. Incluya al administrador inicial en esta asignación.",
+      "noSeatsAvailable": "No hay puestos disponibles: los {{count}} puestos comprados están asignados. Añada puestos al grupo o reduzca la asignación de otro espacio de trabajo.",
       "visibility": "Acceso a tickets propuesto",
       "board_scope": "Supervisión del tablero inicial de la mesa de servicio",
       "escalation_only": "Solo tickets escalados",

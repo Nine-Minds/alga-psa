@@ -237,3 +237,20 @@ describe('ClientInfoStep rendering', () => {
     });
   });
 });
+
+describe('ClientInfoStep co-managed address requirements', () => {
+  const requiredLabels = () => ['companyAddressLine1', 'companyCity', 'company-country-picker']
+    .map((id) => document.querySelector(`label[for="${id}"]`)!);
+
+  it('marks the address fields the co-managed wizard enforces', () => {
+    render(<ClientInfoStep data={makeWizardData()} updateData={vi.fn()} productCode="co_managed" />);
+    for (const label of requiredLabels()) expect(label.querySelector('.text-red-500')).toHaveTextContent('*');
+    expect(document.querySelector('label[for="companyAddressLine2"] .text-red-500')).toBeNull();
+    expect(document.getElementById('companyAddressLine1')).toBeRequired();
+  });
+
+  it('leaves the PSA address optional and unmarked', () => {
+    render(<ClientInfoStep data={makeWizardData()} updateData={vi.fn()} productCode="psa" />);
+    for (const label of requiredLabels()) expect(label.querySelector('.text-red-500')).toBeNull();
+  });
+});

@@ -432,6 +432,7 @@
       "lastName": "Nom de l’administrateur",
       "email": "Adresse e-mail de l’administrateur",
       "capacity": "{{count}} postes disponibles. Comptez l’administrateur initial dans cette attribution.",
+      "noSeatsAvailable": "Aucun poste disponible : les {{count}} postes achetés sont tous attribués. Ajoutez des postes au pool ou réduisez l’attribution d’un autre espace de travail.",
       "visibility": "Accès aux tickets proposé",
       "board_scope": "Supervision du tableau de support initial",
       "escalation_only": "Tickets escaladés uniquement",

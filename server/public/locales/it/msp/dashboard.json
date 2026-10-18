@@ -73,6 +73,8 @@
     "incompleteTitle": "Completa la configurazione",
     "completeDescription": "Sei pronto a usare l'esperienza completa della dashboard MSP.",
     "incompleteDescription": "Completa ogni passaggio per sbloccare l'esperienza completa della dashboard MSP.",
+    "coManagedCompleteDescription": "Il tuo spazio di lavoro IT è pronto all'uso.",
+    "coManagedIncompleteDescription": "Completa ogni passaggio per finire di configurare il tuo spazio di lavoro IT.",
     "stepLabel": "PASSO {{index}}",
     "badges": {
       "complete": "Completato",

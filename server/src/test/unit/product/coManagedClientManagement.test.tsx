@@ -24,13 +24,17 @@ vi.mock('@enterprise/lib/actions/coManagedBillingActions', () => ({
 }));
 vi.mock('@enterprise/components/co-managed/CoManagedCheckout', () => ({ default: () => <div>Stripe checkout</div> }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push }) }));
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({ t: (key: string, options?: Record<string, string>) => {
+vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+  // Stable like the real hook's t, so effects keyed on t run once per mount.
+  const t = (key: string, options?: Record<string, string>) => {
     if (key.endsWith('invitationExpired')) return 'Invitation expired';
     return options?.defaultValue ?? key;
-  } }),
+  };
+  return {
+  useTranslation: () => ({ t }),
   useFormatters: () => ({ formatCurrency: (value: number) => `$${value}`, formatDate: (value: Date) => value.toISOString() }),
-}));
+  };
+});
 vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }) =>
     React.createElement('button', props as React.ButtonHTMLAttributes<HTMLButtonElement>, children),
@@ -120,6 +124,32 @@ describe('client-fixed co-managed setup', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('There are not enough available co-managed seats');
     expect(screen.getByRole('button', { name: 'Submit' })).not.toBeDisabled();
+  });
+
+  it('names a fully allocated pool as out of seats, not as an eligibility problem', async () => {
+    mocks.billing.mockResolvedValue(billingState({ capacity: 3, allocated: 3, available: 0, canGrow: false }));
+    render(<CoManagedClientSetup clientId="client" clientName="Acme" idPrefix="i" onProvisioned={vi.fn()} />);
+    expect(await screen.findByRole('status')).toHaveTextContent('No seats are available');
+    expect(screen.getByRole('status')).not.toHaveTextContent('Pro license');
+  });
+
+  it('keeps the eligibility message for a sponsor without Pro', async () => {
+    mocks.billing.mockResolvedValue(billingState({ isPro: false, canGrow: false }));
+    render(<CoManagedClientSetup clientId="client" clientName="Acme" idPrefix="i" onProvisioned={vi.fn()} />);
+    expect(await screen.findByRole('status')).toHaveTextContent('An active Pro license');
+  });
+
+  it('re-reads the seat pool after a capacity rejection so the hint matches the server', async () => {
+    // Another workspace takes the free seats once this form has been submitted.
+    mocks.billing.mockImplementation(async () => mocks.provision.mock.calls.length === 0 ? billingState()
+      : billingState({ capacity: 5, allocated: 5, available: 0, canGrow: false }));
+    mocks.provision.mockResolvedValue({ rejected: true, errorCode: 'CAPACITY_UNAVAILABLE' });
+    render(<CoManagedClientSetup clientId="client" clientName="Acme" idPrefix="i" onProvisioned={vi.fn()} />);
+    await fillSetup();
+    expect(screen.getByRole('status')).toHaveTextContent('coManaged.provisioning.capacity');
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('No seats are available'));
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
   });
 
   it('prefills the client name, fixes the client, and reuses the operation ID when a submission fails', async () => {

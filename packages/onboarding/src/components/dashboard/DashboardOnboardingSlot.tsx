@@ -13,7 +13,7 @@ interface OnboardingProgressSummary {
   allComplete: boolean;
 }
 
-export async function DashboardOnboardingSlot() {
+export async function DashboardOnboardingSlot({ productCode = 'psa' }: { productCode?: 'psa' | 'co_managed' } = {}) {
   try {
     const [onboardingProgress, dismissedStepIds, sectionDismissal] = await Promise.all([
       getOnboardingProgressAction(),
@@ -34,6 +34,7 @@ export async function DashboardOnboardingSlot() {
         steps={steps}
         initialDismissedStepIds={dismissedStepIds}
         className={className}
+        productCode={productCode}
       />
     );
   } catch (error) {

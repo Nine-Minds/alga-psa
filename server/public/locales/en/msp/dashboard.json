@@ -104,6 +104,8 @@
     "incompleteTitle": "Complete your setup",
     "completeDescription": "You're ready to use the full MSP dashboard experience.",
     "incompleteDescription": "Work through each step to unlock the full MSP dashboard experience.",
+    "coManagedCompleteDescription": "Your IT workspace is ready to use.",
+    "coManagedIncompleteDescription": "Work through each step to finish setting up your IT workspace.",
     "stepLabel": "STEP {{index}}",
     "badges": {
       "complete": "Complete",

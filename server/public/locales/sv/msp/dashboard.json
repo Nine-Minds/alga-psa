@@ -104,6 +104,8 @@
     "incompleteTitle": "Slutför konfigurationen",
     "completeDescription": "Du är redo att använda alla funktioner i MSP-översikten.",
     "incompleteDescription": "Gå igenom varje steg för att få tillgång till alla funktioner i MSP-översikten.",
+    "coManagedCompleteDescription": "Din IT-arbetsyta är redo att användas.",
+    "coManagedIncompleteDescription": "Gå igenom varje steg för att slutföra konfigurationen av din IT-arbetsyta.",
     "stepLabel": "Steg {{index}}",
     "badges": {
       "complete": "Slutfört",
