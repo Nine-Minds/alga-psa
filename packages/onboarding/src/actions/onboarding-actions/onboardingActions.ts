@@ -110,11 +110,34 @@ function onboardingActionErrorMessage(error: unknown, fallback: string): string 
   return fallback;
 }
 
+/**
+ * Workspace setup writes tenant-wide settings, users, billing and ticketing
+ * defaults, so only an administrator may run it (or be sent to it). Each
+ * action checks this itself: the wizard is not the only caller of a server action.
+ */
+async function canRunWorkspaceSetup(user: IUserWithRoles): Promise<boolean> {
+  return hasPermission(user, 'settings', 'update');
+}
+const SETUP_DENIED = { success: false, error: 'Only an administrator can complete workspace setup.' } as const;
+
+/** Steps that only exist in PSA setup; a co-managed workspace skips them. */
+async function isCoManagedTenant(tenant: string): Promise<boolean> {
+  const { knex } = await createTenantKnex();
+  return (await tenantDb(knex, tenant).table('tenants').first('product_code'))?.product_code === 'co_managed';
+}
+const NOT_IN_CO_MANAGED_SETUP = { success: false, error: 'This step is not part of co-managed workspace setup.' } as const;
+
+export const getWorkspaceSetupAccess = withAuth(async (
+  user: IUserWithRoles,
+  _ctx: AuthContext
+): Promise<{ canRun: boolean }> => ({ canRun: await canRunWorkspaceSetup(user) }));
+
 export const saveClientInfo = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: AuthContext,
   data: ClientInfoData
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(currentUser)) return SETUP_DENIED;
   try {
     const { knex } = await createTenantKnex();
 
@@ -273,10 +296,11 @@ async function mspRoleIds(tenant: string): Promise<Map<string, string>> {
 }
 
 export const addSingleTeamMember = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   member: TeamMember
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(user)) return SETUP_DENIED;
   try {
     const outcome = await createTeamMember(member, await mspRoleIds(tenant));
     revalidatePath('/msp/onboarding');
@@ -292,10 +316,11 @@ export const addSingleTeamMember = withAuth(async (
 });
 
 export const addTeamMembers = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   members: TeamMember[]
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(user)) return SETUP_DENIED;
   try {
     const roleIds = await mspRoleIds(tenant);
     const created: string[] = [];
@@ -352,10 +377,12 @@ export const addTeamMembers = withAuth(async (
 });
 
 export const createClient = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   data: ClientData
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(user)) return SETUP_DENIED;
+  if (await isCoManagedTenant(tenant)) return NOT_IN_CO_MANAGED_SETUP;
   try {
     const { knex } = await createTenantKnex();
 
@@ -477,10 +504,12 @@ export const createClient = withAuth(async (
 });
 
 export const addClientContact = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   data: ClientContactData
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(user)) return SETUP_DENIED;
+  if (await isCoManagedTenant(tenant)) return NOT_IN_CO_MANAGED_SETUP;
   try {
     const { knex } = await createTenantKnex();
 
@@ -557,10 +586,12 @@ export const addClientContact = withAuth(async (
 });
 
 export const setupBilling = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   data: BillingData
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(user)) return SETUP_DENIED;
+  if (await isCoManagedTenant(tenant)) return NOT_IN_CO_MANAGED_SETUP;
   try {
     const { knex } = await createTenantKnex();
 
@@ -656,6 +687,7 @@ export const configureTicketing = withAuth(async (
   { tenant }: AuthContext,
   data: TicketingData
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(currentUser)) return SETUP_DENIED;
   try {
     const { knex } = await createTenantKnex();
 
@@ -1005,10 +1037,11 @@ export const validateOnboardingDefaults = withAuth(async (
 });
 
 export const saveOnboardingStepPosition = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   _ctx: AuthContext,
   step: number
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(user)) return SETUP_DENIED;
   try {
     if (!Number.isInteger(step) || step < 0) {
       return { success: false, error: 'Invalid step position' };
@@ -1023,9 +1056,10 @@ export const saveOnboardingStepPosition = withAuth(async (
 });
 
 export const completeOnboarding = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   _ctx: AuthContext
 ): Promise<OnboardingActionResult> => {
+  if (!await canRunWorkspaceSetup(user)) return SETUP_DENIED;
   try {
     // Mark onboarding as completed and clear wizard data
     await updateTenantOnboardingStatus(true);

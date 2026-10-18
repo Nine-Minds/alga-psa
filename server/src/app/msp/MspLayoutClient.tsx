@@ -46,6 +46,8 @@ interface Props {
   dateFormat?: CountryDateFormat | null;
   productCode: ProductCode;
   needsOnboarding: boolean;
+  /** Whether this user may run workspace setup; only they are sent to it. */
+  canRunOnboarding?: boolean;
   initialSidebarCollapsed: boolean;
   initialLocale?: SupportedLocale | null;
   /** Server-embedded i18n resources for the route (skips per-namespace HTTP fetches). */
@@ -94,6 +96,7 @@ export function MspLayoutClient({
   dateFormat,
   productCode,
   needsOnboarding,
+  canRunOnboarding = false,
   initialSidebarCollapsed,
   initialLocale,
   preloadedLocaleResources,
@@ -156,7 +159,7 @@ export function MspLayoutClient({
           Object.prototype.hasOwnProperty.call(settings, 'onboarding_completed') &&
           Object.prototype.hasOwnProperty.call(settings, 'onboarding_skipped');
 
-        if (hasOnboardingFlags && !settings.onboarding_completed && !settings.onboarding_skipped) {
+        if (canRunOnboarding && hasOnboardingFlags && !settings.onboarding_completed && !settings.onboarding_skipped) {
           // The redirect effect above performs the navigation; keeping `router`
           // out of this effect means a new router identity never re-fetches
           // tenant settings (which would blink the license banner off and on).
@@ -176,7 +179,7 @@ export function MspLayoutClient({
     return () => {
       isCancelled = true;
     };
-  }, [needsOnboarding, isOnboardingPage, sessionTenant, onboardingResolvedServerSide]);
+  }, [needsOnboarding, isOnboardingPage, sessionTenant, onboardingResolvedServerSide, canRunOnboarding]);
 
   const isAlgaDesk = productCode === 'algadesk';
 

@@ -208,6 +208,7 @@ describe('MspLayoutClient product shell behavior', () => {
         session={{ user: { tenant: 'tenant-1' } } as any}
         productCode="algadesk"
         needsOnboarding={false}
+        canRunOnboarding
         initialSidebarCollapsed={false}
       >
         <div>algadesk content</div>
@@ -217,6 +218,30 @@ describe('MspLayoutClient product shell behavior', () => {
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/msp/onboarding');
     });
+  });
+
+  it('client fallback does not send a user who cannot run setup into the wizard', async () => {
+    mockGetTenantSettings.mockResolvedValue({
+      tenant: 'tenant-1',
+      onboarding_completed: false,
+      onboarding_skipped: false,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    render(
+      <MspLayoutClient
+        session={{ user: { tenant: 'tenant-1' } } as any}
+        productCode="psa"
+        needsOnboarding={false}
+        initialSidebarCollapsed={false}
+      >
+        <div>technician content</div>
+      </MspLayoutClient>,
+    );
+
+    await waitFor(() => expect(mockGetTenantSettings).toHaveBeenCalled());
+    expect(mockReplace).not.toHaveBeenCalledWith('/msp/onboarding');
   });
 
   it.each([
@@ -340,6 +365,7 @@ describe('MspLayoutClient product shell behavior', () => {
         session={{ user: { tenant: 'tenant-1' } } as any}
         productCode="psa"
         needsOnboarding={false}
+        canRunOnboarding
         initialSidebarCollapsed={false}
         selfHostLicensing={true}
       >
