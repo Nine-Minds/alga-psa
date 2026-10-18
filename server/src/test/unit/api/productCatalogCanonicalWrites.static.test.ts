@@ -12,4 +12,27 @@ describe('product catalog canonical billing writes', () => {
     expect(source).toContain("billing_method: 'usage'");
     expect(source).not.toContain("billing_method: 'per_unit'");
   });
+
+  // service_catalog has no column for these productShape keys; spreading them
+  // into the insert/update returns Postgres 42703 (alga0002285).
+  it.each(['create', 'update'])('%s destructures every non-column product key out of the catalog write', (method) => {
+    const start = source.indexOf(`async ${method}(`);
+    const end = source.indexOf('async ', start + 10);
+    const body = source.slice(start, end);
+    expect(body).toMatch(/currency_code:\s*currencyCode/);
+    expect(body).toMatch(/prices:\s*explicitPrices/);
+    expect(body).toMatch(/scheduled_prices:\s*scheduledPrices/);
+    expect(body).toMatch(/billing_method:\s*_billing_method/);
+  });
+
+  it('productShape non-column keys are all stripped by the service', () => {
+    const schema = readFileSync(path.resolve(process.cwd(), 'src/lib/api/schemas/productSchemas.ts'), 'utf8');
+    const shape = schema.slice(schema.indexOf('const productShape = {'), schema.indexOf('} as const;'));
+    const keys = [...shape.matchAll(/^  ([a-z_]+):/gm)].map((m) => m[1]);
+    const nonColumn = ['currency_code', 'prices', 'scheduled_prices', 'billing_method'];
+    for (const key of nonColumn) expect(keys).toContain(key);
+    // Any new key must be a service_catalog column; update this list deliberately.
+    const columns = ['service_name', 'custom_service_type_id', 'default_rate', 'unit_of_measure', 'unit_code', 'category_id', 'tax_rate_id', 'description', 'sku', 'barcode', 'cost', 'cost_currency', 'vendor', 'manufacturer', 'product_category', 'is_license', 'license_term', 'license_billing_cadence', 'is_active'];
+    expect(keys.filter((k) => !nonColumn.includes(k)).sort()).toEqual([...columns].sort());
+  });
 });

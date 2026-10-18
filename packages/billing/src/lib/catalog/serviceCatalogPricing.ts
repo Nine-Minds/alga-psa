@@ -55,7 +55,7 @@ export function todayCalendarDate(): string {
 
 const supportedCurrencies = (): string[] => CURRENCY_OPTIONS.map((option) => option.value);
 
-const currencyCodeSchema = z.string().refine(
+export const currencyCodeSchema = z.string().refine(
   (code) => supportedCurrencies().includes(code),
   () => ({ message: `currency_code must be one of: ${supportedCurrencies().join(', ')}` }),
 );
