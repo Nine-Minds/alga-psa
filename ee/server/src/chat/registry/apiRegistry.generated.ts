@@ -5440,6 +5440,62 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "date-time",
           "description": "Optional warranty end date/time."
         },
+        "manufacturer": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Hardware make. RMM sync fills it when the provider reports one."
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Hardware model. A first-class column, not a system_info lookup."
+        },
+        "vendor_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Supplier; an inventory vendors.vendor_id of this tenant."
+        },
+        "purchase_cost": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Purchase cost in minor units (cents)."
+        },
+        "purchase_cost_currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO currency code; defaults to the tenant currency when a cost is written without one."
+        },
+        "order_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Purchase order number."
+        },
+        "billing_profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Billing profile for work on this device. Must belong to the asset client and be active; cleared when the client changes."
+        },
         "attributes": {
           "$ref": "#/components/schemas/AssetAttributes"
         },
@@ -6203,6 +6259,62 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "date-time",
           "description": "Warranty end date/time."
         },
+        "manufacturer": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Hardware make. RMM sync fills it when the provider reports one."
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Hardware model. A first-class column, not a system_info lookup."
+        },
+        "vendor_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Supplier; an inventory vendors.vendor_id of this tenant."
+        },
+        "purchase_cost": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Purchase cost in minor units (cents)."
+        },
+        "purchase_cost_currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO currency code; defaults to the tenant currency when a cost is written without one."
+        },
+        "order_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Purchase order number."
+        },
+        "billing_profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Billing profile for work on this device. Must belong to the asset client and be active; cleared when the client changes."
+        },
         "attributes": {
           "$ref": "#/components/schemas/AssetAttributes"
         }
@@ -6397,6 +6509,549 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "success",
         "data",
         "meta"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assets_id_assignments",
+    "method": "get",
+    "path": "/api/v1/assets/{id}/assignments",
+    "displayName": "List asset assignment history",
+    "summary": "List asset assignment history",
+    "description": "Returns every assignment of the path asset, newest first, with the contact name joined. An asset that does not exist in the authenticated tenant returns 404 rather than an empty array.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/AssetAssignment"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assetstatuses",
+    "method": "get",
+    "path": "/api/v1/asset-statuses",
+    "displayName": "List asset statuses",
+    "summary": "List asset statuses",
+    "description": "Returns the tenant asset status registry in display order. Active statuses only unless include_archived=true. assets.status stores the slug.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "include_archived",
+        "in": "query",
+        "required": false,
+        "description": "true also returns archived (is_active false) statuses.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "true also returns archived (is_active false) statuses."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/AssetStatus"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assetgroups",
+    "method": "get",
+    "path": "/api/v1/asset-groups",
+    "displayName": "List asset groups for a client",
+    "summary": "List asset groups for a client",
+    "description": "Returns the client’s bundles and shared workspaces with member and people counts. client_id is required.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": true,
+        "description": "Required; groups belong to a client.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required; groups belong to a client."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/AssetGroup"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetgroups",
+    "method": "post",
+    "path": "/api/v1/asset-groups",
+    "displayName": "Create an asset group",
+    "summary": "Create an asset group",
+    "description": "Creates a bundle or shared workspace for a client, optionally with its first members. Adding a member to a bundle assigns it to the owner and moves it to the group location; adding one to a shared workspace unassigns it.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "bundle",
+            "shared_workspace"
+          ]
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Members to add in the same transaction."
+        }
+      },
+      "required": [
+        "client_id",
+        "name",
+        "kind"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assetgroups_id",
+    "method": "get",
+    "path": "/api/v1/asset-groups/{id}",
+    "displayName": "Get an asset group",
+    "summary": "Get an asset group",
+    "description": "Returns the group with its members and people.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_assetgroups_id",
+    "method": "put",
+    "path": "/api/v1/asset-groups/{id}",
+    "displayName": "Update an asset group",
+    "summary": "Update an asset group",
+    "description": "Renames the group, changes its kind or moves its location. A location change moves every member. shared_workspace to bundle is refused while users exist; bundle to shared_workspace unassigns every member and drops the owner.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "bundle",
+            "shared_workspace"
+          ],
+          "description": "shared_workspace to bundle is refused while users exist; the reverse unassigns every member."
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Propagates to every member."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_assetgroups_id",
+    "method": "delete",
+    "path": "/api/v1/asset-groups/{id}",
+    "displayName": "Delete an asset group",
+    "summary": "Delete an asset group",
+    "description": "Deletes the group and its member and people rows. Members keep their current assignee and location.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetgroups_id_members",
+    "method": "post",
+    "path": "/api/v1/asset-groups/{id}/members",
+    "displayName": "Add assets to a group",
+    "summary": "Add assets to a group",
+    "description": "Adds members. For a bundle each new member is assigned to the owner and moved to the group location; for a shared workspace each is unassigned. An asset of another client or already in another group is a 400.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "asset_ids"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_assetgroups_id_members",
+    "method": "delete",
+    "path": "/api/v1/asset-groups/{id}/members",
+    "displayName": "Remove an asset from a group",
+    "summary": "Remove an asset from a group",
+    "description": "Removes the asset named by asset_id. Its assignee and location are left as they are.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      },
+      {
+        "name": "asset_id",
+        "in": "query",
+        "required": true,
+        "description": "Required.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetgroups_id_contacts",
+    "method": "post",
+    "path": "/api/v1/asset-groups/{id}/contacts",
+    "displayName": "Set a group owner or add a workspace user",
+    "summary": "Set a group owner or add a workspace user",
+    "description": "With role owner, sets (or with a null contact clears) the bundle owner, which assigns or unassigns every member. With role user, adds a shared-workspace user. A user on a bundle or an owner on a workspace is a 400.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contact_name_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Null with role owner clears the bundle owner."
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "owner",
+            "user"
+          ]
+        }
+      },
+      "required": [
+        "contact_name_id",
+        "role"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_assetgroups_id_contacts",
+    "method": "delete",
+    "path": "/api/v1/asset-groups/{id}/contacts",
+    "displayName": "Remove a group owner or workspace user",
+    "summary": "Remove a group owner or workspace user",
+    "description": "Removes the contact named by contact_name_id. On a bundle this clears the owner, which unassigns every member.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      },
+      {
+        "name": "contact_name_id",
+        "in": "query",
+        "required": true,
+        "description": "Required.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
       ]
     }
   },
@@ -12609,6 +13264,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "apply"
             ]
           }
+        },
+        "billing_strategy": {
+          "type": "string",
+          "enum": [
+            "source_profile",
+            "target_default"
+          ],
+          "description": "F099: what happens to tickets, projects, assets and RMM mappings that carry no billing profile. `source_profile` (the default) stamps them with the moved default profile; `target_default` leaves them unattributed so they fall through to the destination client's default. Billing history (invoices, cycles, payments, credits, tax settings) is stamped either way."
         }
       },
       "required": [
@@ -40003,7 +40666,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/{id}/deliveries/{delivery_id}/retry",
     "displayName": "Retry delivery",
     "summary": "Retry delivery",
-    "description": "Re-sends a previously failed delivery and records a new attempt on the same delivery row.",
+    "description": "Re-queues a previously failed delivery as a fresh attempt on the shared webhook delivery queue (rate limiting, backoff and auto-disable still apply). Returns 202 without sending the request in-band; the new attempt lands as its own delivery row. Test deliveries are rejected.",
     "tags": [
       "Webhooks"
     ],
@@ -40036,7 +40699,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {
         "data": {
-          "$ref": "#/components/schemas/WebhookDeliveryRecordV1"
+          "$ref": "#/components/schemas/WebhookDeliveryRetryQueuedV1"
         },
         "meta": {
           "type": "object",
@@ -40077,6 +40740,63 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "data": {
           "$ref": "#/components/schemas/WebhookHealthV1"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_webhooks_id_retryfailed",
+    "method": "post",
+    "path": "/api/v1/webhooks/{id}/retry-failed",
+    "displayName": "Retry failed deliveries",
+    "summary": "Retry failed deliveries",
+    "description": "Re-queues every failed/abandoned non-test delivery of the webhook, oldest first, collapsing repeated attempts of the same event to a single enqueue. Accepts an optional since/limit body (default limit 500, max 1000) and never performs the HTTP calls in-band.",
+    "tags": [
+      "Webhooks"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Webhook UUID from webhooks.webhook_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Webhook UUID from webhooks.webhook_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "since": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Only consider deliveries whose attempted_at is at or after this timestamp."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Maximum number of candidate delivery rows to re-queue. Defaults to 500."
+        }
+      },
+      "description": "All fields optional; an empty body retries the newest 500 candidates."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WebhookRetryFailedResultV1"
         },
         "meta": {
           "type": "object",
@@ -50903,70 +51623,105 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/search",
     "displayName": "Search time sheets",
     "summary": "Search time sheets",
-    "description": "Current route delegates to ApiTimeSheetController.list() rather than search().",
+    "description": "Searches time sheets via ApiTimeSheetController.search(). `query` is required and matches time_sheets.notes (case-insensitive substring) unless `fields` selects user_name/notes/approval_notes. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet's `time_entries`. Returns at most `limit` sheets (default 25, max 100).",
     "tags": [
       "Work Management v1"
     ],
     "approvalRequired": false,
     "parameters": [
       {
-        "name": "page",
+        "name": "query",
         "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "sort",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "order",
-        "in": "query",
-        "required": false,
+        "required": true,
+        "description": "Search text (required). Case-insensitive substring match.",
         "schema": {
           "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ]
+          "minLength": 1,
+          "description": "Search text (required). Case-insensitive substring match."
         }
       },
       {
         "name": "fields",
         "in": "query",
         "required": false,
+        "description": "Columns to search: user_name, notes, approval_notes. Repeat the param or comma-separate. Defaults to notes.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "description": "Columns to search: user_name, notes, approval_notes. Repeat the param or comma-separate. Defaults to notes."
         }
       },
       {
-        "name": "search",
+        "name": "approval_statuses",
         "in": "query",
         "required": false,
+        "description": "Approval statuses to keep (e.g. DRAFT, SUBMITTED, APPROVED, CHANGES_REQUESTED). Repeat or comma-separate.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "description": "Approval statuses to keep (e.g. DRAFT, SUBMITTED, APPROVED, CHANGES_REQUESTED). Repeat or comma-separate."
         }
       },
       {
-        "name": "query",
+        "name": "user_ids",
         "in": "query",
         "required": false,
+        "description": "User UUIDs to keep. Repeat or comma-separate.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "description": "User UUIDs to keep. Repeat or comma-separate."
+        }
+      },
+      {
+        "name": "period_ids",
+        "in": "query",
+        "required": false,
+        "description": "Time period UUIDs to keep. Repeat or comma-separate.",
+        "schema": {
+          "type": "string",
+          "description": "Time period UUIDs to keep. Repeat or comma-separate."
+        }
+      },
+      {
+        "name": "date_from",
+        "in": "query",
+        "required": false,
+        "description": "Keep sheets whose period starts on/after this YYYY-MM-DD date.",
+        "schema": {
+          "type": "string",
+          "description": "Keep sheets whose period starts on/after this YYYY-MM-DD date."
+        }
+      },
+      {
+        "name": "date_to",
+        "in": "query",
+        "required": false,
+        "description": "Keep sheets whose period ends on/before this YYYY-MM-DD date.",
+        "schema": {
+          "type": "string",
+          "description": "Keep sheets whose period ends on/before this YYYY-MM-DD date."
+        }
+      },
+      {
+        "name": "include_entries",
+        "in": "query",
+        "required": false,
+        "description": "Include time_entries on each sheet. Default false.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "Include time_entries on each sheet. Default false."
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Max results, 1-100. Default 25.",
+        "schema": {
+          "type": "string",
+          "description": "Max results, 1-100. Default 25."
         }
       }
     ],
@@ -50977,48 +51732,257 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "period_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "approval_status": {
+                "type": "string",
+                "enum": [
+                  "DRAFT",
+                  "SUBMITTED",
+                  "APPROVED",
+                  "CHANGES_REQUESTED"
+                ]
+              },
+              "submitted_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "approved_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "approved_by": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "user_name": {
+                "type": "string"
+              },
+              "approver_name": {
+                "type": "string"
+              },
+              "total_hours": {
+                "type": "number"
+              },
+              "billable_hours": {
+                "type": "number"
+              },
+              "entry_count": {
+                "type": "number"
+              },
+              "time_entries": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "entry_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "work_item_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "work_item_type": {
+                      "type": "string",
+                      "enum": [
+                        "ticket",
+                        "project_task",
+                        "non_billable_category",
+                        "ad_hoc",
+                        "interaction"
+                      ]
+                    },
+                    "start_time": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "end_time": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "work_date": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "work_timezone": {
+                      "type": "string"
+                    },
+                    "billable_duration": {
+                      "type": "number"
+                    },
+                    "notes": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "user_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "time_sheet_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "approval_status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "SUBMITTED",
+                        "APPROVED",
+                        "CHANGES_REQUESTED"
+                      ]
+                    },
+                    "service_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "tax_region": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "contract_line_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "tax_rate_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "tax_percentage": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "tenant": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "user_name": {
+                      "type": "string"
+                    },
+                    "work_item_title": {
+                      "type": "string"
+                    },
+                    "service_name": {
+                      "type": "string"
+                    },
+                    "client_name": {
+                      "type": "string"
+                    },
+                    "duration_hours": {
+                      "type": "number"
+                    },
+                    "is_billable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "entry_id",
+                    "work_item_id",
+                    "work_item_type",
+                    "start_time",
+                    "end_time",
+                    "billable_duration",
+                    "notes",
+                    "user_id",
+                    "time_sheet_id",
+                    "approval_status",
+                    "service_id",
+                    "tax_region",
+                    "contract_line_id",
+                    "tax_rate_id",
+                    "tax_percentage",
+                    "created_at",
+                    "updated_at",
+                    "tenant"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "id",
+              "period_id",
+              "user_id",
+              "approval_status",
+              "submitted_at",
+              "approved_at",
+              "approved_by",
+              "notes",
+              "created_at",
+              "updated_at",
+              "tenant"
+            ]
           }
-        },
-        "pagination": {
-          "type": "object",
-          "properties": {
-            "page": {
-              "type": "integer"
-            },
-            "limit": {
-              "type": "integer"
-            },
-            "total": {
-              "type": "integer"
-            },
-            "totalPages": {
-              "type": "integer"
-            },
-            "hasNext": {
-              "type": "boolean"
-            },
-            "hasPrev": {
-              "type": "boolean"
-            }
-          },
-          "required": [
-            "page",
-            "limit",
-            "total",
-            "totalPages",
-            "hasNext",
-            "hasPrev"
-          ]
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {}
         }
       },
       "required": [
-        "data",
-        "pagination"
+        "data"
       ]
     }
   },
@@ -51308,7 +52272,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/{id}/entries",
     "displayName": "List time sheet entries",
     "summary": "List time sheet entries",
-    "description": "Current route delegates to ApiTimeSheetController.list() rather than a per-sheet entries reader.",
+    "description": "Returns the time_entries of the time sheet in the path (ordered by start_time) via ApiTimeSheetController.getEntries(). 404 when the sheet does not exist in the caller's tenant.",
     "tags": [
       "Work Management v1"
     ],
@@ -51324,66 +52288,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "uuid",
           "description": "UUID path identifier from underlying resource tables."
         }
-      },
-      {
-        "name": "page",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "sort",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "order",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ]
-        }
-      },
-      {
-        "name": "fields",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "search",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "query",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
       }
     ],
     "responseBodySchema": {
@@ -51393,48 +52297,161 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
+            "properties": {
+              "entry_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "work_item_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "work_item_type": {
+                "type": "string",
+                "enum": [
+                  "ticket",
+                  "project_task",
+                  "non_billable_category",
+                  "ad_hoc",
+                  "interaction"
+                ]
+              },
+              "start_time": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "end_time": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "work_date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "work_timezone": {
+                "type": "string"
+              },
+              "billable_duration": {
+                "type": "number"
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "time_sheet_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "approval_status": {
+                "type": "string",
+                "enum": [
+                  "DRAFT",
+                  "SUBMITTED",
+                  "APPROVED",
+                  "CHANGES_REQUESTED"
+                ]
+              },
+              "service_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "tax_region": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "contract_line_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "tax_rate_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "tax_percentage": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "user_name": {
+                "type": "string"
+              },
+              "work_item_title": {
+                "type": "string"
+              },
+              "service_name": {
+                "type": "string"
+              },
+              "client_name": {
+                "type": "string"
+              },
+              "duration_hours": {
+                "type": "number"
+              },
+              "is_billable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "entry_id",
+              "work_item_id",
+              "work_item_type",
+              "start_time",
+              "end_time",
+              "billable_duration",
+              "notes",
+              "user_id",
+              "time_sheet_id",
+              "approval_status",
+              "service_id",
+              "tax_region",
+              "contract_line_id",
+              "tax_rate_id",
+              "tax_percentage",
+              "created_at",
+              "updated_at",
+              "tenant"
+            ]
           }
-        },
-        "pagination": {
-          "type": "object",
-          "properties": {
-            "page": {
-              "type": "integer"
-            },
-            "limit": {
-              "type": "integer"
-            },
-            "total": {
-              "type": "integer"
-            },
-            "totalPages": {
-              "type": "integer"
-            },
-            "hasNext": {
-              "type": "boolean"
-            },
-            "hasPrev": {
-              "type": "boolean"
-            }
-          },
-          "required": [
-            "page",
-            "limit",
-            "total",
-            "totalPages",
-            "hasNext",
-            "hasPrev"
-          ]
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {}
         }
       },
       "required": [
-        "data",
-        "pagination"
+        "data"
       ]
     }
   },
@@ -51729,7 +52746,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/{id}/summary",
     "displayName": "Get time sheet summary",
     "summary": "Get time sheet summary",
-    "description": "Current route delegates to ApiTimeSheetController.list() instead of summary-specific computation.",
+    "description": "Returns the summary (hours totals, billable split, approval_ready) of the time sheet in the path via ApiTimeSheetController.getSummary(). 404 when the sheet does not exist in the caller's tenant.",
     "tags": [
       "Work Management v1"
     ],
@@ -51745,117 +52762,51 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "uuid",
           "description": "UUID path identifier from underlying resource tables."
         }
-      },
-      {
-        "name": "page",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "sort",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "order",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ]
-        }
-      },
-      {
-        "name": "fields",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "search",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "query",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
       }
     ],
     "responseBodySchema": {
       "type": "object",
       "properties": {
         "data": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": {}
-          }
-        },
-        "pagination": {
           "type": "object",
           "properties": {
-            "page": {
-              "type": "integer"
+            "total_hours": {
+              "type": "number"
             },
-            "limit": {
-              "type": "integer"
+            "billable_hours": {
+              "type": "number"
             },
-            "total": {
-              "type": "integer"
+            "non_billable_hours": {
+              "type": "number"
             },
-            "totalPages": {
-              "type": "integer"
+            "entries_by_type": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              }
             },
-            "hasNext": {
-              "type": "boolean"
+            "entries_by_day": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              }
             },
-            "hasPrev": {
+            "approval_ready": {
               "type": "boolean"
             }
           },
           "required": [
-            "page",
-            "limit",
-            "total",
-            "totalPages",
-            "hasNext",
-            "hasPrev"
+            "total_hours",
+            "billable_hours",
+            "non_billable_hours",
+            "entries_by_type",
+            "entries_by_day",
+            "approval_ready"
           ]
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {}
         }
       },
       "required": [
-        "data",
-        "pagination"
+        "data"
       ]
     }
   },

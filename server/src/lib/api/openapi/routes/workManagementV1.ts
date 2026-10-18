@@ -6,7 +6,13 @@ import {
   createTimeEntrySchema,
   updateTimeEntrySchema,
 } from '../../schemas/timeEntry';
-import { createTimePeriodSchema, updateTimePeriodSchema } from '../../schemas/timeSheet';
+import {
+  createTimePeriodSchema,
+  timeSheetResponseSchema,
+  timeSheetSummaryResponseSchema,
+  updateTimePeriodSchema,
+} from '../../schemas/timeSheet';
+import { timeEntryResponseSchema } from '../../schemas/timeEntry';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import {
   activeStopwatchQuerySchema,
@@ -423,19 +429,19 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'post', path: '/api/v1/time-sheets', summary: 'Create time sheet', description: 'Creates time sheet via create() path.', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets/bulk', summary: 'Bulk time sheet operation', description: 'Current route delegates to ApiTimeSheetController.list() (read path) instead of bulk approval/update logic.', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/time-sheets/export', summary: 'Export time sheets', description: 'Exports time sheets using ApiTimeSheetController.export().', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/time-sheets/search', summary: 'Search time sheets', description: 'Current route delegates to ApiTimeSheetController.list() rather than search().', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-sheets/search', summary: 'Search time sheets', description: 'Searches time sheets via ApiTimeSheetController.search(). `query` is required and matches time_sheets.notes (case-insensitive substring) unless `fields` selects user_name/notes/approval_notes. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet\'s `time_entries`. Returns at most `limit` sheets (default 25, max 100).', family: 'time_sheet' },
     { method: 'delete', path: '/api/v1/time-sheets/{id}', summary: 'Delete time sheet', description: 'Deletes time sheet UUID via ApiBase delete path.', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/time-sheets/{id}', summary: 'Get time sheet', description: 'Gets time sheet UUID with details via getWithDetails().', family: 'time_sheet' },
     { method: 'put', path: '/api/v1/time-sheets/{id}', summary: 'Update time sheet', description: 'Updates time sheet UUID.', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets/{id}/add-entry', summary: 'Add time sheet entry', description: 'Current route delegates to ApiTimeSheetController.create() (time sheet create path), not entry-add-specific logic.', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets/{id}/approve', summary: 'Approve time sheet', description: 'Approves time sheet UUID via approve().', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/time-sheets/{id}/entries', summary: 'List time sheet entries', description: 'Current route delegates to ApiTimeSheetController.list() rather than a per-sheet entries reader.', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-sheets/{id}/entries', summary: 'List time sheet entries', description: 'Returns the time_entries of the time sheet in the path (ordered by start_time) via ApiTimeSheetController.getEntries(). 404 when the sheet does not exist in the caller\'s tenant.', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets/{id}/reject', summary: 'Reject time sheet', description: 'Current route delegates to ApiTimeSheetController.update() instead of reject-specific flow.', family: 'time_sheet' },
     { method: 'delete', path: '/api/v1/time-sheets/{id}/remove-entry', summary: 'Remove time sheet entry', description: 'Current route delegates to ApiTimeSheetController.delete() instead of entry-remove-specific flow.', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets/{id}/request-changes', summary: 'Request time sheet changes', description: 'Requests changes via requestChanges().', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets/{id}/reverse-approval', summary: 'Reverse time sheet approval', description: 'Reverses approval via reverseApproval().', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets/{id}/submit', summary: 'Submit time sheet', description: 'Submits time sheet for approval via submit().', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/time-sheets/{id}/summary', summary: 'Get time sheet summary', description: 'Current route delegates to ApiTimeSheetController.list() instead of summary-specific computation.', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-sheets/{id}/summary', summary: 'Get time sheet summary', description: 'Returns the summary (hours totals, billable split, approval_ready) of the time sheet in the path via ApiTimeSheetController.getSummary(). 404 when the sheet does not exist in the caller\'s tenant.', family: 'time_sheet' },
   ];
 
   const mismatchOps = new Set([
@@ -443,12 +449,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'get /api/v1/schedules/{id}',
     'get /api/v1/schedules/{id}/conflicts',
     'post /api/v1/time-sheets/bulk',
-    'get /api/v1/time-sheets/search',
     'post /api/v1/time-sheets/{id}/add-entry',
-    'get /api/v1/time-sheets/{id}/entries',
     'post /api/v1/time-sheets/{id}/reject',
     'delete /api/v1/time-sheets/{id}/remove-entry',
-    'get /api/v1/time-sheets/{id}/summary',
   ]);
 
   // Legacy mobile tracking endpoints: adapters over the server-side stopwatch, kept for installed builds.
@@ -476,6 +479,53 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'put /api/v1/time-periods/{id}',
     'delete /api/v1/time-periods/{id}',
   ]);
+
+  // Real read contracts for the per-sheet and search routes (derived from the
+  // same zod schemas the controller/service use, so docs cannot drift).
+  const TimeSheetEntriesResponse = registry.registerSchema(
+    'WorkV1TimeSheetEntriesResponse',
+    zOpenApi.object({ data: zOpenApi.array(timeEntryResponseSchema) }),
+  );
+  const TimeSheetSummaryResponse = registry.registerSchema(
+    'WorkV1TimeSheetSummaryResponse',
+    zOpenApi.object({ data: timeSheetSummaryResponseSchema }),
+  );
+  // Query strings are all strings on the wire; the controller's timeSheetSearchSchema
+  // parses them (a contract test keeps this in step with it).
+  const TimeSheetSearchQuery = registry.registerSchema(
+    'WorkV1TimeSheetSearchQuery',
+    zOpenApi.object({
+      query: zOpenApi.string().min(1).describe('Search text (required). Case-insensitive substring match.'),
+      fields: zOpenApi.string().optional().describe('Columns to search: user_name, notes, approval_notes. Repeat the param or comma-separate. Defaults to notes.'),
+      approval_statuses: zOpenApi.string().optional().describe('Approval statuses to keep (e.g. DRAFT, SUBMITTED, APPROVED, CHANGES_REQUESTED). Repeat or comma-separate.'),
+      user_ids: zOpenApi.string().optional().describe('User UUIDs to keep. Repeat or comma-separate.'),
+      period_ids: zOpenApi.string().optional().describe('Time period UUIDs to keep. Repeat or comma-separate.'),
+      date_from: zOpenApi.string().optional().describe('Keep sheets whose period starts on/after this YYYY-MM-DD date.'),
+      date_to: zOpenApi.string().optional().describe('Keep sheets whose period ends on/before this YYYY-MM-DD date.'),
+      include_entries: zOpenApi.enum(['true', 'false']).optional().describe('Include time_entries on each sheet. Default false.'),
+      limit: zOpenApi.string().optional().describe('Max results, 1-100. Default 25.'),
+    }),
+  );
+  const TimeSheetSearchResponse = registry.registerSchema(
+    'WorkV1TimeSheetSearchResponse',
+    zOpenApi.object({
+      data: zOpenApi.array(
+        timeSheetResponseSchema.extend({ time_entries: zOpenApi.array(timeEntryResponseSchema).optional() }),
+      ),
+    }),
+  );
+  const TIME_SHEET_READ_OPS: Record<string, { query?: ZodTypeAny; success: { description: string; schema: ZodTypeAny } }> = {
+    'get /api/v1/time-sheets/search': {
+      query: TimeSheetSearchQuery,
+      success: { description: 'Matching time sheets (at most `limit`).', schema: TimeSheetSearchResponse },
+    },
+    'get /api/v1/time-sheets/{id}/entries': {
+      success: { description: 'Time entries of the sheet, ordered by start_time.', schema: TimeSheetEntriesResponse },
+    },
+    'get /api/v1/time-sheets/{id}/summary': {
+      success: { description: 'Summary of the sheet.', schema: TimeSheetSummaryResponse },
+    },
+  };
 
   function requestFor(def: Def) {
     const req: Record<string, unknown> = {};
@@ -517,6 +567,12 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       if (def.method === 'put' && def.path === '/api/v1/time-periods/{id}') req.body = { schema: UpdateTimePeriodBody };
     } else if ((def.path.startsWith('/api/v1/time-sheets') || def.path.startsWith('/api/v1/schedules')) && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/time-sheets' && def.method === 'post' ? CreateTimeSheetBody : GenericBody };
 
+    const timeSheetRead = TIME_SHEET_READ_OPS[`${def.method} ${def.path}`];
+    if (timeSheetRead) {
+      if (timeSheetRead.query) req.query = timeSheetRead.query;
+      else delete req.query;
+    }
+
     return req;
   }
 
@@ -535,7 +591,10 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       500: { description: 'Unexpected controller/service failure.', schema: ApiError },
     };
 
-    if (isLikelyList(def)) {
+    const timeSheetRead = TIME_SHEET_READ_OPS[`${def.method} ${def.path}`];
+    if (timeSheetRead) {
+      responses[200] = timeSheetRead.success;
+    } else if (isLikelyList(def)) {
       responses[200] = { description: 'Collection response returned.', schema: ApiPaginated };
     } else {
       responses[200] = { description: 'Operation succeeded.', schema: ApiSuccess };

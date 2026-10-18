@@ -1386,7 +1386,7 @@ export class TimeSheetService extends BaseService<any> {
     }
 
 
-  private async getTimeSheetEntries(timeSheetId: string, context: ServiceContext): Promise<any[]> {
+  async getTimeSheetEntries(timeSheetId: string, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
       
       return tenantDb(knex, context.tenant).table('time_entries')
@@ -1395,7 +1395,7 @@ export class TimeSheetService extends BaseService<any> {
     }
 
 
-  private async getTimeSheetSummary(timeSheetId: string, context: ServiceContext): Promise<any> {
+  async getTimeSheetSummary(timeSheetId: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
       const stats = await tenantDb(knex, context.tenant).table('time_entries')

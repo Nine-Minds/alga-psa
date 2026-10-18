@@ -274,17 +274,40 @@ export const timeSheetStatsResponseSchema = z.object({
   }))
 });
 
+// Query strings carry arrays as repeated params (?a=1&a=2) or comma-separated
+// values (?a=1,2). The controller flattens searchParams to strings, so accept
+// both a string and an array and normalise to string[] before validating.
+const queryStringArray = <T extends z.ZodTypeAny>(item: T) =>
+  z.preprocess((value) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    const parts = Array.isArray(value) ? value : [value];
+    return parts
+      .flatMap((part) => (typeof part === 'string' ? part.split(',') : [part]))
+      .map((part) => (typeof part === 'string' ? part.trim() : part))
+      .filter((part) => part !== '');
+  }, z.array(item).optional());
+
 // Time sheet search schema
 export const timeSheetSearchSchema = z.object({
   query: z.string().min(1, 'Search query is required'),
-  fields: z.array(z.enum(['user_name', 'notes', 'approval_notes'])).optional(),
-  approval_statuses: z.array(approvalStatusSchema).optional(),
-  user_ids: z.array(uuidSchema).optional(),
-  period_ids: z.array(uuidSchema).optional(),
+  fields: queryStringArray(z.enum(['user_name', 'notes', 'approval_notes'])),
+  approval_statuses: queryStringArray(approvalStatusSchema),
+  user_ids: queryStringArray(uuidSchema),
+  period_ids: queryStringArray(uuidSchema),
   date_from: dateSchema.optional(),
   date_to: dateSchema.optional(),
   include_entries: booleanTransform.optional().default("false"),
   limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
+});
+
+// Time sheet summary response (GET /time-sheets/{id}/summary)
+export const timeSheetSummaryResponseSchema = z.object({
+  total_hours: z.number(),
+  billable_hours: z.number(),
+  non_billable_hours: z.number(),
+  entries_by_type: z.record(z.number()),
+  entries_by_day: z.record(z.number()),
+  approval_ready: z.boolean()
 });
 
 // Time sheet export schema
