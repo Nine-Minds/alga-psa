@@ -11,7 +11,7 @@ vi.mock('server/src/lib/api/services/TimeSheetService', () => ({
 }));
 
 import { ApiTimeSheetController } from '../../../lib/api/controllers/ApiTimeSheetController';
-import { timeSheetSearchSchema, timeSheetSummaryResponseSchema } from '../../../lib/api/schemas/timeSheet';
+import { timeSheetSearchRowSchema, timeSheetSearchSchema, timeSheetSummaryResponseSchema } from '../../../lib/api/schemas/timeSheet';
 import { createRegistry } from '../../../lib/api/openapi/registry';
 import { registerWorkManagementV1Routes } from '../../../lib/api/openapi/routes/workManagementV1';
 
@@ -145,6 +145,23 @@ describe('time sheet read controllers', () => {
     const res = await controller.search()(get('/api/v1/time-sheets/search?fields=user_name'));
     expect(res.status).toBe(400);
     expect(service.search).not.toHaveBeenCalled();
+  });
+
+  it('search date_from/date_to accept the documented YYYY-MM-DD and reject other formats', () => {
+    expect(timeSheetSearchSchema.parse({ query: 'x', date_from: '2026-01-05', date_to: '2026-01-11' })).toMatchObject({
+      date_from: '2026-01-05', date_to: '2026-01-11',
+    });
+    expect(timeSheetSearchSchema.safeParse({ query: 'x', date_from: '2026-01-05T00:00:00.000Z' }).success).toBe(false);
+    expect(timeSheetSearchSchema.safeParse({ query: 'x', date_to: '01/11/2026' }).success).toBe(false);
+  });
+
+  it('search response schema describes the real row, not timeSheetResponseSchema', () => {
+    const row = {
+      tenant: userId, id: sheetA, user_id: userId, period_id: sheetB, approval_status: 'DRAFT',
+      submitted_at: null, approved_at: null, approved_by: null, user_name: 'Alice Zebra',
+    };
+    expect(timeSheetSearchRowSchema.strict().safeParse(row).success).toBe(true);
+    expect(timeSheetSearchRowSchema.safeParse({ ...row, user_name: undefined }).success).toBe(false);
   });
 
   it('search array params parse as repeated and comma-separated', () => {

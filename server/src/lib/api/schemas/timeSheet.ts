@@ -287,6 +287,21 @@ const queryStringArray = <T extends z.ZodTypeAny>(item: T) =>
       .filter((part) => part !== '');
   }, z.array(item).optional());
 
+// One row of GET /time-sheets/search: exactly time_sheets.* plus the joined user_name.
+// (time_sheets has no notes/created_at/updated_at columns, so this is not timeSheetResponseSchema.)
+export const timeSheetSearchRowSchema = z.object({
+  tenant: uuidSchema,
+  id: uuidSchema,
+  user_id: uuidSchema,
+  period_id: uuidSchema,
+  approval_status: approvalStatusSchema,
+  submitted_at: z.string().datetime().nullable(),
+  approved_at: z.string().datetime().nullable(),
+  approved_by: uuidSchema.nullable(),
+  user_name: z.string(),
+  time_entries: z.array(timeEntryResponseSchema).optional(),
+});
+
 // Time sheet search schema
 export const timeSheetSearchSchema = z.object({
   query: z.string().min(1, 'Search query is required'),
@@ -294,8 +309,9 @@ export const timeSheetSearchSchema = z.object({
   approval_statuses: queryStringArray(approvalStatusSchema),
   user_ids: queryStringArray(uuidSchema),
   period_ids: queryStringArray(uuidSchema),
-  date_from: dateSchema.optional(),
-  date_to: dateSchema.optional(),
+  // YYYY-MM-DD, compared against time_periods.start_date / end_date
+  date_from: isoDateSchema.optional(),
+  date_to: isoDateSchema.optional(),
   include_entries: booleanTransform.optional().default("false"),
   limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
 });

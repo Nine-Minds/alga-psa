@@ -51733,15 +51733,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "object",
             "properties": {
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
               "id": {
                 "type": "string",
                 "format": "uuid"
               },
-              "period_id": {
+              "user_id": {
                 "type": "string",
                 "format": "uuid"
               },
-              "user_id": {
+              "period_id": {
                 "type": "string",
                 "format": "uuid"
               },
@@ -51775,38 +51779,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 ],
                 "format": "uuid"
               },
-              "notes": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "created_at": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "updated_at": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "tenant": {
-                "type": "string",
-                "format": "uuid"
-              },
               "user_name": {
                 "type": "string"
-              },
-              "approver_name": {
-                "type": "string"
-              },
-              "total_hours": {
-                "type": "number"
-              },
-              "billable_hours": {
-                "type": "number"
-              },
-              "entry_count": {
-                "type": "number"
               },
               "time_entries": {
                 "type": "array",
@@ -51966,17 +51940,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               }
             },
             "required": [
+              "tenant",
               "id",
-              "period_id",
               "user_id",
+              "period_id",
               "approval_status",
               "submitted_at",
               "approved_at",
               "approved_by",
-              "notes",
-              "created_at",
-              "updated_at",
-              "tenant"
+              "user_name"
             ]
           }
         }

@@ -8,7 +8,7 @@ import {
 } from '../../schemas/timeEntry';
 import {
   createTimePeriodSchema,
-  timeSheetResponseSchema,
+  timeSheetSearchRowSchema,
   timeSheetSummaryResponseSchema,
   updateTimePeriodSchema,
 } from '../../schemas/timeSheet';
@@ -510,7 +510,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TimeSheetSearchResponse',
     zOpenApi.object({
       data: zOpenApi.array(
-        timeSheetResponseSchema.extend({ time_entries: zOpenApi.array(timeEntryResponseSchema).optional() }),
+        timeSheetSearchRowSchema,
       ),
     }),
   );

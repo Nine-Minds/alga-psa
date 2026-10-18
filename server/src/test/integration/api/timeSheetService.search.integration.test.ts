@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { TimeSheetService } from '@/lib/api/services/TimeSheetService';
-import { timeSheetSearchSchema } from '@/lib/api/schemas/timeSheet';
+import { timeSheetSearchSchema, timeSheetSearchRowSchema } from '@/lib/api/schemas/timeSheet';
 
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(async () => undefined),
@@ -134,8 +134,33 @@ describe('TimeSheetService.search (real Postgres)', () => {
     const byUser = await service.search(parse({ query: ' ', user_ids: f.bob }), ctx);
     expect(byUser.map((r) => r.id)).toEqual([f.bobDraft]);
 
-    const withDates = await service.search(parse({ query: 'zebra', date_from: '2026-01-01T00:00:00.000Z', date_to: '2026-01-31T00:00:00.000Z' }), ctx);
+    const withDates = await service.search(parse({ query: 'zebra', date_from: '2026-01-01', date_to: '2026-01-31' }), ctx);
     expect(withDates).toHaveLength(2);
+    expect(await service.search(parse({ query: 'zebra', date_from: '2026-02-01' }), ctx)).toEqual([]);
+    expect(await service.search(parse({ query: 'zebra', date_to: '2026-01-10' }), ctx)).toEqual([]);
+  });
+
+  it('every real result row matches the documented response row schema (no drift)', async () => {
+    const f = await seed();
+    const ctx = { tenant: f.tenantId, userId: f.alice } as any;
+    const service = serviceFor(f.tenantId);
+    // approve one sheet so nullable timestamp/uuid columns are exercised both ways
+    await tenantTable(f.tenantId, 'time_sheets').where({ id: f.aliceApproved }).update({
+      submitted_at: db.fn.now(), approved_at: db.fn.now(), approved_by: f.bob,
+    });
+
+    for (const include_entries of ['false', 'true']) {
+      const rows = await service.search(parse({ query: ' ', include_entries }), ctx);
+      expect(rows).toHaveLength(3);
+      for (const row of JSON.parse(JSON.stringify(rows))) {
+        // strict(): an undocumented extra column in the payload fails, as does a missing documented one
+        expect(() => timeSheetSearchRowSchema.strict().parse(row)).not.toThrow();
+        expect(Object.keys(row).sort()).toEqual(
+          ['tenant', 'id', 'user_id', 'period_id', 'approval_status', 'submitted_at', 'approved_at', 'approved_by', 'user_name',
+            ...(include_entries === 'true' ? ['time_entries'] : [])].sort(),
+        );
+      }
+    }
   });
 
   it('does not search other tenants', async () => {
