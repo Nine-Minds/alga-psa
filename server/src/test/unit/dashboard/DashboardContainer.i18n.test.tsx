@@ -31,6 +31,9 @@ const translations: Record<string, string> = {
   'features.projects.description': 'Description projets FR',
   'features.reports.title': 'Rapports FR',
   'features.reports.description': 'Description rapports FR',
+  'features.monitoring.coManagedDescription': 'Monitoring espace FR',
+  'features.projects.coManagedDescription': 'Projets organisation FR',
+  'features.reports.coManagedDescription': 'Rapports equipe FR',
   'features.schedule.title': 'Planning FR',
   'features.schedule.description': 'Description planning FR',
   'knowledgeBase.title': 'Base FR',
@@ -151,6 +154,19 @@ describe('DashboardContainer i18n wiring', () => {
     expect(screen.getByText('Base FR')).toBeInTheDocument();
     expect(screen.getByText('Description base FR')).toBeInTheDocument();
     expect(screen.getByText('Visiter FR')).toBeInTheDocument();
+  });
+
+  it('describes the feature cards for an internal IT team in a co-managed workspace', () => {
+    render(<DashboardContainer onboardingSection={<div>Onboarding slot</div>} productCode="co_managed" />);
+
+    expect(screen.getByText('Monitoring espace FR')).toBeInTheDocument();
+    expect(screen.getByText('Projets organisation FR')).toBeInTheDocument();
+    expect(screen.getByText('Rapports equipe FR')).toBeInTheDocument();
+    expect(screen.queryByText('Description monitoring FR')).toBeNull();
+    expect(screen.queryByText('Description projets FR')).toBeNull();
+    expect(screen.queryByText('Description rapports FR')).toBeNull();
+    // Cards without client-specific wording keep their shared copy.
+    expect(screen.getByText('Description tickets FR')).toBeInTheDocument();
   });
 
   it('T077: coming-soon toast is translated', () => {

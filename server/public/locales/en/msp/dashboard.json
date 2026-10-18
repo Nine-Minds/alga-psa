@@ -52,7 +52,8 @@
     },
     "monitoring": {
       "title": "System Monitoring",
-      "description": "Watch critical signals across clients and trigger automation when needed."
+      "description": "Watch critical signals across clients and trigger automation when needed.",
+      "coManagedDescription": "Watch critical signals across your workspace and trigger automation when needed."
     },
     "security": {
       "title": "Security Management",
@@ -60,11 +61,13 @@
     },
     "projects": {
       "title": "Project Management",
-      "description": "Organize delivery plans, tasks, and milestones for every engagement."
+      "description": "Organize delivery plans, tasks, and milestones for every engagement.",
+      "coManagedDescription": "Organize IT projects, tasks, and milestones across your organization."
     },
     "reports": {
       "title": "Reporting & Analytics",
-      "description": "Build rollups on utilization, SLA attainment, and profitability."
+      "description": "Build rollups on utilization, SLA attainment, and profitability.",
+      "coManagedDescription": "Build rollups on workload, SLA attainment, and team performance."
     },
     "schedule": {
       "title": "Schedule Management",

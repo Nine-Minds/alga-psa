@@ -54,6 +54,9 @@ interface FeatureCardDefinition {
   titleDefault: string;
   descriptionKey: string;
   descriptionDefault: string;
+  /** A co-managed workspace is an internal IT department, not an MSP with clients. */
+  coManagedDescriptionKey?: string;
+  coManagedDescriptionDefault?: string;
 }
 
 const featureCards: FeatureCardDefinition[] = [
@@ -76,6 +79,8 @@ const featureCards: FeatureCardDefinition[] = [
     titleDefault: 'System Monitoring',
     descriptionKey: 'features.monitoring.description',
     descriptionDefault: 'Watch critical signals across clients and trigger automation when needed.',
+    coManagedDescriptionKey: 'features.monitoring.coManagedDescription',
+    coManagedDescriptionDefault: 'Watch critical signals across your workspace and trigger automation when needed.',
   },
   {
     id: 'security',
@@ -96,6 +101,8 @@ const featureCards: FeatureCardDefinition[] = [
     titleDefault: 'Project Management',
     descriptionKey: 'features.projects.description',
     descriptionDefault: 'Organize delivery plans, tasks, and milestones for every engagement.',
+    coManagedDescriptionKey: 'features.projects.coManagedDescription',
+    coManagedDescriptionDefault: 'Organize IT projects, tasks, and milestones across your organization.',
   },
   {
     id: 'reports',
@@ -105,6 +112,8 @@ const featureCards: FeatureCardDefinition[] = [
     titleDefault: 'Reporting & Analytics',
     descriptionKey: 'features.reports.description',
     descriptionDefault: 'Build rollups on utilization, SLA attainment, and profitability.',
+    coManagedDescriptionKey: 'features.reports.coManagedDescription',
+    coManagedDescriptionDefault: 'Build rollups on workload, SLA attainment, and team performance.',
   },
   {
     id: 'schedule',
@@ -220,7 +229,9 @@ const WelcomeDashboard = ({
   const translatedFeatureCards = featureCards.map((feature) => ({
     ...feature,
     title: t(feature.titleKey, { defaultValue: feature.titleDefault }),
-    description: t(feature.descriptionKey, { defaultValue: feature.descriptionDefault }),
+    description: productCode === 'co_managed' && feature.coManagedDescriptionKey
+      ? t(feature.coManagedDescriptionKey, { defaultValue: feature.coManagedDescriptionDefault })
+      : t(feature.descriptionKey, { defaultValue: feature.descriptionDefault }),
   }));
 
   const welcomeTitle = productCode === 'co_managed'

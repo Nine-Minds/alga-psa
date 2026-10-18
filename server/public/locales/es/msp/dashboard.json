@@ -44,7 +44,8 @@
     },
     "monitoring": {
       "title": "Monitoreo del sistema",
-      "description": "Observe señales críticas en los clientes y active automatización cuando sea necesario."
+      "description": "Observe señales críticas en los clientes y active automatización cuando sea necesario.",
+      "coManagedDescription": "Observe señales críticas en su espacio de trabajo y active automatización cuando sea necesario."
     },
     "security": {
       "title": "Gestión de seguridad",
@@ -52,11 +53,13 @@
     },
     "projects": {
       "title": "Gestión de proyectos",
-      "description": "Organiza planes de entrega, tareas e hitos para cada compromiso."
+      "description": "Organiza planes de entrega, tareas e hitos para cada compromiso.",
+      "coManagedDescription": "Organice proyectos de TI, tareas e hitos en toda su organización."
     },
     "reports": {
       "title": "Informes y analítica",
-      "description": "Cree resúmenes sobre utilización, cumplimiento de SLA y rentabilidad."
+      "description": "Cree resúmenes sobre utilización, cumplimiento de SLA y rentabilidad.",
+      "coManagedDescription": "Cree resúmenes sobre carga de trabajo, cumplimiento de SLA y rendimiento del equipo."
     },
     "schedule": {
       "title": "Gestión de programación",

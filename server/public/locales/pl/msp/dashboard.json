@@ -44,7 +44,8 @@
     },
     "monitoring": {
       "title": "Monitorowanie systemu",
-      "description": "Obserwuj kluczowe sygnały u klientów i uruchamiaj automatyzację, gdy jest to potrzebne."
+      "description": "Obserwuj kluczowe sygnały u klientów i uruchamiaj automatyzację, gdy jest to potrzebne.",
+      "coManagedDescription": "Obserwuj kluczowe sygnały w swoim obszarze roboczym i uruchamiaj automatyzację, gdy jest to potrzebne."
     },
     "security": {
       "title": "Zarządzanie bezpieczeństwem",
@@ -52,11 +53,13 @@
     },
     "projects": {
       "title": "Zarządzanie projektami",
-      "description": "Organizuj plany realizacji, zadania i kamienie milowe dla każdego zlecenia."
+      "description": "Organizuj plany realizacji, zadania i kamienie milowe dla każdego zlecenia.",
+      "coManagedDescription": "Organizuj projekty IT, zadania i kamienie milowe w całej organizacji."
     },
     "reports": {
       "title": "Raporty i analityka",
-      "description": "Twórz zestawienia wykorzystania, realizacji SLA i rentowności."
+      "description": "Twórz zestawienia wykorzystania, realizacji SLA i rentowności.",
+      "coManagedDescription": "Twórz zestawienia obciążenia pracą, realizacji SLA i wydajności zespołu."
     },
     "schedule": {
       "title": "Zarządzanie harmonogramem",

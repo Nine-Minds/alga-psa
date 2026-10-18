@@ -52,7 +52,8 @@
     },
     "monitoring": {
       "title": "Systemövervakning",
-      "description": "Övervaka kritiska signaler i kundernas miljöer och starta automatiseringar vid behov."
+      "description": "Övervaka kritiska signaler i kundernas miljöer och starta automatiseringar vid behov.",
+      "coManagedDescription": "Övervaka kritiska signaler i din arbetsyta och starta automatiseringar vid behov."
     },
     "security": {
       "title": "Säkerhetshantering",
@@ -60,11 +61,13 @@
     },
     "projects": {
       "title": "Projekthantering",
-      "description": "Organisera leveransplaner, uppgifter och milstolpar för varje uppdrag."
+      "description": "Organisera leveransplaner, uppgifter och milstolpar för varje uppdrag.",
+      "coManagedDescription": "Organisera IT-projekt, uppgifter och milstolpar i hela organisationen."
     },
     "reports": {
       "title": "Rapportering och analys",
-      "description": "Skapa sammanställningar av beläggningsgrad, SLA-uppfyllelse och lönsamhet."
+      "description": "Skapa sammanställningar av beläggningsgrad, SLA-uppfyllelse och lönsamhet.",
+      "coManagedDescription": "Skapa sammanställningar av arbetsbelastning, SLA-uppfyllelse och teamets prestationer."
     },
     "schedule": {
       "title": "Schemahantering",

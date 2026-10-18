@@ -44,7 +44,8 @@
     },
     "monitoring": {
       "title": "Supervision système",
-      "description": "Surveillez les signaux critiques chez les clients et déclenchez l'automatisation si nécessaire."
+      "description": "Surveillez les signaux critiques chez les clients et déclenchez l'automatisation si nécessaire.",
+      "coManagedDescription": "Surveillez les signaux critiques de votre espace de travail et déclenchez l'automatisation si nécessaire."
     },
     "security": {
       "title": "Gestion de la sécurité",
@@ -52,11 +53,13 @@
     },
     "projects": {
       "title": "Gestion de projet",
-      "description": "Organisez les plans de livraison, les tâches et les jalons pour chaque engagement."
+      "description": "Organisez les plans de livraison, les tâches et les jalons pour chaque engagement.",
+      "coManagedDescription": "Organisez les projets informatiques, les tâches et les jalons de toute votre organisation."
     },
     "reports": {
       "title": "Rapports et analyses",
-      "description": "Créez des synthèses sur l'utilisation, le respect des SLA et la rentabilité."
+      "description": "Créez des synthèses sur l'utilisation, le respect des SLA et la rentabilité.",
+      "coManagedDescription": "Créez des synthèses sur la charge de travail, le respect des SLA et la performance de l'équipe."
     },
     "schedule": {
       "title": "Gestion du planning",

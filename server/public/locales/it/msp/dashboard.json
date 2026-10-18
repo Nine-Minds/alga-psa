@@ -44,7 +44,8 @@
     },
     "monitoring": {
       "title": "Monitoraggio del sistema",
-      "description": "Controlla i segnali critici dei clienti e attiva l'automazione quando necessario."
+      "description": "Controlla i segnali critici dei clienti e attiva l'automazione quando necessario.",
+      "coManagedDescription": "Controlla i segnali critici del tuo spazio di lavoro e attiva l'automazione quando necessario."
     },
     "security": {
       "title": "Gestione della sicurezza",
@@ -52,11 +53,13 @@
     },
     "projects": {
       "title": "Gestione progetti",
-      "description": "Organizza piani di consegna, attività e traguardi per ogni incarico."
+      "description": "Organizza piani di consegna, attività e traguardi per ogni incarico.",
+      "coManagedDescription": "Organizza progetti IT, attività e traguardi in tutta l'organizzazione."
     },
     "reports": {
       "title": "Report e analisi",
-      "description": "Crea viste aggregate su utilizzo, rispetto degli SLA e redditività."
+      "description": "Crea viste aggregate su utilizzo, rispetto degli SLA e redditività.",
+      "coManagedDescription": "Crea viste aggregate su carico di lavoro, rispetto degli SLA e prestazioni del team."
     },
     "schedule": {
       "title": "Gestione pianificazione",

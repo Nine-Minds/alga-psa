@@ -44,7 +44,8 @@
     },
     "monitoring": {
       "title": "Systeembewaking",
-      "description": "Bewaak kritieke signalen bij klanten en start automatisering wanneer nodig."
+      "description": "Bewaak kritieke signalen bij klanten en start automatisering wanneer nodig.",
+      "coManagedDescription": "Bewaak kritieke signalen in uw werkruimte en start automatisering wanneer nodig."
     },
     "security": {
       "title": "Beveiligingsbeheer",
@@ -52,11 +53,13 @@
     },
     "projects": {
       "title": "Projectbeheer",
-      "description": "Organiseer opleverplannen, taken en mijlpalen voor elke opdracht."
+      "description": "Organiseer opleverplannen, taken en mijlpalen voor elke opdracht.",
+      "coManagedDescription": "Organiseer IT-projecten, taken en mijlpalen in uw hele organisatie."
     },
     "reports": {
       "title": "Rapportage en analyse",
-      "description": "Maak overzichten van benutting, SLA-prestaties en winstgevendheid."
+      "description": "Maak overzichten van benutting, SLA-prestaties en winstgevendheid.",
+      "coManagedDescription": "Maak overzichten van werkdruk, SLA-prestaties en teamprestaties."
     },
     "schedule": {
       "title": "Planningsbeheer",

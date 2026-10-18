@@ -44,7 +44,8 @@
     },
     "monitoring": {
       "title": "Systemüberwachung",
-      "description": "Beobachten Sie kritische Signale über Kunden hinweg und lösen Sie bei Bedarf Automatisierung aus."
+      "description": "Beobachten Sie kritische Signale über Kunden hinweg und lösen Sie bei Bedarf Automatisierung aus.",
+      "coManagedDescription": "Beobachten Sie kritische Signale in Ihrem Arbeitsbereich und lösen Sie bei Bedarf Automatisierung aus."
     },
     "security": {
       "title": "Sicherheitsmanagement",
@@ -52,11 +53,13 @@
     },
     "projects": {
       "title": "Projektmanagement",
-      "description": "Organisieren Sie Lieferpläne, Aufgaben und Meilensteine für jedes Engagement."
+      "description": "Organisieren Sie Lieferpläne, Aufgaben und Meilensteine für jedes Engagement.",
+      "coManagedDescription": "Organisieren Sie IT-Projekte, Aufgaben und Meilensteine in Ihrer gesamten Organisation."
     },
     "reports": {
       "title": "Berichte & Analysen",
-      "description": "Erstellen Sie Übersichten zu Auslastung, SLA-Erfüllung und Rentabilität."
+      "description": "Erstellen Sie Übersichten zu Auslastung, SLA-Erfüllung und Rentabilität.",
+      "coManagedDescription": "Erstellen Sie Übersichten zu Arbeitslast, SLA-Erfüllung und Teamleistung."
     },
     "schedule": {
       "title": "Terminmanagement",
