@@ -515,12 +515,12 @@ export function AccountingMappingBulkGrid({
             content = t('integrations.accounting.bulk.status.pending', { defaultValue: 'Pending' });
           } else if (row.selected && row.externalId.trim() && row.missingField) {
             content = (
-              <span className="text-xs text-[rgb(var(--badge-warning-text))] !whitespace-normal">
+              <Badge variant="warning" data-testid={`${idPrefix}-missing-field-${row.id}`}>
                 {t('integrations.accounting.bulk.status.missingField', {
                   defaultValue: 'Needs {{field}}',
                   field: row.missingField
                 })}
-              </span>
+              </Badge>
             );
           } else {
             content = '—';
