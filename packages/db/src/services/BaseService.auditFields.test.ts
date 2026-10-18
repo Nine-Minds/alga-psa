@@ -11,7 +11,7 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 
 import logger from '@alga-psa/core/logger';
-import { BaseService, type ServiceContext } from './BaseService';
+import { BaseService, UnsupportedRangeFilterError, type ServiceContext } from './BaseService';
 
 const context: ServiceContext = {
   tenant: 'tenant-1',
@@ -28,10 +28,11 @@ class TestService extends BaseService<Record<string, unknown>> {
   }
 
   async filterCreateAuditFields(data: Record<string, unknown>): Promise<Record<string, unknown>> {
-    return this.filterAuditFields(
-      {} as Knex,
-      this.addCreateAuditFields(data, context)
-    );
+    return this.addCreateAuditFields({} as Knex, data, context);
+  }
+
+  async filterUpdateAuditFields(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return this.addUpdateAuditFields({} as Knex, data, context);
   }
 
   async filterData(data: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -49,7 +50,56 @@ class TargetTableService extends BaseService<Record<string, unknown>> {
   }
 
   async filterCreateForTarget(data: Record<string, unknown>, target: string): Promise<Record<string, unknown>> {
-    return this.filterAuditFields({} as Knex, this.addCreateAuditFields(data, context), target);
+    return this.addCreateAuditFields({} as Knex, data, context, target);
+  }
+}
+
+type RecordedWhere = { column: string; op?: string; value: unknown };
+
+class RecordingQueryBuilder {
+  readonly wheres: RecordedWhere[] = [];
+
+  where(column: string, opOrValue?: unknown, value?: unknown): this {
+    if (value === undefined) {
+      this.wheres.push({ column, value: opOrValue });
+    } else {
+      this.wheres.push({ column, op: String(opOrValue), value });
+    }
+    return this;
+  }
+
+  whereIn(column: string, value: unknown): this {
+    this.wheres.push({ column, value });
+    return this;
+  }
+
+  whereILike(): this {
+    return this;
+  }
+}
+
+class FilterService extends BaseService<Record<string, unknown>> {
+  constructor() {
+    super({ tableName: 'audit_fields_filter' });
+  }
+
+  protected async getTableColumns(): Promise<Set<string>> {
+    return new Set(['tenant', 'created_at', 'updated_at']);
+  }
+
+  runFilters(filters: Record<string, unknown>): RecordedWhere[] {
+    const builder = new RecordingQueryBuilder();
+    this.applyFilters(builder as unknown as Knex.QueryBuilder, filters);
+    return builder.wheres;
+  }
+
+  runRangeFilters(
+    filters: Record<string, unknown>,
+    columns: Record<string, string | null>,
+  ): RecordedWhere[] {
+    const builder = new RecordingQueryBuilder();
+    this.applyRangeFilters(builder as unknown as Knex.QueryBuilder, filters, columns);
+    return builder.wheres;
   }
 }
 
@@ -109,6 +159,70 @@ describe('BaseService audit field filtering', () => {
     expect(logger.warn).toHaveBeenCalledWith(
       '[db/BaseService] table "audit_fields_warning" has no column "updated_by"; skipping audit field'
     );
+  });
+
+  it('stamps and filters update audit fields against the target table', async () => {
+    const service = new TestService('audit_fields_update_partial', new Set(['name', 'tenant', 'updated_at']));
+
+    const result = await service.filterUpdateAuditFields({ name: 'Renamed' });
+
+    expect(result.name).toBe('Renamed');
+    expect(result).toHaveProperty('updated_at');
+    expect(result).not.toHaveProperty('updated_by');
+  });
+
+  it('maps generic created_/updated_ range keys to their timestamp columns', () => {
+    const service = new FilterService();
+
+    expect(service.runFilters({
+      created_from: '2026-01-01',
+      created_to: '2026-02-01',
+      updated_from: '2026-01-15',
+      updated_to: '2026-02-15',
+    })).toEqual([
+      { column: 'created_at', op: '>=', value: '2026-01-01' },
+      { column: 'created_at', op: '<=', value: '2026-02-01' },
+      { column: 'updated_at', op: '>=', value: '2026-01-15' },
+      { column: 'updated_at', op: '<=', value: '2026-02-15' },
+    ]);
+  });
+
+  it('rejects a declared-but-unsupported range key (null mapping)', () => {
+    const service = new FilterService();
+
+    // A declared key mapped to null is a range key this resource cannot serve;
+    // a dropped filter would return unfiltered rows, so fail loudly.
+    expect(() => service.runRangeFilters({ updated_from: '2026-01-01' }, { updated_from: null }))
+      .toThrow(UnsupportedRangeFilterError);
+    expect(() => service.runRangeFilters({ updated_from: '2026-01-01' }, { updated_from: null }))
+      .toThrow(/Unsupported range filter "updated_from"/);
+  });
+
+  it('treats a key absent from the map as a normal filter, not a range key', () => {
+    const service = new FilterService();
+
+    // `assigned_to` ends in `_to` but is not declared as a range key, so it must
+    // be applied as a plain column filter rather than rejected.
+    expect(service.runFilters({ assigned_to: 'user-1' })).toEqual([
+      { column: 'assigned_to', value: 'user-1' },
+    ]);
+    expect(service.runRangeFilters({ assigned_to: 'user-1' }, {
+      created_from: 'created_at',
+    })).toEqual([]);
+  });
+
+  it('applies non-range keys and mapped ranges together', () => {
+    const service = new FilterService();
+
+    expect(service.runFilters({
+      is_active: true,
+      status: ['draft', 'sent'],
+      created_from: '2026-01-01',
+    })).toEqual([
+      { column: 'created_at', op: '>=', value: '2026-01-01' },
+      { column: 'is_active', value: true },
+      { column: 'status', value: ['draft', 'sent'] },
+    ]);
   });
 
   it('filters audit fields against an explicit target table, not the service default', async () => {

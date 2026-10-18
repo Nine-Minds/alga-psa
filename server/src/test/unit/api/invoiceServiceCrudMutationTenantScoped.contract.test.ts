@@ -24,7 +24,7 @@ describe('invoice service CRUD mutation tenant-scoped query contract', () => {
     expect(updateSection).toContain(".table('invoices')");
     expect(updateSection).toContain(".table('invoice_charges')");
     expect(updateSection).not.toContain('invoice_line_items');
-    expect(updateSection).toContain('filterAuditFields(');
+    expect(updateSection).toContain('addUpdateAuditFields(');
     expect(updateSection).not.toMatch(/trx\('invoices'\)\s*\.(?:where|update|del|delete)/);
     expect(updateSection).not.toMatch(/\.where\(\{\s*invoice_id: id,\s*tenant: context\.tenant\s*\}\)/);
 

@@ -89,6 +89,20 @@ export class TagService extends BaseService {
     });
   }
 
+  /**
+   * tag_mappings has created_at but no updated_at. `created_*` maps and
+   * `updated_*` is explicitly declared as unsupported (null) so it is rejected
+   * rather than issuing a 42703 or silently dropping the filter.
+   */
+  protected rangeFilterColumns(): Record<string, string | null> {
+    return {
+      created_from: `${this.tableName}.created_at`,
+      created_to: `${this.tableName}.created_at`,
+      updated_from: null,
+      updated_to: null,
+    };
+  }
+
   private async publishTagDefinitionCreated(definition: ITagDefinition, context: ServiceContext): Promise<void> {
     const occurredAt = new Date().toISOString();
     await publishWorkflowEvent({
