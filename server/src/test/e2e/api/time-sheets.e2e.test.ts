@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { setupE2ETestEnvironment, E2ETestEnvironment } from '../utils/e2eTestSetup';
 import { assertSuccess, assertError } from '../utils/apiTestHelpers';
+import { grantTestUserPermission } from '../utils/simpleRoleSetup';
 
 const API_BASE = '/api/v1/time-sheets';
 
@@ -16,6 +17,8 @@ describe('Time Sheets API E2E (list read path)', () => {
 
   beforeEach(async () => {
     env = await setupE2ETestEnvironment();
+    // setupTestUserWithPermissions does not grant time_sheet; list/search/export all check time_sheet:read.
+    await grantTestUserPermission(env.db, env.userId, env.tenant, 'time_sheet', 'read');
     const periodId = uuidv4();
     await tenantTable('time_periods').insert({
       period_id: periodId,
