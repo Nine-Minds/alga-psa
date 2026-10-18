@@ -876,15 +876,19 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw error;
         }
 
-        // Export within tenant context
-        const result = await runWithTenant(tenantId!, async () => {
-          const timeSheets = await this.timeSheetService.list({}, {
+        // Export within tenant context: every row matching the filters, not page 1 of list()
+        const rows = await runWithTenant(tenantId!, async () => {
+          return this.timeSheetService.exportTimeSheets(exportParams, {
             userId: user.user_id,
             user,
             tenant: tenantId!,
           });
-          return timeSheets.data;
         });
+
+        const fields = exportParams.fields?.filter((field) => field.length > 0);
+        const result = fields && fields.length > 0
+          ? rows.map((row) => Object.fromEntries(fields.map((field) => [field, row[field]])))
+          : rows;
 
         // Return appropriate response based on format
         if (exportParams.format === 'csv') {
