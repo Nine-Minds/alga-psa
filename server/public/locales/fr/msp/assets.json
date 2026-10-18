@@ -835,7 +835,7 @@
       "save": "Enregistrer",
       "label": "Libellé du bouton",
       "template": "Modèle d’URL",
-      "tokens": "Utilisez {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} et {field.<key>} avec les clés de champs personnalisés définies dans Paramètres → Équipements → Types d’équipement.",
+      "tokens": "Utilisez {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {client.name} et {field.<key>} avec les clés de champs personnalisés définies dans Paramètres → Équipements → Types d’équipement.",
       "loading": "Chargement des options d’accès à distance…",
       "unavailable": "Indisponible pour cet équipement",
       "actions": "Actions",

@@ -835,7 +835,7 @@
       "save": "Salvar",
       "label": "Rótulo do botão",
       "template": "Modelo de URL",
-      "tokens": "Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} e {field.<key>} com as chaves de campos personalizados definidas em Configurações → Ativos → Tipos de ativo.",
+      "tokens": "Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {client.name} e {field.<key>} com as chaves de campos personalizados definidas em Configurações → Ativos → Tipos de ativo.",
       "loading": "Carregando opções de acesso remoto…",
       "unavailable": "Indisponível para este ativo",
       "actions": "Ações",
