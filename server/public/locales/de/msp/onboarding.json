@@ -572,6 +572,8 @@
       },
       "current": {
         "title": "Aktuelle Boards",
+        "sharedWithMsp": "Mit Ihrem MSP geteilt",
+        "defaultNotShared": "Neue Anfragen landen auf dem Standard-Board, das nicht mit Ihrem MSP geteilt ist. Ihr MSP sieht diese Tickets nur, wenn Ihr Team sie eskaliert.",
         "defaultTitle": "Standard-Board",
         "setDefaultTitle": "Als Standard-Board festlegen",
         "removeTitle": "Board entfernen"

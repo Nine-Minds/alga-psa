@@ -572,6 +572,8 @@
       },
       "current": {
         "title": "Tableros actuales",
+        "sharedWithMsp": "Compartido con su MSP",
+        "defaultNotShared": "Las nuevas solicitudes van al tablero predeterminado, que no está compartido con su MSP. Su MSP solo verá estos tickets si su equipo los escala.",
         "defaultTitle": "Tablero predeterminado",
         "setDefaultTitle": "Establecer como tablero predeterminado",
         "removeTitle": "Eliminar tablero"

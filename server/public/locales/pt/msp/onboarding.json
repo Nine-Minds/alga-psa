@@ -572,6 +572,8 @@
       },
       "current": {
         "title": "Quadros Atuais",
+        "sharedWithMsp": "Compartilhado com seu MSP",
+        "defaultNotShared": "As novas solicitações vão para o quadro padrão, que não é compartilhado com seu MSP. Seu MSP só verá esses tickets se sua equipe os escalar.",
         "defaultTitle": "Quadro padrão",
         "setDefaultTitle": "Definir como quadro padrão",
         "removeTitle": "Remover quadro"

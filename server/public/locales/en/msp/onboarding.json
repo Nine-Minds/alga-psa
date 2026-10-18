@@ -572,6 +572,8 @@
       },
       "current": {
         "title": "Current Boards",
+        "sharedWithMsp": "Shared with your MSP",
+        "defaultNotShared": "New requests go to the default board, which is not shared with your MSP. Your MSP will only see these tickets if your team escalates them.",
         "defaultTitle": "Default board",
         "setDefaultTitle": "Set as default board",
         "removeTitle": "Remove board"

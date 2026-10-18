@@ -19,7 +19,7 @@ import {
   deletePriority,
   validatePriorityDeletion
 } from '@alga-psa/reference-data/actions';
-import { getTenantTicketingData } from '@alga-psa/onboarding/actions';
+import { getTenantTicketingData, getCoManagedSharedBoardIds } from '@alga-psa/onboarding/actions';
 import { IStandardPriority, ITicketCategory } from '@alga-psa/types';
 import { IStandardStatus } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -178,6 +178,8 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
   // Imported items tracking
   const [importedBoards, setImportedBoards] = useState<any[]>([]);
+  // Boards the workspace shares with its MSP (co-managed workspaces only).
+  const [sharedBoardIds, setSharedBoardIds] = useState<string[]>([]);
   const [importedStatuses, setImportedStatuses] = useState<any[]>([]);
   const [importedCategories, setImportedCategories] = useState<string[]>([]);
   const [importedPriorities, setImportedPriorities] = useState<any[]>([]);
@@ -291,6 +293,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   // Load existing ticketing data on mount
   useEffect(() => {
     loadExistingData();
+    getCoManagedSharedBoardIds().then(setSharedBoardIds).catch(() => setSharedBoardIds([]));
   }, []); // Only run once on mount
 
   // Load available standard data when import dialogs are opened
@@ -1879,6 +1882,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     defaultValue: 'Current Boards'
                   })}
                 </Label>
+                {sharedBoardIds.length > 0 && importedBoards.some(board => board.is_default && !sharedBoardIds.includes(board.board_id)) && (
+                  <Alert variant="warning" className="mb-2">
+                    <AlertDescription>
+                      {t('ticketingConfigStep.boards.current.defaultNotShared', {
+                        defaultValue: 'New requests go to the default board, which is not shared with your MSP. Your MSP will only see these tickets if your team escalates them.'
+                      })}
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
@@ -1913,7 +1925,14 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     <tbody className="bg-white">
                       {importedBoards.map((board, idx) => (
                         <tr key={board.board_id}>
-                          <td className="px-4 py-2 text-sm">{board.board_name}</td>
+                          <td className="px-4 py-2 text-sm">
+                            {board.board_name}
+                            {sharedBoardIds.includes(board.board_id) && (
+                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                                {t('ticketingConfigStep.boards.current.sharedWithMsp', { defaultValue: 'Shared with your MSP' })}
+                              </span>
+                            )}
+                          </td>
                           <td className="px-4 py-2 text-center">
                             <Button
                               id={`board-default-toggle-${idx}`}

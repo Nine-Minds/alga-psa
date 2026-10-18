@@ -1089,6 +1089,18 @@ export const getAvailableRoles = withAuth(async (
  * -context lookup, which is unreliable this early in onboarding and left the
  * step's "Users: N" counter stuck at 0.
  */
+/** Boards this workspace shares with its MSP under a live co-management
+ * relationship; empty outside co-managed workspaces. */
+export const getCoManagedSharedBoardIds = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<string[]> => {
+  const { knex } = await createTenantKnex();
+  const live = await tenantDb(knex, tenant).table('co_management_relationships').whereNull('ended_at').pluck('relationship_id');
+  if (!live.length) return [];
+  return tenantDb(knex, tenant).table('co_management_board_scopes').whereIn('relationship_id', live).distinct().pluck('board_id');
+});
+
 /**
  * Seats as admission counts them, so the step never offers a seat that saving
  * would then refuse: a pending invitation holds a seat until it is accepted or

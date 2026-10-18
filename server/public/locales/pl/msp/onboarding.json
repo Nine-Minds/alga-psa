@@ -574,6 +574,8 @@
       },
       "current": {
         "title": "Bieżące tablice",
+        "sharedWithMsp": "Udostępnione twojemu MSP",
+        "defaultNotShared": "Nowe zgłoszenia trafiają na domyślną tablicę, która nie jest udostępniona twojemu MSP. Twój MSP zobaczy te zgłoszenia tylko wtedy, gdy twój zespół je eskaluje.",
         "defaultTitle": "Tablica domyślna",
         "setDefaultTitle": "Ustaw jako domyślną tablicę",
         "removeTitle": "Usuń tablicę"

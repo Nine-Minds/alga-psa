@@ -400,6 +400,23 @@ async function reserveCustomerInvitation(tenant: string, email: string) {
   });
 }
 
+describe('co-managed board deletion dependency', () => {
+  it('blocks deleting a board shared with the MSP until the relationship ends', async () => {
+    // Deleting a shared board silently removed the MSP's oversight; ended
+    // relationships keep their scope rows as history and must not block.
+    const { DELETION_CONFIGS } = await import('../../../../../packages/core/src/config/deletion');
+    const dependency = DELETION_CONFIGS.board.dependencies.find(dep => dep.type === 'co_managed_board_scope')!;
+    const { operation, actor, input } = await readyForAcceptance();
+    const count = () => dependency.countQuery!(db, { tenant: operation.customer_tenant, entityId: operation.customer_board_id });
+    expect(await count()).toBe(1);
+    await acceptCoManagedRelationship(db, actor, input);
+    expect(await count()).toBe(1);
+    expect(await dependency.countQuery!(db, { tenant: operation.customer_tenant, entityId: randomUUID() })).toBe(0);
+    await tenantDb(db, operation.customer_tenant).table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+    expect(await count()).toBe(0);
+  });
+});
+
 describe('customer technician allocation admission', () => {
   it('serializes concurrent last-seat creates without using MSP licensed_user_count', async () => {
     const { operation, customer, actor, input } = await readyForAcceptance();

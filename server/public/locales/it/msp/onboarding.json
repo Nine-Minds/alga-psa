@@ -572,6 +572,8 @@
       },
       "current": {
         "title": "Bacheche attuali",
+        "sharedWithMsp": "Condiviso con il tuo MSP",
+        "defaultNotShared": "Le nuove richieste finiscono nella bacheca predefinita, che non è condivisa con il tuo MSP. Il tuo MSP vedrà questi ticket solo se il tuo team li inoltra.",
         "defaultTitle": "Bacheca predefinita",
         "setDefaultTitle": "Imposta come bacheca predefinita",
         "removeTitle": "Rimuovi bacheca"

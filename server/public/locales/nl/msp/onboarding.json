@@ -572,6 +572,8 @@
       },
       "current": {
         "title": "Huidige borden",
+        "sharedWithMsp": "Gedeeld met uw MSP",
+        "defaultNotShared": "Nieuwe verzoeken komen op het standaardbord, dat niet met uw MSP wordt gedeeld. Uw MSP ziet deze tickets alleen als uw team ze escaleert.",
         "defaultTitle": "Standaardbord",
         "setDefaultTitle": "Als standaardbord instellen",
         "removeTitle": "Bord verwijderen"

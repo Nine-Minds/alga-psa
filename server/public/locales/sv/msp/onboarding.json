@@ -572,6 +572,8 @@
       },
       "current": {
         "title": "Nuvarande tavlor",
+        "sharedWithMsp": "Delad med din MSP",
+        "defaultNotShared": "Nya ärenden hamnar på standardtavlan, som inte delas med din MSP. Din MSP ser bara dessa ärenden om ditt team eskalerar dem.",
         "defaultTitle": "Standardtavla",
         "setDefaultTitle": "Ange som standardtavla",
         "removeTitle": "Ta bort tavla"

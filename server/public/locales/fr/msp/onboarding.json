@@ -572,6 +572,8 @@
       },
       "current": {
         "title": "Tableaux actuels",
+        "sharedWithMsp": "Partagé avec votre MSP",
+        "defaultNotShared": "Les nouvelles demandes arrivent sur le tableau par défaut, qui n’est pas partagé avec votre MSP. Votre MSP ne verra ces tickets que si votre équipe les escalade.",
         "defaultTitle": "Tableau par défaut",
         "setDefaultTitle": "Définir comme tableau par défaut",
         "removeTitle": "Supprimer le tableau"

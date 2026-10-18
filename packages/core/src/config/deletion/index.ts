@@ -39,6 +39,26 @@ const countDocumentAssociations = (entityType: string) => {
   };
 };
 
+/** Boards a live (unended) co-management relationship shares with the MSP.
+ * Deleting one silently removes the MSP's oversight, so it blocks deletion;
+ * scope rows of ended relationships are history and do not. */
+const countCoManagedBoardScopes = async (
+  trx: Knex | Knex.Transaction,
+  options: { tenant: string; entityId: string }
+): Promise<number> => {
+  const live = await tenantScopedTable(trx, options.tenant, 'co_management_relationships')
+    .whereNull('ended_at')
+    .pluck('relationship_id');
+  if (!live.length) return 0;
+  const result = await tenantScopedTable(trx, options.tenant, 'co_management_board_scopes')
+    .where({ board_id: options.entityId })
+    .whereIn('relationship_id', live)
+    .count<{ count: string }>('* as count')
+    .first();
+
+  return Number(result?.count ?? 0);
+};
+
 const countPortalUsers = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
@@ -592,7 +612,13 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     supportsArchive: false,
     dependencies: [
       { type: 'ticket', table: 'tickets', foreignKey: 'board_id', label: 'ticket' },
-      { type: 'category', table: 'categories', foreignKey: 'board_id', label: 'category' }
+      { type: 'category', table: 'categories', foreignKey: 'board_id', label: 'category' },
+      {
+        type: 'co_managed_board_scope',
+        table: 'co_management_board_scopes',
+        label: 'co-managed relationship',
+        countQuery: countCoManagedBoardScopes
+      }
     ]
   },
   interaction_type: {
