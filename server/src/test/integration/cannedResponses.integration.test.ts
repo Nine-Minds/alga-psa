@@ -10,6 +10,8 @@ import * as auth from '@alga-psa/auth';
 import * as rbac from '@alga-psa/auth/rbac';
 import * as actions from '@alga-psa/tickets/actions/cannedResponseActions';
 import * as commentActions from '@alga-psa/tickets/actions/comment-actions/commentActions';
+import * as optimizedActions from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { withTransaction } from '@alga-psa/db';
 import { TestContext } from '../../../test-utils/testContext';
 import { createUser } from '../../../test-utils/testDataFactory';
 import { tenantDb } from '@alga-psa/db';
@@ -378,6 +380,60 @@ describe('Canned responses (integration)', () => {
       const text = JSON.stringify(row.note);
       expect(text).toContain('Hi Mary, re #CR-1 {{nope.field}}');
       expect(row.markdown_content).toContain('Hi Mary, re #CR-1');
+    });
+  });
+
+  describe('merge fields on the UI write path (addTicketCommentWithCache)', () => {
+    const tokens = 'Hi {{contact.first_name}} {{agent.name}} {{client.name}} {{ticket.number}} {{not.a_field}}';
+
+    async function giveTicketContact(id: string, fullName: string) {
+      const contactId = uuidv4();
+      await tt('contacts').insert({ tenant: tenantId, contact_name_id: contactId, full_name: fullName, email: `${contactId}@example.com`, client_id: clientId });
+      await tt('tickets').where({ ticket_id: id }).update({ contact_name_id: contactId });
+    }
+
+    it('resolves known tokens in note and markdown_content and leaves unknown ones', async () => {
+      await giveTicketContact(ticketId, 'Dorothy Gale');
+      actAs(admin);
+      const clientName = (await tt('clients').where({ client_id: clientId }).first()).client_name;
+      const comment: any = await optimizedActions.addTicketCommentWithCache(ticketId, doc(tokens), false, false);
+      expect(comment?.comment_id, JSON.stringify(comment)).toBeTruthy();
+      const row = await tt('comments').where({ comment_id: comment.comment_id }).first();
+      const expected = `Hi Dorothy Ada Tester ${clientName} CR-1 {{not.a_field}}`;
+      expect(JSON.stringify(row.note)).toContain(expected);
+      expect(row.markdown_content).toContain(expected);
+      expect(JSON.stringify(row.note)).not.toContain('{{contact.first_name}}');
+      expect(JSON.stringify(comment.note)).toContain(expected);
+    });
+
+    it('does not rewrite a client-authored comment', async () => {
+      await giveTicketContact(ticketId, 'Dorothy Gale');
+      const raw = doc(tokens);
+      const comment: any = await withTransaction(context.db, (trx) =>
+        optimizedActions.addTicketCommentInTransaction(trx, portalUser, tenantId, {
+          ticketId, content: raw, isInternal: false, isResolution: false,
+        })
+      );
+      const row = await tt('comments').where({ comment_id: comment.comment_id }).first();
+      expect(JSON.stringify(row.note)).toContain('{{contact.first_name}}');
+      expect(JSON.stringify(row.note)).toContain('{{not.a_field}}');
+      expect(row.markdown_content).toContain('{{contact.first_name}}');
+    });
+
+    it('mirrors the resolved text to bundle children in sync_updates mode', async () => {
+      await giveTicketContact(ticketId, 'Dorothy Gale');
+      const childId = await insertTicket(boardId, 'CR-CHILD');
+      await tt('tickets').where({ ticket_id: childId }).update({ master_ticket_id: ticketId });
+      await tt('ticket_bundle_settings').insert({ tenant: tenantId, master_ticket_id: ticketId, mode: 'sync_updates' });
+      actAs(admin);
+      const comment: any = await optimizedActions.addTicketCommentWithCache(ticketId, doc(tokens), false, false);
+      expect(comment?.comment_id, JSON.stringify(comment)).toBeTruthy();
+      const mirrored = await tt('comments').where({ ticket_id: childId, is_system_generated: true }).first();
+      expect(mirrored).toBeTruthy();
+      expect(JSON.stringify(mirrored.note)).toContain('Hi Dorothy Ada Tester');
+      expect(JSON.stringify(mirrored.note)).toContain('{{not.a_field}}');
+      expect(JSON.stringify(mirrored.note)).not.toContain('{{contact.first_name}}');
+      expect(mirrored.markdown_content).not.toContain('{{contact.first_name}}');
     });
   });
 });
