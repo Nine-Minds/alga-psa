@@ -7934,6 +7934,17 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/v1/tickets/{id}/project-links",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/tickets/[id]/project-links/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "server/src/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/v1/tickets/{id}/status",
     "methods": [
       "PUT"
