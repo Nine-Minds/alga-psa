@@ -125,6 +125,9 @@ describe('XeroAdapter – spec validation scaffolding', () => {
     };
     const knexMock: any = () => knexQb;
     knexMock.raw = (sql: string) => ({ __raw: sql });
+    // Charge expansion probes for the mid-period adjustments table before it
+    // projects contract-change descriptions; this batch carries none.
+    knexMock.schema = { hasTable: async () => false };
     // deliver() runs inside withTransaction; hand the same mock back as the trx.
     knexMock.transaction = async (cb: any) => cb(knexMock);
     createTenantKnexMock.mockResolvedValue({ knex: knexMock, tenant: TENANT_ID });

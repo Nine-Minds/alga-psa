@@ -2359,7 +2359,8 @@
       "Volume",
       "Auto",
       "auto | 50% | 120px",
-      "Cc"
+      "Cc",
+      "{{size}} GB"
     ],
     "caseInsensitive": [
       "account",

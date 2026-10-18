@@ -29,6 +29,8 @@ export interface CreateTicketFromAssetData {
   board_id: string;
   asset_id: string;
   client_id: string;
+  /** FR-E8: a shared workspace's single user, or the asset's assignee. */
+  contact_name_id?: string | null;
 }
 
 export interface AssetRmmCommandResult {

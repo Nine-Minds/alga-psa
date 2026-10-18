@@ -352,7 +352,13 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   { table: 'projects', label: 'project', stampsBillingProfile: true },
   { table: 'contacts', label: 'contact' },
   { table: 'interactions', label: 'interaction' },
-  { table: 'assets', label: 'asset' },
+  // FR-F5: assets and RMM organization mappings now carry a billing profile,
+  // so they follow the same stamping rule as tickets and projects.
+  { table: 'assets', label: 'asset', stampsBillingProfile: true },
+  // FR-E11: groups belong to a client, so they move with it (and with their
+  // members and people, which are keyed by group). This is also why a merge is
+  // exempt from FR-E5's "a client change removes the asset from its group".
+  { table: 'asset_groups', label: 'asset group' },
   { table: 'client_locations', label: 'location' },
   { table: 'client_inbound_email_domains', label: 'inbound email domain' },
   { table: 'client_name_aliases', label: 'name alias' },
@@ -393,7 +399,7 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   // Integrations that keep writing after the merge. `rmm_organization_mappings`
   // is the one that matters: device sync creates assets against the mapped
   // client, so leaving it behind re-populates the client the merge just emptied.
-  { table: 'rmm_organization_mappings', label: 'RMM organisation mapping' },
+  { table: 'rmm_organization_mappings', label: 'RMM organisation mapping', stampsBillingProfile: true },
   { table: 'rmm_maintenance_windows', label: 'RMM maintenance window' },
   { table: 'inbound_ticket_defaults', label: 'inbound ticket default' },
 

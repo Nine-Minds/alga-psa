@@ -821,7 +821,8 @@
       "conflict": "Ta zmiana linii umowy jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
       "notAllowed": "Jedna z wartości linii umowy jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola linii umowy.",
-      "missingFieldNamed": "Brakuje wymaganego pola linii umowy: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola linii umowy: {{field}}.",
+      "advanceTimingNotAllowed": "Rozliczanie z góry jest dostępne tylko dla stałych pozycji umowy. Pozycje godzinowe i rozliczane według zużycia są zawsze rozliczane z dołu, po wykonaniu pracy."
     },
     "templateLine": {
       "unavailable": "Wybrany wiersz szablonu nie jest już dostępny. Odśwież stronę i spróbuj ponownie."

@@ -33,3 +33,4 @@ export * from './context';
 export { DeleteEntityDialog } from './components/DeleteEntityDialog';
 
 export { type ClientDrawerOptions } from './context/ClientDrawerContext';
+export { type ContactDrawerOptions } from './context/ContactDrawerContext';

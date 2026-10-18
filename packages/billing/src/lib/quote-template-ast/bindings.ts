@@ -12,6 +12,9 @@ export const QUOTE_TEMPLATE_VALUE_BINDINGS: QuoteTemplateValueBindings = {
   title: { id: 'title', kind: 'value', path: 'title' },
   scope: { id: 'scope', kind: 'value', path: 'scope_of_work', fallback: '' },
   poNumber: { id: 'poNumber', kind: 'value', path: 'po_number' },
+  // No section-title bindings: the grouped layout's headings are the per-band
+  // `name` on `groupsByCadence`, and the adapter writes a quote's custom
+  // `recurring_section_title` / `onetime_section_title` into that name.
   subtotal: { id: 'subtotal', kind: 'value', path: 'subtotal' },
   discountTotal: { id: 'discountTotal', kind: 'value', path: 'discount_total' },
   tax: { id: 'tax', kind: 'value', path: 'tax' },

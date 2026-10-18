@@ -35,6 +35,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Input } from "@alga-psa/ui/components/Input";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import TemplateDefaultDiscountsPanel from "./TemplateDefaultDiscountsPanel";
 
 import { IContract, IContractAssignmentSummary } from "@alga-psa/types";
 import type { DetailedContractLine } from "../../../repositories/contractLineRepository";
@@ -63,6 +64,8 @@ import { useTemplateNeutralRate } from "./templateNeutralRate";
 import { listContractSimulationClients } from "@alga-psa/billing/actions/contractSimulationActions";
 import GenericPlanServicesList from "../contract-lines/GenericContractLineServicesList";
 import { ContractLineEditDialog } from "./ContractLineEditDialog";
+import { BillingTimingField } from "./BillingTimingField";
+import { isAdvanceTimingAllowedForLineType } from "@shared/billingClients/contractLineTimingRule";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { unitFixedServiceAmountCents } from "../../../lib/fixedServiceBasis";
 import {
@@ -1465,6 +1468,13 @@ const ContractTemplateDetail: React.FC = () => {
         </section>
       </div>
 
+      <TemplateDefaultDiscountsPanel
+        templateId={contract.contract_id}
+        definitions={templateMetadata.default_discounts ?? []}
+        lines={templateLines}
+        onSaved={() => void loadTemplate(contract.contract_id)}
+      />
+
       <Card className="mt-4">
         <CardHeader>
           <CardTitle className="text-base font-semibold text-[rgb(var(--color-text-800))]">
@@ -2028,6 +2038,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
     contractLineId: string,
     rateCents: number,
     billingTiming: "arrears" | "advance",
+    invoiceLineDescription: string | null,
   ) => {
     try {
       const result = await updateContractLineRate(
@@ -2035,6 +2046,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
         contractLineId,
         rateCents,
         billingTiming,
+        invoiceLineDescription,
       );
       if (isReturnedActionError(result)) {
         throw new Error(getErrorMessage(result));
@@ -2127,6 +2139,22 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
                   )}
                 </div>
               </div>
+              {!isAdvanceTimingAllowedForLineType(line.contract_line_type) && (
+                <div className="mt-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {t("billing.labels.timing", {
+                      defaultValue: "Billing Timing",
+                    })}
+                  </p>
+                  {/* Hourly/Usage template lines have no editor; show the fixed value and why. */}
+                  <BillingTimingField
+                    id={`template-billing-timing-${line.contract_line_id}`}
+                    lineType={line.contract_line_type}
+                    value="arrears"
+                    onChange={() => {}}
+                  />
+                </div>
+              )}
               <div className="mt-4">
                 <GenericPlanServicesList
                   contractLineId={line.contract_line_id}
@@ -2145,6 +2173,8 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
             contract_line_name: editingLine.contract_line_name,
             rate: editingLine.rate ?? undefined,
             billing_timing: editingLine.billing_timing,
+            contract_line_type: editingLine.contract_line_type,
+            invoice_line_description: editingLine.invoice_line_description ?? null,
           }}
           onClose={() => setEditingLine(null)}
           onSave={handleSaveRate}
@@ -2153,5 +2183,6 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
     </Card>
   );
 };
+
 
 export default ContractTemplateDetail;

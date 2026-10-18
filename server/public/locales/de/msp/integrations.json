@@ -124,6 +124,15 @@
           "paymentTerms": "Zahlungsbedingungen",
           "discounts": "Rabatte"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Desktop-Dienstkonten",
+        "desktopDiscounts": "Desktop-Rabatte",
+        "desktopAccount": "Name des Desktop-Ertragskontos",
+        "description": "Ordnen Sie Rechnungsrabatte und Gutschriften vor dem Export zu. Die Zuordnung gilt für dieses Buchhaltungsunternehmen.",
+        "add": "Zuordnung hinzufügen",
+        "remove": "Zuordnung entfernen",
+        "removeConfirm": "Diese Buchhaltungszuordnung entfernen?"
       }
     },
     "calendar": {
@@ -2733,10 +2742,25 @@
           "copied": "Kopiert",
           "copy": "Kopieren",
           "description": "Level kann Webhooks nicht über seine API registrieren. Erstellen Sie in Level eine Automatisierung mit einer HTTP-POST-Aktion und verwenden Sie die folgende URL, den Header und die Payload, um Warnungen in Echtzeit an Alga zu senden.",
+          "fallbackDescription": "Verwenden Sie diese Alternative nur, wenn die nativen Webhooks unter Einstellungen → Webhooks in Level nicht genutzt werden können. Erstellen Sie eine Automatisierung mit einer HTTP-POST-Aktion mit der folgenden URL, dem Header und der Payload, um Warnungen an Alga zu senden.",
+          "fallbackNameHint": "Bearbeiten Sie den Wert \"name\" in jeder Automatisierung. Zusammen mit dem Gerät identifiziert er die Warnung; Wiederholungen mit gleichem Namen auf demselben Gerät gelten als eine Warnung.",
+          "fallbackTitle": "Alternative: HTTP-Anfrage per Automatisierung",
           "header": "Header: {{name}}",
           "hideSecret": "Secret ausblenden",
           "loading": "Webhook-Details werden geladen, nachdem die Integration konfiguriert wurde.",
+          "nativeDescription": "Öffnen Sie in Level Einstellungen → Webhooks, fügen Sie einen Webhook mit der URL und dem Signaturschlüssel unten hinzu und aktivieren Sie die aufgeführten Ereignisse. Level signiert jede Zustellung und Alga prüft die Signatur.",
+          "nativeEvents": "Zu aktivierende Ereignisse",
+          "nativeEventsHelp": "Aktivieren Sie alert_active und alert_resolved. Andere Ereignisse werden bestätigt und ignoriert.",
+          "nativeSigningSecret": "Signaturschlüssel",
+          "nativeTitle": "Nativer Webhook (empfohlen)",
           "payload": "Payload-Vorlage",
+          "regenerateCancel": "Abbrechen",
+          "regenerateConfirmLabel": "Neu generieren",
+          "regenerateConfirmMessage": "Bestehende Level-Webhooks schlagen mit 401 fehl, bis Sie den neuen Signaturschlüssel in den Webhook-Einstellungen von Level eintragen. Level wiederholt Zustellungen, sie können aber verloren gehen, wenn der Schlüssel nicht aktualisiert wird.",
+          "regenerateConfirmTitle": "Signaturschlüssel neu generieren?",
+          "regenerateConfirmed": "Signaturschlüssel neu generiert. Aktualisieren Sie ihn in den Webhook-Einstellungen von Level.",
+          "regenerateFailed": "Signaturschlüssel konnte nicht neu generiert werden",
+          "regenerateSecret": "Schlüssel neu generieren",
           "showSecret": "Secret anzeigen",
           "title": "Warnungs-Webhook",
           "url": "Webhook-URL"
@@ -2884,6 +2908,54 @@
         "errors": {
           "saveFailed": "Der Zeitplan für die Gerätesynchronisierung konnte nicht gespeichert werden."
         }
+      },
+      "peopleMode": {
+        "label": "Personen",
+        "options": {
+          "off": "Aus",
+          "suggest": "Vorschlagen",
+          "auto": "Automatisch zuweisen"
+        },
+        "updateFailed": "Der Personen-Modus konnte nicht aktualisiert werden"
+      },
+      "signedInUsers": {
+        "title": "Angemeldete Benutzer",
+        "description": "Die Benutzernamen, die die Geräte dieser Organisation melden, und der jeweils zugeordnete Kontakt.",
+        "empty": "Noch keine angemeldeten Benutzer gemeldet.",
+        "noClient": "Ordnen Sie diese Organisation einem Kunden zu, bevor Sie ihre angemeldeten Benutzer zuordnen.",
+        "refresh": "Aktualisieren",
+        "selectContact": "Kontakt auswählen",
+        "loadFailed": "Angemeldete Benutzer konnten nicht geladen werden.",
+        "saveFailed": "Die Zuordnung konnte nicht gespeichert werden.",
+        "columns": {
+          "user": "Angemeldeter Benutzer",
+          "devices": "Geräte",
+          "method": "Zugeordnet über",
+          "contact": "Kontakt"
+        },
+        "methods": {
+          "mapped": "Gespeicherte Zuordnung",
+          "email": "E-Mail",
+          "username": "Benutzername",
+          "name": "Vollständiger Name",
+          "none": "Keine Übereinstimmung"
+        }
+      },
+      "clientChange": {
+        "title": "Geräte dieser Organisation verschieben?",
+        "message": "{{count}} Asset(s) werden zu {{client}} verschoben. Zuweisungen, Gruppen und Abrechnungsprofile des vorherigen Kunden werden entfernt.",
+        "confirm": "Geräte verschieben"
+      },
+      "billingProfile": {
+        "label": "Abrechnungsprofil",
+        "clientDefault": "Kundenstandard",
+        "updateFailed": "Abrechnungsprofil konnte nicht aktualisiert werden"
+      },
+      "errors": {
+        "invalidPeopleMode": "Das ist kein gültiger Personen-Modus.",
+        "billingProfileUnavailable": "Dieses Abrechnungsprofil ist für diesen Kunden nicht verfügbar.",
+        "mappingNotFound": "Diese Zuordnung existiert nicht mehr. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+        "forbidden": "Sie haben keine Berechtigung, dies zu ändern."
       }
     },
     "sso": {

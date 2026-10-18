@@ -164,9 +164,30 @@ export class ProjectService extends BaseService<IProject> {
     });
   }
 
+  /**
+   * Range keys the projects list accepts. `created_*`/`updated_*` come from the
+   * base map (created_at/updated_at); the start/end windows map to the project
+   * date columns. Any other `_from`/`_to` key is rejected by `applyRangeFilters`.
+   */
+  protected rangeFilterColumns(): Record<string, string> {
+    return {
+      ...super.rangeFilterColumns(),
+      start_date_from: `${this.tableName}.start_date`,
+      start_date_to: `${this.tableName}.start_date`,
+      end_date_from: `${this.tableName}.end_date`,
+      end_date_to: `${this.tableName}.end_date`,
+    };
+  }
+
   async list(options: ListOptions, context: ServiceContext, filters?: ProjectFilterData): Promise<ListResult<IProject>> {
       const { knex } = await this.getKnex();
       const query = scopedTable<IProject>(knex, context.tenant, this.tableName);
+
+      // Common + project-specific range filters (created_*, updated_*,
+      // start_date_*, end_date_*). Unsupported range keys fail loudly.
+      if (filters) {
+        this.applyRangeFilters(query, filters);
+      }
   
       // Apply filters
       if (filters) {
@@ -178,18 +199,6 @@ export class ProjectService extends BaseService<IProject> {
         }
         if (filters.status) {
           query.where(`${this.tableName}.status`, filters.status);
-        }
-        if (filters.start_date_from) {
-          query.where(`${this.tableName}.start_date`, '>=', filters.start_date_from);
-        }
-        if (filters.start_date_to) {
-          query.where(`${this.tableName}.start_date`, '<=', filters.start_date_to);
-        }
-        if (filters.end_date_from) {
-          query.where(`${this.tableName}.end_date`, '>=', filters.end_date_from);
-        }
-        if (filters.end_date_to) {
-          query.where(`${this.tableName}.end_date`, '<=', filters.end_date_to);
         }
         if (filters.is_inactive !== undefined) {
           query.where(`${this.tableName}.is_inactive`, filters.is_inactive);

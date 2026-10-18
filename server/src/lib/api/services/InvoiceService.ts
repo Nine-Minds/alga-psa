@@ -281,6 +281,27 @@ export class InvoiceService extends BaseService<IInvoice> {
     this.storageService = new StorageService();
   }
 
+  /**
+   * Range keys the invoice list accepts: the common created_ and updated_ keys
+   * plus the invoice due/finalized date windows. Any other `_from`/`_to` key is
+   * rejected by `applyRangeFilters` rather than silently dropped.
+   */
+  protected rangeFilterColumns(): Record<string, string> {
+    return {
+      ...super.rangeFilterColumns(),
+      created_from: 'invoices.created_at',
+      created_to: 'invoices.created_at',
+      updated_from: 'invoices.updated_at',
+      updated_to: 'invoices.updated_at',
+      invoice_date_from: 'invoices.invoice_date',
+      invoice_date_to: 'invoices.invoice_date',
+      due_date_from: 'invoices.due_date',
+      due_date_to: 'invoices.due_date',
+      finalized_date_from: 'invoices.finalized_at',
+      finalized_date_to: 'invoices.finalized_at',
+    };
+  }
+
   // Helper to get PDF service for specific tenant
   private getPdfService(tenant: string): PDFGenerationService {
     return createPDFGenerationService(tenant);
@@ -663,12 +684,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       // Prepare update data. `items` is not an invoices column; it is handled below.
       const { items: _items, ...headerData } = data;
-      // LEVERAGE: pattern audit-stamped-update — hand-built filterAuditFields({..., updated_by, updated_at}) payload; a tenantDb(...).updateAudited() helper may be the missing layer
-      const updateData: any = await this.filterAuditFields(trx, {
-        ...headerData,
-        updated_by: context.userId,
-        updated_at: new Date()
-      }, 'invoices');
+      const updateData: any = await this.addUpdateAuditFields(trx, headerData, context, 'invoices');
 
       // Remove undefined values
       Object.keys(updateData).forEach(key => {
@@ -951,16 +967,13 @@ export class InvoiceService extends BaseService<IInvoice> {
       const taxAmount = lineItems.reduce((sum: number, item: any) => sum + Number(item.tax_amount || 0), 0);
       const totalAmount = subtotal + taxAmount;
 
-      // LEVERAGE: pattern audit-stamped-update — hand-built filterAuditFields({..., updated_by, updated_at}) payload; a tenantDb(...).updateAudited() helper may be the missing layer
-      const invoiceUpdate = await this.filterAuditFields(trx, {
+      const invoiceUpdate = await this.addUpdateAuditFields(trx, {
         status: 'sent', // Change to sent instead of finalized
         subtotal,
         tax: taxAmount,
         total_amount: totalAmount,
         finalized_at: data.finalized_at || new Date().toISOString().split('T')[0],
-        updated_by: context.userId,
-        updated_at: new Date()
-      }, 'invoices');
+      }, context, 'invoices');
 
       // Update invoice status and amounts
       await tenantDb(trx, context.tenant).table('invoices')
@@ -2209,8 +2222,13 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private applyInvoiceFilters(query: Knex.QueryBuilder, filters: InvoiceFilter): Knex.QueryBuilder {
+    // Common created_*/updated_* plus invoice/due/finalized windows. Unsupported
+    // range keys throw rather than returning unfiltered invoices.
+    this.applyRangeFilters(query, filters);
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
+      if (key.endsWith('_from') || key.endsWith('_to')) return;
 
       switch (key) {
         case 'status':
@@ -2229,18 +2247,6 @@ export class InvoiceService extends BaseService<IInvoice> {
           break;
         case 'invoice_number':
           query.whereILike('invoices.invoice_number', `%${value}%`);
-          break;
-        case 'invoice_date_from':
-          query.where('invoices.invoice_date', '>=', value);
-          break;
-        case 'invoice_date_to':
-          query.where('invoices.invoice_date', '<=', value);
-          break;
-        case 'due_date_from':
-          query.where('invoices.due_date', '>=', value);
-          break;
-        case 'due_date_to':
-          query.where('invoices.due_date', '<=', value);
           break;
         case 'min_amount':
           query.where('invoices.total_amount', '>=', value);

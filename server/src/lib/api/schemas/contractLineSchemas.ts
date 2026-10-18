@@ -40,6 +40,9 @@ const baseContractLineSchema = z.object({
   service_category: z.string().optional(),
   contract_line_type: planTypeSchema,
   cadence_owner: cadenceOwnerSchema.optional(),
+  // Advance is only valid for Fixed lines; the service rejects it for Hourly/Usage with a 400
+  // (ContractLineTimingNotAllowedError). Without this key zod would silently drop the field.
+  billing_timing: z.enum(['arrears', 'advance']).optional(),
   
   // Hourly plan specific fields (deprecated for Hourly type)
   hourly_rate: z.number().min(0).optional(),

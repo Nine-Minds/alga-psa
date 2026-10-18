@@ -20,6 +20,7 @@ import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipi
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
+import { resolveAssetBillingProfileId } from './assetBillingProfileModel';
 import { buildTicketCommentAddedPayload, buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
 
 // LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
@@ -61,7 +62,11 @@ export const createTicketFromAssetSchema = z.object({
   status_id: z.string().uuid('Status ID must be a valid UUID'),
   board_id: z.string().uuid('Board ID must be a valid UUID'),
   asset_id: z.string().uuid('Asset ID must be a valid UUID'),
-  client_id: z.string().uuid('Client ID must be a valid UUID')
+  client_id: z.string().uuid('Client ID must be a valid UUID'),
+  // FR-E8: the asset's assignee, or a shared workspace's single user.
+  contact_name_id: z.string().uuid('Contact ID must be a valid UUID').nullable().optional(),
+  // FR-F2: an explicit pick wins; omitted means "inherit from the asset".
+  billing_profile_id: z.string().uuid('Billing profile ID must be a valid UUID').nullable().optional()
 });
 
 // Complete ticket schema for validation
@@ -201,6 +206,10 @@ export interface CreateTicketFromAssetInput {
   board_id: string;
   asset_id: string;
   client_id: string;
+  /** FR-E8: the asset's assignee, or a shared workspace's single user. */
+  contact_name_id?: string | null;
+  /** FR-F3: the profile resolved from the asset (or its location). */
+  billing_profile_id?: string | null;
 }
 
 export interface UpdateTicketInput {
@@ -1132,6 +1141,11 @@ export class TicketModel {
 
     const validatedData = validation.data;
 
+    // FR-F2: a ticket raised from an asset inherits the asset's billing profile
+    // — or its location's default — unless the caller picked one explicitly.
+    const billingProfileId = validatedData.billing_profile_id
+      ?? await resolveAssetBillingProfileId(trx, tenant, validatedData.asset_id);
+
     // Convert to CreateTicketInput format using the provided status_id and board_id
     const createTicketInput: CreateTicketInput = {
       title: validatedData.title,
@@ -1140,6 +1154,8 @@ export class TicketModel {
       client_id: validatedData.client_id,
       status_id: validatedData.status_id,
       board_id: validatedData.board_id,
+      contact_id: validatedData.contact_name_id ?? null,
+      billing_profile_id: billingProfileId,
       entered_by: enteredBy,
       attributes: {
         created_from_asset: validatedData.asset_id

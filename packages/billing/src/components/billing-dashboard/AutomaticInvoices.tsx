@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertTriangle, X, MoreVertical, Eye, ChevronRight, ChevronDown, Check, Link2, Clock, Hourglass, Wrench, FileText, Filter } from 'lucide-react';
 import type {
   IExpectedRecurringPricingSource,
+  InvoiceBillingEmailWarning,
   IExpectedUsagePeriodTotal,
   IRecurringDueSelectionInput,
   IRecurringDueWorkInvoiceCandidate,
@@ -801,6 +802,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
       expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
       expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
+      billingEmailWarning?: InvoiceBillingEmailWarning;
     }>;
     invoiceCount: number;
     billingCycleId: string | null;
@@ -1053,16 +1055,28 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         }));
         return;
       }
-      const repairedCount = result.schedulesRepaired + result.rowsBackfilled + result.rowsRealigned + result.rowsSuperseded;
-      setRepairAllMessage(repairedCount > 0
+      const arrearsOnly = result.arrearsOnlyLines;
+      const arrearsOnlyRepairedCount = arrearsOnly
+        ? arrearsOnly.timingFlipped + arrearsOnly.advanceRowsSuperseded + arrearsOnly.rowsRehomed + arrearsOnly.catchUpRowsCreated
+        : 0;
+      const repairedCount = result.schedulesRepaired + result.rowsBackfilled + result.rowsRealigned + result.rowsSuperseded
+        + arrearsOnlyRepairedCount;
+      const manualReviewCount = arrearsOnly?.manualReview.length ?? 0;
+      const baseMessage = repairedCount > 0
         ? t('automaticInvoices.materializationGap.fixAllResult', {
-          schedules: result.schedulesRepaired,
+          schedules: result.schedulesRepaired + (arrearsOnly?.linesScanned ?? 0),
           clients: result.clientsRepaired,
           defaultValue: 'Rebuilt {{schedules}} schedule(s) across {{clients}} client(s).',
         })
         : t('automaticInvoices.materializationGap.fixAllNoop', {
           defaultValue: 'All billing schedules are already up to date. Anything still listed below needs individual review.',
-        }));
+        });
+      setRepairAllMessage(manualReviewCount > 0
+        ? `${baseMessage} ${t('automaticInvoices.materializationGap.fixAllManualReview', {
+          count: manualReviewCount,
+          defaultValue: '{{count}} hourly or usage period(s) need individual review.',
+        })}`
+        : baseMessage);
       onRefreshNeeded?.();
     } catch (error) {
       console.error('Error rebuilding recurring service periods:', error);
@@ -3532,6 +3546,22 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       defaultValue: `Invoice ${previewIndex + 1}`,
                     })}
                   </h3>
+                  {previewEntry.billingEmailWarning && (
+                    // The invoice still generates; it just cannot be emailed or
+                    // paid online until the client has an address.
+                    <Alert
+                      id={`preview-no-billing-email-warning-${previewEntry.previewGroupKey}`}
+                      variant="warning"
+                      data-testid={`preview-no-billing-email-${previewEntry.previewGroupKey}`}
+                    >
+                      <AlertDescription>
+                        {t('automaticInvoices.dialogs.preview.noBillingEmailWarning', {
+                          clientName: previewEntry.billingEmailWarning.params.clientName,
+                          defaultValue: `${previewEntry.billingEmailWarning.params.clientName} has no billing email. The invoice can be generated, but it cannot be emailed or paid online until you set a billing contact, a client billing email, or an email on the billing or default location.`,
+                        })}
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   {(previewEntry.usageServicePeriodStatuses?.length ?? 0) > 0 && (() => {
                     const usageStatuses = previewEntry.usageServicePeriodStatuses ?? [];
                     const actionableStatuses = usageStatuses.filter(
