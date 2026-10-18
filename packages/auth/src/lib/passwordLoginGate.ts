@@ -151,17 +151,38 @@ export async function completePasswordLoginSecondFactor(params: {
  * how an unverifiable session lookup is treated.
  */
 export async function isTokenRevokedByLoginPolicy(token: Record<string, any>): Promise<boolean> {
-  if (token?.user_type !== 'internal' || typeof token.tenant !== 'string') {
+  return isSessionRevokedByLoginPolicy({
+    tenant: token?.tenant,
+    userId: typeof token?.id === 'string' ? token.id : token?.sub,
+    userType: token?.user_type,
+    loginMethod: token?.login_method,
+    authIssuedAtMs: token?.auth_issued_at,
+  });
+}
+
+/**
+ * Same check for any holder of the session claims (JWT token or decoded
+ * session). Uses the cached tenant policy, so it is cheap per request. Never
+ * throws; an unreadable policy leaves the session alone.
+ */
+export async function isSessionRevokedByLoginPolicy(claims: {
+  tenant: unknown;
+  userId: unknown;
+  userType: unknown;
+  loginMethod: unknown;
+  authIssuedAtMs: unknown;
+}): Promise<boolean> {
+  if (claims.userType !== 'internal' || typeof claims.tenant !== 'string') {
     return false;
   }
   try {
-    const policy = await loadTenantAuthPolicy(token.tenant);
+    const policy = await loadTenantAuthPolicy(claims.tenant);
     return isPasswordSessionRevokedByPolicy(
       {
-        userId: typeof token.id === 'string' ? token.id : token.sub,
-        userType: token.user_type,
-        loginMethod: typeof token.login_method === 'string' ? token.login_method : undefined,
-        authIssuedAtMs: typeof token.auth_issued_at === 'number' ? token.auth_issued_at : undefined,
+        userId: typeof claims.userId === 'string' ? claims.userId : undefined,
+        userType: claims.userType,
+        loginMethod: typeof claims.loginMethod === 'string' ? claims.loginMethod : undefined,
+        authIssuedAtMs: typeof claims.authIssuedAtMs === 'number' ? claims.authIssuedAtMs : undefined,
       },
       policy,
     );

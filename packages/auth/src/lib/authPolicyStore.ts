@@ -1,3 +1,4 @@
+import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import logger from '@alga-psa/core/logger';
@@ -111,6 +112,13 @@ export async function listBreakGlassCandidates(
   }));
 }
 
+/**
+ * Insert one `audit_logs` row. The table's BEFORE INSERT trigger reads
+ * `app.current_tenant` (no missing_ok), so the insert must run in a transaction
+ * that has set the tenant GUC. With a caller-supplied `trx` the GUC is set on
+ * that transaction (transaction-local) and the row commits or rolls back with
+ * the caller's work; without one a private transaction is opened.
+ */
 async function writeAudit(
   tenant: string,
   entry: {
@@ -120,19 +128,28 @@ async function writeAudit(
     changedData?: Record<string, unknown>;
     details: Record<string, unknown>;
   },
+  trx?: Knex.Transaction,
 ): Promise<void> {
+  const insert = async (conn: Knex.Transaction) => {
+    await conn.raw("SELECT set_config('app.current_tenant', ?, true)", [tenant]);
+    await tenantDb(conn, tenant).table('audit_logs').insert({
+      audit_id: conn.raw('gen_random_uuid()'),
+      tenant,
+      table_name: 'tenant_settings',
+      operation: entry.operation,
+      record_id: entry.recordId,
+      user_id: entry.userId ?? null,
+      changed_data: JSON.stringify(entry.changedData ?? {}),
+      details: JSON.stringify(entry.details),
+      timestamp: conn.fn.now(),
+    });
+  };
+  if (trx) {
+    await insert(trx);
+    return;
+  }
   const knex = await getAdminConnection();
-  await tenantDb(knex, tenant).table('audit_logs').insert({
-    audit_id: knex.raw('gen_random_uuid()'),
-    tenant,
-    table_name: 'tenant_settings',
-    operation: entry.operation,
-    record_id: entry.recordId,
-    user_id: entry.userId ?? null,
-    changed_data: JSON.stringify(entry.changedData ?? {}),
-    details: JSON.stringify(entry.details),
-    timestamp: knex.fn.now(),
-  });
+  await knex.transaction(insert);
 }
 
 /**
@@ -174,6 +191,8 @@ export async function recordPolicyChange(params: {
   actorUserId: string;
   before: TenantAuthPolicy;
   after: TenantAuthPolicy;
+  /** Pass the settings-write transaction so the audit row and the save commit (or roll back) together. */
+  trx?: Knex.Transaction;
 }): Promise<void> {
   await writeAudit(params.tenant, {
     operation: 'LOGIN_POLICY_CHANGED',
@@ -181,7 +200,66 @@ export async function recordPolicyChange(params: {
     userId: params.actorUserId,
     changedData: { before: params.before, after: params.after },
     details: { operation: 'login_policy_changed', changed_by: params.actorUserId },
+  }, params.trx);
+}
+
+/**
+ * Persist a validated policy change atomically: the `tenant_settings` write, the
+ * `LOGIN_POLICY_CHANGED` audit row and (on the off -> on transition of Require
+ * SSO) the revocation of existing internal password sessions share one
+ * transaction, so a failure in any of them leaves nothing behind. The policy
+ * cache is invalidated only after the commit. Throws on failure.
+ *
+ * Revocation covers `login_method='credentials'` sessions of internal users who
+ * are not break-glass; SSO, client and break-glass sessions are untouched.
+ */
+export async function saveTenantAuthPolicy(params: {
+  knex: Knex;
+  tenant: string;
+  actorUserId: string;
+  /** Current full tenant settings JSON; only its `sso` blob is rewritten. */
+  currentSettings: Record<string, any>;
+  before: TenantAuthPolicy;
+  after: TenantAuthPolicy;
+}): Promise<{ revokedSessions: number }> {
+  const { knex, tenant, currentSettings, before, after } = params;
+  const nextSettings = {
+    ...currentSettings,
+    sso: {
+      ...(currentSettings.sso ?? {}),
+      requireSsoForInternalUsers: after.requireSsoForInternalUsers,
+      require2faForInternalUsers: after.require2faForInternalUsers,
+      require2faForClientUsers: after.require2faForClientUsers,
+      allowKnownDevice2faSkip: after.allowKnownDevice2faSkip,
+      passwordBreakGlassUserIds: after.passwordBreakGlassUserIds,
+      passwordAuthDisabledAt: after.passwordAuthDisabledAt,
+    },
+  };
+
+  const revokedSessions = await knex.transaction(async (trx) => {
+    const now = new Date();
+    await tenantDb(trx, tenant)
+      .table('tenant_settings')
+      .insert({ tenant, settings: JSON.stringify(nextSettings), updated_at: now })
+      .onConflict('tenant')
+      .merge({ settings: JSON.stringify(nextSettings), updated_at: now });
+
+    await recordPolicyChange({ tenant, actorUserId: params.actorUserId, before, after, trx });
+
+    if (!before.requireSsoForInternalUsers && after.requireSsoForInternalUsers) {
+      const { UserSession } = await import('@alga-psa/db/models/UserSession');
+      return UserSession.revokePasswordSessionsForTenant(
+        tenant,
+        after.passwordBreakGlassUserIds,
+        'login_policy_sso_required',
+        trx,
+      );
+    }
+    return 0;
   });
+
+  invalidateTenantAuthPolicyCache(tenant);
+  return { revokedSessions };
 }
 
 /** Audit a forced 2FA enrollment completed at sign-in. The secret is never logged. */

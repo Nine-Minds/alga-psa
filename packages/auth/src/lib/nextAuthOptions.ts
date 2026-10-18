@@ -2335,6 +2335,9 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             if (token.login_method) {
                 (session as any).login_method = token.login_method as string;
             }
+            if (typeof token.auth_issued_at === 'number') {
+                (session as any).auth_issued_at = token.auth_issued_at;
+            }
 
             return session;
         },
@@ -3102,6 +3105,9 @@ export const options: NextAuthConfig = {
             }
             if (token.login_method) {
                 (session as any).login_method = token.login_method as string;
+            }
+            if (typeof token.auth_issued_at === 'number') {
+                (session as any).auth_issued_at = token.auth_issued_at;
             }
 
             return session;

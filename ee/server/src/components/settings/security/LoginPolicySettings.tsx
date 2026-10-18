@@ -14,6 +14,7 @@ import {
 } from "@ee/lib/actions/auth/loginPolicy";
 
 type GuardErrorCode = "sso_provider_required" | "break_glass_required" | "break_glass_invalid_user";
+type SaveErrorCode = GuardErrorCode | "save_failed";
 
 /**
  * Tenant login policy controls. The server validates every save (provider
@@ -25,6 +26,7 @@ export default function LoginPolicySettings() {
   const [state, setState] = useState<LoginPolicyState | null>(null);
   const [pending, setPending] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [guardErrors, setGuardErrors] = useState<GuardErrorCode[]>([]);
 
   useEffect(() => {
@@ -33,8 +35,8 @@ export default function LoginPolicySettings() {
       .then((next) => {
         if (!cancelled) setState(next);
       })
-      .catch((err: any) => {
-        if (!cancelled) setLoadError(err?.message ?? t("loginPolicy.errors.load"));
+      .catch(() => {
+        if (!cancelled) setLoadError(t("loginPolicy.errors.load"));
       });
     return () => {
       cancelled = true;
@@ -44,16 +46,21 @@ export default function LoginPolicySettings() {
   async function save(updates: LoginPolicyUpdate) {
     setPending(true);
     setGuardErrors([]);
-    setLoadError(null);
+    setSaveFailed(false);
     try {
       const result = await updateLoginPolicyAction(updates);
       if (result.success && result.state) {
+        // Show the persisted policy the server returned, not the optimistic toggle.
         setState(result.state);
       } else {
-        setGuardErrors((result.errors ?? []) as GuardErrorCode[]);
+        // Controls are bound to `state`, so leaving it untouched reverts the toggle.
+        const codes = (result.errors ?? []) as SaveErrorCode[];
+        setGuardErrors(codes.filter((code): code is GuardErrorCode => code !== "save_failed"));
+        setSaveFailed(codes.includes("save_failed") || codes.length === 0);
       }
-    } catch (err: any) {
-      setLoadError(err?.message ?? t("loginPolicy.errors.save"));
+    } catch {
+      // Never surface a raw error message (it can carry SQL); show the generic text.
+      setSaveFailed(true);
     } finally {
       setPending(false);
     }
@@ -177,9 +184,9 @@ export default function LoginPolicySettings() {
             </AlertDescription>
           </Alert>
         )}
-        {loadError && (
+        {saveFailed && (
           <Alert variant="destructive" id="login-policy-save-error">
-            <AlertDescription>{loadError}</AlertDescription>
+            <AlertDescription>{t("loginPolicy.errors.save")}</AlertDescription>
           </Alert>
         )}
       </CardContent>

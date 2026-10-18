@@ -1,6 +1,7 @@
 "use server";
 
-import { getTenantSettings, updateTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
+import logger from "@alga-psa/core/logger";
+import { getTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
 import { getSsoProviderOptions } from "@ee/lib/auth/providerConfig";
 import { ensureSsoSettingsPermission } from "@ee/lib/actions/auth/ssoPermissions";
 import {
@@ -11,10 +12,9 @@ import {
   type TenantAuthPolicy,
 } from "@alga-psa/auth/lib/authPolicy";
 import {
-  invalidateTenantAuthPolicyCache,
   listBreakGlassCandidates,
   loadTenantAuthPolicy,
-  recordPolicyChange,
+  saveTenantAuthPolicy,
 } from "@alga-psa/auth/lib/authPolicyStore";
 
 /**
@@ -34,7 +34,8 @@ export type LoginPolicyUpdate = Partial<Omit<TenantAuthPolicy, "passwordAuthDisa
 
 export interface UpdateLoginPolicyResult {
   success: boolean;
-  errors?: PolicyGuardErrorCode[];
+  /** Guard codes, or `save_failed` when persisting failed (details are logged server-side only). */
+  errors?: Array<PolicyGuardErrorCode | "save_failed">;
   invalidBreakGlassUserIds?: string[];
   state?: LoginPolicyState;
 }
@@ -111,25 +112,23 @@ export async function updateLoginPolicyAction(
     };
   }
 
-  await updateTenantSettings({
-    ...currentSettings,
-    sso: {
-      ...(currentSettings.sso ?? {}),
-      requireSsoForInternalUsers: next.requireSsoForInternalUsers,
-      require2faForInternalUsers: next.require2faForInternalUsers,
-      require2faForClientUsers: next.require2faForClientUsers,
-      allowKnownDevice2faSkip: next.allowKnownDevice2faSkip,
-      passwordBreakGlassUserIds: next.passwordBreakGlassUserIds,
-      passwordAuthDisabledAt: next.passwordAuthDisabledAt,
-    },
-  });
-  invalidateTenantAuthPolicyCache(tenant);
-  await recordPolicyChange({
-    tenant,
-    actorUserId: String(user.user_id),
-    before: previous,
-    after: next,
-  });
+  try {
+    await saveTenantAuthPolicy({
+      knex,
+      tenant,
+      actorUserId: String(user.user_id),
+      currentSettings,
+      before: previous,
+      after: next,
+    });
+  } catch (error) {
+    // Details stay server-side; the client only gets a generic code.
+    logger.error("[loginPolicy] Failed to save login policy", {
+      tenant,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { success: false, errors: ["save_failed"] };
+  }
 
   return {
     success: true,

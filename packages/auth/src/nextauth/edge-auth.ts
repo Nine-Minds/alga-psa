@@ -54,6 +54,8 @@ const getEdgeAuth = (): ReturnType<typeof NextAuth> => {
           // Add session_id and login_method to enable session management
           (session as any).session_id = token.session_id as string | undefined;
           (session as any).login_method = token.login_method as string | undefined;
+          // When the sign-in minted this token; lets the login-policy cutoff apply on this path.
+          (session as any).auth_issued_at = token.auth_issued_at as number | undefined;
         }
         return session as any;
       },

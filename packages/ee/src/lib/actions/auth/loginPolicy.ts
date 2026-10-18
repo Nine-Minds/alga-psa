@@ -3,7 +3,8 @@
 export type LoginPolicyErrorCode =
   | 'sso_provider_required'
   | 'break_glass_required'
-  | 'break_glass_invalid_user';
+  | 'break_glass_invalid_user'
+  | 'save_failed';
 
 export interface LoginPolicyState {
   policy: {
