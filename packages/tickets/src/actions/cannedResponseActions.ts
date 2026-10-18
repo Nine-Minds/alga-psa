@@ -558,6 +558,8 @@ export const setCannedResponseFavorite = withAuth(async (
       // Favouriting is personal bookkeeping, not an edit of the response: read permission is the right gate.
       await requirePermission(user, 'canned_response', 'read', trx);
       const existing = await loadVisibleRow(trx, tenant, user, cannedResponseId);
+      // Bound as a JS value: Citus rejects non-IMMUTABLE functions (now()) in DO UPDATE SET.
+      const now = new Date().toISOString();
       await tenantDb(trx, tenant)
         .table(FAVORITES)
         .insert({
@@ -567,7 +569,7 @@ export const setCannedResponseFavorite = withAuth(async (
           is_favorite: isFavorite,
         })
         .onConflict(['tenant', 'user_id', 'canned_response_id'])
-        .merge({ is_favorite: isFavorite, updated_at: trx.fn.now() });
+        .merge({ is_favorite: isFavorite, updated_at: now });
       return { canned_response_id: existing.canned_response_id as string, is_favorite: isFavorite };
     });
   } catch (error) {
@@ -587,20 +589,22 @@ export const recordCannedResponseUse = withAuth(async (
     return await withTransaction(knex, async (trx) => {
       await requirePermission(user, 'canned_response', 'read', trx);
       const existing = await loadVisibleRow(trx, tenant, user, cannedResponseId);
+      // Bound as a JS value: Citus rejects non-IMMUTABLE functions (now()) in DO UPDATE SET.
+      const now = new Date().toISOString();
       await tenantDb(trx, tenant)
         .table(FAVORITES)
         .insert({
           tenant,
           user_id: user.user_id,
           canned_response_id: existing.canned_response_id,
-          last_used_at: trx.fn.now(),
+          last_used_at: now,
           use_count: 1,
         })
         .onConflict(['tenant', 'user_id', 'canned_response_id'])
         .merge({
-          last_used_at: trx.fn.now(),
+          last_used_at: now,
           use_count: trx.raw(`${FAVORITES}.use_count + 1`),
-          updated_at: trx.fn.now(),
+          updated_at: now,
         });
       return { canned_response_id: existing.canned_response_id as string };
     });
