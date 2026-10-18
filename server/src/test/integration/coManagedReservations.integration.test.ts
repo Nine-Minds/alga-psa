@@ -699,6 +699,23 @@ describe('co-managed provisioning request and worker lifecycle', () => {
     await expect(completeCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId)).rejects.toMatchObject({ code: 'CLEANUP_INCOMPLETE' });
   });
 
+  it('counts the client as holding a co-managed workspace until its seats are released', async () => {
+    // Deleting or merging the client orphaned the setup: the operation records
+    // its client only in the request, and the seats stayed held invisibly.
+    const { countLiveCoManagedWorkspacesForClient } = await import('../../../../packages/core/src/config/deletion');
+    const input = await requestFixture(), operation = await prepareCoManagedProvisioning(db, input);
+    const count = (clientId: string) => countLiveCoManagedWorkspacesForClient(db, { tenant: input.sponsorTenant, entityId: clientId });
+    expect(await count(input.clientId)).toBe(1);
+    expect(await count(input.clientId.toUpperCase())).toBe(1);
+    expect(await count(randomUUID())).toBe(0);
+    await requestCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId);
+    expect(await count(input.clientId)).toBe(1);
+    await completeCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId);
+    expect(await tenantDb(db, input.sponsorTenant).table('co_managed_allocations').where('operation_id', operation.operation_id).first())
+      .toMatchObject({ state: 'released' });
+    expect(await count(input.clientId)).toBe(0);
+  });
+
   it('blocks later steps on cancellation and releases capacity only after complete database cleanup', async () => {
     const input = await requestFixture(), operation = await prepareCoManagedProvisioning(db, input);
     const customer = tenantDb(db, operation.customer_tenant);

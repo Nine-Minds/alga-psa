@@ -39,6 +39,27 @@ const countDocumentAssociations = (entityType: string) => {
   };
 };
 
+/** Co-managed workspaces this sponsor (MSP) client still holds: a provisioning
+ * operation whose seat allocation has not been released (released on cancel
+ * and on departure). The operation records its client only in its request, so
+ * deleting or merging the client orphaned the setup and its seats invisibly. */
+export const countLiveCoManagedWorkspacesForClient = async (
+  trx: Knex | Knex.Transaction,
+  options: { tenant: string; entityId: string }
+): Promise<number> => {
+  const result = await tenantScopedTable(trx, options.tenant, 'co_managed_provisioning_operations')
+    .join('co_managed_allocations', function () {
+      this.on('co_managed_allocations.allocation_id', 'co_managed_provisioning_operations.allocation_id')
+        .andOn('co_managed_allocations.tenant', 'co_managed_provisioning_operations.tenant');
+    })
+    .whereRaw("lower(co_managed_provisioning_operations.request->>'clientId') = lower(?)", [options.entityId])
+    .whereNot('co_managed_allocations.state', 'released')
+    .count<{ count: string }>('* as count')
+    .first();
+
+  return Number(result?.count ?? 0);
+};
+
 /** Boards a live (unended) co-management relationship shares with the MSP.
  * Deleting one silently removes the MSP's oversight, so it blocks deletion;
  * scope rows of ended relationships are history and do not. */
@@ -239,6 +260,12 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'asset_associations',
         label: 'asset association',
         countQuery: countAssetAssociations('client')
+      },
+      {
+        type: 'co_managed_workspace',
+        table: 'co_managed_provisioning_operations',
+        label: 'co-managed IT workspace',
+        countQuery: countLiveCoManagedWorkspacesForClient
       }
     ]
   },
