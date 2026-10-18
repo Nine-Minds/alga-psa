@@ -966,7 +966,7 @@
     "templateReplaceTitle": "Zastąpić wprowadzone zmiany?",
     "templateReplaceMessage": "Zastosowanie szablonu zastąpi tytuł, opis i inne wprowadzone pola.",
     "templateReplaceConfirm": "Zastosuj szablon",
-    "templateTokenHint": "Tytuł uzupełnia się o wybranego klienta i kontakt, dopóki go nie zmienisz."
+    "templateTokenHint": "Tytuł uzupełnia się o wybranego klienta, kontakt i termin wykonania, dopóki go nie zmienisz."
   },
   "itil": {
     "calculatedPriority": "Priorytet (obliczony)",

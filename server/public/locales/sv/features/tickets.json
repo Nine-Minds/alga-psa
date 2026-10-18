@@ -862,7 +862,7 @@
     "templateReplaceTitle": "Ersätta dina ändringar?",
     "templateReplaceMessage": "Att använda en mall ersätter rubrik, beskrivning och andra fält du har fyllt i.",
     "templateReplaceConfirm": "Använd mall",
-    "templateTokenHint": "Titeln fylls i med vald kund och kontakt tills du redigerar den."
+    "templateTokenHint": "Titeln fylls i med vald kund, kontakt och förfallodatum tills du redigerar den."
   },
   "itil": {
     "calculatedPriority": "Prioritet (beräknad)",

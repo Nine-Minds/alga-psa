@@ -854,7 +854,7 @@
     "templateReplaceTitle": "Ihre Änderungen ersetzen?",
     "templateReplaceMessage": "Beim Anwenden einer Vorlage werden Titel, Beschreibung und andere eingegebene Felder ersetzt.",
     "templateReplaceConfirm": "Vorlage anwenden",
-    "templateTokenHint": "Der Titel übernimmt den gewählten Kunden und Kontakt, bis Sie ihn bearbeiten."
+    "templateTokenHint": "Der Titel übernimmt den gewählten Kunden, Kontakt und das Fälligkeitsdatum, bis Sie ihn bearbeiten."
   },
   "itil": {
     "calculatedPriority": "Priorität (berechnet)",

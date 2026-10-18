@@ -854,7 +854,7 @@
     "templateReplaceTitle": "¿Reemplazar sus cambios?",
     "templateReplaceMessage": "Aplicar una plantilla reemplaza el título, la descripción y otros campos que ha introducido.",
     "templateReplaceConfirm": "Aplicar plantilla",
-    "templateTokenHint": "El título se completa con el cliente y el contacto que elija, hasta que lo edite."
+    "templateTokenHint": "El título se completa con el cliente, el contacto y la fecha de vencimiento que elija, hasta que lo edite."
   },
   "itil": {
     "calculatedPriority": "Prioridad (calculada)",

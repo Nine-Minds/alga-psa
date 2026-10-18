@@ -64,7 +64,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { isRenderedTitleUntouched, renderTitleTemplate, titleHasTokens } from '../lib/ticketTitleTokens';
+import { nextTemplateTitle, renderTitleTemplate, titleHasTokens, toCalendarDate, type TitleTokenContext } from '../lib/ticketTitleTokens';
 import {
   extractTicketRichTextPlainText,
   parseTicketRichTextContent,
@@ -843,11 +843,16 @@ export function QuickAddTicket({
     setPendingTags(fields.tags);
   }
 
-  // Tokens are filled from the client and contact picked so far; a missing one renders empty. There is no due date here.
-  function renderTemplateTitle(rawTitle: string): string {
+  // Tokens are filled from the client, contact and due date picked so far; a missing one renders empty.
+  // The due date is a calendar date taken from the picked Date's local parts (not toISOString).
+  function templateTitleContext(): TitleTokenContext {
     const clientName = clients.find((candidate) => candidate.client_id === clientId)?.client_name ?? null;
     const contactName = contacts.find((candidate) => candidate.contact_name_id === contactId)?.full_name ?? null;
-    return renderTitleTemplate(rawTitle, { clientName, contactName });
+    return { clientName, contactName, dueDate: dueDate ? toCalendarDate(dueDate) : null };
+  }
+
+  function renderTemplateTitle(rawTitle: string): string {
+    return renderTitleTemplate(rawTitle, templateTitleContext());
   }
 
   function applyTemplateSource(source: TicketTemplateForCreate) {
@@ -986,14 +991,14 @@ export function QuickAddTicket({
   // ticketCreated/isNavigatingToTicket set, so there is no window where all three are false
   // for a saved ticket. A failed create clears isSubmitting without latching, so the guard returns.
   useEffect(() => {
-    if (!templateSource || !titleHasTokens(templateSource.title)) return;
-    if (!isRenderedTitleUntouched(title, lastRenderedTitleRef.current)) return;
-    const next = renderTemplateTitle(templateSource.title);
+    if (!templateSource) return;
+    const next = nextTemplateTitle(templateSource.title, templateTitleContext(), title, lastRenderedTitleRef.current);
+    if (next === null) return;
     lastRenderedTitleRef.current = next;
     if (next !== title) setTitle(next);
-    // Only a client or contact change re-renders; title edits must not loop back through here.
+    // Only a client, contact or due date change re-renders; title edits must not loop back through here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientId, contactId, templateSource, clients, contacts]);
+  }, [clientId, contactId, dueDate, templateSource, clients, contacts]);
 
   // A template prefill is a baseline too: an untouched template-filled draft is not dirty.
   const draftBaselineTitle = duplicateSource ? duplicateSource.title : templateSource ? lastRenderedTitleRef.current ?? templateSource.title : prefilledTitle;
@@ -1507,7 +1512,7 @@ export function QuickAddTicket({
                   />
                   {templateSource && titleHasTokens(templateSource.title) && (
                     <p className="mt-1 text-xs text-gray-500" data-testid="quick-add-ticket-template-token-hint">
-                      {t('quickAdd.templateTokenHint', 'The title fills in the client and contact you pick, until you edit it.')}
+                      {t('quickAdd.templateTokenHint', 'The title fills in the client, contact and due date you pick, until you edit it.')}
                     </p>
                   )}
                 </div>

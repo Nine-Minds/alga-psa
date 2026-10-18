@@ -31,7 +31,8 @@ A recurring ticket definition stops carrying its own copy of the ticket fields a
   `checklist_template_id`, so the replacement rule still prevents doubling with board auto-apply.
 - **R7** Description is written as `JSON.stringify(definition.description)`, as the legacy generator did.
 - **R8** Tokens `{{client}}`, `{{due_date}}`, `{{month}}`, `{{year}}`, `{{contact}}` (`lib/ticketTitleTokens.ts`). Missing
-  context renders empty with whitespace collapsed. Quick Add re-renders only while the title is untouched.
+  context renders empty with whitespace collapsed. Quick Add renders the client, contact and due date
+  (a local `YYYY-MM-DD`), and re-renders when any of them changes, only while the title is untouched.
 - **R9** `instantiateTicketTemplate` shape: resolve cascade -> check references on the effective values -> create.
   The create layer is widened rather than composed around: `createTicketWithSideEffects` takes optional
   `checklistItems` (owned items with an optional `checklist_template_id`, applied with the replacement rule by

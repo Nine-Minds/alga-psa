@@ -98,3 +98,24 @@ export function renderTitleTemplate(template: string, context: TitleTokenContext
 export function isRenderedTitleUntouched(currentTitle: string, lastRendered: string | null): boolean {
   return currentTitle === '' || (lastRendered !== null && currentTitle === lastRendered);
 }
+
+/** A `Date` as `YYYY-MM-DD` from its local calendar parts (`toISOString` would shift the day for late-evening local times). */
+export function toCalendarDate(date: Date): string {
+  const pad = (value: number, width: number) => String(value).padStart(width, '0');
+  return `${pad(date.getFullYear(), 4)}-${pad(date.getMonth() + 1, 2)}-${pad(date.getDate(), 2)}`;
+}
+
+/**
+ * What Quick Add's re-render effect does after client, contact or due date change: the new rendered
+ * title, or `null` when the template has no tokens or the user has edited the title (leave it alone).
+ */
+export function nextTemplateTitle(
+  rawTitle: string,
+  context: TitleTokenContext,
+  currentTitle: string,
+  lastRendered: string | null
+): string | null {
+  if (!titleHasTokens(rawTitle)) return null;
+  if (!isRenderedTitleUntouched(currentTitle, lastRendered)) return null;
+  return renderTitleTemplate(rawTitle, context);
+}

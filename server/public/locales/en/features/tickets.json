@@ -862,7 +862,7 @@
     "templateReplaceTitle": "Replace your changes?",
     "templateReplaceMessage": "Applying a template replaces the title, description and other fields you have entered.",
     "templateReplaceConfirm": "Apply template",
-    "templateTokenHint": "The title fills in the client and contact you pick, until you edit it."
+    "templateTokenHint": "The title fills in the client, contact and due date you pick, until you edit it."
   },
   "itil": {
     "calculatedPriority": "Priority (Calculated)",

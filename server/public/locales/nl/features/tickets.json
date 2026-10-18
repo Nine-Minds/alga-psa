@@ -854,7 +854,7 @@
     "templateReplaceTitle": "Uw wijzigingen vervangen?",
     "templateReplaceMessage": "Het toepassen van een sjabloon vervangt de titel, beschrijving en andere velden die u hebt ingevuld.",
     "templateReplaceConfirm": "Sjabloon toepassen",
-    "templateTokenHint": "De titel vult de gekozen klant en contactpersoon in, totdat u hem bewerkt."
+    "templateTokenHint": "De titel vult de gekozen klant, contactpersoon en vervaldatum in, totdat u hem bewerkt."
   },
   "itil": {
     "calculatedPriority": "Prioriteit (berekend)",

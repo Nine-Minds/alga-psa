@@ -854,7 +854,7 @@
     "templateReplaceTitle": "Substituir as suas alterações?",
     "templateReplaceMessage": "Aplicar um modelo substitui o título, a descrição e outros campos que preencheu.",
     "templateReplaceConfirm": "Aplicar modelo",
-    "templateTokenHint": "O título é preenchido com o cliente e o contato escolhidos, até você editá-lo."
+    "templateTokenHint": "O título é preenchido com o cliente, o contato e a data de vencimento escolhidos, até você editá-lo."
   },
   "itil": {
     "calculatedPriority": "Prioridade (calculada)",

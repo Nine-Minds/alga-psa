@@ -854,7 +854,7 @@
     "templateReplaceTitle": "Remplacer vos modifications ?",
     "templateReplaceMessage": "L'application d'un modèle remplace le titre, la description et les autres champs saisis.",
     "templateReplaceConfirm": "Appliquer le modèle",
-    "templateTokenHint": "Le titre reprend le client et le contact choisis, jusqu'à ce que vous le modifiiez."
+    "templateTokenHint": "Le titre reprend le client, le contact et la date d'échéance choisis, jusqu'à ce que vous le modifiiez."
   },
   "itil": {
     "calculatedPriority": "Priorité (calculée)",
