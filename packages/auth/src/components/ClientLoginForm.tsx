@@ -12,6 +12,7 @@ import SsoProviderButtons from '@alga-psa/auth/sso/entry';
 import CaptchaChallenge from './CaptchaChallenge';
 import { useLoginCaptcha } from './useLoginCaptcha';
 import { appendPortalDomain } from '../lib/portalDomain';
+import PolicyTwoFactorFlow, { type PolicyTwoFactorStep } from './PolicyTwoFactorFlow';
 
 interface ClientLoginFormProps {
   callbackUrl: string;
@@ -28,6 +29,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [twoFactorStep, setTwoFactorStep] = useState<PolicyTwoFactorStep>(null);
   const [tenantRequired, setTenantRequired] = useState(false);
   const captcha = useLoginCaptcha();
 
@@ -83,6 +85,10 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    await attemptSignIn();
+  }
+
+  async function attemptSignIn(twoFactorCode?: string) {
     setIsLoading(true)
     setTenantRequired(false)
 
@@ -110,11 +116,19 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         signInPayload.captchaToken = captcha.token;
       }
 
+      if (twoFactorCode) {
+        signInPayload.twoFactorCode = twoFactorCode;
+      }
+
       const result = (await signIn('credentials', signInPayload)) as unknown as { error?: string; code?: string; url?: string } | null
 
       if (result?.error) {
         if (result.error === '2FA_REQUIRED') {
           onTwoFactorRequired();
+        } else if (result.code === 'TWO_FACTOR_REQUIRED') {
+          setTwoFactorStep('code');
+        } else if (result.code === 'TWO_FACTOR_ENROLLMENT_REQUIRED') {
+          setTwoFactorStep('enroll');
         } else if (result.code === 'CAPTCHA_REQUIRED') {
           await captcha.requireCaptcha();
           onError(t('auth.captchaRequired', 'Please complete the verification below, then sign in again.'))
@@ -146,6 +160,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   }
 
   return (
+    <>
     <form 
       onSubmit={onSubmit} 
       method="POST"
@@ -263,5 +278,23 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         />
       ) : null}
     </form>
+    <PolicyTwoFactorFlow
+      idPrefix="client-login"
+      step={twoFactorStep}
+      credentials={{
+        email,
+        password,
+        userType: 'client',
+        tenant: tenantSlug,
+        portalDomain,
+        captchaToken: captcha.token || undefined,
+      }}
+      onCancel={() => setTwoFactorStep(null)}
+      onCode={(code) => {
+        setTwoFactorStep(null);
+        void attemptSignIn(code);
+      }}
+    />
+    </>
   )
 }

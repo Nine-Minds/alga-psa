@@ -20,7 +20,10 @@ describe('credentials login protection contract', () => {
     // Both active CredentialsProvider authorize() callbacks must enforce the gate,
     // record failures for bad passwords and bad 2FA codes, and clear on success.
     expect(countOccurrences(source, 'await enforceLoginProtection({')).toBe(2);
-    expect(countOccurrences(source, 'await recordLoginFailure(attemptContext);')).toBe(4);
+    // Bad passwords are recorded inline (2); bad 2FA codes are recorded through the shared
+    // second-factor step's onInvalidCode callback (2), see passwordLoginGate.ts.
+    expect(countOccurrences(source, 'await recordLoginFailure(attemptContext);')).toBe(2);
+    expect(countOccurrences(source, 'onInvalidCode: () => recordLoginFailure(attemptContext),')).toBe(2);
     expect(countOccurrences(source, 'await recordLoginSuccess(attemptContext);')).toBe(2);
     expect(countOccurrences(source, "captchaToken: { label: \"Captcha Token\", type: \"text\" },")).toBe(2);
   });

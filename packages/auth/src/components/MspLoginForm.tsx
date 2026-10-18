@@ -11,6 +11,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import SsoProviderButtons from '@alga-psa/auth/sso/entry';
 import CaptchaChallenge from './CaptchaChallenge';
 import { useLoginCaptcha } from './useLoginCaptcha';
+import PolicyTwoFactorFlow, { type PolicyTwoFactorStep } from './PolicyTwoFactorFlow';
 
 interface MspLoginFormProps {
   callbackUrl: string;
@@ -31,6 +32,7 @@ export default function MspLoginForm({
   const [isPublicWorkstation, setIsPublicWorkstation] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [twoFactorStep, setTwoFactorStep] = useState<PolicyTwoFactorStep>(null);
   const captcha = useLoginCaptcha();
   const { t } = useTranslation('msp/auth', { useSuspense: false });
 
@@ -63,6 +65,10 @@ export default function MspLoginForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    await attemptSignIn();
+  };
+
+  const attemptSignIn = async (twoFactorCode?: string) => {
     setLookupError(null);
     setIsSubmitting(true);
 
@@ -74,10 +80,23 @@ export default function MspLoginForm({
         redirect: false,
         callbackUrl,
         ...(captcha.token ? { captchaToken: captcha.token } : {}),
+        ...(twoFactorCode ? { twoFactorCode } : {}),
       });
 
       if (result?.error === '2FA_REQUIRED') {
         onTwoFactorRequired();
+      } else if (result?.code === 'TWO_FACTOR_REQUIRED') {
+        setTwoFactorStep('code');
+      } else if (result?.code === 'TWO_FACTOR_ENROLLMENT_REQUIRED') {
+        setTwoFactorStep('enroll');
+      } else if (result?.code === 'SSO_REQUIRED') {
+        // Password was right, but the organization only allows SSO. Not a failed
+        // attempt, so the captcha challenge is left alone.
+        onError({
+          type: 'error',
+          title: t('signIn.errors.ssoRequiredTitle', 'Single Sign-On Required'),
+          message: t('signIn.errors.ssoRequiredMessage', 'Your organization requires single sign-on. Use one of the single sign-on options below to sign in.')
+        });
       } else if (result?.code === 'CAPTCHA_REQUIRED') {
         await captcha.requireCaptcha();
         setLookupError(t('signIn.errors.captchaRequired', 'Please complete the verification below, then sign in again.'));
@@ -113,6 +132,7 @@ export default function MspLoginForm({
 
 
   return (
+    <>
     <form 
       className="mt-8 space-y-6" 
       onSubmit={handleSubmit}
@@ -226,5 +246,21 @@ export default function MspLoginForm({
      />
 
     </form>
+    <PolicyTwoFactorFlow
+      idPrefix="msp-login"
+      step={twoFactorStep}
+      credentials={{
+        email,
+        password,
+        userType: 'internal',
+        captchaToken: captcha.token || undefined,
+      }}
+      onCancel={() => setTwoFactorStep(null)}
+      onCode={(code) => {
+        setTwoFactorStep(null);
+        void attemptSignIn(code);
+      }}
+    />
+    </>
   );
 }
