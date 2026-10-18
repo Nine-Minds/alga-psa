@@ -402,6 +402,7 @@
       "administratorRequired": "Un amministratore locale dello spazio di lavoro deve accettare questa relazione prima che il tuo team possa iniziare.",
       "preparing": "Lo spazio di lavoro è ancora in preparazione. Aggiorna per controllarne lo stato.",
       "cancelled": "{{sponsor}} ha annullato la configurazione di questo spazio di lavoro. Lo spazio di lavoro non verrà attivato e il tuo account verrà rimosso. Contatta {{sponsor}} se prevedevi di usarlo.",
+      "destinationUnavailable": "La coda di inoltro di {{sponsor}} per questo spazio di lavoro non è più disponibile, quindi la relazione non può ancora essere attivata. Chiedi a {{sponsor}} di ripristinarla, poi aggiorna.",
       "error": "Impossibile attivare o caricare questa relazione. Aggiorna per rivedere l’ambito attuale prima di riprovare.",
       "refresh": "Aggiorna la relazione",
       "signOut": "Esci"

@@ -53,6 +53,12 @@ describe('initial customer scope review', () => {
     expect(screen.queryByRole('button', { name: 'coManaged.acceptance.accept' })).toBeNull();
     expect(screen.queryByText('Workspace content')).toBeNull();
   });
+  it('explains a missing MSP escalation queue instead of failing the review', async () => {
+    mocks.review.mockResolvedValue({ state: 'destination_unavailable', sponsorName: 'Oz' }); workspace();
+    await screen.findByText('coManaged.acceptance.destinationUnavailable:Oz');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: 'coManaged.acceptance.refresh' })).toBeTruthy();
+  });
   it('lets the invitee sign out, since this screen replaces the header and user menu', async () => {
     mocks.review.mockResolvedValue({ state: 'unavailable' }); workspace();
     fireEvent.click(await screen.findByRole('button', { name: 'coManaged.acceptance.signOut' }));

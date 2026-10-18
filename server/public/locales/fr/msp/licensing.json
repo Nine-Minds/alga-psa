@@ -402,6 +402,7 @@
       "administratorRequired": "Un administrateur local de l’espace de travail doit accepter cette relation avant que votre équipe puisse commencer.",
       "preparing": "Votre espace de travail est encore en préparation. Actualisez pour vérifier son statut.",
       "cancelled": "{{sponsor}} a annulé la configuration de cet espace de travail. L’espace de travail ne sera pas activé et votre compte sera supprimé. Contactez {{sponsor}} si vous comptiez l’utiliser.",
+      "destinationUnavailable": "La file d’escalade de {{sponsor}} pour cet espace de travail n’est plus disponible ; la relation ne peut donc pas encore être activée. Demandez à {{sponsor}} de la rétablir, puis actualisez.",
       "error": "Impossible d’activer ou de charger cette relation. Actualisez pour examiner le périmètre actuel avant de réessayer.",
       "refresh": "Actualiser la relation",
       "signOut": "Se déconnecter"

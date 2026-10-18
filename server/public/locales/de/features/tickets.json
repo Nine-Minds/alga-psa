@@ -1474,7 +1474,9 @@
       "referenceInvalid": "Das ausgewählte Board, der Status, die Priorität, der Bearbeiter, das Team oder die SLA-Richtlinie ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicateName": "Ein Board mit diesem Namen existiert bereits.",
       "duplicate": "Ein Board oder Status mit denselben Einstellungen existiert bereits.",
-      "invalidValue": "Einer der Board- oder Statuswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+      "invalidValue": "Einer der Board- oder Statuswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "coManagedEscalationQueue": "Dieses Board empfängt eskalierte Tickets aus einem Co-Managed-IT-Arbeitsbereich und kann daher nicht deaktiviert werden, solange dieser Arbeitsbereich eingerichtet wird oder aktiv ist.",
+      "coManagedSharedBoard": "Dieses Board ist im Rahmen von Co-Managed IT mit Ihrem MSP geteilt und kann daher nicht deaktiviert werden, solange die Beziehung aktiv ist."
     },
     "material": {
       "invalidValue": "Einer der ausgewählten Materialwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",

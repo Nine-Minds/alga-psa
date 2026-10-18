@@ -399,6 +399,7 @@
       "administratorRequired": "A local workspace administrator must accept this relationship before your team can begin.",
       "preparing": "Your workspace is still being prepared. Refresh to check its status.",
       "cancelled": "{{sponsor}} cancelled this workspace setup. The workspace will not be activated, and your account will be removed. Contact {{sponsor}} if you expected to use it.",
+      "destinationUnavailable": "{{sponsor}}'s escalation queue for this workspace is no longer available, so the relationship cannot be activated yet. Contact {{sponsor}} to restore it, then refresh.",
       "error": "Unable to activate or load this relationship. Refresh to review the current scope before trying again.",
       "refresh": "Refresh relationship",
       "signOut": "Sign out"

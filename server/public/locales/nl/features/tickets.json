@@ -1474,7 +1474,9 @@
       "referenceInvalid": "Het geselecteerde bord, de status, de prioriteit, de behandelaar, het team of het SLA-beleid is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
       "duplicateName": "Er bestaat al een bord met deze naam.",
       "duplicate": "Er bestaat al een bord of status met dezelfde instellingen.",
-      "invalidValue": "Een van de bord- of statuswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw."
+      "invalidValue": "Een van de bord- of statuswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "coManagedEscalationQueue": "Dit bord ontvangt geëscaleerde tickets uit een werkruimte voor co-managed IT en kan daarom niet worden gedeactiveerd zolang die werkruimte wordt ingesteld of actief is.",
+      "coManagedSharedBoard": "Dit bord wordt via co-managed IT met uw MSP gedeeld en kan daarom niet worden gedeactiveerd zolang de relatie actief is."
     },
     "material": {
       "invalidValue": "Een van de geselecteerde materiaalwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",

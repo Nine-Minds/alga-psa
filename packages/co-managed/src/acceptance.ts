@@ -18,16 +18,17 @@ export interface CoManagedAcceptanceScope {
 }
 export type CoManagedAcceptanceState =
   | { state: 'unavailable' | 'active' | 'terminated' }
-  | { state: 'cancelled'; sponsorName: string }
+  | { state: 'cancelled' | 'destination_unavailable'; sponsorName: string }
   | { state: 'pending_acceptance'; relationshipId: string; revision: number;
       canAccept: boolean; scope: CoManagedAcceptanceScope; scopeFingerprint: string };
 
 export class CoManagedAcceptanceError extends Error {
-  constructor(public readonly code: 'FORBIDDEN' | 'NOT_PENDING' | 'SCOPE_CHANGED' | 'CAPACITY_UNAVAILABLE') {
+  constructor(public readonly code: 'FORBIDDEN' | 'NOT_PENDING' | 'SCOPE_CHANGED' | 'CAPACITY_UNAVAILABLE' | 'DESTINATION_UNAVAILABLE') {
     super({ FORBIDDEN: 'A customer administrator in this workspace must accept the relationship.',
       NOT_PENDING: 'This relationship is not awaiting acceptance.',
       SCOPE_CHANGED: 'The proposed scope changed. Review it again before accepting.',
       CAPACITY_UNAVAILABLE: 'The sponsoring MSP must restore its Pro license and allocated co-managed seats before activation.',
+      DESTINATION_UNAVAILABLE: 'The MSP escalation queue for this relationship is no longer available.',
     }[code]);
     this.name = 'CoManagedAcceptanceError';
   }
@@ -49,7 +50,8 @@ async function readScope(db: Knex, relationship: any, lock = false): Promise<CoM
   const destinations = sponsor.table('boards').where({ board_id: relationship.escalation_board_id, is_inactive: false });
   if (lock) destinations.forShare();
   const destination = await destinations.first('board_id', 'board_name');
-  if (!owner || !destination) throw new CoManagedAcceptanceError('NOT_PENDING');
+  if (!owner) throw new CoManagedAcceptanceError('NOT_PENDING');
+  if (!destination) throw new CoManagedAcceptanceError('DESTINATION_UNAVAILABLE');
   const customer = tenantDb(db, relationship.tenant);
   const scopeQuery = customer.table('co_management_board_scopes').where('relationship_id', relationship.relationship_id).orderBy('board_id');
   if (lock) scopeQuery.forShare();
@@ -91,7 +93,14 @@ export async function getCoManagedAcceptanceState(db: Knex, actor: CoManagedCust
     }
     if (relationship.state === 'provisioning') return { state: 'unavailable' };
     if (relationship.state === 'active' || relationship.state === 'terminated') return { state: relationship.state };
-    const scope = await readScope(trx, relationship);
+    let scope: CoManagedAcceptanceScope;
+    try { scope = await readScope(trx, relationship); }
+    catch (error) {
+      // A missing queue is the MSP's to fix; say so instead of failing the review.
+      if (!(error instanceof CoManagedAcceptanceError) || error.code !== 'DESTINATION_UNAVAILABLE') throw error;
+      const owner = await tenantDb(trx, relationship.sponsor_tenant).table('tenants').first('client_name');
+      return { state: 'destination_unavailable', sponsorName: owner?.client_name ?? '' };
+    }
     return { state: 'pending_acceptance', relationshipId: relationship.relationship_id, revision: relationship.revision,
       canAccept, scope, scopeFingerprint: fingerprint(scope) };
   }, { isolationLevel: 'repeatable read', readOnly: true });

@@ -399,6 +399,7 @@
       "administratorRequired": "En lokal administratör för arbetsytan måste godkänna relationen innan ert team kan komma igång.",
       "preparing": "Er arbetsyta förbereds fortfarande. Uppdatera för att kontrollera dess status.",
       "cancelled": "{{sponsor}} har avbrutit konfigurationen av den här arbetsytan. Arbetsytan aktiveras inte och ditt konto tas bort. Kontakta {{sponsor}} om du räknade med att använda den.",
+      "destinationUnavailable": "{{sponsor}}s eskaleringskö för den här arbetsytan är inte längre tillgänglig, så relationen kan inte aktiveras än. Be {{sponsor}} att återställa den och uppdatera sedan.",
       "error": "Det gick inte att aktivera eller läsa in relationen. Uppdatera för att granska det aktuella omfånget innan du försöker igen.",
       "refresh": "Uppdatera relation",
       "signOut": "Logga ut"

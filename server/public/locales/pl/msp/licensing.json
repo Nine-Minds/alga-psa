@@ -405,6 +405,7 @@
       "administratorRequired": "Lokalny administrator obszaru roboczego musi zaakceptować tę współpracę, zanim Twój zespół zacznie pracę.",
       "preparing": "Twój obszar roboczy jest jeszcze przygotowywany. Odśwież, aby sprawdzić jego stan.",
       "cancelled": "{{sponsor}} anulował konfigurację tego obszaru roboczego. Obszar roboczy nie zostanie aktywowany, a twoje konto zostanie usunięte. Skontaktuj się z {{sponsor}}, jeśli zamierzałeś z niego korzystać.",
+      "destinationUnavailable": "Kolejka eskalacji {{sponsor}} dla tego obszaru roboczego nie jest już dostępna, więc relacji nie można jeszcze aktywować. Poproś {{sponsor}} o jej przywrócenie, a następnie odśwież.",
       "error": "Nie można aktywować ani wczytać tej współpracy. Odśwież, aby sprawdzić bieżący zakres, zanim spróbujesz ponownie.",
       "refresh": "Odśwież współpracę",
       "signOut": "Wyloguj się"

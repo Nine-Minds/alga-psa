@@ -399,6 +399,7 @@
       "administratorRequired": "Ein lokaler Workspace-Administrator muss diese Beziehung annehmen, bevor Ihr Team beginnen kann.",
       "preparing": "Ihr Workspace wird noch vorbereitet. Aktualisieren Sie die Ansicht, um den Status zu prüfen.",
       "cancelled": "{{sponsor}} hat die Einrichtung dieses Arbeitsbereichs abgebrochen. Der Arbeitsbereich wird nicht aktiviert, und Ihr Konto wird entfernt. Wenden Sie sich an {{sponsor}}, wenn Sie ihn nutzen wollten.",
+      "destinationUnavailable": "Die Eskalationswarteschlange von {{sponsor}} für diesen Arbeitsbereich ist nicht mehr verfügbar, daher kann die Beziehung noch nicht aktiviert werden. Bitten Sie {{sponsor}}, sie wiederherzustellen, und aktualisieren Sie dann.",
       "error": "Diese Beziehung konnte nicht aktiviert oder geladen werden. Aktualisieren Sie die Ansicht, um den aktuellen Umfang zu prüfen, bevor Sie es erneut versuchen.",
       "refresh": "Beziehung aktualisieren",
       "signOut": "Abmelden"

@@ -11,7 +11,8 @@ import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { v4 as uuidv4 } from 'uuid';
 import { BoardTicketStatusInput, saveBoardTicketStatusesForBoard } from './boardTicketStatusActions';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
-import { boardActionErrorFrom, type BoardActionError } from './boardActionErrors';
+import { boardActionErrorFrom, CO_MANAGED_ESCALATION_QUEUE_MESSAGE, CO_MANAGED_SHARED_BOARD_MESSAGE, type BoardActionError } from './boardActionErrors';
+import { countCoManagedBoardScopes, countLiveCoManagedEscalationsForBoard } from '@alga-psa/core/config/deletion';
 import { parseTicketViewSettings } from './boardViewSettingsSchema';
 import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../../lib/ticketSlaSql';
 import { normalizeBoardStopwatchSetting, resolveBoardStopwatchEnabled } from '../../lib/boardLiveTicketTimer';
@@ -801,6 +802,17 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
 
       if (!currentBoard) {
         throw new Error('Board not found');
+      }
+
+      // Deactivation hides the board from every co-management read just as
+      // deletion would; refuse it while a live relationship depends on it.
+      if (boardData.is_inactive === true && !currentBoard.is_inactive) {
+        if (await countLiveCoManagedEscalationsForBoard(trx, { tenant, entityId: boardId }) > 0) {
+          throw new Error(CO_MANAGED_ESCALATION_QUEUE_MESSAGE);
+        }
+        if (await countCoManagedBoardScopes(trx, { tenant, entityId: boardId }) > 0) {
+          throw new Error(CO_MANAGED_SHARED_BOARD_MESSAGE);
+        }
       }
 
       // updateBoard is a second write path to the same two columns that

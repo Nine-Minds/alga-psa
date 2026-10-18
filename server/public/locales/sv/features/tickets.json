@@ -1482,7 +1482,9 @@
       "referenceInvalid": "Den valda tavlan, statusen, prioriteten, den ansvariga, teamet eller SLA-policyn är inte längre giltig. Ladda om sidan och försök igen.",
       "duplicateName": "En tavla med det här namnet finns redan.",
       "duplicate": "En tavla eller status med samma inställningar finns redan.",
-      "invalidValue": "Ett av tavlans eller statusens värden är ogiltigt. Ladda om sidan och försök igen."
+      "invalidValue": "Ett av tavlans eller statusens värden är ogiltigt. Ladda om sidan och försök igen.",
+      "coManagedEscalationQueue": "Den här tavlan tar emot eskalerade ärenden från en arbetsyta för samförvaltad IT och kan därför inte inaktiveras medan arbetsytan konfigureras eller är aktiv.",
+      "coManagedSharedBoard": "Den här tavlan delas med din MSP genom samförvaltad IT och kan därför inte inaktiveras medan relationen är aktiv."
     },
     "material": {
       "invalidValue": "Ett av de valda materialvärdena är ogiltigt. Ladda om sidan och försök igen.",

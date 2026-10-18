@@ -1474,7 +1474,9 @@
       "referenceInvalid": "O quadro, o status, a prioridade, o responsável, a equipe ou a política de SLA selecionados não são mais válidos. Atualize a página e tente novamente.",
       "duplicateName": "Já existe um quadro com este nome.",
       "duplicate": "Já existe um quadro ou status com as mesmas configurações.",
-      "invalidValue": "Um dos valores do quadro ou do status é inválido. Atualize a página e tente novamente."
+      "invalidValue": "Um dos valores do quadro ou do status é inválido. Atualize a página e tente novamente.",
+      "coManagedEscalationQueue": "Este quadro recebe tickets escalados de um espaço de trabalho de TI cogerenciada, portanto não pode ser desativado enquanto esse espaço estiver em configuração ou ativo.",
+      "coManagedSharedBoard": "Este quadro é compartilhado com seu MSP por meio de TI cogerenciada, portanto não pode ser desativado enquanto o relacionamento estiver ativo."
     },
     "material": {
       "invalidValue": "Um dos valores de material selecionados é inválido. Atualize a página e tente novamente.",

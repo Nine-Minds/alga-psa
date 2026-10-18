@@ -415,6 +415,18 @@ describe('co-managed board deletion dependency', () => {
     await tenantDb(db, operation.customer_tenant).table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
     expect(await count()).toBe(0);
   });
+
+  it('counts the MSP escalation queue as in use and keeps a pending review readable without it', async () => {
+    const { countLiveCoManagedEscalationsForBoard } = await import('../../../../../packages/core/src/config/deletion');
+    const { operation, actor } = await readyForAcceptance();
+    expect(await countLiveCoManagedEscalationsForBoard(db, { tenant: operation.tenant, entityId: operation.escalation_board_id })).toBe(1);
+    expect(await countLiveCoManagedEscalationsForBoard(db, { tenant: operation.tenant, entityId: randomUUID() })).toBe(0);
+    // If the queue disappears anyway, the customer sees why instead of an error on every load.
+    await tenantDb(db, operation.tenant).table('boards').where('board_id', operation.escalation_board_id).update({ is_inactive: true });
+    expect(await getCoManagedAcceptanceState(db, actor)).toMatchObject({ state: 'destination_unavailable' });
+    await tenantDb(db, operation.tenant).table('boards').where('board_id', operation.escalation_board_id).update({ is_inactive: false });
+    expect(await getCoManagedAcceptanceState(db, actor)).toMatchObject({ state: 'pending_acceptance' });
+  });
 });
 
 describe('customer technician allocation admission', () => {

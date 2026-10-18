@@ -1474,7 +1474,9 @@
       "referenceInvalid": "El tablero, el estado, la prioridad, el responsable, el equipo o la política de SLA seleccionados ya no son válidos. Actualice la página e inténtelo de nuevo.",
       "duplicateName": "Ya existe un tablero con este nombre.",
       "duplicate": "Ya existe un tablero o estado con la misma configuración.",
-      "invalidValue": "Uno de los valores del tablero o del estado no es válido. Actualice la página e inténtelo de nuevo."
+      "invalidValue": "Uno de los valores del tablero o del estado no es válido. Actualice la página e inténtelo de nuevo.",
+      "coManagedEscalationQueue": "Este tablero recibe tickets escalados de un espacio de trabajo de TI cogestionada, por lo que no se puede desactivar mientras ese espacio se está configurando o está activo.",
+      "coManagedSharedBoard": "Este tablero está compartido con su MSP mediante TI cogestionada, por lo que no se puede desactivar mientras la relación esté activa."
     },
     "material": {
       "invalidValue": "Uno de los valores de material seleccionados no es válido. Actualice la página e inténtelo de nuevo.",

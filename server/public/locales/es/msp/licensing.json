@@ -402,6 +402,7 @@
       "administratorRequired": "Un administrador local del espacio de trabajo debe aceptar esta relación antes de que su equipo pueda empezar.",
       "preparing": "Su espacio de trabajo aún se está preparando. Actualice para comprobar su estado.",
       "cancelled": "{{sponsor}} canceló la configuración de este espacio de trabajo. El espacio de trabajo no se activará y su cuenta se eliminará. Póngase en contacto con {{sponsor}} si esperaba usarlo.",
+      "destinationUnavailable": "La cola de escalamiento de {{sponsor}} para este espacio de trabajo ya no está disponible, por lo que la relación aún no se puede activar. Pida a {{sponsor}} que la restablezca y luego actualice.",
       "error": "No se pudo activar ni cargar esta relación. Actualice para revisar el alcance actual antes de volver a intentarlo.",
       "refresh": "Actualizar la relación",
       "signOut": "Cerrar sesión"

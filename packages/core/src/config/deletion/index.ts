@@ -60,10 +60,30 @@ export const countLiveCoManagedWorkspacesForClient = async (
   return Number(result?.count ?? 0);
 };
 
+/** Co-managed workspaces whose escalated tickets go to this (MSP) board, while
+ * their seat allocation is live. Removing the queue broke escalation, and
+ * before acceptance left the customer's review unable to load. */
+export const countLiveCoManagedEscalationsForBoard = async (
+  trx: Knex | Knex.Transaction,
+  options: { tenant: string; entityId: string }
+): Promise<number> => {
+  const result = await tenantScopedTable(trx, options.tenant, 'co_managed_provisioning_operations')
+    .join('co_managed_allocations', function () {
+      this.on('co_managed_allocations.allocation_id', 'co_managed_provisioning_operations.allocation_id')
+        .andOn('co_managed_allocations.tenant', 'co_managed_provisioning_operations.tenant');
+    })
+    .where('co_managed_provisioning_operations.escalation_board_id', options.entityId)
+    .whereNot('co_managed_allocations.state', 'released')
+    .count<{ count: string }>('* as count')
+    .first();
+
+  return Number(result?.count ?? 0);
+};
+
 /** Boards a live (unended) co-management relationship shares with the MSP.
  * Deleting one silently removes the MSP's oversight, so it blocks deletion;
  * scope rows of ended relationships are history and do not. */
-const countCoManagedBoardScopes = async (
+export const countCoManagedBoardScopes = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
 ): Promise<number> => {
@@ -645,6 +665,12 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'co_management_board_scopes',
         label: 'co-managed relationship',
         countQuery: countCoManagedBoardScopes
+      },
+      {
+        type: 'co_managed_escalation',
+        table: 'co_managed_provisioning_operations',
+        label: 'co-managed escalation queue',
+        countQuery: countLiveCoManagedEscalationsForBoard
       }
     ]
   },

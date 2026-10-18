@@ -41,6 +41,7 @@ export default function CoManagedAcceptanceBoundary({ children }: { children: Re
         {!state && !error && <p role="status">{t('coManaged.loading')}</p>}
         {state?.state === 'unavailable' && <p>{t('coManaged.acceptance.preparing')}</p>}
         {state?.state === 'cancelled' && <p>{t('coManaged.acceptance.cancelled', { sponsor: state.sponsorName })}</p>}
+        {state?.state === 'destination_unavailable' && <p>{t('coManaged.acceptance.destinationUnavailable', { sponsor: state.sponsorName })}</p>}
         {state?.state === 'pending_acceptance' && <>
           <p>{t('coManaged.acceptance.description', { sponsor: state.scope.sponsorName })}</p>
           <p>{t(state.scope.visibilityMode === 'board_scope'
@@ -56,7 +57,7 @@ export default function CoManagedAcceptanceBoundary({ children }: { children: Re
             {t('coManaged.acceptance.accept')}
           </Button> : <p>{t('coManaged.acceptance.administratorRequired')}</p>}
         </>}
-        {(error || state?.state === 'unavailable' || (state?.state === 'pending_acceptance' && !state.canAccept)) && <Button id="co-managed-refresh-acceptance" variant="outline"
+        {(error || state?.state === 'unavailable' || state?.state === 'destination_unavailable' || (state?.state === 'pending_acceptance' && !state.canAccept)) && <Button id="co-managed-refresh-acceptance" variant="outline"
           onClick={() => void reload()} disabled={busy}>{t('coManaged.acceptance.refresh')}</Button>}
         {/* This screen replaces the whole MSP shell, header and user menu included. */}
         <Button id="co-managed-acceptance-sign-out" variant="ghost" disabled={busy}

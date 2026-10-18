@@ -399,6 +399,7 @@
       "administratorRequired": "Een lokale beheerder van de werkruimte moet deze samenwerking accepteren voordat uw team kan beginnen.",
       "preparing": "Uw werkruimte wordt nog voorbereid. Vernieuw om de status te controleren.",
       "cancelled": "{{sponsor}} heeft het instellen van deze werkruimte geannuleerd. De werkruimte wordt niet geactiveerd en uw account wordt verwijderd. Neem contact op met {{sponsor}} als u deze verwachtte te gebruiken.",
+      "destinationUnavailable": "De escalatiewachtrij van {{sponsor}} voor deze werkruimte is niet meer beschikbaar, dus de relatie kan nog niet worden geactiveerd. Vraag {{sponsor}} deze te herstellen en vernieuw daarna.",
       "error": "Deze samenwerking kan niet worden geactiveerd of geladen. Vernieuw om het huidige bereik te bekijken voordat u het opnieuw probeert.",
       "refresh": "Samenwerking vernieuwen",
       "signOut": "Afmelden"

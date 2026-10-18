@@ -1482,7 +1482,9 @@
       "referenceInvalid": "The selected board, status, priority, assignee, team, or SLA policy is no longer valid. Please refresh and try again.",
       "duplicateName": "A board with this name already exists.",
       "duplicate": "A board or status with the same settings already exists.",
-      "invalidValue": "One of the board or status values is invalid. Please refresh and try again."
+      "invalidValue": "One of the board or status values is invalid. Please refresh and try again.",
+      "coManagedEscalationQueue": "This board receives escalated tickets from a co-managed IT workspace, so it cannot be deactivated while that workspace is being set up or is active.",
+      "coManagedSharedBoard": "This board is shared with your MSP under co-managed IT, so it cannot be deactivated while the relationship is active."
     },
     "material": {
       "invalidValue": "One of the selected material values is invalid. Please refresh and try again.",
