@@ -7,6 +7,7 @@ import '@testing-library/jest-dom';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AccountingMappingModuleView } from './AccountingMappingModuleView';
+import { isManualEntryModule } from './AccountingMappingBulkGrid';
 import type { AccountingMappingModule } from './types';
 
 const loadMock = vi.fn();
@@ -330,6 +331,7 @@ describe('AccountingMappingModuleView bulk grid without a provider catalog', () 
       id: 'qbcsv-service-mappings',
       adapterType: 'quickbooks_csv',
       externalTarget: undefined,
+      manualExternalEntry: true,
       labels: {
         tab: 'Items / Services',
         addButton: 'Add Service Mapping',
@@ -385,5 +387,34 @@ describe('AccountingMappingModuleView bulk grid without a provider catalog', () 
     expect(createManyMock.mock.calls[0][1]).toEqual([
       expect.objectContaining({ algaEntityId: 'svc-host', externalEntityId: 'Web Hosting' })
     ]);
+  });
+});
+
+describe('bulk grid manual-entry opt-in', () => {
+  beforeAll(() => {
+    if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
+  });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    loadMock.mockResolvedValue({ ...loadResult([]), externalEntities: [] });
+  });
+  afterEach(() => cleanup());
+
+  it('only file-based modules that opt in type the target', () => {
+    expect(isManualEntryModule({ manualExternalEntry: true })).toBe(true);
+    expect(isManualEntryModule({})).toBe(false);
+    expect(isManualEntryModule({ manualExternalEntry: false })).toBe(false);
+    // A multi-catalog target kind always needs a catalog pick.
+    expect(isManualEntryModule({ manualExternalEntry: true, externalTarget: {} as never })).toBe(false);
+  });
+
+  it('keeps the catalog picker when a catalog-backed module returns an empty catalog', async () => {
+    const qboLike = buildModule({ id: 'qbo-live-service-mappings', adapterType: 'quickbooks_online', externalTarget: undefined } as Partial<AccountingMappingModule>);
+    render(<AccountingMappingModuleView module={qboLike} context={context} />);
+    fireEvent.click(await screen.findByText('Bulk map'));
+    await screen.findByTestId('qbo-live-service-mappings-bulk-grid');
+
+    expect(document.querySelector('input#qbo-live-service-mappings-bulk-external-svc-host')).toBeNull();
+    expect(screen.queryByText('Enter the identifier exactly as it appears in your accounting system.')).toBeNull();
   });
 });

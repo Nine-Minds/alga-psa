@@ -33,6 +33,16 @@ export const BULK_GRID_COLUMN_SIZES = {
   id: { width: '140px' }
 } as const;
 
+/**
+ * Whether bulk mapping types the target instead of picking it from a catalog.
+ * Explicit per module: a catalog-backed module whose catalog happens to be
+ * empty (a new company, nothing of that kind yet) keeps the picker, so a
+ * free-text value can never be saved where a provider id is expected.
+ */
+export function isManualEntryModule(module: Pick<AccountingMappingModule, 'manualExternalEntry' | 'externalTarget'>): boolean {
+  return module.manualExternalEntry === true && !module.externalTarget;
+}
+
 type MappedRow = { externalName?: string; alga_entity_id: string };
 
 type RowEdit = {
@@ -84,10 +94,9 @@ export function AccountingMappingBulkGrid({
   const { t } = useTranslation('msp/integrations');
   const targetConfig = module.externalTarget;
   const idPrefix = `${module.id}-bulk`;
-  // Same rule as AccountingMappingDialog: with no provider catalog to pick from
-  // (QuickBooks CSV/Desktop, Xero CSV) and no multi-catalog target, the target
-  // is typed in, exactly as it appears in the accounting system.
-  const manualEntry = !targetConfig && externalEntities.length === 0;
+  // File-based modules (no provider catalog) type the target, exactly as it
+  // appears in the accounting system.
+  const manualEntry = isManualEntryModule(module);
 
   const [filter, setFilter] = useState<MappedFilter>('unmapped');
   const [search, setSearch] = useState('');
@@ -327,7 +336,7 @@ export function AccountingMappingBulkGrid({
                   defaultValue: 'Enter {{field}}...',
                   field: module.labels.dialog.externalField
                 })}
-                aria-label={module.labels.dialog.externalField}
+                aria-label={`${module.labels.dialog.externalField}: ${row.name}`}
                 className="w-full min-w-0"
               />
             );
