@@ -460,7 +460,13 @@
       "resize": "Alterar a alocação de assentos",
       "saveAllocation": "Salvar alocação",
       "resizeDescription": "Mova assentos entre este cliente e o pool cogerido que você comprou. Os técnicos ativos e os convites pendentes precisam caber na alocação. É necessário pelo menos um assento.",
-      "resizeError": "Não foi possível alterar a alocação. Atualize e verifique os assentos disponíveis, os técnicos ativos e os convites pendentes antes de tentar de novo."
+      "resizeError": "Não foi possível alterar a alocação. Atualize e verifique os assentos disponíveis, os técnicos ativos e os convites pendentes antes de tentar de novo.",
+      "capacityUnavailable": "Não há lugares cogeridos suficientes disponíveis ou a capacidade não está atualmente verificada. Atualize o conjunto e adicione capacidade antes de tentar novamente.",
+      "ineligible": "É necessária uma licença Pro ativa e capacidade cogerida verificada para criar um espaço de trabalho.",
+      "operationConflict": "Este pedido de configuração já foi enviado com dados diferentes. Atualize a lista de espaços antes de recomeçar.",
+      "destinationUnavailable": "O quadro de escalamento selecionado já não está disponível. Selecione um quadro ativo e tente novamente.",
+      "clientUnavailable": "Este cliente já não está disponível. Atualize a lista de clientes.",
+      "invalidRequest": "Introduza um nome de espaço, os dados do administrador, um quadro de escalamento e pelo menos um lugar de técnico."
     },
     "policy": {
       "title": "Acesso cogerido",
@@ -492,7 +498,8 @@
         "project": "Projetos",
         "user": "Pessoal",
         "team": "Equipas"
-      }
+      },
+      "ticketAccess": "Acesso aos tickets"
     },
     "section": {
       "title": "Cogerenciamento",
@@ -969,7 +976,9 @@
       "workHint": "Os projetos do cliente e as filas de tarefas partilhadas permanecem na shell do MSP com as suas identidades qualificadas.",
       "workspace": "Espaço de trabalho do cliente",
       "sharedTickets": "Tickets compartilhados",
-      "openCustomerTickets": "Abrir em Tickets de clientes"
+      "openCustomerTickets": "Abrir em Tickets de clientes",
+      "seatsReleased": "Lugares libertados",
+      "viewDetails": "Ver detalhes"
     },
     "overview": {
       "clients": "Clientes cogeridos",

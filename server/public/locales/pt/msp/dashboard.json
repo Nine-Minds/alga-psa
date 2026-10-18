@@ -12,7 +12,9 @@
     "titleBranded": "Bem-vindo ao centro de comando de {{companyName}}",
     "description": "Acompanhe o progresso do onboarding, configure serviços críticos e mantenha a consistência de cada experiência do cliente.",
     "titleCommunity": "bem vindo de volta",
-    "descriptionCommunity": "Acesse tickets, agendamentos, projetos e relatórios no seu painel."
+    "descriptionCommunity": "Acesse tickets, agendamentos, projetos e relatórios no seu painel.",
+    "coManagedTitle": "Bem-vindo ao seu espaço de TI",
+    "coManagedDescription": "Faça a gestão dos tickets, projetos e equipa de TI da sua organização."
   },
   "algadesk": {
     "welcome": {

@@ -462,7 +462,13 @@
       "resize": "Zmień przydział stanowisk",
       "saveAllocation": "Zapisz przydział",
       "resizeDescription": "Przenoś stanowiska między tym klientem a zakupioną przez Ciebie pulą współzarządzaną. Aktywni technicy i oczekujące zaproszenia muszą mieścić się w przydziale. Wymagane jest co najmniej jedno stanowisko.",
-      "resizeError": "Nie można zmienić przydziału. Odśwież i sprawdź dostępne stanowiska, aktywnych techników oraz oczekujące zaproszenia, zanim spróbujesz ponownie."
+      "resizeError": "Nie można zmienić przydziału. Odśwież i sprawdź dostępne stanowiska, aktywnych techników oraz oczekujące zaproszenia, zanim spróbujesz ponownie.",
+      "capacityUnavailable": "Brakuje dostępnych miejsc współzarządzanych lub pojemność nie jest obecnie zweryfikowana. Odśwież pulę i zwiększ pojemność przed ponowną próbą.",
+      "ineligible": "Utworzenie obszaru roboczego wymaga aktywnej licencji Pro i zweryfikowanej pojemności współzarządzania.",
+      "operationConflict": "To żądanie konfiguracji zostało już wysłane z innymi danymi. Odśwież listę obszarów przed ponownym rozpoczęciem.",
+      "destinationUnavailable": "Wybrana tablica eskalacji nie jest już dostępna. Wybierz aktywną tablicę i spróbuj ponownie.",
+      "clientUnavailable": "Ten klient nie jest już dostępny. Odśwież listę klientów.",
+      "invalidRequest": "Podaj nazwę obszaru, dane administratora, tablicę eskalacji i co najmniej jedno miejsce dla technika."
     },
     "policy": {
       "title": "Dostęp do współzarządzania",
@@ -494,7 +500,8 @@
         "project": "Projekty",
         "user": "Pracownicy",
         "team": "Zespoły"
-      }
+      },
+      "ticketAccess": "Dostęp do zgłoszeń"
     },
     "section": {
       "title": "Współzarządzanie",
@@ -975,7 +982,9 @@
       "workHint": "Projekty klienta i współdzielone kolejki zadań pozostają w powłoce MSP z ich kwalifikowanymi tożsamościami.",
       "workspace": "Obszar roboczy klienta",
       "sharedTickets": "Wspólne zgłoszenia",
-      "openCustomerTickets": "Otwórz w Zgłoszeniach klientów"
+      "openCustomerTickets": "Otwórz w Zgłoszeniach klientów",
+      "seatsReleased": "Miejsca zwolnione",
+      "viewDetails": "Zobacz szczegóły"
     },
     "overview": {
       "clients": "Współzarządzani klienci",

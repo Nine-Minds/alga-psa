@@ -460,7 +460,13 @@
       "resize": "Modifica l’assegnazione delle postazioni",
       "saveAllocation": "Salva l’assegnazione",
       "resizeDescription": "Sposta le postazioni tra questo cliente e il pool cogestito che hai acquistato. I tecnici attivi e gli inviti in sospeso devono rientrare nell’assegnazione. È richiesta almeno una postazione.",
-      "resizeError": "Impossibile modificare l’assegnazione. Aggiorna e controlla le postazioni disponibili, i tecnici attivi e gli inviti in sospeso prima di riprovare."
+      "resizeError": "Impossibile modificare l’assegnazione. Aggiorna e controlla le postazioni disponibili, i tecnici attivi e gli inviti in sospeso prima di riprovare.",
+      "capacityUnavailable": "Non ci sono abbastanza posti cogestiti disponibili oppure la capacità non è attualmente verificata. Aggiorna il pool e aggiungi capacità prima di riprovare.",
+      "ineligible": "Per creare uno spazio di lavoro servono una licenza Pro attiva e una capacità cogestita verificata.",
+      "operationConflict": "Questa richiesta di configurazione è già stata inviata con dati diversi. Aggiorna l’elenco degli spazi prima di ricominciare.",
+      "destinationUnavailable": "La bacheca di escalation selezionata non è più disponibile. Seleziona una bacheca attiva e riprova.",
+      "clientUnavailable": "Questo cliente non è più disponibile. Aggiorna l’elenco dei clienti.",
+      "invalidRequest": "Inserisci il nome dello spazio, i dati dell’amministratore, una bacheca di escalation e almeno un posto tecnico."
     },
     "policy": {
       "title": "Accesso cogestito",
@@ -492,7 +498,8 @@
         "project": "Progetti",
         "user": "Personale",
         "team": "Team"
-      }
+      },
+      "ticketAccess": "Accesso ai ticket"
     },
     "section": {
       "title": "Cogestione",
@@ -969,7 +976,9 @@
       "workHint": "I progetti del cliente e le code di attività condivise restano nella shell MSP con le loro identità qualificate.",
       "workspace": "Area di lavoro del cliente",
       "sharedTickets": "Ticket condivisi",
-      "openCustomerTickets": "Apri in Ticket dei clienti"
+      "openCustomerTickets": "Apri in Ticket dei clienti",
+      "seatsReleased": "Posti liberati",
+      "viewDetails": "Visualizza dettagli"
     },
     "overview": {
       "clients": "Clienti cogestiti",

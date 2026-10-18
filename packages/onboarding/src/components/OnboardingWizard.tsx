@@ -488,6 +488,9 @@ export function OnboardingWizard({
   const isFirstStepValid = () => {
     const { firstName, lastName, tenantName, email, newPassword, confirmPassword } = wizardData;
 
+    if (!isRevisit && productCode === 'co_managed' && ![wizardData.companyAddressLine1, wizardData.companyCity, wizardData.companyCountryCode]
+      .every(value => typeof value === 'string' && value.trim().length > 0)) return false;
+
     // For returning users, only validate company name
     if (isRevisit) {
       return !!tenantName;
@@ -584,7 +587,7 @@ export function OnboardingWizard({
           />
         );
       case 1:
-        return <TeamMembersStep data={wizardData} updateData={updateData} />;
+        return <TeamMembersStep data={wizardData} updateData={updateData} productCode={productCode} />;
       case 2:
         return <AddClientStep data={wizardData} updateData={updateData} />;
       case 3:

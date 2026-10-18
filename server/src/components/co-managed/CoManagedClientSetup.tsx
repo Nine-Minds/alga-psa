@@ -8,8 +8,9 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getCoManagedProvisioningOptions } from '@/lib/actions/coManagedActions';
+import { getCoManagedProvisioningOptions, getCoManagedBillingState } from '@/lib/actions/coManagedActions';
 import { provisionCoManagedWorkspaceAction } from '@enterprise/lib/actions/coManagedProvisioningActions';
+import { provisioningRejectionMessage } from './coManagedProvisioningMessage';
 import { newCoManagedOperationId } from './coManagedOperationId';
 
 type Draft = {
@@ -31,6 +32,7 @@ export default function CoManagedClientSetup({ clientId, clientName, idPrefix, o
   onDirtyChange?: (dirty: boolean) => void;
 }) {
   const { t } = useTranslation('msp/licensing');
+  const [capacity, setCapacity] = useState<Awaited<ReturnType<typeof getCoManagedBillingState>> | null>(null);
   const [boards, setBoards] = useState<Array<{ id: string; name: string }>>([]);
   const [form, setForm] = useState<Draft>(() => ({ workspaceName: clientName, administrator: { firstName: '', lastName: '', email: '' },
     seats: 1, visibilityMode: 'board_scope', escalationBoardId: '' }));
@@ -48,16 +50,19 @@ export default function CoManagedClientSetup({ clientId, clientName, idPrefix, o
 
   useEffect(() => {
     let cancelled = false;
-    void getCoManagedProvisioningOptions('', clientId).then(result => { if (!cancelled) setBoards(result.boards); })
+    void Promise.all([getCoManagedProvisioningOptions('', clientId), getCoManagedBillingState()]).then(([result, billing]) => {
+      if (!cancelled) { setBoards(result.boards); setCapacity(billing); }
+    })
       .catch(() => { if (!cancelled) setError(t('coManaged.provisioning.loadError')); });
     return () => { cancelled = true; };
   }, [clientId, t]);
 
   const valid = form.workspaceName.trim().length > 0 && form.administrator.firstName.trim().length > 0 &&
     form.administrator.lastName.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.administrator.email) &&
-    form.escalationBoardId.length > 0 && Number.isInteger(form.seats) && form.seats >= 1;
+    form.escalationBoardId.length > 0 && Number.isInteger(form.seats) && form.seats >= 1 && capacity?.isPro && capacity.canGrow && form.seats <= capacity.available;
 
   const submit = async () => {
+    if (!submitted.current && !valid) return;
     const request = submitted.current ?? { ...form, clientId, operationId: operationId.current };
     submitted.current = request; setBusy(true); setError(null);
     try {
@@ -65,7 +70,7 @@ export default function CoManagedClientSetup({ clientId, clientName, idPrefix, o
       if ('rejected' in result) {
         // An acknowledged rejection is correctable; the operation ID is retained.
         submitted.current = null;
-        setError(t('coManaged.provisioning.rejected'));
+        setError(provisioningRejectionMessage(result.errorCode, t));
         return;
       }
       submitted.current = null;
@@ -105,9 +110,12 @@ export default function CoManagedClientSetup({ clientId, clientName, idPrefix, o
           </div>
           <div className="space-y-2">
             <Label htmlFor={`${idPrefix}-seats`}>{t('coManaged.provisioning.seats', { defaultValue: 'Technician seats' })}</Label>
-            <Input id={`${idPrefix}-seats`} required type="number" min={1} step={1} value={form.seats}
+            <Input id={`${idPrefix}-seats`} required type="number" min={1} max={capacity?.available ?? 0} step={1} value={form.seats}
               onChange={(event) => setForm({ ...form, seats: Number(event.target.value) })} />
           </div>
+          {capacity && <p role="status" className="text-sm text-muted-foreground">{!capacity.isPro || !capacity.canGrow
+            ? t('coManaged.provisioning.ineligible', { defaultValue: 'An active Pro license and verified co-managed capacity are required to create a workspace.' })
+            : t('coManaged.provisioning.capacity', { count: capacity.available })}</p>}
           <CustomSelect id={`${idPrefix}-visibility`} label={t('coManaged.provisioning.visibility', { defaultValue: 'Visibility' })}
             value={form.visibilityMode}
             options={(['board_scope', 'escalation_only'] as const).map((mode) => ({ value: mode, label: t(`coManaged.provisioning.${mode}`) }))}

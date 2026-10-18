@@ -83,7 +83,9 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
             <div>
               <dt className="text-[rgb(var(--color-text-500))]">{t('coManaged.provisioning.seats', { defaultValue: 'Seats' })}</dt>
               <dd className="font-medium">
-                {selected.usedSeats != null
+                {selected.ended || selected.state === 'cancelled'
+                  ? t('coManaged.client.seatsReleased', { defaultValue: 'Seats released' })
+                  : selected.usedSeats != null
                   ? t('coManaged.client.seatUsage', { defaultValue: '{{used}} of {{allocated}} technician seats', used: selected.usedSeats, allocated: selected.seats })
                   : t('coManaged.client.seatAllocation', { defaultValue: '{{allocated}} allocated technician seats', allocated: selected.seats })}
               </dd>

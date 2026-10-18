@@ -12,7 +12,9 @@
     "titleBranded": "Welcome to the {{companyName}} Command Center",
     "description": "Track onboarding progress, configure critical services, and keep every client experience consistent.",
     "titleCommunity": "Welcome back",
-    "descriptionCommunity": "Jump into tickets, scheduling, projects, and reporting from your dashboard."
+    "descriptionCommunity": "Jump into tickets, scheduling, projects, and reporting from your dashboard.",
+    "coManagedTitle": "Welcome to Your IT Workspace",
+    "coManagedDescription": "Manage your organization’s tickets, projects, and IT team."
   },
   "algadesk": {
     "welcome": {

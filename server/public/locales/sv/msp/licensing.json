@@ -458,7 +458,13 @@
       "resize": "Ändra licenstilldelning",
       "saveAllocation": "Spara tilldelning",
       "resizeDescription": "Flytta licenser mellan den här kunden och din köpta pool för samförvaltning. Aktiva tekniker och väntande inbjudningar måste rymmas inom tilldelningen. Minst en licens krävs.",
-      "resizeError": "Det gick inte att ändra tilldelningen. Uppdatera och kontrollera tillgängliga licenser, aktiva tekniker och väntande inbjudningar innan du försöker igen."
+      "resizeError": "Det gick inte att ändra tilldelningen. Uppdatera och kontrollera tillgängliga licenser, aktiva tekniker och väntande inbjudningar innan du försöker igen.",
+      "capacityUnavailable": "Det finns inte tillräckligt många tillgängliga samhanterade platser, eller kapaciteten är inte verifierad. Uppdatera poolen och lägg till kapacitet innan du försöker igen.",
+      "ineligible": "En aktiv Pro-licens och verifierad samhanteringskapacitet krävs för att skapa en arbetsyta.",
+      "operationConflict": "Denna konfigurationsbegäran har redan skickats med andra uppgifter. Uppdatera listan över arbetsytor innan du börjar om.",
+      "destinationUnavailable": "Den valda eskaleringstavlan är inte längre tillgänglig. Välj en aktiv tavla och försök igen.",
+      "clientUnavailable": "Denna kund är inte längre tillgänglig. Uppdatera kundlistan.",
+      "invalidRequest": "Ange arbetsytans namn, administratörsuppgifter, en eskaleringstavla och minst en teknikerplats."
     },
     "policy": {
       "title": "Samförvaltad åtkomst",
@@ -490,7 +496,8 @@
         "project": "Projekt",
         "user": "Personal",
         "team": "Team"
-      }
+      },
+      "ticketAccess": "Ärendeåtkomst"
     },
     "section": {
       "title": "Samförvaltning",
@@ -967,7 +974,9 @@
       "workHint": "Kundens projekt och delade uppgiftsköer finns kvar i MSP-gränssnittet med sina kvalificerade identiteter.",
       "workspace": "Kundarbetsyta",
       "sharedTickets": "Delade ärenden",
-      "openCustomerTickets": "Öppna i Kundärenden"
+      "openCustomerTickets": "Öppna i Kundärenden",
+      "seatsReleased": "Platser frigjorda",
+      "viewDetails": "Visa detaljer"
     },
     "overview": {
       "clients": "Samhanterade kunder",

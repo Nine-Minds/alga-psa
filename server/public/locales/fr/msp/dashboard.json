@@ -4,7 +4,9 @@
     "titleBranded": "Bienvenue dans le centre de commande de {{companyName}}",
     "description": "Suivez la progression de l'onboarding, configurez les services critiques et gardez une expérience client cohérente.",
     "titleCommunity": "Bon retour",
-    "descriptionCommunity": "Accédez rapidement aux tickets, à la planification, aux projets et aux rapports depuis votre tableau de bord."
+    "descriptionCommunity": "Accédez rapidement aux tickets, à la planification, aux projets et aux rapports depuis votre tableau de bord.",
+    "coManagedTitle": "Bienvenue dans votre espace informatique",
+    "coManagedDescription": "Gérez les tickets, les projets et l’équipe informatique de votre organisation."
   },
   "algadesk": {
     "welcome": {

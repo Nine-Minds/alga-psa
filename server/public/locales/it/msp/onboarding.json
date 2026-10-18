@@ -397,7 +397,8 @@
       }
     },
     "footer": {
-      "note": "Tutti i campi di questa pagina sono obbligatori per procedere."
+      "note": "Tutti i campi di questa pagina sono obbligatori per procedere.",
+      "coManagedNote": "Nome, e-mail, organizzazione, indirizzo riga 1, città e paese sono obbligatori. Indirizzo riga 2, provincia e codice postale sono facoltativi."
     }
   },
   "teamMembersStep": {
@@ -412,7 +413,8 @@
       "summary": {
         "noLimit": "Utenti: {{count}} (nessun limite)",
         "limited": "Utenti: {{current}}/{{limit}}"
-      }
+      },
+      "coManagedLimitReached": "Limite dei posti tecnici raggiunto ({{current}}/{{limit}}). Chiedi al tuo MSP di assegnare altri posti."
     },
     "errors": {
       "requiredFields": "Compila tutti i campi obbligatori, inclusa la password",
@@ -494,7 +496,8 @@
     },
     "limitReached": {
       "title": "Limite utenti raggiunto",
-      "description": "Hai raggiunto il numero massimo di utenti previsto dal tuo piano attuale. Contatta l'assistenza per aumentare il limite."
+      "description": "Hai raggiunto il numero massimo di utenti previsto dal tuo piano attuale. Contatta l'assistenza per aumentare il limite.",
+      "coManagedDescription": "Questo spazio utilizza tutti i posti tecnici assegnati. Chiedi al tuo MSP di assegnare altri posti."
     },
     "optional": {
       "label": "Facoltativo:",

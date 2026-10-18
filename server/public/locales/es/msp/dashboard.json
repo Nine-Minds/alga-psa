@@ -4,7 +4,9 @@
     "titleBranded": "Bienvenido al centro de mando de {{companyName}}",
     "description": "Siga el progreso de la incorporación, configure servicios críticos y mantenga consistente la experiencia de cada cliente.",
     "titleCommunity": "Bienvenido de nuevo",
-    "descriptionCommunity": "Acceda rápidamente a tickets, programación, proyectos e informes desde su panel."
+    "descriptionCommunity": "Acceda rápidamente a tickets, programación, proyectos e informes desde su panel.",
+    "coManagedTitle": "Bienvenido a su espacio de TI",
+    "coManagedDescription": "Gestione los tickets, proyectos y el equipo de TI de su organización."
   },
   "algadesk": {
     "welcome": {

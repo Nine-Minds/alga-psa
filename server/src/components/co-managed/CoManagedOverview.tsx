@@ -24,12 +24,17 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
   // seat capacity decides whether a new customer workspace can be created at
   // all. Keep the whole billing state so the panel is driven by real capacity.
   const [state, setState] = useState<Awaited<ReturnType<typeof getCoManagedBillingState>> | null>(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const [denied, setDenied] = useState(false);
   const reload = useCallback(async () => {
     try { setState(await getCoManagedBillingState()); setDenied(false); }
     catch { setState(null); setDenied(true); }
   }, []);
   useEffect(() => { void reload(); }, [reload]);
+  const refresh = useCallback(async () => {
+    await reload();
+    setRefreshVersion(version => version + 1);
+  }, [reload]);
   // Relationship authority is independent of pool authority: an account-only
   // reader still gets the pool editor but no relationship rows.
   const canReadRelationships = state?.canReadRelationships === true;
@@ -40,7 +45,7 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
       <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">{t('coManaged.description')}</p>
     </header>
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <CoManagedPoolEditor showTotals className="min-w-0 lg:col-span-2" />
+      <CoManagedPoolEditor showTotals refreshVersion={refreshVersion} onChanged={refresh} className="min-w-0 lg:col-span-2" />
       <div className="min-w-0 lg:col-span-1 [&>*]:h-full">
         <CoManagedFeatureBoundary>
           <SharedWorkTile />
@@ -53,9 +58,9 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
       {t('coManaged.loadError')}
     </p>}
     {canReadRelationships && state && <div className="mt-4 grid grid-cols-1 gap-4">
-      <CoManagedClientOverviewTable />
+      <CoManagedClientOverviewTable refreshVersion={refreshVersion} />
       <CoManagedProvisioningPanel available={state.available} canGrow={state.isPro && state.canGrow}
-        initialClientId={initialClientId} onChanged={reload} />
+        initialClientId={initialClientId} onChanged={refresh} />
     </div>}
   </div>;
 }

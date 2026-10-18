@@ -14,6 +14,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedProvisioningOptions, getCoManagedProvisioningStatus, changeCoManagedWorkspaceSeats } from '@/lib/actions/coManagedActions';
 import { provisionCoManagedWorkspaceAction, retryCoManagedProvisioningAction, cancelCoManagedProvisioningAction } from '@enterprise/lib/actions/coManagedProvisioningActions';
+import { provisioningRejectionMessage } from './coManagedProvisioningMessage';
 import { newCoManagedOperationId } from './coManagedOperationId';
 
 type Request = Omit<CoManagedProvisioningRequest, 'sponsorTenant' | 'requestedBy'>;
@@ -82,7 +83,7 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
       if ('rejected' in result) {
         // A domain rejection is an acknowledged response. The form can be
         // corrected, but keeps its operation ID so no prior success duplicates.
-        setSubmitted(null); setError(t('coManaged.provisioning.rejected')); return;
+        setSubmitted(null); setError(provisioningRejectionMessage(result.errorCode, t)); return;
       }
       setOpen(false); setSubmitted(null); operationId.current = null;
       if (!result.enqueued) setError(t('coManaged.provisioning.workerUnavailable'));
@@ -143,7 +144,7 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
       <TableHeader><TableRow>{['workspace', 'administrator', 'seats', 'status', 'actions'].map(key =>
         <TableHead key={key}>{t(`coManaged.provisioning.${key}`)}</TableHead>)}</TableRow></TableHeader>
       <TableBody className="[&_tr]:border-b [&_tr]:border-[rgb(var(--color-border-100))]">{status.items.map(item => <TableRow key={item.operationId}>
-        <TableCell>{item.workspaceName ?? t('coManaged.provisioning.workspace')}</TableCell><TableCell>{item.administratorEmail}</TableCell><TableCell>{item.seats}</TableCell>
+        <TableCell>{item.workspaceName ?? t('coManaged.provisioning.workspace')}</TableCell><TableCell>{item.administratorEmail}</TableCell><TableCell>{item.state === 'cancelled' || item.state === 'terminated' ? t('coManaged.client.seatsReleased', { defaultValue: 'Seats released' }) : item.seats}</TableCell>
         <TableCell><BentoChip tone={STATE_TONE[item.state] ?? 'neutral'}>{t(`coManaged.provisioning.states.${item.state}`)}</BentoChip>
           {item.state === 'cleanup_requested' && <p className="mt-1 text-muted-foreground">{t(item.cleanupFailed ? 'coManaged.provisioning.cleanupFailed' : 'coManaged.provisioning.cleanupPending')}</p>}
           {item.state === 'pending_acceptance' && <p className="mt-1 text-muted-foreground">{t(item.invitationExpired ? 'coManaged.provisioning.invitationExpired' : item.invitationSent

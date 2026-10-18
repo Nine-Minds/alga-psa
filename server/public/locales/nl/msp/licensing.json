@@ -458,7 +458,13 @@
       "resize": "Plaatstoewijzing wijzigen",
       "saveAllocation": "Toewijzing opslaan",
       "resizeDescription": "Verplaats plaatsen tussen deze klant en de gezamenlijk beheerde pool die u hebt gekocht. Actieve technici en openstaande uitnodigingen moeten binnen de toewijzing passen. Er is minimaal één plaats vereist.",
-      "resizeError": "De toewijzing kan niet worden gewijzigd. Vernieuw en controleer de beschikbare plaatsen, actieve technici en openstaande uitnodigingen voordat u het opnieuw probeert."
+      "resizeError": "De toewijzing kan niet worden gewijzigd. Vernieuw en controleer de beschikbare plaatsen, actieve technici en openstaande uitnodigingen voordat u het opnieuw probeert.",
+      "capacityUnavailable": "Er zijn onvoldoende medebeheerde plaatsen beschikbaar of de capaciteit is nog niet geverifieerd. Vernieuw de pool en voeg capaciteit toe voordat u het opnieuw probeert.",
+      "ineligible": "Een actieve Pro-licentie en geverifieerde medebeheercapaciteit zijn vereist om een werkruimte te maken.",
+      "operationConflict": "Dit configuratieverzoek is al met andere gegevens verzonden. Vernieuw de lijst met werkruimten voordat u opnieuw begint.",
+      "destinationUnavailable": "Het geselecteerde escalatiebord is niet meer beschikbaar. Selecteer een actief bord en probeer het opnieuw.",
+      "clientUnavailable": "Deze klant is niet meer beschikbaar. Vernieuw de klantenlijst.",
+      "invalidRequest": "Voer een werkruimtenaam, beheerdersgegevens, een escalatiebord en minstens één technicusplaats in."
     },
     "policy": {
       "title": "Toegang voor gezamenlijk beheer",
@@ -490,7 +496,8 @@
         "project": "Projecten",
         "user": "Medewerkers",
         "team": "Teams"
-      }
+      },
+      "ticketAccess": "Tickettoegang"
     },
     "section": {
       "title": "Gezamenlijk beheer",
@@ -967,7 +974,9 @@
       "workHint": "Klantprojecten en gedeelde taakwachtrijen blijven in de MSP-shell met hun gekwalificeerde identiteiten.",
       "workspace": "Klantwerkruimte",
       "sharedTickets": "Gedeelde tickets",
-      "openCustomerTickets": "Openen in Klanttickets"
+      "openCustomerTickets": "Openen in Klanttickets",
+      "seatsReleased": "Plaatsen vrijgegeven",
+      "viewDetails": "Details bekijken"
     },
     "overview": {
       "clients": "Gezamenlijk beheerde klanten",

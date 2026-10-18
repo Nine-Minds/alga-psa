@@ -397,7 +397,8 @@
       }
     },
     "footer": {
-      "note": "Alle Felder auf dieser Seite sind erforderlich, um fortzufahren."
+      "note": "Alle Felder auf dieser Seite sind erforderlich, um fortzufahren.",
+      "coManagedNote": "Name, E-Mail, Organisation, Adresszeile 1, Ort und Land sind erforderlich. Adresszeile 2, Bundesland und Postleitzahl sind optional."
     }
   },
   "teamMembersStep": {
@@ -412,7 +413,8 @@
       "summary": {
         "noLimit": "Benutzer: {{count}} (kein Limit)",
         "limited": "Benutzer: {{current}}/{{limit}}"
-      }
+      },
+      "coManagedLimitReached": "Technikerplatzlimit erreicht ({{current}}/{{limit}}). Bitten Sie Ihren MSP, weitere Plätze zuzuweisen."
     },
     "errors": {
       "requiredFields": "Bitte füllen Sie alle Pflichtfelder einschließlich des Passworts aus",
@@ -494,7 +496,8 @@
     },
     "limitReached": {
       "title": "Benutzerlimit erreicht",
-      "description": "Sie haben die maximale Anzahl von Benutzern für Ihren aktuellen Plan erreicht. Kontaktieren Sie den Support, um Ihr Limit zu erhöhen."
+      "description": "Sie haben die maximale Anzahl von Benutzern für Ihren aktuellen Plan erreicht. Kontaktieren Sie den Support, um Ihr Limit zu erhöhen.",
+      "coManagedDescription": "Dieser Arbeitsbereich nutzt alle zugewiesenen Technikerplätze. Bitten Sie Ihren MSP, weitere Plätze zuzuweisen."
     },
     "optional": {
       "label": "Optional:",

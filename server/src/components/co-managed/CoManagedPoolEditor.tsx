@@ -20,15 +20,15 @@ const GHOST_ACTION = 'inline-flex items-center gap-0.5 text-xs font-semibold tex
  * reductions and pending-operation recovery, and keeps financial confirmation
  * explicit. Self-host capacity changes route to License Management instead.
  */
-export default function CoManagedPoolEditor({ showTotals = false, className }: { showTotals?: boolean; className?: string }) {
+export default function CoManagedPoolEditor({ showTotals = false, className, refreshVersion = 0, onChanged }: { showTotals?: boolean; className?: string; refreshVersion?: number; onChanged?: () => Promise<void> }) {
   const { t } = useTranslation('msp/licensing');
   const { formatCurrency, formatDate } = useFormatters();
   const { state, quantity, setQuantity, preview, setPreview, checkout, setCheckout, busy, error, setError, reload, review, purchase } =
     useCoManagedPurchaseController();
 
   useEffect(() => {
-    void reload().catch((err) => setError(err instanceof Error ? err.message : t('coManaged.loadError')));
-  }, [reload, setError, t]);
+    void reload().catch(() => setError(t('coManaged.loadError')));
+  }, [reload, setError, t, refreshVersion]);
 
   const message = error === 'expired' ? t('coManaged.checkoutExpired', { defaultValue: 'The checkout session expired. Review the purchase again.' })
     : error === 'checkoutUnavailable' ? t('coManaged.checkoutUnavailable', { defaultValue: 'Embedded checkout is unavailable. Retry after the payment setup is repaired.' })
@@ -36,6 +36,13 @@ export default function CoManagedPoolEditor({ showTotals = false, className }: {
         : error === 'purchase' ? t('coManaged.purchaseError', { defaultValue: 'The purchase could not be completed. Recover the same operation.' })
           : error;
   const reason = state?.purchase?.reason;
+  const confirmPurchase = async (nextQuantity?: number) => {
+    const outcome = await purchase(nextQuantity);
+    if (outcome === 'updated') {
+      await reload();
+      await onChanged?.();
+    }
+  };
 
   return (
     <>
@@ -73,7 +80,7 @@ export default function CoManagedPoolEditor({ showTotals = false, className }: {
             {!state.isPro && <p>{t('coManaged.proRequired')}</p>}
             {!state.selfHosted && (state.purchase?.canResume ? <div className="flex flex-wrap items-center gap-3">
               <p className="text-sm text-muted-foreground">{t('coManaged.pendingCapacity', { defaultValue: 'A purchase of {{quantity}} seats is pending.', quantity: state.purchase.pending?.quantity ?? quantity })}</p>
-              <Button id="co-managed-resume-purchase" disabled={busy} onClick={() => void purchase(state.purchase?.pending?.quantity)}>
+              <Button id="co-managed-resume-purchase" disabled={busy} onClick={() => void confirmPurchase(state.purchase?.pending?.quantity)}>
                 {t('coManaged.resumePurchase')}
               </Button>
             </div> : state.purchase?.canPurchase ? <div className="space-y-2">
@@ -92,11 +99,11 @@ export default function CoManagedPoolEditor({ showTotals = false, className }: {
         {preview && <div className="space-y-4">
           <p>{t('coManaged.monthlyTotal', { count: preview.quantity, amount: formatCurrency(preview.monthlyTotal / 100, preview.currency) })}</p>
           <p>{t('coManaged.dueNow', { amount: formatCurrency(preview.amountDue / 100, preview.currency) })}</p>
-          <Button id="co-managed-confirm-purchase" disabled={busy} onClick={() => void purchase()}>{t('coManaged.confirmPurchase')}</Button>
+          <Button id="co-managed-confirm-purchase" disabled={busy} onClick={() => void confirmPurchase()}>{t('coManaged.confirmPurchase')}</Button>
         </div>}
       </Dialog>
       <Dialog id="co-managed-checkout" isOpen={checkout !== null} onClose={() => setCheckout(null)} title={t('coManaged.checkoutTitle')}>
-        {checkout && <CoManagedCheckout {...checkout} onComplete={() => { setCheckout(null); void purchase(); }} />}
+        {checkout && <CoManagedCheckout {...checkout} onComplete={() => { setCheckout(null); void confirmPurchase(); }} />}
       </Dialog>
     </>
   );

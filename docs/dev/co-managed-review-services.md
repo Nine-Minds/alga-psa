@@ -335,3 +335,19 @@ curl -s -o /dev/null -w '%{http_code}\n' http://100.82.172.57:3374/auth/msp/sign
 
 Skipping the restart validates stale code; an earlier round got false 200s
 exactly that way.
+
+## Production review URLs and local Stripe simulation
+
+The production review app uses `http://feature-co-managed-it.localhost:23374`.
+Set `NEXT_PUBLIC_BASE_URL`, `NEXTAUTH_URL`, and `APPLICATION_URL` in the Temporal
+worker's local `.env` to that origin too. Provisioning invitations are rendered
+by that worker; changing only the app URL leaves invitation links pointing at
+the development port. Restart the worker after changing its environment.
+
+For a production review build backed by the local Stripe simulator, set
+`ALGA_STRIPE_LOCAL_REVIEW=true` alongside `STRIPE_API_BASE_URL` in the app's
+local environment. This opt-in accepts only a loopback endpoint and an
+`sk_test_` key. Without it, production retains the real Stripe endpoint.
+Rebuild/restart the review app after source changes. The simulator's embedded
+checkout completion still uses the existing simulator control flow; this does
+not enable real payments with a simulator key.

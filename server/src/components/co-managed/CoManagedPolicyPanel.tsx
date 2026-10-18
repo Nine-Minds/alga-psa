@@ -144,7 +144,7 @@ export default function CoManagedPolicyPanel({ operationId }: { operationId?: st
         {!state.canExpand && <p role="status">{t('coManaged.policy.readOnly')}</p>}
         {state.side === 'customer' ? <>
           <Link href="/msp/co-management/ticket-access" className="text-primary underline">{t('coManaged.grants.title')}</Link>
-          <CustomSelect id="co-policy-visibility" label={t('coManaged.provisioning.visibility')} value={scope.visibilityMode} disabled={disabled}
+          <CustomSelect id="co-policy-visibility" label={t('coManaged.policy.ticketAccess', { defaultValue: 'Ticket access' })} value={scope.visibilityMode} disabled={disabled}
             options={[...(state.canExpand || scope.visibilityMode === 'board_scope' ? [{ value: 'board_scope', label: t('coManaged.provisioning.board_scope') }] : []),
               { value: 'escalation_only', label: t('coManaged.provisioning.escalation_only') }]}
             onValueChange={mode => setScope(current => ({ ...current, visibilityMode: mode as CoManagedCustomerScope['visibilityMode'], boards: mode === 'escalation_only' ? [] : current.boards }))} />

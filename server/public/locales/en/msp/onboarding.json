@@ -397,7 +397,8 @@
       }
     },
     "footer": {
-      "note": "All fields on this page are required to proceed."
+      "note": "All fields on this page are required to proceed.",
+      "coManagedNote": "Name, email, organization, address line 1, city, and country are required. Address line 2, state/province, and postal code are optional."
     }
   },
   "teamMembersStep": {
@@ -412,7 +413,8 @@
       "summary": {
         "noLimit": "Users: {{count}} (No limit)",
         "limited": "Users: {{current}}/{{limit}}"
-      }
+      },
+      "coManagedLimitReached": "Technician seat limit reached ({{current}}/{{limit}}). Ask your MSP to allocate more seats."
     },
     "errors": {
       "requiredFields": "Please fill in all required fields including password",
@@ -494,7 +496,8 @@
     },
     "limitReached": {
       "title": "User limit reached",
-      "description": "You've reached the maximum number of users for your current plan. Contact support to increase your limit."
+      "description": "You've reached the maximum number of users for your current plan. Contact support to increase your limit.",
+      "coManagedDescription": "This workspace has used all of its allocated technician seats. Ask your MSP to allocate more seats."
     },
     "optional": {
       "label": "Optional:",

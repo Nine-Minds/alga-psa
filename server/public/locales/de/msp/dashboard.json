@@ -4,7 +4,9 @@
     "titleBranded": "Willkommen in der Kommandozentrale von {{companyName}}",
     "description": "Verfolgen Sie den Onboarding-Fortschritt, konfigurieren Sie kritische Services und sorgen Sie für ein konsistentes Kundenerlebnis.",
     "titleCommunity": "Willkommen zurück",
-    "descriptionCommunity": "Springen Sie von Ihrem Dashboard direkt zu Tickets, Planung, Projekten und Berichten."
+    "descriptionCommunity": "Springen Sie von Ihrem Dashboard direkt zu Tickets, Planung, Projekten und Berichten.",
+    "coManagedTitle": "Willkommen in Ihrem IT-Arbeitsbereich",
+    "coManagedDescription": "Verwalten Sie die Tickets, Projekte und das IT-Team Ihrer Organisation."
   },
   "algadesk": {
     "welcome": {

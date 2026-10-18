@@ -28,6 +28,15 @@ describe('cross-client overview table', () => {
     expect(mocks.load).toHaveBeenCalledWith({ search: '', page: 1, pageSize: 20 });
   });
 
+  it('shows a cancelled workspace as released history rather than allocated seats or live access', async () => {
+    mocks.load.mockResolvedValue(page({ rows: [{ ...page().rows[0], state: 'cancelled', ended: true, usedSeats: null, seats: 1 }] }));
+    render(<CoManagedClientOverviewTable />);
+    expect(await screen.findByText('Seats released')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View details' })).toBeInTheDocument();
+    expect(screen.queryByText(/allocated technician seats/)).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Manage' })).toBeNull();
+  });
+
   it('searches and paginates through the authorized query', async () => {
     mocks.load.mockResolvedValue(page({ totalCount: 40 }));
     render(<CoManagedClientOverviewTable />);

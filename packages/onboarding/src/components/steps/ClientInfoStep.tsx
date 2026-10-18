@@ -106,6 +106,7 @@ export function ClientInfoStep({
         </Label>
         <Input
           id="companyAddressLine1"
+          required={productCode === 'co_managed'}
           value={data.companyAddressLine1 || ''}
           onChange={(e) => updateData({ companyAddressLine1: e.target.value })}
           placeholder={t('clientInfoStep.address.fields.addressLine1.placeholder', {
@@ -139,6 +140,7 @@ export function ClientInfoStep({
           </Label>
           <Input
             id="companyCity"
+            required={productCode === 'co_managed'}
             value={data.companyCity || ''}
             onChange={(e) => updateData({ companyCity: e.target.value })}
           />
@@ -682,8 +684,10 @@ export function ClientInfoStep({
               defaultValue: 'Note:'
             })}
           </span>{' '}
-          {t('clientInfoStep.footer.note', {
-            defaultValue: 'All fields on this page are required to proceed.'
+          {t(productCode === 'co_managed' ? 'clientInfoStep.footer.coManagedNote' : 'clientInfoStep.footer.note', {
+            defaultValue: productCode === 'co_managed'
+              ? 'Name, email, organization, address line 1, city, and country are required. Address line 2, state/province, and postal code are optional.'
+              : 'All fields on this page are required to proceed.'
           })}
         </AlertDescription>
       </Alert>

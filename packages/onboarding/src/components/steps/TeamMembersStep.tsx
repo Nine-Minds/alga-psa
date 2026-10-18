@@ -7,7 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, Trash2, Users, AlertCircle, Eye, EyeOff, Mail, KeyRound } from 'lucide-react';
-import type { StepProps } from '@alga-psa/types';
+import type { ProductCode, StepProps } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
@@ -15,7 +15,7 @@ import { getOnboardingLicenseUsage, getAvailableRoles, addSingleTeamMember } fro
 import { sendUserInvitation } from '@alga-psa/users/actions/user-actions/userInvitationActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-export function TeamMembersStep({ data, updateData }: StepProps) {
+export function TeamMembersStep({ data, updateData, productCode = 'psa' }: StepProps & { productCode?: ProductCode }) {
   const { t } = useTranslation('msp/onboarding');
   const [licenseInfo, setLicenseInfo] = useState<{
     limit: number;
@@ -105,8 +105,10 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
 
           let message: string | undefined = undefined;
           if (!canAddMore) {
-            message = t('teamMembersStep.license.limitReached', {
-              defaultValue: 'License limit reached ({{current}}/{{limit}}). Contact support to increase your license limit.',
+            message = t(productCode === 'co_managed' ? 'teamMembersStep.license.coManagedLimitReached' : 'teamMembersStep.license.limitReached', {
+              defaultValue: productCode === 'co_managed'
+                ? 'Technician seat limit reached ({{current}}/{{limit}}). Ask your MSP to allocate more seats.'
+                : 'License limit reached ({{current}}/{{limit}}). Contact support to increase your license limit.',
               current: actualCurrent,
               limit
             });
@@ -636,8 +638,10 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
               })}
             </p>
             <p className="text-xs mt-1">
-              {t('teamMembersStep.limitReached.description', {
-                defaultValue: 'You\'ve reached the maximum number of users for your current plan. Contact support to increase your limit.'
+              {t(productCode === 'co_managed' ? 'teamMembersStep.limitReached.coManagedDescription' : 'teamMembersStep.limitReached.description', {
+                defaultValue: productCode === 'co_managed'
+                  ? 'This workspace has used all of its allocated technician seats. Ask your MSP to allocate more seats.'
+                  : 'You\'ve reached the maximum number of users for your current plan. Contact support to increase your limit.'
               })}
             </p>
           </AlertDescription>

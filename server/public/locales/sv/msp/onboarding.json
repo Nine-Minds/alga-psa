@@ -397,7 +397,8 @@
       }
     },
     "footer": {
-      "note": "Alla fält på den här sidan måste fyllas i för att fortsätta."
+      "note": "Alla fält på den här sidan måste fyllas i för att fortsätta.",
+      "coManagedNote": "Namn, e-post, organisation, adressrad 1, ort och land krävs. Adressrad 2, region och postnummer är valfria."
     }
   },
   "teamMembersStep": {
@@ -412,7 +413,8 @@
       "summary": {
         "noLimit": "Användare: {{count}} (ingen gräns)",
         "limited": "Användare: {{current}}/{{limit}}"
-      }
+      },
+      "coManagedLimitReached": "Gränsen för teknikerplatser har nåtts ({{current}}/{{limit}}). Be din MSP att tilldela fler platser."
     },
     "errors": {
       "requiredFields": "Fyll i alla obligatoriska fält, inklusive lösenord",
@@ -494,7 +496,8 @@
     },
     "limitReached": {
       "title": "Användargränsen har nåtts",
-      "description": "Du har nått det högsta antalet användare för ditt nuvarande abonnemang. Kontakta supporten för att höja gränsen."
+      "description": "Du har nått det högsta antalet användare för ditt nuvarande abonnemang. Kontakta supporten för att höja gränsen.",
+      "coManagedDescription": "Denna arbetsyta använder alla tilldelade teknikerplatser. Be din MSP att tilldela fler platser."
     },
     "optional": {
       "label": "Valfritt:",

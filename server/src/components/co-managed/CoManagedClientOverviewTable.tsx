@@ -33,7 +33,7 @@ const STATE_TONE: Record<string, BentoChipTone> = {
  * record-policy projection as the rows, so the sponsor pool totals are never
  * reconciled by subtracting restricted clients from a visible list.
  */
-export default function CoManagedClientOverviewTable({ className }: { className?: string }) {
+export default function CoManagedClientOverviewTable({ className, refreshVersion = 0 }: { className?: string; refreshVersion?: number }) {
   const { t } = useTranslation('msp/licensing');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -53,7 +53,7 @@ export default function CoManagedClientOverviewTable({ className }: { className?
   useEffect(() => {
     const cancel = reload();
     return cancel;
-  }, [reload]);
+  }, [reload, refreshVersion]);
 
   useEffect(() => {
     const timer = setTimeout(() => setPage(1), 200);
@@ -104,11 +104,13 @@ export default function CoManagedClientOverviewTable({ className }: { className?
                 {row.deliveryFailed && <p className="mt-1 text-muted-foreground">{t('coManaged.provisioning.deliveryFailed')}</p>}
                 {row.cleanupFailed && <p className="mt-1 text-muted-foreground">{t('coManaged.provisioning.cleanupFailed')}</p>}
               </TableCell>
-              <TableCell className="font-medium tabular-nums">{row.usedSeats != null
+              <TableCell className="font-medium tabular-nums">{row.ended || row.state === 'cancelled'
+                ? t('coManaged.client.seatsReleased', { defaultValue: 'Seats released' })
+                : row.usedSeats != null
                 ? t('coManaged.client.seatUsage', { defaultValue: '{{used}} of {{allocated}} technician seats', used: row.usedSeats, allocated: row.seats })
                 : t('coManaged.client.seatAllocation', { defaultValue: '{{allocated}} allocated technician seats', allocated: row.seats })}</TableCell>
               <TableCell><Button id={`co-managed-overview-manage-${row.operationId}`} variant="outline" size="sm" asChild>
-                <Link href={href}>{t('coManaged.policy.manage', { defaultValue: 'Manage' })}</Link>
+                <Link href={href}>{row.state === 'active' && !row.ended ? t('coManaged.policy.manage', { defaultValue: 'Manage' }) : t('coManaged.client.viewDetails', { defaultValue: 'View details' })}</Link>
               </Button></TableCell>
             </TableRow>;
           })}</TableBody>

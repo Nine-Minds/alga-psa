@@ -4,7 +4,9 @@
     "titleBranded": "Benvenuto nel centro di comando di {{companyName}}",
     "description": "Monitora l'avanzamento dell'onboarding, configura i servizi critici e mantieni coerente l'esperienza di ogni cliente.",
     "titleCommunity": "Bentornato",
-    "descriptionCommunity": "Accedi rapidamente a ticket, pianificazione, progetti e report dalla dashboard."
+    "descriptionCommunity": "Accedi rapidamente a ticket, pianificazione, progetti e report dalla dashboard.",
+    "coManagedTitle": "Benvenuto nel tuo spazio IT",
+    "coManagedDescription": "Gestisci i ticket, i progetti e il team IT della tua organizzazione."
   },
   "algadesk": {
     "welcome": {

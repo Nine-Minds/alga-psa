@@ -103,10 +103,14 @@ export default function CoManagedClientSeats({ operationId, clientId, relationsh
       if (current.selfHosted || current.purchase?.canPurchase !== true) { setError(explainShortfall(current)); return; }
       // Absolute pool target: the current purchased pool plus the shortfall.
       const target = current.capacity + shortfall;
-      const quote = await previewCoManagedSeatsAction(target);
-      setReview({ target, baseline: current.capacity, monthlyTotal: quote.monthlyTotal, amountDue: quote.amountDue, currency: quote.currency });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('coManaged.provisioning.resizeError', { defaultValue: 'Could not change the allocation. Refresh and try again.' }));
+      try {
+        const quote = await previewCoManagedSeatsAction(target);
+        setReview({ target, baseline: current.capacity, monthlyTotal: quote.monthlyTotal, amountDue: quote.amountDue, currency: quote.currency });
+      } catch {
+        setError(t('coManaged.previewError', { defaultValue: 'Could not price this change. Refresh and try again.' }));
+      }
+    } catch {
+      setError(t('coManaged.provisioning.resizeError', { defaultValue: 'Could not change the allocation. Refresh and try again.' }));
       await loadBilling();
     } finally { setBusy(false); }
   };
@@ -158,10 +162,10 @@ export default function CoManagedClientSeats({ operationId, clientId, relationsh
       }
       setError(t('coManaged.shortfall.confirming', {
         defaultValue: 'Purchased capacity is being verified. Refresh, then save the allocation again.' }));
-    } catch (err) {
+    } catch {
       // Ambiguous response: keep the frozen operation and quantity; recovery
       // continues on the same operation rather than starting a second charge.
-      setError(err instanceof Error ? err.message : t('coManaged.purchaseError'));
+      setError(t('coManaged.purchaseError'));
       await loadBilling();
     } finally { setBusy(false); }
   };

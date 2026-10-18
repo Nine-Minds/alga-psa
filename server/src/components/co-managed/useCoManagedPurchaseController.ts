@@ -43,8 +43,8 @@ export function useCoManagedPurchaseController() {
       const quote = await previewCoManagedSeatsAction(nextQuantity);
       setPreview({ quantity: nextQuantity, monthlyTotal: quote.monthlyTotal, amountDue: quote.amountDue, currency: quote.currency });
       return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'preview');
+    } catch {
+      setError('preview');
       return false;
     } finally { setBusy(false); }
   }, []);
@@ -74,9 +74,9 @@ export function useCoManagedPurchaseController() {
         return 'expired' as const;
       }
       return 'updated' as const;
-    } catch (err) {
+    } catch {
       // The operation identity stays frozen so a retry recovers the same charge.
-      setError(err instanceof Error ? err.message : 'purchase');
+      setError('purchase');
       await reload().catch(() => undefined);
       return 'ambiguous' as const;
     } finally { setBusy(false); }

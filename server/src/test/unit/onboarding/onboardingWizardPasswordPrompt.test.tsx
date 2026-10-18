@@ -96,16 +96,17 @@ const claimedIdentity: Partial<WizardData> = {
   lastName: 'Gale',
   tenantName: 'Emerald City IT',
   email: 'dorothy@emeraldcity.example',
+  companyAddressLine1: '1 Yellow Brick Road', companyCity: 'Emerald City', companyCountryCode: 'US',
 };
 
 const renderWizard = (
-  options: { requiresPasswordReset?: boolean; productCode?: ProductCode } = {}
+  options: { requiresPasswordReset?: boolean; productCode?: ProductCode; address?: string } = {}
 ) =>
   render(
     <OnboardingWizard
       fullPage
       testMode
-      initialData={claimedIdentity}
+      initialData={{ ...claimedIdentity, ...(options.address !== undefined ? { companyAddressLine1: options.address } : {}) }}
       onComplete={vi.fn()}
       productCode={options.productCode ?? 'co_managed'}
       requiresPasswordReset={options.requiresPasswordReset ?? true}
@@ -123,6 +124,11 @@ describe('OnboardingWizard password prompt', () => {
     renderWizard({ requiresPasswordReset: false });
 
     expect(screen.getByTestId('next-button')).not.toBeDisabled();
+  });
+
+  it.each(['', '   '])('blocks a blank organization address even after the invitation password is set', (address) => {
+    renderWizard({ requiresPasswordReset: false, address });
+    expect(screen.getByTestId('next-button')).toBeDisabled();
   });
 
   it('still blocks an administrator who owes a password reset', () => {

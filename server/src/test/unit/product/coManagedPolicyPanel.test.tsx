@@ -41,25 +41,25 @@ describe('co-managed access editor', () => {
     const result = deferred<{ revision: number }>(); mocks.customer.mockReturnValueOnce(result.promise);
     mount(); await screen.findByText('Our MSP');
     expect(screen.queryByText('coManaged.policy.kinds.user')).toBeNull();
-    fireEvent.change(screen.getByLabelText('coManaged.provisioning.visibility'), { target: { value: 'escalation_only' } });
+    fireEvent.change(screen.getByLabelText('coManaged.policy.ticketAccess'), { target: { value: 'escalation_only' } });
     fireEvent.click(button('save'));
     expect(mocks.customer).toHaveBeenCalledWith({ revision: 2, scope: { visibilityMode: 'escalation_only', boards: [], projects: [] } });
     expect(mocks.sponsor).not.toHaveBeenCalled();
     await act(async () => result.reject(new Error('Lost acknowledgement')));
     expect(await screen.findByRole('alert')).toHaveTextContent('coManaged.policy.saveError');
-    expect(screen.getByLabelText('coManaged.provisioning.visibility')).toBeDisabled();
+    expect(screen.getByLabelText('coManaged.policy.ticketAccess')).toBeDisabled();
     const updated = customerScreen(); updated.policy.revision = 3; mocks.load.mockResolvedValue(updated);
     fireEvent.click(button('retry'));
     await screen.findByText('coManaged.policy.saved');
     expect(mocks.customer.mock.calls[1]).toEqual(mocks.customer.mock.calls[0]);
-    expect(screen.getByLabelText('coManaged.provisioning.visibility')).toBeEnabled();
+    expect(screen.getByLabelText('coManaged.policy.ticketAccess')).toBeEnabled();
   });
 
   it('lets MSPs search home staff while displaying approved customer scope without an editor', async () => {
     mocks.load.mockResolvedValue(sponsorScreen());
     mocks.search.mockImplementation(async ({ kind }: { kind: string }) => ({ options: kind === 'user' ? [{ id: 'staff', name: 'MSP technician' }] : [], hasMore: false }));
     mount('operation-a'); await screen.findByText('Customer A');
-    expect(screen.queryByLabelText('coManaged.provisioning.visibility')).toBeNull();
+    expect(screen.queryByLabelText('coManaged.policy.ticketAccess')).toBeNull();
     expect(document.getElementById('co-policy-board-search')).toBeNull();
     await screen.findByRole('option', { name: 'MSP technician' });
     fireEvent.change(document.getElementById('co-policy-user-select')!, { target: { value: 'staff' } });
@@ -87,9 +87,9 @@ describe('co-managed access editor', () => {
   it('requires reload after a competing revision before editing and submitting the new revision', async () => {
     mocks.customer.mockRejectedValueOnce(new Error('POLICY_CHANGED'));
     mount(); await screen.findByText('Our MSP'); fireEvent.click(button('save'));
-    await screen.findByRole('alert'); expect(screen.getByLabelText('coManaged.provisioning.visibility')).toBeDisabled();
+    await screen.findByRole('alert'); expect(screen.getByLabelText('coManaged.policy.ticketAccess')).toBeDisabled();
     const latest = customerScreen(); latest.policy.revision = 8; latest.policy.boards = []; mocks.load.mockResolvedValue(latest);
-    fireEvent.click(button('reload')); await waitFor(() => expect(screen.getByLabelText('coManaged.provisioning.visibility')).toBeEnabled());
+    fireEvent.click(button('reload')); await waitFor(() => expect(screen.getByLabelText('coManaged.policy.ticketAccess')).toBeEnabled());
     fireEvent.click(button('save')); await screen.findByText('coManaged.policy.saved');
     expect(mocks.customer.mock.calls[1][0]).toEqual({ revision: 8, scope: { visibilityMode: 'board_scope', boards: [], projects: [] } });
   });

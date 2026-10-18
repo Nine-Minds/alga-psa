@@ -399,7 +399,8 @@
       }
     },
     "footer": {
-      "note": "Wszystkie pola na tej stronie są wymagane, aby kontynuować."
+      "note": "Wszystkie pola na tej stronie są wymagane, aby kontynuować.",
+      "coManagedNote": "Imię i nazwisko, e-mail, organizacja, pierwszy wiersz adresu, miasto i kraj są wymagane. Drugi wiersz adresu, województwo i kod pocztowy są opcjonalne."
     }
   },
   "teamMembersStep": {
@@ -414,7 +415,8 @@
       "summary": {
         "noLimit": "Użytkownicy: {{count}} (bez limitu)",
         "limited": "Użytkownicy: {{current}}/{{limit}}"
-      }
+      },
+      "coManagedLimitReached": "Osiągnięto limit miejsc techników ({{current}}/{{limit}}). Poproś swojego MSP o przydzielenie kolejnych miejsc."
     },
     "errors": {
       "requiredFields": "Wypełnij wszystkie wymagane pola, w tym hasło",
@@ -496,7 +498,8 @@
     },
     "limitReached": {
       "title": "Osiągnięto limit użytkowników",
-      "description": "Osiągnąłeś maksymalną liczbę użytkowników dla bieżącego planu. Skontaktuj się z pomocą techniczną, aby zwiększyć limit."
+      "description": "Osiągnąłeś maksymalną liczbę użytkowników dla bieżącego planu. Skontaktuj się z pomocą techniczną, aby zwiększyć limit.",
+      "coManagedDescription": "Ten obszar wykorzystuje wszystkie przydzielone miejsca techników. Poproś swojego MSP o przydzielenie kolejnych miejsc."
     },
     "optional": {
       "label": "Opcjonalne:",

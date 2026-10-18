@@ -397,7 +397,8 @@
       }
     },
     "footer": {
-      "note": "Tous les champs de cette page sont obligatoires pour continuer."
+      "note": "Tous les champs de cette page sont obligatoires pour continuer.",
+      "coManagedNote": "Le nom, l’e-mail, l’organisation, la ligne d’adresse 1, la ville et le pays sont obligatoires. La ligne d’adresse 2, la région et le code postal sont facultatifs."
     }
   },
   "teamMembersStep": {
@@ -412,7 +413,8 @@
       "summary": {
         "noLimit": "Utilisateurs : {{count}} (sans limite)",
         "limited": "Utilisateurs : {{current}}/{{limit}}"
-      }
+      },
+      "coManagedLimitReached": "Limite de places de techniciens atteinte ({{current}}/{{limit}}). Demandez à votre MSP d’attribuer davantage de places."
     },
     "errors": {
       "requiredFields": "Veuillez remplir tous les champs obligatoires, y compris le mot de passe",
@@ -494,7 +496,8 @@
     },
     "limitReached": {
       "title": "Limite d'utilisateurs atteinte",
-      "description": "Vous avez atteint le nombre maximal d'utilisateurs de votre forfait actuel. Contactez le support pour augmenter votre limite."
+      "description": "Vous avez atteint le nombre maximal d'utilisateurs de votre forfait actuel. Contactez le support pour augmenter votre limite.",
+      "coManagedDescription": "Cet espace utilise toutes ses places de techniciens. Demandez à votre MSP d’attribuer davantage de places."
     },
     "optional": {
       "label": "Optionnel :",

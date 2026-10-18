@@ -48,6 +48,7 @@ async function DashboardPage() {
       initialMobileAppCardDismissed={mobileAppCardDismissed}
       selfHost={selfHost}
       welcomeCompanyName={welcomeCompanyName}
+      productCode={productCode === 'co_managed' ? 'co_managed' : 'psa'}
     />
   );
 }

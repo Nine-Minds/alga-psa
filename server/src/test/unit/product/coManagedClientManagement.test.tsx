@@ -91,6 +91,37 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('client-fixed co-managed setup', () => {
+  const fillSetup = async () => {
+    await screen.findByRole('option', { name: 'Escalations' });
+    fireEvent.change(document.getElementById('i-admin-firstName')!, { target: { value: 'Ada' } });
+    fireEvent.change(document.getElementById('i-admin-lastName')!, { target: { value: 'Admin' } });
+    fireEvent.change(document.getElementById('i-admin-email')!, { target: { value: 'ada@example.test' } });
+    fireEvent.change(screen.getByLabelText('Escalation board'), { target: { value: 'board' } });
+  };
+
+  it('blocks a new workspace when the pool is empty, including a direct form submit', async () => {
+    mocks.billing.mockResolvedValue(billingState({ available: 0 }));
+    render(<CoManagedClientSetup clientId="client" clientName="Acme" idPrefix="i" onProvisioned={vi.fn()} />);
+    await fillSetup();
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+    fireEvent.submit(document.querySelector('form')!);
+    expect(mocks.provision).not.toHaveBeenCalled();
+  });
+
+  it('rejects zero or over-capacity allocations and explains an acknowledged server refusal', async () => {
+    mocks.provision.mockResolvedValue({ rejected: true, errorCode: 'CAPACITY_UNAVAILABLE' });
+    render(<CoManagedClientSetup clientId="client" clientName="Acme" idPrefix="i" onProvisioned={vi.fn()} />);
+    await fillSetup();
+    for (const value of ['0', '4']) {
+      fireEvent.change(document.getElementById('i-seats')!, { target: { value } });
+      expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+    }
+    fireEvent.change(document.getElementById('i-seats')!, { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('There are not enough available co-managed seats');
+    expect(screen.getByRole('button', { name: 'Submit' })).not.toBeDisabled();
+  });
+
   it('prefills the client name, fixes the client, and reuses the operation ID when a submission fails', async () => {
     mocks.provision.mockRejectedValueOnce(new Error('Lost acknowledgement'));
     render(<CoManagedClientSetup clientId="client" clientName="Acme" idPrefix="i" onProvisioned={vi.fn()} />);

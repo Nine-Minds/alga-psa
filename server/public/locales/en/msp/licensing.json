@@ -458,7 +458,13 @@
       "resize": "Change seat allocation",
       "saveAllocation": "Save allocation",
       "resizeDescription": "Move seats between this customer and your purchased co-managed pool. Active technicians and pending invitations must fit within the allocation. At least one seat is required.",
-      "resizeError": "Unable to change the allocation. Refresh and check available seats, active technicians, and pending invitations before trying again."
+      "resizeError": "Unable to change the allocation. Refresh and check available seats, active technicians, and pending invitations before trying again.",
+      "capacityUnavailable": "There are not enough available co-managed seats, or the capacity is not currently verified. Refresh the seat pool and add capacity before trying again.",
+      "ineligible": "An active Pro license and verified co-managed capacity are required to create a workspace.",
+      "operationConflict": "This setup request was already submitted with different details. Refresh the workspace list before starting again.",
+      "destinationUnavailable": "The selected escalation board is no longer available. Select an active board and try again.",
+      "clientUnavailable": "This client is no longer available. Refresh the client list.",
+      "invalidRequest": "Enter a workspace name, administrator details, an escalation board, and at least one technician seat."
     },
     "policy": {
       "title": "Co-managed access",
@@ -490,7 +496,8 @@
         "project": "Projects",
         "user": "Staff",
         "team": "Teams"
-      }
+      },
+      "ticketAccess": "Ticket access"
     },
     "section": {
       "title": "Co-managed",
@@ -967,7 +974,9 @@
       "workHint": "Client projects and shared task queues stay in the MSP shell with their qualified identities.",
       "workspace": "Customer workspace",
       "sharedTickets": "Shared tickets",
-      "openCustomerTickets": "Open in Customer Tickets"
+      "openCustomerTickets": "Open in Customer Tickets",
+      "seatsReleased": "Seats released",
+      "viewDetails": "View details"
     },
     "overview": {
       "clients": "Co-managed clients",

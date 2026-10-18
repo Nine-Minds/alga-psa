@@ -460,7 +460,13 @@
       "resize": "Modifier l’attribution des postes",
       "saveAllocation": "Enregistrer l’attribution",
       "resizeDescription": "Déplacez des postes entre ce client et le parc cogéré que vous avez acheté. Les techniciens actifs et les invitations en attente doivent tenir dans l’attribution. Un poste au minimum est requis.",
-      "resizeError": "Impossible de modifier l’attribution. Actualisez et vérifiez les postes disponibles, les techniciens actifs et les invitations en attente avant de réessayer."
+      "resizeError": "Impossible de modifier l’attribution. Actualisez et vérifiez les postes disponibles, les techniciens actifs et les invitations en attente avant de réessayer.",
+      "capacityUnavailable": "Le nombre de places cogérées disponibles est insuffisant ou la capacité n’est pas actuellement vérifiée. Actualisez le pool et ajoutez de la capacité avant de réessayer.",
+      "ineligible": "Une licence Pro active et une capacité cogérée vérifiée sont nécessaires pour créer un espace de travail.",
+      "operationConflict": "Cette demande de configuration a déjà été envoyée avec des informations différentes. Actualisez la liste des espaces avant de recommencer.",
+      "destinationUnavailable": "Le tableau d’escalade sélectionné n’est plus disponible. Sélectionnez un tableau actif et réessayez.",
+      "clientUnavailable": "Ce client n’est plus disponible. Actualisez la liste des clients.",
+      "invalidRequest": "Saisissez un nom d’espace de travail, les coordonnées de l’administrateur, un tableau d’escalade et au moins une place de technicien."
     },
     "policy": {
       "title": "Accès cogéré",
@@ -492,7 +498,8 @@
         "project": "Projets",
         "user": "Personnel",
         "team": "Équipes"
-      }
+      },
+      "ticketAccess": "Accès aux tickets"
     },
     "section": {
       "title": "Cogestion",
@@ -969,7 +976,9 @@
       "workHint": "Les projets clients et les files de tâches partagées restent dans le shell MSP avec leurs identités qualifiées.",
       "workspace": "Espace de travail client",
       "sharedTickets": "Tickets partagés",
-      "openCustomerTickets": "Ouvrir dans Tickets clients"
+      "openCustomerTickets": "Ouvrir dans Tickets clients",
+      "seatsReleased": "Places libérées",
+      "viewDetails": "Voir les détails"
     },
     "overview": {
       "clients": "Clients cogérés",

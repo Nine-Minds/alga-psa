@@ -458,7 +458,13 @@
       "resize": "Platzzuteilung ändern",
       "saveAllocation": "Zuteilung speichern",
       "resizeDescription": "Verschieben Sie Plätze zwischen diesem Kunden und Ihrem gekauften Co-Managed-Pool. Aktive Techniker und offene Einladungen müssen in die Zuteilung passen. Mindestens ein Platz ist erforderlich.",
-      "resizeError": "Die Zuteilung konnte nicht geändert werden. Aktualisieren Sie die Ansicht und prüfen Sie verfügbare Plätze, aktive Techniker und offene Einladungen, bevor Sie es erneut versuchen."
+      "resizeError": "Die Zuteilung konnte nicht geändert werden. Aktualisieren Sie die Ansicht und prüfen Sie verfügbare Plätze, aktive Techniker und offene Einladungen, bevor Sie es erneut versuchen.",
+      "capacityUnavailable": "Es sind nicht genügend Co-Managed-Plätze verfügbar oder die Kapazität ist derzeit nicht bestätigt. Aktualisieren Sie den Platzpool und erhöhen Sie die Kapazität, bevor Sie es erneut versuchen.",
+      "ineligible": "Zum Erstellen eines Arbeitsbereichs sind eine aktive Pro-Lizenz und bestätigte Co-Managed-Kapazität erforderlich.",
+      "operationConflict": "Diese Einrichtungsanfrage wurde bereits mit anderen Angaben gesendet. Aktualisieren Sie die Arbeitsbereichsliste, bevor Sie erneut beginnen.",
+      "destinationUnavailable": "Das ausgewählte Eskalationsboard ist nicht mehr verfügbar. Wählen Sie ein aktives Board und versuchen Sie es erneut.",
+      "clientUnavailable": "Dieser Kunde ist nicht mehr verfügbar. Aktualisieren Sie die Kundenliste.",
+      "invalidRequest": "Geben Sie einen Arbeitsbereichsnamen, Administratordaten, ein Eskalationsboard und mindestens einen Technikerplatz an."
     },
     "policy": {
       "title": "Co-Managed-Zugriff",
@@ -490,7 +496,8 @@
         "project": "Projekte",
         "user": "Mitarbeiter",
         "team": "Teams"
-      }
+      },
+      "ticketAccess": "Ticketzugriff"
     },
     "section": {
       "title": "Co-Managed",
@@ -967,7 +974,9 @@
       "workHint": "Kundenprojekte und gemeinsame Aufgabenwarteschlangen bleiben in der MSP-Shell mit ihren qualifizierten Identitäten.",
       "workspace": "Kundenarbeitsbereich",
       "sharedTickets": "Gemeinsame Tickets",
-      "openCustomerTickets": "In Kundentickets öffnen"
+      "openCustomerTickets": "In Kundentickets öffnen",
+      "seatsReleased": "Plätze freigegeben",
+      "viewDetails": "Details anzeigen"
     },
     "overview": {
       "clients": "Co-Managed-Kunden",

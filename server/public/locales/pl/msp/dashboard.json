@@ -4,7 +4,9 @@
     "titleBranded": "Witamy w centrum dowodzenia {{companyName}}",
     "description": "Śledź postęp onboardingu, konfiguruj kluczowe usługi i dbaj o spójne doświadczenie każdego klienta.",
     "titleCommunity": "Witamy ponownie",
-    "descriptionCommunity": "Przechodź z pulpitu bezpośrednio do zgłoszeń, harmonogramu, projektów i raportów."
+    "descriptionCommunity": "Przechodź z pulpitu bezpośrednio do zgłoszeń, harmonogramu, projektów i raportów.",
+    "coManagedTitle": "Witamy w Twoim obszarze IT",
+    "coManagedDescription": "Zarządzaj zgłoszeniami, projektami i zespołem IT swojej organizacji."
   },
   "algadesk": {
     "welcome": {

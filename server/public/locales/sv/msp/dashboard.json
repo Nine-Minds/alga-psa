@@ -12,7 +12,9 @@
     "titleBranded": "Välkommen till MSP-hubben för {{companyName}}",
     "description": "Följ hur onboardingen går, konfigurera kritiska tjänster och ge alla kunder en enhetlig upplevelse.",
     "titleCommunity": "Välkommen tillbaka",
-    "descriptionCommunity": "Gå direkt till ärenden, schemaläggning, projekt och rapportering från din översikt."
+    "descriptionCommunity": "Gå direkt till ärenden, schemaläggning, projekt och rapportering från din översikt.",
+    "coManagedTitle": "Välkommen till din IT-arbetsyta",
+    "coManagedDescription": "Hantera organisationens ärenden, projekt och IT-team."
   },
   "algadesk": {
     "welcome": {

@@ -43,6 +43,24 @@ describe('hosted co-managed pool editor', () => {
     await waitFor(() => expect(mocks.purchase).toHaveBeenCalledWith({ quantity: 6, operationId: expect.any(String) }));
   });
 
+  it('shows its own pricing error instead of a rejected server-action message', async () => {
+    mocks.preview.mockRejectedValue(new Error('Minified React error #441; secret Stripe diagnostic'));
+    render(<CoManagedPoolEditor />);
+    await screen.findByLabelText('coManaged.quantity');
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.reviewPurchase' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not price this change. Refresh and try again.');
+    expect(screen.queryByText(/441|Stripe diagnostic/)).toBeNull();
+  });
+
+  it('refreshes seat totals when workspace state changes', async () => {
+    const { rerender } = render(<CoManagedPoolEditor showTotals refreshVersion={0} />);
+    await screen.findByLabelText('coManaged.quantity');
+    mocks.state.mockResolvedValue(billing({ allocated: 0, available: 4 }));
+    rerender(<CoManagedPoolEditor showTotals refreshVersion={1} />);
+    await waitFor(() => expect(screen.getByText('0')).toBeInTheDocument());
+    expect(screen.queryByText('2')).toBeNull();
+  });
+
   it('keeps a pending operation when embedded checkout returns no usable key', async () => {
     mocks.purchase.mockResolvedValue({ kind: 'checkout', sessionId: 'cs', clientSecret: 'secret', publishableKey: null });
     render(<CoManagedPoolEditor />);

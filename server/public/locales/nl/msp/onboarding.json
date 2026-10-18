@@ -397,7 +397,8 @@
       }
     },
     "footer": {
-      "note": "Alle velden op deze pagina zijn vereist om door te gaan."
+      "note": "Alle velden op deze pagina zijn vereist om door te gaan.",
+      "coManagedNote": "Naam, e-mail, organisatie, adresregel 1, plaats en land zijn verplicht. Adresregel 2, provincie en postcode zijn optioneel."
     }
   },
   "teamMembersStep": {
@@ -412,7 +413,8 @@
       "summary": {
         "noLimit": "Gebruikers: {{count}} (geen limiet)",
         "limited": "Gebruikers: {{current}}/{{limit}}"
-      }
+      },
+      "coManagedLimitReached": "Limiet voor technicusplaatsen bereikt ({{current}}/{{limit}}). Vraag uw MSP om meer plaatsen toe te wijzen."
     },
     "errors": {
       "requiredFields": "Vul alle verplichte velden in, inclusief wachtwoord",
@@ -494,7 +496,8 @@
     },
     "limitReached": {
       "title": "Gebruikerslimiet bereikt",
-      "description": "U heeft het maximale aantal gebruikers voor uw huidige abonnement bereikt. Neem contact op met support om uw limiet te verhogen."
+      "description": "U heeft het maximale aantal gebruikers voor uw huidige abonnement bereikt. Neem contact op met support om uw limiet te verhogen.",
+      "coManagedDescription": "Deze werkruimte gebruikt alle toegewezen technicusplaatsen. Vraag uw MSP om meer plaatsen toe te wijzen."
     },
     "optional": {
       "label": "Optioneel:",

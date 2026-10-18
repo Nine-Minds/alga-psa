@@ -5,9 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CoManagedPage from '../../../app/msp/co-managed/page';
 
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
-const mocks = vi.hoisted(() => ({ flag: vi.fn(), state: vi.fn(), preview: vi.fn(), purchase: vi.fn() }));
+const mocks = vi.hoisted(() => ({ flag: vi.fn(), state: vi.fn(), preview: vi.fn(), purchase: vi.fn(), status: vi.fn(), overview: vi.fn() }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
-vi.mock('../../../lib/actions/coManagedActions', () => ({ getCoManagedBillingState: mocks.state }));
+vi.mock('../../../lib/actions/coManagedActions', () => ({ getCoManagedBillingState: mocks.state, getCoManagedProvisioningStatus: mocks.status, getCoManagedClientOverviewAction: mocks.overview }));
 vi.mock('@enterprise/lib/actions/coManagedBillingActions', () => ({
   previewCoManagedSeatsAction: mocks.preview, purchaseCoManagedSeatsAction: mocks.purchase,
 }));
@@ -27,6 +27,8 @@ beforeEach(() => {
   vi.resetAllMocks();
   mocks.flag.mockReturnValue({ enabled: true, loading: false, error: null });
   mocks.state.mockResolvedValue(billing);
+  mocks.status.mockResolvedValue({ items: [], hasMore: false, canManage: true, canCreate: true });
+  mocks.overview.mockResolvedValue({ rows: [], totalCount: 0, page: 1, pageSize: 20 });
   mocks.preview.mockResolvedValue({ unitAmount: 1149, monthlyTotal: 6894, amountDue: 1200, currency: 'usd' });
   mocks.purchase.mockResolvedValue({ kind: 'updated', subscriptionId: 'sub_co_managed', publishableKey: null });
 });
@@ -50,6 +52,18 @@ describe('co-managed seat purchase UI', () => {
     expect(mocks.purchase).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'coManaged.confirmPurchase' }));
     await waitFor(() => expect(mocks.purchase).toHaveBeenCalledWith({ quantity: 6, operationId: expect.any(String) }));
+  });
+
+  it('refreshes the seat tile and setup capacity when Refresh workspaces is clicked', async () => {
+    mocks.state.mockResolvedValue({ ...billing, allocated: 4, available: 0, canReadRelationships: true });
+    render(await CoManagedPage({}));
+    await screen.findByRole('button', { name: 'coManaged.provisioning.refresh' });
+    expect(screen.getByRole('button', { name: 'coManaged.provisioning.create' })).toBeDisabled();
+    mocks.state.mockResolvedValue({ ...billing, allocated: 0, available: 4, canReadRelationships: true });
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.refresh' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'coManaged.provisioning.create' })).toBeEnabled());
+    const available = document.querySelector('#co-managed-pool-editor')!;
+    await waitFor(() => expect(available.textContent).toMatch(/4coManaged.available/));
   });
 
   it('resumes the immutable pending operation after a lost response', async () => {

@@ -35,6 +35,7 @@ interface DashboardContainerProps {
    * keeps the stock "Your MSP" title.
    */
   welcomeCompanyName?: string | null;
+  productCode?: 'psa' | 'co_managed';
 }
 
 interface FeatureCardProps {
@@ -153,6 +154,7 @@ const WelcomeDashboard = ({
   initialMobileAppCardDismissed = false,
   selfHost = false,
   welcomeCompanyName = null,
+  productCode = 'psa',
 }: DashboardContainerProps) => {
   const posthog = usePostHog();
   const { t } = useTranslation('msp/dashboard');
@@ -221,7 +223,9 @@ const WelcomeDashboard = ({
     description: t(feature.descriptionKey, { defaultValue: feature.descriptionDefault }),
   }));
 
-  const welcomeTitle = welcomeCompanyName
+  const welcomeTitle = productCode === 'co_managed'
+    ? t('welcome.coManagedTitle', { defaultValue: 'Welcome to Your IT Workspace' })
+    : welcomeCompanyName
     ? t('welcome.titleBranded', {
         defaultValue: 'Welcome to the {{companyName}} Command Center',
         companyName: welcomeCompanyName,
@@ -229,7 +233,9 @@ const WelcomeDashboard = ({
     : t('welcome.title', {
         defaultValue: 'Welcome to Your MSP Command Center',
       });
-  const welcomeDescription = t('welcome.description', {
+  const welcomeDescription = productCode === 'co_managed'
+    ? t('welcome.coManagedDescription', { defaultValue: 'Manage your organization’s tickets, projects, and IT team.' })
+    : t('welcome.description', {
     defaultValue: 'Track onboarding progress, configure critical services, and keep every client experience consistent.',
   });
   const welcomeCommunityTitle = t('welcome.titleCommunity', {
