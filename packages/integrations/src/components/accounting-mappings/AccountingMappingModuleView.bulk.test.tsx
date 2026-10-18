@@ -589,3 +589,70 @@ describe('bulk grid manual-entry opt-in', () => {
     expect(screen.queryByText('Enter the identifier exactly as it appears in your accounting system.')).toBeNull();
   });
 });
+
+describe('AccountingMappingModuleView bulk grid without a provider catalog', () => {
+  // QuickBooks CSV/Desktop and Xero CSV have no catalog to pick from, like the
+  // single-mapping dialog's free-text fallback.
+  const MP = 'qbcsv-service-mappings-bulk';
+  const manualModule = () =>
+    buildModule({
+      id: 'qbcsv-service-mappings',
+      adapterType: 'quickbooks_csv',
+      externalTarget: undefined,
+      labels: {
+        tab: 'Items / Services',
+        addButton: 'Add Service Mapping',
+        algaColumn: 'Alga Service',
+        externalColumn: 'QuickBooks Item',
+        dialog: { addTitle: 'Add', editTitle: 'Edit', algaField: 'Alga Service', externalField: 'QuickBooks Item' },
+        deleteConfirmation: { title: 'Delete', message: () => 'Delete?' }
+      }
+    } as Partial<AccountingMappingModule>);
+
+  beforeAll(() => {
+    if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
+  });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    loadMock.mockResolvedValue({ ...loadResult([]), externalEntities: [] });
+  });
+  afterEach(() => cleanup());
+
+  async function openManualBulk() {
+    render(<AccountingMappingModuleView module={manualModule()} context={{ realmId: null }} />);
+    fireEvent.click(await screen.findByText('Bulk map'));
+    await screen.findByTestId(`${MP}-grid`);
+  }
+
+  it('renders a writable text field per row instead of an empty picker', async () => {
+    await openManualBulk();
+    const input = el(`${MP}-external-svc-host`);
+    expect(input.tagName).toBe('INPUT');
+    expect(input).toHaveAttribute('placeholder', 'Enter QuickBooks Item...');
+    expect(screen.getByText('Enter the identifier exactly as it appears in your accounting system.')).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: 'Web Hosting' } });
+    expect(el(`${MP}-external-svc-host`).value).toBe('Web Hosting');
+    expect(el(`${MP}-select-svc-host`)).toBeChecked();
+    expect(screen.getByTestId(`${MP}-count`)).toHaveTextContent('1 to save');
+  });
+
+  it('saves the typed values, trimmed, and skips blank or ignored rows', async () => {
+    createManyMock.mockImplementation(async (_ctx: unknown, inputs: any[]) =>
+      inputs.map((i) => ({ algaEntityId: i.algaEntityId, ok: true }))
+    );
+    await openManualBulk();
+    fireEvent.change(el(`${MP}-external-svc-host`), { target: { value: '  Web Hosting  ' } });
+    fireEvent.change(el(`${MP}-external-svc-backup`), { target: { value: 'Managed Backup' } });
+    fireEvent.change(el(`${MP}-external-svc-basic`), { target: { value: '   ' } });
+    fireEvent.click(el(`${MP}-ignore-svc-backup`));
+
+    await act(async () => {
+      fireEvent.click(saveAll());
+    });
+    await waitFor(() => expect(createManyMock).toHaveBeenCalledTimes(1));
+    expect(createManyMock.mock.calls[0][1]).toEqual([
+      expect.objectContaining({ algaEntityId: 'svc-host', externalEntityId: 'Web Hosting' })
+    ]);
+  });
+});
