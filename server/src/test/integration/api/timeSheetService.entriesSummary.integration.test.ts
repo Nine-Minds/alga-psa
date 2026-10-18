@@ -64,7 +64,7 @@ async function seed() {
   await tenantTable(tenantId, 'time_sheets').insert({
     tenant: tenantId, id: sheetId, user_id: userId, period_id: periodId, approval_status: 'DRAFT',
   });
-  const entry = (type: string, workDate: string, start: string, end: string, billable: number, notes: string | null) =>
+  const entry = (type: string, workDate: string, start: string | null, end: string, billable: number, notes: string | null) =>
     tenantTable(tenantId, 'time_entries').insert({
       tenant: tenantId,
       entry_id: uuidv4(),
@@ -85,6 +85,9 @@ async function seed() {
   await entry('interaction', '2026-10-12', '2026-10-12T15:00:00Z', '2026-10-12T17:00:00Z', 120, 'client call');
   // 105 min ad_hoc, partially billable 45 (Tue)
   await entry('ad_hoc', '2026-10-13', '2026-10-13T13:00:00Z', '2026-10-13T14:45:00Z', 45, 'mixed');
+  // NULL start_time with a billable_duration: worked time is 0, so the summary clamps its
+  // billable minutes to 0 (billable must never exceed worked)
+  await entry('ad_hoc', '2026-10-13', null, '2026-10-13T16:00:00Z', 30, 'no start');
   return { tenantId, userId, sheetId };
 }
 
@@ -112,11 +115,11 @@ describe('TimeSheetService entries + summary (real Postgres)', () => {
     const f = await seed();
     const ctx = { tenant: f.tenantId, userId: f.userId } as any;
     const rows = JSON.parse(JSON.stringify(await serviceFor(f.tenantId).getTimeSheetEntries(f.sheetId, ctx)));
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(4);
     for (const row of rows) {
       expect(() => timeSheetEntryRowSchema.strict().parse(row)).not.toThrow();
     }
-    expect(rows.map((r: any) => r.work_date)).toEqual(['2026-10-12', '2026-10-12', '2026-10-13']);
+    expect(rows.map((r: any) => r.work_date)).toEqual(['2026-10-12', '2026-10-12', '2026-10-13', '2026-10-13']);
   });
 
   it('search include_entries=true returns time_entries rows that strict-parse', async () => {
@@ -127,7 +130,7 @@ describe('TimeSheetService entries + summary (real Postgres)', () => {
     ));
     expect(rows).toHaveLength(1);
     expect(() => timeSheetSearchRowSchema.strict().parse(rows[0])).not.toThrow();
-    expect(rows[0].time_entries).toHaveLength(3);
+    expect(rows[0].time_entries).toHaveLength(4);
     for (const entry of rows[0].time_entries) {
       expect(() => timeSheetEntryRowSchema.strict().parse(entry)).not.toThrow();
     }
@@ -138,11 +141,12 @@ describe('TimeSheetService entries + summary (real Postgres)', () => {
     const ctx = { tenant: f.tenantId, userId: f.userId } as any;
     const summary = await serviceFor(f.tenantId).getTimeSheetSummary(f.sheetId, ctx);
     expect(() => timeSheetSummaryResponseSchema.strict().parse(summary)).not.toThrow();
-    // worked 60 + 120 + 105 = 285 min; billable 0 + 120 + 45 = 165 min
+    // worked 60 + 120 + 105 + 0 (NULL start) = 285 min; billable 0 + 120 + 45 + LEAST(30, 0) = 165 min
     expect(summary.total_hours).toBeCloseTo(4.75, 6);
     expect(summary.billable_hours).toBeCloseTo(2.75, 6);
     expect(summary.non_billable_hours).toBeCloseTo(2.0, 6);
     expect(summary.non_billable_hours).toBeGreaterThan(0);
+    expect(summary.billable_hours).toBeLessThanOrEqual(summary.total_hours);
     expect(Object.keys(summary.entries_by_type).sort()).toEqual(['ad_hoc', 'interaction']);
     expect(summary.entries_by_type.ad_hoc).toBeCloseTo(2.75, 6);
     expect(summary.entries_by_type.interaction).toBeCloseTo(2, 6);

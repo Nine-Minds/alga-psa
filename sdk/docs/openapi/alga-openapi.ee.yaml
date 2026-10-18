@@ -251,6 +251,7 @@ components:
             - trialing
             - past_due
             - unpaid
+            - null
           description: Billing subscription status copied into the session token.
         solo_pro_trial_end:
           type:
@@ -5905,6 +5906,7 @@ components:
                   - home
                   - fax
                   - other
+                  - null
               custom_type:
                 type:
                   - string
@@ -5956,6 +5958,7 @@ components:
             - personal
             - billing
             - other
+            - null
         primary_email_custom_type:
           type:
             - string
@@ -5987,6 +5990,7 @@ components:
                   - personal
                   - billing
                   - other
+                  - null
               custom_type:
                 type:
                   - string
@@ -6077,6 +6081,7 @@ components:
                   - home
                   - fax
                   - other
+                  - null
               custom_type:
                 type:
                   - string
@@ -6128,6 +6133,7 @@ components:
             - personal
             - billing
             - other
+            - null
         primary_email_custom_type:
           type:
             - string
@@ -6159,6 +6165,7 @@ components:
                   - personal
                   - billing
                   - other
+                  - null
               custom_type:
                 type:
                   - string
@@ -6667,6 +6674,7 @@ components:
               enum:
                 - company
                 - individual
+                - null
             tax_id_number:
               type:
                 - string
@@ -6878,6 +6886,7 @@ components:
                 enum:
                   - company
                   - individual
+                  - null
               tax_id_number:
                 type:
                   - string
@@ -12790,6 +12799,7 @@ components:
           enum:
             - custom
             - itil
+            - null
         priority_type:
           type:
             - string
@@ -12797,6 +12807,7 @@ components:
           enum:
             - custom
             - itil
+            - null
         display_itil_impact:
           type:
             - boolean
@@ -15614,6 +15625,7 @@ components:
           enum:
             - awaiting_client
             - awaiting_internal
+            - null
           description: Current response state of the ticket. On
             ticket.response_state_changed it equals new_response_state.
         previous_status_id:
@@ -15634,6 +15646,7 @@ components:
           enum:
             - awaiting_client
             - awaiting_internal
+            - null
           description: Only populated on ticket.response_state_changed. null when there
             was no prior state.
         new_response_state:
@@ -15643,6 +15656,7 @@ components:
           enum:
             - awaiting_client
             - awaiting_internal
+            - null
           description: Only populated on ticket.response_state_changed. null when the
             state was cleared (e.g. ticket closed).
         priority_id:
@@ -18386,6 +18400,7 @@ components:
                   - non_billable_category
                   - ad_hoc
                   - interaction
+                  - null
               approval_status:
                 type:
                   - string
@@ -18396,6 +18411,7 @@ components:
                   - APPROVED
                   - REJECTED
                   - CHANGES_REQUESTED
+                  - null
               time_sheet_id:
                 type:
                   - string
@@ -18460,6 +18476,7 @@ components:
                   - unresolved
                   - reconciled_at_generation
                   - auto_billing_profile
+                  - null
               contract_line_unresolved_reason:
                 type:
                   - string
@@ -18468,6 +18485,7 @@ components:
                   - ambiguous
                   - no_match
                   - error
+                  - null
               catalog_pricing_acknowledged_at:
                 type:
                   - string
@@ -18665,6 +18683,7 @@ components:
                         - non_billable_category
                         - ad_hoc
                         - interaction
+                        - null
                     approval_status:
                       type:
                         - string
@@ -18675,6 +18694,7 @@ components:
                         - APPROVED
                         - REJECTED
                         - CHANGES_REQUESTED
+                        - null
                     time_sheet_id:
                       type:
                         - string
@@ -18739,6 +18759,7 @@ components:
                         - unresolved
                         - reconciled_at_generation
                         - auto_billing_profile
+                        - null
                     contract_line_unresolved_reason:
                       type:
                         - string
@@ -18747,6 +18768,7 @@ components:
                         - ambiguous
                         - no_match
                         - error
+                        - null
                     catalog_pricing_acknowledged_at:
                       type:
                         - string
@@ -19788,6 +19810,7 @@ components:
             - whitespace
             - asset_aging
             - inbound-lead
+            - null
         generator_context:
           type:
             - object
@@ -19868,6 +19891,7 @@ components:
             - whitespace
             - asset_aging
             - inbound-lead
+            - null
         generator_context:
           type:
             - object
@@ -20006,6 +20030,7 @@ components:
             - proposed
             - verbal
             - won
+            - null
     DeclaredOpportunityEvidenceBodyV1:
       type: object
       properties:

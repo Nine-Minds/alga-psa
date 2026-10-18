@@ -1388,14 +1388,19 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       // worked_minutes is the real duration (end - start); billable_duration is the billed
-      // subset in minutes, so non-billable hours are the difference.
+      // subset in minutes, so non-billable hours are the difference. Billable minutes are
+      // clamped to the entry's worked minutes (an entry with NULL start_time/end_time has 0
+      // worked minutes but may still carry a billable_duration), so billable <= total and
+      // non-billable >= 0 always hold.
       const rows = await tenantDb(knex, context.tenant).table('time_entries')
         .where({ time_sheet_id: timeSheetId })
         .select([
           knex.raw("COALESCE(work_item_type, 'unknown') as work_item_type"),
           knex.raw("to_char(work_date, 'YYYY-MM-DD') as work_date"),
           knex.raw('COALESCE(EXTRACT(EPOCH FROM (end_time - start_time)) / 60.0, 0) as worked_minutes'),
-          knex.raw('COALESCE(billable_duration, 0) as billable_minutes')
+          knex.raw(
+            'LEAST(COALESCE(billable_duration, 0), COALESCE(EXTRACT(EPOCH FROM (end_time - start_time)) / 60.0, 0)) as billable_minutes'
+          )
         ]) as any[];
 
       let workedMinutes = 0;

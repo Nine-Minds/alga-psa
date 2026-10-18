@@ -498,7 +498,8 @@
               "active",
               "trialing",
               "past_due",
-              "unpaid"
+              "unpaid",
+              null
             ],
             "description": "Billing subscription status copied into the session token."
           },
@@ -8182,7 +8183,8 @@
                     "mobile",
                     "home",
                     "fax",
-                    "other"
+                    "other",
+                    null
                   ]
                 },
                 "custom_type": {
@@ -8260,7 +8262,8 @@
               "work",
               "personal",
               "billing",
-              "other"
+              "other",
+              null
             ]
           },
           "primary_email_custom_type": {
@@ -8300,7 +8303,8 @@
                     "work",
                     "personal",
                     "billing",
-                    "other"
+                    "other",
+                    null
                   ]
                 },
                 "custom_type": {
@@ -8431,7 +8435,8 @@
                     "mobile",
                     "home",
                     "fax",
-                    "other"
+                    "other",
+                    null
                   ]
                 },
                 "custom_type": {
@@ -8509,7 +8514,8 @@
               "work",
               "personal",
               "billing",
-              "other"
+              "other",
+              null
             ]
           },
           "primary_email_custom_type": {
@@ -8549,7 +8555,8 @@
                     "work",
                     "personal",
                     "billing",
-                    "other"
+                    "other",
+                    null
                   ]
                 },
                 "custom_type": {
@@ -9271,7 +9278,8 @@
                 ],
                 "enum": [
                   "company",
-                  "individual"
+                  "individual",
+                  null
                 ]
               },
               "tax_id_number": {
@@ -9565,7 +9573,8 @@
                   ],
                   "enum": [
                     "company",
-                    "individual"
+                    "individual",
+                    null
                   ]
                 },
                 "tax_id_number": {
@@ -17798,7 +17807,8 @@
             ],
             "enum": [
               "custom",
-              "itil"
+              "itil",
+              null
             ]
           },
           "priority_type": {
@@ -17808,7 +17818,8 @@
             ],
             "enum": [
               "custom",
-              "itil"
+              "itil",
+              null
             ]
           },
           "display_itil_impact": {
@@ -21591,7 +21602,8 @@
             ],
             "enum": [
               "awaiting_client",
-              "awaiting_internal"
+              "awaiting_internal",
+              null
             ],
             "description": "Current response state of the ticket. On ticket.response_state_changed it equals new_response_state."
           },
@@ -21617,7 +21629,8 @@
             ],
             "enum": [
               "awaiting_client",
-              "awaiting_internal"
+              "awaiting_internal",
+              null
             ],
             "description": "Only populated on ticket.response_state_changed. null when there was no prior state."
           },
@@ -21628,7 +21641,8 @@
             ],
             "enum": [
               "awaiting_client",
-              "awaiting_internal"
+              "awaiting_internal",
+              null
             ],
             "description": "Only populated on ticket.response_state_changed. null when the state was cleared (e.g. ticket closed)."
           },
@@ -25358,7 +25372,8 @@
                     "project_task",
                     "non_billable_category",
                     "ad_hoc",
-                    "interaction"
+                    "interaction",
+                    null
                   ]
                 },
                 "approval_status": {
@@ -25371,7 +25386,8 @@
                     "SUBMITTED",
                     "APPROVED",
                     "REJECTED",
-                    "CHANGES_REQUESTED"
+                    "CHANGES_REQUESTED",
+                    null
                   ]
                 },
                 "time_sheet_id": {
@@ -25460,7 +25476,8 @@
                     "auto_bucket_overlay",
                     "unresolved",
                     "reconciled_at_generation",
-                    "auto_billing_profile"
+                    "auto_billing_profile",
+                    null
                   ]
                 },
                 "contract_line_unresolved_reason": {
@@ -25471,7 +25488,8 @@
                   "enum": [
                     "ambiguous",
                     "no_match",
-                    "error"
+                    "error",
+                    null
                   ]
                 },
                 "catalog_pricing_acknowledged_at": {
@@ -25732,7 +25750,8 @@
                           "project_task",
                           "non_billable_category",
                           "ad_hoc",
-                          "interaction"
+                          "interaction",
+                          null
                         ]
                       },
                       "approval_status": {
@@ -25745,7 +25764,8 @@
                           "SUBMITTED",
                           "APPROVED",
                           "REJECTED",
-                          "CHANGES_REQUESTED"
+                          "CHANGES_REQUESTED",
+                          null
                         ]
                       },
                       "time_sheet_id": {
@@ -25834,7 +25854,8 @@
                           "auto_bucket_overlay",
                           "unresolved",
                           "reconciled_at_generation",
-                          "auto_billing_profile"
+                          "auto_billing_profile",
+                          null
                         ]
                       },
                       "contract_line_unresolved_reason": {
@@ -25845,7 +25866,8 @@
                         "enum": [
                           "ambiguous",
                           "no_match",
-                          "error"
+                          "error",
+                          null
                         ]
                       },
                       "catalog_pricing_acknowledged_at": {
@@ -27293,7 +27315,8 @@
               "tm_conversion",
               "whitespace",
               "asset_aging",
-              "inbound-lead"
+              "inbound-lead",
+              null
             ]
           },
           "generator_context": {
@@ -27398,7 +27421,8 @@
               "tm_conversion",
               "whitespace",
               "asset_aging",
-              "inbound-lead"
+              "inbound-lead",
+              null
             ]
           },
           "generator_context": {
@@ -27587,7 +27611,8 @@
               "assessment",
               "proposed",
               "verbal",
-              "won"
+              "won",
+              null
             ]
           }
         }

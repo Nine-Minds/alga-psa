@@ -11003,7 +11003,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 ],
                 "enum": [
                   "company",
-                  "individual"
+                  "individual",
+                  null
                 ]
               },
               "tax_id_number": {
@@ -11487,7 +11488,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               ],
               "enum": [
                 "company",
-                "individual"
+                "individual",
+                null
               ]
             },
             "tax_id_number": {
@@ -11802,7 +11804,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               ],
               "enum": [
                 "company",
-                "individual"
+                "individual",
+                null
               ]
             },
             "tax_id_number": {
@@ -12241,7 +12244,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               ],
               "enum": [
                 "company",
-                "individual"
+                "individual",
+                null
               ]
             },
             "tax_id_number": {
@@ -14049,7 +14053,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "mobile",
                   "home",
                   "fax",
-                  "other"
+                  "other",
+                  null
                 ]
               },
               "custom_type": {
@@ -14127,7 +14132,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "work",
             "personal",
             "billing",
-            "other"
+            "other",
+            null
           ]
         },
         "primary_email_custom_type": {
@@ -14167,7 +14173,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "work",
                   "personal",
                   "billing",
-                  "other"
+                  "other",
+                  null
                 ]
               },
               "custom_type": {
@@ -14374,7 +14381,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "mobile",
                   "home",
                   "fax",
-                  "other"
+                  "other",
+                  null
                 ]
               },
               "custom_type": {
@@ -14452,7 +14460,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "work",
             "personal",
             "billing",
-            "other"
+            "other",
+            null
           ]
         },
         "primary_email_custom_type": {
@@ -14492,7 +14501,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "work",
                   "personal",
                   "billing",
-                  "other"
+                  "other",
+                  null
                 ]
               },
               "custom_type": {
@@ -51839,7 +51849,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "project_task",
                         "non_billable_category",
                         "ad_hoc",
-                        "interaction"
+                        "interaction",
+                        null
                       ]
                     },
                     "approval_status": {
@@ -51852,7 +51863,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "SUBMITTED",
                         "APPROVED",
                         "REJECTED",
-                        "CHANGES_REQUESTED"
+                        "CHANGES_REQUESTED",
+                        null
                       ]
                     },
                     "time_sheet_id": {
@@ -51941,7 +51953,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "auto_bucket_overlay",
                         "unresolved",
                         "reconciled_at_generation",
-                        "auto_billing_profile"
+                        "auto_billing_profile",
+                        null
                       ]
                     },
                     "contract_line_unresolved_reason": {
@@ -51952,7 +51965,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "enum": [
                         "ambiguous",
                         "no_match",
-                        "error"
+                        "error",
+                        null
                       ]
                     },
                     "catalog_pricing_acknowledged_at": {
@@ -52384,7 +52398,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "project_task",
                   "non_billable_category",
                   "ad_hoc",
-                  "interaction"
+                  "interaction",
+                  null
                 ]
               },
               "approval_status": {
@@ -52397,7 +52412,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "SUBMITTED",
                   "APPROVED",
                   "REJECTED",
-                  "CHANGES_REQUESTED"
+                  "CHANGES_REQUESTED",
+                  null
                 ]
               },
               "time_sheet_id": {
@@ -52486,7 +52502,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "auto_bucket_overlay",
                   "unresolved",
                   "reconciled_at_generation",
-                  "auto_billing_profile"
+                  "auto_billing_profile",
+                  null
                 ]
               },
               "contract_line_unresolved_reason": {
@@ -52497,7 +52514,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "enum": [
                   "ambiguous",
                   "no_match",
-                  "error"
+                  "error",
+                  null
                 ]
               },
               "catalog_pricing_acknowledged_at": {
@@ -57093,7 +57111,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "tm_conversion",
             "whitespace",
             "asset_aging",
-            "inbound-lead"
+            "inbound-lead",
+            null
           ]
         },
         "generator_context": {
@@ -57305,7 +57324,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "tm_conversion",
             "whitespace",
             "asset_aging",
-            "inbound-lead"
+            "inbound-lead",
+            null
           ]
         },
         "generator_context": {
@@ -57477,7 +57497,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "tm_conversion",
             "whitespace",
             "asset_aging",
-            "inbound-lead"
+            "inbound-lead",
+            null
           ]
         },
         "generator_context": {
@@ -57753,7 +57774,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "assessment",
             "proposed",
             "verbal",
-            "won"
+            "won",
+            null
           ]
         }
       }
