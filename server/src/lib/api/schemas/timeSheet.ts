@@ -114,14 +114,15 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
     first_name: z.string(),
     last_name: z.string(),
     email: z.string()
-  }).optional(),
+  }).nullable().optional(),
   
+  // null until the sheet is approved
   approved_by_user: z.object({
     user_id: uuidSchema,
     first_name: z.string(),
     last_name: z.string(),
     email: z.string()
-  }).optional(),
+  }).nullable().optional(),
   
   time_period: z.object({
     period_id: uuidSchema,

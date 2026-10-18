@@ -704,7 +704,8 @@ export class TimeSheetService extends BaseService<any> {
         kind,
         note: body.note ?? null,
         detail: body.detail ?? null,
-        created_by: context.userId
+        created_by: context.userId,
+        created_at: new Date()
       })
       .returning('*');
     return note;
@@ -723,7 +724,8 @@ export class TimeSheetService extends BaseService<any> {
         'time_sheet_notes.*',
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`)
       )
-      .orderBy('time_sheet_notes.created_at', 'desc');
+      .orderBy('time_sheet_notes.created_at', 'desc')
+      .orderBy('time_sheet_notes.note_id', 'asc');
   }
 
   // Time sheet comments
@@ -1410,14 +1412,12 @@ export class TimeSheetService extends BaseService<any> {
         query.where('time_periods.end_date', '<=', params.date_to);
       }
 
-      const timeEntrySubquery = tenantDb(knex, context.tenant).table('time_entries')
-        .where('time_entries.time_sheet_id', knex.raw(`${tableName}.id`))
-        .select([
-          knex.raw('SUM(billable_duration) / 60.0 as total_hours'),
-          knex.raw('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0 as billable_hours'),
-          knex.raw('COUNT(*) as entry_count')
-        ])
-        .first();
+      // One correlated scalar subquery per aggregate (each selects exactly one column).
+      const entryAggregate = (expression: string) =>
+        tenantDb(knex, context.tenant).table('time_entries')
+          .where('time_entries.time_sheet_id', knex.raw(`${tableName}.id`))
+          .select(knex.raw(expression))
+          .toQuery();
 
       query.select(
           `${tableName}.*`,
@@ -1425,9 +1425,9 @@ export class TimeSheetService extends BaseService<any> {
           knex.raw(`CONCAT(approvers.first_name, ' ', approvers.last_name) as approver_name`),
           'time_periods.start_date as period_start',
           'time_periods.end_date as period_end',
-          knex.raw(`(${timeEntrySubquery.clone().select('total_hours').toQuery()}) as total_hours`),
-          knex.raw(`(${timeEntrySubquery.clone().select('billable_hours').toQuery()}) as billable_hours`),
-          knex.raw(`(${timeEntrySubquery.clone().select('entry_count').toQuery()}) as entry_count`)
+          knex.raw(`(${entryAggregate('SUM(billable_duration) / 60.0')}) as total_hours`),
+          knex.raw(`(${entryAggregate('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0')}) as billable_hours`),
+          knex.raw(`(${entryAggregate('COUNT(*)')}) as entry_count`)
       );
       query.orderBy('time_periods.start_date', 'desc').orderBy(`${tableName}.id`, 'asc');
 
