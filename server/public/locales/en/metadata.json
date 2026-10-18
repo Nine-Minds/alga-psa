@@ -552,6 +552,9 @@
       },
       "templates": {
         "title": "Ticket templates"
+      },
+      "cannedResponses": {
+        "title": "Canned responses"
       }
     },
     "timeEntry": {

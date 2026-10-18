@@ -279,6 +279,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // so items go first. Neither references tickets or clients.
   'ticket_template_checklist_items', 'ticket_templates',
 
+  // Canned ticket responses. Favorites FK to responses (ON DELETE CASCADE), so favorites go first.
+  'canned_response_favorites', 'canned_responses',
+
   // Asset details
   'asset_remote_access_links',
   'asset_maintenance_occurrences',

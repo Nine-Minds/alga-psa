@@ -105,7 +105,8 @@
     "passwords": "Passwörter",
     "ticketsAll": "Alle Tickets",
     "ticketsRecurring": "Wiederkehrende Tickets",
-    "ticketsTemplates": "Ticket-Vorlagen"
+    "ticketsTemplates": "Ticket-Vorlagen",
+    "ticketsCannedResponses": "Textbausteine"
   },
   "sidebar": {
     "backToMain": "Zurück zur Hauptansicht",

@@ -284,6 +284,9 @@
       },
       "templates": {
         "title": "Modelli di ticket"
+      },
+      "cannedResponses": {
+        "title": "Risposte predefinite"
       }
     },
     "timeEntry": {

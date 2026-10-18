@@ -552,6 +552,9 @@
       },
       "templates": {
         "title": "Ärendemallar"
+      },
+      "cannedResponses": {
+        "title": "Färdiga svar"
       }
     },
     "timeEntry": {

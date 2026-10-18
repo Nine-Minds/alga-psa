@@ -28,6 +28,7 @@ import { useDialogSubmitShortcut, usePageCreateShortcut } from '@alga-psa/ui/key
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import type { IAggregatedReaction, IComment } from '@alga-psa/types';
+import { useCannedResponseSnippets } from '../../cannedResponses/useCannedResponseSnippets';
 import CommentItem from '../CommentItem';
 import { DEFAULT_BLOCK } from '../TicketConversation';
 import {
@@ -432,6 +433,7 @@ export function BentoTimelineTile({
 }: BentoTimelineTileProps) {
   const { t } = useTranslation('features/tickets');
   const { t: tCommon } = useTranslation('common');
+  const cannedResponseSnippets = useCannedResponseSnippets(ticketId, true);
   const { locale } = useFormatters();
   // dayLabel runs at module scope: without these it formats in the browser's
   // locale and hardcodes an English "Today".
@@ -901,6 +903,7 @@ export function BentoTimelineTile({
         }}
         searchMentions={searchUsersForMentions}
         uploadFile={composeUploadSession.uploadFile}
+        snippets={cannedResponseSnippets}
         footerActions={allowEmailRecipients ? (
           <CommentEmailRecipientsControl
             idPrefix={`${id}-composer`}
@@ -1217,6 +1220,7 @@ export function BentoTimelineTile({
               isSubmitting={isSubmitting}
               uploadFile={editUploadSession.uploadFile}
               searchMentions={searchUsersForMentions}
+              snippets={cannedResponseSnippets}
               footerActions={allowEmailRecipients && !replyTargetComment.is_internal ? (
                 <>
                   <CommentEmailRecipientsControl

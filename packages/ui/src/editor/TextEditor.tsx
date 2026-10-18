@@ -11,6 +11,7 @@ import {
   GridSuggestionMenuController,
   DefaultReactGridSuggestionItem,
   GridSuggestionMenuProps,
+  getDefaultReactSlashMenuItems,
 } from "@blocknote/react";
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/core/fonts/inter.css';
@@ -20,12 +21,15 @@ import {
   PartialBlock,
   BlockNoteSchema,
   defaultInlineContentSpecs,
+  filterSuggestionItems,
 } from '@blocknote/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { Mention } from './Mention';
 import { splitEmbeddedNewlineBlocks } from './normalizeBlocks';
 import { Emoticon } from './EmoticonExtension';
 import { useShortcutScope } from '../keyboard-shortcuts';
+import { SnippetPicker } from './SnippetPicker';
+import { filterSnippets, stripBlockIds, type EditorSnippet, type EditorSnippetsConfig } from './snippets';
 
 // Debug flag
 const DEBUG = false;
@@ -88,6 +92,39 @@ interface TextEditorProps {
   allowFileAttachments?: boolean;
   /** Extra controls rendered in the footer row next to "Attach files". */
   footerActions?: React.ReactNode;
+  /**
+   * Reusable-content library (e.g. canned ticket responses). When set the editor gains a "/" slash
+   * entry, a toolbar button and the Ctrl/Cmd+J shortcut, all opening a searchable picker. Omit it and
+   * the editor is unchanged.
+   */
+  snippets?: EditorSnippetsConfig;
+}
+
+const SLASH_SNIPPET_LIMIT = 6;
+const SLASH_CACHE_MS = 30_000;
+
+/**
+ * Inserts snippet blocks at the cursor. A lone paragraph goes inline (so it can sit mid-sentence);
+ * anything richer replaces an empty current block or lands after the current one.
+ */
+export function insertSnippetBlocks(editor: BlockNoteEditor<any, any, any>, blocks: PartialBlock[]): void {
+  const fresh = stripBlockIds(blocks);
+  if (fresh.length === 0) return;
+  const only = fresh.length === 1 ? (fresh[0] as any) : null;
+  if (only && only.type === 'paragraph' && Array.isArray(only.content) && !(only.children?.length)) {
+    editor.insertInlineContent(only.content);
+    return;
+  }
+  const current = editor.getTextCursorPosition().block as any;
+  const currentIsEmpty =
+    current.type === 'paragraph' &&
+    (!current.content || current.content.every((c: any) => c.type === 'text' && c.text === '')) &&
+    !(current.children?.length);
+  if (currentIsEmpty) {
+    editor.replaceBlocks([current.id], fresh as any);
+  } else {
+    editor.insertBlocks(fresh as any, current.id, 'after');
+  }
 }
 
 export const DEFAULT_BLOCK: PartialBlock[] = [{
@@ -185,6 +222,7 @@ export default function TextEditor({
   autoFocus = false,
   allowFileAttachments = false,
   footerActions,
+  snippets,
 }: TextEditorProps) {
   useShortcutScope('editor');
   const { t } = useTranslation('common');
@@ -438,6 +476,60 @@ export default function TextEditor({
     }
   };
 
+  const [snippetPickerOpen, setSnippetPickerOpen] = useState(false);
+  const snippetCacheRef = useRef<{ at: number; items: Promise<EditorSnippet[]> } | null>(null);
+
+  const insertSnippet = async (snippet: EditorSnippet) => {
+    if (!snippets) return;
+    const blocks = await snippets.resolve(snippet);
+    insertSnippetBlocks(editor, blocks);
+    try {
+      await snippets.onInserted?.(snippet);
+    } catch {
+      // Recording a use is best-effort; the text is already in the editor.
+    }
+  };
+
+  const getSlashMenuItems = async (query: string): Promise<DefaultReactSuggestionItem[]> => {
+    const defaults = filterSuggestionItems(getDefaultReactSlashMenuItems(editor), query);
+    if (!snippets) return defaults;
+    const group = snippets.labels.slashGroup;
+    const browse = filterSuggestionItems(
+      [{
+        title: snippets.labels.slashBrowse,
+        subtext: snippets.labels.slashBrowseHint,
+        aliases: ['canned', 'response', 'snippet', 'template', 'reply'],
+        group,
+        onItemClick: () => setSnippetPickerOpen(true),
+      }],
+      query
+    );
+    let matches: DefaultReactSuggestionItem[] = [];
+    if (query.trim()) {
+      try {
+        const cached = snippetCacheRef.current;
+        if (!cached || Date.now() - cached.at > SLASH_CACHE_MS) {
+          snippetCacheRef.current = { at: Date.now(), items: snippets.load() };
+        }
+        const library = await snippetCacheRef.current!.items;
+        matches = filterSnippets(library, query)
+          .slice(0, SLASH_SNIPPET_LIMIT)
+          .map((snippet) => ({
+            title: snippet.title,
+            subtext: snippet.preview,
+            group,
+            onItemClick: () => {
+              insertSnippet(snippet).catch((error) => console.error('[TextEditor] Snippet insert failed:', error));
+            },
+          }));
+      } catch (error) {
+        snippetCacheRef.current = null;
+        console.error('[TextEditor] Failed to load snippets:', error);
+      }
+    }
+    return [...matches, ...browse, ...defaults];
+  };
+
   // Update editorRef when editor is created
   useEffect(() => {
     if (editorRef) {
@@ -492,8 +584,35 @@ export default function TextEditor({
     return cleanup;
   }, [editor, onContentChange]);
 
+  const snippetButton = snippets ? (
+    <Button
+      id={`${id}-snippets`}
+      type="button"
+      variant="outline"
+      size="sm"
+      title={snippets.labels.buttonTooltip}
+      aria-label={snippets.labels.buttonTooltip}
+      aria-haspopup="dialog"
+      onClick={() => setSnippetPickerOpen(true)}
+    >
+      {snippets.labels.button}
+    </Button>
+  ) : null;
+
   return (
-    <div className="w-full h-full min-w-0" data-keyboard-shortcuts-editor-root="true">
+    <div
+      className="w-full h-full min-w-0"
+      data-keyboard-shortcuts-editor-root="true"
+      onKeyDownCapture={snippets ? (event) => {
+        // Ctrl/Cmd+J opens the snippet picker. Handled here (not in the global shortcut catalog)
+        // because it only exists while an editor with a snippet library is focused.
+        if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'j') {
+          event.preventDefault();
+          event.stopPropagation();
+          setSnippetPickerOpen(true);
+        }
+      } : undefined}
+    >
       {children}
       {allowFileAttachments && uploadFile && <div className="mb-2 flex items-center gap-2">
         <input id={`${id}-attachment-input`} ref={filePickerRef} type="file" multiple hidden onChange={async event => {
@@ -515,13 +634,14 @@ export default function TextEditor({
         <Button id={`${id}-attach-files`} type="button" variant="outline" size="sm" disabled={uploadingFiles} onClick={() => filePickerRef.current?.click()}>
           {uploadingFiles ? t('editor.uploadingFiles', 'Uploading files…') : t('editor.attachFiles', 'Attach files')}
         </Button>
+        {snippetButton}
         {footerActions}
         {uploadError && <span role="alert" className="text-sm text-[rgb(var(--color-text-700))]">{uploadError}</span>}
       </div>}
       {/* Without the attachment row there is no footer yet; render one so the
           slot still has a home. Omitting the slot leaves the layout unchanged. */}
-      {footerActions && !(allowFileAttachments && uploadFile) && (
-        <div className="mb-2 flex items-center gap-2">{footerActions}</div>
+      {(footerActions || snippetButton) && !(allowFileAttachments && uploadFile) && (
+        <div className="mb-2 flex items-center gap-2">{snippetButton}{footerActions}</div>
       )}
       <div
         className="min-h-[100px] h-full w-full editor-paper border border-[rgb(var(--color-border-200))] rounded-lg p-4 overflow-auto min-w-0"
@@ -538,6 +658,7 @@ export default function TextEditor({
           editor={editor}
           theme={blockNoteTheme}
           emojiPicker={false}
+          slashMenu={!snippets}
           className="w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0 [&_.ProseMirror_a]:text-[rgb(var(--badge-info-text))] [&_.ProseMirror_a]:font-medium [&_.ProseMirror_a]:underline [&_.ProseMirror_a]:decoration-[rgb(var(--badge-info-text)/0.4)] [&_.ProseMirror_a]:underline-offset-2 [&_.ProseMirror_a:hover]:decoration-[rgb(var(--badge-info-text))]"
           editable={true}
           style={{
@@ -549,6 +670,12 @@ export default function TextEditor({
             triggerCharacter="@"
             getItems={async (query) => getMentionMenuItems(query)}
           />
+          {snippets && (
+            <SuggestionMenuController
+              triggerCharacter="/"
+              getItems={getSlashMenuItems}
+            />
+          )}
           <GridSuggestionMenuController
             triggerCharacter=":"
             columns={10}
@@ -557,6 +684,21 @@ export default function TextEditor({
           />
         </BlockNoteView>
       </div>
+      {snippets && (
+        <SnippetPicker
+          isOpen={snippetPickerOpen}
+          config={snippets}
+          onClose={() => {
+            setSnippetPickerOpen(false);
+            window.setTimeout(() => editor.focus(), 0);
+          }}
+          onPick={async (snippet) => {
+            await insertSnippet(snippet);
+            setSnippetPickerOpen(false);
+            window.setTimeout(() => editor.focus(), 0);
+          }}
+        />
+      )}
     </div>
   );
 }

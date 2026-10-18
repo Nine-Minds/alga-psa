@@ -105,7 +105,8 @@
     "extensions": "Tillägg",
     "ticketsAll": "Alla ärenden",
     "ticketsRecurring": "Återkommande ärenden",
-    "ticketsTemplates": "Ärendemallar"
+    "ticketsTemplates": "Ärendemallar",
+    "ticketsCannedResponses": "Färdiga svar"
   },
   "marketing": {
     "dialogs": {

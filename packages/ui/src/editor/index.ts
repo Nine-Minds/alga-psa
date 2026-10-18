@@ -11,3 +11,7 @@ export type { EmojiSuggestionState } from './EmojiSuggestion';
 export { MentionNode, MentionSuggestionExtension, MentionSuggestionPopup } from './MentionSuggestion';
 export type { MentionSuggestionState, MentionUser as MentionSuggestionUser } from './MentionSuggestion';
 export { AiResponseBlock } from './AiResponseBlock';
+export { SnippetPicker } from './SnippetPicker';
+export type { SnippetPickerProps } from './SnippetPicker';
+export { buildSnippetSections, filterSnippets, flattenSnippetSections, stripBlockIds } from './snippets';
+export type { EditorSnippet, EditorSnippetLabels, EditorSnippetsConfig, SnippetSection } from './snippets';

@@ -288,6 +288,9 @@
       },
       "templates": {
         "title": "Szablony zgłoszeń"
+      },
+      "cannedResponses": {
+        "title": "Gotowe odpowiedzi"
       }
     },
     "workflowEditor": {

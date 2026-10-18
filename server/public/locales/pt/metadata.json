@@ -303,6 +303,9 @@
       },
       "templates": {
         "title": "Modelos de tickets"
+      },
+      "cannedResponses": {
+        "title": "Respostas prontas"
       }
     },
     "userActivities": {

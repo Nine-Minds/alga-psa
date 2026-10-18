@@ -17,6 +17,8 @@ import { withAuth, hasPermission } from '@alga-psa/auth';
 import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../../lib/workflowTicketCommunicationEvents';
 import { applyCommentResponseState, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 import { publishTicketUpdate } from '../../lib/liveUpdates';
+import { hasMergeTokens, resolveMergeFieldsInNote } from '../../lib/cannedResponses/mergeFields';
+import { loadCannedMergeContext } from '../../lib/cannedResponses/mergeContext';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -187,6 +189,18 @@ export const createComment = withAuth(async (
       throw new Error('Only internal MSP users may schedule client-visible comments');
     }
     normalizeScheduledPublication(comment);
+
+    // Canned responses: the picker resolves merge fields as it inserts, so the agent sees final text. This
+    // pass catches tokens that remain (hand-typed, or pasted from another response). Same pure resolver, same
+    // context loader. Unknown tokens are left as written; known tokens with no value become ''. Only MSP
+    // authors: a client-portal comment is never rewritten.
+    if (comment.note && comment.ticket_id && comment.author_type === 'internal' && hasMergeTokens(comment.note)) {
+      const { knex: mergeDb } = await createTenantKnex();
+      const mergeContext = await withTransaction(mergeDb, (trx: Knex.Transaction) =>
+        loadCannedMergeContext(trx, tenant!, comment.ticket_id, user.user_id)
+      );
+      comment.note = resolveMergeFieldsInNote(comment.note, mergeContext);
+    }
 
     // Convert BlockNote JSON to Markdown if note exists
     if (comment.note) {
