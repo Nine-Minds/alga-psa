@@ -40003,7 +40003,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/{id}/deliveries/{delivery_id}/retry",
     "displayName": "Retry delivery",
     "summary": "Retry delivery",
-    "description": "Re-queues a previously failed delivery as a fresh attempt on the shared webhook delivery queue (rate limiting, backoff and auto-disable still apply). Returns 202 without sending the request in-band; the new attempt lands as its own delivery row. Test deliveries are rejected.",
+    "description": "Re-sends a previously failed delivery and records a new attempt on the same delivery row.",
     "tags": [
       "Webhooks"
     ],
@@ -40036,7 +40036,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {
         "data": {
-          "$ref": "#/components/schemas/WebhookDeliveryRetryQueuedV1"
+          "$ref": "#/components/schemas/WebhookDeliveryRecordV1"
         },
         "meta": {
           "type": "object",
@@ -40077,63 +40077,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "data": {
           "$ref": "#/components/schemas/WebhookHealthV1"
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {}
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_webhooks_id_retryfailed",
-    "method": "post",
-    "path": "/api/v1/webhooks/{id}/retry-failed",
-    "displayName": "Retry failed deliveries",
-    "summary": "Retry failed deliveries",
-    "description": "Re-queues every failed/abandoned non-test delivery of the webhook, oldest first, collapsing repeated attempts of the same event to a single enqueue. Accepts an optional since/limit body (default limit 500, max 1000) and never performs the HTTP calls in-band.",
-    "tags": [
-      "Webhooks"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Webhook UUID from webhooks.webhook_id.",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Webhook UUID from webhooks.webhook_id."
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {
-        "since": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Only consider deliveries whose attempted_at is at or after this timestamp."
-        },
-        "limit": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 1000,
-          "description": "Maximum number of candidate delivery rows to re-queue. Defaults to 500."
-        }
-      },
-      "description": "All fields optional; an empty body retries the newest 500 candidates."
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "$ref": "#/components/schemas/WebhookRetryFailedResultV1"
         },
         "meta": {
           "type": "object",
@@ -50632,18 +50575,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "sort",
         "in": "query",
         "required": false,
-        "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
         "schema": {
-          "type": "string",
-          "enum": [
-            "approval_status",
-            "approved_at",
-            "created_at",
-            "period_end",
-            "period_start",
-            "submitted_at"
-          ],
-          "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
+          "type": "string"
         }
       },
       {
@@ -50659,25 +50592,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "user_id",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "period_id",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "approval_status",
+        "name": "fields",
         "in": "query",
         "required": false,
         "schema": {
@@ -50685,52 +50600,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "approved_by",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "submitted_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "submitted_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "approved_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "approved_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "has_entries",
+        "name": "search",
         "in": "query",
         "required": false,
         "schema": {
@@ -50738,39 +50608,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "period_start_from",
+        "name": "query",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "period_start_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "period_end_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "period_end_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
+          "type": "string"
         }
       }
     ],
@@ -51087,18 +50929,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "sort",
         "in": "query",
         "required": false,
-        "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
         "schema": {
-          "type": "string",
-          "enum": [
-            "approval_status",
-            "approved_at",
-            "created_at",
-            "period_end",
-            "period_start",
-            "submitted_at"
-          ],
-          "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
+          "type": "string"
         }
       },
       {
@@ -51114,25 +50946,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "user_id",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "period_id",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "approval_status",
+        "name": "fields",
         "in": "query",
         "required": false,
         "schema": {
@@ -51140,52 +50954,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "approved_by",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "submitted_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "submitted_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "approved_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "approved_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "has_entries",
+        "name": "search",
         "in": "query",
         "required": false,
         "schema": {
@@ -51193,39 +50962,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "period_start_from",
+        "name": "query",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "period_start_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "period_end_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      {
-        "name": "period_end_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "date-time"
+          "type": "string"
         }
       }
     ],
@@ -51604,8 +51345,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "sort",
         "in": "query",
         "required": false,
+        "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "approval_status",
+            "approved_at",
+            "created_at",
+            "period_end",
+            "period_start",
+            "submitted_at"
+          ],
+          "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
         }
       },
       {
@@ -51621,7 +51372,25 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "fields",
+        "name": "user_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "period_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "approval_status",
         "in": "query",
         "required": false,
         "schema": {
@@ -51629,7 +51398,52 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "search",
+        "name": "approved_by",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "submitted_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "submitted_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "has_entries",
         "in": "query",
         "required": false,
         "schema": {
@@ -51637,11 +51451,39 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "query",
+        "name": "period_start_from",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_start_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     ],
@@ -52025,8 +51867,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "sort",
         "in": "query",
         "required": false,
+        "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "approval_status",
+            "approved_at",
+            "created_at",
+            "period_end",
+            "period_start",
+            "submitted_at"
+          ],
+          "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
         }
       },
       {
@@ -52042,7 +51894,25 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "fields",
+        "name": "user_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "period_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "approval_status",
         "in": "query",
         "required": false,
         "schema": {
@@ -52050,7 +51920,52 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "search",
+        "name": "approved_by",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "submitted_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "submitted_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "has_entries",
         "in": "query",
         "required": false,
         "schema": {
@@ -52058,11 +51973,39 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "query",
+        "name": "period_start_from",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_start_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     ],
