@@ -31,22 +31,8 @@ import {
   periodLastInclusiveDay,
   workDateInTimeZone,
 } from '../../../../lib/timeEntryPeriodSelection';
-import { ISO8601String } from '@alga-psa/types';
-import ContractInfoBanner from './ContractInfoBanner';
+import ContractInfoBanner, { type EligiblePlanUI } from './ContractInfoBanner';
 import { TimeEntryChangeRequestPanel } from './TimeEntryChangeRequestFeedback';
-
-// Define the expected structure returned by getEligibleContractLinesForUI,
-// including the date fields needed for filtering.
-// Type matching the apparent return structure of getEligibleContractLinesForUI
-interface EligiblePlanUI {
-  client_contract_line_id: string;
-  contract_line_name: string;
-  contract_line_type: string;
-  start_date: ISO8601String; // Required for filtering
-  end_date?: ISO8601String | null; // Required for filtering
-  contract_name?: string; // Contract name for display
-  has_bucket_overlay: boolean;
-}
 
 // Parse a 'YYYY-MM-DD' (or ISO) date string into a local midnight Date, avoiding the UTC shift
 // that `new Date(str)`/`parseISO` introduce for date-only values.
@@ -180,9 +166,22 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   }>({});
 
   const [showErrors, setShowErrors] = useState(false);
-  const [eligibleContractLines, setEligibleContractLines] = useState<EligiblePlanUI[]>([]);
-  const [showContractLineSelector, setShowContractLineSelector] = useState(false);
+  // null = eligibility still loading (or nothing to look up yet).
+  const [eligibleContractLines, setEligibleContractLines] = useState<EligiblePlanUI[] | null>(null);
   const [clientId, setClientId] = useState<string | null>(null);
+  // Provenance (decision A): the picker shows only when the choice is ambiguous
+  // (several eligible lines, no single bucket-overlay line), or when the entry
+  // already carries a user-picked ('explicit') line among several. When the
+  // choice is unambiguous the form sends no contract_line_id and the server
+  // resolver records the real auto_* source; sending an id would stamp it
+  // 'explicit'. The form never auto-fills contract_line_id.
+  const contractLineAmbiguous = useMemo(() => {
+    if (!eligibleContractLines || eligibleContractLines.length < 2) return false;
+    return eligibleContractLines.filter(line => line.has_bucket_overlay).length !== 1;
+  }, [eligibleContractLines]);
+  const showContractLineSelector =
+    contractLineAmbiguous ||
+    ((eligibleContractLines?.length ?? 0) > 1 && entry?.contract_line_source === 'explicit');
   const prevServiceIdRef = useRef<string | undefined | null>(undefined);
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     if (entry?.start_time) {
@@ -332,9 +331,6 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       // Tax details are now determined by the backend based on service_id's tax_rate_id
       // --- End Removed Logic ---
 
-      // Always show the plan selector
-      setShowContractLineSelector(true);
-
       let clientDetails: any | null = null;
       let currentEligiblePlans: EligiblePlanUI[] = [];
 
@@ -361,6 +357,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         setEligibleContractLines([]);
       } else {
         // Fetch and filter plans only if service and client are known
+        setEligibleContractLines(null);
         try {
           const plans = await getEligibleContractLinesForUI(
             clientId,
@@ -381,38 +378,29 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
           setEligibleContractLines(currentEligiblePlans);
           console.log('Eligible contract lines loaded:', currentEligiblePlans);
 
-          // 3. Set Default Contract Line (only if lines were loaded)
-          const currentContractLineId = latestEntry.current?.contract_line_id;
-          if (!currentContractLineId && currentEligiblePlans.length > 0) {
-            let defaultPlanId: string | null = null;
-            if (currentEligiblePlans.length === 1) {
-              defaultPlanId = currentEligiblePlans[0].client_contract_line_id;
-              console.log('Setting default contract line (only one eligible):', defaultPlanId);
-            } else {
-              const overlayPlans = currentEligiblePlans.filter(plan => plan.has_bucket_overlay);
-              if (overlayPlans.length === 1) {
-                defaultPlanId = overlayPlans[0].client_contract_line_id;
-                console.log('Setting default contract line (single bucket line):', defaultPlanId);
-              } else {
-                console.log('Multiple eligible contract lines, no single default determined.');
-              }
-            }
-
-            if (defaultPlanId) {
-              const entryWithUpdatedPlan = {
-                ...latestEntry.current, // Preserve edits made while the lookup was pending.
-                contract_line_id: defaultPlanId
-              };
-              onUpdateEntry(index, entryWithUpdatedPlan);
-            }
-          } else {
-            console.log('Contract line already set or no eligible lines found, skipping default selection.');
+          // 3. Drop a stale choice. If the service/date/client changed and the chosen
+          // line is no longer eligible, clear it so it can't be saved against a
+          // line that doesn't cover this entry. We deliberately do NOT auto-fill a
+          // default here: a line the form sends is stamped 'explicit' by
+          // timeEntryWriteCore, so auto-picks are left to the server resolver
+          // (auto_unique_service / auto_bucket_overlay / auto_billing_profile).
+          const current = latestEntry.current;
+          if (
+            current?.contract_line_id &&
+            !currentEligiblePlans.some(plan => plan.client_contract_line_id === current.contract_line_id)
+          ) {
+            onUpdateEntry(index, {
+              ...current, // Preserve edits made while the lookup was pending.
+              contract_line_id: null,
+              contract_line_source: undefined,
+              ...(current.entry_id ? { isDirty: true } : {}),
+            });
           }
 
         } catch (error) {
           if (cancelled) return;
           console.error('Error loading eligible contract lines:', error);
-          setEligibleContractLines([]); // Reset on error
+          setEligibleContractLines([]); // Reset on error (keep any existing choice)
         }
       }
     }
@@ -422,7 +410,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       loadDataAndSetDefaults();
     }
     return () => { cancelled = true; };
-  }, [entry?.entry_id, entry?.tempId, entry?.work_item_id, entry?.service_id, clientId, entry?.start_time, entry?.contract_line_id, index, onUpdateEntry]);
+  }, [entry?.entry_id, entry?.tempId, entry?.work_item_id, entry?.service_id, clientId, entry?.start_time, index, onUpdateEntry]);
 
 const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDuration: number) => {
   const durationToSet = Math.max(0, newDuration);
@@ -478,7 +466,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
     // Call parent's onSave with the current entry
     onSave(index);
-  }, [onSave, validateTimes, entry?.service_id, entry?.work_item_type, showContractLineSelector, eligibleContractLines.length, entry?.contract_line_id, index, setShowErrors, t]);
+  }, [onSave, validateTimes, entry?.service_id, index, setShowErrors, t]);
 
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
     if (!isEditable || !entry) return;
@@ -661,13 +649,48 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
       {/* Contract Info Banner - shows which contract will be used */}
       {entry?.work_item_id && entry?.service_id && (
-        <ContractInfoBanner
-          workItemId={entry.work_item_id}
-          workItemType={entry.work_item_type}
-          serviceId={entry.service_id}
-          entryDate={entry.start_time ? parseISO(entry.start_time) : undefined}
-          clientId={clientId}
-        />
+        <ContractInfoBanner eligibleContractLines={eligibleContractLines} />
+      )}
+
+      {showContractLineSelector && eligibleContractLines && (
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor={`contract-line-${index}`}>
+            {t('timeEntryForm.labels.contractLine', { defaultValue: 'Contract line' })}
+          </label>
+          <CustomSelect
+            id={`contract-line-${index}`}
+            value={entry?.contract_line_id ?? ''}
+            disabled={!isEditable}
+            className="w-full"
+            placeholder={t('timeEntryForm.placeholders.selectContractLine', {
+              defaultValue: 'Select a contract line',
+            })}
+            options={[
+              {
+                value: '',
+                label: t('timeEntryForm.options.resolveContractLineLater', {
+                  defaultValue: 'No line - resolve later',
+                }),
+              },
+              ...eligibleContractLines.map((line) => ({
+                value: line.client_contract_line_id,
+                label: line.contract_name
+                  ? `${line.contract_name} — ${line.contract_line_name}`
+                  : line.contract_line_name,
+              })),
+            ]}
+            onValueChange={(value: string) => {
+              if (!entry) return;
+              // A picked line is 'explicit'; blank sends no id so the server
+              // resolver runs (and records 'unresolved' if it can't decide).
+              onUpdateEntry(index, markEntryAsDirty({
+                ...entry,
+                contract_line_id: value || null,
+                contract_line_source: value ? 'explicit' : undefined,
+              }));
+            }}
+          />
+        </div>
       )}
 
       {/* How this entry's contract line was chosen (F066). Renders nothing when
@@ -677,7 +700,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
         <BillingAttributionInspector
           contractLineSource={entry.contract_line_source}
           contractLineName={
-            eligibleContractLines.find(
+            (eligibleContractLines ?? []).find(
               (line) => line.client_contract_line_id === entry.contract_line_id,
             )?.contract_line_name ?? null
           }
