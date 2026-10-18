@@ -246,7 +246,10 @@ export function contractLineFieldsForWrite(
 ): { contract_line_id?: string | null; contract_line_source?: undefined } {
   const source = entry.contract_line_source ?? null;
   const carry = mode === 'copy-to-new-entry' ? source === 'explicit' : !source?.startsWith('auto_');
+  // Resave: an explicit null (person chose "No line") must reach the UPDATE as
+  // null; undefined makes knex omit the column and the old id would survive.
+  // Copy: null has no meaning on a new row, so it collapses to undefined.
   return carry
-    ? { contract_line_id: entry.contract_line_id ?? undefined }
+    ? { contract_line_id: mode === 'resave' ? entry.contract_line_id : entry.contract_line_id ?? undefined }
     : { contract_line_id: mode === 'resave' ? null : undefined, contract_line_source: undefined };
 }

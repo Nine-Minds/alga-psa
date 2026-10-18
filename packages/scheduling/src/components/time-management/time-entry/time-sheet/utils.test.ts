@@ -108,6 +108,15 @@ describe('contractLineFieldsForWrite', () => {
     expect(contractLineFieldsForWrite({ contract_line_id: 'l' }, 'resave')).toEqual({ contract_line_id: 'l' });
   });
 
+  it('re-save keeps an explicit null (un-picked line) as null so the column is cleared', () => {
+    const fields = contractLineFieldsForWrite({ contract_line_id: null, contract_line_source: undefined }, 'resave');
+    expect(fields.contract_line_id).toBeNull();
+    expect(contractLineFieldsForWrite({ contract_line_id: null, contract_line_source: 'unresolved' }, 'resave').contract_line_id)
+      .toBeNull();
+    // no value at all stays undefined
+    expect(contractLineFieldsForWrite({}, 'resave').contract_line_id).toBeUndefined();
+  });
+
   it('copy-to-new-entry carries only explicit lines', () => {
     expect(contractLineFieldsForWrite({ contract_line_id: 'l', contract_line_source: 'explicit' }, 'copy-to-new-entry'))
       .toEqual({ contract_line_id: 'l' });

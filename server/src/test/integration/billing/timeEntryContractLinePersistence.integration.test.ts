@@ -158,6 +158,26 @@ describe('time entry contract line persistence (picker -> persistTimeEntry -> DB
     expect(row.contract_line_id).toBeNull();
   }, HOOK_TIMEOUT);
 
+  it('un-picking a saved explicit line leaves the column NULL and source unresolved (visible to UnresolvedChargeReview)', async () => {
+    const first = await save({ service_id: ambiguousServiceId, contract_line_id: lineA });
+    const entryId = first.entry.entry_id;
+    expect((await readRow(entryId)).contract_line_id).toBe(lineA);
+
+    await save({ entry_id: entryId, service_id: ambiguousServiceId, contract_line_id: null });
+    const nulled = await readRow(entryId);
+    expect(nulled.contract_line_id).toBeNull();
+    expect(nulled.contract_line_source).toBe('unresolved');
+
+    // Defence in depth: a caller that omits the id (undefined, which knex would
+    // skip) must not leave a stale id behind either.
+    await save({ entry_id: entryId, service_id: ambiguousServiceId, contract_line_id: lineA });
+    expect((await readRow(entryId)).contract_line_id).toBe(lineA);
+    await save({ entry_id: entryId, service_id: ambiguousServiceId });
+    const omitted = await readRow(entryId);
+    expect(omitted.contract_line_id).toBeNull();
+    expect(omitted.contract_line_source).toBe('unresolved');
+  }, HOOK_TIMEOUT);
+
   it('an unambiguous service saved without an id is server-resolved (auto_*), never explicit', async () => {
     const saved = await save({ service_id: uniqueServiceId });
     const row = await readRow(saved.entry.entry_id);
