@@ -19,6 +19,20 @@ vi.mock('@alga-psa/auth', async () => {
   return createAuthModuleMock();
 });
 
+// Row-level ticket policy (bundle/relationship narrowing) is exercised in the authorization suites; here the
+// real check runs for everyone except users listed in rowDeniedUserIds, who are refused as the kernel would.
+const rowDeniedUserIds = vi.hoisted(() => new Set<string>());
+vi.mock('@alga-psa/tickets/lib/ticketRecordAuthorization', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/tickets/lib/ticketRecordAuthorization')>();
+  return {
+    ...actual,
+    authorizeTicketRecordAccess: vi.fn(async (input: any) => {
+      if (rowDeniedUserIds.has(input.user.user_id)) throw new Error('Permission denied: Cannot access ticket');
+      return actual.authorizeTicketRecordAccess(input);
+    }),
+  };
+});
+
 const HOOK_TIMEOUT = 900_000;
 
 function refusal(value: any): string {
@@ -108,6 +122,7 @@ describe('Canned responses (integration)', () => {
   };
 
   beforeEach(async () => {
+    rowDeniedUserIds.clear();
     await context.reset();
     tenantId = context.tenantId;
     clientId = context.clientId;
@@ -305,6 +320,32 @@ describe('Canned responses (integration)', () => {
       expect(await hit('billing')).toEqual(['Refund approved']);
       expect(await hit('100%')).toEqual(['Hello']);
       expect(await hit('%')).toEqual(['Hello']); // a bare % is a literal, not "match everything"
+    });
+  });
+
+  describe('row-level ticket authorization', () => {
+    it('gives a user with ticket:read but no row access nothing from that ticket', async () => {
+      const contactId = uuidv4();
+      await tt('contacts').insert({ tenant: tenantId, contact_name_id: contactId, full_name: 'Secret Person', email: 'secret@example.com', client_id: clientId });
+      await tt('tickets').where({ ticket_id: ticketId }).update({ contact_name_id: contactId });
+      await actions.createCannedResponse({ name: 'Support reply', body: doc('x'), scope: 'board', board_id: boardId } as any);
+      rowDeniedUserIds.add(outsider.user_id);
+      actAs(outsider);
+
+      const context: any = await actions.getCannedResponseMergeContext(ticketId);
+      expect(refusal(context)).toMatch(/permission/i);
+      expect(JSON.stringify(context)).not.toContain('Secret Person');
+      expect(JSON.stringify(context)).not.toContain('Printer offline');
+
+      expect(refusal(await actions.listVisibleCannedResponses({ ticketId } as any))).toMatch(/permission/i);
+      expect(refusal(await actions.searchCannedResponses('reply', { ticketId } as any))).toMatch(/permission/i);
+      // Without a ticket the picker still works: no ticket data is involved.
+      expect(refusal(await actions.listVisibleCannedResponses({} as any))).toBe('');
+    });
+
+    it('treats an unknown or malformed ticket id as not found', async () => {
+      actAs(admin);
+      expect(refusal(await actions.getCannedResponseMergeContext('not-a-uuid'))).not.toBe('');
     });
   });
 

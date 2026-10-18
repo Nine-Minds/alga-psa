@@ -17,6 +17,7 @@ import {
   type CannedResponseInput,
   type ParsedCannedResponseInput,
 } from '../lib/cannedResponses/cannedResponseSchema';
+import { authorizeTicketRecordAccess } from '../lib/ticketRecordAuthorization';
 import { loadCannedMergeContext } from '../lib/cannedResponses/mergeContext';
 import {
   applyVisibilityToQuery,
@@ -55,6 +56,16 @@ async function requirePermission(user: AuthUser, resource: 'canned_response' | '
         : `Permission denied: Cannot ${action} tickets`
     );
   }
+}
+
+/**
+ * Coarse `ticket:read` plus the same row-level policy getTicketById applies (board/relationship/bundle
+ * narrowing). Without it the picker and merge context would leak a ticket's board, title, client and contact.
+ */
+async function requireTicketRowRead(user: AuthUser, trx: Knex.Transaction, tenant: string, ticketId: string) {
+  await requirePermission(user, 'ticket', 'read', trx);
+  if (!UUID_PATTERN.test(ticketId)) throw new Error('Ticket not found');
+  await authorizeTicketRecordAccess({ trx, tenant, user: user as any, ticketId, action: 'read' });
 }
 
 const toIso = (value: Date | string): string => (value instanceof Date ? value : new Date(value)).toISOString();
@@ -480,7 +491,7 @@ export const listVisibleCannedResponses = withAuth(async (
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx) => {
       await requirePermission(user, 'canned_response', 'read', trx);
-      if (options.ticketId) await requirePermission(user, 'ticket', 'read', trx);
+      if (options.ticketId) await requireTicketRowRead(user, trx, tenant, options.ticketId);
       return pickerItems(trx, tenant, user, { ...options, query: undefined });
     });
   } catch (error) {
@@ -500,7 +511,7 @@ export const searchCannedResponses = withAuth(async (
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx) => {
       await requirePermission(user, 'canned_response', 'read', trx);
-      if (options.ticketId) await requirePermission(user, 'ticket', 'read', trx);
+      if (options.ticketId) await requireTicketRowRead(user, trx, tenant, options.ticketId);
       return pickerItems(trx, tenant, user, { ...options, query });
     });
   } catch (error) {
@@ -512,7 +523,6 @@ export const searchCannedResponses = withAuth(async (
  * Values for client-side merge-field resolution on insert. createComment resolves anything left over with
  * the same loader, so what the agent sees in the editor and what is stored agree.
  */
-// LEVERAGE: friction ticket-read-authorization — row-level ticket read auth (authorizeTicketRead) is private to ticketActions.ts, so this gates on ticket:read permission only; same level createComment uses for the write path
 export const getCannedResponseMergeContext = withAuth(async (
   user,
   { tenant },
@@ -523,10 +533,7 @@ export const getCannedResponseMergeContext = withAuth(async (
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx) => {
       await requirePermission(user, 'canned_response', 'read', trx);
-      await requirePermission(user, 'ticket', 'read', trx);
-      if (!UUID_PATTERN.test(ticketId)) throw new Error('Ticket not found');
-      const exists = await tenantDb(trx, tenant).table('tickets').where({ ticket_id: ticketId }).first('ticket_id');
-      if (!exists) throw new Error('Ticket not found');
+      await requireTicketRowRead(user, trx, tenant, ticketId);
       return loadCannedMergeContext(trx, tenant, ticketId, user.user_id);
     });
   } catch (error) {
