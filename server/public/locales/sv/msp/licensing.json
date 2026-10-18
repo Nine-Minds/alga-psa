@@ -468,7 +468,8 @@
       "operationConflict": "Denna konfigurationsbegäran har redan skickats med andra uppgifter. Uppdatera listan över arbetsytor innan du börjar om.",
       "destinationUnavailable": "Den valda eskaleringstavlan är inte längre tillgänglig. Välj en aktiv tavla och försök igen.",
       "clientUnavailable": "Denna kund är inte längre tillgänglig. Uppdatera kundlistan.",
-      "invalidRequest": "Ange arbetsytans namn, administratörsuppgifter, en eskaleringstavla och minst en teknikerplats."
+      "invalidRequest": "Ange arbetsytans namn, administratörsuppgifter, en eskaleringstavla och minst en teknikerplats.",
+      "administratorEmailInUse": "Den här administratörens e-postadress tillhör redan en användare i en annan arbetsyta. Använd en annan e-postadress."
     },
     "policy": {
       "title": "Samförvaltad åtkomst",

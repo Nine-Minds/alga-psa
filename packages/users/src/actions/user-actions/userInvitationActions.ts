@@ -2,6 +2,7 @@
 
 import { createTenantKnex, tenantDb, runWithTenant, runAsSystem, createSystemContext } from '@alga-psa/db';
 import { UserInvitationService } from '../../services/UserInvitationService';
+import User from '@alga-psa/db/models/user';
 import { getSystemEmailService, TenantEmailService, sendTeamInvitationEmail } from '@alga-psa/email';
 import { hasPermission } from '@alga-psa/user-composition/lib/permissions';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
@@ -31,6 +32,7 @@ export type UserInvitationErrorCode =
   | 'REVOKE_FAILED'
   | 'SOLO_PLAN_LIMIT'
   | 'LICENSE_LIMIT_REACHED'
+  | 'EMAIL_IN_USE_ELSEWHERE'
   | CoManagedAdmissionLimitCode;
 
 interface SendUserInvitationParams {
@@ -114,6 +116,14 @@ export const sendUserInvitation = withAuth(async (
       .where({ email: normalizedEmail, user_type: 'internal' })
       .first();
     if (existingUser) {
+      return { success: false, error: 'A user with this email address already exists', errorCode: 'EMAIL_ALREADY_EXISTS' };
+    }
+
+    // Internal users sign in with an email and no tenant, so the email must not
+    // belong to an internal user in any other tenant either (addUser enforces
+    // the same). Refusing here tells the inviter before the invitee finds out.
+    // LEVERAGE: pattern global-internal-email — see prepareCoManagedProvisioning.
+    if ((await User.findUsersByEmailAndType(normalizedEmail, 'internal')).length) {
       return { success: false, error: 'A user with this email address already exists', errorCode: 'EMAIL_ALREADY_EXISTS' };
     }
 
@@ -305,6 +315,18 @@ export async function completeUserInvitationSetup(
         .first();
       if (existingUser) {
         return { success: false, error: 'A user account already exists for this email address', errorCode: 'CREATE_USER_FAILED' } as const;
+      }
+
+      // Rechecked at acceptance: the invitation may predate an account created
+      // elsewhere with this email, and sign-in cannot tell two internal
+      // accounts with one email apart.
+      if ((await User.findUsersByEmailAndType(invitee.email, 'internal')).some(found => found.tenant !== tenant)) {
+        return {
+          success: false,
+          error: 'This email address already belongs to an account in another workspace. Ask the person who invited you to use a different email address.',
+          errorCode: 'EMAIL_IN_USE_ELSEWHERE',
+          messageKey: 'teamSetup.errors.emailInUseElsewhere',
+        } as const;
       }
 
       // Re-check the seat limit here, not just at invite time: this is where

@@ -959,7 +959,8 @@
       "invalidOrExpired": "Ungültiges oder abgelaufenes Einladungstoken",
       "verificationFailed": "Überprüfung des Einladungstokens fehlgeschlagen",
       "requirementsNotMet": "Bitte stellen Sie sicher, dass alle Passwortanforderungen erfüllt sind",
-      "createFailed": "Konto konnte nicht erstellt werden"
+      "createFailed": "Konto konnte nicht erstellt werden",
+      "emailInUseElsewhere": "Diese E-Mail-Adresse gehört bereits zu einem Konto in einem anderen Arbeitsbereich. Bitten Sie die Person, die Sie eingeladen hat, eine andere E-Mail-Adresse zu verwenden."
     }
   }
 }

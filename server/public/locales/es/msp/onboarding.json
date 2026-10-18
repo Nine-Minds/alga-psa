@@ -959,7 +959,8 @@
       "invalidOrExpired": "Token de invitación no válido o caducado",
       "verificationFailed": "No se pudo verificar el token de invitación",
       "requirementsNotMet": "Asegúrese de cumplir todos los requisitos de la contraseña",
-      "createFailed": "No se pudo crear la cuenta"
+      "createFailed": "No se pudo crear la cuenta",
+      "emailInUseElsewhere": "Esta dirección de correo electrónico ya pertenece a una cuenta de otro espacio de trabajo. Pida a la persona que le invitó que use otra dirección de correo electrónico."
     }
   }
 }

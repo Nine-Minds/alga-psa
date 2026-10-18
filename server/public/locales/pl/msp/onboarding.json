@@ -961,7 +961,8 @@
       "invalidOrExpired": "Nieprawidłowy lub wygasły token zaproszenia",
       "verificationFailed": "Nie udało się zweryfikować tokenu zaproszenia",
       "requirementsNotMet": "Upewnij się, że wszystkie wymagania dotyczące hasła są spełnione",
-      "createFailed": "Nie udało się utworzyć konta"
+      "createFailed": "Nie udało się utworzyć konta",
+      "emailInUseElsewhere": "Ten adres e-mail należy już do konta w innym obszarze roboczym. Poproś osobę, która cię zaprosiła, o użycie innego adresu e-mail."
     }
   }
 }

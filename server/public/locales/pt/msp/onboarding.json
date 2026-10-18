@@ -959,7 +959,8 @@
       "invalidOrExpired": "Token de convite inválido ou expirado",
       "verificationFailed": "Falha ao verificar o token de convite",
       "requirementsNotMet": "Certifique-se de que todos os requisitos de senha sejam atendidos",
-      "createFailed": "Falha ao criar a conta"
+      "createFailed": "Falha ao criar a conta",
+      "emailInUseElsewhere": "Este endereço de e-mail já pertence a uma conta de outro espaço de trabalho. Peça a quem convidou você para usar um endereço de e-mail diferente."
     }
   }
 }

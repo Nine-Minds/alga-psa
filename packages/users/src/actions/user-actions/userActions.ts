@@ -365,6 +365,8 @@ async function getSafeUserWithRoles(
   return sanitizeUserForResponse({ ...user, roles });
 }
 
+// LEVERAGE: pattern global-internal-email — internal email uniqueness across tenants is also
+// checked in prepareCoManagedProvisioning and the team invitation send/accept actions.
 async function findExistingUserByEmailGlobally(
   email: string,
   options?: { excludeUserId?: string; userType?: 'internal' | 'client' }

@@ -959,7 +959,8 @@
       "invalidOrExpired": "Token di invito non valido o scaduto",
       "verificationFailed": "Verifica del token di invito non riuscita",
       "requirementsNotMet": "Assicurati che tutti i requisiti della password siano soddisfatti",
-      "createFailed": "Creazione dell'account non riuscita"
+      "createFailed": "Creazione dell'account non riuscita",
+      "emailInUseElsewhere": "Questo indirizzo email appartiene già a un account di un altro spazio di lavoro. Chiedi a chi ti ha invitato di usare un indirizzo email diverso."
     }
   }
 }

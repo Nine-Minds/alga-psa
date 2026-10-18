@@ -13,6 +13,8 @@ export function provisioningRejectionMessage(code: string, t: Translate): string
       return t('coManaged.provisioning.destinationUnavailable', { defaultValue: 'The selected escalation board is no longer available. Select an active board and try again.' });
     case 'CLIENT_NOT_FOUND':
       return t('coManaged.provisioning.clientUnavailable', { defaultValue: 'This client is no longer available. Refresh the client list.' });
+    case 'ADMINISTRATOR_EMAIL_IN_USE':
+      return t('coManaged.provisioning.administratorEmailInUse', { defaultValue: 'This administrator email already belongs to a user in another workspace. Use a different email address.' });
     case 'INVALID_REQUEST':
     case 'INVALID_RESERVATION':
       return t('coManaged.provisioning.invalidRequest', { defaultValue: 'Enter a workspace name, administrator details, an escalation board, and at least one technician seat.' });

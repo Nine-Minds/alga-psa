@@ -473,7 +473,8 @@
       "operationConflict": "Esta solicitud de configuración ya se envió con otros datos. Actualice la lista de espacios antes de empezar de nuevo.",
       "destinationUnavailable": "El tablero de escalamiento seleccionado ya no está disponible. Seleccione un tablero activo e inténtelo de nuevo.",
       "clientUnavailable": "Este cliente ya no está disponible. Actualice la lista de clientes.",
-      "invalidRequest": "Introduzca un nombre de espacio, los datos del administrador, un tablero de escalamiento y al menos un puesto de técnico."
+      "invalidRequest": "Introduzca un nombre de espacio, los datos del administrador, un tablero de escalamiento y al menos un puesto de técnico.",
+      "administratorEmailInUse": "Este correo electrónico de administrador ya pertenece a un usuario de otro espacio de trabajo. Use una dirección de correo electrónico diferente."
     },
     "policy": {
       "title": "Acceso cogestionado",

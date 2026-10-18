@@ -36,7 +36,8 @@ export interface CoManagedProvisioningOperation {
 export class CoManagedProvisioningError extends Error {
   constructor(public readonly code: 'INVALID_REQUEST' | 'OPERATION_CONFLICT' | 'OPERATION_NOT_FOUND' |
     'ACTOR_NOT_FOUND' | 'DESTINATION_NOT_FOUND' | 'OPERATION_CLOSED' | 'RELATIONSHIP_ACTIVE' |
-    'CLEANUP_INCOMPLETE' | 'ADMINISTRATOR_CLAIMED' | 'RESERVATION_NOT_FOUND' | 'CAPACITY_UNAVAILABLE') {
+    'CLEANUP_INCOMPLETE' | 'ADMINISTRATOR_CLAIMED' | 'RESERVATION_NOT_FOUND' | 'CAPACITY_UNAVAILABLE' |
+    'ADMINISTRATOR_EMAIL_IN_USE') {
     super({ INVALID_REQUEST: 'Provide a workspace name, customer administrator, and valid provisioning details.',
       OPERATION_CONFLICT: 'This provisioning operation was started with different details.',
       OPERATION_NOT_FOUND: 'Provisioning operation not found.', ACTOR_NOT_FOUND: 'An active internal sponsor user is required.',
@@ -47,6 +48,7 @@ export class CoManagedProvisioningError extends Error {
       ADMINISTRATOR_CLAIMED: 'The customer administrator has claimed this workspace. Use the customer departure process.',
       RESERVATION_NOT_FOUND: 'The provisioning reservation is no longer valid.',
       CAPACITY_UNAVAILABLE: 'Restore the sponsoring Pro license and co-managed capacity before provisioning.',
+      ADMINISTRATOR_EMAIL_IN_USE: 'This administrator email already belongs to a user in another workspace. Use a different email address.',
     }[code]);
     this.name = 'CoManagedProvisioningError';
   }
@@ -85,6 +87,16 @@ export async function prepareCoManagedProvisioning(db: Knex, input: CoManagedPro
       return existing;
     }
     if (reservation.state !== 'reserved') throw new CoManagedProvisioningError('OPERATION_CLOSED');
+    // Internal users sign in with an email and no tenant, so an internal email
+    // must identify one account platform-wide. The customer administrator is an
+    // internal user of the new workspace; reusing an MSP technician's or another
+    // workspace's administrator email would leave sign-in resolving to either.
+    // LEVERAGE: pattern global-internal-email — the same platform-wide check lives in
+    // userActions.findExistingUserByEmailGlobally and User.findUsersByEmailAndType callers.
+    const emailTaken = await tenantDb(trx, input.sponsorTenant)
+      .unscoped('users', 'internal user emails are unique across tenants')
+      .where({ email: request.administrator.email, user_type: 'internal' }).first('user_id');
+    if (emailTaken) throw new CoManagedProvisioningError('ADMINISTRATOR_EMAIL_IN_USE');
     const board = await sponsor.table('boards').where({ board_id: input.escalationBoardId, is_inactive: false }).forShare().first();
     if (!board) throw new CoManagedProvisioningError('DESTINATION_NOT_FOUND');
     const [operation] = await sponsor.table('co_managed_provisioning_operations').insert({

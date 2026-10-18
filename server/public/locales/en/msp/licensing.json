@@ -468,7 +468,8 @@
       "operationConflict": "This setup request was already submitted with different details. Refresh the workspace list before starting again.",
       "destinationUnavailable": "The selected escalation board is no longer available. Select an active board and try again.",
       "clientUnavailable": "This client is no longer available. Refresh the client list.",
-      "invalidRequest": "Enter a workspace name, administrator details, an escalation board, and at least one technician seat."
+      "invalidRequest": "Enter a workspace name, administrator details, an escalation board, and at least one technician seat.",
+      "administratorEmailInUse": "This administrator email already belongs to a user in another workspace. Use a different email address."
     },
     "policy": {
       "title": "Co-managed access",

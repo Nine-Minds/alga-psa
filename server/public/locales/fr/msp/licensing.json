@@ -473,7 +473,8 @@
       "operationConflict": "Cette demande de configuration a déjà été envoyée avec des informations différentes. Actualisez la liste des espaces avant de recommencer.",
       "destinationUnavailable": "Le tableau d’escalade sélectionné n’est plus disponible. Sélectionnez un tableau actif et réessayez.",
       "clientUnavailable": "Ce client n’est plus disponible. Actualisez la liste des clients.",
-      "invalidRequest": "Saisissez un nom d’espace de travail, les coordonnées de l’administrateur, un tableau d’escalade et au moins une place de technicien."
+      "invalidRequest": "Saisissez un nom d’espace de travail, les coordonnées de l’administrateur, un tableau d’escalade et au moins une place de technicien.",
+      "administratorEmailInUse": "Cette adresse e-mail d’administrateur appartient déjà à un utilisateur d’un autre espace de travail. Utilisez une autre adresse e-mail."
     },
     "policy": {
       "title": "Accès cogéré",

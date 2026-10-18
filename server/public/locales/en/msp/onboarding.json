@@ -959,7 +959,8 @@
       "invalidOrExpired": "Invalid or expired invitation token",
       "verificationFailed": "Failed to verify invitation token",
       "requirementsNotMet": "Please ensure all password requirements are met",
-      "createFailed": "Failed to create account"
+      "createFailed": "Failed to create account",
+      "emailInUseElsewhere": "This email address already belongs to an account in another workspace. Ask the person who invited you to use a different email address."
     }
   }
 }

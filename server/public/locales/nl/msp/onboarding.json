@@ -959,7 +959,8 @@
       "invalidOrExpired": "Ongeldig of verlopen uitnodigingstoken",
       "verificationFailed": "Verifiëren van uitnodigingstoken mislukt",
       "requirementsNotMet": "Zorg ervoor dat aan alle wachtwoordvereisten wordt voldaan",
-      "createFailed": "Account aanmaken mislukt"
+      "createFailed": "Account aanmaken mislukt",
+      "emailInUseElsewhere": "Dit e-mailadres hoort al bij een account in een andere werkruimte. Vraag degene die u heeft uitgenodigd een ander e-mailadres te gebruiken."
     }
   }
 }

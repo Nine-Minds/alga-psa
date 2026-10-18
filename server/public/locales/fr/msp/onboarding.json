@@ -959,7 +959,8 @@
       "invalidOrExpired": "Jeton d'invitation invalide ou expiré",
       "verificationFailed": "Échec de la vérification du jeton d'invitation",
       "requirementsNotMet": "Veuillez vous assurer que toutes les exigences du mot de passe sont respectées",
-      "createFailed": "Échec de la création du compte"
+      "createFailed": "Échec de la création du compte",
+      "emailInUseElsewhere": "Cette adresse e-mail appartient déjà à un compte d’un autre espace de travail. Demandez à la personne qui vous a invité d’utiliser une autre adresse e-mail."
     }
   }
 }

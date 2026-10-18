@@ -959,7 +959,8 @@
       "invalidOrExpired": "Ogiltig eller utgången inbjudningstoken",
       "verificationFailed": "Det gick inte att verifiera inbjudningstoken",
       "requirementsNotMet": "Kontrollera att alla lösenordskrav är uppfyllda",
-      "createFailed": "Det gick inte att skapa kontot"
+      "createFailed": "Det gick inte att skapa kontot",
+      "emailInUseElsewhere": "Den här e-postadressen tillhör redan ett konto i en annan arbetsyta. Be personen som bjöd in dig att använda en annan e-postadress."
     }
   }
 }

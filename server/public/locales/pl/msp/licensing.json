@@ -478,7 +478,8 @@
       "operationConflict": "To żądanie konfiguracji zostało już wysłane z innymi danymi. Odśwież listę obszarów przed ponownym rozpoczęciem.",
       "destinationUnavailable": "Wybrana tablica eskalacji nie jest już dostępna. Wybierz aktywną tablicę i spróbuj ponownie.",
       "clientUnavailable": "Ten klient nie jest już dostępny. Odśwież listę klientów.",
-      "invalidRequest": "Podaj nazwę obszaru, dane administratora, tablicę eskalacji i co najmniej jedno miejsce dla technika."
+      "invalidRequest": "Podaj nazwę obszaru, dane administratora, tablicę eskalacji i co najmniej jedno miejsce dla technika.",
+      "administratorEmailInUse": "Ten adres e-mail administratora należy już do użytkownika w innym obszarze roboczym. Użyj innego adresu e-mail."
     },
     "policy": {
       "title": "Dostęp do współzarządzania",

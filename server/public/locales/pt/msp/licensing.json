@@ -473,7 +473,8 @@
       "operationConflict": "Este pedido de configuração já foi enviado com dados diferentes. Atualize a lista de espaços antes de recomeçar.",
       "destinationUnavailable": "O quadro de escalamento selecionado já não está disponível. Selecione um quadro ativo e tente novamente.",
       "clientUnavailable": "Este cliente já não está disponível. Atualize a lista de clientes.",
-      "invalidRequest": "Introduza um nome de espaço, os dados do administrador, um quadro de escalamento e pelo menos um lugar de técnico."
+      "invalidRequest": "Introduza um nome de espaço, os dados do administrador, um quadro de escalamento e pelo menos um lugar de técnico.",
+      "administratorEmailInUse": "Este e-mail de administrador já pertence a um usuário de outro espaço de trabalho. Use um endereço de e-mail diferente."
     },
     "policy": {
       "title": "Acesso cogerido",

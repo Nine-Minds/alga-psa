@@ -468,7 +468,8 @@
       "operationConflict": "Dit configuratieverzoek is al met andere gegevens verzonden. Vernieuw de lijst met werkruimten voordat u opnieuw begint.",
       "destinationUnavailable": "Het geselecteerde escalatiebord is niet meer beschikbaar. Selecteer een actief bord en probeer het opnieuw.",
       "clientUnavailable": "Deze klant is niet meer beschikbaar. Vernieuw de klantenlijst.",
-      "invalidRequest": "Voer een werkruimtenaam, beheerdersgegevens, een escalatiebord en minstens één technicusplaats in."
+      "invalidRequest": "Voer een werkruimtenaam, beheerdersgegevens, een escalatiebord en minstens één technicusplaats in.",
+      "administratorEmailInUse": "Dit beheerders-e-mailadres hoort al bij een gebruiker in een andere werkruimte. Gebruik een ander e-mailadres."
     },
     "policy": {
       "title": "Toegang voor gezamenlijk beheer",

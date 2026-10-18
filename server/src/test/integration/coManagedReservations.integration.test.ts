@@ -54,6 +54,7 @@ beforeAll(async () => {
     table.uuid('tenant').notNullable();
     table.uuid('user_id').notNullable();
     table.text('user_type').notNullable();
+    table.text('email');
     table.boolean('is_inactive').notNullable().defaultTo(false);
     table.primary(['tenant', 'user_id']);
   });
@@ -585,6 +586,30 @@ describe('co-managed provisioning request and worker lifecycle', () => {
     expect(await tenantDb(db, one.customer_tenant).table('users')).toHaveLength(0);
     expect(await tenantDb(db, one.customer_tenant).table('tenants').first()).toBeUndefined();
     expect(await tenantDb(db, input.sponsorTenant).table('co_managed_allocations')).toHaveLength(1);
+  });
+
+  it('refuses an administrator email that already identifies an internal user in any tenant', async () => {
+    // Internal sign-in has no tenant: a second internal account with this email
+    // would leave sign-in resolving to either, locking the existing user out.
+    const fixture = await requestFixture();
+    const input = { ...fixture, administrator: { ...fixture.administrator, email: `taken-${randomUUID()}@example.test` } };
+    const elsewhere = randomUUID();
+    await db('tenants').insert({ tenant: elsewhere });
+    await tenantDb(db, elsewhere).table('users').insert({ tenant: elsewhere, user_id: randomUUID(), user_type: 'internal',
+      email: input.administrator.email });
+    await expect(prepareCoManagedProvisioning(db, input)).rejects.toMatchObject({ code: 'ADMINISTRATOR_EMAIL_IN_USE' });
+    expect(await tenantDb(db, input.sponsorTenant).table('co_managed_allocations')).toHaveLength(0);
+    expect(await tenantDb(db, input.sponsorTenant).table('co_managed_provisioning_operations')).toHaveLength(0);
+  });
+
+  it('allows an administrator email that only belongs to a client portal user', async () => {
+    const fixture = await requestFixture();
+    const input = { ...fixture, administrator: { ...fixture.administrator, email: `portal-${randomUUID()}@example.test` } };
+    const elsewhere = randomUUID();
+    await db('tenants').insert({ tenant: elsewhere });
+    await tenantDb(db, elsewhere).table('users').insert({ tenant: elsewhere, user_id: randomUUID(), user_type: 'client',
+      email: input.administrator.email });
+    await expect(prepareCoManagedProvisioning(db, input)).resolves.toMatchObject({ state: 'queued' });
   });
 
   it('rejects changes to administrator, name, or destination while retaining the original reservation', async () => {
