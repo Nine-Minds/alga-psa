@@ -127,9 +127,14 @@ function TeamSetupContent() {
 
       if (result.success) {
         try {
+          // The credentials provider reads `email` (and `userType`), like the
+          // MSP sign-in form. A successful sign-in also replaces any session
+          // already open in this browser, so a shared browser lands on the
+          // invitee's workspace rather than the previous user's.
           const signinRes = await signIn('credentials', {
-            username: result.username,
+            email: result.username,
             password: formData.password,
+            userType: 'internal',
             redirect: false
           });
           if (signinRes && (signinRes as any).error) {

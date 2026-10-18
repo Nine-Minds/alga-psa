@@ -179,9 +179,13 @@ function PortalSetupContent() {
       if (result.success) {
         // Attempt auto sign-in with the new credentials
         try {
+          // The credentials provider reads `email`, `userType` and the tenant
+          // slug, like the client portal sign-in form.
           const signinRes = await signIn('credentials', {
-            username: result.username,
+            email: result.username,
             password: formData.password,
+            userType: 'client',
+            ...(tenantSlug ? { tenant: tenantSlug } : {}),
             redirect: false
           });
           if (signinRes && (signinRes as any).error) {
