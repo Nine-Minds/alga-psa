@@ -185,7 +185,7 @@ describe('recurring tickets on ticket templates (integration)', () => {
 
   describe('#1 / #11 migration B', () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const migrationB = require('../../../migrations/20261014100100_backfill_recurring_ticket_templates.cjs');
+    const migrationB = require('../../../migrations/20261017120100_backfill_recurring_ticket_templates.cjs');
 
     async function seedLegacy() {
       const scoped = tenantDb(db, f.tenant);
@@ -423,7 +423,7 @@ describe('recurring tickets on ticket templates (integration)', () => {
 
     it('#11 migration A is idempotent and its down/up round-trips', async () => {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const migrationA = require('../../../migrations/20261014100000_add_recurring_ticket_template_link.cjs');
+      const migrationA = require('../../../migrations/20261017120000_add_recurring_ticket_template_link.cjs');
       await expect(migrationA.up(db)).resolves.not.toThrow();
       await migrationA.down(db);
       const columns = await db.raw(

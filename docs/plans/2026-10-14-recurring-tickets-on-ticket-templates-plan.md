@@ -51,11 +51,11 @@ A recurring ticket definition stops carrying its own copy of the ticket fields a
 
 ## 3. Migrations
 
-- **A (additive, committed)** `20261014100000_add_recurring_ticket_template_link.cjs`: `ticket_templates.offer_for_manual_use`,
+- **A (additive, committed)** `20261017120000_add_recurring_ticket_template_link.cjs`: `ticket_templates.offer_for_manual_use`,
   `recurring_ticket_definitions.ticket_template_id` (nullable) and `overrides`, index, tenant-composite FK
   (added after distribution, guarded for co-location; a NULL member is not enforced). Relaxes NOT NULL on the legacy
   content columns the app no longer writes.
-- **B (data, committed)** `20261014100100_backfill_recurring_ticket_templates.cjs`: per tenant, in batches, create a template
+- **B (data, committed)** `20261017120100_backfill_recurring_ticket_templates.cjs`: per tenant, in batches, create a template
   per definition (name deduped among active names, mapping in `utils/recurringTemplateMapping.cjs`), copy checklist
   items, link. Idempotent. Down restores empty legacy columns from the template and removes migrated templates.
 - **C (NOT committed; the next step)**: after #3728 merged and the equivalence test passed on a prod-shaped clone, make

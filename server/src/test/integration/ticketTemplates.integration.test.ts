@@ -687,7 +687,7 @@ describe('Ticket templates (integration)', () => {
       const migration = require('../../../migrations/20261013041821_create_ticket_templates.cjs');
       // Recurring definitions reference ticket_templates (migration A, ON DELETE RESTRICT), so roll that link back first.
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const linkMigration = require('../../../migrations/20261014100000_add_recurring_ticket_template_link.cjs');
+      const linkMigration = require('../../../migrations/20261017120000_add_recurring_ticket_template_link.cjs');
       await linkMigration.down(context.db);
       try {
         await migration.down(context.db);

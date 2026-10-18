@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Pure mapping for migration `20261014100100_backfill_recurring_ticket_templates`: how a legacy
+ * Pure mapping for migration `20261017120100_backfill_recurring_ticket_templates`: how a legacy
  * recurring-ticket definition (which embedded its own ticket fields) becomes a `ticket_templates` row.
  * No database access here so the rules are unit-tested (server/migrations/__tests__).
  */
