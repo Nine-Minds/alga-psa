@@ -567,6 +567,7 @@ export const setCannedResponseFavorite = withAuth(async (
           user_id: user.user_id,
           canned_response_id: existing.canned_response_id,
           is_favorite: isFavorite,
+          updated_at: now,
         })
         .onConflict(['tenant', 'user_id', 'canned_response_id'])
         .merge({ is_favorite: isFavorite, updated_at: now });
@@ -599,6 +600,7 @@ export const recordCannedResponseUse = withAuth(async (
           canned_response_id: existing.canned_response_id,
           last_used_at: now,
           use_count: 1,
+          updated_at: now,
         })
         .onConflict(['tenant', 'user_id', 'canned_response_id'])
         .merge({
