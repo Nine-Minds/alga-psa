@@ -425,7 +425,7 @@
     "columnsMenu": {
       "label": "Columns",
       "title": "Columns",
-      "reset": "Show all columns"
+      "reset": "Reset to default columns"
     }
   },
   "contractPerformance": {

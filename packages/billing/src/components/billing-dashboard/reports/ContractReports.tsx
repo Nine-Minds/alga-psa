@@ -92,8 +92,9 @@ type BucketUsageRow = Omit<BucketUsage, 'contract_name' | 'overage_hours'> & Par
   id: string;
 };
 
-// User preference: column ids the user hid in the Bucket Hours Utilization table.
-const BUCKET_USAGE_COLUMNS_PREF_KEY = 'billing.reports.bucketUsage.columns';
+// User preference: per-column visibility the user chose in the Bucket Hours
+// Utilization table. Only columns listed here override the content defaults.
+const BUCKET_USAGE_COLUMNS_PREF_KEY = 'billing.reports.bucketUsage.columnVisibility';
 
 const ContractReports: React.FC = () => {
   const { t } = useTranslation('msp/reports');
@@ -305,44 +306,52 @@ const ContractReports: React.FC = () => {
   const hasPoolRows = bucketUsageData.length > 0;
   const hasBlockRows = hourBlockUsageData.length > 0;
 
-  // User-chosen hidden columns, persisted server-side per user (like the client
-  // list view preferences). Hidden-by-content is applied on top of this.
-  const { value: userHiddenColumns, setValue: setUserHiddenColumns } = useUserPreference<string[]>(
+  // Per-column visibility the user chose, persisted server-side per user (like
+  // the client list view preferences). A column the user never touched follows
+  // its content default below; one the user set keeps the user's choice.
+  const { value: userColumnVisibility, setValue: setUserColumnVisibility } = useUserPreference<Record<string, boolean>>(
     BUCKET_USAGE_COLUMNS_PREF_KEY,
-    { defaultValue: [], localStorageKey: BUCKET_USAGE_COLUMNS_PREF_KEY, debounceMs: 300 }
+    { defaultValue: {}, localStorageKey: BUCKET_USAGE_COLUMNS_PREF_KEY, debounceMs: 300 }
+  );
+  const userOverrides = useMemo<Record<string, boolean>>(
+    () => (userColumnVisibility && typeof userColumnVisibility === 'object' && !Array.isArray(userColumnVisibility)
+      ? userColumnVisibility
+      : {}),
+    [userColumnVisibility]
   );
 
-  const userHidden = useMemo(() => new Set(userHiddenColumns ?? []), [userHiddenColumns]);
-
-  // Columns the menu offers, in table order, with what content currently forces.
+  // Columns the menu offers, in table order. Client and Contract are not
+  // offered: they anchor every row and are always shown. defaultVisible for the
+  // rest: Overage only when the table holds bucket pools; block columns only
+  // when it holds prepaid blocks.
   const bucketUsageColumnOptions = useMemo(() => [
-    { id: 'client_name', titleKey: 'contractReports.table.client', fallback: 'Client', locked: true },
-    { id: 'contract_name', titleKey: 'contractReports.table.contract', fallback: 'Contract', locked: true },
-    { id: 'service_name', titleKey: 'contractReports.table.service', fallback: 'Service', locked: !hasBlockRows },
-    { id: 'total_hours', titleKey: 'contractReports.table.totalHours', fallback: 'Total Hours', locked: true },
-    { id: 'used_hours', titleKey: 'contractReports.table.usedHours', fallback: 'Used Hours', locked: true },
-    { id: 'remaining_hours', titleKey: 'contractReports.table.remaining', fallback: 'Remaining', locked: true },
-    { id: 'utilization_percentage', titleKey: 'contractReports.table.utilization', fallback: 'Utilization', locked: true },
-    { id: 'overage_hours', titleKey: 'contractReports.table.overage', fallback: 'Overage', locked: !hasPoolRows },
-    { id: 'hourly_rate', titleKey: 'contractReports.table.hourlyRate', fallback: 'Rate / hr', locked: !hasBlockRows },
-    { id: 'expiration_date', titleKey: 'contractReports.table.expirationDate', fallback: 'Expires', locked: !hasBlockRows },
-    { id: 'status', titleKey: 'contractReports.table.status', fallback: 'Status', locked: !hasBlockRows },
+    { id: 'service_name', titleKey: 'contractReports.table.service', fallback: 'Service', defaultVisible: hasBlockRows },
+    { id: 'total_hours', titleKey: 'contractReports.table.totalHours', fallback: 'Total Hours', defaultVisible: true },
+    { id: 'used_hours', titleKey: 'contractReports.table.usedHours', fallback: 'Used Hours', defaultVisible: true },
+    { id: 'remaining_hours', titleKey: 'contractReports.table.remaining', fallback: 'Remaining', defaultVisible: true },
+    { id: 'utilization_percentage', titleKey: 'contractReports.table.utilization', fallback: 'Utilization', defaultVisible: true },
+    { id: 'overage_hours', titleKey: 'contractReports.table.overage', fallback: 'Overage', defaultVisible: hasPoolRows },
+    { id: 'hourly_rate', titleKey: 'contractReports.table.hourlyRate', fallback: 'Rate / hr', defaultVisible: hasBlockRows },
+    { id: 'expiration_date', titleKey: 'contractReports.table.expirationDate', fallback: 'Expires', defaultVisible: hasBlockRows },
+    { id: 'status', titleKey: 'contractReports.table.status', fallback: 'Status', defaultVisible: hasBlockRows },
   ], [hasPoolRows, hasBlockRows]);
 
   const bucketUsageVisibility = useMemo(() => {
-    const visibility: Record<string, boolean> = {};
+    const visibility: Record<string, boolean> = { client_name: true, contract_name: true };
     for (const option of bucketUsageColumnOptions) {
-      visibility[option.id] = !option.locked && !userHidden.has(option.id);
+      const override = userOverrides[option.id];
+      visibility[option.id] = typeof override === 'boolean' ? override : option.defaultVisible;
     }
     return visibility;
-  }, [bucketUsageColumnOptions, userHidden]);
+  }, [bucketUsageColumnOptions, userOverrides]);
+
+  const hasColumnOverrides = Object.keys(userOverrides).length > 0;
 
   const toggleBucketUsageColumn = (columnId: string, visible: boolean) => {
-    setUserHiddenColumns((prev) => {
-      const set = new Set(prev ?? []);
-      if (visible) set.delete(columnId); else set.add(columnId);
-      return Array.from(set);
-    });
+    setUserColumnVisibility((prev) => ({
+      ...(prev && typeof prev === 'object' && !Array.isArray(prev) ? prev : {}),
+      [columnId]: visible
+    }));
   };
 
   const blockStatusBadge = (value: string) => (
@@ -850,30 +859,29 @@ const ContractReports: React.FC = () => {
                             <Checkbox
                               id={`bucket-usage-column-toggle-${option.id}`}
                               checked={checked}
-                              disabled={option.locked}
                               onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                                 toggleBucketUsageColumn(option.id, event.target.checked)
                               }
                               className="m-0"
                               skipRegistration
                             />
-                            <span className={`truncate ${option.locked ? 'text-muted-foreground' : ''}`}>
+                            <span className="truncate">
                               {t(option.titleKey, { defaultValue: option.fallback })}
                             </span>
                           </div>
                         );
                       })}
                     </div>
-                    {(userHiddenColumns?.length ?? 0) > 0 && (
+                    {hasColumnOverrides && (
                       <div className="border-t border-gray-100 dark:border-[rgb(var(--color-border-200))] py-1">
                         <button
                           type="button"
                           id="bucket-usage-columns-reset"
-                          onClick={() => setUserHiddenColumns([])}
+                          onClick={() => setUserColumnVisibility({})}
                           className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[rgb(var(--color-border-50))]"
                         >
                           <RotateCcw className="h-3.5 w-3.5 shrink-0" />
-                          {t('contractReports.columnsMenu.reset', { defaultValue: 'Show all columns' })}
+                          {t('contractReports.columnsMenu.reset', { defaultValue: 'Reset to default columns' })}
                         </button>
                       </div>
                     )}

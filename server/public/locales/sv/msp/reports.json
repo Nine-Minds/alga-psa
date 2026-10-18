@@ -425,7 +425,7 @@
     "columnsMenu": {
       "label": "Kolumner",
       "title": "Kolumner",
-      "reset": "Visa alla kolumner"
+      "reset": "Återställ standardkolumner"
     }
   },
   "contractPerformance": {

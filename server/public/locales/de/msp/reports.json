@@ -425,7 +425,7 @@
     "columnsMenu": {
       "label": "Spalten",
       "title": "Spalten",
-      "reset": "Alle Spalten anzeigen"
+      "reset": "Standardspalten wiederherstellen"
     }
   },
   "contractPerformance": {

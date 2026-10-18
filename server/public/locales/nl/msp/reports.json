@@ -425,7 +425,7 @@
     "columnsMenu": {
       "label": "Kolommen",
       "title": "Kolommen",
-      "reset": "Alle kolommen weergeven"
+      "reset": "Standaardkolommen herstellen"
     }
   },
   "contractPerformance": {
