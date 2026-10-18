@@ -372,6 +372,8 @@ export const updateContractLine = withAuth(async (
                 if (updateData.round_up_to_nearest !== undefined) templatePatch.round_up_to_nearest = updateData.round_up_to_nearest;
                 if (updateData.cadence_owner !== undefined || updateData.billing_timing !== undefined) {
                     const templatePolicy = resolveRecurringAuthoringPolicy({
+                        // This branch never changes line_type, so the stored type governs timing.
+                        lineType: existingTemplateLine.line_type ?? null,
                         cadenceOwner: updateData.cadence_owner,
                         fallbackCadenceOwner: existingTemplateLine.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                         billingTiming: updateData.billing_timing,

@@ -244,6 +244,39 @@ describe('Hourly/Usage lines never store advance timing: write entry points', ()
     expect(after.billing_timing).toBe('arrears');
   }, HOOK_TIMEOUT);
 
+  it('(c) template line edit via updateContractLine rejects explicit advance on Hourly and leaves it arrears', async () => {
+    const template: any = ok(
+      await actions.createContractTemplateFromWizard({
+        contract_name: `Template ${uuidv4().slice(0, 6)}`,
+        description: 'arrears-only template',
+        billing_frequency: 'monthly',
+        currency_code: 'USD',
+        fixed_services: [],
+        hourly_services: [{ service_id: serviceId, service_name: 'Arrears Only Service', hourly_rate: 11000 }],
+        usage_services: [],
+        enable_proration: false,
+      } as any),
+    );
+    const templateLine = await tenantTable(db, tenantId, 'contract_template_lines')
+      .where({ tenant: tenantId, template_id: template.contract_id, line_type: 'Hourly' })
+      .first();
+    expect(templateLine.billing_timing).toBe('arrears');
+
+    expectAdvanceRejected(await actions.updateContractLine(templateLine.template_line_id, { billing_timing: 'advance' } as any));
+    const after = await tenantTable(db, tenantId, 'contract_template_lines')
+      .where({ tenant: tenantId, template_line_id: templateLine.template_line_id })
+      .first();
+    expect(after.billing_timing).toBe('arrears');
+
+    // A cadence-only edit still goes through and keeps the line arrears.
+    ok(await actions.updateContractLine(templateLine.template_line_id, { cadence_owner: 'contract' } as any));
+    const recadenced = await tenantTable(db, tenantId, 'contract_template_lines')
+      .where({ tenant: tenantId, template_line_id: templateLine.template_line_id })
+      .first();
+    expect(recadenced.cadence_owner).toBe('contract');
+    expect(recadenced.billing_timing).toBe('arrears');
+  }, HOOK_TIMEOUT);
+
   it('(d) createContractLinePreset rejects Hourly + advance and stores nothing', async () => {
     const name = `Advance hourly preset ${uuidv4().slice(0, 6)}`;
     const result = await actions.createContractLinePreset({
