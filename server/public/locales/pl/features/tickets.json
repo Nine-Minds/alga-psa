@@ -84,7 +84,6 @@
     "button": "Filtry",
     "unassigned": "Nieprzypisane",
     "category": "Filtruj według kategorii",
-    "clearFilters": "Wyczyść filtry",
     "assignee": "Przypisany do",
     "allAssignees": "Wszyscy przypisani",
     "responseState": "Stan odpowiedzi",
@@ -248,7 +247,8 @@
     "rowActions": "Akcje",
     "openMenu": "Otwórz menu",
     "moreActions": "Więcej akcji",
-    "createTemplate": "Utwórz szablon ze zgłoszenia"
+    "createTemplate": "Utwórz szablon ze zgłoszenia",
+    "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -357,7 +357,8 @@
     "errorWithMessage": "Błąd: {{message}}",
     "billingProfileUpdated": "Zaktualizowano profil rozliczeniowy",
     "updateBillingProfileFailed": "Nie udało się zaktualizować profilu rozliczeniowego",
-    "scheduleOpenFailed": "Nie udało się otworzyć planera"
+    "scheduleOpenFailed": "Nie udało się otworzyć planera",
+    "sharedWorkspaceReadOnly": "Widzisz to zgłoszenie, ponieważ dotyczy urządzenia we wspólnym stanowisku. Tylko osoba, która je zgłosiła, może coś dodać."
   },
   "conversation": {
     "comments": "Komentarze",
@@ -1947,6 +1948,7 @@
       "setClientToAddContact": "Najpierw wybierz klienta, aby dodać kontakt",
       "logInteraction": "Zarejestruj rozmowę lub e-mail",
       "changeClient": "Zmień klienta",
+      "changeLocation": "Zmień lokalizację",
       "teamFallback": "Zespół",
       "teamSectionLabel": "Przypisz zespół",
       "addAgentsOrTeam": "Dodaj agentów lub zespół…",

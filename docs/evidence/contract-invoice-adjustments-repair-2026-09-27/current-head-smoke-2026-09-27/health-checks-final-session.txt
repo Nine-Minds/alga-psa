@@ -1,0 +1,15 @@
+Final supervised smoke-session health probes before permission revert:
+200 0.007822s
+200 0.007141s
+200 0.007478s
+200 0.006983s
+200 0.006985s
+200 0.007249s
+200 0.007633s
+200 0.007641s
+200 0.007147s
+200 0.006842s
+Memory observation for the process bound to port 3185:
+PID 2000488 RSS 4275648 KiB; health returned 200 in 0.007222s.
+20 seconds later: same PID, RSS 4274928 KiB; health returned 200 in 0.007225s.
+The service remained healthy through invoice UI operations. Restoring the template permission then let supervision stop the service; port 3185 refusal after that stop is expected.

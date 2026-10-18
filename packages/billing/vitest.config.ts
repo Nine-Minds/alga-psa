@@ -33,6 +33,13 @@ export default defineConfig({
       'src/actions/documentTemplateActions.existingDocument.test.ts',
       'src/components/billing-dashboard/documents/DocumentTemplateEditor.existingDocument.test.tsx',
       'src/components/billing-dashboard/LineItem.test.tsx',
+      'src/components/billing-dashboard/ManualInvoices.expandedSave.test.tsx',
+      'src/components/billing-dashboard/invoicing/DraftInvoiceAdjustmentsCard.authRecovery.test.tsx',
+      'src/components/billing-dashboard/invoicing/InvoicePreviewPanel.test.tsx',
+      'src/components/billing-dashboard/invoicing/DraftInvoiceDetailsCard.billingProfile.test.tsx',
+      // Manual invoice total arithmetic must be selected by the billing
+      // package's own test command as well as the server's monorepo glob.
+      'src/components/billing-dashboard/manualInvoiceTotals.test.ts',
       // Catalog-price rollout reachability and the effective-date serialisation
       // regression — listed explicitly so this package's own `npm test` target
       // (the `nx affected -t test` lane) selects them, not only the server
@@ -83,10 +90,15 @@ export default defineConfig({
       // currency-neutral template review step — listed for the same reason as above.
       'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
       'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateReviewContractStep.unitRate.test.tsx',
+      // Contract-line service rates are stored in minor units; the services list
+      // must not re-scale them. Listed for the same reason as above.
+      'src/components/billing-dashboard/contract-lines/GenericContractLineServicesList.customRate.test.tsx',
       // Wizard quantity input draft/commit behavior.
       'src/components/billing-dashboard/contracts/QuantityInput.test.tsx',
       // Template saves must stay valid upserts on Citus distributed tables.
       'src/models/templateSaveUpsert.citus.test.ts',
+      // Client AR must stay a single-shard, co-located join on Citus.
+      'src/actions/billingProfileArActions.citus.test.ts',
     ],
     testTimeout: 20000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing

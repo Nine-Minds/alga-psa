@@ -52,7 +52,6 @@
     "button": "Filtri",
     "unassigned": "Non assegnato",
     "category": "Filtra per categoria",
-    "clearFilters": "Pulisci filtri",
     "assignee": "Assegnatario",
     "allAssignees": "Tutti gli assegnatari",
     "responseState": "Stato risposta",
@@ -216,7 +215,8 @@
     "rowActions": "Azioni",
     "openMenu": "Apri menu",
     "moreActions": "Altre azioni",
-    "createTemplate": "Crea modello dal ticket"
+    "createTemplate": "Crea modello dal ticket",
+    "createWorkflowFromTicket": "Crea workflow dal ticket"
   },
   "messages": {
     "noTickets": "Nessun ticket trovato",
@@ -315,7 +315,8 @@
     "errorWithMessage": "Errore: {{message}}",
     "billingProfileUpdated": "Profilo di fatturazione aggiornato",
     "updateBillingProfileFailed": "Impossibile aggiornare il profilo di fatturazione",
-    "scheduleOpenFailed": "Impossibile aprire il pianificatore"
+    "scheduleOpenFailed": "Impossibile aprire il pianificatore",
+    "sharedWorkspaceReadOnly": "Vedi questo ticket perché riguarda un dispositivo di una postazione condivisa. Solo chi lo ha aperto può aggiungere contenuti."
   },
   "conversation": {
     "comments": "Commenti",
@@ -1801,6 +1802,7 @@
       "setClientToAddContact": "Imposta prima un cliente per aggiungere un contatto",
       "logInteraction": "Registra chiamata o email",
       "changeClient": "Cambia cliente",
+      "changeLocation": "Cambia sede",
       "teamFallback": "Team",
       "teamSectionLabel": "Assegna un team",
       "addAgentsOrTeam": "Aggiungi agenti o un team…",
@@ -2357,7 +2359,7 @@
       "columns": {
         "name": "Nome",
         "title": "Titolo del ticket",
-        "board": "Board",
+        "board": "Bacheca",
         "checklist": "Voci della checklist",
         "status": "Stato",
         "schedules": "Pianificazioni"
@@ -2380,7 +2382,7 @@
     "sections": {
       "details": "Modello",
       "ticket": "Ticket",
-      "checklist": "Checklist",
+      "checklist": "Lista di controllo",
       "customFields": "Campi personalizzati"
     },
     "fields": {
@@ -2428,7 +2430,7 @@
     "errors": {
       "notFound": "Modello di ticket non trovato",
       "duplicateName": "Esiste già un modello chiamato {{name}}",
-      "invalidReferences": "Il modello fa riferimento a una board, una categoria o una priorità non disponibile",
+      "invalidReferences": "Il modello fa riferimento a una bacheca, una categoria o una priorità non disponibile",
       "notAvailable": "I modelli di ticket non sono disponibili",
       "subcategoryNeedsCategory": "Una sottocategoria richiede una categoria",
       "inUseBySchedules": "Usato da {{count}} pianificazione/i ricorrente/i: {{schedules}}. Assegna prima un altro modello o archiviale."

@@ -457,14 +457,25 @@
       "missingFieldNamed": "Ett obligatoriskt fält för tidrapport eller tidpost saknas: {{field}}."
     },
     "timePeriod": {
-      "datesRequired": "Ange giltiga start- och slutdatum."
+      "datesRequired": "Ange giltiga start- och slutdatum.",
+      "closed": "Den här tidsperioden är stängd. Öppna den igen innan du gör ändringar.",
+      "permissions": {
+        "read": "Åtkomst nekad: kan inte visa tidsperioder.",
+        "create": "Åtkomst nekad: kan inte skapa tidsperioder.",
+        "update": "Åtkomst nekad: kan inte uppdatera tidsperioder.",
+        "delete": "Åtkomst nekad: kan inte radera tidsperioder."
+      }
     },
     "timePeriodSettings": {
       "invalidValue": "Ett värde i tidsperiodens inställningar är ogiltigt. Ladda om sidan och försök igen.",
       "referenceMissing": "Den valda tidsperiodsinställningen är inte längre giltig. Ladda om sidan och försök igen.",
       "duplicate": "Det finns redan en tidsperiodsinställning som står i konflikt med den här.",
       "missingField": "Ett obligatoriskt fält för tidsperiodsinställningen saknas.",
-      "missingFieldNamed": "Ett obligatoriskt fält för tidsperiodsinställningen saknas: {{field}}."
+      "missingFieldNamed": "Ett obligatoriskt fält för tidsperiodsinställningen saknas: {{field}}.",
+      "permissions": {
+        "read": "Åtkomst nekad: kan inte visa inställningar för tidsperioder.",
+        "manage": "Åtkomst nekad: kan inte hantera inställningar för tidsperioder."
+      }
     },
     "stopwatch": {
       "notFound": "Stoppurssessionen hittades inte. Den kan redan ha loggats eller förkastats. Uppdatera sidan.",

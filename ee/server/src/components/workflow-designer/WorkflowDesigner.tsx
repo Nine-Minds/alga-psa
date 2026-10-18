@@ -2134,6 +2134,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     } else {
       params.set('section', section);
     }
+    // A selected event only makes sense on the events section.
+    if (section !== 'events') {
+      params.delete('eventId');
+    }
     const nextParamsString = params.toString();
     const nextUrl = nextParamsString ? `/msp/workflow-control?${nextParamsString}` : '/msp/workflow-control';
     if (nextParamsString !== searchParamsString) {

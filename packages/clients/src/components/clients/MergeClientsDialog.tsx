@@ -37,9 +37,12 @@ import type { ContractDateChoice } from '../../lib/clientMergePlan';
  * dates, and whether an accounting mapping should follow.
  */
 
-type WizardStep = 'select' | 'contacts' | 'contracts' | 'options' | 'confirm' | 'accounting';
+type WizardStep = 'select' | 'contacts' | 'contracts' | 'assets' | 'options' | 'confirm' | 'accounting';
 
-const STEP_ORDER: WizardStep[] = ['select', 'contacts', 'contracts', 'options', 'confirm'];
+// FR-G3: the assets step sits between contracts and the options/confirm pair,
+// because the billing choice it asks for governs what the confirm step is
+// about to do.
+const STEP_ORDER: WizardStep[] = ['select', 'contacts', 'contracts', 'assets', 'options', 'confirm'];
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -86,6 +89,9 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
   const [loadedClients, setLoadedClients] = useState<IClient[]>([]);
   const clients = providedClients ?? loadedClients;
   const [step, setStep] = useState<WizardStep>('select');
+  // FR-G2: the default keeps today's behaviour — the merged site stays billed
+  // under its own profile.
+  const [billingStrategy, setBillingStrategy] = useState<'source_profile' | 'target_default'>('source_profile');
   const [targetClientId, setTargetClientId] = useState<string | null>(initialTargetClientId);
   const [sourceClientId, setSourceClientId] = useState<string | null>(null);
   const [preview, setPreview] = useState<ClientMergePreview | null>(null);
@@ -250,6 +256,7 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
           cutoverDate: choice.choice === 'cutover' ? choice.cutoverDate : null,
         })),
         pinPortalGrants,
+        billingStrategy,
         // Accounting is a separate, post-merge confirmation (Q8): nothing is
         // remapped by the merge itself.
         externalRemapChoices: [],
@@ -588,6 +595,87 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
     </div>
   );
 
+  const renderAssets = () => (
+    <div id="merge-assets-section" className="space-y-4">
+      <p className="text-sm text-gray-600">
+        {t('mergeClients.assetsDescription', {
+          defaultValue:
+            'These devices and RMM organizations move to the destination client. Sync keeps them there afterwards.',
+        })}
+      </p>
+
+      <div className="rounded-md border border-gray-200 p-3">
+        <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">
+          <li className="flex justify-between">
+            <span>{t('mergeClients.assetsTotal', { defaultValue: 'Assets' })}</span>
+            <span className="font-medium">{preview?.assets.total ?? 0}</span>
+          </li>
+          <li className="flex justify-between">
+            <span>{t('mergeClients.assetGroups', { defaultValue: 'Asset groups' })}</span>
+            <span className="font-medium">{preview?.assets.groups ?? 0}</span>
+          </li>
+        </ul>
+        {(preview?.assets.byRmmOrganization.length ?? 0) > 0 ? (
+          <ul className="mt-2 space-y-1 border-t border-gray-100 pt-2 text-xs text-gray-600">
+            {preview?.assets.byRmmOrganization.map((organization) => (
+              <li
+                key={`${organization.integrationId}:${organization.externalOrganizationId}`}
+                className="flex justify-between gap-2"
+              >
+                <span className="truncate">
+                  {organization.provider}: {organization.externalOrganizationName || organization.externalOrganizationId}
+                </span>
+                <span className="font-medium">
+                  {t('mergeClients.deviceCount', { defaultValue: '{{count}} devices', count: organization.deviceCount })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+
+      {/* FR-G3: one choice, governing every moving row with no explicit profile. */}
+      <div id="merge-billing-strategy" className="space-y-2 rounded-md border border-gray-200 p-3">
+        <p className="text-sm font-medium">
+          {t('mergeClients.billingStrategyHeading', { defaultValue: 'Bill merged work and devices under' })}
+        </p>
+        {([
+          ['source_profile', t('mergeClients.billingStrategySource', {
+            defaultValue: '{{source}} billing profile, kept as a separate profile on {{target}}',
+            source: preview?.sourceClientName ?? '',
+            target: preview?.targetClientName ?? '',
+          })],
+          ['target_default', t('mergeClients.billingStrategyTarget', {
+            defaultValue: '{{target}} default billing profile',
+            target: preview?.targetClientName ?? '',
+          })],
+        ] as const).map(([value, label]) => (
+          <label key={value} className="flex items-start gap-2 text-sm" htmlFor={`merge-billing-strategy-${value}`}>
+            <input
+              id={`merge-billing-strategy-${value}`}
+              type="radio"
+              name="merge-billing-strategy"
+              className="mt-1"
+              checked={billingStrategy === value}
+              onChange={() => setBillingStrategy(value)}
+            />
+            <span>{label}</span>
+          </label>
+        ))}
+        <p className="text-xs text-gray-500">
+          {t('mergeClients.billingStrategyHelp', {
+            defaultValue:
+              'Applies to {{tickets}} ticket(s), {{projects}} project(s), {{assets}} asset(s) and {{mappings}} RMM device group(s) that have no billing profile of their own. Rows with an explicit profile keep it, and invoices, billing cycles, payments and credits always stay on the merged profile.',
+            tickets: preview?.billingChoice.unstampedTickets ?? 0,
+            projects: preview?.billingChoice.unstampedProjects ?? 0,
+            assets: preview?.billingChoice.unstampedAssets ?? 0,
+            mappings: preview?.billingChoice.unstampedRmmMappings ?? 0,
+          })}
+        </p>
+      </div>
+    </div>
+  );
+
   const renderConfirm = () => (
     <div className="space-y-4">
       <div className="rounded-md border border-gray-200 p-3">
@@ -705,6 +793,7 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
       case 'select': return renderSelect();
       case 'contacts': return renderContacts();
       case 'contracts': return renderContracts();
+      case 'assets': return renderAssets();
       case 'options': return renderOptions();
       case 'confirm': return renderConfirm();
       case 'accounting': return renderAccounting();

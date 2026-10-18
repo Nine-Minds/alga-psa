@@ -67,15 +67,19 @@ export const getRecentClientInvoices = withAuth(async (
   try {
     const invoices: RecentInvoice[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Same money math as the pulse's aging (D6): completed payments only.
+      // `tenant` rides along so the join can match on the distribution key —
+      // Citus only pushes the join to a single shard when it does.
       const completedPayments = trx('invoice_payments')
         .where({ tenant, status: 'completed' })
-        .groupBy('invoice_id')
-        .select('invoice_id')
+        .groupBy('tenant', 'invoice_id')
+        .select('tenant', 'invoice_id')
         .sum({ paid_amount: 'amount' })
         .as('ip');
 
       const rows = await trx('invoices as i')
-        .leftJoin(completedPayments, 'ip.invoice_id', 'i.invoice_id')
+        .leftJoin(completedPayments, function joinCompletedPayments() {
+          this.on('ip.invoice_id', '=', 'i.invoice_id').andOn('ip.tenant', '=', 'i.tenant');
+        })
         .select(
           'i.invoice_id',
           'i.invoice_number',

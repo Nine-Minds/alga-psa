@@ -223,7 +223,8 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
     setError(null);
     try {
       const updatedTeam = await saveTeamChanges(team.team_id, {
-        managerId: managerChanged && selectedManagerId ? selectedManagerId : undefined,
+        // undefined = leave the lead alone; null = explicitly "Not assigned".
+        managerId: managerChanged ? (selectedManagerId ?? null) : undefined,
         removeUserIds: Array.from(pendingRemovals),
         addUserIds: pendingAdditions,
       });
@@ -451,6 +452,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
             buttonWidth="fit"
             size="sm"
             placeholder={t('teams.details.placeholders.selectTeamLead')}
+            unassignedLabel={t('teams.details.placeholders.noTeamLead')}
           />
         </div>
         <div>

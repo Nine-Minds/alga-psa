@@ -60,7 +60,6 @@
     "button": "Filter",
     "unassigned": "Ej tilldelat",
     "category": "Filtrera efter kategori",
-    "clearFilters": "Rensa filter",
     "assignee": "Ansvarig",
     "allAssignees": "Alla ansvariga",
     "responseState": "Svarsstatus",
@@ -224,7 +223,8 @@
     "rowActions": "Åtgärder",
     "openMenu": "Öppna meny",
     "moreActions": "Fler åtgärder",
-    "createTemplate": "Skapa mall från ärende"
+    "createTemplate": "Skapa mall från ärende",
+    "createWorkflowFromTicket": "Skapa arbetsflöde från ärende"
   },
   "messages": {
     "noTickets": "Inga ärenden hittades",
@@ -323,7 +323,8 @@
     "errorWithMessage": "Fel: {{message}}",
     "billingProfileUpdated": "Faktureringsprofilen har uppdaterats",
     "updateBillingProfileFailed": "Det gick inte att uppdatera faktureringsprofilen",
-    "scheduleOpenFailed": "Det gick inte att öppna schemaläggaren"
+    "scheduleOpenFailed": "Det gick inte att öppna schemaläggaren",
+    "sharedWorkspaceReadOnly": "Du ser det här ärendet eftersom det gäller en enhet i en delad arbetsplats. Bara den som skapade det kan lägga till något."
   },
   "conversation": {
     "comments": "Kommentarer",
@@ -1809,6 +1810,7 @@
       "setClientToAddContact": "Ange en kund först för att lägga till en kontakt",
       "logInteraction": "Registrera samtal eller e-post",
       "changeClient": "Ändra kund",
+      "changeLocation": "Ändra plats",
       "teamFallback": "Team",
       "teamSectionLabel": "Tilldela ett team",
       "addAgentsOrTeam": "Lägg till handläggare eller ett team…",

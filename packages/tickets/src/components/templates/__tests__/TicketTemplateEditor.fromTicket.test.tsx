@@ -16,7 +16,11 @@ vi.mock('next/link', () => ({
   __esModule: true,
   default: ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>,
 }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: replaceMock, push: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
+// useSearchParams: the shared BackNav reads it to carry returnFilters back to a list.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: replaceMock, push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 vi.mock('react-hot-toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 vi.mock('../../../actions/ticketTemplateActions', () => ({

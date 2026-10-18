@@ -544,11 +544,21 @@ vi.mock('@alga-psa/auth', async () => {
     };
   };
 
+  // Real class, not a stub: callers narrow with `instanceof` to turn an
+  // authentication rejection into a serializable action result.
+  class AuthenticationError extends Error {
+    constructor(message: string = 'User not authenticated') {
+      super(message);
+      this.name = 'AuthenticationError';
+    }
+  }
+
   // Every name that production code value-imports from '@alga-psa/auth' must
   // exist here — a missing one makes vitest throw at the import binding and
   // every API test 500s (see the runWithApiKeyUser nightly break). The
   // authGlobalMock contract test enumerates prod imports and enforces this.
   return {
+    AuthenticationError,
     getSession: vi.fn().mockResolvedValue(null),
     getSessionWithRevocationCheck: vi.fn().mockResolvedValue(null),
     getCurrentUser,

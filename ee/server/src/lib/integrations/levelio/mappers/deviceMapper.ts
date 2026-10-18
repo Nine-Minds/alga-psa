@@ -137,6 +137,8 @@ export function mapLevelIoDeviceToSnapshot(args: {
         device.operating_system?.full_operating_system ??
         null,
       currentUser: device.last_logged_in_user ?? null,
+      manufacturer: device.manufacturer ?? null,
+      model: device.model ?? null,
       uptimeSeconds,
       lanIp: extractLanIp(device.network_interfaces),
       wanIp: null,

@@ -1,0 +1,11 @@
+invoice_number=TAKEOVER-POSTED-20260927
+invoice_id=5a1e0000-0000-4000-8000-202609279004
+total_amount=390000
+subtotal=390000
+tax=0
+draft_adjustment_revision=0
+charge_count=3
+automatic_settlement_identities=none
+posted_principal=390000
+invoice_generated_transaction_id=5a1e0000-0000-4000-8000-202609279005
+rows=Product: SMOKE Prod Endpoints=150000; Product: SMOKE Prod Locations=40000; Product: SMOKE Prod Users=200000

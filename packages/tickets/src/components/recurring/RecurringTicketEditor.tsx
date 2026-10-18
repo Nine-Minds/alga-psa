@@ -12,6 +12,7 @@ import {
 } from '@alga-psa/shared/lib/recurrence';
 import type { ITicketTemplate, TicketTemplateListItem, TicketTemplateUsage } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import BackNav from '@alga-psa/ui/components/BackNav';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -19,9 +20,15 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import { SectionCard } from '@alga-psa/ui/components/SectionCard';
+import FormCardsSkeleton from '@alga-psa/ui/components/skeletons/FormCardsSkeleton';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { RecurrenceRuleEditor, defaultRuleForFrequency } from '@alga-psa/ui/components/recurrence/RecurrenceRuleEditor';
+import {
+  TranslatedUnsavedChangesProvider,
+  useRegisterUnsavedChanges,
+} from '@alga-psa/ui/context/UnsavedChangesContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getTicketTemplate, listTicketTemplates } from '../../actions/ticketTemplateActions';
 import {
@@ -145,6 +152,14 @@ function toInput(form: FormState, isActive: boolean) {
   };
 }
 
+/**
+ * A comparable snapshot of the editable state for the unsaved-changes guard. The active flag is not
+ * edited in the form — Pause / Resume saves it straight away — so it is pinned here.
+ */
+function snapshot(form: FormState): string {
+  return JSON.stringify(toInput(form, true));
+}
+
 export interface RecurringTicketEditorProps {
   /** A definition id, or `'new'` to create one. */
   definitionId: string;
@@ -155,7 +170,7 @@ export interface RecurringTicketEditorProps {
  * clients and history. Clients and history only exist once the definition is saved, so creating
  * redirects to the saved definition where clients are added.
  */
-export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorProps) {
+function RecurringTicketEditorBody({ definitionId }: RecurringTicketEditorProps) {
   const { t, i18n } = useTranslation('features/tickets');
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -166,6 +181,7 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
 
   const [detail, setDetail] = useState<RecurringDefinitionDetail | null>(null);
   const [form, setForm] = useState<FormState>(() => emptyForm(searchParams?.get('template') ?? ''));
+  const [baseline, setBaseline] = useState<string>(() => snapshot(emptyForm(searchParams?.get('template') ?? '')));
   const [templates, setTemplates] = useState<TicketTemplateListItem[]>([]);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
   const [template, setTemplate] = useState<(ITicketTemplate & TicketTemplateUsage) | null>(null);
@@ -208,7 +224,10 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
       if (result) {
         // Coming back from "New template": the freshly created template replaces the stored one (saved on Save).
         const returned = searchParams?.get('template');
-        setForm(returned ? { ...formFromDetail(result), ticket_template_id: returned } : formFromDetail(result));
+        const stored = formFromDetail(result);
+        setForm(returned ? { ...stored, ticket_template_id: returned } : stored);
+        // The baseline is the stored definition, so a template picked via "New template" counts as an unsaved change.
+        setBaseline(snapshot(stored));
       }
     })();
     // The form is seeded once per definition; later refreshes must not overwrite unsaved edits.
@@ -242,6 +261,12 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.ticket_template_id]);
+
+  const dirty = useMemo(() => !loading && snapshot(form) !== baseline, [form, baseline, loading]);
+
+  // Feeds the provider above: in-app navigation (back button, sidebar links) asks for confirmation and
+  // the shared leave guard covers reload, tab close and the browser history chords.
+  useRegisterUnsavedChanges(`${ID}-editor`, dirty);
 
   const patch = (changes: Partial<FormState>) => setForm((current) => ({ ...current, ...changes }));
 
@@ -300,12 +325,15 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
         const result = await createRecurringTicketDefinition(parsed.data);
         const message = recurringErrorMessage(result);
         if (message !== null) { setErrors([message]); return; }
+        // The draft is now stored, so the guard must let the redirect to the saved definition through.
+        setBaseline(snapshot(form));
         toast.success(t('recurring.editor.created', 'Recurring ticket created. Add the clients it should run for.'));
         router.replace(`/msp/tickets/recurring/${(result as { definition_id: string }).definition_id}`);
       } else {
         const message = recurringErrorMessage(await updateRecurringTicketDefinition(definitionId, parsed.data));
         if (message !== null) { setErrors([message]); return; }
         toast.success(t('recurring.editor.saved', 'Recurring ticket saved'));
+        setBaseline(snapshot(form));
         await load();
         setHistoryKey((key) => key + 1);
       }
@@ -339,7 +367,7 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
   };
 
   if (loading) {
-    return <div id={`${ID}-loading`} className="p-6 text-sm text-[rgb(var(--color-text-500))]">{t('recurring.loading', 'Loading…')}</div>;
+    return <FormCardsSkeleton id={`${ID}-loading`} label={t('recurring.loading', 'Loading…')} />;
   }
   if (loadError) {
     return <div className="p-6"><Alert id={`${ID}-load-error`} variant="destructive"><AlertDescription>{loadError}</AlertDescription></Alert></div>;
@@ -379,39 +407,41 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
   );
 
   return (
-    <div id={`${ID}-editor`} className="mx-auto max-w-5xl space-y-8 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <Link id={`${ID}-back`} href="/msp/tickets/recurring" className="text-sm text-[rgb(var(--color-primary-600))] hover:underline">
-            {t('recurring.editor.back', 'Recurring tickets')}
-          </Link>
-          <h1 className="text-2xl font-semibold">
-            {isNew ? t('recurring.editor.newTitle', 'New recurring ticket') : form.name}
-          </h1>
-          {!isNew && (
-            <Badge variant={archived ? 'default-muted' : isActive ? 'success' : 'warning'}>
-              {archived
-                ? t('recurring.status.archived', 'Archived')
-                : isActive ? t('recurring.status.active', 'Active') : t('recurring.status.paused', 'Paused')}
-            </Badge>
-          )}
-        </div>
-        <div className="flex gap-2">
-          {!isNew && !archived && permissions.update && (
-            <Button id={`${ID}-toggle-active`} type="button" variant="outline" onClick={() => void toggleActive()}>
-              {isActive ? t('recurring.actions.pause', 'Pause') : t('recurring.actions.resume', 'Resume')}
-            </Button>
-          )}
-          {!isNew && !archived && permissions.delete && (
-            <Button id={`${ID}-archive`} type="button" variant="outline" onClick={() => setConfirmArchive(true)}>
-              {t('recurring.actions.archive', 'Archive')}
-            </Button>
-          )}
-          {!readOnly && (
-            <Button id={`${ID}-save`} type="button" disabled={saving || reference.loading} onClick={() => void save()}>
-              {saving ? t('recurring.actions.saving', 'Saving…') : t('recurring.actions.save', 'Save')}
-            </Button>
-          )}
+    <div id={`${ID}-editor`} className="space-y-6 p-6">
+      <div className="space-y-3">
+        <BackNav id={`${ID}-back`} href="/msp/tickets/recurring">
+          ← {t('recurring.editor.back', 'Recurring tickets')}
+        </BackNav>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-bold">
+              {isNew ? t('recurring.editor.newTitle', 'New recurring ticket') : form.name}
+            </h1>
+            {!isNew && (
+              <Badge variant={archived ? 'default-muted' : isActive ? 'success' : 'warning'}>
+                {archived
+                  ? t('recurring.status.archived', 'Archived')
+                  : isActive ? t('recurring.status.active', 'Active') : t('recurring.status.paused', 'Paused')}
+              </Badge>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {!isNew && !archived && permissions.update && (
+              <Button id={`${ID}-toggle-active`} type="button" variant="outline" onClick={() => void toggleActive()}>
+                {isActive ? t('recurring.actions.pause', 'Pause') : t('recurring.actions.resume', 'Resume')}
+              </Button>
+            )}
+            {!isNew && !archived && permissions.delete && (
+              <Button id={`${ID}-archive`} type="button" variant="outline" onClick={() => setConfirmArchive(true)}>
+                {t('recurring.actions.archive', 'Archive')}
+              </Button>
+            )}
+            {!readOnly && (
+              <Button id={`${ID}-save`} type="button" disabled={saving || reference.loading} onClick={() => void save()}>
+                {saving ? t('recurring.actions.saving', 'Saving…') : t('recurring.actions.save', 'Save')}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -430,16 +460,15 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
         </Alert>
       )}
 
-      <section id={`${ID}-details`} className="space-y-4">
-        <h2 className="text-lg font-semibold">{t('recurring.sections.details', 'Details')}</h2>
-        <div>
+      <SectionCard id={`${ID}-details`} title={t('recurring.sections.details', 'Details')}>
+        {/* The name is a short field, so it keeps a readable width on wide viewports. */}
+        <div className="md:max-w-md">
           <Label htmlFor={`${ID}-name`}>{t('recurring.fields.name', 'Name')}</Label>
           <Input id={`${ID}-name`} value={form.name} disabled={readOnly} onChange={(event) => patch({ name: event.target.value })} />
         </div>
-      </section>
+      </SectionCard>
 
-      <section id={`${ID}-template`} className="space-y-4">
-        <h2 className="text-lg font-semibold">{t('recurring.sections.template', 'Ticket template')}</h2>
+      <SectionCard id={`${ID}-template`} title={t('recurring.sections.template', 'Ticket template')}>
         <p className="text-sm text-[rgb(var(--color-text-500))]">
           {t('recurring.template.intro', 'What the ticket looks like comes from a shared ticket template. Changing the template changes every schedule that uses it, from the next ticket on.')}
         </p>
@@ -500,10 +529,9 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
         <p className="text-xs text-[rgb(var(--color-text-500))]">
           {t('recurring.template.tokensHelp', 'Template titles can use {{tokens}}; they are filled in per ticket.', { tokens: TICKET_TITLE_TOKENS.map((token) => `{{${token}}}`).join(' ') })}
         </p>
-      </section>
+      </SectionCard>
 
-      <section id={`${ID}-overrides`} className="space-y-4">
-        <h2 className="text-lg font-semibold">{t('recurring.sections.overrides', 'Overrides for this schedule')}</h2>
+      <SectionCard id={`${ID}-overrides`} title={t('recurring.sections.overrides', 'Overrides for this schedule')}>
         <p className="text-sm text-[rgb(var(--color-text-500))]">
           {t('recurring.overridesSection.intro', 'Leave a group off to use the template. Each client can override these again.')}
         </p>
@@ -530,10 +558,9 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
               onChange={(category) => patch({ overrides: { ...form.overrides, category } })}
             />
           ))}
-      </section>
+      </SectionCard>
 
-      <section id={`${ID}-dispatch`} className="space-y-4">
-        <h2 className="text-lg font-semibold">{t('recurring.sections.dispatch', 'Dispatch')}</h2>
+      <SectionCard id={`${ID}-dispatch`} title={t('recurring.sections.dispatch', 'Dispatch')}>
         <div className="max-w-md">
           <Label htmlFor={`${ID}-status`}>{t('recurring.fields.status', 'Status')}</Label>
           <CustomSelect
@@ -558,10 +585,9 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
           }}
           onChange={(value) => patch(value)}
         />
-      </section>
+      </SectionCard>
 
-      <section id={`${ID}-schedule`} className="space-y-4">
-        <h2 className="text-lg font-semibold">{t('recurring.sections.schedule', 'Schedule')}</h2>
+      <SectionCard id={`${ID}-schedule`} title={t('recurring.sections.schedule', 'Schedule')}>
         <RecurrenceRuleEditor
           idPrefix={`${ID}-rule`}
           value={form.recurrence}
@@ -618,7 +644,7 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
             </p>
           )}
         </div>
-        <div id={`${ID}-preview`} className="rounded-md border border-[rgb(var(--color-border-200))] p-3">
+        <div id={`${ID}-preview`} className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3 md:max-w-md">
           <p className="text-sm font-medium">{describeRule(form.recurrence, describeT)}</p>
           <p className="mt-2 text-sm font-medium">{t('recurring.preview.heading', 'Next 5 due dates')}</p>
           {previewError && <p className="text-sm text-[rgb(var(--color-text-500))]">{previewError}</p>}
@@ -633,10 +659,9 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
             </ul>
           )}
         </div>
-      </section>
+      </SectionCard>
 
-      <section id={`${ID}-behaviour`} className="space-y-4">
-        <h2 className="text-lg font-semibold">{t('recurring.sections.behaviour', 'Behaviour')}</h2>
+      <SectionCard id={`${ID}-behaviour`} title={t('recurring.sections.behaviour', 'Behaviour')}>
         <div className="max-w-md">
           <Label htmlFor={`${ID}-open-previous`}>{t('recurring.behaviour.openPrevious', 'If the previous ticket is still open')}</Label>
           <CustomSelect
@@ -666,7 +691,7 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
             </p>
           </div>
         </div>
-      </section>
+      </SectionCard>
 
       {isNew ? (
         <p id={`${ID}-clients-after-save`} className="text-sm text-[rgb(var(--color-text-500))]">
@@ -702,6 +727,18 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
         cancelLabel={t('recurring.actions.cancel', 'Cancel')}
       />
     </div>
+  );
+}
+
+/**
+ * The editor plus the page-level unsaved-changes guard it needs: the provider owns the confirmation
+ * dialog and the shared leave guard, and the body registers its dirty state with it.
+ */
+export function RecurringTicketEditor(props: RecurringTicketEditorProps) {
+  return (
+    <TranslatedUnsavedChangesProvider>
+      <RecurringTicketEditorBody {...props} />
+    </TranslatedUnsavedChangesProvider>
   );
 }
 

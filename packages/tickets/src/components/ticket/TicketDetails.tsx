@@ -87,7 +87,7 @@ import { Input } from "@alga-psa/ui/components/Input";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Label } from "@alga-psa/ui/components/Label";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { ExternalLink, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate } from 'lucide-react';
+import { ExternalLink, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate, Workflow } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { useTicketTemplatePermissions } from '../templates/useTicketTemplatePermissions';
 import { WorkItemType } from "@alga-psa/types";
@@ -137,7 +137,7 @@ import {
 } from '../../lib/commentImageDocuments';
 import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
-import type { TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
+import { hasWorkflowManageAccess, type TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
 import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
 import TicketResolutionDialog from './TicketResolutionDialog';
 import { persistResolutionComment } from './resolutionCommentPersistence';
@@ -211,6 +211,12 @@ interface TicketDetailsProps {
     ) => Promise<boolean>;
     onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
+    /**
+     * Additive notification fired after a user edit was saved successfully (field change,
+     * batch save, new comment, description edit). Purely informational; hosts use it to
+     * refresh data derived from the ticket (e.g. the activities list).
+     */
+    onSaved?: () => void;
     isSubmitting?: boolean;
     /**
      * Optional injected UI for survey summary (e.g. @alga-psa/surveys TicketSurveySummaryCard).
@@ -252,6 +258,19 @@ interface TicketDetailsProps {
      * QuickInvoiceTicketDialog). Keeps @alga-psa/tickets from importing billing.
      */
     renderQuickInvoice?: (args: { ticket: ITicket }) => React.ReactNode;
+
+    /**
+     * Optional injected UI for "Create workflow from ticket" (EE only; the composition layer
+     * fills it from the `@alga-psa/workflows/ticket-actions` seam). When absent (CE) or in
+     * Alga Desk mode the More menu entry is not rendered.
+     */
+    renderCreateWorkflowFromTicket?: (args: {
+        ticketId: string;
+        ticketNumber: string;
+        title: string;
+        open: boolean;
+        onOpenChange: (open: boolean) => void;
+    }) => React.ReactNode;
 
     /**
      * Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
@@ -321,6 +340,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     onBatchTicketUpdate,
     onAddComment,
     onUpdateDescription,
+    onSaved,
     isSubmitting = false,
     surveySummaryCard,
     bootstrap,
@@ -328,6 +348,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderContactDetails,
     renderCreateProjectTask,
     renderQuickInvoice,
+    renderCreateWorkflowFromTicket,
     renderClientDetails,
     isAlgaDeskMode = false,
     hideSlaStatus = false,
@@ -355,8 +376,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Tracks which mount fetches the server bootstrap already satisfied, so the
     // corresponding effects skip their FIRST run only (later dep-driven runs —
     // e.g. checklist on status change — still fetch).
+    const [canManageWorkflows, setCanManageWorkflows] = useState(
+        bootstrap?.canManageWorkflows ?? false,
+    );
+    const [createWorkflowOpen, setCreateWorkflowOpen] = useState(false);
     const bootstrapSkips = useRef({
-        permissions: bootstrap?.canViewCommentMetadataDebug != null,
+        permissions: bootstrap?.canViewCommentMetadataDebug != null && bootstrap?.canManageWorkflows != null,
         checklist: bootstrap?.checklistItems != null || bootstrap?.autoCloseState != null,
         layout: bootstrap?.layoutPreference != null,
         teams: bootstrap?.teams != null,
@@ -369,6 +394,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const router = useRouter();
     // Gates the header "Create template from ticket" item and the template link; server actions are authoritative.
     const templatePermissions = useTicketTemplatePermissions();
+    // Gates the header "Create workflow from ticket" item: EE slot present, workflow:manage, not Alga Desk.
+    const canCreateWorkflowFromTicket = Boolean(renderCreateWorkflowFromTicket) && canManageWorkflows && !isAlgaDeskMode;
     const searchParams = useSearchParams();
 
     useEffect(() => {
@@ -384,6 +411,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         void getCurrentUserPermissions().then((perms) => {
             if (!cancelled) {
                 setCanViewCommentMetadataDebug(hasAdminSettingsViewAccess(perms));
+                setCanManageWorkflows(hasWorkflowManageAccess(perms));
             }
         });
         return () => {
@@ -570,6 +598,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false, suppression: null });
             setCloseOverrideReason('');
             toast.success(t('messages.ticketClosed', 'Ticket closed'));
+            onSaved?.();
         } catch (error) {
             handleTicketActionError(error, t('messages.closeFailed', 'Failed to close ticket'));
         } finally {
@@ -1429,6 +1458,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 number: ticket.ticket_number,
             }));
 
+            // Notify before closing: closing the drawer unmounts this component.
+            onSaved?.();
+
             if (isInDrawer) {
                 closeDrawer();
                 onClose?.();
@@ -1447,7 +1479,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         } finally {
             setIsTicketDeleteProcessing(false);
         }
-    }, [ticket.ticket_id, ticket.ticket_number, isInDrawer, closeDrawer, onClose, router, searchParams, t]);
+    }, [ticket.ticket_id, ticket.ticket_number, isInDrawer, closeDrawer, onClose, onSaved, router, searchParams, t]);
 
     useEffect(() => {
         if (bootstrapSkips.current.teams) {
@@ -1688,12 +1720,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (result) {
                 setAdditionalAgents(prev => [...prev, result]);
                 toast.success(t('messages.agentAdded'));
+                onSaved?.();
             } else {
                 setTicket(prevTicket => ({
                     ...prevTicket,
                     assigned_to: userId
                 }));
                 toast.success(t('messages.agentAssigned'));
+                onSaved?.();
             }
         } catch (error) {
             handleTicketActionError(error, t('messages.addAgentFailed'));
@@ -1708,6 +1742,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
             setAdditionalAgents(prev => prev.filter(agent => agent.assignment_id !== assignmentId));
             toast.success(t('messages.agentRemoved'));
+            onSaved?.();
         } catch (error) {
             handleTicketActionError(error, t('messages.removeAgentFailed'));
         }
@@ -1803,6 +1838,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 // stamps updated_at/updated_by itself; browsers never send them.
                 setTicket(prev => ({ ...prev, updated_at: new Date().toISOString() }));
                 setUpdatedByUser(localActor);
+                onSaved?.();
             }
         } catch (error) {
             console.error(`Error updating ticket ${field}:`, error);
@@ -1842,6 +1878,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (isReturnedActionError(result)) {
                 throw result;
             }
+            // The assignment is durable; notify even if the follow-up fetches fail.
+            onSaved?.();
 
             // If we didn't have team details from local state, fetch them
             if (!teamDetails) {
@@ -1869,7 +1907,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setAdditionalAgents(previousAgents);
             handleTicketActionError(error, t('messages.teamAssignFailed'));
         }
-    }, [ticket, team, additionalAgents, teams]);
+    }, [ticket, team, additionalAgents, teams, onSaved]);
 
     const handleRemoveTeamAssignment = useCallback(async (
         mode: 'remove_all' | 'keep_all' | 'selective',
@@ -1881,6 +1919,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 throw result;
             }
 
+            onSaved?.();
             setTicket(prevTicket => ({
                 ...prevTicket,
                 assigned_team_id: null
@@ -1900,7 +1939,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             console.error('Error removing team assignment:', error);
             handleTicketActionError(error, t('messages.teamRemoveFailed'));
         }
-    }, [ticket.ticket_id]);
+    }, [ticket.ticket_id, onSaved]);
 
     const [editorKey, setEditorKey] = useState(0);
     const refreshTicketDocuments = useCallback(async () => {
@@ -2035,6 +2074,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 // not, since the editor only reads initialContent on mount.
                 setEditorKey((k) => k + 1);
 
+                onSaved?.();
                 return true;
             } else {
                 // Use the regular createComment action for MSP portal
@@ -2095,6 +2135,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         // See note above: remount the composer editor to clear the view.
                         setEditorKey((k) => k + 1);
                         console.log("New note added successfully");
+                        onSaved?.();
                         return true;
                     } else {
                         console.error('Failed to add comment');
@@ -2150,6 +2191,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (isReturnedActionError(result)) {
                 throw result;
             }
+
+            onSaved?.();
 
             const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
             if (isReturnedActionError(updatedComments)) {
@@ -2228,6 +2271,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (isReturnedActionError(updateResult)) {
                 throw updateResult;
             }
+            onSaved?.();
             await refreshTicketDocuments();
 
             const updatedCommentData = await findCommentById(currentComment.comment_id!);
@@ -2296,6 +2340,7 @@ const handleClose = () => {
             setConversations(prevConversations =>
                 prevConversations.filter(conv => conv.comment_id !== comment.comment_id)
             );
+            onSaved?.();
         } catch (error) {
             console.error("Error deleting comment:", error);
         }
@@ -2327,6 +2372,7 @@ const handleClose = () => {
                         updated_at: new Date().toISOString()
                     }));
                     setUpdatedByUser(localActor);
+                    onSaved?.();
                 }
                 
                 return success;
@@ -2362,6 +2408,7 @@ const handleClose = () => {
 
 
                 toast.success(t('messages.descriptionUpdated'));
+                onSaved?.();
                 return true;
             }
         } catch (error) {
@@ -2502,6 +2549,7 @@ const handleClose = () => {
                 updated_at: new Date().toISOString(),
             }));
             setUpdatedByUser(localActor);
+            onSaved?.();
             return true;
         } catch (error) {
             console.error('Error updating watch list:', error);
@@ -2578,6 +2626,7 @@ const handleClose = () => {
             // Header "Updated … by …": local UI state only; the server stamps the row.
             setTicket(prev => ({ ...prev, updated_at: new Date().toISOString() }));
             setUpdatedByUser(localActor);
+            onSaved?.();
 
             if (newContactId) {
                 const contactData = await getContactByContactNameId(newContactId);
@@ -2650,6 +2699,7 @@ const handleClose = () => {
                 updated_at: new Date().toISOString()
             }));
             setUpdatedByUser(localActor);
+            onSaved?.();
 
             if (field === 'itil_impact') {
                 toast.success(t('messages.itilImpactUpdated'));
@@ -2719,6 +2769,7 @@ const handleClose = () => {
                 // individual-save fallback below relies on handleSelectChange,
                 // which bumps per field on its own.
                 setActivityLogRefreshKey((value) => value + 1);
+                onSaved?.();
             }
             return success;
         }
@@ -2750,6 +2801,7 @@ const handleClose = () => {
                 for (const [field, value] of itilEntries) {
                     await handleItilFieldChange(field, value);
                 }
+                onSaved?.();
                 return true;
             }
 
@@ -2906,10 +2958,16 @@ const handleClose = () => {
             handleTicketActionError(error, t('messages.closeFailed', 'Failed to close ticket'));
             return resolutionSaved;
         } finally {
+            // The resolution comment is durable once saved, even when the status
+            // write was blocked, cancelled or failed, so the list row is stale
+            // in every such case. Single call covers all exits.
+            if (resolutionSaved) {
+                onSaved?.();
+            }
             setIsSubmittingResolutionClose(false);
             setIsSubmittingBundlePropagation(false);
         }
-    }, [addResolutionComment, closedStatusOptions, confirmBundlePropagation, localActor, runWithPendingLiveFields, t, ticket.ticket_id]);
+    }, [addResolutionComment, closedStatusOptions, confirmBundlePropagation, localActor, onSaved, runWithPendingLiveFields, t, ticket.ticket_id]);
 
     const handleClientChange = async (newClientId: string) => {
         try {
@@ -2924,6 +2982,8 @@ const handleClose = () => {
                 }
                 return result;
             });
+            // The client change is durable; notify even if follow-up fetches fail.
+            onSaved?.();
             
             const [clientData, contactsData, locationData] = await Promise.all([
                 getClientById(newClientId),
@@ -2965,6 +3025,7 @@ const handleClose = () => {
                 updated_at: new Date().toISOString()
             }));
             setUpdatedByUser(localActor);
+            onSaved?.();
 
             toast.success(t('messages.locationUpdated'));
         } catch (error) {
@@ -2987,6 +3048,7 @@ const handleClose = () => {
                 updated_at: new Date().toISOString()
             }));
             setUpdatedByUser(localActor);
+            onSaved?.();
 
             toast.success(t('messages.billingProfileUpdated', 'Billing profile updated'));
         } catch (error) {
@@ -3019,6 +3081,7 @@ const handleClose = () => {
             setConversations(prevConversations =>
                 prevConversations.filter(conv => conv.comment_id !== commentToDelete.commentId)
             );
+            onSaved?.();
 
             if (deleteImages && commentToDelete.imageDocuments.length > 0 && ticket.ticket_id) {
                 try {
@@ -3080,11 +3143,12 @@ const handleClose = () => {
                 return;
             }
             toast.success(t('messages.removedFromBundle'));
+            onSaved?.();
             router.refresh();
         } catch (error) {
             handleTicketActionError(error, t('messages.removeFromBundleFailed'));
         }
-    }, [router]);
+    }, [router, onSaved, t]);
 
     const handleUnbundleMaster = useCallback(async () => {
         if (!ticket.ticket_id) return;
@@ -3095,11 +3159,12 @@ const handleClose = () => {
                 return;
             }
             toast.success(t('messages.bundleRemoved'));
+            onSaved?.();
             router.refresh();
         } catch (error) {
             handleTicketActionError(error, t('messages.unbundleFailed'));
         }
-    }, [ticket.ticket_id, router]);
+    }, [ticket.ticket_id, router, onSaved, t]);
 
     const performAddChildToBundle = useCallback(async (childTicketId: string, onClosedMaster?: ClosedMasterChoice) => {
         if (!ticket.ticket_id) return;
@@ -3113,10 +3178,11 @@ const handleClose = () => {
             return;
         }
         toast.success(t('messages.addedToBundle'));
+        onSaved?.();
         setAddChildTicketNumber('');
         resetChildTicketPickerState();
         router.refresh();
-    }, [ticket.ticket_id, t, router, resetChildTicketPickerState]);
+    }, [ticket.ticket_id, t, router, resetChildTicketPickerState, onSaved]);
 
     // Fetch the master's closed context before linking. An open master links
     // straight away; a closed master must go through the explicit choice
@@ -3320,12 +3386,13 @@ const handleClose = () => {
                 return;
             }
             toast.success(t('messages.promotedMaster'));
+            onSaved?.();
             router.push(`/msp/tickets/${childTicketId}`);
             router.refresh();
         } catch (error) {
             handleTicketActionError(error, t('messages.promoteMasterFailed'));
         }
-    }, [ticket.ticket_id, router]);
+    }, [ticket.ticket_id, router, onSaved, t]);
 
     const handleToggleBundleMode = useCallback(async () => {
         if (!ticket.ticket_id || !bundle?.isBundleMaster) return;
@@ -3338,13 +3405,14 @@ const handleClose = () => {
                 return;
             }
             toast.success(t('messages.bundleSettingsUpdated'));
+            onSaved?.();
             router.refresh();
         } catch (error) {
             handleTicketActionError(error, t('messages.updateBundleSettingsFailed'));
         } finally {
             setIsUpdatingBundleSettings(false);
         }
-    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, router]);
+    }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, router, onSaved, t]);
 
     if (!tenant) {
         return (
@@ -3689,7 +3757,7 @@ const handleClose = () => {
                                     <Copy className="h-4 w-4" />
                                     <span>{t('actions.duplicate', { defaultValue: 'Duplicate' })}</span>
                                 </Button>
-                                {templatePermissions.create ? (
+                                {templatePermissions.create || canCreateWorkflowFromTicket ? (
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button
@@ -3702,18 +3770,38 @@ const handleClose = () => {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuItem
-                                                id={`${id}-create-template-menu-item`}
-                                                onClick={() => router.push(
-                                                    `/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticket.ticket_id ?? "")}`
-                                                )}
-                                            >
-                                                <LayoutTemplate className="h-4 w-4 mr-2" />
-                                                {t('actions.createTemplate', { defaultValue: 'Create template from ticket' })}
-                                            </DropdownMenuItem>
+                                            {templatePermissions.create ? (
+                                                <DropdownMenuItem
+                                                    id={`${id}-create-template-menu-item`}
+                                                    onClick={() => router.push(
+                                                        `/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticket.ticket_id ?? "")}`
+                                                    )}
+                                                >
+                                                    <LayoutTemplate className="h-4 w-4 mr-2" />
+                                                    {t('actions.createTemplate', { defaultValue: 'Create template from ticket' })}
+                                                </DropdownMenuItem>
+                                            ) : null}
+                                            {canCreateWorkflowFromTicket ? (
+                                                <DropdownMenuItem
+                                                    id="create-workflow-from-ticket-menu-item"
+                                                    onSelect={() => setCreateWorkflowOpen(true)}
+                                                >
+                                                    <Workflow className="mr-2 h-4 w-4" />
+                                                    {t('actions.createWorkflowFromTicket', { defaultValue: 'Create workflow from ticket' })}
+                                                </DropdownMenuItem>
+                                            ) : null}
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 ) : null}
+                                {renderCreateWorkflowFromTicket && canCreateWorkflowFromTicket
+                                    ? renderCreateWorkflowFromTicket({
+                                        ticketId: ticket.ticket_id as string,
+                                        ticketNumber: ticket.ticket_number ?? '',
+                                        title: ticket.title,
+                                        open: createWorkflowOpen,
+                                        onOpenChange: setCreateWorkflowOpen,
+                                    })
+                                    : null}
                                 <Button
                                     id={`${id}-delete-ticket-button`}
                                     variant="destructive"
@@ -4232,6 +4320,8 @@ const handleClose = () => {
                     clients={clients}
                     onChangeContact={handleContactChange}
                     onChangeClient={handleClientChange}
+                    onChangeLocation={handleLocationChange}
+                    onChangeBillingProfile={handleBillingProfileChange}
                     checklistItems={checklistItems ?? []}
                     onChecklistItemsChanged={setChecklistItems}
                     externalLinks={externalLinks ?? undefined}

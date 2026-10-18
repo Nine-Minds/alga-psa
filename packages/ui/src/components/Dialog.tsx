@@ -491,7 +491,7 @@ export function Dialog({
           {/* Title bar */}
           {title ? (
             <div className="px-6 pt-6 pb-4 border-b border-[rgb(var(--color-border-100))] rounded-t-lg">
-              <h2 className="text-xl font-semibold select-none">{title}</h2>
+              <h2 className="text-xl font-semibold select-none break-words">{title}</h2>
             </div>
           ) : draggable ? (
             <div className="p-2 rounded-t-lg" />
@@ -633,7 +633,7 @@ export function Dialog({
               onMouseDown={handleMouseDown}
             >
               {title ? (
-                <RadixDialog.Title className="text-xl font-semibold select-none">{title}</RadixDialog.Title>
+                <RadixDialog.Title className="text-xl font-semibold select-none break-words">{title}</RadixDialog.Title>
               ) : (
                 <>
                   <VisuallyHidden.Root>

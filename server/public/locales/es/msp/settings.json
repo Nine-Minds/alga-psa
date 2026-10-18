@@ -423,7 +423,8 @@
       "placeholders": {
         "teamName": "Ingrese el nombre del equipo",
         "selectTeamLead": "Seleccionar un líder de equipo",
-        "selectUserToAdd": "Seleccionar un usuario para agregar"
+        "selectUserToAdd": "Seleccionar un usuario para agregar",
+        "noTeamLead": "Sin asignar"
       },
       "alert": {
         "unsavedChanges": "Tiene cambios sin guardar"
@@ -1960,6 +1961,8 @@
   "timeEntry": {
     "title": "Configuración de registro de tiempo",
     "description": "Administre la configuración de registro de tiempo y los períodos de tiempo",
+    "accessDenied": "Acceso denegado: no tiene permiso para ver los períodos de tiempo.",
+    "loading": "Cargando la configuración de registro de tiempo...",
     "timePeriods": {
       "title": "Configuración de períodos de tiempo",
       "description": "Configure los períodos de tiempo de facturación",

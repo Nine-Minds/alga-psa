@@ -220,6 +220,26 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const WebhookRetryFailedBody = registry.registerSchema(
+    'WebhookRetryFailedBodyV1',
+    zOpenApi
+      .object({
+        since: zOpenApi
+          .string()
+          .datetime()
+          .optional()
+          .describe('Only consider deliveries whose attempted_at is at or after this timestamp.'),
+        limit: zOpenApi
+          .number()
+          .int()
+          .min(1)
+          .max(1000)
+          .optional()
+          .describe('Maximum number of candidate delivery rows to re-queue. Defaults to 500.'),
+      })
+      .describe('All fields optional; an empty body retries the newest 500 candidates.'),
+  );
+
   const WebhookSignatureBody = registry.registerSchema(
     'WebhookSignatureBodyV1',
     zOpenApi
@@ -369,6 +389,32 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const WebhookDeliveryRetryQueued = registry.registerSchema(
+    'WebhookDeliveryRetryQueuedV1',
+    zOpenApi.object({
+      queued: zOpenApi.literal(true),
+      webhook_id: zOpenApi.string().uuid(),
+      delivery_id: zOpenApi.string().uuid(),
+      event_id: zOpenApi.string().uuid().describe('event_id of the re-queued envelope.'),
+    }),
+  );
+
+  const WebhookRetryFailedResult = registry.registerSchema(
+    'WebhookRetryFailedResultV1',
+    zOpenApi.object({
+      queued: zOpenApi.number().int().describe('Deliveries handed to the delivery queue.'),
+      skipped: zOpenApi
+        .number()
+        .int()
+        .describe('Candidate rows not re-queued: repeat attempts of an already queued event, or an unusable stored envelope.'),
+      total_candidates: zOpenApi
+        .number()
+        .int()
+        .describe('All failed/abandoned non-test deliveries matching the filter, before the limit.'),
+      truncated: zOpenApi.boolean().describe('True when total_candidates exceeded the limit.'),
+    }),
+  );
+
   const WebhookSubscriptionsResponse = registry.registerSchema(
     'WebhookSubscriptionsResponseV1',
     zOpenApi.object({
@@ -486,6 +532,14 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const WebhookDeliveryEnvelope = registry.registerSchema(
     'WebhookDeliveryEnvelopeV1',
     successOf(WebhookDeliveryRecord),
+  );
+  const WebhookDeliveryRetryQueuedEnvelope = registry.registerSchema(
+    'WebhookDeliveryRetryQueuedEnvelopeV1',
+    successOf(WebhookDeliveryRetryQueued),
+  );
+  const WebhookRetryFailedEnvelope = registry.registerSchema(
+    'WebhookRetryFailedEnvelopeV1',
+    successOf(WebhookRetryFailedResult),
   );
   const WebhookHealthEnvelope = registry.registerSchema(
     'WebhookHealthEnvelopeV1',
@@ -799,6 +853,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     if (handler === 'createTemplate') req.body = { schema: WebhookTemplateBody };
     if (handler === 'useTemplate') req.body = { schema: WebhookTemplateCreateBody };
     if (handler === 'verifySignature') req.body = { schema: WebhookSignatureBody };
+    if (handler === 'retryFailed') req.body = { schema: WebhookRetryFailedBody };
 
     return req;
   }
@@ -821,6 +876,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
         'getDeliveries',
         'getDelivery',
         'retryDelivery',
+        'retryFailed',
         'getWebhookAnalytics',
         'getHealth',
         'rotateSecret',
@@ -836,12 +892,22 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       responses[409] = { description: 'Webhook already exists.', schema: ApiError };
     }
 
+    if (handler === 'retryDelivery') {
+      responses[409] = { description: 'Delivery already succeeded; nothing to retry.', schema: ApiError };
+      responses[422] = {
+        description: 'Stored delivery envelope is not replayable (payload no longer matches the delivery contract).',
+        schema: ApiError,
+      };
+    }
+
     const code =
       handler === 'delete'
         ? 204
         : ['create', 'createTemplate', 'useTemplate'].includes(handler)
           ? 201
-          : 200;
+          : ['retryDelivery', 'retryFailed'].includes(handler)
+            ? 202
+            : 200;
 
     responses[code] = successResponse;
     return responses;
@@ -1037,8 +1103,9 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       handler: 'retryDelivery',
       action: 'retry',
       summary: 'Retry delivery',
-      description: 'Re-sends a previously failed delivery and records a new attempt on the same delivery row.',
-      success: { description: 'Retry attempted.', schema: WebhookDeliveryEnvelope },
+      description:
+        'Re-queues a previously failed delivery as a fresh attempt on the shared webhook delivery queue (rate limiting, backoff and auto-disable still apply). Returns 202 without sending the request in-band; the new attempt lands as its own delivery row. Test deliveries are rejected.',
+      success: { description: 'Retry queued.', schema: WebhookDeliveryRetryQueuedEnvelope },
     },
     {
       method: 'get',
@@ -1049,6 +1116,16 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       description:
         'Derives status (healthy | failing | disabled), success_rate, and last delivery timestamps from the webhook stats counters.',
       success: { description: 'Health status returned.', schema: WebhookHealthEnvelope },
+    },
+    {
+      method: 'post',
+      path: '/api/v1/webhooks/{id}/retry-failed',
+      handler: 'retryFailed',
+      action: 'retry',
+      summary: 'Retry failed deliveries',
+      description:
+        'Re-queues every failed/abandoned non-test delivery of the webhook, oldest first, collapsing repeated attempts of the same event to a single enqueue. Accepts an optional since/limit body (default limit 500, max 1000) and never performs the HTTP calls in-band.',
+      success: { description: 'Retries queued.', schema: WebhookRetryFailedEnvelope },
     },
     {
       method: 'post',

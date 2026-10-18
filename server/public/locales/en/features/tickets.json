@@ -60,7 +60,6 @@
     "button": "Filters",
     "unassigned": "Unassigned",
     "category": "Filter by category",
-    "clearFilters": "Clear filters",
     "assignee": "Assignee",
     "allAssignees": "All Assignees",
     "responseState": "Response State",
@@ -224,7 +223,8 @@
     "rowActions": "Actions",
     "openMenu": "Open menu",
     "moreActions": "More actions",
-    "createTemplate": "Create template from ticket"
+    "createTemplate": "Create template from ticket",
+    "createWorkflowFromTicket": "Create workflow from ticket"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -323,7 +323,8 @@
     "errorWithMessage": "Error: {{message}}",
     "billingProfileUpdated": "Billing profile updated",
     "updateBillingProfileFailed": "Failed to update billing profile",
-    "scheduleOpenFailed": "Failed to open the scheduler"
+    "scheduleOpenFailed": "Failed to open the scheduler",
+    "sharedWorkspaceReadOnly": "You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it."
   },
   "conversation": {
     "comments": "Comments",
@@ -1809,6 +1810,7 @@
       "setClientToAddContact": "Set a client first to add a contact",
       "logInteraction": "Log call or email",
       "changeClient": "Change client",
+      "changeLocation": "Change location",
       "teamFallback": "Team",
       "teamSectionLabel": "Assign a team",
       "addAgentsOrTeam": "Add agents or a team…",

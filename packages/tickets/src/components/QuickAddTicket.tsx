@@ -679,10 +679,19 @@ export function QuickAddTicket({
   };
 
   const handleClientChange = async (newClientId: string | null) => {
-    if (isPrefilledClient) return;
+    // A prefilled client is a default, not a lock — the picker stays enabled,
+    // so swallowing the choice just snapped the dialog back to the client it
+    // was opened with. Honour it and let the effect load that client's
+    // contacts, which the prefilled branch skips.
+    if (isPrefilledClient) {
+      if (newClientId === clientId) return;
+      setIsPrefilledClient(false);
+    }
 
     setClientId(newClientId || '');
     setContactId(null);
+    // The location belongs to the client that was selected before.
+    setLocationId(null);
     clearErrorIfSubmitted();
 
     if (newClientId !== null) {

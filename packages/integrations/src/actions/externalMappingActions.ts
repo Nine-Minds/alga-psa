@@ -29,6 +29,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { mapUniqueViolation } from '../lib/externalMappingUniqueViolation';
 import { getStoredQboCredentialsMap, QboClientService } from '../lib/qbo/qboClientService';
 import { isQboAutomatedSalesTaxEnabled } from '../lib/qbo/qboTaxSettings';
 import { QBO_AST_PSEUDO_TAX_CODES } from '../lib/qbo/types';
@@ -156,7 +157,7 @@ const MUTABLE_MAPPING_ENTITY_TYPES = new Set([...CATALOG_ENTITY_TYPES, 'invoice'
 const REALM_BASED_INTEGRATION_TYPES = new Set(['quickbooks_online', 'xero']);
 
 /** CSV providers export to a file, not a connected realm. */
-const CSV_INTEGRATION_TYPES = new Set(['quickbooks_csv', 'xero_csv']);
+const CSV_INTEGRATION_TYPES = new Set(['quickbooks_csv', 'xero_csv', 'quickbooks_desktop']);
 
 const KNOWN_INTEGRATION_TYPES = new Set([
   ...REALM_BASED_INTEGRATION_TYPES,
@@ -1103,19 +1104,9 @@ async function createMappingRow({
       error,
     });
 
-    if (error?.code === '23505') {
-      // idx_unique_external_mapping is keyed on the external target; anything
-      // else (idx_unique_alga_mapping) is the same Alga entity mapped twice.
-      if (error?.constraint === 'idx_unique_external_mapping') {
-        return actionError(
-          'This target is already mapped to another entity in this organisation. Choose a different target.',
-          'msp/integrations:errors.mappings.duplicateTarget'
-        );
-      }
-      return actionError(
-        'A mapping already exists for this entity. Edit the existing mapping instead.',
-        'msp/integrations:errors.mappings.duplicate'
-      );
+    const uniqueViolation = mapUniqueViolation(error, { integration_type, alga_entity_type });
+    if (uniqueViolation) {
+      return uniqueViolation;
     }
 
     if (error?.code === ACCOUNTING_EXPORT_INVOICE_CANCELLED) {
@@ -1284,6 +1275,7 @@ export const updateExternalEntityMapping = withAuth(async (
     hasExternalEntityIdUpdate: updates.external_entity_id !== undefined,
   });
 
+  let updateScope: { integration_type?: string; alga_entity_type?: string } | null = null;
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
@@ -1300,6 +1292,11 @@ export const updateExternalEntityMapping = withAuth(async (
           'Mapping is unlinked. Create it again to relink the entity.'
         );
       }
+
+      updateScope = {
+        integration_type: before.integration_type,
+        alga_entity_type: before.alga_entity_type,
+      };
 
       // Realm, provider and entity-type fields are not editable here. The
       // persisted entity type determines whether the invoice lock is required.
@@ -1443,7 +1440,7 @@ export const updateExternalEntityMapping = withAuth(async (
     }
     const updateError = error as { code?: string } | null;
     if (updateError?.code === '23505') {
-      return actionError(
+      return mapUniqueViolation(error, updateScope ?? {}) ?? actionError(
         'A mapping already exists for this entity. Edit the existing mapping instead.',
         'msp/integrations:errors.mappings.duplicate'
       );

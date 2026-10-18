@@ -423,7 +423,8 @@
       "placeholders": {
         "teamName": "Digite o nome da equipe",
         "selectTeamLead": "Selecione um líder de equipe",
-        "selectUserToAdd": "Selecione um usuário para adicionar"
+        "selectUserToAdd": "Selecione um usuário para adicionar",
+        "noTeamLead": "Não atribuído"
       },
       "alert": {
         "unsavedChanges": "Você tem alterações não salvas"
@@ -1960,6 +1961,8 @@
   "timeEntry": {
     "title": "Configurações de entrada de tempo",
     "description": "Gerencie suas configurações de entrada de tempo e períodos de tempo",
+    "accessDenied": "Acesso negado: você não tem permissão para visualizar os períodos.",
+    "loading": "Carregando as configurações de entrada de tempo...",
     "timePeriods": {
       "title": "Configurações de período",
       "description": "Configure os períodos de faturamento",

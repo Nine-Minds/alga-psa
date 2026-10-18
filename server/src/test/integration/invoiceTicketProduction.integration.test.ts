@@ -254,7 +254,7 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
     const adjusted = await addManualItemsToInvoice(result.invoice_id, [
       { description: 'Cap acceptance line discount', quantity: 1, rate: -1000, is_discount: true, discount_type: 'fixed', applies_to_item_id: charges.find((c) => Number(c.net_amount) > 0)!.item_id, is_taxable: false },
       { description: 'Cap acceptance negative credit', quantity: 1, rate: -500, is_taxable: false },
-      { description: 'Cap acceptance information', quantity: 1, rate: 0, is_taxable: false },
+      { description: 'Cap acceptance information', quantity: 1, rate: 0, is_taxable: false, service_id: charges.find((c) => Number(c.net_amount) > 0)!.service_id },
     ] as any) as any;
     const adjustedVm = mapDbInvoiceToWasmViewModel(adjusted)!;
     expect(adjustedVm.subtotal).toBe(vm.subtotal - 1500); expect(adjustedVm.tax).toBe(vm.tax); expect(adjustedVm.total).toBe(vm.total - 1500);

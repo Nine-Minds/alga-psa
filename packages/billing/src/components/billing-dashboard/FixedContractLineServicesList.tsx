@@ -397,7 +397,7 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
         }
 
         return record.default_rate !== undefined
-          ? money(Math.round(Number(record.default_rate) * 100))
+          ? money(Math.round(Number(record.default_rate)))
           : t('common.notAvailable', { defaultValue: 'N/A' });
       },
     },
@@ -568,7 +568,7 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
                                         {' | '}
                                         {t('contractLineServices.addSection.rate', {
                                           defaultValue: 'Rate: {{value}}',
-                                          value: money(Math.round(Number(service.default_rate) * 100)),
+                                          value: money(Math.round(Number(service.default_rate))),
                                         })}
                                       </>
                                     )}
