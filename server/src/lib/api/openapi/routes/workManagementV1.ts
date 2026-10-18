@@ -429,7 +429,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'post', path: '/api/v1/time-sheets', summary: 'Create time sheet', description: 'Creates time sheet via create() path.', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets/bulk', summary: 'Bulk time sheet operation', description: 'Current route delegates to ApiTimeSheetController.list() (read path) instead of bulk approval/update logic.', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/time-sheets/export', summary: 'Export time sheets', description: 'Exports time sheets using ApiTimeSheetController.export().', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/time-sheets/search', summary: 'Search time sheets', description: 'Searches time sheets via ApiTimeSheetController.search(). `query` is required and matches time_sheets.notes (case-insensitive substring) unless `fields` selects user_name/notes/approval_notes. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet\'s `time_entries`. Returns at most `limit` sheets (default 25, max 100).', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-sheets/search', summary: 'Search time sheets', description: 'Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched as a case-insensitive substring against the sheet owner\'s full name (first name + space + last name). `user_name` is the only searchable field and the default. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet\'s `time_entries`. Returns at most `limit` sheets (default 25, max 100).', family: 'time_sheet' },
     { method: 'delete', path: '/api/v1/time-sheets/{id}', summary: 'Delete time sheet', description: 'Deletes time sheet UUID via ApiBase delete path.', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/time-sheets/{id}', summary: 'Get time sheet', description: 'Gets time sheet UUID with details via getWithDetails().', family: 'time_sheet' },
     { method: 'put', path: '/api/v1/time-sheets/{id}', summary: 'Update time sheet', description: 'Updates time sheet UUID.', family: 'time_sheet' },
@@ -496,7 +496,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TimeSheetSearchQuery',
     zOpenApi.object({
       query: zOpenApi.string().min(1).describe('Search text (required). Case-insensitive substring match.'),
-      fields: zOpenApi.string().optional().describe('Columns to search: user_name, notes, approval_notes. Repeat the param or comma-separate. Defaults to notes.'),
+      fields: zOpenApi.string().optional().describe('Fields to search. Only `user_name` (the user\'s full name) is supported, and it is the default.'),
       approval_statuses: zOpenApi.string().optional().describe('Approval statuses to keep (e.g. DRAFT, SUBMITTED, APPROVED, CHANGES_REQUESTED). Repeat or comma-separate.'),
       user_ids: zOpenApi.string().optional().describe('User UUIDs to keep. Repeat or comma-separate.'),
       period_ids: zOpenApi.string().optional().describe('Time period UUIDs to keep. Repeat or comma-separate.'),

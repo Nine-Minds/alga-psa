@@ -1256,22 +1256,11 @@ export class TimeSheetService extends BaseService<any> {
       
       const query = this.buildTenantScopedQuery(knex, context);
   
-      // Build search query
-      if (searchData.fields && searchData.fields.length > 0) {
-        query.where(function() {
-          searchData.fields!.forEach(field => {
-            if (field === 'user_name') {
-              this.orWhere(knex.raw(`CONCAT(users.first_name, ' ', users.last_name)`), 'ilike', `%${searchData.query}%`);
-            } else {
-              this.orWhere(`${tableName}.${field}`, 'ilike', `%${searchData.query}%`);
-            }
-          });
-        });
-      } else {
-        // Default search in notes
-        query.where(`${tableName}.notes`, 'ilike', `%${searchData.query}%`);
-      }
-  
+      // Join users first: the name match below references users.*.
+      // `user_name` is the only searchable field; no column name derived from input reaches SQL.
+      db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
+      query.where(knex.raw(`CONCAT(users.first_name, ' ', users.last_name)`), 'ilike', `%${searchData.query}%`);
+
       // Apply filters
       if (searchData.approval_statuses && searchData.approval_statuses.length > 0) {
         query.whereIn(`${tableName}.approval_status`, searchData.approval_statuses);
@@ -1293,9 +1282,6 @@ export class TimeSheetService extends BaseService<any> {
         query.where('time_periods.end_date', '<=', searchData.date_to);
       }
   
-      // Add joins
-      db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
-
       query.select(
           `${tableName}.*`,
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`)

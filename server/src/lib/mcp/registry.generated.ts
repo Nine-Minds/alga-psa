@@ -51623,7 +51623,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets/search",
     "displayName": "Search time sheets",
     "summary": "Search time sheets",
-    "description": "Searches time sheets via ApiTimeSheetController.search(). `query` is required and matches time_sheets.notes (case-insensitive substring) unless `fields` selects user_name/notes/approval_notes. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet's `time_entries`. Returns at most `limit` sheets (default 25, max 100).",
+    "description": "Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched as a case-insensitive substring against the sheet owner's full name (first name + space + last name). `user_name` is the only searchable field and the default. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet's `time_entries`. Returns at most `limit` sheets (default 25, max 100).",
     "tags": [
       "Work Management v1"
     ],
@@ -51644,10 +51644,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "fields",
         "in": "query",
         "required": false,
-        "description": "Columns to search: user_name, notes, approval_notes. Repeat the param or comma-separate. Defaults to notes.",
+        "description": "Fields to search. Only `user_name` (the user's full name) is supported, and it is the default.",
         "schema": {
           "type": "string",
-          "description": "Columns to search: user_name, notes, approval_notes. Repeat the param or comma-separate. Defaults to notes."
+          "description": "Fields to search. Only `user_name` (the user's full name) is supported, and it is the default."
         }
       },
       {

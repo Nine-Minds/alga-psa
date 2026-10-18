@@ -290,7 +290,7 @@ const queryStringArray = <T extends z.ZodTypeAny>(item: T) =>
 // Time sheet search schema
 export const timeSheetSearchSchema = z.object({
   query: z.string().min(1, 'Search query is required'),
-  fields: queryStringArray(z.enum(['user_name', 'notes', 'approval_notes'])),
+  fields: queryStringArray(z.enum(['user_name'])),
   approval_statuses: queryStringArray(approvalStatusSchema),
   user_ids: queryStringArray(uuidSchema),
   period_ids: queryStringArray(uuidSchema),

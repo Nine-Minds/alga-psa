@@ -118,13 +118,13 @@ describe('time sheet read controllers', () => {
   });
 
   it('search passes the query and filters to the service', async () => {
-    const res = await controller.search()(get(`/api/v1/time-sheets/search?query=weekly&fields=notes&user_ids=${userId}&approval_statuses=DRAFT,SUBMITTED&include_entries=true&limit=5`));
+    const res = await controller.search()(get(`/api/v1/time-sheets/search?query=weekly&fields=user_name&user_ids=${userId}&approval_statuses=DRAFT,SUBMITTED&include_entries=true&limit=5`));
     expect(res.status).toBe(200);
     expect((await res.json()).data).toEqual([{ id: sheetB, notes: 'weekly' }]);
     expect(service.search).toHaveBeenCalledWith(
       expect.objectContaining({
         query: 'weekly',
-        fields: ['notes'],
+        fields: ['user_name'],
         user_ids: [userId],
         approval_statuses: ['DRAFT', 'SUBMITTED'],
         include_entries: true,
@@ -135,8 +135,14 @@ describe('time sheet read controllers', () => {
     expect(service.list).not.toHaveBeenCalled();
   });
 
+  it.each(['notes', 'approval_notes'])('search with non-column fields=%s is 400 and never reaches the service', async (field) => {
+    const res = await controller.search()(get(`/api/v1/time-sheets/search?query=weekly&fields=${field}`));
+    expect(res.status).toBe(400);
+    expect(service.search).not.toHaveBeenCalled();
+  });
+
   it('search without query is 400', async () => {
-    const res = await controller.search()(get('/api/v1/time-sheets/search?fields=notes'));
+    const res = await controller.search()(get('/api/v1/time-sheets/search?fields=user_name'));
     expect(res.status).toBe(400);
     expect(service.search).not.toHaveBeenCalled();
   });
@@ -145,7 +151,7 @@ describe('time sheet read controllers', () => {
     const other = '00000000-0000-4000-8000-000000000002';
     expect(timeSheetSearchSchema.parse({ query: 'x', user_ids: [userId, other] }).user_ids).toEqual([userId, other]);
     expect(timeSheetSearchSchema.parse({ query: 'x', user_ids: `${userId},${other}` }).user_ids).toEqual([userId, other]);
-    expect(timeSheetSearchSchema.parse({ query: 'x', fields: 'notes,user_name' }).fields).toEqual(['notes', 'user_name']);
+    expect(timeSheetSearchSchema.parse({ query: 'x', fields: 'user_name,user_name' }).fields).toEqual(['user_name', 'user_name']);
     expect(timeSheetSearchSchema.parse({ query: 'x' }).fields).toBeUndefined();
     expect(() => timeSheetSearchSchema.parse({ query: 'x', user_ids: 'not-a-uuid' })).toThrow();
   });
