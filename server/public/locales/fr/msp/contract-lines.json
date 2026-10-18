@@ -821,7 +821,8 @@
       "conflict": "Cette modification de la ligne de contrat entre en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
       "notAllowed": "L’une des valeurs de la ligne de contrat n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
       "missingField": "Un champ obligatoire de la ligne de contrat est manquant.",
-      "missingFieldNamed": "Un champ obligatoire de la ligne de contrat est manquant : {{field}}."
+      "missingFieldNamed": "Un champ obligatoire de la ligne de contrat est manquant : {{field}}.",
+      "advanceTimingNotAllowed": "La facturation à l’avance n’est disponible que pour les lignes de contrat fixes. Les lignes horaires et d’utilisation sont toujours facturées à terme échu, une fois le travail effectué."
     },
     "templateLine": {
       "unavailable": "La ligne de modèle sélectionnée n’est plus disponible. Veuillez actualiser la page et réessayer."

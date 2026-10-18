@@ -21,6 +21,10 @@ import {
     normalizeLiveRecurringStorage,
     normalizeTemplateRecurringStorage,
 } from '@shared/billingClients/recurrenceStorageModel';
+import {
+    ContractLineTimingNotAllowedError,
+    isAdvanceTimingAllowedForLineType,
+} from '@shared/billingClients/contractLineTimingRule';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 import { validateContractLineWindow, normalizeContractLineDate } from '../lib/billing/contractLineWindow';
 import { actionError, getErrorMessage, permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -104,8 +108,8 @@ function contractLineActionErrorFrom(error: unknown): ContractLineActionError | 
         if (error.message === 'System-managed default contracts are attribution-only; contract-line authoring is disabled.') {
             return actionError(error.message);
         }
-        if (error.message === 'Advance billing is only supported for fixed contract lines.') {
-            return actionError(error.message);
+        if (error instanceof ContractLineTimingNotAllowedError) {
+            return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
         }
         if (error.message.startsWith('Cannot update fixed')) {
             return actionError(error.message);
@@ -298,6 +302,7 @@ export const createContractLine = withAuth(async (
             const { tenant: _, ...safePlanData } = planData;
             assertNonNegativeContractLineRate(safePlanData.custom_rate);
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                lineType: safePlanData.contract_line_type ?? null,
                 cadenceOwner: safePlanData.cadence_owner,
                 defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                 billingTiming: safePlanData.billing_timing,
@@ -367,6 +372,8 @@ export const updateContractLine = withAuth(async (
                 if (updateData.round_up_to_nearest !== undefined) templatePatch.round_up_to_nearest = updateData.round_up_to_nearest;
                 if (updateData.cadence_owner !== undefined || updateData.billing_timing !== undefined) {
                     const templatePolicy = resolveRecurringAuthoringPolicy({
+                        // This branch never changes line_type, so the stored type governs timing.
+                        lineType: existingTemplateLine.line_type ?? null,
                         cadenceOwner: updateData.cadence_owner,
                         fallbackCadenceOwner: existingTemplateLine.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                         billingTiming: updateData.billing_timing,
@@ -466,6 +473,8 @@ export const updateContractLine = withAuth(async (
                 safeUpdateData.invoice_line_description = safeUpdateData.invoice_line_description.trim() || null;
             }
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                // Post-update type: a type change to Hourly/Usage resets inherited advance.
+                lineType: safeUpdateData.contract_line_type ?? existingPlan.contract_line_type ?? null,
                 cadenceOwner: safeUpdateData.cadence_owner,
                 fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                 billingTiming: safeUpdateData.billing_timing,
@@ -535,8 +544,8 @@ export const upsertContractLineTerms = withAuth(async (
             }
             await assertContractLineIsAuthorable(trx, tenant, contractLineId);
 
-            if (billingTiming === 'advance' && contractLine.contract_line_type !== 'Fixed') {
-                throw new Error('Advance billing is only supported for fixed contract lines.');
+            if (billingTiming === 'advance' && !isAdvanceTimingAllowedForLineType(contractLine.contract_line_type)) {
+                throw new ContractLineTimingNotAllowedError();
             }
 
             await tenantDb(trx, tenant).table('contract_lines')

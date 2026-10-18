@@ -242,6 +242,8 @@ export const RECURRING_SERVICE_PERIOD_PROVENANCE_REASON_CODES = {
     'integrity_repair',
     'invoice_linkage_repair',
     'admin_correction',
+    'hourly_usage_arrears_repair',
+    'stranded_advance_catch_up',
   ],
 } as const satisfies Record<RecurringServicePeriodProvenanceKind, readonly string[]>;
 
@@ -625,7 +627,12 @@ export interface IRecurringDueWorkMaterializationGap {
   invoiceWindowEnd: ISO8601String;
   servicePeriodStart: ISO8601String;
   servicePeriodEnd: ISO8601String;
-  reason: 'missing_service_period_materialization';
+  /**
+   * `stranded_arrears_only_line`: an Hourly/Usage line still carries the leftovers of an advance
+   * schedule (a billed empty advance period holding unbilled work, or a retired advance period with
+   * no arrears row). It does not block invoicing; "Fix all" repairs it.
+   */
+  reason: 'missing_service_period_materialization' | 'stranded_arrears_only_line';
   detail: string;
 }
 

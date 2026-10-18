@@ -833,7 +833,7 @@
       "advance": "Vooraf (factureren aan het begin van de periode)",
       "arrears": "Achteraf (factureren aan het einde van de periode)"
     },
-    "billingTimingHelp": "Facturatie vooraf is gebruikelijk voor vaste tarieven; achteraf voor tijd-/verbruiksgebaseerde services.",
+    "billingTimingHelp": "Vaste regels kunnen vooraf of achteraf worden gefactureerd. Uren- en verbruiksregels worden altijd achteraf gefactureerd, nadat het werk is uitgevoerd.",
     "chooseBillingModel": "Kies een factureermodel *",
     "chooseBillingModelDescription": "Selecteer het facturatiegedrag dat bij dit aanbod past.",
     "contractLineNameLabel": "Contractregelnaam *",
@@ -2092,7 +2092,7 @@
       "advance": "Vooraf - factureren aan het begin van de periode"
     },
     "fields": {
-      "billingTiming": "Facturatietiming",
+      "billingTiming": "Factureringsmoment voor vaste regels",
       "adjustPartialPeriods": "Aanpassen voor gedeeltelijke perioden",
       "services": "Services",
       "serviceNumber": "Service {{index}}",
@@ -2539,7 +2539,8 @@
       "tieredPricing": "staffelprijzen",
       "timing": {
         "advance": "Vooraf factureren",
-        "arrears": "Achteraf factureren"
+        "arrears": "Achteraf factureren",
+        "arrearsOnly": "Achteraf gefactureerd"
       },
       "title": "Contractwijzigingen",
       "types": {
@@ -2707,6 +2708,15 @@
   },
   "sellHourBlockNote": {
     "text": "Een urenbundel in het contract factureert alleen het meerverbruik. Wilt u een blok uren vooraf in rekening brengen, gebruik dan Blok verkopen onder Urenblokken op het tabblad Factureringsdashboard van de klant."
+  },
+  "billingTimingField": {
+    "arrears": "Achteraf",
+    "fixedHelp": "Vaste regels kunnen vooraf of achteraf worden gefactureerd.",
+    "nonFixedHelp": "Uren- en verbruiksregels worden altijd achteraf gefactureerd, nadat het werk is uitgevoerd.",
+    "options": {
+      "advance": "Vooraf (factureer aan het begin van de periode)",
+      "arrears": "Achteraf (factureer aan het einde van de periode)"
+    }
   },
   "contractDiscounts": {
     "title": "Kortingen",

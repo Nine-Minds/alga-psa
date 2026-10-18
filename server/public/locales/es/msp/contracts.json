@@ -833,7 +833,7 @@
       "advance": "Anticipado (facturar al inicio del período)",
       "arrears": "A plazo vencido (facturar al final del período)"
     },
-    "billingTimingHelp": "La facturación anticipada es habitual para tarifas fijas; a plazo vencido para servicios basados en tiempo/uso.",
+    "billingTimingHelp": "Las líneas fijas pueden facturarse por adelantado o al vencimiento. Las líneas por horas y por uso siempre se facturan al vencimiento, después de realizar el trabajo.",
     "chooseBillingModel": "Elija un modelo de facturación *",
     "chooseBillingModelDescription": "Seleccione el comportamiento de facturación que se adapte a esta oferta.",
     "contractLineNameLabel": "Nombre de la línea de contrato *",
@@ -2092,7 +2092,7 @@
       "advance": "Anticipado: facturar al inicio del período"
     },
     "fields": {
-      "billingTiming": "Momento de facturación",
+      "billingTiming": "Momento de facturación de las líneas de tarifa fija",
       "adjustPartialPeriods": "Ajustar por períodos parciales",
       "services": "Servicios",
       "serviceNumber": "Servicio {{index}}",
@@ -2539,7 +2539,8 @@
       "tieredPricing": "precios por niveles",
       "timing": {
         "advance": "Facturar por adelantado",
-        "arrears": "Facturar a período vencido"
+        "arrears": "Facturar a período vencido",
+        "arrearsOnly": "Facturado a período vencido"
       },
       "title": "Cambios del contrato",
       "types": {
@@ -2707,6 +2708,15 @@
   },
   "sellHourBlockNote": {
     "text": "Una bolsa de horas del contrato solo factura el exceso. Para cobrar por adelantado un bloque de horas, use Vender bloque en Bloques de horas, en la pestaña Panel de facturación del cliente."
+  },
+  "billingTimingField": {
+    "arrears": "Al vencimiento",
+    "fixedHelp": "Las líneas fijas pueden facturarse por adelantado o al vencimiento.",
+    "nonFixedHelp": "Las líneas por horas y por uso siempre se facturan al vencimiento, después de realizar el trabajo.",
+    "options": {
+      "advance": "Por adelantado (facturar al inicio del periodo)",
+      "arrears": "Al vencimiento (facturar al final del periodo)"
+    }
   },
   "contractDiscounts": {
     "title": "Descuentos",

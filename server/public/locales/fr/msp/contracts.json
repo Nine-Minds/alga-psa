@@ -833,7 +833,7 @@
       "advance": "Par avance (facturer en début de période)",
       "arrears": "À terme échu (facturer en fin de période)"
     },
-    "billingTimingHelp": "La facturation par avance est typique pour les frais fixes ; à terme échu pour les services horaires ou à l'usage.",
+    "billingTimingHelp": "Les lignes fixes peuvent être facturées à l’avance ou à terme échu. Les lignes horaires et d’utilisation sont toujours facturées à terme échu, une fois le travail effectué.",
     "chooseBillingModel": "Choisir un modèle de facturation *",
     "chooseBillingModelDescription": "Sélectionnez le comportement de facturation qui correspond à cette offre.",
     "contractLineNameLabel": "Nom de la ligne de contrat *",
@@ -2092,7 +2092,7 @@
       "advance": "Par avance - facturer au début de la période"
     },
     "fields": {
-      "billingTiming": "Moment de facturation",
+      "billingTiming": "Moment de facturation des lignes à tarif fixe",
       "adjustPartialPeriods": "Ajuster pour les périodes partielles",
       "services": "Services",
       "serviceNumber": "Service {{index}}",
@@ -2539,7 +2539,8 @@
       "tieredPricing": "tarification par paliers",
       "timing": {
         "advance": "Facturer d'avance",
-        "arrears": "Facturer à terme échu"
+        "arrears": "Facturer à terme échu",
+        "arrearsOnly": "Facturé à terme échu"
       },
       "title": "Modifications du contrat",
       "types": {
@@ -2707,6 +2708,15 @@
   },
   "sellHourBlockNote": {
     "text": "Un forfait d'heures de contrat ne facture que le dépassement. Pour facturer d'avance un bloc d'heures, utilisez Vendre un bloc sous Blocs d'heures, dans l'onglet Tableau de bord de facturation du client."
+  },
+  "billingTimingField": {
+    "arrears": "À terme échu",
+    "fixedHelp": "Les lignes fixes peuvent être facturées à l’avance ou à terme échu.",
+    "nonFixedHelp": "Les lignes horaires et d’utilisation sont toujours facturées à terme échu, une fois le travail effectué.",
+    "options": {
+      "advance": "À l’avance (facturer au début de la période)",
+      "arrears": "À terme échu (facturer à la fin de la période)"
+    }
   },
   "contractDiscounts": {
     "title": "Remises",

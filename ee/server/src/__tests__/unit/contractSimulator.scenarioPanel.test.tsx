@@ -164,9 +164,9 @@ describe("contract simulator ScenarioPanel", () => {
     fireEvent.change(screen.getByLabelText("Billing frequency"), {
       target: { value: "quarterly" },
     });
-    fireEvent.change(screen.getByLabelText("Billing timing"), {
-      target: { value: "advance" },
-    });
+    // Usage lines always bill in arrears: no timing select, read-only value.
+    expect(screen.queryByLabelText("Billing timing")).not.toBeInTheDocument();
+    expect(screen.getByText("Bill in arrears")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Cadence owner"), {
       target: { value: "contract" },
     });
