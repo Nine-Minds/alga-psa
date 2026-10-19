@@ -4,6 +4,7 @@
  */
 
 import { createTenantKnex, tenantDb, withTransaction, type TenantDb } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import type { Knex } from 'knex';
 import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
@@ -195,6 +196,7 @@ export class EmailProviderService {
     try {
       const conn = knexOrTrx ?? (await this.getDb(data.tenant));
       const created = await withTransaction(conn, async (trx) => {
+        await assertCoManagedOperationalWrite(trx, data.tenant);
         const db = tenantDb(trx, data.tenant);
 
         // Create main provider record

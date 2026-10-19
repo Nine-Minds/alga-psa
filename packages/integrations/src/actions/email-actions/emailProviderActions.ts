@@ -2,6 +2,7 @@
 
 import { auditLog, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type {
   EmailProvider,
@@ -230,6 +231,9 @@ async function getOrCreateProvider(
   },
   providerId?: string
 ): Promise<EmailProvider> {
+  // A co-managed workspace connects mailboxes only once it is operational: a
+  // mailbox added before acceptance would outlive a cancelled setup's cleanup.
+  await assertCoManagedOperationalWrite(trx, tenant);
   const senderDisplayName = normalizeSenderDisplayName(data.senderDisplayName);
   const providerTable = () => tenantDb(trx, tenant).table('email_providers');
 

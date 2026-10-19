@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@/lib/db';
 import { tenantDb } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import type { Knex } from 'knex';
 import { computeDomain, enqueueProvisioningWorkflow } from '../extensions/runtime/provision';
 import { getS3Client, getBundleBucket } from "../storage/s3-client";
@@ -446,6 +447,9 @@ export const installExtensionForCurrentTenantV2 = withOptionalAuth(async (user, 
 
   // Wrap all writes in a transaction to ensure atomicity across pods
   const installId = await knex.transaction(async (trx: Knex.Transaction) => {
+    // An install before co-management is accepted would survive a cancelled
+    // setup's cleanup, which never removes runner resources.
+    await assertCoManagedOperationalWrite(trx, tenant);
     const txDb = tenantDb(trx, tenant);
     const payload = {
       tenant_id: tenant,

@@ -730,6 +730,20 @@ async function ticketServiceForTest() {
 }
 
 describe('ticket API lifecycle admission against PostgreSQL', () => {
+  it('refuses a mailbox before acceptance, since a cancelled setup cannot clean one up', async () => {
+    // Cleanup refuses to acknowledge a workspace that still holds external
+    // mail resources, so one created before acceptance would strand the seats.
+    const { EmailProviderService } = await import('../../../../../packages/integrations/src/services/email/EmailProviderService');
+    const { operation, customer, actor, input } = await readyForAcceptance();
+    const create = () => new EmailProviderService().createProvider({ tenant: operation.customer_tenant, providerType: 'imap',
+      providerName: 'Support inbox', mailbox: `support-${randomUUID()}@example.test`, isActive: true,
+      vendorConfig: { host: 'imap.example.test', port: 993, auth_type: 'password', username: 'support' } } as never, db);
+    await expect(create()).rejects.toThrow(/must accept co-management/);
+    expect(await customer.table('email_providers')).toHaveLength(0);
+    await acceptCoManagedRelationship(db, actor, input);
+    await expect(create()).resolves.toMatchObject({ name: 'Support inbox' });
+  });
+
   it('denies direct ticket, assignment, comment, and bundle mutations before acceptance and after grace', async () => {
     const { operation, customer, actor, input } = await readyForAcceptance();
     const { service, publish } = await ticketServiceForTest();
