@@ -385,5 +385,37 @@
     "featureIds": [
       "F101"
     ]
+  },
+  {
+    "id": "T041",
+    "description": "Unit: authorization kernel joint-subject evaluation \u2014 allows only when both subjects allow; record-level rules evaluated for each subject; a single-subject call behaves exactly as today",
+    "implemented": false,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "DB integration (CE rule): a ticket comment by a non-interactive author with no visibility is stored internal; explicit is_internal=false throws HumanWorkOwnerRequiredError('is_internal') and stores nothing; client-portal and inbound-email comments unaffected",
+    "implemented": false,
+    "featureIds": [
+      "F101",
+      "F016"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "DB integration (CE guard): assertHumanWorkAssignee rejects a non-interactive id as ticket assignee, ticket resource, schedule assignee, time-entry owner, time-sheet approver and interaction owner; writes that default the owner to a non-internal caller throw HumanWorkOwnerRequiredError; internal ids pass",
+    "implemented": false,
+    "featureIds": [
+      "F052",
+      "F053",
+      "F054",
+      "F055",
+      "F056",
+      "F057",
+      "F059",
+      "F060"
+    ]
   }
 ]

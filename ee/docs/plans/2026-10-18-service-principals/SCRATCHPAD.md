@@ -301,6 +301,38 @@ These pickers use `userTypeFilter={null}`:
 - `PolicyManagement.tsx`: 1643, 1798
 - `AdminSessionManagement.tsx:288`
 
+## Delivery slices (stacked cards)
+
+Robert decided on 2026-10-18 to deliver this plan as four stacked XO cards, in dependency order A → B → C → D. Each card is stacked on the previous one.
+
+- Each card implements only its own slice.
+- Each card flips `implemented` only for its own feature and test ids, which keeps merge conflicts in the plan files to a minimum.
+- Change scope only in this plan, never in a card-local document.
+
+- **A. CE hardening and user_type audit**
+  - Features (42): F001, F008, F009, F010, F011, F012, F013, F014, F015, F016, F017, F018, F019, F020, F021, F022, F035, F036, F037, F038, F039, F040, F041, F042, F043, F044, F045, F052, F053, F054, F055, F056, F057, F058, F059, F060, F061, F082, F083, F085, F086, F101
+  - Tests (13): T007, T008, T009, T010, T011, T013, T021, T022, T026, T028, T029, T042, T043
+- **B. Edition boundary and generic hooks**
+  - Features (10): F005, F046, F047, F048, F049, F051, F092, F096, F097, F098
+  - Tests (3): T037, T038, T041
+- **C. EE core: schema, service, entitlements, act-as, attribution**
+  - Features (39): F002, F003, F004, F006, F007, F023, F024, F025, F026, F027, F028, F029, F030, F031, F032, F033, F034, F050, F062, F063, F064, F065, F066, F067, F068, F070, F071, F072, F073, F074, F075, F087, F088, F089, F090, F093, F094, F099, F100
+  - Tests (21): T001, T002, T003, T004, T005, T006, T012, T014, T015, T016, T017, T018, T019, T020, T023, T024, T025, T027, T035, T039, T040
+- **D. EE UI and usage visibility**
+  - Features (10): F069, F076, F077, F078, F079, F080, F081, F084, F091, F095
+  - Tests (6): T030, T031, T032, T033, T034, T036
+
+Notes on the split:
+
+- **F001, the EE migration that widens the CHECK constraint, ships in card A.**
+  - A's tests need a user with a non-interactive type, and the CE schema forbids one.
+  - Widening the constraint is harmless by itself: nothing creates service users until card C.
+- **Card A's human-work code uses `context.userId`, which already means the effective user.**
+  - Card B adds the explicit `effectiveUserId` field, and A's code works unchanged with it.
+  - Card C's boundary maps `HumanWorkOwnerRequiredError` to `ACT_AS_REQUIRED` (F099).
+- **Card C holds both halves of the release-ordering pair**: the agent-user migration (R9.2) and the EE boundary that makes the API accept service users (R4.6). Neither can merge without the other.
+- **T040 and T016 are the end-to-end act-as versions of T042 and T041.** That is why they live in card C.
+
 ## Commands / Runbooks
 
 Pre-flight before the R9.2 migration: count human work currently pinned to agent backing users.
