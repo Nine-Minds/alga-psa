@@ -2967,6 +2967,161 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
   });
 
+  it('Contact match (Microsoft intra-org): same-tenant sender with no Authentication-Results is attributed via the Exchange internal-auth stamp', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-ms-intraorg-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupMicrosoftProvider({
+      providerId,
+      mailbox,
+      subscriptionId: `sub-ms-${uuidv4()}`,
+    });
+
+    cleanup.push(async () => {
+      await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).delete();
+      await tenantTable('email_providers').where({ id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
+    });
+
+    const contactClientId = uuidv4();
+    const contactEmail = `ms-intraorg-${uuidv4().slice(0, 6)}@example.com`;
+    await tenantTable('clients').insert({
+      tenant: tenantId,
+      client_id: contactClientId,
+      client_name: `MS Intra-Org Client ${uuidv4().slice(0, 6)}`,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await tenantTable('clients').where({ client_id: contactClientId }).delete();
+    });
+
+    const contactId = uuidv4();
+    await tenantTable('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: contactId,
+      full_name: 'Intra-Org Microsoft Contact',
+      email: contactEmail,
+      client_id: contactClientId,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await tenantTable('contacts').where({ contact_name_id: contactId }).delete();
+    });
+
+    const subject = `Microsoft intra-org contact subject ${uuidv4().slice(0, 6)}`;
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'microsoft',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: contactEmail, name: 'Intra-Org Microsoft Contact' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject,
+        body: { text: 'Hello from the same M365 tenant', html: undefined },
+        attachments: [],
+        // Intra-tenant Exchange delivery: no Authentication-Results, only the org stamp.
+        headers: { 'X-MS-Exchange-Organization-AuthAs': 'Internal' },
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await tenantTable('tickets')
+      .where({ title: subject })
+      .first<any>();
+    expect(ticket).toBeDefined();
+    expect(ticket.client_id).toBe(contactClientId);
+    expect(ticket.contact_name_id).toBe(contactId);
+
+    const comments = await tenantTable('comments').where({ ticket_id: ticket.ticket_id });
+    expect(comments).toHaveLength(1);
+    expect(comments[0].author_type).toBe('client');
+    expect(comments[0].contact_id).toBe(contactId);
+
+    cleanup.push(async () => {
+      await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
+    });
+  });
+
+  it('Contact match (Google): the Exchange internal-auth stamp alone does not authorize contact attribution', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-g-intraorg-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await tenantTable('gmail_processed_history').where({ provider_id: providerId }).delete();
+      await tenantTable('google_email_provider_config').where({ email_provider_id: providerId }).delete();
+      await tenantTable('email_providers').where({ id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
+    });
+
+    const contactClientId = uuidv4();
+    const contactEmail = `g-intraorg-${uuidv4().slice(0, 6)}@example.com`;
+    await tenantTable('clients').insert({
+      tenant: tenantId,
+      client_id: contactClientId,
+      client_name: `Google Stamp Client ${uuidv4().slice(0, 6)}`,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await tenantTable('clients').where({ client_id: contactClientId }).delete();
+    });
+
+    const contactId = uuidv4();
+    await tenantTable('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: contactId,
+      full_name: 'Forged Stamp Contact',
+      email: contactEmail,
+      client_id: contactClientId,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await tenantTable('contacts').where({ contact_name_id: contactId }).delete();
+    });
+
+    const subject = `Google forged stamp subject ${uuidv4().slice(0, 6)}`;
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: contactEmail, name: 'Forged Stamp Contact' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject,
+        body: { text: 'Header injected by an external sender', html: undefined },
+        attachments: [],
+        headers: { 'X-MS-Exchange-Organization-AuthAs': 'Internal' },
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await tenantTable('tickets')
+      .where({ title: subject })
+      .first<any>();
+    expect(ticket).toBeDefined();
+    expect(ticket.contact_name_id ?? null).toBeNull();
+    expect(ticket.client_id).not.toBe(contactClientId);
+
+    cleanup.push(async () => {
+      await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
+      await deleteTicketRows(ticket.ticket_id);
+    });
+  });
+
   it('Contact reply match: reply-token threading stores contact-authored comment when sender has no user', async () => {
     const providerId = uuidv4();
     const mailbox = `support-ms-contact-reply-${uuidv4().slice(0, 6)}@example.com`;
