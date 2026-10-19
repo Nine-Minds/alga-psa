@@ -1163,7 +1163,8 @@
       "unknown": "Unknown",
       "unifiedMemory": "{{size}}GB Unified Memory",
       "memoryUsed": " ({{size}}GB Used)",
-      "freeStorage": "{{size}} GB Free"
+      "freeStorage": "{{size}} GB Free",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "No hardware data available",
     "emptyStorage": "No storage drives detected"

@@ -353,6 +353,11 @@ const servicePeriodPostInventoryRefs = new Set([
   // Quote-converted first-invoice regression (alga0002168) asserts the contract
   // line's first service period was materialized.
   'server/src/test/integration/billing/quoteConvertedFirstInvoice.integration.test.ts',
+  // Arrears-only line gap detection and repair (block In Advance billing on Hourly/Usage
+  // lines) read and rewrite persisted service-period rows; like the contract-cadence
+  // materialization and coverage-audit actions above, they landed after the pass-0 snapshot.
+  'packages/billing/src/actions/arrearsOnlyLineGaps.ts',
+  'packages/billing/src/actions/arrearsOnlyLineRepair.ts',
 ]);
 
 // Files whose persisted service-period field references were removed after the

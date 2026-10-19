@@ -1,6 +1,14 @@
 'use server';
 
+import {
+  resolveEffectiveBillingTiming,
+  resolveRecurringChargeFamily,
+} from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import {
+  repairArrearsOnlyLineSchedulesForTenant,
+  type ArrearsOnlyLineRepairSummary,
+} from './arrearsOnlyLineRepair';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { v4 as uuidv4 } from 'uuid';
@@ -376,26 +384,6 @@ function maxIsoDateOnly(left: ISO8601String, right: ISO8601String) {
   return compareIsoDateOnly(left, right) >= 0 ? left : right;
 }
 
-function resolveRecurringChargeFamily(contractLineType: string | null): RecurringChargeFamily {
-  switch ((contractLineType ?? 'fixed').toLowerCase()) {
-    case 'fixed':
-      return 'fixed';
-    case 'time':
-    case 'hourly':
-      return 'hourly';
-    case 'usage':
-      return 'usage';
-    case 'bucket':
-      return 'bucket';
-    case 'product':
-      return 'product';
-    case 'license':
-      return 'license';
-    default:
-      return 'fixed';
-  }
-}
-
 function normalizeContractCadenceBillingCycle(value: string | null): SupportedContractCadenceBillingCycle | null {
   return normalizeCadenceBillingCycle(value) as SupportedContractCadenceBillingCycle | null;
 }
@@ -530,7 +518,9 @@ async function loadLiveScheduleContext(input: {
     contract_line_type: row?.contract_line_type ?? null,
     cadence_owner: row?.cadence_owner ?? null,
     billing_frequency: row?.billing_frequency ?? null,
-    billing_timing: row?.billing_timing ?? null,
+    billing_timing: row?.billing_timing
+      ? resolveEffectiveBillingTiming(row.contract_line_type, row.billing_timing)
+      : null,
     assignment_start_date: row?.assignment_start_date ?? null,
     assignment_end_date: row?.assignment_end_date ?? null,
   };
@@ -1130,7 +1120,7 @@ export const previewRecurringServicePeriodInvoiceLinkageRepair = withAuth(async 
 export const repairAllRecurringServicePeriodsForTenant = withAuth(async (
   user,
   { tenant },
-): Promise<RepairAllClientCadenceServicePeriodsSummary | ActionPermissionError> => {
+): Promise<(RepairAllClientCadenceServicePeriodsSummary & { arrearsOnlyLines: ArrearsOnlyLineRepairSummary }) | ActionPermissionError> => {
   const denied = await requireRecurringServicePeriodPermission(
     user,
     'regenerate',
@@ -1142,6 +1132,10 @@ export const repairAllRecurringServicePeriodsForTenant = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: any) => {
-    return repairAllClientCadenceServicePeriodsForTenant(trx, { tenant });
+    // Hourly/Usage lines saved as "advance" are repaired first so the client-cadence
+    // pass below sees their arrears schedule.
+    const arrearsOnlyLines = await repairArrearsOnlyLineSchedulesForTenant(trx, { tenant });
+    const summary = await repairAllClientCadenceServicePeriodsForTenant(trx, { tenant });
+    return { ...summary, arrearsOnlyLines };
   });
 });

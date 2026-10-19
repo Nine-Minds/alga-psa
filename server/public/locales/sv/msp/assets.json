@@ -1163,7 +1163,8 @@
       "unknown": "Okänd",
       "unifiedMemory": "{{size}} GB enhetligt minne",
       "memoryUsed": " ({{size}} GB använt)",
-      "freeStorage": "{{size}} GB ledigt"
+      "freeStorage": "{{size}} GB ledigt",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "Inga maskinvarudata tillgängliga",
     "emptyStorage": "Inga lagringsenheter upptäcktes"

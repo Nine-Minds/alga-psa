@@ -239,7 +239,8 @@
       "fixAllResult": "Ombyggda scheman: {{schedules}}. Berörda kunder: {{clients}}.",
       "fixAllNoop": "Alla faktureringsscheman är redan uppdaterade. Det som fortfarande visas nedan behöver granskas individuellt.",
       "fixAllError": "Det gick inte att bygga om tjänsteperioderna. Försök igen.",
-      "fixAllDenied": "Du har inte behörighet att bygga om tjänsteperioder."
+      "fixAllDenied": "Du har inte behörighet att bygga om tjänsteperioder.",
+      "fixAllManualReview": "{{count}} timbaserade eller användningsbaserade perioder måste granskas individuellt."
     },
     "errors": {
       "title": "Fel uppstod när fakturorna fastställdes:",

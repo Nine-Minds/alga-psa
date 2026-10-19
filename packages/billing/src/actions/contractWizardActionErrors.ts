@@ -1,3 +1,4 @@
+import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -43,6 +44,10 @@ export function fixedLineNoServiceMessage(lineName: string): string {
 }
 
 export function contractWizardActionErrorFrom(error: unknown): ContractWizardActionError | null {
+  if (isContractLineTimingNotAllowedError(error)) {
+    return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
+  }
+
   if (!(error instanceof Error)) return null;
 
   if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {

@@ -25,6 +25,7 @@ import type {
 import { toISODate, toPlainDate } from "@alga-psa/core";
 import { tenantDb } from "@alga-psa/db";
 import { resolveCadenceOwner } from "@alga-psa/shared/billingClients/recurringTiming";
+import { resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
 import { getClientBillingCycleAnchor } from "@alga-psa/shared/billingClients/billingSchedule";
 import { normalizeAnchorSettingsForCycle } from "@alga-psa/shared/billingClients/billingCycleAnchors";
 import {
@@ -234,7 +235,7 @@ export async function snapshotContractToScenario(
       contract_line_name: row.template_line_name,
       contract_line_type: row.line_type || "Fixed",
       billing_frequency: row.billing_frequency,
-      billing_timing: row.billing_timing,
+      billing_timing: resolveEffectiveBillingTiming(row.line_type, row.billing_timing),
       cadence_owner: row.cadence_owner,
       custom_rate: row.custom_rate ?? row.base_rate,
       enable_proration: row.enable_proration,
@@ -622,7 +623,7 @@ async function buildScenarioLine(
     contract_line_name: lineRow.contract_line_name,
     contract_line_type: contractLineType,
     billing_frequency: lineRow.billing_frequency || contract.billing_frequency,
-    billing_timing: lineRow.billing_timing ?? "arrears",
+    billing_timing: resolveEffectiveBillingTiming(lineRow.contract_line_type, lineRow.billing_timing),
     cadence_owner: resolveCadenceOwner(
       (lineRow.cadence_owner as "client" | "contract" | null) ?? null,
     ),
@@ -804,7 +805,7 @@ function buildTemplateScenarioLine(
     contract_line_name: lineRow.contract_line_name,
     contract_line_type: lineType,
     billing_frequency: lineRow.billing_frequency || contract.billing_frequency,
-    billing_timing: lineRow.billing_timing ?? "arrears",
+    billing_timing: resolveEffectiveBillingTiming(lineRow.contract_line_type, lineRow.billing_timing),
     cadence_owner: resolveCadenceOwner(
       (lineRow.cadence_owner as "client" | "contract" | null) ?? null,
     ),

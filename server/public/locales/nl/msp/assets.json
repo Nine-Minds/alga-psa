@@ -1163,7 +1163,8 @@
       "unknown": "Onbekend",
       "unifiedMemory": "{{size}}GB Uniform geheugen",
       "memoryUsed": "({{size}}GB gebruikt)",
-      "freeStorage": "{{size}} GB Gratis"
+      "freeStorage": "{{size}} GB Gratis",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "Geen hardwaregegevens beschikbaar",
     "emptyStorage": "Geen opslagstations gedetecteerd"
