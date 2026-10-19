@@ -277,8 +277,10 @@ export function AssetDetailScreen({ route, navigation }: Props) {
             {asset.purchase_date ? (
               <FieldRow label={t("identity.purchased", "Purchased")} value={formatDateShort(asset.purchase_date)} />
             ) : null}
-            {/* Written by the site audit (change_type 'audit'); the run itself
-                shows in History below. */}
+            {/* Written by the site audit. The auditor is not here: `assets`
+                carries only the date and result, and the History card below is
+                maintenance history — the audit's asset_history row (with its
+                changed_by) shows on the web. */}
             {typeof asset.last_audited_at === "string" && asset.last_audited_at ? (
               <FieldRow
                 testID="asset-last-audited"

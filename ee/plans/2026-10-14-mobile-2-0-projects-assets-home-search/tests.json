@@ -1227,5 +1227,33 @@
     "featureIds": [
       "F097"
     ]
+  },
+  {
+    "id": "T137",
+    "description": "AssetService.list applies `search` across asset_tag/name/serial_number/location/manufacturer/model to both the rows and the count, inside the tenant and composed with client_id",
+    "implemented": true,
+    "commitGroup": "assets-list",
+    "featureIds": [
+      "F033",
+      "F034"
+    ]
+  },
+  {
+    "id": "T138",
+    "description": "asset_audits and asset_audit_items are in TENANT_TABLES_DELETION_ORDER, items before their audit and both before assets/users, matching the migration's restrictive tenant FK",
+    "implemented": true,
+    "commitGroup": "audit-server",
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T139",
+    "description": "navStatePersistence drops InventoryTab's scan segment (route and nested-navigate copy) so a relaunch does not open the camera",
+    "implemented": true,
+    "commitGroup": "linking",
+    "featureIds": [
+      "F081"
+    ]
   }
 ]

@@ -46,7 +46,7 @@
   },
   {
     "id": "F006",
-    "description": "src/api/projects.ts listProjects(client, {apiKey, page, limit, project_name, status, client_id, assigned_to, is_closed}) \u2192 GET /api/v1/projects with pagination meta",
+    "description": "src/api/projects.ts listProjects(client, {apiKey, page, limit, project_name, status, client_id, assigned_to}) \u2192 GET /api/v1/projects with pagination meta (is_closed dropped: `projects` has no such column, sending it 500s \u2014 see SCRATCHPAD)",
     "implemented": true,
     "commitGroup": "projects-api",
     "prdRefs": [
@@ -109,7 +109,7 @@
   },
   {
     "id": "F013",
-    "description": "ProjectsScreen (drawer ProjectsTab, id projects-list) lists projects with name, client, status badge, end date and progress bar; paginates on end reached (walking past server pages that a multi-status filter narrows to nothing, and showing no count while narrowing because the server's total is unfiltered); pull to refresh",
+    "description": "ProjectsScreen (drawer ProjectsTab, id projects-list) lists projects with name, client and status badge, and end date; paginates on end reached (walking past server pages that a multi-status filter narrows to nothing, and showing no count while narrowing because the server's total is unfiltered); pull to refresh. The per-row progress bar is dropped (the list payload carries no task counts, so it would be one request per row) and lives on ProjectDetail — see SCRATCHPAD",
     "implemented": true,
     "commitGroup": "projects-list",
     "prdRefs": [
@@ -523,7 +523,7 @@
   },
   {
     "id": "F059",
-    "description": "AssetDetailScreen shows a 'Last audited' row (date, result, auditor) when last_audited_at is present",
+    "description": "AssetDetailScreen shows a 'Last audited' row (date and result) when last_audited_at is present. The auditor is NOT shown: `assets` gained only last_audited_at/last_audit_result, so no column or join supplies an actor — the actor lives on the audit's asset_history row (changed_by) and shows on the web. Amended from '(date, result, auditor)' — see SCRATCHPAD",
     "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
