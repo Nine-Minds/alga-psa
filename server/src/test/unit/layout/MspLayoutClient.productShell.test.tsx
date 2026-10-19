@@ -74,11 +74,15 @@ vi.mock('@/hooks/useKeyboardShortcutPreferenceStorage', () => ({
 }));
 
 vi.mock('@/components/layout/DefaultLayout', () => ({
-  default: ({ children }: { children: React.ReactNode }) => <div data-testid="psa-default-layout">{children}</div>,
+  default: ({ children, topBanner }: { children: React.ReactNode; topBanner?: React.ReactNode }) => (
+    <div data-testid="psa-default-layout"><div data-testid="shell-column">{topBanner}{children}</div></div>
+  ),
 }));
 
 vi.mock('@/components/layout/AlgaDeskMspShell', () => ({
-  default: ({ children }: { children: React.ReactNode }) => <div data-testid="algadesk-shell">{children}</div>,
+  default: ({ children, topBanner }: { children: React.ReactNode; topBanner?: React.ReactNode }) => (
+    <div data-testid="algadesk-shell"><div data-testid="shell-column">{topBanner}{children}</div></div>
+  ),
 }));
 
 vi.mock('@/components/product/ProductRouteBoundary', () => ({
@@ -321,5 +325,31 @@ describe('MspLayoutClient product shell behavior', () => {
     );
 
     expect(screen.queryByTestId('license-banner')).not.toBeInTheDocument();
+  });
+
+  it.each(['psa', 'algadesk'] as const)('renders the license banner only inside the %s shell column', async (productCode) => {
+    mockGetTenantSettings.mockResolvedValue({
+      tenant: 'tenant-1',
+      onboarding_completed: true,
+      onboarding_skipped: false,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    const { container } = render(
+      <MspLayoutClient
+        session={{ user: { tenant: 'tenant-1' } } as any}
+        productCode={productCode}
+        needsOnboarding={false}
+        initialSidebarCollapsed={false}
+        selfHostLicensing={true}
+      >
+        <div>content</div>
+      </MspLayoutClient>,
+    );
+
+    const banner = await screen.findByTestId('license-banner');
+    expect(screen.getByTestId('shell-column')).toContainElement(banner);
+    expect(container.querySelectorAll('[data-testid="license-banner"]')).toHaveLength(1);
   });
 });

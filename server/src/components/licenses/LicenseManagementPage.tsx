@@ -17,6 +17,7 @@ import {
   TicketCheck,
 } from "lucide-react";
 import { Button } from "@alga-psa/ui/components/Button";
+import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import {
   Card,
   CardContent,
@@ -32,6 +33,7 @@ import {
   refreshLicenseNow,
 } from "@/lib/actions/licenseManagementActions";
 import type { LicenseStatus } from "@/lib/actions/licenseManagementActions";
+import { notifyLicenseStatusChanged } from "./LicenseBanner";
 import {
   getErrorMessage,
   isActionPermissionError,
@@ -79,6 +81,49 @@ function tierLabel(tier: string | null, t: TFunction) {
   });
 }
 
+/**
+ * Localized text for a failed "Refresh license now". The two check-in failures
+ * that need their own wording are keyed by `code`; anything else falls back to
+ * the action's English `error`.
+ */
+function refreshErrorMessage(
+  result: { error?: string; code?: string; status?: LicenseStatus },
+  t: TFunction,
+): string | undefined {
+  if (result.code === "credential_revoked") {
+    return t("managementPage.errors.credentialRevoked", {
+      defaultValue:
+        "This appliance’s license credential was revoked. Connect it again with a new claim code from the licensing portal.",
+    });
+  }
+  if (result.code === "subscription_lapsed") {
+    const sub = result.status?.subscription;
+    const date = formatDate(sub?.endsAt ?? result.status?.expiresAt ?? null);
+    const stillPro = sub?.phase === "ending";
+    const head = stillPro
+      ? date
+        ? t("managementPage.errors.subscriptionEnding", {
+            date,
+            defaultValue: "Your Pro subscription has been cancelled. Pro ends on {{date}}.",
+          })
+        : t("managementPage.errors.subscriptionEndingNoDate", {
+            defaultValue: "Your Pro subscription has been cancelled.",
+          })
+      : t("managementPage.errors.subscriptionEnded", {
+          defaultValue: "Your Pro subscription has ended. This appliance is on the free edition.",
+        });
+    return sub?.resubscribeUrl
+      ? `${head} ${t("managementPage.errors.resubscribeAt", {
+          url: sub.resubscribeUrl,
+          defaultValue: "Resubscribe at {{url}}.",
+        })}`
+      : `${head} ${t("managementPage.errors.resubscribeToRestore", {
+          defaultValue: "Resubscribe to restore Pro.",
+        })}`;
+  }
+  return result.error;
+}
+
 function statusPresentation(
   status: LicenseStatus,
   t: TFunction,
@@ -123,7 +168,18 @@ function statusPresentation(
           tier: tierLabel(status.tier, t),
           defaultValue: "{{tier}} is active",
         }),
-        description: status.expiresAt
+        description: status.subscription?.phase === "ending" && status.subscription.cause === "term"
+          ? t("managementPage.status.licensed.descriptionTermEnds", {
+              date: formatDate(status.subscription.endsAt ?? status.expiresAt),
+              defaultValue: "Pro is active through {{date}}, when its fixed term ends.",
+            })
+          : status.subscription?.phase === "ending"
+          ? t("managementPage.status.licensed.descriptionEnding", {
+              date: formatDate(status.subscription.endsAt ?? status.expiresAt),
+              defaultValue:
+                "Your subscription has been cancelled. Pro stays active through {{date}}.",
+            })
+          : status.expiresAt
           ? t("managementPage.status.licensed.descriptionWithExpiry", {
               date: formatDate(status.expiresAt),
               defaultValue: "Your license is active through {{date}}.",
@@ -137,6 +193,24 @@ function statusPresentation(
         tone: "success",
       };
     case "license_expired":
+      if (status.subscription?.phase === "lapsed") {
+        return {
+          eyebrow: t("managementPage.status.subscriptionLapsed.eyebrow", {
+            defaultValue: "Subscription ended",
+          }),
+          title: t("managementPage.status.subscriptionLapsed.title", {
+            defaultValue: "You’re now on the free edition",
+          }),
+          description: t("managementPage.status.subscriptionLapsed.description", {
+            defaultValue:
+              "Your Pro subscription has ended. Your data is kept, and Pro features turn back on when you resubscribe.",
+          }),
+          badge: t("managementPage.status.subscriptionLapsed.badge", {
+            defaultValue: "Free edition",
+          }),
+          tone: "warning",
+        };
+      }
       return {
         eyebrow: t("managementPage.status.licenseExpired.eyebrow", {
           defaultValue: "License needs attention",
@@ -296,6 +370,7 @@ export default function LicenseManagementPage() {
       console.error("Failed to refresh session after license change:", error);
     }
     setStatus(newStatus);
+    notifyLicenseStatusChanged();
   }
 
   function handleSubmitLicense() {
@@ -385,8 +460,9 @@ export default function LicenseManagementPage() {
           }),
         );
       } else {
-        setError(
-          result.error ??
+        // A soft lapse still stored new subscription context — show it.
+        if (result.status) await refresh(result.status);
+        setError(refreshErrorMessage(result, t) ??
             t("managementPage.errors.refreshLicense", {
               defaultValue: "Failed to refresh the license.",
             }),
@@ -440,6 +516,9 @@ export default function LicenseManagementPage() {
   const showLicenseRefresh = status.connected;
   const lastCheckIn = formatDateTime(status.lastCheckinAt);
   const expiresAt = formatDate(status.expiresAt);
+  const subscriptionEndDate = formatDate(
+    status.subscription?.endsAt ?? null,
+  );
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 p-6 text-[rgb(var(--color-text-700))]">
@@ -516,6 +595,89 @@ export default function LicenseManagementPage() {
         </CardHeader>
 
         <CardContent className="space-y-6 pt-6">
+          {status.subscription ? (
+            <section
+              id="license-subscription-lapse-section"
+              className="space-y-4"
+            >
+              <Alert
+                id="license-subscription-lapse-alert"
+                variant={status.subscription.phase === "lapsed" ? "destructive" : "warning"}
+              >
+                <AlertDescription className="space-y-3">
+                  <p className="font-medium text-[rgb(var(--color-text-900))]">
+                    {status.subscription.phase === "lapsed"
+                      ? t("managementPage.lapse.lapsedTitle", {
+                          defaultValue: "You’re now on the free edition. Resubscribe to restore Pro.",
+                        })
+                      : status.subscription.cause === "term"
+                        ? t("managementPage.lapse.termEndsTitle", {
+                            defaultValue: "Your Pro term is ending.",
+                          })
+                        : t("managementPage.lapse.endingTitle", {
+                            defaultValue: "Your Pro subscription has been cancelled.",
+                          })}
+                  </p>
+                  {subscriptionEndDate ? (
+                    <p>
+                      {status.subscription.phase === "lapsed"
+                        ? t("managementPage.lapse.endedOn", {
+                            date: subscriptionEndDate,
+                            defaultValue: "Pro ended on {{date}}.",
+                          })
+                        : t("managementPage.lapse.endsOn", {
+                            date: subscriptionEndDate,
+                            defaultValue: "Pro ends on {{date}}.",
+                          })}
+                    </p>
+                  ) : null}
+                  <p>
+                    {t("managementPage.lapse.dataKept", {
+                      defaultValue:
+                        "Nothing is deleted. Your data stays in place and Pro features turn back on after you resubscribe and refresh the license.",
+                    })}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Fall back to the licensing portal when the server sent no URL. */}
+                    {status.subscription.resubscribeUrl || PORTAL_URL ? (
+                      <Button id="license-lapse-resubscribe-link" asChild>
+                        <a
+                          href={status.subscription.resubscribeUrl ?? PORTAL_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                          {t("managementPage.lapse.resubscribe", {
+                            defaultValue: "Resubscribe",
+                          })}
+                        </a>
+                      </Button>
+                    ) : null}
+                    {showLicenseRefresh ? (
+                      <Button
+                        id="license-lapse-refresh-now"
+                        variant="outline"
+                        onClick={handleRefreshLicense}
+                        disabled={isPending}
+                        className="gap-2"
+                      >
+                        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                        {isPending
+                          ? t("managementPage.actions.refreshing", {
+                              defaultValue: "Refreshing…",
+                            })
+                          : t("managementPage.actions.refreshNow", {
+                              defaultValue: "Refresh license now",
+                            })}
+                      </Button>
+                    ) : null}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            </section>
+          ) : null}
+
           {canStartTrial ? (
             <section className="relative overflow-hidden rounded-2xl border border-[rgb(var(--color-primary-300))] bg-[rgb(var(--color-primary-50))] p-5 dark:border-[rgb(var(--color-primary-400)/0.35)] dark:bg-[rgb(var(--color-primary-400)/0.12)]">
               <div

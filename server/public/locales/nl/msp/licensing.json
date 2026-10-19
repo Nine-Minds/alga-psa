@@ -262,7 +262,9 @@
         "title": "{{tier}} is actief",
         "description": "Uw betaalde licentie is actief op deze appliance.",
         "descriptionWithExpiry": "Uw licentie is actief tot en met {{date}}.",
-        "badge": "Gelicentieerd"
+        "badge": "Gelicentieerd",
+        "descriptionEnding": "Uw abonnement is opgezegd. Pro blijft actief tot {{date}}.",
+        "descriptionTermEnds": "Pro is actief tot {{date}}, wanneer de vaste looptijd eindigt."
       },
       "licenseExpired": {
         "eyebrow": "Licentie vereist aandacht",
@@ -287,6 +289,12 @@
         "title": "U gebruikt Essentials",
         "description": "Essentials is actief op deze appliance. Blijf de belangrijkste functies gebruiken of start een eenmalige Pro-proefperiode van 15 dagen.",
         "badge": "Essentials actief"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Abonnement beëindigd",
+        "title": "U gebruikt nu de gratis editie",
+        "description": "Uw Pro-abonnement is beëindigd. Uw gegevens blijven behouden en de Pro-functies worden weer ingeschakeld zodra u opnieuw abonneert.",
+        "badge": "Gratis editie"
       }
     },
     "trialCta": {
@@ -350,7 +358,22 @@
       "activateLicenseKey": "Kan de licentiesleutel niet activeren.",
       "activateClaimCode": "Kan de activeringscode niet activeren.",
       "startTrial": "Kan de proefperiode niet starten.",
-      "refreshLicense": "Kan de licentie niet vernieuwen."
+      "refreshLicense": "Kan de licentie niet vernieuwen.",
+      "credentialRevoked": "De licentiegegevens van deze appliance zijn ingetrokken. Verbind de appliance opnieuw met een nieuwe activeringscode uit het licentieportaal.",
+      "subscriptionEnding": "Uw Pro-abonnement is opgezegd. Pro eindigt op {{date}}.",
+      "subscriptionEndingNoDate": "Uw Pro-abonnement is opgezegd.",
+      "subscriptionEnded": "Uw Pro-abonnement is beëindigd. Deze appliance gebruikt de gratis editie.",
+      "resubscribeAt": "Abonneer opnieuw via {{url}}.",
+      "resubscribeToRestore": "Abonneer opnieuw om Pro te herstellen."
+    },
+    "lapse": {
+      "lapsedTitle": "U gebruikt nu de gratis editie. Abonneer opnieuw om Pro te herstellen.",
+      "endingTitle": "Uw Pro-abonnement is opgezegd.",
+      "endedOn": "Pro eindigde op {{date}}.",
+      "endsOn": "Pro eindigt op {{date}}.",
+      "dataKept": "Er wordt niets verwijderd. Uw gegevens blijven staan en de Pro-functies worden weer ingeschakeld nadat u opnieuw abonneert en de licentie vernieuwt.",
+      "resubscribe": "Opnieuw abonneren",
+      "termEndsTitle": "Uw Pro-periode loopt af."
     }
   },
   "errors": {

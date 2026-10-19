@@ -10,6 +10,8 @@ import {
 import {
   getLicenseStateRow,
   upsertLicenseState,
+  applyCheckInResult,
+  interpretCheckInResponse,
   resolveSelfHostTier,
   isLicenseVerifyFailure,
   type ResolvedLicenseState,
@@ -38,10 +40,30 @@ export interface LicenseStatus {
    * the key to this tenant (its `aud`) so it can't be reused on another install.
    */
   tenantId: string | null;
+  /**
+   * Cancelled-subscription context from the last check-in, or null. 'ending' =
+   * still licensed, Pro ends at `endsAt`; 'lapsed' = Pro already ended and the
+   * install is on the free edition. Dates are ISO strings.
+   */
+  subscription: LicenseSubscriptionStatus | null;
+}
+
+export interface LicenseSubscriptionStatus {
+  phase: 'ending' | 'lapsed';
+  /** 'term' = a fixed-term grant reaching its planned end — not a cancellation. */
+  cause: 'cancelled' | 'term';
+  endsAt: string | null;
+  resubscribeUrl: string | null;
 }
 
 type LicenseAdminUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
-type LicenseMutationResult = { success: boolean; error?: string; status?: LicenseStatus };
+/**
+ * `code` lets the UI localize the two check-in failures that need distinct
+ * wording: a soft subscription lapse vs a hard-revoked appliance credential.
+ * `error` always carries an English fallback.
+ */
+export type LicenseMutationCode = 'subscription_lapsed' | 'credential_revoked';
+type LicenseMutationResult = { success: boolean; error?: string; code?: LicenseMutationCode; status?: LicenseStatus };
 export type LicenseStatusResult = LicenseStatus | ActionPermissionErrorShape;
 
 async function assertAdminPermission(): Promise<LicenseAdminUser | ActionPermissionErrorShape> {
@@ -66,7 +88,7 @@ function permissionFailureResult(error: ActionPermissionErrorShape): LicenseMuta
 async function getLicenseStatusForUser(user: LicenseAdminUser): Promise<LicenseStatus> {
   const row = await getLicenseStateRow();
   if (!row) {
-    return { selfHostMode: false, state: null, tier: null, expiresAt: null, daysRemaining: null, customer: null, trialUsed: false, connected: false, lastCheckinAt: null, tenantId: user.tenant ?? null };
+    return { selfHostMode: false, state: null, tier: null, expiresAt: null, daysRemaining: null, customer: null, trialUsed: false, connected: false, lastCheckinAt: null, tenantId: user.tenant ?? null, subscription: null };
   }
 
   // Pass the tenant so a tenant-bound license issued for a different install
@@ -89,6 +111,14 @@ async function getLicenseStatusForUser(user: LicenseAdminUser): Promise<LicenseS
     connected: !!(row.appliance_credential && row.check_in_url),
     lastCheckinAt: row.last_checkin_at?.toISOString() ?? null,
     tenantId: user.tenant ?? null,
+    subscription: resolved.subscription
+      ? {
+          phase: resolved.subscription.phase,
+          cause: resolved.subscription.cause,
+          endsAt: resolved.subscription.endsAt?.toISOString() ?? null,
+          resubscribeUrl: resolved.subscription.resubscribeUrl,
+        }
+      : null,
   };
 }
 
@@ -193,27 +223,48 @@ export async function refreshLicenseNow(): Promise<LicenseMutationResult> {
       body: JSON.stringify({ appliance_credential: row.appliance_credential, current_license_sub: currentLicenseSub }),
     });
 
-    if (!res.ok) {
-      return { success: false, error: `License service returned HTTP ${res.status}. Try again shortly.` };
+    // Parsing + persistence is shared with the daily Temporal check-in so the two
+    // callers cannot drift (subscription context, soft-revocation grace).
+    const body: unknown = await res.json().catch(() => undefined);
+    const result = interpretCheckInResponse(res.status, body);
+
+    switch (result.kind) {
+      case 'credential_revoked':
+        // Hard revocation (401 revoked_appliance): rebind/compromise, NOT a lapsed
+        // subscription. The stored token is left alone (it grace-expires).
+        return {
+          success: false,
+          code: 'credential_revoked',
+          error: "This appliance's license credential was revoked. Connect it again with a new claim code from the licensing portal.",
+        };
+      case 'server_error':
+      case 'rejected':
+        return { success: false, error: `License service returned HTTP ${result.httpStatus}. Try again shortly.` };
+      case 'lapsed': {
+        // Soft lapse: persist the context but keep the stored token — it keeps
+        // Pro until its own exp (never hard-cut on 'revoked').
+        await applyCheckInResult(result, row);
+        const status = await getLicenseStatusForUser(user);
+        return { success: false, code: 'subscription_lapsed', error: lapseMessage(status), status };
+      }
+      default:
+        await applyCheckInResult(result, row);
+        return { success: true, status: await getLicenseStatusForUser(user) };
     }
-
-    const body = await res.json() as { status: 'ok' | 'no_change' | 'revoked'; jwt?: string };
-    if (body.status === 'revoked') {
-      // Soft revocation: keep the stored token (it grace-expires on its own exp).
-      await upsertLicenseState({ last_checkin_at: new Date() } as any);
-      return { success: false, error: 'This license has been revoked. Contact support if this is unexpected.' };
-    }
-
-    await upsertLicenseState({
-      ...(body.status === 'ok' && body.jwt ? { license_token: body.jwt } : {}),
-      last_checkin_at: new Date(),
-    } as any);
-
-    const status = await getLicenseStatusForUser(user);
-    return { success: true, status };
   } catch (err) {
     return { success: false, error: 'License refresh failed. Try again shortly.' };
   }
+}
+
+/** English fallback for the soft-lapse refresh result; the UI localizes via `code`. */
+function lapseMessage(status: LicenseStatus): string {
+  const sub = status.subscription;
+  const endsAt = sub?.endsAt ?? status.expiresAt;
+  const date = endsAt ? new Date(endsAt).toISOString().slice(0, 10) : null;
+  const head = sub?.phase === 'lapsed' || status.tier === 'essentials'
+    ? "The Pro subscription has ended and this appliance is on the free edition."
+    : `The Pro subscription has been cancelled. Pro ends${date ? ` on ${date}` : ''}.`;
+  return sub?.resubscribeUrl ? `${head} Resubscribe at ${sub.resubscribeUrl}.` : `${head} Resubscribe to restore Pro.`;
 }
 
 /**

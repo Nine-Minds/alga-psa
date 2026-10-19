@@ -46,7 +46,13 @@
     "licenseWrongTenant": "Cette licence a été émise pour une autre instance et n'est pas valide ici. L'installation utilise les fonctionnalités Essentials.",
     "manageLicense": "Gérer la licence",
     "ariaLabel": "Statut de la licence",
-    "dismiss": "Masquer"
+    "dismiss": "Masquer",
+    "subscriptionEnding": "Votre abonnement Pro a été annulé. Pro prend fin le {{date}}. Réabonnez-vous pour conserver Pro.",
+    "subscriptionEndingNoDate": "Votre abonnement Pro a été annulé. Réabonnez-vous pour conserver Pro.",
+    "subscriptionLapsed": "Vous utilisez maintenant l'édition gratuite. Réabonnez-vous pour rétablir Pro.",
+    "resubscribe": "Se réabonner",
+    "termEnds": "Votre accès Pro se termine le {{date}}. Renouvelez pour conserver Pro.",
+    "termEndsNoDate": "Votre période Pro touche à sa fin. Renouvelez pour conserver Pro."
   },
   "nav": {
     "dashboard": "Tableau de bord",

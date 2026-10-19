@@ -262,7 +262,9 @@
         "title": "{{tier}} is active",
         "description": "Your paid license is active on this appliance.",
         "descriptionWithExpiry": "Your license is active through {{date}}.",
-        "badge": "Licensed"
+        "badge": "Licensed",
+        "descriptionEnding": "Your subscription has been cancelled. Pro stays active through {{date}}.",
+        "descriptionTermEnds": "Pro is active through {{date}}, when its fixed term ends."
       },
       "licenseExpired": {
         "eyebrow": "License needs attention",
@@ -287,6 +289,12 @@
         "title": "You’re running Essentials",
         "description": "Essentials is active on this appliance. Keep using the core feature set, or start a one-time 15-day Pro trial.",
         "badge": "Essentials active"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Subscription ended",
+        "title": "You’re now on the free edition",
+        "description": "Your Pro subscription has ended. Your data is kept, and Pro features turn back on when you resubscribe.",
+        "badge": "Free edition"
       }
     },
     "trialCta": {
@@ -350,7 +358,22 @@
       "activateLicenseKey": "Failed to activate license key.",
       "activateClaimCode": "Failed to activate claim code.",
       "startTrial": "Failed to start trial.",
-      "refreshLicense": "Failed to refresh the license."
+      "refreshLicense": "Failed to refresh the license.",
+      "credentialRevoked": "This appliance’s license credential was revoked. Connect it again with a new claim code from the licensing portal.",
+      "subscriptionEnding": "Your Pro subscription has been cancelled. Pro ends on {{date}}.",
+      "subscriptionEndingNoDate": "Your Pro subscription has been cancelled.",
+      "subscriptionEnded": "Your Pro subscription has ended. This appliance is on the free edition.",
+      "resubscribeAt": "Resubscribe at {{url}}.",
+      "resubscribeToRestore": "Resubscribe to restore Pro."
+    },
+    "lapse": {
+      "lapsedTitle": "You’re now on the free edition. Resubscribe to restore Pro.",
+      "endingTitle": "Your Pro subscription has been cancelled.",
+      "endedOn": "Pro ended on {{date}}.",
+      "endsOn": "Pro ends on {{date}}.",
+      "dataKept": "Nothing is deleted. Your data stays in place and Pro features turn back on after you resubscribe and refresh the license.",
+      "resubscribe": "Resubscribe",
+      "termEndsTitle": "Your Pro term is ending."
     }
   },
   "errors": {

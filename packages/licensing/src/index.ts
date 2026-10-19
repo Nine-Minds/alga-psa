@@ -14,3 +14,4 @@ export * from './lib/verify-license';
 export * from './lib/license-state';
 export * from './lib/tenant-tier';
 export { LICENSE_PUBLIC_KEYS } from './lib/license-keys';
+export * from './lib/license-check-in';
