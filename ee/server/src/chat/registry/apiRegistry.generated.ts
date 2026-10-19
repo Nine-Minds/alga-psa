@@ -5440,6 +5440,62 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "date-time",
           "description": "Optional warranty end date/time."
         },
+        "manufacturer": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Hardware make. RMM sync fills it when the provider reports one."
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Hardware model. A first-class column, not a system_info lookup."
+        },
+        "vendor_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Supplier; an inventory vendors.vendor_id of this tenant."
+        },
+        "purchase_cost": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Purchase cost in minor units (cents)."
+        },
+        "purchase_cost_currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO currency code; defaults to the tenant currency when a cost is written without one."
+        },
+        "order_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Purchase order number."
+        },
+        "billing_profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Billing profile for work on this device. Must belong to the asset client and be active; cleared when the client changes."
+        },
         "attributes": {
           "$ref": "#/components/schemas/AssetAttributes"
         },
@@ -6203,6 +6259,62 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "date-time",
           "description": "Warranty end date/time."
         },
+        "manufacturer": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Hardware make. RMM sync fills it when the provider reports one."
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Hardware model. A first-class column, not a system_info lookup."
+        },
+        "vendor_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Supplier; an inventory vendors.vendor_id of this tenant."
+        },
+        "purchase_cost": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Purchase cost in minor units (cents)."
+        },
+        "purchase_cost_currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO currency code; defaults to the tenant currency when a cost is written without one."
+        },
+        "order_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Purchase order number."
+        },
+        "billing_profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Billing profile for work on this device. Must belong to the asset client and be active; cleared when the client changes."
+        },
         "attributes": {
           "$ref": "#/components/schemas/AssetAttributes"
         }
@@ -6397,6 +6509,549 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "success",
         "data",
         "meta"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assets_id_assignments",
+    "method": "get",
+    "path": "/api/v1/assets/{id}/assignments",
+    "displayName": "List asset assignment history",
+    "summary": "List asset assignment history",
+    "description": "Returns every assignment of the path asset, newest first, with the contact name joined. An asset that does not exist in the authenticated tenant returns 404 rather than an empty array.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/AssetAssignment"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assetstatuses",
+    "method": "get",
+    "path": "/api/v1/asset-statuses",
+    "displayName": "List asset statuses",
+    "summary": "List asset statuses",
+    "description": "Returns the tenant asset status registry in display order. Active statuses only unless include_archived=true. assets.status stores the slug.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "include_archived",
+        "in": "query",
+        "required": false,
+        "description": "true also returns archived (is_active false) statuses.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "true also returns archived (is_active false) statuses."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/AssetStatus"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assetgroups",
+    "method": "get",
+    "path": "/api/v1/asset-groups",
+    "displayName": "List asset groups for a client",
+    "summary": "List asset groups for a client",
+    "description": "Returns the client’s bundles and shared workspaces with member and people counts. client_id is required.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": true,
+        "description": "Required; groups belong to a client.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required; groups belong to a client."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/AssetGroup"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetgroups",
+    "method": "post",
+    "path": "/api/v1/asset-groups",
+    "displayName": "Create an asset group",
+    "summary": "Create an asset group",
+    "description": "Creates a bundle or shared workspace for a client, optionally with its first members. Adding a member to a bundle assigns it to the owner and moves it to the group location; adding one to a shared workspace unassigns it.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "bundle",
+            "shared_workspace"
+          ]
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Members to add in the same transaction."
+        }
+      },
+      "required": [
+        "client_id",
+        "name",
+        "kind"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assetgroups_id",
+    "method": "get",
+    "path": "/api/v1/asset-groups/{id}",
+    "displayName": "Get an asset group",
+    "summary": "Get an asset group",
+    "description": "Returns the group with its members and people.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_assetgroups_id",
+    "method": "put",
+    "path": "/api/v1/asset-groups/{id}",
+    "displayName": "Update an asset group",
+    "summary": "Update an asset group",
+    "description": "Renames the group, changes its kind or moves its location. A location change moves every member. shared_workspace to bundle is refused while users exist; bundle to shared_workspace unassigns every member and drops the owner.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "bundle",
+            "shared_workspace"
+          ],
+          "description": "shared_workspace to bundle is refused while users exist; the reverse unassigns every member."
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Propagates to every member."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_assetgroups_id",
+    "method": "delete",
+    "path": "/api/v1/asset-groups/{id}",
+    "displayName": "Delete an asset group",
+    "summary": "Delete an asset group",
+    "description": "Deletes the group and its member and people rows. Members keep their current assignee and location.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetgroups_id_members",
+    "method": "post",
+    "path": "/api/v1/asset-groups/{id}/members",
+    "displayName": "Add assets to a group",
+    "summary": "Add assets to a group",
+    "description": "Adds members. For a bundle each new member is assigned to the owner and moved to the group location; for a shared workspace each is unassigned. An asset of another client or already in another group is a 400.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "asset_ids"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_assetgroups_id_members",
+    "method": "delete",
+    "path": "/api/v1/asset-groups/{id}/members",
+    "displayName": "Remove an asset from a group",
+    "summary": "Remove an asset from a group",
+    "description": "Removes the asset named by asset_id. Its assignee and location are left as they are.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      },
+      {
+        "name": "asset_id",
+        "in": "query",
+        "required": true,
+        "description": "Required.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetgroups_id_contacts",
+    "method": "post",
+    "path": "/api/v1/asset-groups/{id}/contacts",
+    "displayName": "Set a group owner or add a workspace user",
+    "summary": "Set a group owner or add a workspace user",
+    "description": "With role owner, sets (or with a null contact clears) the bundle owner, which assigns or unassigns every member. With role user, adds a shared-workspace user. A user on a bundle or an owner on a workspace is a 400.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contact_name_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Null with role owner clears the bundle owner."
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "owner",
+            "user"
+          ]
+        }
+      },
+      "required": [
+        "contact_name_id",
+        "role"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_assetgroups_id_contacts",
+    "method": "delete",
+    "path": "/api/v1/asset-groups/{id}/contacts",
+    "displayName": "Remove a group owner or workspace user",
+    "summary": "Remove a group owner or workspace user",
+    "description": "Removes the contact named by contact_name_id. On a bundle this clears the owner, which unassigns every member.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      },
+      {
+        "name": "contact_name_id",
+        "in": "query",
+        "required": true,
+        "description": "Required.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
       ]
     }
   },
@@ -7681,6 +8336,1689 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "number"
         }
       }
+    }
+  },
+  {
+    "id": "get-_api_v1_assetaudits",
+    "method": "get",
+    "path": "/api/v1/asset-audits",
+    "displayName": "List site audits",
+    "summary": "List site audits",
+    "description": "Returns the tenant audits newest first, optionally narrowed to one client.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Page number. Defaults to 1.",
+        "schema": {
+          "type": "string",
+          "description": "Page number. Defaults to 1."
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Page size, 1 through 100. Defaults to 25.",
+        "schema": {
+          "type": "string",
+          "description": "Page size, 1 through 100. Defaults to 25."
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "description": "Only audits of this client.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Only audits of this client."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "audit_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "client_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "location_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "in_progress",
+                  "completed",
+                  "cancelled"
+                ]
+              },
+              "started_by": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "started_at": {
+                "type": "string"
+              },
+              "completed_at": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "expected_count": {
+                "type": "integer"
+              },
+              "present_count": {
+                "type": "integer"
+              },
+              "missing_count": {
+                "type": "integer"
+              },
+              "unexpected_count": {
+                "type": "integer"
+              },
+              "statuses": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string"
+                }
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "client_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "location_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "asset_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "result": {
+                      "type": "string",
+                      "enum": [
+                        "expected",
+                        "present",
+                        "missing",
+                        "unexpected"
+                      ]
+                    },
+                    "method": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "scan",
+                        "manual",
+                        "register"
+                      ]
+                    },
+                    "marked_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "marked_by": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "asset_name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "asset_tag": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "serial_number": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "client_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "location_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
+                    "location": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "asset_id",
+                    "result",
+                    "method",
+                    "marked_at",
+                    "marked_by"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "audit_id",
+              "tenant",
+              "client_id",
+              "location_id",
+              "status",
+              "started_by",
+              "started_at",
+              "completed_at",
+              "expected_count",
+              "present_count",
+              "missing_count",
+              "unexpected_count"
+            ]
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data",
+        "pagination"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetaudits",
+    "method": "post",
+    "path": "/api/v1/asset-audits",
+    "displayName": "Start a site audit",
+    "summary": "Start a site audit",
+    "description": "Snapshots the assets expected for the client, location and status slugs in scope as expected items and opens the audit. Needs asset:update because completing the audit writes asset history.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client whose assets are audited."
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Client location in scope. null or omitted audits the client assets that have no location."
+        },
+        "statuses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Asset status slugs in scope. Omitted means every status."
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "client_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register"
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assetaudits_id",
+    "method": "get",
+    "path": "/api/v1/asset-audits/{id}",
+    "displayName": "Get a site audit",
+    "summary": "Get a site audit",
+    "description": "Returns the audit with its items joined to each asset name, tag, serial and location.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Audit UUID from asset_audits.audit_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Audit UUID from asset_audits.audit_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register"
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetaudits_id_items",
+    "method": "post",
+    "path": "/api/v1/asset-audits/{id}/items",
+    "displayName": "Mark an asset in a site audit",
+    "summary": "Mark an asset in a site audit",
+    "description": "Marks the asset present, or unexpected when it is not in the audit snapshot. Idempotent per asset: a second mark keeps the first marked_at.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Audit UUID from asset_audits.audit_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Audit UUID from asset_audits.audit_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "asset_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset being marked."
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "present",
+            "unexpected"
+          ],
+          "description": "Caller intent; an asset outside the snapshot is stored as unexpected regardless. Defaults to present."
+        },
+        "method": {
+          "type": "string",
+          "enum": [
+            "scan",
+            "manual",
+            "register"
+          ],
+          "description": "How the asset was marked. Defaults to manual."
+        }
+      },
+      "required": [
+        "asset_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register"
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_assetaudits_id_items_assetid",
+    "method": "delete",
+    "path": "/api/v1/asset-audits/{id}/items/{assetId}",
+    "displayName": "Undo a site audit mark",
+    "summary": "Undo a site audit mark",
+    "description": "Returns an expected asset to the remaining list; an unexpected asset was never in scope, so its item is removed.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Audit UUID from asset_audits.audit_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Audit UUID from asset_audits.audit_id."
+        }
+      },
+      {
+        "name": "assetId",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register"
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetaudits_id_complete",
+    "method": "post",
+    "path": "/api/v1/asset-audits/{id}/complete",
+    "displayName": "Complete a site audit",
+    "summary": "Complete a site audit",
+    "description": "Turns every still-expected item into missing, writes the counts, and records one asset_history row (change_type audit) plus assets.last_audited_at and last_audit_result for each present and missing asset, in one transaction.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Audit UUID from asset_audits.audit_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Audit UUID from asset_audits.audit_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register"
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetaudits_id_cancel",
+    "method": "post",
+    "path": "/api/v1/asset-audits/{id}/cancel",
+    "displayName": "Cancel a site audit",
+    "summary": "Cancel a site audit",
+    "description": "Abandons an open audit; it writes no asset history.",
+    "tags": [
+      "Asset audits"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Audit UUID from asset_audits.audit_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Audit UUID from asset_audits.audit_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "audit_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "started_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "started_at": {
+              "type": "string"
+            },
+            "completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expected_count": {
+              "type": "integer"
+            },
+            "present_count": {
+              "type": "integer"
+            },
+            "missing_count": {
+              "type": "integer"
+            },
+            "unexpected_count": {
+              "type": "integer"
+            },
+            "statuses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "expected",
+                      "present",
+                      "missing",
+                      "unexpected"
+                    ]
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "scan",
+                      "manual",
+                      "register"
+                    ]
+                  },
+                  "marked_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "asset_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "asset_tag": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "serial_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "client_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "result",
+                  "method",
+                  "marked_at",
+                  "marked_by"
+                ]
+              }
+            }
+          },
+          "required": [
+            "audit_id",
+            "tenant",
+            "client_id",
+            "location_id",
+            "status",
+            "started_by",
+            "started_at",
+            "completed_at",
+            "expected_count",
+            "present_count",
+            "missing_count",
+            "unexpected_count"
+          ]
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
     }
   },
   {
@@ -12609,6 +14947,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "apply"
             ]
           }
+        },
+        "billing_strategy": {
+          "type": "string",
+          "enum": [
+            "source_profile",
+            "target_default"
+          ],
+          "description": "F099: what happens to tickets, projects, assets and RMM mappings that carry no billing profile. `source_profile` (the default) stamps them with the moved default profile; `target_default` leaves them unattributed so they fall through to the destination client's default. Billing history (invoices, cycles, payments, credits, tax settings) is stamped either way."
         }
       },
       "required": [
@@ -40007,7 +42353,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/{id}/deliveries/{delivery_id}/retry",
     "displayName": "Retry delivery",
     "summary": "Retry delivery",
-    "description": "Re-sends a previously failed delivery and records a new attempt on the same delivery row.",
+    "description": "Re-queues a previously failed delivery as a fresh attempt on the shared webhook delivery queue (rate limiting, backoff and auto-disable still apply). Returns 202 without sending the request in-band; the new attempt lands as its own delivery row. Test deliveries are rejected.",
     "tags": [
       "Webhooks"
     ],
@@ -40040,7 +42386,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {
         "data": {
-          "$ref": "#/components/schemas/WebhookDeliveryRecordV1"
+          "$ref": "#/components/schemas/WebhookDeliveryRetryQueuedV1"
         },
         "meta": {
           "type": "object",
@@ -40081,6 +42427,63 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "data": {
           "$ref": "#/components/schemas/WebhookHealthV1"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_webhooks_id_retryfailed",
+    "method": "post",
+    "path": "/api/v1/webhooks/{id}/retry-failed",
+    "displayName": "Retry failed deliveries",
+    "summary": "Retry failed deliveries",
+    "description": "Re-queues every failed/abandoned non-test delivery of the webhook, oldest first, collapsing repeated attempts of the same event to a single enqueue. Accepts an optional since/limit body (default limit 500, max 1000) and never performs the HTTP calls in-band.",
+    "tags": [
+      "Webhooks"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Webhook UUID from webhooks.webhook_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Webhook UUID from webhooks.webhook_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "since": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Only consider deliveries whose attempted_at is at or after this timestamp."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Maximum number of candidate delivery rows to re-queue. Defaults to 500."
+        }
+      },
+      "description": "All fields optional; an empty body retries the newest 500 candidates."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WebhookRetryFailedResultV1"
         },
         "meta": {
           "type": "object",
@@ -42261,7 +44664,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "assigned_to": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "uuid"
         },
         "estimated_hours": {
@@ -42273,11 +44679,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "date-time"
         },
         "due_date": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "date-time"
         },
         "priority_id": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "uuid"
         },
         "task_type_key": {
@@ -52280,6 +54692,58 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_tickets_categories",
+    "method": "get",
+    "path": "/api/v1/tickets/categories",
+    "displayName": "List ticket categories",
+    "summary": "List ticket categories",
+    "description": "Returns the tenant ticket categories (parents and children via parent_category), optionally filtered by board_id, sorted by display_order then name. Read surface for classifying a ticket; configuring categories stays on /api/v1/categories/ticket.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "board_id",
+        "in": "query",
+        "required": false,
+        "description": "Filter categories to this board.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Filter categories to this board."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "put-_api_v1_tickets_id_comments_commentid",
     "method": "put",
     "path": "/api/v1/tickets/{id}/comments/{commentId}",
@@ -61728,6 +64192,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "boolean",
                   "description": "Project tasks on mobile (project:read; PSA product only)."
                 },
+                "assets": {
+                  "type": "boolean",
+                  "description": "Asset browsing on mobile (asset:read; PSA product only)."
+                },
+                "assetAudit": {
+                  "type": "boolean",
+                  "description": "Site audits on mobile (asset:read AND asset:update; PSA product only)."
+                },
                 "clientsCreate": {
                   "type": "boolean"
                 },
@@ -61746,6 +64218,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "opportunities",
                 "opportunitiesCreate",
                 "projects",
+                "assets",
+                "assetAudit",
                 "clientsCreate",
                 "clientsUpdate",
                 "contactsCreate",

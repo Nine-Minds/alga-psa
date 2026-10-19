@@ -677,6 +677,7 @@ CE,/api/v1/tenant-management/tenants/{tenantId}/addons,POST,server/src/app/api/v
 CE,/api/v1/test-auth,GET,server/src/app/api/v1/test-auth/route.ts,,,
 CE,/api/v1/tickets,GET POST,server/src/app/api/v1/tickets/route.ts,ApiTicketController,@/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
 CE,/api/v1/tickets/by-external-link,GET,server/src/app/api/v1/tickets/by-external-link/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
+CE,/api/v1/tickets/categories,GET,server/src/app/api/v1/tickets/categories/route.ts,,,
 CE,/api/v1/tickets/from-asset,GET POST,server/src/app/api/v1/tickets/from-asset/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
 CE,/api/v1/tickets/priorities,GET,server/src/app/api/v1/tickets/priorities/route.ts,,,
 CE,/api/v1/tickets/search,GET,server/src/app/api/v1/tickets/search/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
