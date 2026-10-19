@@ -22,6 +22,7 @@ COPY packages/db/package.json ./packages/db/
 COPY packages/ee/package.json ./packages/ee/
 COPY packages/event-bus/package.json ./packages/event-bus/
 COPY packages/event-schemas/package.json ./packages/event-schemas/
+COPY packages/formatting/package.json ./packages/formatting/
 COPY packages/storage/package.json ./packages/storage/
 COPY packages/types/package.json ./packages/types/
 
@@ -34,6 +35,7 @@ RUN npm config set legacy-peer-deps true && npm install --include-workspace-root
   --workspace=@alga-psa/ee-stubs \
   --workspace=@alga-psa/event-bus \
   --workspace=@alga-psa/event-schemas \
+  --workspace=@alga-psa/formatting \
   --workspace=@alga-psa/storage \
   --workspace=@alga-psa/types
 
@@ -51,6 +53,9 @@ WORKDIR /app/packages/event-schemas
 RUN npm run build
 
 WORKDIR /app/packages/event-bus
+RUN npm run build
+
+WORKDIR /app/packages/formatting
 RUN npm run build
 
 WORKDIR /app/shared
