@@ -7,6 +7,8 @@ import { IBoard } from '@alga-psa/types';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { BaseService, ServiceContext, ListResult, ListOptions } from '@alga-psa/db';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { countCoManagedBoardScopes, countLiveCoManagedEscalationsForBoard } from '@alga-psa/core/config/deletion';
+import { ConflictError } from '../middleware/apiMiddleware';
 
 export class BoardService extends BaseService<IBoard> {
   constructor() {
@@ -41,7 +43,21 @@ export class BoardService extends BaseService<IBoard> {
     return board;
   }
 
+  /** Co-management depends on this board while its seats are live: the MSP's
+   * escalation queue for a customer workspace, or a customer board the MSP
+   * oversees. Removing or deactivating it would orphan that access. */
+  private async assertNotCoManagedBoard(id: string, context: ServiceContext, action: 'deleted' | 'deactivated'): Promise<void> {
+    const { knex } = await this.getKnex();
+    if (await countLiveCoManagedEscalationsForBoard(knex, { tenant: context.tenant, entityId: id }) > 0) {
+      throw new ConflictError(`This board receives escalated tickets from a co-managed IT workspace, so it cannot be ${action} while that workspace is being set up or is active.`);
+    }
+    if (await countCoManagedBoardScopes(knex, { tenant: context.tenant, entityId: id }) > 0) {
+      throw new ConflictError(`This board is shared with your MSP under co-managed IT, so it cannot be ${action} while the relationship is active.`);
+    }
+  }
+
   async update(id: string, data: Partial<IBoard>, context: ServiceContext): Promise<IBoard> {
+    if (data.is_inactive === true) await this.assertNotCoManagedBoard(id, context, 'deactivated');
     const board = await super.update(id, data, context);
 
     await publishEvent({
@@ -59,6 +75,7 @@ export class BoardService extends BaseService<IBoard> {
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
+    await this.assertNotCoManagedBoard(id, context, 'deleted');
     await super.delete(id, context);
 
     await publishEvent({

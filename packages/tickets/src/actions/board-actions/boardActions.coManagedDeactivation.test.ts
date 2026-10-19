@@ -98,6 +98,10 @@ function createTrx() {
       };
       return builder;
     }
+    if (table === 'inbound_ticket_defaults') {
+      const builder: any = { where: vi.fn(() => builder), count: vi.fn(() => builder), first: vi.fn(async () => ({ count: 0 })) };
+      return builder;
+    }
     throw new Error(`Unexpected table: ${table}`);
   }) as any;
 }
@@ -139,5 +143,15 @@ describe('updateBoard co-managed deactivation guard', () => {
     escalationCount.mockResolvedValue(1);
     expect(isReturnedActionError(await updateBoard('board-a', { board_name: 'Renamed' } as any))).toBe(false);
     expect(boardUpdates).toHaveLength(2);
+  });
+
+  it('refuses to delete a board co-management depends on, even when forced', async () => {
+    const { deleteBoard } = await import('./boardActions');
+    escalationCount.mockResolvedValue(1);
+    await expect(deleteBoard('board-a', true, true)).resolves.toMatchObject({ success: false, code: 'BOARD_IN_CO_MANAGEMENT' });
+    escalationCount.mockResolvedValue(0);
+    sharedScopeCount.mockResolvedValue(2);
+    await expect(deleteBoard('board-a', true, true)).resolves.toMatchObject({ success: false, code: 'BOARD_IN_CO_MANAGEMENT',
+      counts: { co_managed_relationship: 2 } });
   });
 });

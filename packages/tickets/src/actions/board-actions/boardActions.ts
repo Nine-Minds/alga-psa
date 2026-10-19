@@ -551,6 +551,30 @@ export const deleteBoard = withAuth(async (
       };
     }
 
+    // 3b. Co-management depends on this board while its seats are live: the
+    // MSP's escalation queue for a customer workspace, or a customer board the
+    // MSP oversees. Deleting it (even with force) would orphan that access.
+    const coManagedEscalations = await countLiveCoManagedEscalationsForBoard(trx, { tenant, entityId: boardId });
+    if (coManagedEscalations > 0) {
+      return {
+        success: false,
+        code: 'BOARD_IN_CO_MANAGEMENT',
+        message: 'Cannot delete board: it receives escalated tickets from a co-managed IT workspace that is being set up or is active.',
+        dependencies: ['co_managed_relationship'],
+        counts: { co_managed_relationship: coManagedEscalations }
+      };
+    }
+    const coManagedScopes = await countCoManagedBoardScopes(trx, { tenant, entityId: boardId });
+    if (coManagedScopes > 0) {
+      return {
+        success: false,
+        code: 'BOARD_IN_CO_MANAGEMENT',
+        message: 'Cannot delete board: it is shared with your MSP under co-managed IT while the relationship is active.',
+        dependencies: ['co_managed_relationship'],
+        counts: { co_managed_relationship: coManagedScopes }
+      };
+    }
+
     // 4. Check if this is an ITIL board (categories are shared across ITIL boards)
     const isItilCategoryBoard = board.category_type === 'itil';
 
