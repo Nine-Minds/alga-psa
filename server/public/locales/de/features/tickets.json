@@ -978,7 +978,7 @@
     "noContact": "Kein Kontakt",
     "closeTicketTitle": "Ticket schließen",
     "resolveAndClose": "Lösen und schließen",
-    "closeTicketResolutionPrompt": "Wählen Sie einen Schließstatus und fügen Sie eine Lösung für dieses Ticket hinzu.",
+    "closeTicketResolutionPrompt": "Wählen Sie einen Schließstatus. Fügen Sie eine Lösung hinzu oder lassen Sie das Feld leer, um ohne Lösung zu schließen.",
     "selectCloseStatus": "Schließstatus auswählen",
     "cannotCloseYet": "Dieses Ticket kann noch nicht geschlossen werden",
     "closeRulesIntro": "Die Schließregeln des Boards erfordern Folgendes, bevor dieses Ticket geschlossen werden kann:",

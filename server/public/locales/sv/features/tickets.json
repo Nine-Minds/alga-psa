@@ -986,7 +986,7 @@
     "noContact": "Ingen kontakt",
     "closeTicketTitle": "Stäng ärende",
     "resolveAndClose": "Lös och stäng",
-    "closeTicketResolutionPrompt": "Välj en stängningsstatus och lägg till en lösning för det här ärendet.",
+    "closeTicketResolutionPrompt": "Välj en stängningsstatus. Lägg till en lösning eller lämna fältet tomt för att stänga utan lösning.",
     "selectCloseStatus": "Välj en stängningsstatus",
     "cannotCloseYet": "Det här ärendet kan inte stängas ännu",
     "closeRulesIntro": "Tavlans stängningsregler kräver följande innan det här ärendet kan stängas:",

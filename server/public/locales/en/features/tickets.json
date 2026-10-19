@@ -986,7 +986,7 @@
     "noContact": "No contact",
     "closeTicketTitle": "Close ticket",
     "resolveAndClose": "Resolve and close",
-    "closeTicketResolutionPrompt": "Choose a close status and add a resolution for this ticket.",
+    "closeTicketResolutionPrompt": "Choose a close status. Add a resolution, or leave it blank to close without one.",
     "selectCloseStatus": "Select a close status",
     "cannotCloseYet": "This ticket can't be closed yet",
     "closeRulesIntro": "The board's close rules require the following before this ticket can be closed:",

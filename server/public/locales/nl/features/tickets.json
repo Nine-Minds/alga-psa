@@ -978,7 +978,7 @@
     "noContact": "Geen contact",
     "closeTicketTitle": "Ticket sluiten",
     "resolveAndClose": "Oplossen en sluiten",
-    "closeTicketResolutionPrompt": "Kies een afsluitstatus en voeg een oplossing voor dit ticket toe.",
+    "closeTicketResolutionPrompt": "Kies een afsluitstatus. Voeg een oplossing toe of laat het veld leeg om zonder oplossing af te sluiten.",
     "selectCloseStatus": "Selecteer een afsluitstatus",
     "cannotCloseYet": "Dit ticket kan nog niet worden gesloten",
     "closeRulesIntro": "De sluitregels van het bord vereisen het volgende voordat dit ticket kan worden gesloten:",
