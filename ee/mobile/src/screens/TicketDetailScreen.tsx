@@ -27,6 +27,7 @@ import { useCommentDraft } from "../features/ticketDetail/hooks/useCommentDraft"
 import { useDescriptionEditor } from "../features/ticketDetail/hooks/useDescriptionEditor";
 import { useTicketStatus } from "../features/ticketDetail/hooks/useTicketStatus";
 import { useTicketPriority } from "../features/ticketDetail/hooks/useTicketPriority";
+import { useTicketCategory } from "../features/ticketDetail/hooks/useTicketCategory";
 import { useTicketDueDate } from "../features/ticketDetail/hooks/useTicketDueDate";
 import { useTicketWatch } from "../features/ticketDetail/hooks/useTicketWatch";
 import { useTimeEntry } from "../features/ticketDetail/hooks/useTimeEntry";
@@ -52,6 +53,7 @@ import { resyncScheduleReminders } from "../notifications/reminderSync";
 import { DueDateModal } from "../features/ticketDetail/components/DueDateModal";
 import { TimeEntryModal } from "../features/ticketDetail/components/TimeEntryModal";
 import { PriorityPickerModal } from "../features/ticketDetail/components/PriorityPickerModal";
+import { CategoryPickerModal } from "../features/ticketDetail/components/CategoryPickerModal";
 import { StatusPickerModal } from "../features/ticketDetail/components/StatusPickerModal";
 import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
 import { ContactPickerModal } from "../features/ticketDetail/components/ContactPickerModal";
@@ -71,6 +73,7 @@ import { useTimer } from "../features/timer/TimerContext";
 
 // Utils
 import { getDueDateIso, getWatcherUserIds, isoToDateInput, stringOrDash } from "../features/ticketDetail/utils";
+import { selectedTicketCategoryId, ticketCategoryLabel } from "../features/ticketDetail/ticketCategory";
 
 // Re-exports for backward compatibility
 export { CommentComposer } from "../features/ticketDetail/components/CommentComposer";
@@ -243,6 +246,7 @@ export function TicketDetailBody({
     },
   });
   const priorityHook = useTicketPriority({ ...deps, fetchTicket });
+  const categoryHook = useTicketCategory({ ...deps, fetchTicket, boardId });
   const dueDateHook = useTicketDueDate({ ...deps, ticket, fetchTicket });
   const watchHook = useTicketWatch({ ...deps, ticket, fetchTicket });
   const [timeEntriesRefreshKey, setTimeEntriesRefreshKey] = useState(0);
@@ -753,6 +757,24 @@ export function TicketDetailBody({
             ) : null}
           </KeyValue>
           <View style={{ height: spacing.sm }} />
+          <KeyValue
+            label={t("detail.category")}
+            value={stringOrDash(ticketCategoryLabel(ticket))}
+          >
+            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm, gap: spacing.sm }}>
+              <ActionChip
+                label={t("detail.changeCategory")}
+                disabled={categoryHook.categoryUpdating}
+                onPress={() => void categoryHook.openCategoryPicker()}
+              />
+            </View>
+            {categoryHook.categoryUpdateError && !categoryHook.categoryPickerOpen ? (
+              <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+                {categoryHook.categoryUpdateError}
+              </Text>
+            ) : null}
+          </KeyValue>
+          <View style={{ height: spacing.sm }} />
           <KeyValue label={t("detail.created")} value={formatDateTimeWithRelative(ticket.entered_at)} />
           <View style={{ height: spacing.sm }} />
           <KeyValue label={t("detail.updated")} value={formatDateTimeWithRelative(ticket.updated_at)} />
@@ -874,6 +896,18 @@ export function TicketDetailBody({
         updateError={priorityHook.priorityUpdateError}
         onApply={(id, notificationSuppression) => void priorityHook.submitPriority(id, notificationSuppression)}
         onClose={() => priorityHook.setPriorityPickerOpen(false)}
+      />
+
+      <CategoryPickerModal
+        visible={categoryHook.categoryPickerOpen}
+        loading={categoryHook.categoryOptionsLoading}
+        error={categoryHook.categoryOptionsError}
+        categories={categoryHook.categoryOptions}
+        currentCategoryId={selectedTicketCategoryId(ticket)}
+        updating={categoryHook.categoryUpdating}
+        updateError={categoryHook.categoryUpdateError}
+        onApply={(categoryId, notificationSuppression) => void categoryHook.submitCategory(categoryId, notificationSuppression)}
+        onClose={() => categoryHook.setCategoryPickerOpen(false)}
       />
 
       <StatusPickerModal

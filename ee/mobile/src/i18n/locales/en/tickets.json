@@ -101,7 +101,9 @@
     "unableToLoadDescription": "Please try again.",
     "changeStatus": "Change status",
     "changePriority": "Change priority",
+    "changeCategory": "Change category",
     "priority": "Priority",
+    "category": "Category",
     "dueDate": "Due date",
     "dueOn": "Due {{date}}",
     "more": "More",
@@ -141,6 +143,7 @@
     "errors": {
       "unableToLoadStatuses": "Unable to load statuses.",
       "unableToLoadPriorities": "Unable to load priorities.",
+      "unableToLoadCategories": "Unable to load categories.",
       "statusPermission": "You don't have permission to change this ticket's status.",
       "statusValidation": "Status change was rejected by the server.",
       "statusGeneric": "Unable to change status. Please try again.",
@@ -150,6 +153,9 @@
       "priorityPermission": "You don't have permission to change this ticket's priority.",
       "priorityValidation": "Priority change was rejected by the server.",
       "priorityGeneric": "Unable to change priority. Please try again.",
+      "categoryPermission": "You don't have permission to change the category.",
+      "categoryValidation": "That category could not be saved.",
+      "categoryGeneric": "Unable to change the category. Please try again.",
       "dueDatePermission": "You don't have permission to change this ticket's due date.",
       "dueDateValidation": "Due date change was rejected by the server.",
       "dueDateGeneric": "Unable to update due date. Please try again.",
@@ -428,6 +434,14 @@
     "title": "Select priority",
     "setPriority": "Set priority {{name}}",
     "apply": "Change priority"
+  },
+  "categoryPicker": {
+    "title": "Select category",
+    "hint": "Pick a category, or a subcategory under it. Tap the selected row to clear it.",
+    "searchPlaceholder": "Search categories",
+    "setCategory": "Set category {{name}}",
+    "empty": "This board has no categories yet.",
+    "apply": "Change category"
   },
   "create": {
     "title": "New Ticket",

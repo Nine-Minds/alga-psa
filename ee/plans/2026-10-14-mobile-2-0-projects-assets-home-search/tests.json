@@ -1180,5 +1180,52 @@
     "featureIds": [
       "F052"
     ]
+  },
+  {
+    "id": "T132",
+    "description": "the categories route is board-filtered behind ticket:read and the CE/EE specs document it plus the nullable category_id/subcategory_id",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "featureIds": [
+      "F095",
+      "F096"
+    ]
+  },
+  {
+    "id": "T133",
+    "description": "updateTicketSchema accepts a category pair and a null on either side, and still rejects a non-uuid",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "featureIds": [
+      "F096"
+    ]
+  },
+  {
+    "id": "T134",
+    "description": "getTicketCategories calls /api/v1/tickets/categories with the board filter; updateTicketCategory sends both columns",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "featureIds": [
+      "F095",
+      "F097"
+    ]
+  },
+  {
+    "id": "T135",
+    "description": "picking a subcategory writes the parent into category_id and the child into subcategory_id; picking a parent clears the subcategory",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "featureIds": [
+      "F097"
+    ]
+  },
+  {
+    "id": "T136",
+    "description": "the category hook surfaces a 403 as a permission message and keeps the picker open on a validation failure",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "featureIds": [
+      "F097"
+    ]
   }
 ]

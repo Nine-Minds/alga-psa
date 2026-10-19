@@ -844,5 +844,32 @@
     "prdRefs": [
       "FR40"
     ]
+  },
+  {
+    "id": "F095",
+    "description": "GET /api/v1/tickets/categories lists board-scoped ticket categories behind ticket:read (sibling of /tickets/statuses and /priorities), so agents without ticket_settings:read can classify a ticket; documented in the CE/EE specs",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "prdRefs": [
+      "OPERATOR-2026-10-19"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "PUT /api/v1/tickets/{id} accepts null category_id/subcategory_id so a re-classification clears the old parent's child; the ticket detail payload returns subcategory_name",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "prdRefs": [
+      "OPERATOR-2026-10-19"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "Ticket detail Details card shows Category (parent \u203a child) with a Change category picker: board categories grouped parent/child, search, tap-to-clear, notification-suppression footer; unblocks boards whose close rules require category/subcategory",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "prdRefs": [
+      "OPERATOR-2026-10-19"
+    ]
   }
 ]
