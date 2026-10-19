@@ -6,6 +6,7 @@ import { X } from 'lucide-react';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { DialogComponent, ButtonComponent, AutomationProps } from '../ui-reflection/types';
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
+import { useTranslation } from '../lib/i18n/client';
 
 interface GenericDialogProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ const GenericDialog = ({
   constrainToViewport = true,
   maxWidth = 'max-w-md'
 }: GenericDialogProps & AutomationProps) => {
+  const { t } = useTranslation('common');
   // Register dialog with UI reflection system
   const { automationIdProps: dialogProps } = useAutomationIdAndRegister<DialogComponent>({
     id,
@@ -47,7 +49,7 @@ const GenericDialog = ({
   const { automationIdProps: closeButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: `${id}-close`,
     type: 'button',
-    label: 'Close Dialog',
+    label: t('actions.closeDialog', { defaultValue: 'Close Dialog' }),
   });
 
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -168,7 +170,7 @@ const GenericDialog = ({
             <button
               {...closeButtonProps}
               className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))]"
-              aria-label="Close"
+              aria-label={t('actions.close', { defaultValue: 'Close' })}
             >
               <X className="h-4 w-4" />
             </button>

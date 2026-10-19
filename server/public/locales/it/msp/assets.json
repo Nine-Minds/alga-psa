@@ -38,6 +38,20 @@
       "offline": "Non in linea",
       "overdue": "In ritardo",
       "unknown": "Sconosciuto"
+    },
+    "rmaStatus": {
+      "open": "Aperto",
+      "awaiting_return": "In attesa di reso",
+      "returned": "Reso",
+      "sent_to_vendor": "Inviato al fornitore",
+      "replacement_received": "Unità sostitutiva ricevuta",
+      "replacement_deployed": "Unità sostitutiva installata",
+      "dead_unit_owed": "Unità guasta da restituire",
+      "dead_unit_returned": "Unità guasta resa",
+      "replaced": "Sostituito",
+      "credited": "Accreditato",
+      "charged": "Addebitato",
+      "closed": "Chiuso"
     }
   },
   "assetAlertsSection": {
@@ -835,7 +849,7 @@
       "save": "Salva",
       "label": "Etichetta del pulsante",
       "template": "Modello URL",
-      "tokens": "Usa {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} e {field.<key>} con le chiavi dei campi personalizzati definite in Impostazioni → Asset → Tipi di asset.",
+      "tokens": "Usa {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {client.name} e {field.<key>} con le chiavi dei campi personalizzati definite in Impostazioni → Asset → Tipi di asset.",
       "loading": "Caricamento delle opzioni di accesso remoto…",
       "unavailable": "Non disponibile per questo asset",
       "actions": "Azioni",
@@ -1504,13 +1518,6 @@
     }
   },
   "assetBento": {
-    "rmmUser": {
-      "looksLike": "· Sembra essere {{contact}}",
-      "mapDialogDescription": "«{{user}}» verrà memorizzato per questa organizzazione RMM.",
-      "mapDialogTitle": "Associare l’utente connesso a un contatto",
-      "mapFailed": "Impossibile salvare l’associazione.",
-      "mapToContact": "Associa a un contatto…"
-    },
     "health": "Stato di salute",
     "security": "Sicurezza",
     "openTickets": "Ticket aperti",
@@ -1560,6 +1567,13 @@
     "lastDone": "Ultima eseguita",
     "noMaintenance": "Niente in programma.",
     "docsHint": "Allegati e credenziali di questo asset.",
+    "rmmUser": {
+      "looksLike": "· Sembra essere {{contact}}",
+      "mapDialogDescription": "«{{user}}» verrà memorizzato per questa organizzazione RMM.",
+      "mapDialogTitle": "Associare l’utente connesso a un contatto",
+      "mapFailed": "Impossibile salvare l’associazione.",
+      "mapToContact": "Associa a un contatto…"
+    },
     "manufacturer": "Produttore",
     "model": "Modello",
     "vendor": "Fornitore",
@@ -1715,6 +1729,36 @@
     "empty": "Nessun asset corrispondente per questo cliente",
     "loading": "Caricamento...",
     "remove": "Rimuovi asset"
+  },
+  "inventoryProvenance": {
+    "title": "Provenienza nell’inventario",
+    "fields": {
+      "product": {
+        "label": "Prodotto"
+      },
+      "serial": {
+        "label": "Numero di serie"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Ordine di vendita di origine"
+      },
+      "delivered": {
+        "label": "Consegnato"
+      }
+    },
+    "rmaHistory": {
+      "title": "Cronologia RMA"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "Caricamento del modulo asset..."
+    }
   },
   "assetStatuses": {
     "active": "Attivo",

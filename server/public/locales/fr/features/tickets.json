@@ -33,7 +33,39 @@
     "createdSuccess_one": "{{count}} ticket créé avec succès.",
     "createdSuccess_other": "{{count}} tickets créés avec succès.",
     "rowLimitExceeded": "Limite de lignes dépassée :",
-    "rowLimitDescription": "Votre CSV a {{original}} lignes, mais seules les premières {{kept}} lignes seront importées. Divisez votre fichier en lots plus petits pour les lignes restantes."
+    "rowLimitDescription": "Votre CSV a {{original}} lignes, mais seules les premières {{kept}} lignes seront importées. Divisez votre fichier en lots plus petits pour les lignes restantes.",
+    "createdSuccess_few": "{{count}} tickets créés avec succès.",
+    "createdSuccess_many": "{{count}} tickets créés avec succès.",
+    "errorCount_few": "{{count}} erreurs :",
+    "errorCount_many": "{{count}} erreurs :",
+    "importTickets_few": "Importer {{count}} tickets",
+    "importTickets_many": "Importer {{count}} tickets",
+    "skipDropped_few": "Ignorer ({{count}} tickets supprimés)",
+    "skipDropped_many": "Ignorer ({{count}} tickets supprimés)",
+    "skippedCount_few": "{{count}} tickets ont été ignorés.",
+    "skippedCount_many": "{{count}} tickets ont été ignorés.",
+    "ticketCount_few": "({{count}} tickets)",
+    "ticketCount_many": "({{count}} tickets)",
+    "unmatchedAgents_few": "{{count}} agents",
+    "unmatchedAgents_many": "{{count}} agents",
+    "unmatchedCategories_few": "{{count}} catégories",
+    "unmatchedCategories_many": "{{count}} catégories",
+    "unmatchedClients_few": "{{count}} clients",
+    "unmatchedClients_many": "{{count}} clients",
+    "unmatchedContacts_few": "{{count}} contacts",
+    "unmatchedContacts_many": "{{count}} contacts",
+    "unmatchedDateFormats_few": "{{count}} formats de date",
+    "unmatchedDateFormats_many": "{{count}} formats de date",
+    "unmatchedPriorities_few": "{{count}} priorités",
+    "unmatchedPriorities_many": "{{count}} priorités",
+    "unmatchedStatuses_few": "{{count}} statuts",
+    "unmatchedStatuses_many": "{{count}} statuts",
+    "unmatchedTeams_few": "{{count}} équipes",
+    "unmatchedTeams_many": "{{count}} équipes",
+    "unmatchedValuesIntro_few": "{{count}} valeurs de votre CSV n'ont pas pu être associées automatiquement.",
+    "unmatchedValuesIntro_many": "{{count}} valeurs de votre CSV n'ont pas pu être associées automatiquement.",
+    "warningCount_few": "{{count}} avertissements :",
+    "warningCount_many": "{{count}} avertissements :"
   },
   "title": "Tickets d'assistance",
   "subtitle": "Consultez et gérez vos tickets d'assistance",
@@ -316,6 +348,16 @@
     "billingProfileUpdated": "Profil de facturation mis à jour",
     "updateBillingProfileFailed": "Échec de la mise à jour du profil de facturation",
     "scheduleOpenFailed": "Impossible d’ouvrir le planificateur",
+    "commentWithImagesDeleted_few": "Commentaire et {{count}} images collées supprimés avec succès.",
+    "commentWithImagesDeleted_many": "Commentaire et {{count}} images collées supprimés avec succès.",
+    "deleteCommentWithImages_few": "Ce commentaire contient {{count}} images collées téléversées comme documents de ticket. Supprimer uniquement le commentaire, ou aussi supprimer définitivement les images collées ?",
+    "deleteCommentWithImages_many": "Ce commentaire contient {{count}} images collées téléversées comme documents de ticket. Supprimer uniquement le commentaire, ou aussi supprimer définitivement les images collées ?",
+    "pastedImageDeleteFailed_few": "Commentaire supprimé, mais impossible de supprimer {{count}} images collées.",
+    "pastedImageDeleteFailed_many": "Commentaire supprimé, mais impossible de supprimer {{count}} images collées.",
+    "pastedImagesDeleteFailed_few": "Impossible de supprimer {{count}} images collées.",
+    "pastedImagesDeleteFailed_many": "Impossible de supprimer {{count}} images collées.",
+    "pastedImagesDeleted_few": "{{count}} images collées supprimées.",
+    "pastedImagesDeleted_many": "{{count}} images collées supprimées.",
     "sharedWorkspaceReadOnly": "Vous voyez ce ticket parce qu'il concerne un appareil d'un espace partagé. Seule la personne qui l'a créé peut y ajouter quelque chose."
   },
   "conversation": {
@@ -403,7 +445,9 @@
     "notSet": "Non défini",
     "set": "Définir l'état de réponse",
     "all": "Tous les états de réponse",
-    "none": "Aucun état de réponse"
+    "none": "Aucun état de réponse",
+    "awaitingClientTooltip": "En attente de la réponse du client",
+    "awaitingInternalTooltip": "Le client a répondu, en attente d’une action interne"
   },
   "origin": {
     "internal": "Créé en interne",
@@ -492,7 +536,13 @@
       "allMatchingSelected_other": "Tous les {{count}} tickets correspondant à vos filtres sont sélectionnés.",
       "clear": "Effacer la sélection",
       "selectAllMatching_one": "Sélectionnez tous les {{count}} tickets correspondant à vos filtres",
-      "selectAllMatching_other": "Sélectionnez tous les {{count}} tickets correspondant à vos filtres"
+      "selectAllMatching_other": "Sélectionnez tous les {{count}} tickets correspondant à vos filtres",
+      "allMatchingSelected_few": "Tous les {{count}} tickets correspondant à vos filtres sont sélectionnés.",
+      "allMatchingSelected_many": "Tous les {{count}} tickets correspondant à vos filtres sont sélectionnés.",
+      "pageSelected_few": "Tous les {{count}} tickets sur cette page sont sélectionnés.",
+      "pageSelected_many": "Tous les {{count}} tickets sur cette page sont sélectionnés.",
+      "selectAllMatching_few": "Sélectionnez tous les {{count}} tickets correspondant à vos filtres",
+      "selectAllMatching_many": "Sélectionnez tous les {{count}} tickets correspondant à vos filtres"
     },
     "spacing": {
       "compact": "Compacte",
@@ -532,7 +582,13 @@
       },
       "selectedAction": "Imprimer la sélection ({{count}})",
       "selectedTitle": "Tickets sélectionnés ({{count}})",
-      "subtitle": "{{count}} tickets"
+      "subtitle": "{{count}} tickets",
+      "selectedAction_few": "Imprimer la sélection ({{count}})",
+      "selectedAction_many": "Imprimer la sélection ({{count}})",
+      "selectedTitle_few": "Tickets sélectionnés ({{count}})",
+      "selectedTitle_many": "Tickets sélectionnés ({{count}})",
+      "subtitle_few": "{{count}} tickets",
+      "subtitle_many": "{{count}} tickets"
     },
     "exportSelectedAction": "Exporter la sélection ({{count}})",
     "exportAction": "Exporter CSV",
@@ -560,7 +616,15 @@
       "saveFailed": "Échec de l'enregistrement de la vue par défaut",
       "reset": "Réinitialiser à la valeur par défaut du locataire",
       "resetFailed": "Échec de la réinitialisation de la vue"
-    }
+    },
+    "allMatchingSelected_few": "Tous les {{count}} tickets correspondant à vos filtres sont sélectionnés.",
+    "allMatchingSelected_many": "Tous les {{count}} tickets correspondant à vos filtres sont sélectionnés.",
+    "allPageSelected_few": "Tous les {{count}} tickets sur cette page sont sélectionnés.",
+    "allPageSelected_many": "Tous les {{count}} tickets sur cette page sont sélectionnés.",
+    "exportSelectedTooltip_few": "Exportation de {{count}} tickets sélectionnés vers CSV",
+    "exportSelectedTooltip_many": "Exportation de {{count}} tickets sélectionnés vers CSV",
+    "selectAllMatching_few": "Sélectionnez tous les {{count}} tickets correspondant à vos filtres",
+    "selectAllMatching_many": "Sélectionnez tous les {{count}} tickets correspondant à vos filtres"
   },
   "bulk": {
     "bundleTickets": "Regrouper les tickets",
@@ -626,7 +690,11 @@
       "partialFailure": "Certains tickets n'ont pas pu être déplacés",
       "failure": "Échec du déplacement des tickets sélectionnés",
       "confirm": "Déplacer {{count}} tickets",
-      "success": "{{count}} tickets déplacés"
+      "success": "{{count}} tickets déplacés",
+      "confirm_few": "Déplacer {{count}} tickets",
+      "confirm_many": "Déplacer {{count}} tickets",
+      "success_few": "{{count}} tickets déplacés",
+      "success_many": "{{count}} tickets déplacés"
     },
     "delete": {
       "dialogTitle": "Supprimer les tickets sélectionnés",
@@ -643,7 +711,13 @@
       "partialFailure": "Certains tickets n'ont pas pu être supprimés",
       "failure": "Échec de la suppression des tickets sélectionnés",
       "confirm": "Êtes-vous sûr de vouloir supprimer ces {{count}} tickets ? Cette action ne peut pas être annulée.",
-      "success": "{{count}} tickets supprimés"
+      "success": "{{count}} tickets supprimés",
+      "button_few": "Supprimer {{count}} tickets",
+      "button_many": "Supprimer {{count}} tickets",
+      "confirm_few": "Êtes-vous sûr de vouloir supprimer ces {{count}} tickets ? Cette action ne peut pas être annulée.",
+      "confirm_many": "Êtes-vous sûr de vouloir supprimer ces {{count}} tickets ? Cette action ne peut pas être annulée.",
+      "success_few": "{{count}} tickets supprimés",
+      "success_many": "{{count}} tickets supprimés"
     },
     "bundle": {
       "dialogTitle": "Regrouper les tickets",
@@ -679,7 +753,9 @@
       "needMoreTickets": "Ajoutez au moins un ticket supplémentaire au lot.",
       "unresolvedSelectedTickets_one": "Impossible de charger {{count}} ticket sélectionné.",
       "unresolvedSelectedTickets_other": "Impossible de charger {{count}} tickets sélectionnés.",
-      "badgeClosed": "Fermé"
+      "badgeClosed": "Fermé",
+      "unresolvedSelectedTickets_few": "Impossible de charger {{count}} tickets sélectionnés.",
+      "unresolvedSelectedTickets_many": "Impossible de charger {{count}} tickets sélectionnés."
     },
     "auth": {
       "moveRequired": "Vous devez être connecté pour déplacer des tickets",
@@ -706,7 +782,9 @@
       "statusDisabledMultiBoard": "Les tickets sélectionnés sont sur des tableaux différents",
       "statusResolvingBoards": "Vérification des tableaux des tickets sélectionnés…",
       "more": "Plus",
-      "bundleNeedsOne": "Sélectionnez au moins 1 ticket à regrouper"
+      "bundleNeedsOne": "Sélectionnez au moins 1 ticket à regrouper",
+      "selectedCount_few": "{{count}} sélectionnés",
+      "selectedCount_many": "{{count}} sélectionnés"
     },
     "assign": {
       "dialogTitle": "Assigner les tickets sélectionnés",
@@ -720,7 +798,11 @@
       "success_other": "{{count}} tickets réassignés",
       "partialFailure": "Certains tickets n’ont pas pu être réassignés",
       "failure": "Échec de la réassignation des tickets sélectionnés",
-      "failedHeading": "Les tickets suivants n’ont pas pu être réassignés :"
+      "failedHeading": "Les tickets suivants n’ont pas pu être réassignés :",
+      "confirm_few": "Réassigner {{count}} tickets",
+      "confirm_many": "Réassigner {{count}} tickets",
+      "success_few": "{{count}} tickets réassignés",
+      "success_many": "{{count}} tickets réassignés"
     },
     "tags": {
       "dialogTitle": "Ajouter des étiquettes aux tickets sélectionnés",
@@ -733,7 +815,11 @@
       "success_other": "Étiquettes ajoutées à {{count}} tickets",
       "partialFailure": "Les étiquettes n’ont pas pu être ajoutées à certains tickets",
       "failure": "Échec de l’ajout d’étiquettes",
-      "failedHeading": "Les étiquettes n’ont pas pu être ajoutées aux tickets suivants :"
+      "failedHeading": "Les étiquettes n’ont pas pu être ajoutées aux tickets suivants :",
+      "confirm_few": "Ajouter aux {{count}} tickets",
+      "confirm_many": "Ajouter aux {{count}} tickets",
+      "success_few": "Étiquettes ajoutées à {{count}} tickets",
+      "success_many": "Étiquettes ajoutées à {{count}} tickets"
     },
     "dueDate": {
       "dialogTitle": "Définir l’échéance des tickets sélectionnés",
@@ -748,7 +834,11 @@
       "success_other": "Échéance mise à jour sur {{count}} tickets",
       "partialFailure": "L’échéance n’a pas pu être mise à jour sur certains tickets",
       "failure": "Échec de la mise à jour de l’échéance",
-      "failedHeading": "L’échéance n’a pas pu être mise à jour sur les tickets suivants :"
+      "failedHeading": "L’échéance n’a pas pu être mise à jour sur les tickets suivants :",
+      "confirm_few": "Mettre à jour {{count}} tickets",
+      "confirm_many": "Mettre à jour {{count}} tickets",
+      "success_few": "Échéance mise à jour sur {{count}} tickets",
+      "success_many": "Échéance mise à jour sur {{count}} tickets"
     },
     "status": {
       "dialogTitle": "Changer le statut des tickets sélectionnés",
@@ -767,7 +857,11 @@
       "resolutionLabelRequired": "Commentaire de résolution",
       "resolutionRequiredHint": "Ce tableau exige un commentaire de résolution avant de pouvoir clôturer les tickets.",
       "resolutionPlaceholder": "Décrivez comment ces tickets ont été résolus",
-      "resolutionHelper": "Enregistré comme résolution sur chaque ticket sélectionné et satisfait les tableaux qui en exigent une avant la clôture."
+      "resolutionHelper": "Enregistré comme résolution sur chaque ticket sélectionné et satisfait les tableaux qui en exigent une avant la clôture.",
+      "confirm_few": "Mettre à jour {{count}} tickets",
+      "confirm_many": "Mettre à jour {{count}} tickets",
+      "success_few": "Statut mis à jour sur {{count}} tickets",
+      "success_many": "Statut mis à jour sur {{count}} tickets"
     },
     "priority": {
       "dialogTitle": "Changer la priorité des tickets sélectionnés",
@@ -780,8 +874,24 @@
       "success_other": "Priorité mise à jour sur {{count}} tickets",
       "partialFailure": "La priorité n’a pas pu être mise à jour sur certains tickets",
       "failure": "Échec de la mise à jour de la priorité",
-      "failedHeading": "La priorité n’a pas pu être mise à jour sur les tickets suivants :"
-    }
+      "failedHeading": "La priorité n’a pas pu être mise à jour sur les tickets suivants :",
+      "confirm_few": "Mettre à jour {{count}} tickets",
+      "confirm_many": "Mettre à jour {{count}} tickets",
+      "success_few": "Priorité mise à jour sur {{count}} tickets",
+      "success_many": "Priorité mise à jour sur {{count}} tickets"
+    },
+    "deleteConfirm_few": "Supprimer {{count}} tickets",
+    "deleteConfirm_many": "Supprimer {{count}} tickets",
+    "deleteDialogDescription_few": "Êtes-vous sûr de vouloir supprimer ces {{count}} tickets ? Cette action ne peut pas être annulée.",
+    "deleteDialogDescription_many": "Êtes-vous sûr de vouloir supprimer ces {{count}} tickets ? Cette action ne peut pas être annulée.",
+    "deleteSuccess_few": "{{count}} tickets supprimés",
+    "deleteSuccess_many": "{{count}} tickets supprimés",
+    "exportSelectedTooltip_few": "Exporter {{count}} tickets sélectionnés au format CSV",
+    "exportSelectedTooltip_many": "Exporter {{count}} tickets sélectionnés au format CSV",
+    "moveConfirm_few": "Déplacer {{count}} Tickets",
+    "moveConfirm_many": "Déplacer {{count}} Tickets",
+    "moveSuccess_few": "{{count}} tickets déplacés",
+    "moveSuccess_many": "{{count}} tickets déplacés"
   },
   "quickAdd": {
     "dialogTitle": "Ajout rapide d'un ticket",
@@ -853,7 +963,11 @@
     "templateCustomFieldsNote": "Les valeurs des champs personnalisés sont copiées depuis le modèle.",
     "templateReplaceTitle": "Remplacer vos modifications ?",
     "templateReplaceMessage": "L'application d'un modèle remplace le titre, la description et les autres champs saisis.",
-    "templateReplaceConfirm": "Appliquer le modèle"
+    "templateReplaceConfirm": "Appliquer le modèle",
+    "tagCreatePartialFailure_few": "Impossible de créer {{count}} balises",
+    "tagCreatePartialFailure_many": "Impossible de créer {{count}} balises",
+    "tagCreationFailed_few": "{{count}} tags n'ont pas pu être créés",
+    "tagCreationFailed_many": "{{count}} tags n'ont pas pu être créés"
   },
   "itil": {
     "calculatedPriority": "Priorité (calculée)",
@@ -1142,7 +1256,9 @@
       "copyTargetBoard": "Sélectionner le tableau cible",
       "copyBoardTypeMismatch": "Les catégories de tickets ne peuvent être copiées qu’entre des tableaux du même type de catégorie.",
       "copyConflicts_one": "{{count}} catégorie ignorée a une catégorie parente différente sur le tableau cible.",
-      "copyConflicts_other": "{{count}} catégories ignorées ont une catégorie parente différente sur le tableau cible."
+      "copyConflicts_other": "{{count}} catégories ignorées ont une catégorie parente différente sur le tableau cible.",
+      "copyConflicts_few": "{{count}} catégories ignorées ont une catégorie parente différente sur le tableau cible.",
+      "copyConflicts_many": "{{count}} catégories ignorées ont une catégorie parente différente sur le tableau cible."
     },
     "display": {
       "responseStateTrackingTitle": "Suivi de l'état de réponse",
@@ -1220,7 +1336,23 @@
     "appliedFiltersSummary": "(sur {{count}} ticket correspondant aux filtres appliqués)",
     "completeMessage": "{{count}} ticket exporté avec succès au format CSV.",
     "confirm": "Exporter {{count}} ticket",
-    "selectedTicketsSummary": "Exportation de {{count}} ticket sélectionné"
+    "selectedTicketsSummary": "Exportation de {{count}} ticket sélectionné",
+    "appliedFiltersSummary_few": "(sur {{count}} tickets correspondant aux filtres appliqués)",
+    "appliedFiltersSummary_many": "(sur {{count}} tickets correspondant aux filtres appliqués)",
+    "completeDescription_few": "Exportation réussie de {{count}} tickets au format CSV.",
+    "completeDescription_many": "Exportation réussie de {{count}} tickets au format CSV.",
+    "completeMessage_few": "{{count}} tickets ont été exportés avec succès au format CSV.",
+    "completeMessage_many": "{{count}} tickets ont été exportés avec succès au format CSV.",
+    "confirm_few": "Exporter {{count}} tickets",
+    "confirm_many": "Exporter {{count}} tickets",
+    "selectedFields_few": "{{count}} sur {{total}} champs sélectionnés",
+    "selectedFields_many": "{{count}} sur {{total}} champs sélectionnés",
+    "selectedTicketsSummary_few": "Exportation de {{count}} tickets sélectionnés",
+    "selectedTicketsSummary_many": "Exportation de {{count}} tickets sélectionnés",
+    "summaryMatching_few": "(sur {{total}} tickets correspondant aux filtres appliqués)",
+    "summaryMatching_many": "(sur {{total}} tickets correspondant aux filtres appliqués)",
+    "summary_few": "Exportation de {{selected}} tickets sélectionnés",
+    "summary_many": "Exportation de {{selected}} tickets sélectionnés"
   },
   "materials": {
     "title": "Matériaux",
@@ -1343,7 +1475,15 @@
     "excludingCount_other": "à l'exclusion de {{count}} catégories",
     "excludingPrefix": "à l'exclusion de {{name}}",
     "excludingCount": "en excluant {{count}} catégorie",
-    "selectedCount": "{{count}} catégories"
+    "selectedCount": "{{count}} catégories",
+    "categoriesCount_few": "{{count}} catégories",
+    "categoriesCount_many": "{{count}} catégories",
+    "excludingCategoriesCount_few": "à l'exclusion de {{count}} catégories",
+    "excludingCategoriesCount_many": "à l'exclusion de {{count}} catégories",
+    "excludingCount_few": "à l'exclusion de {{count}} catégories",
+    "excludingCount_many": "à l'exclusion de {{count}} catégories",
+    "selectedCount_few": "{{count}} catégories",
+    "selectedCount_many": "{{count}} catégories"
   },
   "navigation": {
     "previousTicket": "Ticket précédent",
@@ -1635,7 +1775,9 @@
     "editing": {
       "single": "{{name}} modifie",
       "multiple_one": "{{name}} et {{count}} autre personne modifient",
-      "multiple_other": "{{name}} et {{count}} autres personnes modifient"
+      "multiple_other": "{{name}} et {{count}} autres personnes modifient",
+      "multiple_few": "{{name}} et {{count}} autres personnes modifient",
+      "multiple_many": "{{name}} et {{count}} autres personnes modifient"
     },
     "remoteFieldUpdated": "{{name}} a mis à jour {{field}}",
     "connection": {
@@ -1663,7 +1805,11 @@
     "selectedCount": "{{count}} tableaux",
     "statusActive": "Actifs",
     "statusAll": "Tous",
-    "statusInactive": "Inactifs"
+    "statusInactive": "Inactifs",
+    "excludingCount_few": "hors {{count}} tableaux",
+    "excludingCount_many": "hors {{count}} tableaux",
+    "selectedCount_few": "{{count}} tableaux",
+    "selectedCount_many": "{{count}} tableaux"
   },
   "checklist": {
     "addFailed": "Échec de l'ajout de l'élément de la liste de contrôle",
@@ -1801,7 +1947,6 @@
       "setClientToAddContact": "Définissez d'abord un client pour ajouter un contact",
       "logInteraction": "Consigner un appel ou un e-mail",
       "changeClient": "Changer de client",
-      "changeLocation": "Changer d'emplacement",
       "teamFallback": "Équipe",
       "teamSectionLabel": "Attribuer une équipe",
       "addAgentsOrTeam": "Ajouter des agents ou une équipe…",
@@ -1816,7 +1961,10 @@
         "cancelled": "Annulé"
       },
       "scheduleTime": "Planifier du temps",
-      "openScheduleEntry": "Ouvrir l’entrée de planning"
+      "openScheduleEntry": "Ouvrir l’entrée de planning",
+      "acrossEntries_few": "sur {{count}} entrées",
+      "acrossEntries_many": "sur {{count}} entrées",
+      "changeLocation": "Changer d'emplacement"
     },
     "timeline": {
       "subtitle": "Réponses, temps et changements système au même endroit",
@@ -2405,6 +2553,34 @@
       "invalidReferences": "Le modèle fait référence à un tableau, une catégorie ou une priorité qui n'est pas disponible",
       "notAvailable": "Les modèles de tickets ne sont pas disponibles",
       "subcategoryNeedsCategory": "Une sous-catégorie nécessite une catégorie"
+    }
+  },
+  "enums": {
+    "slaStatus": {
+      "paused": "En pause",
+      "on_track": "Dans les délais",
+      "at_risk": "À risque",
+      "breached": "Non respecté",
+      "unknown": "Inconnu",
+      "response_breached": "SLA de réponse non respecté",
+      "resolution_breached": "SLA de résolution non respecté"
+    }
+  },
+  "sla": {
+    "tooltip": {
+      "paused": "Minuteur SLA : en pause",
+      "status": "Statut SLA : {{status}}",
+      "responseBreached": "Réponse : délai dépassé de {{time}}",
+      "responseRemaining": "Réponse : temps restant : {{time}}",
+      "resolutionBreached": "Résolution : délai dépassé de {{time}}",
+      "resolutionRemaining": "Résolution : temps restant : {{time}}"
+    },
+    "time": {
+      "minutes": "{{minutes}} min",
+      "hoursMinutes": "{{hours}} h {{minutes}} min",
+      "hours": "{{hours}} h",
+      "daysHours": "{{days}} j {{hours}} h",
+      "days": "{{days}} j"
     }
   }
 }

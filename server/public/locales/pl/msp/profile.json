@@ -733,6 +733,9 @@
     }
   },
   "connectSso": {
+    "proFeature": {
+      "description": "Łączenie kont SSO jest dostępne w Pro. Przejdź na Pro, aby połączyć konto Google Workspace lub Microsoft 365 i korzystać z płynnego uwierzytelniania."
+    },
     "linkError": {
       "title": "Nie udało się powiązać konta SSO.",
       "no_matching_user": "Konto, za pomocą którego się zalogowano, to {{providerEmail}}, natomiast Twój login AlgaPSA to {{accountEmail}}. Powiąż konto używające adresu {{accountEmail}} albo poproś administratora dostawcy tożsamości o ustawienie {{accountEmail}} jako głównego adresu e-mail tego konta.",

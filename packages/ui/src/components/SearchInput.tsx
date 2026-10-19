@@ -6,6 +6,7 @@ import Spinner from './Spinner';
 import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { withDataAutomationId } from '../ui-reflection/withDataAutomationId';
+import { useTranslation } from '../lib/i18n/client';
 
 interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 'onChange'> {
   /** Unique identifier for UI reflection system */
@@ -35,6 +36,7 @@ export function SearchInput({
   onClear,
   ...props
 }: SearchInputProps & AutomationProps) {
+  const { t } = useTranslation('common');
   const { automationIdProps: textProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     id,
     type: 'formField',
@@ -109,7 +111,7 @@ export function SearchInput({
           type="button"
           onClick={onClear}
           className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-          aria-label="Clear search"
+          aria-label={t('actions.clearSearch')}
         >
           <X size={16} />
         </button>

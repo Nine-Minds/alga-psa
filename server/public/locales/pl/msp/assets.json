@@ -38,6 +38,20 @@
       "offline": "Offline",
       "overdue": "Zaległy",
       "unknown": "Nieznany"
+    },
+    "rmaStatus": {
+      "open": "Otwarte",
+      "awaiting_return": "Oczekiwanie na zwrot",
+      "returned": "Zwrócono",
+      "sent_to_vendor": "Wysłano do dostawcy",
+      "replacement_received": "Otrzymano zamiennik",
+      "replacement_deployed": "Zamiennik wdrożony",
+      "dead_unit_owed": "Uszkodzone urządzenie do zwrotu",
+      "dead_unit_returned": "Zwrócono uszkodzone urządzenie",
+      "replaced": "Wymieniono",
+      "credited": "Zaliczono",
+      "charged": "Obciążono",
+      "closed": "Zamknięte"
     }
   },
   "assetAlertsSection": {
@@ -835,7 +849,7 @@
       "save": "Zapisz",
       "label": "Etykieta przycisku",
       "template": "Szablon adresu URL",
-      "tokens": "Użyj {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} i {field.<key>} z kluczami pól niestandardowych z Ustawienia → Zasoby → Typy zasobów.",
+      "tokens": "Użyj {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {client.name} i {field.<key>} z kluczami pól niestandardowych z Ustawienia → Zasoby → Typy zasobów.",
       "loading": "Wczytywanie opcji dostępu zdalnego…",
       "unavailable": "Niedostępne dla tego zasobu",
       "actions": "Działania",
@@ -1504,13 +1518,6 @@
     }
   },
   "assetBento": {
-    "rmmUser": {
-      "looksLike": "· Prawdopodobnie {{contact}}",
-      "mapDialogDescription": "„{{user}}” zostanie zapamiętany dla tej organizacji RMM.",
-      "mapDialogTitle": "Mapowanie zalogowanego użytkownika na kontakt",
-      "mapFailed": "Nie udało się zapisać mapowania.",
-      "mapToContact": "Mapuj na kontakt…"
-    },
     "health": "Kondycja",
     "security": "Bezpieczeństwo",
     "openTickets": "Otwarte zgłoszenia",
@@ -1560,6 +1567,13 @@
     "lastDone": "Ostatnio wykonano",
     "noMaintenance": "Nic nie zaplanowano.",
     "docsHint": "Załączniki i poświadczenia tego zasobu.",
+    "rmmUser": {
+      "looksLike": "· Prawdopodobnie {{contact}}",
+      "mapDialogDescription": "„{{user}}” zostanie zapamiętany dla tej organizacji RMM.",
+      "mapDialogTitle": "Mapowanie zalogowanego użytkownika na kontakt",
+      "mapFailed": "Nie udało się zapisać mapowania.",
+      "mapToContact": "Mapuj na kontakt…"
+    },
     "manufacturer": "Producent",
     "model": "Model",
     "vendor": "Dostawca",
@@ -1715,6 +1729,36 @@
     "empty": "Brak pasujących zasobów dla tego klienta",
     "loading": "Ładowanie...",
     "remove": "Usuń zasób"
+  },
+  "inventoryProvenance": {
+    "title": "Pochodzenie magazynowe",
+    "fields": {
+      "product": {
+        "label": "Produkt"
+      },
+      "serial": {
+        "label": "Numer seryjny"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Źródłowe zamówienie sprzedaży"
+      },
+      "delivered": {
+        "label": "Dostarczono"
+      }
+    },
+    "rmaHistory": {
+      "title": "Historia RMA"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "Ładowanie formularza zasobu..."
+    }
   },
   "assetStatuses": {
     "active": "Aktywny",

@@ -738,7 +738,67 @@
       "visibilityDuplicate": "Grupa widoczności o takich danych już istnieje dla tego klienta.",
       "visibilityInvalidData": "Podano nieprawidłowe dane grupy widoczności. Sprawdź dane grupy i wybrane tablice.",
       "groupNameRequired": "Nazwa grupy jest wymagana",
-      "readPermission": "Odmowa uprawnień: nie można odczytywać kontaktów"
+      "readPermission": "Odmowa uprawnień: nie można odczytywać kontaktów",
+      "idRequired": "Identyfikator kontaktu jest wymagany",
+      "schemaError": "Błąd schematu bazy danych — skontaktuj się z pomocą techniczną",
+      "readFailed": "Wystąpił nieoczekiwany błąd podczas pobierania informacji o kontakcie",
+      "deleteRecordFailed": "Nie znaleziono rekordu kontaktu lub nie można go usunąć",
+      "updateIdRequired": "Identyfikator kontaktu jest wymagany do aktualizacji",
+      "clientMissing": "Wybrany klient już nie istnieje",
+      "destinationMissing": "Wybrane miejsce docelowe zgłoszeń przychodzących już nie istnieje",
+      "updateMissing": "Kontakt, który próbujesz zaktualizować, już nie istnieje",
+      "updateRecordMissing": "Aktualizacja kontaktu zakończyła się bez zwrócenia zaktualizowanego rekordu",
+      "clientIdRequired": "Identyfikator klienta jest wymagany",
+      "specifiedClientMissing": "Wskazany klient nie istnieje",
+      "updateDataRequired": "Nie podano danych do aktualizacji",
+      "emailInvalid": "Podaj prawidłowy adres e-mail",
+      "bulkUpdateFailed": "Aktualizacja kontaktów klienta zakończyła się bez zmiany żadnego rekordu",
+      "updateFailed": "Wystąpił nieoczekiwany błąd podczas aktualizacji kontaktów klienta",
+      "importMultipleMatches": "Importowane adresy e-mail pasują do wielu istniejących kontaktów",
+      "updatePermission": "Nie można zaktualizować kontaktów",
+      "importDataRequired": "Nie podano danych kontaktów",
+      "fullNameRequired": "Imię i nazwisko jest wymagane",
+      "importFailed": "Wystąpił nieoczekiwany błąd podczas importowania kontaktów",
+      "emailsRequired": "Nie podano adresów e-mail",
+      "validEmailsRequired": "Nie podano prawidłowych adresów e-mail",
+      "checkEmailsFailed": "Wystąpił nieoczekiwany błąd podczas sprawdzania istniejących adresów e-mail",
+      "portalAdminRequired": "Wymagany jest dostęp administratora portalu klienta",
+      "assignedGroupInvalid": "Przypisana grupa widoczności jest nieprawidłowa dla tego kontaktu",
+      "groupNotFound": "Nie znaleziono grupy widoczności",
+      "boardsInvalid": "Co najmniej jedna tablica jest nieprawidłowa dla tej organizacji",
+      "groupCreateFailed": "Tworzenie grupy widoczności zakończyło się bez zwrócenia identyfikatora grupy",
+      "groupInUse": "Nie można usunąć grupy widoczności, dopóki jest przypisana do kontaktów",
+      "importEmailInvalid": "Nieprawidłowy format adresu e-mail kontaktu: {{name}}",
+      "importClientMissing": "Nie znaleziono klienta dla kontaktu: {{name}}",
+      "invalidEmailValue": "Nieprawidłowy format adresu e-mail: {{email}}",
+      "invalidData": "Nieprawidłowe dane kontaktu",
+      "phoneExtensionInvalid": "Telefon {{index}}: wprowadź prawidłowy numer wewnętrzny",
+      "phoneNumberInvalid": "Telefon {{index}}: wprowadź prawidłowy numer telefonu",
+      "phoneCountryRequired": "Telefon {{index}}: podaj numer kierunkowy kraju zaczynający się od +",
+      "tenantEmailExists": "Adres e-mail kontaktu już istnieje w tej organizacji",
+      "importRowFailed": "Nie można zaimportować tego kontaktu. Sprawdź wymagane pola i odwołania do klientów.",
+      "deleteMissing": "Kontakt, który próbujesz usunąć, już nie istnieje.",
+      "deleteFailed": "Nie można usunąć kontaktu. Spróbuj ponownie.",
+      "deleteDependencies": "Nie można usunąć kontaktu, ponieważ ma powiązane rekordy",
+      "connectionFailed": "Problem z połączeniem z bazą danych. Spróbuj ponownie.",
+      "deleteUnexpected": "Wystąpił nieoczekiwany błąd podczas usuwania kontaktu",
+      "importFileFailed": "Nie można zaimportować kontaktów. Sprawdź plik i spróbuj ponownie.",
+      "portalAdminUpdateFailed": "Nie można zaktualizować statusu administratora portalu. Odśwież stronę i spróbuj ponownie.",
+      "userLoadFailed": "Nie udało się pobrać użytkownika",
+      "sharedMailboxAdmin": "Kontakty współdzielonych skrzynek pocztowych nie mogą być administratorami klientów.",
+      "createFailed": "Wystąpił nieoczekiwany błąd podczas tworzenia kontaktu",
+      "importDuplicateEmail": "Kontakt z tym adresem e-mail już istnieje: {{value}}",
+      "importDuplicateName": "Kontakt o tej nazwie już istnieje: {{value}}",
+      "permissions": {
+        "readContacts": "Nie można odczytać kontaktów",
+        "deleteContacts": "Nie można usunąć kontaktów",
+        "createContacts": "Nie można utworzyć kontaktów",
+        "updateContacts": "Nie można zaktualizować kontaktów",
+        "managePhoneTypes": "Nie można zarządzać typami telefonów",
+        "updateClientUsers": "Nie masz uprawnień do aktualizowania użytkowników klientów",
+        "viewClientUsers": "Nie masz uprawnień do wyświetlania użytkowników klientów"
+      },
+      "field": "pole"
     }
   },
   "portal": {
@@ -767,5 +827,27 @@
       "managerScopeNote_many": "Jego widok obejmuje także dane {{count}} podlegających mu osób.",
       "managerScopeNote_other": "Jego widok obejmuje także dane {{count}} podlegających mu osób."
     }
+  },
+  "messages": {
+    "success": {
+      "updated": "Pomyślnie zaktualizowano kontakt",
+      "created": "Kontakt został utworzony"
+    }
+  },
+  "csvTemplate": {
+    "explorerRole": "Główna odkrywczyni",
+    "explorerNotes": "Wpadła do króliczej nory i odkryła zupełnie nowy świat",
+    "explorerTags": "Ciekawa, Żądna przygód, Odważna",
+    "teaRole": "Główny ekspert ceremonii herbacianej",
+    "teaNotes": "Wie, dlaczego kruk jest podobny do biurka",
+    "teaTags": "Kreatywny, Ekscentryczny, Ekspert od herbaty"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · ostatnia synchronizacja: {{date}}",
+    "description": "Ten kontakt jest synchronizowany z kontem w katalogu.",
+    "signInName": "Nazwa logowania: {{name}}",
+    "lastSynced": "Ostatnia synchronizacja: {{date}}",
+    "deleted": "Nieaktywny — konto Microsoft zostało usunięte.",
+    "disabled": "Nieaktywny — konto Microsoft jest wyłączone."
   }
 }

@@ -1397,7 +1397,9 @@
         "summary_one": "Skipped {{count}} event in the last {{days}} days — {{reasons}}",
         "summary_other": "Skipped {{count}} events in the last {{days}} days — {{reasons}}",
         "lastSkipped": "Last skipped {{when}}",
-        "view": "View skipped events"
+        "view": "View skipped events",
+        "summary_few": "Skipped {{count}} events in the last {{days}} days — {{reasons}}",
+        "summary_many": "Skipped {{count}} events in the last {{days}} days — {{reasons}}"
       },
       "drawer": {
         "title": "Skipped events",
@@ -1740,7 +1742,9 @@
     "insertionPointLabel": "New steps go here",
     "emptyBranchPrompt": "Add a step to this branch",
     "emptyActivePrompt": "New steps go here. Pick one from the palette.",
-    "stepCount": "({{count}} steps)"
+    "stepCount": "({{count}} steps)",
+    "stepCount_few": "({{count}} steps)",
+    "stepCount_many": "({{count}} steps)"
   },
   "expressionEditor": {
     "ariaLabel": "Expression editor",
@@ -2253,7 +2257,12 @@
       "currentRun": "Run {{id}}",
       "backToWorkflow": "Back to workflow"
     },
-    "title": "Workflow Run Studio"
+    "title": "Workflow Run Studio",
+    "communityEdition": {
+      "title": "Pro Feature",
+      "description": "Workflow run studio is only available in Pro.",
+      "runId": "Run id: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3026,6 +3035,10 @@
         "selectBoard": "Select or enter a board",
         "selectPriority": "Select or enter a priority"
       }
+    },
+    "proFeature": {
+      "title": "Pro Feature",
+      "description": "The workflow system is only available in Pro. Please upgrade your installation to access this feature."
     }
   },
   "toggle": {

@@ -38,6 +38,20 @@
       "offline": "Offline",
       "overdue": "Försenad",
       "unknown": "Okänd"
+    },
+    "rmaStatus": {
+      "open": "Öppet",
+      "awaiting_return": "Väntar på retur",
+      "returned": "Returnerat",
+      "sent_to_vendor": "Skickat till leverantör",
+      "replacement_received": "Ersättningsenhet mottagen",
+      "replacement_deployed": "Ersättningsenhet driftsatt",
+      "dead_unit_owed": "Trasig enhet ska återlämnas",
+      "dead_unit_returned": "Trasig enhet återlämnad",
+      "replaced": "Ersatt",
+      "credited": "Krediterat",
+      "charged": "Debiterat",
+      "closed": "Stängt"
     }
   },
   "assetAlertsSection": {
@@ -106,7 +120,9 @@
       "selectedAssets_one": "{{count}} tillgång markerad",
       "selectedAssets_other": "{{count}} tillgångar markerade",
       "clearSelection": "Avmarkera alla",
-      "bulkActionsComingSoon": "Massåtgärder kommer snart"
+      "bulkActionsComingSoon": "Massåtgärder kommer snart",
+      "selectedAssets_few": "{{count}} tillgångar markerade",
+      "selectedAssets_many": "{{count}} tillgångar markerade"
     },
     "actions": {
       "openActionsForAsset": "Öppna åtgärder för tillgången {{name}}",
@@ -408,7 +424,13 @@
       "hoursAgo_one": "för {{count}} timme sedan",
       "hoursAgo_other": "för {{count}} timmar sedan",
       "daysAgo_one": "för {{count}} dag sedan",
-      "daysAgo_other": "för {{count}} dagar sedan"
+      "daysAgo_other": "för {{count}} dagar sedan",
+      "minutesAgo_few": "för {{count}} minuter sedan",
+      "minutesAgo_many": "för {{count}} minuter sedan",
+      "hoursAgo_few": "för {{count}} timmar sedan",
+      "hoursAgo_many": "för {{count}} timmar sedan",
+      "daysAgo_few": "för {{count}} dagar sedan",
+      "daysAgo_many": "för {{count}} dagar sedan"
     }
   },
   "assetDetailHeader": {
@@ -809,7 +831,7 @@
       "save": "Spara",
       "label": "Knapptext",
       "template": "URL-mall",
-      "tokens": "Använd {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} och {field.<key>} med anpassade fältnycklar som definieras under Inställningar → Tillgångar → Tillgångstyper.",
+      "tokens": "Använd {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {client.name} och {field.<key>} med anpassade fältnycklar som definieras under Inställningar → Tillgångar → Tillgångstyper.",
       "errors": {
         "load": "Det gick inte att läsa in länkar för fjärråtkomst.",
         "save": "Det gick inte att spara länken för fjärråtkomst.",
@@ -851,7 +873,9 @@
       "addAsset": "Lägg till tillgång",
       "showLess": "Visa färre",
       "moreAssets_one": "{{count}} tillgång till",
-      "moreAssets_other": "{{count}} tillgångar till"
+      "moreAssets_other": "{{count}} tillgångar till",
+      "moreAssets_few": "{{count}} tillgångar till",
+      "moreAssets_many": "{{count}} tillgångar till"
     },
     "errors": {
       "loadAvailableAssets": "Det gick inte att läsa in tillgängliga tillgångar",
@@ -867,7 +891,11 @@
       "associated_other": "{{count}} tillgångar har kopplats",
       "associatedPartial_one": "{{count}} tillgång har kopplats, {{failed}} misslyckades (kan redan vara kopplade)",
       "associatedPartial_other": "{{count}} tillgångar har kopplats, {{failed}} misslyckades (kan redan vara kopplade)",
-      "removed": "Tillgångskopplingen har tagits bort"
+      "removed": "Tillgångskopplingen har tagits bort",
+      "associated_few": "{{count}} tillgångar har kopplats",
+      "associated_many": "{{count}} tillgångar har kopplats",
+      "associatedPartial_few": "{{count}} tillgångar har kopplats, {{failed}} misslyckades (kan redan vara kopplade)",
+      "associatedPartial_many": "{{count}} tillgångar har kopplats, {{failed}} misslyckades (kan redan vara kopplade)"
     },
     "empty": {
       "noneAssociated": "Inga tillgångar är kopplade till det här ärendet.",
@@ -890,7 +918,9 @@
       },
       "actions": {
         "addAssets_one": "Lägg till tillgång",
-        "addAssets_other": "Lägg till tillgångar"
+        "addAssets_other": "Lägg till tillgångar",
+        "addAssets_few": "Lägg till tillgångar",
+        "addAssets_many": "Lägg till tillgångar"
       }
     },
     "table": {
@@ -1307,8 +1337,20 @@
         "quarterly_one": "kvartal",
         "quarterly_other": "kvartal",
         "yearly_one": "år",
-        "yearly_other": "år"
-      }
+        "yearly_other": "år",
+        "daily_few": "dagar",
+        "daily_many": "dagar",
+        "weekly_few": "veckor",
+        "weekly_many": "veckor",
+        "monthly_few": "månader",
+        "monthly_many": "månader",
+        "quarterly_few": "kvartal",
+        "quarterly_many": "kvartal",
+        "yearly_few": "år",
+        "yearly_many": "år"
+      },
+      "every_few": "Intervall: {{count}} {{frequency}}",
+      "every_many": "Intervall: {{count}} {{frequency}}"
     },
     "status": {
       "active": "Aktivt",
@@ -1476,13 +1518,6 @@
     }
   },
   "assetBento": {
-    "rmmUser": {
-      "looksLike": "· Verkar vara {{contact}}",
-      "mapDialogDescription": "”{{user}}” kommer att kommas ihåg för den här RMM-organisationen.",
-      "mapDialogTitle": "Koppla inloggad användare till en kontakt",
-      "mapFailed": "Kunde inte spara kopplingen.",
-      "mapToContact": "Koppla till kontakt…"
-    },
     "health": "Hälsa",
     "security": "Säkerhet",
     "openTickets": "Öppna ärenden",
@@ -1532,6 +1567,13 @@
     "lastDone": "Senast utfört",
     "noMaintenance": "Inget schemalagt.",
     "docsHint": "Bilagor och inloggningsuppgifter för den här tillgången.",
+    "rmmUser": {
+      "looksLike": "· Verkar vara {{contact}}",
+      "mapDialogDescription": "”{{user}}” kommer att kommas ihåg för den här RMM-organisationen.",
+      "mapDialogTitle": "Koppla inloggad användare till en kontakt",
+      "mapFailed": "Kunde inte spara kopplingen.",
+      "mapToContact": "Koppla till kontakt…"
+    },
     "manufacturer": "Tillverkare",
     "model": "Modell",
     "vendor": "Leverantör",
@@ -1687,6 +1729,36 @@
     "empty": "Inga matchande tillgångar för den här kunden",
     "loading": "Läser in...",
     "remove": "Ta bort tillgång"
+  },
+  "inventoryProvenance": {
+    "title": "Lagerursprung",
+    "fields": {
+      "product": {
+        "label": "Produkt"
+      },
+      "serial": {
+        "label": "Serienummer"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Ursprunglig försäljningsorder"
+      },
+      "delivered": {
+        "label": "Levererad"
+      }
+    },
+    "rmaHistory": {
+      "title": "RMA-historik"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "Läser in tillgångsformuläret..."
+    }
   },
   "assetStatuses": {
     "active": "Aktiv",

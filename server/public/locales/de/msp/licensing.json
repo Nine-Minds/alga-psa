@@ -10,7 +10,8 @@
   },
   "purchasePage": {
     "title": "Lizenzen kaufen",
-    "description": "Fügen Sie Ihrem AlgaPSA-Konto weitere Benutzerlizenzen hinzu"
+    "description": "Fügen Sie Ihrem AlgaPSA-Konto weitere Benutzerlizenzen hinzu",
+    "communityEditionDescription": "Die selbst gehostete Community Edition bietet unbegrenzt viele Benutzer ohne Lizenzbeschränkungen oder zusätzliche Kosten."
   },
   "purchaseSuccess": {
     "metaTitle": "Kauf erfolgreich",
@@ -37,7 +38,8 @@
     },
     "sessionDetails": "Sitzungsdetails (für den Support)",
     "sessionId": "Sitzungs-ID:",
-    "goToAccountManagement": "Zur Kontoverwaltung"
+    "goToAccountManagement": "Zur Kontoverwaltung",
+    "enterpriseOnly": "Diese Funktion ist nur in Pro verfügbar."
   },
   "subscriptionForm": {
     "title": "Lizenzabonnement verwalten",
@@ -255,7 +257,9 @@
         "description_one": "Ihnen bleibt noch {{count}} Tag, um alle Pro-Funktionen zu nutzen.",
         "description_other": "Ihnen bleiben noch {{count}} Tage, um alle Pro-Funktionen zu nutzen.",
         "descriptionNoDays": "Während des Testzeitraums können Sie alle Pro-Funktionen nutzen.",
-        "badge": "Testversion aktiv"
+        "badge": "Testversion aktiv",
+        "description_few": "Ihnen bleiben noch {{count}} Tage, um alle Pro-Funktionen zu nutzen.",
+        "description_many": "Ihnen bleiben noch {{count}} Tage, um alle Pro-Funktionen zu nutzen."
       },
       "licensed": {
         "eyebrow": "Kostenpflichtige Lizenz",
@@ -302,7 +306,9 @@
       "refreshLabel": "Lizenzaktualisierung",
       "connected": "Verbunden",
       "lastCheckIn": "Letzte Prüfung: {{timestamp}}",
-      "refreshHelp": "Wendet im Portal vorgenommene Änderungen an Benutzerplätzen oder am Tarif sofort an."
+      "refreshHelp": "Wendet im Portal vorgenommene Änderungen an Benutzerplätzen oder am Tarif sofort an.",
+      "daysRemaining_few": "Noch {{count}} Tage",
+      "daysRemaining_many": "Noch {{count}} Tage"
     },
     "portal": {
       "manageTitle": "Benutzerplätze, Abrechnung und Aktivierungscodes",

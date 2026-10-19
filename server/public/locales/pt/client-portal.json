@@ -173,7 +173,8 @@
       "createTicket": "Criar ticket",
       "requestAppointment": "Solicitar agendamento",
       "viewLatestInvoice": "Ver última fatura",
-      "newServiceRequest": "Nova solicitação de serviço"
+      "newServiceRequest": "Nova solicitação de serviço",
+      "createSupportTicket": "Criar ticket de suporte"
     },
     "appointments": {
       "title": "Próximos compromissos",
@@ -375,7 +376,25 @@
       "tenant_mismatch": "{{providerEmail}} pertence ao portal de outra organização. Faça login com sua senha ou fale com seu prestador de serviços."
     },
     "configurationTitle": "Falha no login",
-    "configurationMessage": "O login falhou. Tente novamente ou fale com seu prestador de serviços."
+    "configurationMessage": "O login falhou. Tente novamente ou fale com seu prestador de serviços.",
+    "registration": {
+      "messages": {
+        "verified": "Usuário verificado e registrado com sucesso"
+      },
+      "errors": {
+        "verifyFailed": "Falha ao verificar e registrar o usuário",
+        "invalidToken": "Token inválido",
+        "tokenExpired": "Token expirado",
+        "tokenNotActive": "O token ainda não está ativo",
+        "unknown": "Erro desconhecido"
+      },
+      "user": "Usuário",
+      "clientPortalUser": "Usuário do portal do cliente",
+      "mspUser": "Usuário MSP",
+      "resetExpiration": "1 hora",
+      "verificationExpiration": "24 horas",
+      "superadminRole": "Função de superadministrador"
+    }
   },
   "account": {
     "title": "Conta",
@@ -601,7 +620,9 @@
       "invoices": "Notificações de fatura",
       "announcements": "Anúncios do sistema",
       "emailPreferences": "E-mail",
-      "internalPreferences": "Interno"
+      "internalPreferences": "Interno",
+      "unreadCount_few": "Notificações não lidas {{count}}",
+      "unreadCount_many": "Notificações não lidas {{count}}"
     },
     "actions": {
       "save": "Salvar alterações",
@@ -879,7 +900,9 @@
     "card": {
       "unread": "Não lida",
       "noMessage": "Nenhuma mensagem"
-    }
+    },
+    "unreadCount_few": "{{count}} notificações não lidas",
+    "unreadCount_many": "{{count}} notificações não lidas"
   },
   "billing": {
     "columns": {

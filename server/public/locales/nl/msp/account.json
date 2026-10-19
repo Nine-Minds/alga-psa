@@ -427,5 +427,12 @@
       "loading": "Laden…",
       "loadMore": "Meer laden"
     }
+  },
+  "communityEdition": {
+    "hostedDescription": "Accountbeheer en facturatiefuncties zijn beschikbaar in Pro voor gehoste implementaties.",
+    "selfHostedDescription": "De zelfgehoste Community Edition biedt onbeperkt gebruikers zonder licentiebeperkingen of facturatie."
+  },
+  "page": {
+    "title": "Accountbeheer"
   }
 }

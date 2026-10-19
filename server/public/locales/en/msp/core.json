@@ -811,5 +811,37 @@
   "githubStar": {
     "label": "Star",
     "ariaLabel": "Star {{repository}} on GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "MSP Portal",
+      "dashboard": "Dashboard",
+      "ticketDetails": "Ticket Details",
+      "tickets": "Tickets",
+      "projectDetails": "Project Details",
+      "projects": "Projects",
+      "clientDetails": "Client Details",
+      "clients": "Clients",
+      "contactDetails": "Contact Details",
+      "contacts": "Contacts",
+      "assetDetails": "Asset Details",
+      "assets": "Assets",
+      "billing": "Billing",
+      "settings": "Settings",
+      "settingsSection": "Settings: {{section}}",
+      "chat": "Chat"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Pro Feature",
+      "description": "AI Chat features require Pro. Please upgrade to access this feature."
+    },
+    "messages": {
+      "proRequired": "Message features require Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Chat features are only available in Enterprise Edition"
+    }
   }
 }

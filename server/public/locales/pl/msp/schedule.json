@@ -853,5 +853,81 @@
       "members": "Członkowie",
       "creatorNote": "Będziesz mógł zarządzać tym kalendarzem."
     }
+  },
+  "ticketDetails": {
+    "title": "Szczegóły zgłoszenia",
+    "numberedTitle": "Zgłoszenie nr {{number}}",
+    "untitled": "Zgłoszenie bez tytułu",
+    "noDescription": "Brak opisu",
+    "notAvailable": "Brak danych",
+    "unassigned": "Nieprzypisane",
+    "fields": {
+      "title": {
+        "label": "Tytuł"
+      },
+      "description": {
+        "label": "Opis"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "priority": {
+        "label": "Priorytet"
+      },
+      "board": {
+        "label": "Tablica"
+      },
+      "client": {
+        "label": "Klient"
+      },
+      "contact": {
+        "label": "Kontakt"
+      },
+      "assignedUser": {
+        "label": "Przypisany użytkownik"
+      },
+      "entered": {
+        "label": "Utworzono"
+      },
+      "updated": {
+        "label": "Zaktualizowano"
+      },
+      "closed": {
+        "label": "Zamknięto"
+      }
+    }
+  },
+  "projectTaskDetails": {
+    "title": "Zadanie projektu",
+    "noDescription": "Brak opisu",
+    "notAvailable": "Brak danych",
+    "unassigned": "Nieprzypisane",
+    "untitledItem": "Element bez tytułu",
+    "noChecklistItems": "Brak elementów listy kontrolnej",
+    "fields": {
+      "description": {
+        "label": "Opis"
+      },
+      "project": {
+        "label": "Projekt"
+      },
+      "phase": {
+        "label": "Faza"
+      },
+      "assignedTo": {
+        "label": "Przypisano do"
+      },
+      "dueDate": {
+        "label": "Termin wykonania"
+      },
+      "checklist": {
+        "label": "Lista kontrolna"
+      }
+    }
+  },
+  "fallback": {
+    "agentSchedule": "Widok harmonogramu agenta jest teraz zarządzany w module Planowanie. (agentId: {{agentId}})",
+    "timeEntry": "Wpisy czasu są zarządzane w module Planowanie.",
+    "scheduling": "Planowanie jest zarządzane w module Planowanie."
   }
 }

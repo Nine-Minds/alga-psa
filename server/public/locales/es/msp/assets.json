@@ -38,6 +38,20 @@
       "offline": "Desconectado",
       "overdue": "Atrasado",
       "unknown": "Desconocido"
+    },
+    "rmaStatus": {
+      "open": "Abierto",
+      "awaiting_return": "Esperando devolución",
+      "returned": "Devuelto",
+      "sent_to_vendor": "Enviado al proveedor",
+      "replacement_received": "Reemplazo recibido",
+      "replacement_deployed": "Reemplazo desplegado",
+      "dead_unit_owed": "Unidad defectuosa pendiente",
+      "dead_unit_returned": "Unidad defectuosa devuelta",
+      "replaced": "Reemplazado",
+      "credited": "Acreditado",
+      "charged": "Cobrado",
+      "closed": "Cerrado"
     }
   },
   "assetAlertsSection": {
@@ -835,7 +849,7 @@
       "save": "Guardar",
       "label": "Etiqueta del botón",
       "template": "Plantilla de URL",
-      "tokens": "Usa {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} y {field.<key>} con claves de campos personalizados definidas en Configuración → Activos → Tipos de activo.",
+      "tokens": "Usa {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {client.name} y {field.<key>} con claves de campos personalizados definidas en Configuración → Activos → Tipos de activo.",
       "loading": "Cargando opciones de acceso remoto…",
       "unavailable": "No disponible para este activo",
       "actions": "Acciones",
@@ -1504,13 +1518,6 @@
     }
   },
   "assetBento": {
-    "rmmUser": {
-      "looksLike": "· Parece ser {{contact}}",
-      "mapDialogDescription": "Se recordará «{{user}}» para esta organización RMM.",
-      "mapDialogTitle": "Asignar usuario con sesión iniciada a un contacto",
-      "mapFailed": "No se pudo guardar la asignación.",
-      "mapToContact": "Asignar a un contacto…"
-    },
     "health": "Estado de salud",
     "security": "Seguridad",
     "openTickets": "Tickets abiertos",
@@ -1560,6 +1567,13 @@
     "lastDone": "Última realizada",
     "noMaintenance": "Nada programado.",
     "docsHint": "Adjuntos y credenciales de este activo.",
+    "rmmUser": {
+      "looksLike": "· Parece ser {{contact}}",
+      "mapDialogDescription": "Se recordará «{{user}}» para esta organización RMM.",
+      "mapDialogTitle": "Asignar usuario con sesión iniciada a un contacto",
+      "mapFailed": "No se pudo guardar la asignación.",
+      "mapToContact": "Asignar a un contacto…"
+    },
     "manufacturer": "Fabricante",
     "model": "Modelo",
     "vendor": "Proveedor",
@@ -1715,6 +1729,36 @@
     "empty": "No hay activos coincidentes para este cliente",
     "loading": "Cargando...",
     "remove": "Quitar activo"
+  },
+  "inventoryProvenance": {
+    "title": "Procedencia del inventario",
+    "fields": {
+      "product": {
+        "label": "Producto"
+      },
+      "serial": {
+        "label": "Número de serie"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Orden de venta de origen"
+      },
+      "delivered": {
+        "label": "Entregado"
+      }
+    },
+    "rmaHistory": {
+      "title": "Historial de RMA"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "Cargando formulario de activo..."
+    }
   },
   "assetStatuses": {
     "active": "Activo",

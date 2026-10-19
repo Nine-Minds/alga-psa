@@ -1,7 +1,9 @@
 {
   "escalationManager": {
     "unsavedChanges_one": "{{count}} niet-opgeslagen wijziging",
-    "unsavedChanges_other": "{{count}} niet-opgeslagen wijzigingen"
+    "unsavedChanges_other": "{{count}} niet-opgeslagen wijzigingen",
+    "unsavedChanges_few": "{{count}} niet-opgeslagen wijzigingen",
+    "unsavedChanges_many": "{{count}} niet-opgeslagen wijzigingen"
   },
   "page": {
     "title": "Beheerdersinstellingen"
@@ -448,7 +450,9 @@
       },
       "leadName": "Leider: {{name}}",
       "memberCount_one": "{{count}} lid",
-      "memberCount_other": "{{count}} leden"
+      "memberCount_other": "{{count}} leden",
+      "memberCount_few": "{{count}} leden",
+      "memberCount_many": "{{count}} leden"
     },
     "messages": {
       "error": {
@@ -1139,7 +1143,9 @@
         "success": {
           "deleted": "Interactietype verwijderd",
           "imported_one": "{{count}} interactietype geïmporteerd",
-          "imported_other": "{{count}} interactietypen geïmporteerd"
+          "imported_other": "{{count}} interactietypen geïmporteerd",
+          "imported_few": "{{count}} interactietypen geïmporteerd",
+          "imported_many": "{{count}} interactietypen geïmporteerd"
         },
         "error": {
           "fetchFailed": "Kan interactietypen niet ophalen",
@@ -1956,6 +1962,48 @@
       "editor": {
         "inlineLogoHint": "Uw logo wordt bij verzending in het bericht ingesloten. Laat de verwijzing src=\"cid:{{cid}}\" ongewijzigd — vervangt u die door een URL, dan moeten ontvangers eerst toestemming geven om de afbeelding te downloaden."
       }
+    },
+    "templateVariables": {
+      "actions": {
+        "insert": "Invoegen bij cursor",
+        "guide": "De volledige handleiding lezen",
+        "copy": "{{path}} kopiëren"
+      },
+      "insertHelp": "Selecteer een variabele om deze in te voegen.",
+      "availableHelp": "Variabelen die beschikbaar zijn voor dit sjabloon.",
+      "fields": {
+        "search": {
+          "placeholder": "Variabelen zoeken"
+        },
+        "globalSearch": {
+          "placeholder": "Paden, beschrijvingen en concepten zoeken"
+        },
+        "category": {
+          "all": "Alle gebieden"
+        }
+      },
+      "title": "Variabelenreferentie voor e-mailsjablonen",
+      "panelTitle": "Sjabloonvariabelen",
+      "inferredContract": "Wordt momenteel niet verzonden. Dit contract is afgeleid van het sjabloon.",
+      "empty": "Geen overeenkomende variabelen.",
+      "example": "Voorbeeld:",
+      "usedBy": "Gebruikt door {{templates}}",
+      "description": "Bekijk de beschikbare gegevens voor elk systeeme-mailsjabloon. Kopieer het exacte Handlebars-token naar een aangepast sjabloon.",
+      "enums": {
+        "categories": {
+          "appointments": "Afspraken",
+          "auth": "Authenticatie",
+          "billing": "Facturatie",
+          "quotes": "Offertes",
+          "invoices": "Facturen",
+          "opportunities": "Verkoopkansen",
+          "projects": "Projecten",
+          "sla": "SLA",
+          "surveys": "Enquêtes",
+          "tickets": "Tickets",
+          "time": "Tijd"
+        }
+      }
     }
   },
   "timeEntry": {
@@ -2265,7 +2313,9 @@
         "samples_other": "{{sample}} · {{count}} gegevensrijen",
         "noSample": "Geen voorbeeld",
         "missingRequired": "Niet-gekoppelde verplichte velden: {{fields}}",
-        "duplicate": "Een aangepast veld is meerdere keren gekoppeld. Kies een uniek doel voor elke bron."
+        "duplicate": "Een aangepast veld is meerdere keren gekoppeld. Kies een uniek doel voor elke bron.",
+        "samples_few": "{{sample}} · {{count}} gegevensrijen",
+        "samples_many": "{{sample}} · {{count}} gegevensrijen"
       },
       "actions": {
         "back": "Terug naar migraties",
@@ -2383,7 +2433,16 @@
   },
   "policyManagement": {
     "title": "Beleidsbeheer",
-    "upgradeDescription": "Beleidsbeheer is een Pro-functie. Voer een upgrade uit voor toegang tot geavanceerde beleidsinstellingen."
+    "upgradeDescription": "Beleidsbeheer is een Pro-functie. Voer een upgrade uit voor toegang tot geavanceerde beleidsinstellingen.",
+    "bundleLibrary": {
+      "title": "Bibliotheek met autorisatiebundels",
+      "upgradeDescription": "Geavanceerd beheer van autorisatiebundels is beschikbaar in Pro. Upgrade om beperkende bundels voor rollen, teams, gebruikers en API-sleutels te configureren.",
+      "protectionsDescription": "Ingebouwde autorisatiebeveiligingen blijven actief, ook wanneer configureerbare geavanceerde opties niet beschikbaar zijn in deze editie of dit abonnement."
+    },
+    "proFeature": {
+      "title": "Pro-functie",
+      "description": "Beleidsbeheer vereist Pro. Upgrade om toegang te krijgen tot deze functie."
+    }
   },
   "roleManagement": {
     "title": "Rollen beheren",
@@ -2528,7 +2587,9 @@
         "noSessions": "Geen actieve sessies gevonden"
       },
       "subtitle_one": "{{sessionCount}} actieve sessie bij {{userCount}} gebruiker",
-      "subtitle_other": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers"
+      "subtitle_other": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers",
+      "subtitle_few": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers",
+      "subtitle_many": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers"
     }
   },
   "ssoBulk": {
@@ -2621,7 +2682,9 @@
         "unlinkedCount": "{{count}} accounts ontkoppeld via {{provider}}.",
         "previewUnlink_one": "Voorbeeld klaar. We ontkoppelen {{count}} geselecteerde gebruiker.",
         "previewUnlink_other": "Voorbeeld klaar. We ontkoppelen {{count}} geselecteerde gebruikers.",
-        "previewLink": "Voorbeeld klaar. Bekijk het overzicht voordat u accounts koppelt."
+        "previewLink": "Voorbeeld klaar. Bekijk het overzicht voordat u accounts koppelt.",
+        "previewUnlink_few": "Voorbeeld klaar. We ontkoppelen {{count}} geselecteerde gebruikers.",
+        "previewUnlink_many": "Voorbeeld klaar. We ontkoppelen {{count}} geselecteerde gebruikers."
       },
       "results": {
         "completeTitle": "Toewijzing voltooid",
@@ -2636,12 +2699,16 @@
         "wouldLink": "Zou koppelen",
         "alreadyUnlinked": "Al ontkoppeld",
         "alreadyLinked": "Al gekoppeld",
-        "skippedInactive": "Overgeslagen (inactief)"
+        "skippedInactive": "Overgeslagen (inactief)",
+        "processed_few": "{{count}} gebruikers verwerkt.",
+        "processed_many": "{{count}} gebruikers verwerkt."
       },
       "providerNames": {
         "google": "Google Workspace",
         "microsoft": "Microsoft 365"
-      }
+      },
+      "selected_few": "{{count}} gebruikers geselecteerd.",
+      "selected_many": "{{count}} gebruikers geselecteerd."
     },
     "clientPortalProvisioning": {
       "deactivateBody": "Wanneer dit is ingeschakeld, worden gebruikers die via Entra-inrichting worden beheerd gedeactiveerd zodra hun recht op de toegangsgroep wordt verwijderd.",
@@ -2657,6 +2724,10 @@
       "modeTitle": "Entra-inrichtingsmodus voor het klantenportaal",
       "modeWorkflowManaged": "Door workflow beheerd",
       "workflowManagedInfo": "De door workflow beheerde modus publiceert alleen Entra-toegangsgebeurtenissen. De geselecteerde workflow is verantwoordelijk voor de inrichting van gebruikers van het klantenportaal, roltoewijzing, uitnodigingen en levenscycluswijzigingen."
+    },
+    "proFeature": {
+      "title": "Bulktoewijzing voor single sign-on",
+      "description": "Deze functie is beschikbaar in Pro. Upgrade om SSO-toewijzingen voor Google Workspace en Microsoft 365 rechtstreeks vanaf de pagina met beveiligingsinstellingen te beheren."
     }
   },
   "profile": {
@@ -2905,7 +2976,9 @@
         "overallCompliance": "Totale naleving",
         "pausedSla": "tickets met een gepauzeerde SLA",
         "ticketsTracked_one": "{{count}} ticket gevolgd",
-        "ticketsTracked_other": "{{count}} tickets gevolgd"
+        "ticketsTracked_other": "{{count}} tickets gevolgd",
+        "ticketsTracked_few": "{{count}} tickets gevolgd",
+        "ticketsTracked_many": "{{count}} tickets gevolgd"
       },
       "recentBreaches": {
         "empty": "Geen SLA-overschrijdingen in de geselecteerde periode",
@@ -2948,7 +3021,9 @@
         "responseTrackingDisabled": "Registratie van de reactiestatus uitgeschakeld",
         "responseTrackingEnabled": "Registratie van de reactiestatus ingeschakeld",
         "statusesUpdated_one": "{{count}} statusconfiguratie bijgewerkt",
-        "statusesUpdated_other": "{{count}} statusconfiguraties bijgewerkt"
+        "statusesUpdated_other": "{{count}} statusconfiguraties bijgewerkt",
+        "statusesUpdated_few": "{{count}} statusconfiguraties bijgewerkt",
+        "statusesUpdated_many": "{{count}} statusconfiguraties bijgewerkt"
       },
       "perStatus": {
         "description": "Configureer bij welke ticketstatussen de SLA-timer moet pauzeren. Wanneer een ticket naar een status met ingeschakelde pauze wordt verplaatst, stopt de SLA-timer totdat het ticket naar een andere status wordt verplaatst.",
@@ -2960,7 +3035,9 @@
         "resetChanges": "Wijzigingen herstellen",
         "saveChanges": "Wijzigingen opslaan",
         "saving": "Opslaan...",
-        "title": "Pauzeconfiguratie per status"
+        "title": "Pauzeconfiguratie per status",
+        "modifiedCount_few": "{{count}} statussen gewijzigd",
+        "modifiedCount_many": "{{count}} statussen gewijzigd"
       },
       "retry": "Opnieuw proberen"
     },
@@ -3003,7 +3080,9 @@
         "selectAll": "Alles selecteren",
         "selectAllVisible": "Alle zichtbare items selecteren",
         "selectedCount_one": "{{count}} geselecteerd",
-        "selectedCount_other": "{{count}} geselecteerd"
+        "selectedCount_other": "{{count}} geselecteerd",
+        "selectedCount_few": "{{count}} geselecteerd",
+        "selectedCount_many": "{{count}} geselecteerd"
       },
       "targets": {
         "always": "Doorlopend (kantooruren negeren)",
@@ -3096,7 +3175,13 @@
         "usageClients_one": "Klant: {{names}}",
         "usageClients_other": "Klanten: {{names}}",
         "usageTickets_one": "{{count}} ticket",
-        "usageTickets_other": "{{count}} tickets"
+        "usageTickets_other": "{{count}} tickets",
+        "usageBoards_few": "Borden: {{names}}",
+        "usageBoards_many": "Borden: {{names}}",
+        "usageClients_few": "Klanten: {{names}}",
+        "usageClients_many": "Klanten: {{names}}",
+        "usageTickets_few": "{{count}} tickets",
+        "usageTickets_many": "{{count}} tickets"
       },
       "description": "Beheer SLA-beleidsregels die doelen voor reactie- en oplossingstijden vastleggen",
       "empty": "Geen SLA-beleid gevonden. Klik op \"SLA-beleid toevoegen\" om het eerste beleid te maken.",
@@ -3562,5 +3647,185 @@
   },
   "common": {
     "saving": "Opslaan…"
+  },
+  "featureFlags": {
+    "categories": {
+      "core": {
+        "title": "Kernfuncties",
+        "description": "Essentiële functies voor dagelijkse werkzaamheden"
+      },
+      "ui": {
+        "title": "Gebruikersinterface",
+        "description": "Nieuwe interfacefuncties en verbeteringen"
+      },
+      "ai": {
+        "title": "AI-functies",
+        "description": "Functies op basis van kunstmatige intelligentie"
+      },
+      "integrations": {
+        "title": "Integraties",
+        "description": "Integraties met externe diensten"
+      },
+      "performance": {
+        "title": "Prestaties",
+        "description": "Functies voor prestatieoptimalisatie"
+      },
+      "experimental": {
+        "title": "Experimenteel",
+        "description": "Innovatieve functies in ontwikkeling"
+      }
+    },
+    "features": {
+      "enable_ticket_automation": {
+        "title": "Ticketautomatisering",
+        "description": "Tickets automatisch toewijzen en doorsturen op basis van regels"
+      },
+      "enable_time_tracking": {
+        "title": "Tijdregistratie",
+        "description": "Tijd besteed aan tickets en projecten registreren"
+      },
+      "enable_billing": {
+        "title": "Facturatiesysteem",
+        "description": "Facturen aanmaken en betalingen bijhouden"
+      },
+      "new_ticket_ui": {
+        "title": "Nieuwe ticketinterface",
+        "description": "Vernieuwde interface voor het aanmaken en beheren van tickets"
+      },
+      "new_dashboard_layout": {
+        "title": "Modern dashboard",
+        "description": "Nieuw dashboard met aanpasbare widgets"
+      },
+      "ai_ticket_suggestions": {
+        "title": "AI-ticketsuggesties",
+        "description": "Ticketcategorisering en prioriteitssuggesties op basis van AI"
+      },
+      "enable_ai_time_tracking": {
+        "title": "AI-tijdregistratie",
+        "description": "Tijd automatisch registreren op basis van activiteit"
+      },
+      "enable_predictive_analytics": {
+        "title": "Voorspellende analyses",
+        "description": "Ticketvolume en benodigde middelen voorspellen"
+      },
+      "enable_slack_integration": {
+        "title": "Slack-integratie",
+        "description": "Meldingen en updates naar Slack sturen"
+      },
+      "teams-integration-ui": {
+        "description": "Integreren met Microsoft Teams"
+      },
+      "enable_jira_sync": {
+        "title": "Jira-synchronisatie",
+        "description": "Tickets synchroniseren met Jira-issues"
+      },
+      "enable_query_caching": {
+        "title": "Querycaching",
+        "description": "Databasequery’s cachen voor snellere reacties"
+      },
+      "enable_lazy_loading": {
+        "title": "Laden op aanvraag",
+        "description": "Inhoud laden wanneer nodig voor betere prestaties"
+      },
+      "enable_websocket_updates": {
+        "title": "Realtime-updates",
+        "description": "WebSockets gebruiken voor directe updates"
+      },
+      "enable_voice_commands": {
+        "title": "Spraakopdrachten",
+        "description": "De app bedienen met spraakopdrachten"
+      },
+      "beta_mobile_app": {
+        "title": "Mobiele app bèta",
+        "description": "Toegang tot de bètaversie van de mobiele app"
+      }
+    },
+    "enums": {
+      "stable": "Stabiel",
+      "beta": "Bèta",
+      "experimental": "Experimenteel"
+    },
+    "loading": "Functieschakelaars laden...",
+    "title": "Functieschakelaars",
+    "description": "Schakel functies in uw applicatie in of uit. Sommige functies vereisen mogelijk een herstart.",
+    "unsaved": "U heeft niet-opgeslagen wijzigingen. Klik op Opslaan om ze toe te passen.",
+    "requiresRestart": "Herstart vereist",
+    "errors": {
+      "loadFailed": "Fout bij het laden van functieschakelaars: {{message}}"
+    },
+    "dependencies": "Vereist: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Taalinstellingen voor het klantenportaal",
+    "description": "Configureer de taalopties die beschikbaar zijn voor uw klanten",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Standaardtaal",
+        "help": "Deze taal wordt gebruikt voor nieuwe klanten en wanneer er geen voorkeur is ingesteld"
+      },
+      "availableLanguages": {
+        "label": "Beschikbare talen",
+        "help": "Selecteer de talen waaruit klanten kunnen kiezen"
+      }
+    },
+    "defaultSuffix": "(standaard)",
+    "preview": {
+      "title": "Voorbeeld",
+      "defaultLanguage": "Standaardtaal:",
+      "availableLanguages": "Beschikbare talen:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Instellingen succesvol opgeslagen"
+      }
+    },
+    "errors": {
+      "saveFailed": "Instellingen opslaan mislukt"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Engels",
+      "fr": "Frans",
+      "es": "Spaans",
+      "de": "Duits",
+      "nl": "Nederlands",
+      "it": "Italiaans",
+      "pl": "Pools",
+      "pt": "Portugees (Brazilië)",
+      "sv": "Zweeds",
+      "xx": "Pseudotaal (xx)",
+      "yy": "Pseudotaal (yy)"
+    }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Gebruiksstatistieken",
+        "enabledDescription": "Ingeschakeld - Verzendt anonieme gebruiksgegevens om het product te helpen verbeteren",
+        "disabledDescription": "Uitgeschakeld - Verzendt anonieme gebruiksgegevens om het product te helpen verbeteren"
+      }
+    },
+    "environmentHelp": "Gebruiksstatistieken worden beheerd via de omgevingsvariabele {{variable}}. Neem contact op met uw systeembeheerder om deze instelling te wijzigen.",
+    "sections": {
+      "collectedData": {
+        "title": "Welke gegevens worden verzameld",
+        "featureUsage": "Gebruikspatronen van functies (geen persoonsgegevens)",
+        "errorReports": "Foutrapporten voor foutopsporing",
+        "performance": "Prestatiestatistieken",
+        "configuration": "Systeemconfiguratie (geanonimiseerd)"
+      }
+    }
+  },
+  "dialogs": {
+    "statusImport": {
+      "title": "Standaardstatussen importeren",
+      "description": "Selecteer de standaardstatussen die u wilt importeren",
+      "selectAll": "Alles selecteren ({{selected}}/{{total}})",
+      "closed": "Gesloten",
+      "default": "Standaard",
+      "empty": "Geen standaardstatussen beschikbaar om te importeren",
+      "importSelected": "Selectie importeren ({{count}})"
+    }
   }
 }

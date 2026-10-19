@@ -38,6 +38,20 @@
       "offline": "Offline",
       "overdue": "Verlopen",
       "unknown": "Onbekend"
+    },
+    "rmaStatus": {
+      "open": "Open",
+      "awaiting_return": "Wacht op retour",
+      "returned": "Geretourneerd",
+      "sent_to_vendor": "Naar leverancier verzonden",
+      "replacement_received": "Vervanging ontvangen",
+      "replacement_deployed": "Vervanging uitgerold",
+      "dead_unit_owed": "Defect apparaat nog te retourneren",
+      "dead_unit_returned": "Defect apparaat geretourneerd",
+      "replaced": "Vervangen",
+      "credited": "Gecrediteerd",
+      "charged": "In rekening gebracht",
+      "closed": "Gesloten"
     }
   },
   "assetAlertsSection": {
@@ -835,7 +849,7 @@
       "save": "Opslaan",
       "label": "Knoptekst",
       "template": "URL-sjabloon",
-      "tokens": "Gebruik {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} en {field.<key>} met aangepaste veldsleutels uit Instellingen → Assets → Assettypen.",
+      "tokens": "Gebruik {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {client.name} en {field.<key>} met aangepaste veldsleutels uit Instellingen → Assets → Assettypen.",
       "loading": "Opties voor toegang op afstand laden…",
       "unavailable": "Niet beschikbaar voor dit asset",
       "actions": "Acties",
@@ -1504,13 +1518,6 @@
     }
   },
   "assetBento": {
-    "rmmUser": {
-      "looksLike": "· Waarschijnlijk {{contact}}",
-      "mapDialogDescription": "‘{{user}}’ wordt onthouden voor deze RMM-organisatie.",
-      "mapDialogTitle": "Ingelogde gebruiker aan een contact koppelen",
-      "mapFailed": "De koppeling kon niet worden opgeslagen.",
-      "mapToContact": "Aan contact koppelen…"
-    },
     "health": "Toestand",
     "security": "Beveiliging",
     "openTickets": "Openstaande tickets",
@@ -1560,6 +1567,13 @@
     "lastDone": "Laatst uitgevoerd",
     "noMaintenance": "Niets gepland.",
     "docsHint": "Bijlagen en inloggegevens voor dit asset.",
+    "rmmUser": {
+      "looksLike": "· Waarschijnlijk {{contact}}",
+      "mapDialogDescription": "‘{{user}}’ wordt onthouden voor deze RMM-organisatie.",
+      "mapDialogTitle": "Ingelogde gebruiker aan een contact koppelen",
+      "mapFailed": "De koppeling kon niet worden opgeslagen.",
+      "mapToContact": "Aan contact koppelen…"
+    },
     "manufacturer": "Fabrikant",
     "model": "Model",
     "vendor": "Leverancier",
@@ -1715,6 +1729,36 @@
     "empty": "Geen overeenkomende assets voor deze klant",
     "loading": "Laden...",
     "remove": "Asset verwijderen"
+  },
+  "inventoryProvenance": {
+    "title": "Voorraadherkomst",
+    "fields": {
+      "product": {
+        "label": "Product"
+      },
+      "serial": {
+        "label": "Serienummer"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Oorspronkelijke verkooporder"
+      },
+      "delivered": {
+        "label": "Geleverd"
+      }
+    },
+    "rmaHistory": {
+      "title": "RMA-geschiedenis"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "Assetformulier laden..."
+    }
   },
   "assetStatuses": {
     "active": "Actief",
