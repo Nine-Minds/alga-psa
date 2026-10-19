@@ -62,22 +62,30 @@ function connectTo(database: string): Knex {
   });
 }
 
-/** Same directory-based migration source the bootstrap harness uses. */
+/**
+ * Directory-based migration source that overlays directories in order (later
+ * wins on name collision), mirroring server/scripts/run-ee-migrations.js: CE
+ * first, then ee/server/migrations (the credentials migrations live in EE; CE
+ * only has no-op placeholders under the same names).
+ */
 class DirectoryMigrationSource {
-  private readonly directory: string;
+  private readonly directories: string[];
 
-  constructor(directory: string) {
-    this.directory = directory;
+  constructor(...directories: string[]) {
+    this.directories = directories;
   }
 
   async getMigrations(loadExtensions?: string[]): Promise<string[]> {
     const exts = loadExtensions && loadExtensions.length > 0 ? loadExtensions : ['.cjs', '.js'];
     const extSet = new Set(exts.map((e) => (e.startsWith('.') ? e : `.${e}`)));
-    const files = await fsp.readdir(this.directory).catch(() => [] as string[]);
-    return files
-      .filter((file) => extSet.has(path.extname(file)))
-      .map((file) => path.join(this.directory, file))
-      .sort((a, b) => path.basename(a).localeCompare(path.basename(b)));
+    const byName = new Map<string, string>();
+    for (const directory of this.directories) {
+      const files = await fsp.readdir(directory).catch(() => [] as string[]);
+      for (const file of files) {
+        if (extSet.has(path.extname(file))) byName.set(file, path.join(directory, file));
+      }
+    }
+    return [...byName.values()].sort((a, b) => path.basename(a).localeCompare(path.basename(b)));
   }
 
   getMigrationName(migration: string): string {
@@ -90,7 +98,7 @@ class DirectoryMigrationSource {
 }
 
 const expandMigration = require(
-  path.resolve(repoRoot, 'server', 'migrations', '20260812110000_expand_credential_associations_entity_types.cjs')
+  path.resolve(repoRoot, 'ee', 'server', 'migrations', '20260812110000_expand_credential_associations_entity_types.cjs')
 ) as {
   up: (knex: Knex) => Promise<void>;
   down: (knex: Knex) => Promise<void>;
@@ -122,12 +130,15 @@ describe('credentials associations expand migration — down preflight-abort (is
     // defeat the race).
     await db2.raw('select 1');
 
-    // Bootstrap the full CE migration chain so all prerequisite tables (tenants,
+    // Bootstrap the full CE+EE migration chain so all prerequisite tables (tenants,
     // clients, users, assets, ...) and the credential tables exist in the
     // expanded (post-up) state — the same harness the playwright DB bootstrap
     // uses.
-    const migrationsDir = path.resolve(repoRoot, 'server', 'migrations');
-    await db.migrate.latest({ migrationSource: new DirectoryMigrationSource(migrationsDir) as never });
+    const ceMigrationsDir = path.resolve(repoRoot, 'server', 'migrations');
+    const eeMigrationsDir = path.resolve(repoRoot, 'ee', 'server', 'migrations');
+    await db.migrate.latest({
+      migrationSource: new DirectoryMigrationSource(ceMigrationsDir, eeMigrationsDir) as never,
+    });
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
