@@ -14,6 +14,9 @@ const TRANSIENT_ROUTE_PARAMS: Record<string, string[]> = {
   // An audit session keeps its auditId (the server owns the run), but the
   // display-only names must not be replayed from a previous launch.
   AuditSession: ["clientName", "locationName"],
+  // Assets ▸ Scan deep-jumps the Inventory tab onto the camera. Replaying that
+  // on the next launch would open the app straight into a live viewfinder.
+  InventoryTab: ["segment"],
 };
 
 type Params = Record<string, unknown>;

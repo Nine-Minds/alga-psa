@@ -28,4 +28,21 @@ describe("navStatePersistence audit session", () => {
 
     expect(stripTransientRouteParams(state).routes[0].params).toBeUndefined();
   });
+
+  it("T139 drops the Inventory scan segment so a relaunch does not open the camera", () => {
+    const state = {
+      routes: [
+        {
+          name: "Tabs",
+          params: { screen: "InventoryTab", params: { segment: "scan" } },
+          state: { routes: [{ name: "InventoryTab", params: { segment: "scan" } }] },
+        },
+      ],
+    };
+
+    const stripped = stripTransientRouteParams(state);
+
+    expect(stripped.routes[0].params).toEqual({ screen: "InventoryTab" });
+    expect(stripped.routes[0].state!.routes![0].params).toBeUndefined();
+  });
 });
