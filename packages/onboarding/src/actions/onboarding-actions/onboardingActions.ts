@@ -139,6 +139,18 @@ export const saveClientInfo = withAuth(async (
 ): Promise<OnboardingActionResult> => {
   if (!await canRunWorkspaceSetup(currentUser)) return SETUP_DENIED;
   try {
+    // The email here is the administrator's sign-in identity. Internal users
+    // sign in with an email and no tenant, so a change must stay unique across
+    // every tenant (addUser enforces the same) or sign-in resolves to either account.
+    const newEmail = data.email?.trim().toLowerCase();
+    if (newEmail && newEmail !== (currentUser.email ?? '').trim().toLowerCase()) {
+      if (!isValidEmail(newEmail)) return { success: false, error: 'Enter a valid email address.' };
+      const { default: User } = await import('@alga-psa/db/models/user');
+      if ((await User.findUsersByEmailAndType(newEmail, 'internal')).some(found => found.user_id !== currentUser.user_id)) {
+        return { success: false, error: 'This email address is already used by another account. Use a different email address.' };
+      }
+    }
+
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {

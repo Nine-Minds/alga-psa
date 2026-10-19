@@ -11,11 +11,14 @@ const mocks = vi.hoisted(() => ({
   productCode: 'psa',
   createClient: vi.fn(),
   addUser: vi.fn(),
+  findUsersByEmailAndType: vi.fn(async () => [] as Array<{ user_id: string }>),
+  userUpdates: [] as unknown[],
 }));
 
 function queryFor(table: string) {
   const query: any = {
-    where: () => query, whereNull: () => query, count: () => query, insert: async () => undefined, update: async () => undefined,
+    where: () => query, whereNull: () => query, count: () => query, insert: async () => undefined,
+    update: async (payload: unknown) => { if (table === 'users') mocks.userUpdates.push(payload); },
     select: async () => [],
     first: async () => (table === 'tenants' ? { product_code: mocks.productCode } : undefined),
   };
@@ -33,6 +36,7 @@ vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions
   saveTenantOnboardingProgress: vi.fn(), updateTenantOnboardingStatus: vi.fn(async () => ({ success: true })),
 }));
 vi.mock('@alga-psa/users/actions/user-actions/userActions', () => ({ addUser: mocks.addUser }));
+vi.mock('@alga-psa/db/models/user', () => ({ default: { findUsersByEmailAndType: mocks.findUsersByEmailAndType } }));
 vi.mock('@alga-psa/clients/actions/clientActions', () => ({ createClient: mocks.createClient }));
 vi.mock('@alga-psa/clients/actions/contact-actions/contactActions', () => ({ createClientContact: vi.fn() }));
 vi.mock('../../../../../packages/licensing/src/lib/get-license-usage', () => ({
@@ -50,6 +54,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.productCode = 'psa';
   mocks.hasPermission.mockResolvedValue(false);
+  mocks.userUpdates.length = 0;
 });
 
 describe('workspace setup access', () => {
@@ -85,5 +90,29 @@ describe('workspace setup access', () => {
     mocks.productCode = 'co_managed';
     await expect(call()).resolves.toEqual({ success: false, error: 'This step is not part of co-managed workspace setup.' });
     expect(mocks.createClient).not.toHaveBeenCalled();
+  });
+});
+
+describe('workspace setup sign-in email', () => {
+  const admin = { user_id: 'admin', email: 'admin@example.test' } as any;
+  const info = (email: string) => ({ firstName: 'A', lastName: 'B', tenantName: 'T', email }) as any;
+  beforeEach(() => mocks.hasPermission.mockResolvedValue(true));
+
+  it('refuses an email that belongs to another internal account', async () => {
+    mocks.findUsersByEmailAndType.mockResolvedValueOnce([{ user_id: 'someone-else' }]);
+    const result = await actions.saveClientInfo(admin, context, info('Taken@Example.test'));
+    expect(result).toMatchObject({ success: false, error: expect.stringContaining('already used by another account') });
+    expect(mocks.findUsersByEmailAndType).toHaveBeenCalledWith('taken@example.test', 'internal');
+    expect(mocks.userUpdates).toEqual([]);
+  });
+
+  it('refuses an invalid email', async () => {
+    await expect(actions.saveClientInfo(admin, context, info('not-an-email'))).resolves.toMatchObject({ success: false });
+    expect(mocks.userUpdates).toEqual([]);
+  });
+
+  it('does not re-check an unchanged email', async () => {
+    await actions.saveClientInfo(admin, context, info('ADMIN@example.test'));
+    expect(mocks.findUsersByEmailAndType).not.toHaveBeenCalled();
   });
 });
