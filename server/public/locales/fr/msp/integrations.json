@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Fonctionnalité Pro"
+    },
     "accounting": {
       "bulk": {
         "button": "Mappage en masse",
@@ -1232,7 +1235,12 @@
         "recommendedUnsaved": "Recommandé — non enregistré",
         "unsavedChange": "Modification non enregistrée",
         "unsavedNotice": "Ces filtres ne seront appliqués qu’après leur enregistrement."
-      }
+      },
+      "proFeature": {
+        "description": "L’intégration Microsoft Entra est disponible dans AlgaPSA Pro.",
+        "notice": "L’intégration des identités Microsoft Entra est une fonctionnalité Pro."
+      },
+      "loading": "Chargement de l’intégration Microsoft Entra…"
     },
     "google": {
       "settings": {
@@ -1303,6 +1311,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "L’intégration de la documentation informatique Hudu est disponible dans AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Source : Hudu",
         "openInHudu": "Ouvrir dans Hudu",
@@ -2323,6 +2334,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "L’intégration RMM NinjaOne est disponible dans AlgaPSA Pro."
+        },
         "loading": "Chargement des paramètres d’intégration NinjaOne...",
         "card": {
           "title": "Intégration NinjaOne RMM",
@@ -2600,6 +2614,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "L’intégration RMM Tanium est disponible dans AlgaPSA Pro."
+        },
         "loading": "Chargement des paramètres d'intégration Tanium...",
         "actions": {
           "discoverScopes": "Découvrir les portées",
@@ -2670,6 +2687,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "L’intégration RMM Level.io est disponible dans AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Rattraper les alertes",
           "disconnect": "Déconnecter",
@@ -2742,16 +2762,35 @@
           "copied": "Copié",
           "copy": "Copier",
           "description": "Level ne peut pas enregistrer de webhooks via son API. Dans Level, créez une automatisation avec une action HTTP POST utilisant l'URL, l'en-tête et la charge utile ci-dessous pour pousser les alertes vers Alga en temps réel.",
+          "fallbackDescription": "Utilisez cette solution de repli uniquement si les webhooks natifs de Paramètres → Webhooks dans Level ne sont pas utilisables. Créez une automatisation avec une action HTTP POST utilisant l'URL, l'en-tête et la charge utile ci-dessous pour envoyer les alertes à Alga.",
+          "fallbackNameHint": "Modifiez la valeur \"name\" dans chaque automatisation. Avec l'appareil, elle identifie l'alerte : les répétitions du même nom sur le même appareil forment une seule alerte.",
+          "fallbackTitle": "Solution de repli : requête HTTP d'automatisation",
           "header": "En-tête : {{name}}",
           "hideSecret": "Masquer le secret",
           "loading": "Les détails du webhook se chargent une fois l'intégration configurée.",
+          "nativeDescription": "Dans Level, ouvrez Paramètres → Webhooks, ajoutez un webhook avec l'URL et la clé de signature ci-dessous, puis activez les événements indiqués. Level signe chaque envoi et Alga vérifie la signature.",
+          "nativeEvents": "Événements à activer",
+          "nativeEventsHelp": "Activez alert_active et alert_resolved. Les autres événements sont acquittés et ignorés.",
+          "nativeSigningSecret": "Clé de signature",
+          "nativeTitle": "Webhook natif (recommandé)",
           "payload": "Modèle de charge utile",
+          "regenerateCancel": "Annuler",
+          "regenerateConfirmLabel": "Régénérer",
+          "regenerateConfirmMessage": "Les webhooks Level existants échoueront avec une erreur 401 tant que vous n'aurez pas collé la nouvelle clé de signature dans les paramètres de webhook de Level. Level réessaie les envois, mais ils peuvent être perdus si la clé n'est pas mise à jour.",
+          "regenerateConfirmTitle": "Régénérer la clé de signature ?",
+          "regenerateConfirmed": "Clé de signature régénérée. Mettez-la à jour dans les paramètres de webhook de Level.",
+          "regenerateFailed": "Échec de la régénération de la clé de signature",
+          "regenerateSecret": "Régénérer la clé",
           "showSecret": "Afficher le secret",
           "title": "Webhook d'alertes",
           "url": "URL du webhook"
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Intégration Huntress",
+          "description": "L’intégration de sécurité Huntress est une fonctionnalité Pro."
+        },
         "columns": {
           "organization": "Organisation Huntress",
           "client": "Client Alga",
@@ -3511,6 +3550,11 @@
           "regenerate": "Régénérer le package",
           "regenerating": "Régénération..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Connexion à Teams indisponible",
+        "tabTitle": "Onglet Teams indisponible",
+        "description": "L’intégration Microsoft Teams est uniquement disponible dans Pro."
       }
     },
     "xero": {

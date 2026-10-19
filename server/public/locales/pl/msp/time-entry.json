@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Dodaj wpis czasu"
+    }
+  },
   "common": {
     "actions": {
       "view": "Zobacz",
@@ -513,7 +518,8 @@
     "entryMissingPeriod": "W arkuszu czasu tego wpisu brakuje okresu i nie można go otworzyć.",
     "noPeriods": "Nie skonfigurowano jeszcze okresów czasu, więc nie można rejestrować czasu. Poproś administratora o utworzenie okresów czasu w Ustawienia → Ewidencja czasu.",
     "noEditablePeriods": "Wszystkie arkusze czasu są przesłane lub zatwierdzone, więc nie ma dnia, do którego można dodać czas. Poproś osobę zatwierdzającą o ponowne otwarcie arkusza lub administratora o dodanie okresu.",
-    "prepareFailed": "Wystąpił błąd podczas przygotowywania wpisu czasu. Spróbuj ponownie."
+    "prepareFailed": "Wystąpił błąd podczas przygotowywania wpisu czasu. Spróbuj ponownie.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Sugestie",

@@ -8,6 +8,7 @@ import { processTemplateVariables } from "@alga-psa/core";
 import { useDrawer } from "@alga-psa/ui";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useActivitiesCache } from "../hooks/useActivitiesCache";
+import { useActivitiesInvalidationSignal } from "../hooks/ActivitiesCacheProvider";
 import { useTenant } from "@alga-psa/ui/components/providers/TenantProvider";
 import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -198,7 +199,14 @@ export function ActivityDetailViewerDrawer({
   const tenant = useTenant();
   const drawer = useDrawer();
   const { invalidateCache } = useActivitiesCache();
+  const { notifyInvalidated } = useActivitiesInvalidationSignal();
   const ctx = useActivityCrossFeature();
+  // Ticket edits don't close the drawer, so refresh the list without going through
+  // onActionComplete (which closes it).
+  const handleTicketSaved = useCallback(() => {
+    invalidateCache(ActivityType.TICKET);
+    notifyInvalidated();
+  }, [invalidateCache, notifyInvalidated]);
 
   // Memoize the loadContent function to prevent unnecessary re-renders
   const loadContent = useCallback(async () => {
@@ -224,6 +232,7 @@ export function ActivityDetailViewerDrawer({
                 consolidatedData: ticketData,
                 currentUser,
                 onClose,
+                onSaved: handleTicketSaved,
               })}
             </div>
           );
@@ -659,6 +668,7 @@ export function ActivityDetailViewerDrawer({
                             consolidatedData: ticketData,
                             currentUser,
                             onClose,
+                            onSaved: handleTicketSaved,
                           })}
                         </div>
                       </div>
@@ -823,7 +833,7 @@ export function ActivityDetailViewerDrawer({
     } finally {
       setIsLoading(false);
     }
-  }, [activityType, activityId, workItemType, relatedOpportunityId, onActionComplete, onClose, tenant, ctx, invalidateCache, t]);
+  }, [activityType, activityId, workItemType, relatedOpportunityId, onActionComplete, onClose, tenant, ctx, invalidateCache, handleTicketSaved, t]);
 
   // Use effect to call loadContent when component mounts or dependencies change
   useEffect(() => {

@@ -215,8 +215,10 @@ export interface DiskUsageInfo {
 export interface RmmStorageInfo {
   name: string;
   total_gb: number;
-  free_gb: number;
-  utilization_percent: number;
+  /** Absent when the provider reports capacity only (e.g. Level.io `disks`). */
+  free_gb?: number | null;
+  /** Absent when free space is unknown; never substitute 0. */
+  utilization_percent?: number | null;
 }
 
 // Cached RMM data structure (returned by getAssetRmmData)

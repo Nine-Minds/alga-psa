@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Info } from 'lucide-react';
+import { useFormatters, useTranslation } from '../../lib/i18n/client';
 
 interface BucketUsageData {
   plan_id: string;
@@ -20,6 +21,9 @@ interface BucketUsageChartProps {
 }
 
 const BucketUsageChart = React.memo(({ bucketData }: BucketUsageChartProps) => {
+  const { t } = useTranslation('features/billing');
+  const { formatNumber } = useFormatters();
+  const formatHours = (minutes: number) => formatNumber(minutes / 60, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const totalAvailableMinutes = bucketData.total_minutes + bucketData.rolled_over_minutes;
   const percentage = totalAvailableMinutes > 0
     ? Math.round((bucketData.minutes_used / totalAvailableMinutes) * 100)
@@ -60,16 +64,16 @@ const BucketUsageChart = React.memo(({ bucketData }: BucketUsageChartProps) => {
           <p className="text-sm text-muted-foreground">{bucketData.plan_name}</p>
         </div>
         <div className="flex items-center">
-          <span className="text-sm text-muted-foreground mr-1">Bucket Contract Line</span>
+          <span className="text-sm text-muted-foreground mr-1">{t('bucketUsage.contractLine')}</span>
           <Info className="h-4 w-4 text-muted-foreground" />
         </div>
       </div>
 
       <div className="mt-4">
         <div className="flex justify-between items-center mb-1">
-          <span className="text-sm font-medium">Usage</span>
+          <span className="text-sm font-medium">{t('bucketUsage.usage')}</span>
           <span className={`text-sm font-medium ${colorClasses.text}`}>
-            {percentage}%
+            {formatNumber(percentage / 100, { style: 'percent' })}
           </span>
         </div>
         <div className="w-full bg-muted rounded-full h-2.5">
@@ -79,14 +83,14 @@ const BucketUsageChart = React.memo(({ bucketData }: BucketUsageChartProps) => {
           ></div>
         </div>
         <div className="flex justify-between mt-1 text-xs text-muted-foreground">
-          <span>{(bucketData.minutes_used / 60).toFixed(1)} hours used</span>
-          <span>{(totalAvailableMinutes / 60).toFixed(1)} hours total</span>
+          <span>{t('bucketUsage.hoursUsed', { hours: formatHours(bucketData.minutes_used) })}</span>
+          <span>{t('bucketUsage.hoursTotal', { hours: formatHours(totalAvailableMinutes) })}</span>
         </div>
       </div>
 
       {bucketData.rolled_over_minutes > 0 && (
         <div className="mt-3 text-xs text-muted-foreground flex items-center">
-          <span className="mr-1">Includes {(bucketData.rolled_over_minutes / 60).toFixed(1)} rollover hours</span>
+          <span className="mr-1">{t('bucketUsage.rolloverHours', { hours: formatHours(bucketData.rolled_over_minutes) })}</span>
           <Info className="h-3 w-3 text-muted-foreground" />
         </div>
       )}

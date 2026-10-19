@@ -443,5 +443,12 @@
     "expires": "Vervalt op {{date}}",
     "recentBurn": "Recent verbruik",
     "timeEntry": "Tijdsvermelding"
+  },
+  "bucketUsage": {
+    "contractLine": "Contractregel voor urenbundel",
+    "usage": "Verbruik",
+    "hoursUsed": "{{hours}} uur gebruikt",
+    "hoursTotal": "{{hours}} uur in totaal",
+    "rolloverHours": "Inclusief {{hours}} overgedragen uren"
   }
 }

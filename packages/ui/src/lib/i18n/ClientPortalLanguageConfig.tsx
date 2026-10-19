@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-psa/core/i18n/config';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 
 interface ClientPortalLanguageConfigProps {
@@ -26,6 +27,8 @@ export function ClientPortalLanguageConfig({
   onSave,
   className = '',
 }: ClientPortalLanguageConfigProps) {
+  const { t } = useTranslation('msp/settings');
+  const { t: tCommon } = useTranslation('common');
   const visibleLocales = useMemo(
     () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales),
     [],
@@ -101,10 +104,10 @@ export function ClientPortalLanguageConfig({
     <div className={`space-y-6 ${className}`}>
       <div>
         <h3 className="text-lg font-medium text-gray-900">
-          Client Portal Language Settings
+          {t('clientPortalLanguageConfig.title')}
         </h3>
         <p className="mt-1 text-sm text-gray-600">
-          Configure the language options available to your clients
+          {t('clientPortalLanguageConfig.description')}
         </p>
       </div>
 
@@ -115,10 +118,10 @@ export function ClientPortalLanguageConfig({
             htmlFor="default-locale"
             className="block text-sm font-medium text-gray-700"
           >
-            Default Language
+            {t('clientPortalLanguageConfig.fields.defaultLanguage.label')}
           </label>
           <p className="mt-1 text-sm text-gray-500">
-            This language will be used for new clients and when no preference is set
+            {t('clientPortalLanguageConfig.fields.defaultLanguage.help')}
           </p>
           <select
             id="default-locale"
@@ -138,7 +141,7 @@ export function ClientPortalLanguageConfig({
           >
             {visibleLocales.map((locale) => (
               <option key={locale} value={locale}>
-                {LOCALE_CONFIG.localeNames[locale]} ({locale})
+                {t(`enums.locale.${locale}`)} ({locale})
               </option>
             ))}
           </select>
@@ -147,10 +150,10 @@ export function ClientPortalLanguageConfig({
         {/* Available Languages */}
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Available Languages
+            {t('clientPortalLanguageConfig.fields.availableLanguages.label')}
           </label>
           <p className="mt-1 text-sm text-gray-500">
-            Select which languages clients can choose from
+            {t('clientPortalLanguageConfig.fields.availableLanguages.help')}
           </p>
           <div className="mt-2 space-y-2">
             {visibleLocales.map((locale) => (
@@ -163,9 +166,9 @@ export function ClientPortalLanguageConfig({
                     id={`locale-${locale}`}
                     label={
                       <span className="text-sm text-gray-700">
-                        {LOCALE_CONFIG.localeNames[locale]} ({locale})
+                        {t(`enums.locale.${locale}`)} ({locale})
                         {locale === selectedLocale && (
-                          <span className="ml-2 text-xs text-gray-500">(default)</span>
+                          <span className="ml-2 text-xs text-gray-500">{t('clientPortalLanguageConfig.defaultSuffix')}</span>
                         )}
                       </span>
                     }
@@ -181,10 +184,10 @@ export function ClientPortalLanguageConfig({
 
         {/* Preview */}
         <div className="p-4 bg-gray-50 rounded-lg">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Preview</h4>
+          <h4 className="text-sm font-medium text-gray-700 mb-2">{t('clientPortalLanguageConfig.preview.title')}</h4>
           <div className="text-sm text-gray-600">
-            <p>Default language: <strong>{LOCALE_CONFIG.localeNames[selectedLocale]}</strong></p>
-            <p>Available languages: <strong>{Array.from(enabledLocales).map(loc => LOCALE_CONFIG.localeNames[loc]).join(', ')}</strong></p>
+            <p>{t('clientPortalLanguageConfig.preview.defaultLanguage')} <strong>{t(`enums.locale.${selectedLocale}`)}</strong></p>
+            <p>{t('clientPortalLanguageConfig.preview.availableLanguages')} <strong>{Array.from(enabledLocales).map(loc => t(`enums.locale.${loc}`)).join(', ')}</strong></p>
           </div>
         </div>
 
@@ -200,7 +203,7 @@ export function ClientPortalLanguageConfig({
                     clipRule="evenodd"
                   />
                 </svg>
-                Settings saved successfully
+                {t('clientPortalLanguageConfig.messages.success.saved')}
               </span>
             )}
             {saveStatus === 'error' && (
@@ -212,7 +215,7 @@ export function ClientPortalLanguageConfig({
                     clipRule="evenodd"
                   />
                 </svg>
-                Failed to save settings
+                {t('clientPortalLanguageConfig.errors.saveFailed')}
               </span>
             )}
           </div>
@@ -226,7 +229,7 @@ export function ClientPortalLanguageConfig({
             onClick={handleSave}
             disabled={!hasChanges || isSaving}
           >
-            {isSaving ? 'Saving...' : 'Save Settings'}
+            {isSaving ? tCommon('actions.saving') : tCommon('actions.saveSettings')}
           </button>
         </div>
       </div>

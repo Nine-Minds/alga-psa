@@ -13,7 +13,8 @@ import {
   DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
   resolveRecurringAuthoringPolicy,
 } from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
-import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { normalizeLiveRecurringStorage, normalizeRecurringStorageForLineType } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { toDateOnly } from '../lib/billing/dateOnly';
 
 import { withTransaction } from '@alga-psa/db';
@@ -32,6 +33,10 @@ class ContractLineMappingDomainError extends Error {
 }
 
 function contractLineMappingActionErrorFrom(error: unknown): ContractLineMappingActionError | null {
+  if (isContractLineTimingNotAllowedError(error)) {
+    return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
+  }
+
   if (error instanceof ContractLineMappingDomainError) {
     if (error.message.startsWith('Permission denied:')) {
       return permissionError(error.message);
@@ -152,7 +157,8 @@ export async function ensureTemplateLineSnapshot(
   }
 
   const now = new Date().toISOString();
-  const contractRecurringStorage = normalizeLiveRecurringStorage(contractLine);
+  // LEVERAGE: pattern recurring-storage-copy — copy sites each re-derive (billing_timing, cadence_owner) from the source row; a shared copy helper would remove the repeated per-site normalization
+  const contractRecurringStorage = normalizeRecurringStorageForLineType(contractLine, contractLine.contract_line_type);
 
   // All terms columns are now stored directly on contract_lines
   await tenantScopedTable(knex, tenant, 'contract_template_lines')
@@ -737,8 +743,9 @@ export const updateContractLineAssociation = withAuth(async (
             template_id: contractId,
             template_line_id: contractLineId,
           })
-          .first(['cadence_owner', 'billing_timing']);
+          .first(['cadence_owner', 'billing_timing', 'line_type']);
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          lineType: existingTemplateLine?.line_type ?? null,
           cadenceOwner: dbUpdateData.cadence_owner,
           fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: dbUpdateData.billing_timing,

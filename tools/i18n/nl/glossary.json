@@ -2304,6 +2304,7 @@
       "file-upload",
       "Filters",
       "Firewall",
+      "{{size}} GB",
       "Gmail",
       "Google",
       "Google Calendar",
@@ -2556,7 +2557,8 @@
       "is",
       "Cc",
       "Bcc",
-      "Cc/Bcc"
+      "Cc/Bcc",
+      "Training"
     ],
     "caseInsensitive": [
       "account",

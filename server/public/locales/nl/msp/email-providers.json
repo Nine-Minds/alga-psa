@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Pro-functie",
+      "domainsDescription": "Beheerde domeinen vereisen Pro.",
+      "settingsDescription": "Instellingen voor beheerde e-mail vereisen Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Kan beheerde domeinen niet laden",
       "loadOutboundSettingsFailed": "Kan instellingen voor uitgaande e-mail niet laden",
@@ -930,6 +935,12 @@
       "copyHostAriaLabel": "Host kopiëren",
       "copyFqdnAriaLabel": "Volledige naam kopiëren",
       "hostHint": "Tip: voer bij uw DNS-provider alleen de hierboven getoonde Host in. De meeste providers (Namecheap, GoDaddy, Cloudflare en andere) voegen “{{domain}}” automatisch toe. Als u de volledige naam plakt, wordt het domein herhaald (…{{domain}}.{{domain}}) en wordt het record nooit geverifieerd."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Pro-functie",
+        "description": "Instructies voor DNS-records vereisen Pro."
+      }
     }
   },
   "inboundRules": {

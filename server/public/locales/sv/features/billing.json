@@ -443,5 +443,12 @@
     "expires": "Löper ut {{date}}",
     "recentBurn": "Senaste förbrukning",
     "timeEntry": "Tidpost"
+  },
+  "bucketUsage": {
+    "contractLine": "Avtalsrad med timpott",
+    "usage": "Förbrukning",
+    "hoursUsed": "{{hours}} h förbrukade",
+    "hoursTotal": "{{hours}} h totalt",
+    "rolloverHours": "Inkluderar {{hours}} h överförd tid"
   }
 }

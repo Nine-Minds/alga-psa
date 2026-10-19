@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface SpinnerProps {
   /** Spinner diameter preset.
@@ -43,6 +44,7 @@ function ensureKeyframes() {
 
 /** Animated circular loading spinner. */
 export function Spinner({ size = 'md', variant = 'default', className, style }: SpinnerProps) {
+  const { t } = useTranslation('common');
   React.useEffect(() => {
     ensureKeyframes();
   }, []);
@@ -76,7 +78,7 @@ export function Spinner({ size = 'md', variant = 'default', className, style }: 
 
   return (
     <div style={containerStyle} className={className}>
-      <div style={spinnerStyle} role="status" aria-label="Loading">
+      <div style={spinnerStyle} role="status" aria-label={t('status.loadingLabel')}>
         <span style={{
           position: 'absolute',
           width: 1,
@@ -88,7 +90,7 @@ export function Spinner({ size = 'md', variant = 'default', className, style }: 
           whiteSpace: 'nowrap',
           border: 0,
         }}>
-          Loading
+          {t('status.loadingLabel')}
         </span>
       </div>
     </div>

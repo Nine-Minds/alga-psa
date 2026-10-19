@@ -1397,7 +1397,9 @@
         "summary_one": "{{count}} evento ignorado nos últimos {{days}} dias — {{reasons}}",
         "summary_other": "{{count}} eventos ignorados nos últimos {{days}} dias — {{reasons}}",
         "lastSkipped": "Último ignorado {{when}}",
-        "view": "Ver eventos ignorados"
+        "view": "Ver eventos ignorados",
+        "summary_few": "{{count}} eventos ignorados nos últimos {{days}} dias — {{reasons}}",
+        "summary_many": "{{count}} eventos ignorados nos últimos {{days}} dias — {{reasons}}"
       },
       "drawer": {
         "title": "Eventos ignorados",
@@ -1740,7 +1742,9 @@
     "insertionPointLabel": "Novas etapas entram aqui",
     "emptyBranchPrompt": "Adicione uma etapa a este ramo",
     "emptyActivePrompt": "Novas etapas entram aqui. Escolha uma na paleta.",
-    "stepCount": "({{count}} etapas)"
+    "stepCount": "({{count}} etapas)",
+    "stepCount_few": "(etapas {{count}})",
+    "stepCount_many": "(etapas {{count}})"
   },
   "expressionEditor": {
     "ariaLabel": "Editor de expressão",
@@ -2253,7 +2257,12 @@
       "currentRun": "Execução {{id}}",
       "backToWorkflow": "Voltar ao fluxo de trabalho"
     },
-    "title": "Estúdio de execução de fluxo de trabalho"
+    "title": "Estúdio de execução de fluxo de trabalho",
+    "communityEdition": {
+      "title": "Recurso Pro",
+      "description": "O estúdio de execução de fluxos de trabalho está disponível apenas no Pro.",
+      "runId": "ID da execução: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3026,6 +3035,10 @@
         "selectBoard": "Selecione ou insira um quadro",
         "selectPriority": "Selecione ou insira uma prioridade"
       }
+    },
+    "proFeature": {
+      "title": "Recurso Pro",
+      "description": "O sistema de fluxos de trabalho está disponível apenas no Pro. Atualize sua instalação para acessar este recurso."
     }
   },
   "toggle": {

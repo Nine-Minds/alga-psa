@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Agregar entrada de tiempo"
+    }
+  },
   "common": {
     "actions": {
       "view": "Ver",
@@ -513,7 +518,8 @@
     "entryMissingPeriod": "La hoja de tiempo de esta entrada no tiene período y no se puede abrir.",
     "noPeriods": "Aún no hay períodos de tiempo configurados, por lo que no se puede registrar tiempo. Pide a un administrador que cree períodos de tiempo en Configuración → Entrada de tiempo.",
     "noEditablePeriods": "Todas las hojas de tiempo están enviadas o aprobadas, así que no hay ningún día al que añadir tiempo. Pide a un aprobador que reabra una hoja o a un administrador que añada un período.",
-    "prepareFailed": "Se produjo un error al preparar la entrada de tiempo. Inténtalo de nuevo."
+    "prepareFailed": "Se produjo un error al preparar la entrada de tiempo. Inténtalo de nuevo.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Sugerencias",
@@ -538,7 +544,9 @@
       "checklistChanged": "lista de verificación cambiada",
       "linksChanged": "enlaces cambiados",
       "updated": "actualizado"
-    }
+    },
+    "activitySummary_few": "primera actividad {{first}} · última {{last}} · {{count}} acciones ({{kinds}})",
+    "activitySummary_many": "primera actividad {{first}} · última {{last}} · {{count}} acciones ({{kinds}})"
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} registrado en {{count}} segmento (en pausa {{paused}})",
@@ -557,6 +565,8 @@
       "confirm": "Continuar",
       "cancel": "Cancelar"
     },
-    "ticketFallbackName": "Ticket {{number}}"
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "{{active}} registrados en {{count}} segmentos (en pausa {{paused}})",
+    "pausedNotice_many": "{{active}} registrados en {{count}} segmentos (en pausa {{paused}})"
   }
 }

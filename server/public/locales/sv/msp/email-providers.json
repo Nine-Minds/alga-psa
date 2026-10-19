@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Pro-funktion",
+      "domainsDescription": "Hanterade domäner kräver Pro.",
+      "settingsDescription": "Inställningar för hanterad e-post kräver Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Det gick inte att läsa in hanterade domäner",
       "loadOutboundSettingsFailed": "Det gick inte att läsa in inställningarna för utgående e-post",
@@ -930,6 +935,12 @@
       "copyHostAriaLabel": "Kopiera värd",
       "copyFqdnAriaLabel": "Kopiera fullständigt namn",
       "hostHint": "Tips: Ange bara det värdnamn som visas ovan hos din DNS-leverantör. De flesta leverantörer (Namecheap, GoDaddy, Cloudflare och andra) lägger till ”{{domain}}” automatiskt. Om du i stället klistrar in det fullständiga namnet upprepas domänen (…{{domain}}.{{domain}}) och posten kan aldrig verifieras."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Pro-funktion",
+        "description": "Instruktioner för DNS-poster kräver Pro."
+      }
     }
   },
   "inboundRules": {

@@ -260,10 +260,10 @@ describe('recurrence storage model contracts', () => {
     expect(contractLineAction).toContain('resolveRecurringAuthoringPolicy({');
     expect(contractLineAction).toContain('normalizeTemplateRecurringStorage');
     expect(contractLineAction).toContain('normalizeLiveRecurringStorage');
-    expect(packageRepository).toContain('normalizeTemplateRecurringStorage({');
-    expect(packageRepository).toContain('normalizeLiveRecurringStorage(baseLine)');
+    expect(packageRepository).toContain('normalizeRecurringStorageForLineType({');
+    expect(packageRepository).toContain('normalizeRecurringStorageForLineType(baseLine, baseLine.contract_line_type)');
     expect(serverRepository).toContain("export * from '@alga-psa/billing/repositories/contractLineRepository'");
-    expect(contractLineService).toContain('normalizeTemplateRecurringStorage({');
+    expect(contractLineService).toContain('normalizeRecurringStorageForLineType({');
   });
 
   it('T245: legacy billing_cycle_alignment defaults stay normalized consistently across recurring write and reread paths', () => {
@@ -353,13 +353,13 @@ describe('recurrence storage model contracts', () => {
       'utf8',
     );
 
-    expect(contractLineMappingActions).toContain('const contractRecurringStorage = normalizeLiveRecurringStorage(contractLine);');
+    expect(contractLineMappingActions).toContain('const contractRecurringStorage = normalizeRecurringStorageForLineType(contractLine, contractLine.contract_line_type);');
     expect(contractLineMappingActions).toContain('billing_timing: contractRecurringStorage.billing_timing,');
     expect(contractLineMappingActions).toContain('const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({');
     expect(contractLineMappingActions).toContain('billingTiming: dbUpdateData.billing_timing,');
     expect(contractLineMappingActions).toContain('billing_timing: recurringAuthoringPolicy.billingTiming,');
     expect(contractLineMappingModel).toContain('return normalizeLiveRecurringStorage(line);');
-    expect(contractLineMappingModel).toContain("first(['cadence_owner', 'billing_timing']);");
+    expect(contractLineMappingModel).toContain("first(['cadence_owner', 'billing_timing', 'contract_line_type']);");
     expect(contractLineMappingModel).toContain('billing_timing: recurringAuthoringPolicy.billingTiming,');
     expect(contractLineMappingModel).toContain("'billing_timing',");
     expect(packageRepository).toContain('return normalizeLiveRecurringStorage(row);');
@@ -451,7 +451,7 @@ describe('recurrence storage model contracts', () => {
     expect(clientContractModel).toContain('normalizeLiveRecurringStorage');
     expect(clientContractModel).toContain('return contractLines.map((line) => normalizeLiveRecurringStorage(line));');
     expect(clientContractLineActions).toContain('const recurringStorage = normalizeLiveRecurringStorage(billing);');
-    expect(clientContractLineActions).toContain('const templateRecurringStorage = normalizeLiveRecurringStorage(templateLine);');
+    expect(clientContractLineActions).toContain('const templateRecurringStorage = normalizeRecurringStorageForLineType(templateLine, templateLine.contract_line_type);');
     expect(clientContractLineActions).toContain('billing_timing: templateRecurringStorage.billing_timing,');
     expect(clientContractLineActions).toContain(
       'cadence_owner: newBilling.cadence_owner ?? templateRecurringStorage.cadence_owner,',

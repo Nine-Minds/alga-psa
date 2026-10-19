@@ -38,6 +38,8 @@ const RELEVANT_INBOUND_HEADER_NAMES = [
   'list-subscribe',
   'list-archive',
   'list-owner',
+  // Exchange intra-org auth stamp; kept so sender-attribution decisions can be audited later.
+  'x-ms-exchange-organization-authas',
 ] as const;
 
 export type AutomatedMessageReason =

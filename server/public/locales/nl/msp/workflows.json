@@ -1519,7 +1519,9 @@
         "summary_one": "{{count}} gebeurtenis overgeslagen in de afgelopen {{days}} dagen — {{reasons}}",
         "summary_other": "{{count}} gebeurtenissen overgeslagen in de afgelopen {{days}} dagen — {{reasons}}",
         "lastSkipped": "Laatst overgeslagen {{when}}",
-        "view": "Overgeslagen gebeurtenissen bekijken"
+        "view": "Overgeslagen gebeurtenissen bekijken",
+        "summary_few": "{{count}} gebeurtenissen overgeslagen in de afgelopen {{days}} dagen — {{reasons}}",
+        "summary_many": "{{count}} gebeurtenissen overgeslagen in de afgelopen {{days}} dagen — {{reasons}}"
       },
       "drawer": {
         "title": "Overgeslagen gebeurtenissen",
@@ -1862,7 +1864,9 @@
     "insertionPointLabel": "Nieuwe stappen komen hier",
     "emptyBranchPrompt": "Voeg een stap toe aan deze tak",
     "emptyActivePrompt": "Nieuwe stappen komen hier. Kies er een uit het palet.",
-    "stepCount": "({{count}} stappen)"
+    "stepCount": "({{count}} stappen)",
+    "stepCount_few": "({{count}} stappen)",
+    "stepCount_many": "({{count}} stappen)"
   },
   "expressionEditor": {
     "ariaLabel": "Expressie-editor",
@@ -2375,7 +2379,12 @@
       "currentRun": "Uitvoering {{id}}",
       "backToWorkflow": "Terug naar workflow"
     },
-    "title": "Workflow-uitvoeringsstudio"
+    "title": "Workflow-uitvoeringsstudio",
+    "communityEdition": {
+      "title": "Pro-functie",
+      "description": "De studio voor workflowuitvoeringen is alleen beschikbaar in Pro.",
+      "runId": "Uitvoerings-ID: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3148,6 +3157,10 @@
         "selectBoard": "Selecteer of voer een bord in",
         "selectPriority": "Selecteer of voer een prioriteit in"
       }
+    },
+    "proFeature": {
+      "title": "Pro-functie",
+      "description": "Het workflowsysteem is alleen beschikbaar in Pro. Upgrade uw installatie om toegang te krijgen tot deze functie."
     }
   },
   "toggle": {
