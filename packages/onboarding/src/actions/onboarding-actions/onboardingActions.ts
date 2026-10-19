@@ -719,14 +719,20 @@ export const configureTicketing = withAuth(async (
           .first();
 
         if (existingNumbering) {
+          // generate_next_number issues GREATEST(last_number + 1, initial_value),
+          // so a higher start number applies without a reset. Rewinding
+          // last_number is only safe while no ticket holds an issued number: a
+          // co-managed workspace can already have tickets (escalated or created
+          // before setup finished) that a reset would hand out again.
+          const ticketsExist = Boolean(await tenantScopedTable('tickets').first('ticket_id'));
           await tenantScopedTable('next_number')
             .where({ entity_type: 'TICKET' })
             .update({
               prefix: data.ticketPrefix ?? '',
               padding_length: data.ticketPaddingLength ?? 6,
-              ...(data.ticketStartNumber && { 
-                last_number: 0,
-                initial_value: data.ticketStartNumber 
+              ...(data.ticketStartNumber && {
+                initial_value: data.ticketStartNumber,
+                ...(!ticketsExist && { last_number: 0 }),
               })
             });
         } else {
