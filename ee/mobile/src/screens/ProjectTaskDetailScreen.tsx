@@ -401,6 +401,11 @@ export function ProjectTaskDetailScreen({ navigation, route }: Props) {
   const estimated = task ? task.estimated_hours ?? null : activity?.estimatedHours ?? null;
   const totalMinutes = entries.reduce((sum, entry) => sum + timeEntryMinutes(entry), 0);
   const actual = totalMinutes > 0 ? totalMinutes : (task ? task.actual_hours ?? 0 : activity?.actualHours ?? 0);
+  // The task GET names the priority; the picker's own list is the fallback for
+  // servers whose task join predates that, so an edit never reads back as None.
+  const priorityLabel = task?.priority_id
+    ? task.priority_name ?? priorities.find((item) => item.priority_id === task.priority_id)?.priority_name ?? null
+    : null;
   const canChangeStatus = canAct && Boolean(task?.project_id);
   const detailsEditable = canAct && !detailsReadOnly && !isOffline;
   const checklistDone = checklist.filter((item) => item.completed).length;
@@ -503,7 +508,7 @@ export function ProjectTaskDetailScreen({ navigation, route }: Props) {
               <DetailRow
                 testID="project-task-priority"
                 label={tProjects("task.priority")}
-                value={task.priority_name ?? tProjects("task.none")}
+                value={priorityLabel ?? tProjects("task.none")}
                 editable={detailsEditable}
                 onPress={() => void openPriorityPicker()}
               />

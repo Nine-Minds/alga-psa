@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   updateTaskChecklistItem: vi.fn(),
   listComments: vi.fn(),
   listTimeEntries: vi.fn(),
+  listPriorities: vi.fn(),
   getServices: vi.fn(),
   createTimeEntry: vi.fn(),
   showToast: vi.fn(),
@@ -52,6 +53,7 @@ vi.mock("../features/comments/commentTarget", async (importOriginal) => ({
 vi.mock("../capabilities/CapabilitiesContext", () => ({ useCapabilities: () => ({ features: mocks.features, defaultCountry: "US", loaded: true }) }));
 vi.mock("../network/useNetworkStatus", () => ({ useNetworkStatus: () => ({ isConnected: true, isInternetReachable: true }) }));
 vi.mock("../api/users", () => ({ listUsers: vi.fn(), getUserDisplayName: () => "" }));
+vi.mock("../api/priorities", () => ({ listPriorities: (...args: unknown[]) => mocks.listPriorities(...args) }));
 vi.mock("../features/ticketDetail/components/CommentsSection", () => ({ CommentsSection: (props: Record<string, unknown>) => React.createElement("MockCommentsSection", props) }));
 vi.mock("../features/ticketDetail/components/CommentComposer", () => ({ CommentComposer: (props: Record<string, unknown>) => React.createElement("MockCommentComposer", props) }));
 vi.mock("../features/ticketDetail/hooks/useCommentDraft", () => ({
@@ -112,6 +114,12 @@ function texts(renderer: ReactTestRenderer): string[] {
   });
 }
 
+/** A DetailRow renders its label then its value. */
+function detailValue(renderer: ReactTestRenderer, testID: string): string {
+  const row = renderer.root.find((node) => node.props?.testID === testID);
+  return String(row.findAllByType(Text)[1].props.children);
+}
+
 describe("ProjectTaskDetailScreen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -134,6 +142,10 @@ describe("ProjectTaskDetailScreen", () => {
       { entry_id: "e2", duration_hours: 0.5, start_time: "2026-10-01T09:00:00Z" },
     ], pagination: { total: 2 } } });
     mocks.getServices.mockResolvedValue({ ok: true, data: { data: [{ service_id: "svc-1", service_name: "Onsite" }] } });
+    mocks.listPriorities.mockResolvedValue({ ok: true, data: { data: [
+      { priority_id: "pri-1", priority_name: "High" },
+      { priority_id: "pri-2", priority_name: "Critical" },
+    ] } });
   });
 
   it("loads the task by id and shows project, estimate and logged time", async () => {
@@ -267,6 +279,28 @@ describe("ProjectTaskDetailScreen", () => {
     expect(renderer.root.find((n) => n.props?.testID === "project-task-open-project")).toBeTruthy();
     expect(texts(renderer)).toContain("HQ refresh • Deploy");
     expect(texts(renderer)).toContain("Sam Lee");
+  });
+
+  it("T140 names the task's priority and keeps the label when the reload omits it", async () => {
+    const detail = { ...task, project_id: "proj-1", project_status_mapping_id: "map-1", priority_id: "pri-1", priority_name: "High" };
+    mocks.getProjectTask.mockResolvedValue({ ok: true, data: { data: detail } });
+    const renderer = await renderScreen();
+    expect(detailValue(renderer, "project-task-priority")).toBe("High");
+
+    // A server whose task join predates priority_name: the picker's own list
+    // has to carry the label, or a saved edit reads back as "none".
+    mocks.getProjectTask.mockResolvedValue({ ok: true, data: { data: { ...detail, priority_id: "pri-2", priority_name: undefined } } });
+    await act(async () => renderer.root.find((n) => n.props?.testID === "project-task-priority").props.onPress());
+    await flush();
+    const picker = renderer.root
+      .findAll((n) => n.type === ("MockEntityPicker" as never))
+      .find((n) => n.props.title === "task.selectPriority")!;
+    expect(picker.props.items.map((item: { label: string }) => item.label)).toEqual(["High", "Critical"]);
+
+    await act(async () => picker.props.onSelect("pri-2", "Critical"));
+    await flush();
+    expect(mocks.updateProjectTask).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ taskId: "task-1", data: { priority_id: "pri-2" } }));
+    expect(detailValue(renderer, "project-task-priority")).toBe("Critical");
   });
 
   it("ticks checklist items and shows progress", async () => {

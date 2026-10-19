@@ -1255,5 +1255,24 @@
     "featureIds": [
       "F081"
     ]
+  },
+  {
+    "id": "T140",
+    "description": "ProjectTaskDetail Priority row shows the task's priority name, and keeps the picked label when the reload omits priority_name (older server)",
+    "implemented": true,
+    "commitGroup": "task-edit",
+    "featureIds": [
+      "F098",
+      "F029"
+    ]
+  },
+  {
+    "id": "T141",
+    "description": "contract: getTaskById joins 'priorities as pri' through tenantJoin and selects pri.priority_name; the public OpenAPI task schema still omits the three joined names",
+    "implemented": true,
+    "commitGroup": "task-edit",
+    "featureIds": [
+      "F098"
+    ]
   }
 ]

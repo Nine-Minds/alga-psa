@@ -1562,8 +1562,8 @@ export class ProjectService extends BaseService<IProject> {
   /**
    * One task with the names a detail view needs: phase and project, the
    * resolved status (custom mapping name, then project status, then standard),
-   * and the assignee. Mobile opens tasks by id from pushes and deep links, so
-   * the row has to stand on its own.
+   * the assignee and the priority. Mobile opens tasks by id from pushes and
+   * deep links, so the row has to stand on its own.
    */
   async getTaskById(taskId: string, context: ServiceContext): Promise<(IProjectTask & {
     phase_name?: string | null;
@@ -1573,6 +1573,7 @@ export class ProjectService extends BaseService<IProject> {
     status_name?: string | null;
     is_closed?: boolean;
     assigned_user_name?: string | null;
+    priority_name?: string | null;
     effective_service_id?: string | null;
     service_source?: ProjectServiceSource | null;
     service_name?: string | null;
@@ -1587,6 +1588,7 @@ export class ProjectService extends BaseService<IProject> {
     db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
     db.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
     db.tenantJoin(query, 'users as assignee', 'project_tasks.assigned_to', 'assignee.user_id', { type: 'left' });
+    db.tenantJoin(query, 'priorities as pri', 'project_tasks.priority_id', 'pri.priority_id', { type: 'left' });
     // One catalog join per level so the name matches the id the COALESCE picked.
     db.tenantJoin(query, 'service_catalog as task_service', 'project_tasks.service_id', 'task_service.service_id', { type: 'left' });
     db.tenantJoin(query, 'service_catalog as phase_service', 'project_phases.service_id', 'phase_service.service_id', { type: 'left' });
@@ -1603,6 +1605,7 @@ export class ProjectService extends BaseService<IProject> {
         knex.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
         knex.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
         knex.raw("NULLIF(TRIM(CONCAT(assignee.first_name, ' ', assignee.last_name)), '') as assigned_user_name"),
+        'pri.priority_name',
         // The task's own service_id stays in `project_tasks.*`; these three say
         // which service a time entry should actually prefill, and from where.
         knex.raw(`${effectiveServiceIdSql(TASK_SERVICE_ALIASES)} as effective_service_id`),

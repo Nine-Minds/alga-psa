@@ -871,5 +871,14 @@
     "prdRefs": [
       "OPERATOR-2026-10-19"
     ]
+  },
+  {
+    "id": "F098",
+    "description": "The task detail GET fills priority_name (tenant-scoped priorities join in ProjectService.getTaskById) and the mobile Priority row falls back to the picker's own priorities list, so the row names the priority instead of reading 'none' after a save",
+    "implemented": true,
+    "commitGroup": "task-edit",
+    "prdRefs": [
+      "FR8"
+    ]
   }
 ]
