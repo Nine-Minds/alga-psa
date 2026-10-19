@@ -480,6 +480,7 @@
       "clientUnavailable": "Dieser Kunde ist nicht mehr verfügbar. Aktualisieren Sie die Kundenliste.",
       "invalidRequest": "Geben Sie einen Arbeitsbereichsnamen, Administratordaten, ein Eskalationsboard und mindestens einen Technikerplatz an.",
       "administratorEmailInUse": "Diese Administrator-E-Mail-Adresse gehört bereits einem Benutzer in einem anderen Arbeitsbereich. Verwenden Sie eine andere E-Mail-Adresse.",
+      "administratorEmailPending": "Für diese Administrator-E-Mail-Adresse besteht bereits eine offene Einladung in einen anderen Arbeitsbereich. Verwenden Sie eine andere E-Mail-Adresse oder brechen Sie zuerst diese Einrichtung ab.",
       "setupCancelling": "Die vorherige Einrichtung für diesen Kunden wird noch abgebrochen. Versuchen Sie es erneut, sobald die Bereinigung abgeschlossen ist."
     },
     "policy": {

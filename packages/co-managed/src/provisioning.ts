@@ -37,7 +37,7 @@ export class CoManagedProvisioningError extends Error {
   constructor(public readonly code: 'INVALID_REQUEST' | 'OPERATION_CONFLICT' | 'OPERATION_NOT_FOUND' |
     'ACTOR_NOT_FOUND' | 'DESTINATION_NOT_FOUND' | 'OPERATION_CLOSED' | 'RELATIONSHIP_ACTIVE' |
     'CLEANUP_INCOMPLETE' | 'RESERVATION_NOT_FOUND' | 'CAPACITY_UNAVAILABLE' |
-    'ADMINISTRATOR_EMAIL_IN_USE' | 'CLIENT_NOT_FOUND' | 'SETUP_CANCELLING') {
+    'ADMINISTRATOR_EMAIL_IN_USE' | 'ADMINISTRATOR_EMAIL_PENDING' | 'CLIENT_NOT_FOUND' | 'SETUP_CANCELLING') {
     super({ INVALID_REQUEST: 'Provide a workspace name, customer administrator, and valid provisioning details.',
       OPERATION_CONFLICT: 'This provisioning operation was started with different details.',
       OPERATION_NOT_FOUND: 'Provisioning operation not found.', ACTOR_NOT_FOUND: 'An active internal sponsor user is required.',
@@ -48,6 +48,7 @@ export class CoManagedProvisioningError extends Error {
       RESERVATION_NOT_FOUND: 'The provisioning reservation is no longer valid.',
       CAPACITY_UNAVAILABLE: 'Restore the sponsoring Pro license and co-managed capacity before provisioning.',
       ADMINISTRATOR_EMAIL_IN_USE: 'This administrator email already belongs to a user in another workspace. Use a different email address.',
+      ADMINISTRATOR_EMAIL_PENDING: 'This administrator email has a pending invitation to another workspace. Use a different email address, or cancel that setup first.',
       CLIENT_NOT_FOUND: 'This client is no longer available.',
       SETUP_CANCELLING: 'The previous setup for this client is still being cancelled. Try again once cleanup finishes.',
     }[code]);
@@ -103,6 +104,28 @@ export async function prepareCoManagedProvisioning(db: Knex, input: CoManagedPro
       .unscoped('users', 'internal user emails are unique across tenants')
       .where({ email: request.administrator.email, user_type: 'internal' }).first('user_id');
     if (emailTaken) throw new CoManagedProvisioningError('ADMINISTRATOR_EMAIL_IN_USE');
+    // An unaccepted invitation claims the email too: whichever invitee signs up
+    // first creates the account, and the other workspace can then never be
+    // claimed, holding its seats. That covers any unexpired team invitation and
+    // another live setup's administrator, whose invitation may not exist yet
+    // (queued) or may have expired awaiting a resend.
+    const pendingInvitation = await tenantDb(trx, input.sponsorTenant)
+      .unscoped('user_invitations', 'internal user emails are unique across tenants, including pending invitations')
+      .whereRaw('lower(trim(email)) = ?', [request.administrator.email]).whereNull('used_at')
+      .where('expires_at', '>', trx.fn.now()).first('invitation_id');
+    const pendingSetup = await tenantDb(trx, input.sponsorTenant)
+      .unscoped('co_managed_provisioning_operations as o', 'a pending co-managed administrator claims its email across sponsors')
+      .leftJoin('user_invitations as i', function () {
+        this.on('i.tenant', 'o.customer_tenant').andOn('i.invitation_id', 'o.administrator_invitation_id');
+      })
+      .whereRaw("lower(trim(o.request->'administrator'->>'email')) = ?", [request.administrator.email])
+      .whereNot('o.operation_id', input.operationId)
+      .where(function () {
+        this.where(function () { this.whereNull('i.invitation_id').whereIn('o.state', ['queued', 'provisioning', 'failed']); })
+          .orWhere(function () { this.whereNotNull('i.invitation_id').whereNull('i.used_at'); });
+      })
+      .first('o.operation_id');
+    if (pendingInvitation || pendingSetup) throw new CoManagedProvisioningError('ADMINISTRATOR_EMAIL_PENDING');
     const board = await sponsor.table('boards').where({ board_id: input.escalationBoardId, is_inactive: false }).forShare().first();
     if (!board) throw new CoManagedProvisioningError('DESTINATION_NOT_FOUND');
     const [operation] = await sponsor.table('co_managed_provisioning_operations').insert({

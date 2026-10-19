@@ -480,6 +480,7 @@
       "clientUnavailable": "This client is no longer available. Refresh the client list.",
       "invalidRequest": "Enter a workspace name, administrator details, an escalation board, and at least one technician seat.",
       "administratorEmailInUse": "This administrator email already belongs to a user in another workspace. Use a different email address.",
+      "administratorEmailPending": "This administrator email has a pending invitation to another workspace. Use a different email address, or cancel that setup first.",
       "setupCancelling": "The previous setup for this client is still being cancelled. Try again once cleanup finishes."
     },
     "policy": {

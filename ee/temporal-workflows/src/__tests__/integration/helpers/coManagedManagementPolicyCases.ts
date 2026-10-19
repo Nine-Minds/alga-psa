@@ -288,7 +288,9 @@ export function registerCoManagedManagementPolicyTests(getDb: () => Knex, prepar
       await f.home.table('authorization_bundle_rules').where('revision_id', f.clientPolicy.revisionId)
         .update({ config: { selectedClientIds: [f.operation.request.clientId, clientId] } });
       await f.home.table('co_managed_entitlements').update({ capacity: 10 });
-      const request = { ...f.operation.request, clientId, operationId: randomUUID(), seats: 1 };
+      // A second client needs its own administrator: the fixture's is still pending.
+      const request = { ...f.operation.request, clientId, operationId: randomUUID(), seats: 1,
+        administrator: { ...f.operation.request.administrator, email: `fresh-${randomUUID()}@example.test` } };
       const first = await prepareCoManagedProvisioningForActor(f.db, f.actor, request);
       const resumed = await prepareCoManagedProvisioningForActor(f.db, f.actor, { ...request, operationId: randomUUID() });
       expect(resumed.operation_id).toBe(first.operation_id);
@@ -303,7 +305,9 @@ export function registerCoManagedManagementPolicyTests(getDb: () => Knex, prepar
       await f.home.table('authorization_bundle_rules').where('revision_id', f.clientPolicy.revisionId)
         .update({ config: { selectedClientIds: [f.operation.request.clientId, clientId] } });
       await f.home.table('co_managed_entitlements').update({ capacity: 10 });
-      const request = { ...f.operation.request, clientId, operationId: randomUUID(), seats: 1 };
+      // A second client needs its own administrator: the fixture's is still pending.
+      const request = { ...f.operation.request, clientId, operationId: randomUUID(), seats: 1,
+        administrator: { ...f.operation.request.administrator, email: `fresh-${randomUUID()}@example.test` } };
       const first = await prepareCoManagedProvisioningForActor(f.db, f.actor, request);
       // A stale tab corrects the administrator email and submits under its own operation ID.
       await expect(prepareCoManagedProvisioningForActor(f.db, f.actor, { ...request, operationId: randomUUID(),

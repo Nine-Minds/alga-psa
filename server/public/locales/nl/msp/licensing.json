@@ -480,6 +480,7 @@
       "clientUnavailable": "Deze klant is niet meer beschikbaar. Vernieuw de klantenlijst.",
       "invalidRequest": "Voer een werkruimtenaam, beheerdersgegevens, een escalatiebord en minstens één technicusplaats in.",
       "administratorEmailInUse": "Dit beheerders-e-mailadres hoort al bij een gebruiker in een andere werkruimte. Gebruik een ander e-mailadres.",
+      "administratorEmailPending": "Voor dit beheerdersadres staat al een uitnodiging voor een andere werkruimte open. Gebruik een ander e-mailadres of annuleer eerst die installatie.",
       "setupCancelling": "De vorige instelling voor deze klant wordt nog geannuleerd. Probeer het opnieuw zodra het opschonen is voltooid."
     },
     "policy": {

@@ -490,6 +490,7 @@
       "clientUnavailable": "Ten klient nie jest już dostępny. Odśwież listę klientów.",
       "invalidRequest": "Podaj nazwę obszaru, dane administratora, tablicę eskalacji i co najmniej jedno miejsce dla technika.",
       "administratorEmailInUse": "Ten adres e-mail administratora należy już do użytkownika w innym obszarze roboczym. Użyj innego adresu e-mail.",
+      "administratorEmailPending": "Ten adres e-mail administratora ma oczekujące zaproszenie do innego obszaru roboczego. Użyj innego adresu e-mail lub najpierw anuluj tamtą konfigurację.",
       "setupCancelling": "Poprzednia konfiguracja tego klienta jest jeszcze anulowana. Spróbuj ponownie po zakończeniu czyszczenia."
     },
     "policy": {

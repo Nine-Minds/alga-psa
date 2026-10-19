@@ -17,6 +17,8 @@ export function provisioningRejectionMessage(code: string, t: Translate): string
       return t('coManaged.provisioning.setupCancelling', { defaultValue: 'The previous setup for this client is still being cancelled. Try again once cleanup finishes.' });
     case 'ADMINISTRATOR_EMAIL_IN_USE':
       return t('coManaged.provisioning.administratorEmailInUse', { defaultValue: 'This administrator email already belongs to a user in another workspace. Use a different email address.' });
+    case 'ADMINISTRATOR_EMAIL_PENDING':
+      return t('coManaged.provisioning.administratorEmailPending', { defaultValue: 'This administrator email has a pending invitation to another workspace. Use a different email address, or cancel that setup first.' });
     case 'INVALID_REQUEST':
     case 'INVALID_RESERVATION':
       return t('coManaged.provisioning.invalidRequest', { defaultValue: 'Enter a workspace name, administrator details, an escalation board, and at least one technician seat.' });

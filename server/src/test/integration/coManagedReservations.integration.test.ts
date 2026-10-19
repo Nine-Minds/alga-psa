@@ -574,7 +574,7 @@ describe('co-managed provisioning request and worker lifecycle', () => {
     await sponsor.table('users').insert({ tenant: reservation.sponsorTenant, user_id: requestedBy, user_type: 'internal' });
     await sponsor.table('boards').insert({ tenant: reservation.sponsorTenant, board_id: escalationBoardId });
     return { ...reservation, requestedBy, escalationBoardId, workspaceName: 'Customer IT',
-      administrator: { firstName: 'Customer', lastName: 'Admin', email: 'customer@example.test' } };
+      administrator: { firstName: 'Customer', lastName: 'Admin', email: `customer-${randomUUID()}@example.test` } };
   }
 
   it('reserves the full immutable request and identities before any worker or login exists', async () => {
@@ -602,6 +602,36 @@ describe('co-managed provisioning request and worker lifecycle', () => {
     expect(await tenantDb(db, input.sponsorTenant).table('co_managed_provisioning_operations')).toHaveLength(0);
   });
 
+  it('refuses an administrator email with an unaccepted team invitation in another tenant', async () => {
+    const input = await requestFixture();
+    const elsewhere = randomUUID();
+    await db('tenants').insert({ tenant: elsewhere });
+    await tenantDb(db, elsewhere).table('user_invitations').insert({ tenant: elsewhere, invitation_id: randomUUID(),
+      email: input.administrator.email.toUpperCase(), expires_at: db.raw("now() + interval '1 day'") });
+    await expect(prepareCoManagedProvisioning(db, input)).rejects.toMatchObject({ code: 'ADMINISTRATOR_EMAIL_PENDING' });
+    expect(await tenantDb(db, input.sponsorTenant).table('co_managed_provisioning_operations')).toHaveLength(0);
+  });
+
+  it('refuses an administrator email that another live setup is inviting, until that setup is cancelled', async () => {
+    // Whichever invitee signs up first creates the account; the other workspace
+    // could then never be claimed and would hold its seats.
+    const first = await requestFixture();
+    const queued = await prepareCoManagedProvisioning(db, first);
+    const second = { ...(await requestFixture()), administrator: first.administrator };
+    await expect(prepareCoManagedProvisioning(db, second)).rejects.toMatchObject({ code: 'ADMINISTRATOR_EMAIL_PENDING' });
+    // An expired but unused invitation still belongs to a setup that can resend it.
+    await tenantDb(db, queued.customer_tenant).table('user_invitations').insert({ tenant: queued.customer_tenant,
+      invitation_id: queued.administrator_invitation_id, email: first.administrator.email, expires_at: db.raw("now() - interval '1 hour'") });
+    await tenantDb(db, first.sponsorTenant).table('co_managed_provisioning_operations')
+      .where('operation_id', queued.operation_id).update({ state: 'pending_acceptance' });
+    await expect(prepareCoManagedProvisioning(db, second)).rejects.toMatchObject({ code: 'ADMINISTRATOR_EMAIL_PENDING' });
+    // A cancelled setup's invitation is deleted by its cleanup; the email is free again.
+    await tenantDb(db, queued.customer_tenant).table('user_invitations').where('invitation_id', queued.administrator_invitation_id).delete();
+    await tenantDb(db, first.sponsorTenant).table('co_managed_provisioning_operations')
+      .where('operation_id', queued.operation_id).update({ state: 'cancelled' });
+    await expect(prepareCoManagedProvisioning(db, second)).resolves.toMatchObject({ state: 'queued' });
+  });
+
   it('allows an administrator email that only belongs to a client portal user', async () => {
     const fixture = await requestFixture();
     const input = { ...fixture, administrator: { ...fixture.administrator, email: `portal-${randomUUID()}@example.test` } };
@@ -626,7 +656,7 @@ describe('co-managed provisioning request and worker lifecycle', () => {
     const input = await requestFixture();
     const original = await prepareCoManagedProvisioning(db, input);
     expect(await prepareCoManagedProvisioning(db, { ...input, workspaceName: ' Customer IT ',
-      administrator: { ...input.administrator, email: ' Customer@Example.test ' } })).toEqual(original);
+      administrator: { ...input.administrator, email: ` ${input.administrator.email.toUpperCase()} ` } })).toEqual(original);
   });
 
   it('rolls back reservation and relationship when an actor or destination is foreign', async () => {

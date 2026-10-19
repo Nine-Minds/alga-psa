@@ -485,6 +485,7 @@
       "clientUnavailable": "Questo cliente non è più disponibile. Aggiorna l’elenco dei clienti.",
       "invalidRequest": "Inserisci il nome dello spazio, i dati dell’amministratore, una bacheca di escalation e almeno un posto tecnico.",
       "administratorEmailInUse": "Questa email dell’amministratore appartiene già a un utente di un altro spazio di lavoro. Usa un indirizzo email diverso.",
+      "administratorEmailPending": "Questa email dell'amministratore ha un invito in sospeso per un altro spazio di lavoro. Usa un altro indirizzo email oppure annulla prima quella configurazione.",
       "setupCancelling": "La configurazione precedente di questo cliente è ancora in fase di annullamento. Riprova al termine della pulizia."
     },
     "policy": {

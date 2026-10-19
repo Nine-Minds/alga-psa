@@ -9,6 +9,10 @@ describe('provisioningRejectionMessage', () => {
       .toBe('coManaged.provisioning.administratorEmailInUse|This administrator email already belongs to a user in another workspace. Use a different email address.');
   });
 
+  it('tells the MSP the administrator email is waiting on another invitation', () => {
+    expect(provisioningRejectionMessage('ADMINISTRATOR_EMAIL_PENDING', t)).toMatch(/^coManaged.provisioning.administratorEmailPending\|This administrator email has a pending invitation/);
+  });
+
   it('keeps unknown codes on the generic rejection', () => {
     expect(provisioningRejectionMessage('SOMETHING_ELSE', t)).toBe('coManaged.provisioning.rejected|');
   });
