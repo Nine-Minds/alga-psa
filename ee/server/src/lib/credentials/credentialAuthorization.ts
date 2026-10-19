@@ -127,7 +127,7 @@ export async function resolveCredentialAuthorizationSubjectForUser(
   return {
     tenant,
     userId,
-    userType: user.user_type === 'client' ? 'client' : 'internal',
+    userType: user.user_type === 'client' ? 'client' : user.user_type === 'service' ? 'service' : 'internal',
     roleIds,
     teamIds,
     managedUserIds: [],

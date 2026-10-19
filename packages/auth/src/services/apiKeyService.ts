@@ -1,6 +1,7 @@
 import { createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import crypto from 'crypto';
+import { isLicensedUserType } from '@alga-psa/types';
 
 interface ApiKey {
   api_key_id: string;
@@ -120,11 +121,16 @@ export class ApiKeyService {
     // a tenant API key. Client-portal identities are denied here even when a
     // caller bypasses the server-action guard. Internal mobile-session and
     // temporary AI keys are backed by internal users, so they continue to work.
+    //
+    // This stays internal-owner-only for EVERY purpose (mobile_session, mcp_user, general).
+    // It must never be widened to non-interactive (service) owners and never issues service
+    // keys: those are written directly by the EE issuer, not through this method. Widening
+    // it would also silently open mobile OTT exchange/refresh, which rely on this check.
     const owner = await tenantDb(knex, tenant)
       .table('users')
       .where({ user_id: userId })
       .first('is_inactive', 'user_type');
-    if (!owner || owner.is_inactive || owner.user_type !== 'internal') {
+    if (!owner || owner.is_inactive || !isLicensedUserType(owner.user_type)) {
       throw new Error(`Failed to create API key for user ${userId} in tenant ${tenant}`);
     }
 

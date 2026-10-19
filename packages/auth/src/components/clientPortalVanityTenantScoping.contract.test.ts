@@ -65,14 +65,14 @@ describe('Client portal vanity-domain tenant scoping contract', () => {
     expect(tenantRequiredBranch).not.toContain('captcha.refreshChallenge()');
   });
 
-  it('both credentials providers accept and forward the portalDomain hint', () => {
+  it('the credentials provider accepts and forwards the portalDomain hint', () => {
     const source = read('packages/auth/src/lib/nextAuthOptions.ts');
 
     const credentialDeclarations = source.split('portalDomain: { label: "Portal Domain", type: "text" },').length - 1;
     const forwardedHints = source.split('portalDomain: portalDomainHint,').length - 1;
 
-    expect(credentialDeclarations).toBe(2);
-    expect(forwardedHints).toBe(2);
+    expect(credentialDeclarations).toBe(1);
+    expect(forwardedHints).toBe(1);
   });
 
   it('TENANT_REQUIRED is a CredentialsSignin code alongside the other login gates', () => {

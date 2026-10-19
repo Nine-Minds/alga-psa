@@ -1,4 +1,5 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { isInteractiveUserType } from '@alga-psa/types';
 import { checkPasswordResetLimit, formatRateLimitError } from '../lib/security/rateLimiting';
 import crypto from 'crypto';
 import { Knex } from 'knex';
@@ -67,6 +68,11 @@ export class PasswordResetService {
     userId?: string;
     error?: string;
   }> {
+    // Recovery only ever applies to interactive users; a non-interactive target never gets a token.
+    if (!isInteractiveUserType(userType)) {
+      return { success: false, error: 'Password reset is not available for this account type' };
+    }
+
     try {
       // Check rate limit
       const rateLimitResult = await checkPasswordResetLimit(email);
@@ -90,7 +96,7 @@ export class PasswordResetService {
         })
         .first();
 
-      if (!user) {
+      if (!user || !isInteractiveUserType(user.user_type)) {
         // Don't reveal if user exists or not for security
         return { success: true, tokenId: 'dummy', token: 'dummy', userId: 'dummy' };
       }
@@ -249,6 +255,15 @@ export class PasswordResetService {
           return { 
             valid: false, 
             error: 'Invalid or expired reset token' 
+          };
+        }
+
+        // A token never authorises a password write on a non-interactive user, whatever
+        // was stored on the token row.
+        if (!isInteractiveUserType(resetToken.user_type)) {
+          return {
+            valid: false,
+            error: 'Invalid or expired reset token'
           };
         }
 

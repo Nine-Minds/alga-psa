@@ -67,7 +67,7 @@
   {
     "id": "T007",
     "description": "Unit: user-type predicates truth table for internal/client/service/unknown",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
@@ -75,7 +75,7 @@
   {
     "id": "T008",
     "description": "Integration: authenticateUser rejects a service user even after its hashed_password is set to a real valid hash (proves the gate is not the locked password); omitted userType is rejected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
@@ -83,7 +83,7 @@
   {
     "id": "T009",
     "description": "Integration: signIn callback returns false for a service user on credentials and an OAuth provider, and no sessions row, last_login update or login-success record is written",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
@@ -91,7 +91,7 @@
   {
     "id": "T010",
     "description": "Unit: checkTrackedSession, requireLiveSession and sessionAuthMiddleware reject a token whose stored user type is service; Next middleware sends it to sign-in",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037",
       "F013",
@@ -101,7 +101,7 @@
   {
     "id": "T011",
     "description": "Integration: mobile \u2014 issueMobileOtt/exchange/refresh, Apple sign-in via a linked identity, and IAP restore all refuse a service user (and an inactive internal user)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038",
       "F039",
@@ -120,7 +120,7 @@
   {
     "id": "T013",
     "description": "Integration: adminChangeUserPassword, createResetToken, completePasswordReset and setNewPassword refuse a non-interactive target; deleteUser/invite/reactivate actions refuse it too",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042",
       "F083"
@@ -202,7 +202,7 @@
   {
     "id": "T021",
     "description": "DB integration: project task create/update with assigned_to or task resource = service user is rejected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
@@ -210,7 +210,7 @@
   {
     "id": "T022",
     "description": "DB integration: a legacy ticket whose assigned_to is a migrated (now service) agent user can still have its status changed; changing assigned_to to that user is rejected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]
@@ -247,7 +247,7 @@
   {
     "id": "T026",
     "description": "DB integration: getAllUsers/getAllUsersBasic and UserService list exclude service users by default and include them with includeServicePrincipals; Settings \u2192 Users MSP tab data excludes them",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F019",
@@ -267,7 +267,7 @@
   {
     "id": "T028",
     "description": "Unit: comment author resolution and authorization-subject normalizers return service for a service user (never client/contact or internal)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F016",
@@ -277,7 +277,7 @@
   {
     "id": "T029",
     "description": "Unit (static guard): no non-test source contains a raw `user_type !== 'client'` or `=== 'client' ? 'client' : 'internal'` pattern outside packages/types predicates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",
@@ -397,7 +397,7 @@
   {
     "id": "T042",
     "description": "DB integration (CE rule): a ticket comment by a non-interactive author with no visibility is stored internal; explicit is_internal=false throws HumanWorkOwnerRequiredError('is_internal') and stores nothing; client-portal and inbound-email comments unaffected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101",
       "F016"
@@ -406,7 +406,7 @@
   {
     "id": "T043",
     "description": "DB integration (CE guard): assertHumanWorkAssignee rejects a non-interactive id as ticket assignee, ticket resource, schedule assignee, time-entry owner, time-sheet approver and interaction owner; writes that default the owner to a non-internal caller throw HumanWorkOwnerRequiredError; internal ids pass",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052",
       "F053",

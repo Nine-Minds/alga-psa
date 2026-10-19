@@ -7,6 +7,7 @@ import type {
   IUserWithRoles,
   IRoleWithPermissions,
 } from '@alga-psa/types';
+import { INTERACTIVE_USER_TYPES } from '@alga-psa/types';
 import { getAdminConnection } from '../lib/admin';
 import { tenantDb } from '../lib/tenantDb';
 import { requireTenantId } from '../lib/tenantId';
@@ -70,10 +71,18 @@ export function groupRolePermissionRows(rows: RoleWithPermissionRow[]): IRoleWit
 }
 
 const User = {
-  getAll: async (knexOrTrx: Knex | Knex.Transaction, includeInactive = false): Promise<IUser[]> => {
+  getAll: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    includeInactive = false,
+    options: { includeNonInteractive?: boolean } = {}
+  ): Promise<IUser[]> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
       let query = tenantDb(knexOrTrx, tenant).table<IUser>('users').select('*');
+      // Non-interactive principals (e.g. service) are never part of the default user list.
+      if (!options.includeNonInteractive) {
+        query = query.whereIn('user_type', [...INTERACTIVE_USER_TYPES]);
+      }
       if (!includeInactive) {
         query = query.andWhere('is_inactive', false);
       }

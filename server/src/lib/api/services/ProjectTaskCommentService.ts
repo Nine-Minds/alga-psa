@@ -25,9 +25,10 @@ import { ForbiddenError, NotFoundError, ValidationError } from '../middleware/ap
 import type { ProjectTaskCommentReactionResponse, ProjectTaskCommentResponse } from '../schemas/projectTaskComment';
 
 function actorFrom(context: ServiceContext): TaskCommentActor {
-  const user = context.user as { user_id?: string; user_type?: 'internal' | 'client' } | undefined;
+  const user = context.user as { user_id?: string; user_type?: 'internal' | 'client' | 'service' } | undefined;
   return {
     user_id: user?.user_id ?? context.userId,
+    // Only a missing (legacy) type defaults to internal; 'service' is preserved.
     user_type: user?.user_type ?? 'internal',
   };
 }

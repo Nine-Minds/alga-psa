@@ -1,6 +1,7 @@
 'use server';
 
 import { IUser } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import { getConnection, withTransaction, tenantDb } from '@alga-psa/db';
@@ -46,7 +47,7 @@ export const getClientKBArticles = withAuth(
   ): Promise<PaginatedClientKBArticles | ClientPortalActionError> => {
     try {
       // Enforce client portal access only
-      if (user.user_type !== 'client') {
+      if (!isClientUserType(user.user_type)) {
         throw new Error('Access denied: Client portal actions are restricted to client users');
       }
 
@@ -163,7 +164,7 @@ export const getClientKBArticle = withAuth(
   ): Promise<IKBArticleWithDocument | null | ClientPortalActionError> => {
     try {
       // Enforce client portal access only
-      if (user.user_type !== 'client') {
+      if (!isClientUserType(user.user_type)) {
         throw new Error('Access denied: Client portal actions are restricted to client users');
       }
 
@@ -257,7 +258,7 @@ export const recordClientKBFeedback = withAuth(
   ): Promise<boolean | ClientPortalActionError> => {
     try {
       // Enforce client portal access only
-      if (user.user_type !== 'client') {
+      if (!isClientUserType(user.user_type)) {
         throw new Error('Access denied: Client portal actions are restricted to client users');
       }
 
@@ -305,7 +306,7 @@ export const getClientKBCategories = withAuth(
   ): Promise<ClientKBCategory[] | ClientPortalActionError> => {
     try {
       // Enforce client portal access only
-      if (user.user_type !== 'client') {
+      if (!isClientUserType(user.user_type)) {
         throw new Error('Access denied: Client portal actions are restricted to client users');
       }
 
@@ -352,7 +353,7 @@ export const getClientKBTags = withAuth(
     { tenant }
   ): Promise<Array<{ tag_id: string; tag_text: string; tagged_id: string; tagged_type: string; background_color: string | null; text_color: string | null }> | ClientPortalActionError> => {
     try {
-      if (user.user_type !== 'client') {
+      if (!isClientUserType(user.user_type)) {
         throw new Error('Access denied: Client portal actions are restricted to client users');
       }
 

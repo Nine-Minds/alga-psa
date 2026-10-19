@@ -18,6 +18,8 @@ vi.mock('@alga-psa/auth', async (importOriginal) => {
   const mod = await importOriginal<typeof import('@alga-psa/auth')>();
   return {
     ...mod,
+    // The mobile gate re-reads the user from the DB; these tests exercise OTT/refresh mechanics only.
+    assertActiveInternalUser: vi.fn(async () => true),
     // ApiKeyService is a class: spreading it copies no statics, so every
     // method the service calls must be listed here explicitly.
     ApiKeyService: {
@@ -37,7 +39,7 @@ import {
   issueMobileOtt,
   refreshMobileSession,
 } from 'server/src/lib/mobileAuth/mobileAuthService';
-import { ApiKeyService } from '@alga-psa/auth';
+import { ApiKeyService, assertActiveInternalUser } from '@alga-psa/auth';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 
 vi.mock('server/src/lib/logging/auditLog', () => ({
@@ -228,6 +230,9 @@ describe('mobile auth (OTT + refresh rotation)', () => {
       expires_at: new Date(Date.now() + 60_000),
     });
 
+    // Call history otherwise leaks between shuffled tests (restoreAllMocks keeps vi.fn() history).
+    vi.mocked(ApiKeyService.createApiKey).mockClear();
+
     vi.spyOn(ApiKeyService, 'createApiKey').mockImplementation(async (_userId, _desc, _expires, opts) => {
       const id = crypto.randomUUID();
       return {
@@ -409,5 +414,40 @@ describe('mobile auth (OTT + refresh rotation)', () => {
     expect(ApiKeyService.deactivateApiKey).not.toHaveBeenCalled();
 
     await expect(refreshMobileSession({ refreshToken })).rejects.toThrow(/refresh token/i);
+  });
+
+  // T011: the gate is mocked "allow" above; here it denies, as it does for a service user
+  // or a deactivated internal user (both read false from assertActiveInternalUser).
+  describe('T011: non-interactive / inactive users get no mobile credentials', () => {
+    it('issueMobileOtt refuses and writes no OTT row', async () => {
+      vi.mocked(assertActiveInternalUser).mockResolvedValueOnce(false);
+      await expect(
+        issueMobileOtt({ tenantId: 'tenant-1', userId: 'svc-1', sessionId: 'session-1', state: 's' }),
+      ).rejects.toMatchObject({ statusCode: 403 });
+      expect(assertActiveInternalUser).toHaveBeenCalledWith('svc-1', 'tenant-1');
+      expect(state.mobile_auth_otts).toHaveLength(0);
+    });
+
+    it('exchangeOttForSession refuses an OTT whose user became non-interactive/inactive and mints no key', async () => {
+      const { ott } = await issueMobileOtt({ tenantId: 'tenant-1', userId: 'user-1', sessionId: 'session-1', state: 'st' });
+      vi.mocked(assertActiveInternalUser).mockResolvedValueOnce(false);
+      await expect(
+        exchangeOttForSession({ ott, state: 'st', device: { deviceId: 'd' } }),
+      ).rejects.toMatchObject({ statusCode: 403 });
+      expect(ApiKeyService.createApiKey).not.toHaveBeenCalled();
+      expect(state.mobile_refresh_tokens).toHaveLength(0);
+    });
+
+    it('refreshMobileSession refuses and rotates nothing', async () => {
+      state.mobile_refresh_tokens.push({
+        mobile_refresh_token_id: 'rt-x', tenant: 'tenant-1', user_id: 'user-1', api_key_id: null,
+        token_hash: sha256('rt-secret'), created_at: new Date(), expires_at: new Date(Date.now() + 60_000),
+        revoked_at: null, replaced_by_id: null, last_used_at: null, device_id: null, device: null,
+      });
+      vi.mocked(assertActiveInternalUser).mockResolvedValueOnce(false);
+      await expect(refreshMobileSession({ refreshToken: 'rt-secret' })).rejects.toMatchObject({ statusCode: 403 });
+      expect(ApiKeyService.createApiKey).not.toHaveBeenCalled();
+      expect(state.mobile_refresh_tokens).toHaveLength(1);
+    });
   });
 });

@@ -45,3 +45,24 @@ export function isInteractiveUserType(userType: MaybeUserType): userType is Inte
 export function isLicensedUserType(userType: MaybeUserType): userType is 'internal' {
   return userType === 'internal';
 }
+
+export type RoleAssignmentViolation = 'portal_role_on_msp_user' | 'msp_role_on_portal_user';
+
+/**
+ * Decide whether a role may be assigned to a user of the given type.
+ * MSP principals (internal | service) hold only MSP roles (role.msp);
+ * client users hold only client roles (role.client). Any other type is
+ * rejected for both role kinds (fail closed).
+ */
+export function getRoleAssignmentViolation(
+  userType: string | null | undefined,
+  role: { msp?: boolean | null; client?: boolean | null },
+): RoleAssignmentViolation | null {
+  if (isMspPrincipalUserType(userType)) {
+    return role.msp ? null : 'portal_role_on_msp_user';
+  }
+  if (isClientUserType(userType)) {
+    return role.client ? null : 'msp_role_on_portal_user';
+  }
+  return 'msp_role_on_portal_user';
+}

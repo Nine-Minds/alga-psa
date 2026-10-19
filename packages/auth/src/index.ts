@@ -17,6 +17,7 @@ export {
   clearCachedSecret
 } from './lib/session';
 export { getSession, getSessionWithRevocationCheck } from './lib/getSession';
+export { assertInteractiveUser, assertActiveInternalUser } from './lib/assertInteractiveUser';
 
 // Type exports
 export type { PortalSessionTokenPayload } from './lib/session';

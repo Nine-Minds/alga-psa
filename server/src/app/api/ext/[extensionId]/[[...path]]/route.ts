@@ -12,6 +12,7 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { createTenantKnex } from 'server/src/lib/db';
 import { assertSessionProductAccess } from '@/lib/api/standaloneProductGuards';
 import { tenantDb } from '@alga-psa/db';
+import { isClientUserType } from '@alga-psa/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -265,7 +266,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       console.error('[api/ext] failed to get user info', { error: userInfoError, elapsed: Date.now() - start });
     }
     if (access.principal.kind === 'client') {
-      if (!userInfo || userInfo.user_type !== 'client') {
+      if (!userInfo || !isClientUserType(userInfo.user_type)) {
         return applyCorsHeaders(
           NextResponse.json({ error: 'forbidden' }, { status: 403 }),
           corsOrigin

@@ -1,4 +1,5 @@
 import type { IComment } from '@alga-psa/types';
+import { isClientUserType, isInteractiveUserType } from '@alga-psa/types';
 
 export interface CommentUserAuthor {
   user_id: string;
@@ -18,12 +19,14 @@ export interface CommentContactAuthor {
 
 export interface ResolvedCommentAuthor {
   source: 'user' | 'contact' | 'system' | 'unknown';
+  /** Author kind: 'service' is a named non-human (non-interactive) user, never a client/contact. */
+  authorKind?: 'internal' | 'client' | 'service';
   displayName: string;
   email?: string;
   userId?: string;
   contactId?: string;
   userType?: string;
-  avatarKind: 'user' | 'contact' | 'system' | 'unknown';
+  avatarKind: 'user' | 'contact' | 'service' | 'system' | 'unknown';
   avatarUrl: string | null;
 }
 
@@ -58,7 +61,10 @@ export function resolveCommentAuthor(
         email: user.email,
         userId: user.user_id,
         userType: user.user_type,
-        avatarKind: user.user_type === 'internal' ? 'user' : 'contact',
+        authorKind: isInteractiveUserType(user.user_type)
+          ? (isClientUserType(user.user_type) ? 'client' : 'internal')
+          : 'service',
+        avatarKind: user.user_type === 'internal' ? 'user' : isInteractiveUserType(user.user_type) ? 'contact' : 'service',
         avatarUrl: user.avatarUrl,
       };
     }

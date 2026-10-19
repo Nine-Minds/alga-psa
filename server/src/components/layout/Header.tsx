@@ -30,7 +30,7 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { NotificationBell } from '@alga-psa/notifications/components/NotificationBell';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { IUserWithRoles } from '@alga-psa/types';
+import { isLicensedUserType, type IUserWithRoles } from '@alga-psa/types';
 import { menuItems, bottomMenuItems, settingsNavigationSections, MenuItem } from '@/config/menuConfig';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { useUserAvatar, useContactAvatar } from '@alga-psa/user-composition/hooks';
@@ -478,8 +478,8 @@ export default function Header({
 
   // Use SWR hooks for avatar - only one will be active based on user type
   const { avatarUrl: userAvatarUrl } = useUserAvatar(
-    userData?.user_type !== 'client' ? userData?.user_id : undefined,
-    userData?.user_type !== 'client' ? userData?.tenant : undefined
+    isLicensedUserType(userData?.user_type) ? userData?.user_id : undefined,
+    isLicensedUserType(userData?.user_type) ? userData?.tenant : undefined
   );
   const { avatarUrl: contactAvatarUrl } = useContactAvatar(
     userData?.user_type === 'client' ? userData?.contact_id ?? undefined : undefined,

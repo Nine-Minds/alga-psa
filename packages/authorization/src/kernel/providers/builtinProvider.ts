@@ -1,3 +1,4 @@
+import { isClientUserType } from '@alga-psa/types';
 import type {
   AuthorizationEvaluationInput,
   BuiltinAuthorizationProvider,
@@ -24,7 +25,7 @@ export type BuiltinRelationshipRulesResolver = (
 export function resolveDefaultBuiltinRelationshipRules(
   input: AuthorizationEvaluationInput
 ): RelationshipRule[] {
-  if (input.subject.userType === 'client') {
+  if (isClientUserType(input.subject.userType)) {
     return [{ template: 'same_client' }];
   }
   return [];
@@ -106,7 +107,7 @@ export class BuiltinAuthorizationKernelProvider implements BuiltinAuthorizationP
       // Scope-only evaluation. A client subject with the same_client rule must
       // never produce an unconstrained allow: constrain to the subject's client
       // when known, deny when it is missing.
-      if (this.sameClientRuleActive(rules) && input.subject.userType === 'client') {
+      if (this.sameClientRuleActive(rules) && isClientUserType(input.subject.userType)) {
         if (input.subject.clientId) {
           return {
             allowed: true,

@@ -9,6 +9,7 @@ import type {
   ITicketLinkedTask,
 } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { billableTicketProjectsQuery } from '@alga-psa/shared/billingClients/ticketProjectAttribution';
 import ProjectModel from './project';
 
@@ -48,6 +49,9 @@ const ProjectTaskModel = {
         orderKey = generateKeyBetween(lastTask?.order_key || null, null);
       }
   
+      // Human-work guard: a task's assignee must be an active internal user.
+      await assertHumanWorkAssignee(knexOrTrx, tenant, [taskData.assigned_to]);
+
       const [newTask] = await tenantScopedTable<IProjectTask>(knexOrTrx, 'project_tasks', tenant)
         .insert({
           ...taskData,
@@ -145,6 +149,17 @@ const ProjectTaskModel = {
               finalTaskData[typedKey] = (value === '' || value === undefined) ? null : value as string | null;
               break;
           }
+        }
+      }
+
+      // Human-work guard: validate assigned_to only when this write changes it, so legacy
+      // references (e.g. a former agent user) never block unrelated edits.
+      if (finalTaskData.assigned_to) {
+        const current = await tenantScopedTable(knexOrTrx, 'project_tasks', tenant)
+          .where('task_id', taskId)
+          .first('assigned_to');
+        if (finalTaskData.assigned_to !== current?.assigned_to) {
+          await assertHumanWorkAssignee(knexOrTrx, tenant, [finalTaskData.assigned_to]);
         }
       }
 
@@ -469,6 +484,9 @@ const ProjectTaskModel = {
       if (existingResource) {
         throw new Error(`Resource already exists for user ${userId}`);
       }
+
+      // Human-work guard: the added resource (and a promoted-to-primary assignee) is this user.
+      await assertHumanWorkAssignee(knexOrTrx, tenant, [userId]);
 
       // assigned_to is guaranteed non-null: either the task already has one,
       // or we fall back to the additional user being added.

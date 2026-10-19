@@ -212,9 +212,15 @@ export default function AdminSessionManagement() {
 
   const getUserTypeBadge = (userType: string) => {
     const isInternal = userType === 'internal';
+    // Only internal and client users hold sessions; any other type is shown as-is rather than mislabelled.
+    const label = isInternal
+      ? t('security.sessions.userTypes.internal')
+      : userType === 'client'
+        ? t('security.sessions.userTypes.client')
+        : userType;
     return (
       <Badge variant={isInternal ? 'default' : 'secondary'} className="text-xs">
-        {isInternal ? t('security.sessions.userTypes.internal') : t('security.sessions.userTypes.client')}
+        {label}
       </Badge>
     );
   };

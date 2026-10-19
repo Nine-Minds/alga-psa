@@ -376,3 +376,19 @@ None remain. All were resolved on 2026-10-18; the table at the end of the PRD li
   - F089, OpenAPI docs and registry regen
   - F091, i18n strings
 - T029 is a deliberate static guard against new raw `!== 'client'` checks. It complements the behavioural tests and does not replace them.
+
+## Card A/4 implementation notes (CE hardening + user_type audit)
+
+- Inventory sites converted; final raw-check grep found 72 sites vs 66 inventoried (extras converted too). Guarded by `server/src/test/unit/userTypeRawChecks.static.test.ts` (T029).
+- PRD R5.7 corrected: `comment_author_type` is `internal|client|unknown`; service authors store `internal`. Display uses `authorKind: service`.
+- T026 option name is `includeNonInteractive` (test text says `includeServicePrincipals`).
+- `=== 'internal'` classification: human-only / server-action-only sites kept; MSP-scope sites use `isMspPrincipalUserType` (MSP-positive, unknown denied). Not classified: `responseState.ts:70`, `commentActions.ts:336`.
+- Human-work guard (`shared/lib/humanWork/assertHumanWorkAssignee.ts`) is NOT yet on: client-portal and scheduling appointment-request inserts, workflow runtime inserts (scheduling/projects/timeDomain), direct `time_sheets` inserts, bundle propagation of `assigned_to`. Follow-up.
+- Possible latent defect (not fixed): `TimeSheetService.approveTimeSheet` (~505) writes `time_entries.approved_at/approved_by`, which do not exist.
+- `createInteractionRecord` treats owner==caller as defaulted. Duplicating a project task with a legacy service resource now fails.
+- `packages/product-ext-proxy` imports `@alga-psa/types` without declaring the dependency.
+- `clientUserActions.ts` has if-client / else-if-internal chains (service falls through; reviewed, no default branch hit).
+- F044 removed duplicate `options`/`validateUser` block in `nextAuthOptions.ts` (only consumer: two tests in `sessionExpiry.test.ts`, removed).
+- F043 applied to EE `ssoPreferences.ts` (file named in brief did not exist).
+- No REST seat check on client->internal change in `UserService.update` (pre-existing gap).
+- Pre-existing failures: ~10 shared workflow `*.db.test.ts` fail with "Attempting to use production database (server)" identically on the foundation commit.

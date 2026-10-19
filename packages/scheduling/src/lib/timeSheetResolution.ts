@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { tenantDb } from '@alga-psa/db';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
 import { TimePeriod } from '../models/timePeriod';
@@ -34,6 +35,8 @@ export async function findOrCreateTimeSheetRow(
     .first();
 
   if (!timeSheet) {
+    // Human-work guard: a new time sheet's owner must be a licensed user.
+    await assertHumanWorkOwner(conn, tenant, userId, 'user_id');
     [timeSheet] = await facade.table('time_sheets')
       .insert({
         user_id: userId,

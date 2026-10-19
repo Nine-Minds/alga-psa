@@ -1075,7 +1075,7 @@ async function resolveActorAuthorizationSubject(tx: TenantTxContext): Promise<Au
     : [];
 
   const clientId = parseNullableUuid(actor?.client_id ?? actor?.clientId);
-  const userType = actor?.user_type === 'internal' || actor?.user_type === 'client' ? actor.user_type : 'internal';
+  const userType = actor?.user_type === 'internal' || actor?.user_type === 'client' || actor?.user_type === 'service' ? actor.user_type : 'internal';
   return {
     tenant: tx.tenantId,
     userId: tx.actorUserId,

@@ -1,3 +1,4 @@
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { IDocument, IUser } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
@@ -111,7 +112,7 @@ function applyDocumentRedactions<T extends object>(document: T, redactedFields: 
 }
 
 function getDocumentBuiltinRelationshipRules(user: IUser): RelationshipRule[] {
-  if (user.user_type !== 'client') {
+  if (isMspPrincipalUserType(user.user_type)) {
     return [];
   }
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { IUser, ITeam } from '@alga-psa/types';
+import { IUser, ITeam, isInteractiveUserType } from '@alga-psa/types';
 import { ChevronDown, Search } from 'lucide-react';
 import UserAvatar from './UserAvatar';
 import TeamAvatar from './TeamAvatar';
@@ -129,7 +129,7 @@ const UserAndTeamPicker = ({
     teamAvatarUrls[teamId] ?? initialTeamAvatarUrls?.[teamId] ?? null;
 
   const applyUserTypeFilter = (user: IUser) => {
-    if (userTypeFilter === null) return true;
+    if (userTypeFilter === null) return isInteractiveUserType(user.user_type); // all interactive types only
     if (Array.isArray(userTypeFilter)) return userTypeFilter.includes(user.user_type);
     return user.user_type === userTypeFilter;
   };

@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "EE migration replaces users_user_type_check so users.user_type accepts 'internal' | 'client' | 'service' (DROP CONSTRAINT, ADD \u2026 NOT VALID, VALIDATE; Citus-safe); CE constraint unchanged",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.1",
       "R9.1"
@@ -64,7 +64,7 @@
   {
     "id": "F008",
     "description": "Shared TypeScript/Zod user-type unions in packages/types widened to include 'service' (vocabulary only; no CE code produces it); login/SSO/portal types stay internal|client",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.2"
     ]
@@ -72,7 +72,7 @@
   {
     "id": "F009",
     "description": "Stale API userTypeSchema (admin/contractor) corrected to internal|client|service; user create/update schemas accept only internal|client",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ]
@@ -80,7 +80,7 @@
   {
     "id": "F010",
     "description": "packages/types exports isClientUserType, isMspPrincipalUserType, isInteractiveUserType, isLicensedUserType and INTERACTIVE_USER_TYPES",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.1"
     ]
@@ -88,7 +88,7 @@
   {
     "id": "F011",
     "description": "Portal 'require client' guards (~45 `!== 'client'` sites in client-portal actions/routes, extension proxies) converted to isClientUserType; service users are denied",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.2"
     ]
@@ -96,7 +96,7 @@
   {
     "id": "F012",
     "description": "MSP-data-scope sites converted to isMspPrincipalUserType (clients/projects/tickets list-search predicates, ticket/record visibility, ticketRecordAuthorization, commentActions client guard, documentAuthorization, invoiceQueries, TicketService.ts:396, policyActions.ts:146, userActions assertPortalUserManagementScope, quote sole-approver)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.2"
     ]
@@ -104,7 +104,7 @@
   {
     "id": "F013",
     "description": "Session/UI sites converted to isInteractiveUserType (getSession, checkTrackedSession, express authMiddleware, middleware.ts portal routing, signin page, Header avatar)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.2",
       "R3.3"
@@ -113,7 +113,7 @@
   {
     "id": "F014",
     "description": "addUser seat check (userActions.ts:557) keyed on isLicensedUserType",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.2"
     ]
@@ -121,7 +121,7 @@
   {
     "id": "F015",
     "description": "Authorization-subject normalizers map 'service' explicitly (authorizationKernel.ts:78, credentialAuthorization.ts:130, workflow crm.ts:969, projects.ts:1078)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.3"
     ]
@@ -129,7 +129,7 @@
   {
     "id": "F016",
     "description": "CE comment author resolution (comment.ts:99,235, commentActions.ts:536, commentAuthorResolution.ts:61, optimizedTicketActions.ts:3450) treats a non-interactive author as a named non-human user, never client/contact; EE ServiceAuthorBadge slot adds the Service badge/avatar",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.3",
       "R5.7"
@@ -138,7 +138,7 @@
   {
     "id": "F017",
     "description": "Activity actor kind, mention-recipient kind and `|| 'internal'` defaults (latestActivityActor.ts, internalNotificationSubscriber, UserService, userActions, sessionActions) handle non-interactive types explicitly",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.3"
     ]
@@ -146,7 +146,7 @@
   {
     "id": "F018",
     "description": "User.getAll / getAllUsers / getAllUsersBasic return only interactive user types unless includeNonInteractive: true; userTypeFilter={null} pickers follow the same default",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.4"
     ]
@@ -154,7 +154,7 @@
   {
     "id": "F019",
     "description": "UserService list, search and user_type stats return only interactive user types by default",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.4"
     ]
@@ -162,7 +162,7 @@
   {
     "id": "F020",
     "description": "REST-reachable 'must be internal' checks that mean 'MSP-side caller' accept MSP principals (TicketService.ts:2785, taskCommentService.ts:83,172, ApiTimeSheetController, ApiTicketController, documents routes); human-meaning checks stay internal; classification recorded in SCRATCHPAD",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.5"
     ]
@@ -170,7 +170,7 @@
   {
     "id": "F021",
     "description": "Role assignment (policyActions.ts:453/457, roleActions.ts:106/110) lets an MSP principal type hold MSP roles and rejects client roles",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.6"
     ]
@@ -178,7 +178,7 @@
   {
     "id": "F022",
     "description": "RBAC resolution (three rbac.ts copies, search/acl.ts, tags/permissions.ts, user-composition/permissions.ts, kernel builtinProvider) uses isMspPrincipalUserType explicitly",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2.7"
     ]
@@ -287,7 +287,7 @@
   {
     "id": "F035",
     "description": "authenticateUser rejects non-interactive user types and requires an explicit userType (untyped User.findUserByEmail fallback removed)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3.1"
     ]
@@ -295,7 +295,7 @@
   {
     "id": "F036",
     "description": "NextAuth signIn callback calls assertInteractiveUser(userId, tenant) for every provider and returns false before recordLoginSuccess, enforceMaxSessions, updateLastLogin or session-row creation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3.2"
     ]
@@ -303,7 +303,7 @@
   {
     "id": "F037",
     "description": "checkTrackedSession, requireLiveSession and sessionAuthMiddleware share INTERACTIVE_USER_TYPES",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3.3"
     ]
@@ -311,7 +311,7 @@
   {
     "id": "F038",
     "description": "Mobile handoff, issueMobileOtt, exchangeOttForSession and refreshMobileSession require an active internal user",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3.4"
     ]
@@ -319,7 +319,7 @@
   {
     "id": "F039",
     "description": "Apple sign-in via an already-linked apple_user_identities row checks the user is active and internal",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3.4"
     ]
@@ -327,7 +327,7 @@
   {
     "id": "F040",
     "description": "IAP restore/provision bind only to an active internal user",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3.4"
     ]
@@ -335,7 +335,7 @@
   {
     "id": "F041",
     "description": "ApiKeyService.createApiKey stays internal-owner-only for every purpose (mobile_session, mcp_user, general); it never issues service keys",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3.5"
     ]
@@ -343,7 +343,7 @@
   {
     "id": "F042",
     "description": "Password writes refuse non-interactive targets: adminChangeUserPassword, UserService password change, PasswordResetService.createResetToken, completePasswordReset, setNewPassword (untyped fallback removed)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3.6"
     ]
@@ -351,7 +351,7 @@
   {
     "id": "F043",
     "description": "ssoPreferences.ts untyped findUserByEmail lookup replaced with a typed internal lookup",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3.7"
     ]
@@ -359,7 +359,7 @@
   {
     "id": "F044",
     "description": "Unused duplicate `export const options` / validateUser block in nextAuthOptions.ts removed after confirming no importers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3.8"
     ]
@@ -367,7 +367,7 @@
   {
     "id": "F045",
     "description": "Next middleware and msp/layout redirect a session with a non-interactive user type to sign-in rather than the client portal",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3.9"
     ]
@@ -423,7 +423,7 @@
   {
     "id": "F052",
     "description": "assertHumanWorkAssignee(trx, tenant, userIds) guard rejects any non-active-internal id with HUMAN_WORK_ASSIGNEE_INVALID",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.3"
     ]
@@ -431,7 +431,7 @@
   {
     "id": "F053",
     "description": "Ticket assigned_to (create/update), addTicketResourceCore and assignTeamToTicketCore call the human-work guard",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.3"
     ]
@@ -439,7 +439,7 @@
   {
     "id": "F054",
     "description": "ScheduleEntry.create / updateAssignees call the human-work guard",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.3"
     ]
@@ -447,7 +447,7 @@
   {
     "id": "F055",
     "description": "Time-entry owner uses effectiveUserId; a non-internal effective user throws HumanWorkOwnerRequiredError, which EE maps to 422 ACT_AS_REQUIRED",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.3",
       "R5.4"
@@ -456,7 +456,7 @@
   {
     "id": "F056",
     "description": "Time-sheet owner and approve (approved_by) use effectiveUserId and the human-work guard; a bare service principal gets ACT_AS_REQUIRED",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.3",
       "R5.4"
@@ -465,7 +465,7 @@
   {
     "id": "F057",
     "description": "Time-entry approval requires a human approver (ACT_AS_REQUIRED for a bare service principal)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.3",
       "R5.4"
@@ -474,7 +474,7 @@
   {
     "id": "F058",
     "description": "Project task assigned_to and task_resources call the human-work guard",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.3"
     ]
@@ -482,7 +482,7 @@
   {
     "id": "F059",
     "description": "Interaction owner uses effectiveUserId and the human-work guard",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.3",
       "R5.4"
@@ -491,7 +491,7 @@
   {
     "id": "F060",
     "description": "resolveScheduleAssignees never defaults the assignee to a non-internal caller; with no assignees the write throws HumanWorkOwnerRequiredError (EE: ACT_AS_REQUIRED)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.4"
     ]
@@ -499,7 +499,7 @@
   {
     "id": "F061",
     "description": "Human-work guard validates only fields the write sets or changes; legacy references to former agent users don't block unrelated edits",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.3",
       "R9.4"
@@ -672,7 +672,7 @@
   {
     "id": "F082",
     "description": "Settings \u2192 Users MSP tab filters with isLicensedUserType; user detail loader rejects non-interactive ids",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8.4"
     ]
@@ -680,7 +680,7 @@
   {
     "id": "F083",
     "description": "User server actions (adminChangeUserPassword, deleteUser, invite, reactivate) refuse non-interactive targets",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8.4"
     ]
@@ -696,7 +696,7 @@
   {
     "id": "F085",
     "description": "user_type is immutable through REST UserService.update and user actions except existing internal\u2194client changes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8.5"
     ]
@@ -704,7 +704,7 @@
   {
     "id": "F086",
     "description": "REST UserService.create accepts only internal|client and runs checkInternalUserLicenseLimit for internal",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8.6"
     ]
@@ -831,7 +831,7 @@
   {
     "id": "F101",
     "description": "Ticket-comment write core forces non-interactive authors to internal comments: unspecified visibility defaults to internal; explicit is_internal=false throws HumanWorkOwnerRequiredError('is_internal') (EE: 422 ACT_AS_REQUIRED); under act-as the human authors and public is allowed with created_via_principal_id stamped",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.9"
     ]

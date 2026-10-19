@@ -12,6 +12,7 @@ import type {
   IProjectBillingScheduleEntry,
   IUserWithRoles,
 } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ClientBillingActionError } from './client-billing';
 import { hasClientBillingReadPermission } from './clientBillingPermissions';
@@ -67,7 +68,7 @@ export const getClientProjectBillingSummary = withAuth(async (
   { tenant }: AuthContext,
   projectId: string,
 ): Promise<ClientProjectBillingSummary | null | ClientBillingActionError> => {
-  if (user.user_type !== 'client' || !user.contact_id) return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
+  if (!isClientUserType(user.user_type) || !user.contact_id) return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
 
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);

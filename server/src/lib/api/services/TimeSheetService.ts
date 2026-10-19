@@ -3,6 +3,7 @@
  * Handles all time sheet-related database operations for the REST API
  */
 
+import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
@@ -294,6 +295,13 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       const created = await withTransaction(knex, async (trx) => {
+        // Human-work guard: an explicit owner must be a licensed user; a defaulted owner
+        // (the caller) must be one too.
+        if (data.user_id) {
+          await assertHumanWorkAssignee(trx, context.tenant, [data.user_id]);
+        } else {
+          await assertHumanWorkOwner(trx, context.tenant, context.userId, 'user_id');
+        }
         const timeSheetData = {
           ...data,
           user_id: data.user_id || context.userId,
@@ -485,6 +493,9 @@ export class TimeSheetService extends BaseService<any> {
         if (timeSheet.approval_status !== 'SUBMITTED') {
           throw new ConflictError('Time sheet must be submitted before approval');
         }
+
+        // Human-work guard: approval requires a human approver.
+        await assertHumanWorkOwner(trx, context.tenant, context.userId, 'approved_by');
   
         await this.buildTenantScopedQuery(trx, context)
           .where({ id })
@@ -1168,6 +1179,17 @@ export class TimeSheetService extends BaseService<any> {
   
         // Update assignees if provided
         if (data.assigned_user_ids !== undefined) {
+          // Human-work guard: validate only assignees this write adds (legacy ones are kept).
+          const currentAssignees = await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
+            .where({ entry_id: id })
+            .select('user_id');
+          const currentAssigneeIds = new Set(currentAssignees.map((row: { user_id: string }) => row.user_id));
+          await assertHumanWorkAssignee(
+            trx,
+            context.tenant,
+            data.assigned_user_ids.filter((userId: string) => !currentAssigneeIds.has(userId))
+          );
+
           await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
             .where({ entry_id: id })
             .del();

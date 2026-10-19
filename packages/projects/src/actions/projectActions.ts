@@ -1,5 +1,6 @@
 'use server';
 
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import { Knex } from 'knex';
 import ProjectModel from '../models/project';
 import ProjectTaskModel from '../models/projectTask';
@@ -657,7 +658,7 @@ export const searchProjectListIds = withAuth(async (
 
   const prefixTsquery = buildProjectListSearchPrefixTsquery(rawSearch);
   const identifier = rawSearch.match(PROJECT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
-  const isInternalUser = user.user_type !== 'client';
+  const isInternalUser = isMspPrincipalUserType(user.user_type);
   const clientScopePredicate = isInternalUser
     ? 'TRUE'
     : user.clientId

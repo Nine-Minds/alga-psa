@@ -4,6 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { DEFAULT_CLIENT_PORTAL_CONFIG, IClientPortalConfig } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { v4 as uuidv4 } from 'uuid';
 import { getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
@@ -52,7 +53,7 @@ async function getProjectWithConfigInternal(
   clientId: string;
 } | null> {
   const { knex } = await createTenantKnex();
-  if (user.user_type !== 'client') return null;
+  if (!isClientUserType(user.user_type)) return null;
   if (!user.contact_id) return null;
   if (!(await hasClientProjectReadPermission(knex, user, tenant))) return null;
 
@@ -504,7 +505,7 @@ export const uploadClientTaskDocument = withAuth(async (
   folderPath?: string | null
 ) => {
   const { knex } = await createTenantKnex();
-  if (user.user_type !== 'client') {
+  if (!isClientUserType(user.user_type)) {
     return { success: false, error: 'Not authorized' };
   }
   if (!(await hasClientProjectReadPermission(knex, user, tenant))) {
@@ -609,7 +610,7 @@ export const getClientTaskDocuments = withAuth(async (
   taskId: string
 ) => {
   const { knex } = await createTenantKnex();
-  if (user.user_type !== 'client') {
+  if (!isClientUserType(user.user_type)) {
     return { success: false, error: 'Not authorized' };
   }
   if (!(await hasClientProjectReadPermission(knex, user, tenant))) {

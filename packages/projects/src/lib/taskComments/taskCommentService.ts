@@ -15,7 +15,7 @@ import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils'
 import { getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildTaskCommentAddedPayload, buildTaskCommentUpdatedPayload } from '@alga-psa/workflow-streams';
-import { aggregateReactions, validateEmoji } from '@alga-psa/types';
+import { aggregateReactions, isMspPrincipalUserType, validateEmoji } from '@alga-psa/types';
 import type { IAggregatedReaction, IProjectTaskComment, IProjectTaskCommentWithUser, IReactionsBatchResult } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import {
@@ -24,7 +24,7 @@ import {
   createAuthorizationKernel,
 } from '@alga-psa/authorization/kernel';
 
-export type TaskCommentActor = { user_id: string; user_type: 'internal' | 'client' };
+export type TaskCommentActor = { user_id: string; user_type: 'internal' | 'client' | 'service' };
 
 export type CreateTaskCommentInput = {
   taskId: string;
@@ -80,7 +80,7 @@ async function assertOwnCommentOrInternalUser(
   ownerUserId: string,
   action: 'update' | 'delete'
 ): Promise<void> {
-  if (user.user_type === 'internal') {
+  if (isMspPrincipalUserType(user.user_type)) {
     return;
   }
 
@@ -169,7 +169,7 @@ export async function createTaskCommentWithDb(
       .where({ user_id: userId })
       .first();
 
-    if (!userRecord || userRecord.user_type !== 'internal') {
+    if (!userRecord || !isMspPrincipalUserType(userRecord.user_type)) {
       throw new Error('Only internal users can comment on tasks');
     }
 

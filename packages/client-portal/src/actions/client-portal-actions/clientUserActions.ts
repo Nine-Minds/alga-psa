@@ -18,6 +18,7 @@ import { assertValidContactManager } from '@shared/models/contactModel';
 import { collectReportContactIds } from '@alga-psa/authorization/portal/visibility.server';
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 
 export type ClientUserActionError =
   | { readonly actionError: string }
@@ -232,7 +233,7 @@ async function assertCanManageClientUser(
   }
 
   // MSP staff: gate on the standard user-management permission.
-  if (user.user_type !== 'client') {
+  if (!isClientUserType(user.user_type)) {
     const canUpdate = await hasPermission(user, 'user', 'update', knex);
     if (!canUpdate) {
       throw new Error('Permission denied: Cannot manage client users');
@@ -288,7 +289,7 @@ async function assertCanCreateClientUser(
   }
 
   // MSP staff: gate on the standard user-management permission.
-  if (user.user_type !== 'client') {
+  if (!isClientUserType(user.user_type)) {
     const canCreate = await hasPermission(user, 'user', 'create', knex);
     if (!canCreate) {
       throw new Error('Permission denied: Cannot create client user');

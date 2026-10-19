@@ -2,6 +2,7 @@ import { cache } from "react";
 import { cookies } from "next/headers.js";
 import { redirect } from "next/navigation";
 import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
+import { isLicensedUserType } from "@alga-psa/types";
 import { getTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale";
 import { MspLayoutClient } from "./MspLayoutClient";
@@ -87,9 +88,11 @@ export default async function MspLayout({
     redirect('/auth/msp/signin');
   }
 
-  // Check if user is trying to access wrong portal
-  if (session.user.user_type === 'client') {
-    console.log('[msp-layout] Client user trying to access MSP portal, redirecting to switch prompt');
+  // Only internal users belong in the MSP portal. Client users are in the wrong portal;
+  // a non-interactive type must never hold a UI session, so send both to sign-in rather
+  // than to the client portal.
+  if (!isLicensedUserType(session.user.user_type)) {
+    console.log('[msp-layout] Non-internal session trying to access MSP portal, redirecting to sign-in');
     redirect('/auth/msp/signin');
   }
 

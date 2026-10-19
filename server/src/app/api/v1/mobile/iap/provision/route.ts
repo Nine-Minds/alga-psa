@@ -74,7 +74,7 @@ async function findExistingSubscription(
 async function findAdminUserForTenant(tenantId: string): Promise<{ userId: string } | null> {
   const knex = await getConnection(null);
   const row = await tenantDb(knex, tenantId).table('users')
-    .where({ user_type: 'internal' })
+    .where({ user_type: 'internal', is_inactive: false })
     .orderBy('created_at', 'asc')
     .first('user_id');
   if (!row) return null;

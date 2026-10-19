@@ -4,6 +4,7 @@ import type { Knex } from 'knex';
 
 import { analytics } from '@/lib/analytics/posthog';
 import { tenantDb } from '@alga-psa/db';
+import { isClientUserType } from '@alga-psa/types';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { ensureSsoSettingsPermission } from '@ee/lib/actions/auth/ssoPermissions';
 import type { OAuthLinkProvider } from '@ee/lib/auth/oauthAccountLinks';
@@ -131,7 +132,7 @@ function normalizeInput(request: SsoBulkAssignmentRequest): NormalizedInput {
   );
 
   const userType: SsoBulkAssignmentUserType =
-    request.userType === 'client' ? 'client' : 'internal';
+    isClientUserType(request.userType) ? 'client' : 'internal';
 
   const mode: SsoBulkAssignmentMode = request.mode === 'unlink' ? 'unlink' : 'link';
 

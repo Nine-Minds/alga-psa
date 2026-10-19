@@ -75,7 +75,8 @@ export function buildAuthorizationPrincipalSubject(
   const subject: AuthorizationSubject = {
     tenant: user?.tenant ?? '',
     userId: typeof user?.user_id === 'string' ? user.user_id : '',
-    userType: user?.user_type === 'client' ? 'client' : 'internal',
+    // 'service' is mapped explicitly; only a missing/legacy type falls back to internal.
+    userType: user?.user_type === 'client' ? 'client' : user?.user_type === 'service' ? 'service' : 'internal',
     roleIds,
     teamIds,
     managedUserIds,

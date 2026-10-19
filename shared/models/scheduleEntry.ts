@@ -13,6 +13,7 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { assertHumanWorkAssignee } from '../lib/humanWork/assertHumanWorkAssignee';
 import type {
   IScheduleEntry,
   IRecurrencePattern,
@@ -181,6 +182,18 @@ const ScheduleEntry = {
     if (!entryExists) {
       throw new Error(`Schedule entry ${entry_id} not found in tenant ${tenant}`);
     }
+
+    // Human-work guard: validate only assignees this write adds, so legacy assignees
+    // (e.g. a former agent user) that are kept never block the edit.
+    const existingAssignees = await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)
+      .where('entry_id', entry_id)
+      .select('user_id');
+    const existingAssigneeIds = new Set(existingAssignees.map((row: { user_id: string }) => row.user_id));
+    await assertHumanWorkAssignee(
+      knexOrTrx,
+      tenant,
+      userIds.filter((id) => !existingAssigneeIds.has(id))
+    );
 
     // Delete existing assignments
     await tenantScopedTable(knexOrTrx, 'schedule_entry_assignees', tenant)

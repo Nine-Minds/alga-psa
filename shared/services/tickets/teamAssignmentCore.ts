@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { assertHumanWorkAssignee } from '../../lib/humanWork/assertHumanWorkAssignee';
 
 export type RemoveTeamFromTicketMode = 'remove_all' | 'keep_all' | 'selective';
 
@@ -84,6 +85,23 @@ export async function assignTeamToTicketCore(
   // or we fall back to team.manager_id (validated above).
   const resolvedAssignedTo: string = (ticket.assigned_to as string | null) || team.manager_id;
 
+  const memberIds = teamMembers
+    .map((member: { user_id: string }) => member.user_id)
+    .filter((userId: string) => userId && userId !== resolvedAssignedTo);
+
+  const existingResources = memberIds.length > 0
+    ? await tenantScopedTable(trx, 'ticket_resources', tenant)
+      .where({ ticket_id: ticketId })
+      .whereIn('additional_user_id', memberIds)
+      .select('additional_user_id')
+    : [];
+  const existingIds = new Set(existingResources.map((row: { additional_user_id: string }) => row.additional_user_id));
+  const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
+
+  // Human-work guard: validate only what this write sets (a newly defaulted lead; an existing
+  // assignee is left alone) and the members about to become resources, before any write.
+  await assertHumanWorkAssignee(trx, tenant, [...(ticket.assigned_to ? [] : [resolvedAssignedTo]), ...toInsert]);
+
   await tenantScopedTable(trx, 'tickets', tenant)
     .where({ ticket_id: ticketId })
     .update({
@@ -93,31 +111,17 @@ export async function assignTeamToTicketCore(
       updated_at: new Date()
     });
 
-  const memberIds = teamMembers
-    .map((member: { user_id: string }) => member.user_id)
-    .filter((userId: string) => userId && userId !== resolvedAssignedTo);
-
-  if (memberIds.length > 0) {
-    const existingResources = await tenantScopedTable(trx, 'ticket_resources', tenant)
-      .where({ ticket_id: ticketId })
-      .whereIn('additional_user_id', memberIds)
-      .select('additional_user_id');
-
-    const existingIds = new Set(existingResources.map((row: { additional_user_id: string }) => row.additional_user_id));
-    const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
-
-    if (toInsert.length > 0) {
-      await tenantScopedTable(trx, 'ticket_resources', tenant).insert(
-        toInsert.map((userId) => ({
-          ticket_id: ticketId,
-          assigned_to: resolvedAssignedTo,
-          additional_user_id: userId,
-          role: 'team_member',
-          tenant,
-          assigned_at: new Date()
-        }))
-      );
-    }
+  if (toInsert.length > 0) {
+    await tenantScopedTable(trx, 'ticket_resources', tenant).insert(
+      toInsert.map((userId) => ({
+        ticket_id: ticketId,
+        assigned_to: resolvedAssignedTo,
+        additional_user_id: userId,
+        role: 'team_member',
+        tenant,
+        assigned_at: new Date()
+      }))
+    );
   }
 
   return resolvedAssignedTo;

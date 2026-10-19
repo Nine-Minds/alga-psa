@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { normalizeLocale } from '@alga-psa/core/i18n/config';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import {
   createAppointmentRequestSchema,
   updateAppointmentRequestSchema,
@@ -327,7 +328,7 @@ export const createAppointmentRequest = withAuth(async (
   data: CreateAppointmentRequestInput
 ): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can create appointment requests' };
     }
 
@@ -804,7 +805,7 @@ export const updateAppointmentRequest = withAuth(async (
   data: UpdateAppointmentRequestInput
 ): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can update appointment requests' };
     }
 
@@ -1077,7 +1078,7 @@ export const getMyAppointmentRequests = withAuth(async (
   filters?: Partial<AppointmentRequestFilters>
 ): Promise<AppointmentRequestResult<IAppointmentRequest[]>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
@@ -1193,7 +1194,7 @@ export const getAppointmentRequestDetails = withAuth(async (
   requestId: string
 ): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
@@ -1281,7 +1282,7 @@ export const cancelAppointmentRequest = withAuth(async (
   data: CancelAppointmentRequestInput
 ): Promise<AppointmentRequestResult<void>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can cancel appointment requests' };
     }
 
@@ -1548,7 +1549,7 @@ export const getAvailableServicesAndTickets = withAuth(async (
   }>;
 }>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
@@ -1644,7 +1645,7 @@ export const getAvailableDatesForService = withAuth(async (
   userTimezone?: string
 ): Promise<AppointmentRequestResult<string[]>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
@@ -1688,7 +1689,7 @@ export const getAppointmentRequestsByTicketId = withAuth(async (
   ticketId: string
 ): Promise<AppointmentRequestResult<IAppointmentRequest[]>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
@@ -1784,7 +1785,7 @@ export const getAvailableTimeSlotsForDate = withAuth(async (
   }>;
 }>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
