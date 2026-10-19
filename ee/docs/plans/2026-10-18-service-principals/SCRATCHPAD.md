@@ -19,8 +19,22 @@
   - The gate is `TIER_FEATURES.SERVICE_PRINCIPALS` with minimum tier `pro`. It covers API principals and MCP agents.
   - Solo is defunct, so it gets no entitlement entry. It ranks below Pro, so it is gated out automatically.
   - Below Pro, existing principals are grandfathered: they keep working, but nothing new can be created, reactivated or keyed. This also covers essentials appliances that already have MCP agents. MCP had no tier gate before.
-  - `assertTenantTierAccess` returns early on CE builds, so CE stays unrestricted, as with every other tier gate.
+  - CE does not have the feature at all (see the edition-placement decision below), so the CE no-op in `assertTenantTierAccess` is irrelevant here.
   - The UI uses `TierGate` (`server/src/components/tier-gating/TierGate.tsx`), `FeatureUpgradeNotice` (`packages/ui/src/components/tier-gating/`) and `useTierFeature` (`server/src/context/TierContext.tsx:185`).
+- **(2026-10-18, Robert) Licensing requires the feature to live in `ee/`.** This replaces the first draft, which put the service and the migrations in CE.
+  - **EE owns all of it:** every schema change (`ee/server/migrations`, including the `users_user_type_check` widening, so the CE schema can't hold a `service` user), the service, entitlements, act-as, key issuance, rate-limit config, server actions and UI.
+  - **CE keeps only two things:**
+    - edition-neutral hardening, written as allow-lists of `internal` and `client`: login (R3), the human-work guard, user-management exclusion, `user_type` immutability, and the REST create seat check
+    - generic hooks that default to the plain user: `ApiContext` principal fields, `withViaPrincipal`, the kernel's ability to authorize two subjects together, and the rate-limit config override
+  - **Two boundary mechanisms, both already in the repo:**
+    - `@product/service-principals/entry`: a new `packages/product-service-principals` with `oss/` and `ee/` entries, modelled on `packages/product-mcp`. Its aliases go in `server/next.config.mjs` (around line 428) and `server/tsconfig.json` (around line 406).
+    - `@enterprise/components/...`, with null-rendering stubs in `packages/ee/src/components/`, modelled on credentials (`packages/ee/src/components/credentials/CredentialsScreen.tsx`).
+  - **Precedent for EE migrations that add columns to base tables:** `api_keys.agent_id` (`20260607120000_create_mcp_agents.cjs`). Credentials is a counter-example: its tables went into `server/migrations` despite the coding standard. We follow the standard, `docs/AI_coding_standards.md` §"ee folder".
+  - **`createApiKey` stays internal-only.** EE issues `service` keys directly, as `mintAgentSessionKey` does. So the CE key-creation path never learns about service owners, and mobile and `mcp_user` keys can't open up.
+  - **Error codes are split.** CE throws a generic `HumanWorkOwnerRequiredError(field)`, and the EE boundary maps it to `ACT_AS_REQUIRED`, because act-as is an EE concept.
+  - **The per-principal rate-limit override lives on `service_principals`** (EE), not as a new column on CE `api_rate_limit_settings`.
+  - **`ticket_audit_logs.actor_type`** is a plain `string(32)` with no CHECK, so `service_principal` needs no constraint change.
+  - **Boundary enforcement:** a static guard test (F096 / T038) plus a CE build check.
 - **(2026-10-18) No feature flag.** The change only tightens behaviour, and it fixes counts that are wrong today.
 
 ## Discoveries / Constraints
@@ -71,7 +85,7 @@ Other seat facts:
   - `ApiContactController.ts:136`
   - the documents routes
 - `packages/auth/src/services/apiKeyService.ts:127` `createApiKey` requires an `internal` owner.
-- `server/migrations/20241116000000_add_user_type_to_users.cjs:7` creates a knex `enu`. That is a text column plus the CHECK `users_user_type_check`.
+- `server/migrations/20241116000000_add_user_type_to_users.cjs:7` creates a knex `enu`. That is a text column plus the CHECK `users_user_type_check`. Only the EE migration widens it; CE keeps `internal | client`.
 - Role assignment `policyActions.ts:453/457` and `roleActions.ts:106/110` handle only internal→msp and client→client.
 
 ### Login map (where `service` is blocked, and how)

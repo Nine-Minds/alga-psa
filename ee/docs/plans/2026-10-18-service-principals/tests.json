@@ -1,13 +1,12 @@
 [
   {
     "id": "T001",
-    "description": "DB integration: CE migrations apply on a migrated schema; inserting a user with user_type='service' succeeds and 'robot' fails the CHECK; service_principals, via columns, principal_user_id, service_principal_limit and permission rows exist",
+    "description": "DB integration: EE migrations apply on a migrated schema \u2014 inserting a user with user_type='service' succeeds and 'robot' fails the CHECK; service_principals, via columns, service_principal_limit and permission rows exist. On a CE-only migrated schema, inserting user_type='service' fails the CHECK",
     "implemented": false,
     "featureIds": [
       "F001",
       "F002",
       "F004",
-      "F005",
       "F006",
       "F007"
     ]
@@ -36,7 +35,7 @@
   },
   {
     "id": "T004",
-    "description": "Unit: Pro limit resolution precedence \u2014 tenant override beats appliance claim beats Pro default; CE build returns unlimited",
+    "description": "Unit: limit resolution precedence \u2014 tenant override beats appliance claim beats Pro default",
     "implemented": false,
     "featureIds": [
       "F071",
@@ -110,7 +109,7 @@
   },
   {
     "id": "T012",
-    "description": "Integration: createApiKey owner-type \u00d7 purpose matrix (internal/general ok, service/service ok, service/mobile_session rejected, service/mcp_user rejected, client rejected)",
+    "description": "Integration: createApiKey refuses a service owner for every purpose (including mobile_session, mcp_user); EE issueServicePrincipalKey creates an active purpose='service' key that validates",
     "implemented": false,
     "featureIds": [
       "F041",
@@ -119,7 +118,7 @@
   },
   {
     "id": "T013",
-    "description": "Integration: adminChangeUserPassword, createResetToken, completePasswordReset and setNewPassword all refuse a service target; deleteUser/invite/reactivate actions refuse it too",
+    "description": "Integration: adminChangeUserPassword, createResetToken, completePasswordReset and setNewPassword refuse a non-interactive target; deleteUser/invite/reactivate actions refuse it too",
     "implemented": false,
     "featureIds": [
       "F042",
@@ -131,13 +130,14 @@
     "description": "Integration: REST GET /api/v1/tickets with a service principal key succeeds under its MSP role and 403s without the permission; a client-owned key is still rejected",
     "implemented": false,
     "featureIds": [
-      "F046",
-      "F047",
-      "F048",
+      "F012",
       "F020",
       "F021",
       "F022",
-      "F012"
+      "F046",
+      "F047",
+      "F048",
+      "F099"
     ]
   },
   {
@@ -235,11 +235,12 @@
   },
   {
     "id": "T025",
-    "description": "Unit: two different keys for one principal consume the same sp:<id> bucket; config precedence key \u2192 principal \u2192 tier; override above ceiling rejected",
+    "description": "Unit: two different keys for one principal consume the same sp:<id> bucket; rateLimitConfig resolves per-key row \u2192 principal override \u2192 Pro default; CE enforce honors the context override; override above ceiling rejected",
     "implemented": false,
     "featureIds": [
       "F073",
-      "F074"
+      "F074",
+      "F005"
     ]
   },
   {
@@ -333,7 +334,7 @@
   },
   {
     "id": "T035",
-    "description": "DB integration (EE): on an essentials tenant createServicePrincipal (api) and createAgent both fail with TIER_ACCESS_DENIED and insert nothing; a pre-existing principal's key still authenticates while reactivation and new key issuance are refused; on a CE build creation succeeds",
+    "description": "DB integration (EE): on an essentials tenant createServicePrincipal (api) and createAgent both fail with TIER_ACCESS_DENIED and insert nothing; a pre-existing principal's key still authenticates while reactivation and new key issuance are refused",
     "implemented": false,
     "featureIds": [
       "F092",
@@ -347,6 +348,33 @@
     "implemented": false,
     "featureIds": [
       "F095"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Unit (CE build): with the oss entry, buildAuthenticatedApiContext rejects a key owned by a non-internal, non-client user, getKeyGateReason rejects it, and the @enterprise service-principal component stubs render null",
+    "implemented": false,
+    "featureIds": [
+      "F097",
+      "F098",
+      "F046",
+      "F047"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Unit (static guard): no file outside ee/, packages/product-service-principals/ or packages/ee/ references service_principals, X-Alga-Act-As, the 'service' key purpose or the entitlement constant",
+    "implemented": false,
+    "featureIds": [
+      "F096"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Integration (EE): service-principal server actions refuse callers without an interactive internal session or without service_principal permission",
+    "implemented": false,
+    "featureIds": [
+      "F100"
     ]
   }
 ]

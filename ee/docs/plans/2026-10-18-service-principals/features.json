@@ -1,7 +1,7 @@
 [
   {
     "id": "F001",
-    "description": "CE migration replaces users_user_type_check so users.user_type accepts 'internal' | 'client' | 'service' (DROP CONSTRAINT, ADD \u2026 NOT VALID, VALIDATE; Citus-safe)",
+    "description": "EE migration replaces users_user_type_check so users.user_type accepts 'internal' | 'client' | 'service' (DROP CONSTRAINT, ADD \u2026 NOT VALID, VALIDATE; Citus-safe); CE constraint unchanged",
     "implemented": false,
     "prdRefs": [
       "R1.1",
@@ -10,7 +10,7 @@
   },
   {
     "id": "F002",
-    "description": "CE migration creates service_principals(tenant, user_id, kind, name, description, allow_act_as, created_by, archived_at, created_at, updated_at) with PK (tenant, user_id)",
+    "description": "EE migration creates service_principals(tenant, user_id, kind, name, description, allow_act_as, rate_limit_max_tokens, rate_limit_refill_per_min, created_by, archived_at, created_at, updated_at) with PK (tenant, user_id)",
     "implemented": false,
     "prdRefs": [
       "R1.3",
@@ -27,7 +27,7 @@
   },
   {
     "id": "F004",
-    "description": "CE migration adds nullable via-principal columns: time_entries.created_via_principal_id/updated_via_principal_id, time_sheets.approved_via_principal_id, schedule_entries/interactions/comments/project_tasks.created_via_principal_id, tickets.entered_via_principal_id, ticket_audit_logs.via_principal_user_id; EE adds mcp_agent_audit.act_as_user_id",
+    "description": "EE migration adds nullable via-principal columns: time_entries.created_via_principal_id/updated_via_principal_id, time_sheets.approved_via_principal_id, schedule_entries/interactions/comments/project_tasks.created_via_principal_id, tickets.entered_via_principal_id, ticket_audit_logs.via_principal_user_id, mcp_agent_audit.act_as_user_id",
     "implemented": false,
     "prdRefs": [
       "R5.5",
@@ -36,16 +36,16 @@
   },
   {
     "id": "F005",
-    "description": "CE migration adds api_rate_limit_settings.principal_user_id with unique (tenant, principal_user_id)",
+    "description": "CE enforce.ts / apiRateLimitConfigGetter honor a context-supplied rateLimitConfig override (generic; default unchanged)",
     "implemented": false,
     "prdRefs": [
-      "R6.4",
-      "R9.1"
+      "R4.3",
+      "R6.4"
     ]
   },
   {
     "id": "F006",
-    "description": "CE migration adds nullable tenants.service_principal_limit (platform-admin override)",
+    "description": "EE migration adds nullable tenants.service_principal_limit (platform-admin override)",
     "implemented": false,
     "prdRefs": [
       "R6.2",
@@ -54,7 +54,7 @@
   },
   {
     "id": "F007",
-    "description": "Migration adds RBAC resource service_principal (read/create/update/delete) and seeds it to the Admin role",
+    "description": "EE migration adds RBAC resource service_principal (read/create/update/delete) and seeds it to the Admin role",
     "implemented": false,
     "prdRefs": [
       "Security / Permissions",
@@ -63,7 +63,7 @@
   },
   {
     "id": "F008",
-    "description": "TypeScript/Zod user-type unions widened to include 'service' where a service user can appear (IUser, shared IUser, AuthorizationSubject.userType, UserSession, event-bus schema); login/SSO/portal types stay internal|client",
+    "description": "Shared TypeScript/Zod user-type unions in packages/types widened to include 'service' (vocabulary only; no CE code produces it); login/SSO/portal types stay internal|client",
     "implemented": false,
     "prdRefs": [
       "R1.2"
@@ -128,7 +128,7 @@
   },
   {
     "id": "F016",
-    "description": "Comment author resolution handles service users: comment.ts:99,235, commentActions.ts:536, commentAuthorResolution.ts:61, optimizedTicketActions.ts:3450 never classify a service author as client/contact",
+    "description": "CE comment author resolution (comment.ts:99,235, commentActions.ts:536, commentAuthorResolution.ts:61, optimizedTicketActions.ts:3450) treats a non-interactive author as a named non-human user, never client/contact; EE ServiceAuthorBadge slot adds the Service badge/avatar",
     "implemented": false,
     "prdRefs": [
       "R2.3",
@@ -137,7 +137,7 @@
   },
   {
     "id": "F017",
-    "description": "Activity actor kind, mention-recipient kind and `|| 'internal'` defaults (latestActivityActor.ts, internalNotificationSubscriber, UserService, userActions, sessionActions) handle 'service' explicitly",
+    "description": "Activity actor kind, mention-recipient kind and `|| 'internal'` defaults (latestActivityActor.ts, internalNotificationSubscriber, UserService, userActions, sessionActions) handle non-interactive types explicitly",
     "implemented": false,
     "prdRefs": [
       "R2.3"
@@ -145,7 +145,7 @@
   },
   {
     "id": "F018",
-    "description": "User.getAll / getAllUsers / getAllUsersBasic exclude service users unless includeServicePrincipals: true; userTypeFilter={null} pickers exclude them too",
+    "description": "User.getAll / getAllUsers / getAllUsersBasic return only interactive user types unless includeNonInteractive: true; userTypeFilter={null} pickers follow the same default",
     "implemented": false,
     "prdRefs": [
       "R2.4"
@@ -153,7 +153,7 @@
   },
   {
     "id": "F019",
-    "description": "UserService list, search and user_type stats exclude service users by default",
+    "description": "UserService list, search and user_type stats return only interactive user types by default",
     "implemented": false,
     "prdRefs": [
       "R2.4"
@@ -169,7 +169,7 @@
   },
   {
     "id": "F021",
-    "description": "Role assignment (policyActions.ts:453/457, roleActions.ts:106/110) allows a service user to hold MSP roles and rejects client roles",
+    "description": "Role assignment (policyActions.ts:453/457, roleActions.ts:106/110) lets an MSP principal type hold MSP roles and rejects client roles",
     "implemented": false,
     "prdRefs": [
       "R2.6"
@@ -185,7 +185,7 @@
   },
   {
     "id": "F023",
-    "description": "createServicePrincipal creates the service user (locked sentinel password, name mirrored to first_name), service_principals row and MSP role grants in one transaction after checkServicePrincipalLimit",
+    "description": "EE createServicePrincipal (ee/server/src/lib/service-principals) creates the service user (locked sentinel password, name mirrored to first_name), service_principals row and MSP role grants in one transaction after the tier gate and checkServicePrincipalLimit",
     "implemented": false,
     "prdRefs": [
       "R1.5",
@@ -228,10 +228,11 @@
   },
   {
     "id": "F028",
-    "description": "issueServicePrincipalKey issues a purpose='service' key owned by the principal (plaintext returned once); revoke and rotate (grace via expireApiKeyAfter) supported",
+    "description": "EE issueServicePrincipalKey writes a purpose='service' key owned by the principal directly (not via ApiKeyService.createApiKey), returns plaintext once; revoke and rotate (grace via expireApiKeyAfter)",
     "implemented": false,
     "prdRefs": [
-      "R1.5"
+      "R1.5",
+      "R3.5"
     ]
   },
   {
@@ -333,7 +334,7 @@
   },
   {
     "id": "F041",
-    "description": "ApiKeyService.createApiKey enforces the owner-type \u00d7 purpose matrix: internal any purpose; service only 'service'; mobile_session and mcp_user internal-only",
+    "description": "ApiKeyService.createApiKey stays internal-owner-only for every purpose (mobile_session, mcp_user, general); it never issues service keys",
     "implemented": false,
     "prdRefs": [
       "R3.5"
@@ -341,7 +342,7 @@
   },
   {
     "id": "F042",
-    "description": "Password writes refuse service targets: adminChangeUserPassword, UserService password change, PasswordResetService.createResetToken, completePasswordReset, setNewPassword (untyped fallback removed)",
+    "description": "Password writes refuse non-interactive targets: adminChangeUserPassword, UserService password change, PasswordResetService.createResetToken, completePasswordReset, setNewPassword (untyped fallback removed)",
     "implemented": false,
     "prdRefs": [
       "R3.6"
@@ -373,7 +374,7 @@
   },
   {
     "id": "F046",
-    "description": "assertInternalApiUser replaced by assertMspApiPrincipal (internal | service) at every caller",
+    "description": "CE buildAuthenticatedApiContext keeps the internal path and delegates non-internal, non-client owners to resolveServicePrincipalApiContext from @product/service-principals/entry; assertInternalApiUser becomes assertApiPrincipal (internal user or boundary-produced service context) at every caller",
     "implemented": false,
     "prdRefs": [
       "R4.1"
@@ -381,7 +382,7 @@
   },
   {
     "id": "F047",
-    "description": "Both getKeyGateReason copies use an allow-list: active internal or service owners pass, client and unknown types rejected",
+    "description": "Both getKeyGateReason copies use an allow-list: active internal passes, client rejected, any other type passes only if the boundary's servicePrincipalKeyGate approves (CE stub rejects)",
     "implemented": false,
     "prdRefs": [
       "R4.2"
@@ -389,7 +390,7 @@
   },
   {
     "id": "F048",
-    "description": "ApiContext carries principal {userId, userType, kind}, actAsUserId and effectiveUserId; context.userId means effective user; ApiKey type includes agent_id",
+    "description": "CE ApiContext gains generic principal {userId, userType, kind}, actAsUserId, effectiveUserId and rateLimitConfig fields defaulting to the key owner; context.userId means effective user; ApiKey type includes agent_id",
     "implemented": false,
     "prdRefs": [
       "R4.3"
@@ -397,7 +398,7 @@
   },
   {
     "id": "F049",
-    "description": "ServiceContext carries viaPrincipalUserId for model writers",
+    "description": "CE ServiceContext carries viaPrincipalUserId and withViaPrincipal(ctx, row) adds via columns only when it is set",
     "implemented": false,
     "prdRefs": [
       "R4.4"
@@ -405,7 +406,7 @@
   },
   {
     "id": "F050",
-    "description": "X-Alga-Act-As header validated: principal must be service with allow_act_as (403 ACT_AS_NOT_ALLOWED), target an active internal user in tenant (422 ACT_AS_INVALID_TARGET), human-owned keys rejected (400 ACT_AS_NOT_SUPPORTED)",
+    "description": "EE X-Alga-Act-As validation: principal must have allow_act_as (403 ACT_AS_NOT_ALLOWED), target an active internal user in tenant (422 ACT_AS_INVALID_TARGET); CE middleware rejects the header on human-owned keys (400 ACT_AS_NOT_SUPPORTED)",
     "implemented": false,
     "prdRefs": [
       "R5.1"
@@ -413,7 +414,7 @@
   },
   {
     "id": "F051",
-    "description": "Under act-as, authorization requires both the principal's and the act-as user's subjects to allow the action (RBAC intersection, record rules evaluated for the human)",
+    "description": "CE authorization kernel can authorize two subjects jointly (allow only if both allow, record rules evaluated for each); EE act-as uses it for RBAC intersection",
     "implemented": false,
     "prdRefs": [
       "R5.2"
@@ -445,7 +446,7 @@
   },
   {
     "id": "F055",
-    "description": "Time-entry owner uses effectiveUserId; a service principal without act-as gets 422 ACT_AS_REQUIRED",
+    "description": "Time-entry owner uses effectiveUserId; a non-internal effective user throws HumanWorkOwnerRequiredError, which EE maps to 422 ACT_AS_REQUIRED",
     "implemented": false,
     "prdRefs": [
       "R5.3",
@@ -454,7 +455,7 @@
   },
   {
     "id": "F056",
-    "description": "Time-sheet owner and approve (approved_by) use effectiveUserId and the human-work guard; service principal without act-as gets ACT_AS_REQUIRED",
+    "description": "Time-sheet owner and approve (approved_by) use effectiveUserId and the human-work guard; a bare service principal gets ACT_AS_REQUIRED",
     "implemented": false,
     "prdRefs": [
       "R5.3",
@@ -489,7 +490,7 @@
   },
   {
     "id": "F060",
-    "description": "resolveScheduleAssignees never defaults the assignee to a service principal; with no assignees and no act-as the write fails with ACT_AS_REQUIRED",
+    "description": "resolveScheduleAssignees never defaults the assignee to a non-internal caller; with no assignees the write throws HumanWorkOwnerRequiredError (EE: ACT_AS_REQUIRED)",
     "implemented": false,
     "prdRefs": [
       "R5.4"
@@ -538,7 +539,7 @@
   },
   {
     "id": "F066",
-    "description": "ticket_audit_logs records actor_type='service_principal' when a principal acts as itself, and actor_type='user' + via_principal_user_id under act-as",
+    "description": "ticket_audit_logs records actor_type='service_principal' (plain string column, no constraint change) when a principal acts as itself, and actor_type='user' + via_principal_user_id under act-as",
     "implemented": false,
     "prdRefs": [
       "R5.6"
@@ -563,16 +564,15 @@
   },
   {
     "id": "F069",
-    "description": "Ticket activity feed, time-entry detail and comment header render '<human> via <principal>' and service-authored comments render the principal name with a Service badge/avatar",
+    "description": "CE ticket activity feed, time-entry detail and comment header render the EE ViaPrincipalLabel slot ('<human> via <principal>') when a via column is set",
     "implemented": false,
     "prdRefs": [
-      "R5.7",
       "R5.8"
     ]
   },
   {
     "id": "F070",
-    "description": "SERVICE_PRINCIPAL_ENTITLEMENT (Pro only: maxPrincipals, rateLimit ceiling) defined beside TIER_FEATURES; no per-tier map",
+    "description": "SERVICE_PRINCIPAL_ENTITLEMENT (Pro: maxPrincipals, rateLimit ceiling) defined in ee/server/src/lib/service-principals/entitlements.ts",
     "implemented": false,
     "prdRefs": [
       "R6.1"
@@ -580,7 +580,7 @@
   },
   {
     "id": "F071",
-    "description": "On Pro the service-principal limit resolves tenants.service_principal_limit \u2192 EE appliance claim service_principals \u2192 Pro default; CE builds unlimited",
+    "description": "Service-principal limit resolves tenants.service_principal_limit \u2192 appliance claim service_principals \u2192 Pro default",
     "implemented": false,
     "prdRefs": [
       "R6.2"
@@ -596,15 +596,16 @@
   },
   {
     "id": "F073",
-    "description": "Requests authenticated as a service principal use rate-limit bucket subject sp:<principal user_id> regardless of key (covers MCP per-request keys)",
+    "description": "EE boundary sets rateLimitSubjectId = sp:<principal user_id> for every service-principal request regardless of key (covers MCP per-request keys)",
     "implemented": false,
     "prdRefs": [
+      "R4.6",
       "R6.4"
     ]
   },
   {
     "id": "F074",
-    "description": "Rate-limit config resolves per-key \u2192 per-principal \u2192 Pro default; per-principal override capped at the Pro ceiling unless a platform override exists",
+    "description": "EE boundary sets rateLimitConfig from service_principals override \u2192 Pro default (a per-key api_rate_limit_settings row still wins); override capped at the Pro ceiling unless a platform override exists",
     "implemented": false,
     "prdRefs": [
       "R6.4"
@@ -670,7 +671,7 @@
   },
   {
     "id": "F082",
-    "description": "Settings \u2192 Users MSP tab filters with isLicensedUserType; user detail loader rejects service ids",
+    "description": "Settings \u2192 Users MSP tab filters with isLicensedUserType; user detail loader rejects non-interactive ids",
     "implemented": false,
     "prdRefs": [
       "R8.4"
@@ -678,7 +679,7 @@
   },
   {
     "id": "F083",
-    "description": "User server actions (adminChangeUserPassword, deleteUser, invite, reactivate) refuse service targets with a pointer to Service principals",
+    "description": "User server actions (adminChangeUserPassword, deleteUser, invite, reactivate) refuse non-interactive targets",
     "implemented": false,
     "prdRefs": [
       "R8.4"
@@ -686,7 +687,7 @@
   },
   {
     "id": "F084",
-    "description": "API keys admin list shows the owning principal's name with a Service badge instead of username",
+    "description": "API keys admin list renders an EE principal cell (name + Service badge) for principal-owned keys; CE stub falls back to today's rendering",
     "implemented": false,
     "prdRefs": [
       "UX / UI Notes"
@@ -694,7 +695,7 @@
   },
   {
     "id": "F085",
-    "description": "user_type is immutable to/from 'service' in REST UserService.update and user actions",
+    "description": "user_type is immutable through REST UserService.update and user actions except existing internal\u2194client changes",
     "implemented": false,
     "prdRefs": [
       "R8.5"
@@ -702,7 +703,7 @@
   },
   {
     "id": "F086",
-    "description": "REST UserService.create rejects user_type='service' and runs checkInternalUserLicenseLimit for internal users",
+    "description": "REST UserService.create accepts only internal|client and runs checkInternalUserLicenseLimit for internal",
     "implemented": false,
     "prdRefs": [
       "R8.6"
@@ -710,7 +711,7 @@
   },
   {
     "id": "F087",
-    "description": "EE migration converts every agent's backing user to user_type='service', sets is_inactive = NOT agents.active, mirrors name, backfills agents.service_user_id and inserts service_principals (kind mcp_agent); idempotent, skips and logs missing/non-internal users",
+    "description": "EE data migration converts every agent's backing user to user_type='service', sets is_inactive = NOT agents.active, mirrors name, backfills agents.service_user_id and inserts service_principals (kind mcp_agent); idempotent, skips and logs missing/non-internal users",
     "implemented": false,
     "prdRefs": [
       "R9.2"
@@ -758,7 +759,7 @@
   },
   {
     "id": "F093",
-    "description": "assertTenantTierAccess(SERVICE_PRINCIPALS) enforced in createServicePrincipal (covers createAgent), reactivation, issueServicePrincipalKey and enabling allow_act_as; below Pro returns 403 TIER_ACCESS_DENIED; no-op on CE",
+    "description": "EE assertTenantTierAccess(SERVICE_PRINCIPALS) enforced in createServicePrincipal (covers createAgent), reactivation, issueServicePrincipalKey and enabling allow_act_as; below Pro returns 403 TIER_ACCESS_DENIED",
     "implemented": false,
     "prdRefs": [
       "R6.0",
@@ -781,6 +782,50 @@
     "prdRefs": [
       "R7.2",
       "R7.3"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "Static edition-boundary guard: fails if any file outside ee/, packages/product-service-principals/ or packages/ee/ references the service_principals table, X-Alga-Act-As, the 'service' key purpose or the service-principal entitlement",
+    "implemented": false,
+    "prdRefs": [
+      "Edition placement (CE / EE)",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "New packages/product-service-principals with oss/entry.ts (stubs: resolveServicePrincipalApiContext \u2192 null, servicePrincipalKeyGate \u2192 reject, error mapping pass-through) and ee/entry.ts re-exporting ee/server/src/lib/service-principals; aliased in server/next.config.mjs and server/tsconfig.json like @product/mcp/entry",
+    "implemented": false,
+    "prdRefs": [
+      "Edition placement (CE / EE)"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "CE stubs in packages/ee/src/components/service-principals (settings tab, usage row, ViaPrincipalLabel, ServiceAuthorBadge, API-key principal cell) render null; the Service principals settings tab is registered only when isEnterprise",
+    "implemented": false,
+    "prdRefs": [
+      "Edition placement (CE / EE)",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "EE resolveServicePrincipalApiContext validates an active non-archived principal, applies act-as, sets principal/actAsUserId/effectiveUserId/viaPrincipalUserId and the rate-limit subject/config, and maps HumanWorkOwnerRequiredError to ACT_AS_REQUIRED",
+    "implemented": false,
+    "prdRefs": [
+      "R4.6",
+      "R5.4"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "EE server actions (ee/server/src/lib/actions/service-principal-actions.ts) for list/create/update/activate/archive/keys, each requiring an interactive internal session and the service_principal permission",
+    "implemented": false,
+    "prdRefs": [
+      "Edition placement (CE / EE)",
+      "Security / Permissions"
     ]
   }
 ]
