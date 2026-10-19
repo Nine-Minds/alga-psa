@@ -580,5 +580,13 @@ export function translate(
   key: string,
   options?: Record<string, unknown>,
 ): string {
-  return i18next.t(key, { ns: namespace, ...(options ?? {}) }) as string;
+  // Before i18next.init() resolves (no provider mounted yet, or a standalone
+  // consumer that never mounts one — an extension sandbox, a unit test),
+  // i18next.t() returns undefined outright instead of honoring defaultValue
+  // the way the hook-based `t()` does. Fall back explicitly so callers outside
+  // a React tree get the same defaultValue guarantee documented above.
+  const result = i18next.t(key, { ns: namespace, ...(options ?? {}) }) as string | undefined;
+  if (result !== undefined) return result;
+  const fallback = (options as { defaultValue?: string } | undefined)?.defaultValue;
+  return fallback ?? key;
 }

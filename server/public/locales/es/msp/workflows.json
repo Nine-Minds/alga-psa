@@ -1519,7 +1519,9 @@
         "summary_one": "Se omitió {{count}} evento en los últimos {{days}} días — {{reasons}}",
         "summary_other": "Se omitieron {{count}} eventos en los últimos {{days}} días — {{reasons}}",
         "lastSkipped": "Última omisión {{when}}",
-        "view": "Ver eventos omitidos"
+        "view": "Ver eventos omitidos",
+        "summary_few": "Se omitieron {{count}} eventos en los últimos {{days}} días — {{reasons}}",
+        "summary_many": "Se omitieron {{count}} eventos en los últimos {{days}} días — {{reasons}}"
       },
       "drawer": {
         "title": "Eventos omitidos",
@@ -1862,7 +1864,9 @@
     "insertionPointLabel": "Los pasos nuevos van aquí",
     "emptyBranchPrompt": "Añada un paso a esta rama",
     "emptyActivePrompt": "Los pasos nuevos van aquí. Elija uno de la paleta.",
-    "stepCount": "({{count}} pasos)"
+    "stepCount": "({{count}} pasos)",
+    "stepCount_few": "({{count}} pasos)",
+    "stepCount_many": "({{count}} pasos)"
   },
   "expressionEditor": {
     "ariaLabel": "Editor de expresiones",
@@ -2375,7 +2379,12 @@
       "currentRun": "Ejecución {{id}}",
       "backToWorkflow": "Volver al flujo de trabajo"
     },
-    "title": "Estudio de ejecuciones de flujo de trabajo"
+    "title": "Estudio de ejecuciones de flujo de trabajo",
+    "communityEdition": {
+      "title": "Función Pro",
+      "description": "El estudio de ejecución de flujos de trabajo solo está disponible en Pro.",
+      "runId": "ID de ejecución: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3148,6 +3157,10 @@
         "selectBoard": "Seleccione o introduzca un tablero",
         "selectPriority": "Seleccione o introduzca una prioridad"
       }
+    },
+    "proFeature": {
+      "title": "Función Pro",
+      "description": "El sistema de flujos de trabajo solo está disponible en Pro. Actualice su instalación para acceder a esta función."
     }
   },
   "toggle": {

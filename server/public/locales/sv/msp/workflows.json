@@ -1397,7 +1397,9 @@
         "summary_one": "{{count}} händelse hoppades över de senaste {{days}} dagarna — {{reasons}}",
         "summary_other": "{{count}} händelser hoppades över de senaste {{days}} dagarna — {{reasons}}",
         "lastSkipped": "Senast överhoppad {{when}}",
-        "view": "Visa överhoppade händelser"
+        "view": "Visa överhoppade händelser",
+        "summary_few": "{{count}} händelser hoppades över de senaste {{days}} dagarna — {{reasons}}",
+        "summary_many": "{{count}} händelser hoppades över de senaste {{days}} dagarna — {{reasons}}"
       },
       "drawer": {
         "title": "Överhoppade händelser",
@@ -1740,7 +1742,9 @@
     "insertionPointLabel": "Nya steg hamnar här",
     "emptyBranchPrompt": "Lägg till ett steg i den här grenen",
     "emptyActivePrompt": "Nya steg hamnar här. Välj ett från paletten.",
-    "stepCount": "({{count}} steg)"
+    "stepCount": "({{count}} steg)",
+    "stepCount_few": "({{count}} steg)",
+    "stepCount_many": "({{count}} steg)"
   },
   "expressionEditor": {
     "ariaLabel": "Uttrycksredigerare",
@@ -2253,7 +2257,12 @@
       "currentRun": "Körning {{id}}",
       "backToWorkflow": "Tillbaka till arbetsflödet"
     },
-    "title": "Studio för arbetsflödeskörningar"
+    "title": "Studio för arbetsflödeskörningar",
+    "communityEdition": {
+      "title": "Pro-funktion",
+      "description": "Studion för arbetsflödeskörningar är endast tillgänglig i Pro.",
+      "runId": "Körnings-ID: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3026,6 +3035,10 @@
         "selectBoard": "Välj eller ange en tavla",
         "selectPriority": "Välj eller ange en prioritet"
       }
+    },
+    "proFeature": {
+      "title": "Pro-funktion",
+      "description": "Arbetsflödessystemet är endast tillgängligt i Pro. Uppgradera din installation för att få tillgång till den här funktionen."
     }
   },
   "toggle": {

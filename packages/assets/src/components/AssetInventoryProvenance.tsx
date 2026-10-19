@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Package } from 'lucide-react';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getAssetInventoryProvenance,
   type AssetInventoryProvenance,
@@ -11,9 +12,6 @@ import {
 interface AssetInventoryProvenanceSectionProps {
   assetId: string;
 }
-
-const shortDate = (iso: string | null): string =>
-  iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—';
 
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div>
@@ -28,6 +26,10 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, 
  * carries inventory links (service_id/stock_unit_id), absent otherwise.
  */
 export const AssetInventoryProvenanceSection: React.FC<AssetInventoryProvenanceSectionProps> = ({ assetId }) => {
+  const { t } = useTranslation('msp/assets');
+  const { formatDate } = useFormatters();
+  const shortDate = (iso: string | null): string =>
+    iso ? formatDate(iso, { dateStyle: 'medium' }) : t('inventoryProvenance.emptyValue');
   const [data, setData] = useState<AssetInventoryProvenance | null>(null);
 
   useEffect(() => {
@@ -55,39 +57,39 @@ export const AssetInventoryProvenanceSection: React.FC<AssetInventoryProvenanceS
     >
       <div className="mb-4 flex items-center gap-2">
         <Package className="h-5 w-5 text-[rgb(var(--color-primary-600))]" />
-        <h3 className="text-sm font-semibold text-[rgb(var(--color-text-900))]">Inventory provenance</h3>
+        <h3 className="text-sm font-semibold text-[rgb(var(--color-text-900))]">{t('inventoryProvenance.title')}</h3>
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-        <Field label="Product">
-          {data.service_name || '—'}
+        <Field label={t('inventoryProvenance.fields.product.label')}>
+          {data.service_name || t('inventoryProvenance.emptyValue')}
           {data.sku ? <span className="ml-2 font-mono text-xs text-[rgb(var(--color-text-500))]">{data.sku}</span> : null}
         </Field>
-        <Field label="Serial">{data.serial_number || '—'}</Field>
-        <Field label="MAC">{data.mac_address || '—'}</Field>
-        <Field label="Origin sales order">
+        <Field label={t('inventoryProvenance.fields.serial.label')}>{data.serial_number || t('inventoryProvenance.emptyValue')}</Field>
+        <Field label={t('inventoryProvenance.fields.mac.label')}>{data.mac_address || t('inventoryProvenance.emptyValue')}</Field>
+        <Field label={t('inventoryProvenance.fields.originSalesOrder.label')}>
           {data.origin_so_number ? (
             <Link href="/msp/inventory/sales-orders" className="text-primary-600 hover:underline tabular-nums">
               {data.origin_so_number}
             </Link>
           ) : (
-            '—'
+            t('inventoryProvenance.emptyValue')
           )}
         </Field>
-        <Field label="Delivered">{shortDate(data.delivered_at)}</Field>
+        <Field label={t('inventoryProvenance.fields.delivered.label')}>{shortDate(data.delivered_at)}</Field>
       </div>
 
       {data.rma_history.length > 0 && (
         <div className="mt-5">
           <div className="text-xs font-medium uppercase tracking-wide text-[rgb(var(--color-text-500))]">
-            RMA history
+            {t('inventoryProvenance.rmaHistory.title')}
           </div>
           <ul className="mt-2 space-y-1" id="asset-provenance-rma-history">
             {data.rma_history.map((rma) => (
               <li key={rma.rma_id} className="flex items-center gap-3 text-sm text-[rgb(var(--color-text-700))]">
-                <span className="font-medium">{rma.rma_number || 'RMA'}</span>
+                <span className="font-medium">{rma.rma_number || t('inventoryProvenance.rmaLabel')}</span>
                 <span className="rounded bg-[rgb(var(--color-border-100))] px-1.5 py-0.5 text-xs">
-                  {String(rma.status).replace(/_/g, ' ')}
+                  {t(`enums.rmaStatus.${rma.status}`, { defaultValue: String(rma.status).replace(/_/g, ' ') })}
                 </span>
                 <span className="text-xs text-[rgb(var(--color-text-500))]">{shortDate(rma.created_at)}</span>
               </li>

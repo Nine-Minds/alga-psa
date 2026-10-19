@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Recurso Pro",
+      "domainsDescription": "Domínios gerenciados exigem o Pro.",
+      "settingsDescription": "As configurações de email gerenciado exigem o Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Falha ao carregar domínios gerenciados",
       "loadOutboundSettingsFailed": "Falha ao carregar as configurações de e-mail de saída",
@@ -930,6 +935,12 @@
       "copyHostAriaLabel": "Copiar host",
       "copyFqdnAriaLabel": "Copiar nome completo",
       "hostHint": "Dica: no seu provedor de DNS, insira apenas o Host mostrado acima. A maioria dos provedores (Namecheap, GoDaddy, Cloudflare, entre outros) adiciona “{{domain}}” automaticamente. Se você colar o nome completo, o domínio é repetido (…{{domain}}.{{domain}}) e o registro nunca será verificado."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Recurso Pro",
+        "description": "As instruções de registros DNS exigem o Pro."
+      }
     }
   },
   "inboundRules": {

@@ -853,5 +853,81 @@
       "members": "⟦Ḿḗḿƀḗřş⟧",
       "creatorNote": "⟦Ẏȯŭ ẇīŀŀ ƀḗ ȧƀŀḗ ŧȯ ḿȧƞȧɠḗ ŧħīş ƈȧŀḗƞḓȧř.⟧"
     }
+  },
+  "ticketDetails": {
+    "title": "⟦Ŧīƈķḗŧ Ḓḗŧȧīŀş⟧",
+    "numberedTitle": "⟦Ŧīƈķḗŧ #{{number}}⟧",
+    "untitled": "⟦Ŭƞŧīŧŀḗḓ ŧīƈķḗŧ⟧",
+    "noDescription": "⟦Ƞȯ ḓḗşƈřīƥŧīȯƞ⟧",
+    "notAvailable": "⟦Ƞ/Ȧ⟧",
+    "unassigned": "⟦Ŭƞȧşşīɠƞḗḓ⟧",
+    "fields": {
+      "title": {
+        "label": "⟦Ŧīŧŀḗ⟧"
+      },
+      "description": {
+        "label": "⟦Ḓḗşƈřīƥŧīȯƞ⟧"
+      },
+      "status": {
+        "label": "⟦Şŧȧŧŭş⟧"
+      },
+      "priority": {
+        "label": "⟦Ƥřīȯřīŧẏ⟧"
+      },
+      "board": {
+        "label": "⟦Ɓȯȧřḓ⟧"
+      },
+      "client": {
+        "label": "⟦Ƈŀīḗƞŧ⟧"
+      },
+      "contact": {
+        "label": "⟦Ƈȯƞŧȧƈŧ⟧"
+      },
+      "assignedUser": {
+        "label": "⟦Ȧşşīɠƞḗḓ Ŭşḗř⟧"
+      },
+      "entered": {
+        "label": "⟦Ḗƞŧḗřḗḓ⟧"
+      },
+      "updated": {
+        "label": "⟦Ŭƥḓȧŧḗḓ⟧"
+      },
+      "closed": {
+        "label": "⟦Ƈŀȯşḗḓ⟧"
+      }
+    }
+  },
+  "projectTaskDetails": {
+    "title": "⟦Ƥřȯĵḗƈŧ Ŧȧşķ⟧",
+    "noDescription": "⟦Ƞȯ ḓḗşƈřīƥŧīȯƞ⟧",
+    "notAvailable": "⟦Ƞ/Ȧ⟧",
+    "unassigned": "⟦Ŭƞȧşşīɠƞḗḓ⟧",
+    "untitledItem": "⟦Ŭƞŧīŧŀḗḓ īŧḗḿ⟧",
+    "noChecklistItems": "⟦Ƞȯ ƈħḗƈķŀīşŧ īŧḗḿş⟧",
+    "fields": {
+      "description": {
+        "label": "⟦Ḓḗşƈřīƥŧīȯƞ⟧"
+      },
+      "project": {
+        "label": "⟦Ƥřȯĵḗƈŧ⟧"
+      },
+      "phase": {
+        "label": "⟦Ƥħȧşḗ⟧"
+      },
+      "assignedTo": {
+        "label": "⟦Ȧşşīɠƞḗḓ Ŧȯ⟧"
+      },
+      "dueDate": {
+        "label": "⟦Ḓŭḗ Ḓȧŧḗ⟧"
+      },
+      "checklist": {
+        "label": "⟦Ƈħḗƈķŀīşŧ⟧"
+      }
+    }
+  },
+  "fallback": {
+    "agentSchedule": "⟦Ȧɠḗƞŧ şƈħḗḓŭŀḗ ṽīḗẇ īş ƞȯẇ ȯẇƞḗḓ ƀẏ Şƈħḗḓŭŀīƞɠ. (ȧɠḗƞŧĪḓ: {{agentId}})⟧",
+    "timeEntry": "⟦Ŧīḿḗ ḗƞŧřẏ īş ḿȧƞȧɠḗḓ īƞ Şƈħḗḓŭŀīƞɠ.⟧",
+    "scheduling": "⟦Şƈħḗḓŭŀīƞɠ īş ḿȧƞȧɠḗḓ īƞ Şƈħḗḓŭŀīƞɠ.⟧"
   }
 }

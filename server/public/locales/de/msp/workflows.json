@@ -1519,7 +1519,9 @@
         "summary_one": "{{count}} Ereignis in den letzten {{days}} Tagen übersprungen — {{reasons}}",
         "summary_other": "{{count}} Ereignisse in den letzten {{days}} Tagen übersprungen — {{reasons}}",
         "lastSkipped": "Zuletzt übersprungen {{when}}",
-        "view": "Übersprungene Ereignisse anzeigen"
+        "view": "Übersprungene Ereignisse anzeigen",
+        "summary_few": "{{count}} Ereignisse in den letzten {{days}} Tagen übersprungen — {{reasons}}",
+        "summary_many": "{{count}} Ereignisse in den letzten {{days}} Tagen übersprungen — {{reasons}}"
       },
       "drawer": {
         "title": "Übersprungene Ereignisse",
@@ -1862,7 +1864,9 @@
     "insertionPointLabel": "Neue Schritte kommen hierhin",
     "emptyBranchPrompt": "Fügen Sie diesem Zweig einen Schritt hinzu",
     "emptyActivePrompt": "Neue Schritte kommen hierhin. Wählen Sie einen aus der Palette.",
-    "stepCount": "({{count}} Schritte)"
+    "stepCount": "({{count}} Schritte)",
+    "stepCount_few": "({{count}} Schritte)",
+    "stepCount_many": "({{count}} Schritte)"
   },
   "expressionEditor": {
     "ariaLabel": "Ausdruckseditor",
@@ -2375,7 +2379,12 @@
       "currentRun": "Ausführung {{id}}",
       "backToWorkflow": "Zurück zum Workflow"
     },
-    "title": "Workflow-Ausführungsstudio"
+    "title": "Workflow-Ausführungsstudio",
+    "communityEdition": {
+      "title": "Pro-Funktion",
+      "description": "Das Studio für Workflow-Ausführungen ist nur in Pro verfügbar.",
+      "runId": "Ausführungs-ID: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3148,6 +3157,10 @@
         "selectBoard": "Board auswählen oder eingeben",
         "selectPriority": "Priorität auswählen oder eingeben"
       }
+    },
+    "proFeature": {
+      "title": "Pro-Funktion",
+      "description": "Das Workflow-System ist nur in Pro verfügbar. Führen Sie ein Upgrade Ihrer Installation durch, um auf diese Funktion zuzugreifen."
     }
   },
   "toggle": {

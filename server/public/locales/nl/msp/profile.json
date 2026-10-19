@@ -731,6 +731,9 @@
     }
   },
   "connectSso": {
+    "proFeature": {
+      "description": "Het koppelen van SSO-accounts is beschikbaar in Pro. Upgrade om uw Google Workspace- of Microsoft 365-account te verbinden voor naadloze authenticatie."
+    },
     "linkError": {
       "title": "SSO-koppeling mislukt.",
       "no_matching_user": "Het account waarmee u bent aangemeld is {{providerEmail}}, maar uw AlgaPSA-aanmelding is {{accountEmail}}. Koppel een account dat {{accountEmail}} gebruikt, of vraag de beheerder van uw identiteitsprovider om {{accountEmail}} als primair e-mailadres van dat account in te stellen.",

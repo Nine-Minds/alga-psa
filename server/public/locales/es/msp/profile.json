@@ -731,6 +731,9 @@
     }
   },
   "connectSso": {
+    "proFeature": {
+      "description": "La vinculación de cuentas SSO está disponible en Pro. Actualice su plan para conectar su cuenta de Google Workspace o Microsoft 365 y disfrutar de una autenticación sin interrupciones."
+    },
     "linkError": {
       "title": "No se pudo vincular el SSO.",
       "no_matching_user": "La cuenta con la que inició sesión es {{providerEmail}}, pero su inicio de sesión de AlgaPSA es {{accountEmail}}. Vincule una cuenta que use {{accountEmail}} o pida al administrador de su proveedor de identidad que establezca {{accountEmail}} como dirección de correo electrónico principal de esa cuenta.",

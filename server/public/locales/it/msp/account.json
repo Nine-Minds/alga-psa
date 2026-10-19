@@ -427,5 +427,12 @@
       "loading": "Caricamento…",
       "loadMore": "Carica altro"
     }
+  },
+  "communityEdition": {
+    "hostedDescription": "Le funzionalità di gestione dell’account e fatturazione sono disponibili in Pro per le distribuzioni ospitate.",
+    "selfHostedDescription": "La Community Edition con hosting autonomo offre utenti illimitati senza restrizioni di licenza né fatturazione."
+  },
+  "page": {
+    "title": "Gestione account"
   }
 }

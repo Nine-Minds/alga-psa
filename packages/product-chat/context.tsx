@@ -8,6 +8,8 @@ import React, {
   useState,
 } from 'react';
 import { usePathname } from 'next/navigation';
+import type { TFunction } from 'i18next';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export type AIChatRecordType =
   | 'ticket'
@@ -49,10 +51,10 @@ function toTitleCase(value: string): string {
     .join(' ');
 }
 
-function deriveScreenFromPathname(pathname: string | null): AIChatUiContext['screen'] {
+function deriveScreenFromPathname(pathname: string | null, t: TFunction): AIChatUiContext['screen'] {
   const fallback = {
     key: 'msp',
-    label: 'MSP Portal',
+    label: t('chatContext.screens.portal'),
   };
 
   if (!pathname) {
@@ -74,31 +76,31 @@ function deriveScreenFromPathname(pathname: string | null): AIChatUiContext['scr
   const key = secondary ? `${primary}.${secondary}` : primary;
 
   if (primary === 'dashboard') {
-    return { key, label: 'Dashboard' };
+    return { key, label: t('chatContext.screens.dashboard') };
   }
   if (primary === 'tickets') {
-    return { key, label: secondary ? 'Ticket Details' : 'Tickets' };
+    return { key, label: secondary ? t('chatContext.screens.ticketDetails') : t('chatContext.screens.tickets') };
   }
   if (primary === 'projects') {
-    return { key, label: secondary ? 'Project Details' : 'Projects' };
+    return { key, label: secondary ? t('chatContext.screens.projectDetails') : t('chatContext.screens.projects') };
   }
   if (primary === 'clients') {
-    return { key, label: secondary ? 'Client Details' : 'Clients' };
+    return { key, label: secondary ? t('chatContext.screens.clientDetails') : t('chatContext.screens.clients') };
   }
   if (primary === 'contacts') {
-    return { key, label: secondary ? 'Contact Details' : 'Contacts' };
+    return { key, label: secondary ? t('chatContext.screens.contactDetails') : t('chatContext.screens.contacts') };
   }
   if (primary === 'assets') {
-    return { key, label: secondary ? 'Asset Details' : 'Assets' };
+    return { key, label: secondary ? t('chatContext.screens.assetDetails') : t('chatContext.screens.assets') };
   }
   if (primary === 'billing') {
-    return { key, label: 'Billing' };
+    return { key, label: t('chatContext.screens.billing') };
   }
   if (primary === 'settings') {
-    return { key, label: secondary ? `Settings: ${toTitleCase(secondary)}` : 'Settings' };
+    return { key, label: secondary ? t('chatContext.screens.settingsSection', { section: toTitleCase(secondary) }) : t('chatContext.screens.settings') };
   }
   if (primary === 'chat') {
-    return { key, label: 'Chat' };
+    return { key, label: t('chatContext.screens.chat') };
   }
 
   return {
@@ -108,12 +110,13 @@ function deriveScreenFromPathname(pathname: string | null): AIChatUiContext['scr
 }
 
 export function AIChatContextProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation('msp/core');
   const pathname = usePathname();
   const [override, setOverride] = useState<AIChatContextOverride | null>(null);
 
   const uiContext = useMemo<AIChatUiContext>(() => {
     const resolvedPath = override?.pathname ?? pathname ?? '/msp';
-    const derivedScreen = deriveScreenFromPathname(resolvedPath);
+    const derivedScreen = deriveScreenFromPathname(resolvedPath, t);
 
     return {
       pathname: resolvedPath,
@@ -123,7 +126,7 @@ export function AIChatContextProvider({ children }: { children: React.ReactNode 
       },
       ...(override?.record ? { record: override.record } : {}),
     };
-  }, [override, pathname]);
+  }, [override, pathname, t]);
 
   const value = useMemo<AIChatContextValue>(
     () => ({

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import * as RadixSelect from '@radix-ui/react-select';
+import { useTranslation } from 'react-i18next';
 
 export interface SelectOption {
   value: string;
@@ -42,12 +43,15 @@ export function CustomSelect({
   options,
   value,
   onValueChange,
-  placeholder = 'Select...',
+  placeholder: placeholderProp,
   disabled = false,
   style,
   error,
   errorMessage,
 }: CustomSelectProps) {
+  const { t } = useTranslation('common');
+  const placeholder = placeholderProp === undefined ? t('form.selectPlaceholder') : placeholderProp;
+
   // Ensure unique options
   const uniqueOptions = useMemo(() => {
     const seen = new Set<string>();
