@@ -21,8 +21,8 @@ export async function generateMetadata(): Promise<Metadata> {
  * `/msp/dashboard`, `/msp/tickets` and `/msp/settings/email` all render an empty
  * `main` for this product — so the flag decides whether the co-managed app
  * exists at all, and a second gate on one route inside it changes nothing.
- * (That shell-wide blanking has no fallback and is a real defect, but it is
- * pre-existing and shell-owned; it is reported, not fixed here.)
+ * (The shell boundary now explains a deliberately-off flag instead of
+ * blanking, and stays open when the flag cannot be evaluated.)
  *
  * For `psa`, which this route's rule also allows and which the shell boundary
  * does not wrap, the page-level gate WAS the only gate — and it gated a surface
