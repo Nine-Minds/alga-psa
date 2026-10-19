@@ -17,6 +17,7 @@ const h = vi.hoisted(() => {
   };
   let failHistoryInsert = false;
   let nextId = 0;
+  const insertCalls: Record<string, number> = {};
 
   class QB {
     private wheres: Array<Record<string, any>> = [];
@@ -89,6 +90,7 @@ const h = vi.hoisted(() => {
       return Promise.resolve(doomed.size);
     }
     insert(row: Row | Row[]) {
+      insertCalls[this.table] = (insertCalls[this.table] ?? 0) + 1;
       if (this.table === 'asset_history' && failHistoryInsert) {
         return Promise.reject(new Error('history insert exploded')) as any;
       }
@@ -144,8 +146,12 @@ const h = vi.hoisted(() => {
   return {
     state,
     knex,
+    insertCalls,
     setFailHistoryInsert: (value: boolean) => {
       failHistoryInsert = value;
+    },
+    resetInsertCalls: () => {
+      Object.keys(insertCalls).forEach((table) => delete insertCalls[table]);
     },
   };
 });
@@ -202,6 +208,7 @@ beforeEach(() => {
   h.state.asset_audits = [];
   h.state.asset_audit_items = [];
   h.state.asset_history = [];
+  h.resetInsertCalls();
   service = new AssetAuditService();
 });
 
@@ -371,6 +378,18 @@ describe('AssetAuditService.complete', () => {
     expect(h.state.assets.find((row) => row.asset_id === 'a-1')?.last_audit_result).toBe('present');
     expect(h.state.assets.find((row) => row.asset_id === 'a-2')?.last_audit_result).toBe('missing');
     expect(h.state.assets.find((row) => row.asset_id === 'a-1')?.last_audited_at).toBeTruthy();
+  });
+
+  it('writes the audit trail in one insert instead of one per asset', async () => {
+    const audit = await service.start({ client_id: CLIENT, location_id: LOCATION, statuses: ['active'] }, context);
+    await service.markItem(audit.audit_id, { asset_id: 'a-1', result: 'present', method: 'scan' }, context);
+    h.resetInsertCalls();
+
+    await service.complete(audit.audit_id, context);
+
+    // Two assets touched (a-1 present, a-2 missing), one round trip.
+    expect(h.state.asset_history).toHaveLength(2);
+    expect(h.insertCalls.asset_history).toBe(1);
   });
 
   it('T053 leaves the audit in progress when a history insert fails', async () => {

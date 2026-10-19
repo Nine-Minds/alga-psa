@@ -153,7 +153,10 @@ export class AssetAuditService extends BaseService<any> {
       const result: AssetAuditItemResult = inSnapshot || joinedScope ? 'present' : 'unexpected';
 
       if (existing && existing.result === result && existing.marked_at) {
-        return { ...audit, items: await this.loadItems(trx, context.tenant, auditId) };
+        return {
+          ...(await this.loadAudit(trx, context.tenant, auditId)),
+          items: await this.loadItems(trx, context.tenant, auditId),
+        };
       }
 
       // Citus rejects non-IMMUTABLE functions in the DO UPDATE SET of an insert
@@ -252,23 +255,31 @@ export class AssetAuditService extends BaseService<any> {
       const unexpectedCount = items.filter((item) => item.result === 'unexpected').length;
 
       const nowIso = new Date().toISOString();
-      for (const item of items) {
-        if (item.result === 'unexpected') continue;
-        await scoped(trx, context.tenant, 'asset_history').insert({
-          tenant: context.tenant,
-          asset_id: item.asset_id,
-          changed_by: context.userId,
-          change_type: 'audit',
-          changes: JSON.stringify({
-            audit_id: auditId,
-            result: item.result,
-            location_id: audit.location_id,
-            method: item.method ?? null,
-          }),
-        });
+      // A 500-device site would be 1000 round trips one row at a time, so the
+      // trail goes in as one insert and one update per result.
+      const audited = items.filter((item) => item.result !== 'unexpected');
+      if (audited.length > 0) {
+        await scoped(trx, context.tenant, 'asset_history').insert(
+          audited.map((item) => ({
+            tenant: context.tenant,
+            asset_id: item.asset_id,
+            changed_by: context.userId,
+            change_type: 'audit',
+            changes: JSON.stringify({
+              audit_id: auditId,
+              result: item.result,
+              location_id: audit.location_id,
+              method: item.method ?? null,
+            }),
+          })),
+        );
+      }
+      for (const result of ['present', 'missing'] as const) {
+        const assetIds = audited.filter((item) => item.result === result).map((item) => item.asset_id);
+        if (assetIds.length === 0) continue;
         await scoped(trx, context.tenant, 'assets')
-          .where({ asset_id: item.asset_id })
-          .update({ last_audited_at: nowIso, last_audit_result: item.result });
+          .whereIn('asset_id', assetIds)
+          .update({ last_audited_at: nowIso, last_audit_result: result });
       }
 
       await scoped(trx, context.tenant, 'asset_audits')

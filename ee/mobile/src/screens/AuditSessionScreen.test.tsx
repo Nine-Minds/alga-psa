@@ -219,6 +219,31 @@ describe("AuditSessionScreen", () => {
     );
   });
 
+  it("confirms the result the server stored, not the one the scan asked for", async () => {
+    // A device that joined the scope after the snapshot: the scan sees it as
+    // out of scope and asks for unexpected, the server stores it present.
+    mocks.lookupInventoryCode.mockResolvedValue({
+      ok: true,
+      data: { data: { type: "asset", asset: { asset_id: "a-9" } } },
+    });
+    mocks.markAssetAuditItem.mockResolvedValue(
+      auditWith([
+        ...EXPECTED_ITEMS,
+        { asset_id: "a-9", result: "present", method: "scan", asset_name: "Latecomer", asset_tag: "A-9" },
+      ]),
+    );
+    const renderer = await renderScreen();
+
+    await act(async () => scanner(renderer).props.onScan("CODE-9"));
+    await flush();
+
+    expect(mocks.markAssetAuditItem).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ assetId: "a-9", result: "unexpected" }),
+    );
+    expect(mocks.showToast).toHaveBeenCalledWith({ message: "Marked present", tone: "success" });
+  });
+
   it("T119 a second scan of an unexpected asset only toasts, so it cannot be promoted", async () => {
     mocks.getAssetAudit.mockResolvedValue(
       auditWith([

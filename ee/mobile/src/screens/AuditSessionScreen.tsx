@@ -144,12 +144,17 @@ export function AuditSessionScreen({ navigation, route }: Props) {
         showToast({ message: t("audit.markFailed", "Unable to record that device."), tone: "error" });
         return;
       }
-      setAudit(response.data.data);
+      const updated = response.data.data;
+      setAudit(updated);
+      // The server decides: a device that joined the scope after the snapshot
+      // is stored present even when the scan asked for unexpected, so the
+      // confirmation has to read the stored row, not the request.
+      const recorded = updated.items?.find((item) => item.asset_id === assetId)?.result ?? result;
       // Same short buzz the Inventory scanner gives on a successful resolve.
       Vibration.vibrate(30);
       showToast({
         message:
-          result === "unexpected"
+          recorded === "unexpected"
             ? t("audit.markedUnexpected", "Recorded as unexpected")
             : t("audit.markedPresent", "Marked present"),
         tone: "success",
