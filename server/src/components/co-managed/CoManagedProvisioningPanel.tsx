@@ -14,7 +14,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedProvisioningOptions, getCoManagedProvisioningStatus, changeCoManagedWorkspaceSeats } from '@/lib/actions/coManagedActions';
 import { provisionCoManagedWorkspaceAction, retryCoManagedProvisioningAction, cancelCoManagedProvisioningAction } from '@enterprise/lib/actions/coManagedProvisioningActions';
-import { provisioningRejectionMessage } from './coManagedProvisioningMessage';
+import { provisioningRejectionMessage, seatChangeRejectionMessage } from './coManagedProvisioningMessage';
 import { newCoManagedOperationId } from './coManagedOperationId';
 
 type Request = Omit<CoManagedProvisioningRequest, 'sponsorTenant' | 'requestedBy'>;
@@ -109,7 +109,8 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
     if (!allocation) return;
     setBusy(true); setError(null);
     try {
-      await changeCoManagedWorkspaceSeats({ operationId: allocation.operationId, seats: allocatedSeats, expectedSeats: allocation.seats });
+      const result = await changeCoManagedWorkspaceSeats({ operationId: allocation.operationId, seats: allocatedSeats, expectedSeats: allocation.seats });
+      if (!result.changed) { setError(seatChangeRejectionMessage(result.errorCode, t)); return; }
       setAllocation(null); await reload(); await onChanged();
     } catch { setError(t('coManaged.provisioning.resizeError')); }
     finally { setBusy(false); }

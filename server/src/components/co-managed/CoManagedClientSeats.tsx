@@ -13,6 +13,7 @@ import { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } from '@ente
 import CoManagedCheckout from '@enterprise/components/co-managed/CoManagedCheckout';
 import { readCoManagedClientDraft, writeCoManagedClientDraft, clearCoManagedClientDraft } from './coManagedClientDraft';
 import { newCoManagedOperationId } from './coManagedOperationId';
+import { seatChangeRejectionMessage } from './coManagedProvisioningMessage';
 
 type Billing = Awaited<ReturnType<typeof getCoManagedBillingState>>;
 type Quote = { target: number; baseline: number; monthlyTotal: number; amountDue: number; currency: string };
@@ -68,7 +69,8 @@ export default function CoManagedClientSeats({ operationId, clientId, relationsh
   };
 
   const resize = async () => {
-    await changeCoManagedWorkspaceSeats({ operationId, seats, expectedSeats: allocated });
+    const result = await changeCoManagedWorkspaceSeats({ operationId, seats, expectedSeats: allocated });
+    if (!result.changed) { setError(seatChangeRejectionMessage(result.errorCode, t)); return; }
     clearCoManagedClientDraft(clientId, relationshipId);
     setOpen(false);
     await onSaved();

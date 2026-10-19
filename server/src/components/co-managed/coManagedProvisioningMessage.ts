@@ -24,3 +24,17 @@ export function provisioningRejectionMessage(code: string, t: Translate): string
       return t('coManaged.provisioning.rejected');
   }
 }
+
+/** Why a seat allocation change was refused, for the MSP changing it. */
+export function seatChangeRejectionMessage(code: string, t: Translate): string {
+  switch (code) {
+    case 'CO_MANAGED_SEAT_LIMIT':
+      return t('coManaged.provisioning.resizeBelowUsed', { defaultValue: 'This workspace already has more technicians and pending invitations than that. Remove or deactivate some before lowering its allocation.' });
+    case 'CO_MANAGED_POOL_LIMIT':
+      return t('coManaged.provisioning.resizePoolLimit', { defaultValue: 'Your pool does not have enough available seats for this increase. Add seats to the pool first.' });
+    case 'CO_MANAGED_LICENSE_LAPSED':
+      return t('coManaged.provisioning.resizeLicenseLapsed', { defaultValue: 'Restore your Pro license and co-managed seats before increasing this allocation.' });
+    default:
+      return t('coManaged.provisioning.resizeError', { defaultValue: 'Could not change the allocation. Refresh and try again.' });
+  }
+}

@@ -11,7 +11,8 @@ vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
 vi.mock('../../../lib/co-managed/browserActor', () => ({ coManagedBrowserActor: mocks.browser }));
 vi.mock('@alga-psa/co-managed', () => ({ canManageCoManagedClient: mocks.client, getCoManagedManagementOptions: mocks.options,
   getCoManagedManagementStatus: mocks.status, changeCoManagedAllocationForActor: mocks.resize }));
-vi.mock('@alga-psa/licensing', () => ({ getCoManagedEntitlementState: mocks.capacity, getLicenseStateRow: mocks.license }));
+vi.mock('@alga-psa/licensing', () => ({ getCoManagedEntitlementState: mocks.capacity, getLicenseStateRow: mocks.license,
+  CoManagedAdmissionError: class CoManagedAdmissionError extends Error { constructor(public readonly code: string) { super(code); } } }));
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: async () => ({ knex: mocks.db }), tenantDb: (_db: any, tenant: string) => ({
   table: (name: string) => {
     let rows = mocks.rows[`${tenant}:${name}`] || [];

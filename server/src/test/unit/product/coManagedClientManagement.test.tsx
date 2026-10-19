@@ -87,7 +87,7 @@ beforeEach(() => {
   mocks.provision.mockResolvedValue({ operationId: 'op', enqueued: true });
   mocks.retry.mockResolvedValue({ enqueued: true });
   mocks.cancel.mockResolvedValue({ enqueued: true });
-  mocks.resize.mockResolvedValue(undefined);
+  mocks.resize.mockResolvedValue({ changed: true });
   mocks.billing.mockResolvedValue(billingState());
   mocks.preview.mockResolvedValue({ unitAmount: 1149, monthlyTotal: 6894, amountDue: 1200, currency: 'usd' });
   mocks.purchaseSeats.mockResolvedValue({ kind: 'updated', subscriptionId: 'sub', publishableKey: null });
@@ -188,6 +188,18 @@ describe('client allocation', () => {
     fireEvent.change(input, { target: { value: '3' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save allocation' }));
     await waitFor(() => expect(mocks.resize).toHaveBeenCalledWith({ operationId: 'op', seats: 3, expectedSeats: 2 }));
+  });
+
+  it('names the reason when the server refuses the change', async () => {
+    // Pending invitations count as committed seats, so the floor shown here can be below what the server allows.
+    mocks.resize.mockResolvedValueOnce({ changed: false, errorCode: 'CO_MANAGED_SEAT_LIMIT' });
+    const onSaved = vi.fn();
+    render(<CoManagedClientSeats operationId="op" clientId="client" allocated={3} committed={1} idPrefix="i" onSaved={onSaved} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Change seats' }));
+    fireEvent.change(screen.getByLabelText('Technician seats'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save allocation' }));
+    expect(await screen.findByText(/already has more technicians and pending invitations/)).toBeInTheDocument();
+    expect(onSaved).not.toHaveBeenCalled();
   });
 
   it('converts a shortfall into an absolute pool target and freezes the purchase operation', async () => {

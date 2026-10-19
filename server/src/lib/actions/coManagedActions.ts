@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { getCoManagedEntitlementState, getLicenseStateRow, type CoManagedPurchaseOperation } from '@alga-psa/licensing';
+import { CoManagedAdmissionError, getCoManagedEntitlementState, getLicenseStateRow, type CoManagedPurchaseOperation } from '@alga-psa/licensing';
 
 import { canManageCoManagedClient, getCoManagedManagementOptions, getCoManagedManagementStatus, changeCoManagedAllocationForActor,
   getCoManagedClientManagement as readCoManagedClientManagement, resolveCoManagedManagementTarget,
@@ -97,7 +97,15 @@ export const changeCoManagedWorkspaceSeats = withAuth(async (user, { tenant }, i
   if (user.user_type !== 'internal' || !await hasPermission(user, 'co_management', 'manage')) throw new Error('Permission denied');
   const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
-  await changeCoManagedAllocationForActor(knex, actor, { operationId: input.operationId, seats: input.seats, expectedSeats: input.expectedSeats });
+  try {
+    await changeCoManagedAllocationForActor(knex, actor, { operationId: input.operationId, seats: input.seats, expectedSeats: input.expectedSeats });
+    return { changed: true as const };
+  } catch (error) {
+    // Admission refusals are expected outcomes the screen must name (a thrown
+    // error reaches the client as a redacted generic failure).
+    if (error instanceof CoManagedAdmissionError) return { changed: false as const, errorCode: error.code };
+    throw error;
+  }
 });
 
 /** Authorized per-client relationship discovery and seat usage for the client
