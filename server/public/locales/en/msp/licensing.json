@@ -404,6 +404,10 @@
       "refresh": "Refresh relationship",
       "signOut": "Sign out"
     },
+    "workspaceUnavailable": {
+      "title": "Co-managed IT is not available",
+      "description": "This workspace is not available right now. Contact your IT provider if you expected to use it."
+    },
     "provisioning": {
       "cancelSetup": "Cancel setup",
       "cancelTitle": "Cancel workspace setup?",

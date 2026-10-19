@@ -26,9 +26,18 @@ describe('co-managed UI release boundary', () => {
     const view = render(<CoManagedWorkspaceBoundary productCode="co_managed"><button>Escalate to MSP</button></CoManagedWorkspaceBoundary>);
     expect(screen.getByRole('button').textContent).toBe('Escalate to MSP');
     expect(useFeatureFlag).toHaveBeenCalledWith('release-v1-6-feature', { defaultValue: false });
-    useFeatureFlag.mockReturnValue({ enabled: false, loading: false, error: null });
+    useFeatureFlag.mockReturnValue({ enabled: false, loading: false, error: null, resolved: true });
     view.rerender(<CoManagedWorkspaceBoundary productCode="co_managed"><button>Escalate to MSP</button></CoManagedWorkspaceBoundary>);
-    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Escalate to MSP' })).toBeNull();
+    // The workspace is the tenant's whole product: say why it is closed instead of rendering nothing.
+    expect(screen.getByText('Co-managed IT is not available')).toBeTruthy();
+  });
+
+  it('keeps a co-managed workspace usable when the flag could not be evaluated', () => {
+    // An ad blocker or unreachable PostHog leaves only the default; that is not the flag being off.
+    useFeatureFlag.mockReturnValue({ enabled: false, loading: false, error: null, resolved: false });
+    render(<CoManagedWorkspaceBoundary productCode="co_managed"><button>Escalate to MSP</button></CoManagedWorkspaceBoundary>);
+    expect(screen.getByRole('button', { name: 'Escalate to MSP' })).toBeTruthy();
   });
 
   it.each(['psa', 'algadesk'] as const)('leaves ordinary %s UI independent of this flag', (productCode) => {

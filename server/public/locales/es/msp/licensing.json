@@ -407,6 +407,10 @@
       "refresh": "Actualizar la relación",
       "signOut": "Cerrar sesión"
     },
+    "workspaceUnavailable": {
+      "title": "TI cogestionada no está disponible",
+      "description": "Este espacio de trabajo no está disponible en este momento. Póngase en contacto con su proveedor de TI si esperaba usarlo."
+    },
     "provisioning": {
       "cancelSetup": "Cancelar configuración",
       "cancelTitle": "¿Cancelar la configuración del espacio?",

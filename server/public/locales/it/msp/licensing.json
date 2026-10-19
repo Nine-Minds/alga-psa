@@ -407,6 +407,10 @@
       "refresh": "Aggiorna la relazione",
       "signOut": "Esci"
     },
+    "workspaceUnavailable": {
+      "title": "L’IT in co-gestione non è disponibile",
+      "description": "Questo spazio di lavoro non è disponibile al momento. Contatta il tuo fornitore IT se prevedevi di usarlo."
+    },
     "provisioning": {
       "cancelSetup": "Annulla configurazione",
       "cancelTitle": "Annullare la configurazione dello spazio?",

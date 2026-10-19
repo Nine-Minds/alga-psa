@@ -404,6 +404,10 @@
       "refresh": "Samenwerking vernieuwen",
       "signOut": "Afmelden"
     },
+    "workspaceUnavailable": {
+      "title": "Co-managed IT is niet beschikbaar",
+      "description": "Deze werkruimte is momenteel niet beschikbaar. Neem contact op met uw IT-leverancier als u deze verwachtte te gebruiken."
+    },
     "provisioning": {
       "cancelSetup": "Configuratie annuleren",
       "cancelTitle": "Configuratie van werkruimte annuleren?",

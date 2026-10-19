@@ -410,6 +410,10 @@
       "refresh": "Odśwież współpracę",
       "signOut": "Wyloguj się"
     },
+    "workspaceUnavailable": {
+      "title": "Współzarządzane IT jest niedostępne",
+      "description": "Ten obszar roboczy jest obecnie niedostępny. Skontaktuj się ze swoim dostawcą IT, jeśli zamierzałeś z niego korzystać."
+    },
     "provisioning": {
       "cancelSetup": "Anuluj konfigurację",
       "cancelTitle": "Anulować konfigurację przestrzeni?",

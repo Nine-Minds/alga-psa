@@ -93,11 +93,25 @@ interface FeatureFlagOptions {
 export function useFeatureFlag(
   flagKey: string,
   options: FeatureFlagOptions = {}
-): { enabled: boolean; loading: boolean; error: Error | null } {
+): {
+  enabled: boolean;
+  loading: boolean;
+  error: Error | null;
+  /**
+   * Whether the flag was actually evaluated (forced, bootstrapped, or answered
+   * by PostHog). False when PostHog is missing, blocked, or has not loaded flags:
+   * `enabled` then only reflects the default, which callers that gate a whole
+   * screen must not mistake for the flag being off.
+   */
+  resolved: boolean;
+} {
   const { data: session } = useSession();
   const posthog = usePostHog();
   const forcedValue = getForcedFlagValue(flagKey);
   const bootstrappedValue = useBootstrappedFeatureFlag(flagKey);
+  const [resolved, setResolved] = useState<boolean>(
+    featureFlagsDisabled || forcedValue !== undefined || bootstrappedValue !== undefined
+  );
   const [enabled, setEnabled] = useState<boolean>(() => {
     if (featureFlagsDisabled) return true;
     if (forcedValue !== undefined) return coerceForcedBoolean(flagKey, forcedValue);
@@ -114,6 +128,7 @@ export function useFeatureFlag(
       setEnabled(true);
       setLoading(false);
       setError(null);
+      setResolved(true);
       return;
     }
 
@@ -121,6 +136,7 @@ export function useFeatureFlag(
       setEnabled(coerceForcedBoolean(flagKey, forcedValue));
       setLoading(false);
       setError(null);
+      setResolved(true);
       return;
     }
 
@@ -139,6 +155,8 @@ export function useFeatureFlag(
         void distinctId;
 
         const flagValue = posthog.isFeatureEnabled(flagKey);
+        // undefined: PostHog has not loaded flags (blocked, offline, still loading).
+        if (flagValue !== undefined) setResolved(true);
 
         if (process.env.NODE_ENV === 'development') {
           console.log(`[FeatureFlag] ${flagKey}:`, {
@@ -185,7 +203,7 @@ export function useFeatureFlag(
     };
   }, [posthog, flagKey, session?.user?.id, session?.user?.tenant, options.userId, options.pollInterval, forcedValue, bootstrappedValue]);
 
-  return { enabled, loading, error };
+  return { enabled, loading, error, resolved };
 }
 
 export function useFeatureFlagVariant(

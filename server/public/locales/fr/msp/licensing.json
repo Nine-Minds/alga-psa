@@ -407,6 +407,10 @@
       "refresh": "Actualiser la relation",
       "signOut": "Se déconnecter"
     },
+    "workspaceUnavailable": {
+      "title": "L’informatique cogérée n’est pas disponible",
+      "description": "Cet espace de travail n’est pas disponible pour le moment. Contactez votre prestataire informatique si vous comptiez l’utiliser."
+    },
     "provisioning": {
       "cancelSetup": "Annuler la configuration",
       "cancelTitle": "Annuler la configuration de cet espace ?",

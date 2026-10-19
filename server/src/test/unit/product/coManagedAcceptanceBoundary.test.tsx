@@ -20,7 +20,9 @@ afterEach(cleanup);
 describe('initial customer scope review', () => {
   it('does not fetch or expose acceptance when the UI release flag is disabled', () => {
     mocks.flag.mockReturnValue({ enabled: false, loading: false, error: null }); workspace();
-    expect(mocks.review).not.toHaveBeenCalled(); expect(screen.queryByRole('button')).toBeNull();
+    expect(mocks.review).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'coManaged.acceptance.accept' })).toBeNull();
+    expect(screen.queryByText('Workspace content')).toBeNull();
   });
   it('waits for deliberate approval of the shown scope before displaying the workspace', async () => {
     workspace();

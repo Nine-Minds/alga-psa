@@ -404,6 +404,10 @@
       "refresh": "Uppdatera relation",
       "signOut": "Logga ut"
     },
+    "workspaceUnavailable": {
+      "title": "Samförvaltad IT är inte tillgänglig",
+      "description": "Den här arbetsytan är inte tillgänglig just nu. Kontakta din IT-leverantör om du räknade med att använda den."
+    },
     "provisioning": {
       "cancelSetup": "Avbryt konfigurationen",
       "cancelTitle": "Avbryta konfigurationen av arbetsytan?",

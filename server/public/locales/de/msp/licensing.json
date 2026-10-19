@@ -404,6 +404,10 @@
       "refresh": "Beziehung aktualisieren",
       "signOut": "Abmelden"
     },
+    "workspaceUnavailable": {
+      "title": "Co-Managed IT ist nicht verfügbar",
+      "description": "Dieser Arbeitsbereich ist derzeit nicht verfügbar. Wenden Sie sich an Ihren IT-Dienstleister, wenn Sie ihn nutzen wollten."
+    },
     "provisioning": {
       "cancelSetup": "Einrichtung abbrechen",
       "cancelTitle": "Workspace-Einrichtung abbrechen?",

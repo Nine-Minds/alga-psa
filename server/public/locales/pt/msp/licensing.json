@@ -407,6 +407,10 @@
       "refresh": "Atualizar relação",
       "signOut": "Sair"
     },
+    "workspaceUnavailable": {
+      "title": "TI cogerenciada não está disponível",
+      "description": "Este espaço de trabalho não está disponível no momento. Entre em contato com seu provedor de TI se você esperava usá-lo."
+    },
     "provisioning": {
       "cancelSetup": "Cancelar configuração",
       "cancelTitle": "Cancelar a configuração do espaço?",
