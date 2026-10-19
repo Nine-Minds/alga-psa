@@ -990,6 +990,7 @@
       "capacity": "Pojemność",
       "chooseRelationship": "Wybierz relację",
       "endedHint": "Ta relacja została zakończona. Zachowana historia i archiwa pozostają dostępne.",
+      "failedHint": "Konfiguracja nie została ukończona. Stanowiska pozostają zarezerwowane; spróbuj ponownie, aby ją kontynuować, lub anuluj konfigurację.",
       "forClient": "Współzarządzane IT dla {{name}}",
       "history": "Historia relacji",
       "invitation": "Zaproszenie administratora",

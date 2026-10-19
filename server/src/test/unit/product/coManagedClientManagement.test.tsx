@@ -67,7 +67,7 @@ vi.mock('../../../components/co-managed/CoManagedDeparture', () => ({ default: (
 const relationship = (over: Record<string, unknown> = {}) => ({
   relationshipId: 'rel', operationId: 'operation', state: 'pending_acceptance', ended: false, seats: 2, usedSeats: 1,
   workspaceName: 'Customer IT', administratorEmail: 'admin@example.test', canManage: true, canChangeSeats: true,
-  canRetry: true, canCancel: true, invitationExpired: false, deliveryFailed: false, ...over,
+  canRetry: true, canCancel: true, invitationExpired: false, deliveryFailed: false, cleanupFailed: false, ...over,
 });
 const view = (over: Record<string, unknown> = {}) => ({
   clientId: 'client', clientName: 'Acme', selectionRequired: false, selectedRelationshipId: null as string | null,
@@ -358,13 +358,31 @@ describe('client relationship view sections', () => {
     expect(screen.getByTestId('sla')).toBeInTheDocument();
     expect(screen.getByTestId('delegation')).toBeInTheDocument();
   });
-  it('offers explicit history selection instead of setup when only an ended relationship exists', () => {
+  it('offers setup again beside history selection when only an ended relationship exists', () => {
     render(<CoManagedClientView view={view({ selectionRequired: true,
-      relationships: [relationship({ state: 'terminated', ended: true, canRetry: false, canCancel: false, canChangeSeats: false })] })}
+      relationships: [relationship({ state: 'cancelled', ended: true, canRetry: false, canCancel: false, canChangeSeats: false })] })}
+      clientId="client" clientName="Acme" idPrefix="i" />);
+    expect(document.getElementById('i-setup')).not.toBeNull();
+    expect(document.getElementById('i-relationship')).not.toBeNull();
+    expect(screen.getByText('Co-managed IT not enabled')).toBeInTheDocument();
+  });
+  it('does not offer a second setup while a relationship is live', () => {
+    render(<CoManagedClientView view={view({ selectionRequired: true, relationships: [
+      relationship({ state: 'cancelled', ended: true, relationshipId: 'old' }), relationship({ relationshipId: 'live' })] })}
       clientId="client" clientName="Acme" idPrefix="i" />);
     expect(document.getElementById('i-setup')).toBeNull();
-    expect(document.getElementById('i-relationship')).not.toBeNull();
-    expect(screen.getByText('Relationship history')).toBeInTheDocument();
+  });
+  it('explains a failed setup and a pending or failed cleanup', () => {
+    const { rerender } = render(<CoManagedClientView view={view({ selectedRelationshipId: 'rel', relationships: [relationship({ state: 'failed', canCancel: true })] })}
+      clientId="client" clientName="Acme" idPrefix="i" />);
+    expect(screen.getByText(/Setup did not finish/)).toBeInTheDocument();
+    rerender(<CoManagedClientView view={view({ selectedRelationshipId: 'rel', relationships: [relationship({ state: 'cleanup_requested', canCancel: false, cleanupFailed: false })] })}
+      clientId="client" clientName="Acme" idPrefix="i" />);
+    expect(screen.getByText(/Cleanup is pending/)).toBeInTheDocument();
+    expect(screen.queryByText(/must accept/)).toBeNull();
+    rerender(<CoManagedClientView view={view({ selectedRelationshipId: 'rel', relationships: [relationship({ state: 'cleanup_requested', canCancel: false, cleanupFailed: true })] })}
+      clientId="client" clientName="Acme" idPrefix="i" />);
+    expect(screen.getByText(/Cleanup did not finish/)).toBeInTheDocument();
   });
   it('links client-context work to the MSP shell', () => {
     render(<CoManagedClientView view={view({ selectedRelationshipId: 'rel', relationships: [relationship({ state: 'active', canRetry: false, canCancel: false, canChangeSeats: false })] })}

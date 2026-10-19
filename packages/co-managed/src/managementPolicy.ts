@@ -225,6 +225,15 @@ function relationshipEnded(relationship: { state: string; ended_at?: unknown }):
   return relationship.state === 'terminated' || Boolean(relationship.ended_at);
 }
 
+/** The state an MSP sees for one setup. Until the customer accepts, the
+ * relationship only says provisioning or pending acceptance, so the setup's own
+ * state (queued, failed, cleanup requested, cancelled) is the meaningful one;
+ * once accepted or ended, the relationship's state is. */
+function presentedSetupState(operationState: string, relationship: { state: string } | null | undefined): string {
+  if (operationState === 'cancelled') return 'cancelled';
+  return relationship && ['active', 'terminated'].includes(relationship.state) ? relationship.state : operationState;
+}
+
 interface ClientRelationshipEntry {
   operation: any; relationship: { state: string; ended_at?: unknown; revision?: number }; ended: boolean;
 }
@@ -247,7 +256,7 @@ async function discoverClientRelationships(context: ManagementContext, clientId:
 
 function relationshipOption(context: ManagementContext, entry: ClientRelationshipEntry): CoManagedRelationshipOption {
   return { relationshipId: entry.operation.relationship_id as string, operationId: entry.operation.operation_id as string,
-    state: entry.relationship.state, ended: entry.ended,
+    state: presentedSetupState(entry.operation.state, entry.relationship), ended: entry.ended,
     workspaceName: hidden(context, workspaceNames) ? null : entry.operation.request.workspaceName as string };
 }
 
@@ -343,6 +352,7 @@ export interface CoManagedClientRelationshipView extends CoManagedRelationshipOp
   invitationSent: boolean;
   invitationExpired: boolean;
   deliveryFailed: boolean;
+  cleanupFailed: boolean;
 }
 
 export interface CoManagedClientManagementView {
@@ -394,7 +404,8 @@ export async function getCoManagedClientManagement(db: Knex, actor: CoManagedSes
         canRetry: canManage && (['queued', 'provisioning', 'failed', 'cleanup_requested'].includes(operation.state) ||
           await administratorInvitationOutstanding(customer, invitation)),
         invitationSent: Boolean(operation.invitation_sent_at),
-        invitationExpired, deliveryFailed: Boolean(operation.invitation_delivery_error) });
+        invitationExpired, deliveryFailed: Boolean(operation.invitation_delivery_error),
+        cleanupFailed: operation.error_code === 'PROVISIONING_CLEANUP_FAILED' });
     }
     const current = relationships.filter(entry => !entry.ended);
     const selected = relationshipId ? relationships.find(entry => entry.relationshipId === relationshipId)
@@ -482,8 +493,7 @@ export async function getCoManagedClientOverview(db: Knex, actor: CoManagedSessi
         relationshipId: operation.relationship_id, operationId: operation.operation_id,
         workspaceName: hidden(context, workspaceNames) ? null : operation.request.workspaceName as string,
         administratorEmail: hidden(context, administratorEmails) ? null : operation.request.administrator.email as string,
-        state: (operation.state === 'cancelled' ? 'cancelled'
-          : relationship && ['active', 'terminated'].includes(relationship.state) ? relationship.state : operation.state) as string,
+        state: presentedSetupState(operation.state, relationship),
         ended, seats: Number(allocation?.seats ?? operation.request.seats),
         usedSeats: canManage && !ended ? await countCoManagedCommittedSeats(context.trx, operation.customer_tenant) : null,
         invitationExpired, deliveryFailed: Boolean(operation.invitation_delivery_error),
@@ -528,7 +538,7 @@ export async function getCoManagedManagementStatus(db: Knex, actor: CoManagedSes
         canCancel: Boolean(canManage && allocation?.state === 'reserved' && ['provisioning', 'pending_acceptance'].includes(relationship?.state) &&
           ['queued', 'provisioning', 'failed', 'pending_acceptance'].includes(operation.state)),
         cleanupFailed: operation.error_code === 'PROVISIONING_CLEANUP_FAILED',
-        state: (operation.state === 'cancelled' ? 'cancelled' : ['active', 'terminated'].includes(relationship?.state) ? relationship.state : operation.state) as string,
+        state: presentedSetupState(operation.state, relationship),
         invitationSent: Boolean(operation.invitation_sent_at), invitationExpired, deliveryFailed: Boolean(operation.invitation_delivery_error),
         canRetry: canManage && (['queued', 'provisioning', 'failed', 'cleanup_requested'].includes(operation.state) || awaitingAdministrator),
       });

@@ -980,6 +980,7 @@
       "capacity": "Capacité",
       "chooseRelationship": "Choisir la relation",
       "endedHint": "Cette relation est terminée. L'historique conservé et les archives restent disponibles.",
+      "failedHint": "La configuration n'est pas terminée. Les postes restent réservés ; réessayez pour la poursuivre ou annulez la configuration.",
       "forClient": "Informatique cogérée pour {{name}}",
       "history": "Historique de la relation",
       "invitation": "Invitation de l'administrateur",

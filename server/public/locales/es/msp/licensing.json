@@ -980,6 +980,7 @@
       "capacity": "Capacidad",
       "chooseRelationship": "Elegir relación",
       "endedHint": "Esta relación ha finalizado. El historial retenido y los archivos siguen disponibles.",
+      "failedHint": "La configuración no terminó. Los puestos siguen reservados; reintente para continuarla o cancele la configuración.",
       "forClient": "TI cogestionada para {{name}}",
       "history": "Historial de la relación",
       "invitation": "Invitación del administrador",

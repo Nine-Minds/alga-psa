@@ -974,6 +974,7 @@
       "capacity": "Kapacitet",
       "chooseRelationship": "Välj relation",
       "endedHint": "Den här relationen har avslutats. Sparad historik och sparade arkiv finns kvar.",
+      "failedHint": "Konfigurationen slutfördes inte. Platserna förblir reserverade; försök igen för att fortsätta eller avbryt konfigurationen.",
       "forClient": "Samhanterad IT för {{name}}",
       "history": "Relationshistorik",
       "invitation": "Administratörsinbjudan",

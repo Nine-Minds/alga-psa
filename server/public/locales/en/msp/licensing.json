@@ -974,6 +974,7 @@
       "capacity": "Capacity",
       "chooseRelationship": "Choose relationship",
       "endedHint": "This relationship has ended. Retained history and archives remain available.",
+      "failedHint": "Setup did not finish. Seats stay reserved; retry to continue it, or cancel the setup.",
       "forClient": "Co-managed IT for {{name}}",
       "history": "Relationship history",
       "invitation": "Administrator invitation",

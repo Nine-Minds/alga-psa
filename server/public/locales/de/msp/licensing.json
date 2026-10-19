@@ -974,6 +974,7 @@
       "capacity": "Kapazität",
       "chooseRelationship": "Beziehung auswählen",
       "endedHint": "Diese Beziehung wurde beendet. Aufbewahrter Verlauf und Archive bleiben verfügbar.",
+      "failedHint": "Die Einrichtung wurde nicht abgeschlossen. Die Plätze bleiben reserviert. Versuchen Sie es erneut, um fortzufahren, oder brechen Sie die Einrichtung ab.",
       "forClient": "Co-Managed IT für {{name}}",
       "history": "Beziehungsverlauf",
       "invitation": "Administrator-Einladung",

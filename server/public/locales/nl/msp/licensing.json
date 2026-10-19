@@ -974,6 +974,7 @@
       "capacity": "Capaciteit",
       "chooseRelationship": "Relatie kiezen",
       "endedHint": "Deze relatie is beëindigd. Bewaarde geschiedenis en archieven blijven beschikbaar.",
+      "failedHint": "De installatie is niet voltooid. De plaatsen blijven gereserveerd; probeer het opnieuw om verder te gaan, of annuleer de installatie.",
       "forClient": "Gezamenlijk beheerde IT voor {{name}}",
       "history": "Relatiegeschiedenis",
       "invitation": "Beheerdersuitnodiging",

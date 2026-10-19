@@ -37,6 +37,9 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
   // re-renders the server tree and closes the focus view, so the integration
   // owns the selected relationship and syncs the URL shallowly.
   const openRelationship = (nextId: string) => onSelectRelationship?.(nextId);
+  // A cancelled or ended relationship stays listed as history; it does not
+  // stop the client from being set up again.
+  const hasLiveRelationship = view.relationships.some((entry) => !entry.ended);
   const needsRecovery = Boolean(selected && !selected.ended &&
     (selected.canRetry || selected.canCancel || ['queued', 'provisioning', 'failed', 'cleanup_requested', 'pending_acceptance'].includes(selected.state)));
   return (
@@ -50,9 +53,9 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
               {selected
                 ? t(`coManaged.provisioning.states.${selected.state}`, { defaultValue: selected.state })
                 : view.selectionRequired
-                  ? (view.relationships.some((entry) => !entry.ended)
+                  ? (hasLiveRelationship
                     ? t('coManaged.client.selectionRequired', { defaultValue: 'Select a co-managed relationship' })
-                    : t('coManaged.client.history', { defaultValue: 'Relationship history' }))
+                    : t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' }))
                   : t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' })}
             </h3>
           </div>
@@ -117,7 +120,7 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
         </CardContent>
       </Card>
 
-      {view.relationships.length === 0 && view.canManage && (
+      {!hasLiveRelationship && view.canManage && (
         <CoManagedClientSetup key={resetKey} clientId={clientId} clientName={clientName} idPrefix={idPrefix}
           onProvisioned={() => onReload?.()} onDirtyChange={onDirtyChange} />
       )}
@@ -129,7 +132,13 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
             <p className="text-sm text-[rgb(var(--color-text-600))]">
               {selected.state === 'pending_acceptance'
                 ? t('coManaged.client.awaitingAcceptance', { defaultValue: 'The customer administrator must accept before access is granted.' })
-                : t('coManaged.client.provisioningHint', { defaultValue: 'Reserved seats stay held until setup completes or cleanup is acknowledged.' })}
+                : selected.state === 'cleanup_requested'
+                  ? (selected.cleanupFailed
+                    ? t('coManaged.provisioning.cleanupFailed', { defaultValue: 'Cleanup did not finish. Seats remain reserved; you can retry safely.' })
+                    : t('coManaged.provisioning.cleanupPending', { defaultValue: 'Cleanup is pending. Seats remain reserved until it finishes.' }))
+                  : selected.state === 'failed'
+                    ? t('coManaged.client.failedHint', { defaultValue: 'Setup did not finish. Seats stay reserved; retry to continue it, or cancel the setup.' })
+                    : t('coManaged.client.provisioningHint', { defaultValue: 'Reserved seats stay held until setup completes or cleanup is acknowledged.' })}
             </p>
             <CoManagedClientRecovery operationId={selected.operationId} state={selected.state} canRetry={selected.canRetry}
               canCancel={selected.canCancel} invitationSent={selected.invitationSent} invitationExpired={selected.invitationExpired} deliveryFailed={selected.deliveryFailed}

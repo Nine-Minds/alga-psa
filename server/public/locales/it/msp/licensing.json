@@ -980,6 +980,7 @@
       "capacity": "Capacità",
       "chooseRelationship": "Scegli relazione",
       "endedHint": "Questa relazione è terminata. La cronologia conservata e gli archivi restano disponibili.",
+      "failedHint": "La configurazione non è stata completata. I posti restano riservati; riprova per continuarla oppure annulla la configurazione.",
       "forClient": "IT cogestita per {{name}}",
       "history": "Cronologia della relazione",
       "invitation": "Invito dell'amministratore",

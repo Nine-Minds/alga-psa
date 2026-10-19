@@ -205,6 +205,23 @@ export function registerCoManagedManagementPolicyTests(getDb: () => Knex, prepar
           canManage: true, seats: 2, usedSeats: 2 }] });
     });
 
+    it('shows the setup state on the client view while acceptance is pending, including cleanup progress', async () => {
+      // Until acceptance the relationship only says provisioning or pending
+      // acceptance; a failed or cancelled setup must not read as either.
+      const f = await fixture();
+      const clientId = f.operation.request.clientId;
+      const operations = () => f.home.table('co_managed_provisioning_operations').where('operation_id', f.operation.operation_id);
+      const selected = async () => (await getCoManagedClientManagement(f.db, f.actor, clientId)).relationships[0];
+      await operations().update({ state: 'failed', error_code: 'PROVISIONING_FAILED' });
+      await expect(selected()).resolves.toMatchObject({ state: 'failed', canCancel: true, canRetry: true });
+      await bootstrapCoManagedWorkspace(f.db, f.actor.tenant, f.operation.operation_id, { info() {}, warn() {}, error() {} });
+      await expect(selected()).resolves.toMatchObject({ state: 'pending_acceptance', cleanupFailed: false });
+      await requestCoManagedProvisioningCleanup(f.db, f.actor.tenant, f.operation.operation_id);
+      await expect(selected()).resolves.toMatchObject({ state: 'cleanup_requested', canCancel: false, canRetry: true, cleanupFailed: false });
+      await operations().update({ error_code: 'PROVISIONING_CLEANUP_FAILED' });
+      await expect(selected()).resolves.toMatchObject({ state: 'cleanup_requested', cleanupFailed: true });
+    });
+
     it('denies foreign clients and forged or mismatched relationship selections without leaking labels', async () => {
       const f = await fixture();
       const foreign = await prepare();
