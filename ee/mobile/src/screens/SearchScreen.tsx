@@ -5,6 +5,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { RootStackParamList } from "../navigation/types";
 import { useTheme } from "../ui/ThemeContext";
+import { Badge } from "../ui/components/Badge";
 import { Card } from "../ui/components/Card";
 import { SearchBar } from "../ui/components/SearchBar";
 import { ErrorState } from "../ui/states";
@@ -36,6 +37,9 @@ const DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 2;
 const PER_GROUP = 5;
 
+/** What one result group holds: its page, its own cursor and its match count. */
+type SearchGroup = { items: SearchResult[]; cursor?: string; total?: number };
+
 export function SearchScreen({ navigation }: Props) {
   const { t } = useTranslation("search");
   const theme = useTheme();
@@ -64,8 +68,7 @@ export function SearchScreen({ navigation }: Props) {
 
   const [input, setInput] = useState("");
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [cursors, setCursors] = useState<Partial<Record<SearchableType, string>>>({});
+  const [groups, setGroups] = useState<Partial<Record<SearchableType, SearchGroup>>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
@@ -110,13 +113,13 @@ export function SearchScreen({ navigation }: Props) {
   useEffect(() => {
     if (!client || !apiKey) return;
     if (query.length < MIN_QUERY_LENGTH) {
-      setResults([]);
+      setGroups({});
       setError(false);
       setLoading(false);
       return;
     }
     if (offline) {
-      setResults([]);
+      setGroups({});
       setError(true);
       return;
     }
@@ -129,32 +132,43 @@ export function SearchScreen({ navigation }: Props) {
     void (async () => {
       setLoading(true);
       setError(false);
-      const result = await runSearch(client, {
-        apiKey,
-        query,
-        types,
-        limit: PER_GROUP * types.length,
-        signal: controller.signal,
-      });
+      // One request per group: a single mixed page hides every type whose
+      // matches rank below the cut, and its own cursor is what More needs.
+      const settled = await Promise.all(
+        types.map(async (type) => ({
+          type,
+          result: await runSearch(client, {
+            apiKey,
+            query,
+            types: [type],
+            limit: PER_GROUP,
+            signal: controller.signal,
+          }),
+        })),
+      );
       if (controller.signal.aborted || latestQueryRef.current !== query) return;
       setLoading(false);
-      if (!result.ok) {
-        if (result.error.kind === "canceled") return;
-        logger.warn("Search failed", { error: result.error });
+      const next: Partial<Record<SearchableType, SearchGroup>> = {};
+      let failed = 0;
+      for (const { type, result } of settled) {
+        if (!result.ok) {
+          if (result.error.kind === "canceled") return;
+          failed += 1;
+          logger.warn("Search failed", { type, error: result.error });
+          continue;
+        }
+        const page = result.data.data;
+        next[type] = {
+          items: page.results ?? [],
+          cursor: page.nextCursor ?? undefined,
+          total: page.groups?.[type],
+        };
+      }
+      setGroups(next);
+      if (failed > 0 && Object.keys(next).length === 0) {
         setError(true);
         return;
       }
-      const page = result.data.data;
-      setResults(page.results ?? []);
-      // One combined cursor comes back for the mixed page; each group's More
-      // continues from it, narrowed to that type.
-      setCursors(
-        page.nextCursor
-          ? (Object.fromEntries(types.map((type) => [type, page.nextCursor])) as Partial<
-              Record<SearchableType, string>
-            >)
-          : {},
-      );
       rememberQuery(query);
     })();
 
@@ -163,20 +177,32 @@ export function SearchScreen({ navigation }: Props) {
 
   const loadMore = useCallback(
     async (type: SearchableType) => {
-      if (!client || !apiKey) return;
+      const cursor = groups[type]?.cursor;
+      if (!client || !apiKey || !cursor) return;
       const result = await runSearch(client, {
         apiKey,
         query,
         types: [type],
         limit: PER_GROUP,
-        cursor: cursors[type],
+        cursor,
       });
       if (!result.ok) return;
       const page = result.data.data;
-      setResults((current) => [...current, ...(page.results ?? [])]);
-      setCursors((current) => ({ ...current, [type]: page.nextCursor ?? undefined }));
+      setGroups((current) => {
+        const existing = current[type];
+        if (!existing) return current;
+        const seen = new Set(existing.items.map((item) => item.id));
+        return {
+          ...current,
+          [type]: {
+            items: [...existing.items, ...(page.results ?? []).filter((item) => !seen.has(item.id))],
+            cursor: page.nextCursor ?? undefined,
+            total: page.groups?.[type] ?? existing.total,
+          },
+        };
+      });
     },
-    [apiKey, client, cursors, query],
+    [apiKey, client, groups, query],
   );
 
   const open = useCallback(
@@ -199,7 +225,9 @@ export function SearchScreen({ navigation }: Props) {
 
   const grouped = SEARCHABLE_TYPES.filter((type) => types.includes(type)).map((type) => ({
     type,
-    items: results.filter((result) => result.type === type),
+    items: groups[type]?.items ?? [],
+    cursor: groups[type]?.cursor,
+    total: groups[type]?.total,
   }));
   const hasResults = grouped.some((group) => group.items.length > 0);
 
@@ -307,9 +335,14 @@ export function SearchScreen({ navigation }: Props) {
         {grouped.map((group) =>
           group.items.length === 0 ? null : (
             <View key={group.type} style={{ marginBottom: theme.spacing.lg }}>
-              <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, fontWeight: "700" }}>
-                {t(`groups.${group.type}`, group.type)}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
+                <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, fontWeight: "700" }}>
+                  {t(`groups.${group.type}`, group.type)}
+                </Text>
+                {typeof group.total === "number" && group.total > group.items.length ? (
+                  <Badge label={String(group.total)} />
+                ) : null}
+              </View>
               <Card style={{ marginTop: theme.spacing.sm, padding: 0 }}>
                 {group.items.map((result, index) => (
                   <Pressable
@@ -339,7 +372,7 @@ export function SearchScreen({ navigation }: Props) {
                   </Pressable>
                 ))}
               </Card>
-              {group.items.length >= PER_GROUP ? (
+              {group.cursor ? (
                 <Pressable
                   testID={`search-more-${group.type}`}
                   onPress={() => void loadMore(group.type)}
