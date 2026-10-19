@@ -35,11 +35,11 @@
   },
   {
     "id": "T004",
-    "description": "Unit: limit resolution precedence \u2014 tenant override beats appliance claim beats Pro default",
+    "description": "Unit: limit resolution \u2014 hosted uses tenant override else 10; appliance uses the verified service_principals claim, ignores tenants.service_principal_limit, and falls back to 10 when the claim is missing or the token is invalid",
     "implemented": false,
     "featureIds": [
-      "F071",
-      "F070"
+      "F070",
+      "F071"
     ]
   },
   {
@@ -55,12 +55,13 @@
   },
   {
     "id": "T006",
-    "description": "DB integration: deleting a principal referenced by a ticket and mcp_agent_audit archives it (audit kept, IdP binding cleared, hidden from list, subject rebindable to a new agent); deleting an unused principal hard-deletes it",
+    "description": "DB integration: deleting a principal referenced by a ticket and mcp_agent_audit archives it (audit kept, IdP binding cleared, hidden from list, subject rebindable to a new agent); deleting an unused principal hard-deletes it; the archived principal no longer counts toward the limit",
     "implemented": false,
     "featureIds": [
       "F027",
+      "F029",
       "F033",
-      "F029"
+      "F072"
     ]
   },
   {
@@ -375,6 +376,14 @@
     "implemented": false,
     "featureIds": [
       "F100"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "DB integration: principal posts a ticket comment with no visibility \u2192 stored internal; explicit is_internal=false without act-as \u2192 422 ACT_AS_REQUIRED and nothing stored; with act-as \u2192 public comment authored by the human with created_via_principal_id; a client-portal user's public comment is unaffected",
+    "implemented": false,
+    "featureIds": [
+      "F101"
     ]
   }
 ]

@@ -35,6 +35,22 @@
   - **The per-principal rate-limit override lives on `service_principals`** (EE), not as a new column on CE `api_rate_limit_settings`.
   - **`ticket_audit_logs.actor_type`** is a plain `string(32)` with no CHECK, so `service_principal` needs no constraint change.
   - **Boundary enforcement:** a static guard test (F096 / T038) plus a CE build check.
+- **(2026-10-18, Robert) Open questions resolved. All choices were the recommended options.**
+  - **Pro principal limit:** a flat 10 that does not scale with seats. The cap is the guard against "one bot per unlicensed person".
+  - **Default per-principal rate limit:** 120 burst / 60 per minute, the same as today's per-key default.
+  - **Appliance limit:** taken only from the signed `service_principals` claim; the tenants override is ignored on appliances.
+    - Why: the appliance owner controls their own database.
+    - If the claim is missing or the token is invalid, the limit is the Pro default. It never fails open to unlimited, unlike `userSeatGuard`, which fails open so it never blocks user creation.
+    - Detection: an appliance is a host with a `license_state` row, read on the admin connection.
+    - The claim is issued by the separate alga-license service (`ee/server/src/lib/applianceConsole/algaLicenseAdminClient.ts`). That makes it a cross-service dependency, but this plan ships safely before the issuer change.
+  - **Act-as scope:** an on/off switch per principal plus RBAC intersection; no team allow-lists.
+  - **A principal's own comments:** forced internal.
+    - A customer-visible comment needs act-as.
+    - An explicit public request without act-as is rejected (ACT_AS_REQUIRED) rather than silently coerced, so the integration learns its intent wasn't honored.
+    - Enforced in the CE comment write core as a generic rule: a non-interactive author means internal only.
+  - **Interaction owner:** human work.
+  - **Archived principals:** don't count toward the limit.
+- **Follow-up to check during implementation:** are there other customer-facing outbound paths a principal could use, such as REST email-send endpoints or portal-visible document shares? If so, the R5.9 rule may need to apply there too. So far only ticket comments are known to reach customers.
 - **(2026-10-18) No feature flag.** The change only tightens behaviour, and it fixes counts that are wrong today.
 
 ## Discoveries / Constraints
@@ -316,14 +332,7 @@ git grep -nE "user_?[tT]ype\s*!==?\s*'client'" -- ':!**/*.test.*' ':!**/__tests_
 
 ## Open Questions
 
-These mirror the PRD's Open Questions.
-
-- Pro entitlement numbers (proposed: 10 principals, 120 burst / 60 per min) and whether they should scale with seats.
-- Whether the appliance license should carry a signed `service_principals` claim now.
-- Act-as allow-lists (users or teams) beyond the on/off switch.
-- Default visibility of service-authored ticket comments.
-- Whether the interaction owner counts as human work (this plan says yes).
-- Whether archived principals count toward the limit (this plan says no).
+None remain. All were resolved on 2026-10-18; the table at the end of the PRD lists every decision.
 
 ## Test coverage notes
 

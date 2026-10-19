@@ -572,7 +572,7 @@
   },
   {
     "id": "F070",
-    "description": "SERVICE_PRINCIPAL_ENTITLEMENT (Pro: maxPrincipals, rateLimit ceiling) defined in ee/server/src/lib/service-principals/entitlements.ts",
+    "description": "SERVICE_PRINCIPAL_ENTITLEMENT (Pro) in ee/server/src/lib/service-principals/entitlements.ts: maxPrincipals 10 (flat, not seat-scaled); default and ceiling rate limit 120 burst / 60 per min",
     "implemented": false,
     "prdRefs": [
       "R6.1"
@@ -580,7 +580,7 @@
   },
   {
     "id": "F071",
-    "description": "Service-principal limit resolves tenants.service_principal_limit \u2192 appliance claim service_principals \u2192 Pro default",
+    "description": "Limit resolution: hosted \u2192 tenants.service_principal_limit else Pro default; appliance (license_state row) \u2192 verified signed service_principals claim else Pro default, ignoring tenants.service_principal_limit; unreadable/invalid token falls back to the Pro default, never unlimited; claim read in EE only",
     "implemented": false,
     "prdRefs": [
       "R6.2"
@@ -588,7 +588,7 @@
   },
   {
     "id": "F072",
-    "description": "checkServicePrincipalLimit(trx, tenant) counts active service users and returns SERVICE_PRINCIPAL_LIMIT_REACHED at the limit",
+    "description": "checkServicePrincipalLimit(trx, tenant) counts active (non-archived) service users and returns SERVICE_PRINCIPAL_LIMIT_REACHED at the limit; archiving frees the slot",
     "implemented": false,
     "prdRefs": [
       "R6.3"
@@ -605,7 +605,7 @@
   },
   {
     "id": "F074",
-    "description": "EE boundary sets rateLimitConfig from service_principals override \u2192 Pro default (a per-key api_rate_limit_settings row still wins); override capped at the Pro ceiling unless a platform override exists",
+    "description": "EE boundary sets rateLimitConfig from service_principals override \u2192 Pro default (a per-key api_rate_limit_settings row still wins); override capped at the Pro ceiling, raisable only by a hosted platform override",
     "implemented": false,
     "prdRefs": [
       "R6.4"
@@ -826,6 +826,14 @@
     "prdRefs": [
       "Edition placement (CE / EE)",
       "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "Ticket-comment write core forces non-interactive authors to internal comments: unspecified visibility defaults to internal; explicit is_internal=false throws HumanWorkOwnerRequiredError('is_internal') (EE: 422 ACT_AS_REQUIRED); under act-as the human authors and public is allowed with created_via_principal_id stamped",
+    "implemented": false,
+    "prdRefs": [
+      "R5.9"
     ]
   }
 ]

@@ -2,7 +2,7 @@
 
 - Slug: `service-principals`
 - Date: `2026-10-18`
-- Status: Draft
+- Status: Draft — open questions resolved 2026-10-18
 
 ## Summary
 
@@ -137,7 +137,7 @@ Personas: MSP admin (sets up integrations); integration developer (writes agains
 3. **Integration acts as itself.**
    - An RMM creates a ticket with `POST /api/v1/tickets` using the principal's key, and `entered_by` is the principal.
    - It may set `assigned_to` to a human tech. Assigning work to a human is fine, because the principal is not the assignee.
-   - It posts a comment, and the comment author shows as the principal's name with a "Service" badge.
+   - It posts a comment, and the comment author shows as the principal's name with a "Service" badge. A principal's own comments are always internal. A customer-visible reply needs act-as, so it comes from a licensed human ("Jane Tech via Datto RMM").
 4. **Integration logs human work via act-as.** A dispatch tool calls `POST /api/v1/time-entries` with `X-Alga-Act-As: <tech user_id>`.
    - The call succeeds only if all of these hold:
      - the principal's RBAC allows the action
@@ -347,6 +347,12 @@ These checks are enforced in the auth layer, independent of the password. They a
   - The generic `auditLog()` records `via_principal_user_id` in `details`.
 - **R5.7** Comments authored by a service principal keep `author_type = 'user'`, so the enum doesn't change. CE display resolution treats a user of a non-interactive type as a named non-human author, never as a client or contact. The EE `ServiceAuthorBadge` slot adds the "Service" badge and avatar.
 - **R5.8** Attribution display: the ticket activity feed, the time-entry detail and the comment header render the EE `ViaPrincipalLabel` slot, "<human> via <principal name>", when the via column is set.
+- **R5.9 Customer-visible comments are human work.** Talking to the customer is core help-desk work, so only a licensed human (or the client themselves) may author a customer-visible comment.
+  - **The rule (CE, in the ticket-comment write core).** A comment whose author is not an interactive user type must be internal (`is_internal = true`). It applies to every caller: UI, REST, workflow and MCP.
+  - **When the caller doesn't specify visibility.** A non-interactive author's comment defaults to internal. It is never silently made public.
+  - **When the caller explicitly asks for public.** An explicit `is_internal = false` from a non-interactive author throws `HumanWorkOwnerRequiredError('is_internal')`, and the EE boundary maps that to `422 ACT_AS_REQUIRED`. We don't silently flip the comment to internal, so the integration finds out its intent wasn't honored.
+  - **Under act-as.** The author is the human, so a public comment is allowed and is stamped with `created_via_principal_id`.
+  - Client-portal and inbound-email comments are unaffected, because their authors are interactive (`client`) or contacts.
 
 #### R6 — Entitlements (EE)
 
@@ -363,21 +369,26 @@ These checks are enforced in the auth layer, independent of the password. They a
   - A non-Pro tenant keeps its existing principals working: their keys authenticate and their MCP tokens resolve.
   - It cannot create principals, reactivate them or issue keys until it is on Pro.
   - The same applies when a Pro tenant drops below Pro. Nothing is deactivated or deleted; only new work is blocked.
-- **R6.1** `SERVICE_PRINCIPAL_ENTITLEMENT` (Pro) in `ee/server/src/lib/service-principals/entitlements.ts` holds `maxPrincipals` and the rate-limit ceiling (`maxTokens`, `refillPerMin`). Proposed defaults, still an open question:
-  - 10 principals
-  - 120 tokens burst, 60 per minute
-- **R6.2** The limit resolves in this order:
-  1. `tenants.service_principal_limit`, a nullable platform-admin override in the style of `licensed_user_count`
-  2. the appliance license claim `service_principals`, when it is present in the signed claims
-  3. the Pro default
-- **R6.3** `checkServicePrincipalLimit(trx, tenant)` counts active service users.
+- **R6.1** `SERVICE_PRINCIPAL_ENTITLEMENT` (Pro) in `ee/server/src/lib/service-principals/entitlements.ts` holds:
+  - `maxPrincipals: 10`, a flat number that does not scale with seats
+  - the default per-principal rate limit and ceiling: `maxTokens: 120`, `refillPerMin: 60`, which matches today's per-key API default, so an integration moving off a human's key sees no change
+
+  The cap is the main guard against "one bot per unlicensed person", since a principal can still act as itself.
+- **R6.2** Where the limit comes from depends on the deployment:
+  - **Hosted (no `license_state` row).** Use `tenants.service_principal_limit` if set. It is a nullable override that only a Nine Minds platform admin can change, in the style of `licensed_user_count`. Otherwise use the Pro default.
+  - **Appliance (`license_state` row present).**
+    - **Trust only the signed license.** Use the `service_principals` claim from the verified license token (`verifyLicense`, as `userSeatGuard.ts` does for `seats`). `tenants.service_principal_limit` is **ignored**, because the appliance owner controls that database and could raise their own limit.
+    - **When there is no claim to use.** If the claim is missing, or the token can't be read or verified, use the Pro default. This means "the default", never "unlimited". The seat guard is deliberately the opposite: it fails open so it never blocks a user from being created.
+    - **The appliance tier still has to be Pro.** It is resolved by `resolveSelfHostTier`, as today.
+  - The claim is read in EE (`ee/server/src/lib/service-principals/entitlements.ts`) from the verified claims object. Nothing about it is added to the shared `packages/licensing` claim types, to keep the edition boundary intact.
+- **R6.3** `checkServicePrincipalLimit(trx, tenant)` counts active service users. Archived principals are inactive, so they don't count. Deleting a principal always frees its slot.
   - It runs in `createServicePrincipal` and on reactivation, after the R6.0 tier check and in the same transaction as the write. This follows the pattern of `checkInternalUserLicenseLimit`.
   - At the limit it returns `SERVICE_PRINCIPAL_LIMIT_REACHED` with a readable message.
 - **R6.4** Per-principal rate limits:
   - The EE boundary sets the token bucket subject to `sp:<principal user_id>`, whatever key was used. That includes MCP's per-request minted keys, which finally makes agent rate limiting work.
   - It also sets `rateLimitConfig` from the principal's own override, falling back to the Pro default. A per-key row in `api_rate_limit_settings` still wins.
   - CE `enforce.ts` gains generic support for a context-supplied config override.
-  - An override can't exceed the Pro ceiling unless the tenant has a platform override.
+  - An override can't exceed the Pro ceiling. On hosted tenants, only a Nine Minds platform override can raise the ceiling. On appliances, the ceiling is the Pro default.
   - Throttling still follows `RATE_LIMIT_ENFORCE`.
 - **R6.5** Seat checks stay separate. Creating a service principal never calls `checkInternalUserLicenseLimit`, and creating an internal user never counts service principals.
 
@@ -491,18 +502,26 @@ Nothing new beyond the attribution and audit columns above. Existing rate-limit 
 - No feature flag. The change only tightens behavior (login, assignment) and corrects counts, and the new UI ships with it.
 - **CE.** The CE schema and behavior for `internal` and `client` users are unchanged, apart from the edition-neutral hardening (R2, R3, R5.3, R8.4–R8.6).
 - **Tier change for MCP agents.** On EE tenants below Pro (essentials appliances), existing agents keep working but new ones need Pro. Hosted tenants with a null plan resolve to Pro and see no change. Put this in the release notes.
+- **Cross-service dependency: alga-license.**
+  - Appliance licenses need a new signed `service_principals` claim, issued next to `seats` by the alga-license service. The appliance console (`algaLicenseAdminClient.ts`) and the Stripe-backed appliance subscription flows pass it through.
+  - Until a license carrying the claim is issued, Pro appliances get the Pro default of 10. This plan ships safely before the issuer change.
 - **Breaking change for integrations.** REST callers that log time or approve sheets with a principal-owned key get `ACT_AS_REQUIRED`. No such callers exist yet, because service principals don't exist before this release. MCP agents that used to log time as themselves now need `act_as_user_id`, so document it in the MCP tool description.
 
 ## Open Questions
 
-1. **Pro entitlement numbers.** Is 10 principals at 120 burst / 60 per minute right, or should the count scale with seats (for example `max(5, seats)`)? Already decided on 2026-10-18:
-   - Both kinds are EE, Pro-only, and implemented under `ee/`.
-   - Existing principals below Pro are grandfathered (R6.0a).
-2. **Appliance license claim.** Should `service_principals` be a signed claim now, or should Pro appliances use the Pro default until the license service issues one?
-3. **Act-as allow-lists.** Is the per-principal switch plus RBAC intersection enough for v1, or do MSPs need "may act as these users or teams only"?
-4. **Comments.** Should a service-principal comment on a ticket be customer-visible (`is_internal = false`) by default, or forced internal unless act-as is used?
-5. **Interactions.** Is the interaction owner human work? This plan says yes, which means telephony and call-logging integrations would need act-as.
-6. **Archived principals.** Should they still count toward the limit? This plan says no, because they are inactive.
+None remain. All were resolved by Robert on 2026-10-18:
+
+| Question | Decision | Where |
+|---|---|---|
+| Edition and tier | EE only, implemented under `ee/`; Pro only, for both kinds | *Edition placement*, R6.0 |
+| Principals on a tenant that is below Pro | Grandfathered: they keep working, but nothing new can be added | R6.0a |
+| Pro principal limit | A flat 10; it does not scale with seats | R6.1 |
+| Default per-principal rate limit | 120 burst / 60 per minute, the same as today's per-key default | R6.1 |
+| Where an appliance's limit comes from | The signed `service_principals` claim only. The tenants override is ignored, and a missing claim means the Pro default. | R6.2 |
+| Act-as scope | A per-principal on/off switch plus RBAC intersection; no allow-lists in v1 | R5.1, R5.2, Non-goals |
+| A principal's own comments | Always internal. A customer-visible comment needs act-as. | R5.9 |
+| Interaction owner | Human work, so it needs act-as | R5.3, R5.4 |
+| Archived principals | Don't count toward the limit | R6.3 |
 
 ## Acceptance Criteria (Definition of Done)
 
@@ -518,8 +537,9 @@ Nothing new beyond the attribution and audit columns above. Existing rate-limit 
    An admin cannot set its password. Each path is covered by a test that does not rely on the locked password.
 5. **API access.** A service principal can call `/api/v1` with its key, under its MSP roles, and is rate-limited per principal across MCP's rotating keys.
 6. **No human work.** A service principal can never be stored as a ticket assignee or resource, schedule assignee, time-entry or time-sheet owner, approver, project-task assignee or interaction owner, whether through UI, REST, workflow or MCP. Writes that would default to it fail with `ACT_AS_REQUIRED`.
-7. **Act-as attribution.** With act-as enabled and a valid target, human-work writes record the human as the actor and the principal in the via column and the activity log. RBAC is the intersection of both.
-8. **Deactivate and delete.** Deactivating a principal immediately stops all its keys, including MCP session keys, and frees its slot. Deleting a used principal archives it and keeps the audit trail.
-9. **User management.** Settings → Users never lists a non-interactive user, and no password, reset, invite or delete action can target one. `user_type` cannot be changed to or from `service` through user management.
-10. **Usage display.** On Pro, the license and account page and the Service principals tab show `used of limit`. Below Pro, they show the standard upgrade notice.
-11. **Audit complete.** All 66 `!== 'client'` sites and the REST-reachable `=== 'internal'` requirements are converted to named predicates, and the SCRATCHPAD inventory is marked complete.
+7. **Comments.** A principal's own ticket comments are always internal. Asking for a public one without act-as fails with `ACT_AS_REQUIRED`.
+8. **Act-as attribution.** With act-as enabled and a valid target, human-work writes record the human as the actor and the principal in the via column and the activity log. RBAC is the intersection of both.
+9. **Deactivate and delete.** Deactivating a principal immediately stops all its keys, including MCP session keys, and frees its slot. Deleting a used principal archives it and keeps the audit trail.
+10. **User management.** Settings → Users never lists a non-interactive user, and no password, reset, invite or delete action can target one. `user_type` cannot be changed to or from `service` through user management.
+11. **Usage display.** On Pro, the license and account page and the Service principals tab show `used of limit`. Below Pro, they show the standard upgrade notice.
+12. **Audit complete.** All 66 `!== 'client'` sites and the REST-reachable `=== 'internal'` requirements are converted to named predicates, and the SCRATCHPAD inventory is marked complete.
