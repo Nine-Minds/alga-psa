@@ -15,7 +15,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       limit: zOpenApi.string().optional().describe('Page size as a query string. Must parse to 1 through 100; defaults to 25.'),
       sort: zOpenApi.string().optional().describe('Sort column. Defaults to created_at.'),
       order: zOpenApi.enum(['asc', 'desc']).optional().describe('Sort direction. Defaults to desc.'),
-      search: zOpenApi.string().optional().describe('General search filter accepted by the shared filter schema. The current AssetService.list implementation does not apply this filter.'),
+      search: zOpenApi.string().optional().describe('Case-insensitive substring match across asset_tag, name, serial_number, location, manufacturer and model. Applied to both the returned rows and the pagination total.'),
       created_from: zOpenApi.string().datetime().optional().describe('Accepted by validation, but not currently applied by AssetService.list.'),
       created_to: zOpenApi.string().datetime().optional().describe('Accepted by validation, but not currently applied by AssetService.list.'),
       updated_from: zOpenApi.string().datetime().optional().describe('Accepted by validation, but not currently applied by AssetService.list.'),
@@ -851,7 +851,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       ...assetRouteExtensions,
       'x-rbac-resource': 'asset',
       'x-rbac-action': 'read',
-      'x-unapplied-validated-filters': ['maintenance_due', 'is_active', 'search', 'created_from', 'created_to', 'updated_from', 'updated_to'],
+      'x-unapplied-validated-filters': ['maintenance_due', 'is_active', 'created_from', 'created_to', 'updated_from', 'updated_to'],
     },
     edition: 'both',
   });

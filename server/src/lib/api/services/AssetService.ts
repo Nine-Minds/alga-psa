@@ -99,12 +99,35 @@ export class AssetService extends BaseService<any> {
     });
   }
 
+  /**
+   * `search` across `searchableFields`. This override never reaches
+   * BaseService.applyFilters, which is the only other consumer of that option,
+   * so the free-text box on the REST/mobile asset list is applied here.
+   */
+  private applySearch(query: Knex.QueryBuilder<any, any>, search: string): void {
+    if (this.searchableFields.length === 0) return;
+    const fields = this.searchableFields;
+    const table = this.tableName;
+    query.where((subQuery) => {
+      fields.forEach((field, index) => {
+        if (index === 0) {
+          subQuery.whereILike(`${table}.${field}`, `%${search}%`);
+        } else {
+          subQuery.orWhereILike(`${table}.${field}`, `%${search}%`);
+        }
+      });
+    });
+  }
+
   async list(options: ListOptions, context: ServiceContext, filters?: AssetFilterData): Promise<ListResult<any>> {
     const knex = await this.getDbForContext(context);
     const query = scopedTable(knex, context.tenant, this.tableName);
 
     // Apply filters
     if (filters) {
+      if (filters.search) {
+        this.applySearch(query, filters.search);
+      }
       if (filters.asset_tag) {
         query.where(`${this.tableName}.asset_tag`, 'ilike', `%${filters.asset_tag}%`);
       }
@@ -204,6 +227,9 @@ export class AssetService extends BaseService<any> {
 
     if (filters) {
       // Apply the same filters to count query
+      if (filters.search) {
+        this.applySearch(countQuery, filters.search);
+      }
       if (filters.client_id) {
         countQuery.where(`${this.tableName}.client_id`, filters.client_id);
       }

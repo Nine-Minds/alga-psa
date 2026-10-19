@@ -5109,10 +5109,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "search",
         "in": "query",
         "required": false,
-        "description": "General search filter accepted by the shared filter schema. The current AssetService.list implementation does not apply this filter.",
+        "description": "Case-insensitive substring match across asset_tag, name, serial_number, location, manufacturer and model. Applied to both the returned rows and the pagination total.",
         "schema": {
           "type": "string",
-          "description": "General search filter accepted by the shared filter schema. The current AssetService.list implementation does not apply this filter."
+          "description": "Case-insensitive substring match across asset_tag, name, serial_number, location, manufacturer and model. Applied to both the returned rows and the pagination total."
         }
       },
       {

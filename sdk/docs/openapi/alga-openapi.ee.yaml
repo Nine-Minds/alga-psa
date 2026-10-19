@@ -1289,8 +1289,9 @@ components:
           description: Sort direction. Defaults to desc.
         search:
           type: string
-          description: General search filter accepted by the shared filter schema. The
-            current AssetService.list implementation does not apply this filter.
+          description: Case-insensitive substring match across asset_tag, name,
+            serial_number, location, manufacturer and model. Applied to both the
+            returned rows and the pagination total.
         created_from:
           type: string
           format: date-time
@@ -27107,7 +27108,6 @@ paths:
         x-unapplied-validated-filters:
           - maintenance_due
           - is_active
-          - search
           - created_from
           - created_to
           - updated_from
@@ -27148,12 +27148,13 @@ paths:
           in: query
         - schema:
             type: string
-            description: General search filter accepted by the shared filter schema. The
-              current AssetService.list implementation does not apply this
-              filter.
+            description: Case-insensitive substring match across asset_tag, name,
+              serial_number, location, manufacturer and model. Applied to both
+              the returned rows and the pagination total.
           required: false
-          description: General search filter accepted by the shared filter schema. The
-            current AssetService.list implementation does not apply this filter.
+          description: Case-insensitive substring match across asset_tag, name,
+            serial_number, location, manufacturer and model. Applied to both the
+            returned rows and the pagination total.
           name: search
           in: query
         - schema:
