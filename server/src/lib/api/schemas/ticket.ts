@@ -150,6 +150,10 @@ export const updateTicketSchema = createUpdateSchema(
   })
 ).extend({
   contact_name_id: uuidSchema.nullable().optional(),
+  // Nullable so a re-classification can clear them: picking a category with no
+  // children has to drop the old parent's subcategory in the same request.
+  category_id: uuidSchema.nullable().optional(),
+  subcategory_id: uuidSchema.nullable().optional(),
   ...ticketNotificationSuppressionSchema,
   // Close despite unmet close rules; honored only when the caller's user holds
   // ticket:close_override. Stripped before the row update.

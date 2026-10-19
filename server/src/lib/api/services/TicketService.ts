@@ -796,6 +796,7 @@ export class TicketService extends BaseService<ITicket> {
     scopedDb.tenantJoin(ticketQuery, 'statuses as stat', 't.status_id', 'stat.status_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'priorities as pri', 't.priority_id', 'pri.priority_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'categories as cat', 't.category_id', 'cat.category_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'categories as subcat', 't.subcategory_id', 'subcat.category_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'users as assigned_user', 't.assigned_to', 'assigned_user.user_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id', { type: 'left' });
     const ticket = await ticketQuery
@@ -818,6 +819,7 @@ export class TicketService extends BaseService<ITicket> {
         'stat.is_closed as status_is_closed',
         'pri.priority_name',
         'cat.category_name',
+        'subcat.category_name as subcategory_name',
         knex.raw(`CASE 
           WHEN assigned_user.first_name IS NOT NULL AND assigned_user.last_name IS NOT NULL 
           THEN CONCAT(assigned_user.first_name, ' ', assigned_user.last_name) 

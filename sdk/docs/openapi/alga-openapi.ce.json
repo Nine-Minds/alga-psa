@@ -24532,12 +24532,20 @@
             "format": "uuid"
           },
           "category_id": {
-            "type": "string",
-            "format": "uuid"
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Parent category, or null to clear the classification."
           },
           "subcategory_id": {
-            "type": "string",
-            "format": "uuid"
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Child of category_id, or null when the selected category has no subcategory."
           },
           "assigned_to": {
             "type": [
@@ -25565,6 +25573,16 @@
             "type": "string",
             "format": "uuid",
             "description": "Filter statuses to this board."
+          }
+        }
+      },
+      "WorkV1TicketCategoriesQuery": {
+        "type": "object",
+        "properties": {
+          "board_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Filter categories to this board."
           }
         }
       },
@@ -104274,6 +104292,94 @@
         "responses": {
           "200": {
             "description": "Ticket statuses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/categories": {
+      "get": {
+        "summary": "List ticket categories",
+        "description": "Returns the tenant ticket categories (parents and children via parent_category), optionally filtered by board_id, sorted by display_order then name. Read surface for classifying a ticket; configuring categories stays on /api/v1/categories/ticket.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter categories to this board."
+            },
+            "required": false,
+            "description": "Filter categories to this board.",
+            "name": "board_id",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket categories.",
             "content": {
               "application/json": {
                 "schema": {

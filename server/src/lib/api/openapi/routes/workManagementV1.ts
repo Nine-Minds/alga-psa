@@ -181,8 +181,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       location_id: zOpenApi.string().uuid().optional(),
       contact_name_id: zOpenApi.string().uuid().nullable().optional(),
       status_id: zOpenApi.string().uuid().optional(),
-      category_id: zOpenApi.string().uuid().optional(),
-      subcategory_id: zOpenApi.string().uuid().optional(),
+      category_id: zOpenApi.string().uuid().nullable().optional().describe('Parent category, or null to clear the classification.'),
+      subcategory_id: zOpenApi.string().uuid().nullable().optional().describe('Child of category_id, or null when the selected category has no subcategory.'),
       assigned_to: zOpenApi.string().uuid().nullable().optional(),
       priority_id: zOpenApi.string().uuid().optional(),
       attributes: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
@@ -817,6 +817,10 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TicketStatusesQuery',
     zOpenApi.object({ board_id: zOpenApi.string().uuid().optional().describe('Filter statuses to this board.') }),
   );
+  const TicketCategoriesQuery = registry.registerSchema(
+    'WorkV1TicketCategoriesQuery',
+    zOpenApi.object({ board_id: zOpenApi.string().uuid().optional().describe('Filter categories to this board.') }),
+  );
   const TicketCommentUpdateBody = registry.registerSchema(
     'WorkV1TicketCommentUpdateBody',
     zOpenApi.object({ comment_text: zOpenApi.string().min(1).max(5000).describe('Updated comment text (1–5000 visible chars).') }),
@@ -947,6 +951,16 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     request: { query: TicketStatusesQuery },
     responses: ticketStdResponses({ code: 200, description: 'Ticket statuses.' }, false),
+    extensions: ticketExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/categories',
+    summary: 'List ticket categories',
+    description: 'Returns the tenant ticket categories (parents and children via parent_category), optionally filtered by board_id, sorted by display_order then name. Read surface for classifying a ticket; configuring categories stays on /api/v1/categories/ticket.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { query: TicketCategoriesQuery },
+    responses: ticketStdResponses({ code: 200, description: 'Ticket categories.' }, false),
     extensions: ticketExt('read'), edition: 'both',
   });
 
