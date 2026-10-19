@@ -10,11 +10,13 @@ import { retryCoManagedProvisioningAction, cancelCoManagedProvisioningAction } f
 /** Recovery controls for a client setup that is queued, provisioning, failed,
  * pending acceptance, or awaiting acknowledged cleanup. Retrying reuses the
  * original operation ID, so an uncertain response cannot start a second setup. */
-export default function CoManagedClientRecovery({ operationId, state, canRetry, canCancel, invitationExpired, deliveryFailed, idPrefix, onChanged }: {
+export default function CoManagedClientRecovery({ operationId, state, canRetry, canCancel, invitationSent = false, invitationExpired, deliveryFailed, idPrefix, onChanged }: {
   operationId: string;
   state: string;
   canRetry: boolean;
   canCancel: boolean;
+  /** The administrator invitation was delivered; retrying resends it. */
+  invitationSent?: boolean;
   invitationExpired: boolean;
   deliveryFailed: boolean;
   idPrefix: string;
@@ -41,7 +43,7 @@ export default function CoManagedClientRecovery({ operationId, state, canRetry, 
     setConfirmingCancel(false);
   };
   const retryLabel = state === 'cleanup_requested' ? t('coManaged.provisioning.retryCleanup', { defaultValue: 'Retry cleanup' })
-    : invitationExpired ? t('coManaged.provisioning.resendInvitation', { defaultValue: 'Resend invitation' })
+    : invitationExpired || (state === 'pending_acceptance' && invitationSent) ? t('coManaged.provisioning.resendInvitation', { defaultValue: 'Resend invitation' })
       : t('coManaged.provisioning.retry', { defaultValue: 'Retry' });
   return (
     <div className="space-y-2">

@@ -60,10 +60,17 @@ export async function retryCoManagedInitialAdministratorInvitation(db: Knex, inp
       await context.customer.table('user_invitations').where('invitation_id', context.invitation.invitation_id).update({
         token: randomBytes(32).toString('hex'), expires_at: trx.raw("now() + interval '24 hours'"),
       });
-      await context.sponsor.table('co_managed_provisioning_operations').where('operation_id', operationId).update({
-        invitation_sent_at: null, invitation_delivery_error: null, updated_at: trx.raw('now()'),
+    } else {
+      // Resend of a live invitation (lost or deleted email): same link, and the
+      // 24 hours the new email promises start now.
+      await context.customer.table('user_invitations').where('invitation_id', context.invitation.invitation_id).update({
+        expires_at: trx.raw("now() + interval '24 hours'"),
       });
     }
+    // Clearing the delivery receipt is what makes the worker send it again.
+    await context.sponsor.table('co_managed_provisioning_operations').where('operation_id', operationId).update({
+      invitation_sent_at: null, invitation_delivery_error: null, updated_at: trx.raw('now()'),
+    });
     await credential.assertCurrent();
   });
 }

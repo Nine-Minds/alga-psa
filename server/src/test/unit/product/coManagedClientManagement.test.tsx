@@ -302,6 +302,13 @@ describe('client recovery', () => {
     expect(await screen.findByRole('button', { name: 'Resend invitation' })).toBeInTheDocument();
   });
 
+  it('labels the retry of a delivered, unexpired invitation as a resend', async () => {
+    render(<CoManagedClientRecovery operationId="op" state="pending_acceptance" canRetry canCancel={false} invitationSent
+      invitationExpired={false} deliveryFailed={false} idPrefix="r" onChanged={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Resend invitation' }));
+    await waitFor(() => expect(mocks.retry).toHaveBeenCalledWith('op'));
+  });
+
   it('confirms before cancelling, because cancelling deletes the unactivated workspace', async () => {
     render(<CoManagedClientRecovery operationId="op" state="pending_acceptance" canRetry={false} canCancel
       invitationExpired={false} deliveryFailed={false} idPrefix="r" onChanged={vi.fn()} />);

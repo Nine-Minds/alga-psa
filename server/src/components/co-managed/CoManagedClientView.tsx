@@ -132,7 +132,7 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
                 : t('coManaged.client.provisioningHint', { defaultValue: 'Reserved seats stay held until setup completes or cleanup is acknowledged.' })}
             </p>
             <CoManagedClientRecovery operationId={selected.operationId} state={selected.state} canRetry={selected.canRetry}
-              canCancel={selected.canCancel} invitationExpired={selected.invitationExpired} deliveryFailed={selected.deliveryFailed}
+              canCancel={selected.canCancel} invitationSent={selected.invitationSent} invitationExpired={selected.invitationExpired} deliveryFailed={selected.deliveryFailed}
               idPrefix={`${idPrefix}-recovery`} onChanged={() => onReload?.()} />
           </CardContent>
         </Card>

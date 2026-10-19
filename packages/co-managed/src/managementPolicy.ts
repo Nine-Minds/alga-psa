@@ -145,6 +145,15 @@ async function liveClientMappings(context: ManagementContext, clientId: string, 
   return live;
 }
 
+/** The administrator invitation is still outstanding: unused, and no internal
+ * account exists for its email. Until then the MSP may resend it. */
+async function administratorInvitationOutstanding(customer: ReturnType<typeof tenantDb>,
+  invitation: { used_at?: unknown; email?: string } | null | undefined): Promise<boolean> {
+  if (!invitation || invitation.used_at || !invitation.email) return false;
+  return !await customer.table('users').where('user_type', 'internal')
+    .whereRaw('lower(trim(email)) = ?', [invitation.email.trim().toLowerCase()]).first('user_id');
+}
+
 export async function prepareCoManagedProvisioningForActor(db: Knex, actor: CoManagedSessionActor,
   input: Omit<CoManagedProvisioningRequest, 'sponsorTenant' | 'requestedBy'>) {
   // Snapshot before waiting for authority/capacity locks; caller-owned objects
@@ -331,6 +340,7 @@ export interface CoManagedClientRelationshipView extends CoManagedRelationshipOp
   canChangeSeats: boolean;
   canRetry: boolean;
   canCancel: boolean;
+  invitationSent: boolean;
   invitationExpired: boolean;
   deliveryFailed: boolean;
 }
@@ -382,7 +392,8 @@ export async function getCoManagedClientManagement(db: Knex, actor: CoManagedSes
         canCancel: Boolean(canManage && allocation?.state === 'reserved' && ['provisioning', 'pending_acceptance'].includes(entry.relationship.state) &&
           ['queued', 'provisioning', 'failed', 'pending_acceptance'].includes(operation.state)),
         canRetry: canManage && (['queued', 'provisioning', 'failed', 'cleanup_requested'].includes(operation.state) ||
-          Boolean(invitation && !invitation.used_at && (!operation.invitation_sent_at || invitationExpired))),
+          await administratorInvitationOutstanding(customer, invitation)),
+        invitationSent: Boolean(operation.invitation_sent_at),
         invitationExpired, deliveryFailed: Boolean(operation.invitation_delivery_error) });
     }
     const current = relationships.filter(entry => !entry.ended);
@@ -418,6 +429,7 @@ export interface CoManagedClientOverviewRow {
   ended: boolean;
   seats: number;
   usedSeats: number | null;
+  invitationSent: boolean;
   invitationExpired: boolean;
   deliveryFailed: boolean;
   cleanupFailed: boolean;
@@ -463,7 +475,7 @@ export async function getCoManagedClientOverview(db: Knex, actor: CoManagedSessi
       const allocation = await context.home.table('co_managed_allocations').where({ operation_id: operation.operation_id,
         customer_tenant: operation.customer_tenant, relationship_id: operation.relationship_id }).first('seats', 'state');
       const invitation = operation.state === 'pending_acceptance' && relationship?.state === 'pending_acceptance'
-        ? await customer.table('user_invitations').where({ invitation_id: operation.administrator_invitation_id }).first('expires_at', 'used_at') : null;
+        ? await customer.table('user_invitations').where({ invitation_id: operation.administrator_invitation_id }).first('expires_at', 'used_at', 'email') : null;
       const invitationExpired = Boolean(invitation && !invitation.used_at && new Date(invitation.expires_at).getTime() <= Date.now());
       out.push({ clientId: operation.auth_client as string,
         clientName: hidden(context, ['client_name', 'clients.client_name']) ? null : operation.auth_client_name ?? null,
@@ -476,7 +488,9 @@ export async function getCoManagedClientOverview(db: Knex, actor: CoManagedSessi
         usedSeats: canManage && !ended ? await countCoManagedCommittedSeats(context.trx, operation.customer_tenant) : null,
         invitationExpired, deliveryFailed: Boolean(operation.invitation_delivery_error),
         cleanupFailed: operation.error_code === 'PROVISIONING_CLEANUP_FAILED', canManage,
-        canRetry: canManage && (['queued', 'provisioning', 'failed', 'cleanup_requested'].includes(operation.state) || invitationExpired),
+        canRetry: canManage && (['queued', 'provisioning', 'failed', 'cleanup_requested'].includes(operation.state) ||
+          await administratorInvitationOutstanding(customer, invitation)),
+        invitationSent: Boolean(operation.invitation_sent_at),
         canCancel: Boolean(canManage && allocation?.state === 'reserved' && ['provisioning', 'pending_acceptance'].includes(relationship?.state ?? '') &&
           ['queued', 'provisioning', 'failed', 'pending_acceptance'].includes(operation.state)) });
     }
@@ -516,7 +530,7 @@ export async function getCoManagedManagementStatus(db: Knex, actor: CoManagedSes
         cleanupFailed: operation.error_code === 'PROVISIONING_CLEANUP_FAILED',
         state: (operation.state === 'cancelled' ? 'cancelled' : ['active', 'terminated'].includes(relationship?.state) ? relationship.state : operation.state) as string,
         invitationSent: Boolean(operation.invitation_sent_at), invitationExpired, deliveryFailed: Boolean(operation.invitation_delivery_error),
-        canRetry: canManage && (['queued', 'provisioning', 'failed', 'cleanup_requested'].includes(operation.state) || awaitingAdministrator && (!operation.invitation_sent_at || invitationExpired)),
+        canRetry: canManage && (['queued', 'provisioning', 'failed', 'cleanup_requested'].includes(operation.state) || awaitingAdministrator),
       });
     }
     return { items, hasMore: rows.length > 25, canManage: context.canManage, canCreate: context.canManage };

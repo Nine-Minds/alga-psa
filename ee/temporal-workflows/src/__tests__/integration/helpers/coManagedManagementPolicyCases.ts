@@ -143,6 +143,21 @@ export function registerCoManagedManagementPolicyTests(getDb: () => Knex, prepar
       await expect(withCoManagedManagementOperation(f.db, f.actor, f.operation.operation_id, async () => true)).rejects.toThrow();
     });
 
+    it('offers to resend a delivered invitation before it expires, until the administrator has an account', async () => {
+      // A lost or deleted invitation email used to leave the MSP waiting 24 hours for expiry.
+      const f = await fixture();
+      await bootstrapCoManagedWorkspace(f.db, f.actor.tenant, f.operation.operation_id, { info() {}, warn() {}, error() {} });
+      await f.home.table('co_managed_provisioning_operations').update({ invitation_sent_at: new Date() });
+      expect((await getCoManagedManagementStatus(f.db, f.actor)).items[0])
+        .toMatchObject({ invitationSent: true, invitationExpired: false, canRetry: true });
+      const customer = tenantDb(f.db, f.operation.customer_tenant);
+      const invitation = await customer.table('user_invitations').first();
+      const id = randomUUID();
+      await customer.table('users').insert({ tenant: f.operation.customer_tenant, user_id: id, username: id, email: invitation.email,
+        first_name: 'Claimed', last_name: 'Administrator', hashed_password: 'x', user_type: 'internal', is_inactive: false });
+      expect((await getCoManagedManagementStatus(f.db, f.actor)).items[0]).toMatchObject({ canRetry: false });
+    });
+
     it('reports expired invitation recovery without exposing the token or offering reset after account creation', async () => {
       const f = await fixture();
       await bootstrapCoManagedWorkspace(f.db, f.actor.tenant, f.operation.operation_id, { info() {}, warn() {}, error() {} });

@@ -161,7 +161,8 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
           {status.canManage && item.canChangeSeats && <Button id={`co-managed-resize-${item.operationId}`} variant="outline" disabled={busy}
             onClick={() => { setAllocation({ operationId: item.operationId, seats: item.seats, workspaceName: item.workspaceName ?? t('coManaged.provisioning.workspace') }); setAllocatedSeats(item.seats); setError(null); }}>{t('coManaged.provisioning.resize')}</Button>}
           {status.canManage && item.canRetry && <Button id={`co-managed-retry-${item.operationId}`} variant="outline" disabled={busy}
-            onClick={() => void retry(item.operationId)}>{t(item.state === 'cleanup_requested' ? 'coManaged.provisioning.retryCleanup' : item.invitationExpired ? 'coManaged.provisioning.resendInvitation' : 'coManaged.provisioning.retry')}</Button>}
+            onClick={() => void retry(item.operationId)}>{t(item.state === 'cleanup_requested' ? 'coManaged.provisioning.retryCleanup'
+              : item.invitationExpired || (item.state === 'pending_acceptance' && item.invitationSent) ? 'coManaged.provisioning.resendInvitation' : 'coManaged.provisioning.retry')}</Button>}
           {status.canManage && item.canCancel && <Button id={`co-managed-cancel-${item.operationId}`} variant="outline" disabled={busy}
             onClick={() => setCancellation({ operationId: item.operationId, workspaceName: item.workspaceName ?? t('coManaged.provisioning.workspace') })}>{t('coManaged.provisioning.cancelSetup')}</Button>}
         </div></TableCell>

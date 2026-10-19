@@ -85,13 +85,31 @@ export function registerCoManagedInvitationRecoveryTests(getDb: () => Knex,
       expect(await f.customer.table('co_management_relationships').first()).toEqual(relationship);
       expect(await f.customer.table('users')).toEqual([]);
       expect((await f.sponsor.table('co_managed_provisioning_operations').first()).invitation_sent_at).toBeNull();
-      await f.deliver(); await f.retry(); await f.deliver();
-      expect((await f.invitation()).token).toBe(renewed.token);
+      await f.deliver();
       expect(send).toHaveBeenCalledTimes(2);
+      // Retrying a live invitation resends the same link (a lost or deleted
+      // email); it no longer has to expire first, and it is not renewed.
+      await f.retry(); await f.deliver();
+      expect((await f.invitation()).token).toBe(renewed.token);
+      expect(send).toHaveBeenCalledTimes(3);
       expect(send).toHaveBeenLastCalledWith(expect.objectContaining({ tenant: f.operation.customer_tenant, email: before.email,
         inviteLink: `https://co-managed.example.test/auth/team/setup?token=${renewed.token}` }));
       for (const table of ['tenants', 'user_invitations']) expect(await f.customer.table(table)).toHaveLength(1);
       expect(await f.sponsor.table('co_managed_provisioning_operations')).toHaveLength(1);
+    });
+
+    it('resends a live invitation with the same link and a fresh 24 hours', async () => {
+      const f = await fixture(); await f.deliver();
+      const before = await f.invitation();
+      await f.customer.table('user_invitations').update({ expires_at: new Date(Date.now() + 60_000) });
+      await f.retry();
+      const resent = await f.invitation();
+      expect(resent.token).toBe(before.token);
+      expect(new Date(resent.expires_at).getTime()).toBeGreaterThan(Date.now() + 23 * 3600_000);
+      expect((await f.sponsor.table('co_managed_provisioning_operations').first()).invitation_sent_at).toBeNull();
+      await f.deliver();
+      expect(send).toHaveBeenCalledTimes(2);
+      expect(send).toHaveBeenLastCalledWith(expect.objectContaining({ inviteLink: `https://co-managed.example.test/auth/team/setup?token=${before.token}` }));
     });
 
     it('retains the replacement token through failed delivery and does not require new pool capacity', async () => {
