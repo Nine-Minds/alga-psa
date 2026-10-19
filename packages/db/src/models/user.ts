@@ -105,7 +105,7 @@ const User = {
     }
   },
 
-  findUserByEmailAndType: async (email: string, userType: 'internal' | 'client'): Promise<IUser | undefined> => {
+  findUserByEmailAndType: async (email: string, userType: 'internal' | 'client' | 'service'): Promise<IUser | undefined> => {
     const db = await getAdminConnection();
     try {
       const user = await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
@@ -125,7 +125,7 @@ const User = {
    * sibling above answers an arbitrary one of them, which is wrong for sign-in
    * when no tenant is known: callers need to see the ambiguity to refuse it.
    */
-  findUsersByEmailAndType: async (email: string, userType: 'internal' | 'client'): Promise<IUser[]> => {
+  findUsersByEmailAndType: async (email: string, userType: 'internal' | 'client' | 'service'): Promise<IUser[]> => {
     const db = await getAdminConnection();
     try {
       return await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
@@ -141,7 +141,7 @@ const User = {
   findUserByEmailTenantAndType: async (
     email: string,
     tenantId: string,
-    userType: 'internal' | 'client'
+    userType: 'internal' | 'client' | 'service'
   ): Promise<IUser | undefined> => {
     const db = await getAdminConnection();
     try {

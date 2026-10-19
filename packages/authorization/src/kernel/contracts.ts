@@ -15,7 +15,7 @@ export interface AuthorizationReason {
 export interface AuthorizationSubject {
   tenant: string;
   userId: string;
-  userType: 'internal' | 'client';
+  userType: 'internal' | 'client' | 'service';
   roleIds?: string[];
   teamIds?: string[];
   clientId?: string | null;
