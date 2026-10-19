@@ -37,7 +37,7 @@ export class CoManagedProvisioningError extends Error {
   constructor(public readonly code: 'INVALID_REQUEST' | 'OPERATION_CONFLICT' | 'OPERATION_NOT_FOUND' |
     'ACTOR_NOT_FOUND' | 'DESTINATION_NOT_FOUND' | 'OPERATION_CLOSED' | 'RELATIONSHIP_ACTIVE' |
     'CLEANUP_INCOMPLETE' | 'RESERVATION_NOT_FOUND' | 'CAPACITY_UNAVAILABLE' |
-    'ADMINISTRATOR_EMAIL_IN_USE') {
+    'ADMINISTRATOR_EMAIL_IN_USE' | 'CLIENT_NOT_FOUND' | 'SETUP_CANCELLING') {
     super({ INVALID_REQUEST: 'Provide a workspace name, customer administrator, and valid provisioning details.',
       OPERATION_CONFLICT: 'This provisioning operation was started with different details.',
       OPERATION_NOT_FOUND: 'Provisioning operation not found.', ACTOR_NOT_FOUND: 'An active internal sponsor user is required.',
@@ -48,6 +48,8 @@ export class CoManagedProvisioningError extends Error {
       RESERVATION_NOT_FOUND: 'The provisioning reservation is no longer valid.',
       CAPACITY_UNAVAILABLE: 'Restore the sponsoring Pro license and co-managed capacity before provisioning.',
       ADMINISTRATOR_EMAIL_IN_USE: 'This administrator email already belongs to a user in another workspace. Use a different email address.',
+      CLIENT_NOT_FOUND: 'This client is no longer available.',
+      SETUP_CANCELLING: 'The previous setup for this client is still being cancelled. Try again once cleanup finishes.',
     }[code]);
     this.name = 'CoManagedProvisioningError';
   }
@@ -71,9 +73,14 @@ function normalizeRequest(input: CoManagedProvisioningRequest): CoManagedProvisi
 /** Caller authorizes sponsor administration and client access before entering.
  * This durable record contains no password, invitation token, or customer login.
  * Both reservation and full request commit together before scheduling a worker. */
+/** Identity of a provisioning request's details, as stored in request_fingerprint. */
+export function coManagedProvisioningFingerprint(input: CoManagedProvisioningRequest): string {
+  return createHash('sha256').update(JSON.stringify(normalizeRequest(input))).digest('hex');
+}
+
 export async function prepareCoManagedProvisioning(db: Knex, input: CoManagedProvisioningRequest): Promise<CoManagedProvisioningOperation> {
   const request = normalizeRequest(input);
-  const fingerprint = createHash('sha256').update(JSON.stringify(request)).digest('hex');
+  const fingerprint = coManagedProvisioningFingerprint(input);
   return db.transaction(async trx => {
     const reservation = await reserveCoManagedWorkspace(trx, { ...input, visibilityMode: request.visibilityMode });
     const sponsor = tenantDb(trx, input.sponsorTenant);

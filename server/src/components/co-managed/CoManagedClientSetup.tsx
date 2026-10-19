@@ -89,7 +89,12 @@ export default function CoManagedClientSetup({ clientId, clientName, idPrefix, o
       onDirtyChange?.(false);
       if (!result.enqueued) setError(t('coManaged.provisioning.workerUnavailable'));
       await onProvisioned();
-    } catch { setError(t('coManaged.provisioning.submitError')); }
+    } catch {
+      // Keep the operation ID so resending the same details stays idempotent, but
+      // unlock the form: a changed request now gets an explained conflict.
+      submitted.current = null;
+      setError(t('coManaged.provisioning.submitError'));
+    }
     finally { setBusy(false); }
   };
 

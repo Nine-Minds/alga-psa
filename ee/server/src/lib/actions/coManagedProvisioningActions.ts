@@ -26,7 +26,8 @@ export const provisionCoManagedWorkspaceAction = withAuth(async (user, { tenant 
     throw error;
   }
   if (operation.state === 'cancelled' || operation.state === 'cleanup_requested') {
-    throw new Error('This provisioning operation has been cancelled.');
+    // The same operation ID was cancelled; the form explains it and can start over.
+    return { operationId: input.operationId, rejected: true as const, errorCode: 'SETUP_CANCELLING' as const };
   }
   const scheduled = await startCoManagedProvisioningWorkflow({ sponsorTenant: tenant, operationId: operation.operation_id });
   return { operationId: operation.operation_id, enqueued: scheduled.enqueued };

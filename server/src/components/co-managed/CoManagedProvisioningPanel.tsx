@@ -75,8 +75,7 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
   };
   const submit = async () => {
     const request = submitted || { ...form, operationId: operationId.current || (operationId.current = newCoManagedOperationId()) };
-    // Freeze the request across an ambiguous network failure. Retrying can only
-    // recover this exact operation, never create a second customer workspace.
+    // The request is frozen while it is in flight.
     setSubmitted(request); setBusy(true); setError(null);
     try {
       const result = await provisionCoManagedWorkspaceAction(request);
@@ -88,7 +87,14 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
       setOpen(false); setSubmitted(null); operationId.current = null;
       if (!result.enqueued) setError(t('coManaged.provisioning.workerUnavailable'));
       await reload(); await onChanged();
-    } catch { setError(t('coManaged.provisioning.submitError')); }
+    } catch {
+      // Unlock for correction but keep the operation ID: resending the same
+      // details recovers the original operation, and changed details are
+      // refused as a conflict, so no second workspace can be created. A frozen
+      // form could only resend a request the server keeps refusing.
+      setSubmitted(null);
+      setError(t('coManaged.provisioning.submitError'));
+    }
     finally { setBusy(false); }
   };
   const retry = async (operationId: string) => {

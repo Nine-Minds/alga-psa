@@ -472,7 +472,8 @@
       "destinationUnavailable": "Den valda eskaleringstavlan är inte längre tillgänglig. Välj en aktiv tavla och försök igen.",
       "clientUnavailable": "Denna kund är inte längre tillgänglig. Uppdatera kundlistan.",
       "invalidRequest": "Ange arbetsytans namn, administratörsuppgifter, en eskaleringstavla och minst en teknikerplats.",
-      "administratorEmailInUse": "Den här administratörens e-postadress tillhör redan en användare i en annan arbetsyta. Använd en annan e-postadress."
+      "administratorEmailInUse": "Den här administratörens e-postadress tillhör redan en användare i en annan arbetsyta. Använd en annan e-postadress.",
+      "setupCancelling": "Den tidigare konfigurationen för den här kunden håller fortfarande på att avbrytas. Försök igen när rensningen är klar."
     },
     "policy": {
       "title": "Samförvaltad åtkomst",

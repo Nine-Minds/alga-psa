@@ -472,7 +472,8 @@
       "destinationUnavailable": "Das ausgewählte Eskalationsboard ist nicht mehr verfügbar. Wählen Sie ein aktives Board und versuchen Sie es erneut.",
       "clientUnavailable": "Dieser Kunde ist nicht mehr verfügbar. Aktualisieren Sie die Kundenliste.",
       "invalidRequest": "Geben Sie einen Arbeitsbereichsnamen, Administratordaten, ein Eskalationsboard und mindestens einen Technikerplatz an.",
-      "administratorEmailInUse": "Diese Administrator-E-Mail-Adresse gehört bereits einem Benutzer in einem anderen Arbeitsbereich. Verwenden Sie eine andere E-Mail-Adresse."
+      "administratorEmailInUse": "Diese Administrator-E-Mail-Adresse gehört bereits einem Benutzer in einem anderen Arbeitsbereich. Verwenden Sie eine andere E-Mail-Adresse.",
+      "setupCancelling": "Die vorherige Einrichtung für diesen Kunden wird noch abgebrochen. Versuchen Sie es erneut, sobald die Bereinigung abgeschlossen ist."
     },
     "policy": {
       "title": "Co-Managed-Zugriff",

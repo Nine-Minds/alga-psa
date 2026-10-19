@@ -7,7 +7,7 @@ import { lockCoManagedLocalAuthentication } from './localAuthentication';
 import { hasCoManagedLocalPermission } from './localPermission';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActor, type CoManagedSessionActor } from './sharedWorkIdentity';
-import { prepareCoManagedProvisioning, type CoManagedProvisioningRequest, type CoManagedProvisioningOperation } from './provisioning';
+import { prepareCoManagedProvisioning, coManagedProvisioningFingerprint, CoManagedProvisioningError, type CoManagedProvisioningRequest, type CoManagedProvisioningOperation } from './provisioning';
 
 const deny = (): never => { throw new CoManagedSharedWorkError(); };
 interface ManagementContext {
@@ -152,10 +152,14 @@ export async function prepareCoManagedProvisioningForActor(db: Knex, actor: CoMa
   if (!input || ![input.clientId, input.escalationBoardId, input.operationId].every(isCoManagedUuid)) deny();
   const request = { ...input, administrator: { ...input.administrator } };
   return withManagement(db, actor, 'manage', async context => {
+    // A client or board deactivated since the form loaded is a correctable
+    // rejection the form can explain, not an authorization failure.
+    const client = await context.home.table('clients').where({ client_id: request.clientId }).forShare().first('is_inactive');
+    if (client?.is_inactive) throw new CoManagedProvisioningError('CLIENT_NOT_FOUND');
+    const board = await context.home.table('boards').where({ board_id: request.escalationBoardId }).forShare().first('is_inactive');
+    if (board?.is_inactive) throw new CoManagedProvisioningError('DESTINATION_NOT_FOUND');
     const choice = await setupChoices(context).where({ 'q.client_id': request.clientId, 'q.board_id': request.escalationBoardId }).first();
-    if (!choice) deny();
-    if (!await context.home.table('clients').where({ client_id: request.clientId, is_inactive: false }).forShare().first() ||
-        !await context.home.table('boards').where({ board_id: request.escalationBoardId, is_inactive: false }).forShare().first()) deny();
+    if (!choice || !client || !board) deny();
     // Enable is a single-setup action per client: while any current setup or
     // relationship maps to this authorized client, resume its original operation
     // instead of creating a second workspace. The entitlement lock serializes the
@@ -164,7 +168,14 @@ export async function prepareCoManagedProvisioningForActor(db: Knex, actor: CoMa
     if (live) {
       const operation = await context.home.table('co_managed_provisioning_operations')
         .where('operation_id', live.operation_id).first() as CoManagedProvisioningOperation | undefined;
-      if (operation) return operation;
+      if (operation) {
+        if (operation.state === 'cleanup_requested') throw new CoManagedProvisioningError('SETUP_CANCELLING');
+        // Resuming is only safe for the same details: a second tab or a corrected
+        // resubmission must not silently re-run the original request.
+        const fingerprint = coManagedProvisioningFingerprint({ ...request, sponsorTenant: context.actor.tenant, requestedBy: context.actor.userId });
+        if (operation.request_fingerprint !== fingerprint) throw new CoManagedProvisioningError('OPERATION_CONFLICT');
+        return operation;
+      }
     }
     return prepareCoManagedProvisioning(context.trx, { ...request, sponsorTenant: context.actor.tenant, requestedBy: context.actor.userId });
   });

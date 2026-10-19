@@ -7,7 +7,7 @@ import { canManageCoManagedClient, getCoManagedManagementOptions, getCoManagedMa
   prepareCoManagedProvisioningForActor, changeCoManagedAllocationForActor, withCoManagedManagementOperation,
   getCoManagedClientManagement, resolveCoManagedManagementTarget, getCoManagedOperationTarget,
   getCoManagedClientOverview } from '../../../../../../packages/co-managed/src/managementPolicy';
-import { prepareCoManagedProvisioning, type CoManagedProvisioningOperation } from '../../../../../../packages/co-managed/src/provisioning';
+import { prepareCoManagedProvisioning, requestCoManagedProvisioningCleanup, type CoManagedProvisioningOperation } from '../../../../../../packages/co-managed/src/provisioning';
 import { bootstrapCoManagedWorkspace } from '../../../db/co-managed-provisioning-operations';
 
 export function registerCoManagedManagementPolicyTests(getDb: () => Knex, prepare: () => Promise<CoManagedProvisioningOperation>) {
@@ -79,10 +79,13 @@ export function registerCoManagedManagementPolicyTests(getDb: () => Knex, prepar
       for (const request of [{ ...f.request, clientId: f.otherClient }, { ...f.request, escalationBoardId: f.otherBoard }])
         await expect(prepareCoManagedProvisioningForActor(f.db, f.actor, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
       expect(await f.home.table('co_managed_allocations')).toEqual(before);
+      // Resuming the client's current setup requires its original details.
+      const same = { ...f.request, seats: f.operation.request.seats };
       const created = await prepareCoManagedProvisioningForActor(f.db, f.actor,
-        { ...f.request, sponsorTenant: randomUUID(), requestedBy: randomUUID() } as any);
+        { ...same, sponsorTenant: randomUUID(), requestedBy: randomUUID() } as any);
       expect(created).toMatchObject({ tenant: f.actor.tenant, requested_by: f.actor.userId, request: { clientId: f.operation.request.clientId } });
-      expect(await prepareCoManagedProvisioningForActor(f.db, f.actor, f.request)).toMatchObject({ operation_id: created.operation_id });
+      expect(await prepareCoManagedProvisioningForActor(f.db, f.actor, same)).toMatchObject({ operation_id: created.operation_id });
+      await expect(prepareCoManagedProvisioningForActor(f.db, f.actor, f.request)).rejects.toMatchObject({ code: 'OPERATION_CONFLICT' });
       const callback = vi.fn(async () => true);
       expect(await withCoManagedManagementOperation(f.db, f.actor, f.operation.operation_id, callback)).toBe(true);
       callback.mockClear();
@@ -259,6 +262,37 @@ export function registerCoManagedManagementPolicyTests(getDb: () => Knex, prepar
       expect(resumed.operation_id).toBe(first.operation_id);
       expect(await f.home.table('co_managed_provisioning_operations').whereRaw("lower(request->>'clientId') = ?", [clientId]))
         .toHaveLength(1);
+    });
+
+    it('reports changed details for a client with a current setup instead of silently re-running the original', async () => {
+      const f = await fixture();
+      const clientId = randomUUID();
+      await f.home.table('clients').insert({ tenant: f.actor.tenant, client_id: clientId, client_name: 'Fresh customer' });
+      await f.home.table('authorization_bundle_rules').where('revision_id', f.clientPolicy.revisionId)
+        .update({ config: { selectedClientIds: [f.operation.request.clientId, clientId] } });
+      await f.home.table('co_managed_entitlements').update({ capacity: 10 });
+      const request = { ...f.operation.request, clientId, operationId: randomUUID(), seats: 1 };
+      const first = await prepareCoManagedProvisioningForActor(f.db, f.actor, request);
+      // A stale tab corrects the administrator email and submits under its own operation ID.
+      await expect(prepareCoManagedProvisioningForActor(f.db, f.actor, { ...request, operationId: randomUUID(),
+        administrator: { ...request.administrator, email: 'corrected@example.test' } })).rejects.toMatchObject({ code: 'OPERATION_CONFLICT' });
+      expect((await f.home.table('co_managed_provisioning_operations').where('operation_id', first.operation_id).first()).request.administrator.email)
+        .toBe(request.administrator.email);
+      // While its cancellation is still cleaning up, a new setup says so.
+      await requestCoManagedProvisioningCleanup(f.db, f.actor.tenant, first.operation_id);
+      await expect(prepareCoManagedProvisioningForActor(f.db, f.actor, { ...request, operationId: randomUUID() }))
+        .rejects.toMatchObject({ code: 'SETUP_CANCELLING' });
+    });
+
+    it('rejects a client or escalation board deactivated since the form loaded with a correctable code', async () => {
+      const f = await fixture();
+      await f.home.table('co_managed_entitlements').update({ capacity: 10 });
+      const request = { ...f.request, operationId: randomUUID() };
+      await f.home.table('boards').where('board_id', request.escalationBoardId).update({ is_inactive: true });
+      await expect(prepareCoManagedProvisioningForActor(f.db, f.actor, request)).rejects.toMatchObject({ code: 'DESTINATION_NOT_FOUND' });
+      await f.home.table('boards').where('board_id', request.escalationBoardId).update({ is_inactive: false });
+      await f.home.table('clients').where('client_id', request.clientId).update({ is_inactive: true });
+      await expect(prepareCoManagedProvisioningForActor(f.db, f.actor, request)).rejects.toMatchObject({ code: 'CLIENT_NOT_FOUND' });
     });
   });
 }

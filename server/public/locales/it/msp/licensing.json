@@ -477,7 +477,8 @@
       "destinationUnavailable": "La bacheca di escalation selezionata non è più disponibile. Seleziona una bacheca attiva e riprova.",
       "clientUnavailable": "Questo cliente non è più disponibile. Aggiorna l’elenco dei clienti.",
       "invalidRequest": "Inserisci il nome dello spazio, i dati dell’amministratore, una bacheca di escalation e almeno un posto tecnico.",
-      "administratorEmailInUse": "Questa email dell’amministratore appartiene già a un utente di un altro spazio di lavoro. Usa un indirizzo email diverso."
+      "administratorEmailInUse": "Questa email dell’amministratore appartiene già a un utente di un altro spazio di lavoro. Usa un indirizzo email diverso.",
+      "setupCancelling": "La configurazione precedente di questo cliente è ancora in fase di annullamento. Riprova al termine della pulizia."
     },
     "policy": {
       "title": "Accesso cogestito",

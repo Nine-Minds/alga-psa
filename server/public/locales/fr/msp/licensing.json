@@ -477,7 +477,8 @@
       "destinationUnavailable": "Le tableau d’escalade sélectionné n’est plus disponible. Sélectionnez un tableau actif et réessayez.",
       "clientUnavailable": "Ce client n’est plus disponible. Actualisez la liste des clients.",
       "invalidRequest": "Saisissez un nom d’espace de travail, les coordonnées de l’administrateur, un tableau d’escalade et au moins une place de technicien.",
-      "administratorEmailInUse": "Cette adresse e-mail d’administrateur appartient déjà à un utilisateur d’un autre espace de travail. Utilisez une autre adresse e-mail."
+      "administratorEmailInUse": "Cette adresse e-mail d’administrateur appartient déjà à un utilisateur d’un autre espace de travail. Utilisez une autre adresse e-mail.",
+      "setupCancelling": "La configuration précédente de ce client est encore en cours d’annulation. Réessayez une fois le nettoyage terminé."
     },
     "policy": {
       "title": "Accès cogéré",

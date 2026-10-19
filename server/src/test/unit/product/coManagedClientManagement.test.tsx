@@ -165,9 +165,16 @@ describe('client-fixed co-managed setup', () => {
     await waitFor(() => expect(mocks.provision).toHaveBeenCalledTimes(1));
     const first = mocks.provision.mock.calls[0][0];
     expect(first).toMatchObject({ clientId: 'client', workspaceName: 'Acme', escalationBoardId: 'board' });
-    fireEvent.click(await screen.findByRole('button', { name: 'Retry' }));
+    // The form unlocks so the details can be corrected (it used to stay locked
+    // with only a resend of the original), and keeps the operation ID so an
+    // identical resend stays idempotent; changed details get an explained conflict.
+    await screen.findByText('coManaged.provisioning.submitError');
+    expect(document.getElementById('i-admin-email')).not.toBeDisabled();
+    fireEvent.change(document.getElementById('i-admin-email')!, { target: { value: 'ada.corrected@example.test' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     await waitFor(() => expect(mocks.provision).toHaveBeenCalledTimes(2));
-    expect(mocks.provision.mock.calls[1][0].operationId).toBe(first.operationId);
+    expect(mocks.provision.mock.calls[1][0]).toMatchObject({ operationId: first.operationId,
+      administrator: { email: 'ada.corrected@example.test' } });
   });
 });
 

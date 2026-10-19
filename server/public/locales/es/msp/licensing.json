@@ -477,7 +477,8 @@
       "destinationUnavailable": "El tablero de escalamiento seleccionado ya no está disponible. Seleccione un tablero activo e inténtelo de nuevo.",
       "clientUnavailable": "Este cliente ya no está disponible. Actualice la lista de clientes.",
       "invalidRequest": "Introduzca un nombre de espacio, los datos del administrador, un tablero de escalamiento y al menos un puesto de técnico.",
-      "administratorEmailInUse": "Este correo electrónico de administrador ya pertenece a un usuario de otro espacio de trabajo. Use una dirección de correo electrónico diferente."
+      "administratorEmailInUse": "Este correo electrónico de administrador ya pertenece a un usuario de otro espacio de trabajo. Use una dirección de correo electrónico diferente.",
+      "setupCancelling": "La configuración anterior de este cliente todavía se está cancelando. Vuelva a intentarlo cuando finalice la limpieza."
     },
     "policy": {
       "title": "Acceso cogestionado",

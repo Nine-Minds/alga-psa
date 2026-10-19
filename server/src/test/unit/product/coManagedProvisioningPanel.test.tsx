@@ -66,9 +66,11 @@ describe('co-managed provisioning UI', () => {
   it('reuses an unchanged operation after an ambiguous failed response', async () => {
     mocks.provision.mockRejectedValueOnce(new Error('Connection lost')); panel(); await fillForm();
     fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.submit' }));
-    const retry = await screen.findByRole('button', { name: 'coManaged.provisioning.retry' });
-    expect(screen.getByLabelText('coManaged.provisioning.email')).toBeDisabled();
-    const first = mocks.provision.mock.calls[0][0]; fireEvent.click(retry);
+    // The form unlocks (a frozen form could only resend a request the server
+    // keeps refusing) but resending it unchanged recovers the same operation.
+    await waitFor(() => expect(screen.getByLabelText('coManaged.provisioning.email')).not.toBeDisabled());
+    const first = mocks.provision.mock.calls[0][0];
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.submit' }));
     await waitFor(() => expect(mocks.provision).toHaveBeenCalledTimes(2));
     expect(mocks.provision.mock.calls[1][0]).toEqual(first);
   });

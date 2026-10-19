@@ -472,7 +472,8 @@
       "destinationUnavailable": "The selected escalation board is no longer available. Select an active board and try again.",
       "clientUnavailable": "This client is no longer available. Refresh the client list.",
       "invalidRequest": "Enter a workspace name, administrator details, an escalation board, and at least one technician seat.",
-      "administratorEmailInUse": "This administrator email already belongs to a user in another workspace. Use a different email address."
+      "administratorEmailInUse": "This administrator email already belongs to a user in another workspace. Use a different email address.",
+      "setupCancelling": "The previous setup for this client is still being cancelled. Try again once cleanup finishes."
     },
     "policy": {
       "title": "Co-managed access",
