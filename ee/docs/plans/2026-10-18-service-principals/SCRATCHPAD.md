@@ -1,0 +1,378 @@
+# Scratchpad — Service Principals
+
+- Plan slug: `service-principals`
+- Created: `2026-10-18`
+
+## Decisions
+
+- **(2026-10-18) Use a new `user_type = 'service'`, not a flag on internal users.** The seat counters, the seat guard, the Stripe quantity, SCIM, and the internal-only pickers and recipient lists all filter on `user_type = 'internal'`. A new type drops out of all of them with no new special cases. A flag would need every one of those sites to learn about it.
+- **(2026-10-18) The `users` row is the principal, and `service_principals` holds its metadata.** RBAC (`user_roles`) and key ownership (`api_keys.user_id`) already key on `user_id`, so the principal must be a user row. Kind, description, act-as and archive state live in `service_principals`. `agents` keeps only the MCP-specific IdP binding, plus `service_user_id`.
+- **(2026-10-18) `users.is_inactive` is the single active flag.**
+  - `getKeyGateReason` already rejects keys owned by inactive users. So deactivating the user ends every key at once, including the 300-second MCP session keys, without teaching the gate about `agent_id`.
+  - `agents.active` is kept in lock-step by the service, because `resolveAgentByIdp` filters on it.
+- **(2026-10-18) Act-as means the human is the effective user, and RBAC is the intersection of both.** With act-as, `context.userId` becomes the human, so every existing writer that uses `context.userId` (`TimeEntryService`, `TimeSheetService` approve, `entered_by` and so on) records the human with no per-service change. The via column is stamped from `ServiceContext.viaPrincipalUserId`. The intersection stops either side being used to escalate.
+- **(2026-10-18) The human-work guard lives in the shared write cores, not in each endpoint.** That way UI, REST, workflow and MCP all get it: `ticketResourceCore`, `teamAssignmentCore`, `ScheduleEntry.updateAssignees`, the time entry, time sheet, project task and interaction writers.
+- **(2026-10-18) Service principals keep MSP data scope.** About 15 `!== 'client'` sites grant unscoped MSP visibility to anything that isn't a client. For service users that is the intended behaviour, because they hold MSP roles and RBAC governs them. We make it explicit with `isMspPrincipalUserType` rather than leaving it to chance.
+- **(2026-10-18) Comments keep `author_type = 'user'`.** `comments.author_type` is a native enum `comment_author_type` (`user`, `contact`, `unknown`). A service author is a `user` row, and display resolves the kind from `users.user_type`. No enum migration is needed.
+- **(2026-10-18) Delete becomes archive when the principal is referenced.** Today `deleteAgent` deletes `mcp_agent_audit` (which defeats attribution) and hard-deletes the `users` row (FKs from comments, time_entries and others make it fail, and `tickets.*_by` is left dangling).
+- **(2026-10-18, Robert) Service principals are Pro-only, for both kinds.**
+  - The gate is `TIER_FEATURES.SERVICE_PRINCIPALS` with minimum tier `pro`. It covers API principals and MCP agents.
+  - Solo is defunct, so it gets no entitlement entry. It ranks below Pro, so it is gated out automatically.
+  - Below Pro, existing principals are grandfathered: they keep working, but nothing new can be created, reactivated or keyed. This also covers essentials appliances that already have MCP agents. MCP had no tier gate before.
+  - CE does not have the feature at all (see the edition-placement decision below), so the CE no-op in `assertTenantTierAccess` is irrelevant here.
+  - The UI uses `TierGate` (`server/src/components/tier-gating/TierGate.tsx`), `FeatureUpgradeNotice` (`packages/ui/src/components/tier-gating/`) and `useTierFeature` (`server/src/context/TierContext.tsx:185`).
+- **(2026-10-18, Robert) Licensing requires the feature to live in `ee/`.** This replaces the first draft, which put the service and the migrations in CE.
+  - **EE owns all of it:** every schema change (`ee/server/migrations`, including the `users_user_type_check` widening, so the CE schema can't hold a `service` user), the service, entitlements, act-as, key issuance, rate-limit config, server actions and UI.
+  - **CE keeps only two things:**
+    - edition-neutral hardening, written as allow-lists of `internal` and `client`: login (R3), the human-work guard, user-management exclusion, `user_type` immutability, and the REST create seat check
+    - generic hooks that default to the plain user: `ApiContext` principal fields, `withViaPrincipal`, the kernel's ability to authorize two subjects together, and the rate-limit config override
+  - **Two boundary mechanisms, both already in the repo:**
+    - `@product/service-principals/entry`: a new `packages/product-service-principals` with `oss/` and `ee/` entries, modelled on `packages/product-mcp`. Its aliases go in `server/next.config.mjs` (around line 428) and `server/tsconfig.json` (around line 406).
+    - `@enterprise/components/...`, with null-rendering stubs in `packages/ee/src/components/`, modelled on credentials (`packages/ee/src/components/credentials/CredentialsScreen.tsx`).
+  - **Precedent for EE migrations that add columns to base tables:** `api_keys.agent_id` (`20260607120000_create_mcp_agents.cjs`). Credentials is a counter-example: its tables went into `server/migrations` despite the coding standard. We follow the standard, `docs/AI_coding_standards.md` §"ee folder".
+  - **`createApiKey` stays internal-only.** EE issues `service` keys directly, as `mintAgentSessionKey` does. So the CE key-creation path never learns about service owners, and mobile and `mcp_user` keys can't open up.
+  - **Error codes are split.** CE throws a generic `HumanWorkOwnerRequiredError(field)`, and the EE boundary maps it to `ACT_AS_REQUIRED`, because act-as is an EE concept.
+  - **The per-principal rate-limit override lives on `service_principals`** (EE), not as a new column on CE `api_rate_limit_settings`.
+  - **`ticket_audit_logs.actor_type`** is a plain `string(32)` with no CHECK, so `service_principal` needs no constraint change.
+  - **Boundary enforcement:** a static guard test (F096 / T038) plus a CE build check.
+- **(2026-10-18, Robert) Open questions resolved. All choices were the recommended options.**
+  - **Pro principal limit:** a flat 10 that does not scale with seats. The cap is the guard against "one bot per unlicensed person".
+  - **Default per-principal rate limit:** 120 burst / 60 per minute, the same as today's per-key default.
+  - **Appliance limit:** taken only from the signed `service_principals` claim; the tenants override is ignored on appliances.
+    - Why: the appliance owner controls their own database.
+    - If the claim is missing or the token is invalid, the limit is the Pro default. It never fails open to unlimited, unlike `userSeatGuard`, which fails open so it never blocks user creation.
+    - Detection: an appliance is a host with a `license_state` row, read on the admin connection.
+    - The claim is issued by the separate alga-license service (`ee/server/src/lib/applianceConsole/algaLicenseAdminClient.ts`). That makes it a cross-service dependency, but this plan ships safely before the issuer change.
+  - **Act-as scope:** an on/off switch per principal plus RBAC intersection; no team allow-lists.
+  - **A principal's own comments:** forced internal.
+    - A customer-visible comment needs act-as.
+    - An explicit public request without act-as is rejected (ACT_AS_REQUIRED) rather than silently coerced, so the integration learns its intent wasn't honored.
+    - Enforced in the CE comment write core as a generic rule: a non-interactive author means internal only.
+  - **Interaction owner:** human work.
+  - **Archived principals:** don't count toward the limit.
+- **Follow-up to check during implementation:** are there other customer-facing outbound paths a principal could use, such as REST email-send endpoints or portal-visible document shares? If so, the R5.9 rule may need to apply there too. So far only ticket comments are known to reach customers.
+- **(2026-10-18) No feature flag.** The change only tightens behaviour, and it fixes counts that are wrong today.
+
+## Discoveries / Constraints
+
+### Current agent implementation (`ee/server/src/lib/mcp/agents.ts`)
+
+- `createAgent` (:83-139):
+  - inserts `users` with `user_type: 'internal'`, `username: mcp-agent-<slug>`, `email: mcp-agent-<id>@agents.alga.local`, and `lockedPassword()`
+  - grants `user_roles` and `agent_roles`
+  - stores `metadata.backing_user_id`
+  - **never calls `checkInternalUserLicenseLimit`**
+- `setAgentActive` (:142-147) only updates `agents.active`.
+- `deleteAgent` (:155-173) deletes agent_roles, **mcp_agent_audit**, api_keys, user_roles, **users** and agents in one transaction.
+- `mintAgentSessionKey` (:318-351) inserts directly into `api_keys`, so it skips `createApiKey`'s owner check. It uses a 300-second TTL, purpose `mcp_agent`, and a new key per request.
+- `ee/server/src/lib/mcp/jsonRpcServer.ts:227-268` `resolveAuth` handles three cases:
+  1. OAuth user token → `mintUserSessionKey`, purpose `mcp_user`, the human's own id
+  2. IdP agent JWT → `mintAgentSessionKey`
+  3. raw API key
+
+  In each case tool calls loop back to `/api/v1` through `selfFetch` with `x-api-key`.
+
+### Seats
+
+All of these count `{user_type:'internal', is_inactive:false}`, so all of them exclude `service` automatically:
+- `packages/licensing/src/lib/get-license-usage.ts:29`
+- `server/src/lib/license/get-license-usage.ts:33`
+- `ee/server/src/lib/license/get-license-usage.ts:34`
+- `packages/users/src/lib/internalUserLicenseGuard.ts:49`
+- the inline copy in `userActions.ts:565-567`
+- `packages/licensing/src/actions/license-actions.ts:69`
+- `ee/server/src/lib/actions/license-actions.ts:1026`
+- `server/src/app/api/billing/licence-count/route.ts:190`
+- `ee/temporal-workflows/src/activities/license-management-activities.ts:109`
+- `ee/server/src/lib/stripe/StripeService.ts:883,2209`
+
+Other seat facts:
+- The appliance guard (`ee/server/src/lib/license/userSeatGuard.ts:16`) is handed the internal count.
+- **Gap:** REST `UserService.create` (`packages/users/src/services/UserService.ts:228+`) has no seat check. Fixed by F086.
+- **Gap:** `UserService.update` accepts `data.user_type` (:346). Fixed by F085.
+
+### Things that block `service` today and must change in the same release as the migration
+
+- `server/src/lib/api/middleware/apiMiddleware.ts:271-278` `assertInternalApiUser` throws unless the user is `internal`. That breaks every REST call, MCP dispatch included. Callers:
+  - `buildAuthenticatedApiContext` (:280)
+  - `ApiBaseController.ts:92`
+  - `ApiTicketController.ts:463+`
+  - `ApiTimeSheetController` (:127, 201, 284, 367, 450, 533, 614)
+  - `ApiContactController.ts:136`
+  - the documents routes
+- `packages/auth/src/services/apiKeyService.ts:127` `createApiKey` requires an `internal` owner.
+- `server/migrations/20241116000000_add_user_type_to_users.cjs:7` creates a knex `enu`. That is a text column plus the CHECK `users_user_type_check`. Only the EE migration widens it; CE keeps `internal | client`.
+- Role assignment `policyActions.ts:453/457` and `roleActions.ts:106/110` handle only internal→msp and client→client.
+
+### Login map (where `service` is blocked, and how)
+
+- **The real gate today** is the per-request session check, whose allow-list is internal|client:
+  - `checkTrackedSession` (`nextAuthOptions.ts:167`)
+  - `requireLiveSession` (`getSession.ts:39`)
+  - `sessionAuthMiddleware` (`authMiddleware.ts:443`)
+
+  All three go through `UserSession.isRevokedOrIdentityMismatch`, which compares the stored `users.user_type` with the token claim.
+- **That gate fires too late.** The jwt callback creates the `sessions` row (:2157) before `checkTrackedSession` rejects it (:2206), so `recordLoginSuccess`, `enforceMaxSessions` and `updateLastLogin` have already run. That is why R3.2 puts the check in the `signIn` callback.
+- `authenticateUser` (`auth.tsx:157-168`) falls back to an untyped `User.findUserByEmail` when no `userType` is posted. A direct POST to the credentials callback can omit it.
+- SSO (CE `ceOAuthProfileMapper.ts:47`, EE `ssoProviders.ts:155-202`) looks up by type hint internal|client, so service is already never matched. The `signIn` check is defence in depth.
+- Mobile:
+  - The handoff route (`auth/mobile/handoff/route.ts:63`) blocks only `client`.
+  - The Apple linked-identity branch (`api/v1/mobile/auth/apple/route.ts:79-82`) has no type or active check.
+  - IAP restore/provision binds to the *oldest internal user*. Today that can be an agent user.
+  - OTT exchange and refresh are protected only by `createApiKey`'s internal check, so widening `createApiKey` naively would open mobile. Hence the F041 matrix.
+- `adminChangeUserPassword` (`userActions.ts:1843-1900`) and the `UserService` password change have no target-type check. Today an admin can give an agent user a working password.
+- `nextAuthOptions.ts:2387-3180` contains a second `export const options` with its own `authorize` and callbacks, plus `validateUser` (:3182). It looks unused; confirm before deleting (F044).
+- There is no impersonation or "login as" feature, and no magic links.
+
+### Attribution columns (for the human-work guard and the via columns)
+
+- `tickets`: `entered_by`, `updated_by`, `assigned_to`, `closed_by`. **No FK.** See `initial_schema.cjs:244-283`. TicketService create (:1739-1740) does not validate `assigned_to`.
+- `ticket_resources`: `assigned_to` and `additional_user_id` (FKs), plus a check that they differ. Written by `shared/services/tickets/ticketResourceCore.ts:121`, which promotes to primary when the ticket has no assignee (:140-147). Team assignment is in `teamAssignmentCore.ts:45`.
+- `schedule_entry_assignees.user_id`: FK, ON DELETE CASCADE. Written by `shared/models/scheduleEntry.ts:175-211,500-540`, which checks only that the user exists.
+- `resolveScheduleAssignees` (`packages/clients/src/actions/interactionCreateHelper.ts:257-264`) **defaults to the caller**.
+- `time_entries.user_id`: NOT NULL, FK. `created_by`/`updated_by` were added in `20260131120000`. `TimeEntryService.ts:338` always uses `context.userId`.
+- `time_sheets.user_id` and `approved_by` (FKs). `TimeSheetService.ts:257` (owner), `:452` (approve). `:458-466` writes `approved_at`/`approved_by` to time_entries, but no migration adds those columns. **Possible latent defect; verify.**
+- `project_tasks.assigned_to` (FK) and `task_resources`. `ProjectService.ts:725-738` spreads `...data`.
+- `interactions.user_id` (FK). `InteractionService.ts:201,226`.
+- `ticket_audit_logs` (`20260525231145`) already has `actor_type`, `actor_user_id` and `source`. Constants are in `shared/lib/ticketActivity/types.ts:80-103`.
+- `audit_logs` has `user_id` and `details` jsonb.
+- `mcp_agent_audit` (`20260607130000`) has no user and no act-as column.
+- `deleteUser` (`userActions.ts:705-950`) is the reference for cleaning up references. Its dependency list is `packages/core/src/config/deletion/index.ts:407-433`. It does not touch `tickets.entered_by`.
+
+### Rate limiting
+
+- `server/src/lib/api/rateLimit/enforce.ts:70`: the subject is `rateLimitSubjectId ?? apiKeyId`, and config lookup is by `api_key_id` (a uuid).
+- The defaults are 120 tokens and 60/min (`apiRateLimitSettingsModel.ts:25-28`).
+- It throttles only when `RATE_LIMIT_ENFORCE=true`.
+- MCP mints a new key per request, so today's per-key buckets do nothing for agents.
+
+### UI surfaces
+
+- Seat banner: `server/src/components/settings/general/UserManagement.tsx:1041-1062`.
+- User list filter: `:377-383`, `internal || !user_type`. Service users drop out automatically, but make it explicit.
+- Admin "Set password": `UserDetails.tsx:367-391,676-700`.
+- EE account page: `ee/server/src/components/settings/account/AccountManagement.tsx:194-217,840,1382-1390`.
+- Appliance license page: `server/src/components/licenses/LicenseManagementPage.tsx`. It shows no seat x-of-y today.
+- MCP agents admin: `server/src/components/settings/mcp/McpServerSettings.tsx`, which calls `/api/v1/mcp/agents` (`server/src/app/api/v1/mcp/agents/route.ts`) through `@product/mcp/entry`. Auth is `ee/server/src/lib/mcp/adminAuth.ts`.
+- API keys admin: `AdminApiKeysSetup.tsx`, via `listAllApiKeys` (a tenantJoin on users).
+
+### Tiers
+
+- `TENANT_TIERS = ['essentials','solo','pro']` (`packages/types/src/constants/tenantTiers.ts`). A null plan resolves to `pro`.
+- There is no per-plan limits table yet. `TIER_FEATURES` is in `packages/types/src/constants/tierFeatures.ts`.
+
+## Audit inventory — `user_type !== 'client'` (66 non-test sites)
+
+Each site's target predicate is given in brackets. Mark a site done when converted.
+
+**Already "require client, otherwise deny"** → `!isClientUserType` → deny. Behaviour is unchanged.
+- `packages/client-portal/src/actions/client-portal-actions/`:
+  - `appointmentRequestActions.ts`: 330, 807, 1080, 1196, 1284, 1551, 1647, 1691, 1787
+  - `client-assets.ts:83`
+  - `client-documents.ts`: 61, 173, 243
+  - `client-kb.ts`: 49, 166, 260, 308, 355
+  - `client-project-billing.ts:70`
+  - `client-project-details.ts`: 55, 507, 612
+  - `client-tickets.ts:140`
+  - `clientUserActions.ts`: 235, 291
+  - `dashboard.ts`: 183, 299
+- `packages/client-portal/src/lib/clientAuth.ts:54`
+- `clientDocumentAccess.ts`: 89, 97
+- `server/src/app/client-portal/request-services/`:
+  - `actions.ts`: 19, 41
+  - `[definitionId]/actions.ts`: 84, 110
+  - `my-requests/actions.ts`: 18, 34
+- `server/src/app/api/client-portal/documents/[documentId]/`:
+  - `export/route.ts:14`
+  - `file/route.ts:31`
+- `server/src/app/api/ext/[extensionId]/[[...path]]/route.ts:268`
+- `packages/product-ext-proxy/ee/handler.ts:243`
+- `shared/lib/ticketCommentAttachments.ts:122`
+- `packages/clients/src/actions/contactAvatarActions.ts:22`
+- `packages/auth/src/actions/policyActions.ts:158`
+- `server/src/middleware/express/authMiddleware.ts:464`
+
+**"Not a client, so MSP scope"** → `isMspPrincipalUserType`. Each of these is a deliberate decision.
+- `packages/clients/src/lib/listSearchSql.ts:90`
+- `packages/projects/src/actions/projectActions.ts:660`
+- `packages/tickets/src/actions/optimizedTicketActions.ts`: 250, 1612
+- `packages/tickets/src/actions/ticketActions.ts:290`
+- `packages/tickets/src/lib/ticketRecordAuthorization.ts:121`
+- `packages/tickets/src/actions/comment-actions/commentActions.ts:75`
+- `server/src/lib/api/services/TicketService.ts:396` (**the REST path service principals hit**)
+- `shared/lib/documentAuthorization.ts:114`
+- `packages/billing/src/actions/invoiceQueries.ts:65`
+- `packages/billing/src/actions/quoteActions.ts:1424`
+- `packages/auth/src/actions/policyActions.ts:146`
+- `packages/users/src/actions/user-actions/userActions.ts:406`
+
+**Session and UI** → `isInteractiveUserType`.
+- `packages/auth/src/lib/getSession.ts:39`
+- `packages/auth/src/lib/nextAuthOptions.ts`: 167, 513
+- `server/src/middleware/express/authMiddleware.ts:443`
+- `server/src/middleware.ts:598`
+- `server/src/app/auth/signin/page.tsx:41`
+- `server/src/components/layout/Header.tsx`: 456, 457
+
+**Seat** → `isLicensedUserType`.
+- `packages/users/src/actions/user-actions/userActions.ts:557`
+
+### Mappings that turn `service` into internal or client (need an explicit branch)
+
+Ternaries that make internal the else-branch:
+- `server/src/lib/api/controllers/authorizationKernel.ts:78`
+- `ee/server/src/lib/credentials/credentialAuthorization.ts:130`
+- `shared/workflow/runtime/actions/businessOperations/crm.ts:969`
+- `projects.ts:1078`
+- `userRecipients.ts:149`
+- `packages/auth/src/lib/nextAuthOptions.ts`: 710, 3189
+- `packages/tickets/src/actions/optimizedTicketActions.ts:3450`
+- `packages/tickets/src/lib/latestActivityActor.ts:75`
+- `packages/auth/src/actions/auth-actions/passwordResetActions.ts:48`
+- `ee/server/src/lib/actions/ssoActions.ts:134`
+- `OrgChart.tsx:134`
+- `internalNotificationSubscriber.ts:1831`
+- `Header.tsx:460-636`
+
+Reverse pattern, where internal is the if-branch and everything else becomes client:
+- `packages/tickets/src/models/comment.ts`: 99, 235
+- `commentActions.ts:536`
+- `commentAuthorResolution.ts:61`
+
+`|| 'internal'` / `?? 'internal'` defaults:
+- `ee/server/src/lib/platformNotifications/actions.ts:27`
+- `packages/auth/src/actions/session-actions/sessionActions.ts:143`
+- `packages/product-ext-proxy/ee/gateway/auth.ts:134`
+- `server/src/lib/extensions/gateway/auth.ts:111`
+- `ProjectTaskCommentService.ts:31`
+- `TicketDetails.tsx:1290`
+- `UserService.ts`: 235, 278, 346
+- `userActions.ts`: 546, 622
+- the email locale resolvers
+
+Synthetic `user_type: 'internal'` objects:
+- `packages/auth/src/lib/apiAuth.ts:65`
+- `server/src/lib/auth/apiAuth.ts:49`
+- `TicketService.ts:1978`
+
+### `=== 'internal'` requirements reachable over REST (classify during F020)
+
+- **Should accept MSP principals:**
+  - `TicketService.ts:2785`
+  - `taskCommentService.ts:83,172`
+  - `ApiTimeSheetController` and `ApiTicketController` local auth blocks
+  - documents routes (`documents/[documentId]/content`, `download`, `view/[fileId]`)
+- **Should stay human-only:**
+  - `packages/reporting/src/lib/reports/actions/executeReport.ts:33`
+  - `getDeferredRevenueReport.ts:46`
+  - tenancy branding, locale, logo and theme actions
+
+  These are server actions anyway, so only a session can reach them.
+- **Server-action-only checks** (ticketActions, commentActions, list-views, email logs and so on) can stay `internal`, because a service user never has a session.
+
+### Unfiltered `getAllUsers` callers
+
+These pass no `userType`. F018's default exclusion covers them:
+- `ticketFormActions.ts:31`
+- `useRecurringReferenceData.ts:58`
+- `BulkAssignTicketsRouteContent.tsx:10`
+- `TicketImportRouteContent.tsx:14`
+- `projectActions.ts`: 2005, 2226
+- `ProjectDetailsEdit.tsx:99`
+- `ProjectQuickAdd.tsx:99`
+- `Projects.tsx:512`
+- `TechnicianDispatchDashboard.tsx:787`
+- `WorkItemDetailsDrawer.tsx:61`
+- `WorkItemDrawer.tsx:211`
+- `WorkItemPicker.tsx:161`
+- `DocumentsPage.tsx:177`
+- `ClientDetails.tsx:753`
+- `ClientQuickView.tsx:202`
+- `QuickAddClient.tsx:205`
+- `ActivityDetailViewerDrawer.tsx`: 240, 335, 685
+- `TeamDetails.tsx:144`
+- `TeamList.tsx:71`
+- `UserRoleAssignment.tsx:57`
+- `PolicyManagement.tsx:312`
+- `CredentialRestrictDialog.tsx:68`
+- both `useUsers.ts` hooks
+
+These pickers use `userTypeFilter={null}`:
+- `PolicyManagement.tsx`: 1643, 1798
+- `AdminSessionManagement.tsx:288`
+
+## Delivery slices (stacked cards)
+
+Robert decided on 2026-10-18 to deliver this plan as four stacked XO cards, in dependency order A → B → C → D. Each card is stacked on the previous one.
+
+- Each card implements only its own slice.
+- Each card flips `implemented` only for its own feature and test ids, which keeps merge conflicts in the plan files to a minimum.
+- Change scope only in this plan, never in a card-local document.
+
+- **A. CE hardening and user_type audit**
+  - Features (42): F001, F008, F009, F010, F011, F012, F013, F014, F015, F016, F017, F018, F019, F020, F021, F022, F035, F036, F037, F038, F039, F040, F041, F042, F043, F044, F045, F052, F053, F054, F055, F056, F057, F058, F059, F060, F061, F082, F083, F085, F086, F101
+  - Tests (13): T007, T008, T009, T010, T011, T013, T021, T022, T026, T028, T029, T042, T043
+- **B. Edition boundary and generic hooks**
+  - Features (10): F005, F046, F047, F048, F049, F051, F092, F096, F097, F098
+  - Tests (3): T037, T038, T041
+- **C. EE core: schema, service, entitlements, act-as, attribution**
+  - Features (39): F002, F003, F004, F006, F007, F023, F024, F025, F026, F027, F028, F029, F030, F031, F032, F033, F034, F050, F062, F063, F064, F065, F066, F067, F068, F070, F071, F072, F073, F074, F075, F087, F088, F089, F090, F093, F094, F099, F100
+  - Tests (21): T001, T002, T003, T004, T005, T006, T012, T014, T015, T016, T017, T018, T019, T020, T023, T024, T025, T027, T035, T039, T040
+- **D. EE UI and usage visibility**
+  - Features (10): F069, F076, F077, F078, F079, F080, F081, F084, F091, F095
+  - Tests (6): T030, T031, T032, T033, T034, T036
+
+Notes on the split:
+
+- **F001, the EE migration that widens the CHECK constraint, ships in card A.**
+  - A's tests need a user with a non-interactive type, and the CE schema forbids one.
+  - Widening the constraint is harmless by itself: nothing creates service users until card C.
+- **Card A's human-work code uses `context.userId`, which already means the effective user.**
+  - Card B adds the explicit `effectiveUserId` field, and A's code works unchanged with it.
+  - Card C's boundary maps `HumanWorkOwnerRequiredError` to `ACT_AS_REQUIRED` (F099).
+- **Card C holds both halves of the release-ordering pair**: the agent-user migration (R9.2) and the EE boundary that makes the API accept service users (R4.6). Neither can merge without the other.
+- **T040 and T016 are the end-to-end act-as versions of T042 and T041.** That is why they live in card C.
+
+## Commands / Runbooks
+
+Pre-flight before the R9.2 migration: count human work currently pinned to agent backing users.
+
+```sql
+WITH agent_users AS (
+  SELECT tenant, (metadata->>'backing_user_id')::uuid AS user_id FROM agents
+)
+SELECT 'tickets.assigned_to' AS ref, count(*) FROM tickets t JOIN agent_users a USING (tenant) WHERE t.assigned_to = a.user_id
+UNION ALL SELECT 'ticket_resources', count(*) FROM ticket_resources r JOIN agent_users a USING (tenant) WHERE a.user_id IN (r.assigned_to, r.additional_user_id)
+UNION ALL SELECT 'schedule_entry_assignees', count(*) FROM schedule_entry_assignees s JOIN agent_users a USING (tenant) WHERE s.user_id = a.user_id
+UNION ALL SELECT 'time_entries', count(*) FROM time_entries e JOIN agent_users a USING (tenant) WHERE e.user_id = a.user_id
+UNION ALL SELECT 'interactions', count(*) FROM interactions i JOIN agent_users a USING (tenant) WHERE i.user_id = a.user_id;
+```
+
+To test the CHECK replacement on Citus, use the `alga-regression-citus` container (see memory `project_citus_now_in_case`).
+
+To recount the audit inventory once the work is done (it should return only the predicates file):
+
+```bash
+git grep -nE "user_?[tT]ype\s*!==?\s*'client'" -- ':!**/*.test.*' ':!**/__tests__/**'
+```
+
+## Links / References
+
+- MCP server design, §10 (agent identity): `docs/plans/2026-06-06-alga-mcp-server/design.md`
+- Agent schema: `ee/server/migrations/20260607120000_create_mcp_agents.cjs`; audit: `ee/server/migrations/20260607130000_create_mcp_agent_audit.cjs`
+- Industry precedent: ConnectWise Manage "API Members" (free, no login, cannot be resources) and Autotask "API User (system)" security level (free, API-only).
+
+## Open Questions
+
+None remain. All were resolved on 2026-10-18; the table at the end of the PRD lists every decision.
+
+## Test coverage notes
+
+- Six features have no dedicated test because typecheck and build already cover them:
+  - F008, type widening
+  - F009, schema enum correction
+  - F043, typed SSO-preferences lookup
+  - F044, dead-code removal
+  - F089, OpenAPI docs and registry regen
+  - F091, i18n strings
+- T029 is a deliberate static guard against new raw `!== 'client'` checks. It complements the behavioural tests and does not replace them.
