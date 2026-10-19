@@ -425,7 +425,7 @@
   {
     "id": "F048",
     "description": "OpenAPI route definitions for every audit endpoint; CE/EE specs and MCP/chat registries regenerated",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "audit-server",
     "prdRefs": [
       "FR18"
@@ -758,7 +758,7 @@
   {
     "id": "F085",
     "description": "OpenAPI CE/EE specs + MCP/chat registries regenerated and committed; nm-store spec copy noted for the alga-openapi-sync skill",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "release",
     "prdRefs": [
       "FR18"

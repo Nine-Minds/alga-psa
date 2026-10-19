@@ -804,7 +804,7 @@
   },
   {
     "id": "T090",
-    "description": "typing 'fl' issues one request after the debounce; typing 'f' issues none",
+    "description": "typing 'fl' issues one search after the debounce (one request per group, limit 5); typing 'f' issues none",
     "implemented": true,
     "commitGroup": "search",
     "featureIds": [
@@ -922,7 +922,7 @@
   {
     "id": "T103",
     "description": "server unit + contract suites green after regeneration (OpenAPI drift test)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "release",
     "featureIds": [
       "F085"

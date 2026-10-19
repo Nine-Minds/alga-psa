@@ -41,9 +41,9 @@ first-class instead of side doors.
 - [x] Mobile lint, typecheck and the vitest suite pass.
 - [x] Server audit service, route, OpenAPI and product-registry contract
   tests pass.
-- [ ] OpenAPI CE/EE specs and the MCP/chat registries regenerated in an
-  environment with the workspace packages built, then synced to nm-store via
-  the `alga-openapi-sync` skill.
+- [x] OpenAPI CE/EE specs, the MCP/chat registries and the route inventory
+  regenerated and committed.
+- [ ] Spec copy synced to nm-store via the `alga-openapi-sync` skill.
 - [ ] TestFlight and Play Internal builds accepted by their stores.
 - [ ] Accessibility, small-screen, dark-mode, offline and error-state checks
   for Home, Projects, Devices, the audit flow and Search.
