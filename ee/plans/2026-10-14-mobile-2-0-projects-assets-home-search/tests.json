@@ -1274,5 +1274,15 @@
     "featureIds": [
       "F098"
     ]
+  },
+  {
+    "id": "T142",
+    "description": "GET /api/v1/tickets/categories gives a second ITIL board the tenant ITIL standards (not an empty list) with the parent/child pair intact, filters a custom board by board_id, falls back to board_id when the board row is missing, and refuses a caller without ticket:read",
+    "implemented": true,
+    "commitGroup": "ticket-category",
+    "featureIds": [
+      "F095",
+      "F097"
+    ]
   }
 ]

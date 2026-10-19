@@ -109,7 +109,7 @@
   },
   {
     "id": "F013",
-    "description": "ProjectsScreen (drawer ProjectsTab, id projects-list) lists projects with name, client and status badge, and end date; paginates on end reached (walking past server pages that a multi-status filter narrows to nothing, and showing no count while narrowing because the server's total is unfiltered); pull to refresh. The per-row progress bar is dropped (the list payload carries no task counts, so it would be one request per row) and lives on ProjectDetail — see SCRATCHPAD",
+    "description": "ProjectsScreen (drawer ProjectsTab, id projects-list) lists projects with name, client and status badge, and end date; paginates on end reached (walking past server pages that a multi-status filter narrows to nothing, and showing no count while narrowing because the server's total is unfiltered); pull to refresh. The per-row progress bar is dropped (the list payload carries no task counts, so it would be one request per row) and lives on ProjectDetail \u2014 see SCRATCHPAD",
     "implemented": true,
     "commitGroup": "projects-list",
     "prdRefs": [
@@ -523,7 +523,7 @@
   },
   {
     "id": "F059",
-    "description": "AssetDetailScreen shows a 'Last audited' row (date and result) when last_audited_at is present. The auditor is NOT shown: `assets` gained only last_audited_at/last_audit_result, so no column or join supplies an actor — the actor lives on the audit's asset_history row (changed_by) and shows on the web. Amended from '(date, result, auditor)' — see SCRATCHPAD",
+    "description": "AssetDetailScreen shows a 'Last audited' row (date and result) when last_audited_at is present. The auditor is NOT shown: `assets` gained only last_audited_at/last_audit_result, so no column or join supplies an actor \u2014 the actor lives on the audit's asset_history row (changed_by) and shows on the web. Amended from '(date, result, auditor)' \u2014 see SCRATCHPAD",
     "implemented": true,
     "commitGroup": "audit-mobile",
     "prdRefs": [
@@ -847,7 +847,7 @@
   },
   {
     "id": "F095",
-    "description": "GET /api/v1/tickets/categories lists board-scoped ticket categories behind ticket:read (sibling of /tickets/statuses and /priorities), so agents without ticket_settings:read can classify a ticket; documented in the CE/EE specs",
+    "description": "GET /api/v1/tickets/categories lists board-scoped ticket categories behind ticket:read (sibling of /tickets/statuses and /priorities), so agents without ticket_settings:read can classify a ticket; an ITIL board resolves by is_from_itil_standard rather than board_id (the standards are copied once per tenant and stamped with the first board that enabled ITIL), matching getTicketCategoriesByBoard; documented in the CE/EE specs",
     "implemented": true,
     "commitGroup": "ticket-category",
     "prdRefs": [

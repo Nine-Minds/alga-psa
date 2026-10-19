@@ -32,6 +32,14 @@ describe('ticket category REST surface', () => {
     expect(text).toContain("'parent_category'");
   });
 
+  it('resolves an ITIL board by the standards flag, like the web picker does', () => {
+    const text = source('server/src/app/api/v1/tickets/categories/route.ts');
+
+    expect(text).toContain("table('boards')");
+    expect(text).toContain("category_type");
+    expect(text).toContain("queryBuilder.where('is_from_itil_standard', true)");
+  });
+
   it('accepts a category pair and clears either side with null', () => {
     const base = { category_id: '11111111-1111-4111-8111-111111111111' };
 
