@@ -557,6 +557,11 @@ describe('client quote billing actions', () => {
     const generateAndStore = vi.fn(async () => ({ file_id: 'new-pdf-file' }));
     vi.doMock('@alga-psa/billing/services', () => ({
       recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
+      resolveQuoteItemTaxesIfIncluded: async () =>
+        new Map([
+          ['item-required', 0],
+          ['item-optional', 0],
+        ]),
       createPDFGenerationService: vi.fn(() => ({ generateAndStore })),
     }));
 
@@ -592,6 +597,11 @@ describe('client quote billing actions', () => {
     // to avoid breaking other tests that depend on the same mock
     vi.doMock('@alga-psa/billing/services', () => ({
       recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
+      resolveQuoteItemTaxesIfIncluded: async () =>
+        new Map([
+          ['item-required', 0],
+          ['item-optional', 0],
+        ]),
       createPDFGenerationService: vi.fn(() => ({
         generateAndStore: vi.fn(async () => ({ file_id: 'generated-pdf-file-1' })),
       })),

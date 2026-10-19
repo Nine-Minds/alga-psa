@@ -8,7 +8,7 @@ import {
   recalculateQuoteFinancials,
   resolveQuoteItemTaxesIfIncluded,
 } from '../../../../../../packages/billing/src/services/quoteCalculationService';
-import { computeQuoteTotals } from '../../../../../../packages/billing/src/lib/quoteTotals';
+import { computeQuoteTotals } from '../../../../../../packages/core/src/lib/quoteTotals';
 
 process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;

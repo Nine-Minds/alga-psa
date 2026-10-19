@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { displayAddressField, displayCountry, isOptional, isQuoteItemIncluded } from '@alga-psa/core';
-import { computeQuoteTotals } from '@alga-psa/billing/lib/quoteTotals';
+import { computeQuoteTotals, displayAddressField, displayCountry, isOptional, isQuoteItemIncluded } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useRouter } from 'next/navigation';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';

@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 
 import { isQuoteItemIncluded } from '../lib/quoteItemInclusion';
-import { allocateIncludedQuoteDiscounts, computeQuoteTotals, rowGrossAmount } from '../lib/quoteTotals';
+import { allocateIncludedQuoteDiscounts, computeQuoteTotals, rowGrossAmount } from '@alga-psa/core';
 
 interface QuoteCalculationContext {
   quote_id: string;
