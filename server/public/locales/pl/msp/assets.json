@@ -849,7 +849,7 @@
       "save": "Zapisz",
       "label": "Etykieta przycisku",
       "template": "Szablon adresu URL",
-      "tokens": "Użyj {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} i {field.<key>} z kluczami pól niestandardowych z Ustawienia → Zasoby → Typy zasobów.",
+      "tokens": "Użyj {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {client.name} i {field.<key>} z kluczami pól niestandardowych z Ustawienia → Zasoby → Typy zasobów.",
       "loading": "Wczytywanie opcji dostępu zdalnego…",
       "unavailable": "Niedostępne dla tego zasobu",
       "actions": "Działania",
