@@ -15,6 +15,12 @@
 - **(2026-10-18) Service principals keep MSP data scope.** About 15 `!== 'client'` sites grant unscoped MSP visibility to anything that isn't a client. For service users that is the intended behaviour, because they hold MSP roles and RBAC governs them. We make it explicit with `isMspPrincipalUserType` rather than leaving it to chance.
 - **(2026-10-18) Comments keep `author_type = 'user'`.** `comments.author_type` is a native enum `comment_author_type` (`user`, `contact`, `unknown`). A service author is a `user` row, and display resolves the kind from `users.user_type`. No enum migration is needed.
 - **(2026-10-18) Delete becomes archive when the principal is referenced.** Today `deleteAgent` deletes `mcp_agent_audit` (which defeats attribution) and hard-deletes the `users` row (FKs from comments, time_entries and others make it fail, and `tickets.*_by` is left dangling).
+- **(2026-10-18, Robert) Service principals are Pro-only, for both kinds.**
+  - The gate is `TIER_FEATURES.SERVICE_PRINCIPALS` with minimum tier `pro`. It covers API principals and MCP agents.
+  - Solo is defunct, so it gets no entitlement entry. It ranks below Pro, so it is gated out automatically.
+  - Below Pro, existing principals are grandfathered: they keep working, but nothing new can be created, reactivated or keyed. This also covers essentials appliances that already have MCP agents. MCP had no tier gate before.
+  - `assertTenantTierAccess` returns early on CE builds, so CE stays unrestricted, as with every other tier gate.
+  - The UI uses `TierGate` (`server/src/components/tier-gating/TierGate.tsx`), `FeatureUpgradeNotice` (`packages/ui/src/components/tier-gating/`) and `useTierFeature` (`server/src/context/TierContext.tsx:185`).
 - **(2026-10-18) No feature flag.** The change only tightens behaviour, and it fixes counts that are wrong today.
 
 ## Discoveries / Constraints
@@ -298,7 +304,7 @@ git grep -nE "user_?[tT]ype\s*!==?\s*'client'" -- ':!**/*.test.*' ':!**/__tests_
 
 These mirror the PRD's Open Questions.
 
-- Entitlement numbers (proposed: essentials 1, solo 2, pro 10) and whether they should scale with seats.
+- Pro entitlement numbers (proposed: 10 principals, 120 burst / 60 per min) and whether they should scale with seats.
 - Whether the appliance license should carry a signed `service_principals` claim now.
 - Act-as allow-lists (users or teams) beyond the on/off switch.
 - Default visibility of service-authored ticket comments.

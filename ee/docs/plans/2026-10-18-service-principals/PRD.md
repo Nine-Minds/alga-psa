@@ -15,7 +15,9 @@ This plan adds **service principals**: non-interactive identities backed by a ne
 - They can create and change records as themselves, such as an RMM integration opening alert tickets.
 - They can never *be* the person doing the work. A service principal is never a ticket assignee, schedule resource, time-entry owner or approver.
 - Any human-work write must name a licensed internal user to act as. The record then stores both the human actor and the principal it came through.
-- Each plan gets a number of service principals and a per-principal rate limit. Usage shows on the license page.
+- Service principals of both kinds, API and MCP agent, are a **Pro** feature (`TIER_FEATURES.SERVICE_PRINCIPALS`, minimum tier `pro`).
+- Pro tenants get a number of service principals and a per-principal rate limit. Usage shows on the license page.
+- As with every other tier gate, Community Edition builds are not restricted.
 
 ConnectWise API members and Autotask API-only users are the industry precedent. Both are free and non-interactive, and neither can own billable work.
 
@@ -45,7 +47,7 @@ Today the only non-human identity is the EE MCP agent (`ee/server/src/lib/mcp/ag
 2. Service principals never count toward seats. Their exclusion comes from the existing `user_type = 'internal'` filters, not from new special cases.
 3. No interactive session can ever be created for a service principal. This is enforced in the auth layer on every login and recovery path, not by an unusable password.
 4. A service principal can never hold human work. Human-work writes need an explicit act-as licensed internal user, and those records store both the actor and the via-principal.
-5. Each plan gets a service-principal entitlement (a count limit) and a per-principal rate limit.
+5. Service principals are Pro-only on Enterprise builds. Pro gets a service-principal count limit and a per-principal rate limit.
 6. Admins can see service-principal usage next to seat usage.
 7. Existing MCP agent backing users are migrated to `service`. The three lifecycle gaps are closed: no limit check on create, deactivate that doesn't cut access, and agents visible in user management with a password action.
 
@@ -79,10 +81,11 @@ Personas: MSP admin (sets up integrations); integration developer (writes agains
 
 1. **Create an API service principal.** The admin opens Settings → Security → Service principals and clicks "New service principal".
    - They enter a name and description, assign MSP roles, and optionally turn on "Allow act-as".
-   - The service-principal limit is checked first. If the tenant is at its limit, the dialog shows the limit and blocks creation.
+   - On a tenant below Pro, the tab shows the standard upgrade notice (`TierGate` / `FeatureUpgradeNotice`) instead of the list, and creation is refused on the server.
+   - On Pro, the service-principal limit is checked first. If the tenant is at its limit, the dialog shows the limit and blocks creation.
    - On save the admin issues an API key owned by the principal. The key is shown once, using the existing key-reveal UI pattern.
 2. **Create an MCP agent (EE).** This works as it does today in Settings → MCP server, but the agent is now a service principal of kind `mcp_agent`.
-   - It is limit-checked against the service-principal entitlement instead of seats.
+   - It requires Pro, like API principals, and is limit-checked against the service-principal entitlement instead of seats.
    - It appears in the Service principals list too, with a kind badge. It is managed in one place, with no duplicate state.
 3. **Integration acts as itself.**
    - An RMM creates a ticket with `POST /api/v1/tickets` using the principal's key. `entered_by` is the principal.
@@ -227,34 +230,40 @@ These are enforced in the auth layer, independent of the password.
 
 #### R6 — Entitlements
 
-- **R6.1** Add a `SERVICE_PRINCIPAL_ENTITLEMENTS: Record<TenantTier, { maxPrincipals: number | null; rateLimit: { maxTokens; refillPerMin } }>` constant beside `TIER_FEATURES` in `packages/types`. Proposed defaults are an open question:
-  - essentials: 1 principal
-  - solo: 2
-  - pro: 10
-  - rate limit for all tiers: 120 tokens burst, 60/min
-- **R6.2** The limit resolves in this order:
+- **R6.0 Pro-only gate.** Add `TIER_FEATURES.SERVICE_PRINCIPALS` with `FEATURE_MINIMUM_TIER = 'pro'`. Use the namespace-member pattern that `CREDENTIALS` uses, so existing exhaustive label maps keep compiling. The gate covers both kinds, `api` and `mcp_agent`. It is enforced with `assertTenantTierAccess`, which already returns early on CE builds, at:
+  - `createServicePrincipal`, so `createAgent` is covered too
+  - reactivation
+  - `issueServicePrincipalKey` (issuing and rotating keys)
+  - turning on `allow_act_as`
+
+  Below Pro these return the existing `TIER_ACCESS_DENIED` (403) error. Solo is defunct and needs no special handling: it ranks below Pro, so it is gated out like `essentials`.
+- **R6.0a Existing principals below Pro are grandfathered.** A non-Pro tenant that already has principals keeps them working: their keys authenticate and MCP tokens resolve. The tenant cannot create, reactivate or issue keys until it is on Pro. The same rule applies when a Pro tenant drops below Pro. Nothing is deactivated or deleted, and new work is what's blocked.
+- **R6.1** Add a `SERVICE_PRINCIPAL_ENTITLEMENT: { maxPrincipals: number; rateLimit: { maxTokens; refillPerMin } }` constant for Pro beside `TIER_FEATURES` in `packages/types`. It is a single entry, not a per-tier map, because no other tier gets principals. Proposed defaults (an open question):
+  - 10 principals
+  - 120 tokens burst, 60/min
+- **R6.2** On Pro, the limit resolves in this order:
   1. `tenants.service_principal_limit`, a nullable platform-admin override in the same style as `licensed_user_count`
   2. the EE appliance license claim `service_principals`, when present in the signed claims
-  3. the tier default
+  3. the Pro default
 
-  CE builds with no licensing resolve to unlimited, matching how the CE seat guard is a no-op.
-- **R6.3** `checkServicePrincipalLimit(trx, tenant)` counts active service users. It is called by `createServicePrincipal` and by reactivation, in the same transaction as the write, following `checkInternalUserLicenseLimit`'s pattern. Over limit, it returns `SERVICE_PRINCIPAL_LIMIT_REACHED` with a readable message.
+  CE builds resolve to unlimited, matching how the CE seat guard and `assertTierAccess` are no-ops.
+- **R6.3** `checkServicePrincipalLimit(trx, tenant)` counts active service users. It is called by `createServicePrincipal` and by reactivation, after the R6.0 tier check and in the same transaction as the write, following `checkInternalUserLicenseLimit`'s pattern. Over limit, it returns `SERVICE_PRINCIPAL_LIMIT_REACHED` with a readable message.
 - **R6.4** Per-principal rate limits:
   - Every request authenticated as a service principal uses the token bucket subject `sp:<principal user_id>`, whatever key it used. That includes MCP's per-request minted keys, so agent limiting finally works.
-  - Config is resolved in order: per-key row, then per-principal row (new `api_rate_limit_settings.principal_user_id`), then the tier default from R6.1.
-  - A per-principal override can't exceed the tier ceiling unless the tenant has a platform override.
+  - Config is resolved in order: per-key row, then per-principal row (new `api_rate_limit_settings.principal_user_id`), then the Pro default from R6.1. Grandfathered principals below Pro use the Pro default too.
+  - A per-principal override can't exceed the Pro ceiling unless the tenant has a platform override.
   - Throttling still follows `RATE_LIMIT_ENFORCE`.
 - **R6.5** Seat checks stay separate. Creating a service principal never calls `checkInternalUserLicenseLimit`, and creating an internal user never counts service principals.
 
 #### R7 — Usage visibility
 
 - **R7.1** `getServicePrincipalUsage(tenant)` returns `{ limit, used, remaining }`.
-- **R7.2** The EE account page (`AccountManagement.tsx`) and the appliance `LicenseManagementPage` show a service-principal usage row beside seats, with the note "Service principals don't use seats" and a link to the settings tab.
-- **R7.3** The header of the Service principals settings tab shows the same usage and disables "New" at the limit.
+- **R7.2** The EE account page (`AccountManagement.tsx`) and the appliance `LicenseManagementPage` show a service-principal usage row beside seats, with the note "Service principals don't use seats" and a link to the settings tab. Below Pro, the row reads "Available on Pro", plus the count of any grandfathered principals.
+- **R7.3** On Pro, the header of the Service principals settings tab shows the same usage and disables "New" at the limit. Below Pro, the tab and the MCP agent create flow render the standard `TierGate` / `FeatureUpgradeNotice`, using `useTierFeature(TIER_FEATURES.SERVICE_PRINCIPALS)`. Grandfathered principals remain listed and can be deactivated or deleted, but not created, reactivated or given new keys.
 
 #### R8 — Lifecycle and the gaps that exist today
 
-- **R8.1** `createAgent` creates a service principal of kind `mcp_agent` through R1.5. It is checked against the service-principal limit, not seats.
+- **R8.1** `createAgent` creates a service principal of kind `mcp_agent` through R1.5. It requires Pro (R6.0) and is checked against the service-principal limit, not seats. MCP agents have no tier gate today, so this is a new restriction for non-Pro EE tenants.
 - **R8.2** `setServicePrincipalActive(false)`, and therefore `setAgentActive(false)`:
   - sets `users.is_inactive = true` and `agents.active = false` (for `mcp_agent`) in one transaction
   - deactivates every active key the principal owns, including outstanding `mcp_agent` session keys, so access ends immediately
@@ -284,7 +293,7 @@ These are enforced in the auth layer, independent of the password.
   - insert a `service_principals` row with kind `mcp_agent`
 
   It is idempotent. It skips any backing user that is no longer `internal` or is missing, and logs it.
-- **R9.3** The migration never deactivates or deletes anything to fit the new service-principal limit. Tenants already over the limit keep their principals, and only new creation is blocked.
+- **R9.3** The migration never deactivates or deletes anything to fit the new tier gate or limit. Non-Pro tenants with agents, and Pro tenants over the limit, keep their principals working (R6.0a). Only new creation is blocked.
 - **R9.4** Historical rows that point at a former agent user as assignee, schedule resource or time owner are left alone. A pre-flight count query lives in the SCRATCHPAD runbook. The R5.3 guard applies only when such a field is next changed.
 
 ### Non-functional Requirements
@@ -335,12 +344,15 @@ Nothing new beyond the attribution and audit columns above. Existing rate-limit 
 - Ship R9.1 and R9.2 together with R3 and R4. The agent users become `service` in the same release that teaches the API layer to accept `service`, so MCP dispatch never breaks.
 - **Seat and billing effect.** Tenants with MCP agents see their seat count drop by their agent count. On hosted Stripe tenants the next quantity sync lowers the billed seat quantity to match. That is correct, but it is a billing change, so give support and finance advance notice.
 - No feature flag. The change makes behavior stricter (login, assignment) and corrects counts. The new UI ships with it.
+- **Tier change for MCP agents.** On EE tenants below Pro (essentials appliances), existing agents keep working, but new agents need Pro. Note this in the release notes. Hosted tenants with a null plan resolve to Pro and see no change.
 - **Breaking change for integrations.** REST callers that log time or approve sheets with a key owned by a service principal will start getting `ACT_AS_REQUIRED`. None exist before this release, because service principals don't exist yet. MCP agents that used to log time as themselves will now need `act_as_user_id`. Document it in the MCP tool description.
 
 ## Open Questions
 
-1. **Entitlement numbers.** Are essentials 1, solo 2 and pro 10 right, or should the limit scale with seats (for example `max(5, seats)`)? Should the rate-limit ceiling differ by tier?
-2. **Appliance license claim.** Should `service_principals` be a signed claim now, or should appliances use the tier default until the license service issues it?
+1. **Pro entitlement numbers.** Is 10 principals at 120 burst / 60 per minute right, or should the count scale with seats (for example `max(5, seats)`)?
+   - *Decided 2026-10-18:* service principals of both kinds are Pro-only.
+   - *Decided 2026-10-18:* existing principals below Pro are grandfathered (R6.0a).
+2. **Appliance license claim.** Should `service_principals` be a signed claim now, or should Pro appliances use the Pro default until the license service issues it?
 3. **Act-as allow-lists.** Is the per-principal switch plus RBAC intersection enough for v1, or do MSPs need "may act as these users or teams only"?
 4. **Comments.** Should a service-principal comment on a ticket be allowed to be customer-visible (`is_internal = false`) by default, or forced internal unless act-as is used?
 5. **Interactions.** Is the interaction owner human work? This plan treats it as human work. Telephony and call-logging integrations would then need act-as.
@@ -349,12 +361,12 @@ Nothing new beyond the attribution and audit columns above. Existing rate-limit 
 ## Acceptance Criteria (Definition of Done)
 
 1. `users.user_type` accepts `service`. MCP agents and API principals are created as `service` users with `service_principals` rows, and existing agent users are migrated.
-2. Seat usage, the seat guard, Stripe quantity and the appliance seat guard exclude service users without any new special case. Creating or reactivating a principal checks the service-principal limit instead.
+2. Seat usage, the seat guard, Stripe quantity and the appliance seat guard exclude service users without any new special case. Creating or reactivating a principal, of either kind, requires Pro on EE builds and then checks the service-principal limit instead of seats. Existing principals below Pro keep working.
 3. A service user cannot get a session through credentials, any SSO provider, mobile (handoff, OTT, refresh, Apple, IAP), the vanity-domain exchange, password reset or invite. An admin cannot set its password. Each of these is covered by a test that does not depend on the locked password.
 4. A service principal can call `/api/v1` with its key, under its MSP roles, and is rate-limited per principal across MCP's rotating keys.
 5. A service principal can never be stored as a ticket assignee or resource, schedule assignee, time-entry or time-sheet owner, approver, project-task assignee or interaction owner, through any of UI, REST, workflow or MCP. Writes that would default to it fail with `ACT_AS_REQUIRED`.
 6. With act-as enabled and a valid target, human-work writes record the human as actor and the principal in the via column and activity log, and RBAC is the intersection of both.
 7. Deactivating a principal immediately stops all its keys, including MCP session keys, and frees its count. Deleting a used principal archives it and keeps the audit trail.
 8. Settings → Users never lists a service user, and no password, reset, invite or delete action can target one. `user_type` cannot be changed to or from `service` outside the principal service.
-9. The license and account page and the Service principals tab show `used of limit`.
+9. On Pro, the license and account page and the Service principals tab show `used of limit`. Below Pro, they show the standard upgrade notice.
 10. All 66 `!== 'client'` sites and the REST-reachable `=== 'internal'` requirements are converted to named predicates. The SCRATCHPAD inventory is marked complete.

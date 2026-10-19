@@ -24,7 +24,7 @@
   },
   {
     "id": "T003",
-    "description": "DB integration: tenant at its seat limit can still create an API principal and an MCP agent (seat usage unchanged); at the service-principal limit both fail with SERVICE_PRINCIPAL_LIMIT_REACHED and nothing is inserted",
+    "description": "DB integration: Pro tenant at its seat limit can still create an API principal and an MCP agent (seat usage unchanged); at the service-principal limit both fail with SERVICE_PRINCIPAL_LIMIT_REACHED and nothing is inserted",
     "implemented": false,
     "featureIds": [
       "F023",
@@ -36,7 +36,7 @@
   },
   {
     "id": "T004",
-    "description": "Unit: limit resolution precedence \u2014 tenant override beats appliance claim beats tier default; CE build returns unlimited",
+    "description": "Unit: Pro limit resolution precedence \u2014 tenant override beats appliance claim beats Pro default; CE build returns unlimited",
     "implemented": false,
     "featureIds": [
       "F071",
@@ -329,6 +329,24 @@
     "implemented": false,
     "featureIds": [
       "F084"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "DB integration (EE): on an essentials tenant createServicePrincipal (api) and createAgent both fail with TIER_ACCESS_DENIED and insert nothing; a pre-existing principal's key still authenticates while reactivation and new key issuance are refused; on a CE build creation succeeds",
+    "implemented": false,
+    "featureIds": [
+      "F092",
+      "F093",
+      "F094"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Component: below Pro the Service principals tab and MCP agent create show the upgrade notice, grandfathered principals list with deactivate/delete only, and the license page row reads 'Available on Pro'",
+    "implemented": false,
+    "featureIds": [
+      "F095"
     ]
   }
 ]

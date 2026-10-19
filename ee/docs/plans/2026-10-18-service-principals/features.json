@@ -572,7 +572,7 @@
   },
   {
     "id": "F070",
-    "description": "SERVICE_PRINCIPAL_ENTITLEMENTS per tier (maxPrincipals, rateLimit ceiling) defined beside TIER_FEATURES",
+    "description": "SERVICE_PRINCIPAL_ENTITLEMENT (Pro only: maxPrincipals, rateLimit ceiling) defined beside TIER_FEATURES; no per-tier map",
     "implemented": false,
     "prdRefs": [
       "R6.1"
@@ -580,7 +580,7 @@
   },
   {
     "id": "F071",
-    "description": "Service-principal limit resolves tenants.service_principal_limit \u2192 EE appliance claim service_principals \u2192 tier default; CE builds unlimited",
+    "description": "On Pro the service-principal limit resolves tenants.service_principal_limit \u2192 EE appliance claim service_principals \u2192 Pro default; CE builds unlimited",
     "implemented": false,
     "prdRefs": [
       "R6.2"
@@ -604,7 +604,7 @@
   },
   {
     "id": "F074",
-    "description": "Rate-limit config resolves per-key \u2192 per-principal \u2192 tier default; per-principal override capped at the tier ceiling unless a platform override exists",
+    "description": "Rate-limit config resolves per-key \u2192 per-principal \u2192 Pro default; per-principal override capped at the Pro ceiling unless a platform override exists",
     "implemented": false,
     "prdRefs": [
       "R6.4"
@@ -746,6 +746,41 @@
     "implemented": false,
     "prdRefs": [
       "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "TIER_FEATURES.SERVICE_PRINCIPALS added with FEATURE_MINIMUM_TIER 'pro' (namespace-member pattern like CREDENTIALS)",
+    "implemented": false,
+    "prdRefs": [
+      "R6.0"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "assertTenantTierAccess(SERVICE_PRINCIPALS) enforced in createServicePrincipal (covers createAgent), reactivation, issueServicePrincipalKey and enabling allow_act_as; below Pro returns 403 TIER_ACCESS_DENIED; no-op on CE",
+    "implemented": false,
+    "prdRefs": [
+      "R6.0",
+      "R8.1"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "Existing principals on a tenant below Pro (pre-existing or after downgrade) keep authenticating and resolving MCP tokens; only create/reactivate/key issuance is blocked; nothing is deactivated",
+    "implemented": false,
+    "prdRefs": [
+      "R6.0a",
+      "R9.3"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "Below Pro the Service principals tab and MCP agent create flow render TierGate / FeatureUpgradeNotice via useTierFeature; grandfathered principals stay listed with deactivate/delete only; license page row reads 'Available on Pro'",
+    "implemented": false,
+    "prdRefs": [
+      "R7.2",
+      "R7.3"
     ]
   }
 ]
