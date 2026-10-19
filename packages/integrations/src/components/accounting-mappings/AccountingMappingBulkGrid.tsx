@@ -325,20 +325,27 @@ export function AccountingMappingBulkGrid({
           if (row.mappedTo !== null) return <span>{row.mappedTo}</span>;
           if (manualEntry) {
             return (
-              <Input
-                id={`${idPrefix}-external-${row.id}`}
-                value={row.externalId}
-                disabled={row.ignored || isSaving}
-                onChange={(event) =>
-                  patchRow(row.id, { externalId: event.target.value, selected: Boolean(event.target.value.trim()) })
-                }
-                placeholder={t('integrations.accounting.dialog.enterPlaceholder', {
-                  defaultValue: 'Enter {{field}}...',
-                  field: module.labels.dialog.externalField
-                })}
-                aria-label={`${module.labels.dialog.externalField}: ${row.name}`}
-                className="w-full min-w-0"
-              />
+              // The cell clips its content to truncate text, and the field fills
+              // it edge to edge, so the focus ring is drawn outside the clip and
+              // sliced off. The 2px inset is exactly the ring's width.
+              <div className="p-0.5">
+                <Input
+                  id={`${idPrefix}-external-${row.id}`}
+                  value={row.externalId}
+                  disabled={row.ignored || isSaving}
+                  onChange={(event) =>
+                    patchRow(row.id, { externalId: event.target.value, selected: Boolean(event.target.value.trim()) })
+                  }
+                  placeholder={t('integrations.accounting.dialog.enterPlaceholder', {
+                    defaultValue: 'Enter {{field}}...',
+                    field: module.labels.dialog.externalField
+                  })}
+                  aria-label={`${module.labels.dialog.externalField}: ${row.name}`}
+                  // Ignored rows read as disabled here the same way the picker
+                  // rows do.
+                  className="w-full min-w-0 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
             );
           }
           const options = externalEntities

@@ -370,6 +370,43 @@ describe('AccountingMappingModuleView bulk grid without a provider catalog', () 
     expect(screen.getByTestId(`${MP}-count`)).toHaveTextContent('1 to save');
   });
 
+  it('keeps the field focused while a value is typed into it', async () => {
+    await openManualBulk();
+    const input = el(`${MP}-external-svc-host`);
+    input.focus();
+
+    // The first character gives the cell text it did not have, which used to
+    // rebuild the cell and drop the caret after one keystroke.
+    fireEvent.change(input, { target: { value: 'W' } });
+    expect(el(`${MP}-external-svc-host`)).toBe(input);
+    expect(document.activeElement).toBe(input);
+
+    fireEvent.change(input, { target: { value: 'Web Hosting' } });
+    expect(el(`${MP}-external-svc-host`).value).toBe('Web Hosting');
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('greys the field out and drops it from the count when the row is ignored', async () => {
+    await openManualBulk();
+    fireEvent.change(el(`${MP}-external-svc-host`), { target: { value: 'Web Hosting' } });
+    expect(screen.getByTestId(`${MP}-count`)).toHaveTextContent('1 to save');
+
+    fireEvent.click(el(`${MP}-ignore-svc-host`));
+    expect(el(`${MP}-external-svc-host`)).toBeDisabled();
+    expect(el(`${MP}-external-svc-host`).className).toContain('disabled:opacity-50');
+    expect(el(`${MP}-select-svc-host`)).not.toBeChecked();
+    expect(screen.getByTestId(`${MP}-count`)).toHaveTextContent('0 to save');
+    expect(screen.getByTestId(`${MP}-status-svc-host`)).toHaveTextContent('Ignored');
+  });
+
+  it('treats a whitespace-only value as blank', async () => {
+    await openManualBulk();
+    fireEvent.change(el(`${MP}-external-svc-host`), { target: { value: '   ' } });
+    expect(el(`${MP}-select-svc-host`)).not.toBeChecked();
+    expect(screen.getByTestId(`${MP}-count`)).toHaveTextContent('0 to save');
+    expect(screen.getByTestId(`${MP}-status-svc-host`)).toHaveTextContent('—');
+  });
+
   it('saves the typed values, trimmed, and skips blank or ignored rows', async () => {
     createManyMock.mockImplementation(async (_ctx: unknown, inputs: any[]) =>
       inputs.map((i) => ({ algaEntityId: i.algaEntityId, ok: true }))
