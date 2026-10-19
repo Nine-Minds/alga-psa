@@ -107,6 +107,39 @@ describe('T008/T009/T013: non-interactive users never log in', () => {
     });
   });
 
+  describe('T009: real signIn callback against a real service row', () => {
+    async function signIn(userId: string, email: string, account: unknown) {
+      const { getAuthOptions } = await import('../../../../packages/auth/src/lib/nextAuthOptions');
+      const options = await getAuthOptions();
+      // The candidate CLAIMS internal; the stored row (user_type = service) must win.
+      const candidate = { id: userId, tenant, email, name: email, username: email, proToken: '', user_type: 'internal' };
+      return options.callbacks!.signIn!({ user: candidate as any, account: account as any, credentials: undefined, profile: undefined } as any);
+    }
+
+    it.each([
+      ['credentials', { provider: 'credentials', type: 'credentials' }],
+      ['azure-ad', { provider: 'azure-ad', providerAccountId: 'oid-t009' }],
+      ['google', { provider: 'google', providerAccountId: 'g-t009' }],
+    ])('refuses a real service user via %s: no session row, no last_login', async (_n, account) => {
+      const { UserSession } = await import('@alga-psa/db/models/UserSession');
+      const createSpy = vi.spyOn(UserSession, 'create');
+      const lastLoginSpy = vi.spyOn(User, 'updateLastLogin');
+      try {
+        await expect(signIn(service.id, service.email, account)).resolves.toBe(false);
+        expect(createSpy).not.toHaveBeenCalled();
+        expect(lastLoginSpy).not.toHaveBeenCalled();
+      } finally {
+        createSpy.mockRestore();
+        lastLoginSpy.mockRestore();
+      }
+      const sessions = await db('sessions').where({ tenant, user_id: service.id }).count('* as c').first();
+      expect(Number(sessions?.c)).toBe(0);
+      const row = await db('users').where({ tenant, user_id: service.id }).first();
+      expect(row.last_login_at ?? null).toBeNull();
+      expect(row.last_login_method ?? null).toBeNull();
+    });
+  });
+
   describe('T013 (password half): setNewPassword', () => {
     async function tokenFor(email: string, userType: string) {
       const { createToken } = await import('../../../../packages/auth/src/lib/tokenizer');

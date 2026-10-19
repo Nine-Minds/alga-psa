@@ -1125,6 +1125,8 @@ export class TimeEntryService extends BaseService<any> {
 
     if (!timeSheet) {
       // Create new time sheet
+      // Human-work guard (R5.3): never create a time sheet for a non-internal user.
+      await assertHumanWorkAssignee(knex, context.tenant, [userId]);
       const [newTimeSheet] = await tenantDb(knex, context.tenant).table('time_sheets')
         .insert({
           period_id: period.period_id,

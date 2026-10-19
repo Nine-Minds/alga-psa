@@ -6,6 +6,7 @@ import {
   tenantDb,
   withTransaction,
 } from '@alga-psa/db';
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 import {
@@ -302,6 +303,8 @@ async function getOrCreateTimeSheetForWorkDate(
     return existing.id;
   }
 
+  // Human-work guard (R5.3): never create a time sheet for a non-internal user.
+  await assertHumanWorkAssignee(trx, tenant, [userId]);
   const [created] = await scopedDb.table('time_sheets')
     .insert({
       tenant,

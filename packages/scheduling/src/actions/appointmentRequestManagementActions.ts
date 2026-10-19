@@ -1,5 +1,6 @@
 'use server';
 
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { createTenantKnex, tenantDb, User } from '@alga-psa/db';
 import { withTransaction, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -644,6 +645,8 @@ export const approveAppointmentRequest = withAuth(async (
         if (!assignedUser) {
           throw new Error('Assigned user not found');
         }
+        // Human-work guard (R5.3): a technician assigned to an appointment must be an active internal user.
+        await assertHumanWorkAssignee(trx, tenant, [validatedData.assigned_user_id]);
 
         const service = await trxTenantDb.table('service_catalog')
           .where({
@@ -799,6 +802,8 @@ export const approveAppointmentRequest = withAuth(async (
       if (!assignedUser) {
         throw new Error('Assigned user not found');
       }
+      // Human-work guard (R5.3): a technician assigned to an appointment must be an active internal user.
+      await assertHumanWorkAssignee(trx, tenant, [validatedData.assigned_user_id]);
 
       // Get service details
       const service = await trxTenantDb.table('service_catalog')

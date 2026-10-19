@@ -30,6 +30,7 @@ import {
   type TenantTxContext,
 } from './shared';
 import { getCurrentTicketAdditionalUserIds } from './userRecipients';
+import { assertHumanWorkAssignee } from '../../../../lib/humanWork/assertHumanWorkAssignee';
 import {
   WORKFLOW_COMMENT_VISIBILITY_LABELS,
   withWorkflowExplicitChoice,
@@ -353,6 +354,9 @@ const reconcileWorkflowTicketAdditionalUsers = async (
   assignedTo: string | null,
   additionalUsers: WorkflowTicketResolvedAdditionalUser[]
 ): Promise<void> => {
+  // Human-work guard (R5.3): additional agents and the primary must be active internal users.
+  await assertHumanWorkAssignee(tx.trx, tx.tenantId, [assignedTo, ...additionalUsers.map((u) => u.userId)]);
+
   await tenantScopedTable(tx, 'ticket_resources')
     .where('ticket_id', ticketId)
     .delete();

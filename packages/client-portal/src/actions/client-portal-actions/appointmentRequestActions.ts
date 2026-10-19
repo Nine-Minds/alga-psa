@@ -40,6 +40,7 @@ import { isEnterprise } from '@alga-psa/core/features';
 import { format, type Locale } from 'date-fns';
 import { de, es, fr, it, nl, enUS } from 'date-fns/locale';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { getClientPortalFeatureSettingsForTenant } from '../../lib/clientPortalFeatureSettingsDb';
 
 export interface IAppointmentRequest {
@@ -482,6 +483,8 @@ export const createAppointmentRequest = withAuth(async (
         updated_at: now
       };
 
+      // Human-work guard (R5.3): a technician assigned to an appointment must be an active internal user.
+      await assertHumanWorkAssignee(trx, tenant, [validatedData.preferred_assigned_user_id]);
       await tenantDb(trx, tenant).table('appointment_requests').insert(newRequest);
 
       return await tenantDb(trx, tenant).table('appointment_requests')
@@ -885,6 +888,10 @@ export const updateAppointmentRequest = withAuth(async (
 
     // Update the appointment request
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Human-work guard (R5.3): a technician assigned to an appointment must be an active internal user.
+      if (validatedData.preferred_assigned_user_id !== existingRequest.preferred_assigned_user_id) {
+        await assertHumanWorkAssignee(trx, tenant, [validatedData.preferred_assigned_user_id]);
+      }
       await tenantDb(trx, tenant).table('appointment_requests')
         .where({
           appointment_request_id: validatedData.appointment_request_id
