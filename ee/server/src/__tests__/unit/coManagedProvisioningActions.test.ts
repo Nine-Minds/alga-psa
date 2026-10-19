@@ -59,7 +59,7 @@ describe('sponsor provisioning authentication adapter', () => {
     mocks.prepare.mockRejectedValueOnce(new Error('No seats'));
     await expect(provisionCoManagedWorkspaceAction({} as any)).rejects.toThrow('No seats');
     mocks.prepare.mockResolvedValue({ operation_id: 'operation', state: 'cleanup_requested' });
-    await expect(provisionCoManagedWorkspaceAction({} as any)).rejects.toThrow('cancelled');
+    await expect(provisionCoManagedWorkspaceAction({} as any)).resolves.toMatchObject({ rejected: true, errorCode: 'SETUP_CANCELLING' });
     expect(mocks.schedule).not.toHaveBeenCalled();
   });
 });

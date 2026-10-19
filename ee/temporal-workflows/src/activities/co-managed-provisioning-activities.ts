@@ -1,4 +1,4 @@
-import { Context } from '@temporalio/activity';
+import { ApplicationFailure, Context } from '@temporalio/activity';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { tenantDb } from '@alga-psa/db';
 import { recordCoManagedProvisioningFailure, deliverCoManagedInitialAdministratorInvitation, runCoManagedProvisioningCleanup, recordCoManagedProvisioningCleanupFailure } from '@alga-psa/co-managed';
@@ -15,6 +15,9 @@ export async function bootstrapCoManagedCustomer(input: CoManagedProvisioningWor
     await bootstrapCoManagedWorkspace(db, input.sponsorTenant, input.operationId, Context.current().log);
   } catch (error) {
     await recordCoManagedProvisioningFailure(db, input.sponsorTenant, input.operationId);
+    // A cancelled or otherwise closed setup cannot progress on another attempt.
+    if ((error as { code?: string })?.code === 'OPERATION_CLOSED')
+      throw ApplicationFailure.nonRetryable('Co-managed setup is no longer provisioning', 'OPERATION_CLOSED');
     throw error;
   }
 }

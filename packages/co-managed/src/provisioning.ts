@@ -260,16 +260,22 @@ export async function completeCoManagedProvisioningCleanup(db: Knex, sponsorTena
 }
 
 /** Prepare the exact scope the customer administrator will review. A prepared
- * board scope is not an access grant until the relationship is accepted. */
+ * board scope is not an access grant until the relationship is accepted.
+ * A setup that failed here (capacity in grace, a transient database error)
+ * resumes here: every earlier step is already committed and skipped. */
 export async function finalizeCoManagedProvisioning(db: Knex, sponsorTenant: string, operationId: string): Promise<void> {
   await db.transaction(async trx => {
     const operation = await lockOperation(trx, sponsorTenant, operationId, true);
     if (operation.state === 'pending_acceptance') return;
-    if (operation.state !== 'provisioning' || operation.step !== 'administrator_invitation') {
+    if (!['provisioning', 'failed'].includes(operation.state) || operation.step !== 'administrator_invitation') {
       throw new CoManagedProvisioningError('OPERATION_CLOSED');
     }
     await assertProvisioningCapacity(trx, sponsorTenant);
     const customer = tenantDb(trx, operation.customer_tenant);
+    // Delivery runs only after this step, so an invitation that expired while
+    // the setup was stuck was never sent: renew it rather than strand the setup.
+    await customer.table('user_invitations').where({ invitation_id: operation.administrator_invitation_id, used_at: null })
+      .where('expires_at', '<=', trx.fn.now()).update({ expires_at: trx.raw("now() + interval '24 hours'") });
     const owner = await customer.table('tenants').where('product_code', 'co_managed').first();
     const board = await customer.table('boards').where({ board_id: operation.customer_board_id, is_inactive: false }).first();
     const invitation = await customer.table('user_invitations').where({ invitation_id: operation.administrator_invitation_id,
@@ -284,6 +290,6 @@ export async function finalizeCoManagedProvisioning(db: Knex, sponsorTenant: str
       }).onConflict(['tenant', 'relationship_id', 'board_id']).ignore();
     }
     await tenantDb(trx, sponsorTenant).table('co_managed_provisioning_operations').where('operation_id', operationId)
-      .update({ state: 'pending_acceptance', updated_at: trx.fn.now() });
+      .update({ state: 'pending_acceptance', error_code: null, updated_at: trx.fn.now() });
   });
 }

@@ -31,7 +31,7 @@ import { assertCoManagedOperationalWrite, getCoManagedOperationalState, withCoMa
 import { tenantDb, runWithTenant, withTransaction } from '@alga-psa/db';
 import { getSecret } from '../../../../../server/src/lib/utils/getSecret';
 import { prepareCoManagedProvisioning } from '../../../../../packages/co-managed/src/provisioning';
-import { requestCoManagedProvisioningCleanup } from '../../../../../packages/co-managed/src/provisioning';
+import { requestCoManagedProvisioningCleanup, recordCoManagedProvisioningFailure } from '../../../../../packages/co-managed/src/provisioning';
 import { acceptCoManagedRelationship, getCoManagedAcceptanceState } from '../../../../../packages/co-managed/src/acceptance';
 import { bootstrapCoManagedWorkspace } from '../../db/co-managed-provisioning-operations';
 import { deliverCoManagedAdministratorInvitation } from '../../activities/co-managed-provisioning-activities';
@@ -249,6 +249,24 @@ describe('co-managed bootstrap against the complete installed schema', () => {
     await bootstrapCoManagedWorkspace(db, operation.tenant, operation.operation_id, log);
     for (const table of ['tenants', 'clients', 'boards', 'user_invitations']) expect(await customer.table(table), table).toHaveLength(1);
     expect((await customer.table('user_invitations').first()).token).toBe(invitation.token);
+  });
+
+  it('resumes a setup that failed in its final step, renewing an invitation that expired meanwhile', async () => {
+    // Every earlier step committed; retrying must not stop on the failure itself.
+    const operation = await prepare();
+    const sponsor = tenantDb(db, operation.tenant), customer = tenantDb(db, operation.customer_tenant);
+    await sponsor.table('boards').where('board_id', operation.escalation_board_id).update({ is_inactive: true });
+    await expect(bootstrapCoManagedWorkspace(db, operation.tenant, operation.operation_id, log)).rejects.toMatchObject({ code: 'RESERVATION_NOT_FOUND' });
+    await recordCoManagedProvisioningFailure(db, operation.tenant, operation.operation_id);
+    expect(await sponsor.table('co_managed_provisioning_operations').first()).toMatchObject({ state: 'failed', step: 'administrator_invitation' });
+    await customer.table('user_invitations').update({ expires_at: db.raw("now() - interval '1 hour'") });
+    await sponsor.table('boards').where('board_id', operation.escalation_board_id).update({ is_inactive: false });
+    await bootstrapCoManagedWorkspace(db, operation.tenant, operation.operation_id, log);
+    expect(await sponsor.table('co_managed_provisioning_operations').first()).toMatchObject({ state: 'pending_acceptance', error_code: null });
+    expect(await customer.table('co_management_relationships').first()).toMatchObject({ state: 'pending_acceptance' });
+    const invitation = await customer.table('user_invitations').first();
+    expect(new Date(invitation.expires_at).getTime()).toBeGreaterThan(Date.now());
+    expect(await customer.table('user_invitations')).toHaveLength(1);
   });
 
   it('refuses an unreserved co-managed bootstrap through the ordinary tenant factory', async () => {
