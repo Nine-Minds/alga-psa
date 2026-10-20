@@ -1857,8 +1857,12 @@ export const createClientContractFromWizard = withAuth(async (
           },
           // No placeholder zero: absent a member rate the catalog price in the
           // contract currency resolves (the engine's chain), and a stored 0
-          // 'bundle' base_rate would shadow it in readers.
-          { base_rate: null, rate_provenance: 'inherited' }
+          // 'bundle' base_rate would shadow it in readers. The basis is 'unit'
+          // because that is how the engine bills a product member (quantity x
+          // resolved rate, never a share of a line total) -- 'bundle' made the
+          // UI call the seat count "an allocation of the bundle price". The
+          // engine and valuation never branch on a product's pricing_basis.
+          { base_rate: null, rate_provenance: 'inherited', pricing_basis: 'unit' }
         );
       }
 

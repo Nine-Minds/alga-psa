@@ -9,6 +9,7 @@ export {
   hasRecurringMemberRate,
   resolveEffectiveLineRate,
   resolveFixedLineRecurringTotal,
+  resolveFixedLinePeriodTotal,
   productMembersRecurringTotalCents,
   normalizeToMonthlyCents,
 } from '@alga-psa/shared/billingClients/recurringMemberRate';

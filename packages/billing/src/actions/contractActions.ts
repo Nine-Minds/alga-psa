@@ -1098,11 +1098,22 @@ export interface IContractLineOverview {
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
   billing_frequency: string;
   base_rate: number | null;  // For fixed lines - in cents
+  /**
+   * Effective recurring amount of one billing period (cents) for a Fixed line
+   * that holds product members, computed by the shared contract valuation so
+   * the header can never disagree with the contract total. A zero line rate is
+   * a historical placeholder, not a price, so `base_rate` must not be printed
+   * for such a line. Null when the line has no product members (the line's own
+   * `base_rate` is then the amount) and for templates.
+   */
+  recurring_amount: number | null;
   display_order: number;
   services: {
     service_id: string;
     service_name: string;
     billing_method: string;
+    /** Catalog item kind ('product' members are billed quantity x rate, never as a bundle share). */
+    item_kind: string | null;
     custom_rate: number | null;  // In cents
     /**
      * Fixed-allocation quantity. Always null for Usage lines: usage billing is
@@ -1209,6 +1220,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
             'ctls.service_id',
             's.service_name',
             's.billing_method',
+            's.item_kind',
             'ctls.custom_rate',
             'ctls.quantity'
           ]);
@@ -1238,6 +1250,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           contract_line_type: (line.contract_line_type || 'Fixed') as 'Fixed' | 'Hourly' | 'Usage',
           billing_frequency: line.billing_frequency || 'monthly',
           base_rate: line.base_rate ? Number(line.base_rate) : null,
+          recurring_amount: null,
           display_order: line.display_order ?? 0,
           services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
@@ -1247,6 +1260,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
               service_id: svc.service_id,
               service_name: svc.service_name || 'Unknown Service',
               billing_method: svc.billing_method || 'fixed',
+              item_kind: svc.item_kind ?? null,
               custom_rate: config?.custom_rate ? Number(config.custom_rate) : (svc.custom_rate ? Number(svc.custom_rate) : null),
               // Usage lines bill recorded usage only; legacy configured
               // quantities are audit metadata and must not read as billable.
@@ -1394,10 +1408,13 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
         const catalogRateByConfig = new Map<string, number | null>();
         const inheritingUnitConfigs = (configs as any[]).filter((config: any) => {
           const fixed = fixedSemanticsMap.get(config.config_id);
-          const unitValued = fixed?.pricing_basis === 'unit' || effectiveUnitConfigIds.has(config.config_id);
+          const isProduct = itemKindByService.get(config.service_id) === 'product';
+          // A product is always quantity x rate (the engine never reads its
+          // pricing_basis), and its fixed base_rate is never a unit rate.
+          const unitValued = isProduct || fixed?.pricing_basis === 'unit' || effectiveUnitConfigIds.has(config.config_id);
           if (!unitValued) return false;
           return catalogPolicyConfigIds.has(config.config_id)
-            || (fixed?.base_rate == null && config.custom_rate == null);
+            || ((isProduct || fixed?.base_rate == null) && config.custom_rate == null);
         });
         if (inheritingUnitConfigs.length > 0) {
           const inheritingServiceIds = inheritingUnitConfigs.map((config: any) => config.service_id);
@@ -1440,17 +1457,20 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           contract_line_type: (line.contract_line_type || 'Fixed') as 'Fixed' | 'Hourly' | 'Usage',
           billing_frequency: line.billing_frequency || 'monthly',
           base_rate: line.base_rate ? Number(line.base_rate) : null,
+          recurring_amount: null,
           display_order: line.display_order ?? 0,
           services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
             const semantics = fixedSemanticsMap.get(config?.config_id);
             const isScheduledUnit = effectiveUnitConfigIds.has(config?.config_id);
             const isCatalogPolicy = catalogPolicyConfigIds.has(config?.config_id);
-            const isUnitValued = semantics?.pricing_basis === 'unit' || isScheduledUnit;
+            const isProduct = svc.item_kind === 'product';
+            const isUnitValued = semantics?.pricing_basis === 'unit' || isScheduledUnit || isProduct;
             return {
               service_id: svc.service_id,
               service_name: svc.service_name || 'Unknown Service',
               billing_method: svc.billing_method || 'fixed',
+              item_kind: svc.item_kind ?? null,
               custom_rate: config?.custom_rate ? Number(config.custom_rate) : null,
               // Usage lines bill recorded usage only; legacy configured
               // quantities are audit metadata and must not read as billable.
@@ -1469,7 +1489,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
                 ? null
                 : catalogRateByConfig.has(config?.config_id)
                   ? catalogRateByConfig.get(config?.config_id) ?? null
-                  : (semantics?.base_rate != null
+                  : (semantics?.base_rate != null && !isProduct
                       ? Number(semantics.base_rate)
                       : (config?.custom_rate != null ? Number(config.custom_rate) : null))
             };
@@ -1495,6 +1515,15 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
       // line rate, and every line is cadence-normalized.
       const contractValues = await getContractMonthlyFixedValuesByContract(knex, tenant, [contractId]);
       totalEstimatedMonthlyValue = contractValues.get(contractId)?.monthlyValueCents ?? 0;
+      // A Fixed line holding product members is billed quantity x rate, so
+      // its header amount comes from the same valuation as the total (a line
+      // `custom_rate` of 0 is a legacy placeholder and must not be printed).
+      const linePeriodCents = contractValues.get(contractId)?.linePeriodCentsByLine;
+      for (const line of contractLines) {
+        if (line.contract_line_type !== 'Fixed') continue;
+        if (!line.services.some((service) => service.item_kind === 'product')) continue;
+        line.recurring_amount = linePeriodCents?.get(line.contract_line_id) ?? null;
+      }
     } else if (hasFixedServices) {
       // Templates have no contract rows for the shared valuation; keep the
       // template-line normalization. Per-seat members add quantity × default

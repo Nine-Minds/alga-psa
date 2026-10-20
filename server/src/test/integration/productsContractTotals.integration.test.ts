@@ -142,6 +142,8 @@ describe('Products-only AUD contract: wizard total == stored valuation == engine
     expect(fixedConfigs).toHaveLength(3);
     for (const fc of fixedConfigs) {
       expect(fc.base_rate).toBeNull();
+      // Product members bill quantity x rate: persisted as 'unit', never as a bundle allocation.
+      expect(fc.pricing_basis).toBe('unit');
     }
 
     // Stored valuation.
@@ -206,6 +208,17 @@ describe('backfill migration', () => {
     const productMembers = await t('contract_line_service_configuration').where({ contract_line_id: productLineId });
     await t('contract_line_service_fixed_config').whereIn('config_id', productMembers.map((m: any) => m.config_id)).update({ base_rate: 0, pricing_basis: 'bundle', rate_provenance: 'custom' });
 
+    // Step 3 shape: rate-less 'bundle' product members (what the wizard wrote before the basis fix).
+    const d = await seedProduct('Backfill D', 18000, 0, serviceTypeId);
+    const { lines: nullRateLines } = await createProductsContract([{ service_id: d, quantity: 2 }]);
+    const nullRateMembers = await t('contract_line_service_configuration').where({ contract_line_id: nullRateLines[0].contract_line_id });
+    await t('contract_line_service_fixed_config').whereIn('config_id', nullRateMembers.map((m: any) => m.config_id)).update({ base_rate: null, pricing_basis: 'bundle', rate_provenance: 'inherited' });
+
+    // Control: a product member carrying a REAL bundle rate (information, not a placeholder) stays a bundle.
+    const { lines: realRateLines } = await createProductsContract([{ service_id: d, quantity: 3 }]);
+    const realRateMembers = await t('contract_line_service_configuration').where({ contract_line_id: realRateLines[0].contract_line_id });
+    await t('contract_line_service_fixed_config').whereIn('config_id', realRateMembers.map((m: any) => m.config_id)).update({ base_rate: 5000, pricing_basis: 'bundle', rate_provenance: 'custom' });
+
     // Control: a non-product Fixed line with custom_rate 0 and a 0 bundle member.
     const clientId = uuidv4();
     await t('clients').insert({ tenant: tenantId, client_id: clientId, client_name: `Control ${clientId.slice(0, 6)}`, billing_cycle: 'monthly', is_tax_exempt: false, default_currency_code: 'AUD', created_at: db.fn.now(), updated_at: db.fn.now() });
@@ -238,6 +251,13 @@ describe('backfill migration', () => {
          JOIN service_catalog s ON s.tenant = c.tenant AND s.service_id = c.service_id AND s.item_kind = 'product'
          JOIN contract_lines l ON l.tenant = c.tenant AND l.contract_line_id = c.contract_line_id AND l.contract_id IS NOT NULL AND COALESCE(l.is_template, false) = false
         WHERE f.tenant = ? AND f.base_rate = 0 AND f.pricing_basis = 'bundle'`, [tenantId])).rows[0].n);
+    const expectedBasisOnly = Number((await db.raw(
+      `SELECT count(*) AS n FROM contract_line_service_fixed_config f
+         JOIN contract_line_service_configuration c ON c.tenant = f.tenant AND c.config_id = f.config_id
+         JOIN service_catalog s ON s.tenant = c.tenant AND s.service_id = c.service_id AND s.item_kind = 'product'
+         JOIN contract_lines l ON l.tenant = c.tenant AND l.contract_line_id = c.contract_line_id AND l.contract_id IS NOT NULL AND COALESCE(l.is_template, false) = false
+        WHERE f.tenant = ? AND f.base_rate IS NULL AND f.pricing_basis = 'bundle'`, [tenantId])).rows[0].n);
+    expect(expectedBasisOnly).toBeGreaterThanOrEqual(1);
     expect(expectedLines).toBeGreaterThanOrEqual(1);
     expect(expectedConfigs).toBeGreaterThanOrEqual(2);
 
@@ -246,13 +266,19 @@ describe('backfill migration', () => {
     try { await backfill.up(db); messages = log.mock.calls.map((c) => String(c[0])); } finally { log.mockRestore(); }
     const tenantLine = messages.find((m) => m.includes(`tenant ${tenantId}`));
     expect(tenantLine).toContain(`contract_lines.custom_rate 0 -> NULL: ${expectedLines}`);
-    expect(tenantLine).toContain(`contract_line_service_fixed_config.base_rate 0 -> NULL: ${expectedConfigs}`);
+    expect(tenantLine).toContain(`contract_line_service_fixed_config.base_rate 0 -> NULL (+ pricing_basis unit): ${expectedConfigs}`);
+    expect(tenantLine).toContain(`contract_line_service_fixed_config.pricing_basis bundle -> unit (rate already NULL): ${expectedBasisOnly}`);
+    expect(messages.some((m) => m.includes('pricing_basis -> unit'))).toBe(true);
 
     const fixedLine = (await t('contract_lines').where({ contract_line_id: productLineId }).first());
     expect(fixedLine.custom_rate).toBeNull();
     expect(fixedLine.rate_provenance).toBe('inherited');
     const rewritten = await t('contract_line_service_fixed_config').whereIn('config_id', productMembers.map((m: any) => m.config_id));
-    expect(rewritten.every((r: any) => r.base_rate === null && r.rate_provenance === 'inherited')).toBe(true);
+    expect(rewritten.every((r: any) => r.base_rate === null && r.rate_provenance === 'inherited' && r.pricing_basis === 'unit')).toBe(true);
+    const basisOnly = await t('contract_line_service_fixed_config').whereIn('config_id', nullRateMembers.map((m: any) => m.config_id));
+    expect(basisOnly.every((r: any) => r.base_rate === null && r.rate_provenance === 'inherited' && r.pricing_basis === 'unit')).toBe(true);
+    const realRate = await t('contract_line_service_fixed_config').whereIn('config_id', realRateMembers.map((m: any) => m.config_id));
+    expect(realRate.every((r: any) => Number(r.base_rate) === 5000 && r.pricing_basis === 'bundle' && r.rate_provenance === 'custom')).toBe(true);
 
     // Unrelated rows untouched.
     const untouchedLine = await t('contract_lines').where({ contract_line_id: controlLine.contract_line_id }).first();

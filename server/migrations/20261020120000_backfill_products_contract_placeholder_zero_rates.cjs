@@ -19,10 +19,31 @@
 //      member is a product (service_catalog.item_kind = 'product') AND whose line is a
 //      non-template contract line with a contract_id (same scope as step 1; template
 //      lines are left untouched)
-//      -> base_rate = NULL, rate_provenance = 'inherited'.
+//      -> base_rate = NULL, rate_provenance = 'inherited', pricing_basis = 'unit'.
+//   3. The same product members on the same non-template contract lines that already have
+//      base_rate IS NULL AND pricing_basis = 'bundle' (what the wizard wrote between the
+//      placeholder fix and the basis fix) -> pricing_basis = 'unit'.
+//
+// Why 'unit': the engine bills a product member as quantity x resolved rate (it never reads a
+// product's pricing_basis -- product members are excluded from the fixed-line loaders), so
+// 'bundle' only made the UI call the seat count "an allocation of the bundle price". Product
+// members with a real (non-zero) base_rate are NOT touched: that is a different shape (quote
+// conversion) and carries information.
+//
+// This extends the (unmerged, never-applied) placeholder backfill instead of adding a sibling
+// migration because both steps select the very same rows with the same scope; two migrations
+// would have to agree on that WHERE clause forever.
 //
 // rate_provenance moves with the rate because of the CHECK constraints (a NULL rate must be
 // 'inherited'). Not reversible: the zero was a placeholder, not information (down is a no-op).
+//
+// COLLISION WARNING (unmerged branch 20261012000001_fixed_member_base_rate_basis): it adds
+// CHECK ((base_rate IS NULL) = (base_rate_basis IS NULL)) and a pricing_basis/'share' check on this
+// table. Step 2 nulls base_rate without touching base_rate_basis, which that CHECK rejects for
+// rows whose base_rate_basis is set; any pricing_basis change must also satisfy its seat check
+// (pricing_basis = 'unit' => base_rate_basis IS DISTINCT FROM 'share'). Whoever merges the two
+// must reconcile them (e.g. also null base_rate_basis in step 2) -- this migration does not fold
+// that constraint in.
 //
 // Citus-safe: every statement is tenant-scoped, ids are selected first and bound in Node, there
 // are no joins/functions/casts in the UPDATEs. Row counts are logged per tenant and in total.
@@ -38,6 +59,47 @@ function chunk(items) {
   return out;
 }
 
+// Config ids of Fixed members that (a) match `rateFilter` on the fixed config with
+// pricing_basis = 'bundle', (b) are catalog products and (c) sit on a non-template contract line.
+async function productMemberConfigIds(db, rateFilter) {
+  const candidates = await rateFilter(db.table('contract_line_service_fixed_config').where('pricing_basis', 'bundle'))
+    .select('config_id');
+  if (candidates.length === 0) return [];
+
+  const configToMember = new Map();
+  for (const ids of chunk(candidates.map((row) => row.config_id))) {
+    const rows = await db.table('contract_line_service_configuration')
+      .whereIn('config_id', ids)
+      .select('config_id', 'service_id', 'contract_line_id');
+    for (const row of rows) configToMember.set(row.config_id, row);
+  }
+  // Same scope as step 1: only non-template lines that belong to a contract.
+  const contractLineIds = new Set();
+  for (const ids of chunk(Array.from(new Set(Array.from(configToMember.values(), (m) => m.contract_line_id))))) {
+    const rows = await db.table('contract_lines')
+      .whereIn('contract_line_id', ids)
+      .whereNotNull('contract_id')
+      .where(function notTemplate() {
+        this.where('is_template', false).orWhereNull('is_template');
+      })
+      .select('contract_line_id');
+    for (const row of rows) contractLineIds.add(row.contract_line_id);
+  }
+  const productServices = new Set();
+  for (const ids of chunk(Array.from(new Set(Array.from(configToMember.values(), (m) => m.service_id))))) {
+    const rows = await db.table('service_catalog')
+      .whereIn('service_id', ids)
+      .where('item_kind', 'product')
+      .select('service_id');
+    for (const row of rows) productServices.add(row.service_id);
+  }
+  const out = [];
+  for (const [configId, member] of configToMember) {
+    if (productServices.has(member.service_id) && contractLineIds.has(member.contract_line_id)) out.push(configId);
+  }
+  return out;
+}
+
 exports.up = async function up(knex) {
   const { tenantDb } = require('./utils/tenantDb.cjs');
   const tenants = await tenantDb(knex, MIGRATION_TENANT)
@@ -46,6 +108,7 @@ exports.up = async function up(knex) {
 
   let totalLines = 0;
   let totalConfigs = 0;
+  let totalBasisOnly = 0;
 
   for (const { tenant } of tenants) {
     const db = tenantDb(knex, tenant);
@@ -131,69 +194,44 @@ exports.up = async function up(knex) {
         .update({ custom_rate: null, rate_provenance: 'inherited', updated_at: nowIso });
     }
 
-    // ---- 2. product members with the placeholder base_rate = 0 / 'bundle' ----
-    const zeroConfigs = await db.table('contract_line_service_fixed_config')
-      .where('base_rate', 0)
-      .where('pricing_basis', 'bundle')
-      .select('config_id');
-    const configIdsToFix = [];
-    if (zeroConfigs.length > 0) {
-      const configToMember = new Map();
-      for (const ids of chunk(zeroConfigs.map((row) => row.config_id))) {
-        const rows = await db.table('contract_line_service_configuration')
-          .whereIn('config_id', ids)
-          .select('config_id', 'service_id', 'contract_line_id');
-        for (const row of rows) configToMember.set(row.config_id, row);
-      }
-      // Same scope as step 1: only non-template lines that belong to a contract.
-      const contractLineIds = new Set();
-      for (const ids of chunk(Array.from(new Set(Array.from(configToMember.values(), (m) => m.contract_line_id))))) {
-        const rows = await db.table('contract_lines')
-          .whereIn('contract_line_id', ids)
-          .whereNotNull('contract_id')
-          .where(function notTemplate() {
-            this.where('is_template', false).orWhereNull('is_template');
-          })
-          .select('contract_line_id');
-        for (const row of rows) contractLineIds.add(row.contract_line_id);
-      }
-      const productServices = new Set();
-      for (const ids of chunk(Array.from(new Set(Array.from(configToMember.values(), (m) => m.service_id))))) {
-        const rows = await db.table('service_catalog')
-          .whereIn('service_id', ids)
-          .where('item_kind', 'product')
-          .select('service_id');
-        for (const row of rows) productServices.add(row.service_id);
-      }
-      for (const [configId, member] of configToMember) {
-        if (productServices.has(member.service_id) && contractLineIds.has(member.contract_line_id)) {
-          configIdsToFix.push(configId);
-        }
-      }
-    }
+    // ---- 2./3. product members on contract lines: placeholder base_rate = 0 / 'bundle' (-> NULL,
+    //      'unit') and rate-less 'bundle' (-> 'unit') ----
+    const zeroConfigIds = await productMemberConfigIds(db, (q) => q.where('base_rate', 0));
+    const nullConfigIds = await productMemberConfigIds(db, (q) => q.whereNull('base_rate'));
 
     let configsUpdated = 0;
-    for (const ids of chunk(configIdsToFix)) {
+    let basisOnlyUpdated = 0;
+    for (const ids of chunk(zeroConfigIds)) {
       configsUpdated += await db.table('contract_line_service_fixed_config')
         .whereIn('config_id', ids)
         .where('base_rate', 0)
         .where('pricing_basis', 'bundle')
-        .update({ base_rate: null, rate_provenance: 'inherited', updated_at: nowIso });
+        .update({ base_rate: null, rate_provenance: 'inherited', pricing_basis: 'unit', updated_at: nowIso });
+    }
+    for (const ids of chunk(nullConfigIds)) {
+      basisOnlyUpdated += await db.table('contract_line_service_fixed_config')
+        .whereIn('config_id', ids)
+        .whereNull('base_rate')
+        .where('pricing_basis', 'bundle')
+        .update({ pricing_basis: 'unit', updated_at: nowIso });
     }
 
-    if (linesUpdated > 0 || configsUpdated > 0) {
+    if (linesUpdated > 0 || configsUpdated > 0 || basisOnlyUpdated > 0) {
       console.log(
         `[products placeholder-zero backfill] tenant ${tenant}: contract_lines.custom_rate 0 -> NULL: ${linesUpdated}; `
-        + `contract_line_service_fixed_config.base_rate 0 -> NULL: ${configsUpdated}`,
+        + `contract_line_service_fixed_config.base_rate 0 -> NULL (+ pricing_basis unit): ${configsUpdated}; `
+        + `contract_line_service_fixed_config.pricing_basis bundle -> unit (rate already NULL): ${basisOnlyUpdated}`,
       );
     }
     totalLines += linesUpdated;
     totalConfigs += configsUpdated;
+    totalBasisOnly += basisOnlyUpdated;
   }
 
   console.log(
     `[products placeholder-zero backfill] total: contract_lines rewritten: ${totalLines}; `
-    + `contract_line_service_fixed_config rewritten: ${totalConfigs}`,
+    + `contract_line_service_fixed_config rewritten (base_rate 0 -> NULL, pricing_basis -> unit): ${totalConfigs}; `
+    + `contract_line_service_fixed_config pricing_basis bundle -> unit only: ${totalBasisOnly}`,
   );
 };
 

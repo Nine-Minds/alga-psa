@@ -47,6 +47,13 @@ const getTypeBadgeVariant = (type: 'Fixed' | 'Hourly' | 'Usage'): 'info' | 'succ
   }
 };
 
+// A member reads as recurring seats (quantity x unit rate) when it is explicitly
+// unit-priced OR a catalog product: the engine bills products per unit whatever
+// their stored pricing_basis, so a legacy 'bundle' product row must never be
+// captioned as an "allocation of the bundle price".
+const billedPerUnit = (service: { pricing_basis: 'unit' | 'bundle' | null; item_kind?: string | null }): boolean =>
+  service.pricing_basis === 'unit' || service.item_kind === 'product';
+
 const ContractLineCard: React.FC<{
   line: IContractLineOverview;
   isExpanded: boolean;
@@ -94,6 +101,12 @@ const ContractLineCard: React.FC<{
   reportPeriodCountLabel,
   onStartLegacyTransition,
 }) => {
+  // The line's own rate is the amount for a bundle. A line billing product
+  // members is quantity x rate: the server resolves that with the shared
+  // valuation, and the line rate (a historical 0.00 placeholder) is never
+  // printed in its place -- no amount beats a wrong A$0.00.
+  const hasProductMembers = line.services.some((service) => service.item_kind === 'product');
+  const headerAmountCents = hasProductMembers ? (line.recurring_amount ?? null) : line.base_rate;
   return (
     <div className="border border-[rgb(var(--color-border-200))] rounded-lg overflow-hidden">
       <button
@@ -111,10 +124,10 @@ const ContractLineCard: React.FC<{
               </Badge>
               <span>•</span>
               <span>{formatFrequencyLabel(line.billing_frequency)}</span>
-              {line.base_rate !== null && line.contract_line_type === 'Fixed' && (
+              {line.contract_line_type === 'Fixed' && headerAmountCents !== null && (
                 <>
                   <span>•</span>
-                  <span className="font-medium text-[rgb(var(--color-text-700))]">{formatCurrencyCents(line.base_rate, currencyCode)}</span>
+                  <span className="font-medium text-[rgb(var(--color-text-700))]">{formatCurrencyCents(headerAmountCents, currencyCode)}</span>
                 </>
               )}
             </div>
@@ -150,7 +163,7 @@ const ContractLineCard: React.FC<{
                       at a unit rate, a bundle member's quantity only allocates
                       the line total, and Usage bills records only. */}
                   {line.contract_line_type !== 'Usage' &&
-                    service.pricing_basis === 'unit' &&
+                    billedPerUnit(service) &&
                     service.quantity != null && (
                       <span data-testid={`fixed-recurring-seats-${service.service_id}`}>
                         {(() => {
@@ -169,7 +182,7 @@ const ContractLineCard: React.FC<{
                       </span>
                     )}
                   {line.contract_line_type !== 'Usage' &&
-                    service.pricing_basis !== 'unit' &&
+                    !billedPerUnit(service) &&
                     service.quantity != null &&
                     service.quantity > 1 && (
                       <>
@@ -242,7 +255,7 @@ const ContractLineCard: React.FC<{
                   {/* A unit-priced row already states its rate inside the
                       seat calculation; repeating it here would read as a
                       second, separate amount. */}
-                  {service.custom_rate !== null && service.pricing_basis !== 'unit' && (
+                  {service.custom_rate !== null && !billedPerUnit(service) && (
                     <span className="font-medium text-[rgb(var(--color-text-700))]">
                       {formatCurrencyCents(service.custom_rate, currencyCode)}
                       {line.contract_line_type === 'Hourly' && '/hr'}

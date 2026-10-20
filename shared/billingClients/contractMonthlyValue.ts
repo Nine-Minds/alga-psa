@@ -101,6 +101,12 @@ export interface ContractFixedMonthlyValue {
   monthlyValueCents: number;
   /** True when the contract has usage-billed lines with variable, record-driven revenue. */
   hasVariableUsage: boolean;
+  /**
+   * Recurring amount of one billing period of each non-Usage line, in the
+   * line's own cadence (what a line header printed next to its frequency
+   * should show). Same numbers the monthly value is built from.
+   */
+  linePeriodCentsByLine: Map<string, number>;
 }
 
 /**
@@ -321,7 +327,8 @@ export async function getContractMonthlyFixedValuesByContract(
     }
   }
 
-  const lineMonthlyCents = (line: (typeof lines)[number]): number => {
+  // Recurring amount of ONE billing period of the line (its own cadence, not monthly).
+  const linePeriodCents = (line: (typeof lines)[number]): number => {
     if (line.contract_line_type === 'Usage') return 0;
     if (line.contract_line_type === 'Fixed') {
       const members = membersByLine.get(line.contract_line_id) ?? [];
@@ -359,7 +366,10 @@ export async function getContractMonthlyFixedValuesByContract(
       // their legacy valuation path so existing contracts are unchanged.
       const lineHasEffectiveRevision = members.some(hasApplicableRevision);
       const isEffectiveUnitMember = (member: FixedMemberValuationRow) =>
-        isUnitPricedMember(member) ||
+        // A product stays on the product path whatever its stored pricing_basis
+        // (the wizard persists 'unit' for display); only a scheduled revision
+        // moves it to the revision-aware unit valuation.
+        (isUnitPricedMember(member) && member.item_kind !== 'product') ||
         hasApplicableRevision(member) ||
         (lineHasEffectiveRevision && member.item_kind === 'product');
       const unitMembers = members.filter(isEffectiveUnitMember);
@@ -442,22 +452,25 @@ export async function getContractMonthlyFixedValuesByContract(
         // No members at all: the line-level rate stands alone.
         totalCents += toCents(line.custom_rate) ?? 0;
       }
-      return normalizeToMonthlyCents(totalCents, line.billing_frequency);
+      return totalCents;
     }
     // Other non-Usage line types keep the existing line-level custom_rate
     // valuation (minor units).
-    return normalizeToMonthlyCents(toCents(line.custom_rate) ?? 0, line.billing_frequency);
+    return toCents(line.custom_rate) ?? 0;
   };
+  const lineMonthlyCents = (line: (typeof lines)[number]): number =>
+    normalizeToMonthlyCents(linePeriodCents(line), line.billing_frequency);
 
   const valueByContract = new Map<string, ContractFixedMonthlyValue>();
   for (const line of lines) {
     const existing = valueByContract.get(line.contract_id)
-      ?? { contractId: line.contract_id, monthlyValueCents: 0, hasVariableUsage: false };
+      ?? { contractId: line.contract_id, monthlyValueCents: 0, hasVariableUsage: false, linePeriodCentsByLine: new Map<string, number>() };
     if (line.contract_line_type === 'Usage' || lineIdsWithUsageConfigs.has(line.contract_line_id)) {
       existing.hasVariableUsage = true;
     }
     if (line.contract_line_type !== 'Usage') {
       existing.monthlyValueCents += lineMonthlyCents(line);
+      existing.linePeriodCentsByLine.set(line.contract_line_id, linePeriodCents(line));
     }
     valueByContract.set(line.contract_id, existing);
   }

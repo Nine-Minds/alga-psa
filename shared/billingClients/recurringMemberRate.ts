@@ -138,10 +138,23 @@ export function normalizeToMonthlyCents(amountCents: number, billingFrequency: s
 }
 
 /**
+ * Un-normalized recurring amount of ONE billing period of a Fixed line that
+ * holds product members: the effective line override when there is a real one,
+ * else Σ quantity × resolved member rate. This is what a line header next to
+ * its own billing frequency should print.
+ *
+ * Returns `null` when the line has no product members.
+ */
+export function resolveFixedLinePeriodTotal(line: FixedLineInput): number | null {
+  const products = line.members.filter(isProductMember);
+  if (products.length === 0) return null;
+  return resolveEffectiveLineRate(line.custom_rate, products) ?? productMembersRecurringTotalCents(products);
+}
+
+/**
  * Monthly-normalized recurring value of a Fixed line that holds product
- * members: the effective line override when there is a real one, else
- * Σ quantity × resolved member rate. The line's own `billing_frequency` wins
- * over `frequency` (the contract default).
+ * members (see {@link resolveFixedLinePeriodTotal}). The line's own
+ * `billing_frequency` wins over `frequency` (the contract default).
  *
  * Returns `null` when the line has no product members — fixed, unit and bundle
  * members of non-product lines keep their existing valuation in the caller.
@@ -150,9 +163,7 @@ export function resolveFixedLineRecurringTotal(
   line: FixedLineInput,
   frequency?: string | null,
 ): number | null {
-  const products = line.members.filter(isProductMember);
-  if (products.length === 0) return null;
-  const amount =
-    resolveEffectiveLineRate(line.custom_rate, products) ?? productMembersRecurringTotalCents(products);
+  const amount = resolveFixedLinePeriodTotal(line);
+  if (amount === null) return null;
   return normalizeToMonthlyCents(amount, line.billing_frequency ?? frequency);
 }
