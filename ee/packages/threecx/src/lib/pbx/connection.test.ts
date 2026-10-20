@@ -84,13 +84,16 @@ function seedRow(config: Record<string, unknown> = {}) {
   });
 }
 
-function pbxFetch(plan: { token?: number; defs?: number; callcontrol?: number }) {
-  return vi.fn(async (url: string) => {
+function pbxFetch(plan: { token?: number; defs?: number; callcontrol?: number; users?: number; contacts?: number; network?: boolean }) {
+  return vi.fn(async (url: string, init?: RequestInit) => {
     if (url.endsWith('/connect/token')) {
       return new Response(JSON.stringify(plan.token === undefined ? { access_token: 't', expires_in: 3600 } : { error: 'invalid_client' }), {
         status: plan.token ?? 200,
       });
     }
+    if (plan.network) throw new Error('ECONNREFUSED');
+    if (url.includes('/xapi/v1/Users')) return new Response(plan.users ? '{"error":"Forbidden"}' : '{"value":[]}', { status: plan.users ?? 200 });
+    if (url.includes('/xapi/v1/Contacts')) return new Response(plan.contacts ? 'denied' : '{"value":[]}', { status: plan.contacts ?? 200 });
     if (url.includes('/xapi/v1/Defs')) return new Response('{"value":[]}', { status: plan.defs ?? 200 });
     if (url.endsWith('/callcontrol')) return new Response('[]', { status: plan.callcontrol ?? 200 });
     return new Response('{}', { status: 404 });
@@ -153,7 +156,12 @@ describe('3CX PBX connection', () => {
     await saveThreecxPbxCredentials(TENANT, { baseUrl: 'https://pbx.example.com', clientId: '900', clientSecret: 'shh' });
     const state = await testThreecxPbxConnection(TENANT, { fetchImpl: pbxFetch({}) as any });
     expect(state.pbx.status).toBe('connected');
-    expect(state.pbx.capabilities).toEqual({ xapi: true, callControl: true });
+    expect(state.pbx.capabilities).toEqual({
+      xapi: true,
+      callControl: true,
+      users: { ok: true, status: 200, reason: null },
+      contacts: { ok: true, status: 200, reason: null },
+    });
     expect(state.pbx.lastCheckedAt).not.toBeNull();
     expect(state.pbx.lastError).toBeNull();
   });
@@ -163,7 +171,58 @@ describe('3CX PBX connection', () => {
     await saveThreecxPbxCredentials(TENANT, { baseUrl: 'https://pbx.example.com', clientId: '900', clientSecret: 'shh' });
     const state = await testThreecxPbxConnection(TENANT, { fetchImpl: pbxFetch({ callcontrol: 403 }) as any });
     expect(state.pbx.status).toBe('connected');
-    expect(state.pbx.capabilities).toEqual({ xapi: true, callControl: false });
+    expect(state.pbx.capabilities).toMatchObject({ xapi: true, callControl: false });
+  });
+
+  it('a 403 on /Users marks users not ok with the role hint while xapi stays true', async () => {
+    seedRow();
+    await saveThreecxPbxCredentials(TENANT, { baseUrl: 'https://pbx.example.com', clientId: '900', clientSecret: 'shh' });
+    const state = await testThreecxPbxConnection(TENANT, { fetchImpl: pbxFetch({ users: 403 }) as any });
+    expect(state.pbx.status).toBe('connected');
+    expect(state.pbx.capabilities.xapi).toBe(true);
+    expect(state.pbx.capabilities.users).toMatchObject({ ok: false, status: 403 });
+    expect(state.pbx.capabilities.users?.reason).toContain('Role');
+    expect(state.pbx.capabilities.users?.reason).toContain('Integrations > API');
+    expect(state.pbx.capabilities.contacts?.ok).toBe(true);
+  });
+
+  it('a 403 on /Contacts marks contacts not ok', async () => {
+    seedRow();
+    await saveThreecxPbxCredentials(TENANT, { baseUrl: 'https://pbx.example.com', clientId: '900', clientSecret: 'shh' });
+    const state = await testThreecxPbxConnection(TENANT, { fetchImpl: pbxFetch({ contacts: 403 }) as any });
+    expect(state.pbx.capabilities.contacts).toMatchObject({ ok: false, status: 403 });
+    expect(state.pbx.capabilities.users?.ok).toBe(true);
+  });
+
+  it('a network failure marks every capability unreachable', async () => {
+    seedRow();
+    await saveThreecxPbxCredentials(TENANT, { baseUrl: 'https://pbx.example.com', clientId: '900', clientSecret: 'shh' });
+    const fetchImpl = pbxFetch({ network: true });
+    // token request goes through the same fetch; let it succeed, fail the rest
+    const wrapped = vi.fn(async (url: string, init?: RequestInit) =>
+      url.endsWith('/connect/token')
+        ? new Response(JSON.stringify({ access_token: 't', expires_in: 3600 }), { status: 200 })
+        : fetchImpl(url, init));
+    const state = await testThreecxPbxConnection(TENANT, { fetchImpl: wrapped as any });
+    expect(state.pbx.status).toBe('error');
+    expect(state.pbx.capabilities).toMatchObject({
+      xapi: false,
+      callControl: false,
+      users: { ok: false, status: 0 },
+      contacts: { ok: false, status: 0 },
+    });
+  });
+
+  it('probes only issue GET requests', async () => {
+    seedRow();
+    await saveThreecxPbxCredentials(TENANT, { baseUrl: 'https://pbx.example.com', clientId: '900', clientSecret: 'shh' });
+    const fetchImpl = pbxFetch({});
+    await testThreecxPbxConnection(TENANT, { fetchImpl: fetchImpl as any });
+    const pbxCalls = fetchImpl.mock.calls.filter(([url]) => !String(url).endsWith('/connect/token'));
+    expect(pbxCalls.length).toBeGreaterThanOrEqual(4);
+    for (const [, init] of pbxCalls) {
+      expect((init?.method ?? 'GET').toUpperCase()).toBe('GET');
+    }
   });
 
   it('F009: a token failure marks the connection as error with the PBX message and no capabilities', async () => {

@@ -1,3 +1,4 @@
+import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { createThreecxPbxClient, odataPageAll, type CreateThreecxPbxClientOptions } from './pbx/client';
 import {
@@ -83,6 +84,14 @@ export async function syncThreecxExtensions(
   const userIdByEmail = new Map<string, string>();
   for (const user of users) {
     if (user.email) userIdByEmail.set(user.email.trim().toLowerCase(), user.user_id);
+  }
+
+  if (!pbxUsers.some((user) => user.Enabled !== false && (user.Number ?? '').trim())) {
+    logger.warn('[3CX] Extension sync returned no enabled users', {
+      tenantId,
+      capability: 'users',
+      pbxUserCount: pbxUsers.length,
+    });
   }
 
   await updateThreecxConfig(

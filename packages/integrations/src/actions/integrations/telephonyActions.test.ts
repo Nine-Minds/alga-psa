@@ -182,6 +182,8 @@ const hoisted = vi.hoisted(() => {
     autoTicketPolicyMock: vi.fn(async () => undefined),
     availabilityMock: vi.fn(async () => ({ enabled: true }) as any),
     providerAvailabilityMock: vi.fn(async (_provider: string) => ({ enabled: true, reason: 'enabled' }) as any),
+    syncThreecxMock: vi.fn(async (): Promise<any> => ({})),
+    logMocks: { error: vi.fn(), warn: vi.fn(), debug: vi.fn(), info: vi.fn() },
     threecxStateMock: vi.fn(async () => ({ provider: '3cx', status: 'not_configured', autoCreateTickets: false }) as any),
     activateThreecxMock: vi.fn(async () => ({ provider: '3cx', status: 'active', apiKey: 'threecx-key' }) as any),
     deactivateThreecxMock: vi.fn(async () => ({ provider: '3cx', status: 'disabled' }) as any),
@@ -257,7 +259,10 @@ vi.mock('@alga-psa/ee-microsoft-teams/lib', () => ({
   setTeamsPhoneAutoTicketPolicy: hoisted.autoTicketPolicyMock,
 }));
 
+vi.mock('@alga-psa/core/logger', () => ({ default: hoisted.logMocks }));
+
 vi.mock('@alga-psa/ee-threecx/lib', () => ({
+  syncThreecxExtensions: hoisted.syncThreecxMock,
   getThreecxProviderState: hoisted.threecxStateMock,
   // No PBX configured in these scenarios: the 3CX call affordance stays off.
   getThreecxProviderConfig: async () => null,
@@ -298,6 +303,7 @@ import {
   setTelephonyAutoCreateTickets,
   setTelephonyAutoTicketPolicy,
   setTelephonyProviderEnabled,
+  syncThreecxExtensions,
 } from './telephonyActions';
 
 describe('telephony link-to-ticket', () => {
@@ -912,6 +918,45 @@ describe('telephony link-to-ticket', () => {
 
       expect(renderTemplateMock).toHaveBeenCalledWith(expect.objectContaining({ templateVersion: 7 }));
       expect(stampTemplateMock).toHaveBeenCalledWith('tenant-1', 7);
+    });
+  });
+
+  describe('3CX admin mutation failures', () => {
+    it('returns the PBX error and logs status, excerpt and capability once at warn/error without secrets', async () => {
+      hoisted.logMocks.error.mockClear();
+      hoisted.logMocks.warn.mockClear();
+      const failure = Object.assign(new Error('PBX GET /Users failed (403): Forbidden'), {
+        name: 'ThreecxPbxError',
+        status: 403,
+        body: 'Forbidden',
+        capability: 'users',
+      });
+      hoisted.syncThreecxMock.mockRejectedValueOnce(failure);
+
+      const result = await syncThreecxExtensions();
+
+      expect(result).toEqual({ success: false, error: 'PBX GET /Users failed (403): Forbidden' });
+      // The PBX client owns the primary error line; this action line is warn.
+      expect(hoisted.logMocks.error).not.toHaveBeenCalled();
+      expect(hoisted.logMocks.warn).toHaveBeenCalledTimes(1);
+      const [, fields] = hoisted.logMocks.warn.mock.calls[0];
+      expect(fields).toMatchObject({
+        tenantId: 'tenant-1',
+        actionId: 'syncThreecxExtensions',
+        status: 403,
+        bodyExcerpt: 'Forbidden',
+        capability: 'users',
+      });
+    });
+
+    it('logs a non-PBX failure as the primary error line', async () => {
+      hoisted.logMocks.error.mockClear();
+      hoisted.syncThreecxMock.mockRejectedValueOnce(new Error('db exploded'));
+
+      const result = await syncThreecxExtensions();
+
+      expect(result).toEqual({ success: false, error: 'db exploded' });
+      expect(hoisted.logMocks.error).toHaveBeenCalledTimes(1);
     });
   });
 
