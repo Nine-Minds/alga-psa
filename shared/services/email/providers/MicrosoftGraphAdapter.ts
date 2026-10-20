@@ -407,17 +407,14 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         (resolveDeploymentCapabilities().microsoftOAuth.sharedApp ? 'platform-managed' : 'tenant-owned');
       let profileTenantId: string | undefined;
       if (issuerKind === 'tenant-owned') {
-        profileTenantId =
-          vendorTenantId
-          || getAccessTokenTenantId(this.accessToken)
-          || process.env.MICROSOFT_TENANT_ID
-          || undefined;
+        // Only values that belong to this mailbox's own app. The deployment-wide
+        // MICROSOFT_TENANT_ID (env or app secret) is the hosting tenant, never a
+        // tenant-owned app's directory, so it is deliberately not consulted.
+        profileTenantId = vendorTenantId || getAccessTokenTenantId(this.accessToken) || undefined;
         if (!profileTenantId) {
           try {
             const secretProvider = await getSecretProviderInstance();
-            profileTenantId = await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_tenant_id')
-              || await secretProvider.getAppSecret('MICROSOFT_TENANT_ID')
-              || undefined;
+            profileTenantId = (await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_tenant_id')) || undefined;
           } catch {
             profileTenantId = undefined;
           }
