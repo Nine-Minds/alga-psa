@@ -1329,6 +1329,18 @@ describe('Ticket bundling integration', () => {
       expect(child?.is_closed).toBe(true);
     });
 
+    it('keep_closed switches the mode and leaves the children untouched (action)', async () => {
+      const { scopedDb, masterId, childId } = await setupClosedMaster();
+      await runWithTenant(tenantId, () =>
+        updateBundleSettingsAction({ masterTicketId: masterId, mode: 'sync_updates', onClosedMaster: 'keep_closed' }, internalUser as any)
+      );
+      const settings = await scopedDb.table('ticket_bundle_settings').where({ master_ticket_id: masterId }).first();
+      expect(settings?.mode).toBe('sync_updates');
+      const child = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
+      expect(child?.status_id).toBe(statusOpenId);
+      expect(child?.is_closed).toBeFalsy();
+    });
+
     it('switching to link_only changes no child data, and an open master switches without closing children', async () => {
       const { scopedDb, masterId, childId } = await setupClosedMaster('sync_updates');
       await runWithTenant(tenantId, () =>
