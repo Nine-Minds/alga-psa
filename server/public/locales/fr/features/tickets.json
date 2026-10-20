@@ -1092,7 +1092,7 @@
     "noContact": "Aucun contact",
     "closeTicketTitle": "Fermer le ticket",
     "resolveAndClose": "Résoudre et fermer",
-    "closeTicketResolutionPrompt": "Choisissez un statut de clôture et ajoutez une résolution pour ce ticket.",
+    "closeTicketResolutionPrompt": "Choisissez un statut de clôture. Ajoutez une résolution ou laissez le champ vide pour clôturer sans résolution.",
     "selectCloseStatus": "Sélectionner un statut de clôture",
     "cannotCloseYet": "Ce ticket ne peut pas encore être fermé",
     "closeRulesIntro": "Les règles de fermeture du tableau exigent les éléments suivants avant que ce ticket puisse être fermé :",

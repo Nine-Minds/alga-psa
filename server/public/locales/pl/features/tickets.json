@@ -1092,7 +1092,7 @@
     "noContact": "Brak kontaktu",
     "closeTicketTitle": "Zamknij zgłoszenie",
     "resolveAndClose": "Rozwiąż i zamknij",
-    "closeTicketResolutionPrompt": "Wybierz status zamknięcia i dodaj rozwiązanie tego zgłoszenia.",
+    "closeTicketResolutionPrompt": "Wybierz status zamknięcia. Dodaj rozwiązanie lub pozostaw pole puste, aby zamknąć bez rozwiązania.",
     "selectCloseStatus": "Wybierz status zamknięcia",
     "cannotCloseYet": "Tego zgłoszenia nie można jeszcze zamknąć",
     "closeRulesIntro": "Reguły zamykania tablicy wymagają spełnienia poniższych warunków przed zamknięciem tego zgłoszenia:",
