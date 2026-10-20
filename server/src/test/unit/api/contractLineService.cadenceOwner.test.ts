@@ -237,6 +237,11 @@ describe('ContractLineService cadence owner handling', () => {
         where() {
           return builder;
         },
+        // attachPrepaidBlocks reads the Prepaid Block overlay after the update.
+        whereIn() {
+          return builder;
+        },
+        select: async () => [],
         update(payload: Record<string, unknown>) {
           captured.payload = payload;
           return { returning: async () => [{ ...existing, ...payload }] };

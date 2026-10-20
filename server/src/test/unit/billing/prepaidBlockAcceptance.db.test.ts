@@ -3,16 +3,16 @@ import { v4 as uuidv4 } from 'uuid';
 import knexLib from 'knex';
 import type { Knex } from 'knex';
 import { toCalendarDateStringInTimeZone } from '@alga-psa/core';
-import { EXPIRY_REPLACED_BY_USAGE_BLOCK_REASON } from '../src/services/prepaidBlockLifecycleService';
-import { BillingEngine } from '../src/lib/billing/billingEngine';
-import { persistInvoiceCharges } from '../src/services/invoiceService';
-import { syncPrepaidBlockIssuancesForContractLine } from '../src/services/prepaidBlockIssuanceSync';
-import { fetchPrepaidBlockIssuanceDueWorkRows } from '../src/lib/prepaidBlockDueWork';
-import { handlePrepaidBlockUsageChanged } from '../../../server/src/lib/eventBus/subscribers/prepaidBalanceAlertSubscriber';
+import { EXPIRY_REPLACED_BY_USAGE_BLOCK_REASON } from '@alga-psa/billing/services/prepaidBlockLifecycleService';
+import { BillingEngine } from '@alga-psa/billing/lib/billing/billingEngine';
+import { persistInvoiceCharges } from '@alga-psa/billing/services/invoiceService';
+import { syncPrepaidBlockIssuancesForContractLine } from '@alga-psa/billing/services/prepaidBlockIssuanceSync';
+import { fetchPrepaidBlockIssuanceDueWorkRows } from '@alga-psa/billing/lib/prepaidBlockDueWork';
+import { handlePrepaidBlockUsageChanged } from 'server/src/lib/eventBus/subscribers/prepaidBalanceAlertSubscriber';
 import { EventSchemas } from '@alga-psa/event-schemas';
-import { buildPrepaidBlockUsageChangedPayload } from '../../scheduling/src/lib/timeEntryWriteCore';
-import { expiredHourBlocksHandler } from '../../jobs/src/lib/handlers/expiredHourBlocksHandler';
-import { expiringHourBlocksNotificationHandler } from '../../jobs/src/lib/handlers/expiringHourBlocksNotificationHandler';
+import { buildPrepaidBlockUsageChangedPayload } from '@alga-psa/scheduling/lib/timeEntryWriteCore';
+import { expiredHourBlocksHandler } from '@alga-psa/jobs/handlers/expiredHourBlocksHandler';
+import { expiringHourBlocksNotificationHandler } from '@alga-psa/jobs/handlers/expiringHourBlocksNotificationHandler';
 
 // Acceptance test: Ryan's scenario (plan section 9, steps 1-6) end to end on a
 // real database. A 40 h Prepaid Block of Remote Support sold at 4,400.00 with a
@@ -81,17 +81,17 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishNonCatalogEventByName: vi.fn(async () => undefined),
   publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
-vi.mock('../src/services/accountingSync/syncProducers', () => ({
+vi.mock('@alga-psa/billing/services/accountingSync/syncProducers', () => ({
   enqueueInvoiceAutoExport: vi.fn(async () => undefined),
   enqueueInvoiceVoid: vi.fn(async () => undefined),
 }));
-vi.mock('../src/services/accountingSync/invoiceTerminalStatusHandlers', () => ({
+vi.mock('@alga-psa/billing/services/accountingSync/invoiceTerminalStatusHandlers', () => ({
   notifyInvoiceTerminalStatus: vi.fn(async () => undefined),
 }));
-vi.mock('../src/services/accountingSync/accountingSyncSettings', () => ({
+vi.mock('@alga-psa/billing/services/accountingSync/accountingSyncSettings', () => ({
   hasConnectedQboRealm: vi.fn(async () => false),
 }));
-vi.mock('../src/services/autopayBridge', () => ({
+vi.mock('@alga-psa/billing/services/autopayBridge', () => ({
   signalAutopayInvoiceSettled: vi.fn(async () => undefined),
   startInvoiceAutopay: vi.fn(async () => undefined),
 }));
@@ -335,7 +335,7 @@ async function generateAndMaybeFinalize(w: World, issuanceId: string, invoiceDat
     await trx('invoices').where({ tenant, invoice_id: invoiceId }).update({ subtotal, total_amount: subtotal });
   });
   if (finalizeIt) {
-    const { finalizeInvoiceWithKnex } = await import('../src/actions/invoiceModification');
+    const { finalizeInvoiceWithKnex } = await import('@alga-psa/billing/actions/invoiceModification');
     await finalizeInvoiceWithKnex(invoiceId, db, tenant, userId, { skipAutoApply: true });
   }
   const block = await db('hour_blocks').where({ tenant, source_invoice_id: invoiceId }).first();
@@ -415,7 +415,7 @@ describe.runIf(enabled)('Prepaid Block acceptance: Ryan\'s scenario', () => {
     const { overflow, followOn, followOnInvoiceId } = await logToExhaustionAndDraftFollowOn(w, first.blockId);
 
     // Finalize the follow-on: the block activates at finalize with 37 h left (3 h already drawn).
-    const { finalizeInvoiceWithKnex } = await import('../src/actions/invoiceModification');
+    const { finalizeInvoiceWithKnex } = await import('@alga-psa/billing/actions/invoiceModification');
     await finalizeInvoiceWithKnex(followOnInvoiceId, db, tenant, userId, { skipAutoApply: true });
     const activated = await db('hour_blocks').where({ tenant, block_id: followOn.block_id }).first();
     expect(activated).toMatchObject({ status: 'active', total_minutes: 2400, remaining_minutes: 2220 });
@@ -430,7 +430,7 @@ describe.runIf(enabled)('Prepaid Block acceptance: Ryan\'s scenario', () => {
     expect(openExpiry[0].source_block_id).toBe(followOn.block_id);
 
     // The panel's balance is the block being drawn (37 of 40 h), not the drained first block added to it.
-    const { getContractLinePrepaidBlockSummary } = await import('../src/actions/prepaidBlockActions');
+    const { getContractLinePrepaidBlockSummary } = await import('@alga-psa/billing/actions/prepaidBlockActions');
     expect(await getContractLinePrepaidBlockSummary(w.blockLineId)).toMatchObject({
       balance: { total_minutes: 2400, remaining_minutes: 2220, active_block_count: 1 },
     });
@@ -485,7 +485,7 @@ describe.runIf(enabled)('Prepaid Block acceptance: Ryan\'s scenario', () => {
     const sourceExpiry = () => db('contract_line_block_issuances').where({ tenant, trigger_kind: 'expiry', source_block_id: first.blockId }).first();
     expect((await sourceExpiry()).status).toBe('superseded');
 
-    const { hardDeleteInvoice } = await import('../src/actions/invoiceModification');
+    const { hardDeleteInvoice } = await import('@alga-psa/billing/actions/invoiceModification');
     expect(await hardDeleteInvoice(followOnInvoiceId)).toEqual({ success: true });
     // Discarding the draft puts the source block's anniversary forfeiture back on the schedule.
     expect(await sourceExpiry()).toMatchObject({ status: 'scheduled', cancel_reason: null });
@@ -515,7 +515,7 @@ describe.runIf(enabled)('Prepaid Block acceptance: Ryan\'s scenario', () => {
     expect((await sourceExpiry()).status).toBe('superseded');
 
     // The same service voidInvoice runs for the invoice's hour blocks (the draft's pending block is unused).
-    const { voidHourBlocksForVoidedInvoice } = await import('../src/services/prepaidBlockLifecycleService');
+    const { voidHourBlocksForVoidedInvoice } = await import('@alga-psa/billing/services/prepaidBlockLifecycleService');
     const outcome = await db.transaction((trx) => voidHourBlocksForVoidedInvoice(
       trx, tenant, followOnInvoiceId, userId, new Date().toISOString(), 'test void',
     ));
@@ -542,7 +542,7 @@ describe.runIf(enabled)('Prepaid Block: manual issue supersedes a scheduled expi
     expect(await sourceExpiry(first.blockId)).toMatchObject({ status: 'superseded', cancel_reason: EXPIRY_REPLACED_BY_USAGE_BLOCK_REASON });
 
     // Step 3: discard the draft: allocations released, expiry issuance scheduled again, 3 h bill as overage.
-    const { hardDeleteInvoice } = await import('../src/actions/invoiceModification');
+    const { hardDeleteInvoice } = await import('@alga-psa/billing/actions/invoiceModification');
     expect(await hardDeleteInvoice(followOnInvoiceId)).toEqual({ success: true });
     expect(await db('hour_block_time_allocations').where({ tenant, block_id: followOn.block_id })).toHaveLength(0);
     expect(await sourceExpiry(first.blockId)).toMatchObject({ status: 'scheduled', cancel_reason: null });
@@ -563,7 +563,7 @@ describe.runIf(enabled)('Prepaid Block: manual issue supersedes a scheduled expi
     expect(await billedMinutes(w)).toBe(240); // 3 h released + 1 h new, billed as overage while no block exists
 
     // Step 5: the action accepts and supersedes the expiry issuance with the usage reason.
-    const { issueNextPrepaidBlock } = await import('../src/actions/prepaidBlockActions');
+    const { issueNextPrepaidBlock } = await import('@alga-psa/billing/actions/prepaidBlockActions');
     const issued = await issueNextPrepaidBlock(w.blockLineId) as { issuanceId: string };
     expect(issued.issuanceId).toBeTruthy();
     expect(await sourceExpiry(first.blockId)).toMatchObject({ status: 'superseded', cancel_reason: EXPIRY_REPLACED_BY_USAGE_BLOCK_REASON });
@@ -589,7 +589,7 @@ describe.runIf(enabled)('Prepaid Block: manual issue supersedes a scheduled expi
 
   it('variant: voiding the manual draft restores the expiry issuance and the 4 h bill once as overage', async () => {
     const { w, first, overflow, extra } = await stuckLine();
-    const { issueNextPrepaidBlock } = await import('../src/actions/prepaidBlockActions');
+    const { issueNextPrepaidBlock } = await import('@alga-psa/billing/actions/prepaidBlockActions');
     const issued = await issueNextPrepaidBlock(w.blockLineId) as { issuanceId: string };
     const manualDraft = await generateAndMaybeFinalize(w, issued.issuanceId, today(), false);
     // While the manual draft exists the 4 h are held on its pending block, not billed.
@@ -599,7 +599,7 @@ describe.runIf(enabled)('Prepaid Block: manual issue supersedes a scheduled expi
     expect((await sourceExpiry(first.blockId)).status).toBe('superseded');
 
     const invoice = await db('hour_blocks').where({ tenant, block_id: manualDraft.blockId }).first();
-    const { hardDeleteInvoice } = await import('../src/actions/invoiceModification');
+    const { hardDeleteInvoice } = await import('@alga-psa/billing/actions/invoiceModification');
     expect(await hardDeleteInvoice(invoice.source_invoice_id)).toEqual({ success: true });
 
     expect(await sourceExpiry(first.blockId)).toMatchObject({ status: 'scheduled', cancel_reason: null });
@@ -616,7 +616,7 @@ describe.runIf(enabled)('Prepaid Block: manual issue supersedes a scheduled expi
     const w = await setup();
     const first = await startContractAndIssueFirstBlock(w);
     await logToExhaustionAndDraftFollowOn(w, first.blockId);
-    const { issueNextPrepaidBlock } = await import('../src/actions/prepaidBlockActions');
+    const { issueNextPrepaidBlock } = await import('@alga-psa/billing/actions/prepaidBlockActions');
     expect(await issueNextPrepaidBlock(w.blockLineId)).toMatchObject({ actionError: expect.stringContaining('pending block') });
     expect(await pendingBlocks()).toHaveLength(1);
     expect(await db('contract_line_block_issuances').where({ tenant, trigger_kind: 'manual' })).toHaveLength(0);
@@ -627,7 +627,7 @@ describe.runIf(enabled)('Prepaid Block: manual issue supersedes a scheduled expi
 
 describe.runIf(enabled)('Prepaid Block deploy fixes: generation through the real action path', () => {
   async function materialize(w: World) {
-    const { syncRecurringServicePeriodsForContractLine } = await import('../src/actions/recurringServicePeriodSync');
+    const { syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync');
     for (const lineId of [w.blockLineId, w.otherLineId]) {
       await db.transaction((trx) => syncRecurringServicePeriodsForContractLine(trx, {
         tenant, contractLineId: lineId, sourceRunPrefix: 'pba-deploy-fix',
@@ -679,7 +679,7 @@ describe.runIf(enabled)('Prepaid Block deploy fixes: generation through the real
     expect(row).toMatchObject({ chargeType: 'PrepaidBlock', billingCycleId: null, canGenerate: true, isEarly: false });
 
     // Approval gate: only the block row is selected -> not blocked by the other line's draft time.
-    const { generateInvoiceForSelectionInput, generateInvoice } = await import('../src/actions/invoiceGeneration');
+    const { generateInvoiceForSelectionInput, generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
     const blockInvoice: any = await generateInvoiceForSelectionInput(row.selectorInput, {}, undefined);
     expect(blockInvoice?.error, JSON.stringify(blockInvoice)).toBeUndefined();
     const blockInvoiceRow = await db('invoices').where({ tenant, invoice_id: blockInvoice.invoiceId ?? blockInvoice.invoice_id }).first();
@@ -725,16 +725,16 @@ describe.runIf(enabled)('Prepaid Block deploy fixes: generation through the real
     await db.transaction((trx) => syncPrepaidBlockIssuancesForContractLine(trx, tenant, w.blockLineId));
     await materialize(w);
     const [row] = await dueWorkRows(w, null, '2026-03-01');
-    const { generateInvoiceForSelectionInput } = await import('../src/actions/invoiceGeneration');
+    const { generateInvoiceForSelectionInput } = await import('@alga-psa/billing/actions/invoiceGeneration');
     const invoice: any = await generateInvoiceForSelectionInput(row.selectorInput, {}, undefined);
     expect(invoice?.error, JSON.stringify(invoice)).toBeUndefined();
-    const { finalizeInvoiceWithKnex } = await import('../src/actions/invoiceModification');
+    const { finalizeInvoiceWithKnex } = await import('@alga-psa/billing/actions/invoiceModification');
     await finalizeInvoiceWithKnex((invoice.invoiceId ?? invoice.invoice_id), db, tenant, userId, { skipAutoApply: true });
 
     // The contract's own next (expiry) issuance is open; "Issue next block" is for a line with none scheduled.
     await db('contract_line_block_issuances').where({ tenant, contract_line_id: w.blockLineId, status: 'scheduled' }).update({ status: 'cancelled' });
     const cyclesBefore = await db('client_billing_cycles').where({ tenant, client_id: w.clientId }).count({ n: '*' }).first() as any;
-    const { issueNextPrepaidBlock } = await import('../src/actions/prepaidBlockActions');
+    const { issueNextPrepaidBlock } = await import('@alga-psa/billing/actions/prepaidBlockActions');
     await issueNextPrepaidBlock(w.blockLineId);
 
     // Due today; the client has only the March cycle, so the window cannot come from a cycle row.

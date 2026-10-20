@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import knexLib from 'knex';
 import type { Knex } from 'knex';
-import { evaluatePrepaidBalanceAlertsForTenant } from '../../../server/src/lib/eventBus/subscribers/prepaidBalanceAlertEvaluator';
-import { replenishOpenPrepaidBalanceAlerts } from '../../../server/src/lib/eventBus/subscribers/prepaidAutoReplenishment';
+import { evaluatePrepaidBalanceAlertsForTenant } from 'server/src/lib/eventBus/subscribers/prepaidBalanceAlertEvaluator';
+import { replenishOpenPrepaidBalanceAlerts } from 'server/src/lib/eventBus/subscribers/prepaidAutoReplenishment';
 
 // Guarded DB tests for Prepaid Block usage-triggered follow-ons (plan sections
 // 6 and 9): the alert subject, the draft/auto_issue follow-on invoice, the
@@ -49,17 +49,17 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishNonCatalogEventByName: vi.fn(async () => undefined),
   publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
-vi.mock('../src/services/accountingSync/syncProducers', () => ({
+vi.mock('@alga-psa/billing/services/accountingSync/syncProducers', () => ({
   enqueueInvoiceAutoExport: vi.fn(async () => undefined),
   enqueueInvoiceVoid: vi.fn(async () => undefined),
 }));
-vi.mock('../src/services/accountingSync/invoiceTerminalStatusHandlers', () => ({
+vi.mock('@alga-psa/billing/services/accountingSync/invoiceTerminalStatusHandlers', () => ({
   notifyInvoiceTerminalStatus: vi.fn(async () => undefined),
 }));
-vi.mock('../src/services/accountingSync/accountingSyncSettings', () => ({
+vi.mock('@alga-psa/billing/services/accountingSync/accountingSyncSettings', () => ({
   hasConnectedQboRealm: vi.fn(async () => false),
 }));
-vi.mock('../src/services/autopayBridge', () => ({
+vi.mock('@alga-psa/billing/services/autopayBridge', () => ({
   signalAutopayInvoiceSettled: vi.fn(async () => undefined),
   startInvoiceAutopay: vi.fn(async () => undefined),
 }));
@@ -240,7 +240,7 @@ describe.runIf(enabled)('Prepaid Block usage-triggered follow-on', () => {
 describe.runIf(enabled)('issueNextPrepaidBlock', () => {
   it('queues a manual issuance due today and refuses while one is open', async () => {
     const w = await setup({ remaining: 500 });
-    const { issueNextPrepaidBlock } = await import('../src/actions/prepaidBlockActions');
+    const { issueNextPrepaidBlock } = await import('@alga-psa/billing/actions/prepaidBlockActions');
     const result = await (issueNextPrepaidBlock as any)(w.lineId);
     expect(result.issuanceId).toBeTruthy();
     const row = await db('contract_line_block_issuances').where({ tenant, issuance_id: result.issuanceId }).first();

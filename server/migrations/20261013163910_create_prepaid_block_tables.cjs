@@ -14,7 +14,7 @@
  * because FKs are added to distributed tables (see
  * 20260819150000_add_prepaid_auto_replenishment.cjs).
  */
-const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+const { ensureTenantDistribution, isDistributed, hasCitus } = require('./utils/citusDistribution.cjs');
 
 exports.config = { transaction: false };
 
@@ -77,7 +77,12 @@ async function createConfigTable(knex, name, keyColumn, parentTable) {
     table.foreign(['tenant', 'sold_as_service_id']).references(['tenant', 'service_id']).inTable('service_catalog');
   });
   await addConfigChecks(knex, name);
-  await ensureTenantDistribution(knex, name);
+  // contract_templates (and so contract_template_lines) stay local on Citus
+  // (see 20260815000000_create_contract_template_line_buckets.cjs); a child
+  // with a composite FK to a local parent must stay local too.
+  if (!(await hasCitus(knex)) || (await isDistributed(knex, parentTable))) {
+    await ensureTenantDistribution(knex, name);
+  }
 }
 
 exports.up = async function up(knex) {
@@ -144,12 +149,14 @@ exports.up = async function up(knex) {
 
   // Soft references to rows owned by other tables: SET NULL on the column only
   // (tenant is part of the PK/distribution key and must not be nulled).
+  // alert_id stays a plain column: a constraint on prepaid_balance_alerts would
+  // block that migration's historical down (20260815000000), and the alert is
+  // only ever read back by id.
   const softFks = [
     ['source_block_id', 'hour_blocks', 'block_id', 'source_block'],
     ['block_id', 'hour_blocks', 'block_id', 'block'],
     ['invoice_id', 'invoices', 'invoice_id', 'invoice'],
     ['invoice_charge_id', 'invoice_charges', 'item_id', 'invoice_charge'],
-    ['alert_id', 'prepaid_balance_alerts', 'alert_id', 'alert'],
   ];
   for (const [column, refTable, refColumn, label] of softFks) {
     const name = `contract_line_block_issuances_${label}_fkey`;

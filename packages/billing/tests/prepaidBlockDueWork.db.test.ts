@@ -294,7 +294,9 @@ describe.runIf(enabled)('Prepaid Block due-work rows', () => {
     const w = await setup({ lineCreatedAt: '2026-01-01T00:00:00Z' });
     try {
       await w.db('contract_lines').where({ tenant: w.tenant, contract_line_id: w.lineId })
-        .update({ cadence_owner: 'contract', billing_timing: 'advance', billing_frequency: 'monthly' });
+        // Hourly lines (which a Prepaid Block line is) bill in arrears; advance is rejected by
+        // contract_lines_hourly_usage_not_advance_check.
+        .update({ cadence_owner: 'contract', billing_timing: 'arrears', billing_frequency: 'monthly' });
       const { syncRecurringServicePeriodsForContractLine } = await import('../src/actions/recurringServicePeriodSync');
       await w.db.transaction((trx) => syncRecurringServicePeriodsForContractLine(trx, {
         tenant: w.tenant, contractLineId: w.lineId, sourceRunPrefix: 'pbd-test',

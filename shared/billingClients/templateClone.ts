@@ -204,17 +204,19 @@ export async function cloneTemplateLinePrepaidBlock(
   for (const column of PREPAID_BLOCK_CONFIG_COLUMNS) {
     values[column] = templateConfig[column] ?? null;
   }
+  // Bound timestamp: Citus rejects non-IMMUTABLE functions in the DO UPDATE SET of distributed upserts.
+  const now = new Date().toISOString();
   await db.table('contract_line_prepaid_blocks')
     .insert({
       tenant,
       contract_line_id: contractLineId,
       sold_as_service_id: soldAs,
       ...values,
-      created_at: trx.fn.now(),
-      updated_at: trx.fn.now(),
+      created_at: now,
+      updated_at: now,
     })
     .onConflict(['tenant', 'contract_line_id'])
-    .merge({ sold_as_service_id: soldAs, ...values, updated_at: trx.fn.now() });
+    .merge({ sold_as_service_id: soldAs, ...values, updated_at: now });
   return true;
 }
 
@@ -243,17 +245,18 @@ export async function snapshotContractLinePrepaidBlockToTemplateLine(
   for (const column of PREPAID_BLOCK_CONFIG_COLUMNS) {
     values[column] = lineConfig[column] ?? null;
   }
+  const now = new Date().toISOString();
   await db.table('contract_template_line_prepaid_blocks')
     .insert({
       tenant,
       template_line_id: templateLineId,
       sold_as_service_id: lineConfig.sold_as_service_id ?? null,
       ...values,
-      created_at: trx.fn.now(),
-      updated_at: trx.fn.now(),
+      created_at: now,
+      updated_at: now,
     })
     .onConflict(['tenant', 'template_line_id'])
-    .merge({ sold_as_service_id: lineConfig.sold_as_service_id ?? null, ...values, updated_at: trx.fn.now() });
+    .merge({ sold_as_service_id: lineConfig.sold_as_service_id ?? null, ...values, updated_at: now });
   return true;
 }
 
