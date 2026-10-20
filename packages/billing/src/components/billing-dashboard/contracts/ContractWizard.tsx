@@ -532,7 +532,7 @@ export function ContractWizard({
         fixed_lines: meaningfulFixedLines(wizardData.fixed_lines),
         discounts: wizardData.discounts ?? [],
         bucket_pools: wizardData.bucket_pools ?? [],
-      }) as ContractDraftSimulationInput,
+      }) satisfies ContractDraftSimulationInput,
     [wizardData],
   );
 

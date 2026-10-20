@@ -308,7 +308,7 @@ export class ScenarioChargeSource implements ContractChargeSource {
         lineCycle: this.input.lineCycle,
         ...(first ? { serviceId: first.service_id } : {}),
         quantityLabel: isUsagePool
-          ? `${spec.overage_rate} ${unit} overage`
+          ? `${unit} overage`
           : "hrs overage",
       },
     };
