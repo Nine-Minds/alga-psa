@@ -104,7 +104,13 @@ Whichever slot the credentials come from, the Azure app registration they name m
 - **Multi-tenant sign-in** (supported account types: *Accounts in any organizational
   directory*). Per-client sync mints tokens against each managed tenant's authority; a
   single-tenant registration can never do that, and every sync fails with
-  `invalid_grant`/`AADSTS700016` no matter what else is configured.
+  `invalid_grant`/`AADSTS700016` no matter what else is configured. Entra Direct always
+  signs in through the `common` authority, so a single-tenant app is rejected at connect
+  time with `AADSTS50194`. AlgaPSA shows a message that asks you to make the app
+  multi-tenant. A multi-tenant app is recommended for every Microsoft integration.
+  Email and calendar also support a single-tenant app when its directory ID is on the
+  Microsoft profile. If you run a single-tenant app for those, register a separate
+  multi-tenant app for Entra.
 - **Delegated Microsoft Graph permissions** (from
   `ee/server/src/lib/integrations/entra/auth/directScopes.ts`): `User.Read`,
   `ManagedTenants.Read.All`, `Directory.Read.All`, plus `offline_access`. Grant admin
