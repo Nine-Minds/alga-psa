@@ -76,6 +76,11 @@ const WINDOW_START = "2025-02-15";
 const WINDOW_END = "2025-03-15";
 // Arrears: the service period for the 2025-02-15 invoice window is 2025-01-15..2025-02-15.
 const ACTIVITY_DATE = "2025-01-20";
+// Second consecutive period (rollover fixtures): service period 2025-02-15..2025-03-15,
+// invoiced in the 2025-03-15..2025-04-15 window.
+const SECOND_WINDOW_START = "2025-03-15";
+const SECOND_WINDOW_END = "2025-04-15";
+const SECOND_ACTIVITY_DATE = "2025-02-20";
 
 type ParityLine = {
   kind: string;
@@ -249,6 +254,146 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
     expect(engine.filter((line) => line.kind === "bucket")).toHaveLength(1);
     expect(simulator).toEqual(engine);
   }, 120_000);
+
+  it("acceptance: unedited snapshot of an Hourly line + 10h pool, 14 assumed hours -> exactly 4 overage hours, no plain hourly charge", async () => {
+    const contract = await seedParityContract(context, {
+      hourlyMinutes: [840],
+      usageQuantities: [3],
+      pool: { totalMinutes: 600, overageRate: 15_000, shape: "pool-only" },
+    });
+    // The snapshot is used exactly as taken: no line, service or pool field is
+    // edited. Only the assumed activity and the horizon are supplied.
+    const scenario = structuredClone(contract.scenario);
+    scenario.horizon = { start_date: "2025-01-15T00:00:00Z", period_count: 3 };
+    scenario.assumptions[assumptionKey(contract.hourlyLineId, contract.hourlyServiceId)] = { flat: 14 };
+    const simulated = await simulateContractScenario(context.db, context.tenantId, scenario);
+    const allLines = simulated.periods.flatMap((period) => period.lines);
+    const bucketLines = allLines.filter((line) => line.charge_type === "bucket");
+    // Absolute values, not a comparison with the engine: 14h worked - 10h pool = 4h at 150.00/h.
+    expect(bucketLines.length).toBeGreaterThan(0);
+    for (const line of bucketLines) {
+      expect(line.net_amount).toBe(4 * 15_000);
+    }
+    const hourlyForPooled = allLines.filter(
+      (line) =>
+        (line.charge_type === "time" || line.charge_type === "hourly") &&
+        line.service_id === contract.hourlyServiceId,
+    );
+    expect(hourlyForPooled).toHaveLength(0);
+  }, 120_000);
+
+  it("fixed billed in advance (service period starts at the invoice window) matches the engine", async () => {
+    const contract = await seedParityContract(context, {
+      hourlyMinutes: [150],
+      usageQuantities: [3],
+      fixedAdvance: true,
+    });
+    const { engine, simulator } = await compare(context, contract, { hourlyHours: 2.5 });
+    expect(engine.filter((line) => line.kind === "fixed")).toHaveLength(1);
+    expect(simulator).toEqual(engine);
+  }, 120_000);
+
+  it("an active contract pricing schedule overrides the fixed rate identically", async () => {
+    const contract = await seedParityContract(context, {
+      hourlyMinutes: [150],
+      usageQuantities: [3],
+      pricingScheduleRate: 23_000,
+    });
+    const { engine, simulator } = await compare(context, contract, { hourlyHours: 2.5 });
+    const fixedLine = engine.find((line) => line.kind === "fixed");
+    expect(fixedLine?.net).toBe(23_000);
+    expect(simulator).toEqual(engine);
+  }, 120_000);
+
+  it("a percentage discount on the fixed line is produced and priced identically", async () => {
+    const contract = await seedParityContract(context, {
+      hourlyMinutes: [150],
+      usageQuantities: [3],
+      discountPercent: 0.1,
+    });
+    const { engine, simulator } = await compare(context, contract, { hourlyHours: 2.5 });
+    const discounts = engine.filter((line) => line.kind === "discount");
+    expect(discounts).toHaveLength(1);
+    // percentage discounts are fractions (0.1 = 10%) of the invoice gross
+    const gross = engine
+      .filter((line) => line.kind !== "discount")
+      .reduce((sum, line) => sum + line.net, 0);
+    expect(Math.abs(discounts[0].net)).toBe(Math.round(gross * 0.1));
+    expect(simulator).toEqual(engine);
+  }, 120_000);
+
+  it("pool with allow_rollover carries unused minutes into the next period and bills the same overage", async () => {
+    // Period 1: 4h worked of a 10h pool => 6h carried. Period 2: 18h worked
+    // against 10h + 6h = 16h => 2h overage (without rollover it would be 8h).
+    const contract = await seedParityContract(context, {
+      hourlyMinutes: [240],
+      secondPeriodHourlyMinutes: [1080],
+      usageQuantities: [3],
+      pool: { totalMinutes: 600, overageRate: 15_000, allowRollover: true, shape: "pool-only" },
+    });
+    const { engine, simulator } = await compare(
+      context,
+      contract,
+      { hourlyHours: 4, hourlyOverrides: { 2: 18 } },
+      { period: "second", kinds: ["bucket", "hourly"] },
+    );
+    const record = await context
+      .db("bucket_usage")
+      .where({ tenant: context.tenantId, period_start: "2025-02-15" })
+      .first();
+    expect(Number(record.rolled_over_minutes)).toBe(360);
+    expect(engine.filter((line) => line.kind === "bucket").map((line) => line.net)).toEqual([2 * 15_000]);
+    expect(engine.filter((line) => line.kind === "hourly" && line.serviceId === contract.hourlyServiceId)).toHaveLength(0);
+    expect(simulator).toEqual(engine);
+  }, 180_000);
+
+  it("rollover is not carried when the pool does not allow it (same two periods)", async () => {
+    const contract = await seedParityContract(context, {
+      hourlyMinutes: [240],
+      secondPeriodHourlyMinutes: [1080],
+      usageQuantities: [3],
+      pool: { totalMinutes: 600, overageRate: 15_000, allowRollover: false, shape: "pool-only" },
+    });
+    const { engine, simulator } = await compare(
+      context,
+      contract,
+      { hourlyHours: 4, hourlyOverrides: { 2: 18 } },
+      { period: "second", kinds: ["bucket", "hourly"] },
+    );
+    expect(engine.filter((line) => line.kind === "bucket").map((line) => line.net)).toEqual([8 * 15_000]);
+    expect(simulator).toEqual(engine);
+  }, 180_000);
+
+  it("several time entries pooled into one pool bill the same overage as the engine", async () => {
+    const contract = await seedParityContract(context, {
+      hourlyMinutes: [300, 300, 240],
+      usageQuantities: [3],
+      pool: { totalMinutes: 600, overageRate: 15_000, shape: "pool-only" },
+    });
+    const { engine, simulator } = await compare(context, contract, { hourlyHours: 14 });
+    expect(engine.filter((line) => line.kind === "bucket").map((line) => line.net)).toEqual([4 * 15_000]);
+    expect(simulator).toEqual(engine);
+  }, 120_000);
+
+  it("KNOWN GAP: unpooled time entries are rounded per entry by the engine and once per period by the simulator", async () => {
+    // 50 + 50 minutes with a 15 minute round-up: the engine prices 60 + 60
+    // = 2.00h, the simulator aggregates the assumption (100 min) and rounds
+    // once to 105 min = 1.75h. Marked LEVERAGE pattern per-entry-vs-aggregated-hours.
+    const contract = await seedParityContract(context, {
+      hourlyMinutes: [50, 50],
+      usageQuantities: [3],
+    });
+    const { engine, simulator } = await compare(context, contract, { hourlyHours: 100 / 60 });
+    const hourlyOf = (lines: ParityLine[]) =>
+      lines.filter((line) => line.kind === "hourly" && line.serviceId === contract.hourlyServiceId);
+    const hoursOf = (lines: ParityLine[]) => round(hourlyOf(lines).reduce((sum, line) => sum + line.quantity, 0));
+    expect(hourlyOf(engine)).toHaveLength(2);
+    expect(hoursOf(engine)).toBe(2);
+    expect(hoursOf(simulator)).toBe(1.75);
+    // Everything except the hourly lines still matches.
+    const rest = (lines: ParityLine[]) => lines.filter((line) => !hourlyOf(lines).includes(line));
+    expect(rest(simulator)).toEqual(rest(engine));
+  }, 120_000);
 });
 
 // ---------------------------------------------------------------------------
@@ -256,17 +401,41 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
 async function compare(
   context: TestContext,
   contract: ParityContract,
-  assumed: { hourlyHours?: number; usageQuantity?: number },
+  assumed: {
+    hourlyHours?: number;
+    usageQuantity?: number;
+    /** Assumed hourly hours for a later simulated period (index -> hours). */
+    hourlyOverrides?: Record<number, number>;
+  },
+  options: {
+    /** Which simulated period / engine invoice window to compare (default: first). */
+    period?: "first" | "second";
+    /** Compare only these line kinds (the other kinds are seeded for one period only). */
+    kinds?: string[];
+  } = {},
 ): Promise<{ engine: ParityLine[]; simulator: ParityLine[] }> {
-  const engine = await runEngineDryRun(context, contract);
+  const second = options.period === "second";
+  const engine = (
+    await runEngineDryRun(
+      context,
+      contract,
+      second
+        ? { start: SECOND_WINDOW_START, end: SECOND_WINDOW_END }
+        : { start: WINDOW_START, end: WINDOW_END },
+    )
+  ).filter((line) => !options.kinds || options.kinds.includes(line.kind));
 
   const scenario = structuredClone(contract.scenario);
   for (const line of scenario.lines) line.cadence_owner = "contract";
-  scenario.horizon = { start_date: `${WINDOW_START}T00:00:00Z`, period_count: 2 };
+  // The simulator bills arrears one invoice window after the service period
+  // starts, so the horizon begins one period before the engine window under
+  // test: simulated period 1 is the engine's 2025-02-15 window, period 2 its
+  // 2025-03-15 window. Period 0 is a warm-up and is never compared.
+  scenario.horizon = { start_date: "2025-01-15T00:00:00Z", period_count: 3 };
   if (assumed.hourlyHours != null) {
     scenario.assumptions[
       assumptionKey(contract.hourlyLineId, contract.hourlyServiceId)
-    ] = { flat: assumed.hourlyHours };
+    ] = { flat: assumed.hourlyHours, overrides: assumed.hourlyOverrides };
   }
   scenario.assumptions[
     assumptionKey(contract.usageLineId, contract.usageServiceId)
@@ -276,8 +445,7 @@ async function compare(
     context.tenantId,
     scenario,
   );
-  const lines =
-    simulated.periods.find((period) => period.lines.length > 0)?.lines ?? [];
+  const lines = simulated.periods[second ? 2 : 1]?.lines ?? [];
   const simulator = lines
     .map(
       (line): ParityLine => ({
@@ -287,6 +455,7 @@ async function compare(
         net: line.net_amount,
       }),
     )
+    .filter((line) => !options.kinds || options.kinds.includes(line.kind))
     .sort(compareLines);
   return { engine, simulator };
 }
@@ -300,6 +469,7 @@ async function compare(
 async function runEngineDryRun(
   context: TestContext,
   contract: ParityContract,
+  window: { start: string; end: string } = { start: WINDOW_START, end: WINDOW_END },
 ): Promise<ParityLine[]> {
   const captured: any[] = [];
   const original = BillingEngine.prototype.calculateBillingForExecutionWindow;
@@ -324,8 +494,8 @@ async function runEngineDryRun(
           clientId: context.clientId,
           contractId: contract.contractId,
           contractLineId: line.origin_contract_line_id ?? line.key,
-          windowStart: `${WINDOW_START}T00:00:00Z`,
-          windowEnd: `${WINDOW_END}T00:00:00Z`,
+          windowStart: `${window.start}T00:00:00Z`,
+          windowEnd: `${window.end}T00:00:00Z`,
         }),
       ),
     });
@@ -336,18 +506,26 @@ async function runEngineDryRun(
   if (!result) throw new Error("Engine did not run for the window");
   recordInvoiceLineDump(result);
   if (result.error) throw new Error(`Engine failed: ${result.error}`);
-  return (result.charges as any[])
-    .filter((charge) => !charge.is_discount)
-    .map((charge): ParityLine => {
-      const kind = normalizeKind(String(charge.type));
-      return {
-        kind,
-        serviceId: serviceIdFor(kind, charge.serviceId ?? charge.service_catalog_id ?? null),
-        quantity: quantityFor(kind, Number(charge.quantity ?? 0)),
-        net: Number(charge.total),
-      };
-    })
-    .sort(compareLines);
+  const chargeLines = (result.charges as any[]).map((charge): ParityLine => {
+    const kind = normalizeKind(String(charge.type));
+    return {
+      kind,
+      serviceId: serviceIdFor(kind, charge.serviceId ?? charge.service_catalog_id ?? null),
+      quantity: quantityFor(kind, Number(charge.quantity ?? 0)),
+      net: Number(charge.total),
+    };
+  });
+  // Discounts are computed by the shared compute pipeline and live beside
+  // `charges` on the engine result; the simulator emits them as lines.
+  const discountLines = ((result.discounts ?? []) as any[]).map(
+    (discount): ParityLine => ({
+      kind: "discount",
+      serviceId: null,
+      quantity: 0,
+      net: -Math.abs(Number(discount.amount)),
+    }),
+  );
+  return [...chargeLines, ...discountLines].sort(compareLines);
 }
 
 // ---------------------------------------------------------------------------
@@ -387,7 +565,7 @@ function normalizeKind(kind: string): string {
 
 /** Fixed and bucket-overage lines are not keyed to a catalog service on both sides. */
 function serviceIdFor(kind: string, serviceId: string | null): string | null {
-  return kind === "fixed" || kind === "bucket" ? null : serviceId;
+  return kind === "fixed" || kind === "bucket" || kind === "discount" ? null : serviceId;
 }
 
 /**
@@ -395,7 +573,7 @@ function serviceIdFor(kind: string, serviceId: string | null): string | null {
  * the simulator; the overage amount (`net`) is the comparable figure.
  */
 function quantityFor(kind: string, quantity: number): number {
-  return kind === "bucket" ? 0 : round(quantity);
+  return kind === "bucket" || kind === "discount" ? 0 : round(quantity);
 }
 
 function round(value: number): number {
@@ -414,6 +592,19 @@ async function seedParityContract(
     hourlyMinutes: number[];
     usageQuantities: number[];
     pool?: PoolSpec;
+    /** Fixed line billed in advance (default arrears like the other lines). */
+    fixedAdvance?: boolean;
+    /** Contract-wide pricing schedule active over the compared service period. */
+    pricingScheduleRate?: number;
+    /** Percentage discount on the fixed line. */
+    discountPercent?: number;
+    /**
+     * Minutes worked in the NEXT service period (2025-02-15..2025-03-15). When
+     * set, both service periods are materialized and the pool usage for both is
+     * recorded through the live bucket-usage service, in order (so rollover is
+     * carried the way the live app carries it).
+     */
+    secondPeriodHourlyMinutes?: number[];
   },
 ): Promise<ParityContract> {
   const taxRateId = await setupClientTaxConfiguration(context, {
@@ -469,6 +660,7 @@ async function seedParityContract(
   };
   const fixed = await createFixedPlanAssignment(context, fixedService, {
     ...common,
+    billingTiming: options.fixedAdvance ? ("advance" as const) : common.billingTiming,
     planName: "Managed support",
     baseRateCents: 10_000,
   });
@@ -526,6 +718,34 @@ async function seedParityContract(
     { tenant: context.tenantId, tier_id: uuidv4(), config_id: usageConfig, min_quantity: 10, max_quantity: null, rate: 150 },
   ]);
 
+  if (options.pricingScheduleRate != null) {
+    await context.db("contract_pricing_schedules").insert({
+      tenant: context.tenantId,
+      schedule_id: uuidv4(),
+      contract_id: contractId,
+      effective_date: "2025-01-01",
+      end_date: null,
+      custom_rate: options.pricingScheduleRate,
+    });
+  }
+  if (options.discountPercent != null) {
+    const discountId = uuidv4();
+    await context.db("discounts").insert({
+      tenant: context.tenantId,
+      discount_id: discountId,
+      discount_name: "Parity loyalty discount",
+      discount_type: "percentage",
+      value: options.discountPercent,
+      start_date: "2025-01-01",
+      end_date: null,
+      is_active: true,
+    });
+    await context.db("contract_line_discounts").insert({
+      tenant: context.tenantId,
+      contract_line_id: fixed.contractLineId,
+      discount_id: discountId,
+    });
+  }
   if (options.pool) {
     await addPool(context, hourly.contractLineId, hourlyService, options.pool);
   }
@@ -538,28 +758,67 @@ async function seedParityContract(
     usageServiceId: usageService,
     usageQuantities: options.usageQuantities,
   });
-  if (options.pool) {
-    await recordLivePoolUsage(
-      context,
-      hourlyService,
-      ACTIVITY_DATE,
-      options.hourlyMinutes.reduce((sum, minutes) => sum + minutes, 0) *
-        (options.pool.burn ?? 1),
-    );
-  }
-  await persistServicePeriods(context, [
-    fixed.contractLineId,
-    hourly.contractLineId,
-    usage.contractLineId,
-    product.contractLineId,
-    license.contractLineId,
-  ], {
+  const lineFamilies = {
     [product.contractLineId]: "product",
     [license.contractLineId]: "license",
     [fixed.contractLineId]: "fixed",
     [hourly.contractLineId]: "hourly",
     [usage.contractLineId]: "usage",
-  });
+  };
+  const allLineIds = [
+    fixed.contractLineId,
+    hourly.contractLineId,
+    usage.contractLineId,
+    product.contractLineId,
+    license.contractLineId,
+  ];
+  const burn = options.pool?.burn ?? 1;
+  const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
+  if (options.secondPeriodHourlyMinutes) {
+    // Both periods exist before any pool usage is recorded, so the live service
+    // resolves each period from the materialized schedule and carries rollover
+    // from the first into the second.
+    await persistServicePeriods(context, allLineIds, lineFamilies, {
+      fixedAdvance: options.fixedAdvance,
+      fixedLineId: fixed.contractLineId,
+    });
+    await persistServicePeriods(context, allLineIds, lineFamilies, {
+      second: true,
+      fixedLineId: fixed.contractLineId,
+    });
+    await seedActivity(context, {
+      hourlyLineId: hourly.contractLineId,
+      hourlyServiceId: hourlyService,
+      hourlyMinutes: options.secondPeriodHourlyMinutes,
+      usageLineId: usage.contractLineId,
+      usageServiceId: usageService,
+      usageQuantities: [3],
+      activityDate: SECOND_ACTIVITY_DATE,
+      ticketNumber: "PAR-0002",
+    });
+    if (options.pool) {
+      await recordLivePoolUsage(context, hourlyService, ACTIVITY_DATE, sum(options.hourlyMinutes) * burn);
+      await recordLivePoolUsage(
+        context,
+        hourlyService,
+        SECOND_ACTIVITY_DATE,
+        sum(options.secondPeriodHourlyMinutes) * burn,
+      );
+    }
+  } else {
+    if (options.pool) {
+      await recordLivePoolUsage(
+        context,
+        hourlyService,
+        ACTIVITY_DATE,
+        sum(options.hourlyMinutes) * burn,
+      );
+    }
+    await persistServicePeriods(context, allLineIds, lineFamilies, {
+      fixedAdvance: options.fixedAdvance,
+      fixedLineId: fixed.contractLineId,
+    });
+  }
 
   const scenario = await snapshotContractToScenario(context.db, context.tenantId, {
     contractId,
@@ -655,19 +914,22 @@ async function seedActivity(
     usageLineId: string;
     usageServiceId: string;
     usageQuantities: number[];
+    activityDate?: string;
+    ticketNumber?: string;
   },
 ): Promise<void> {
+  const activityDate = input.activityDate ?? ACTIVITY_DATE;
   const ticketId = await createBillingTestTicket(
     { db: context.db, tenantId: context.tenantId },
     {
       clientId: context.clientId,
       title: "Parity activity",
-      ticketNumber: "PAR-0001",
+      ticketNumber: input.ticketNumber ?? "PAR-0001",
     },
   );
   let offset = 0;
   const entries = input.hourlyMinutes.map((minutes) => {
-    const start = new Date(`${ACTIVITY_DATE}T${String(8 + offset++).padStart(2, "0")}:00:00Z`);
+    const start = new Date(`${activityDate}T${String(8 + offset++).padStart(2, "0")}:00:00Z`);
     return {
       tenant: context.tenantId,
       entry_id: uuidv4(),
@@ -677,8 +939,8 @@ async function seedActivity(
       work_item_type: "ticket",
       user_id: context.userId,
       service_id: input.hourlyServiceId,
-      entry_date: ACTIVITY_DATE,
-      work_date: ACTIVITY_DATE,
+      entry_date: activityDate,
+      work_date: activityDate,
       start_time: start.toISOString(),
       end_time: new Date(start.getTime() + minutes * 60_000).toISOString(),
       billable_duration: minutes,
@@ -699,7 +961,7 @@ async function seedActivity(
         client_id: context.clientId,
         contract_line_id: input.usageLineId,
         service_id: input.usageServiceId,
-        usage_date: ACTIVITY_DATE,
+        usage_date: activityDate,
         quantity,
         is_billable: true,
         invoiced: false,
@@ -712,33 +974,44 @@ async function persistServicePeriods(
   context: TestContext,
   lineIds: string[],
   families: Record<string, string>,
+  options: { second?: boolean; fixedAdvance?: boolean; fixedLineId?: string } = {},
 ): Promise<void> {
   const now = new Date().toISOString();
+  const arrears = options.second
+    ? { start: "2025-02-15", end: "2025-03-15", windowStart: SECOND_WINDOW_START, windowEnd: SECOND_WINDOW_END }
+    : { start: "2025-01-15", end: "2025-02-15", windowStart: WINDOW_START, windowEnd: WINDOW_END };
+  // Advance billing covers the period that starts at the invoice window.
+  const advance = options.second
+    ? { start: "2025-03-15", end: "2025-04-15", windowStart: SECOND_WINDOW_START, windowEnd: SECOND_WINDOW_END }
+    : { start: "2025-02-15", end: "2025-03-15", windowStart: WINDOW_START, windowEnd: WINDOW_END };
   await insertSupportedRows(
     context.db,
     "recurring_service_periods",
-    lineIds.map((lineId) => ({
-      tenant: context.tenantId,
-      record_id: uuidv4(),
-      schedule_key: `parity:${lineId}`,
-      period_key: "2025-01-15:2025-02-15",
-      revision: 1,
-      obligation_id: lineId,
-      charge_family: families[lineId],
-      cadence_owner: "contract",
-      due_position: "arrears",
-      lifecycle_state: "generated",
-      service_period_start: "2025-01-15",
-      service_period_end: "2025-02-15",
-      invoice_window_start: WINDOW_START,
-      invoice_window_end: WINDOW_END,
-      provenance_kind: "generated",
-      source_rule_version: "parity-v1",
-      reason_code: "initial_materialization",
-      source_run_key: "charge-resolution-parity",
-      created_at: now,
-      updated_at: now,
-    })),
+    lineIds.map((lineId) => {
+      const timing = options.fixedAdvance && lineId === options.fixedLineId ? advance : arrears;
+      return {
+        tenant: context.tenantId,
+        record_id: uuidv4(),
+        schedule_key: `parity:${lineId}`,
+        period_key: `${timing.start}:${timing.end}`,
+        revision: 1,
+        obligation_id: lineId,
+        charge_family: families[lineId],
+        cadence_owner: "contract",
+        due_position: timing === advance ? "advance" : "arrears",
+        lifecycle_state: "generated",
+        service_period_start: timing.start,
+        service_period_end: timing.end,
+        invoice_window_start: timing.windowStart,
+        invoice_window_end: timing.windowEnd,
+        provenance_kind: "generated",
+        source_rule_version: "parity-v1",
+        reason_code: "initial_materialization",
+        source_run_key: "charge-resolution-parity",
+        created_at: now,
+        updated_at: now,
+      };
+    }),
   );
 }
 
