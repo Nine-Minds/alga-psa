@@ -1,4 +1,5 @@
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
+import { CONTRACT_START_DATE_DESCRIPTION, CONTRACT_END_DATE_DESCRIPTION } from '../../schemas/contractLineSchemas';
 
 export function registerQuotesContractsV1Routes(registry: ApiOpenApiRegistry) {
   const tag = 'Quotes & Contracts v1';
@@ -109,6 +110,33 @@ export function registerQuotesContractsV1Routes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const ContractListItem = registry.registerSchema(
+    'ContractListItemV1',
+    zOpenApi.object({
+      contract_id: zOpenApi.string().uuid(),
+      contract_name: zOpenApi.string(),
+      start_date: zOpenApi.string().datetime().nullable().optional().describe(CONTRACT_START_DATE_DESCRIPTION),
+      end_date: zOpenApi.string().datetime().nullable().optional().describe(CONTRACT_END_DATE_DESCRIPTION),
+      total_plans: zOpenApi.number().int().optional().describe('Count of contract lines on the contract.'),
+      clients_using_contract: zOpenApi.number().int().optional().describe('Count of distinct clients assigned the contract.'),
+    }).passthrough().describe('Contract header as returned by the list endpoint; see contractResponseSchema for the full field set.'),
+  );
+
+  const ApiPaginatedContracts = registry.registerSchema(
+    'ContractsApiPaginatedV1',
+    zOpenApi.object({
+      data: zOpenApi.array(ContractListItem),
+      pagination: zOpenApi.object({
+        page: zOpenApi.number().int(),
+        limit: zOpenApi.number().int(),
+        total: zOpenApi.number().int(),
+        totalPages: zOpenApi.number().int(),
+      }).optional(),
+      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      _links: zOpenApi.record(zOpenApi.unknown()).optional(),
+    }),
+  );
+
   type Def = {
     method: 'get' | 'post' | 'put' | 'delete';
     path: string;
@@ -185,7 +213,7 @@ export function registerQuotesContractsV1Routes(registry: ApiOpenApiRegistry) {
       return responses;
     }
     if (def.path === '/api/v1/contracts' && def.method === 'get') {
-      responses[200] = { description: 'Paginated contracts returned.', schema: ApiPaginated };
+      responses[200] = { description: 'Paginated contracts returned.', schema: ApiPaginatedContracts };
       return responses;
     }
 
