@@ -59,5 +59,15 @@
       "F010"
     ],
     "implemented": true
+  },
+  {
+    "id": "T008",
+    "description": "Parity: fixed in advance, pricing schedule, percentage discount, allow_rollover across two periods, several pooled entries, absolute-value acceptance (14h/10h pool = 4 overage hours exactly); per-entry rounding documented as known gap",
+    "featureIds": [
+      "F001",
+      "F009",
+      "F011"
+    ],
+    "implemented": true
   }
 ]

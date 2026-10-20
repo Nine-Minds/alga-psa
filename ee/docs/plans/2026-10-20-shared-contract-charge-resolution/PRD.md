@@ -40,7 +40,14 @@ Port rules (decisions):
 - `resolveTiming(line, request: TimingRequest)` is per demand. `TimingRequest = { policy, duePosition }`; `policy` names the existing timing resolver (`fixed-recurring`, `service-driven`, `recurring`), `duePosition` is `line` (current behaviour) | `advance` | `arrears`. Nothing requests a non-`line` position yet; sources reject it explicitly (60482d29 will implement it: fee in advance, overage in arrears on one line).
 - Pool exclusion is expressed as a demand argument to `hourly(...)`: `PooledTimeExclusion { serviceIds, attributedOnly: true }`. Today's engine rule is preserved: only time explicitly attributed to the line is hidden; unassigned rows keep their existing attribution path.
 - Usage is **not** excluded by pools (the engine never did); preserved.
-- Neither side selects charges by `configuration_type` in code. DB column reads of `configuration_type` live inside the DB source only (reading a stored column to supply data).
+- Neither side selects charges by `configuration_type` in code. The resolver alone decides pool exclusion and which families a line emits. The remaining `configuration_type` mentions are all in engine-owned data loaders (see next section).
+
+### Remaining `configuration_type` reads in engine loaders — kept, as data supply
+
+Four sites remain in `billingEngine.ts`: the fixed-price loaders' `clsc.configuration_type = 'Fixed'` joins (~3750, ~3945) and the hourly/usage loaders' guards that the stored base config is `Hourly` / `Usage` (~5341, ~5717). They were kept in the engine loaders (not moved into `DatabaseChargeSource`) because each one only chooses *which satellite table row to read* for a service that the resolver has already asked that family about (`contract_line_service_fixed_config` vs `_hourly_configs` vs `_usage_config`): the discriminator says which detail table holds the rate/rounding data, exactly like a join key. None of them decides whether a family is emitted for a line, whether a service is pooled, or whether hours are excluded:
+- Pool exclusion is a resolver decision: `DatabaseChargeSource.pools()` supplies the pool rows (`contract_line_buckets` / `contract_line_bucket_services`) and the resolver passes `PooledTimeExclusion` to `hourly(...)`; the hourly loader receives the excluded service ids and filters time entries on them.
+- A `Bucket`-typed (legacy) service has no Hourly satellite row, so its hourly loader read is empty with or without the guard, and its hours are covered by the pool either way. A pooled Hourly-typed service is excluded by the resolver, not by the guard. Routing of a pooled or Bucket-typed service therefore does not depend on these reads; parity fixtures cover both shapes (`typed-config`, `pool-only`) with identical engine/simulator output.
+Moving them would be a pure relocation of SQL with no behavioural change; it is deliberately left out of this change to keep the engine diff reviewable. `grep -n configuration_type packages/billing/src/lib/billing/billingEngine.ts` shows exactly these four.
 
 ### Pool line identity (decision 4) — settled
 
@@ -60,8 +67,8 @@ The engine and simulator need no edit: they call `resolveContractLineCharges` an
 - Parity suite (live contracts, DB-backed): simulator charges == engine dry run, line by line, for fixed advance/arrears, hourly, usage, hourly+pool (rollover, overage), weighted/after-hours pool, products, licenses, pricing schedules, discounts. Recorded red for pool fixtures at a62fafbcb5; green after.
 - Acceptance scenario: saved contract, one Hourly line + 10-hour pool, 14 assumed hours → 4 overage hours, no plain hourly charge for the pooled service.
 - Template using `contract_template_line_buckets` simulates its pool.
-- Existing billing integration tests pass unedited; full invoice-line diff (order, amounts, line identity) before/after engine switch is empty.
-- No code selects charges by `configuration_type` in simulator or engine loaders (grep evidence in PR).
+- Existing billing integration tests pass on both a62fafbcb5 and HEAD (same per-suite counts); the full ordered invoice-line diff across those suites (bucket/pool, fixed-advance, product/license, discount, timing) is empty. Edits to existing tests are limited to mocks and source-string assertions (projectBillingEngine.test.ts, productionGolden.test.ts); no expected amount or line order changed.
+- No code selects charges by `configuration_type`; the four remaining engine-loader reads are data-supply (rationale above).
 - Simulator stays read-only (no BillingEngine, numbering, TaxService).
 
 ## Risks
