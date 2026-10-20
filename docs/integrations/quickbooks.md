@@ -289,6 +289,13 @@ Once an invoice exports successfully, AlgaPSA records an invoice mapping and
 excludes that invoice from later exports for the same integration. You cannot
 export the same invoice twice.
 
+For QuickBooks Desktop, the downloadable IIF file, invoice mappings and new-entry
+delivery markers commit together. A failed export does not mark its invoices or
+new entries as exported; correct the reported error and retry the batch.
+Invoices already voided are omitted. If an invoice is voided after file
+preparation but before finalization, the batch fails rather than publishing
+stale invoice data.
+
 If your tenant delegates tax calculation to QuickBooks, the same screen imports
 tax amounts back from QuickBooks report CSVs onto the matching invoices.
 

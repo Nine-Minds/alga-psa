@@ -583,37 +583,20 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
     }
 
     const { knex } = await createTenantKnex();
-    const deliveredAt = new Date().toISOString();
     const filename = this.buildFilename(context);
 
     const deliveredLines: { lineId: string; externalDocumentRef?: string | null }[] = [];
     const deliveredDocuments: AccountingExportDocument[] = [];
     const failedDocuments: Array<{ documentId: string; lineIds: string[]; code: string; message: string }> = [];
 
-    // Same ordering as the CSV adapter: the mapping insert takes the invoice row
-    // lock the void path holds, so a concurrently voided invoice is refused here
-    // and left out of the file.
+    // Exclude invoices already voided. postProcess rechecks under the execution
+    // transaction before publishing the file and its mappings together.
     for (const document of transformResult.documents) {
       const payload = document.payload as unknown as InvoiceDocumentPayload;
       const externalRef = `iif:${payload.invoiceNumber}`;
       try {
         await withTransaction(knex, async (trx) => {
           await lockInvoiceForExternalSync(trx, tenantId, document.documentId);
-          await new KnexInvoiceMappingRepository(trx).upsertInvoiceMapping({
-            tenantId,
-            adapterType: this.type,
-            invoiceId: document.documentId,
-            externalInvoiceId: externalRef,
-            targetRealm: context.batch.target_realm ?? null,
-            metadata: {
-              last_exported_at: deliveredAt,
-              filename,
-              invoiceNumber: payload.invoiceNumber
-            }
-          });
-          if (payload.listRecordEntities?.length) {
-            await this.markListRecordsDelivered(trx, tenantId, context, payload.listRecordEntities);
-          }
         });
 
         deliveredDocuments.push(document);
@@ -655,9 +638,57 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
       metadata: {
         adapter: this.type,
         deliveredInvoices: deliveredDocuments.length,
-        files
+        files,
+        invoiceMappings: deliveredDocuments.map((document) => {
+          const payload = document.payload as unknown as InvoiceDocumentPayload;
+          return {
+            invoiceId: document.documentId,
+            invoiceNumber: payload.invoiceNumber,
+            listRecordEntities: payload.listRecordEntities
+          };
+        })
       }
     };
+  }
+
+  async postProcess(
+    deliveryResult: AccountingExportDeliveryResult,
+    context: AccountingExportAdapterContext,
+    transaction?: Knex
+  ): Promise<void> {
+    const tenantId = context.batch.tenant;
+    if (!tenantId) {
+      throw new AppError('QBD_TENANT_REQUIRED', 'QuickBooks Desktop export requires batch tenant identifier for mapping persistence');
+    }
+    const metadata = deliveryResult.metadata as {
+      invoiceMappings?: Array<{
+        invoiceId: string;
+        invoiceNumber: string;
+        listRecordEntities?: ListRecordEntity[];
+      }>;
+    } | undefined;
+    const knex = transaction ?? (await createTenantKnex()).knex;
+    const deliveredAt = new Date().toISOString();
+    await withTransaction(knex, async (trx) => {
+      for (const mapping of [...(metadata?.invoiceMappings ?? [])].sort((a, b) => a.invoiceId.localeCompare(b.invoiceId))) {
+        await lockInvoiceForExternalSync(trx, tenantId, mapping.invoiceId);
+        await new KnexInvoiceMappingRepository(trx).upsertInvoiceMapping({
+          tenantId,
+          adapterType: this.type,
+          invoiceId: mapping.invoiceId,
+          externalInvoiceId: `iif:${mapping.invoiceNumber}`,
+          targetRealm: context.batch.target_realm ?? null,
+          metadata: {
+            last_exported_at: deliveredAt,
+            filename: this.buildFilename(context),
+            invoiceNumber: mapping.invoiceNumber
+          }
+        });
+        if (mapping.listRecordEntities?.length) {
+          await this.markListRecordsDelivered(trx, tenantId, context, mapping.listRecordEntities);
+        }
+      }
+    });
   }
 
   private readSettings(raw: Record<string, unknown> | undefined): QuickBooksDesktopAdapterSettings {

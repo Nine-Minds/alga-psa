@@ -384,7 +384,7 @@ describe('manual export selected-target delivery (DB-backed)', () => {
     adapter.deliver = async (transformResult: any, context: any) => {
       const result = await originalDeliver(transformResult, context);
       deliveryAttempt += 1;
-      const iif = result.artifacts.file;
+      const iif = result.metadata.files[0];
       if (deliveryAttempt === 1) previousIifBytes = Buffer.from(iif.content, 'utf8');
       return {
         ...result,

@@ -494,7 +494,8 @@ export class AccountingExportService {
       // Finalize file-export mappings only after the exact bytes are durable.
       // The validating reservation remains in place through this mapping
       // transaction, closing the transform-to-delivery edit window.
-      if (failedDocuments.length === 0 && typeof adapter.postProcess === 'function') {
+      if ((failedDocuments.length === 0 || (isFileAdapter && deliveryResult.deliveredLines.length > 0)) &&
+          typeof adapter.postProcess === 'function') {
         await adapter.postProcess(deliveryResult, context, this.repository.getConnection?.());
         if (isFileAdapter) fileExportFinalized = true;
       }

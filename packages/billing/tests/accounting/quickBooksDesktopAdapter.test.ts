@@ -661,7 +661,14 @@ describe('QuickBooksDesktopAdapter list records for items created by the export 
 
     const adapter = await QuickBooksDesktopAdapter.create();
     const ctx = context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }]);
-    await adapter.deliver(await adapter.transform(ctx), ctx);
+    const delivered = await adapter.deliver(await adapter.transform(ctx), ctx);
+    expect(harness.upserts).toEqual([]);
+    expect(harness.updates.filter((u) => u.table === 'tenant_external_entity_mappings')).toEqual([]);
+    const { createTenantKnex, withTransaction } = await import('@alga-psa/db');
+    vi.mocked(createTenantKnex).mockClear();
+    await adapter.postProcess(delivered, ctx, harness.knex);
+    expect(createTenantKnex).not.toHaveBeenCalled();
+    expect(withTransaction).toHaveBeenLastCalledWith(harness.knex, expect.any(Function));
 
     const stamped = harness.updates.filter((u) => u.table === 'tenant_external_entity_mappings');
     expect(stamped.map((u) => u.where.find((w: any[]) => w[0] === 'where' && typeof w[1] === 'object')?.[1])).toEqual([
@@ -694,6 +701,7 @@ describe('QuickBooksDesktopAdapter list records for items created by the export 
     expect(String(transformed.files?.[0]?.content)).toContain('CUST\tGlobex');
 
     const delivered = await adapter.deliver(transformed, ctx);
+    await adapter.postProcess(delivered, ctx, harness.knex);
     const content = (delivered.metadata as any).files[0].content as string;
     // Not stamped as delivered, so Globex's next batch defines it again.
     expect(harness.updates.filter((u) => u.table === 'tenant_external_entity_mappings')).toEqual([]);
@@ -715,6 +723,8 @@ describe('QuickBooksDesktopAdapter delivery', () => {
     ]);
     const transformed = await adapter.transform(ctx);
     const delivered = await adapter.deliver(transformed, ctx);
+    expect(harness.upserts).toEqual([]);
+    await adapter.postProcess(delivered, ctx, harness.knex);
 
     expect(delivered.deliveredLines).toEqual([{ lineId: 'line-1', externalDocumentRef: 'iif:INV-1001' }]);
     expect(delivered.failedDocuments).toEqual([
@@ -733,6 +743,19 @@ describe('QuickBooksDesktopAdapter delivery', () => {
     expect(files[0].filename).toBe('quickbooks-desktop-invoices-batch-1.iif');
     expect(files[0].content).toContain('INV-1001');
     expect(files[0].content).not.toContain('INV-1002');
+  });
+
+  it('rejects finalization if an invoice is voided after file preparation', async () => {
+    harness.rows.invoices = [invoice()];
+    harness.rows.invoice_charges = [charge()];
+    const adapter = await QuickBooksDesktopAdapter.create();
+    const ctx = context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }]);
+    const delivered = await adapter.deliver(await adapter.transform(ctx), ctx);
+    harness.lockFailures.add('inv-1');
+
+    await expect(adapter.postProcess(delivered, ctx, harness.knex)).rejects.toThrow(/voided/);
+    expect(harness.upserts).toEqual([]);
+    expect(harness.updates.filter((u) => u.table === 'tenant_external_entity_mappings')).toEqual([]);
   });
 
   it('declares a file-mode invoice adapter without tax delegation', async () => {
