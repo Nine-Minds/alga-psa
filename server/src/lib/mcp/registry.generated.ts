@@ -44514,22 +44514,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "approvalRequired": false,
     "parameters": [
       {
-        "name": "page",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
         "name": "start_date",
         "in": "query",
         "required": false,
@@ -44660,7 +44644,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/schedules/search",
     "displayName": "Search schedules",
     "summary": "Search schedules",
-    "description": "Searches schedule entries via ApiTimeSheetController.listScheduleEntries(). Returns entries visible to the caller under shared-calendar rules, filtered by start_date, end_date (ISO 8601 date or date-time) and user_id, paginated with page/limit. Returns 400 for invalid dates or start_date after end_date.",
+    "description": "Searches schedule entries via ApiTimeSheetController.searchScheduleEntries(). Returns entries visible to the caller under shared-calendar rules, filtered by start_date, end_date (ISO 8601 date or date-time) and user_id, paginated with page/limit. Returns 400 for invalid dates or start_date after end_date.",
     "tags": [
       "Work Management v1"
     ],

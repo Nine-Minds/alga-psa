@@ -405,11 +405,22 @@ const scheduleQueryDateSchema = z.union([
   z.string().datetime({ offset: true }),
 ], { errorMap: () => ({ message: 'Expected ISO 8601 date or date-time' }) });
 
-export const scheduleEntryListQuerySchema = paginationQuerySchema.extend({
+const scheduleEntryFilterShape = {
   start_date: scheduleQueryDateSchema.optional(),
   end_date: scheduleQueryDateSchema.optional(),
   user_id: uuidSchema.optional(),
-}).refine(
-  (q) => !q.start_date || !q.end_date || Date.parse(q.start_date) <= Date.parse(q.end_date),
-  { message: 'start_date must not be after end_date', path: ['start_date'] },
-);
+};
+
+const startNotAfterEnd = (q: { start_date?: string; end_date?: string }) =>
+  !q.start_date || !q.end_date || Date.parse(q.start_date) <= Date.parse(q.end_date);
+const startNotAfterEndIssue = { message: 'start_date must not be after end_date', path: ['start_date'] };
+
+// GET /api/v1/schedules: filters only. Deliberately unpaginated (returns every
+// visible entry); page/limit are ignored for backwards compatibility.
+export const scheduleEntryListQuerySchema = z.object(scheduleEntryFilterShape).refine(startNotAfterEnd, startNotAfterEndIssue);
+
+// GET /api/v1/schedules/search: same filters plus page/limit.
+export const scheduleEntrySearchQuerySchema = paginationQuerySchema
+  .pick({ page: true, limit: true })
+  .extend(scheduleEntryFilterShape)
+  .refine(startNotAfterEnd, startNotAfterEndIssue);

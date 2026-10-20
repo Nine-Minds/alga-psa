@@ -24,7 +24,8 @@ import {
   timeSheetExportQuerySchema,
   createScheduleEntrySchema,
   updateScheduleEntrySchema,
-  scheduleEntryListQuerySchema
+  scheduleEntryListQuerySchema,
+  scheduleEntrySearchQuerySchema
 } from '../schemas/timeSheet';
 import { 
   ApiKeyServiceForApi 
@@ -1800,9 +1801,18 @@ export class ApiTimeSheetController extends ApiBaseController {
   // Schedule Management
 
   /**
-   * List schedule entries
+   * Search schedule entries (GET /api/v1/schedules/search): same auth,
+   * permission and visibility path as listScheduleEntries(), but paginated.
    */
-  listScheduleEntries() {
+  searchScheduleEntries() {
+    return this.listScheduleEntries({ paginate: true });
+  }
+
+  /**
+   * List schedule entries (GET /api/v1/schedules). Unpaginated unless
+   * `paginate` is set: shipped mobile clients read the whole result set.
+   */
+  listScheduleEntries(options: { paginate?: boolean } = {}) {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         // Authenticate
@@ -1854,26 +1864,34 @@ export class ApiTimeSheetController extends ApiBaseController {
         // enforced by the service through the shared-calendar resolver, so
         // any user_id may be requested; unshared calendars simply return none.
         const url = new URL(req.url);
-        let query;
-        try {
-          query = scheduleEntryListQuerySchema.parse(Object.fromEntries(url.searchParams.entries()));
-        } catch (error) {
-          if (error instanceof ZodError) {
-            throw new ValidationError('Invalid schedule query parameters', error.errors);
+        const rawQuery = Object.fromEntries(url.searchParams.entries());
+        const parseQuery = <T>(schema: { parse(v: unknown): T }): T => {
+          try {
+            return schema.parse(rawQuery);
+          } catch (error) {
+            if (error instanceof ZodError) {
+              throw new ValidationError('Invalid schedule query parameters', error.errors);
+            }
+            throw error;
           }
-          throw error;
+        };
+        const serviceContext = { userId: user.user_id, user, tenant: tenantId! };
+
+        if (!options.paginate) {
+          const { start_date, end_date, user_id } = parseQuery(scheduleEntryListQuerySchema);
+          const entries = await runWithTenant(tenantId!, async () => {
+            return await this.timeSheetService.getScheduleEntries(serviceContext, { start_date, end_date, user_id });
+          });
+          return createSuccessResponse(entries);
         }
-        const { page, limit, start_date, end_date, user_id } = query;
-        const filters = { start_date, end_date, user_id };
+
+        const { page, limit, start_date, end_date, user_id } = parseQuery(scheduleEntrySearchQuerySchema);
 
         // Paginated after visibility is resolved, so total excludes hidden entries.
         // LEVERAGE: pattern paginated-list-outside-base — ApiBaseController.list() paginates via service.list(); schedule entries need a bespoke paged service method.
         const result = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getScheduleEntriesPage({
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          }, filters, { page, limit });
+          return await this.timeSheetService.getScheduleEntriesPage(
+            serviceContext, { start_date, end_date, user_id }, { page, limit });
         });
 
         return createPaginatedResponse(result.data, result.total, page, limit, undefined, req);

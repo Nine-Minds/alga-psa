@@ -17616,6 +17616,18 @@ components:
     WorkV1ScheduleEntryListQuery:
       type: object
       properties:
+        start_date:
+          type: string
+          description: ISO 8601 date or date-time; entries starting at or after.
+        end_date:
+          type: string
+          description: ISO 8601 date or date-time; entries ending at or before.
+        user_id:
+          type: string
+          format: uuid
+    WorkV1ScheduleEntrySearchQuery:
+      type: object
+      properties:
         page:
           type: string
         limit:
@@ -64116,16 +64128,6 @@ paths:
       parameters:
         - schema:
             type: string
-          required: false
-          name: page
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: limit
-          in: query
-        - schema:
-            type: string
             description: ISO 8601 date or date-time; entries starting at or after.
           required: false
           name: start_date
@@ -64235,7 +64237,7 @@ paths:
     get:
       summary: Search schedules
       description: Searches schedule entries via
-        ApiTimeSheetController.listScheduleEntries(). Returns entries visible to
+        ApiTimeSheetController.searchScheduleEntries(). Returns entries visible to
         the caller under shared-calendar rules, filtered by start_date, end_date
         (ISO 8601 date or date-time) and user_id, paginated with page/limit.
         Returns 400 for invalid dates or start_date after end_date.

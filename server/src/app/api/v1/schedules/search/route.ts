@@ -10,7 +10,7 @@ const controller = new ApiTimeSheetController();
 
 export async function GET(request: Request) {
   try {
-    return await controller.listScheduleEntries()(request as any);
+    return await controller.searchScheduleEntries()(request as any);
   } catch (error) {
     return handleApiError(error);
   }
