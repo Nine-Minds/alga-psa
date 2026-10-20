@@ -14,6 +14,7 @@
       "semiAnnually": "⟦Şḗḿī-ȧƞƞŭȧŀŀẏ⟧"
     },
     "cadenceTotal": "⟦{{cadence}} Ŧȯŧȧŀ⟧",
+    "currency": "⟦Ƈŭřřḗƞƈẏ⟧",
     "date": "⟦Ḓȧŧḗ⟧",
     "description": "⟦Ḓḗşƈřīƥŧīȯƞ⟧",
     "discounts": "⟦Ḓīşƈȯŭƞŧş⟧",
@@ -60,6 +61,7 @@
     "rate": "⟦Řȧŧḗ⟧",
     "recurring": "⟦Řḗƈŭřřīƞɠ⟧",
     "service": "⟦Şḗřṽīƈḗ⟧",
+    "servicePeriod": "⟦Şḗřṽīƈḗ Ƥḗřīȯḓ⟧",
     "shipDate": "⟦Şħīƥ Ḓȧŧḗ⟧",
     "shipTo": "⟦Şħīƥ Ŧȯ⟧",
     "shipped": "⟦Şħīƥƥḗḓ⟧",
