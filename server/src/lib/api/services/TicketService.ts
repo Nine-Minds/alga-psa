@@ -1120,6 +1120,13 @@ export class TicketService extends BaseService<ITicket> {
    * the UI watcher save produces; `silent` sets both suppression flags on that
    * event (the suppressContactNotifications / suppressInternalNotifications
    * mechanism) and is never stored.
+   *
+   * What the event does: it carries empty `changes`. The email subscriber's
+   * accumulator skips updates with no changes, so no watcher/agent/contact email
+   * is sent for the watch-list change itself; the internal-notification subscriber
+   * still creates the generic 'ticket updated' in-app notification for assigned
+   * agents and the client-portal contact unless `silent` suppresses it. The new
+   * watcher is copied on later updates, not on this one.
    */
   private async writeWatchers(
     ticketId: string,

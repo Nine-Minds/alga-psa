@@ -393,6 +393,44 @@ describe('ticket watchers', () => {
       expect(JSON.stringify(await mirror())).not.toContain('silent');
     });
 
+    it('the published event: non-silent creates the in-app update notice, silent=true is skipped by the subscriber', async () => {
+      const { internalNotificationSubscriberTestHarness } = await import(
+        '../../lib/eventBus/subscribers/internalNotificationSubscriber'
+      );
+      // An assignee other than the actor receives staff 'ticket updated' notices.
+      const [assignee] = await tenantDb(db, tenantId)
+        .table('users')
+        .where({ user_type: 'internal' })
+        .whereNot({ user_id: actorId })
+        .limit(1);
+      if (!assignee) throw new Error('fixture needs a second internal user');
+      await scoped('tickets').where({ ticket_id: ticketId }).update({ assigned_to: assignee.user_id });
+
+      const countNotices = async () => {
+        const row = await scoped('internal_notifications')
+          .where({ user_id: assignee.user_id })
+          .whereRaw("link like ?", ['%' + ticketId + '%'])
+          .count<{ count: string }[]>('* as count')
+          .first();
+        return Number(row?.count ?? 0);
+      };
+      const deliver = async (event: any) =>
+        internalNotificationSubscriberTestHarness.handleTicketUpdated(
+          { id: uuidv4(), eventType: 'TICKET_UPDATED', timestamp: new Date().toISOString(), payload: { ...event.payload, tenantId } } as any,
+          { db, propagateErrors: true }
+        );
+
+      await service.addWatcher(ticketId, { email: 'loud@vendor.example' }, ctx());
+      await service.addWatcher(ticketId, { email: 'quiet@vendor.example', silent: true }, ctx());
+      const [loud, quiet] = published().filter((e) => e.eventType === 'TICKET_UPDATED');
+
+      const before = await countNotices();
+      await deliver(quiet);
+      expect(await countNotices()).toBe(before);
+      await deliver(loud);
+      expect(await countNotices()).toBe(before + 1);
+    });
+
     it('does not publish for an idempotent re-add', async () => {
       await service.addWatcher(ticketId, { email: 'once@vendor.example' }, ctx());
       publishWorkflowEventMock.mockClear();
