@@ -1,0 +1,70 @@
+name: huntress-incident-lifecycle
+description: >-
+  The two-poll Huntress incident walk: a SOC report arrives on a mapped
+  organization (ticket created), an hour later the SOC closes it (internal note
+  plus, with autoCloseTickets on, a closed ticket). Point Alga at
+  http://localhost:4090 with HUNTRESS_API_BASE_URL or the connect card's Base
+  URL field, then connect with algasim-huntress-key / algasim-huntress-secret
+  and poll twice, advancing the clock between the two polls.
+steps:
+  - reset: huntress
+  - action: huntress/configure
+    params:
+      accountName: Acme MSP
+      accountSubdomain: acme
+      credentials:
+        - { key: algasim-huntress-key, secret: algasim-huntress-secret, escalationsWrite: true }
+  - seed: huntress/organization
+    params: { id: 500, name: Acme Inc., key: acme, agents_count: 1, incident_reports_count: 1 }
+  - seed: huntress/agent
+    params:
+      id: 7
+      hostname: SRV01
+      organization_id: 500
+      platform: windows
+      os: Windows Server 2022
+      os_major: 10
+      os_build_version: '20348'
+      arch: x86_64
+      version: 0.13.14
+      edr_version: 0.3.20
+      ipv4_address: 10.0.0.5
+      external_ip: 198.51.100.42
+      serial_number: SN-1
+      mac_addresses: ['7c:a7:b0:16:2f:78']
+      tags: [Server, Production]
+  - seed: huntress/incident
+    params:
+      id: 1000
+      organization_id: 500
+      agent_id: 7
+      severity: high
+      status: sent
+      platform: windows
+      subject: HIGH - Incident on SRV01
+      summary: Huntress detected a malicious scheduled task on this host.
+      indicator_types: [footholds]
+      indicator_counts: { footholds: 1 }
+      remediations:
+        - type: manual
+          action: Delete File
+          status: pending
+          parameters:
+            - { name: path, description: 'c:\windows\system32\tasks\malicious_task' }
+  # An incident on an organization Alga has no mapping for: fallback routing
+  # plus on-demand mapping discovery through GET /v1/organizations/600.
+  - seed: huntress/organization
+    params: { id: 600, name: Globex Ltd., key: globex }
+  - seed: huntress/incident
+    params:
+      id: 2000
+      organization_id: 600
+      severity: low
+      status: sent
+      platform: microsoft_365
+      subject: LOW - M365 incident
+      indicator_types: [managed_identity]
+  # First poll happens here. Then the SOC closes the mapped incident.
+  - advance: 1h
+  - action: huntress/update-incident
+    params: { incidentId: 1000, status: closed }
