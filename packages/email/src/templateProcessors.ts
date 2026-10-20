@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
+import Handlebars from 'handlebars';
 import { SupportedLocale } from './lib/localeConfig';
 
 const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
@@ -31,42 +32,19 @@ export abstract class BaseTemplateProcessor implements ITemplateProcessor {
   abstract process(options: TemplateProcessorOptions): Promise<EmailTemplateContent>;
 
   /**
-   * Replace template variables with actual data
+   * Render a template with Handlebars semantics, matching SystemEmailService:
+   * in an HTML body `{{value}}` is HTML-escaped and `{{{value}}}` inserts
+   * prepared HTML (survey rating buttons). Subjects and plain text are not
+   * HTML, so they render unescaped. Values are often typed by someone other
+   * than the recipient - an MSP naming a customer workspace, for instance -
+   * and must never become markup in the email.
    */
   protected replaceTemplateVariables(
-    content: string, 
-    data: Record<string, any>
+    content: string,
+    data: Record<string, any>,
+    options: { html: boolean }
   ): string {
-    let result = content;
-    
-    // Flatten nested objects for template replacement
-    const flattenedData = this.flattenObject(data);
-    
-    // Replace template variables
-    Object.entries(flattenedData).forEach(([key, value]) => {
-      const placeholder = new RegExp(`{{${key}}}`, 'g');
-      result = result.replace(placeholder, String(value ?? ''));
-    });
-    
-    return result;
-  }
-
-  /**
-   * Flatten nested objects for template variable replacement
-   */
-  private flattenObject(
-    obj: Record<string, any>, 
-    prefix = ''
-  ): Record<string, any> {
-    return Object.entries(obj).reduce((acc: Record<string, any>, [key, value]) => {
-      const newKey = prefix ? `${prefix}.${key}` : key;
-      if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
-        Object.assign(acc, this.flattenObject(value, newKey));
-      } else {
-        acc[newKey] = value;
-      }
-      return acc;
-    }, {});
+    return Handlebars.compile(content, { noEscape: !options.html })(data);
   }
 
   /**
@@ -174,9 +152,9 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
 
     // Replace template variables if data provided
     if (templateData) {
-      subject = this.replaceTemplateVariables(subject, templateData);
-      html = this.replaceTemplateVariables(html, templateData);
-      text = this.replaceTemplateVariables(text, templateData);
+      subject = this.replaceTemplateVariables(subject, templateData, { html: false });
+      html = this.replaceTemplateVariables(html, templateData, { html: true });
+      text = this.replaceTemplateVariables(text, templateData, { html: false });
     }
 
     return { subject, html, text };
@@ -204,9 +182,9 @@ export class StaticTemplateProcessor extends BaseTemplateProcessor {
 
     // Replace template variables if data provided
     if (templateData) {
-      processedSubject = this.replaceTemplateVariables(processedSubject, templateData);
-      processedHtml = this.replaceTemplateVariables(processedHtml, templateData);
-      processedText = this.replaceTemplateVariables(processedText, templateData);
+      processedSubject = this.replaceTemplateVariables(processedSubject, templateData, { html: false });
+      processedHtml = this.replaceTemplateVariables(processedHtml, templateData, { html: true });
+      processedText = this.replaceTemplateVariables(processedText, templateData, { html: false });
     }
 
     return {
@@ -257,9 +235,9 @@ export class CustomTemplateProcessor extends BaseTemplateProcessor {
     
     // Replace template variables if data provided
     if (options.templateData) {
-      subject = this.replaceTemplateVariables(subject, options.templateData);
-      html = this.replaceTemplateVariables(html, options.templateData);
-      text = this.replaceTemplateVariables(text, options.templateData);
+      subject = this.replaceTemplateVariables(subject, options.templateData, { html: false });
+      html = this.replaceTemplateVariables(html, options.templateData, { html: true });
+      text = this.replaceTemplateVariables(text, options.templateData, { html: false });
     }
 
     return { subject, html, text };

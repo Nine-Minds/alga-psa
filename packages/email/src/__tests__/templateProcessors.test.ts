@@ -11,6 +11,24 @@ import {
 } from '../templateProcessors';
 
 describe('StaticTemplateProcessor', () => {
+  it('escapes values in the HTML body but not in the subject or text', async () => {
+    // Values are often typed by someone other than the recipient (an MSP
+    // naming a customer workspace) and must never become markup.
+    const processor = new StaticTemplateProcessor('Join {{name}}', '<p>Join {{name}}</p>', 'Join {{name}}');
+    const name = '<a href="https://example.com">Accept</a> & $\' Co';
+    await expect(processor.process({ templateData: { name } })).resolves.toEqual({
+      subject: `Join ${name}`,
+      html: '<p>Join &lt;a href&#x3D;&quot;https://example.com&quot;&gt;Accept&lt;/a&gt; &amp; $&#x27; Co</p>',
+      text: `Join ${name}`,
+    });
+  });
+
+  it('inserts prepared HTML from triple braces and renders conditionals', async () => {
+    const processor = new StaticTemplateProcessor('S', '<div>{{{buttons}}}</div>{{#if note}}<p>{{note}}</p>{{else}}<p>none</p>{{/if}}');
+    await expect(processor.process({ templateData: { buttons: '<b>5</b>', note: '' } }))
+      .resolves.toMatchObject({ html: '<div><b>5</b></div><p>none</p>' });
+  });
+
   it('substitutes {{variable}} placeholders in subject, html and text', async () => {
     const processor = new StaticTemplateProcessor(
       'Hello {{name}}',
@@ -58,10 +76,10 @@ describe('StaticTemplateProcessor', () => {
     expect(result.html).toBe('<p></p>');
   });
 
-  it('leaves placeholders intact when no data key matches', async () => {
+  it('renders a missing value as empty instead of sending the placeholder', async () => {
     const processor = new StaticTemplateProcessor('Hi {{name}}', '<p>{{name}}</p>');
     const result = await processor.process({ templateData: { other: 'value' } });
-    expect(result.subject).toBe('Hi {{name}}');
+    expect(result).toMatchObject({ subject: 'Hi ', html: '<p></p>' });
   });
 
   it('does not flatten arrays or Date values', async () => {
