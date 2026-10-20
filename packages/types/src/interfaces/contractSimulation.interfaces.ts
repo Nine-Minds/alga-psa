@@ -339,6 +339,27 @@ export interface ContractDraftDiscount {
   end_date?: string | null;
 }
 
+/**
+ * A line-level bucket pool authored in the wizard (structurally the wizard's
+ * `BucketPoolDraft`). Units match what the wizard submits: minutes and cents.
+ */
+export interface ContractDraftBucketPoolInput {
+  /** Which wizard line the pool belongs to; absent means 'hourly'. */
+  line_key?: "hourly" | "usage";
+  bucket_name?: string | null;
+  total_minutes: number;
+  overage_rate: number;
+  allow_rollover: boolean;
+  covers_all_services: boolean;
+  after_hours_multiplier?: number | null;
+  business_hours_schedule_id?: string | null;
+  members: Array<{
+    service_id: string;
+    service_name?: string;
+    burn_multiplier: number;
+  }>;
+}
+
 /** Minimal unsaved ContractWizard state accepted by the EE scenario hydrator. */
 export interface ContractDraftSimulationInput {
   client_id: string;
@@ -374,6 +395,8 @@ export interface ContractDraftSimulationInput {
     bucket_overlay?: ContractDraftBucketOverlayInput | null;
   }>;
   usage_billing_frequency?: string;
+  /** Line-level pools (members + burn multipliers); same model as saved pools. */
+  bucket_pools?: ContractDraftBucketPoolInput[];
   /** Contract-wide discounts authored in the wizard, priced by the simulator. */
   discounts?: ContractDraftDiscount[];
 }

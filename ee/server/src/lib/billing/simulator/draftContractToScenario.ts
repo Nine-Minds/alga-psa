@@ -1,6 +1,7 @@
 import type { Knex } from "knex";
 import type {
   ContractDraftBucketOverlayInput,
+  ContractDraftBucketPoolInput,
   ContractDraftDiscount,
   ContractDraftSimulationInput,
   ContractScenario,
@@ -8,6 +9,7 @@ import type {
   ScenarioDiscount,
   ScenarioLine,
   ScenarioLineService,
+  ScenarioPool,
   ScenarioServiceConfig,
 } from "@alga-psa/types";
 import { tenantDb } from "@alga-psa/db";
@@ -58,6 +60,43 @@ export function draftDiscountsToScenario(
         contract_line_keys: [],
       };
     });
+}
+
+/**
+ * Wizard pool drafts as the scenario pool model snapshotContractToScenario
+ * builds from `contract_line_buckets` (ScenarioPool: allowance, members with
+ * burn multipliers, after-hours rule), so ScenarioChargeSource.pools() has one
+ * pool path. Drafts whose line is not simulated are skipped, as the wizard
+ * submission skips them.
+ */
+export function draftPoolsToScenario(
+  pools: ContractDraftBucketPoolInput[] | undefined,
+  lineKey: "hourly" | "usage",
+  services: ScenarioLineService[],
+): ScenarioPool[] {
+  const lineServiceIds = new Set(services.map((service) => service.service_id));
+  return (pools ?? [])
+    .filter((pool) => (pool.line_key ?? "hourly") === lineKey)
+    .map((pool, index) => ({
+      pool_id: `draft-pool-${lineKey}-${index + 1}`,
+      pool_name: pool.bucket_name ?? null,
+      covers_all_services: Boolean(pool.covers_all_services),
+      total_minutes: Math.max(0, Math.round(Number(pool.total_minutes ?? 0))),
+      billing_period: "monthly",
+      overage_rate: Math.max(0, Math.round(Number(pool.overage_rate ?? 0))),
+      allow_rollover: Boolean(pool.allow_rollover),
+      after_hours_multiplier:
+        pool.after_hours_multiplier != null
+          ? Number(pool.after_hours_multiplier)
+          : null,
+      business_hours_schedule_id: pool.business_hours_schedule_id ?? null,
+      members: (pool.members ?? [])
+        .filter((member) => lineServiceIds.has(member.service_id))
+        .map((member) => ({
+          service_id: member.service_id,
+          burn_multiplier: Number(member.burn_multiplier ?? 1),
+        })),
+    }));
 }
 
 export async function draftContractToScenario(
@@ -191,6 +230,10 @@ export async function draftContractToScenario(
   });
 
   const lines: ScenarioLine[] = [];
+  const withDraftPools = (scenarioLine: ScenarioLine, lineKey: "hourly" | "usage") => {
+    const pools = draftPoolsToScenario(draft.bucket_pools, lineKey, scenarioLine.services);
+    if (pools.length > 0) scenarioLine.pools = pools;
+  };
   // One scenario line per wizard fixed line. A line with no service cannot be
   // billed (the engine rejects a rate with no members), so it is not simulated.
   const simulatedFixedLines = draft.fixed_lines.filter((fixedLine) => fixedLine.services.length > 0);
@@ -264,6 +307,7 @@ export async function draftContractToScenario(
         services,
       ),
     );
+    withDraftPools(lines[lines.length - 1], "hourly");
   }
   if ((draft.usage_services ?? []).length > 0) {
     const services = (draft.usage_services ?? []).flatMap((item) => {
@@ -288,6 +332,7 @@ export async function draftContractToScenario(
         services,
       ),
     );
+    withDraftPools(lines[lines.length - 1], "usage");
   }
 
   const schedule = await getClientBillingCycleAnchor(
