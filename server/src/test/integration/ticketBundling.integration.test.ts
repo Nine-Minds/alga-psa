@@ -1239,10 +1239,12 @@ describe('Ticket bundling integration', () => {
     it.each(['link_only', 'no_row'] as const)('%s child can change status, assignee and priority (server action)', async (mode) => {
       const { scopedDb, childId } = await setup(mode);
       const other = await scopedDb.table('priorities').andWhereNot({ priority_id: priorityId }).first();
+      // Without a second priority the priority assertion below would prove nothing.
+      expect(other?.priority_id).toBeTruthy();
       const result = await runWithTenant(tenantId, () =>
         updateTicketWithCache(
           childId,
-          { status_id: statusClosedId, assigned_to: internalUser.user_id, priority_id: other?.priority_id ?? priorityId },
+          { status_id: statusClosedId, assigned_to: internalUser.user_id, priority_id: other.priority_id },
           internalUser as any,
         )
       );
@@ -1250,6 +1252,7 @@ describe('Ticket bundling integration', () => {
       const child = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
       expect(child?.status_id).toBe(statusClosedId);
       expect(child?.assigned_to).toBe(internalUser.user_id);
+      expect(child?.priority_id).toBe(other.priority_id);
     });
 
     it('sync_updates child is rejected with the lock message (server action)', async () => {
