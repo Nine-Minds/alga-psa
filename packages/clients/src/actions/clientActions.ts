@@ -1671,7 +1671,8 @@ function queueImportedClientEvents(
   const clientId = change.after.client_id;
   const ctx = { tenantId: tenant, occurredAt, actor };
 
-  if (change.created) {
+  // `in` narrows the union regardless of strictNullChecks (the ee tsconfig is non-strict).
+  if (!('before' in change)) {
     registerAfterCommit(trx, () => publishWorkflowEvent({
       eventType: 'CLIENT_CREATED',
       payload: buildClientCreatedPayload({
