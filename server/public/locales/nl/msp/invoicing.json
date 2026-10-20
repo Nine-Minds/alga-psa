@@ -2472,7 +2472,8 @@
     "types": {
       "salesOrder": "Verkooporder",
       "packingSlip": "Pakbon",
-      "pickList": "Picklijst"
+      "pickList": "Picklijst",
+      "workTag": "Werklabel / Label"
     }
   },
   "errors": {

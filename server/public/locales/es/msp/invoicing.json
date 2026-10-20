@@ -2472,7 +2472,8 @@
     "types": {
       "salesOrder": "Orden de venta",
       "packingSlip": "Nota de entrega",
-      "pickList": "Lista de preparación de pedidos"
+      "pickList": "Lista de preparación de pedidos",
+      "workTag": "Etiqueta de trabajo / Etiqueta"
     }
   },
   "errors": {

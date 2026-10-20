@@ -2472,7 +2472,8 @@
     "types": {
       "salesOrder": "Pedido de venda",
       "packingSlip": "Nota de entrega",
-      "pickList": "Lista de separação"
+      "pickList": "Lista de separação",
+      "workTag": "Etiqueta de trabalho / Etiqueta"
     }
   },
   "errors": {

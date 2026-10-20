@@ -14,6 +14,7 @@ export default defineConfig({
       'src/lib/invoice-template-ast/printSettings.test.ts',
       'src/components/invoice-designer/ast/workspaceAst.roundtrip.nodes.test.ts',
       'src/lib/invoice-template-ast/barcode/barcode.test.ts',
+      'src/lib/invoice-template-ast/barcode/clientBundle.test.ts',
       'src/lib/document-templates/registry.test.ts',
       'src/lib/label-template-ast/**/*.test.ts',
       'src/lib/label-batch/**/*.test.ts',

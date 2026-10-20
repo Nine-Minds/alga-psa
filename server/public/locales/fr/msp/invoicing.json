@@ -2472,7 +2472,8 @@
     "types": {
       "salesOrder": "Commande client",
       "packingSlip": "Bon de livraison",
-      "pickList": "Liste de prélèvement"
+      "pickList": "Liste de prélèvement",
+      "workTag": "Étiquette de travail / Label"
     }
   },
   "errors": {

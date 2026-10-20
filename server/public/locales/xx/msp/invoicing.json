@@ -2472,7 +2472,8 @@
     "types": {
       "salesOrder": "⟦Şȧŀḗş Ȯřḓḗř⟧",
       "packingSlip": "⟦Ƥȧƈķīƞɠ Şŀīƥ⟧",
-      "pickList": "⟦Ƥīƈķ Ŀīşŧ⟧"
+      "pickList": "⟦Ƥīƈķ Ŀīşŧ⟧",
+      "workTag": "⟦Ẇȯřķ Ŧȧɠ / Ŀȧƀḗŀ⟧"
     }
   },
   "errors": {

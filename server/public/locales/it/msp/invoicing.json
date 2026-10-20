@@ -2472,7 +2472,8 @@
     "types": {
       "salesOrder": "Ordine di vendita",
       "packingSlip": "Documento di trasporto",
-      "pickList": "Lista di prelievo"
+      "pickList": "Lista di prelievo",
+      "workTag": "Etichetta di lavoro / Etichetta"
     }
   },
   "errors": {

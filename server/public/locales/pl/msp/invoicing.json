@@ -2522,7 +2522,8 @@
     "types": {
       "salesOrder": "Zamówienie sprzedaży",
       "packingSlip": "Dokument dostawy",
-      "pickList": "Lista kompletacyjna"
+      "pickList": "Lista kompletacyjna",
+      "workTag": "Etykieta robocza / Etykieta"
     }
   },
   "errors": {

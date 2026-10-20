@@ -1,0 +1,57 @@
+[
+  {
+    "id": "T001",
+    "description": "Resolver round-trip for all six types",
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "description": "Mobile copy byte-identity",
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "description": "Page-size options and @page rule; Letter/A4/Legal unchanged",
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "description": "Barcode constraints and encoders",
+    "implemented": true
+  },
+  {
+    "id": "T005",
+    "description": "Registry: every standard template renders",
+    "implemented": true
+  },
+  {
+    "id": "T006",
+    "description": "e2e PDF: 4x2in single label decodes QR/Code128 to recordUrl",
+    "implemented": true
+  },
+  {
+    "id": "T007",
+    "description": "e2e PDF: n-up Letter order and decode",
+    "implemented": true
+  },
+  {
+    "id": "T008",
+    "description": "Layout planner overflow/validation",
+    "implemented": true
+  },
+  {
+    "id": "T009",
+    "description": "Route: uniform 404, validation, no render before auth",
+    "implemented": true
+  },
+  {
+    "id": "T010",
+    "description": "Client bundle isolation",
+    "implemented": true
+  },
+  {
+    "id": "T011",
+    "description": "Translation validation",
+    "implemented": true
+  }
+]

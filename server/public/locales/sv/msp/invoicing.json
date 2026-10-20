@@ -2472,7 +2472,8 @@
     "types": {
       "salesOrder": "Försäljningsorder",
       "packingSlip": "Följesedel",
-      "pickList": "Plocklista"
+      "pickList": "Plocklista",
+      "workTag": "Arbetsetikett / Etikett"
     }
   },
   "errors": {

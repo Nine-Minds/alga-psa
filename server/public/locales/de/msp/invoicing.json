@@ -2472,7 +2472,8 @@
     "types": {
       "salesOrder": "Verkaufsauftrag",
       "packingSlip": "Lieferschein",
-      "pickList": "Kommissionierliste"
+      "pickList": "Kommissionierliste",
+      "workTag": "Arbeitsetikett / Label"
     }
   },
   "errors": {
