@@ -1356,6 +1356,8 @@ const nextConfig = {
     'bcryptjs',
     'speakeasy',
     'qrcode',
+    // Barcode node (label rendering): server-only; loaded via bwip-js/node from barcode/encode.server.ts.
+    'bwip-js',
     'pdf-lib',
     'pdf2pic',
     'marked',

@@ -35,7 +35,9 @@ export const encodeCode128 = async (value: string): Promise<number[]> => {
   if (!/^[\x20-\x7e]+$/.test(value)) {
     throw new BarcodeError('unencodable', 'Value cannot be encoded as Code 128: printable ASCII characters only');
   }
-  const bwip = await import('bwip-js');
+  // Explicit server subpath: the package root only matches browser/electron/react-native/node export
+  // conditions, none of which bundler module resolution (tsc, webpack) selects reliably.
+  const bwip = await import('bwip-js/node');
   const api = bwip.default ?? bwip;
   try {
     const result = api.raw('code128', value) as Array<{ sbs: number[] }>;

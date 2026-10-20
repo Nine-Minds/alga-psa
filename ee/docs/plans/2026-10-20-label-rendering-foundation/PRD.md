@@ -4,6 +4,20 @@
 No Design Session plan doc existed for this card. It was implemented from the dossier in
 `ee/docs/plans/2026-10-20-physical-work-tags/` (ANALYSIS.md, PLAN.md). Where this PRD differs, this PRD wins.
 
+## Deviation from card
+The card's acceptance wording was that BOTH the QR and the Code 128 decode to the record's `recordUrl`. That holds for the QR only.
+**Code 128 encodes the short identifier (`code128Value`, e.g. the asset tag), not the URL.**
+
+Module math (Code 128 subset B: 11 modules per character, + 11 start, + 11 check, + 13 stop = 11n + 35 modules; plus the
+10-module quiet zone on each side = 11n + 55 modules). Minimum module size is `BARCODE_MIN_MODULE_MM = 0.25`.
+- Canonical asset URL `https://<host>/msp/assets/<uuid>`: with a 20-character host, n = 71, so 11*71 + 55 = 836 modules * 0.25 mm = **209 mm**.
+  A 4x2in label has about 95.6 mm usable width (101.6 mm minus 3 mm margins); an Avery-style cell is narrower still. It does not fit, at any host length
+  (the 36-character UUID plus `/msp/assets/` alone is 48 characters = 583 modules = 146 mm).
+- Short asset tag, e.g. `ASSET-00123` (11 chars): 11*11 + 55 = 176 modules * 0.25 mm = **44 mm**, which fits.
+Shrinking modules below 0.25 mm would make the code unscannable on typical thermal/laser printers, so the renderer refuses
+(clear error) rather than shrink. The scannable URL is the QR. Code 128 exists for handheld laser scanners that read the tag and look it up
+by identifier. Tests assert QR == recordUrl and Code 128 == `code128Value`.
+
 ## Problem
 Any record should be printable as a small label PDF with a scannable QR / Code 128 code. Record-to-URL mappings are
 duplicated across search indexers, notification links, Teams links and mobile. This card ships no end-user feature;

@@ -51,7 +51,7 @@ function workItemLabel(row: TimeEntrySearchRow): string {
   return row.work_item_type ?? 'Time entry';
 }
 
-function urlFor(row: TimeEntrySearchRow): string {
+export function urlFor(row: TimeEntrySearchRow): string {
   if (row.work_item_type === 'ticket' && row.work_item_id) {
     // LEVERAGE: pattern record-links — URL comes from the shared recordPath resolver (@alga-psa/types), not an inline template.
     return recordPath('ticket', row.work_item_id);

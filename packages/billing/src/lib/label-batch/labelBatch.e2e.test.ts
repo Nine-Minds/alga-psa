@@ -9,7 +9,11 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'n
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import jsQR from 'jsqr';
-import { PNG } from 'pngjs';
+import { createRequire } from 'node:module';
+// pngjs ships no types (and ambient *.d.ts files are gitignored here), so type the one call we use.
+const { PNG } = createRequire(import.meta.url)('pngjs') as {
+  PNG: { sync: { read(buffer: Buffer): { width: number; height: number; data: Buffer } } };
+};
 import { PDFDocument } from 'pdf-lib';
 import {
   BarcodeFormat,
