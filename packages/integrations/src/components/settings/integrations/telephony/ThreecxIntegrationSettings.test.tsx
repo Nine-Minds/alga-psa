@@ -105,6 +105,19 @@ const connectedPbx = (): ThreecxCardState['pbx'] => ({
   capabilities: { xapi: true, callControl: true },
 });
 
+// Every control in the card shares one `busy` flag that stays set until the
+// action's reload resolves, so a click fired the instant the previous action's
+// mock was called lands on a disabled control and is swallowed. Wait for the
+// control to come back before clicking it.
+async function clickWhenEnabled(find: () => Element | null): Promise<void> {
+  const enabled = await waitFor(() => {
+    const node = find() as HTMLButtonElement | null;
+    if (!node || node.disabled) throw new Error('control is still busy');
+    return node;
+  });
+  fireEvent.click(enabled);
+}
+
 describe('ThreecxIntegrationSettings', () => {
   beforeEach(() => {
     cleanup();
@@ -267,13 +280,13 @@ describe('ThreecxIntegrationSettings', () => {
     const { container } = render(<ThreecxIntegrationSettings />);
     await screen.findByText('3CX');
     await waitFor(() => expect(container.querySelector('#threecx-cdr-toggle')).toBeTruthy());
-    fireEvent.click(container.querySelector('#threecx-cdr-toggle')!);
+    await clickWhenEnabled(() => container.querySelector('#threecx-cdr-toggle'));
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ enabled: true, lookbackDays: 30 }));
-    fireEvent.click(screen.getByRole('button', { name: 'Push now' }));
+    await clickWhenEnabled(() => screen.getByRole('button', { name: 'Push now' }));
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledTimes(2));
-    fireEvent.click(screen.getByRole('button', { name: 'Import now' }));
+    await clickWhenEnabled(() => screen.getByRole('button', { name: 'Import now' }));
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledTimes(3));
-    fireEvent.click(container.querySelector('#threecx-phonebook-toggle')!);
+    await clickWhenEnabled(() => container.querySelector('#threecx-phonebook-toggle'));
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ enabled: true, schedule: 'daily' }));
   });
 
