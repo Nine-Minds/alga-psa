@@ -131,6 +131,29 @@ export interface ScenarioCatalogService {
   is_license: boolean;
 }
 
+/**
+ * A line-owned allowance pool (`contract_line_buckets` /
+ * `contract_template_line_buckets`) with its members. Carried on the line so a
+ * pool is simulated whether or not any service holds a Bucket config: the
+ * allowance lives here, the scenario's services only reference it through
+ * ScenarioPoolRef. Optional: scenarios without it fall back to the pools their
+ * Bucket-config services describe (legacy service bucket config, drafts).
+ */
+export interface ScenarioPool {
+  pool_id: string;
+  pool_name: string | null;
+  covers_all_services: boolean;
+  total_minutes: number;
+  billing_period: string;
+  /** Cents per hour (or per unit on a Usage line) of overage. */
+  overage_rate: number;
+  allow_rollover: boolean;
+  after_hours_multiplier: number | null;
+  business_hours_schedule_id: string | null;
+  /** Explicit members with their burn multipliers. */
+  members: Array<{ service_id: string; burn_multiplier: number }>;
+}
+
 export interface ScenarioLine {
   /** Stable key inside the scenario: live contract_line_id or `scenario-<n>`. */
   key: string;
@@ -150,6 +173,8 @@ export interface ScenarioLine {
   /** Cents per hour. */
   overtime_rate: number | null;
   services: ScenarioLineService[];
+  /** Line-owned pools; see ScenarioPool. */
+  pools?: ScenarioPool[];
 }
 
 export interface ScenarioPricingSchedule {

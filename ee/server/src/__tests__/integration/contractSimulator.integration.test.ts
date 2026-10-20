@@ -371,6 +371,61 @@ describe("Contract simulator – migrated-schema integration", () => {
     }
   });
 
+  it("simulates a pool carried only in contract_template_line_buckets (10h pool, 14h assumed => 4 overage hours, no plain hourly)", async () => {
+    const { templateId, hourlyLineId, hourlyServices } =
+      await seedCustomerShapedTemplate(context, fixture);
+    const now = new Date().toISOString();
+    const poolId = uuidv4();
+    await context.db("contract_template_line_buckets").insert({
+      tenant: context.tenantId,
+      bucket_id: poolId,
+      template_line_id: hourlyLineId,
+      bucket_name: "Template pool",
+      total_minutes: 600,
+      overage_rate: 15_000,
+      allow_rollover: false,
+      covers_all_services: false,
+      created_at: now,
+      updated_at: now,
+    });
+    await context.db("contract_template_line_bucket_services").insert({
+      tenant: context.tenantId,
+      bucket_id: poolId,
+      template_line_id: hourlyLineId,
+      service_id: hourlyServices[0],
+      burn_multiplier: 1,
+      created_at: now,
+      updated_at: now,
+    });
+
+    const scenario = await snapshotContractToScenario(
+      context.db,
+      context.tenantId,
+      { contractId: templateId, clientContractId: null, forceProfile: true },
+    );
+    scenario.horizon = { start_date: "2025-05-15T00:00:00Z", period_count: 2 };
+    scenario.assumptions[assumptionKey(hourlyLineId, hourlyServices[0])] = {
+      flat: 14,
+    };
+    const result = await simulateContractScenario(
+      context.db,
+      context.tenantId,
+      scenario,
+    );
+    // Arrears: the first period has nothing to bill yet.
+    const lines = result.periods[1].lines;
+    const bucket = lines.filter((line) => line.charge_type === "bucket");
+    expect(bucket).toHaveLength(1);
+    expect(bucket[0].net_amount).toBe(4 * 15_000);
+    expect(
+      lines.filter(
+        (line) =>
+          line.service_id === hourlyServices[0] &&
+          (line.charge_type === "time" || line.charge_type === "hourly"),
+      ),
+    ).toHaveLength(0);
+  });
+
   it("rejects unknown contract ids and template line references outside the template", async () => {
     const { templateId } = await seedCustomerShapedTemplate(context, fixture);
     const otherTemplate = await seedCustomerShapedTemplate(context, fixture);

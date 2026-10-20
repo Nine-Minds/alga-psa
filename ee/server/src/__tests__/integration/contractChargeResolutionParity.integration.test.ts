@@ -176,7 +176,7 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
   }, 120_000);
 
   // RED at a62fafbcb5: the simulator only prices Bucket-typed configurations. Flip to `it` when the scenario source lands.
-  it.fails("Hourly line with a pool carried only in contract_line_buckets (10h, 14h worked) matches the engine", async () => {
+  it("Hourly line with a pool carried only in contract_line_buckets (10h, 14h worked) matches the engine", async () => {
     const contract = await seedParityContract(context, {
       hourlyMinutes: [840],
       usageQuantities: [3],
@@ -198,7 +198,7 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
   }, 120_000);
 
   // RED at a62fafbcb5: the simulator only prices Bucket-typed configurations. Flip to `it` when the scenario source lands.
-  it.fails("weighted (2x burn) pool carried only in contract_line_buckets matches the engine", async () => {
+  it("weighted (2x burn) pool carried only in contract_line_buckets matches the engine", async () => {
     // 8h worked at 2x = 16 weighted hours against a 10h pool => 6 overage hours.
     const contract = await seedParityContract(context, {
       hourlyMinutes: [480],
@@ -220,7 +220,7 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
   }, 120_000);
 
   // RED at a62fafbcb5: the simulator only prices Bucket-typed configurations. Flip to `it` when the scenario source lands.
-  it.fails("a pool that is not exhausted bills no overage and no plain hourly charge", async () => {
+  it("a pool that is not exhausted bills no overage and no plain hourly charge", async () => {
     const contract = await seedParityContract(context, {
       hourlyMinutes: [300],
       usageQuantities: [3],
@@ -237,7 +237,7 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
     expect(simulator).toEqual(engine);
   }, 120_000);
   // RED at a62fafbcb5 (same cause). Flip to `it` when the scenario source lands.
-  it.fails("catch-all pool (covers_all_services, no member rows) matches the engine", async () => {
+  it("catch-all pool (covers_all_services, no member rows) matches the engine", async () => {
     const contract = await seedParityContract(context, {
       hourlyMinutes: [840],
       usageQuantities: [3],

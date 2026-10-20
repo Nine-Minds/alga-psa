@@ -20,6 +20,7 @@ import type {
   ScenarioPricingSchedule,
   ScenarioBillingSchedule,
   ScenarioServiceConfig,
+  ScenarioPool,
   ScenarioPoolRef,
 } from "@alga-psa/types";
 import { toISODate, toPlainDate } from "@alga-psa/core";
@@ -637,6 +638,13 @@ async function buildScenarioLine(
         : null,
     overtime_rate: toCents(lineRow.overtime_rate),
     services,
+    ...withPools(
+      toScenarioPools(
+        poolRowsByLine.get(lineRow.contract_line_id) ?? [],
+        poolMembersByBucket,
+      ),
+      services,
+    ),
   };
 }
 
@@ -819,6 +827,7 @@ function buildTemplateScenarioLine(
         : null,
     overtime_rate: toCents(lineRow.overtime_rate),
     services,
+    ...withPools(toScenarioPools(templatePoolRows, poolMembersByBucket), services),
   };
 }
 
@@ -937,6 +946,52 @@ async function buildScenarioServiceConfig(
           `"${configurationType}" (config ${configDetails.baseConfig.config_id})`,
       );
   }
+}
+
+/**
+ * `pools` carries the pools no Bucket-config service already describes: a
+ * Bucket service IS its pool (removing it removes the pool), so listing the
+ * same pool here too would keep it alive after the service is edited away.
+ * Absent when empty, so pool-free scenarios are unchanged.
+ */
+function withPools(
+  pools: ScenarioPool[],
+  services: ScenarioLineService[],
+): { pools?: ScenarioPool[] } {
+  const describedByService = new Set(
+    services.flatMap((service) =>
+      service.configuration.configuration_type === "Bucket" &&
+      service.configuration.pool_id
+        ? [service.configuration.pool_id]
+        : [],
+    ),
+  );
+  const standalone = pools.filter((pool) => !describedByService.has(pool.pool_id));
+  return standalone.length > 0 ? { pools: standalone } : {};
+}
+
+/** The line's pool rows as scenario pools (allowance + members). */
+function toScenarioPools(
+  linePools: PoolRow[],
+  poolMembersByBucket: Map<string, Array<{ service_id: string; burn_multiplier: number }>>,
+): ScenarioPool[] {
+  return linePools.map((pool) => ({
+    pool_id: pool.bucket_id,
+    pool_name: pool.bucket_name,
+    covers_all_services: Boolean(pool.covers_all_services),
+    total_minutes: Number(pool.total_minutes ?? 0),
+    billing_period: pool.billing_period || "monthly",
+    overage_rate: toCents(pool.overage_rate) ?? 0,
+    allow_rollover: Boolean(pool.allow_rollover),
+    after_hours_multiplier:
+      pool.after_hours_multiplier != null
+        ? Number(pool.after_hours_multiplier)
+        : null,
+    business_hours_schedule_id: pool.business_hours_schedule_id ?? null,
+    members: poolMembersByBucketGet(poolMembersByBucket, pool.bucket_id).map(
+      (member) => ({ ...member }),
+    ),
+  }));
 }
 
 function poolMembersByBucketGet(
