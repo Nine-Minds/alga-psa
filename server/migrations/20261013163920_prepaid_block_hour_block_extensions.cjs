@@ -76,8 +76,10 @@ exports.up = async function up(knex) {
 
   // --- prepaid_balance_alerts ------------------------------------------------
   await knex.raw('ALTER TABLE prepaid_balance_alerts ADD COLUMN IF NOT EXISTS hour_block_id uuid NULL');
+  const alertsDistributed = (await hasCitus(knex)) && (await isDistributed(knex, 'prepaid_balance_alerts'));
   await addFk(knex, 'prepaid_balance_alerts', 'prepaid_balance_alerts_hour_block_fkey',
-    'tenant, hour_block_id', 'hour_blocks', 'tenant, block_id', 'SET NULL (hour_block_id)');
+    'tenant, hour_block_id', 'hour_blocks', 'tenant, block_id',
+    alertsDistributed ? undefined : 'SET NULL (hour_block_id)');
   await replaceCheck(knex, 'prepaid_balance_alerts', 'prepaid_balance_alerts_alert_type_check',
     "alert_type IN ('credit','bucket','prepaid_block')");
 };
