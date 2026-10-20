@@ -977,6 +977,35 @@ export class TimeSheetService extends BaseService<any> {
 
   // Schedule entries
   async getScheduleEntries(context: ServiceContext, filters?: any): Promise<any[]> {
+      const { visible, access } = await this.loadVisibleScheduleEntries(context, filters);
+      const results = await Promise.all(
+        visible.map((candidate) => this.buildScheduleEntryResult(candidate, access, context))
+      );
+      return results.filter((entry) => entry !== null);
+    }
+
+  /**
+   * Paginated variant of getScheduleEntries. Visibility (SQL filter plus the
+   * per-entry access decision, which can hide an entry entirely) is resolved
+   * for every candidate BEFORE counting, so `total` never includes hidden
+   * entries. Only the requested page is then masked / enriched (work item
+   * lookups), which is the expensive part.
+   */
+  async getScheduleEntriesPage(
+    context: ServiceContext,
+    filters: any,
+    pagination: { page: number; limit: number }
+  ): Promise<{ data: any[]; total: number }> {
+      const { visible, access } = await this.loadVisibleScheduleEntries(context, filters);
+      const offset = (pagination.page - 1) * pagination.limit;
+      const pageRows = visible.slice(offset, offset + pagination.limit);
+      const data = await Promise.all(
+        pageRows.map((candidate) => this.buildScheduleEntryResult(candidate, access, context))
+      );
+      return { data: data.filter((entry) => entry !== null), total: visible.length };
+    }
+
+  private async loadVisibleScheduleEntries(context: ServiceContext, filters?: any) {
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
       
@@ -1030,19 +1059,27 @@ export class TimeSheetService extends BaseService<any> {
       const entries = await query
         .select('schedule_entries.*')
         .distinct()
-        .orderBy('scheduled_start');
+        .orderBy('scheduled_start')
+        .orderBy('schedule_entries.entry_id');
 
-      // Get assigned users for each entry
-      const results = await Promise.all(entries.map(async entry => {
+      // Resolve assignees + access decision per entry; drop hidden entries.
+      const candidates = await Promise.all(entries.map(async (entry: any) => {
         const assignedUsers = await this.getScheduleAssignees(entry.entry_id, context);
         const decision = evaluateEntryAccess(
           { ...entry, assigned_user_ids: assignedUsers.map((u: any) => u.user_id) },
           access
         );
-        if (decision.access === 'none') {
-          return null;
-        }
+        return decision.access === 'none' ? null : { entry, assignedUsers, decision };
+      }));
 
+      return { visible: candidates.filter((c) => c !== null) as any[], access };
+    }
+
+  private async buildScheduleEntryResult(
+    { entry, assignedUsers, decision }: { entry: any; assignedUsers: any[]; decision: any },
+    access: any,
+    context: ServiceContext
+  ): Promise<any> {
         const startTime = entry.scheduled_start ? new Date(entry.scheduled_start) : new Date();
         const endTime = entry.scheduled_end ? new Date(entry.scheduled_end) : new Date();
         const durationMs = endTime.getTime() - startTime.getTime();
@@ -1065,9 +1102,6 @@ export class TimeSheetService extends BaseService<any> {
           access: 'full',
           can_edit: decision.canEdit,
         };
-      }));
-
-      return results.filter((entry) => entry !== null);
     }
 
 

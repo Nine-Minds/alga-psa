@@ -23,7 +23,8 @@ import {
   timeSheetSearchSchema,
   timeSheetExportQuerySchema,
   createScheduleEntrySchema,
-  updateScheduleEntrySchema
+  updateScheduleEntrySchema,
+  scheduleEntryListQuerySchema
 } from '../schemas/timeSheet';
 import { 
   ApiKeyServiceForApi 
@@ -1853,22 +1854,29 @@ export class ApiTimeSheetController extends ApiBaseController {
         // enforced by the service through the shared-calendar resolver, so
         // any user_id may be requested; unshared calendars simply return none.
         const url = new URL(req.url);
-        const filters = {
-          start_date: url.searchParams.get('start_date') || undefined,
-          end_date: url.searchParams.get('end_date') || undefined,
-          user_id: url.searchParams.get('user_id') || undefined
-        };
+        let query;
+        try {
+          query = scheduleEntryListQuerySchema.parse(Object.fromEntries(url.searchParams.entries()));
+        } catch (error) {
+          if (error instanceof ZodError) {
+            throw new ValidationError('Invalid schedule query parameters', error.errors);
+          }
+          throw error;
+        }
+        const { page, limit, start_date, end_date, user_id } = query;
+        const filters = { start_date, end_date, user_id };
 
-        // Get schedule entries within tenant context
-        const entries = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getScheduleEntries({
+        // Paginated after visibility is resolved, so total excludes hidden entries.
+        // LEVERAGE: pattern paginated-list-outside-base — ApiBaseController.list() paginates via service.list(); schedule entries need a bespoke paged service method.
+        const result = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.getScheduleEntriesPage({
             userId: user.user_id,
             user,
             tenant: tenantId!,
-          }, filters);
+          }, filters, { page, limit });
         });
 
-        return createSuccessResponse(entries);
+        return createPaginatedResponse(result.data, result.total, page, limit, undefined, req);
       } catch (error) {
         return handleApiError(error);
       }

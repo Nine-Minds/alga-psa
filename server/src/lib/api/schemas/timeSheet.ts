@@ -12,7 +12,8 @@ import {
   baseFilterSchema,
   booleanTransform,
   dateSchema,
-  isoDateSchema
+  isoDateSchema,
+  paginationQuerySchema
 } from './common';
 import { approvalStatusSchema, timeEntryResponseSchema } from './timeEntry';
 
@@ -395,3 +396,20 @@ export type TimeSheetExportQuery = z.infer<typeof timeSheetExportQuerySchema>;
 export type CreateScheduleEntryData = z.infer<typeof createScheduleEntrySchema>;
 export type UpdateScheduleEntryData = z.infer<typeof updateScheduleEntrySchema>;
 export type ScheduleEntryResponse = z.infer<typeof scheduleEntryResponseSchema>;
+
+
+// Schedule entry list/search query: ISO 8601 date (YYYY-MM-DD) or date-time.
+// Values are passed to the service unchanged once validated.
+const scheduleQueryDateSchema = z.union([
+  isoDateSchema.refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().startsWith(v), 'Invalid date'),
+  z.string().datetime({ offset: true }),
+], { errorMap: () => ({ message: 'Expected ISO 8601 date or date-time' }) });
+
+export const scheduleEntryListQuerySchema = paginationQuerySchema.extend({
+  start_date: scheduleQueryDateSchema.optional(),
+  end_date: scheduleQueryDateSchema.optional(),
+  user_id: uuidSchema.optional(),
+}).refine(
+  (q) => !q.start_date || !q.end_date || Date.parse(q.start_date) <= Date.parse(q.end_date),
+  { message: 'start_date must not be after end_date', path: ['start_date'] },
+);

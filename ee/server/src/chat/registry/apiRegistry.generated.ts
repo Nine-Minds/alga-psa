@@ -44530,47 +44530,30 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "sort",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "order",
+        "name": "start_date",
         "in": "query",
         "required": false,
         "schema": {
           "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ]
+          "description": "ISO 8601 date or date-time; entries starting at or after."
         }
       },
       {
-        "name": "fields",
+        "name": "end_date",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "description": "ISO 8601 date or date-time; entries ending at or before."
         }
       },
       {
-        "name": "search",
+        "name": "user_id",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "query",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "uuid"
         }
       }
     ],
@@ -44677,7 +44660,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/schedules/search",
     "displayName": "Search schedules",
     "summary": "Search schedules",
-    "description": "Current route delegates to ApiTimeSheetController.list() (time sheet list path), not schedule-specific search.",
+    "description": "Searches schedule entries via ApiTimeSheetController.listScheduleEntries(). Returns entries visible to the caller under shared-calendar rules, filtered by start_date, end_date (ISO 8601 date or date-time) and user_id, paginated with page/limit. Returns 400 for invalid dates or start_date after end_date.",
     "tags": [
       "Work Management v1"
     ],
@@ -44700,47 +44683,30 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "sort",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "order",
+        "name": "start_date",
         "in": "query",
         "required": false,
         "schema": {
           "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ]
+          "description": "ISO 8601 date or date-time; entries starting at or after."
         }
       },
       {
-        "name": "fields",
+        "name": "end_date",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "description": "ISO 8601 date or date-time; entries ending at or before."
         }
       },
       {
-        "name": "search",
+        "name": "user_id",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "query",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "uuid"
         }
       }
     ],

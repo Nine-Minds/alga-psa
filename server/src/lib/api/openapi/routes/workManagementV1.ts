@@ -345,7 +345,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
 
     { method: 'get', path: '/api/v1/schedules', summary: 'List schedule entries', description: 'Lists schedule entries via ApiTimeSheetController.listScheduleEntries().', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/schedules', summary: 'Create schedule entry', description: 'Creates schedule entry via ApiTimeSheetController.createScheduleEntry().', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/schedules/search', summary: 'Search schedules', description: 'Current route delegates to ApiTimeSheetController.list() (time sheet list path), not schedule-specific search.', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/schedules/search', summary: 'Search schedules', description: 'Searches schedule entries via ApiTimeSheetController.listScheduleEntries(). Returns entries visible to the caller under shared-calendar rules, filtered by start_date, end_date (ISO 8601 date or date-time) and user_id, paginated with page/limit. Returns 400 for invalid dates or start_date after end_date.', family: 'time_sheet' },
     { method: 'delete', path: '/api/v1/schedules/{id}', summary: 'Delete schedule entry', description: 'Deletes schedule entry via ApiTimeSheetController.deleteScheduleEntry().', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/schedules/{id}', summary: 'Get schedule entry', description: 'Current route delegates to ApiTimeSheetController.getById() (time sheet read path), not schedule-specific getter.', family: 'time_sheet' },
     { method: 'put', path: '/api/v1/schedules/{id}', summary: 'Update schedule entry', description: 'Updates schedule entry via ApiTimeSheetController.updateScheduleEntry().', family: 'time_sheet' },
@@ -439,7 +439,6 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   ];
 
   const mismatchOps = new Set([
-    'get /api/v1/schedules/search',
     'get /api/v1/schedules/{id}',
     'get /api/v1/schedules/{id}/conflicts',
     'post /api/v1/time-sheets/bulk',
@@ -477,6 +476,18 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'delete /api/v1/time-periods/{id}',
   ]);
 
+  // GET /api/v1/schedules and /schedules/search share listScheduleEntries().
+  const ScheduleEntryListQuery = registry.registerSchema(
+    'WorkV1ScheduleEntryListQuery',
+    zOpenApi.object({
+      page: zOpenApi.string().optional(),
+      limit: zOpenApi.string().optional(),
+      start_date: zOpenApi.string().optional().openapi({ description: 'ISO 8601 date or date-time; entries starting at or after.' }),
+      end_date: zOpenApi.string().optional().openapi({ description: 'ISO 8601 date or date-time; entries ending at or before.' }),
+      user_id: zOpenApi.string().uuid().optional(),
+    }),
+  );
+
   function requestFor(def: Def) {
     const req: Record<string, unknown> = {};
 
@@ -495,6 +506,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
 
     if (def.method === 'get' && def.path === '/api/v1/tickets') {
       req.query = TicketListQuery;
+    }
+    if (def.method === 'get' && (def.path === '/api/v1/schedules' || def.path === '/api/v1/schedules/search')) {
+      req.query = ScheduleEntryListQuery;
     }
 
     if (def.path.startsWith('/api/v1/projects') && (def.method === 'post' || def.method === 'put')) {

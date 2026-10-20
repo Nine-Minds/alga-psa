@@ -24347,6 +24347,29 @@
           }
         }
       },
+      "WorkV1ScheduleEntryListQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string",
+            "description": "ISO 8601 date or date-time; entries starting at or after."
+          },
+          "end_date": {
+            "type": "string",
+            "description": "ISO 8601 date or date-time; entries ending at or before."
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "WorkV1GenericBody": {
         "type": "object",
         "additionalProperties": {},
@@ -93204,46 +93227,29 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "ISO 8601 date or date-time; entries starting at or after."
             },
             "required": false,
-            "name": "sort",
+            "name": "start_date",
             "in": "query"
           },
           {
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "description": "ISO 8601 date or date-time; entries ending at or before."
             },
             "required": false,
-            "name": "order",
+            "name": "end_date",
             "in": "query"
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             },
             "required": false,
-            "name": "fields",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "search",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "query",
+            "name": "user_id",
             "in": "query"
           }
         ],
@@ -93397,7 +93403,7 @@
     "/api/v1/schedules/search": {
       "get": {
         "summary": "Search schedules",
-        "description": "Current route delegates to ApiTimeSheetController.list() (time sheet list path), not schedule-specific search.",
+        "description": "Searches schedule entries via ApiTimeSheetController.listScheduleEntries(). Returns entries visible to the caller under shared-calendar rules, filtered by start_date, end_date (ISO 8601 date or date-time) and user_id, paginated with page/limit. Returns 400 for invalid dates or start_date after end_date.",
         "tags": [
           "Work Management v1"
         ],
@@ -93410,8 +93416,7 @@
           "x-tenant-scoped": true,
           "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
-          "x-rbac-resource": "time_sheet",
-          "x-route-controller-mismatch": true
+          "x-rbac-resource": "time_sheet"
         },
         "x-alga-products": [
           "psa"
@@ -93435,46 +93440,29 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "ISO 8601 date or date-time; entries starting at or after."
             },
             "required": false,
-            "name": "sort",
+            "name": "start_date",
             "in": "query"
           },
           {
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "description": "ISO 8601 date or date-time; entries ending at or before."
             },
             "required": false,
-            "name": "order",
+            "name": "end_date",
             "in": "query"
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             },
             "required": false,
-            "name": "fields",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "search",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "query",
+            "name": "user_id",
             "in": "query"
           }
         ],
