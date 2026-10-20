@@ -27,7 +27,7 @@ B1 Bug: materials consume stock reserved for sales orders   (independent)
 B2 Bug: inventory scan lookup skips asset permission         (independent)
 ```
 
-Not carded yet: vendor-only conversation audiences on tickets. This is a change to the comment-thread model and belongs with the multi-party / co-managed conversation work. C5 covers the interim: the vendor case is recorded as an external link and on the RMA.
+Not carded here: vendor-only conversation audiences on tickets. The XO card "Ticket conversations: vendor email threads, AI participation, sharing and synthesis" (branch `feature/ticket-conversations-vendor-email-threads-ai-par`, PR in CI as of 2026-10-20) already covers it. C5 should use that conversation model for vendor correspondence once it merges, and record the vendor case as an external link and on the RMA either way.
 
 ### C1 — Label rendering foundation and record link resolver
 

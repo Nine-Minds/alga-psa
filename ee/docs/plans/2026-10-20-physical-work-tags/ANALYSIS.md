@@ -169,7 +169,7 @@ All inventory code is in `packages/inventory/src/{lib,actions,components}`, with
    - Add a pre-authorization `warranty_review` status, `ticket_id`, and shipping and tracking fields.
    - Approval moves the same case into the existing standard or advance track, so its history is preserved.
 6. **Project staging copies sales-order allocation** onto project materials, with a reserve → stage → consume flow. Boxes become a new `staging_containers` record with members and a manifest PDF.
-7. **Vendor conversations go to the multi-party thread model.** Interim: vendor case as an external link, and RMA `rma_reference` linked to the ticket.
+7. **Vendor conversations go to the multi-party thread model.** That work is already in flight as the XO card "Ticket conversations: vendor email threads, AI participation, sharing and synthesis" (`feature/ticket-conversations-vendor-email-threads-ai-par`). The audit above describes `main` before that card merges. Interim: vendor case as an external link, and RMA `rma_reference` linked to the ticket.
 
 ## Bugs found during the audit (separate cards, not part of this feature)
 
