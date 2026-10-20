@@ -1,0 +1,186 @@
+// Data repair for alga-2026-0002714: Products contracts valued at $0.
+//
+// The contract wizard used to persist a placeholder 0 for Products lines:
+//   (a) contract_lines.custom_rate = 0 (rate_provenance 'custom'), and
+//   (b) contract_line_service_fixed_config.base_rate = 0, pricing_basis = 'bundle' on each
+//       product member.
+// Readers trusted the 0 over the member/catalog price, so the contract was valued at $0 while
+// the invoice engine (which ignores the placeholder) billed the catalog price. The wizard no
+// longer writes the placeholder and the readers ignore a zero line rate on priced product
+// lines; this migration rewrites the rows that already carry it. Exactly two shapes, per tenant:
+//
+//   1. contract_lines (non-template, contract_type Fixed) with custom_rate = 0 that hold at least
+//      one PRICED product member -> custom_rate = NULL, rate_provenance = 'inherited'.
+//      "Priced" is the resolver's definition (shared/billingClients/recurringMemberRate
+//      hasRecurringMemberRate): a configuration custom_rate, a legacy contract_line_services
+//      custom_rate, a service_prices row in the CONTRACT's currency, or a catalog default_rate.
+//      A non-product line with custom_rate = 0 is never touched.
+//   2. contract_line_service_fixed_config with base_rate = 0 AND pricing_basis = 'bundle' whose
+//      member is a product (service_catalog.item_kind = 'product')
+//      -> base_rate = NULL, rate_provenance = 'inherited'.
+//
+// rate_provenance moves with the rate because of the CHECK constraints (a NULL rate must be
+// 'inherited'). Not reversible: the zero was a placeholder, not information (down is a no-op).
+//
+// Citus-safe: every statement is tenant-scoped, ids are selected first and bound in Node, there
+// are no joins/functions/casts in the UPDATEs. Row counts are logged per tenant and in total.
+const MIGRATION_TENANT = 'migration:20261020120000_backfill_products_contract_placeholder_zero_rates';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for products placeholder-zero rate backfill';
+const CHUNK = 500;
+
+exports.config = { transaction: true };
+
+function chunk(items) {
+  const out = [];
+  for (let i = 0; i < items.length; i += CHUNK) out.push(items.slice(i, i + CHUNK));
+  return out;
+}
+
+exports.up = async function up(knex) {
+  const { tenantDb } = require('./utils/tenantDb.cjs');
+  const tenants = await tenantDb(knex, MIGRATION_TENANT)
+    .unscoped('tenants', TENANT_ENUMERATION_REASON)
+    .select('tenant');
+
+  let totalLines = 0;
+  let totalConfigs = 0;
+
+  for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
+    const nowIso = new Date().toISOString();
+
+    // ---- 1. contract_lines.custom_rate = 0 on lines with priced product members ----
+    const zeroLines = await db.table('contract_lines')
+      .where('contract_line_type', 'Fixed')
+      .where('custom_rate', 0)
+      .whereNotNull('contract_id')
+      .where(function notTemplate() {
+        this.where('is_template', false).orWhereNull('is_template');
+      })
+      .select('contract_line_id', 'contract_id');
+
+    const lineIdsToFix = [];
+    if (zeroLines.length > 0) {
+      const lineIds = zeroLines.map((row) => row.contract_line_id);
+      const contractIds = Array.from(new Set(zeroLines.map((row) => row.contract_id)));
+
+      const currencyByContract = new Map();
+      for (const ids of chunk(contractIds)) {
+        const rows = await db.table('contracts').whereIn('contract_id', ids).select('contract_id', 'currency_code');
+        for (const row of rows) currencyByContract.set(row.contract_id, row.currency_code);
+      }
+
+      const members = [];
+      for (const ids of chunk(lineIds)) {
+        const rows = await db.table('contract_line_service_configuration')
+          .where('configuration_type', 'Fixed')
+          .whereIn('contract_line_id', ids)
+          .select('contract_line_id', 'service_id', 'custom_rate');
+        members.push(...rows);
+      }
+
+      const serviceIds = Array.from(new Set(members.map((row) => row.service_id)));
+      const catalogByService = new Map();
+      const pricesByService = new Map();
+      for (const ids of chunk(serviceIds)) {
+        const catalogRows = await db.table('service_catalog')
+          .whereIn('service_id', ids)
+          .select('service_id', 'item_kind', 'default_rate');
+        for (const row of catalogRows) catalogByService.set(row.service_id, row);
+        const priceRows = await db.table('service_prices')
+          .whereIn('service_id', ids)
+          .select('service_id', 'currency_code');
+        for (const row of priceRows) {
+          const set = pricesByService.get(row.service_id) ?? new Set();
+          set.add(row.currency_code);
+          pricesByService.set(row.service_id, set);
+        }
+      }
+
+      const serviceLineRates = new Map();
+      for (const ids of chunk(lineIds)) {
+        const rows = await db.table('contract_line_services')
+          .whereIn('contract_line_id', ids)
+          .select('contract_line_id', 'service_id', 'custom_rate');
+        for (const row of rows) serviceLineRates.set(`${row.contract_line_id}:${row.service_id}`, row.custom_rate);
+      }
+
+      const lineContract = new Map(zeroLines.map((row) => [row.contract_line_id, row.contract_id]));
+      const fixable = new Set();
+      for (const member of members) {
+        const catalog = catalogByService.get(member.service_id);
+        if (!catalog || catalog.item_kind !== 'product') continue;
+        const currency = currencyByContract.get(lineContract.get(member.contract_line_id));
+        const priced =
+          member.custom_rate != null ||
+          serviceLineRates.get(`${member.contract_line_id}:${member.service_id}`) != null ||
+          (currency != null && (pricesByService.get(member.service_id)?.has(currency) ?? false)) ||
+          catalog.default_rate != null;
+        if (priced) fixable.add(member.contract_line_id);
+      }
+      lineIdsToFix.push(...fixable);
+    }
+
+    let linesUpdated = 0;
+    for (const ids of chunk(lineIdsToFix)) {
+      linesUpdated += await db.table('contract_lines')
+        .whereIn('contract_line_id', ids)
+        .where('custom_rate', 0)
+        .update({ custom_rate: null, rate_provenance: 'inherited', updated_at: nowIso });
+    }
+
+    // ---- 2. product members with the placeholder base_rate = 0 / 'bundle' ----
+    const zeroConfigs = await db.table('contract_line_service_fixed_config')
+      .where('base_rate', 0)
+      .where('pricing_basis', 'bundle')
+      .select('config_id');
+    const configIdsToFix = [];
+    if (zeroConfigs.length > 0) {
+      const configToService = new Map();
+      for (const ids of chunk(zeroConfigs.map((row) => row.config_id))) {
+        const rows = await db.table('contract_line_service_configuration')
+          .whereIn('config_id', ids)
+          .select('config_id', 'service_id');
+        for (const row of rows) configToService.set(row.config_id, row.service_id);
+      }
+      const productServices = new Set();
+      for (const ids of chunk(Array.from(new Set(configToService.values())))) {
+        const rows = await db.table('service_catalog')
+          .whereIn('service_id', ids)
+          .where('item_kind', 'product')
+          .select('service_id');
+        for (const row of rows) productServices.add(row.service_id);
+      }
+      for (const [configId, serviceId] of configToService) {
+        if (productServices.has(serviceId)) configIdsToFix.push(configId);
+      }
+    }
+
+    let configsUpdated = 0;
+    for (const ids of chunk(configIdsToFix)) {
+      configsUpdated += await db.table('contract_line_service_fixed_config')
+        .whereIn('config_id', ids)
+        .where('base_rate', 0)
+        .where('pricing_basis', 'bundle')
+        .update({ base_rate: null, rate_provenance: 'inherited', updated_at: nowIso });
+    }
+
+    if (linesUpdated > 0 || configsUpdated > 0) {
+      console.log(
+        `[products placeholder-zero backfill] tenant ${tenant}: contract_lines.custom_rate 0 -> NULL: ${linesUpdated}; `
+        + `contract_line_service_fixed_config.base_rate 0 -> NULL: ${configsUpdated}`,
+      );
+    }
+    totalLines += linesUpdated;
+    totalConfigs += configsUpdated;
+  }
+
+  console.log(
+    `[products placeholder-zero backfill] total: contract_lines rewritten: ${totalLines}; `
+    + `contract_line_service_fixed_config rewritten: ${totalConfigs}`,
+  );
+};
+
+exports.down = async function down() {
+  // Intentionally a no-op: the zeros were placeholders, not data worth restoring.
+};

@@ -2,9 +2,16 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import {
   resolveMemberRate,
+  selectEffectiveServicePrice,
   type UnitPricingRevisionRateRow,
   type ServicePriceRateRow,
 } from './resolveFixedLineRate';
+import {
+  normalizeToMonthlyCents,
+  productMembersRecurringTotalCents,
+  resolveEffectiveLineRate,
+  type FixedLineMemberInput,
+} from './recurringMemberRate';
 import {
   selectLatestApplicableRevision,
   toRecurringUnitRevisionCandidate,
@@ -32,27 +39,9 @@ export interface CurrencyAmount {
   totalCents: number;
 }
 
-/**
- * Cadence normalization used by every recurring-value read path. Mirrors the
- * contract-overview normalization so overview, reports, and summaries cannot
- * disagree about what a non-monthly line is worth per month.
- */
-export function normalizeToMonthlyCents(amountCents: number, billingFrequency: string | null | undefined): number {
-  switch (billingFrequency) {
-    case 'weekly':
-      return Math.round(amountCents * 4.33);
-    case 'quarterly':
-      return Math.round(amountCents / 3);
-    case 'semi-annually':
-    case 'semi_annually':
-      return Math.round(amountCents / 6);
-    case 'annually':
-      return Math.round(amountCents / 12);
-    default:
-      // monthly (and unknown cadences, which are stored monthly by default)
-      return Math.round(amountCents);
-  }
-}
+// Cadence normalization is shared with the client-side wizard total; it lives
+// in the pure recurringMemberRate module and is re-exported for existing callers.
+export { normalizeToMonthlyCents };
 
 /**
  * Currency-safe aggregation: minor units are summed per currency and never
@@ -352,6 +341,16 @@ export async function getContractMonthlyFixedValuesByContract(
         `${line.contract_line_id}:${member.service_id}:${member.config_id}`;
       const hasApplicableRevision = (member: FixedMemberValuationRow) =>
         (candidatesByKey.get(revisionKey(member)) ?? []).length > 0;
+      // Engine inputs for a product member: contract-currency catalog price
+      // (never the tenant default), then the legacy default rate.
+      const toRateInput = (member: FixedMemberValuationRow): FixedLineMemberInput => ({
+        item_kind: member.item_kind,
+        quantity: member.quantity,
+        configuration_custom_rate: member.custom_rate,
+        service_line_custom_rate: member.service_line_custom_rate,
+        price_rate: selectEffectiveServicePrice(catalogPrices, member.service_id, currency, asOf)?.rateCents ?? null,
+        default_rate: member.default_rate,
+      });
       // A member is unit-valued when it is explicitly unit-priced, when it
       // carries an applicable scheduled revision, or — once the line is
       // actively revision-managed — when it is a catalog product (products share
@@ -399,19 +398,30 @@ export async function getContractMonthlyFixedValuesByContract(
         totalCents += Math.round(quantity * rateCents);
       }
 
-      // Bundle members: the line-level rate is authoritative when present.
-      // When it is absent the engine derives the fee from the members
-      // (base rates, then catalog rates) — mirror that instead of valuing an
-      // invoiceable bundle at zero.
+      // Bundle members: the line-level rate is authoritative when it is a real
+      // override. A zero is not a price: on a line with priced product members
+      // the wizard's placeholder `0.00` never wins over the member rates.
+      // When there is no effective line rate the engine derives the fee from
+      // the members — mirror that instead of valuing an invoiceable bundle at
+      // zero. Product members resolve through the engine's own chain
+      // (config/service override, then the contract-currency catalog price);
+      // other members derive from base rates, then catalog rates.
       if (bundleMembers.length > 0) {
-        const lineRateCents = toCents(line.custom_rate);
+        const productMembers = members.filter((member) => member.item_kind === 'product');
+        const lineRateCents = resolveEffectiveLineRate(
+          line.custom_rate,
+          productMembers.map(toRateInput),
+        );
         if (lineRateCents !== null) {
           totalCents += lineRateCents;
         } else {
+          const bundleProducts = bundleMembers.filter((member) => member.item_kind === 'product');
+          const bundleOthers = bundleMembers.filter((member) => member.item_kind !== 'product');
+          totalCents += productMembersRecurringTotalCents(bundleProducts.map(toRateInput));
           const deriveFrom = (rateOf: (member: FixedMemberValuationRow) => number | null): number | null => {
             let derived = 0;
             let hasRate = false;
-            for (const member of bundleMembers) {
+            for (const member of bundleOthers) {
               const rate = rateOf(member);
               if (rate !== null) {
                 const quantity = Number(member.quantity ?? 1) || 1;

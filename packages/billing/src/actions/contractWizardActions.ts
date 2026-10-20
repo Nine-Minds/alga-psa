@@ -1855,14 +1855,19 @@ export const createClientContractFromWizard = withAuth(async (
             tenant,
             custom_rate: customRate,
           },
-          { base_rate: 0 }
+          // No placeholder zero: absent a member rate the catalog price in the
+          // contract currency resolves (the engine's chain), and a stored 0
+          // 'bundle' base_rate would shadow it in readers.
+          { base_rate: null, rate_provenance: 'inherited' }
         );
       }
 
       const fixedConfigModel = new ContractLineFixedConfig(trx, tenant);
       await fixedConfigModel.upsert({
         contract_line_id: productsLineId,
-        base_rate: 0,
+        // NULL = no line override. A line-level 0 is read as a price by anything
+        // that reads contract_lines.custom_rate directly.
+        base_rate: null,
         enable_proration: recurringAuthoringPolicy.enableProration,
         billing_cycle_alignment: recurringAuthoringPolicy.billingCycleAlignment,
         tenant,
