@@ -7082,10 +7082,12 @@ export class BillingEngine {
     // (member rows are multiplier overrides under a catch-all).
     const poolQuery = db.table<any>("contract_line_buckets as clb");
 
+    // Pools are keyed by the owning contract line (contract_lines.contract_line_id),
+    // not by the client_contract_line alias the line query also exposes.
     const pools = await poolQuery
       .where({
         "clb.tenant": client.tenant,
-        "clb.contract_line_id": contractLine.client_contract_line_id,
+        "clb.contract_line_id": contractLine.contract_line_id,
       })
       .select("clb.*");
 

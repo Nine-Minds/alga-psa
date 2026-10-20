@@ -7,3 +7,9 @@
 - Test DB: `docker` container alga-currency-test-pg on 5472. Run EE integration tests with
   `cd ee/server && TEST_DB_NAME=alga2684_test DB_HOST=127.0.0.1 DB_PORT=5472 npx vitest run --config vitest.integration.config.ts <file>`
 - Parity suite: `ee/server/src/__tests__/integration/contractChargeResolutionParity.integration.test.ts`.
+
+## Pool identity fix — evidence
+`loadBucketObligation` now queries `contract_line_buckets` by `contractLine.contract_line_id` (was the
+`client_contract_line_id` alias, populated from the same column). Full invoice-line dump
+(`CHARGE_RESOLUTION_DUMP`) of the parity fixtures before vs after this commit: byte-identical. Conclusion:
+the mismatch was naming-only; it changes no live pool charge.
