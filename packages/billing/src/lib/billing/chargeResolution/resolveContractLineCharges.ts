@@ -87,5 +87,61 @@ export async function resolveContractLineCharges(
     }),
   );
   // Registry order, regardless of which source query finished first.
-  return collected.flat();
+  const charges = collected.flat();
+  await assertEverythingClaimed(source, pooledServiceIds);
+  return charges;
+}
+
+/**
+ * Every configured service kind and the line type must be claimed by some
+ * registry family (whether or not it was requested or produced a charge this
+ * period). Driven only by what entries declare in `handles`, so a new family
+ * is one registry entry and nothing here. Services a pool absorbed are exempt.
+ */
+async function assertEverythingClaimed(
+  source: ContractChargeSource,
+  pooledServiceIds: readonly string[],
+): Promise<void> {
+  const claimedConfigurationTypes = new Set(
+    CHARGE_FAMILY_REGISTRY.flatMap((entry) => entry.handles.configurationTypes),
+  );
+  const claimedLineTypes = new Set(
+    CHARGE_FAMILY_REGISTRY.flatMap((entry) => entry.handles.lineTypes),
+  );
+  const pooled = new Set(pooledServiceIds);
+  const lineId = source.line.clientContractLineId;
+  const lineType = source.line.contractLineType;
+
+  if (lineType && !claimedLineTypes.has(lineType)) {
+    throw new Error(
+      `Contract line ${lineId} has contract_line_type "${lineType}", which no charge family handles (handled: ${[...claimedLineTypes].join(", ")})`,
+    );
+  }
+  const services = await source.configuredServices();
+  const hasFallbackFamily =
+    lineType != null &&
+    CHARGE_FAMILY_REGISTRY.some(
+      (entry) =>
+        entry.handles.legacyFallbackLineTypes?.includes(lineType) &&
+        !services.some((service) =>
+          entry.handles.configurationTypes.includes(service.configurationType ?? ""),
+        ),
+    );
+  const unclaimed = services.filter(
+    (service) =>
+      !pooled.has(service.serviceId) &&
+      !hasFallbackFamily &&
+      !claimedConfigurationTypes.has(service.configurationType ?? ""),
+  );
+  if (unclaimed.length > 0) {
+    const detail = unclaimed
+      .map(
+        (service) =>
+          `service ${service.serviceId} (configuration_type "${service.configurationType ?? "null"}")`,
+      )
+      .join("; ");
+    throw new Error(
+      `Contract line ${lineId} (contract_line_type "${lineType ?? "unknown"}") configures services no charge family handles: ${detail}`,
+    );
+  }
 }

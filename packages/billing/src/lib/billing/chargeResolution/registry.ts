@@ -49,6 +49,25 @@ export interface FamilyEntry {
   allowsUntimed?: boolean;
   /** True when the family has nothing to ask the source if the line has no pools. */
   requiresPools?: boolean;
+  /**
+   * What this family claims. A configured service whose `configuration_type`,
+   * or a line whose `contract_line_type`, no entry claims is a configuration
+   * the engine cannot price; the resolver throws instead of returning no
+   * charges. Claiming is declaration, not output: a claimed service with no
+   * activity this period is fine.
+   */
+  handles: {
+    configurationTypes: readonly string[];
+    lineTypes: readonly string[];
+    /**
+     * Legacy fallback: on a line of one of these types that has no service of
+     * this family's `configurationTypes`, the family still prices the line's
+     * services whatever their stored configuration_type (the engine's hourly
+     * loader falls back to contract_line_services). Those services count as
+     * claimed. Optional; most families have none.
+     */
+    legacyFallbackLineTypes?: readonly string[];
+  };
   collect(context: FamilyContext): Promise<PlannedCharge[]>;
 }
 
@@ -107,22 +126,30 @@ const single = (
 export const CHARGE_FAMILY_REGISTRY: readonly FamilyEntry[] = [
   {
     family: "fixed",
+    handles: { configurationTypes: ["Fixed"], lineTypes: ["Fixed"] },
     timing: { policy: "fixed-recurring", duePosition: LINE_POSITION },
     collect: async ({ source, timing }) => single(await source.fixed(timing!)),
   },
   {
     family: "hourly",
+    handles: {
+      configurationTypes: ["Hourly"],
+      lineTypes: ["Hourly"],
+      legacyFallbackLineTypes: ["Hourly"],
+    },
     timing: { policy: "service-driven", duePosition: LINE_POSITION },
     collect: async (context) =>
       single(await context.source.hourly(context.timing!, exclusionFor(context))),
   },
   {
     family: "usage",
+    handles: { configurationTypes: ["Usage"], lineTypes: ["Usage"] },
     timing: { policy: "service-driven", duePosition: LINE_POSITION },
     collect: async ({ source, timing }) => single(await source.usage(timing!)),
   },
   {
     family: "bucket",
+    handles: { configurationTypes: ["Bucket"], lineTypes: ["Bucket"] },
     timing: { policy: "recurring", duePosition: LINE_POSITION },
     allowsUntimed: true,
     requiresPools: true,
@@ -130,12 +157,14 @@ export const CHARGE_FAMILY_REGISTRY: readonly FamilyEntry[] = [
   },
   {
     family: "product",
+    handles: { configurationTypes: [], lineTypes: [] },
     timing: { policy: "recurring", duePosition: LINE_POSITION },
     collect: async ({ source, timing }) =>
       single(await source.recurringQuantity("product", timing!)),
   },
   {
     family: "license",
+    handles: { configurationTypes: [], lineTypes: [] },
     timing: { policy: "recurring", duePosition: LINE_POSITION },
     collect: async ({ source, timing }) =>
       single(await source.recurringQuantity("license", timing!)),

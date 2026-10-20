@@ -32,6 +32,7 @@ import {
 import type { ChargeComputeTaxContext } from "@alga-psa/billing/lib/billing/compute";
 import {
   resolvePoolForService,
+  type ConfiguredService,
   type ContractChargeSource,
   type PoolDefinition,
   type PoolPeriodState,
@@ -166,6 +167,15 @@ export class ScenarioChargeSource implements ContractChargeSource {
           .map((service) => service.service_id),
       ),
     );
+  }
+
+  async configuredServices(): Promise<ConfiguredService[]> {
+    return this.input.line.services
+      .filter((service) => !isProductService(service))
+      .map((service) => ({
+        serviceId: service.service_id,
+        configurationType: service.configuration.configuration_type ?? null,
+      }));
   }
 
   async poolPeriodState(

@@ -29,6 +29,7 @@ import type {
 import { lineFacts } from "../domain/calculateContractCharge";
 import type {
   ChargeFamily,
+  ConfiguredService,
   ContractChargeSource,
   FactsOf,
   PoolDefinition,
@@ -312,6 +313,21 @@ export class DatabaseChargeSource implements ContractChargeSource {
       })
       .select("service_id");
     return Array.from(new Set(rows.map((row) => row.service_id as string)));
+  }
+
+  async configuredServices(): Promise<ConfiguredService[]> {
+    const db = tenantDb(this.host.knex, this.host.tenant);
+    const rows = await db
+      .table<any>("contract_line_service_configuration")
+      .where({
+        tenant: this.host.tenant,
+        contract_line_id: this.input.clientContractLine.contract_line_id,
+      })
+      .select("service_id", "configuration_type");
+    return rows.map((row) => ({
+      serviceId: row.service_id as string,
+      configurationType: (row.configuration_type as string | null) ?? null,
+    }));
   }
 
   async poolPeriodState(

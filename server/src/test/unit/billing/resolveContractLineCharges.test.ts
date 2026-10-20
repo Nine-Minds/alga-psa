@@ -24,6 +24,7 @@ function fakeSource(overrides: Partial<ContractChargeSource> & {
   timing?: TimingResolution;
   pools?: PoolDefinition[];
   periods?: unknown[];
+  services?: Array<{ serviceId: string; configurationType: string | null }>;
 } = {}) {
   const calls: string[] = [];
   const exclusions: Array<PooledTimeExclusion | null> = [];
@@ -39,6 +40,11 @@ function fakeSource(overrides: Partial<ContractChargeSource> & {
     billingProfile: async () => null,
     pools: async () => overrides.pools ?? [],
     configuredServiceIds: async () => ["svc-a", "svc-b"],
+    configuredServices: async () =>
+      overrides.services ?? [
+        { serviceId: "svc-a", configurationType: "Hourly" },
+        { serviceId: "svc-b", configurationType: "Hourly" },
+      ],
     poolPeriodState: async (pool) => ({
       pool,
       configuration: {} as any,
@@ -61,6 +67,55 @@ function fakeSource(overrides: Partial<ContractChargeSource> & {
 }
 
 describe("resolveContractLineCharges", () => {
+  it("rejects a configured service of a kind no registry family handles", async () => {
+    const { source } = fakeSource({
+      services: [{ serviceId: "svc-x", configurationType: "Mystery" }],
+    });
+    await expect(resolveContractLineCharges(source)).rejects.toThrow(
+      /ccl-1.*svc-x.*Mystery/,
+    );
+  });
+
+  it("rejects a line whose contract_line_type no family handles", async () => {
+    const { source } = fakeSource();
+    (source as any).line = { clientContractLineId: "ccl-1", tenantId: "t", contractLineType: "Weird" };
+    await expect(resolveContractLineCharges(source)).rejects.toThrow(/ccl-1.*Weird/);
+  });
+
+  it("tolerates unrecognised service kinds on an Hourly line with no Hourly config (legacy fallback)", async () => {
+    const { source } = fakeSource({
+      services: [{ serviceId: "svc-t", configurationType: "Time" }],
+    });
+    (source as any).line = { clientContractLineId: "ccl-1", tenantId: "t", contractLineType: "Hourly" };
+    await expect(resolveContractLineCharges(source)).resolves.toBeDefined();
+    // ...but not once the line has a real Hourly config alongside it.
+    const mixed = fakeSource({
+      services: [
+        { serviceId: "svc-t", configurationType: "Time" },
+        { serviceId: "svc-h", configurationType: "Hourly" },
+      ],
+    }).source;
+    (mixed as any).line = { clientContractLineId: "ccl-1", tenantId: "t", contractLineType: "Hourly" };
+    await expect(resolveContractLineCharges(mixed)).rejects.toThrow(/svc-t/);
+  });
+
+  it("does not flag a service a pool absorbed", async () => {
+    const { source } = fakeSource({
+      pools: [POOL],
+      services: [{ serviceId: "svc-a", configurationType: "Mystery" }],
+    });
+    await expect(resolveContractLineCharges(source)).resolves.toBeDefined();
+  });
+
+  it("a claimed hourly service with no activity resolves to [] without throwing", async () => {
+    const { source } = fakeSource();
+    source.hourly = async () => null;
+    source.fixed = async () => null;
+    source.usage = async () => null;
+    source.recurringQuantity = async () => null;
+    await expect(resolveContractLineCharges(source)).resolves.toEqual([]);
+  });
+
   it("emits families in registry order", async () => {
     const { source } = fakeSource({ pools: [POOL] });
     const result = await resolveContractLineCharges(source);

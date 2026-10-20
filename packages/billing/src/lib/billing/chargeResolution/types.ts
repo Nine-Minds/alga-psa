@@ -114,6 +114,12 @@ export interface TaxContextDemand {
   locationId?: string | null;
 }
 
+export interface ConfiguredService {
+  serviceId: string;
+  /** `contract_line_service_configuration.configuration_type`. */
+  configurationType: string | null;
+}
+
 export interface ContractChargeSource {
   /** The line these charges belong to. */
   readonly line: ResolvedContractLineFacts;
@@ -135,6 +141,12 @@ export interface ContractChargeSource {
    * these: "covers all line services", not "anything this client bills".
    */
   configuredServiceIds(): Promise<string[]>;
+  /**
+   * The same services with the kind each is configured as
+   * (`configuration_type`). The resolver checks every kind against what the
+   * registry's families declare they handle; it never interprets the kinds.
+   */
+  configuredServices(): Promise<ConfiguredService[]>;
   /**
    * One pool's allowance state for `timing` (see PoolPeriodState). `periods`
    * empty means the pool has nothing to charge for this window.
