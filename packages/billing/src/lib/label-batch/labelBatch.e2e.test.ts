@@ -54,15 +54,15 @@ const ticketLabel = (n: number): LabelPrintItem => ({
   } satisfies LabelViewModel,
 });
 
-const assetLabel = (n: number): LabelPrintItem => ({
+const assetLabel = (n: number, tag?: string): LabelPrintItem => ({
   templateCode: STANDARD_LABEL_ASSET_CODE128_CODE,
   viewModel: {
     labelClass: 'asset-identity',
     entityType: 'asset',
     recordId: uuid(500 + n),
     url: recordUrl('asset', uuid(500 + n), BASE),
-    identifier: `AT-${String(100 + n).padStart(6, '0')}`,
-    code128Value: `AT-${String(100 + n).padStart(6, '0')}`,
+    identifier: tag ?? `AT-${String(100 + n).padStart(6, '0')}`,
+    code128Value: tag ?? `AT-${String(100 + n).padStart(6, '0')}`,
     title: `Laptop ${n}`,
     clientName: 'Emerald City Dental',
     detail: null,
@@ -131,6 +131,31 @@ function decodeCode128(image: Raster): string | null {
 }
 
 const mmToPx = (mm: number) => (mm / 25.4) * DPI;
+
+/** True when the outer `bandMm` of the image is entirely white on all four edges (printable-area margin). */
+function edgeBandIsWhite(image: Raster, bandMm = 3): boolean {
+  const band = Math.floor(mmToPx(bandMm)) - 1; // one pixel of slack for rasteriser rounding
+  for (let y = 0; y < image.height; y += 1) {
+    for (let x = 0; x < image.width; x += 1) {
+      const inBand = x < band || y < band || x >= image.width - band || y >= image.height - band;
+      if (!inBand) continue;
+      const p = (y * image.width + x) * 4;
+      if (image.data[p] < 250 || image.data[p + 1] < 250 || image.data[p + 2] < 250) return false;
+    }
+  }
+  return true;
+}
+
+/** Rows (from the top) of the lowest non-white pixel: used to prove whitespace remains below the bars. */
+function lowestInkRow(image: Raster): number {
+  for (let y = image.height - 1; y >= 0; y -= 1) {
+    for (let x = 0; x < image.width; x += 1) {
+      const p = (y * image.width + x) * 4;
+      if (image.data[p] < 200) return y;
+    }
+  }
+  return -1;
+}
 
 async function printLabels(items: LabelPrintItem[], layout: LabelBatchLayout, name: string) {
   const { html, geometry, printOptions } = await renderLabelBatchHtml(items, layout, {
@@ -219,5 +244,33 @@ describe('label PDF end to end', () => {
     const { rasters } = await printLabels([item], ONE_PER_PAGE, 'code128-single');
     expect(decodeCode128(rasters[0])).toBe(item.viewModel.code128Value);
     expect(decodeQr(rasters[0])).toBe(item.viewModel.url);
+  }, 120_000);
+
+  it('4x2in Code 128 label: 3 mm white margin on all edges, whitespace under the bars, both codes decode', async () => {
+    const item = assetLabel(8);
+    const { rasters } = await printLabels([item], ONE_PER_PAGE, 'code128-margin');
+    expect(edgeBandIsWhite(rasters[0])).toBe(true);
+    // Bars end at least 2 mm above the 3 mm margin band, i.e. visible whitespace below the bars.
+    expect(rasters[0].height - lowestInkRow(rasters[0])).toBeGreaterThan(mmToPx(3 + 2));
+    expect(decodeCode128(rasters[0])).toBe(item.viewModel.code128Value);
+    expect(decodeQr(rasters[0])).toBe(item.viewModel.url);
+  }, 120_000);
+
+  it('renders and decodes a 17-character asset tag (no sizing refusal)', async () => {
+    const item = assetLabel(9, 'REVIEW-NINJA-WS01');
+    const { rasters } = await printLabels([item], ONE_PER_PAGE, 'code128-long');
+    expect(decodeCode128(rasters[0])).toBe('REVIEW-NINJA-WS01');
+    expect(decodeQr(rasters[0])).toBe(item.viewModel.url);
+    expect(edgeBandIsWhite(rasters[0])).toBe(true);
+  }, 120_000);
+
+  it('keeps the Code 128 label inside its cell on a Letter 2x5 sheet (cell-edge band is white)', async () => {
+    const items = [assetLabel(1, 'REVIEW-NINJA-WS01'), assetLabel(2)];
+    const { geometry, rasters } = await printLabels(items, LETTER_2X5, 'code128-cell');
+    geometry.placements.forEach((p, i) => {
+      const cell = crop(rasters[0], mmToPx(p.leftMm), mmToPx(p.topMm), mmToPx(p.widthMm), mmToPx(p.heightMm));
+      expect(edgeBandIsWhite(cell)).toBe(true);
+      expect(decodeCode128(cell)).toBe(items[i].viewModel.code128Value);
+    });
   }, 120_000);
 });

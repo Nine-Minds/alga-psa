@@ -51,14 +51,46 @@ const code128 = (id: string): Node => ({
   type: 'barcode',
   symbology: 'code128',
   value: { type: 'binding', bindingId: 'code128Value' },
-  style: { inline: { width: '60mm', height: '9mm' } },
+  // Full-width row: 95 mm holds ~29 characters at the 0.25 mm minimum module (11 modules/char + 55).
+  style: { inline: { width: '95mm', height: '9mm', flexShrink: '0' } },
 });
 
 const brandLine = (): Node =>
   text('brand', 'tenantName', { fontSize: '8px', color: '#4b5563' });
 
-const label = (name: string, left: Node[], right: Node[]): TemplateAst =>
-  ({
+/**
+ * Printable area of the 4 x 2 in cell is 95.6 x 44.8 mm (marginMm 3). Without a footer the content is
+ * one 44 mm row. With a footer (full-width Code 128) the layout is a 40 mm column: a 28 mm text+QR row,
+ * 2 mm gap, the 9 mm footer, leaving ~5 mm of whitespace below the bars.
+ */
+const label = (name: string, left: Node[], right: Node[], footer: Node[] = []): TemplateAst => {
+  const row: Node = {
+    id: footer.length ? 'label-row' : 'label',
+    type: 'stack',
+    direction: 'row',
+    style: {
+      inline: {
+        gap: '3mm',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        height: footer.length ? '28mm' : '44mm',
+      },
+    },
+    children: [
+      { id: 'label-text', type: 'stack', direction: 'column', style: { inline: { gap: '1mm', flex: '1 1 0', minWidth: '0' } }, children: left },
+      { id: 'label-code', type: 'stack', direction: 'column', style: { inline: { gap: '1mm', alignItems: 'center' } }, children: right },
+    ],
+  };
+  const content: Node = footer.length
+    ? {
+        id: 'label',
+        type: 'stack',
+        direction: 'column',
+        style: { inline: { gap: '2mm', height: '40mm' } },
+        children: [row, ...footer],
+      }
+    : row;
+  return {
     kind: 'invoice-template-ast',
     version: TEMPLATE_AST_VERSION,
     metadata: {
@@ -66,23 +98,9 @@ const label = (name: string, left: Node[], right: Node[]): TemplateAst =>
       printSettings: { paperPreset: 'Letter', marginMm: 3, customPageSize: { width: 4, height: 2, unit: 'in' } },
     },
     bindings: buildLabelTemplateBindings(),
-    layout: {
-      id: 'root',
-      type: 'document',
-      children: [
-        {
-          id: 'label',
-          type: 'stack',
-          direction: 'row',
-          style: { inline: { gap: '3mm', alignItems: 'center', justifyContent: 'space-between', height: '44mm' } },
-          children: [
-            { id: 'label-text', type: 'stack', direction: 'column', style: { inline: { gap: '1mm', flex: '1 1 0', minWidth: '0' } }, children: left },
-            { id: 'label-code', type: 'stack', direction: 'column', style: { inline: { gap: '1mm', alignItems: 'center' } }, children: right },
-          ],
-        },
-      ],
-    },
-  }) as unknown as TemplateAst;
+    layout: { id: 'root', type: 'document', children: [content] },
+  } as unknown as TemplateAst;
+};
 
 const buildTicketWorkTag = (): TemplateAst =>
   label(
@@ -105,11 +123,11 @@ const buildAssetLabel = (name: string, withCode128: boolean): TemplateAst =>
     [
       brandLine(),
       text('asset-tag', 'identifier', { fontSize: '22px', fontWeight: 800, fontFamily: 'monospace' }),
-      text('asset-name', 'title', { fontSize: '12px', fontWeight: 600, lineHeight: 1.2, maxHeight: '14mm' }),
+      text('asset-name', 'title', { fontSize: '12px', fontWeight: 600, lineHeight: 1.2, maxHeight: withCode128 ? '8mm' : '14mm' }),
       text('client', 'clientName', { fontSize: '11px', lineHeight: 1.2 }),
-      ...(withCode128 ? [code128('code128')] : []),
     ],
-    [qr('qr', withCode128 ? '30mm' : '34mm')],
+    [qr('qr', withCode128 ? '26mm' : '34mm')],
+    withCode128 ? [code128('code128')] : [],
   );
 
 const buildStockUnitLabel = (): TemplateAst =>

@@ -12,7 +12,7 @@ import { renderEvaluatedTemplateAst } from '../react-renderer';
 
 const URL_VALUE = 'https://psa.example.com/msp/tickets/6f1c2b1e-0b57-4a53-9d77-2f0f4d9f1a11';
 
-const astWith = (symbology: 'qr' | 'code128', value: unknown, width?: string): TemplateAst =>
+const astWith = (symbology: 'qr' | 'code128', value: unknown, width?: string, height?: string): TemplateAst =>
   ({
     kind: 'invoice-template-ast',
     version: 1,
@@ -25,7 +25,7 @@ const astWith = (symbology: 'qr' | 'code128', value: unknown, width?: string): T
           type: 'barcode',
           symbology,
           value: { type: 'literal', value },
-          ...(width ? { style: { inline: { width } } } : {}),
+          ...(width || height ? { style: { inline: { ...(width ? { width } : {}), ...(height ? { height } : {}) } } } : {}),
         },
       ],
     },
@@ -107,5 +107,48 @@ describe('barcode rendering', () => {
   });
   it('throws when a prepass was supplied but missed a node', async () => {
     await expect(renderEvaluatedTemplateAst(astWith('qr', URL_VALUE), evaluation, { barcodes: {} })).rejects.toThrow(/prepass/);
+  });
+});
+
+describe('barcode height (1D)', () => {
+  const attr = (svg: string, name: string) => svg.match(new RegExp(`<svg[^>]* ${name}="([^"]*)"`))![1];
+
+  it('Code 128 emits the declared mm height, stretches vertically only and never squeezes', async () => {
+    const svg = (await renderBarcodeSvgs(astWith('code128', 'AT-000123', '60mm', '9mm'), evaluation)).code;
+    expect(attr(svg, 'height')).toBe('9mm');
+    expect(attr(svg, 'width')).toBe('60mm');
+    expect(attr(svg, 'preserveAspectRatio')).toBe('none');
+    expect(svg).not.toContain('height:auto');
+    expect(svg).not.toContain('max-width');
+  });
+
+  it('module width does not depend on the height', async () => {
+    const tall = (await renderBarcodeSvgs(astWith('code128', 'AT-000123', '60mm', '20mm'), evaluation)).code;
+    const short = (await renderBarcodeSvgs(astWith('code128', 'AT-000123', '60mm', '5mm'), evaluation)).code;
+    const natural = (await renderBarcodeSvgs(astWith('code128', 'AT-000123', '60mm'), evaluation)).code;
+    const modulesAcross = (svg: string) => viewBox(svg)[0];
+    expect(modulesAcross(tall)).toBe(modulesAcross(short));
+    expect(modulesAcross(tall)).toBe(modulesAcross(natural));
+    expect(attr(tall, 'width')).toBe(attr(short, 'width'));
+  });
+
+  it('without a declared height falls back to the module-ratio height', async () => {
+    const svg = (await renderBarcodeSvgs(astWith('code128', 'AT-000123', '60mm'), evaluation)).code;
+    const [w, h] = viewBox(svg);
+    expect(attr(svg, 'height')).toBe(`${+((60 * h) / w).toFixed(3)}mm`);
+    expect(svg).not.toContain('preserveAspectRatio');
+  });
+
+  it('still refuses a Code 128 narrower than the minimum module, whatever the height', async () => {
+    await expect(renderBarcodeSvgs(astWith('code128', 'REVIEW-NINJA-WS01', '40mm', '9mm'), evaluation)).rejects.toMatchObject({
+      code: 'too-small',
+    });
+  });
+
+  it('QR ignores a declared height: square, uniform scaling, never preserveAspectRatio none', async () => {
+    const svg = (await renderBarcodeSvgs(astWith('qr', URL_VALUE, '1in', '5mm'), evaluation)).code;
+    expect(attr(svg, 'width')).toBe(attr(svg, 'height'));
+    expect(svg).not.toContain('preserveAspectRatio');
+    expect(svg).toContain('max-width:100%;height:auto');
   });
 });

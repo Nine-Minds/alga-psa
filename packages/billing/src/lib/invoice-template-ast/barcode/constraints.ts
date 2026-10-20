@@ -82,12 +82,31 @@ export const resolveBarcodeSizing = (
 
 const xmlEscape = (value: string): string => value.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
 
-const svgOpen = (width: number, height: number, widthMm: number, label: string): string => {
-  const heightMm = (widthMm * height) / width;
+/**
+ * 2D (QR) symbols stay square and scale uniformly: `height:auto` + `max-width:100%` keeps the aspect ratio.
+ * 1D (Code 128) symbols are only meaningful in the horizontal axis, so when the node declares a height the SVG
+ * is emitted at exactly that mm height with `preserveAspectRatio="none"` (bars stretch vertically only).
+ * Squeeze rule for 1D: `max-width:100%` is NOT emitted, so a narrow container can never shrink the module width
+ * below what `resolveBarcodeSizing` validated; an over-wide symbol overflows (and is clipped) instead of
+ * silently becoming unscannable. `preserveAspectRatio="none"` is never used for QR.
+ */
+const svgOpen = (
+  width: number,
+  height: number,
+  widthMm: number,
+  label: string,
+  symbology: BarcodeSymbology,
+  declaredHeightMm: number | null = null
+): string => {
+  const oneD = symbology === 'code128';
+  const heightMm = oneD && declaredHeightMm != null ? declaredHeightMm : (widthMm * height) / width;
+  const fixedHeight = oneD && declaredHeightMm != null;
+  const style = oneD ? 'display:block' : 'display:block;max-width:100%;height:auto';
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" ` +
-    `width="${+widthMm.toFixed(3)}mm" height="${+heightMm.toFixed(3)}mm" ` +
-    `shape-rendering="crispEdges" role="img" aria-label="${xmlEscape(label)}" style="display:block;max-width:100%;height:auto">` +
+    `width="${+widthMm.toFixed(3)}mm" height="${+heightMm.toFixed(3)}mm"` +
+    `${fixedHeight ? ' preserveAspectRatio="none"' : ''} ` +
+    `shape-rendering="crispEdges" role="img" aria-label="${xmlEscape(label)}" style="${style}">` +
     `<rect width="${width}" height="${height}" fill="#fff"/>`
   );
 };
@@ -111,14 +130,20 @@ export const qrMatrixToSvg = (rows: boolean[][], declaredWidthMm: number | null,
       path += `M${start + quiet} ${y + quiet}h${x - start}v1h-${x - start}z`;
     }
   }
-  return `${svgOpen(total, total, widthMm, label)}<path fill="#000" d="${path}"/></svg>`;
+  return `${svgOpen(total, total, widthMm, label, 'qr')}<path fill="#000" d="${path}"/></svg>`;
 };
 
 /**
  * Code 128 symbol from bwip-js `raw` widths: alternating bar, space, bar... in modules, starting
- * with a bar. The bar height follows the 15%-of-length rule with a floor, so it scales with the width.
+ * with a bar. Printed height is `declaredHeightMm` when the node declares one; otherwise the natural
+ * height is 30% of the symbol length (floor 30 modules), so it scales with the width.
  */
-export const code128BarsToSvg = (widths: number[], declaredWidthMm: number | null, label: string): string => {
+export const code128BarsToSvg = (
+  widths: number[],
+  declaredWidthMm: number | null,
+  label: string,
+  declaredHeightMm: number | null = null
+): string => {
   const quiet = BARCODE_QUIET_ZONE_MODULES.code128;
   const symbolModules = widths.reduce((sum, w) => sum + w, 0);
   const total = symbolModules + quiet * 2;
@@ -130,5 +155,5 @@ export const code128BarsToSvg = (widths: number[], declaredWidthMm: number | nul
     if (index % 2 === 0) path += `M${x} 0h${w}v${height}h-${w}z`;
     x += w;
   });
-  return `${svgOpen(total, height, widthMm, label)}<path fill="#000" d="${path}"/></svg>`;
+  return `${svgOpen(total, height, widthMm, label, 'code128', declaredHeightMm)}<path fill="#000" d="${path}"/></svg>`;
 };

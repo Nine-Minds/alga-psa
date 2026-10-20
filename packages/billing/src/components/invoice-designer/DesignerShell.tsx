@@ -1890,6 +1890,20 @@ export const DesignerShell: React.FC = () => {
 
     if (selectedNode.type === 'barcode') {
       const symbology = metadata.symbology === 'code128' ? 'code128' : 'qr';
+      // Code 128 is a wide 1D strip (~95 x 12 mm at 96 px/in), QR a square. Auto-generated layer names
+      // ("Barcode / QR code 2" <-> "Code 128 2") follow the symbology; a name the user set is kept.
+      const switchBarcodeSymbology = (next: 'qr' | 'code128') => {
+        if (next === symbology) return;
+        const is1d = next === 'code128';
+        resizeNode(selectedNode.id, is1d ? { width: 359, height: 45 } : { width: 140, height: 140 }, false);
+        if (is1d) unsetNodeProp(selectedNode.id, 'style.aspectRatio', false);
+        else setNodeProp(selectedNode.id, 'style.aspectRatio', '1 / 1', false);
+        const autoName = /^(Barcode \/ QR code|Code 128)(?: (\d+))?$/.exec(getNodeName(selectedNode));
+        if (autoName) {
+          setNodeProp(selectedNode.id, 'name', `${is1d ? 'Code 128' : 'Barcode / QR code'}${autoName[2] ? ` ${autoName[2]}` : ''}`, false);
+        }
+        applyMetadata({ symbology: next }, true);
+      };
       return (
         <div className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2">
           <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.barcode', { defaultValue: 'Barcode' })}</p>
@@ -1901,7 +1915,7 @@ export const DesignerShell: React.FC = () => {
               id="designer-barcode-symbology"
               showPlaceholderInDropdown={false}
               value={symbology}
-              onValueChange={(value) => applyMetadata({ symbology: value === 'code128' ? 'code128' : 'qr' }, true)}
+              onValueChange={(value) => switchBarcodeSymbology(value === 'code128' ? 'code128' : 'qr')}
               options={[
                 { value: 'qr', label: t('designer.inspector.barcodeQr', { defaultValue: 'QR code' }) },
                 { value: 'code128', label: t('designer.inspector.barcodeCode128', { defaultValue: 'Code 128' }) },

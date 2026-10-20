@@ -45,10 +45,11 @@ export const renderBarcodeSvgs = async (
         throw new BarcodeError('empty-value', 'Barcode value is empty');
       }
       const declaredWidthMm = cssLengthToMm(node.style?.inline?.width);
+      const declaredHeightMm = cssLengthToMm(node.style?.inline?.height);
       svgs[node.id] =
         node.symbology === 'qr'
           ? qrMatrixToSvg(await encoders.encodeQr(value), declaredWidthMm, `QR code`)
-          : code128BarsToSvg(await encoders.encodeCode128(value), declaredWidthMm, `Code 128 barcode`);
+          : code128BarsToSvg(await encoders.encodeCode128(value), declaredWidthMm, `Code 128 barcode`, declaredHeightMm);
     } catch (error) {
       if (error instanceof BarcodeError) {
         throw new BarcodeError(error.code, `Barcode "${node.id}": ${error.message}`);
