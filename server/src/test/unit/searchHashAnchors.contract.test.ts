@@ -62,7 +62,7 @@ describe('app-wide search hash-anchor contracts', () => {
     const indexerSource = readRepoFile('packages/search/src/indexers/ticket_comment.ts');
     const commentItemSource = readRepoFile('packages/tickets/src/components/ticket/CommentItem.tsx');
 
-    expect(indexerSource).toContain('url: `/msp/tickets/${row.ticket_id}#comment-${row.comment_id}`');
+    expect(indexerSource).toContain("url: `${recordPath('ticket', row.ticket_id)}#comment-${row.comment_id}`");
     expect(indexerSource).toContain("parentType: 'ticket'");
     expect(indexerSource).toContain('body: resolveCommentBody(row)');
     expect(commentItemSource).toContain('const expectedHash = `#comment-${conversation.comment_id}`');

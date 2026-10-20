@@ -4,6 +4,7 @@ import type { TemplateAst } from '@alga-psa/types';
 import type { TemplateEvaluationResult } from './evaluator';
 import { renderEvaluatedTemplateAst } from './react-renderer';
 import { localizeTemplateAstForLocale } from './i18nLabels';
+import { resolveCustomPageCssFromAst } from './printSettings';
 import { StorageProviderFactory, FileStoreModel } from '@alga-psa/storage';
 
 const escapeHtml = (value: string): string =>
@@ -103,13 +104,20 @@ export const renderTemplateAstHtmlDocument = async (
   options: TemplateHtmlDocumentOptions = {}
 ): Promise<string> => {
   const { ast: localizedAst, locale, t } = await localizeTemplateAstForLocale(ast, options.locale);
+  // Barcode prepass: async + server-only (qrcode / bwip-js are dynamically imported, never bundled
+  // for the client). Skipped entirely, with no library load, when the template has no barcode node.
+  const { renderBarcodeSvgs } = await import('./barcode/prepass.server');
+  const barcodes = await renderBarcodeSvgs(localizedAst, evaluation, { locale });
   const { html, css } = await renderEvaluatedTemplateAst(localizedAst, evaluation, {
+    barcodes,
     locale,
     dateFormat: options.dateFormat,
     t,
   });
   const title = escapeHtml(options.title ?? 'Invoice');
-  const additionalCss = options.additionalCss ?? '';
+  // Custom page size: emit a real @page rule (preferCSSPageSize makes Chromium honour it).
+  const customPageCss = resolveCustomPageCssFromAst(ast);
+  const additionalCss = [customPageCss, options.additionalCss].filter(Boolean).join('\n');
   const bodyClassName = options.bodyClassName ? ` class="${escapeHtml(options.bodyClassName)}"` : '';
 
   // When Puppeteer renders HTML via page.setContent(), the page origin is about:blank.

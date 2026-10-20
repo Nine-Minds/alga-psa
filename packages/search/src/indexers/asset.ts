@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import { flattenJsonbPayload } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
+import { recordPath } from '@alga-psa/types';
 
 interface AssetSearchRow {
   asset_id: string;
@@ -37,7 +38,8 @@ function toSearchDoc(tenant: string, row: AssetSearchRow): SearchDoc {
     title: row.name,
     subtitle: compactJoin([row.asset_tag, row.serial_number]),
     body,
-    url: `/msp/assets/${row.asset_id}`,
+    // LEVERAGE: pattern record-links — URL comes from the shared recordPath resolver (@alga-psa/types), not an inline template.
+    url: recordPath('asset', row.asset_id),
     metadata: identifier ? { identifier } : undefined,
     acl: {
       requiredPermission: 'asset:read',

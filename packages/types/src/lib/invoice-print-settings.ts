@@ -16,9 +16,31 @@ export interface InvoicePaperPresetDefinition {
   heightPx: number;
 }
 
+export const CUSTOM_PAGE_SIZE_UNITS = ['in', 'mm'] as const;
+
+export type CustomPageSizeUnit = (typeof CUSTOM_PAGE_SIZE_UNITS)[number];
+
+/**
+ * An explicit page size (labels, tags, odd stock). When set it replaces the preset's dimensions;
+ * `paperPreset` stays on the settings as the fallback for consumers that only understand presets.
+ */
+export interface CustomPageSize {
+  width: number;
+  height: number;
+  unit: CustomPageSizeUnit;
+}
+
+/** Bounds, in millimetres, for either side of a custom page. 10 mm covers the smallest roll labels. */
+export const CUSTOM_PAGE_SIZE_MM_RANGE = {
+  min: 10,
+  max: 1200,
+} as const;
+
 export interface TemplatePrintSettings {
   paperPreset: InvoicePaperPresetId;
   marginMm: number;
+  /** Optional and additive: absent means the preset's dimensions apply, exactly as before. */
+  customPageSize?: CustomPageSize;
 }
 
 export interface InvoicePrintResolutionInput {
@@ -41,7 +63,12 @@ export interface ResolvedTemplatePrintSettings extends TemplatePrintSettings {
 }
 
 export interface InvoicePdfPrintOptions {
-  format: InvoicePaperPresetId;
+  /** Preset paper. Omitted for a custom page size, which is emitted as `width`/`height`. */
+  format?: InvoicePaperPresetId;
+  /** CSS length (e.g. `4in`), set only for a custom page size. */
+  width?: string;
+  /** CSS length (e.g. `2in`), set only for a custom page size. */
+  height?: string;
   margin: {
     top: string;
     right: string;
@@ -64,6 +91,39 @@ export const millimetersToPixels = (millimeters: number): number =>
 
 export const pixelsToMillimeters = (pixels: number): number =>
   (pixels / DESIGNER_DPI) * MM_PER_INCH;
+
+export const customPageSizeToMm = (size: CustomPageSize): { widthMm: number; heightMm: number } => {
+  const factor = size.unit === 'in' ? MM_PER_INCH : 1;
+  return { widthMm: size.width * factor, heightMm: size.height * factor };
+};
+
+/** Returns a human-readable problem with `size`, or null when it is usable. */
+export const validateCustomPageSize = (size: unknown): string | null => {
+  if (typeof size !== 'object' || size === null) {
+    return 'Custom page size must be an object with width, height and unit.';
+  }
+  const { width, height, unit } = size as Partial<CustomPageSize>;
+  if (unit !== 'in' && unit !== 'mm') {
+    return "Custom page size unit must be 'in' or 'mm'.";
+  }
+  if (typeof width !== 'number' || typeof height !== 'number' || !Number.isFinite(width) || !Number.isFinite(height)) {
+    return 'Custom page size width and height must be numbers.';
+  }
+  const { widthMm, heightMm } = customPageSizeToMm({ width, height, unit });
+  const { min, max } = CUSTOM_PAGE_SIZE_MM_RANGE;
+  if (widthMm < min || heightMm < min || widthMm > max || heightMm > max) {
+    return `Custom page size must be between ${min} mm and ${max} mm on each side.`;
+  }
+  return null;
+};
+
+const normalizeCustomPageSize = (size: unknown): CustomPageSize | null => {
+  if (validateCustomPageSize(size) !== null) {
+    return null;
+  }
+  const { width, height, unit } = size as CustomPageSize;
+  return { width: roundToTwoDecimals(width), height: roundToTwoDecimals(height), unit };
+};
 
 const createPaperPreset = (
   id: InvoicePaperPresetId,
@@ -127,9 +187,15 @@ export const normalizeTemplatePrintSettings = (
     return null;
   }
 
+  // An unusable custom size is dropped (the preset still applies) rather than failing the whole
+  // settings object: this parses persisted data, and the designer reports the problem via
+  // validateCustomPageSize at edit time.
+  const customPageSize = normalizeCustomPageSize(value?.customPageSize);
+
   return {
     paperPreset: preset.id,
     marginMm: clampInvoiceMarginMm(marginMm),
+    ...(customPageSize ? { customPageSize } : {}),
   };
 };
 
@@ -161,8 +227,9 @@ const createResolvedTemplatePrintSettings = (
 ): ResolvedTemplatePrintSettings => {
   const preset = INVOICE_PAPER_PRESET_REGISTRY[settings.paperPreset];
   const marginPx = overrides?.marginPx ?? Math.round(millimetersToPixels(settings.marginMm));
-  const pageWidthPx = overrides?.pageWidthPx ?? preset.widthPx;
-  const pageHeightPx = overrides?.pageHeightPx ?? preset.heightPx;
+  const custom = settings.customPageSize ? customPageSizeToMm(settings.customPageSize) : null;
+  const pageWidthPx = overrides?.pageWidthPx ?? (custom ? Math.round(millimetersToPixels(custom.widthMm)) : preset.widthPx);
+  const pageHeightPx = overrides?.pageHeightPx ?? (custom ? Math.round(millimetersToPixels(custom.heightMm)) : preset.heightPx);
 
   return {
     ...settings,
@@ -239,6 +306,20 @@ export const resolveInvoicePdfPrintOptions = (
   // padding), use them as Puppeteer margins.  When they were inferred from the
   // page section's CSS padding, the padding is already in the HTML — setting
   // Puppeteer margins too would double-count and push content to extra pages.
+  const customPageSize = resolved.source === 'explicit' ? resolved.customPageSize : undefined;
+  if (customPageSize) {
+    // A custom page is sized by the document's own @page rule (see resolveCustomPageCss), which
+    // also owns the margin; Chromium is told to honour it, and the same width/height is passed so
+    // the two can never disagree. Margins are therefore not repeated here.
+    return {
+      width: `${customPageSize.width}${customPageSize.unit}`,
+      height: `${customPageSize.height}${customPageSize.unit}`,
+      margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
+      printBackground: true,
+      preferCSSPageSize: true,
+    };
+  }
+
   const hasCssPadding = Number.isFinite(input?.pagePaddingPx) && (input?.pagePaddingPx ?? 0) > 0;
   const useExplicitMargin = resolved.source === 'explicit' && !hasCssPadding;
   const marginStr = useExplicitMargin ? `${roundToTwoDecimals(resolved.marginMm)}mm` : '0mm';
@@ -253,4 +334,20 @@ export const resolveInvoicePdfPrintOptions = (
     },
     printBackground: true,
   };
+};
+
+/**
+ * The `@page` rule for a custom page size, or null for preset paper (whose output must not change).
+ * Emitted into the rendered HTML so the browser print path and Puppeteer's `preferCSSPageSize`
+ * agree on the page box and its margin.
+ */
+export const resolveCustomPageCss = (
+  input: InvoicePrintResolutionInput | null | undefined
+): string | null => {
+  const resolved = resolveTemplatePrintSettings(input);
+  const size = resolved.source === 'explicit' ? resolved.customPageSize : undefined;
+  if (!size) {
+    return null;
+  }
+  return `@page { size: ${size.width}${size.unit} ${size.height}${size.unit}; margin: ${roundToTwoDecimals(resolved.marginMm)}mm; }`;
 };

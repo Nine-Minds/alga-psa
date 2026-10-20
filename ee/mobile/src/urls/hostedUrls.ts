@@ -1,3 +1,5 @@
+import { recordPath } from "./recordLinks";
+
 export function buildHostedPathUrl(baseUrl: string, path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return new URL(normalizedPath, baseUrl).toString();
@@ -13,7 +15,7 @@ export function tryBuildHostedPathUrl(baseUrl: string | null, path: string): str
 }
 
 export function buildTicketWebUrl(baseUrl: string, ticketId: string): string {
-  const safeId = encodeURIComponent(ticketId);
-  return buildHostedPathUrl(baseUrl, `/msp/tickets/${safeId}`);
+  // LEVERAGE: pattern record-links — path comes from the verbatim copy of packages/types recordLinks.ts.
+  return buildHostedPathUrl(baseUrl, recordPath("ticket", ticketId));
 }
 

@@ -1,4 +1,5 @@
 import {
+  resolveCustomPageCss,
   resolveInvoicePdfPrintOptions,
   resolveTemplatePrintSettings,
   type InvoicePdfPrintOptions,
@@ -63,3 +64,7 @@ export const resolvePdfPrintOptionsFromAst = (
   ast: TemplateAst | null | undefined
 ): InvoicePdfPrintOptions => resolveInvoicePdfPrintOptions(resolvePrintResolutionInputFromAst(ast));
 
+
+/** The `@page` rule for a custom page size, or null for preset paper. */
+export const resolveCustomPageCssFromAst = (ast: TemplateAst | null | undefined): string | null =>
+  resolveCustomPageCss(resolvePrintResolutionInputFromAst(ast));

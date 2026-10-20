@@ -11,6 +11,9 @@ export default defineConfig({
     include: [
       'tests/**/*.test.ts',
       'tests/**/*.test.tsx',
+      'src/lib/invoice-template-ast/printSettings.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.roundtrip.nodes.test.ts',
+      'src/lib/invoice-template-ast/barcode/barcode.test.ts',
       'src/actions/projectBillingActions.contract.test.ts',
       'src/actions/invoiceEmailBrandLogo.contract.test.ts',
       'src/lib/prepaidBalanceAlerts.test.ts',

@@ -53,6 +53,7 @@ export type TemplateNodeType =
   | 'field'
   | 'image'
   | 'divider'
+  | 'barcode'
   | 'table'
   | 'dynamic-table'
   | 'totals';
@@ -137,6 +138,21 @@ export interface TemplateImageNode extends TemplateNodeBase {
 
 export interface TemplateDividerNode extends TemplateNodeBase {
   type: 'divider';
+  children?: never;
+}
+
+export type TemplateBarcodeSymbology = 'qr' | 'code128';
+
+/**
+ * A machine-readable code. `value` is encoded as-is; rendering is an async server prepass into an
+ * SVG string keyed by node id (the synchronous shared renderer only inlines it). Quiet zone
+ * (QR >= 4 modules, Code 128 >= 10) and a minimum module size are enforced there, and a value that
+ * cannot be encoded or cannot fit at the node's width fails the render with a clear error.
+ */
+export interface TemplateBarcodeNode extends TemplateNodeBase {
+  type: 'barcode';
+  symbology: TemplateBarcodeSymbology;
+  value: TemplateValueExpression;
   children?: never;
 }
 
@@ -237,6 +253,7 @@ export type TemplateNode =
   | TemplateFieldNode
   | TemplateImageNode
   | TemplateDividerNode
+  | TemplateBarcodeNode
   | TemplateTableNode
   | TemplateDynamicTableNode
   | TemplateTotalsNode;
