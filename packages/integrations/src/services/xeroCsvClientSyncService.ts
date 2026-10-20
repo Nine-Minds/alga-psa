@@ -12,14 +12,58 @@
 
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, registerAfterCommit, tenantDb } from '@alga-psa/db';
 import { unparseCSV, parseCSV } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
 import type { IClient, IClientLocation } from '@alga-psa/types';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildClientCreatedPayload,
+  buildClientLocationCreatedPayload,
+  buildClientLocationUpdatedPayload,
+} from '@alga-psa/workflow-streams';
 import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 
 const ADAPTER_TYPE = 'xero_csv';
+
+// LEVERAGE: pattern client-location-event-publish — this package cannot import @alga-psa/clients
+// (it would be circular), so it re-states the after-commit publish that
+// packages/clients/src/lib/clientLocationEvents.ts owns for every other client_locations writer.
+function queueXeroLocationCreated(trx: Knex.Transaction, tenant: string, userId: string | undefined, location: IClientLocation): void {
+  const occurredAt = new Date().toISOString();
+  registerAfterCommit(trx, () => publishWorkflowEvent({
+    eventType: 'CLIENT_LOCATION_CREATED',
+    payload: buildClientLocationCreatedPayload({
+      locationId: location.location_id,
+      clientId: location.client_id,
+      isDefault: Boolean(location.is_default),
+      createdByUserId: userId,
+      createdAt: occurredAt,
+    }),
+    ctx: { tenantId: tenant, occurredAt, ...(userId ? { actor: { actorType: 'USER' as const, actorUserId: userId } } : {}) },
+    idempotencyKey: `client_location_created:${location.location_id}`,
+  }), `CLIENT_LOCATION_CREATED location=${location.location_id}`);
+}
+
+function queueXeroLocationUpdated(trx: Knex.Transaction, tenant: string, userId: string | undefined, before: IClientLocation, after: IClientLocation): void {
+  const occurredAt = new Date().toISOString();
+  const payload = buildClientLocationUpdatedPayload({
+    locationId: after.location_id,
+    clientId: after.client_id,
+    before: before as unknown as Record<string, unknown>,
+    after: after as unknown as Record<string, unknown>,
+    updatedByUserId: userId,
+    updatedAt: occurredAt,
+  });
+  if (!((payload as { updatedFields?: string[] }).updatedFields ?? []).length) return;
+  registerAfterCommit(trx, () => publishWorkflowEvent({
+    eventType: 'CLIENT_LOCATION_UPDATED',
+    payload,
+    ctx: { tenantId: tenant, occurredAt, ...(userId ? { actor: { actorType: 'USER' as const, actorUserId: userId } } : {}) },
+    idempotencyKey: `client_location_updated:${after.location_id}:${occurredAt}`,
+  }), `CLIENT_LOCATION_UPDATED location=${after.location_id}`);
+}
 
 /**
  * Xero Contacts CSV export row structure.
@@ -574,7 +618,7 @@ export class XeroCsvClientSyncService {
 
               // Update location if we have address data
               if (contact.addressLine1 || contact.phone) {
-                await this.updateClientLocation(trx, tenant, matchedClient.client_id, contact);
+                await this.updateClientLocation(trx, tenant, matchedClient.client_id, contact, userId);
               }
 
               // Create/update mapping
@@ -734,11 +778,24 @@ export class XeroCsvClientSyncService {
       clientId,
     });
 
+    registerAfterCommit(trx, () => publishWorkflowEvent({
+      eventType: 'CLIENT_CREATED',
+      payload: buildClientCreatedPayload({
+        clientId,
+        clientName: contact.contactName,
+        createdByUserId: userId,
+        createdAt: now,
+        status: 'active',
+      }),
+      ctx: { tenantId: tenant, occurredAt: now, actor: { actorType: 'USER' as const, actorUserId: userId } },
+      idempotencyKey: `client_created:${clientId}`,
+    }), `CLIENT_CREATED client=${clientId}`);
+
     // Create default location if we have address data
     if (contact.addressLine1 || contact.phone || contact.email) {
       const locationId = await trx.raw('SELECT gen_random_uuid() as id').then(r => r.rows[0].id);
 
-      await db.table('client_locations').insert({
+      const [insertedLocation] = await db.table('client_locations').insert({
         tenant,
         location_id: locationId,
         client_id: clientId,
@@ -757,7 +814,8 @@ export class XeroCsvClientSyncService {
         is_active: true,
         created_at: now,
         updated_at: now
-      });
+      }).returning('*');
+      queueXeroLocationCreated(trx, tenant, userId, insertedLocation);
     }
 
     return clientId;
@@ -770,7 +828,8 @@ export class XeroCsvClientSyncService {
     trx: Knex.Transaction,
     tenant: string,
     clientId: string,
-    contact: ParsedXeroContact
+    contact: ParsedXeroContact,
+    userId?: string
   ): Promise<void> {
     const now = new Date().toISOString();
     const db = tenantDb(trx, tenant);
@@ -795,14 +854,16 @@ export class XeroCsvClientSyncService {
     if (contact.email) locationData.email = contact.email;
 
     if (existingLocation) {
-      await db.table('client_locations')
+      const [updatedLocation] = await db.table('client_locations')
         .where('location_id', existingLocation.location_id)
-        .update(locationData);
+        .update(locationData)
+        .returning('*');
+      queueXeroLocationUpdated(trx, tenant, userId, existingLocation as unknown as IClientLocation, updatedLocation);
     } else {
       // Create a new default location
       const locationId = await trx.raw('SELECT gen_random_uuid() as id').then(r => r.rows[0].id);
 
-      await db.table('client_locations').insert({
+      const [insertedLocation] = await db.table('client_locations').insert({
         tenant,
         location_id: locationId,
         client_id: clientId,
@@ -821,7 +882,8 @@ export class XeroCsvClientSyncService {
         is_active: true,
         created_at: now,
         updated_at: now
-      });
+      }).returning('*');
+      queueXeroLocationCreated(trx, tenant, userId, insertedLocation);
     }
   }
 

@@ -8,6 +8,7 @@ import { hashPassword } from '@alga-psa/core/encryption';
 import { randomUUID } from 'crypto';
 import { isValidEmail } from '@alga-psa/core';
 import { createClient as createClientInternal } from '@alga-psa/clients/actions/clientActions';
+import { queueClientLocationCreated, queueClientLocationUpdated } from '@alga-psa/clients/lib/clientLocationEvents';
 import { createClientContact } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { persistTenantOnboardingProgress } from '@alga-psa/tenancy/server';
@@ -196,14 +197,16 @@ export const saveClientInfo = withAuth(async (
 
           const defaultLocation = await tenantDb(trx, tenant).table('client_locations')
             .where({ client_id: mspClient.client_id, is_default: true })
-            .first('location_id');
+            .first();
 
           if (defaultLocation) {
-            await tenantDb(trx, tenant).table('client_locations')
+            const [updatedLocation] = await tenantDb(trx, tenant).table('client_locations')
               .where({ location_id: defaultLocation.location_id })
-              .update(locationFields);
+              .update(locationFields)
+              .returning('*');
+            queueClientLocationUpdated(trx, tenant, defaultLocation, updatedLocation, { actorUserId: currentUser.user_id });
           } else {
-            await tenantDb(trx, tenant).table('client_locations').insert({
+            const [insertedLocation] = await tenantDb(trx, tenant).table('client_locations').insert({
               location_id: randomUUID(),
               client_id: mspClient.client_id,
               tenant,
@@ -214,7 +217,8 @@ export const saveClientInfo = withAuth(async (
               is_default: true,
               is_active: true,
               created_at: new Date()
-            });
+            }).returning('*');
+            queueClientLocationCreated(trx, tenant, insertedLocation, { actorUserId: currentUser.user_id });
           }
         }
       }
@@ -521,7 +525,7 @@ export const addTeamMembers = withAuth(async (
 });
 
 export const createClient = withAuth(async (
-  _user: IUserWithRoles,
+  currentUser: IUserWithRoles,
   { tenant }: AuthContext,
   data: ClientData
 ): Promise<OnboardingActionResult> => {
@@ -550,13 +554,15 @@ export const createClient = withAuth(async (
           .first();
 
         if (defaultLocation && (data.clientEmail || data.clientPhone)) {
-          await tenantScopedTable('client_locations')
+          const [updatedLocation] = await tenantScopedTable('client_locations')
             .where({ location_id: defaultLocation.location_id })
             .update({
               email: data.clientEmail || defaultLocation.email || '',
               phone: data.clientPhone || defaultLocation.phone || '',
               updated_at: new Date()
-            });
+            })
+            .returning('*');
+          queueClientLocationUpdated(trx, tenant, defaultLocation, updatedLocation, { actorUserId: currentUser.user_id });
         }
       });
 
@@ -601,7 +607,7 @@ export const createClient = withAuth(async (
 
       // Create default location with email and phone if provided
       if (data.clientEmail || data.clientPhone) {
-        await tenantScopedTable('client_locations').insert({
+        const [insertedLocation] = await tenantScopedTable('client_locations').insert({
           location_id: require('crypto').randomUUID(),
           client_id: clientId,
           tenant,
@@ -618,7 +624,8 @@ export const createClient = withAuth(async (
           is_active: true,
           created_at: new Date(),
           updated_at: new Date()
-        });
+        }).returning('*');
+        queueClientLocationCreated(trx, tenant, insertedLocation, { actorUserId: currentUser.user_id });
       }
     });
 

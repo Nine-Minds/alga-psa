@@ -2284,7 +2284,8 @@ function OutboundWebhooksSetup() {
         webhookId: formState.webhookId,
         name: formState.name.trim(),
         url: formState.url.trim(),
-        eventTypes: formState.eventTypes as Parameters<typeof upsertWebhook>[0]['eventTypes'],
+        // Stored legacy (retired) names ride along unchanged; the server accepts them only if already on the row.
+        eventTypes: formState.eventTypes,
         customHeaders: parseCustomHeaders(
           formState.customHeadersText,
           (line) => t('security.webhooks.messages.invalidHeaderLine', { line }),
@@ -2482,7 +2483,11 @@ function OutboundWebhooksSetup() {
         <div>
           <div className="font-medium text-gray-900">{webhook.name}</div>
           <div className="mt-1 break-all text-xs text-gray-500">{webhook.url}</div>
-          <div className="mt-1 text-xs text-gray-500">{webhook.eventTypes.join(', ')}</div>
+          <div className="mt-1 text-xs text-gray-500">
+            {webhook.eventTypes.map((eventType) => (eventOptions.includes(eventType)
+              ? eventType
+              : `${eventType} (${t('security.webhooks.form.legacyEventLabel', { defaultValue: 'unsupported' })})`)).join(', ')}
+          </div>
         </div>
       ),
     },
@@ -2543,7 +2548,7 @@ function OutboundWebhooksSetup() {
         </DropdownMenu>
       ),
     },
-  ], [handleDeleteFromRow, handleEditClick, handleToggleActiveFor, handleViewClick, locale, neverLabel, t]);
+  ], [handleDeleteFromRow, handleEditClick, handleToggleActiveFor, eventOptions, handleViewClick, locale, neverLabel, t]);
 
   const handleTablePageSizeChange = useCallback((newPageSize: number) => {
     setTablePageSize(newPageSize);
@@ -2909,6 +2914,11 @@ function ConfigurationTabBody(props: {
   t: TFunc;
 }) {
   const { formState, eventOptions, handleFieldChange, handleEventToggle, t } = props;
+  // Stored names that are not advertised any more (kept inert, never dropped silently).
+  const legacyEventTypes = useMemo(
+    () => formState.eventTypes.filter((eventType) => !eventOptions.includes(eventType)),
+    [formState.eventTypes, eventOptions],
+  );
   return (
     <>
       <p className="text-sm text-gray-600 mb-4">
@@ -2953,6 +2963,27 @@ function ConfigurationTabBody(props: {
               />
             ))}
           </div>
+          {legacyEventTypes.length > 0 && (
+            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3" data-testid="webhook-legacy-events">
+              <div className="text-xs text-amber-800">
+                {t('security.webhooks.form.legacyEventsHelp', {
+                  defaultValue:
+                    'These event types are no longer supported. They are kept on this webhook but never deliver. Uncheck one to remove it.',
+                })}
+              </div>
+              <div className="mt-2 grid gap-1 md:grid-cols-2">
+                {legacyEventTypes.map((eventType) => (
+                  <Checkbox
+                    key={eventType}
+                    id={`webhook-event-legacy-${eventType}`}
+                    label={`${eventType} (${t('security.webhooks.form.legacyEventLabel', { defaultValue: 'unsupported' })})`}
+                    checked={formState.eventTypes.includes(eventType)}
+                    onChange={(event) => handleEventToggle(eventType, event.target.checked)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div>

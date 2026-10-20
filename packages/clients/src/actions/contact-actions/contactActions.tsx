@@ -719,30 +719,29 @@ export const addContact = withAuth(async (
     });
 
     const clientId = (created as any)?.client_id;
-    if (typeof clientId === 'string' && clientId) {
-      const occurredAt = (created as any)?.created_at ?? new Date().toISOString();
-      const actor = maybeUserActor(user);
-      await publishWorkflowEvent({
-        eventType: 'CONTACT_CREATED',
-        payload: buildContactCreatedPayload({
-          contactId: created.contact_name_id,
-          clientId,
-          fullName: created.full_name,
-          email: created.email || undefined,
-          primaryEmailCanonicalType: created.primary_email_canonical_type ?? null,
-          primaryEmailCustomTypeId: created.primary_email_custom_type_id ?? null,
-          primaryEmailType: created.primary_email_type ?? null,
-          additionalEmailAddresses: created.additional_email_addresses ?? [],
-          phoneNumbers: created.phone_numbers,
-          defaultPhoneNumber: created.default_phone_number || undefined,
-          defaultPhoneType: created.default_phone_type || undefined,
-          createdByUserId: user?.user_id,
-          createdAt: occurredAt,
-        }),
-        ctx: { tenantId: tenant, occurredAt, actor },
-        idempotencyKey: `contact_created:${created.contact_name_id}`,
-      });
-    }
+    // Client-less contacts emit too: the webhook layer carries client_id only when present.
+    const occurredAt = (created as any)?.created_at ?? new Date().toISOString();
+    const actor = maybeUserActor(user);
+    await publishWorkflowEvent({
+      eventType: 'CONTACT_CREATED',
+      payload: buildContactCreatedPayload({
+        contactId: created.contact_name_id,
+        clientId,
+        fullName: created.full_name,
+        email: created.email || undefined,
+        primaryEmailCanonicalType: created.primary_email_canonical_type ?? null,
+        primaryEmailCustomTypeId: created.primary_email_custom_type_id ?? null,
+        primaryEmailType: created.primary_email_type ?? null,
+        additionalEmailAddresses: created.additional_email_addresses ?? [],
+        phoneNumbers: created.phone_numbers,
+        defaultPhoneNumber: created.default_phone_number || undefined,
+        defaultPhoneType: created.default_phone_type || undefined,
+        createdByUserId: user?.user_id,
+        createdAt: occurredAt,
+      }),
+      ctx: { tenantId: tenant, occurredAt, actor },
+      idempotencyKey: `contact_created:${created.contact_name_id}`,
+    });
 
     return { success: true, contact: created };
   } catch (err) {
@@ -961,43 +960,42 @@ export const updateContact = withAuth(async (
     const actor = maybeUserActor(user);
     const clientId = (updatedContact as any)?.client_id ?? (updateResult.before as any)?.client_id;
 
-    if (typeof clientId === 'string' && clientId) {
-      const wasInactive = Boolean((updateResult.before as any)?.is_inactive);
-      const isInactive = Boolean((updatedContact as any)?.is_inactive);
-      if (!wasInactive && isInactive) {
-        await publishWorkflowEvent({
-          eventType: 'CONTACT_ARCHIVED',
-          payload: buildContactArchivedPayload({
-            contactId: updatedContact.contact_name_id,
-            clientId,
-            archivedByUserId: user?.user_id,
-            archivedAt: occurredAt,
-          }),
-          ctx: { tenantId: tenant, occurredAt, actor },
-          idempotencyKey: `contact_archived:${updatedContact.contact_name_id}:${occurredAt}`,
-        });
-      }
-
-      const updatedPayload = buildContactUpdatedPayload({
-        contactId: updatedContact.contact_name_id,
-        clientId,
-        before: updateResult.before as any,
-        after: updatedContact as any,
-        updatedFieldKeys: updateResult.updatedFieldKeys ?? [],
-        updatedByUserId: user?.user_id,
-        updatedAt: occurredAt,
+    // Client-less contacts emit too: the webhook layer carries client_id only when present.
+    const wasInactive = Boolean((updateResult.before as any)?.is_inactive);
+    const isInactive = Boolean((updatedContact as any)?.is_inactive);
+    if (!wasInactive && isInactive) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_ARCHIVED',
+        payload: buildContactArchivedPayload({
+          contactId: updatedContact.contact_name_id,
+          clientId,
+          archivedByUserId: user?.user_id,
+          archivedAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `contact_archived:${updatedContact.contact_name_id}:${occurredAt}`,
       });
+    }
 
-      const updatedFields = (updatedPayload as any).updatedFields;
-      const changes = (updatedPayload as any).changes;
-      if ((Array.isArray(updatedFields) && updatedFields.length) || (changes && Object.keys(changes).length)) {
-        await publishWorkflowEvent({
-          eventType: 'CONTACT_UPDATED',
-          payload: updatedPayload,
-          ctx: { tenantId: tenant, occurredAt, actor },
-          idempotencyKey: `contact_updated:${updatedContact.contact_name_id}:${occurredAt}`,
-        });
-      }
+    const updatedPayload = buildContactUpdatedPayload({
+      contactId: updatedContact.contact_name_id,
+      clientId,
+      before: updateResult.before as any,
+      after: updatedContact as any,
+      updatedFieldKeys: updateResult.updatedFieldKeys ?? [],
+      updatedByUserId: user?.user_id,
+      updatedAt: occurredAt,
+    });
+
+    const updatedFields = (updatedPayload as any).updatedFields;
+    const changes = (updatedPayload as any).changes;
+    if ((Array.isArray(updatedFields) && updatedFields.length) || (changes && Object.keys(changes).length)) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_UPDATED',
+        payload: updatedPayload,
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `contact_updated:${updatedContact.contact_name_id}:${occurredAt}`,
+      });
     }
 
     return updatedContact;

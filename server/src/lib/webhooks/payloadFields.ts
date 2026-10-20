@@ -96,12 +96,26 @@ export const WEBHOOK_PROJECT_PAYLOAD_FIELDS = [
 export type WebhookProjectPayloadField = (typeof WEBHOOK_PROJECT_PAYLOAD_FIELDS)[number];
 
 /**
+ * Client/contact/client_location lifecycle events carry ids plus (on `.updated`)
+ * `changed_fields` only; there are no record bodies. The entity's own id
+ * (`client_id`, `contact_id`, `location_id`) is an always-required correlation
+ * key; `client_id` on contact/client_location events is the parent reference
+ * and is selectable like the other optional keys.
+ */
+export const WEBHOOK_CLIENT_PAYLOAD_FIELDS = ['changed_fields'] as const;
+export const WEBHOOK_CONTACT_PAYLOAD_FIELDS = ['client_id', 'changed_fields'] as const;
+export const WEBHOOK_CLIENT_LOCATION_PAYLOAD_FIELDS = ['client_id', 'changed_fields'] as const;
+
+/**
  * Per-entity selectable payload field registry. New entities are added here so
  * validation, OpenAPI docs, UI controls, and runtime projection stay aligned.
  */
 export const WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY = {
   ticket: WEBHOOK_TICKET_PAYLOAD_FIELDS,
   project: WEBHOOK_PROJECT_PAYLOAD_FIELDS,
+  client: WEBHOOK_CLIENT_PAYLOAD_FIELDS,
+  contact: WEBHOOK_CONTACT_PAYLOAD_FIELDS,
+  client_location: WEBHOOK_CLIENT_LOCATION_PAYLOAD_FIELDS,
 } as const satisfies Record<string, readonly string[]>;
 
 export type WebhookPayloadEntity = keyof typeof WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY;
@@ -115,6 +129,9 @@ export type SupportedPayloadField =
 export const ALWAYS_INCLUDED_KEYS_BY_ENTITY = {
   ticket: ['ticket_id'],
   project: ['project_id'],
+  client: ['client_id'],
+  contact: ['contact_id'],
+  client_location: ['location_id'],
 } as const satisfies Record<WebhookPayloadEntity, readonly string[]>;
 
 /**

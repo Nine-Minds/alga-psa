@@ -39,7 +39,7 @@ import {
   buildClientStatusChangedPayload,
   buildClientUpdatedPayload,
 } from '@alga-psa/workflow-streams';
-import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
+import { buildContactPrimarySetPayload, buildContactArchivedPayload } from '@alga-psa/workflow-streams';
 import {
   ensureDefaultContractForClientIfBillingConfigured,
 } from '@alga-psa/shared/billingClients/defaultContract';
@@ -650,6 +650,7 @@ export class ClientService extends BaseService<IClient> {
   async update(id: string, data: UpdateClientData, context: ServiceContext): Promise<IClient> {
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
+      let newlyDeactivatedContactIds: string[] = [];
       const db = tenantDb(trx, context.tenant);
       const before = await db.table('clients')
         .where('client_id', id)
@@ -716,6 +717,12 @@ export class ClientService extends BaseService<IClient> {
 
         const contactIds = contacts.map((c) => c.contact_name_id);
 
+        // Only contacts that were active flip state (and get contact.deactivated).
+        const activeNow = await db.table('contacts')
+          .select('contact_name_id')
+          .where({ client_id: id, is_inactive: false });
+        newlyDeactivatedContactIds = activeNow.map((c) => c.contact_name_id);
+
         // Deactivate all contacts
         await db.table('contacts')
           .where({ client_id: id })
@@ -740,7 +747,7 @@ export class ClientService extends BaseService<IClient> {
         }
       }
 
-      return { before, after: client, updatedFieldKeys };
+      return { before, after: client, updatedFieldKeys, newlyDeactivatedContactIds };
     });
 
     const occurredAt = (result.after as any).updated_at ?? new Date().toISOString();
@@ -819,6 +826,21 @@ export class ClientService extends BaseService<IClient> {
         }),
         ctx: { tenantId: context.tenant, occurredAt, actor },
         idempotencyKey: `client_archived:${id}:${occurredAt}`,
+      });
+    }
+
+    // Contacts the cascade flipped to inactive are real contact.deactivated transitions.
+    for (const contactId of result.newlyDeactivatedContactIds) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_ARCHIVED',
+        payload: buildContactArchivedPayload({
+          contactId,
+          clientId: id,
+          archivedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+          archivedAt: occurredAt,
+        }),
+        ctx: { tenantId: context.tenant, occurredAt, actor },
+        idempotencyKey: `contact_archived:${contactId}:${occurredAt}`,
       });
     }
 
@@ -903,7 +925,7 @@ export class ClientService extends BaseService<IClient> {
           throw new NotFoundError('Client not found');
         }
 
-        return createClientLocation(trx, context.tenant, clientId, data);
+        return createClientLocation(trx, context.tenant, clientId, data, { actorUserId: context.userId });
       });
     } catch (error) {
       throwClientLocationApiError(error);
@@ -921,7 +943,7 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
     try {
       return await withTransaction(knex, (trx) =>
-        updateClientLocation(trx, context.tenant, clientId, locationId, data)
+        updateClientLocation(trx, context.tenant, clientId, locationId, data, { actorUserId: context.userId })
       );
     } catch (error) {
       throwClientLocationApiError(error);
@@ -938,7 +960,7 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
     try {
       await withTransaction(knex, (trx) =>
-        deleteClientLocation(trx, context.tenant, clientId, locationId)
+        deleteClientLocation(trx, context.tenant, clientId, locationId, { actorUserId: context.userId })
       );
     } catch (error) {
       throwClientLocationApiError(error);

@@ -240,3 +240,45 @@ export const contactDeletedEventPayloadSchema = BaseDomainEventPayloadSchema.ext
 }).describe('Payload for CONTACT_DELETED');
 
 export type ContactDeletedEventPayload = z.infer<typeof contactDeletedEventPayloadSchema>;
+
+const clientLocationIdSchema = uuidSchema('Client Location ID');
+
+export const clientLocationCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  locationId: clientLocationIdSchema,
+  clientId: clientIdSchema,
+  isDefault: z.boolean().optional(),
+  createdByUserId: userIdSchema.optional(),
+  createdAt: z.string().datetime().optional(),
+}).describe('Payload for CLIENT_LOCATION_CREATED');
+
+export type ClientLocationCreatedEventPayload = z.infer<typeof clientLocationCreatedEventPayloadSchema>;
+
+export const clientLocationUpdatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  locationId: clientLocationIdSchema,
+  clientId: clientIdSchema,
+  updatedByUserId: userIdSchema.optional(),
+  updatedAt: z.string().datetime().optional(),
+  updatedFields: updatedFieldsSchema,
+  changes: changesSchema,
+}).describe('Payload for CLIENT_LOCATION_UPDATED');
+
+export type ClientLocationUpdatedEventPayload = z.infer<typeof clientLocationUpdatedEventPayloadSchema>;
+
+// Published only when `is_active` flips true -> false. Re-activation is reported as CLIENT_LOCATION_UPDATED.
+export const clientLocationDeactivatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  locationId: clientLocationIdSchema,
+  clientId: clientIdSchema,
+  deactivatedByUserId: userIdSchema.optional(),
+  deactivatedAt: z.string().datetime().optional(),
+}).describe('Payload for CLIENT_LOCATION_DEACTIVATED');
+
+export type ClientLocationDeactivatedEventPayload = z.infer<typeof clientLocationDeactivatedEventPayloadSchema>;
+
+export const clientLocationDeletedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  locationId: clientLocationIdSchema,
+  clientId: clientIdSchema,
+  deletedByUserId: userIdSchema.optional(),
+  deletedAt: z.string().datetime().optional(),
+}).describe('Payload for CLIENT_LOCATION_DELETED');
+
+export type ClientLocationDeletedEventPayload = z.infer<typeof clientLocationDeletedEventPayloadSchema>;

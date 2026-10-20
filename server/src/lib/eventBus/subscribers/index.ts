@@ -27,6 +27,7 @@ import {
   registerProjectBillingPaymentStatusSubscriber,
   unregisterProjectBillingPaymentStatusSubscriber,
 } from './projectBillingPaymentStatusSubscriber';
+import { ENTITY_WEBHOOK_SUBSCRIBERS } from './entityWebhookSubscribers';
 import { registerThreecxPhonebookSubscriber, unregisterThreecxPhonebookSubscriber } from './threecxPhonebookSubscriber';
 
 type SubscriberRegistration = {
@@ -56,6 +57,8 @@ const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'inboundAuthPauseNotification', register: registerInboundAuthPauseNotificationSubscriber },
   { name: 'projectBillingPaymentStatus', register: registerProjectBillingPaymentStatusSubscriber },
   { name: 'threecxPhonebook', register: registerThreecxPhonebookSubscriber },
+  // client / contact / client_location webhooks: one registry-driven subscriber per entity.
+  ...ENTITY_WEBHOOK_SUBSCRIBERS.map((s) => ({ name: `webhook:${s.entity}`, register: () => s.register() })),
 ];
 
 const UNREGISTRATIONS: SubscriberRegistration[] = [
@@ -80,6 +83,7 @@ const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'rmmAlertNotification', register: unregisterRmmAlertNotificationSubscriber },
   { name: 'projectBillingPaymentStatus', register: unregisterProjectBillingPaymentStatusSubscriber },
   { name: 'threecxPhonebook', register: unregisterThreecxPhonebookSubscriber },
+  ...ENTITY_WEBHOOK_SUBSCRIBERS.map((s) => ({ name: `webhook:${s.entity}`, register: () => s.unregister() })),
 ];
 
 // Each subscriber registers in its own try/catch. A transient failure (e.g. a

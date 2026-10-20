@@ -8,7 +8,13 @@ import { ensureDefaultContractForClientIfBillingConfigured } from '../../../../b
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '@alga-psa/event-schemas';
 import { ClientModel } from '../../../../models/clientModel';
-import { buildClientArchivedPayload, buildClientCreatedPayload, buildClientUpdatedPayload } from '../../../streams/domainEventBuilders/clientEventBuilders';
+import {
+  buildClientArchivedPayload,
+  buildClientCreatedPayload,
+  buildClientLocationCreatedPayload,
+  buildClientLocationUpdatedPayload,
+  buildClientUpdatedPayload,
+} from '../../../streams/domainEventBuilders/clientEventBuilders';
 import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { buildInteractionLoggedPayload, buildNoteCreatedPayload } from '../../../streams/domainEventBuilders/crmInteractionNoteEventBuilders';
 import { ticketUpdateStamp } from '../../../../lib/tickets/ticketUpdateStamp';
@@ -327,6 +333,56 @@ async function deactivateClientUsersForClient(tx: TenantTxContext, clientId: str
   }
 }
 
+// LEVERAGE: pattern client-location-event-publish — shared cannot import @alga-psa/clients, so the
+// workflow business operations re-state the location publish that models/clientLocation.ts owns for
+// the UI/REST/applier paths. Unlike those (after-commit), this runs inside the action transaction,
+// matching publishWorkflowDomainEvent's existing best-effort contract for client events here.
+async function publishLocationCreated(
+  tx: TenantTxContext,
+  location: { location_id: string; client_id: string; is_default?: boolean | null }
+): Promise<void> {
+  const occurredAt = new Date().toISOString();
+  await publishWorkflowDomainEvent({
+    eventType: 'CLIENT_LOCATION_CREATED',
+    payload: buildClientLocationCreatedPayload({
+      locationId: location.location_id,
+      clientId: location.client_id,
+      isDefault: Boolean(location.is_default),
+      createdByUserId: tx.actorUserId,
+      createdAt: occurredAt,
+    }),
+    tenantId: tx.tenantId,
+    occurredAt,
+    actorUserId: tx.actorUserId,
+    idempotencyKey: `client_location_created:${location.location_id}`,
+  });
+}
+
+async function publishLocationUpdated(
+  tx: TenantTxContext,
+  before: Record<string, unknown> & { location_id: string; client_id: string },
+  after: Record<string, unknown>
+): Promise<void> {
+  const occurredAt = new Date().toISOString();
+  const payload = buildClientLocationUpdatedPayload({
+    locationId: before.location_id,
+    clientId: before.client_id,
+    before,
+    after,
+    updatedByUserId: tx.actorUserId,
+    updatedAt: occurredAt,
+  });
+  if (!((payload as { updatedFields?: string[] }).updatedFields ?? []).length) return;
+  await publishWorkflowDomainEvent({
+    eventType: 'CLIENT_LOCATION_UPDATED',
+    payload,
+    tenantId: tx.tenantId,
+    occurredAt,
+    actorUserId: tx.actorUserId,
+    idempotencyKey: `client_location_updated:${before.location_id}:${occurredAt}`,
+  });
+}
+
 async function upsertDefaultClientLocation(
   tx: TenantTxContext,
   clientId: string,
@@ -413,6 +469,11 @@ async function upsertDefaultClientLocation(
 
     if (Object.keys(insertRow).length > 0) {
       await tenantScopedTable(tx, 'client_locations').insert(insertRow);
+      await publishLocationCreated(tx, {
+        location_id: insertRow.location_id as string,
+        client_id: clientId,
+        is_default: true,
+      });
     }
     return;
   }
@@ -421,6 +482,7 @@ async function upsertDefaultClientLocation(
     await tenantScopedTable(tx, 'client_locations')
       .where({ client_id: clientId, location_id: location.location_id })
       .update(locationPatch);
+    await publishLocationUpdated(tx, location as any, { ...location, ...locationPatch });
   }
 }
 
@@ -910,6 +972,32 @@ async function publishWorkflowDomainEvent<T extends WorkflowCatalogEventType>(pa
   try {
     const publishers = await import('@alga-psa/event-bus/publishers');
     await publishers.publishWorkflowEvent({
+      eventType: params.eventType,
+      payload: params.payload,
+      ctx: {
+        tenantId: params.tenantId,
+        occurredAt: params.occurredAt,
+        actor: maybeWorkflowActor(params.actorUserId),
+      },
+      idempotencyKey: params.idempotencyKey,
+    });
+  } catch {
+    // Best-effort publication; action persistence/audit remains source of truth.
+  }
+}
+
+// CLIENT_DELETED has no catalog entry (no payload schema), so it goes through the non-catalog publisher.
+async function publishNonCatalogDomainEvent(params: {
+  eventType: 'CLIENT_DELETED';
+  payload: Record<string, unknown>;
+  tenantId: string;
+  occurredAt: string;
+  actorUserId: string;
+  idempotencyKey: string;
+}): Promise<void> {
+  try {
+    const publishers = await import('@alga-psa/event-bus/publishers');
+    await publishers.publishNonCatalogWorkflowEvent({
       eventType: params.eventType,
       payload: params.payload,
       ctx: {
@@ -1617,6 +1705,16 @@ export function registerClientActions(): void {
           details: { action_id: 'clients.delete', action_version: 1, client_id: input.client_id },
         });
 
+        const deletedAt = new Date().toISOString();
+        await publishNonCatalogDomainEvent({
+          eventType: 'CLIENT_DELETED',
+          payload: { clientId: input.client_id, deletedByUserId: tx.actorUserId, deletedAt },
+          tenantId: tx.tenantId,
+          occurredAt: deletedAt,
+          actorUserId: tx.actorUserId,
+          idempotencyKey: `client_deleted:${input.client_id}:${deletedAt}`,
+        });
+
         return { deleted: true, client_id: input.client_id };
       }),
   });
@@ -1697,6 +1795,21 @@ export function registerClientActions(): void {
           rethrowAsStandardError(ctx, error);
         }
 
+        await publishWorkflowDomainEvent({
+          eventType: 'CLIENT_CREATED',
+          payload: buildClientCreatedPayload({
+            clientId: duplicateId,
+            clientName: input.client_name,
+            createdByUserId: tx.actorUserId,
+            createdAt: nowIso,
+            status: Boolean(duplicateRow.is_inactive) ? 'inactive' : 'active',
+          }),
+          tenantId: tx.tenantId,
+          occurredAt: nowIso,
+          actorUserId: tx.actorUserId,
+          idempotencyKey: `client_created:${duplicateId}`,
+        });
+
         try {
           await ensureDefaultContractForClientIfBillingConfigured(tx.trx, {
             tenant: tx.tenantId,
@@ -1755,6 +1868,13 @@ export function registerClientActions(): void {
 
             await tenantScopedTable(tx, 'client_locations').insert(inserts);
             copiedLocations = inserts.length;
+            for (const insert of inserts) {
+              await publishLocationCreated(tx, {
+                location_id: insert.location_id as string,
+                client_id: duplicateId,
+                is_default: Boolean(insert.is_default),
+              });
+            }
           }
         }
 

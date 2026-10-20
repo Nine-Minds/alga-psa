@@ -224,7 +224,7 @@ export const createClientLocation = withAuth(async (
         trx
       );
 
-      return createLocation(trx, tenant, clientId, validatedLocationData);
+      return createLocation(trx, tenant, clientId, validatedLocationData, { actorUserId: user.user_id });
     });
   } catch (error) {
     const expected = clientLocationActionErrorFrom(error);
@@ -289,7 +289,8 @@ export const updateClientLocation = withAuth(async (
         tenant,
         existingLocation.client_id,
         locationId,
-        structural.data
+        structural.data,
+        { actorUserId: user.user_id }
       );
     });
   } catch (error) {
@@ -335,7 +336,7 @@ export const deleteClientLocation = withAuth(async (user, { tenant }, locationId
         trx
       );
 
-      await deleteLocation(trx, tenant, location.client_id, locationId);
+      await deleteLocation(trx, tenant, location.client_id, locationId, { actorUserId: user.user_id });
 
       return location.client_id;
     });
@@ -383,7 +384,7 @@ export const setDefaultClientLocation = withAuth(async (user, { tenant }, locati
         trx
       );
 
-      await updateLocation(trx, tenant, location.client_id, locationId, { is_default: true });
+      await updateLocation(trx, tenant, location.client_id, locationId, { is_default: true }, { actorUserId: user.user_id });
 
       return location.client_id;
     });

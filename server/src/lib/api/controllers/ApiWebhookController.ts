@@ -19,7 +19,6 @@ import {
   webhookSubscriptionSchema,
   webhookTemplateSchema,
   webhookEventSchema,
-  webhookEventTypeSchema,
   webhookRetryFailedSchema,
   webhookSignatureSchema,
   CreateWebhookData,
@@ -56,6 +55,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 import { webhookModel } from '../../webhooks/webhookModel';
+import { WEBHOOK_EVENT_NAMES } from '../../webhooks/eventRegistry';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { verifyWebhookSignature as verifyAlgaWebhookSignature } from '../../webhooks/sign';
 import { signRequest } from '../../webhooks/sign';
@@ -1510,7 +1510,7 @@ export class ApiWebhookController {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
-          const events = [...webhookEventTypeSchema.options];
+          const events = [...WEBHOOK_EVENT_NAMES];
           
           return createSuccessResponse(events);
         });

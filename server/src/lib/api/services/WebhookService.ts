@@ -21,7 +21,7 @@ import {
   EventFilter,
   PayloadTransformation
 } from '../schemas/webhookSchemas';
-import { webhookEventTypeSchema } from '../schemas/webhookSchemas';
+import { disallowedEventTypes } from '../../webhooks/eventRegistry';
 import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
 import { DatabaseService } from './DatabaseService';
 import { PaginatedResponse, SuccessResponse } from '../../types/api';
@@ -77,9 +77,7 @@ export class WebhookService {
     await this.validateWebhookUrl(data.url);
 
     // Validate event types
-    for (const eventType of data.event_types) {
-      await this.validateEventType(eventType);
-    }
+    this.assertEventTypesAllowed(data.event_types, []);
 
     const signingSecret = randomBytes(32).toString('base64url');
     const created = await webhookModel.insert({
@@ -215,10 +213,14 @@ export class WebhookService {
     }
 
     // Validate event types if being updated
-    if (data.event_types) {
-      for (const eventType of data.event_types) {
-        await this.validateEventType(eventType);
-      }
+    // Legacy names already stored on the webhook pass through; names newly added must be registered.
+    // (createUpdateSchema erases the inferred field types, hence the explicit string[] view.)
+    const requestedEventTypes = data.event_types as string[] | undefined;
+    if (requestedEventTypes) {
+      this.assertEventTypesAllowed(
+        requestedEventTypes,
+        ((existing as { event_types?: string[] | null }).event_types ?? []) as string[]
+      );
     }
 
     const updated = {
@@ -233,8 +235,8 @@ export class WebhookService {
     );
 
     // Update event subscriptions if event types changed
-    if (data.event_types) {
-      await this.updateEventSubscriptions(webhookId, data.event_types, tenantId);
+    if (requestedEventTypes) {
+      await this.updateEventSubscriptions(webhookId, requestedEventTypes, tenantId);
     }
 
     // Publish event
@@ -896,9 +898,10 @@ export class WebhookService {
     }
   }
 
-  private async validateEventType(eventType: string): Promise<void> {
-    if (!webhookEventTypeSchema.safeParse(eventType).success) {
-      throw new ValidationError(`Unsupported event type: ${eventType}`);
+  private assertEventTypesAllowed(requested: readonly string[], existing: readonly string[]): void {
+    const rejected = disallowedEventTypes(requested, existing);
+    if (rejected.length > 0) {
+      throw new ValidationError(`Unsupported event type: ${rejected.join(', ')}`);
     }
   }
 

@@ -1,6 +1,12 @@
 import { tenantDb } from '@alga-psa/db';
 import type { IClientLocation } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import {
+  queueClientLocationCreated,
+  queueClientLocationDeleted,
+  queueClientLocationUpdated,
+  type ClientLocationEventOptions,
+} from '../lib/clientLocationEvents';
 
 export type CreateClientLocationInput = Omit<
   IClientLocation,
@@ -71,7 +77,8 @@ export async function createLocation(
   trx: Knex.Transaction,
   tenant: string,
   clientId: string,
-  data: CreateClientLocationInput
+  data: CreateClientLocationInput,
+  eventOptions: ClientLocationEventOptions = {}
 ): Promise<IClientLocation> {
   await lockClient(trx, tenant, clientId);
   const db = tenantDb(trx, tenant);
@@ -103,6 +110,7 @@ export async function createLocation(
     })
     .returning('*');
 
+  queueClientLocationCreated(trx, tenant, location, eventOptions);
   return location;
 }
 
@@ -111,7 +119,8 @@ export async function updateLocation(
   tenant: string,
   clientId: string,
   locationId: string,
-  data: UpdateClientLocationInput
+  data: UpdateClientLocationInput,
+  eventOptions: ClientLocationEventOptions = {}
 ): Promise<IClientLocation> {
   await lockClient(trx, tenant, clientId);
   const db = tenantDb(trx, tenant);
@@ -175,6 +184,7 @@ export async function updateLocation(
   if (!location) {
     throw new Error('Location not found');
   }
+  queueClientLocationUpdated(trx, tenant, existing, location, eventOptions);
   return location;
 }
 
@@ -182,7 +192,8 @@ export async function deleteLocation(
   trx: Knex.Transaction,
   tenant: string,
   clientId: string,
-  locationId: string
+  locationId: string,
+  eventOptions: ClientLocationEventOptions = {}
 ): Promise<void> {
   await lockClient(trx, tenant, clientId);
   const db = tenantDb(trx, tenant);
@@ -223,4 +234,6 @@ export async function deleteLocation(
   await db.table<IClientLocation>('client_locations')
     .where({ client_id: clientId, location_id: locationId })
     .delete();
+
+  queueClientLocationDeleted(trx, tenant, location, eventOptions);
 }

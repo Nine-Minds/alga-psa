@@ -157,28 +157,27 @@ async function createContactRecord(tenantId: string, input: CreateContactRecordI
   const created = await withTransaction(tenantId, (trx) => ContactModel.createContact(createInput, tenantId, trx));
 
   const clientId = created.client_id;
-  if (typeof clientId === 'string' && clientId) {
-    const occurredAt = created.created_at ?? new Date().toISOString();
-    await publishWorkflowEvent({
-      eventType: 'CONTACT_CREATED',
-      payload: buildContactCreatedPayload({
-        contactId: created.contact_name_id,
-        clientId,
-        fullName: created.full_name,
-        email: created.email || undefined,
-        primaryEmailCanonicalType: created.primary_email_canonical_type ?? null,
-        primaryEmailCustomTypeId: created.primary_email_custom_type_id ?? null,
-        primaryEmailType: created.primary_email_type ?? null,
-        additionalEmailAddresses: created.additional_email_addresses ?? [],
-        phoneNumbers: created.phone_numbers,
-        defaultPhoneNumber: created.default_phone_number || undefined,
-        defaultPhoneType: created.default_phone_type || undefined,
-        createdAt: occurredAt,
-      }),
-      ctx: { tenantId, occurredAt, actor: { actorType: 'SYSTEM' } },
-      idempotencyKey: `contact_created:${created.contact_name_id}`,
-    });
-  }
+  // Client-less contacts emit too: the webhook layer carries client_id only when present.
+  const occurredAt = created.created_at ?? new Date().toISOString();
+  await publishWorkflowEvent({
+    eventType: 'CONTACT_CREATED',
+    payload: buildContactCreatedPayload({
+      contactId: created.contact_name_id,
+      clientId,
+      fullName: created.full_name,
+      email: created.email || undefined,
+      primaryEmailCanonicalType: created.primary_email_canonical_type ?? null,
+      primaryEmailCustomTypeId: created.primary_email_custom_type_id ?? null,
+      primaryEmailType: created.primary_email_type ?? null,
+      additionalEmailAddresses: created.additional_email_addresses ?? [],
+      phoneNumbers: created.phone_numbers,
+      defaultPhoneNumber: created.default_phone_number || undefined,
+      defaultPhoneType: created.default_phone_type || undefined,
+      createdAt: occurredAt,
+    }),
+    ctx: { tenantId, occurredAt, actor: { actorType: 'SYSTEM' } },
+    idempotencyKey: `contact_created:${created.contact_name_id}`,
+  });
 
   return created;
 }
