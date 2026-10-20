@@ -1,48 +1,66 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import type { RecurringTemplateFields } from './effectiveFields';
+import type { TicketTemplateReferenceProblem } from '@alga-psa/types';
 
-export interface RecurringReferenceProblem {
-  field: 'board_id' | 'status_id' | 'priority_id' | 'category_id' | 'subcategory_id' | 'assigned_to'
-    | 'assigned_team_id' | 'additional_agent_ids' | 'contact_id' | 'location_id' | 'asset_ids';
-  /** Actionable, user-facing English message (stored as the occurrence `reason` when generating). */
-  message: string;
+/**
+ * Reference checks for the ticket field group (board, status, priority, category, assignees, and a
+ * client's contact/location/assets). One implementation serves ticket templates (save + apply) and
+ * recurring schedules (save + every generated occurrence): there are deliberately no foreign keys to
+ * these rows, so a dangling reference is data, reported with an actionable message.
+ */
+
+export type TicketFieldReferenceProblem = TicketTemplateReferenceProblem;
+
+export interface TicketFieldReferenceFields {
+  board_id: string | null;
+  status_id?: string | null;
+  priority_id: string | null;
+  category_id: string | null;
+  subcategory_id: string | null;
+  assigned_to?: string | null;
+  assigned_team_id?: string | null;
+  additional_agent_ids?: readonly string[];
 }
 
-export interface RecurringReferenceTargets {
-  fields: RecurringTemplateFields;
-  /** Client the ticket is for. Contact, location and assets must belong to it. Omit for a definition's own defaults. */
+export interface TicketFieldReferenceTargets {
+  fields: TicketFieldReferenceFields;
+  /** Client the ticket is for. Contact, location and assets must belong to it. Omit for a template or a schedule's own defaults. */
   clientId?: string;
   contactId?: string | null;
   locationId?: string | null;
   assetIds?: readonly string[];
+  /**
+   * The fields are the EFFECTIVE ones of a schedule: a board and priority are mandatory and a status that
+   * is not on the board tells the user to edit the schedule. Templates leave both unset (nullable there).
+   */
+  schedule?: boolean;
 }
 
-// LEVERAGE: pattern ticket-field-reference-validation — same board/category/subcategory/priority existence checks as findTicketTemplateReferenceProblems (lib/ticketTemplates.ts); a shared ticket-field validator belongs below both
 /**
- * Checks that everything a recurring ticket will reference still exists and is coherent: the board is
- * active, the status and category belong to that board, assignees are active, and the contact,
- * location and assets belong to the client.
- *
- * One implementation serves two moments: the save-time actions reject on the first problem list, and
- * the generator re-runs it on every occurrence, because those rows can change after a definition is
- * saved (there are deliberately no foreign keys to them). A dangling reference then becomes a
- * `failed` occurrence with the message below rather than a blocked delete.
+ * Checks that everything a ticket will reference still exists and is coherent: the board is active, the
+ * status and category belong to that board, assignees are active, and the contact, location and assets
+ * belong to the client.
  */
-export async function findRecurringReferenceProblems(
+export async function findTicketFieldReferenceProblems(
   conn: Knex | Knex.Transaction,
   tenant: string,
-  targets: RecurringReferenceTargets
-): Promise<RecurringReferenceProblem[]> {
+  targets: TicketFieldReferenceTargets
+): Promise<TicketFieldReferenceProblem[]> {
   const db = tenantDb(conn, tenant);
   const { fields } = targets;
-  const problems: RecurringReferenceProblem[] = [];
+  const additionalAgentIds = [...(fields.additional_agent_ids ?? [])];
+  const problems: TicketFieldReferenceProblem[] = [];
 
-  const board = await db.table('boards').where({ board_id: fields.board_id }).first('board_id', 'board_name', 'is_inactive');
-  if (!board) {
-    problems.push({ field: 'board_id', message: 'The selected board no longer exists' });
-  } else if (board.is_inactive) {
-    problems.push({ field: 'board_id', message: `Board ‘${board.board_name}’ is inactive` });
+  let board: { board_id: string; board_name: string; is_inactive: boolean } | undefined;
+  if (fields.board_id) {
+    board = await db.table('boards').where({ board_id: fields.board_id }).first('board_id', 'board_name', 'is_inactive');
+    if (!board) {
+      problems.push({ field: 'board_id', message: 'The selected board no longer exists' });
+    } else if (board.is_inactive) {
+      problems.push({ field: 'board_id', message: `Board ‘${board.board_name}’ is inactive` });
+    }
+  } else if (targets.schedule) {
+    problems.push({ field: 'board_id', message: 'A board is required: choose one on the template or override it for this schedule' });
   }
 
   if (board && fields.status_id) {
@@ -53,15 +71,22 @@ export async function findRecurringReferenceProblems(
     if (!status) {
       problems.push({ field: 'status_id', message: 'The selected status no longer exists' });
     } else if (status.board_id !== fields.board_id) {
-      problems.push({ field: 'status_id', message: `Status ‘${status.name}’ does not belong to board ‘${board.board_name}’` });
+      problems.push({
+        field: 'status_id',
+        message: `Status ‘${status.name}’ does not belong to board ‘${board.board_name}’${targets.schedule ? '; edit the schedule' : ''}`,
+      });
     }
   }
 
-  const priority = await db
-    .table('priorities')
-    .where({ priority_id: fields.priority_id, item_type: 'ticket' })
-    .first('priority_id');
-  if (!priority) problems.push({ field: 'priority_id', message: 'The selected priority no longer exists' });
+  if (fields.priority_id) {
+    const priority = await db
+      .table('priorities')
+      .where({ priority_id: fields.priority_id, item_type: 'ticket' })
+      .first('priority_id');
+    if (!priority) problems.push({ field: 'priority_id', message: 'The selected priority no longer exists' });
+  } else if (targets.schedule) {
+    problems.push({ field: 'priority_id', message: 'A priority is required: choose one on the template or override it for this schedule' });
+  }
 
   if (fields.subcategory_id && !fields.category_id) {
     problems.push({ field: 'subcategory_id', message: 'A subcategory requires a category' });
@@ -73,7 +98,7 @@ export async function findRecurringReferenceProblems(
       .first('category_id', 'category_name', 'board_id', 'parent_category');
     if (!category) {
       problems.push({ field: 'category_id', message: 'The selected category no longer exists' });
-    } else if (category.board_id && category.board_id !== fields.board_id) {
+    } else if (fields.board_id && category.board_id && category.board_id !== fields.board_id) {
       problems.push({ field: 'category_id', message: `Category ‘${category.category_name}’ does not belong to the selected board` });
     } else if (category.parent_category) {
       problems.push({ field: 'category_id', message: `Category ‘${category.category_name}’ is a subcategory` });
@@ -91,7 +116,7 @@ export async function findRecurringReferenceProblems(
     }
   }
 
-  const userIds = [...new Set([fields.assigned_to, ...fields.additional_agent_ids].filter((id): id is string => Boolean(id)))];
+  const userIds = [...new Set([fields.assigned_to, ...additionalAgentIds].filter((id): id is string => Boolean(id)))];
   if (userIds.length > 0) {
     const users = await db
       .table('users')
@@ -108,7 +133,7 @@ export async function findRecurringReferenceProblems(
       const result = describe(fields.assigned_to);
       if (!result.ok) problems.push({ field: 'assigned_to', message: result.message });
     }
-    for (const id of fields.additional_agent_ids) {
+    for (const id of additionalAgentIds) {
       const result = describe(id);
       if (!result.ok) problems.push({ field: 'additional_agent_ids', message: result.message.replace('Assigned user', 'Additional agent') });
     }

@@ -64,6 +64,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { nextTemplateTitle, renderTitleTemplate, titleHasTokens, toCalendarDate, type TitleTokenContext } from '../lib/ticketTitleTokens';
 import {
   extractTicketRichTextPlainText,
   parseTicketRichTextContent,
@@ -321,6 +322,9 @@ export function QuickAddTicket({
   const [templateOptions, setTemplateOptions] = useState<TicketTemplateOption[]>([]);
   const [templateLoadError, setTemplateLoadError] = useState<string | null>(null);
   const [copyTemplateChecklist, setCopyTemplateChecklist] = useState(true);
+  // The title last produced from the template's tokens. While the title still equals it (or is empty) the
+  // operator has not edited it, so a client or contact change re-renders it (R8).
+  const lastRenderedTitleRef = useRef<string | null>(null);
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
   const effectiveAssetId = isAlgaDeskMode ? undefined : assetId;
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -839,12 +843,26 @@ export function QuickAddTicket({
     setPendingTags(fields.tags);
   }
 
+  // Tokens are filled from the client, contact and due date picked so far; a missing one renders empty.
+  // The due date is a calendar date taken from the picked Date's local parts (not toISOString).
+  function templateTitleContext(): TitleTokenContext {
+    const clientName = clients.find((candidate) => candidate.client_id === clientId)?.client_name ?? null;
+    const contactName = contacts.find((candidate) => candidate.contact_name_id === contactId)?.full_name ?? null;
+    return { clientName, contactName, dueDate: dueDate ? toCalendarDate(dueDate) : null };
+  }
+
+  function renderTemplateTitle(rawTitle: string): string {
+    return renderTitleTemplate(rawTitle, templateTitleContext());
+  }
+
   function applyTemplateSource(source: TicketTemplateForCreate) {
     setTemplateSource(source);
     setCopyTemplateChecklist(true);
     setTemplateLoadError(null);
+    const renderedTitle = renderTemplateTitle(source.title);
+    lastRenderedTitleRef.current = titleHasTokens(source.title) ? renderedTitle : null;
     applyCopiedTicketFields({
-      title: source.title,
+      title: renderedTitle,
       description: source.description,
       board_id: source.board_id,
       priority_id: source.priority_id,
@@ -972,8 +990,18 @@ export function QuickAddTicket({
   // round trip can finish, and isSubmitting stays true until the same batch that has
   // ticketCreated/isNavigatingToTicket set, so there is no window where all three are false
   // for a saved ticket. A failed create clears isSubmitting without latching, so the guard returns.
+  useEffect(() => {
+    if (!templateSource) return;
+    const next = nextTemplateTitle(templateSource.title, templateTitleContext(), title, lastRenderedTitleRef.current);
+    if (next === null) return;
+    lastRenderedTitleRef.current = next;
+    if (next !== title) setTitle(next);
+    // Only a client, contact or due date change re-renders; title edits must not loop back through here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId, contactId, dueDate, templateSource, clients, contacts]);
+
   // A template prefill is a baseline too: an untouched template-filled draft is not dirty.
-  const draftBaselineTitle = duplicateSource ? duplicateSource.title : templateSource ? templateSource.title : prefilledTitle;
+  const draftBaselineTitle = duplicateSource ? duplicateSource.title : templateSource ? lastRenderedTitleRef.current ?? templateSource.title : prefilledTitle;
   const draftBaselineDescription = duplicateSource
     ? duplicateSource.description
     : templateSource ? templateSource.description : prefilledDescription;
@@ -1482,6 +1510,11 @@ export function QuickAddTicket({
                       ...templateOptions.map((option) => ({ value: option.template_id, label: option.name })),
                     ]}
                   />
+                  {templateSource && titleHasTokens(templateSource.title) && (
+                    <p className="mt-1 text-xs text-gray-500" data-testid="quick-add-ticket-template-token-hint">
+                      {t('quickAdd.templateTokenHint', 'The title fills in the client, contact and due date you pick, until you edit it.')}
+                    </p>
+                  )}
                 </div>
               )}
 

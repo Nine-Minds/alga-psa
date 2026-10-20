@@ -964,6 +964,7 @@
     "templateReplaceTitle": "Sostituire le modifiche?",
     "templateReplaceMessage": "Applicando un modello vengono sostituiti titolo, descrizione e gli altri campi inseriti.",
     "templateReplaceConfirm": "Applica modello",
+    "templateTokenHint": "Il titolo si compila con il cliente, il contatto e la data di scadenza scelti, finché non lo modifichi.",
     "tagCreatePartialFailure_few": "Impossibile creare {{count}} tag",
     "tagCreatePartialFailure_many": "Impossibile creare {{count}} tag",
     "tagCreationFailed_few": "Impossibile creare {{count}} tag",
@@ -2250,7 +2251,9 @@
       "details": "Dettagli",
       "template": "Modello di ticket",
       "schedule": "Pianificazione",
-      "behaviour": "Comportamento"
+      "behaviour": "Comportamento",
+      "overrides": "Sostituzioni per questa pianificazione",
+      "dispatch": "Assegnazione"
     },
     "fields": {
       "board": "Bacheca",
@@ -2457,6 +2460,22 @@
       "monthlyOnDay": "{{every}}, {{day}}",
       "monthlyOnNthWeekday": "{{every}}, {{ordinal}} {{weekday}}",
       "yearly": "Ogni anno il {{day}} {{month}}"
+    },
+    "template": {
+      "intro": "L'aspetto del ticket deriva da un modello di ticket condiviso. Modificare il modello cambia tutte le pianificazioni che lo usano, dal prossimo ticket.",
+      "select": "Modello di ticket",
+      "placeholder": "Seleziona un modello di ticket",
+      "inactiveOption": "{{name}} (inattivo)",
+      "summary": "{{checklist}} elemento/i di checklist, {{tags}} tag",
+      "inactiveNotice": "Questo modello è inattivo: nascosto nel selettore dei modelli; ancora usato da {{count}} pianificazioni.",
+      "sharedNotice": "Usato da {{count}} pianificazioni. Modificare il modello le cambia tutte.",
+      "edit": "Modifica modello",
+      "new": "Nuovo modello",
+      "sampleTitle": "Titolo del primo ticket:",
+      "tokensHelp": "I titoli dei modelli possono usare {{tokens}}; vengono compilati per ogni ticket."
+    },
+    "overridesSection": {
+      "intro": "Lascia disattivato un gruppo per usare il modello. Ogni cliente può sostituirli di nuovo."
     }
   },
   "stopwatch": {
@@ -2490,12 +2509,15 @@
         "title": "Titolo del ticket",
         "board": "Bacheca",
         "checklist": "Voci della checklist",
-        "status": "Stato"
-      }
+        "status": "Stato",
+        "schedules": "Pianificazioni"
+      },
+      "deleteBlocked": "Usato da {{count}} pianificazione/i ricorrente/i. Assegna prima un altro modello o archiviale."
     },
     "status": {
       "active": "Attivo",
-      "inactive": "Inattivo"
+      "inactive": "Inattivo",
+      "scheduledOnly": "Solo pianificato"
     },
     "actions": {
       "edit": "Modifica",
@@ -2517,7 +2539,10 @@
       "notesHelp": "Solo per il tuo team. Non vengono copiate nei ticket.",
       "title": "Titolo del ticket",
       "description": "Descrizione",
-      "descriptionPlaceholder": "Descrizione"
+      "descriptionPlaceholder": "Descrizione",
+      "offerForManualUse": "Offri nel selettore dei nuovi ticket",
+      "offerForManualUseHelp": "Disattiva per i modelli usati solo dalle pianificazioni ricorrenti.",
+      "titleTokens": "Nel titolo puoi usare {{tokens}}; vengono compilati per ogni ticket."
     },
     "checklist": {
       "empty": "Nessuna voce di checklist.",
@@ -2545,14 +2570,24 @@
       "fromTicket": "Precompilato dal ticket #{{number}}. Non viene salvato nulla finché non fai clic su Salva.",
       "inlineImages": "La descrizione contiene immagini che appartengono al ticket di origine. Potrebbero non essere più visualizzate se quel ticket viene eliminato. Rimuovile o ricaricale se il modello deve sopravvivere al ticket.",
       "viewOnly": "Puoi visualizzare questo modello ma non modificarlo.",
-      "referenceProblems": "Alcuni campi di questo modello puntano a elementi che non esistono più. Restano vuoti quando il modello viene usato. Correggili e salva:"
+      "referenceProblems": "Alcuni campi di questo modello puntano a elementi che non esistono più. Restano vuoti quando il modello viene usato. Correggili e salva:",
+      "inactiveWarning": "Inattivo: nascosto nel selettore dei modelli; ancora usato da {{count}} pianificazioni.",
+      "sharedWarning": "Le modifiche si applicano a ogni pianificazione ricorrente che usa questo modello, a partire dal prossimo ticket creato.",
+      "boardChangeWarning": "Cambiare la bacheca azzera priorità e categoria e può rendere non valido lo stato delle pianificazioni che usano questo modello. Tali pianificazioni falliscono finché non le modifichi. Pianificazioni interessate: {{schedules}}."
     },
     "errors": {
       "notFound": "Modello di ticket non trovato",
       "duplicateName": "Esiste già un modello chiamato {{name}}",
       "invalidReferences": "Il modello fa riferimento a una bacheca, una categoria o una priorità non disponibile",
       "notAvailable": "I modelli di ticket non sono disponibili",
-      "subcategoryNeedsCategory": "Una sottocategoria richiede una categoria"
+      "subcategoryNeedsCategory": "Una sottocategoria richiede una categoria",
+      "inUseBySchedules": "Usato da {{count}} pianificazione/i ricorrente/i: {{schedules}}. Assegna prima un altro modello o archiviale."
+    },
+    "usage": {
+      "schedules": "Usato da {{count}} pianificazioni",
+      "paused": "in pausa",
+      "tickets": "{{count}} ticket creati da questo modello",
+      "scheduleThis": "Pianifica questo modello…"
     }
   },
   "enums": {

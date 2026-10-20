@@ -14,8 +14,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getClientLocations, getContactsByClient } from '../../actions/clientLookupActions';
 import { useRecurringTicketsCrossFeature } from './RecurringTicketsFeatureContext';
 import { getRecurringTicketDefinition, updateRecurringTicketClient } from '../../actions/recurringTicketActions';
-import type { RecurringTicketOverrides } from '../../lib/recurring/effectiveFields';
-import type { RecurringDefinitionDetail, RecurringDefinitionRecord } from '../../lib/recurring/types';
+import type { RecurringTemplateFields, RecurringTicketOverrides } from '../../lib/recurring/effectiveFields';
+import type { RecurringDefinitionDetail } from '../../lib/recurring/types';
 import {
   AssignmentFields,
   BoardStatusFields,
@@ -26,7 +26,7 @@ import {
   type CategoryValue,
 } from './RecurringFieldGroups';
 import { recurringErrorMessage, unwrapRecurring } from './recurringUi';
-import { useRecurringReferenceData, type RecurringReferenceData } from './useRecurringReferenceData';
+import { useTicketFieldReferenceData, type TicketFieldReferenceData } from '../useTicketFieldReferenceData';
 
 export interface RecurringClientOverridesDialogProps {
   isOpen: boolean;
@@ -72,15 +72,15 @@ function overridesFrom(draft: DraftState): RecurringTicketOverrides {
   };
 }
 
-/** What the definition itself would use, shown while a group is not overridden. */
+/** What the schedule itself resolves (template, dispatch, schedule overrides), shown while a group is not overridden. */
 function inheritedSummary(
   group: GroupKey,
-  definition: RecurringDefinitionRecord,
-  reference: RecurringReferenceData,
+  definition: RecurringTemplateFields,
+  reference: TicketFieldReferenceData,
   none: string
 ): string {
   const board = reference.boards.find((candidate) => candidate.board_id === definition.board_id);
-  const boardData = reference.boardData[definition.board_id];
+  const boardData = definition.board_id ? reference.boardData[definition.board_id] : undefined;
   switch (group) {
     case 'board': {
       const status = boardData?.statuses.find((candidate) => candidate.status_id === definition.status_id);
@@ -114,7 +114,7 @@ export function RecurringClientOverridesDialog({
   isOpen, onClose, definitionId, definitionClientId, onSaved,
 }: RecurringClientOverridesDialogProps) {
   const { t } = useTranslation('features/tickets');
-  const reference = useRecurringReferenceData();
+  const reference = useTicketFieldReferenceData();
   const { renderAssetPicker } = useRecurringTicketsCrossFeature();
   const [detail, setDetail] = useState<RecurringDefinitionDetail | null>(null);
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -157,15 +157,15 @@ export function RecurringClientOverridesDialog({
 
   const { ensureBoard } = reference;
   useEffect(() => {
-    if (detail) void ensureBoard(detail.definition.board_id).catch(() => undefined);
+    if (detail?.effective_fields.board_id) void ensureBoard(detail.effective_fields.board_id).catch(() => undefined);
   }, [detail, ensureBoard]);
 
   const toggleGroup = (group: GroupKey, enabled: boolean) => {
     if (!detail || !draft) return;
-    const definition = detail.definition;
+    const definition = detail.effective_fields;
     // Starting an override from the definition's current values keeps "override" a deliberate edit.
     const initial: Record<GroupKey, () => Partial<DraftState>> = {
-      board: () => ({ board: enabled ? { board_id: definition.board_id, status_id: definition.status_id } : null }),
+      board: () => ({ board: enabled && definition.board_id ? { board_id: definition.board_id, status_id: definition.status_id } : null }),
       priority: () => ({ priority: enabled ? definition.priority_id : null }),
       category: () => ({ category: enabled ? { category_id: definition.category_id, subcategory_id: definition.subcategory_id } : null }),
       assignment: () => ({
@@ -232,7 +232,7 @@ export function RecurringClientOverridesDialog({
       ) : (
         <p className="text-sm text-[rgb(var(--color-text-500))]">
           {t('recurring.overrides.inherited', 'Uses the recurring ticket setting: {{value}}', {
-            value: detail ? inheritedSummary(group, detail.definition, reference, none) : '',
+            value: detail ? inheritedSummary(group, detail.effective_fields, reference, none) : '',
           })}
         </p>
       )}
@@ -276,7 +276,7 @@ export function RecurringClientOverridesDialog({
               draft.priority !== null && (
                 <PriorityField
                   idPrefix={`${idPrefix}-priority`} reference={reference}
-                  boardId={draft.board?.board_id ?? detail.definition.board_id}
+                  boardId={draft.board?.board_id ?? detail.effective_fields.board_id ?? ''}
                   value={draft.priority}
                   onChange={(priority) => setDraft({ ...draft, priority })}
                 />
@@ -285,7 +285,7 @@ export function RecurringClientOverridesDialog({
               draft.category && (
                 <CategoryField
                   idPrefix={`${idPrefix}-category`} reference={reference}
-                  boardId={draft.board?.board_id ?? detail.definition.board_id}
+                  boardId={draft.board?.board_id ?? detail.effective_fields.board_id ?? ''}
                   value={draft.category}
                   onChange={(category) => setDraft({ ...draft, category })}
                 />
