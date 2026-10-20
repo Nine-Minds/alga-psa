@@ -1,125 +1,36 @@
 'use client';
 
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { WorkflowTaskActivity, ActivityType, ActivityFilters } from '@alga-psa/types';
+import React from 'react';
+import { WorkflowTaskActivity, ActivityFilters, ActivityType } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { WorkflowTaskCard } from './ActivityCard';
-import { fetchDashboardWorkflowTasks } from '@alga-psa/user-activities/actions';
-import { WorkflowTaskListDrawer } from './WorkflowTaskListDrawer';
-import { useDrawer } from '@alga-psa/ui';
-import { WorkflowTasksSectionFiltersDialog } from './filters/WorkflowTasksSectionFiltersDialog';
-import { Filter, XCircle } from 'lucide-react';
 import { useActivityDrawer } from './ActivityDrawerProvider';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useActivitySectionFeed } from '../hooks/useActivitySectionFeed';
+import { WorkflowTaskListDrawer } from './WorkflowTaskListDrawer';
+import { useDrawer } from '@alga-psa/ui';
 
 interface WorkflowTasksSectionProps {
   limit?: number;
   onViewAll?: () => void;
+  /** The shared filter model (the same one the table uses). */
+  filters: ActivityFilters;
+  targetUserId?: string;
+  /** Viewing another user: no action menus. */
+  readOnly?: boolean;
 }
 
-export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSectionProps) {
+export function WorkflowTasksSection({ limit = 5, onViewAll, filters, targetUserId = '', readOnly = false }: WorkflowTasksSectionProps) {
   const { t } = useTranslation('msp/user-activities');
-  const [activities, setActivities] = useState<WorkflowTaskActivity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const drawer = useDrawer();
   const { openActivityDrawer } = useActivityDrawer();
-  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
-  const [workflowFilters, setWorkflowFilters] = useState<Partial<ActivityFilters>>({ isClosed: false });
-  const [workflowExecutions, setWorkflowExecutions] = useState<Array<{ execution_id: string; workflow_name: string }>>([]);
-  const [filterDataLoading, setFilterDataLoading] = useState(true);
-
-  // Fetch initial activities and filter data
-  const loadActivities = useCallback(async (filters: Partial<ActivityFilters> = { isClosed: false }) => {
-    try {
-      setLoading(true);
-      setError(null);
-      // Fetch workflow task activities using current filters
-      const result = await fetchDashboardWorkflowTasks(limit, filters);
-      setActivities(result);
-    } catch (err) {
-      console.error('Error loading workflow task activities:', err);
-      setError(t('sections.workflowTasks.errors.loadFailed', { defaultValue: 'Failed to load workflow task activities. Please try again later.' }));
-    } finally {
-      setLoading(false);
-    }
-  }, [limit]);
-
-  // Fetch workflow executions for filter dropdown
-  useEffect(() => {
-    async function loadFilterData() {
-      try {
-        setFilterDataLoading(true);
-        // In a real implementation, you would fetch workflow executions from the server
-        // For now, we'll use a placeholder empty array that will be populated when tasks are loaded
-        const uniqueExecutions = new Map<string, { execution_id: string; workflow_name: string }>();
-        
-        // Get executions from current activities
-        activities.forEach(activity => {
-          if (activity.executionId && !uniqueExecutions.has(activity.executionId)) {
-            uniqueExecutions.set(activity.executionId, {
-              execution_id: activity.executionId,
-              workflow_name: activity.contextData?.workflowName || `Workflow ${activity.executionId.substring(0, 8)}`
-            });
-          }
-        });
-        
-        setWorkflowExecutions(Array.from(uniqueExecutions.values()));
-      } catch (err) {
-        console.error('Error loading filter data:', err);
-      } finally {
-        setFilterDataLoading(false);
-      }
-    }
-    loadFilterData();
-  }, [activities]);
-
-  // Load activities initially and when filters change
-  useEffect(() => {
-    loadActivities(workflowFilters);
-  }, [workflowFilters, loadActivities]);
-
-  const handleApplyFilters = (newFilters: Partial<ActivityFilters>) => {
-    setWorkflowFilters(prevFilters => ({
-      ...prevFilters, // Keep existing non-workflow filters if any
-      ...newFilters, // Apply new workflow-specific filters
-    }));
-    // loadActivities will be triggered by the useEffect watching workflowFilters
-  };
-
-  // Function to check if filters are active (beyond the default)
-  const isFiltersActive = useCallback(() => {
-    const defaultFilters: Partial<ActivityFilters> = { isClosed: false };
-    // Check if any filter key exists beyond the default 'isClosed'
-    const hasExtraKeys = Object.keys(workflowFilters).some(key => !(key in defaultFilters));
-    // Check if 'isClosed' is different from the default
-    const isClosedChanged = workflowFilters.isClosed !== defaultFilters.isClosed;
-    // Check if any filter value is actually set (not undefined or empty array for array types)
-    const hasSetValues = Object.entries(workflowFilters).some(([key, value]) => {
-      if (key === 'isClosed') return value !== false; // Check if isClosed is true
-      if (Array.isArray(value)) return value.length > 0; // Check array filters
-      return value !== undefined && value !== null && value !== ''; // Check other filters
-    });
-
-    // Consider filters active if they have extra keys, isClosed is true, or any value is set meaningfully
-    return hasExtraKeys || isClosedChanged || hasSetValues;
-  }, [workflowFilters]);
-
-  const handleResetFilters = () => {
-    setWorkflowFilters({ isClosed: false }); // Reset to default filters
-    // loadActivities will be triggered by the useEffect watching workflowFilters
-  };
-
-  const handleRefresh = () => {
-    // Reload activities with the current filters
-    loadActivities(workflowFilters);
-  };
-
-  const handleViewDetails = (activity: WorkflowTaskActivity) => {
-    openActivityDrawer(activity);
-  };
+  const drawer = useDrawer();
+  const feed = useActivitySectionFeed<WorkflowTaskActivity>(ActivityType.WORKFLOW_TASK, filters, targetUserId, limit);
+  const { activities, loading } = feed;
+  const error = feed.error
+    ? t('sections.workflowTasks.errors.loadFailed', { defaultValue: 'Failed to load workflow task activities. Please try again later.' })
+    : null;
 
   const handleViewAll = () => {
     if (onViewAll) {
@@ -134,10 +45,10 @@ export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSect
         onSelectTask={(task) => {
           // First close the list drawer
           drawer.closeDrawer();
-          
+
           // Then open the detail drawer after a short delay
           setTimeout(() => {
-            handleViewDetails(task);
+            openActivityDrawer(task);
           }, 100);
         }}
       />
@@ -153,36 +64,12 @@ export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSect
             id="refresh-workflow-tasks-button"
             variant="outline"
             size="sm"
-            onClick={handleRefresh}
+            onClick={feed.refresh}
             disabled={loading}
             aria-label={t('sections.workflowTasks.ariaLabels.refresh', { defaultValue: 'Refresh Workflow Tasks' })}
           >
             {t('sections.workflowTasks.actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
-          {isFiltersActive() ? (
-            <Button
-              id="reset-workflow-task-filters-button"
-              variant="outline"
-              size="sm"
-              onClick={handleResetFilters}
-              disabled={loading}
-              className="gap-1"
-            >
-              <XCircle className="h-4 w-4" />
-              {t('sections.workflowTasks.actions.reset', { defaultValue: 'Reset' })}
-            </Button>
-          ) : (
-            <Button
-              id="filter-workflow-tasks-button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsFilterDialogOpen(true)}
-              disabled={filterDataLoading || loading}
-              aria-label={t('sections.workflowTasks.ariaLabels.filter', { defaultValue: 'Filter Workflow Tasks' })}
-            >
-              <Filter size={16} className="mr-1" /> {t('sections.workflowTasks.actions.filter', { defaultValue: 'Filter' })}
-            </Button>
-          )}
           <Button
             id="view-all-workflow-tasks-button"
             variant="outline"
@@ -213,23 +100,13 @@ export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSect
                 key={activity.id}
                 activity={activity}
                 onViewDetails={() => openActivityDrawer(activity)}
-                onActionComplete={() => loadActivities(workflowFilters)}
+                readOnly={readOnly}
+                onActionComplete={feed.refresh}
               />
             ))}
           </div>
         )}
       </CardContent>
-
-      {/* Workflow Task Filters Dialog */}
-      {isFilterDialogOpen && (
-        <WorkflowTasksSectionFiltersDialog
-          isOpen={isFilterDialogOpen}
-          onOpenChange={setIsFilterDialogOpen}
-          initialFilters={workflowFilters}
-          onApplyFilters={handleApplyFilters}
-          workflowExecutions={workflowExecutions}
-        />
-      )}
     </Card>
   );
 }

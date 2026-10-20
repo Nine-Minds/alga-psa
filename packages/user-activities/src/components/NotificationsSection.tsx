@@ -3,13 +3,12 @@
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ActivityFilters, ActivityPriority, NotificationActivity } from "@alga-psa/types";
+import { ActivityFilters, NotificationActivity } from "@alga-psa/types";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { NotificationCard } from "./NotificationCard";
 import { fetchNotificationActivities, fetchNotificationActivitiesPaged } from "@alga-psa/user-activities/actions";
-import { NotificationSectionFiltersDialog } from "./filters/NotificationSectionFiltersDialog";
-import { Filter, XCircle } from 'lucide-react';
+import { NotificationInlineFilters } from "./filters/NotificationInlineFilters";
 import { useActivityDrawer } from "./ActivityDrawerProvider";
 import { getCurrentUser } from "@alga-psa/user-composition/actions";
 import { Badge } from "@alga-psa/ui/components/Badge";
@@ -33,22 +32,6 @@ interface NotificationsSectionProps {
 const DEFAULT_TAB = 'unread';
 // Page size for the full-view server-side pagination.
 const FULL_MODE_PAGE_SIZE = 20;
-type PriorityFilterKey = 'all' | 'high' | 'normal' | 'low';
-
-// Map a priority filter chip to the ActivityPriority value stored on notification
-// activities (stored 'normal' → ActivityPriority.MEDIUM).
-function priorityKeyToActivityPriority(key: PriorityFilterKey): ActivityPriority | undefined {
-  switch (key) {
-    case 'high':
-      return ActivityPriority.HIGH;
-    case 'normal':
-      return ActivityPriority.MEDIUM;
-    case 'low':
-      return ActivityPriority.LOW;
-    default:
-      return undefined;
-  }
-}
 
 export function NotificationsSection({ limit = 5, onViewAll, noCard = false, fullMode = false }: NotificationsSectionProps) {
   const { t } = useTranslation('msp/user-activities');
@@ -60,7 +43,6 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
   const [loading, setLoading] = useState(true);
   const { openActivityDrawer } = useActivityDrawer();
   const [error, setError] = useState<string | null>(null);
-  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
 
   // Determine initial tab from URL or default to "Unread"
   const initialTab = useMemo(() => {
@@ -75,17 +57,6 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
   // Full-view (flag-on) server-side pagination state.
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-
-  // Derive the active priority chip from the shared notification filters, so the
-  // chips and the filter dialog stay in sync off a single source of truth.
-  const activePriorityKey: PriorityFilterKey =
-    notificationFilters.priority?.includes(ActivityPriority.HIGH)
-      ? 'high'
-      : notificationFilters.priority?.includes(ActivityPriority.MEDIUM)
-        ? 'normal'
-        : notificationFilters.priority?.includes(ActivityPriority.LOW)
-          ? 'low'
-          : 'all';
 
   // Use real-time notifications hook to detect changes
   const tenant = session?.user?.tenant;
@@ -195,34 +166,6 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
     // Real-time hook will automatically update unread count
   };
 
-  const handleApplyFilters = (newFilters: Partial<ActivityFilters>) => {
-    setNotificationFilters(prevFilters => ({
-      ...prevFilters,
-      ...newFilters,
-    }));
-  };
-
-  // Function to check if filters are active (beyond the default)
-  const isFiltersActive = useCallback(() => {
-    const defaultFilters: Partial<ActivityFilters> = { isClosed: false };
-    // Check if any filter key exists beyond the default 'isClosed'
-    const hasExtraKeys = Object.keys(notificationFilters).some(key => !(key in defaultFilters));
-    // Check if 'isClosed' is different from the default
-    const isClosedChanged = notificationFilters.isClosed !== defaultFilters.isClosed;
-    // Check if any filter value is actually set
-    const hasSetValues = Object.entries(notificationFilters).some(([key, value]) => {
-      if (key === 'isClosed') return value !== false;
-      if (Array.isArray(value)) return value.length > 0;
-      return value !== undefined && value !== null && value !== '';
-    });
-
-    return hasExtraKeys || isClosedChanged || hasSetValues;
-  }, [notificationFilters]);
-
-  const handleResetFilters = () => {
-    setNotificationFilters({ isClosed: false }); // Reset to default filters
-  };
-
   // Handle tab change to update filters and URL
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
@@ -275,30 +218,6 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
         >
           {t('sections.notifications.actions.refresh', { defaultValue: 'Refresh' })}
         </Button>
-        {isFiltersActive() ? (
-          <Button
-            id="reset-notification-filters-button"
-            variant="outline"
-            size="sm"
-            onClick={handleResetFilters}
-            disabled={loading}
-            className="gap-1"
-          >
-            <XCircle className="h-4 w-4" />
-            {t('sections.notifications.actions.reset', { defaultValue: 'Reset' })}
-          </Button>
-        ) : (
-          <Button
-            id="filter-notifications-button"
-            variant="outline"
-            size="sm"
-            onClick={() => setIsFilterDialogOpen(true)}
-            disabled={loading}
-            aria-label={t('sections.notifications.ariaLabels.filter', { defaultValue: 'Filter Notifications' })}
-          >
-            <Filter size={16} className="mr-1" /> {t('sections.notifications.actions.filter', { defaultValue: 'Filter' })}
-          </Button>
-        )}
         <Button
           id="view-all-notifications-button"
           variant="outline"
@@ -308,45 +227,6 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
           {t('sections.notifications.actions.viewAll', { defaultValue: 'View All' })}
         </Button>
       </div>
-    </div>
-  );
-
-  // Apply a priority filter chip by writing the shared notification filters (the
-  // filter dialog reads/writes the same `priority` key, keeping the two in sync).
-  const handlePriorityChip = (key: PriorityFilterKey) => {
-    setNotificationFilters(prev => {
-      const next = { ...prev };
-      const mapped = priorityKeyToActivityPriority(key);
-      if (mapped) {
-        next.priority = [mapped];
-      } else {
-        delete next.priority;
-      }
-      return next;
-    });
-  };
-
-  // Priority filter chips (full view only). Chronological order is preserved; the
-  // chips only narrow the list, they never regroup it.
-  const priorityChips = (
-    <div className="flex flex-wrap items-center gap-2 mb-4">
-      <span className="text-sm font-medium text-gray-600 mr-1">
-        {t('sections.notifications.priority.label', { defaultValue: 'Priority' })}
-      </span>
-      {(['all', 'high', 'normal', 'low'] as PriorityFilterKey[]).map(key => (
-        <Button
-          key={key}
-          id={`notification-priority-filter-${key}`}
-          variant={activePriorityKey === key ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => handlePriorityChip(key)}
-          disabled={loading}
-        >
-          {t(`sections.notifications.priority.${key}`, {
-            defaultValue: key === 'all' ? 'All' : key === 'high' ? 'High' : key === 'normal' ? 'Normal' : 'Low',
-          })}
-        </Button>
-      ))}
     </div>
   );
 
@@ -391,15 +271,28 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
       );
     })();
 
-    // Flag off / preview mode: identical markup to before.
+    const inlineFilters = (
+      <NotificationInlineFilters
+        filters={notificationFilters}
+        onChange={setNotificationFilters}
+        disabled={loading}
+      />
+    );
+
+    // Preview mode: inline filters above the fixed-size list.
     if (!fullMode) {
-      return body;
+      return (
+        <div>
+          {inlineFilters}
+          {body}
+        </div>
+      );
     }
 
-    // Flag on / full view: priority chips above the list, numbered server-side pager below.
+    // Full view: inline filters above the list, numbered server-side pager below.
     return (
       <div>
-        {priorityChips}
+        {inlineFilters}
         {body}
         {totalCount > FULL_MODE_PAGE_SIZE && (
           <Pagination
@@ -446,14 +339,6 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
         onTabChange={handleTabChange}
         tabStyles={tabStyles}
       />
-      {isFilterDialogOpen && (
-        <NotificationSectionFiltersDialog
-          isOpen={isFilterDialogOpen}
-          onOpenChange={setIsFilterDialogOpen}
-          initialFilters={notificationFilters}
-          onApplyFilters={handleApplyFilters}
-        />
-      )}
     </div>
   );
 
@@ -488,30 +373,6 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
           >
             {t('sections.notifications.actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
-          {isFiltersActive() ? (
-            <Button
-              id="reset-notification-filters-button"
-              variant="outline"
-              size="sm"
-              onClick={handleResetFilters}
-              disabled={loading}
-              className="gap-1"
-            >
-              <XCircle className="h-4 w-4" />
-              {t('sections.notifications.actions.reset', { defaultValue: 'Reset' })}
-            </Button>
-          ) : (
-            <Button
-              id="filter-notifications-button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsFilterDialogOpen(true)}
-              disabled={loading}
-              aria-label={t('sections.notifications.ariaLabels.filter', { defaultValue: 'Filter Notifications' })}
-            >
-              <Filter size={16} className="mr-1" /> {t('sections.notifications.actions.filter', { defaultValue: 'Filter' })}
-            </Button>
-          )}
           <Button
             id="view-all-notifications-button"
             variant="outline"
@@ -530,15 +391,6 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
           tabStyles={tabStyles}
         />
       </CardContent>
-
-      {isFilterDialogOpen && (
-        <NotificationSectionFiltersDialog
-          isOpen={isFilterDialogOpen}
-          onOpenChange={setIsFilterDialogOpen}
-          initialFilters={notificationFilters}
-          onApplyFilters={handleApplyFilters}
-        />
-      )}
     </Card>
   );
 }

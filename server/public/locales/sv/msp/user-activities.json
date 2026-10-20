@@ -201,13 +201,10 @@
       "title": "Projektuppgifter",
       "actions": {
         "refresh": "Uppdatera",
-        "filter": "Filter",
-        "reset": "Återställ",
         "viewAll": "Visa alla"
       },
       "ariaLabels": {
-        "refresh": "Uppdatera projektuppgifter",
-        "filter": "Filtrera projektuppgifter"
+        "refresh": "Uppdatera projektuppgifter"
       },
       "states": {
         "loading": "Läser in projektaktiviteter…",
@@ -215,47 +212,16 @@
       },
       "errors": {
         "loadFailed": "Det gick inte att läsa in projektaktiviteterna. Försök igen senare."
-      },
-      "filterDialog": {
-        "title": "Filtrera projektuppgifter",
-        "description": "Välj kriterier för att filtrera aktiviteter för projektuppgifter.",
-        "fields": {
-          "search": "Sök",
-          "searchPlaceholder": "Sök i titel och beskrivning",
-          "project": "Projekt",
-          "projectPlaceholder": "Välj projekt…",
-          "allProjects": "Alla projekt",
-          "phase": "Fas",
-          "phasePlaceholder": "Välj fas…",
-          "phaseLoadingPlaceholder": "Läser in faser…",
-          "phaseSelectFirstPlaceholder": "Välj ett projekt först",
-          "allPhases": "Alla faser",
-          "priority": "Prioritet",
-          "priorityPlaceholder": "Välj prioritet…",
-          "allPriorities": "Alla prioriteter",
-          "dueDateRange": "Intervall för måldatum",
-          "createdDateRange": "Intervall för skapandedatum",
-          "showClosedTasks": "Visa stängda uppgifter"
-        },
-        "actions": {
-          "reset": "Återställ",
-          "cancel": "Avbryt",
-          "apply": "Tillämpa filter",
-          "clearDates": "Rensa"
-        }
       }
     },
     "tickets": {
       "title": "Ärenden",
       "actions": {
         "refresh": "Uppdatera",
-        "filter": "Filter",
-        "reset": "Återställ",
         "viewAll": "Visa alla"
       },
       "ariaLabels": {
-        "refresh": "Uppdatera ärenden",
-        "filter": "Filtrera ärenden"
+        "refresh": "Uppdatera ärenden"
       },
       "states": {
         "loading": "Läser in ärendeaktiviteter…",
@@ -263,31 +229,6 @@
       },
       "errors": {
         "loadFailed": "Det gick inte att läsa in ärendeaktiviteterna. Försök igen senare."
-      },
-      "filterDialog": {
-        "title": "Filtrera ärenden",
-        "description": "Välj kriterier för att filtrera ärendeaktiviteter.",
-        "fields": {
-          "search": "Sök",
-          "searchPlaceholder": "Sök i titel, beskrivning och ärendenummer",
-          "client": "Kund",
-          "contact": "Kontakt",
-          "status": "Status",
-          "statusPlaceholder": "Välj status…",
-          "allStatuses": "Alla statusar",
-          "priority": "Prioritet",
-          "priorityPlaceholder": "Välj prioritet…",
-          "allPriorities": "Alla prioriteter",
-          "dueDateRange": "Intervall för måldatum",
-          "createdDateRange": "Intervall för skapandedatum",
-          "showClosedTickets": "Visa stängda ärenden"
-        },
-        "actions": {
-          "reset": "Återställ",
-          "cancel": "Avbryt",
-          "apply": "Tillämpa filter",
-          "clearDates": "Rensa"
-        }
       }
     },
     "workflowTasks": {
@@ -295,13 +236,10 @@
       "drawerTitle": "Arbetsflödesuppgifter",
       "actions": {
         "refresh": "Uppdatera",
-        "filter": "Filter",
-        "reset": "Återställ",
         "viewAll": "Visa alla"
       },
       "ariaLabels": {
-        "refresh": "Uppdatera arbetsflödesuppgifter",
-        "filter": "Filtrera arbetsflödesuppgifter"
+        "refresh": "Uppdatera arbetsflödesuppgifter"
       },
       "states": {
         "loading": "Läser in aktiviteter för arbetsflödesuppgifter…",
@@ -309,33 +247,6 @@
       },
       "errors": {
         "loadFailed": "Det gick inte att läsa in aktiviteterna för arbetsflödesuppgifter. Försök igen senare."
-      },
-      "filterDialog": {
-        "title": "Filtrera arbetsflödesuppgifter",
-        "description": "Välj kriterier för att filtrera aktiviteter för arbetsflödesuppgifter.",
-        "fields": {
-          "search": "Sök",
-          "searchPlaceholder": "Sök i titel och beskrivning",
-          "workflowExecution": "Arbetsflödeskörning",
-          "workflowExecutionPlaceholder": "Välj arbetsflödeskörning…",
-          "allExecutions": "Alla körningar",
-          "priority": "Prioritet",
-          "priorityPlaceholder": "Välj prioritet…",
-          "allPriorities": "Alla prioriteter",
-          "priorityHigh": "Hög",
-          "priorityMedium": "Medel",
-          "priorityLow": "Låg",
-          "dueDateRange": "Intervall för måldatum",
-          "createdDateRange": "Intervall för skapandedatum",
-          "showClosedTasks": "Visa stängda uppgifter",
-          "includeHiddenTasks": "Inkludera dolda uppgifter"
-        },
-        "actions": {
-          "reset": "Återställ",
-          "cancel": "Avbryt",
-          "apply": "Tillämpa filter",
-          "clearDates": "Rensa"
-        }
       },
       "listDrawer": {
         "searchPlaceholder": "Sök uppgifter…",
@@ -363,8 +274,6 @@
       "title": "Schema",
       "actions": {
         "refresh": "Uppdatera",
-        "filter": "Filter",
-        "reset": "Återställ",
         "viewAll": "Visa alla"
       },
       "states": {
@@ -375,41 +284,17 @@
         "loadFailed": "Det gick inte att läsa in schemaaktiviteterna. Försök igen senare.",
         "refreshFailed": "Det gick inte att uppdatera schemaaktiviteterna. Försök igen senare.",
         "addAdHocFailed": "Det gick inte att lägga till aktiviteten. Försök igen."
-      },
-      "filterDialog": {
-        "title": "Filtrera schemaposter",
-        "description": "Välj kriterier för att filtrera schemaaktiviteter.",
-        "fields": {
-          "search": "Sök",
-          "searchPlaceholder": "Sök i titel och beskrivning",
-          "dateRange": "Datumintervall",
-          "workItemType": "Typ av relaterad arbetspost",
-          "workItemTypePlaceholder": "Välj typ av arbetspost…",
-          "allTypes": "Alla typer",
-          "ticket": "Ärende",
-          "projectTask": "Projektuppgift",
-          "workflowTask": "Arbetsflödesuppgift",
-          "showClosedEntries": "Visa stängda poster",
-          "showRecurringOnly": "Visa endast återkommande"
-        },
-        "actions": {
-          "reset": "Återställ",
-          "cancel": "Avbryt",
-          "apply": "Tillämpa filter"
-        }
       }
     },
     "notifications": {
       "title": "Aviseringar",
       "actions": {
         "refresh": "Uppdatera",
-        "filter": "Filter",
         "reset": "Återställ",
         "viewAll": "Visa alla"
       },
       "ariaLabels": {
-        "refresh": "Uppdatera aviseringar",
-        "filter": "Filtrera aviseringar"
+        "refresh": "Uppdatera aviseringar"
       },
       "tabs": {
         "unread": "Olästa",
@@ -424,12 +309,7 @@
         "loadFailed": "Det gick inte att läsa in aviseringsaktiviteterna. Försök igen senare."
       },
       "filterDialog": {
-        "title": "Filtrera aviseringar",
-        "description": "Välj kriterier för att filtrera aviseringsaktiviteter.",
         "fields": {
-          "status": "Status",
-          "unreadOnly": "Endast olästa",
-          "showRead": "Visa lästa",
           "category": "Kategori",
           "categoryPlaceholder": "Välj kategori…",
           "allCategories": "Alla kategorier",
@@ -440,11 +320,6 @@
             "system": "System"
           },
           "dateRange": "Datumintervall"
-        },
-        "actions": {
-          "reset": "Återställ",
-          "cancel": "Avbryt",
-          "apply": "Tillämpa filter"
         }
       },
       "priority": {
