@@ -19,6 +19,7 @@ export * from './Checkbox';
 export * from './ClientAvatar';
 export { default as ClientAvatar } from './ClientAvatar';
 export * from './ClientPicker';
+export * from './AsyncClientPicker';
 export * from './ColorPicker';
 export { default as ColorPicker } from './ColorPicker';
 // CommentThreadDrawer pulls the BlockNote editor (via InlineReplyComposer). Not re-exported
