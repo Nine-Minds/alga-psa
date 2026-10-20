@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import knexLib from 'knex';
 import type { Knex } from 'knex';
@@ -9,13 +9,21 @@ import { BillingEngine } from '../src/lib/billing/billingEngine';
 import { getAvailableRecurringDueWork } from '../src/actions/billingAndTax';
 
 // Deploy-fix round 3 (alga-2026-0002695): behaviour on a server that is NOT on UTC.
-// The smoke server runs in America/New_York. Node caches the zone at process start,
-// so these suites only mean something when the process was started with a non-UTC
-// TZ; run them through server/vitest.workspace-db-newyork.config.ts (which sets
-// TZ=America/New_York before the workers fork) or with TZ=America/New_York in the
-// environment. Under UTC they are skipped rather than passing vacuously.
+// The smoke server runs in America/New_York. Node re-reads TZ when process.env.TZ
+// changes, so this file pins the zone itself before any Date is built and restores
+// the host zone when it is done; the workspace-db lane (UTC) therefore executes it
+// instead of skipping it, which its execution-evidence gate requires.
 // Needs HOUR_BLOCK_DB_TESTS=1 (see prepaidBlockInvoicing.db.test.ts for the env vars).
-const enabled = process.env.HOUR_BLOCK_DB_TESTS === '1' && new Date(2026, 9, 13).getTimezoneOffset() !== 0;
+const hostTimeZone = process.env.TZ;
+process.env.TZ = 'America/New_York';
+afterAll(() => {
+  if (hostTimeZone === undefined) delete process.env.TZ;
+  else process.env.TZ = hostTimeZone;
+});
+const enabled = process.env.HOUR_BLOCK_DB_TESTS === '1';
+if (enabled && new Date(2026, 9, 13).getTimezoneOffset() === 0) {
+  throw new Error('prepaidBlockDeployFixes: TZ=America/New_York did not take effect in this worker');
+}
 
 const config = {
   host: process.env.HOUR_BLOCK_DB_HOST || '127.0.0.1',
