@@ -17,6 +17,7 @@ import { GoogleCalendarAdapter } from '@alga-psa/ee-calendar/lib/services/calend
 import { MicrosoftCalendarAdapter } from '@alga-psa/ee-calendar/lib/services/calendar/providers/MicrosoftCalendarAdapter';
 import { CalendarSyncService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarSyncService';
 import { CalendarWebhookMaintenanceService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarWebhookMaintenanceService';
+import { MICROSOFT_MULTI_TENANT_AUTHORITY, microsoftIssuerKindFromSource, resolveMicrosoftOAuthAuthority } from '@alga-psa/shared/services/email/microsoftAuthority';
 
 type CalendarActionContext = {
   tenant: string;
@@ -150,6 +151,7 @@ export async function initiateCalendarOAuthImpl(
     }
 
     let clientId: string | null = null;
+    let msTenantAuthority: string = MICROSOFT_MULTI_TENANT_AUTHORITY;
 
     if (provider === 'google') {
       clientId =
@@ -165,6 +167,10 @@ export async function initiateCalendarOAuthImpl(
         };
       }
       clientId = microsoftProfile.clientId || null;
+      msTenantAuthority = resolveMicrosoftOAuthAuthority({
+        issuerKind: microsoftIssuerKindFromSource(microsoftProfile.credentialSource),
+        profileTenantId: microsoftProfile.microsoftTenantId,
+      });
     }
 
     if (!clientId) {
@@ -191,8 +197,6 @@ export async function initiateCalendarOAuthImpl(
       isPopup,
     };
     const encodedState = encodeCalendarState(state);
-
-    const msTenantAuthority = 'common';
 
     const authUrl =
       provider === 'microsoft'

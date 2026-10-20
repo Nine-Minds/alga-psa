@@ -1,6 +1,7 @@
 // @ts-nocheck
 // TODO: Implicit any type on response
 import axios, { AxiosInstance } from 'axios';
+import { microsoftIssuerKindFromSource, resolveMicrosoftOAuthAuthority } from '@alga-psa/shared/services/email/microsoftAuthority';
 import { getMicrosoftGraphBaseUrl, getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { BaseCalendarAdapter } from './base/BaseCalendarAdapter';
 import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/types';
@@ -147,8 +148,14 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         throw new Error('Microsoft OAuth credentials not configured');
       }
 
-      // Always use 'common' for multi-tenant Azure AD apps
-      const tokenUrl = getMicrosoftTokenUrl('common');
+      // Platform env app -> common; otherwise the stored profile directory ID.
+      const usesPlatformEnvApp = !vendorConfig.clientId && Boolean(clientId) && clientId === process.env.MICROSOFT_CLIENT_ID;
+      const tokenUrl = getMicrosoftTokenUrl(
+        resolveMicrosoftOAuthAuthority({
+          issuerKind: usesPlatformEnvApp ? 'platform-managed' : 'tenant-owned',
+          profileTenantId: vendorConfig.tenantId || vendorConfig.tenant_id,
+        })
+      );
 
       // Omit scope on refresh: this preserves each refresh token's granted scopes.
       // Older connections can still sync event bodies and get a category-specific reconnect warning.
