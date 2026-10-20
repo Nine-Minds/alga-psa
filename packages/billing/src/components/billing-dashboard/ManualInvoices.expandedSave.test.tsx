@@ -31,7 +31,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_k
 import ManualInvoices from './ManualInvoices';
 afterEach(cleanup);
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   mocks.snapshot.mockImplementation(async (requestedInvoiceId?: string) => {
     const invoiceId = requestedInvoiceId ?? invoice.invoice_id;
     const invoiceCharges = await mocks.lineItems(invoiceId);
