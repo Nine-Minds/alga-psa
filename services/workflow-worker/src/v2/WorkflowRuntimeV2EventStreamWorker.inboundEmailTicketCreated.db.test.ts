@@ -17,14 +17,33 @@ import { createClient } from 'redis';
 // processInboundEmailInApp derives, not a raw message) and the Temporal start (the run row is real,
 // the Temporal workflow start is not).
 //
-// Needs a migrated test database plus the local-test Redis; skipped without TEST_DB_NAME.
-//   cd server && TEST_DB_NAME=<name>_test npx vitest run src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts --coverage.enabled=false
-//   cd services/workflow-worker && TEST_DB_NAME=<name>_test DB_HOST=127.0.0.1 DB_PORT=5472 REDIS_HOST=127.0.0.1 REDIS_PORT=6380 \
-//     npx vitest run src/v2/WorkflowRuntimeV2EventStreamWorker.inboundEmailTicketCreated.db.test.ts
+// Needs a migrated AND seeded database plus the local-test Redis. Plain `npm test` skips it without
+// TEST_DB_NAME; with REQUIRE_DB=1 or vitest.db.config.ts a missing TEST_DB_NAME or a stubbed `redis` throws.
+//
+// Ports: Postgres 127.0.0.1:5472 (the instance server/test-utils/dbConfig.ts bootstraps against; 5474 is a
+// different instance and has no app_user test DBs), Redis 127.0.0.1:6380. Passwords come from the checkout's
+// secrets/ directory (postgres_password, db_password_server, redis_password), read below.
+//
+// Recipe, from nothing to green (run from the repo/worktree root):
+//   1. Create + migrate + seed a dedicated DB. The server TestContext bootstrap drops/recreates
+//      $TEST_DB_NAME, runs server/migrations and the seeds, so this smoke test is the bootstrap:
+//        cd server && TEST_DB_NAME=alga2379_wfw_test \
+//          npx vitest run src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts --coverage.enabled=false
+//   2. Run this test through the DB config (forces the real node-redis client by setting REAL_REDIS=1):
+//        cd services/workflow-worker && TEST_DB_NAME=alga2379_wfw_test \
+//          npx vitest run --config vitest.db.config.ts src/v2/WorkflowRuntimeV2EventStreamWorker.inboundEmailTicketCreated.db.test.ts
+//   A migrated-but-unseeded DB fails with `Expected seeded tenant`. The test cleans up what it creates
+//   (tickets, outbox rows, runtime events, the workflow definition, its stream entries), so it can be rerun.
 
+const requireInfra = process.env.REQUIRE_DB === '1' || process.env.DB_TEST_CONFIG === '1';
 const dbConfigured = Boolean(process.env.TEST_DB_NAME);
-if (!dbConfigured && process.env.REQUIRE_DB === '1') {
-  throw new Error('inboundEmailTicketCreated.db requires TEST_DB_NAME');
+if (!dbConfigured && requireInfra) {
+  throw new Error('inboundEmailTicketCreated.db requires TEST_DB_NAME (REQUIRE_DB=1 or vitest.db.config.ts was used)');
+}
+if (dbConfigured && process.env.REAL_REDIS !== '1') {
+  // The repo-root vitest config aliases `redis` to a no-op stub unless REAL_REDIS=1, so both this test and the
+  // EventBus would get a client without xAdd/xGroupCreate and fail obscurely.
+  throw new Error('inboundEmailTicketCreated.db needs the real redis client: run with --config vitest.db.config.ts (sets REAL_REDIS=1)');
 }
 
 const secretsDir = path.resolve(__dirname, '../../../../secrets');
@@ -138,6 +157,31 @@ describe.skipIf(!dbConfigured)('inbound email -> TICKET_CREATED workflow launch 
       password: process.env.REDIS_PASSWORD || undefined,
     });
     await redis.connect();
+    if (typeof redis.xAdd !== 'function') {
+      throw new Error('redis client has no xAdd: the `redis` stub alias is active; run with --config vitest.db.config.ts');
+    }
+
+    // Both tests need the runtime registries and a published TICKET_CREATED workflow; vitest shuffles
+    // test order, so this cannot live inside one test (a lone stale-payload test saw unknown_schema_ref).
+    const { createWorkflowDefinitionAction, publishWorkflowDefinitionAction } = await import('@alga-psa/workflows/actions');
+    const { initializeWorkflowRuntimeV2 } = await import('@alga-psa/workflows/runtime');
+    initializeWorkflowRuntimeV2();
+
+    const created = await createWorkflowDefinitionAction({
+      definition: {
+        id: uuidv4(),
+        version: 1,
+        name: `Inbound email ticket created ${uuidv4().slice(0, 6)}`,
+        description: 'alga-2026-0002379 acceptance',
+        payloadSchemaRef: 'payload.TicketCreated.v1',
+        trigger: { type: 'event', eventName: 'TICKET_CREATED' },
+        steps: [{ id: 'state-1', type: 'state.set', config: { state: 'READY' } } as any],
+      },
+    });
+    workflowId = created.workflowId;
+    const publish: any = await publishWorkflowDefinitionAction({ workflowId, version: 1 });
+    expect(JSON.stringify(publish?.errors ?? [])).toBe('[]');
+    expect(publish?.ok).toBe(true);
   }, 120_000);
 
   afterAll(async () => {
@@ -158,31 +202,13 @@ describe.skipIf(!dbConfigured)('inbound email -> TICKET_CREATED workflow launch 
         await db('workflow_runtime_events').where({ tenant: tenantId }).whereIn('event_id', eventIds).delete().catch(() => undefined);
       }
       await db('inbound_email_outbox').where({ tenant: tenantId }).whereIn('ticket_id' as any, ticketIds).delete().catch(() => undefined);
+      // Runs, steps and versions cascade from the definition.
+      if (workflowId) await db('workflow_definitions').where({ workflow_id: workflowId }).delete().catch(() => undefined);
       await db.destroy();
     }
   });
 
   it('starts the published TICKET_CREATED workflow for a new inbound-email ticket', async () => {
-    const { createWorkflowDefinitionAction, publishWorkflowDefinitionAction } = await import('@alga-psa/workflows/actions');
-    const { initializeWorkflowRuntimeV2 } = await import('@alga-psa/workflows/runtime');
-    initializeWorkflowRuntimeV2();
-
-    const created = await createWorkflowDefinitionAction({
-      definition: {
-        id: uuidv4(),
-        version: 1,
-        name: `Inbound email ticket created ${uuidv4().slice(0, 6)}`,
-        description: 'alga-2026-0002379 acceptance',
-        payloadSchemaRef: 'payload.TicketCreated.v1',
-        trigger: { type: 'event', eventName: 'TICKET_CREATED' },
-        steps: [{ id: 'state-1', type: 'state.set', config: { state: 'READY' } } as any],
-      },
-    });
-    workflowId = created.workflowId;
-    const publish: any = await publishWorkflowDefinitionAction({ workflowId, version: 1 });
-    expect(JSON.stringify(publish?.errors ?? [])).toBe('[]');
-    expect(publish?.ok).toBe(true);
-
     // Durable inbound: an inbox row owns the outbox rows written in the ticket transaction.
     const { upsertIngress, upsertInbox } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
     const providerId = uuidv4();
