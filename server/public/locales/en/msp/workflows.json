@@ -565,7 +565,8 @@
       "exportCsv": "Export CSV",
       "exportJson": "Export JSON",
       "close": "Close",
-      "viewRunDetails": "View run details"
+      "viewRunDetails": "View run details",
+      "backToEvents": "Back to events"
     },
     "table": {
       "schemaConflict": "catalog ≠ submission",
@@ -627,7 +628,8 @@
     },
     "actions": {
       "refresh": "Refresh",
-      "loadMore": "Load more"
+      "loadMore": "Load more",
+      "backToList": "Back to dead letter"
     },
     "table": {
       "columns": {
@@ -1395,7 +1397,9 @@
         "summary_one": "Skipped {{count}} event in the last {{days}} days — {{reasons}}",
         "summary_other": "Skipped {{count}} events in the last {{days}} days — {{reasons}}",
         "lastSkipped": "Last skipped {{when}}",
-        "view": "View skipped events"
+        "view": "View skipped events",
+        "summary_few": "Skipped {{count}} events in the last {{days}} days — {{reasons}}",
+        "summary_many": "Skipped {{count}} events in the last {{days}} days — {{reasons}}"
       },
       "drawer": {
         "title": "Skipped events",
@@ -1738,7 +1742,9 @@
     "insertionPointLabel": "New steps go here",
     "emptyBranchPrompt": "Add a step to this branch",
     "emptyActivePrompt": "New steps go here. Pick one from the palette.",
-    "stepCount": "({{count}} steps)"
+    "stepCount": "({{count}} steps)",
+    "stepCount_few": "({{count}} steps)",
+    "stepCount_many": "({{count}} steps)"
   },
   "expressionEditor": {
     "ariaLabel": "Expression editor",
@@ -2251,7 +2257,12 @@
       "currentRun": "Run {{id}}",
       "backToWorkflow": "Back to workflow"
     },
-    "title": "Workflow Run Studio"
+    "title": "Workflow Run Studio",
+    "communityEdition": {
+      "title": "Pro Feature",
+      "description": "Workflow run studio is only available in Pro.",
+      "runId": "Run id: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3024,6 +3035,10 @@
         "selectBoard": "Select or enter a board",
         "selectPriority": "Select or enter a priority"
       }
+    },
+    "proFeature": {
+      "title": "Pro Feature",
+      "description": "The workflow system is only available in Pro. Please upgrade your installation to access this feature."
     }
   },
   "toggle": {
@@ -3162,5 +3177,29 @@
       "label": "Causation depth exceeded",
       "hint": "The chain of events caused by events exceeded the maximum depth; skipped to prevent runaway loops."
     }
+  },
+  "createFromTicket": {
+    "title": "Create workflow from ticket",
+    "description": "Creates a draft workflow whose first step creates a ticket like #{{number}}. Nothing is published.",
+    "cancel": "Cancel",
+    "creating": "Creating…",
+    "submit": "Create draft & open designer",
+    "nameLabel": "Workflow name",
+    "triggerLabel": "Trigger",
+    "triggerManual": "Manual (run on demand)",
+    "ticketCreatedWarning": "This workflow creates a ticket, and a new ticket fires this trigger again. Add a condition before publishing to avoid a loop.",
+    "includeLegend": "Include from the ticket",
+    "propertiesAlways": "Title, description, client, contact, board, category and priority are always included.",
+    "includeAssignment": "Assignment",
+    "includeTags": "Tags",
+    "includeCustomFields": "Custom fields",
+    "includeChecklist": "Checklist",
+    "errors": {
+      "nameRequired": "Workflow name is required",
+      "generic": "Failed to create the workflow draft"
+    },
+    "includeCustomFieldsCount": "Custom fields ({{n}})",
+    "includeChecklistCount": "Checklist ({{total}} items: {{templates}} from templates / {{adHoc}} ad-hoc)",
+    "checklistTemplateNote": "Items from templates are re-applied from the current template, so edits made on this ticket are not carried over."
   }
 }

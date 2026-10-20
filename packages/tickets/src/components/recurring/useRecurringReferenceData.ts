@@ -37,6 +37,7 @@ export interface RecurringReferenceData {
  * quick-add ticket dialog uses, loaded once, plus a per-board cache so every board a client override
  * mentions is fetched at most once.
  */
+// LEVERAGE: friction recurring-reference-data-hook — board/priority/category lookups are generic ticket-field data but live in a recurring-named hook (also reused by TicketTemplateEditor); extract a neutral useTicketFieldReferenceData
 export function useRecurringReferenceData(): RecurringReferenceData {
   const [state, setState] = useState<Omit<RecurringReferenceData, 'ensureBoard' | 'boardData'>>({
     loading: true,

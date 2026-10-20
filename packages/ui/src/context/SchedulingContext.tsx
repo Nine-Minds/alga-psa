@@ -3,6 +3,7 @@
 import React, { createContext, useContext } from 'react';
 import { Alert, AlertDescription } from '../components/Alert';
 import { toast } from 'react-hot-toast';
+import { translate, useTranslation } from '../lib/i18n/client';
 import type {
   TimeEntryWorkItemContext,
   TicketTimeEntriesSummary,
@@ -66,21 +67,26 @@ export interface SchedulingCallbacks {
   deleteTimeEntry: (entryId: string) => Promise<void | ActionMessageError | ActionPermissionError>;
 }
 
-const defaultSchedulingCallbacks: SchedulingCallbacks = {
-  renderAgentSchedule: (agentId: string) => (
+function AgentScheduleFallback({ agentId }: { agentId: string }) {
+  const { t } = useTranslation('msp/schedule');
+  return (
     <div className="p-4">
       <Alert>
         <AlertDescription>
-          Agent schedule view is now owned by Scheduling. (agentId: {agentId})
+          {t('fallback.agentSchedule', { agentId, defaultValue: `Agent schedule view is now owned by Scheduling. (agentId: ${agentId})` })}
         </AlertDescription>
       </Alert>
     </div>
-  ),
+  );
+}
+
+const defaultSchedulingCallbacks: SchedulingCallbacks = {
+  renderAgentSchedule: (agentId: string) => <AgentScheduleFallback agentId={agentId} />,
   launchTimeEntry: async () => {
-    toast('Time entry is managed in Scheduling.');
+    toast(translate('msp/schedule', 'fallback.timeEntry', { defaultValue: 'Time entry is managed in Scheduling.' }));
   },
   launchScheduleEntry: async () => {
-    toast('Scheduling is managed in Scheduling.');
+    toast(translate('msp/schedule', 'fallback.scheduling', { defaultValue: 'Scheduling is managed in Scheduling.' }));
   },
   fetchTimeEntriesForTicket: async () => ({
     entries: [],
@@ -95,7 +101,7 @@ const defaultSchedulingCallbacks: SchedulingCallbacks = {
     totalMinutes: 0,
   }),
   deleteTimeEntry: async () => {
-    toast('Time entry is managed in Scheduling.');
+    toast(translate('msp/schedule', 'fallback.timeEntry', { defaultValue: 'Time entry is managed in Scheduling.' }));
   },
 };
 

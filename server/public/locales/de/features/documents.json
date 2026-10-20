@@ -376,5 +376,8 @@
     "altVideoThumbnail": "Vorschaubild von {{name}}",
     "pageCount_one": "{{count}} Seite",
     "pageCount_other": "{{count}} Seiten"
+  },
+  "skeleton": {
+    "cardLabel": "Ladeplatzhalter für Dokumentkarte"
   }
 }

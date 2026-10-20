@@ -128,7 +128,7 @@ function parseTaniumDisks(disks?: Array<{
   if (!Array.isArray(disks)) return [];
 
   return disks
-    .map((disk) => {
+    .map((disk): RmmStorageInfo | null => {
       const name = String(disk?.name || '').trim();
       const totalGb = parseSizeToGb(disk?.total);
       const freeGb = parseSizeToGb(disk?.free);
@@ -143,7 +143,7 @@ function parseTaniumDisks(disks?: Array<{
         total_gb: totalGb,
         free_gb: freeGb,
         utilization_percent: utilizationPercent,
-      } satisfies RmmStorageInfo;
+      };
     })
     .filter((disk): disk is RmmStorageInfo => disk !== null);
 }

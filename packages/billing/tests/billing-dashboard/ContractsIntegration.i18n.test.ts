@@ -217,7 +217,10 @@ describe('Contracts integration i18n coverage', () => {
     for (const key of keySet) {
       if (
         key === 'wizardBasics.summary.values.noticePeriodDays' ||
-        key === 'wizardBasics.summary.values.renewalTermMonths'
+        key === 'wizardBasics.summary.values.renewalTermMonths' ||
+        // i18next plural base key (badgeCount_one / badgeCount_other)
+        key === 'wizardReview.prepaid.badgeCount' ||
+        key === 'wizardReview.prepaid.expiresAfter'
       ) {
         expect(getLeaf(en, `${key}_one`)).toBeDefined();
         expect(getLeaf(en, `${key}_other`)).toBeDefined();

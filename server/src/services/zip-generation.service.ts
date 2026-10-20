@@ -1,8 +1,7 @@
-import { createWriteStream, readFileSync } from 'fs';
+import { createWriteStream } from 'fs';
 import archiver from 'archiver';
 import { FileStoreModel } from '@alga-psa/storage';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from '../lib/db';
 
 export class ZipGenerationService {
@@ -24,11 +23,12 @@ export class ZipGenerationService {
       archive.pipe(output);
 
       try {
+        const { knex } = await createTenantKnex();
+
         // Process files sequentially
         let successCount = 0;
         for (const record of fileRecords) {
           try {
-            const { knex } = await createTenantKnex();
             const file = await FileStoreModel.findById(knex, record.file_id);
             if (!file) {
               console.warn(`File not found: ${record.file_id}`);
@@ -56,26 +56,5 @@ export class ZipGenerationService {
       console.error('Error generating zip file:', err);
       throw err; // Re-throw the error to maintain the Promise<string> return type
     });
-  }
-
-  async storeZipFile(zipFilePath: string, metadata: Record<string, unknown>): Promise<string> {
-    const { knex } = await createTenantKnex();
-    const fileStore = await FileStoreModel.create(knex, {
-      file_name: `invoices-${Date.now()}.zip`,
-      original_name: 'invoices.zip',
-      mime_type: 'application/zip',
-      file_size: 0, // Will be updated after upload
-      storage_path: zipFilePath,
-      uploaded_by_id: 'system',
-      fileId: uuidv4() // Add fileId since FileStore type expects it
-    });
-
-    await FileStoreModel.createDocumentSystemEntry(knex, {
-      fileId: fileStore.file_id,
-      category: 'invoice-zip',
-      metadata,
-    });
-
-    return fileStore.file_id;
   }
 }

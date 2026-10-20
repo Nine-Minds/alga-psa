@@ -3,8 +3,8 @@
  * Handles CRUD operations for email provider configurations
  */
 
-import { tenantDb } from '@alga-psa/db';
-import type { TenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction, type TenantDb } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import { createTenantKnex } from '../../lib/db';
 import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
@@ -50,6 +50,7 @@ export interface ProviderStatus {
 }
 
 export class EmailProviderService {
+  // LEVERAGE: pattern email-provider-service-twin — server/ and packages/integrations/ carry diverging copies of EmailProviderService; the create/update/vendor-config logic has drifted (missing IMAP tenant, Microsoft column allowlist only in packages)
   private readonly lifecycleService = new EmailProviderLifecycleService();
   private async getDb() {
     const { knex } = await createTenantKnex();
@@ -137,81 +138,103 @@ export class EmailProviderService {
   }
 
   /**
-   * Create a new email provider
+   * Create a new email provider.
+   *
+   * The provider row and its vendor-config row are written atomically. If a
+   * caller transaction is passed it is joined (the caller owns commit/rollback);
+   * otherwise the service opens its own transaction.
    */
-  async createProvider(data: CreateProviderData): Promise<EmailProviderConfig> {
+  async createProvider(
+    data: CreateProviderData,
+    knexOrTrx?: Knex | Knex.Transaction
+  ): Promise<EmailProviderConfig> {
     try {
-      const db = await this.getDb();
-      
-      // Create main provider record
-      const [provider] = await tenantDb(db, data.tenant).table('email_providers')
-        .insert({
-          id: db.raw('gen_random_uuid()'),
-          tenant: data.tenant,
-          provider_type: data.providerType,
-          provider_name: data.providerName,
-          mailbox: data.mailbox,
-          is_active: data.isActive,
-          status: 'configuring',
-          created_at: db.fn.now(),
-          updated_at: db.fn.now()
-        })
-        .returning('*');
+      const conn = knexOrTrx ?? (await this.getDb());
+      const created = await withTransaction(conn, async (trx) => {
+        const db = tenantDb(trx, data.tenant);
 
-      // Create vendor-specific configuration
-      const providerDb = tenantDb(db, data.tenant);
-      if (data.providerType === 'google') {
-        const insertPayload = { ...data.vendorConfig };
-        
-        // Ensure label_filters is properly JSON-stringified for jsonb column
-        if (insertPayload.label_filters && Array.isArray(insertPayload.label_filters)) {
-          insertPayload.label_filters = JSON.stringify(insertPayload.label_filters);
-        }
-        
-        await providerDb.table('google_email_provider_config')
+        // Create main provider record
+        const [providerRow] = await db.table('email_providers')
           .insert({
-            email_provider_id: provider.id,
+            id: trx.raw('gen_random_uuid()'),
             tenant: data.tenant,
-            ...insertPayload,
-            created_at: db.fn.now(),
-            updated_at: db.fn.now()
-          });
-      } else if (data.providerType === 'microsoft') {
-        await providerDb.table('microsoft_email_provider_config')
-          .insert({
-            email_provider_id: provider.id,
-            tenant: data.tenant,
-            ...data.vendorConfig,
-            created_at: db.fn.now(),
-            updated_at: db.fn.now()
-          });
-      } else if (data.providerType === 'imap') {
-        const insertPayload = { ...data.vendorConfig };
-        if (insertPayload.folder_filters && Array.isArray(insertPayload.folder_filters)) {
-          insertPayload.folder_filters = JSON.stringify(insertPayload.folder_filters);
-        }
-        await providerDb.table('imap_email_provider_config')
-          .insert({
-            email_provider_id: provider.id,
-            ...insertPayload,
-            created_at: db.fn.now(),
-            updated_at: db.fn.now()
-          });
-      }
+            provider_type: data.providerType,
+            provider_name: data.providerName,
+            mailbox: data.mailbox,
+            is_active: data.isActive,
+            status: 'configuring',
+            created_at: trx.fn.now(),
+            updated_at: trx.fn.now()
+          })
+          .returning('*');
 
-      console.log(`✅ Created email provider: ${provider.provider_name} (${provider.id})`);
-      
-      // Fetch the complete provider with vendor config
-      const createdProvider = await this.getProvider(provider.id);
-      if (!createdProvider) {
-        throw new Error('Failed to fetch created provider');
-      }
-      
-      return createdProvider;
+        // Create vendor-specific configuration
+        const vendorRow = await this.insertVendorConfig(db, trx, providerRow.id, data);
+
+        return this.mapCurrentDbRowToProvider(providerRow, vendorRow);
+      });
+
+      console.log(`✅ Created email provider: ${created.name} (${created.id})`);
+
+      return created;
     } catch (error: any) {
       console.error('Error creating email provider:', error);
       throw new Error(`Failed to create email provider: ${error.message}`);
     }
+  }
+
+  private async insertVendorConfig(
+    db: TenantDb,
+    trx: Knex.Transaction,
+    providerId: string,
+    data: CreateProviderData
+  ): Promise<any | null> {
+    if (data.providerType === 'google') {
+      const insertPayload = { ...data.vendorConfig };
+
+      // Ensure label_filters is properly JSON-stringified for jsonb column
+      if (insertPayload.label_filters && Array.isArray(insertPayload.label_filters)) {
+        insertPayload.label_filters = JSON.stringify(insertPayload.label_filters);
+      }
+
+      const rows = await db.table('google_email_provider_config')
+        .insert({
+          email_provider_id: providerId,
+          tenant: data.tenant,
+          ...insertPayload,
+          created_at: trx.fn.now(),
+          updated_at: trx.fn.now()
+        })
+        .returning('*');
+      return rows[0] ?? null;
+    } else if (data.providerType === 'microsoft') {
+      const rows = await db.table('microsoft_email_provider_config')
+        .insert({
+          email_provider_id: providerId,
+          tenant: data.tenant,
+          ...data.vendorConfig,
+          created_at: trx.fn.now(),
+          updated_at: trx.fn.now()
+        })
+        .returning('*');
+      return rows[0] ?? null;
+    } else if (data.providerType === 'imap') {
+      const insertPayload = { ...data.vendorConfig };
+      if (insertPayload.folder_filters && Array.isArray(insertPayload.folder_filters)) {
+        insertPayload.folder_filters = JSON.stringify(insertPayload.folder_filters);
+      }
+      const rows = await db.table('imap_email_provider_config')
+        .insert({
+          email_provider_id: providerId,
+          tenant: data.tenant,
+          ...insertPayload,
+          created_at: trx.fn.now(),
+          updated_at: trx.fn.now()
+        })
+        .returning('*');
+      return rows[0] ?? null;
+    }
+    return null;
   }
 
   /**

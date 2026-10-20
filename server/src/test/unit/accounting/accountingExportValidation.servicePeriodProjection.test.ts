@@ -158,6 +158,9 @@ describe('AccountingExportValidation service-period projection', () => {
 
       throw new Error(`Unexpected table ${table}`);
     });
+    // Charge expansion probes for the mid-period adjustments table before it
+    // projects contract-change descriptions; this batch carries none.
+    knex.schema = { hasTable: async () => false };
 
     vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({
       knex,

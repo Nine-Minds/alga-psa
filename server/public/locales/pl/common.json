@@ -1,4 +1,7 @@
 {
+  "breadcrumbs": {
+    "ariaLabel": "Ścieżka nawigacji"
+  },
   "phone": {
     "extension": "wew."
   },
@@ -113,7 +116,16 @@
     "printSelected": "Drukuj zaznaczone ({{count}})",
     "printSelected_few": "Drukuj zaznaczone ({{count}})",
     "printSelected_many": "Drukuj zaznaczone ({{count}})",
-    "removeTag": "Usuń tag"
+    "removeTag": "Usuń tag",
+    "saveChanges": "Zapisz zmiany",
+    "saveSettings": "Zapisz ustawienia",
+    "finishSetup": "Zakończ konfigurację",
+    "skip": "Pomiń",
+    "saveAsDraft": "Zapisz jako wersję roboczą",
+    "completing": "Kończenie...",
+    "more": "Więcej",
+    "closeDialog": "Zamknij okno dialogowe",
+    "clearSearch": "Wyczyść wyszukiwanie"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -131,7 +143,8 @@
     "active": "Aktywne",
     "inactive": "Nieaktywne",
     "completed": "Zakończone",
-    "cancelled": "Anulowane"
+    "cancelled": "Anulowane",
+    "loadingLabel": "Ładowanie"
   },
   "messages": {
     "welcome": "Witamy",
@@ -211,7 +224,18 @@
     }
   },
   "fields": {
-    "notes": "Notatki"
+    "notes": "Notatki",
+    "phone": {
+      "label": "Telefon",
+      "placeholder": "+1 (555) 123-4567"
+    },
+    "phoneExtension": {
+      "label": "Numer wewnętrzny",
+      "placeholder": "wew. 1234"
+    },
+    "priority": {
+      "placeholder": "Wybierz priorytet"
+    }
   },
   "auth": {
     "signOut": {
@@ -1327,8 +1351,34 @@
     }
   },
   "enums": {
+    "locale": {
+      "en": "Angielski",
+      "fr": "Francuski",
+      "es": "Hiszpański",
+      "de": "Niemiecki",
+      "nl": "Niderlandzki",
+      "it": "Włoski",
+      "pl": "Polski",
+      "pt": "Portugalski (Brazylia)",
+      "sv": "Szwedzki",
+      "xx": "Pseudo-język (xx)",
+      "yy": "Pseudo-język (yy)"
+    },
     "addOnDescription": {
       "ai_assistant": "Odblokuj czat AI, pomoc w dokumentach, pomoc w pasku bocznym oraz narzędzia AI dla workflow Twojego zespołu."
+    },
+    "notificationCategory": {
+      "tickets": "Zgłoszenia",
+      "invoices": "Faktury",
+      "messages": "Wiadomości",
+      "projects": "Projekty",
+      "system": "System",
+      "appointments": "Wizyty"
+    },
+    "theme": {
+      "light": "Jasny",
+      "dark": "Ciemny",
+      "system": "Systemowy"
     }
   },
   "form": {
@@ -1354,7 +1404,9 @@
     "notAssigned": "Nieprzypisane",
     "searchUsersOrTeams": "Szukaj użytkowników lub zespołów...",
     "unnamedUser": "Użytkownik bez nazwy",
-    "unnamedTeam": "Zespół bez nazwy"
+    "unnamedTeam": "Zespół bez nazwy",
+    "userPicker": "Wybór użytkownika",
+    "noUsersFound": "Nie znaleziono użytkowników"
   },
   "serviceTypeSelect": {
     "placeholder": "Wybierz rodzaj usługi...",
@@ -1559,7 +1611,20 @@
     "showLess": "Pokaż mniej",
     "columnsHidden": "Ukryto {{count}} kolumn z powodu ograniczonej przestrzeni.",
     "columnsHidden_few": "Ukryto {{count}} kolumny z powodu ograniczonego miejsca.",
-    "columnsHidden_many": "Ukryto {{count}} kolumn z powodu ograniczonego miejsca."
+    "columnsHidden_many": "Ukryto {{count}} kolumn z powodu ograniczonego miejsca.",
+    "responsiveColumnsHidden_one": "Ukryto {{count}} kolumnę z powodu braku miejsca. Zmień rozmiar, aby zobaczyć więcej.",
+    "responsiveColumnsHidden_other": "Ukryto {{count}} kolumny z powodu braku miejsca. Zmień rozmiar, aby zobaczyć więcej.",
+    "responsiveColumnsHidden_few": "Ukryto {{count}} kolumny z powodu braku miejsca. Zmień rozmiar, aby zobaczyć więcej.",
+    "responsiveColumnsHidden_many": "Ukryto {{count}} kolumn z powodu braku miejsca. Zmień rozmiar, aby zobaczyć więcej.",
+    "empty": "Brak wyników",
+    "pagination": {
+      "empty": "0 elementów",
+      "range_one": "{{first}}–{{last}} z {{count}} elementu",
+      "range_other": "{{first}}–{{last}} z {{count}} elementu",
+      "range_few": "{{first}}–{{last}} z {{count}} elementów",
+      "range_many": "{{first}}–{{last}} z {{count}} elementów",
+      "perPage": "{{count}} na stronę"
+    }
   },
   "richTextEditorSkeleton": {
     "loading": "Ładowanie edytora…"
@@ -1578,7 +1643,36 @@
   },
   "notifications": {
     "needsAttention": "Wymaga uwagi ({{count}})",
-    "lowPriority": "Niski priorytet ({{count}})"
+    "lowPriority": "Niski priorytet ({{count}})",
+    "detail": {
+      "document": "Dokument",
+      "actions": {
+        "openDocument": "Otwórz dokument",
+        "viewTicket": "Wyświetl zgłoszenie",
+        "viewTask": "Wyświetl zadanie",
+        "viewDetails": "Zobacz szczegóły"
+      },
+      "changes": "Zmiany:",
+      "status": "Status:",
+      "priority": "Priorytet:",
+      "assignedTo": "Przypisano do:",
+      "changedBy": "Zmienione przez:",
+      "assignedBy": "Przypisane przez:",
+      "unread": "Nieprzeczytane",
+      "internalComment": "Komentarz wewnętrzny",
+      "commentBy": "Komentarz użytkownika {{author}}:",
+      "readAt": "Przeczytano {{time}}"
+    },
+    "item": {
+      "unknown": "Nieznany",
+      "justNow": "Przed chwilą",
+      "minutesAgo": "{{minutes}} min temu",
+      "hoursAgo": "{{hours}} godz. temu",
+      "daysAgo": "{{days}} dn. temu",
+      "assigned": "Przypisano:",
+      "performedBy": "przez {{name}}",
+      "internal": "Wewnętrzny"
+    }
   },
   "importConflicts": {
     "title": "Rozwiąż konflikty importu",
@@ -1627,7 +1721,41 @@
       "document": "dokumentów",
       "knowledge_base_article": "artykułów bazy wiedzy",
       "opportunity": "szans sprzedaży"
-    }
+    },
+    "messages": {
+      "error": {
+        "duplicate": "Tag „{{tag}}” już istnieje w tym elemencie",
+        "missingEntityId": "Nie można dodać tagu: brakuje identyfikatora encji"
+      },
+      "success": {
+        "added": "Tag „{{tag}}” został dodany"
+      }
+    },
+    "dialogs": {
+      "lastUsage": {
+        "title": "Ostatnie użycie tagu",
+        "message": "To ostatnie użycie tagu „{{tag}}”. Usunąć definicję tagu czy zachować ją do wykorzystania w przyszłości?",
+        "confirm": "Odłącz i usuń definicję",
+        "keep": "Odłącz i zachowaj definicję"
+      }
+    },
+    "fields": {
+      "tags": {
+        "label": "Tagi",
+        "placeholder": "Dodaj tag..."
+      },
+      "newTag": {
+        "placeholder": "Nowy tag"
+      }
+    },
+    "actions": {
+      "removeTag": "Usuń tag {{tag}}",
+      "saving": "..."
+    },
+    "errors": {
+      "providerRequired": "useTags musi być używany wewnątrz TagProvider"
+    },
+    "empty": "Nie znaleziono tagów"
   },
   "statusDialog": {
     "nameRequired": "Nazwa statusu jest wymagana",
@@ -1666,7 +1794,14 @@
   "editor": {
     "attachFiles": "Załącz pliki",
     "uploadingFiles": "Przesyłanie plików…",
-    "fileUploadFailed": "Nie udało się przesłać pliku."
+    "fileUploadFailed": "Nie udało się przesłać pliku.",
+    "mentions": {
+      "everyone": "Wszyscy",
+      "aiAssistant": "Asystent Alga AI",
+      "noUsername": "brak nazwy użytkownika",
+      "userTitle": "{{displayName}} ({{username}})",
+      "fallback": "wzmianka"
+    }
   },
   "emailPreferences": {
     "loading": "Ładowanie preferencji e-mail…",
@@ -1788,5 +1923,254 @@
   "emailRecipients": {
     "remove": "Usuń {{email}}",
     "placeholder": "Wpisz adres i naciśnij Enter"
+  },
+  "iconPicker": {
+    "enums": {
+      "icons": {
+        "phone": "Telefon",
+        "mail": "E-mail",
+        "message-circle": "Komunikat",
+        "video": "Rozmowa wideo",
+        "send": "Wyślij",
+        "users": "Spotkanie",
+        "calendar": "Wizyta",
+        "presentation": "Prezentacja",
+        "coffee": "Nieformalne spotkanie",
+        "handshake": "Porozumienie",
+        "file-text": "Dokument",
+        "sticky-note": "Notatka",
+        "edit": "Edytuj",
+        "flag": "Dalsze działania",
+        "alarm-clock": "Przypomnienie",
+        "clock": "Rejestrowanie czasu",
+        "activity": "Ogólna aktywność",
+        "briefcase": "Zarządzanie kontem",
+        "search": "Badania",
+        "book-open": "Szkolenie",
+        "headphones": "Wsparcie",
+        "check-square": "Przegląd",
+        "clipboard": "Dokumentacja",
+        "users-2": "Konsultacja",
+        "target": "Planowanie",
+        "settings": "Konfiguracja",
+        "star": "Ważne",
+        "award": "Osiągnięcie",
+        "zap": "Szybka akcja",
+        "map-pin": "Lokalizacja",
+        "tag": "Etykieta",
+        "bell": "Powiadomienie",
+        "shield": "Bezpieczeństwo",
+        "key": "Dostęp",
+        "heart": "Ulubione"
+      },
+      "categories": {
+        "Communication": "Komunikacja",
+        "Meetings": "Spotkania",
+        "Documents": "Dokumenty",
+        "Tasks": "Zadania",
+        "Activities": "Aktywności",
+        "Business": "Biznes"
+      }
+    },
+    "selected": "Wybrano: {{label}}",
+    "help": "Wybierz ikonę reprezentującą ten typ interakcji. Ikona będzie wyświetlana na listach i w formularzach."
+  },
+  "skeletons": {
+    "calendar": {
+      "loading": "Ładowanie kalendarza..."
+    },
+    "kanbanBoard": {
+      "loading": "Ładowanie tablicy Kanban"
+    },
+    "chart": {
+      "loading": "Ładowanie wykresu...",
+      "loadingNamed": "Trwa ładowanie: {{title}}..."
+    },
+    "settingsTab": {
+      "loading": "Ładowanie ustawień..."
+    },
+    "editor": {
+      "loading": "Ładowanie edytora..."
+    },
+    "taskForm": {
+      "loading": "Ładowanie formularza zadania..."
+    },
+    "workflow": {
+      "loading": "Ładowanie wizualizacji workflow..."
+    }
+  },
+  "dialogs": {
+    "success": {
+      "title": "Sukces",
+      "confirm": "OK"
+    },
+    "contactPicker": {
+      "title": "Wybierz kontakt",
+      "columns": {
+        "name": "Imię i nazwisko",
+        "email": "E-mail",
+        "phone": "Telefon",
+        "action": "Akcja"
+      },
+      "select": "Wybierz",
+      "searchPlaceholder": "Szukaj według imienia i nazwiska, adresu e-mail lub telefonu..."
+    },
+    "defaultTitle": "Okno dialogowe",
+    "confirmDelete": {
+      "title": "Usuń {{itemType}}",
+      "message": "Czy na pewno chcesz usunąć „{{itemName}}”? Tej operacji nie można cofnąć."
+    },
+    "unsavedChanges": {
+      "title": "Niezapisane zmiany",
+      "message": "Masz niezapisane zmiany. Czy na pewno chcesz wyjść? Twoje zmiany zostaną utracone.",
+      "confirm": "Wyjdź bez zapisywania",
+      "cancel": "Zostań"
+    },
+    "confirmAction": {
+      "title": "Potwierdź działanie"
+    },
+    "contentTitle": "Zawartość okna dialogowego"
+  },
+  "viewDensity": {
+    "compact": {
+      "label": "Zwarty",
+      "title": "Przełącz na widok zwarty"
+    },
+    "spacious": {
+      "label": "Przestronny",
+      "title": "Przełącz na widok przestronny"
+    },
+    "decrease": {
+      "title": "Zmniejsz odstępy"
+    },
+    "reset": {
+      "title": "Przywróć ustawienia domyślne"
+    },
+    "increase": {
+      "title": "Zwiększ odstępy"
+    }
+  },
+  "multiContactPicker": {
+    "fields": {
+      "contacts": {
+        "placeholder": "Wybierz kontakty..."
+      },
+      "search": {
+        "placeholder": "Szukaj kontaktów..."
+      }
+    },
+    "noResults": "Nie znaleziono wyników",
+    "noContacts": "Brak dostępnych kontaktów",
+    "noEmail": "brak adresu e-mail",
+    "actions": {
+      "clearAll": "Wyczyść wszystko"
+    }
+  },
+  "themeToggle": {
+    "ariaLabel": "Zmień motyw",
+    "selected": "Wybrany"
+  },
+  "drawer": {
+    "formTitle": "{{title}} - Formularz",
+    "actions": {
+      "goBack": "Wstecz",
+      "goForward": "Dalej",
+      "close": "Zamknij panel boczny"
+    }
+  },
+  "countryPicker": {
+    "placeholder": "Wybierz kraj",
+    "searchPlaceholder": "Szukaj krajów...",
+    "otherCountries": "Inne kraje",
+    "empty": "Nie znaleziono krajów"
+  },
+  "input": {
+    "actions": {
+      "typeIntoLabel": "Wpisz tekst w polu {{label}}",
+      "type": "Wpisz tekst w tym polu",
+      "focus": "Ustaw fokus na tym polu tekstowym",
+      "clear": "Wyczyść bieżący tekst"
+    }
+  },
+  "button": {
+    "actions": {
+      "clickLabel": "Kliknij {{label}}",
+      "click": "Kliknij ten przycisk",
+      "focus": "Ustaw fokus na tym przycisku"
+    }
+  },
+  "inlineReplyComposer": {
+    "actions": {
+      "reply": "Odpowiedz"
+    },
+    "fields": {
+      "internal": {
+        "label": "Oznacz jako wewnętrzne"
+      }
+    }
+  },
+  "featureUpgradeNotice": {
+    "title": "{{featureName}} wymaga planu {{tierLabel}}",
+    "description": "Przejdź na plan {{tierLabel}}, aby odblokować funkcję {{featureName}} i inne zaawansowane funkcje.",
+    "actions": {
+      "viewPlans": "Zobacz plany"
+    }
+  },
+  "widgets": {
+    "highlight": {
+      "ariaLabel": "Wyróżniona treść"
+    },
+    "buttonLink": {
+      "unavailable": "Link niedostępny",
+      "actions": {
+        "openLink": "Otwórz link"
+      }
+    },
+    "richTextViewer": {
+      "loading": "Ładowanie treści...",
+      "errors": {
+        "loadFailed": "Błąd ładowania treści"
+      }
+    }
+  },
+  "reflection": {
+    "parentId": "Identyfikator komponentu nadrzędnego: {{id}}",
+    "noParent": "Brak komponentu nadrzędnego"
+  },
+  "teamAvatar": {
+    "alt": "Awatar: {{name}}",
+    "defaultAlt": "Awatar zespołu"
+  },
+  "userAvatar": {
+    "alt": "Awatar: {{name}}",
+    "defaultAlt": "Awatar użytkownika"
+  },
+  "featurePlaceholder": {
+    "description": "404 - Ta strona jest w budowie. Ta część witryny nie jest jeszcze całkiem gotowa. Alga przygotowuje wszystko za kulisami. Wróć wkrótce!"
+  },
+  "contactAvatar": {
+    "alt": "Awatar: {{name}}",
+    "defaultAlt": "Awatar kontaktu"
+  },
+  "entityAvatar": {
+    "alt": "Obraz: {{name}}",
+    "defaultAlt": "Obraz encji"
+  },
+  "editableField": {
+    "notSet": "Nie ustawiono"
+  },
+  "editableText": {
+    "actions": {
+      "edit": "Kliknij, aby edytować"
+    }
+  },
+  "label": {
+    "required": "Wymagane"
+  },
+  "tabs": {
+    "ariaLabel": "Karty"
+  },
+  "viewSwitcher": {
+    "ariaLabel": "Przełącz widok"
   }
 }

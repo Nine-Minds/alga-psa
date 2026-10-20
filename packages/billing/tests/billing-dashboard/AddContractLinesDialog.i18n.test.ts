@@ -22,9 +22,21 @@ function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
   }, record);
 }
 
+// The dialog now composes the shared preset picker/hook, so the translated
+// strings it renders live across all three files.
+const dialogSources = [
+  '../../src/components/billing-dashboard/contracts/AddContractLinesDialog.tsx',
+  '../../src/components/billing-dashboard/contracts/ContractLinePresetPicker.tsx',
+  '../../src/components/billing-dashboard/contracts/useContractLinePresetSelection.ts',
+];
+
+function readAll(relativePaths: string[]): string {
+  return relativePaths.map(read).join('\n');
+}
+
 describe('AddContractLinesDialog i18n wiring contract', () => {
   it('T023: dialog title, search/filter controls, and preset selection labels use translated keys', () => {
-    const source = read('../../src/components/billing-dashboard/contracts/AddContractLinesDialog.tsx');
+    const source = readAll(dialogSources);
     const en = readJson<Record<string, unknown>>(
       '../../../../server/public/locales/en/msp/contracts.json'
     );
@@ -59,7 +71,7 @@ describe('AddContractLinesDialog i18n wiring contract', () => {
   });
 
   it('T024: expanded preset details and error/loading states use translated keys', () => {
-    const source = read('../../src/components/billing-dashboard/contracts/AddContractLinesDialog.tsx');
+    const source = readAll(dialogSources);
     const en = readJson<Record<string, unknown>>(
       '../../../../server/public/locales/en/msp/contracts.json'
     );
@@ -94,7 +106,6 @@ describe('AddContractLinesDialog i18n wiring contract', () => {
       'addLines.usageConfig.ratePerUnit',
       'addLines.usageConfig.defaultRate',
       'addLines.usageConfig.unitOfMeasure',
-      'addLines.usageConfig.unitPlaceholder',
       'addLines.usageConfig.unitHint',
     ];
 

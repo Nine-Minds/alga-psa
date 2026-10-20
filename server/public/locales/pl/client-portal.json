@@ -66,7 +66,8 @@
       "createTicket": "Utwórz zgłoszenie",
       "requestAppointment": "Zarezerwuj wizytę",
       "viewLatestInvoice": "Zobacz ostatnią fakturę",
-      "newServiceRequest": "Nowe zgłoszenie serwisowe"
+      "newServiceRequest": "Nowe zgłoszenie serwisowe",
+      "createSupportTicket": "Utwórz zgłoszenie do pomocy technicznej"
     },
     "appointments": {
       "title": "Nadchodzące wizyty",
@@ -140,10 +141,7 @@
       "viewAll": "Zobacz wszystkie",
       "countLabel": "Zarządzane: {{count}}",
       "emptyShort": "Brak urządzeń",
-      "emptyBody": "Tutaj pojawią się urządzenia zarządzane przez dostawcę.",
-      "healthy": "Sprawne",
-      "inactive": "Nieaktywne",
-      "active": "Aktywne"
+      "emptyBody": "Tutaj pojawią się urządzenia zarządzane przez dostawcę."
     },
     "timeAgo": {
       "justNow": "przed chwilą",
@@ -332,7 +330,25 @@
       "tenant_mismatch": "{{providerEmail}} należy do portalu innej organizacji. Zaloguj się hasłem lub skontaktuj się z usługodawcą."
     },
     "configurationTitle": "Logowanie nie powiodło się",
-    "configurationMessage": "Logowanie nie powiodło się. Spróbuj ponownie lub skontaktuj się z usługodawcą."
+    "configurationMessage": "Logowanie nie powiodło się. Spróbuj ponownie lub skontaktuj się z usługodawcą.",
+    "registration": {
+      "messages": {
+        "verified": "Użytkownik został zweryfikowany i zarejestrowany"
+      },
+      "errors": {
+        "verifyFailed": "Nie udało się zweryfikować i zarejestrować użytkownika",
+        "invalidToken": "Nieprawidłowy token",
+        "tokenExpired": "Token wygasł",
+        "tokenNotActive": "Token nie jest jeszcze aktywny",
+        "unknown": "Nieznany błąd"
+      },
+      "user": "Użytkownik",
+      "clientPortalUser": "Użytkownik portalu klienta",
+      "mspUser": "Użytkownik MSP",
+      "resetExpiration": "1 godzina",
+      "verificationExpiration": "24 godziny",
+      "superadminRole": "Rola superadministratora"
+    }
   },
   "account": {
     "title": "Konto",
@@ -865,12 +881,9 @@
       "network": "Sieć",
       "unknown": "Inne"
     },
-    "statusWarnTitle": "Niektóre urządzenia nieaktywne",
-    "statusWarnBody": "{{active}} aktywnych · {{inactive}} nieaktywnych",
-    "status": {
-      "active": "Aktywne",
-      "inactive": "Nieaktywne"
-    },
+    "statusAttentionTitle": "Niektóre urządzenia wymagają uwagi",
+    "statusAttentionBody": "{{active}} z {{total}} urządzeń aktywnych",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Szukaj po nazwie, znaczniku lub numerze seryjnym",
     "filters": {
       "allTypes": "Wszystkie typy",
@@ -1008,14 +1021,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Nazwa",
-      "type": "Typ",
-      "status": "Status",
-      "location": "Lokalizacja",
-      "lastUpdated": "Ostatnia aktualizacja"
+      "assignedTo": "Przypisano do"
     },
-    "notAvailable": "Brak",
-    "detailsTitle": "Szczegóły zasobu"
+    "statuses": {
+      "active": "Aktywny",
+      "in_stock": "W magazynie",
+      "maintenance": "W serwisie",
+      "inactive": "Nieaktywny",
+      "retired": "Wycofany"
+    },
+    "unassigned": "Nieprzypisany",
+    "sharedWorkspace": "Współdzielone stanowisko: {{name}}",
+    "sharedWorkspaceLabel": "Współdzielone stanowisko"
   },
   "errors": {
     "account": {

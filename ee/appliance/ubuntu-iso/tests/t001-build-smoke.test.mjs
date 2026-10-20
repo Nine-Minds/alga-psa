@@ -194,6 +194,11 @@ test('T004 Temporal chart waits for schema-safe startup and creates the default 
   assert.equal(env.SKIP_ADD_CUSTOM_SEARCH_ATTRIBUTES, 'true');
   assert.equal(temporalContainer.livenessProbe.initialDelaySeconds, 300);
   assert.ok(temporalContainer.startupProbe.failureThreshold >= 60);
+  // 512Mi OOMKilled temporal-server on field appliances; GOMEMLIMIT keeps the Go
+  // heap under whatever limit is set.
+  assert.equal(temporalContainer.resources.limits.memory, '1Gi');
+  const goMemLimit = temporalContainer.env.find((entry) => entry.name === 'GOMEMLIMIT');
+  assert.deepEqual(goMemLimit?.valueFrom?.resourceFieldRef, { containerName: 'temporal', resource: 'limits.memory' });
 
   assert.equal(job.metadata.annotations['helm.sh/hook'], 'post-install,post-upgrade');
   assert.match(job.spec.template.spec.containers[0].command.join('\n'), /temporal operator namespace create/);

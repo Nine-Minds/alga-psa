@@ -821,7 +821,8 @@
       "conflict": "Este cambio de la línea de contrato entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
       "notAllowed": "Uno de los valores de la línea de contrato no está permitido. Revise el formulario e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio de la línea de contrato.",
-      "missingFieldNamed": "Falta un campo obligatorio de la línea de contrato: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio de la línea de contrato: {{field}}.",
+      "advanceTimingNotAllowed": "La facturación por adelantado solo está disponible para líneas de contrato fijas. Las líneas por horas y por uso siempre se facturan al vencimiento, después de realizar el trabajo."
     },
     "templateLine": {
       "unavailable": "La línea de plantilla seleccionada ya no está disponible. Actualice la página e inténtelo de nuevo."

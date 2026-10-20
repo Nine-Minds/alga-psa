@@ -123,9 +123,12 @@ async function handleHourBlockExpiringEvent(event: unknown): Promise<void> {
           // LEVERAGE: pattern expiring-date-email-render — creditExpiringSubscriber.ts
           // still renders date-only strings through formatDate (UTC-midnight reparse);
           // converge it onto formatCalendarDate when next touched.
+          const baseName = row?.service_id ? (serviceNameByServiceId[row.service_id] ?? 'Prepaid hours') : 'Prepaid hours';
           return {
             blockId: block.blockId,
-            serviceName: row?.service_id ? (serviceNameByServiceId[row.service_id] ?? 'Prepaid hours') : 'Prepaid hours',
+            // Contract blocks name their contract so a client with several can tell them apart.
+            serviceName: block.contractName ? `${baseName} (${block.contractName})` : baseName,
+            contractName: block.contractName ?? null,
             remainingHours: (Number(block.remainingMinutes) / 60).toFixed(1),
             expirationDate: formatCalendarDate(block.expirationDate, 'M/d/yyyy') ?? '',
           };

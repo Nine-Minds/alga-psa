@@ -565,7 +565,8 @@
       "exportCsv": "Eksportuj CSV",
       "exportJson": "Eksportuj JSON",
       "close": "Zamknij",
-      "viewRunDetails": "Zobacz szczegóły uruchomienia"
+      "viewRunDetails": "Zobacz szczegóły uruchomienia",
+      "backToEvents": "Wróć do zdarzeń"
     },
     "table": {
       "schemaConflict": "katalog ≠ zgłoszenie",
@@ -627,7 +628,8 @@
     },
     "actions": {
       "refresh": "Odśwież",
-      "loadMore": "Załaduj więcej"
+      "loadMore": "Załaduj więcej",
+      "backToList": "Wróć do kolejki martwych komunikatów"
     },
     "table": {
       "columns": {
@@ -2377,7 +2379,12 @@
       "currentRun": "Uruchomienie {{id}}",
       "backToWorkflow": "Wróć do workflow"
     },
-    "title": "Studio uruchamiania workflow"
+    "title": "Studio uruchamiania workflow",
+    "communityEdition": {
+      "title": "Funkcja Pro",
+      "description": "Studio uruchomień workflow jest dostępne tylko w Pro.",
+      "runId": "ID uruchomienia: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3150,6 +3157,10 @@
         "selectBoard": "Wybierz lub wprowadź tablicę",
         "selectPriority": "Wybierz lub wprowadź priorytet"
       }
+    },
+    "proFeature": {
+      "title": "Funkcja Pro",
+      "description": "System workflow jest dostępny tylko w Pro. Uaktualnij swoją instalację, aby uzyskać dostęp do tej funkcji."
     }
   },
   "toggle": {
@@ -3288,5 +3299,29 @@
       "label": "Przekroczono głębokość przyczynowości",
       "hint": "Łańcuch wywołanych zdarzeń przekroczył maksymalną głębokość; pominięto, aby zapobiec niekontrolowanym pętlom."
     }
+  },
+  "createFromTicket": {
+    "title": "Utwórz workflow ze zgłoszenia",
+    "description": "Tworzy szkic workflow, którego pierwszy krok tworzy zgłoszenie takie jak #{{number}}. Nic nie zostaje opublikowane.",
+    "cancel": "Anuluj",
+    "creating": "Tworzenie…",
+    "submit": "Utwórz szkic i otwórz projektanta",
+    "nameLabel": "Nazwa workflow",
+    "triggerLabel": "Wyzwalacz",
+    "triggerManual": "Ręczny (uruchamiany na żądanie)",
+    "ticketCreatedWarning": "Ten workflow tworzy zgłoszenie, a nowe zgłoszenie ponownie uruchamia ten wyzwalacz. Przed publikacją dodaj warunek, aby uniknąć pętli.",
+    "includeLegend": "Uwzględnij ze zgłoszenia",
+    "propertiesAlways": "Tytuł, opis, klient, kontakt, tablica, kategoria i priorytet są zawsze uwzględniane.",
+    "includeAssignment": "Przypisanie",
+    "includeTags": "Tagi",
+    "includeCustomFields": "Pola niestandardowe",
+    "includeChecklist": "Lista kontrolna",
+    "errors": {
+      "nameRequired": "Nazwa workflow jest wymagana",
+      "generic": "Nie udało się utworzyć szkicu workflow"
+    },
+    "includeCustomFieldsCount": "Pola niestandardowe ({{n}})",
+    "includeChecklistCount": "Lista kontrolna ({{total}} pozycji: {{templates}} z szablonów / {{adHoc}} doraźnych)",
+    "checklistTemplateNote": "Pozycje z szablonów są stosowane ponownie z bieżącego szablonu, więc zmiany wprowadzone w tym zgłoszeniu nie są przenoszone."
   }
 }

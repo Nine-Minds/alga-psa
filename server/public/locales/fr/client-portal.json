@@ -66,7 +66,8 @@
       "createTicket": "Créer un ticket",
       "requestAppointment": "Demander un rendez-vous",
       "viewLatestInvoice": "Voir la dernière facture",
-      "newServiceRequest": "Nouvelle demande de service"
+      "newServiceRequest": "Nouvelle demande de service",
+      "createSupportTicket": "Créer un ticket d’assistance"
     },
     "appointments": {
       "title": "Rendez-vous à venir",
@@ -140,10 +141,7 @@
       "viewAll": "Voir tout",
       "countLabel": "{{count}} gérés",
       "emptyShort": "Aucun appareil",
-      "emptyBody": "Les appareils gérés par votre fournisseur apparaîtront ici.",
-      "healthy": "Sain",
-      "inactive": "Inactif",
-      "active": "Actif"
+      "emptyBody": "Les appareils gérés par votre fournisseur apparaîtront ici."
     },
     "timeAgo": {
       "justNow": "à l'instant",
@@ -332,7 +330,25 @@
       "tenant_mismatch": "{{providerEmail}} appartient au portail d'une autre organisation. Connectez-vous avec votre mot de passe ou contactez votre prestataire de services."
     },
     "configurationTitle": "Échec de la connexion",
-    "configurationMessage": "La connexion a échoué. Veuillez réessayer ou contacter votre prestataire de services."
+    "configurationMessage": "La connexion a échoué. Veuillez réessayer ou contacter votre prestataire de services.",
+    "registration": {
+      "messages": {
+        "verified": "Utilisateur vérifié et inscrit avec succès"
+      },
+      "errors": {
+        "verifyFailed": "Impossible de vérifier et d’inscrire l’utilisateur",
+        "invalidToken": "Jeton non valide",
+        "tokenExpired": "Jeton expiré",
+        "tokenNotActive": "Le jeton n’est pas encore actif",
+        "unknown": "Erreur inconnue"
+      },
+      "user": "Utilisateur",
+      "clientPortalUser": "Utilisateur du portail client",
+      "mspUser": "Utilisateur MSP",
+      "resetExpiration": "1 heure",
+      "verificationExpiration": "24 heures",
+      "superadminRole": "Rôle de superadministrateur"
+    }
   },
   "account": {
     "title": "Compte",
@@ -558,7 +574,9 @@
       "invoices": "Notifications de factures",
       "announcements": "Annonces système",
       "emailPreferences": "E-mail",
-      "internalPreferences": "Internes"
+      "internalPreferences": "Internes",
+      "unreadCount_few": "{{count}} notifications non lues",
+      "unreadCount_many": "{{count}} notifications non lues"
     },
     "actions": {
       "save": "Enregistrer les modifications",
@@ -836,7 +854,9 @@
     "card": {
       "unread": "Non lue",
       "noMessage": "Aucun message"
-    }
+    },
+    "unreadCount_few": "{{count}} notifications non lues",
+    "unreadCount_many": "{{count}} notifications non lues"
   },
   "sidebar": {
     "goToDashboard": "Aller au tableau de bord",
@@ -861,12 +881,9 @@
       "network": "Réseau",
       "unknown": "Autres"
     },
-    "statusWarnTitle": "Certains appareils inactifs",
-    "statusWarnBody": "{{active}} actifs · {{inactive}} inactifs",
-    "status": {
-      "active": "Actif",
-      "inactive": "Inactif"
-    },
+    "statusAttentionTitle": "Certains appareils nécessitent une attention",
+    "statusAttentionBody": "{{active}} appareils actifs sur {{total}}",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Rechercher par nom, étiquette ou série",
     "filters": {
       "allTypes": "Tous les types",
@@ -1004,14 +1021,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Nom",
-      "type": "Type",
-      "status": "Statut",
-      "location": "Emplacement",
-      "lastUpdated": "Dernière mise à jour"
+      "assignedTo": "Attribué à"
     },
-    "notAvailable": "N/D",
-    "detailsTitle": "Détails de l'actif"
+    "statuses": {
+      "active": "Actif",
+      "in_stock": "En stock",
+      "maintenance": "En maintenance",
+      "inactive": "Inactif",
+      "retired": "Retiré"
+    },
+    "unassigned": "Non attribué",
+    "sharedWorkspace": "Espace partagé : {{name}}",
+    "sharedWorkspaceLabel": "Espace partagé"
   },
   "errors": {
     "account": {

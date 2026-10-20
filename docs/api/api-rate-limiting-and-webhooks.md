@@ -682,6 +682,65 @@ Failed non-test deliveries are retried with this schedule:
 
 After the fifth failed attempt, the delivery is abandoned.
 
+### Retrying Failed Deliveries
+
+#### Per-delivery retry
+
+Retry a single delivery attempt:
+
+```http
+POST /api/v1/webhooks/{id}/deliveries/{delivery_id}/retry
+```
+
+Returns `202` with a queued result:
+
+```json
+{
+  "queued": true,
+  "webhook_id": "...",
+  "delivery_id": "...",
+  "event_id": "..."
+}
+```
+
+The delivery is re-queued through the normal delivery queue, preserving
+rate limiting, backoff, and auto-disable behavior.
+
+#### Bulk retry
+
+Re-queue all failed or abandoned non-test deliveries for a webhook in one
+call:
+
+```http
+POST /api/v1/webhooks/{id}/retry-failed
+Content-Type: application/json
+
+{
+  "since": "2026-10-01T00:00:00Z",  // optional ISO-8601; defaults to all time
+  "limit": 200                        // optional; max 1000, default 500
+}
+```
+
+Returns `202`:
+
+```json
+{
+  "queued": 200,
+  "skipped": 12,
+  "total_candidates": 212,
+  "truncated": false
+}
+```
+
+- `queued` — deliveries re-queued in this call.
+- `skipped` — candidates already in a pending retry attempt.
+- `total_candidates` — total matching failed/abandoned deliveries found.
+- `truncated` — `true` when `total_candidates` exceeded `limit`; call again
+  with a later `since` to page through the remainder.
+
+`retry-failed` is also surfaced as a HATEOAS `links.retry-failed` action on
+the webhook resource returned by `GET /api/v1/webhooks/{id}`.
+
 ### Per-Webhook Outbound Rate Limit
 
 Webhook delivery also has an outbound cap per webhook. The default is

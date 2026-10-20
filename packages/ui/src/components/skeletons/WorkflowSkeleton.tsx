@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import { useTranslation } from '../../lib/i18n/client';
 
 interface WorkflowSkeletonProps {
   height?: number | string;
@@ -13,6 +16,7 @@ const WorkflowSkeleton = ({
   showControls = true, 
   showLegend = true 
 }: WorkflowSkeletonProps) => {
+  const { t } = useTranslation('common');
   return (
     <div className="workflow-visualizer relative animate-pulse" style={{ height, width }}>
       {/* Main visualization area */}
@@ -40,7 +44,7 @@ const WorkflowSkeleton = ({
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-gray-500">Loading workflow visualization...</p>
+            <p className="text-gray-500">{t('skeletons.workflow.loading')}</p>
           </div>
         </div>
       </div>

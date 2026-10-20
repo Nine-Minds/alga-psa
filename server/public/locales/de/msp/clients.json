@@ -1578,7 +1578,8 @@
         "warrantyEnd": "Garantieende",
         "agent": "Agent",
         "patching": "Patches",
-        "coverage": "Abdeckung"
+        "coverage": "Abdeckung",
+        "assignedTo": "Zugewiesen an"
       },
       "details": {
         "local": "Lokal",
@@ -1625,7 +1626,28 @@
         "workstation": "Arbeitsplatz"
       },
       "loadError": "Assets können derzeit nicht geladen werden.",
-      "retry": "Wiederholen"
+      "retry": "Wiederholen",
+      "views": {
+        "assets": "Assets",
+        "groups": "Gruppen"
+      },
+      "groups": {
+        "newGroup": "Neue Gruppe",
+        "drawerTitle": "Asset-Gruppe",
+        "name": "Name",
+        "kind": "Art",
+        "kinds": {
+          "bundle": "Paket",
+          "shared_workspace": "Gemeinsamer Arbeitsplatz"
+        },
+        "columns": {
+          "name": "Name",
+          "kind": "Art",
+          "location": "Standort",
+          "members": "Mitglieder",
+          "people": "Personen"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Ticket hinzufügen",
@@ -1982,7 +2004,15 @@
     "accountingApply": "Auswahl übernehmen",
     "accountingSkip": "Vorerst überspringen",
     "accountingRemapped": "Buchhaltungszuordnungen wurden umgestellt",
-    "accountingSkipped": "{{count}} Zuordnung(en) konnten nicht umgestellt werden und müssen manuell neu verknüpft werden."
+    "accountingSkipped": "{{count}} Zuordnung(en) konnten nicht umgestellt werden und müssen manuell neu verknüpft werden.",
+    "assetsDescription": "Diese Geräte und RMM-Organisationen werden zum Zielkunden verschoben. Die Synchronisierung belässt sie anschließend dort.",
+    "assetsTotal": "Assets",
+    "assetGroups": "Asset-Gruppen",
+    "deviceCount": "{{count}} Geräte",
+    "billingStrategyHeading": "Abrechnungsprofil für zusammengeführte Arbeit und Geräte",
+    "billingStrategySource": "Abrechnungsprofil von {{source}}, als separates Profil bei {{target}} beibehalten",
+    "billingStrategyTarget": "Standard-Abrechnungsprofil von {{target}}",
+    "billingStrategyHelp": "Gilt für {{tickets}} Ticket(s), {{projects}} Projekt(e), {{assets}} Asset(s) und {{mappings}} RMM-Gerätegruppe(n) ohne eigenes Abrechnungsprofil. Zeilen mit einem expliziten Profil behalten es, und Rechnungen, Abrechnungszyklen, Zahlungen und Guthaben bleiben immer beim zusammengeführten Profil."
   },
   "billingProfileContacts": {
     "title": "Profilkontakte",

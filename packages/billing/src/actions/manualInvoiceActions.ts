@@ -129,14 +129,27 @@ function isInvoiceNumberConflict(error: unknown): boolean {
     databaseError.constraint === 'unique_invoice_number_per_tenant';
 }
 
+/**
+ * Whether the manual-invoice form should warn that the selected client (and
+ * profile) has no address to email the invoice to. Advisory: generation no
+ * longer refuses; sending and payment links do.
+ */
 export const getClientBillingEmailStatus = withAuth(async (
   _user,
   { tenant },
   clientId: string,
+  billingProfileId?: string | null,
 ): Promise<{ hasBillingEmail: boolean }> => {
   const { knex } = await invoiceService.validateSessionAndTenant();
-  const billingEmail = await invoiceService.getClientBillingEmail(knex, tenant, clientId);
-  return { hasBillingEmail: Boolean(billingEmail) };
+  const client = await invoiceService.getClientDetails(knex, tenant, clientId);
+  const validation = await invoiceService.validateClientBillingEmail(
+    knex,
+    tenant,
+    clientId,
+    client.client_name,
+    billingProfileId?.trim() || null,
+  );
+  return { hasBillingEmail: validation.valid };
 });
 
 export const generateManualInvoice = withAuth(async (
@@ -163,23 +176,6 @@ export const generateManualInvoice = withAuth(async (
     const { session, knex } = await invoiceService.validateSessionAndTenant();
     context.userId = session.user.id;
     const client = await invoiceService.getClientDetails(knex, tenant, clientId);
-    const emailValidation = await invoiceService.validateClientBillingEmail(
-      knex,
-      tenant,
-      clientId,
-      client.client_name,
-      // A profile of another client is rejected below; the resolver ignores one
-      // here for the same reason, so this cannot borrow a stranger's address.
-      request.billingProfileId?.trim() || null,
-    );
-    if (!emailValidation.valid) {
-      return handledManualInvoiceFailure(
-        emailValidation.code ?? 'NO_BILLING_EMAIL',
-        emailValidation.error ?? 'Client billing email is required',
-        context,
-        emailValidation.params ?? { clientName: client.client_name },
-      );
-    }
 
     let currencyCode = request.currency_code || client.default_currency_code;
     if (!currencyCode) {

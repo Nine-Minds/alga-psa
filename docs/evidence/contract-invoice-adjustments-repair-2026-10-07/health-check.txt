@@ -1,0 +1,9 @@
+Board-managed readiness probe (temporary Draft Implementation service-use permission active):
+
+GET http://127.0.0.1:3185/api/health
+HTTP 200
+{"status":"ok","version":"1.0.0"}
+
+The board `workflow-ensure-service --name=dev-server` invocation supplied no command. It returned `created:false`, reused `card-service:b97eda7b-0e3f-4b09-be80-6b57f934d8a5:dev-server:19`, and returned the saved worktree command/cwd plus readiness `{port:3185,path:"/api/health"}`. The readiness URL was `http://100.109.101.64:3185/api/health`. Startup logs showed the Next.js dev process running from this worktree and compiled the authenticated billing route after the local missing dependency was repaired.
+
+After smoke, the temporary service-use entry was removed. Normal policy is restored: Draft Implementation has no dev-server dependency and Smoke Test retains it. The board suspended PTY :19 under that policy; registration :19 remains saved and was not concluded.

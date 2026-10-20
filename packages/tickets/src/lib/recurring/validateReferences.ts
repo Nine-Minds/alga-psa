@@ -18,6 +18,7 @@ export interface RecurringReferenceTargets {
   assetIds?: readonly string[];
 }
 
+// LEVERAGE: pattern ticket-field-reference-validation — same board/category/subcategory/priority existence checks as findTicketTemplateReferenceProblems (lib/ticketTemplates.ts); a shared ticket-field validator belongs below both
 /**
  * Checks that everything a recurring ticket will reference still exists and is coherent: the board is
  * active, the status and category belong to that board, assignees are active, and the contact,

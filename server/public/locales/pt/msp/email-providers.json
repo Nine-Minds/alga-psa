@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Recurso Pro",
+      "domainsDescription": "Domínios gerenciados exigem o Pro.",
+      "settingsDescription": "As configurações de email gerenciado exigem o Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Falha ao carregar domínios gerenciados",
       "loadOutboundSettingsFailed": "Falha ao carregar as configurações de e-mail de saída",
@@ -930,6 +935,12 @@
       "copyHostAriaLabel": "Copiar host",
       "copyFqdnAriaLabel": "Copiar nome completo",
       "hostHint": "Dica: no seu provedor de DNS, insira apenas o Host mostrado acima. A maioria dos provedores (Namecheap, GoDaddy, Cloudflare, entre outros) adiciona “{{domain}}” automaticamente. Se você colar o nome completo, o domínio é repetido (…{{domain}}.{{domain}}) e o registro nunca será verificado."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Recurso Pro",
+        "description": "As instruções de registros DNS exigem o Pro."
+      }
     }
   },
   "inboundRules": {
@@ -1131,7 +1142,10 @@
       "duplicateShortName": "Já existe uma configuração com este nome curto",
       "createFailed": "Falha ao criar os padrões de tickets de entrada. Tente novamente.",
       "notFound": "Configuração de padrões não encontrada",
-      "updateFailed": "Falha ao atualizar os padrões de tickets de entrada. Tente novamente."
+      "updateFailed": "Falha ao atualizar os padrões de tickets de entrada. Tente novamente.",
+      "locationRequiresClient": "Selecione uma empresa antes de selecionar uma localização",
+      "locationClientMismatch": "A localização selecionada não pertence à empresa selecionada",
+      "referencedByProviders": "Esta configuração ainda é usada pelos seguintes provedores de email: {{providers}}. Selecione outros padrões de tickets recebidos nesses provedores antes de excluí-la."
     },
     "ticketFieldOptions": {
       "permissionDenied": "Permissão negada: não é possível ler as opções de campo do ticket",

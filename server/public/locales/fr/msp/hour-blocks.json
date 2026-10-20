@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Blocs d'heures",
-    "description": "Blocs d'heures prépayés à achat unique. Le temps non couvert par une ligne de contrat est décompté de ces blocs, en commençant par l'expiration la plus proche.",
+    "description": "Blocs d'heures prépayés ponctuels. Ils ne reçoivent que le temps qu'aucune ligne de contrat ne couvre. Les blocs émis par une ligne de contrat Bloc prépayé ne sont décomptés que par le temps de cette ligne.",
     "availableBalance": "{{hours}} h disponibles",
     "noBlocks": "Aucun bloc d'heures pour l'instant. Vendez un bloc à ce client ou accordez des heures offertes.",
     "loadFailed": "Échec du chargement des blocs d'heures. Réessayez."
@@ -126,7 +126,8 @@
     "autoExpired": "Expiré automatiquement",
     "voidedLabel": "Annulé",
     "purchaseReversed": "Achat annulé (facture définalisée)",
-    "unknownUser": "Système"
+    "unknownUser": "Système",
+    "sourceContract": "Contrat : {{contract}}"
   },
   "expire": {
     "error": "Impossible de faire expirer le bloc d'heures.",
@@ -154,5 +155,16 @@
       "missingField": "Un champ obligatoire du bloc d’heures est manquant. Veuillez vérifier le formulaire et réessayer.",
       "referenceMissing": "Le client, le service ou la facture sélectionné n’existe plus. Veuillez actualiser la page et réessayer."
     }
+  },
+  "coverage": {
+    "oneLine": "Le temps sur {{service}} est facturé via {{contract}} / {{line}} et ne sera pas prélevé sur ce bloc d'heures.",
+    "manyLines": "Le temps sur {{service}} affecté à une ligne de contrat ne sera pas prélevé sur ce bloc d'heures.",
+    "linesLabel": "Lignes de contrat couvrant {{service}} :",
+    "unscopedIntro": "Ce bloc d'heures couvre tout le travail, mais le temps sur ces services est facturé via une ligne de contrat et ne sera pas prélevé dessus :",
+    "unscopedService": "{{service}} — {{contract}} / {{line}}",
+    "unscopedServiceAssigned": "{{service}} — lorsqu'il est affecté à une ligne de contrat",
+    "more": "et {{count}} de plus",
+    "badge": "Chevauchement de contrat",
+    "viewContract": "Voir le contrat"
   }
 }

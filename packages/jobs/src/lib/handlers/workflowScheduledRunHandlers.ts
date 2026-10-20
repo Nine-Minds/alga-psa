@@ -152,7 +152,7 @@ async function runScheduledWorkflow(
           last_run_status: 'error',
           last_error: `${issue.message} (${cancellationMessage})`,
           last_fire_key: fireKey
-        }).catch(() => undefined);
+        }, schedule.tenant).catch(() => undefined);
         throw cancelError;
       }
 
@@ -166,7 +166,7 @@ async function runScheduledWorkflow(
         last_run_status: 'error',
         last_error: issue.message,
         last_fire_key: fireKey
-      });
+      }, schedule.tenant);
       return;
     }
 
@@ -184,7 +184,7 @@ async function runScheduledWorkflow(
         last_error: null,
         last_fire_key: fireKey,
         next_fire_at: computeNextFireAtForSchedule(schedule)
-      });
+      }, schedule.tenant);
       return;
     }
   }
@@ -223,14 +223,14 @@ async function runScheduledWorkflow(
       last_error: null,
       last_fire_key: fireKey,
       ...successState
-    });
+    }, schedule.tenant);
   } catch (error) {
     await WorkflowScheduleStateModel.update(knex, schedule.id, {
       last_fire_at: triggerMetadata.firedAt,
       last_run_status: 'error',
       last_error: error instanceof Error ? error.message : String(error),
       last_fire_key: fireKey
-    }).catch(() => undefined);
+    }, schedule.tenant).catch(() => undefined);
     throw error;
   }
 }

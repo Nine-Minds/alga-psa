@@ -7,6 +7,7 @@ import { RadioGroup } from './RadioGroup';
 import { useRegisterUIComponent } from '../ui-reflection/useRegisterUIComponent';
 import { DialogComponent, ButtonComponent, AutomationProps } from '../ui-reflection/types';
 import { withDataAutomationId } from '../ui-reflection/withDataAutomationId';
+import { useTranslation } from '../lib/i18n/client';
 
 interface ConfirmationDialogProps {
   isOpen: boolean;
@@ -31,8 +32,8 @@ export const ConfirmationDialog = ({
   onConfirm,
   title,
   message,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   isConfirming,
   options,
   id,
@@ -40,6 +41,7 @@ export const ConfirmationDialog = ({
   onCancel,
   thirdButtonLabel
 }: ConfirmationDialogProps & AutomationProps) => {
+  const { t } = useTranslation('common');
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedValue, setSelectedValue] = useState('');
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
@@ -83,13 +85,17 @@ export const ConfirmationDialog = ({
       }}
     >
       <DialogContent>
-        <DialogDescription className="sr-only">
-          {typeof message === 'string' ? message : title}
-        </DialogDescription>
+        {/* The message renders exactly once. A string message *is* the dialog
+            description (so aria-describedby points at the visible copy); a node
+            message keeps the title as the description instead of repeating the
+            body verbatim. */}
         {typeof message === 'string' ? (
-          <p className="text-gray-600">{message}</p>
+          <DialogDescription className="text-gray-600">{message}</DialogDescription>
         ) : (
-          <div className="text-gray-600">{message}</div>
+          <>
+            <DialogDescription className="sr-only">{title}</DialogDescription>
+            <div className="text-gray-600">{message}</div>
+          </>
         )}
         {options && (
           <RadioGroup
@@ -110,7 +116,7 @@ export const ConfirmationDialog = ({
               id={`${id}-close`}
               disabled={isProcessing}
             >
-              {cancelLabel}
+              {cancelLabel === undefined ? t('actions.cancel') : cancelLabel}
             </Button>
             {/* Render third button if provided */}
             {thirdButtonLabel && onCancel && (
@@ -130,7 +136,7 @@ export const ConfirmationDialog = ({
               id={`${id}-confirm`}
               ref={confirmButtonRef}
             >
-              {confirmLabel}
+              {confirmLabel === undefined ? t('actions.confirm') : confirmLabel}
             </Button>
           </div>
         </DialogFooter>

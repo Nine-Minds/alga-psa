@@ -439,6 +439,127 @@ describe('executeClientMerge', () => {
     });
   });
 
+  // T141/T142 — F099: what happens to rows that carry no billing profile.
+  describe('billing strategy', () => {
+    const seedUnstamped = () => {
+      table('assets').push(
+        { tenant: TENANT, asset_id: 'asset-null', client_id: 'source', billing_profile_id: null },
+        { tenant: TENANT, asset_id: 'asset-plant', client_id: 'source', billing_profile_id: 'src-plant' },
+      );
+      table('rmm_organization_mappings').push(
+        { tenant: TENANT, mapping_id: 'map-null', client_id: 'source', billing_profile_id: null },
+      );
+      table('projects').push(
+        { tenant: TENANT, project_id: 'project-null', client_id: 'source', billing_profile_id: null },
+      );
+    };
+
+    it('T141: source_profile stamps every null-profile row and records the strategy', async () => {
+      seedUnstamped();
+
+      const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        billingStrategy: 'source_profile',
+      });
+
+      expect(result.billingStrategy).toBe('source_profile');
+      expect(table('client_merges')[0]).toMatchObject({ billing_strategy: 'source_profile' });
+      for (const [tableName, key, id] of [
+        ['tickets', 'ticket_id', 'ticket-null'],
+        ['projects', 'project_id', 'project-null'],
+        ['assets', 'asset_id', 'asset-null'],
+        ['rmm_organization_mappings', 'mapping_id', 'map-null'],
+      ] as const) {
+        expect(table(tableName).find((row) => row[key] === id)).toMatchObject({
+          client_id: 'target',
+          billing_profile_id: 'src-default',
+        });
+      }
+    });
+
+    it('T142: target_default leaves them null, keeps explicit picks, and still stamps billing history', async () => {
+      seedUnstamped();
+
+      const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        billingStrategy: 'target_default',
+      });
+
+      expect(result.billingStrategy).toBe('target_default');
+      expect(table('client_merges')[0]).toMatchObject({ billing_strategy: 'target_default' });
+      for (const [tableName, key, id] of [
+        ['tickets', 'ticket_id', 'ticket-null'],
+        ['projects', 'project_id', 'project-null'],
+        ['assets', 'asset_id', 'asset-null'],
+        ['rmm_organization_mappings', 'mapping_id', 'map-null'],
+      ] as const) {
+        expect(table(tableName).find((row) => row[key] === id)).toMatchObject({
+          client_id: 'target',
+          // Unattributed on purpose: the chain terminates at the target default.
+          billing_profile_id: null,
+        });
+      }
+      // An explicit pick is never second-guessed by either strategy.
+      expect(table('assets').find((row) => row.asset_id === 'asset-plant'))
+        .toMatchObject({ client_id: 'target', billing_profile_id: 'src-plant' });
+      expect(table('tickets').find((row) => row.ticket_id === 'ticket-plant'))
+        .toMatchObject({ client_id: 'target', billing_profile_id: 'src-plant' });
+      // Billing history is stamped regardless of the choice — an invoice with no
+      // profile would drop out of the target's AR entirely.
+      expect(table('invoices')[0]).toMatchObject({ client_id: 'target', billing_profile_id: 'src-default' });
+    });
+
+    it('T143: after the merge the asset carries what the alert ticket will inherit', async () => {
+      seedUnstamped();
+      // The asset's location default would answer for it if the column were
+      // null, so pin the column: that is the value FR-F2's resolver reads first.
+      await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        billingStrategy: 'source_profile',
+      });
+
+      const moved = table('assets').find((row) => row.asset_id === 'asset-null');
+      expect(moved).toMatchObject({ client_id: 'target', billing_profile_id: 'src-default' });
+      // So a ticket raised from that device (resolveAssetBillingProfileId ->
+      // asset profile) and an alert ticket for it both land on src-default
+      // rather than on the destination client's own default.
+      expect(moved!.billing_profile_id).not.toBe('tgt-default');
+      const mapping = table('rmm_organization_mappings').find((row) => row.mapping_id === 'map-null');
+      expect(mapping).toMatchObject({ billing_profile_id: 'src-default' });
+    });
+
+    it('T143: under target_default both fall through to the destination default', async () => {
+      seedUnstamped();
+
+      await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        billingStrategy: 'target_default',
+      });
+
+      // Null on both the asset and the mapping is what makes the attribution
+      // chain terminate at the target client default.
+      expect(table('assets').find((row) => row.asset_id === 'asset-null')!.billing_profile_id).toBeNull();
+      expect(table('rmm_organization_mappings').find((row) => row.mapping_id === 'map-null')!.billing_profile_id).toBeNull();
+    });
+
+    it('T141: source_profile is the default, so an omitted choice keeps today behaviour', async () => {
+      seedUnstamped();
+
+      const result = await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+      });
+
+      expect(result.billingStrategy).toBe('source_profile');
+      expect(table('assets').find((row) => row.asset_id === 'asset-null'))
+        .toMatchObject({ billing_profile_id: 'src-default' });
+    });
+  });
+
   it('renames a colliding visibility group instead of dropping it', async () => {
     await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
       sourceClientId: 'source',

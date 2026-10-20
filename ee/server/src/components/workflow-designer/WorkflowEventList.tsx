@@ -2,6 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { XCircle } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ListDetailLayout } from '@alga-psa/ui/components/ListDetailLayout';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
@@ -166,9 +168,24 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
   const [summary, setSummary] = useState<WorkflowEventSummary | null>(null);
   const [totalItems, setTotalItems] = useState(0);
 
-  // Deep link from the launch-skips drawer: ?eventId=<uuid> preselects the event.
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(() =>
-    typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('eventId')
+  // Selection lives in the URL (?eventId=<uuid>) so deep links, Close and Back stay consistent.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedEventId = searchParams?.get('eventId') || null;
+  const selectEvent = useCallback(
+    (eventId: string | null) => {
+      const params = new URLSearchParams(searchParams?.toString() ?? '');
+      if (eventId) {
+        params.set('eventId', eventId);
+      } else {
+        params.delete('eventId');
+      }
+      const query = params.toString();
+      const pathname = window.location.pathname;
+      // scroll: false — selecting an event must not jump the page to the top.
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [router, searchParams]
   );
   const [launchSkips, setLaunchSkips] = useState<EventLaunchSkipItem[]>([]);
   const [eventDetail, setEventDetail] = useState<WorkflowEventDetailResponse | null>(null);
@@ -453,7 +470,11 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
   }, [formatDateTime, formatWorkflowEventStatus, t]);
 
   return (
-    <div className="flex h-full gap-4">
+    <ListDetailLayout
+      id="workflow-events-layout"
+      onBack={() => selectEvent(null)}
+      backLabel={t('eventList.actions.backToEvents', { defaultValue: 'Back to events' })}
+      list={
       <div className="flex-1 min-h-0 flex flex-col gap-3">
         <Card className="p-3 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -463,7 +484,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
               onChange={(event) => setEventNameInput(event.target.value)}
               onClear={() => setEventNameInput('')}
               placeholder={t('eventList.filters.eventNamePlaceholder', { defaultValue: 'Event name…' })}
-              className="w-56 h-[38px]"
+              className="w-56 max-w-full h-[38px]"
             />
             <SearchInput
               id="workflow-events-correlation"
@@ -471,7 +492,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
               onChange={(event) => setCorrelationKeyInput(event.target.value)}
               onClear={() => setCorrelationKeyInput('')}
               placeholder={t('eventList.filters.correlationKeyPlaceholder', { defaultValue: 'Correlation key…' })}
-              className="w-48 h-[38px]"
+              className="w-48 max-w-full h-[38px]"
             />
             <CustomSelect
               id="workflow-events-status"
@@ -514,7 +535,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
                 {t('eventList.actions.reset', { defaultValue: 'Reset' })}
               </Button>
             )}
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex flex-wrap items-center gap-2">
               <Button id="workflow-events-export-csv" variant="outline" size="sm" onClick={() => handleExport('csv')}>
                 {t('eventList.actions.exportCsv', { defaultValue: 'Export CSV' })}
               </Button>
@@ -551,7 +572,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
             pageSize={query.pageSize}
             onItemsPerPageChange={(size) => setQuery((prev) => ({ ...prev, pageSize: size, page: 1 }))}
             totalItems={totalItems}
-            onRowClick={(row) => setSelectedEventId((row as WorkflowEventRecord).event_id)}
+            onRowClick={(row) => selectEvent((row as WorkflowEventRecord).event_id)}
             rowClassName={(row) =>
               (row as WorkflowEventRecord).event_id === selectedEventId
                 ? 'bg-table-selected'
@@ -571,13 +592,13 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
           />
         </Card>
       </div>
-
-      {selectedEventId && (
-        <div className="w-[480px] shrink-0 overflow-auto space-y-4">
+      }
+      detail={selectedEventId ? (
+        <>
           <Card id="workflow-event-detail-panel" className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="text-sm font-semibold">{t('eventList.detail.title', { defaultValue: 'Event Detail' })}</div>
-              <Button id="workflow-event-detail-close" variant="ghost" onClick={() => setSelectedEventId(null)}>
+              <Button id="workflow-event-detail-close" variant="ghost" onClick={() => selectEvent(null)}>
                 {t('eventList.actions.close', { defaultValue: 'Close' })}
               </Button>
             </div>
@@ -707,9 +728,9 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
               onClose={handleRunDetailsClose}
             />
           )}
-        </div>
-      )}
-    </div>
+        </>
+      ) : null}
+    />
   );
 };
 

@@ -565,7 +565,8 @@
       "exportCsv": "Exportar CSV",
       "exportJson": "Exportar JSON",
       "close": "Fechar",
-      "viewRunDetails": "Ver detalhes da execução"
+      "viewRunDetails": "Ver detalhes da execução",
+      "backToEvents": "Voltar aos eventos"
     },
     "table": {
       "schemaConflict": "catálogo ≠ submissão",
@@ -627,7 +628,8 @@
     },
     "actions": {
       "refresh": "Atualizar",
-      "loadMore": "Carregar mais"
+      "loadMore": "Carregar mais",
+      "backToList": "Voltar às mensagens com falha"
     },
     "table": {
       "columns": {
@@ -1395,7 +1397,9 @@
         "summary_one": "{{count}} evento ignorado nos últimos {{days}} dias — {{reasons}}",
         "summary_other": "{{count}} eventos ignorados nos últimos {{days}} dias — {{reasons}}",
         "lastSkipped": "Último ignorado {{when}}",
-        "view": "Ver eventos ignorados"
+        "view": "Ver eventos ignorados",
+        "summary_few": "{{count}} eventos ignorados nos últimos {{days}} dias — {{reasons}}",
+        "summary_many": "{{count}} eventos ignorados nos últimos {{days}} dias — {{reasons}}"
       },
       "drawer": {
         "title": "Eventos ignorados",
@@ -1738,7 +1742,9 @@
     "insertionPointLabel": "Novas etapas entram aqui",
     "emptyBranchPrompt": "Adicione uma etapa a este ramo",
     "emptyActivePrompt": "Novas etapas entram aqui. Escolha uma na paleta.",
-    "stepCount": "({{count}} etapas)"
+    "stepCount": "({{count}} etapas)",
+    "stepCount_few": "(etapas {{count}})",
+    "stepCount_many": "(etapas {{count}})"
   },
   "expressionEditor": {
     "ariaLabel": "Editor de expressão",
@@ -2251,7 +2257,12 @@
       "currentRun": "Execução {{id}}",
       "backToWorkflow": "Voltar ao fluxo de trabalho"
     },
-    "title": "Estúdio de execução de fluxo de trabalho"
+    "title": "Estúdio de execução de fluxo de trabalho",
+    "communityEdition": {
+      "title": "Recurso Pro",
+      "description": "O estúdio de execução de fluxos de trabalho está disponível apenas no Pro.",
+      "runId": "ID da execução: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3024,6 +3035,10 @@
         "selectBoard": "Selecione ou insira um quadro",
         "selectPriority": "Selecione ou insira uma prioridade"
       }
+    },
+    "proFeature": {
+      "title": "Recurso Pro",
+      "description": "O sistema de fluxos de trabalho está disponível apenas no Pro. Atualize sua instalação para acessar este recurso."
     }
   },
   "toggle": {
@@ -3162,5 +3177,29 @@
       "label": "Profundidade de causalidade excedida",
       "hint": "A cadeia de eventos causados excedeu a profundidade máxima; ignorado para evitar loops descontrolados."
     }
+  },
+  "createFromTicket": {
+    "title": "Criar fluxo de trabalho a partir do ticket",
+    "description": "Cria um fluxo de trabalho em rascunho cujo primeiro passo cria um ticket como #{{number}}. Nada é publicado.",
+    "cancel": "Cancelar",
+    "creating": "Criando…",
+    "submit": "Criar rascunho e abrir o designer",
+    "nameLabel": "Nome do fluxo de trabalho",
+    "triggerLabel": "Gatilho",
+    "triggerManual": "Manual (executar sob demanda)",
+    "ticketCreatedWarning": "Este fluxo de trabalho cria um ticket, e um novo ticket aciona este gatilho novamente. Adicione uma condição antes de publicar para evitar um ciclo.",
+    "includeLegend": "Incluir do ticket",
+    "propertiesAlways": "Título, descrição, cliente, contato, quadro, categoria e prioridade são sempre incluídos.",
+    "includeAssignment": "Atribuição",
+    "includeTags": "Etiquetas",
+    "includeCustomFields": "Campos personalizados",
+    "includeChecklist": "Lista de verificação",
+    "errors": {
+      "nameRequired": "O nome do fluxo de trabalho é obrigatório",
+      "generic": "Falha ao criar o rascunho do fluxo de trabalho"
+    },
+    "includeCustomFieldsCount": "Campos personalizados ({{n}})",
+    "includeChecklistCount": "Lista de verificação ({{total}} itens: {{templates}} de modelos / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Os itens de modelos são reaplicados a partir do modelo atual, portanto as edições feitas neste ticket não são transferidas."
   }
 }

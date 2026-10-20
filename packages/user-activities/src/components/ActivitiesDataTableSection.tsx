@@ -7,14 +7,6 @@ import {
   ActivityFilters,
   ActivitySortBy,
   ActivityType,
-  IClient,
-  IPriority,
-  IStatus,
-  ITag,
-  ItemType,
-  IUser,
-  ProjectWithPhases,
-  TaggedEntityType,
 } from '@alga-psa/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -33,33 +25,29 @@ import {
   fetchActivities,
   getUserActivityGroups,
   createAdHocActivity,
-  getActivityViewableUsers,
   type ActivityGroup,
 } from '@alga-psa/user-activities/actions';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { Input } from '@alga-psa/ui/components/Input';
-import { Label } from '@alga-psa/ui/components/Label';
-import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { Plus } from 'lucide-react';
 import { ActivitiesDataTable } from './ActivitiesDataTable';
 import { GroupedActivitiesView } from './GroupedActivitiesView';
 import { PrintableActivitiesView } from './PrintableActivitiesView';
 import { ActivitiesTableFilters } from './filters/ActivitiesTableFilters';
+import { ViewingUserPicker } from './ViewingUserPicker';
+import { useActivityFilterState, type ActivityFilterState } from '../hooks/useActivityFilterState';
+import { useActivityFilterOptions, type ActivityFilterOptions } from '../hooks/useActivityFilterOptions';
+import { useViewableUsers } from '../hooks/useViewableUsers';
 import { useActivityDrawer } from './ActivityDrawerProvider';
 import { useMyActivityGroups } from './MyActivityGroupsProvider';
 import { ActivityGroupMenuScope } from './ActivityGroupMenuScope';
-import { useActivityCrossFeature } from '@alga-psa/ui/context';
 import { useActivitiesCache } from '../hooks/useActivitiesCache';
+import { useActivitiesInvalidationSignal } from '../hooks/ActivitiesCacheProvider';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
-import { ScheduleActivity } from '@alga-psa/types';
 
 import { ActivitiesTableSkeleton } from './ActivitiesTableSkeleton';
-import { getAllPriorities, getStatuses } from '@alga-psa/reference-data/actions';
-import { getAllBoards } from '@alga-psa/reference-data/actions';
-import { findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { DEFAULT_TABLE_TYPES } from './constants';
+import { collapseRecurringSeries } from '../lib/recurringSeries';
 
 interface ActivitiesDataTableSectionProps {
   title?: string;
@@ -73,12 +61,14 @@ interface ActivitiesDataTableSectionProps {
   focusActivityKey?: string | null;
   /** Called once the deep link has been resolved (found + highlighted, or reported not found). */
   onFocusConsumed?: () => void;
+  /**
+   * Lifted filter state (the dashboard owns it so the cards and table views share one model).
+   * When omitted — together with `filterOptions` — the section manages its own.
+   */
+  filterState?: ActivityFilterState;
+  /** Lifted filter option data. See `filterState`. */
+  filterOptions?: ActivityFilterOptions;
 }
-
-const DEFAULT_FILTERS: ActivityFilters = {
-  types: DEFAULT_TABLE_TYPES,
-  isClosed: false,
-};
 
 type ListViewMode = 'flat' | 'grouped';
 
@@ -90,37 +80,45 @@ function buildLoadedKey(filters: ActivityFilters, viewMode: string): string {
 }
 const NO_GROUPS: ActivityGroup[] = [];
 
-function dedupeRecurringActivities(activities: Activity[]): Activity[] {
-  const uniqueUpcomingActivities: Activity[] = [];
-  const addedRecurringSeriesOnPage = new Set<string>();
+type ControlledProps = Omit<ActivitiesDataTableSectionProps, 'filterState' | 'filterOptions'> & {
+  filterState: ActivityFilterState;
+  filterOptions: ActivityFilterOptions;
+};
 
-  for (const activity of activities) {
-    if (activity.type === ActivityType.SCHEDULE) {
-      const scheduleActivity = activity as ScheduleActivity;
-      if (scheduleActivity.isRecurring) {
-        const seriesIdentifier = `${scheduleActivity.title}-${scheduleActivity.workItemId || 'no-item'}-${scheduleActivity.workItemType || 'no-type'}`;
-        if (!addedRecurringSeriesOnPage.has(seriesIdentifier)) {
-          uniqueUpcomingActivities.push(scheduleActivity);
-          addedRecurringSeriesOnPage.add(seriesIdentifier);
-        }
-      } else {
-        uniqueUpcomingActivities.push(activity);
-      }
-    } else {
-      uniqueUpcomingActivities.push(activity);
-    }
-  }
-
-  return uniqueUpcomingActivities;
+/** Standalone use: owns its filter state and option data. */
+function SelfManagedActivitiesDataTableSection(props: ActivitiesDataTableSectionProps) {
+  const { initialFilters = {} } = props;
+  // Explicit "View All"-style filters count as an override for this visit.
+  const hasExplicitFilters = !!initialFilters.types && initialFilters.types.length > 0;
+  const ownState = useActivityFilterState({
+    initialOverride: hasExplicitFilters ? initialFilters : undefined,
+  });
+  const filterState = props.filterState ?? ownState;
+  const ownOptions = useActivityFilterOptions(filterState.filters.types);
+  return (
+    <ControlledActivitiesDataTableSection
+      {...props}
+      filterState={filterState}
+      filterOptions={props.filterOptions ?? ownOptions}
+    />
+  );
 }
 
-export function ActivitiesDataTableSection({
+export function ActivitiesDataTableSection(props: ActivitiesDataTableSectionProps) {
+  if (props.filterState && props.filterOptions) {
+    return <ControlledActivitiesDataTableSection {...(props as ControlledProps)} />;
+  }
+  return <SelfManagedActivitiesDataTableSection {...props} />;
+}
+
+function ControlledActivitiesDataTableSection({
   title,
-  initialFilters = {},
   id = "activities-data-table-section",
   focusActivityKey = null,
   onFocusConsumed,
-}: ActivitiesDataTableSectionProps) {
+  filterState,
+  filterOptions,
+}: ControlledProps) {
   const { t } = useTranslation('msp/user-activities');
   const effectiveTitle = title ?? t('table.title.all', { defaultValue: 'All Activities' });
 const LIST_VIEW_OPTIONS: ViewSwitcherOption<ListViewMode>[] = [
@@ -139,30 +137,13 @@ function formatActivityPrintDate(dateString?: string): string {
   const [adHocTitle, setAdHocTitle] = useState('');
   const [isAddingAdHoc, setIsAddingAdHoc] = useState(false);
   const { openActivityDrawer } = useActivityDrawer();
-  const ctx = useActivityCrossFeature();
   const myGroups = useMyActivityGroups();
   const { refresh: refreshMyGroups } = myGroups;
 
   // "Viewing": whose activities to show. Empty string = the current user. Other values
   // require the caller to hold the schedule "view others" permission (resolved server-side).
-  const [targetUserId, setTargetUserId] = useState<string>('');
-  const [viewableUsers, setViewableUsers] = useState<IUser[]>([]);
-  const [canViewOthers, setCanViewOthers] = useState(false);
-
-  // Load the users whose activities this user may view (empty/forbidden → selector hidden).
-  useEffect(() => {
-    let cancelled = false;
-    getActivityViewableUsers()
-      .then((result) => {
-        if (cancelled) return;
-        setCanViewOthers(result.canViewOthers);
-        setViewableUsers(result.users);
-      })
-      .catch((err) => console.error('Error loading viewable users:', err));
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { filters, targetUserId, setTargetUserId } = filterState;
+  const { viewableUsers, canViewOthers } = useViewableUsers();
 
   const viewingOther = canViewOthers && targetUserId !== '';
 
@@ -197,44 +178,8 @@ function formatActivityPrintDate(dateString?: string): string {
     setTargetUserId('');
     setFocusAlert(null);
     setFocusFiltersCleared(false);
-  }, [focusActivityKey]);
+  }, [focusActivityKey, setTargetUserId]);
 
-  // Determine if explicit filters were passed (e.g., from "View All" in cards view)
-  const hasExplicitFilters = initialFilters.types && initialFilters.types.length > 0;
-
-  // Persist filters to user preferences
-  const {
-    value: savedFilters,
-    setValue: setSavedFilters,
-    hasLoadedInitial: filtersLoaded,
-  } = useUserPreference<ActivityFilters>(
-    'activitiesTableFilters',
-    {
-      defaultValue: DEFAULT_FILTERS,
-      localStorageKey: 'activitiesTableFilters',
-      debounceMs: 1000,
-    }
-  );
-
-  // Use explicit filters if provided, otherwise saved preferences
-  const [filters, setFilters] = useState<ActivityFilters>(
-    hasExplicitFilters ? initialFilters : DEFAULT_FILTERS
-  );
-  // Whether the user has made their own filter edit (which must not be overwritten by a
-  // late-arriving saved value). Explicit "View All" filters count as an intentional choice.
-  const userEditedFiltersRef = useRef(hasExplicitFilters);
-
-  // Mirror saved preferences into local filter state until the user makes their own edit.
-  // This intentionally keeps syncing (rather than latching once) because useUserPreference
-  // resolves in two stages — localStorage first, then the authoritative server value. A
-  // one-shot sync could capture the initial default before the persisted value arrives and
-  // then lock, silently dropping saved filters (due/created dates, client, tags…) on reload.
-  useEffect(() => {
-    if (filtersLoaded && !hasExplicitFilters && !userEditedFiltersRef.current) {
-      setFilters(savedFilters);
-    }
-  }, [filtersLoaded, hasExplicitFilters, savedFilters]);
-  
   // Use the enhanced cache hook with loading state
   const {
     getActivities,
@@ -242,23 +187,6 @@ function formatActivityPrintDate(dateString?: string): string {
     isLoading,
     isInitialLoad
   } = useActivitiesCache();
-
-  // Priorities for the filter dropdown
-  const [priorities, setPriorities] = useState<IPriority[]>([]);
-
-  // Clients for the shared client filter
-  const [clients, setClients] = useState<IClient[]>([]);
-
-  // Projects (with phases + statuses) for the filter tree-select
-  const [projects, setProjects] = useState<ProjectWithPhases[]>([]);
-
-  // Boards and ticket statuses for ticket-specific filters
-  const [boards, setBoards] = useState<Array<{ board_id?: string; board_name?: string }>>([]);
-  const [ticketStatuses, setTicketStatuses] = useState<IStatus[]>([]);
-
-  // Tags for ticket and project task filters
-  const [ticketTags, setTicketTags] = useState<ITag[]>([]);
-  const [projectTaskTags, setProjectTaskTags] = useState<ITag[]>([]);
 
   // Ungrouped collapse state (read here for print view, owned by UngroupedSection)
   const { value: ungroupedCollapsed } = useUserPreference<boolean>(
@@ -312,80 +240,6 @@ function formatActivityPrintDate(dateString?: string): string {
     setSortBy(nextSortBy as ActivitySortBy);
     setSortDirection(nextDirection);
     setCurrentPage(1); // reset to first page on sort change
-  }, []);
-
-  // Load priorities when a single prioritized activity type is selected
-  useEffect(() => {
-    const types = filters.types;
-    if (types?.length === 1) {
-      const type = types[0];
-      if (type === ActivityType.TICKET || type === ActivityType.PROJECT_TASK) {
-        const itemType = type === ActivityType.TICKET ? 'ticket' : 'project_task';
-        getAllPriorities(itemType)
-          .then(setPriorities)
-          .catch(err => console.error('Error loading priorities:', err));
-        return;
-      }
-    }
-    setPriorities([]);
-  }, [filters.types]);
-
-  // Load clients for the shared client filter on mount
-  useEffect(() => {
-    ctx.getAllClients(false)
-      .then((data: unknown) => {
-        if (!isActionPermissionError(data)) {
-          setClients(data as IClient[]);
-        }
-      })
-      .catch((err: unknown) => console.error('Error loading clients:', err));
-  }, [ctx]);
-
-  // Load projects with phases + statuses for the filter tree on mount
-  useEffect(() => {
-    ctx.getProjectsWithPhases()
-      .then((data: unknown) => {
-        if (!isActionPermissionError(data)) {
-          setProjects(data as ProjectWithPhases[]);
-        }
-      })
-      .catch((err: unknown) => console.error('Error loading projects with phases:', err));
-  }, [ctx]);
-
-  // Load boards and ticket statuses on mount
-  useEffect(() => {
-    Promise.all([
-      getAllBoards(true),
-      getStatuses('ticket' as ItemType),
-    ])
-      .then(([boardsData, statusesData]) => {
-        setBoards(boardsData || []);
-        setTicketStatuses(statusesData || []);
-      })
-      .catch((err) => console.error('Error loading boards/statuses:', err));
-  }, []);
-
-  // Load tags on mount (for both ticket and project task filters)
-  useEffect(() => {
-    Promise.all([
-      findAllTagsByType('ticket' as TaggedEntityType),
-      findAllTagsByType('project_task' as TaggedEntityType),
-    ])
-      .then(([tt, pt]) => {
-        if (isTagActionError(tt)) {
-          console.error('Error loading ticket tags:', tt);
-          setTicketTags([]);
-        } else {
-          setTicketTags(tt || []);
-        }
-        if (isTagActionError(pt)) {
-          console.error('Error loading project task tags:', pt);
-          setProjectTaskTags([]);
-        } else {
-          setProjectTaskTags(pt || []);
-        }
-      })
-      .catch((err) => console.error('Error loading tags:', err));
   }, []);
 
   // Use useCallback to memoize loadActivities with cache.
@@ -443,6 +297,16 @@ function formatActivityPrintDate(dateString?: string): string {
     loadActivities();
   }, [loadActivities, invalidateCache]);
 
+  // Refetch when another consumer of the shared cache (the activity drawer) reports a change.
+  // Skip the initial value so mounting doesn't trigger a duplicate load.
+  const { version: invalidationVersion } = useActivitiesInvalidationSignal();
+  const lastHandledInvalidationVersion = useRef(invalidationVersion);
+  useEffect(() => {
+    if (invalidationVersion === lastHandledInvalidationVersion.current) return;
+    lastHandledInvalidationVersion.current = invalidationVersion;
+    handleRefresh();
+  }, [invalidationVersion, handleRefresh]);
+
   const handleAddAdHoc = useCallback(async () => {
     const title = adHocTitle.trim();
     if (!title || isAddingAdHoc) return;
@@ -461,12 +325,9 @@ function formatActivityPrintDate(dateString?: string): string {
   }, [adHocTitle, isAddingAdHoc, invalidateCache, loadActivities, t]);
 
   const handleFilterChange = useCallback((newFilters: ActivityFilters) => {
-    // Mark that the user has taken control so the saved-preference mirror stops overwriting.
-    userEditedFiltersRef.current = true;
-    setFilters(newFilters);
-    setSavedFilters(newFilters);
+    filterState.setFilters(newFilters);
     setCurrentPage(1);
-  }, [setSavedFilters]);
+  }, [filterState]);
 
   const currentKey = useMemo(
     () => buildLoadedKey(getEffectiveFilters(), listViewMode),
@@ -476,7 +337,7 @@ function formatActivityPrintDate(dateString?: string): string {
   const handleTargetUserChange = useCallback((value: string) => {
     setTargetUserId(value);
     setCurrentPage(1);
-  }, []);
+  }, [setTargetUserId]);
 
   const preparePrintActivities = useCallback(async () => {
     if (listViewMode === 'grouped') {
@@ -492,7 +353,7 @@ function formatActivityPrintDate(dateString?: string): string {
     );
 
     const result = await fetchActivities(effectiveFilters, 1, printPageSize);
-    setPrintActivities(dedupeRecurringActivities(result.activities));
+    setPrintActivities(collapseRecurringSeries(result.activities));
   }, [activities.length, getEffectiveFilters, listViewMode, loadActivityGroups, pageSize, totalItems]);
 
   const cleanupPrintActivities = useCallback(() => {
@@ -508,8 +369,11 @@ function formatActivityPrintDate(dateString?: string): string {
     setCurrentPage(1); // Reset to first page when changing page size
   }, []);
 
+  // LEVERAGE: friction recurring-collapse-per-page — the table collapses recurring series
+  // client-side per page, so totalCount counts occurrences and pages can come up short; the
+  // server-side `collapseRecurringSeries` filter key fixes both but changes table pagination.
   const filteredActivitiesForTable = useMemo(() => (
-    dedupeRecurringActivities(activities)
+    collapseRecurringSeries(activities)
   ), [activities]);
 
   // ---- Deep-link focus ------------------------------------------------------------------
@@ -521,7 +385,7 @@ function formatActivityPrintDate(dateString?: string): string {
     listViewMode === 'grouped' &&
     !viewingOther &&
     !error &&
-    (filtersLoaded || hasExplicitFilters || focusFiltersCleared) &&
+    (filterState.isReady || focusFiltersCleared) &&
     groupsReady &&
     loadedKey === currentKey;
   const focusFound = focusReady && filteredActivitiesForTable.some((a) => `${a.type}:${a.id}` === pendingFocusKey);
@@ -547,12 +411,11 @@ function formatActivityPrintDate(dateString?: string): string {
   // "Clear filters": for this visit only (saved filters are NOT written), show every table type
   // and drop the closed restriction, then retry the focus.
   const handleClearFiltersForFocus = useCallback(() => {
-    userEditedFiltersRef.current = true;
-    setFilters({ types: DEFAULT_TABLE_TYPES });
+    filterState.setOverrideFilters({ types: DEFAULT_TABLE_TYPES });
     setCurrentPage(1);
     setFocusFiltersCleared(true);
     setFocusAlert(null);
-  }, []);
+  }, [filterState]);
 
   const activityPrintColumns = useMemo<PrintColumnOption<Activity>[]>(() => [
     {
@@ -688,23 +551,13 @@ function formatActivityPrintDate(dateString?: string): string {
               </>
             )}
             {canViewOthers && (
-              <div className="ml-auto flex items-center gap-2">
-                <Label htmlFor={`${id}-viewing-user`} className="text-sm font-medium whitespace-nowrap mb-0">
-                  {t('table.viewingUser.label', { defaultValue: 'Viewing:' })}
-                </Label>
-                <UserPicker
-                  id={`${id}-viewing-user`}
-                  value={targetUserId}
-                  onValueChange={handleTargetUserChange}
-                  users={viewableUsers}
-                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                  userTypeFilter="internal"
-                  placeholder={t('table.viewingUser.me', { defaultValue: 'My activities' })}
-                  unassignedLabel={t('table.viewingUser.me', { defaultValue: 'My activities' })}
-                  buttonWidth="fit"
-                  size="sm"
-                />
-              </div>
+              <ViewingUserPicker
+                id={`${id}-viewing-user`}
+                className="ml-auto flex items-center gap-2"
+                value={targetUserId}
+                onChange={handleTargetUserChange}
+                users={viewableUsers}
+              />
             )}
           </div>
         )}
@@ -733,13 +586,7 @@ function formatActivityPrintDate(dateString?: string): string {
         <ActivitiesTableFilters
           filters={filters}
           onChange={handleFilterChange}
-          priorities={priorities}
-          clients={clients}
-          projects={projects}
-          boards={boards}
-          ticketStatuses={ticketStatuses}
-          ticketTags={ticketTags}
-          projectTaskTags={projectTaskTags}
+          {...filterOptions}
         />
         {isInitialLoad || (isLoading && activities.length === 0) ? (
           <ActivitiesTableSkeleton rowCount={pageSize} />

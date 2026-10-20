@@ -1,3 +1,4 @@
+import { expandAccountingExportCharges } from './accountingExportChargeExpansion';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingExportRepository } from '../repositories/accountingExportRepository';
 import { AccountingMappingResolver, type MappingResolution } from './accountingMappingResolver';
@@ -27,8 +28,9 @@ type ChargeProjection = {
   service_id?: string | null;
   tax_region?: string | null;
   net_amount?: number | string | null;
-  is_taxable?: boolean | null;
+  description?: string | null;
   is_discount?: boolean | null;
+  is_taxable?: boolean | null;
 };
 
 type ChargeDetailProjection = {
@@ -97,7 +99,7 @@ function mergeErrorMetadata(
 }
 
 export class AccountingExportValidation {
-  static async ensureMappingsForBatch(batchId: string, adapters?: AccountingExportAdapterLookup): Promise<void> {
+  static async ensureMappingsForBatch(batchId: string, adapters?: AccountingExportAdapterLookup, options: { preserveBatchStatus?: boolean } = {}): Promise<void> {
     const repo = await AccountingExportRepository.create();
     const batch = await repo.getBatch(batchId);
     if (!batch) {
@@ -109,7 +111,7 @@ export class AccountingExportValidation {
       throw new Error(`Export batch ${batchId} is missing tenant context`);
     }
 
-    const lines = await repo.listLines(batchId);
+    let lines = await repo.listLines(batchId);
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
     const validationTimestamp = new Date().toISOString();
@@ -155,7 +157,9 @@ export class AccountingExportValidation {
 
       const errors = await repo.listErrors(batchId);
       const openErrors = errors.filter((item) => item.resolution_state === 'open');
-      await repo.updateBatchStatus(batchId, { status: openErrors.length === 0 ? 'ready' : 'needs_attention' });
+      if (!options.preserveBatchStatus) {
+        await repo.updateBatchStatus(batchId, { status: openErrors.length === 0 ? 'ready' : 'needs_attention' });
+      }
       return;
     }
 
@@ -187,10 +191,34 @@ export class AccountingExportValidation {
     const charges =
       chargeIds.size > 0
         ? await db.table<ChargeProjection>('invoice_charges')
-            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount', 'is_taxable', 'is_discount')
+            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount', 'description', 'is_discount', 'is_manual', 'tax_amount', 'is_taxable')
             .whereIn('item_id', Array.from(chargeIds))
         : [];
-    const chargesById = new Map(charges.map((charge) => [charge.item_id, charge]));
+
+    // Validate persisted Xero amounts before fixed-parent expansion. Expansion
+    // needs a real parent amount to reconcile its allocations; a null amount
+    // must remain a line-level readiness error and must never reach the adapter.
+    const rawChargeById = new Map(charges.map((charge) => [charge.item_id, charge]));
+    const missingNetAmountLineIds = new Set<string>();
+    if (adapterType === 'xero') {
+      for (const line of lines) {
+        if (!line.document_line_id) continue;
+        const charge = rawChargeById.get(line.document_line_id);
+        if (!charge || (charge.net_amount !== null && charge.net_amount !== undefined)) continue;
+        await repo.addError({
+          batch_id: batchId,
+          line_id: line.line_id,
+          code: 'missing_net_amount',
+          message: `Charge ${line.document_line_id} is missing its net amount. Repair the invoice, then cancel and recreate this export batch.`,
+          metadata: mergeErrorMetadata(line, { invoice_charge_id: line.document_line_id })
+        });
+        missingNetAmountLineIds.add(line.line_id);
+      }
+    }
+
+    const expanded = await expandAccountingExportCharges(knex, tenant, new Map(charges.map((charge) => [charge.item_id, charge])), lines);
+    const chargesById = expanded.charges;
+    lines = expanded.lines;
     const chargeDetailRows =
       chargeIds.size > 0
         ? await db.table<ChargeDetailProjection>('invoice_charge_details')
@@ -327,7 +355,7 @@ export class AccountingExportValidation {
     };
 
     const serviceIds = new Set<string>();
-    for (const charge of charges) {
+    for (const charge of chargesById.values()) {
       if (charge.service_id) {
         serviceIds.add(charge.service_id);
       }
@@ -344,6 +372,7 @@ export class AccountingExportValidation {
     );
 
     for (const line of lines) {
+      if (missingNetAmountLineIds.has(line.line_id)) continue;
       if (!line.document_line_id) {
         await repo.addError({
           batch_id: batchId,
@@ -372,13 +401,17 @@ export class AccountingExportValidation {
           batch_id: batchId,
           line_id: line.line_id,
           code: 'missing_service',
-          message: `Charge ${line.document_line_id} missing associated service`,
-          metadata: mergeErrorMetadata(line)
+          message: `Assign a service to '${charge?.description ?? 'charge'}' on invoice ${line.document_id ?? 'unknown'} (line ${line.line_id}).`,
+          metadata: mergeErrorMetadata(line, {
+            invoice_charge_id: line.document_line_id,
+            invoice_id: line.document_id ?? null,
+            description: charge?.description ?? null
+          })
         });
         continue;
       }
 
-      const canonicalPeriods = canonicalPeriodsByChargeId.get(line.document_line_id) ?? [];
+      const canonicalPeriods = canonicalPeriodsByChargeId.get(lineById.get(line.line_id)?.document_line_id ?? line.document_line_id) ?? [];
       const exportSource = normalizeExportLineServicePeriodSource(line.payload);
       const exportSummaryStart = normalizeIsoString(line.service_period_start);
       const exportSummaryEnd = normalizeIsoString(line.service_period_end);
@@ -501,7 +534,7 @@ export class AccountingExportValidation {
       const invoiceDelegatesTax =
         invoiceTaxSource === 'external' || invoiceTaxSource === 'pending_external';
 
-      if (isQuickBooks && charge.tax_region && !invoiceDelegatesTax) {
+      if ((isQuickBooks || adapterType === 'quickbooks_desktop') && charge.tax_region && !invoiceDelegatesTax) {
         const cacheKey = `${charge.tax_region}:${batch.target_realm ?? 'default'}`;
         if (!checkedTaxRegions.has(cacheKey)) {
           const taxMapping = await resolver.resolveTaxCodeMapping({
@@ -623,7 +656,9 @@ export class AccountingExportValidation {
     const errors = await repo.listErrors(batchId);
     const openErrors = errors.filter((item) => item.resolution_state === 'open');
     const cleanedStatus = openErrors.length === 0 ? 'ready' : 'needs_attention';
-    await repo.updateBatchStatus(batchId, { status: cleanedStatus });
+    if (!options.preserveBatchStatus) {
+      await repo.updateBatchStatus(batchId, { status: cleanedStatus });
+    }
   }
 }
 

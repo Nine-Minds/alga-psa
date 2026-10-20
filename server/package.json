@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.6.10",
+  "version": "1.6.16",
   "private": true,
   "type": "module",
   "engines": {
@@ -221,6 +221,7 @@
     "tinycolor2": "^1.6.0",
     "ts-command-line-args": "^2.5.1",
     "ts-morph": "^26.0.0",
+    "typescript": "^5.7.3",
     "ua-parser-js": "^2.0.6",
     "uuid": "^11.1.1",
     "web-vitals": "^5.0.3",

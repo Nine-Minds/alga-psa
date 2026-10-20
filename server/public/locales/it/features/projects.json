@@ -85,7 +85,9 @@
     "noService": "Nessun servizio",
     "servicePlaceholder": "Seleziona servizio predefinito",
     "serviceHelp": "Usato per le registrazioni ore sulle attività di questa fase quando l’attività stessa non imposta un servizio.",
-    "serviceDisplayLabel": "Servizio"
+    "serviceDisplayLabel": "Servizio",
+    "taskCount_few": "{{count}} attività",
+    "taskCount_many": "{{count}} attività"
   },
   "projectList": {
     "addProject": "Aggiungi progetto",
@@ -314,7 +316,9 @@
     "bulkTagsFailure": "Impossibile aggiungere i tag alle attività selezionate",
     "taskTypeFallback": "Attività",
     "timeline": "Cronologia",
-    "loadingTimeline": "Caricamento cronologia..."
+    "loadingTimeline": "Caricamento cronologia...",
+    "bulkTagsSuccess_few": "Tag aggiunti a {{count}} attività",
+    "bulkTagsSuccess_many": "Tag aggiunti a {{count}} attività"
   },
   "taskForm": {
     "addTitle": "Aggiungi attività",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "Eredita {{service}} dal progetto.",
     "startDateLabel": "Data di inizio",
     "taskStartDateLabel": "Data di inizio dell'attività",
-    "startDatePlaceholder": "Seleziona data di inizio"
+    "startDatePlaceholder": "Seleziona data di inizio",
+    "createdTicketsIntro_few": "Hai creato {{count}} ticket durante questa sessione:",
+    "createdTicketsIntro_many": "Hai creato {{count}} ticket durante questa sessione:",
+    "documentCleanupFailure_few": "Impossibile eliminare {{count}} documenti: rimarranno in Documenti",
+    "documentCleanupFailure_many": "Impossibile eliminare {{count}} documenti: rimarranno in Documenti",
+    "documentsCleanupIntro_few": "Hai {{count}} documenti che sono stati {{cleanupType}}:",
+    "documentsCleanupIntro_many": "Hai {{count}} documenti che sono stati {{cleanupType}}:",
+    "ticketCleanupFailure_few": "Impossibile eliminare {{count}} ticket",
+    "ticketCleanupFailure_many": "Impossibile eliminare {{count}} ticket"
   },
   "taskDependencies": {
     "title": "Dipendenze",
@@ -644,7 +656,13 @@
     },
     "exportSelected": "Esporta {{count}} selezionata/e",
     "selectedTasksNotice_one": "Esportazione di {{count}} attività selezionata.",
-    "selectedTasksNotice_other": "Esportazione di {{count}} attività selezionate."
+    "selectedTasksNotice_other": "Esportazione di {{count}} attività selezionate.",
+    "phasesSelected_few": "{{selected}} di {{total}} fasi selezionate",
+    "phasesSelected_many": "{{selected}} di {{total}} fasi selezionate",
+    "selectedTasksNotice_few": "Esportazione di {{count}} attività selezionate.",
+    "selectedTasksNotice_many": "Esportazione di {{count}} attività selezionate.",
+    "success_few": "{{count}} attività esportate con successo in CSV.",
+    "success_many": "{{count}} attività esportate con successo in CSV."
   },
   "import": {
     "title": "Importa fasi e attività",
@@ -765,7 +783,9 @@
     "statusUnmatchedTooltip": "Lo stato non corrisponde a nessuno stato esistente per questa fase. Risolvi nei passaggi di mappatura prima dell'importazione.",
     "statusFallbackSuffix": "Predefinito",
     "statusFallbackTooltip": "Utilizzo dello stato di ripiego predefinito per questa fase.",
-    "inPhaseBadge": "nella fase {{phase}}"
+    "inPhaseBadge": "nella fase {{phase}}",
+    "taskCountLabel_few": "({{count}} attività)",
+    "taskCountLabel_many": "({{count}} attività)"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +859,9 @@
       "badgeCount_other": "{{count}} Attività",
       "badgeCount_one": "{{count}} Attività",
       "billsToProject": "Le ore sono fatturate come ore di progetto",
-      "billsToClient": "Le ore sono fatturate a livello cliente"
+      "billsToClient": "Le ore sono fatturate a livello cliente",
+      "badgeCount_few": "{{count}} Attività",
+      "badgeCount_many": "{{count}} Attività"
     },
     "bulkMoveTask": {
       "title": "Sposta attività",
@@ -943,7 +965,7 @@
       "choose_status": "Scegli uno stato",
       "no_statuses_available": "Nessuno stato disponibile",
       "no_statuses_available_hint": "Crea prima gli stati in Impostazioni → Progetti → Stati.",
-      "task_status_library_title": "Libreria stati attività progetto",
+      "task_status_library_title": "Libreria stati attività",
       "task_status_library_description": "Gestisci gli stati delle attività di progetto della tua organizzazione. Questi stati possono essere utilizzati in tutti i progetti.",
       "task_status_library_empty": "Nessuno stato attività progetto trovato",
       "task_status_library_empty_hint": "Crea il tuo primo stato per iniziare",
@@ -983,12 +1005,33 @@
       "last_closed_error": "Almeno uno stato deve rimanere contrassegnato come chiuso",
       "last_closed_delete_error": "Impossibile eliminare l’ultimo stato chiuso per questo tipo.",
       "addStatus": "Aggiungi nuovo stato",
-      "add_from_library": "Aggiungi stato"
+      "add_from_library": "Aggiungi stato",
+      "closed_badge": "(Chiuso)",
+      "drag_to_reorder": "Trascina per riordinare",
+      "refresh_library": "Aggiorna la libreria degli stati",
+      "all_library_statuses_used": "Ogni stato della libreria è già una colonna qui. Usa «Crea nuovo» per aggiungerne un altro.",
+      "delete_no_move_target": "Non esiste un'altra colonna di stato in cui spostare queste attività. Aggiungi prima un'altra colonna.",
+      "delete_scope_help": "Questo rimuove la colonna solo in questo ambito. Lo stato resta nella Libreria stati attività.",
+      "fork_title": "Usare colonne di stato personalizzate per questa fase?",
+      "fork_message": "Questa fase smetterà di ereditare le colonne predefinite del progetto. Le colonne di stato che aggiungerai in seguito ai predefiniti del progetto non compariranno qui finché non riporti la fase ai predefiniti.",
+      "fork_confirm": "Usa stati personalizzati",
+      "phase_uses_custom": "Questa fase ha colonne di stato proprie e non eredita più i predefiniti del progetto.",
+      "pending_title": "Modifiche non salvate alle colonne di stato",
+      "pending_apply_hint": "Non cambia nulla finché non salvi.",
+      "pending_fork": "{{phase}} passerà a colonne di stato proprie.",
+      "pending_revert": "{{phase}} tornerà alle colonne predefinite del progetto.",
+      "pending_order": "Nuovo ordine delle colonne per {{scope}}.",
+      "pending_preview_hint": "Le colonne predefinite del progetto sono mostrate come anteprima. Salva per applicare il passaggio, poi potrai aggiungere o rimuovere colonne qui.",
+      "rename_impact_title": "Dove si applica questa rinomina",
+      "rename_impact_following": "Recepisce subito questa rinomina: {{columns}} colonna/e in {{projects}}.",
+      "rename_impact_keeping": "Mantiene il nome «{{name}}»: {{columns}} colonna/e in {{projects}}. Queste colonne non sono collegate a questo stato della Libreria stati attività, quindi quei progetti continueranno a riportare il nome precedente finché non rinomini la colonna lì.",
+      "rename_impact_more": "e altre {{remaining}}",
+      "rename_impact_none": "Questo stato non è ancora usato come colonna in nessun progetto."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Gestisci colonne di stato",
+      "manage_title": "Colonne di stato attività",
       "manage_description": "Definisci le colonne di stato per le attività in questo modello. Trascina per riordinare.",
       "template_defaults": "Predefiniti del modello",
       "added": "Colonna di stato aggiunta",
@@ -1014,7 +1057,8 @@
       "replaced": "Colonna di stato sostituita",
       "replace_failed": "Impossibile sostituire la colonna di stato",
       "repair_status_columns": "Ripara colonne di stato",
-      "unresolved_apply_guard": "Le colonne di stato devono essere riparate ({{count}})"
+      "unresolved_apply_guard": "Le colonne di stato devono essere riparate ({{count}})",
+      "pending_row_hint": "Completa la colonna di stato vuota prima di aggiungerne un’altra."
     },
     "list": {
       "title": "Modelli di progetto",
@@ -1193,7 +1237,9 @@
       "taskCount_other": "{{count}} attività",
       "unknownUser": "Sconosciuto",
       "unknownTask": "Attività sconosciuta",
-      "checklistCountTitle": "{{count}} elemento checklist"
+      "checklistCountTitle": "{{count}} elemento checklist",
+      "taskCount_few": "{{count}} attività",
+      "taskCount_many": "{{count}} attività"
     },
     "taskForm": {
       "addTitle": "Aggiungi attività",
@@ -1458,18 +1504,6 @@
     "title": "Fasi del progetto",
     "import": "Importa"
   },
-  "addStatusDialog": {
-    "phaseTitle": "Aggiungi stato fase dalla libreria",
-    "projectTitle": "Aggiungi stato dalla libreria",
-    "selectLabel": "Seleziona dalla libreria degli stati",
-    "placeholder": "Scegli uno stato",
-    "helpText": "Seleziona uno stato dalla libreria degli stati del tuo tenant da aggiungere a questo progetto.",
-    "noStatusesTitle": "Nessuno stato disponibile",
-    "noStatusesDescription": "Crea gli stati in Impostazioni → Progetti → Stati.",
-    "adding": "Aggiunta...",
-    "addStatus": "Aggiungi stato",
-    "addFailed": "Impossibile aggiungere lo stato. Riprova."
-  },
   "taskStatusSelect": {
     "ariaLabel": "Stato dell'attività",
     "selectStatus": "Seleziona stato"
@@ -1554,7 +1588,7 @@
     "statusColor": "Colore dello stato",
     "changeColor": "Cambia colore",
     "markClosed": "Segna come stato chiuso",
-    "markClosedDescription": "Le attività negli stati chiusi sono considerate completate",
+    "markClosedDescription": "Le attività con questo stato verranno considerate completate",
     "creating": "Creazione...",
     "createButton": "Crea stato",
     "nameRequired": "Il nome dello stato è obbligatorio",
@@ -1615,7 +1649,9 @@
       "submitting": "Aggiunta dei tag...",
       "confirm_one": "Aggiungi tag a {{count}} attività",
       "confirm_other": "Aggiungi tag a {{count}} attività",
-      "failedHeading": "Impossibile aggiungere i tag alle seguenti attività:"
+      "failedHeading": "Impossibile aggiungere i tag alle seguenti attività:",
+      "confirm_few": "Aggiungi tag a {{count}} attività",
+      "confirm_many": "Aggiungi tag a {{count}} attività"
     }
   },
   "common:actions": {
@@ -1678,7 +1714,9 @@
       "lockedSummary_other": "{{count}} voci per un totale di {{amount}} sono bloccate e non cambieranno.",
       "edit": "Modifica condizioni",
       "saved": "Condizioni di fatturazione aggiornate",
-      "dialogTitle": "Modifica condizioni di fatturazione"
+      "dialogTitle": "Modifica condizioni di fatturazione",
+      "lockedSummary_few": "{{count}} voci per un totale di {{amount}} sono bloccate e non cambieranno.",
+      "lockedSummary_many": "{{count}} voci per un totale di {{amount}} sono bloccate e non cambieranno."
     },
     "setup": {
       "title": "Fattura questo progetto",
@@ -2027,5 +2065,22 @@
     "question": "Le dipendenze non sono vincolanti, quindi puoi continuare. Vuoi farlo?",
     "proceed": "Continua comunque",
     "cancel": "Annulla"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Compatto"
+    },
+    "spacious": {
+      "label": "Spazioso"
+    },
+    "decrease": {
+      "title": "Riduci la larghezza delle colonne"
+    },
+    "increase": {
+      "title": "Aumenta la larghezza delle colonne"
+    },
+    "reset": {
+      "title": "Ripristina il valore predefinito"
+    }
   }
 }

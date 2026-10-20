@@ -172,7 +172,7 @@ vi.mock("@alga-psa/ui/components/CustomSelect", () => ({
 }));
 
 describe("TicketResolutionDialog", () => {
-  it("requires a close status and non-empty resolution, then submits blocks and suppression", async () => {
+  it("requires a close status, then submits blocks and suppression", async () => {
     const onConfirm = vi.fn().mockResolvedValue(true);
 
     render(
@@ -192,7 +192,7 @@ describe("TicketResolutionDialog", () => {
 
     expect(
       screen.getByText(
-        "Choose a close status and add a resolution for this ticket.",
+        "Choose a close status. Add a resolution, or leave it blank to close without one.",
       ),
     ).toBeInTheDocument();
     const confirm = screen.getByRole("button", { name: "Resolve and close" });
@@ -233,6 +233,72 @@ describe("TicketResolutionDialog", () => {
     await waitFor(() => {
       expect(uploadSessionMock.resetDraftTracking).toHaveBeenCalledOnce();
     });
+  });
+
+  // A resolution is optional: picking a close status is the only requirement.
+  it("closes with no resolution when the editor is left empty", async () => {
+    const onConfirm = vi.fn().mockResolvedValue(true);
+
+    render(
+      <TicketResolutionDialog
+        id="ticket-resolution-close"
+        isOpen
+        ticketId="ticket-1"
+        statusOptions={[{ value: "closed", label: "Closed" }]}
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    const confirm = screen.getByRole("button", { name: "Resolve and close" });
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
+
+    expect(onConfirm).toHaveBeenCalledWith(
+      "closed",
+      DEFAULT_BLOCK,
+      {
+        suppressContactNotifications: false,
+        suppressInternalNotifications: false,
+      },
+      false,
+      undefined,
+    );
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledOnce());
+  });
+
+  // Whitespace is not a resolution; the close still goes through without one.
+  it("treats a whitespace-only resolution as empty", () => {
+    const onConfirm = vi.fn().mockResolvedValue(true);
+
+    render(
+      <TicketResolutionDialog
+        id="ticket-resolution-close"
+        isOpen
+        ticketId="ticket-1"
+        statusOptions={[{ value: "closed", label: "Closed" }]}
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Resolution"), {
+      target: { value: "   " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Resolve and close" }));
+
+    expect(onConfirm).toHaveBeenCalledWith(
+      "closed",
+      [
+        {
+          ...DEFAULT_BLOCK[0],
+          content: [{ type: "text", text: "   ", styles: {} }],
+        },
+      ],
+      expect.any(Object),
+      false,
+      undefined,
+    );
   });
 
   it("keeps draft image tracking until the async resolution save succeeds", async () => {
@@ -509,6 +575,28 @@ describe("TicketResolutionDialog", () => {
 
       fireEvent.change(ccInput(), { target: { value: "vendor@acme.test" } });
       fireEvent.keyDown(ccInput(), { key: "Enter" });
+      expect(confirm).toBeEnabled();
+    });
+
+    // The recipients travel on the resolution comment's metadata, so with no
+    // comment to carry them they would be silently dropped.
+    it("blocks a no-resolution close while recipients are entered", () => {
+      const onConfirm = vi.fn().mockResolvedValue(true);
+      render(<TicketResolutionDialog {...ccBccProps} isOpen onConfirm={onConfirm} />);
+
+      const confirm = screen.getByRole("button", { name: "Resolve and close" });
+      expect(confirm).toBeEnabled();
+
+      fireEvent.click(toggle());
+      fireEvent.change(ccInput(), { target: { value: "vendor@acme.test" } });
+      fireEvent.keyDown(ccInput(), { key: "Enter" });
+      expect(confirm).toBeDisabled();
+      fireEvent.submit(document.getElementById("ticket-resolution-close-form")!);
+      expect(onConfirm).not.toHaveBeenCalled();
+
+      fireEvent.change(screen.getByLabelText("Resolution"), {
+        target: { value: "Replaced the switch." },
+      });
       expect(confirm).toBeEnabled();
     });
 

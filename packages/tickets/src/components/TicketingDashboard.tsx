@@ -8,6 +8,7 @@ import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@
 import { ITag } from '@alga-psa/types';
 import { buildCreateTicketHref } from '../lib/createTicketRoute';
 import { createTicketActionsColumn } from './ticketActionsColumn';
+import { useTicketTemplatePermissions } from './templates/useTicketTemplatePermissions';
 import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
@@ -495,6 +496,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+
+  // Gates the row menu's "Create template from ticket" item; the server action is authoritative.
+  const templatePermissions = useTicketTemplatePermissions();
 
   // The only way out of this route. Announcing the departure *before* the push
   // is the point: the container mirrors filter state into the URL, and a write
@@ -1647,6 +1651,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         duplicateFromTicketId: ticketId,
         isAlgaDeskMode: useAlgaDeskQuickAddForm,
       })),
+      // Opens the template editor prefilled from the ticket. Nothing is saved until Save there.
+      onCreateTemplate: (ticketId) => navigateAwayTo(`/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticketId)}`),
+      canCreateTemplate: templatePermissions.create,
     });
 
     return [selectionColumn, ...baseColumns, actionsColumn];
@@ -1678,6 +1685,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     densityClasses.tagSize,
     navigateAwayTo,
     useAlgaDeskQuickAddForm,
+    templatePermissions.create,
     t,
     locale,
     dateFormat,
@@ -2425,13 +2433,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       </button>
                     </span>
                   ))}
-                  <button
-                    type="button"
-                    onClick={handleResetFilters}
-                    className="ml-1 text-xs font-medium text-[rgb(var(--color-text-500))] underline-offset-2 hover:text-[rgb(var(--color-text-700))] hover:underline"
-                  >
-                    {t('filters.clearFilters', 'Clear filters')}
-                  </button>
                 </div>
               )}
 
