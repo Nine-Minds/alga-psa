@@ -117,7 +117,8 @@ export const connectHuntress = withHuntressAccess(
 
     const apiKey = input.apiKey?.trim();
     const apiSecret = input.apiSecret?.trim();
-    const baseUrl = input.baseUrl?.trim() || HUNTRESS_DEFAULT_BASE_URL;
+    const baseUrl =
+      input.baseUrl?.trim() || process.env.HUNTRESS_API_BASE_URL || HUNTRESS_DEFAULT_BASE_URL;
     if (!apiKey || !apiSecret) {
       return { success: false, error: 'API key and secret are required' };
     }
