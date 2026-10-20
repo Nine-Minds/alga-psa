@@ -47,6 +47,8 @@ const StripeCustomerImport: React.FC = () => {
   const [results, setResults] = useState<ImportRowResult[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [matchNote, setMatchNote] = useState<string | null>(null);
+  // Names learned from previewed rows, by index into allRows, so an unchecked row (which has no plan row) can still show names.
+  const [knownNames, setKnownNames] = useState<Record<number, { client?: string; profile?: string }>>({});
 
   const reset = () => { setPlan(null); setResults(null); setAttested(new Set()); setExcluded(new Set()); setAmbiguous([]); setMatchNote(null); };
 
@@ -59,6 +61,15 @@ const StripeCustomerImport: React.FC = () => {
     try {
       const res = await previewStripeImportAction({ rows: included.map((i) => input[i]) });
       if (!res.success || !res.data) { toast.error(res.error ?? t('payment.import.errors.preview', { defaultValue: 'Preview failed' })); return; }
+      const sameInput = input === allRows; // include/exclude re-preview keeps learned names; a fresh input starts over
+      setKnownNames((prevNames) => {
+        const prev = sameInput ? prevNames : {};
+        const next = { ...prev };
+        res.data!.plan.rows.forEach((planRow, position) => {
+          next[included[position]] = { client: planRow.clientName ?? prev[included[position]]?.client, profile: planRow.profileName ?? prev[included[position]]?.profile };
+        });
+        return next;
+      });
       setAllRows(input); setExcluded(skip); setPlan(res.data.plan); setDigest(res.data.digest); setResults(null);
     } finally { setBusy(false); }
   };
@@ -214,7 +225,7 @@ const StripeCustomerImport: React.FC = () => {
                           return (
                             <tr key={`excluded-${allIndex}`} className="align-top border-b border-[rgb(var(--color-border-100))] opacity-60">
                               {includeCell}
-                              <td className="py-2 pr-3">{raw.client}{raw.profile ? ` / ${raw.profile}` : ''}</td>
+                              <td className="py-2 pr-3">{knownNames[allIndex]?.client ?? raw.client}{(knownNames[allIndex]?.profile ?? raw.profile) ? ` / ${knownNames[allIndex]?.profile ?? raw.profile}` : ''}</td>
                               <td className="py-2 pr-3 text-xs">{raw.customerId}</td>
                               <td colSpan={3} />
                             </tr>

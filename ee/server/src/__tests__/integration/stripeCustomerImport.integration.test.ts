@@ -26,10 +26,12 @@ function fakeStripe(customers: Record<string, StripeCustomerSnapshot>, events: s
     capabilities: () => ({ supportedCurrencies: ['USD', 'EUR'] }),
     getCustomerImportSnapshot: async (id) => (customers[id] ? structuredClone(customers[id]) : null),
     listCustomersForImport: async () => ({ customers: Object.values(customers), truncated: false }),
-    updateCustomerMetadata: async (id, metadata) => { events.push(`customer:${id}`); customers[id].metadata = { ...customers[id].metadata, ...metadata }; },
+    updateCustomerMetadata: async (id, metadata) => { events.push(`customer:${id}`); customers[id].metadata = { ...customers[id].metadata, ...metadata }; return { ...customers[id].metadata }; },
     updateSavedPaymentMethodMetadata: async (id, metadata) => {
       events.push(`pm:${id}`);
       for (const c of Object.values(customers)) for (const pm of c.paymentMethods) if (pm.id === id) pm.metadata = { ...pm.metadata, ...metadata };
+      for (const c of Object.values(customers)) for (const pm of c.paymentMethods) if (pm.id === id) return { ...pm.metadata };
+      return {};
     },
   };
 }
@@ -156,6 +158,56 @@ describe('StripeCustomerImportService executor (DB integration)', () => {
       expect(stripe.customers.create).not.toHaveBeenCalled();
       expect(stripe.customers.list).not.toHaveBeenCalled();
       expect(await trx('client_payment_customers').where({ tenant })).toHaveLength(1);
+    } finally { await trx.rollback(); }
+  });
+
+  it('re-stamps after Stripe metadata drift despite idempotency replay, and fails the row (no mapping) when the stamp does not land', async () => {
+    const trx = await db.transaction();
+    try {
+      const { tenant, clientId, profileId } = await seed(trx);
+      connection.current = trx;
+      const customers: Record<string, StripeCustomerSnapshot> = {
+        cus_drift1: { id: 'cus_drift1', email: 'a@x.test', name: 'A', currency: null, defaultPaymentMethodId: null, metadata: {}, paymentMethods: [card('pm_eeee5555', 1)] },
+      };
+      // Stripe-like replay: a reused key returns the first response and writes nothing.
+      const cache = new Map<string, Record<string, string>>();
+      const keys: string[] = [];
+      const base = fakeStripe(customers, []);
+      let landStamp = true;
+      const gateway: StripeImportGateway = {
+        ...base,
+        updateCustomerMetadata: async (id, metadata, key) => {
+          keys.push(key);
+          if (cache.has(key)) return cache.get(key)!;
+          const out = landStamp ? await base.updateCustomerMetadata(id, metadata, key) : { ...customers[id].metadata };
+          cache.set(key, out);
+          return out;
+        },
+      };
+      const svc = new StripeCustomerImportService(tenant, trx as unknown as Knex, gateway);
+      const input = [{ rowId: 'r1', clientId, billingProfileId: profileId, customerId: 'cus_drift1' }];
+
+      expect((await svc.execute(await svc.preview(input)))[0].status).toBe('imported');
+      expect(customers.cus_drift1.metadata.client_id).toBe(clientId);
+
+      customers.cus_drift1.metadata = {}; // drift
+      const plan = await svc.preview(input);
+      expect(plan.rows[0].needsCustomerStamp).toBe(true);
+      expect((await svc.execute(plan))[0].status).toBe('imported');
+      expect(keys[1]).not.toBe(keys[0]);
+      expect(customers.cus_drift1.metadata).toMatchObject({ tenant_id: tenant, client_id: clientId, billing_profile_id: profileId, source: 'alga_import' });
+      expect(await trx('client_payment_customers').where({ tenant })).toHaveLength(1);
+
+      // A gateway that reports unstamped metadata fails the row and writes no mapping.
+      const other = await seed(trx);
+      customers.cus_drift2 = { id: 'cus_drift2', email: null, name: null, currency: null, defaultPaymentMethodId: null, metadata: {}, paymentMethods: [] };
+      landStamp = false;
+      const svc2 = new StripeCustomerImportService(other.tenant, trx as unknown as Knex, gateway);
+      const input2 = [{ rowId: 'r2', clientId: other.clientId, billingProfileId: other.profileId, customerId: 'cus_drift2' }];
+      const res = await svc2.execute(await svc2.preview(input2));
+      expect(res[0].status).toBe('failed');
+      expect(res[0].error).toMatch(/did not persist/);
+      expect(await trx('client_payment_customers').where({ tenant: other.tenant })).toHaveLength(0);
     } finally { await trx.rollback(); }
   });
 });

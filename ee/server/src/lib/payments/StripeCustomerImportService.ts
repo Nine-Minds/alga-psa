@@ -21,8 +21,8 @@ import {
 export interface StripeImportGateway {
   getCustomerImportSnapshot(customerId: string): Promise<StripeCustomerSnapshot | null>;
   listCustomersForImport(): Promise<{ customers: StripeCustomerSnapshot[]; truncated: boolean }>;
-  updateCustomerMetadata(customerId: string, metadata: Record<string, string>, idempotencyKey: string): Promise<void>;
-  updateSavedPaymentMethodMetadata(externalId: string, metadata: Record<string, string>): Promise<void>;
+  updateCustomerMetadata(customerId: string, metadata: Record<string, string>, idempotencyKey: string): Promise<Record<string, string>>;
+  updateSavedPaymentMethodMetadata(externalId: string, metadata: Record<string, string>): Promise<Record<string, string>>;
   capabilities(): { supportedCurrencies: string[] };
 }
 
@@ -61,6 +61,23 @@ export type EnrollCallback = (row: RowPlan, paymentMethodId: string) => Promise<
 /** Stable digest of a plan, so execute can prove it is applying what the operator previewed. */
 export function computePlanDigest(plan: ImportPlan): string {
   return createHash('sha256').update(JSON.stringify(plan.rows)).digest('hex');
+}
+
+/** Throws unless every expected key/value is present in what Stripe says it stored. */
+function assertStamped(what: string, id: string, expected: Record<string, string>, returned: Record<string, string> | null | undefined): void {
+  const missing = Object.entries(expected).filter(([key, value]) => returned?.[key] !== value).map(([key]) => key);
+  if (missing.length > 0) {
+    throw new Error(`Stripe did not persist the import metadata on ${what} ${id} (missing or mismatched: ${missing.join(', ')}); nothing was imported for this row`);
+  }
+}
+
+/**
+ * Idempotency key for the customer stamp. Stripe replays the cached response for a reused key for ~24h, so the key must
+ * differ per import attempt (attemptId) yet stay stable for retries inside one attempt. Always well under Stripe's 255 chars.
+ */
+export function customerStampIdempotencyKey(tenantId: string, row: Pick<RowPlan, 'customerId' | 'clientId' | 'billingProfileId'>, attemptId: string, stamp: Record<string, string>): string {
+  const stampHash = createHash('sha256').update(JSON.stringify(Object.entries(stamp).sort())).digest('hex').slice(0, 16);
+  return `alga_import:${tenantId}:${row.customerId}:${row.clientId}:${row.billingProfileId}:${attemptId}:${stampHash}`;
 }
 
 export class StripeCustomerImportService {
@@ -141,6 +158,7 @@ export class StripeCustomerImportService {
   async execute(plan: ImportPlan, options: { attestedRowIds?: string[]; enroll?: EnrollCallback } = {}): Promise<ImportRowResult[]> {
     const attested = new Set(options.attestedRowIds ?? []);
     const results: ImportRowResult[] = [];
+    const attemptId = uuidv4();
     for (const row of plan.rows) {
       const result: ImportRowResult = { rowId: row.rowId, status: 'unchanged', cardsImported: 0, enrollment: 'not-requested' };
       results.push(result);
@@ -152,7 +170,7 @@ export class StripeCustomerImportService {
           continue;
         }
         if (row.action === 'adopt') {
-          result.cardsImported = await this.applyRow(row);
+          result.cardsImported = await this.applyRow(row, attemptId);
           result.status = 'imported';
         }
         if (attested.has(row.rowId)) {
@@ -174,20 +192,22 @@ export class StripeCustomerImportService {
     return results;
   }
 
-  private async applyRow(row: RowPlan): Promise<number> {
+  private async applyRow(row: RowPlan, attemptId: string): Promise<number> {
     const stamp = importMetadata(this.tenantId, row.clientId, row.billingProfileId);
 
     // Adoption order is mandatory (1): stamp the Stripe customer BEFORE any local mapping exists.
     // getOrCreateCustomer only reuses a cus_ whose metadata matches exactly; otherwise it overwrites
     // the mapping and orphans the customer.
     if (row.needsCustomerStamp) {
-      await this.gateway.updateCustomerMetadata(row.customerId, stamp, `alga_import:${this.tenantId}:${row.customerId}:${row.clientId}:${row.billingProfileId}`);
+      const stored = await this.gateway.updateCustomerMetadata(row.customerId, stamp, customerStampIdempotencyKey(this.tenantId, row, attemptId, stamp));
+      // A replayed or no-op update must never be reported as imported: verify the stamp really landed.
+      assertStamped('customer', row.customerId, stamp, stored);
     }
     const cards = row.cards.filter((card) => card.action === 'import' || (card.action === 'already-imported' && card.needsMetadataStamp));
     for (const card of cards) {
-      await this.gateway.updateSavedPaymentMethodMetadata(card.externalPaymentMethodId, {
-        tenant_id: this.tenantId, client_id: row.clientId, billing_profile_id: row.billingProfileId, source: 'alga_import',
-      });
+      const cardStamp = { ...stamp };
+      const storedCard = await this.gateway.updateSavedPaymentMethodMetadata(card.externalPaymentMethodId, cardStamp);
+      assertStamped('payment method', card.externalPaymentMethodId, cardStamp, storedCard);
     }
 
     // Adoption order (2): local writes, one transaction per row.

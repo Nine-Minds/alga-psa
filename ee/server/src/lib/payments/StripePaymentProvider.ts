@@ -239,8 +239,9 @@ export class StripePaymentProvider implements PaymentProvider {
     return result.data[0] ?? null;
   }
 
-  async updateSavedPaymentMethodMetadata(externalId: string, metadata: Record<string, string>): Promise<void> {
-    await (await this.getStripe()).paymentMethods.update(externalId, { metadata });
+  async updateSavedPaymentMethodMetadata(externalId: string, metadata: Record<string, string>): Promise<Record<string, string>> {
+    const updated = await (await this.getStripe()).paymentMethods.update(externalId, { metadata });
+    return (updated.metadata ?? {}) as Record<string, string>;
   }
 
   /** Stripe customer + all attached payment methods + off-session evidence, for the existing-customer import. */
@@ -269,8 +270,9 @@ export class StripePaymentProvider implements PaymentProvider {
     return { customers: list.slice(0, maxCustomers).map((customer) => toCustomerSnapshot(customer, [], new Set())), truncated: list.length > maxCustomers };
   }
 
-  async updateCustomerMetadata(customerId: string, metadata: Record<string, string>, idempotencyKey: string): Promise<void> {
-    await (await this.getStripe()).customers.update(customerId, { metadata }, { idempotencyKey });
+  async updateCustomerMetadata(customerId: string, metadata: Record<string, string>, idempotencyKey: string): Promise<Record<string, string>> {
+    const updated = await (await this.getStripe()).customers.update(customerId, { metadata }, { idempotencyKey });
+    return (updated.metadata ?? {}) as Record<string, string>;
   }
 
   async detachPaymentMethod(externalId: string): Promise<void> {
