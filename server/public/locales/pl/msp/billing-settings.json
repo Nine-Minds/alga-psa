@@ -1442,7 +1442,18 @@
       "assisted": {
         "run": "Dopasuj według e-maila, potem nazwy",
         "summary": "Zaproponowano: {{matched}}, niejednoznacznych: {{ambiguous}} (nie zaproponowano){{truncated}}",
-        "truncated": "; lista skrócona"
+        "truncated": "; lista skrócona",
+        "ambiguousTitle": "Niejednoznaczne dopasowania (nie zaproponowano)",
+        "addRow": "Dodaj jako wiersz",
+        "matchedBy": "Dopasowano według: {{by}}",
+        "by": {
+          "email": "e-mail",
+          "name": "nazwa"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Pasuje do wielu profili rozliczeniowych",
+          "multiple-customers": "Pasuje do wielu klientów Stripe"
+        }
       },
       "errors": {
         "preview": "Podgląd nie powiódł się",
@@ -1454,7 +1465,9 @@
         "customer": "Klient Stripe",
         "plan": "Plan",
         "cards": "Karty",
-        "enroll": "Zapisz do automatycznych płatności"
+        "enroll": "Zapisz do automatycznych płatności",
+        "clientProfile": "Klient / profil rozliczeniowy",
+        "include": "Uwzględnij"
       },
       "actions": {
         "adopt": "Przejmij",

@@ -129,6 +129,9 @@ export interface RowPlan {
   currency: string | null;
   customerEmail: string | null;
   customerName: string | null;
+  /** Alga names for the review table; null when the client/profile did not resolve. */
+  clientName: string | null;
+  profileName: string | null;
   /** Step 1 of adoption: Stripe customer metadata still needs stamping. */
   needsCustomerStamp: boolean;
   /** Step 2 of adoption: client_payment_customers row still needs writing. */
@@ -174,7 +177,7 @@ function isExpired(card: { expMonth: number; expYear: number }, now: Date): bool
 function emptyRow(row: ImportInputRow, partial: Partial<RowPlan>): RowPlan {
   return {
     rowId: row.rowId, clientId: row.clientId, billingProfileId: row.billingProfileId, customerId: row.customerId,
-    source: row.source ?? 'mapping', action: 'skip', warnings: [], currency: null, customerEmail: null, customerName: null,
+    source: row.source ?? 'mapping', action: 'skip', warnings: [], currency: null, customerEmail: null, customerName: null, clientName: null, profileName: null,
     needsCustomerStamp: false, needsMapping: false, cards: [], enrollmentExternalPaymentMethodId: null,
     alreadyEnrolled: false, enrollable: false, ...partial,
   };
@@ -200,7 +203,7 @@ export function classifyImport(input: {
     rowsByProfile.set(key, set);
   }
 
-  const rows = input.rows.map((row): RowPlan => {
+  const rows = input.rows.map((row): Omit<RowPlan, 'clientName' | 'profileName'> => {
     if (!CUSTOMER_ID.test(row.customerId)) return emptyRow(row, { action: 'skip', reason: 'invalid-customer-id' });
 
     const profile = profiles.get(profileKey(row.clientId, row.billingProfileId));
@@ -316,7 +319,13 @@ export function classifyImport(input: {
     };
   });
 
-  return { rows };
+  // Names are display-only; attach after the rules ran so no rule depends on them.
+  return {
+    rows: rows.map((row) => {
+      const profile = profiles.get(profileKey(row.clientId, row.billingProfileId));
+      return { ...row, clientName: profile?.clientName ?? null, profileName: profile?.profileName ?? null };
+    }),
+  };
 }
 
 // ---------------------------------------------------------------------------

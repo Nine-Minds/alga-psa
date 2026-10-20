@@ -1440,7 +1440,18 @@
       "assisted": {
         "run": "Coincidir por correo electrónico y luego por nombre",
         "summary": "{{matched}} propuestos, {{ambiguous}} ambiguos (no propuestos){{truncated}}",
-        "truncated": "; lista truncada"
+        "truncated": "; lista truncada",
+        "ambiguousTitle": "Coincidencias ambiguas (no propuestas)",
+        "addRow": "Añadir como fila",
+        "matchedBy": "Coincidencia por {{by}}",
+        "by": {
+          "email": "correo electrónico",
+          "name": "nombre"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Coincide con varios perfiles de facturación",
+          "multiple-customers": "Coincide con varios clientes de Stripe"
+        }
       },
       "errors": {
         "preview": "Error en la vista previa",
@@ -1452,7 +1463,9 @@
         "customer": "Cliente de Stripe",
         "plan": "Plan",
         "cards": "Tarjetas",
-        "enroll": "Inscribir en pago automático"
+        "enroll": "Inscribir en pago automático",
+        "clientProfile": "Cliente / perfil de facturación",
+        "include": "Incluir"
       },
       "actions": {
         "adopt": "Adoptar",

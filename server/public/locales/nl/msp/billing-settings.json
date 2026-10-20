@@ -1440,7 +1440,18 @@
       "assisted": {
         "run": "Koppelen op e-mail, daarna op naam",
         "summary": "{{matched}} voorgesteld, {{ambiguous}} dubbelzinnig (niet voorgesteld){{truncated}}",
-        "truncated": "; lijst afgekapt"
+        "truncated": "; lijst afgekapt",
+        "ambiguousTitle": "Dubbelzinnige overeenkomsten (niet voorgesteld)",
+        "addRow": "Toevoegen als rij",
+        "matchedBy": "Gematcht op {{by}}",
+        "by": {
+          "email": "e-mail",
+          "name": "naam"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Komt overeen met meerdere factureringsprofielen",
+          "multiple-customers": "Komt overeen met meerdere Stripe-klanten"
+        }
       },
       "errors": {
         "preview": "Voorbeeld mislukt",
@@ -1452,7 +1463,9 @@
         "customer": "Stripe-klant",
         "plan": "Abonnement",
         "cards": "Kaarten",
-        "enroll": "Inschrijven voor automatische betaling"
+        "enroll": "Inschrijven voor automatische betaling",
+        "clientProfile": "Klant / factureringsprofiel",
+        "include": "Opnemen"
       },
       "actions": {
         "adopt": "Overnemen",

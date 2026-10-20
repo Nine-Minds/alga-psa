@@ -1440,7 +1440,18 @@
       "assisted": {
         "run": "Corresponder por e-mail e depois por nome",
         "summary": "{{matched}} propostos, {{ambiguous}} ambíguos (não propostos){{truncated}}",
-        "truncated": "; lista truncada"
+        "truncated": "; lista truncada",
+        "ambiguousTitle": "Correspondências ambíguas (não propostas)",
+        "addRow": "Adicionar como linha",
+        "matchedBy": "Correspondência por {{by}}",
+        "by": {
+          "email": "e-mail",
+          "name": "nome"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Corresponde a vários perfis de faturamento",
+          "multiple-customers": "Corresponde a vários clientes Stripe"
+        }
       },
       "errors": {
         "preview": "Falha na pré-visualização",
@@ -1452,7 +1463,9 @@
         "customer": "Cliente Stripe",
         "plan": "Plano",
         "cards": "Cartões",
-        "enroll": "Inscrever no pagamento automático"
+        "enroll": "Inscrever no pagamento automático",
+        "clientProfile": "Cliente / perfil de faturamento",
+        "include": "Incluir"
       },
       "actions": {
         "adopt": "Adotar",

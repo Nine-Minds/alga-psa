@@ -1440,7 +1440,18 @@
       "assisted": {
         "run": "Nach E-Mail, dann nach Name abgleichen",
         "summary": "{{matched}} vorgeschlagen, {{ambiguous}} mehrdeutig (nicht vorgeschlagen){{truncated}}",
-        "truncated": "; Liste gekürzt"
+        "truncated": "; Liste gekürzt",
+        "ambiguousTitle": "Mehrdeutige Treffer (nicht vorgeschlagen)",
+        "addRow": "Als Zeile hinzufügen",
+        "matchedBy": "Abgeglichen nach {{by}}",
+        "by": {
+          "email": "E-Mail",
+          "name": "Name"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Passt zu mehreren Abrechnungsprofilen",
+          "multiple-customers": "Passt zu mehreren Stripe-Kunden"
+        }
       },
       "errors": {
         "preview": "Vorschau fehlgeschlagen",
@@ -1452,7 +1463,9 @@
         "customer": "Stripe-Kunde",
         "plan": "Tarif",
         "cards": "Karten",
-        "enroll": "Für Auto-Pay anmelden"
+        "enroll": "Für Auto-Pay anmelden",
+        "clientProfile": "Kunde / Abrechnungsprofil",
+        "include": "Einbeziehen"
       },
       "actions": {
         "adopt": "Übernehmen",

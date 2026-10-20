@@ -23,7 +23,7 @@ import {
   executeStripeImportAction,
 } from '@ee/lib/actions/stripe-import-actions';
 import { parseImportCsv, type RawImportRow } from '@ee/lib/payments/stripeImportRows';
-import type { ImportPlan, RowPlan } from '@ee/lib/payments/stripeImportClassifier';
+import type { ImportPlan, MatchAmbiguity, RowPlan } from '@ee/lib/payments/stripeImportClassifier';
 import type { ImportRowResult } from '@ee/lib/payments/StripeCustomerImportService';
 
 const CSV_PLACEHOLDER = 'client,billing_profile,customer_id\nAcme Corp,Default,cus_ABC123';
@@ -32,28 +32,46 @@ const StripeCustomerImport: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
   const [open, setOpen] = useState(false);
   const [csv, setCsv] = useState('');
-  const [rows, setRows] = useState<RawImportRow[]>([]);
+  // allRows: everything the operator entered. excluded: indices into allRows the operator unchecked.
+  // The server only ever previews/executes the included rows, so the digest always matches what is applied.
+  const [allRows, setAllRows] = useState<RawImportRow[]>([]);
+  const [excluded, setExcluded] = useState<Set<number>>(new Set());
+  const [ambiguous, setAmbiguous] = useState<MatchAmbiguity[]>([]);
   const [plan, setPlan] = useState<ImportPlan | null>(null);
   const [digest, setDigest] = useState('');
-  const [attested, setAttested] = useState<Set<string>>(new Set());
+  // Attestation is keyed by index into allRows so it survives a re-preview triggered by include/exclude.
+  const [attested, setAttested] = useState<Set<number>>(new Set());
   const [results, setResults] = useState<ImportRowResult[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [matchNote, setMatchNote] = useState<string | null>(null);
 
-  const reset = () => { setPlan(null); setResults(null); setAttested(new Set()); setMatchNote(null); };
+  const reset = () => { setPlan(null); setResults(null); setAttested(new Set()); setExcluded(new Set()); setAmbiguous([]); setMatchNote(null); };
 
-  const runPreview = async (input: RawImportRow[]) => {
+  const includedIndexes = (rows: RawImportRow[], skip: Set<number>) => rows.map((_, i) => i).filter((i) => !skip.has(i));
+
+  const runPreview = async (input: RawImportRow[], skip: Set<number> = new Set()) => {
+    const included = includedIndexes(input, skip);
+    if (included.length === 0) { toast.error(t('payment.import.errors.noRows', { defaultValue: 'Add at least one row' })); return; }
     setBusy(true);
     try {
-      const res = await previewStripeImportAction({ rows: input });
+      const res = await previewStripeImportAction({ rows: included.map((i) => input[i]) });
       if (!res.success || !res.data) { toast.error(res.error ?? t('payment.import.errors.preview', { defaultValue: 'Preview failed' })); return; }
-      setRows(input); setPlan(res.data.plan); setDigest(res.data.digest); setAttested(new Set()); setResults(null);
+      setAllRows(input); setExcluded(skip); setPlan(res.data.plan); setDigest(res.data.digest); setResults(null);
     } finally { setBusy(false); }
   };
+
+  const toggleInclude = async (index: number, include: boolean) => {
+    const next = new Set(excluded);
+    if (include) next.delete(index); else next.add(index);
+    await runPreview(allRows, next);
+  };
+
+  const addAmbiguousRow = (customerId: string) => setCsv((prev) => `${prev.trimEnd()}${prev.trim() ? '\n' : ''},,${customerId}`);
 
   const handlePreviewCsv = async () => {
     const parsed = parseImportCsv(csv);
     if (parsed.length === 0) { toast.error(t('payment.import.errors.noRows', { defaultValue: 'Add at least one row' })); return; }
+    setAttested(new Set());
     await runPreview(parsed);
   };
 
@@ -62,14 +80,16 @@ const StripeCustomerImport: React.FC = () => {
     try {
       const res = await proposeStripeImportMatchesAction();
       if (!res.success || !res.data) { toast.error(res.error ?? t('payment.import.errors.match', { defaultValue: 'Matching failed' })); return; }
-      const { proposals, ambiguous, truncated } = res.data;
+      const { proposals, ambiguous: ambiguousMatches, truncated } = res.data;
+      setAmbiguous(ambiguousMatches);
       setMatchNote(t('payment.import.assisted.summary', {
         defaultValue: '{{matched}} proposed, {{ambiguous}} ambiguous (not proposed){{truncated}}',
-        matched: proposals.length, ambiguous: ambiguous.length,
+        matched: proposals.length, ambiguous: ambiguousMatches.length,
         truncated: truncated ? t('payment.import.assisted.truncated', { defaultValue: '; list truncated' }) : '',
       }));
       if (proposals.length === 0) return;
       setBusy(false);
+      setAttested(new Set());
       await runPreview(proposals.map((p) => ({ client: p.clientId, profile: p.billingProfileId, customerId: p.customerId, source: 'assisted' as const })));
     } finally { setBusy(false); }
   };
@@ -82,15 +102,19 @@ const StripeCustomerImport: React.FC = () => {
     if (!plan) return;
     setBusy(true);
     try {
-      const res = await executeStripeImportAction({ rows, planDigest: digest, attestedRowIds: [...attested] });
+      const included = includedIndexes(allRows, excluded);
+      // Plan row ids are positions in the included list; map our allRows-keyed attestations onto them.
+      const attestedRowIds = included.flatMap((allIndex, position) => (attested.has(allIndex) ? [plan.rows[position].rowId] : []));
+      const res = await executeStripeImportAction({ rows: included.map((i) => allRows[i]), planDigest: digest, attestedRowIds });
       if (!res.success || !res.data) { toast.error(res.error ?? t('payment.import.errors.execute', { defaultValue: 'Import failed' })); return; }
       setResults(res.data.results);
       toast.success(t('payment.import.done', { defaultValue: 'Import finished' }));
     } finally { setBusy(false); }
   };
 
-  const toggle = (rowId: string, on: boolean) => setAttested((prev) => { const next = new Set(prev); if (on) next.add(rowId); else next.delete(rowId); return next; });
-  const actionable = plan?.rows.some((r) => r.action === 'adopt' || attested.has(r.rowId)) ?? false;
+  const toggle = (index: number, on: boolean) => setAttested((prev) => { const next = new Set(prev); if (on) next.add(index); else next.delete(index); return next; });
+  const includedIdx = includedIndexes(allRows, excluded);
+  const actionable = plan?.rows.some((r, position) => r.action === 'adopt' || attested.has(includedIdx[position])) ?? false;
 
   const rowLabel = (row: RowPlan) => row.customerName || row.customerEmail || row.customerId;
 
@@ -132,6 +156,21 @@ const StripeCustomerImport: React.FC = () => {
                 </Button>
               </div>
               {matchNote && <p className="text-sm text-[rgb(var(--color-text-600))]">{matchNote}</p>}
+              {ambiguous.length > 0 && (
+                <div id="stripe-import-ambiguous" className="space-y-1">
+                  <div className="text-sm font-medium">{t('payment.import.assisted.ambiguousTitle', { defaultValue: 'Ambiguous matches (not proposed)' })}</div>
+                  {ambiguous.map((a) => (
+                    <div key={a.customerId} className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="font-mono">{a.customerId}</span>
+                      <span>{t('payment.import.assisted.matchedBy', { defaultValue: 'Matched by {{by}}', by: t(`payment.import.assisted.by.${a.matchedBy}`, { defaultValue: a.matchedBy }) })}</span>
+                      <span>{t(`payment.import.assisted.ambiguousReasons.${a.reason}`, { defaultValue: a.reason })}</span>
+                      <Button id={`stripe-import-add-ambiguous-${a.customerId}`} variant="outline" size="sm" onClick={() => addAmbiguousRow(a.customerId)}>
+                        {t('payment.import.assisted.addRow', { defaultValue: 'Add as row' })}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {plan && (
@@ -140,6 +179,8 @@ const StripeCustomerImport: React.FC = () => {
                   <table className="w-full text-sm" id="stripe-import-preview-table">
                     <thead>
                       <tr className="text-left border-b border-[rgb(var(--color-border-200))]">
+                        <th className="py-2 pr-3">{t('payment.import.table.include', { defaultValue: 'Include' })}</th>
+                        <th className="py-2 pr-3">{t('payment.import.table.clientProfile', { defaultValue: 'Client / billing profile' })}</th>
                         <th className="py-2 pr-3">{t('payment.import.table.customer', { defaultValue: 'Stripe customer' })}</th>
                         <th className="py-2 pr-3">{t('payment.import.table.plan', { defaultValue: 'Plan' })}</th>
                         <th className="py-2 pr-3">{t('payment.import.table.cards', { defaultValue: 'Cards' })}</th>
@@ -147,8 +188,37 @@ const StripeCustomerImport: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {plan.rows.map((row) => (
+                      {allRows.map((raw, allIndex) => {
+                        const isExcluded = excluded.has(allIndex);
+                        const row = isExcluded ? undefined : plan.rows[includedIdx.indexOf(allIndex)];
+                        const includeCell = (
+                          <td className="py-2 pr-3">
+                            <Checkbox
+                              id={`stripe-import-include-${allIndex}`}
+                              checked={!isExcluded}
+                              disabled={busy || !!results}
+                              onChange={(e) => void toggleInclude(allIndex, e.target.checked)}
+                              label={t('payment.import.table.include', { defaultValue: 'Include' })}
+                            />
+                          </td>
+                        );
+                        if (!row) {
+                          return (
+                            <tr key={`excluded-${allIndex}`} className="align-top border-b border-[rgb(var(--color-border-100))] opacity-60">
+                              {includeCell}
+                              <td className="py-2 pr-3">{raw.client}{raw.profile ? ` / ${raw.profile}` : ''}</td>
+                              <td className="py-2 pr-3 text-xs">{raw.customerId}</td>
+                              <td colSpan={3} />
+                            </tr>
+                          );
+                        }
+                        return (
                         <tr key={row.rowId} className="align-top border-b border-[rgb(var(--color-border-100))]">
+                          {includeCell}
+                          <td className="py-2 pr-3">
+                            <div className="font-medium">{row.clientName ?? raw.client}</div>
+                            <div className="text-xs text-[rgb(var(--color-text-500))]">{row.profileName ?? raw.profile ?? ''}</div>
+                          </td>
                           <td className="py-2 pr-3">
                             <div className="font-medium">{rowLabel(row)}</div>
                             <div className="text-xs text-[rgb(var(--color-text-500))]">{row.customerId}</div>
@@ -179,8 +249,8 @@ const StripeCustomerImport: React.FC = () => {
                             {row.enrollable ? (
                               <Checkbox
                                 id={`stripe-import-enroll-${row.rowId}`}
-                                checked={attested.has(row.rowId)}
-                                onChange={(e) => toggle(row.rowId, e.target.checked)}
+                                checked={attested.has(allIndex)}
+                                onChange={(e) => toggle(allIndex, e.target.checked)}
                                 label={t('payment.import.attest', { defaultValue: 'The client has authorized recurring charges to this card' })}
                               />
                             ) : row.alreadyEnrolled ? (
@@ -188,7 +258,8 @@ const StripeCustomerImport: React.FC = () => {
                             ) : <span className="text-xs">&mdash;</span>}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

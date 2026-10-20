@@ -1494,7 +1494,18 @@
       "assisted": {
         "run": "Matcha på e-post, sedan på namn",
         "summary": "{{matched}} föreslagna, {{ambiguous}} tvetydiga (inte föreslagna){{truncated}}",
-        "truncated": "; listan har kortats"
+        "truncated": "; listan har kortats",
+        "ambiguousTitle": "Tvetydiga matchningar (inte föreslagna)",
+        "addRow": "Lägg till som rad",
+        "matchedBy": "Matchad på {{by}}",
+        "by": {
+          "email": "e-post",
+          "name": "namn"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Matchar flera faktureringsprofiler",
+          "multiple-customers": "Matchar flera Stripe-kunder"
+        }
       },
       "errors": {
         "preview": "Förhandsgranskningen misslyckades",
@@ -1506,7 +1517,9 @@
         "customer": "Stripe-kund",
         "plan": "Abonnemang",
         "cards": "Kort",
-        "enroll": "Anmäl till autobetalning"
+        "enroll": "Anmäl till autobetalning",
+        "clientProfile": "Kund / faktureringsprofil",
+        "include": "Inkludera"
       },
       "actions": {
         "adopt": "Ta över",

@@ -26,6 +26,23 @@ export interface StripeImportGateway {
   capabilities(): { supportedCurrencies: string[] };
 }
 
+/** Stripe's default limit is ~100 req/s live; each snapshot is 4 calls, so keep the fan-out small. */
+export const SNAPSHOT_CONCURRENCY = 5;
+
+/** Runs `fn` over `items` with at most `limit` in flight, preserving order. First rejection rejects. */
+export async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
 export type ImportRowStatus = 'imported' | 'unchanged' | 'skipped' | 'conflict' | 'failed';
 export type ImportEnrollmentStatus = 'enrolled' | 'not-requested' | 'not-eligible' | 'already-enrolled' | 'failed';
 
@@ -95,7 +112,7 @@ export class StripeCustomerImportService {
   async preview(rows: ImportInputRow[]): Promise<ImportPlan> {
     const alga = await this.loadAlgaState();
     const ids = [...new Set(rows.map((row) => row.customerId).filter((id) => /^cus_[A-Za-z0-9]+$/.test(id)))];
-    const snapshots = await Promise.all(ids.map((id) => this.gateway.getCustomerImportSnapshot(id)));
+    const snapshots = await mapWithConcurrency(ids, SNAPSHOT_CONCURRENCY, (id) => this.gateway.getCustomerImportSnapshot(id));
     return classifyImport({ rows, customers: snapshots.filter((s): s is StripeCustomerSnapshot => !!s), alga });
   }
 

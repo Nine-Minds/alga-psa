@@ -1477,7 +1477,18 @@
       "assisted": {
         "run": "Match by email, then name",
         "summary": "{{matched}} proposed, {{ambiguous}} ambiguous (not proposed){{truncated}}",
-        "truncated": "; list truncated"
+        "truncated": "; list truncated",
+        "ambiguousTitle": "Ambiguous matches (not proposed)",
+        "addRow": "Add as row",
+        "matchedBy": "Matched by {{by}}",
+        "by": {
+          "email": "email",
+          "name": "name"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Matches several billing profiles",
+          "multiple-customers": "Matches several Stripe customers"
+        }
       },
       "errors": {
         "preview": "Preview failed",
@@ -1489,7 +1500,9 @@
         "customer": "Stripe customer",
         "plan": "Plan",
         "cards": "Cards",
-        "enroll": "Enroll in auto-pay"
+        "enroll": "Enroll in auto-pay",
+        "clientProfile": "Client / billing profile",
+        "include": "Include"
       },
       "actions": {
         "adopt": "Adopt",
