@@ -142,6 +142,14 @@ export default function HourBlockDetailDrawer({ block, onClose }: HourBlockDetai
                   {t('detail.expires', { date: formatCalendarDate(data.block.expiration_date) ?? '', defaultValue: 'Expires {{date}}' })}
                 </p>
               )}
+              {(data.block.source_type === 'contract' || data.block.contract_line_id != null) && (
+                <p id="hb-detail-source-contract" className="text-[rgb(var(--color-text-500))]">
+                  {t('detail.sourceContract', {
+                    contract: data.block.contract_name || data.block.contract_line_name || '',
+                    defaultValue: 'Contract: {{contract}}',
+                  })}
+                </p>
+              )}
               {data.block.source_invoice_id && data.block.invoice_number ? (
                 <p className="text-[rgb(var(--color-text-500))]">
                   {t('detail.sourceInvoice', { defaultValue: 'Source invoice' })} #{data.block.invoice_number}
@@ -150,7 +158,7 @@ export default function HourBlockDetailDrawer({ block, onClose }: HourBlockDetai
                 <p className="text-[rgb(var(--color-text-500))]">
                   {t('detail.invoiceDeleted', { defaultValue: 'Invoice (deleted)' })}
                 </p>
-              ) : (
+              ) : data.block.source_type === 'contract' || data.block.contract_line_id != null ? null : (
                 <p className="text-[rgb(var(--color-text-500))]">{t('detail.directGrant', { defaultValue: 'Direct grant' })}</p>
               )}
             </div>

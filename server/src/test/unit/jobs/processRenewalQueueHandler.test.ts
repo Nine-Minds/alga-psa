@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
+  resolveEffectiveTimeZone: vi.fn(async () => 'UTC'),
   // The facade scopes each table by tenant; the fake builder's where() merges
   // object criteria, so the recorded update where still carries { tenant, ... }.
   tenantDb: (conn: any, tenant: string) => ({
@@ -29,6 +30,10 @@ vi.mock('@alga-psa/core/logger', () => ({
     warn: mocks.loggerWarn,
     error: mocks.loggerError,
   },
+}));
+
+vi.mock('@alga-psa/billing/services/prepaidBlockRenewalService', () => ({
+  scheduleRenewalIssuancesForRolledCycle: vi.fn(async () => []),
 }));
 
 vi.mock('@shared/billingClients/clientContracts', () => ({
