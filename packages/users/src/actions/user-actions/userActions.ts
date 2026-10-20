@@ -73,6 +73,7 @@ export type UpdateUserErrorCode =
   | 'REPORTS_TO_CYCLE'
   | 'SCIM_MANAGED_INACTIVE'
   | 'INVALID_TIMEZONE'
+  | 'INVALID_ACTIVE_STATE'
   | 'PERMISSION_DENIED'
   | 'USER_UPDATE_FAILED';
 
@@ -993,6 +994,13 @@ export const updateUser = withAuth(async (
         if (field in userData) {
           delete (userData as Record<string, unknown>)[field as string];
         }
+      }
+
+      // Active state is a strict boolean. Seat admission and every seat count
+      // read `is_inactive = false`, while sign-in only tests truthiness, so any
+      // other value (null, "false") would leave a user signed in but uncounted.
+      if ('is_inactive' in userData && typeof userData.is_inactive !== 'boolean') {
+        return { success: false, code: 'INVALID_ACTIVE_STATE', error: 'Active state must be true or false.' };
       }
 
       if (
