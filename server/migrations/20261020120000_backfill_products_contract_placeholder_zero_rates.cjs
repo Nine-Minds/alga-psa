@@ -16,7 +16,9 @@
 //      custom_rate, a service_prices row in the CONTRACT's currency, or a catalog default_rate.
 //      A non-product line with custom_rate = 0 is never touched.
 //   2. contract_line_service_fixed_config with base_rate = 0 AND pricing_basis = 'bundle' whose
-//      member is a product (service_catalog.item_kind = 'product')
+//      member is a product (service_catalog.item_kind = 'product') AND whose line is a
+//      non-template contract line with a contract_id (same scope as step 1; template
+//      lines are left untouched)
 //      -> base_rate = NULL, rate_provenance = 'inherited'.
 //
 // rate_provenance moves with the rate because of the CHECK constraints (a NULL rate must be
@@ -136,23 +138,37 @@ exports.up = async function up(knex) {
       .select('config_id');
     const configIdsToFix = [];
     if (zeroConfigs.length > 0) {
-      const configToService = new Map();
+      const configToMember = new Map();
       for (const ids of chunk(zeroConfigs.map((row) => row.config_id))) {
         const rows = await db.table('contract_line_service_configuration')
           .whereIn('config_id', ids)
-          .select('config_id', 'service_id');
-        for (const row of rows) configToService.set(row.config_id, row.service_id);
+          .select('config_id', 'service_id', 'contract_line_id');
+        for (const row of rows) configToMember.set(row.config_id, row);
+      }
+      // Same scope as step 1: only non-template lines that belong to a contract.
+      const contractLineIds = new Set();
+      for (const ids of chunk(Array.from(new Set(Array.from(configToMember.values(), (m) => m.contract_line_id))))) {
+        const rows = await db.table('contract_lines')
+          .whereIn('contract_line_id', ids)
+          .whereNotNull('contract_id')
+          .where(function notTemplate() {
+            this.where('is_template', false).orWhereNull('is_template');
+          })
+          .select('contract_line_id');
+        for (const row of rows) contractLineIds.add(row.contract_line_id);
       }
       const productServices = new Set();
-      for (const ids of chunk(Array.from(new Set(configToService.values())))) {
+      for (const ids of chunk(Array.from(new Set(Array.from(configToMember.values(), (m) => m.service_id))))) {
         const rows = await db.table('service_catalog')
           .whereIn('service_id', ids)
           .where('item_kind', 'product')
           .select('service_id');
         for (const row of rows) productServices.add(row.service_id);
       }
-      for (const [configId, serviceId] of configToService) {
-        if (productServices.has(serviceId)) configIdsToFix.push(configId);
+      for (const [configId, member] of configToMember) {
+        if (productServices.has(member.service_id) && contractLineIds.has(member.contract_line_id)) {
+          configIdsToFix.push(configId);
+        }
       }
     }
 

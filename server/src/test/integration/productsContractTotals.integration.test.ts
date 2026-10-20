@@ -219,6 +219,13 @@ describe('backfill migration', () => {
     const controlMembers = await t('contract_line_service_configuration').where({ contract_line_id: controlLine.contract_line_id });
     await t('contract_line_service_fixed_config').whereIn('config_id', controlMembers.map((m: any) => m.config_id)).update({ base_rate: 0, pricing_basis: 'bundle', rate_provenance: 'custom' });
 
+    // Control: a template-flagged line holding a product member with the same 0 / 'bundle' shape.
+    const { lines: templateLines } = await createProductsContract([{ service_id: a, quantity: 1 }]);
+    const templateLineId = templateLines[0].contract_line_id;
+    await t('contract_lines').where({ contract_line_id: templateLineId }).update({ is_template: true });
+    const templateMembers = await t('contract_line_service_configuration').where({ contract_line_id: templateLineId });
+    await t('contract_line_service_fixed_config').whereIn('config_id', templateMembers.map((m: any) => m.config_id)).update({ base_rate: 0, pricing_basis: 'bundle', rate_provenance: 'custom' });
+
     // Expected counts for THIS tenant, by the written-out predicate (independent of the migration's code path).
     const expectedLines = Number((await db.raw(
       `SELECT count(DISTINCT cl.contract_line_id) AS n FROM contract_lines cl
@@ -229,6 +236,7 @@ describe('backfill migration', () => {
       `SELECT count(*) AS n FROM contract_line_service_fixed_config f
          JOIN contract_line_service_configuration c ON c.tenant = f.tenant AND c.config_id = f.config_id
          JOIN service_catalog s ON s.tenant = c.tenant AND s.service_id = c.service_id AND s.item_kind = 'product'
+         JOIN contract_lines l ON l.tenant = c.tenant AND l.contract_line_id = c.contract_line_id AND l.contract_id IS NOT NULL AND COALESCE(l.is_template, false) = false
         WHERE f.tenant = ? AND f.base_rate = 0 AND f.pricing_basis = 'bundle'`, [tenantId])).rows[0].n);
     expect(expectedLines).toBeGreaterThanOrEqual(1);
     expect(expectedConfigs).toBeGreaterThanOrEqual(2);
@@ -252,6 +260,11 @@ describe('backfill migration', () => {
     expect(untouchedLine.rate_provenance).toBe('custom');
     const untouchedConfigs = await t('contract_line_service_fixed_config').whereIn('config_id', controlMembers.map((m: any) => m.config_id));
     expect(untouchedConfigs.every((r: any) => Number(r.base_rate) === 0 && r.pricing_basis === 'bundle')).toBe(true);
+
+    // Template line's product config with 0 / 'bundle' is left untouched.
+    const templateConfigs = await t('contract_line_service_fixed_config').whereIn('config_id', templateMembers.map((m: any) => m.config_id));
+    expect(templateConfigs).toHaveLength(1);
+    expect(templateConfigs.every((r: any) => Number(r.base_rate) === 0 && r.pricing_basis === 'bundle' && r.rate_provenance === 'custom')).toBe(true);
 
     // Rewritten contract now values at the member rates: 5 x 16098 + 5 x 9000.
     expect((await getContractMonthlyFixedValuesByContract(db, tenantId, [productLines[0].contract_id])).get(productLines[0].contract_id)?.monthlyValueCents).toBe(125_490);
