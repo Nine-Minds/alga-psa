@@ -150,3 +150,13 @@ export type {
   PropagateBundleMasterStatusOptions,
   PropagateBundleMasterStatusResult,
 } from './ticketBundlePropagation';
+export {
+  BUNDLE_CHILD_LOCKED_FIELDS,
+  effectiveBundleMode,
+  isChildWorkflowLocked,
+} from './bundleWorkflowLock';
+export type {
+  BundleChildLockedField,
+  BundleSettingsLike,
+  BundleWorkflowMode,
+} from './bundleWorkflowLock';

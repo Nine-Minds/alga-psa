@@ -2161,6 +2161,7 @@ export class ApiTicketController extends ApiBaseController {
             masterTicketId,
             mode: data.mode,
             reopenOnChildReply: data.reopen_on_child_reply,
+            onClosedMaster: data.on_closed_master,
           });
           return createSuccessResponse(result, 200, undefined, apiRequest);
         });

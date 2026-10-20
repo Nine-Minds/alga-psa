@@ -13,6 +13,8 @@ export interface ClosedMasterChoiceFieldsProps {
   hasResolutionComment: boolean;
   masterStatusName: string | null;
   disabled?: boolean;
+  /** 'add' labels the choices for linking a child; 'switch' for changing the bundle to Sync Updates. */
+  variant?: 'add' | 'switch';
 }
 
 /**
@@ -29,9 +31,12 @@ export function ClosedMasterChoiceFields({
   hasResolutionComment,
   masterStatusName,
   disabled = false,
+  variant = 'add',
 }: ClosedMasterChoiceFieldsProps) {
   const { t } = useTranslation('features/tickets');
   const statusLabel = masterStatusName || t('details.bundle.childClosedStatus', 'Closed');
+  // LEVERAGE: friction closed-master-choice-copy — the add-child radio group is reused for the mode switch via a variant flag; the choices need a neutral subject (child/children) instead.
+  const isSwitch = variant === 'switch';
   const keepClosedGated = !allowedChoices.includes('keep_closed');
 
   const renderChoice = (
@@ -66,17 +71,38 @@ export function ClosedMasterChoiceFields({
       {allowedChoices.includes('keep_closed') &&
         renderChoice(
           'keep_closed',
-          t('details.bundle.keepClosedLabel', 'Add and keep master closed'),
-          t(
-            'details.bundle.keepClosedHelp',
-            'The child stays open with its own SLA clock. The bundle will show as inconsistent until the child is resolved.',
-          ),
+          isSwitch
+            ? t('details.bundle.keepClosedSwitchLabel', 'Switch and keep master closed')
+            : t('details.bundle.keepClosedLabel', 'Add and keep master closed'),
+          isSwitch
+            ? t(
+                'details.bundle.keepClosedSwitchHelp',
+                'Open children stay open with their own SLA clocks. The bundle will show as inconsistent until they are resolved.',
+              )
+            : t(
+                'details.bundle.keepClosedHelp',
+                'The child stays open with its own SLA clock. The bundle will show as inconsistent until the child is resolved.',
+              ),
         )}
       {allowedChoices.includes('apply_resolution') &&
         renderChoice(
           'apply_resolution',
-          t('details.bundle.applyResolutionLabel', "Add and apply the master's resolution to this child"),
-          hasResolutionComment
+          isSwitch
+            ? t('details.bundle.applyResolutionSwitchLabel', "Switch and apply the master's resolution to open children")
+            : t('details.bundle.applyResolutionLabel', "Add and apply the master's resolution to this child"),
+          isSwitch
+            ? hasResolutionComment
+              ? t(
+                  'details.bundle.applyResolutionSwitchHelp',
+                  "Closes each open child with status {{status}} and posts the master's resolution to it as a public comment.",
+                  { status: statusLabel },
+                )
+              : t(
+                  'details.bundle.applyResolutionSwitchHelpNoComment',
+                  'Closes each open child with status {{status}}. The master has no public resolution comment to post.',
+                  { status: statusLabel },
+                )
+            : hasResolutionComment
             ? t(
                 'details.bundle.applyResolutionHelp',
                 "Closes the child with status {{status}} and posts the master's resolution to the child as a public comment.",
@@ -91,7 +117,9 @@ export function ClosedMasterChoiceFields({
       {allowedChoices.includes('reopen_master') &&
         renderChoice(
           'reopen_master',
-          t('details.bundle.reopenMasterLabel', 'Add and reopen master'),
+          isSwitch
+            ? t('details.bundle.reopenMasterSwitchLabel', 'Switch and reopen master')
+            : t('details.bundle.reopenMasterLabel', 'Add and reopen master'),
           t(
             'details.bundle.reopenMasterHelp',
             'Reopens only the master. Already-closed children in this bundle stay closed; reopen notifications and SLA apply to the master.',

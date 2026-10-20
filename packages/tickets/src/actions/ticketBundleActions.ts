@@ -21,6 +21,7 @@ import {
   revertBundlePropagationForChild,
   revertBundlePropagationsForMaster,
   attachChildrenToBundle,
+  changeBundleSettings,
   getBundleMasterClosedContext,
   type BundleAfterCommitPublication,
   type BundleAttachFailure,
@@ -531,41 +532,47 @@ const updateBundleSettingsSchema = z.object({
   masterTicketId: z.string().uuid(),
   mode: z.enum(['link_only', 'sync_updates']).optional(),
   reopenOnChildReply: z.boolean().optional(),
+  /** Required when switching a bundle with a closed master to sync_updates. */
+  onClosedMaster: closedMasterChoiceSchema.optional(),
 });
 
-export const updateBundleSettingsAction = withAuth(async (user, { tenant }, input: z.input<typeof updateBundleSettingsSchema>) => {
+type UpdateBundleSettingsResult = {
+  master_ticket_id: string;
+  mode: 'link_only' | 'sync_updates';
+  reopen_on_child_reply: boolean;
+};
+
+export const updateBundleSettingsAction = withAuth(async (
+  user,
+  { tenant },
+  input: z.input<typeof updateBundleSettingsSchema>
+): Promise<UpdateBundleSettingsResult | TicketActionError> => {
   try {
   const data = updateBundleSettingsSchema.parse(input);
   const { knex: db } = await createTenantKnex();
+  const occurredAt = nowIso();
+  const workflowCtx = buildTicketBundleWorkflowCtx({ tenantId: tenant, actorUserId: user.user_id, occurredAt });
 
-  return withTransaction(db, async (trx) => {
+  return await withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
       throw new Error('Permission denied: Cannot modify ticket bundles');
     }
 
-    const existing = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-      .where({ master_ticket_id: data.masterTicketId })
-      .first();
-    if (!existing) throw new Error('Bundle settings not found');
-
-    const update: any = {};
-    if (data.mode) update.mode = data.mode;
-    if (data.reopenOnChildReply !== undefined) update.reopen_on_child_reply = data.reopenOnChildReply;
-
-    if (Object.keys(update).length === 0) {
-      return {
-        master_ticket_id: existing.master_ticket_id,
-        mode: existing.mode,
-        reopen_on_child_reply: existing.reopen_on_child_reply,
-      };
+    const result = await changeBundleSettings(trx, tenant, {
+      masterTicketId: data.masterTicketId,
+      mode: data.mode,
+      reopenOnChildReply: data.reopenOnChildReply,
+      choice: data.onClosedMaster ?? null,
+      actor: bundleActorInfo(user as IUser),
+      source: TICKET_ACTIVITY_SOURCE.UI,
+      occurredAt,
+    });
+    if (!result.ok) {
+      if (result.code === 'settings_not_found') throw new Error('Bundle settings not found');
+      return bundleAttachFailureToActionError(result);
     }
-
-    const [updated] = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-      .where({ master_ticket_id: data.masterTicketId })
-      .update(update)
-      .returning(['master_ticket_id', 'mode', 'reopen_on_child_reply']);
-
-    return updated;
+    registerBundlePublications(trx, workflowCtx, result.value.publications);
+    return result.value.settings;
   });
   } catch (error) {
     const expected = ticketBundleActionErrorFrom(error);
