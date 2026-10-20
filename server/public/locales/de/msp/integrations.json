@@ -2854,6 +2854,8 @@
           "selectPriority": "Priorität",
           "pollInterval": "Abfrageintervall (Minuten)",
           "autoClose": "Tickets schließen, wenn Huntress den Vorfall schließt",
+          "ingestEscalations": "Tickets aus Huntress-Eskalationen erstellen",
+          "ingestEscalationsHelp": "Eskalationen verwenden dieselben Board-, Kategorie-, Prioritätszuordnungs- und Auto-Schließen-Einstellungen wie Vorfälle. Eine Eskalation, die mehrere Organisationen betrifft, erstellt ein Ticket pro Organisation.",
           "closedStatus": "Status für geschlossene Tickets",
           "selectStatus": "Status auswählen",
           "save": "Routing-Konfiguration speichern",

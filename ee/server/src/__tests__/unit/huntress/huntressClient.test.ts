@@ -150,4 +150,19 @@ describe('HuntressClient', () => {
     // Second call must have waited most of the interval.
     expect(Math.max(0, ...sleeps)).toBeGreaterThan(500);
   });
+
+  it('listEscalationsPage requests updated_at desc with the page token', async () => {
+    axiosGetMock.mockResolvedValueOnce({ data: { escalations: [], pagination: {} } });
+    await client.listEscalationsPage({ page_token: 'tok' });
+    expect(axiosGetMock).toHaveBeenCalledWith('/v1/escalations', {
+      params: { limit: 500, sort_field: 'updated_at', sort_direction: 'desc', page_token: 'tok' },
+    });
+  });
+
+  it('getEscalation unwraps the escalation and returns null on 404', async () => {
+    axiosGetMock.mockResolvedValueOnce({ data: { escalation: { id: 9 } } });
+    expect(await client.getEscalation(9)).toEqual({ id: 9 });
+    axiosGetMock.mockRejectedValueOnce(axios404());
+    expect(await client.getEscalation(10)).toBeNull();
+  });
 });

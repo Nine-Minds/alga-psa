@@ -2854,6 +2854,8 @@
           "selectPriority": "Priorità",
           "pollInterval": "Intervallo di polling (minuti)",
           "autoClose": "Chiudi i ticket quando Huntress chiude l’incidente",
+          "ingestEscalations": "Crea ticket dalle escalation di Huntress",
+          "ingestEscalationsHelp": "Le escalation usano le stesse impostazioni di bacheca, categoria, mappatura delle priorità e chiusura automatica degli incidenti. Un’escalation che riguarda più organizzazioni crea un ticket per ogni organizzazione.",
           "closedStatus": "Stato di chiusura",
           "selectStatus": "Seleziona stato",
           "save": "Salva configurazione di instradamento",

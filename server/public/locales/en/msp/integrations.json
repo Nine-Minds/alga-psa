@@ -2877,6 +2877,8 @@
           "selectPriority": "Priority",
           "pollInterval": "Poll interval (minutes)",
           "autoClose": "Close tickets when Huntress closes the incident",
+          "ingestEscalations": "Create tickets from Huntress escalations",
+          "ingestEscalationsHelp": "Escalations use the same board, category, priority mapping and auto-close settings as incidents. An escalation that covers several organizations creates one ticket per organization.",
           "closedStatus": "Closed status",
           "selectStatus": "Select status",
           "save": "Save routing configuration",

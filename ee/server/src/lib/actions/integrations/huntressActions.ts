@@ -266,6 +266,7 @@ export interface HuntressSettingsUpdate {
   closedStatusId?: string | null;
   pollIntervalMinutes?: number;
   backfillDays?: number;
+  ingestEscalations?: boolean;
 }
 
 export const updateHuntressSettings = withHuntressAccess(
@@ -306,8 +307,18 @@ export const updateHuntressSettings = withHuntressAccess(
         ? { pollIntervalMinutes: updates.pollIntervalMinutes }
         : {}),
       ...(updates.backfillDays !== undefined ? { backfillDays: updates.backfillDays } : {}),
+      ...(updates.ingestEscalations !== undefined
+        ? { ingestEscalations: updates.ingestEscalations }
+        : {}),
     });
     merged.incidentCursor = current.incidentCursor;
+    // Turning escalations (back) on starts from the backfill window rather
+    // than a cursor left over from an earlier enabled period, which could be
+    // months old and flood the board with stale open escalations.
+    merged.escalationCursor =
+      merged.ingestEscalations && !current.ingestEscalations
+        ? undefined
+        : current.escalationCursor;
 
     await db.table('rmm_integrations')
       .where({ integration_id: row.integration_id })

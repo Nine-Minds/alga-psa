@@ -11,6 +11,7 @@ import {
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Input } from '@alga-psa/ui/components/Input';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { getAllClients } from '@alga-psa/clients/actions';
@@ -53,6 +54,7 @@ const HuntressIntegrationSettings: React.FC = () => {
   const [priorityHigh, setPriorityHigh] = useState<string | null>(null);
   const [priorityLow, setPriorityLow] = useState<string | null>(null);
   const [autoClose, setAutoClose] = useState(false);
+  const [ingestEscalations, setIngestEscalations] = useState(false);
   const [closedStatusId, setClosedStatusId] = useState<string | null>(null);
   const [pollInterval, setPollInterval] = useState('5');
 
@@ -78,6 +80,7 @@ const HuntressIntegrationSettings: React.FC = () => {
         setPriorityHigh(s.severityPriorityMap.high ?? null);
         setPriorityLow(s.severityPriorityMap.low ?? null);
         setAutoClose(s.autoCloseTickets);
+        setIngestEscalations(s.ingestEscalations);
         setClosedStatusId(s.closedStatusId ?? null);
         setPollInterval(String(s.pollIntervalMinutes));
       }
@@ -136,6 +139,7 @@ const HuntressIntegrationSettings: React.FC = () => {
           low: priorityLow ?? undefined,
         },
         autoCloseTickets: autoClose,
+        ingestEscalations,
         closedStatusId,
         pollIntervalMinutes: Number(pollInterval) || 5,
       });
@@ -483,6 +487,27 @@ const HuntressIntegrationSettings: React.FC = () => {
                     />
                   </div>
                 )}
+              </div>
+
+              <div className="flex items-center justify-between gap-4 rounded-md border p-3">
+                <div>
+                  <label htmlFor="huntress-ingest-escalations" className="text-sm font-medium">
+                    {t('integrations.rmm.huntress.routing.ingestEscalations', {
+                      defaultValue: 'Create tickets from Huntress escalations',
+                    })}
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    {t('integrations.rmm.huntress.routing.ingestEscalationsHelp', {
+                      defaultValue:
+                        'Escalations use the same board, category, priority mapping and auto-close settings as incidents. An escalation that covers several organizations creates one ticket per organization.',
+                    })}
+                  </p>
+                </div>
+                <Switch
+                  id="huntress-ingest-escalations"
+                  checked={ingestEscalations}
+                  onCheckedChange={setIngestEscalations}
+                />
               </div>
 
               <Button id="huntress-save-routing" onClick={handleSaveRouting} disabled={isPending}>

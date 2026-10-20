@@ -2854,6 +2854,8 @@
           "selectPriority": "Priorytet",
           "pollInterval": "Interwał odpytywania (minuty)",
           "autoClose": "Zamykaj zgłoszenia po zamknięciu incydentu w Huntress",
+          "ingestEscalations": "Twórz zgłoszenia z eskalacji Huntress",
+          "ingestEscalationsHelp": "Eskalacje korzystają z tych samych ustawień tablicy, kategorii, mapowania priorytetów i automatycznego zamykania co incydenty. Eskalacja obejmująca kilka organizacji tworzy jedno zgłoszenie dla każdej organizacji.",
           "closedStatus": "Status zamknięcia",
           "selectStatus": "Wybierz status",
           "save": "Zapisz konfigurację routingu",

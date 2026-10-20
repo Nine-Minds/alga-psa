@@ -25,6 +25,7 @@ import {
   buildUpdateNote,
 } from './ticketContent';
 import { addTicketInternalNote, createHuntressTicket } from './ticketCreator';
+import { matchAsset, resolveOrgMapping, upsertEntityMapping } from '../alertSupport';
 
 export interface ProcessIncidentDeps {
   getAgent: (agentId: number) => Promise<HuntressAgent | null>;
@@ -61,47 +62,15 @@ export async function processIncident(
       })
       .first();
 
-    let mapping =
+    const mapping =
       incident.organization_id != null
-        ? await db.table('rmm_organization_mappings')
-            .where({
-              integration_id: integration.integration_id,
-              external_organization_id: String(incident.organization_id),
-            })
-            .first()
-        : null;
-
-    // Org created in Huntress after the last org sync: discover it on demand
-    // so the mapping screen stays current, then fall through to fallback
-    // routing (the new row is unmapped).
-    if (!mapping && incident.organization_id != null) {
-      const org = await deps
-        .getOrganization(incident.organization_id)
-        .catch(() => null);
-      const [inserted] = await db.table('rmm_organization_mappings')
-        .insert({
-          tenant: tenantId,
-          mapping_id: knex.raw('gen_random_uuid()'),
-          integration_id: integration.integration_id,
-          external_organization_id: String(incident.organization_id),
-          external_organization_name: org?.name ?? `Huntress org ${incident.organization_id}`,
-          client_id: null,
-          auto_sync_assets: false,
-          auto_create_tickets: true,
-          metadata: JSON.stringify({ discoveredVia: 'incident_poll' }),
-        })
-        .onConflict(['tenant', 'integration_id', 'external_organization_id'])
-        .ignore()
-        .returning('*');
-      mapping =
-        inserted ??
-        (await db.table('rmm_organization_mappings')
-          .where({
-            integration_id: integration.integration_id,
-            external_organization_id: String(incident.organization_id),
+        ? await resolveOrgMapping(knex, tenantId, {
+            integrationId: integration.integration_id,
+            organizationId: incident.organization_id,
+            getOrganization: deps.getOrganization,
+            discoveredVia: 'incident_poll',
           })
-          .first());
-    }
+        : null;
 
     const action = planIncidentAction({
       incident,
@@ -200,7 +169,7 @@ export async function processIncident(
         });
 
         if (matchedAssetId && agent) {
-          await upsertEntityMapping(trx, tenantId, incident, agent, matchedAssetId);
+          await upsertEntityMapping(trx, tenantId, incident.organization_id, agent, matchedAssetId);
         }
         return ticket.ticket_id;
       }
@@ -233,63 +202,4 @@ export async function processIncident(
     });
     return { ok: false, action: 'error', error: message };
   }
-}
-
-/** Unique hostname match within the mapped client; serial number tie-breaks. */
-async function matchAsset(
-  knex: Knex,
-  tenantId: string,
-  clientId: string,
-  agent: HuntressAgent
-): Promise<string | null> {
-  const candidates = await tenantDb(knex, tenantId).table('assets')
-    .where({ client_id: clientId })
-    .whereRaw('LOWER(name) = ?', [String(agent.hostname).toLowerCase()])
-    .select('asset_id', 'serial_number');
-
-  if (candidates.length === 1) return candidates[0].asset_id;
-  if (candidates.length > 1 && agent.serial_number) {
-    const bySerial = candidates.filter((c) => c.serial_number === agent.serial_number);
-    if (bySerial.length === 1) return bySerial[0].asset_id;
-  }
-  return null;
-}
-
-async function upsertEntityMapping(
-  trx: Knex.Transaction,
-  tenantId: string,
-  incident: HuntressIncidentReport,
-  agent: HuntressAgent,
-  assetId: string
-): Promise<void> {
-  const db = tenantDb(trx, tenantId);
-  const existing = await db.table('tenant_external_entity_mappings')
-    .where({
-      integration_type: 'huntress',
-      external_entity_id: String(agent.id),
-    })
-    .first();
-  if (existing) {
-    await db.table('tenant_external_entity_mappings')
-      .where({ id: existing.id })
-      .update({
-        alga_entity_id: assetId,
-        sync_status: 'synced',
-        last_synced_at: trx.fn.now(),
-        updated_at: trx.fn.now(),
-      });
-    return;
-  }
-  await db.table('tenant_external_entity_mappings').insert({
-    tenant: tenantId,
-    integration_type: 'huntress',
-    alga_entity_type: 'asset',
-    alga_entity_id: assetId,
-    external_entity_id: String(agent.id),
-    external_realm_id:
-      incident.organization_id != null ? String(incident.organization_id) : null,
-    sync_status: 'synced',
-    last_synced_at: trx.fn.now(),
-    metadata: JSON.stringify({ hostname: agent.hostname }),
-  });
 }

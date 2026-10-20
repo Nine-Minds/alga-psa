@@ -2877,6 +2877,8 @@
           "selectPriority": "Prioritet",
           "pollInterval": "Avfrågningsintervall (minuter)",
           "autoClose": "Stäng ärenden när Huntress stänger incidenten",
+          "ingestEscalations": "Skapa ärenden från Huntress-eskaleringar",
+          "ingestEscalationsHelp": "Eskaleringar använder samma inställningar för tavla, kategori, prioritetsmappning och automatisk stängning som incidenter. En eskalering som omfattar flera organisationer skapar ett ärende per organisation.",
           "closedStatus": "Status för stängt ärende",
           "selectStatus": "Välj status",
           "save": "Spara ärendefördelning",
