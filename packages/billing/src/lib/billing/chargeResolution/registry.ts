@@ -1,0 +1,143 @@
+/**
+ * The charge family registry: the single ordered list of what a contract line
+ * can produce. Order is the order charges are emitted (and merged into the
+ * invoice): fixed -> hourly -> usage -> bucket -> product -> license.
+ *
+ * Adding a family touches four places: one entry here, one `kind` in
+ * ResolvedContractBillingChargeFacts, one case in calculateContractChargeImpl,
+ * one compute module. Entries only ask the source for data through the port.
+ */
+
+import type { ChargeComputeTaxContext } from "../compute";
+import type {
+  ResolvedBillingTiming,
+  ResolvedContractBillingChargeFacts,
+  UnpricedContractBillingObligation,
+} from "../domain";
+import type {
+  ChargeFamily,
+  ContractChargeSource,
+  PoolDefinition,
+  PoolPeriodState,
+  PooledTimeExclusion,
+  TimingRequest,
+} from "./types";
+
+export interface PlannedCharge {
+  facts: ResolvedContractBillingChargeFacts;
+  taxContext: ChargeComputeTaxContext;
+  metadata?: UnpricedContractBillingObligation["metadata"];
+  /** Discriminator appended to the obligation id when a family emits several. */
+  discriminator?: string;
+}
+
+export interface FamilyContext {
+  source: ContractChargeSource;
+  /** Undefined only for the pool family under an `untimed` resolution. */
+  timing: ResolvedBillingTiming | undefined;
+  /** Pool definitions (empty when pools are ignored). */
+  pools: PoolDefinition[];
+  /** Services the pools absorb; empty when pools are ignored. */
+  pooledServiceIds: string[];
+}
+
+export interface FamilyEntry {
+  family: ChargeFamily;
+  /** The timing demand this family makes of its source. */
+  timing: TimingRequest;
+  /** True when the family tolerates an `untimed` timing resolution. */
+  allowsUntimed?: boolean;
+  /** True when the family has nothing to ask the source if the line has no pools. */
+  requiresPools?: boolean;
+  collect(context: FamilyContext): Promise<PlannedCharge[]>;
+}
+
+const LINE_POSITION = "line" as const;
+
+function exclusionFor(context: FamilyContext): PooledTimeExclusion | null {
+  return context.pooledServiceIds.length > 0
+    ? { serviceIds: context.pooledServiceIds, attributedOnly: true }
+    : null;
+}
+
+async function poolCharges(context: FamilyContext): Promise<PlannedCharge[]> {
+  const { source, timing, pools } = context;
+  const states: PoolPeriodState[] = [];
+  for (const pool of pools) {
+    states.push(await source.poolPeriodState(pool, timing));
+  }
+  const billingProfile = await source.billingProfile();
+  const client = await source.client();
+  const planned: PlannedCharge[] = [];
+  for (const state of states) {
+    // A pool with nothing recorded for the window charges nothing.
+    if (state.periods.length === 0) continue;
+    planned.push({
+      discriminator: state.pool.poolId,
+      facts: {
+        kind: "bucket",
+        line: source.line,
+        client,
+        timing,
+        billingPeriod: source.billingPeriod,
+        billingProfile,
+        configuration: state.configuration,
+        periodContributions: state.periodContributions,
+        periods: state.periods,
+      },
+      taxContext: await source.taxContext({
+        taxRateIds: state.taxRateIds,
+        billingProfileIds: [
+          billingProfile?.contractLineBillingProfileId,
+          billingProfile?.contractBillingProfileId,
+        ],
+        locationId: source.line.locationId,
+      }),
+      metadata: state.metadata,
+    });
+  }
+  return planned;
+}
+
+const single = (
+  charge: Pick<PlannedCharge, "facts" | "taxContext" | "metadata"> | null,
+): PlannedCharge[] =>
+  charge ? [charge] : [];
+
+export const CHARGE_FAMILY_REGISTRY: readonly FamilyEntry[] = [
+  {
+    family: "fixed",
+    timing: { policy: "fixed-recurring", duePosition: LINE_POSITION },
+    collect: async ({ source, timing }) => single(await source.fixed(timing!)),
+  },
+  {
+    family: "hourly",
+    timing: { policy: "service-driven", duePosition: LINE_POSITION },
+    collect: async (context) =>
+      single(await context.source.hourly(context.timing!, exclusionFor(context))),
+  },
+  {
+    family: "usage",
+    timing: { policy: "service-driven", duePosition: LINE_POSITION },
+    collect: async ({ source, timing }) => single(await source.usage(timing!)),
+  },
+  {
+    family: "bucket",
+    timing: { policy: "recurring", duePosition: LINE_POSITION },
+    allowsUntimed: true,
+    requiresPools: true,
+    collect: poolCharges,
+  },
+  {
+    family: "product",
+    timing: { policy: "recurring", duePosition: LINE_POSITION },
+    collect: async ({ source, timing }) =>
+      single(await source.recurringQuantity("product", timing!)),
+  },
+  {
+    family: "license",
+    timing: { policy: "recurring", duePosition: LINE_POSITION },
+    collect: async ({ source, timing }) =>
+      single(await source.recurringQuantity("license", timing!)),
+  },
+];

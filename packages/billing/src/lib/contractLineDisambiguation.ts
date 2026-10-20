@@ -199,6 +199,7 @@ export async function getEligibleContractLines(
     {
       type: 'left',
       on(join) {
+        // LEVERAGE: pattern pool-coverage-rule — the catch-all/explicit-member rule is also written as pure code in chargeResolution/poolCoverage.ts; this SQL is the write-path copy (parity suite asserts they agree)
         join.andOnVal('catch_all.covers_all_services', '=', true);
       },
     },
