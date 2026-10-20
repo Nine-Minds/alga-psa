@@ -1,6 +1,7 @@
 'use server';
 
 import logger from '@alga-psa/core/logger';
+import { PAYMENT_TERMS } from '@alga-psa/shared/billingClients/paymentPreferences';
 import {
   auditLog,
   ACCOUNTING_EXPORT_INVOICE_CANCELLED,
@@ -164,7 +165,7 @@ const KNOWN_INTEGRATION_TYPES = new Set([
   ...CSV_INTEGRATION_TYPES,
 ]);
 
-const PAYMENT_TERM_IDS = new Set(['net_30', 'net_15', 'due_on_receipt']);
+const PAYMENT_TERM_IDS = new Set<string>(PAYMENT_TERMS);
 
 function cloneMapping(mapping: ExternalEntityMapping): ExternalEntityMapping {
   return {
