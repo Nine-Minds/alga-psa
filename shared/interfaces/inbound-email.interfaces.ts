@@ -47,6 +47,7 @@ export interface EmailProviderConfig {
     resolved_client_id?: string;
     resolved_client_secret?: string;
     resolved_tenant_id?: string;
+    resolved_issuer_kind?: 'platform-managed' | 'tenant-owned';
     resolved_credential_source?: 'profile' | 'vendor' | 'environment' | 'legacy';
     resolved_profile_id?: string;
     resolved_client_secret_ref?: string;

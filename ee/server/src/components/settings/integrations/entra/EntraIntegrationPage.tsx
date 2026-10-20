@@ -70,12 +70,15 @@ export default function EntraIntegrationPage({
     }
 
     if (callbackStatus === 'failure') {
-      setCallbackError(t(buildEntraCallbackErrorKey(params.get('error'))));
+      setCallbackError(
+        t(buildEntraCallbackErrorKey(params.get('error')), { redirectUri: params.get('redirect_uri') ?? '' })
+      );
     }
 
     params.delete('entra_status');
     params.delete('error');
     params.delete('message');
+    params.delete('redirect_uri');
     const query = params.toString();
     window.history.replaceState(
       null,

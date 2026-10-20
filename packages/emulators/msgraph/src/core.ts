@@ -2,6 +2,69 @@ import { createHash } from 'node:crypto';
 import { Temporal } from '@js-temporal/polyfill';
 import type { EmulatorCore, HostEnv } from '@alga-psa/emulator-host';
 
+/** Microsoft identity platform sign-in audience of an app registration. */
+export type SignInAudience = 'AzureADMyOrg' | 'AzureADMultipleOrgs' | 'AzureADandPersonalMicrosoftAccount';
+
+/**
+ * Tenancy of a registered OAuth client. Leave everything unset for the legacy
+ * behaviour: multi-tenant, any redirect URI accepted, no authority policing.
+ */
+export interface ClientTenancyOptions {
+  displayName?: string;
+  /** Default AzureADMultipleOrgs. */
+  signInAudience?: SignInAudience;
+  /** Directory the app registration lives in (tid of single-tenant tokens). */
+  homeTenantId?: string;
+  /** Registered redirect URIs (exact match). Unset: any redirect URI is accepted. */
+  redirectUris?: string[];
+  /**
+   * Directories holding a service principal for the app besides the home one.
+   * Unset: a multi-tenant app is available in every directory.
+   */
+  servicePrincipalTenants?: string[];
+}
+
+interface RegisteredClient extends ClientTenancyOptions {
+  secret: string;
+  appRoles: string[];
+}
+
+/** Authority path segments that are not a specific directory. */
+const GENERIC_AUTHORITIES = new Set(['common', 'organizations', 'consumers']);
+/** Cut-off date Microsoft quotes in AADSTS50194. */
+const MULTITENANT_CUTOFF = '10/15/2018';
+
+/**
+ * An AADSTS error from the login surface. /authorize renders or redirects it;
+ * /token serialises `body` as the JSON error response (HTTP 400).
+ */
+export class OAuthError extends Error {
+  constructor(
+    readonly aadsts: number,
+    readonly error: string,
+    /** "AADSTSnnnnn: ..." without the Trace ID / Correlation ID / Timestamp suffix. */
+    readonly description: string,
+    readonly ids: { traceId: string; correlationId: string; timestamp: string },
+  ) {
+    super(description);
+    this.name = 'OAuthError';
+  }
+
+  get status(): number { return 400; }
+
+  get body() {
+    const suffix = `\r\nTrace ID: ${this.ids.traceId}\r\nCorrelation ID: ${this.ids.correlationId}\r\nTimestamp: ${this.ids.timestamp}`;
+    return {
+      error: this.error,
+      error_description: `${this.description}${suffix}`,
+      error_codes: [this.aadsts],
+      timestamp: this.ids.timestamp,
+      trace_id: this.ids.traceId,
+      correlation_id: this.ids.correlationId,
+    };
+  }
+}
+
 /** Vendor-shaped error the wire shell turns into an HTTP response. */
 export class GraphApiError extends Error {
   constructor(public readonly status: number, public readonly body: unknown) {
@@ -261,6 +324,8 @@ export interface SignedInUser {
   mail: string;
   userPrincipalName: string;
   displayName?: string;
+  /** Directory (tenant) the account belongs to. Defaults to EMULATED_TENANT_ID. */
+  tenantId?: string;
 }
 
 /** Defaults for inbound activity injection; tune with the `configure` action. */
@@ -417,14 +482,15 @@ const DEFAULT_BOT_CONFIG: BotConfig = {
  * expires access tokens and subscriptions exactly like real elapsed time.
  */
 export class MsGraphCore implements EmulatorCore {
-  private readonly clients = new Map<string, { secret: string; appRoles: string[] }>();
+  private readonly clients = new Map<string, RegisteredClient>();
   private readonly codes = new Map<string, {
     clientId: string;
     redirectUri: string;
     nonce?: string;
     scope?: string;
+    userTenantId: string;
   }>();
-  private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean; scope: string }>();
+  private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean; scope: string; userTenantId: string }>();
   private readonly accessTokens = new Map<string, { clientId: string; tenantId: string; expiresAt: number }>();
   readonly messages = new Map<string, GraphMessage>();
   readonly subscriptions = new Map<string, GraphSubscription>();
@@ -536,16 +602,106 @@ export class MsGraphCore implements EmulatorCore {
    * into the `roles` claim of an app-only token. Empty (the default) emulates
    * an app registration whose permissions were never consented.
    */
-  registerClient(clientId: string, clientSecret: string, appRoles: string[] = []): void {
-    this.clients.set(clientId, { secret: clientSecret, appRoles: [...appRoles] });
+  registerClient(clientId: string, clientSecret: string, appRoles: string[] = [], tenancy: ClientTenancyOptions = {}): void {
+    const defined = Object.fromEntries(Object.entries(tenancy).filter(([, value]) => value !== undefined));
+    this.clients.set(clientId, { secret: clientSecret, appRoles: [...appRoles], ...defined });
   }
 
-  authorize(clientId: string, redirectUri: string, input?: { nonce?: string; scope?: string }): string {
-    if (!this.clients.has(clientId)) {
+  private oauthError(aadsts: number, error: string, description: string): OAuthError {
+    return new OAuthError(aadsts, error, `AADSTS${aadsts}: ${description}`, {
+      traceId: this.newId('trace'),
+      correlationId: this.newId('correlation'),
+      timestamp: new Date(this.nowMs()).toISOString().replace('T', ' ').replace(/\.\d+Z$/, 'Z'),
+    });
+  }
+
+  private userTenantId(): string {
+    return this.signedInUser.tenantId || EMULATED_TENANT_ID;
+  }
+
+  private tenantLabel(tenantId: string): string {
+    return this.organizations.get(tenantId)?.displayName ?? tenantId;
+  }
+
+  private appName(clientId: string): string {
+    return this.clients.get(clientId)?.displayName
+      ?? [...this.applications.values()].find((application) => application.appId === clientId)?.displayName
+      ?? clientId;
+  }
+
+  /** A client is tenancy-aware once it states an audience or home tenant. */
+  private isTenancyAware(client: RegisteredClient): boolean {
+    return client.signInAudience !== undefined || client.homeTenantId !== undefined;
+  }
+
+  /**
+   * Audience and authority policing shared by /authorize and /token. `user`
+   * is the directory of the signing-in account (absent for app-only grants).
+   * Assumed: all four checks fire at /authorize; /token repeats them.
+   */
+  checkAuthority(clientId: string, authority: string | undefined, userTenantId?: string): void {
+    const client = this.clients.get(clientId);
+    if (!client || authority === undefined || !this.isTenancyAware(client)) return;
+    const audience = client.signInAudience ?? 'AzureADMultipleOrgs';
+    const normalized = authority.toLowerCase();
+    const generic = GENERIC_AUTHORITIES.has(normalized);
+    const appName = this.appName(clientId);
+    if (audience === 'AzureADMyOrg') {
+      if (normalized === 'common' || normalized === 'organizations') {
+        throw this.oauthError(50194, 'invalid_request',
+          `Application '${clientId}'(${appName}) isn't configured as a multitenant application. Usage of the /common endpoint isn't supported for such applications created after '${MULTITENANT_CUTOFF}'. Use a tenant-specific endpoint or configure the application to be multitenant.`);
+      }
+      if (!generic && client.homeTenantId && normalized !== client.homeTenantId.toLowerCase()) {
+        throw this.oauthError(700016, 'unauthorized_client', this.notFoundInDirectory(clientId, authority));
+      }
+    } else if (!generic && client.homeTenantId && normalized !== client.homeTenantId.toLowerCase()
+      && client.servicePrincipalTenants && !client.servicePrincipalTenants.some((id) => id.toLowerCase() === normalized)) {
+      throw this.oauthError(700016, 'unauthorized_client', this.notFoundInDirectory(clientId, authority));
+    }
+    if (userTenantId !== undefined && !generic && normalized !== userTenantId.toLowerCase()) {
+      // Single-tenant app: the user is foreign to the (home) tenant. Multi-tenant
+      // app: the authority names a directory the user does not belong to.
+      throw this.oauthError(50020, 'invalid_grant',
+        `User account '${this.signedInUser.userPrincipalName}' from identity provider 'https://sts.windows.net/${userTenantId}/' does not exist in tenant '${this.tenantLabel(authority)}' and cannot access the application '${clientId}'(${appName}) in that tenant. The account needs to be added as an external user in the tenant first. Sign out and sign in again with a different Azure Active Directory user account.`);
+    }
+  }
+
+  private notFoundInDirectory(clientId: string, authority: string): string {
+    return `Application with identifier '${clientId}' was not found in the directory '${this.tenantLabel(authority)}'. This can happen if the application has not been installed by the administrator of the tenant or consented to by any user in the tenant. You may have sent your authentication request to the wrong tenant.`;
+  }
+
+  /** The `tid` of tokens issued to this client. */
+  private resolveTenantId(clientId: string, authority: string | undefined, userTenantId?: string): string {
+    const client = this.clients.get(clientId);
+    const specific = authority && !GENERIC_AUTHORITIES.has(authority.toLowerCase()) ? authority : undefined;
+    if (client && this.isTenancyAware(client)) {
+      if (client.signInAudience === 'AzureADMyOrg') return client.homeTenantId ?? specific ?? EMULATED_TENANT_ID;
+      return userTenantId ?? specific ?? client.homeTenantId ?? EMULATED_TENANT_ID;
+    }
+    return specific ?? userTenantId ?? EMULATED_TENANT_ID;
+  }
+
+  /**
+   * Returns the authorization code. `authorityTenant` is the `/:tenant/` path
+   * segment; when omitted only the redirect URI is validated.
+   * Throws OAuthError(50011) for an unregistered redirect URI (Microsoft
+   * renders that as a hosted error page, never a redirect).
+   */
+  authorize(clientId: string, redirectUri: string, input?: { nonce?: string; scope?: string; authorityTenant?: string }): string {
+    const client = this.clients.get(clientId);
+    if (!client) {
       throw new GraphApiError(400, { error: 'invalid_client' });
     }
+    if (client.redirectUris && !client.redirectUris.includes(redirectUri)) {
+      throw this.oauthError(50011,
+        'invalid_request',
+        `The redirect URI '${redirectUri}' specified in the request does not match the redirect URIs configured for the application '${clientId}'. Make sure the redirect URI sent in the request matches one added to your application in the Azure portal. Navigate to https://aka.ms/redirectUriMismatchError to learn more about how to fix this.`);
+    }
+    this.checkAuthority(clientId, input?.authorityTenant, this.userTenantId());
     const code = this.newId('code');
-    this.codes.set(code, { clientId, redirectUri, nonce: input?.nonce, scope: input?.scope });
+    this.codes.set(code, {
+      clientId, redirectUri, nonce: input?.nonce, scope: input?.scope, userTenantId: this.userTenantId(),
+    });
     return code;
   }
 
@@ -565,10 +721,13 @@ export class MsGraphCore implements EmulatorCore {
       if (!code || code.clientId !== input.client_id || code.redirectUri !== input.redirect_uri) {
         throw new GraphApiError(400, { error: 'invalid_grant' });
       }
+      this.checkAuthority(String(input.client_id), input.authorityTenant, code.userTenantId);
       this.codes.delete(String(input.code));
       return this.issueTokens(String(input.client_id), undefined, {
         nonce: code.nonce,
         scope: code.scope || input.scope,
+        authorityTenant: input.authorityTenant,
+        userTenantId: code.userTenantId,
       });
     }
     if (input.grant_type === 'refresh_token') {
@@ -576,19 +735,22 @@ export class MsGraphCore implements EmulatorCore {
       if (!refresh || refresh.revoked || refresh.clientId !== input.client_id) {
         throw new GraphApiError(400, { error: 'invalid_grant' });
       }
+      this.checkAuthority(String(input.client_id), input.authorityTenant, refresh.userTenantId);
       return this.issueTokens(String(input.client_id), String(input.refresh_token), {
         scope: refresh.scope,
-        tenantId: input.authorityTenant,
+        authorityTenant: input.authorityTenant,
+        userTenantId: refresh.userTenantId,
       });
     }
     if (input.grant_type === 'client_credentials') {
       // App-only flow used by the Teams bot connector
       // (scope https://api.botframework.com/.default) and by Graph
       // app tokens. No user, so no refresh token is issued.
+      this.checkAuthority(String(input.client_id), input.authorityTenant);
       return this.issueTokens(
         String(input.client_id),
         undefined,
-        { scope: input.scope || 'https://graph.microsoft.com/.default', appOnly: true },
+        { scope: input.scope || 'https://graph.microsoft.com/.default', appOnly: true, authorityTenant: input.authorityTenant },
       );
     }
     throw new GraphApiError(400, { error: 'unsupported_grant_type' });
@@ -603,10 +765,10 @@ export class MsGraphCore implements EmulatorCore {
   private issueTokens(
     clientId: string,
     existingRefreshToken?: string,
-    claims?: { nonce?: string; scope?: string; appOnly?: boolean; tenantId?: string }
+    claims?: { nonce?: string; scope?: string; appOnly?: boolean; authorityTenant?: string; userTenantId?: string }
   ) {
-    const tenantId = claims?.tenantId && !['common', 'organizations'].includes(claims.tenantId)
-      ? claims.tenantId : EMULATED_TENANT_ID;
+    const tenantId = this.resolveTenantId(clientId, claims?.authorityTenant, claims?.userTenantId);
+    const specificAuthority = Boolean(claims?.authorityTenant && !GENERIC_AUTHORITIES.has(claims.authorityTenant.toLowerCase()));
     // OAuth requests accept resource-qualified Graph scopes; Graph access
     // tokens expose permission names in scp, which the application validates.
     const scope = (claims?.scope || 'Mail.Read Mail.Read.Shared offline_access')
@@ -639,9 +801,9 @@ export class MsGraphCore implements EmulatorCore {
       tenantId,
       expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000,
     });
-    if (refreshToken) this.refreshTokens.set(refreshToken, { clientId, revoked: false, scope });
+    if (refreshToken) this.refreshTokens.set(refreshToken, { clientId, revoked: false, scope, userTenantId: claims?.userTenantId ?? this.userTenantId() });
     if (existingRefreshToken && existingRefreshToken !== refreshToken &&
-        (!claims?.tenantId || ['common', 'organizations'].includes(claims.tenantId))) {
+        !specificAuthority) {
       this.refreshTokens.delete(existingRefreshToken);
     }
     return {
@@ -1503,7 +1665,8 @@ export class MsGraphCore implements EmulatorCore {
 
     this.clients.clear();
     for (const row of Array.isArray(snapshot.clients) ? snapshot.clients : []) {
-      this.registerClient(String(row.clientId), String(row.secret), Array.isArray(row.appRoles) ? row.appRoles : []);
+      const { clientId, secret, appRoles, ...tenancy } = row;
+      this.registerClient(String(clientId), String(secret), Array.isArray(appRoles) ? appRoles : [], tenancy);
     }
     load(this.messages, snapshot.messages, (row) => row.id);
     load(this.subscriptions, snapshot.subscriptions, (row) => row.id);

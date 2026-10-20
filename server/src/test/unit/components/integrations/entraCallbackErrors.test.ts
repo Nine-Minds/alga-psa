@@ -31,4 +31,12 @@ describe('buildEntraCallbackErrorKey', () => {
       'integrations.entra.settings.connection.callbackErrors.generic'
     );
   });
+
+  it('gives each mapped AADSTS failure its own message', () => {
+    const base = 'integrations.entra.settings.connection.callbackErrors';
+    expect(buildEntraCallbackErrorKey('aadsts_50194_single_tenant')).toBe(`${base}.singleTenantApp`);
+    expect(buildEntraCallbackErrorKey('aadsts_700016_app_not_found')).toBe(`${base}.appNotInDirectory`);
+    expect(buildEntraCallbackErrorKey('aadsts_50020_wrong_directory')).toBe(`${base}.wrongDirectory`);
+    expect(buildEntraCallbackErrorKey('aadsts_50011_redirect_uri')).toBe(`${base}.redirectUriMismatch`);
+  });
 });

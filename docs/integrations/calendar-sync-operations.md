@@ -15,8 +15,9 @@ This runbook covers the day-to-day operational tasks for the Google and Microsof
    - Give the provider an operator-friendly name.
    - Supply the external calendar identifier (use `primary` for the default Google calendar or `calendar` for Outlook).
    - Choose the desired sync direction and enable the provider.
-5. Press **Authorize**. A vendor popup appears; complete the OAuth consent flow.
-6. After a successful callback you will see the `OAuth Complete` badge. Save the form to persist changes.
+5. For Outlook, the Microsoft profile's **Tenant ID** selects the sign-in authority. A multi-tenant app (recommended) works with a blank or `common` Tenant ID. A single-tenant app works if you enter its directory (tenant) ID. AlgaPSA reports `AADSTS50194`, `AADSTS700016`, `AADSTS50020` and `AADSTS50011` with a specific message. Register the calendar redirect URI shown on the Microsoft app registration screen.
+6. Press **Authorize**. A vendor popup appears; complete the OAuth consent flow.
+7. After a successful callback you will see the `OAuth Complete` badge. Save the form to persist changes.
 
 ## Monitoring Sync Health
 - Each provider card now shows **Connection Status**, **OAuth badge**, **Last Sync**, and **Sync Direction** at a glance.

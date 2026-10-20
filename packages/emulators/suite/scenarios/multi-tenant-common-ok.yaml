@@ -1,0 +1,16 @@
+name: multi-tenant-common-ok
+description: Multi-tenant (AzureADMultipleOrgs) app authorizing at /common; tid/iss are the signed-in user's directory
+# Assumed: /common (and /organizations) is accepted for a multi-tenant app at
+# both /authorize and /token; tid is the user's tenant, not the app's home tenant.
+steps:
+  - reset: msgraph
+  - seed: msgraph/client
+    params:
+      clientId: aaaaaaaa-2222-4222-8222-aaaaaaaaaaaa
+      clientSecret: multi-tenant-secret
+      displayName: Nine Minds Platform
+      signInAudience: AzureADMultipleOrgs
+      homeTenantId: 99999999-9999-4999-8999-999999999999
+      redirectUris: ["http://localhost:3000/api/auth/callback/azure-ad"]
+  - seed: msgraph/signed-in-user
+    params: { userPrincipalName: jamie@cedar.example, mail: jamie@cedar.example, tenantId: bbbbbbbb-1111-4111-8111-111111111111 }

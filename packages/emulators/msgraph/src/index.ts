@@ -14,7 +14,8 @@ const msgraphEmulator: EmulatorPackage<MsGraphCore> = {
 
 export default msgraphEmulator;
 export { msgraphEmulator as emulator };
-export { GraphApiError, MsGraphCore } from './core';
+export { EMULATED_TENANT_ID, GraphApiError, MsGraphCore, OAuthError } from './core';
+export type { ClientTenancyOptions, SignInAudience } from './core';
 export type {
   ActivityNotificationRecord,
   BotConfig,
@@ -33,3 +34,11 @@ export type {
   SignedInUser,
 } from './core';
 export { BOT_FRAMEWORK_ISSUER } from './botFramework';
+export {
+  authorizeOverHttp,
+  exchangeCodeOverHttp,
+  registerTenantedClient,
+  setSignedInUser,
+  tokenOverHttp,
+} from './testing';
+export type { AuthorizeOutcome } from './testing';

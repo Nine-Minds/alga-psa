@@ -3,6 +3,7 @@ import { getAdminConnection } from '../../db/admin';
 import { tenantDb } from '@alga-psa/db';
 import type { EmailProviderConfig } from '../../interfaces/inbound-email.interfaces';
 import { MICROSOFT_TEAMS_APP_CLIENT_ID } from './microsoftGraphEndpoints';
+import type { MicrosoftIssuerKind } from './microsoftAuthority';
 
 export type MicrosoftEmailCredentialSource = 'profile' | 'vendor' | 'environment' | 'legacy';
 
@@ -13,6 +14,8 @@ export interface MicrosoftEmailRuntimeCredentials {
   profileId?: string;
   clientSecretRef?: string;
   source: MicrosoftEmailCredentialSource;
+  /** Who owns the app: decides the OAuth authority (see microsoftAuthority.ts). */
+  issuerKind: MicrosoftIssuerKind;
 }
 
 export function selectMicrosoftEmailRuntimeCredentials(params: {
@@ -90,6 +93,7 @@ async function resolveBoundProfileCredentials(
     profileId: profile.profile_id,
     clientSecretRef: profile.client_secret_ref,
     source: 'profile',
+    issuerKind: 'tenant-owned',
   };
 }
 
@@ -137,6 +141,7 @@ async function resolveProviderPinnedProfileCredentials(
     profileId: profile.profile_id,
     clientSecretRef: profile.client_secret_ref,
     source: 'profile',
+    issuerKind: 'tenant-owned',
   };
 }
 
@@ -148,6 +153,11 @@ async function resolveFallbackCredentials(
   const matchesIssuer = (clientId: string) => !issuingClientId || clientId === issuingClientId;
   const vendorClientId = normalized(vendorConfig.client_id);
   const vendorClientSecret = normalized(vendorConfig.client_secret);
+  const secretProvider = await getSecretProviderInstance();
+  const envClientIdForKind = normalized(
+    (await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID')) || process.env.MICROSOFT_CLIENT_ID
+  );
+  const sameClient = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
   if (vendorClientId && vendorClientSecret && matchesIssuer(vendorClientId)) {
     return {
       clientId: vendorClientId,
@@ -156,10 +166,12 @@ async function resolveFallbackCredentials(
       profileId: normalized(vendorConfig.microsoft_profile_id) || undefined,
       clientSecretRef: normalized(vendorConfig.client_secret_ref) || undefined,
       source: 'vendor',
+      // A managed (Nine Minds) mailbox persists the platform app's client id and
+      // secret on the provider row; every other vendor row is a customer app.
+      issuerKind: envClientIdForKind && sameClient(vendorClientId, envClientIdForKind) ? 'platform-managed' : 'tenant-owned',
     };
   }
 
-  const secretProvider = await getSecretProviderInstance();
   const [appClientId, appClientSecret, appTenantId] = await Promise.all([
     secretProvider.getAppSecret('MICROSOFT_CLIENT_ID'),
     secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET'),
@@ -173,6 +185,7 @@ async function resolveFallbackCredentials(
       clientSecret: envClientSecret,
       tenantId: normalized(appTenantId || process.env.MICROSOFT_TENANT_ID) || 'common',
       source: 'environment',
+      issuerKind: 'platform-managed',
     };
   }
 
@@ -187,6 +200,7 @@ async function resolveFallbackCredentials(
     clientSecret: normalized(clientSecret),
     tenantId: normalized(tenantId) || 'common',
     source: 'legacy',
+    issuerKind: 'tenant-owned',
   };
 }
 
@@ -249,6 +263,7 @@ export async function buildMicrosoftEmailProviderConfig(
       resolved_client_id: selected.clientId,
       resolved_client_secret: selected.clientSecret,
       resolved_tenant_id: selected.tenantId,
+      resolved_issuer_kind: selected.issuerKind,
       resolved_credential_source: selected.source,
       resolved_profile_id: selected.profileId,
       resolved_client_secret_ref: selected.clientSecretRef,

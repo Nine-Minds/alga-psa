@@ -81,7 +81,7 @@ function credential(
   clientSecret: string,
   source: MicrosoftEmailRuntimeCredentials['source']
 ): MicrosoftEmailRuntimeCredentials {
-  return { clientId, clientSecret, tenantId: 'common', source };
+  return { clientId, clientSecret, tenantId: 'common', source, issuerKind: 'tenant-owned' };
 }
 
 describe('Microsoft email runtime credential selection', () => {
