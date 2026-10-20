@@ -617,7 +617,15 @@
     "invoiceLinksHelp": "Draft invoices were created. Open each currency group to review it.",
     "currencyDraftLink": "{{currency}} draft invoice",
     "productCount": "{{count}} products",
-    "productsMovedToHoldOnClose": "{{count}} linked product(s) moved to On hold because their billing event was canceled."
+    "productsMovedToHoldOnClose": "{{count}} linked product(s) moved to On hold because their billing event was canceled.",
+    "availableBadge": "Available: {{available}}",
+    "availableByLocation": "Free stock by location",
+    "freeOfOnHand": "{{free}} free of {{onHand}}",
+    "stockHeld": "Only {{free}} available. {{held}} on hand is on hard hold for sales orders and can't be used here.",
+    "stockInsufficient": "Only {{onHand}} on hand, {{requested}} requested.",
+    "reservedStockTitle": "Stock is reserved for a sales order",
+    "reservedStockMessage": "Only {{free}} of this product is free. {{reserved}} on hand is reserved for sales orders, and you asked for {{requested}}. Adding it anyway takes stock a sales order is counting on and may leave that order short.",
+    "reservedStockConfirm": "Add anyway"
   },
   "export": {
     "title": "Export Project Tasks",

@@ -84,6 +84,12 @@ export interface AddMaterialInput {
   billing_schedule_entry_id?: string | null;
   /** Serialized: the picked stock unit to deliver. Required for serialized tracked products. */
   unit_id?: string | null;
+  /**
+   * Explicitly consume stock soft-reserved for a sales order (non-serialized). Never lets a
+   * hard hold be consumed. Set only after the user confirmed the InsufficientStockError
+   * whose `overrideable` was true.
+   */
+  allow_reserved_override?: boolean;
 }
 
 export interface UpdateProjectMaterialBillingInput {
@@ -277,6 +283,7 @@ export async function addMaterial(
       performed_by: performedBy,
       unit_id: input.unit_id ?? null,
       client_id: clientId,
+      allow_reserved_override: input.allow_reserved_override === true,
     });
 
     const pendingStockLow = consumption.consumed
@@ -443,6 +450,7 @@ export interface CatalogPickerQueryRow {
   cost_currency: string | null;
   track_stock?: boolean;
   on_hand_total?: number | null;
+  free_total?: number | null;
   reorder_point?: number | null;
 }
 
@@ -501,6 +509,16 @@ export async function queryCatalogPickerItems(
         `(SELECT COALESCE(SUM(sl.quantity_on_hand), 0) FROM stock_levels sl
           WHERE sl.tenant = sc.tenant AND sl.service_id = sc.service_id) as on_hand_total`
       ),
+      // Free stock at the location recordStockConsumption will lock: the product's default
+      // location, else the tenant default. Same formula as levels.availableQuantity.
+      trx.raw(
+        `(SELECT COALESCE(SUM(sl.quantity_on_hand - sl.reserved_quantity - sl.held_quantity), 0) FROM stock_levels sl
+          WHERE sl.tenant = sc.tenant AND sl.service_id = sc.service_id
+            AND sl.location_id = COALESCE(
+              pis.default_location_id,
+              (SELECT loc.location_id FROM stock_locations loc WHERE loc.tenant = sc.tenant AND loc.is_default = true LIMIT 1)
+            )) as free_total`
+      ),
     )
     .orderBy('sc.service_name', 'asc')
     .limit(limit)
@@ -511,6 +529,7 @@ export async function queryCatalogPickerItems(
       ...r,
       track_stock: !!r.track_stock,
       on_hand_total: r.track_stock ? Number(r.on_hand_total ?? 0) : null,
+      free_total: r.track_stock ? Number(r.free_total ?? 0) : null,
       reorder_point: r.reorder_point ?? null,
     })) as CatalogPickerQueryRow[],
     totalCount,

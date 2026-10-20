@@ -617,7 +617,15 @@
     "invoiceLinksHelp": "Fakturautkast har skapats. Öppna varje valutagrupp för att granska den.",
     "currencyDraftLink": "Fakturautkast i {{currency}}",
     "productCount": "Produkter: {{count}}",
-    "productsMovedToHoldOnClose": "Länkade produkter har pausats ({{count}}) eftersom deras faktureringshändelse annullerades."
+    "productsMovedToHoldOnClose": "Länkade produkter har pausats ({{count}}) eftersom deras faktureringshändelse annullerades.",
+    "availableBadge": "Tillgängligt: {{available}}",
+    "availableByLocation": "Fritt lager per plats",
+    "freeOfOnHand": "{{free}} lediga av {{onHand}}",
+    "stockHeld": "Bara {{free}} tillgängliga. {{held}} i lager är hårt spärrade för försäljningsorder och kan inte användas här.",
+    "stockInsufficient": "Bara {{onHand}} i lager, {{requested}} begärda.",
+    "reservedStockTitle": "Lagret är reserverat för en försäljningsorder",
+    "reservedStockMessage": "Bara {{free}} av den här produkten är lediga. {{reserved}} i lager är reserverade för försäljningsorder och du begärde {{requested}}. Om du lägger till det ändå tas lager som en försäljningsorder räknar med, och ordern kan bli underfylld.",
+    "reservedStockConfirm": "Lägg till ändå"
   },
   "export": {
     "title": "Exportera projektuppgifter",

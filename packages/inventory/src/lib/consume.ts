@@ -3,6 +3,7 @@ import { StockMovementSourceDocType } from '@alga-psa/types';
 import { recordStockMovement } from './movements';
 import { ensureStockLevel } from './levels';
 import { PendingAssetLink } from './assetLink';
+import type { StockConflictResult } from './stockConflict';
 
 /**
  * Stock-consumption hook used by the billing-side materials flow (and any caller
@@ -27,18 +28,104 @@ export interface ConsumeOpts {
   unit_id?: string | null;
   /** Owner recorded on the delivered unit. */
   client_id?: string | null;
+  /**
+   * Non-serialized only: explicitly consume stock that is soft-reserved (`reserved_quantity`)
+   * for a sales order. NEVER lets a hard hold (`held_quantity`) be consumed, and never lets
+   * on-hand go negative. Ignored for serialized units (an `allocated` unit is never pickable).
+   */
+  allow_reserved_override?: boolean;
+}
+
+/** Why a consumption was refused. */
+export type StockRefusalReason =
+  /** Not enough physical stock (or unit/location not consumable). Never overrideable. */
+  | 'on_hand'
+  /** Would dip into a sales-order hard hold. Never overrideable. */
+  | 'held'
+  /** Would dip into soft-reserved stock. Overrideable with `allow_reserved_override`. */
+  | 'reserved';
+
+/** Serializable description of a refusal — what a dialog needs to explain it. */
+export interface StockConflictDetail {
+  reason: StockRefusalReason;
+  overrideable: boolean;
+  /** quantity_on_hand - reserved_quantity - held_quantity at the consumed location. */
+  free: number;
+  onHand: number;
+  reserved: number;
+  held: number;
+  requested: number;
 }
 
 /**
- * Consumption would drive on-hand negative (or the picked unit / location is not
- * consumable). Adjustments, counts, and receiving are the correction paths and are
+ * Consumption was refused: it would drive on-hand negative, take a hard hold, take
+ * soft-reserved stock without an override, or the picked unit / location is not
+ * consumable. Adjustments, counts, and receiving are the correction paths and are
  * NOT guarded (F015) — negative on-hand corrupts COGS layering, so only `consume`
  * refuses (F014, decision D1).
+ *
+ * `available` is the figure the message names (on-hand for `on_hand`, free stock
+ * otherwise); `detail` is set for non-serialized stock-level refusals.
  */
 export class InsufficientStockError extends Error {
-  constructor(message: string, public readonly available: number) {
+  constructor(message: string, public readonly available: number, public readonly detail: StockConflictDetail | null = null) {
     super(message);
     this.name = 'InsufficientStockError';
+  }
+  get overrideable(): boolean { return this.detail?.overrideable ?? false; }
+  get reason(): StockRefusalReason { return this.detail?.reason ?? 'on_hand'; }
+  get free(): number | undefined { return this.detail?.free; }
+  get reserved(): number | undefined { return this.detail?.reserved; }
+  get held(): number | undefined { return this.detail?.held; }
+  get requested(): number | undefined { return this.detail?.requested; }
+}
+
+/** The serializable form of a stock-level refusal for server-action results; null for other refusals. */
+export function stockConflictResultFrom(error: unknown): StockConflictResult | null {
+  if (!(error instanceof InsufficientStockError) || !error.detail) return null;
+  return { stockConflict: { ...error.detail, message: error.message } };
+}
+
+export type ConsumeDecision =
+  | { allowed: true; overridesReserved: boolean; detail: StockConflictDetail }
+  | { allowed: false; detail: StockConflictDetail };
+
+/**
+ * Pure free-stock rule for a non-serialized level row (also the basis for project
+ * staging, C6). free = on_hand - reserved - held.
+ *  - quantity > on_hand          → refuse (on_hand), never overrideable (D1)
+ *  - quantity > on_hand - held   → refuse (held), never overrideable
+ *  - quantity > free             → refuse (reserved) unless `allowReservedOverride`
+ *  - otherwise                   → allowed
+ */
+export function evaluateConsumption(
+  level: { quantity_on_hand?: number | string | null; reserved_quantity?: number | string | null; held_quantity?: number | string | null } | null | undefined,
+  quantity: number,
+  allowReservedOverride = false,
+): ConsumeDecision {
+  const onHand = Number(level?.quantity_on_hand ?? 0);
+  const reserved = Number(level?.reserved_quantity ?? 0);
+  const held = Number(level?.held_quantity ?? 0);
+  const free = onHand - reserved - held;
+  const base = { free, onHand, reserved, held, requested: quantity };
+  if (quantity > onHand) return { allowed: false, detail: { ...base, reason: 'on_hand', overrideable: false } };
+  if (quantity > onHand - held) return { allowed: false, detail: { ...base, reason: 'held', overrideable: false } };
+  if (quantity > free) {
+    if (!allowReservedOverride) return { allowed: false, detail: { ...base, reason: 'reserved', overrideable: true } };
+    return { allowed: true, overridesReserved: true, detail: { ...base, reason: 'reserved', overrideable: true } };
+  }
+  return { allowed: true, overridesReserved: false, detail: { ...base, reason: 'reserved', overrideable: true } };
+}
+
+function refusalMessage(name: string, d: StockConflictDetail): string {
+  const free = Math.max(0, d.free);
+  switch (d.reason) {
+    case 'on_hand':
+      return `Insufficient stock for ${name}: ${d.onHand} available, ${d.requested} requested.`;
+    case 'held':
+      return `Insufficient free stock for ${name}: ${free} free, ${d.requested} requested. ${d.held} on hand ${d.held === 1 ? 'is' : 'are'} on hard hold for sales orders and cannot be used.`;
+    default:
+      return `Insufficient free stock for ${name}: ${free} free, ${d.requested} requested. ${d.reserved} on hand ${d.reserved === 1 ? 'is' : 'are'} reserved for sales orders.`;
   }
 }
 
@@ -138,13 +225,21 @@ export async function recordStockConsumption(
     .where({ tenant, service_id: opts.service_id, location_id: loc })
     .forUpdate()
     .first();
-  const onHand = Number(level?.quantity_on_hand ?? 0);
-  if (onHand < opts.quantity) {
+  // Free stock is judged on THIS locked row (never a tenant-wide sum). Hard holds are
+  // unconditional; soft reservations need the explicit override, which consumes without
+  // touching the sales order (computeAllocationsFromTruth owns reserved/held).
+  const decision = evaluateConsumption(level, opts.quantity, opts.allow_reserved_override === true);
+  if (!decision.allowed) {
+    const d = decision.detail;
     throw new InsufficientStockError(
-      `Insufficient stock for ${await serviceName(trx, tenant, opts.service_id)}: ${onHand} available, ${opts.quantity} requested.`,
-      onHand,
+      refusalMessage(await serviceName(trx, tenant, opts.service_id), d),
+      d.reason === 'on_hand' ? d.onHand : Math.max(0, d.free),
+      d,
     );
   }
+  const overrideReason = decision.overridesReserved
+    ? `reserved_stock_override: ${JSON.stringify({ requested: decision.detail.requested, free: decision.detail.free, reserved: decision.detail.reserved, held: decision.detail.held, onHand: decision.detail.onHand, performed_by: opts.performed_by ?? null })}`
+    : undefined;
 
   await recordStockMovement(trx, tenant, {
     movement_type: 'consume',
@@ -157,6 +252,7 @@ export async function recordStockConsumption(
     source_doc_type: opts.source_doc_type,
     source_doc_id: opts.source_doc_id,
     performed_by: opts.performed_by ?? null,
+    ...(overrideReason ? { reason: overrideReason } : {}),
   });
   return { consumed: true };
 }

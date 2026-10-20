@@ -617,7 +617,15 @@
     "invoiceLinksHelp": "Les factures provisoires ont été créées. Ouvrez chaque groupe de devises pour les vérifier.",
     "currencyDraftLink": "Facture provisoire en {{currency}}",
     "productCount": "{{count}} produit(s)",
-    "productsMovedToHoldOnClose": "{{count}} produit(s) associé(s) placé(s) en attente, car leur événement de facturation a été annulé."
+    "productsMovedToHoldOnClose": "{{count}} produit(s) associé(s) placé(s) en attente, car leur événement de facturation a été annulé.",
+    "availableBadge": "Disponible : {{available}}",
+    "availableByLocation": "Stock libre par emplacement",
+    "freeOfOnHand": "{{free}} libres sur {{onHand}}",
+    "stockHeld": "Seulement {{free}} disponibles. {{held}} en stock sont bloqués fermement pour des commandes clients et ne peuvent pas être utilisés ici.",
+    "stockInsufficient": "Seulement {{onHand}} en stock, {{requested}} demandés.",
+    "reservedStockTitle": "Le stock est réservé pour une commande client",
+    "reservedStockMessage": "Seulement {{free}} de ce produit sont libres. {{reserved}} en stock sont réservés pour des commandes clients et vous en avez demandé {{requested}}. L'ajouter quand même prélève du stock sur lequel une commande client compte et peut la laisser incomplète.",
+    "reservedStockConfirm": "Ajouter quand même"
   },
   "export": {
     "title": "Exporter les tâches du projet",

@@ -617,7 +617,15 @@
     "invoiceLinksHelp": "Conceptfacturen zijn gemaakt. Open elke valutagroep om deze te controleren.",
     "currencyDraftLink": "Conceptfactuur in {{currency}}",
     "productCount": "{{count}} producten",
-    "productsMovedToHoldOnClose": "{{count}} gekoppelde producten verplaatst naar Aangehouden omdat de facturatiegebeurtenis is geannuleerd."
+    "productsMovedToHoldOnClose": "{{count}} gekoppelde producten verplaatst naar Aangehouden omdat de facturatiegebeurtenis is geannuleerd.",
+    "availableBadge": "Beschikbaar: {{available}}",
+    "availableByLocation": "Vrije voorraad per locatie",
+    "freeOfOnHand": "{{free}} vrij van {{onHand}}",
+    "stockHeld": "Slechts {{free}} beschikbaar. {{held}} op voorraad is vastgezet voor verkooporders en kan hier niet worden gebruikt.",
+    "stockInsufficient": "Slechts {{onHand}} op voorraad, {{requested}} gevraagd.",
+    "reservedStockTitle": "Voorraad is gereserveerd voor een verkooporder",
+    "reservedStockMessage": "Slechts {{free}} van dit product is vrij. {{reserved}} op voorraad is gereserveerd voor verkooporders en u vroeg er {{requested}}. Als u het toch toevoegt, neemt u voorraad af waar een verkooporder op rekent en kan die order tekortkomen.",
+    "reservedStockConfirm": "Toch toevoegen"
   },
   "export": {
     "title": "Projecttaken exporteren",
