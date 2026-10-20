@@ -1,7 +1,8 @@
 import { randomUUID } from 'crypto';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
+import { queueContactCreated } from '@alga-psa/shared/lib/contacts/contactEvents';
 import type { Knex } from 'knex';
 import type { EntraSyncUser } from './sync/types';
 import type { EntraContactMatchCandidate } from './sync/contactMatcher';
@@ -331,7 +332,7 @@ export async function resolveEntraQueueToNewContact(input: {
   return runWithTenant(input.tenantId, async () => {
     const { knex } = await createTenantKnex();
 
-    return knex.transaction(async (trx) => {
+    return withTransaction(knex, async (trx) => {
       const queueRow = await loadOpenQueueItem(trx, input.tenantId, input.queueItemId);
       if (!queueRow.client_id) {
         throw new Error('Queue item does not have an associated client for contact creation.');
@@ -352,6 +353,7 @@ export async function resolveEntraQueueToNewContact(input: {
         input.tenantId,
         trx
       );
+      queueContactCreated(trx, input.tenantId, created as any);
 
       await upsertEntraContactLinkActive(trx, {
         tenantId: input.tenantId,

@@ -95,12 +95,14 @@ import {
   updateClientLocation,
 } from '../../../../packages/clients/src/actions/clientLocationActions';
 
-import { addContact, deleteContact, updateContact } from '../../../../packages/clients/src/actions/contact-actions/contactActions';
+import { addContact, createClientContact, deleteContact, updateContact, updateContactsForClient } from '../../../../packages/clients/src/actions/contact-actions/contactActions';
 import {
   createClient as createClientAction,
   deleteClient as deleteClientAction,
+  deactivateClientContacts,
   updateClient as updateClientAction,
 } from '../../../../packages/clients/src/actions/clientActions';
+import { mergeClientIntoParent } from '../../../../packages/clients/src/actions/clientMergeActions';
 import { ClientService } from '../../lib/api/services/ClientService';
 import { ContactService } from '../../lib/api/services/ContactService';
 
@@ -470,6 +472,103 @@ describe('entity webhooks → signed delivery at the webhook-sink (no app server
       reqs = await drain();
       expect(names(reqs)).toEqual(['client_location.deleted']);
       expectSigned(reqs[0]);
+    });
+  });
+
+  describe('secondary writers: after-commit contact and location events', () => {
+    it('createClientContact publishes contact.created after commit', async () => {
+      const contact: any = await createClientContact({
+        clientId, fullName: 'Quick Add', email: `qa-${uuidv4()}@example.com`,
+      } as any);
+      const reqs = await drain();
+      expect(names(reqs)).toEqual(['contact.created']);
+      expect(reqs[0].body.data).toEqual({ contact_id: contact.contact_name_id, client_id: clientId });
+      expectSigned(reqs[0]);
+    });
+
+    it('bulk move (updateContactsForClient) publishes contact.updated with client_id in changed_fields', async () => {
+      const a: any = await addContact({ full_name: 'Bulk A', email: `ba-${uuidv4()}@example.com`, client_id: clientId } as any);
+      const b: any = await addContact({ full_name: 'Bulk B', email: `bb-${uuidv4()}@example.com`, client_id: clientId } as any);
+      await drain();
+      const otherClient = uuidv4();
+      await knex('clients').insert({
+        tenant, client_id: otherClient, client_name: `Bulk target ${otherClient.slice(0, 8)}`,
+        billing_cycle: 'monthly', is_tax_exempt: false, created_at: knex.fn.now(), updated_at: knex.fn.now(),
+      });
+      created.clients.push(otherClient);
+
+      await updateContactsForClient(clientId, { client_id: otherClient } as any);
+      const reqs = await drain();
+      expect(names(reqs)).toEqual(['contact.updated', 'contact.updated']);
+      expect(reqs.map((r) => r.body.data.contact_id).sort()).toEqual(
+        [a.contact.contact_name_id, b.contact.contact_name_id].sort(),
+      );
+      for (const r of reqs) {
+        expect(r.body.data.client_id).toBe(otherClient);
+        expect(r.body.data.changed_fields).toContain('client_id');
+        expectSigned(r);
+      }
+    });
+
+    it('cascade deactivation publishes contact.deactivated per contact', async () => {
+      const a: any = await addContact({ full_name: 'Casc A', email: `ca-${uuidv4()}@example.com`, client_id: clientId } as any);
+      const b: any = await addContact({ full_name: 'Casc B', email: `cb-${uuidv4()}@example.com`, client_id: clientId } as any);
+      await drain();
+      const result: any = await deactivateClientContacts(clientId);
+      expect(result.success).toBe(true);
+      const reqs = await drain();
+      const deactivated = reqs.filter((r) => r.body.event_type === 'contact.deactivated');
+      expect(deactivated.map((r) => r.body.data.contact_id).sort()).toEqual(
+        [a.contact.contact_name_id, b.contact.contact_name_id].sort(),
+      );
+      reqs.forEach(expectSigned);
+    });
+
+    it('deleting the default location promotes the next one and publishes client_location.updated', async () => {
+      const hq: any = await createClientLocation(clientId, locationInput('Promo HQ', { is_default: true }) as any);
+      const branch: any = await createClientLocation(clientId, locationInput('Promo Branch') as any);
+      await drain();
+      await deleteClientLocation(hq.location_id);
+      const reqs = await drain();
+      expect(names(reqs)).toEqual(['client_location.deleted', 'client_location.updated']);
+      const updated = reqs.find((r) => r.body.event_type === 'client_location.updated')!;
+      expect(updated.body.data.location_id).toBe(branch.location_id);
+      expect(updated.body.data.changed_fields).toContain('is_default');
+      reqs.forEach(expectSigned);
+    });
+
+    it('making another location default demotes the previous default with client_location.updated', async () => {
+      const hq: any = await createClientLocation(clientId, locationInput('Demote HQ', { is_default: true }) as any);
+      const branch: any = await createClientLocation(clientId, locationInput('Demote Branch') as any);
+      await drain();
+      await updateClientLocation(branch.location_id, { is_default: true } as any);
+      const reqs = await drain();
+      expect(names(reqs)).toEqual(['client_location.updated', 'client_location.updated']);
+      expect(reqs.map((r) => r.body.data.location_id).sort()).toEqual([hq.location_id, branch.location_id].sort());
+      for (const r of reqs) expect(r.body.data.changed_fields).toContain('is_default');
+    });
+
+    it('client merge re-parents contacts and locations with client_id in changed_fields', async () => {
+      const target = uuidv4();
+      await knex('clients').insert({
+        tenant, client_id: target, client_name: `Merge target ${target.slice(0, 8)}`,
+        billing_cycle: 'monthly', is_tax_exempt: false, created_at: knex.fn.now(), updated_at: knex.fn.now(),
+      });
+      created.clients.push(target);
+      const c: any = await addContact({ full_name: 'Merge C', email: `mc-${uuidv4()}@example.com`, client_id: clientId } as any);
+      const loc: any = await createClientLocation(clientId, locationInput('Merge Loc') as any);
+      await drain();
+
+      const result: any = await mergeClientIntoParent({ sourceClientId: clientId, targetClientId: target } as any);
+      expect(result.error, JSON.stringify(result)).toBeUndefined();
+      const reqs = await drain();
+      const contactEv = reqs.find((r) => r.body.event_type === 'contact.updated' && r.body.data.contact_id === c.contact.contact_name_id);
+      const locEv = reqs.find((r) => r.body.event_type === 'client_location.updated' && r.body.data.location_id === loc.location_id);
+      expect(contactEv?.body.data).toMatchObject({ client_id: target, changed_fields: ['client_id'] });
+      expect(locEv?.body.data.client_id).toBe(target);
+      expect(locEv?.body.data.changed_fields).toContain('client_id');
+      expect(names(reqs)).toContain('client.deleted');
+      reqs.forEach(expectSigned);
     });
   });
 

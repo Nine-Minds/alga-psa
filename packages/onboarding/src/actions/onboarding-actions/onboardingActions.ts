@@ -1,5 +1,6 @@
 'use server';
 
+import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { revalidatePath } from 'next/cache';
 import { withTransaction } from '@alga-psa/db';
@@ -653,7 +654,7 @@ export const createClient = withAuth(async (
 });
 
 export const addClientContact = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   data: ClientContactData
 ): Promise<OnboardingActionResult> => {
@@ -678,15 +679,17 @@ export const addClientContact = withAuth(async (
 
       if (needsUpdate) {
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-          await tenantDb(trx, tenant).table('contacts')
-            .where({ 
-              contact_name_id: existingContact.contact_name_id,
-            })
-            .update({
-              full_name: data.contactName,
-              role: data.contactRole,
-              updated_at: new Date()
-            });
+          await trackContactUpdates(trx, tenant, [existingContact.contact_name_id], ['full_name', 'role'], () =>
+            tenantDb(trx, tenant).table('contacts')
+              .where({ 
+                contact_name_id: existingContact.contact_name_id,
+              })
+              .update({
+                full_name: data.contactName,
+                role: data.contactRole,
+                updated_at: new Date()
+              }),
+            { actorUserId: user.user_id });
         });
       }
 

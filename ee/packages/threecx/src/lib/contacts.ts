@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { ContactModel, type CreateContactInput } from '@alga-psa/shared/models/contactModel';
+import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildContactCreatedPayload } from '@alga-psa/workflow-streams';
 import { THREECX_PROVIDER } from './providerState';
@@ -443,10 +444,15 @@ export async function mapThreecxContactToClient(
 
   if (input.clientId) {
     await assertClientExists(db, input.clientId);
-    await db
-      .table('contacts')
-      .where({ contact_name_id: input.contactId })
-      .update({ client_id: input.clientId, updated_at: knex.fn.now() });
+    const clientId = input.clientId;
+    await withTransaction(knex, (trx) =>
+      trackContactUpdates(trx, tenantId, [input.contactId], ['client_id'], () =>
+        tenantDb(trx, tenantId)
+          .table('contacts')
+          .where({ contact_name_id: input.contactId })
+          .update({ client_id: clientId, updated_at: trx.fn.now() })
+      )
+    );
   }
 
   await queueRowsQuery(db, THREECX_CONTACT_ORIGIN_ENTITY_TYPE).where({ alga_entity_id: input.contactId }).delete();

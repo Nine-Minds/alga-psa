@@ -15,6 +15,8 @@ import {
   type MergeableContract,
   type SourceBillingProfile,
 } from './clientMergePlan';
+import { queueContactUpdated } from './contactEvents';
+import { queueClientLocationUpdated } from './clientLocationEvents';
 
 /**
  * Merging a client into a parent as a billing profile.
@@ -812,6 +814,11 @@ export async function executeClientMerge(
 
   // --- 5. Work items and the plain client-keyed tables -------------------
 
+  // Snapshot the children before they move: each re-parented contact and location is reported
+  // to webhook consumers as an *.updated with the new client_id (queued after commit below).
+  const contactsBeforeMove = await scoped(trx, tenant, 'contacts').where({ client_id: source.clientId });
+  const locationsBeforeMove = await scoped(trx, tenant, 'client_locations').where({ client_id: source.clientId });
+
   // `ux_client_locations_default_per_client` allows one default location per
   // client, so a source default arriving at a target that already has one
   // would abort the whole merge on a unique violation. The target's default is
@@ -835,6 +842,17 @@ export async function executeClientMerge(
       movedDefaultProfileId,
       billingStrategy,
     );
+  }
+
+  const eventOptions = actorUserId ? { actorUserId } : {};
+  for (const before of contactsBeforeMove as any[]) {
+    const after = await scoped(trx, tenant, 'contacts').where({ contact_name_id: before.contact_name_id }).first();
+    if (after) queueContactUpdated(trx, tenant, before, after, ['client_id'], eventOptions);
+  }
+  for (const before of locationsBeforeMove as any[]) {
+    const after = await scoped(trx, tenant, 'client_locations').where({ location_id: before.location_id }).first();
+    // A source default arriving beside the target's default is demoted; that shows up here as is_default.
+    if (after) queueClientLocationUpdated(trx, tenant, before, after, eventOptions);
   }
 
   // --- 6. Polymorphic associations ---------------------------------------

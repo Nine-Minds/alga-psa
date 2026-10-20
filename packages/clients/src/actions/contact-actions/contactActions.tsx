@@ -1,5 +1,6 @@
 'use server'
 
+import { queueContactCreated, queueContactUpdated } from '../../lib/contactEvents';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 import type {
@@ -1086,6 +1087,10 @@ export const updateContactsForClient = withAuth(async (
     }, {});
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      const beforeRows = await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ client_id: clientId })
+        .select('*');
+
       const updated = await tenantScopedTable(trx, 'contacts', tenant)
         .where({ client_id: clientId })
         .update({
@@ -1095,6 +1100,19 @@ export const updateContactsForClient = withAuth(async (
 
       if (!updated) {
         throw new Error(await contactText('errors.contact.bulkUpdateFailed'));
+      }
+
+      // One contact.updated (and contact.deactivated on an active -> inactive flip) per affected contact.
+      // A client_id change (bulk move) shows up as `client_id` in changed_fields.
+      const afterRows = await tenantScopedTable(trx, 'contacts', tenant)
+        .whereIn('contact_name_id', beforeRows.map((row: any) => row.contact_name_id))
+        .select('*');
+      const afterById = new Map<string, any>(afterRows.map((row: any) => [row.contact_name_id, row]));
+      for (const beforeRow of beforeRows as any[]) {
+        const afterRow = afterById.get(beforeRow.contact_name_id);
+        if (afterRow) {
+          queueContactUpdated(trx, tenant, beforeRow, afterRow, Object.keys(sanitizedData), { actorUserId: user?.user_id });
+        }
       }
     });
   } catch (err) {
@@ -1415,6 +1433,7 @@ export const importContactsFromCSV = withAuth(async (
             }
 
             savedContact = await ContactModel.updateContact(existingContact.contact_name_id, updateData, tenant, trx);
+            queueContactUpdated(trx, tenant, existingContact as any, savedContact as any, Object.keys(updateData), { actorUserId: user?.user_id });
 
             if (contactData.tags !== undefined) {
               try {
@@ -1462,6 +1481,7 @@ export const importContactsFromCSV = withAuth(async (
             };
 
             savedContact = await ContactModel.createContact(contactToCreate, tenant, trx);
+            queueContactCreated(trx, tenant, savedContact as any, { actorUserId: user?.user_id });
 
             if (contactData.tags) {
               try {
@@ -1677,7 +1697,7 @@ export const createClientContact = withAuth(async (
     }
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return ContactModel.createContact({
+      const created = await ContactModel.createContact({
         full_name: structural.data.full_name,
         email: normalizedEmail,
         primary_email_canonical_type: primaryEmailCanonicalType,
@@ -1687,6 +1707,8 @@ export const createClientContact = withAuth(async (
         client_id: clientId,
         role: jobTitle,
       }, tenant, trx);
+      queueContactCreated(trx, tenant, created as any, { actorUserId: user?.user_id });
+      return created;
     });
 
     return contact;

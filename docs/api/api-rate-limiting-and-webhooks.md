@@ -619,20 +619,19 @@ An event fires for the same change no matter where it was made.
 | `client.updated` | A client's fields change, its lifecycle status changes (prospect, active, former), or its primary contact changes. | Web UI, REST API, workflow actions, CSV import |
 | `client.deactivated` | `is_inactive` goes from `false` to `true`. | Web UI, REST API, workflow actions |
 | `client.deleted` | A client is deleted, or a client is merged into another one. For a merge, `client_id` is the **source** (merged-away) client. | Web UI, REST API, workflow actions, client merge |
-| `contact.created` | A contact is created. | Web UI, REST API, workflow actions, inbound email, 3CX |
-| `contact.updated` | A contact's fields change. | Web UI, REST API, workflow actions |
-| `contact.deactivated` | `is_inactive` goes from `false` to `true`. This includes each contact deactivated when you deactivate a client with "deactivate contacts". | Web UI, REST API, workflow actions |
+| `contact.created` | A contact is created. | Web UI (including the client and contact dialog), REST API, workflow actions, contact CSV import, onboarding, inbound email and inbound webhooks, Entra sync, migration import, portal invitations, ticket import, marketing capture, 3CX |
+| `contact.updated` | A contact's fields change. This includes a contact moved to another client (`client_id` in `changed_fields`) and a contact re-parented by a client merge. | Web UI, REST API, workflow actions, contact CSV import, bulk contact moves, inbound webhooks, Entra sync, client merge, portal and onboarding flows, marketing capture, 3CX |
+| `contact.deactivated` | `is_inactive` goes from `false` to `true`. This includes each contact deactivated when you deactivate a client with "deactivate contacts": one `contact.deactivated` is sent per contact. | Web UI, REST API, workflow actions, Entra sync |
 | `contact.deleted` | A contact is deleted. | Web UI, REST API, workflow actions |
 | `client_location.created` | A location is created. | Web UI, REST API, CSV import, onboarding, Xero client import, workflow actions |
-| `client_location.updated` | A location's fields change. | Web UI, REST API, onboarding, workflow actions |
+| `client_location.updated` | A location's fields change. This includes the implicit change when another location becomes the default (the previous default gets `is_default` in `changed_fields`, and a promoted location does too) and a location re-parented by a client merge. | Web UI, REST API, onboarding, Xero client import, workflow actions, client merge |
 | `client_location.deactivated` | `is_active` goes from `true` to `false`. | Web UI, REST API |
 | `client_location.deleted` | A location is deleted on its own. | Web UI, REST API |
 
 Not every internal write is delivered. These do not produce events:
 
-- Contacts created or changed by the contact CSV import, bulk contact moves between clients, and the Entra sync contact reconciler. Entra sync delivers `client.created` only.
-- Reactivating a client or contact with the "reactivate contacts" choice. A reactivation is not a separate event; when the change goes through the normal update path it arrives as `client.updated` or `contact.updated` with `is_inactive` in `changed_fields`.
-- Child records removed because their client was deleted. See [Delete and merge semantics](#delete-and-merge-semantics).
+- Un-archiving is not a separate event. Reactivating a client or contact (including with the "reactivate contacts" choice) arrives as `client.updated` or `contact.updated` with `is_inactive` in `changed_fields`.
+- Child records removed because their client was deleted, and the records seeded when a tenant is created or deleted. See [Delete and merge semantics](#delete-and-merge-semantics).
 
 ### Payload
 
@@ -697,9 +696,9 @@ For contact and client location events, an `entity_ids` filter matches either th
 
 ### Deactivated, Deleted, and Merge Semantics
 
-- **Deactivated.** The record still exists and is marked inactive. Only the `false` to `true` change fires `*.deactivated`. Turning the flag back off fires no `*.deactivated` and no separate event; look for `is_inactive` or `is_active` in `changed_fields` on the matching `*.updated` event.
+- **Deactivated.** The record still exists and is marked inactive. Deactivating a client with "deactivate contacts" cascades: every previously active contact sends its own `contact.deactivated`. Only the `false` to `true` change fires `*.deactivated`. Turning the flag back off fires no `*.deactivated` and no separate event; look for `is_inactive` or `is_active` in `changed_fields` on the matching `*.updated` event.
 - **Deleted.** The record is gone. Deleting a client does **not** send `contact.deleted` or `client_location.deleted` for its children. Treat a `client.deleted` as covering everything under that client.
-- **Merge.** Merging client A into client B sends one `client.deleted` with A's id. B receives no event. Contacts and locations that moved from A to B send no events.
+- **Merge.** Merging client A into client B sends one `client.deleted` with A's id. B receives no event. Each contact and location that moved from A to B sends its own `contact.updated` or `client_location.updated` with the new `client_id` (B) and `changed_fields` of `["client_id"]`, published after the merge commits. A location that stops being the default in the process also sends `client_location.updated` with `is_default` in `changed_fields`.
 - **Follow-up fetches.** If you fetch a record after a `*.deleted` event, a `404` is the expected answer. Treat it as success.
 
 ## Shared Webhook Mechanics

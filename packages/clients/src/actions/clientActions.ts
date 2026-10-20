@@ -1,5 +1,6 @@
 'use server'
 
+import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
 import { resolveProductCode } from '@alga-psa/types';
 import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
@@ -2230,10 +2231,12 @@ export const deactivateClientContacts = withAuth(async (
         return { contactsDeactivated: 0 };
       }
 
-      // Deactivate all contacts
-      await db.table('contacts')
-        .where({ client_id: clientId, is_inactive: false })
-        .update({ is_inactive: true });
+      // Deactivate all contacts (contact.deactivated per contact, queued for after commit)
+      await trackContactUpdates(trx, tenant, contactIds, ['is_inactive'], () =>
+        db.table('contacts')
+          .where({ client_id: clientId, is_inactive: false })
+          .update({ is_inactive: true }),
+        { actorUserId: user.user_id });
 
       // Deactivate all users associated with these contacts
       await db.table('users')
@@ -2393,10 +2396,12 @@ export const markClientActiveWithContacts = withAuth(async (
         const contactIds = inactiveContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
 
         if (contactIds.length > 0) {
-          // Reactivate all contacts
-          await db.table('contacts')
-            .where({ client_id: clientId, is_inactive: true })
-            .update({ is_inactive: false });
+          // Reactivate all contacts (contact.updated with is_inactive per contact)
+          await trackContactUpdates(trx, tenant, contactIds, ['is_inactive'], () =>
+            db.table('contacts')
+              .where({ client_id: clientId, is_inactive: true })
+              .update({ is_inactive: false }),
+            { actorUserId: user.user_id });
 
           // Reactivate all users associated with these contacts
           await db.table('users')
@@ -2451,10 +2456,12 @@ export const reactivateClientContacts = withAuth(async (
         return { contactsReactivated: 0 };
       }
 
-      // Reactivate all contacts
-      await db.table('contacts')
-        .where({ client_id: clientId, is_inactive: true })
-        .update({ is_inactive: false });
+      // Reactivate all contacts (contact.updated with is_inactive per contact)
+      await trackContactUpdates(trx, tenant, contactIds, ['is_inactive'], () =>
+        db.table('contacts')
+          .where({ client_id: clientId, is_inactive: true })
+          .update({ is_inactive: false }),
+        { actorUserId: user.user_id });
 
       // Reactivate all users associated with these contacts
       await db.table('users')

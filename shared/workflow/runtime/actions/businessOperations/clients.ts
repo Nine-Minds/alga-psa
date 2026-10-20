@@ -16,6 +16,7 @@ import {
   buildClientUpdatedPayload,
 } from '../../../streams/domainEventBuilders/clientEventBuilders';
 import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
+import { buildContactArchivedPayload } from '../../../streams/domainEventBuilders/contactEventBuilders';
 import { buildInteractionLoggedPayload, buildNoteCreatedPayload } from '../../../streams/domainEventBuilders/crmInteractionNoteEventBuilders';
 import { ticketUpdateStamp } from '../../../../lib/tickets/ticketUpdateStamp';
 import {
@@ -317,9 +318,29 @@ function pickExistingFields(
 async function deactivateClientUsersForClient(tx: TenantTxContext, clientId: string): Promise<void> {
   const contacts = await tenantScopedTable(tx, 'contacts')
     .where('client_id', clientId)
-    .select('contact_name_id');
+    .select('contact_name_id', 'is_inactive');
 
   await tenantScopedTable(tx, 'contacts').where('client_id', clientId).update({ is_inactive: true });
+
+  // The contacts really change state, so each one that was active reports contact.deactivated
+  // (same best-effort in-transaction contract as the other events in this file).
+  const archivedAt = new Date().toISOString();
+  for (const row of contacts as Array<{ contact_name_id: string; is_inactive?: boolean | null }>) {
+    if (row.is_inactive) continue;
+    await publishWorkflowDomainEvent({
+      eventType: 'CONTACT_ARCHIVED',
+      payload: buildContactArchivedPayload({
+        contactId: row.contact_name_id,
+        clientId,
+        archivedByUserId: tx.actorUserId,
+        archivedAt,
+      }),
+      tenantId: tx.tenantId,
+      occurredAt: archivedAt,
+      actorUserId: tx.actorUserId,
+      idempotencyKey: `contact_archived:${row.contact_name_id}:${archivedAt}`,
+    });
+  }
 
   const contactIds = contacts
     .map((row: { contact_name_id?: string | null }) => row.contact_name_id)
