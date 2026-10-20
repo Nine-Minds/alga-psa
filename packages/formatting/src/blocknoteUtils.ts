@@ -1,4 +1,5 @@
 import type { Block, PartialBlock } from '@blocknote/core';
+import { splitEmbeddedNewlineBlocks } from './normalizeBlocks';
 
 function escapeHtml(value: string): string {
   return value
@@ -138,8 +139,12 @@ export function formatBlockNoteContent(content: unknown): { html: string; text: 
 
   const convertSafely = (input: any): { html: string; text: string } => {
     try {
-      const htmlResult = convertBlockNoteToHTML(input);
-      const textResult = convertBlockNoteToMarkdown(input);
+      // Stored comments (inbound email, pre-normalizer saves) can carry raw
+      // "\n" inside text/link nodes; both renderers would collapse them and
+      // swallow the following text into the link.
+      const normalized = Array.isArray(input) ? splitEmbeddedNewlineBlocks(input) : input;
+      const htmlResult = convertBlockNoteToHTML(normalized);
+      const textResult = convertBlockNoteToMarkdown(normalized);
 
       if (!isEffectivelyEmpty(htmlResult || '', textResult || '')) {
         return { html: normalizeBlockHtmlForEmail(htmlResult), text: textResult };
