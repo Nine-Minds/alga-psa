@@ -158,6 +158,10 @@ const hasOverflow = (element: HTMLElement): boolean => {
     .some((child) => !child.closest('.sr-only') && isElementOverflowing(child));
 };
 
+const isEditableElement = (element: HTMLElement): boolean => (
+  element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.isContentEditable
+);
+
 // Shows the custom Tooltip only when the content is actually truncated. The open state is
 // controlled and vetoed in onOpenChange so overflow is measured lazily (on hover) — no tooltip
 // is shown for content that fits.
@@ -171,24 +175,29 @@ const OverflowTooltip = ({ text, children, className }: OverflowTooltipProps) =>
       return;
     }
     const element = contentRef.current;
-    if (text && element && hasOverflow(element)) {
+    if (!text || !element) {
+      return;
+    }
+    // A cell the user is typing in owns its surface: never cover the field.
+    const active = document.activeElement as HTMLElement | null;
+    if (active && element.contains(active) && isEditableElement(active)) {
+      return;
+    }
+    if (hasOverflow(element)) {
       setOpen(true);
     }
   };
 
-  const content = (
-    <div ref={contentRef} className={className}>
-      {children}
-    </div>
-  );
-
-  if (!text) {
-    return content;
-  }
-
+  // The wrapper is unconditional, even with nothing to show. Swapping between a
+  // bare div and a Tooltip-wrapped one when the text appears or disappears is a
+  // change of element type at that slot, so React remounts the cell's children:
+  // an editable cell lost its input — and the caret with it — on the keystroke
+  // that first gave the cell any text.
   return (
-    <Tooltip content={text} open={open} onOpenChange={handleOpenChange}>
-      {content}
+    <Tooltip content={text ?? ''} open={open} onOpenChange={handleOpenChange}>
+      <div ref={contentRef} className={className}>
+        {children}
+      </div>
     </Tooltip>
   );
 };
@@ -297,6 +306,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     sortDirection,
     onSortChange,
     rowClassName,
+    rowProps,
     initialSorting,
     onVisibleRowsChange,
     onItemsPerPageChange,
@@ -940,6 +950,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                 // Use the id property if it exists in the data, otherwise use row.id
                 const rowId = ('id' in row.original) ? (row.original as { id: string }).id : row.id;
                 const extraRowClass = typeof rowClassName === 'function' ? rowClassName(row.original as any) : '';
+                const extraRowProps = typeof rowProps === 'function' ? rowProps(row.original as any, rowIndex) : undefined;
                 const expanded = expandedRowRender
                   ? expandedRowRender(row.original as T, rowIndex)
                   : null;
@@ -947,6 +958,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                 return (
                   <React.Fragment key={`row_group_${rowId}`}>
                   <tr
+                    {...extraRowProps}
                     onClick={(e) => handleRowClick(e, row)}
                     className={`
                     bg-[rgb(var(--color-card))]

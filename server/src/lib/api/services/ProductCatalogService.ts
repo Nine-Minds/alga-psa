@@ -6,7 +6,7 @@ import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/serv
 import { resolveCatalogTaxRateIdForCreate } from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { ListOptions } from '../controllers/types';
 import { publishServiceCatalogSearchEvent, writePricing } from './ServiceCatalogService';
-import { ConflictError, NotFoundError } from '../middleware/apiMiddleware';
+import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 type SortField = 'service_name' | 'billing_method' | 'default_rate';
 
@@ -218,15 +218,32 @@ export class ProductCatalogService extends BaseService<IService> {
     const tenant = context.tenant;
 
     const rawData = data as any;
+    // Keys with no service_catalog column (currency_code, prices, scheduled_prices)
+    // are destructured out here so `...rest` can never leak them into the insert
+    // (Postgres 42703). billing_method is re-set canonically below.
     const {
-      prices,
+      currency_code: currencyCode,
+      prices: explicitPrices,
       scheduled_prices: scheduledPrices,
       billing_method: _billing_method,
       unit_of_measure,
       ...rest
     } = rawData;
-    // default_rate mirrors the primary price (prices[0]); the schema defaults an
-    // omitted default_rate to 0, so the writer's mirror is what sets it.
+    if (currencyCode !== undefined && explicitPrices !== undefined) {
+      throw new ValidationError('currency_code cannot be combined with prices; send either the currency_code + default_rate shorthand or prices[]');
+    }
+    // currency_code + default_rate is shorthand for one price. default_rate and
+    // prices[].rate are both integer minor units, so no conversion. An omitted
+    // default_rate is a 400 (same rule as update), never an implicit 0-rate price.
+    if (currencyCode !== undefined && rest.default_rate === undefined) {
+      throw new ValidationError('default_rate is required when currency_code is sent');
+    }
+    const prices = currencyCode !== undefined
+      ? [{ currency_code: currencyCode, rate: Number(rest.default_rate) }]
+      : explicitPrices;
+    // default_rate mirrors the primary price (prices[0]); with no prices and no
+    // default_rate the row is created with 0.
+    rest.default_rate = rest.default_rate ?? 0;
 
     // DD-2/F-2: resolve the product cost currency when not explicitly provided.
     // Products are tenant-scoped (no client_id), so precedence is:
@@ -316,13 +333,22 @@ export class ProductCatalogService extends BaseService<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
+    // Keys with no service_catalog column (currency_code, prices, scheduled_prices)
+    // are destructured out so `...updateData` can never leak them into the update.
     const {
-      prices,
+      currency_code: currencyCode,
+      prices: explicitPrices,
       scheduled_prices: scheduledPrices,
       billing_method: _billing_method,
       service_type_name: _,
       ...updateData
     } = data as any;
+    if (currencyCode !== undefined && explicitPrices !== undefined) {
+      throw new ValidationError('currency_code cannot be combined with prices; send either the currency_code + default_rate shorthand or prices[]');
+    }
+    if (currencyCode !== undefined && updateData.default_rate === undefined) {
+      throw new ValidationError('default_rate is required when currency_code is sent');
+    }
 
     // One transaction for the catalog row and its prices: a failure after the
     // catalog write leaves no partial state.
@@ -334,6 +360,24 @@ export class ProductCatalogService extends BaseService<IService> {
         .first();
       if (!existing || existing.item_kind !== 'product') {
         throw new NotFoundError('Resource not found or permission denied');
+      }
+
+      // Shorthand: upsert one currency as the primary price and keep the rest of
+      // the current window (the writer replaces the whole window, so the full
+      // list must be passed). default_rate and rates are both integer minor units.
+      let prices = explicitPrices;
+      if (currencyCode !== undefined) {
+        const currentRows = await tenantDb(trx, tenant).table('service_prices')
+          .where('service_id', id)
+          .select('*')
+          .orderBy([{ column: 'display_order' }, { column: 'currency_code' }]);
+        const { current } = splitServicePricesByEffectiveDate(currentRows);
+        prices = [
+          { currency_code: currencyCode, rate: Number(updateData.default_rate) },
+          ...current
+            .filter((price: any) => price.currency_code !== currencyCode)
+            .map((price: any) => ({ currency_code: price.currency_code, rate: Number(price.rate) })),
+        ];
       }
 
       const normalizedUpdateData = {

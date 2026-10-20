@@ -7,6 +7,10 @@
     "description": "{{feature}} require Pro. Please upgrade to access this feature."
   },
   "settings": {
+    "unavailable": {
+      "title": "Extension Settings Not Available",
+      "description": "Extension settings management is available in AlgaPSA Pro."
+    },
     "title": "Extension Management",
     "description": "Install, configure, and manage extensions to extend AlgaPSA functionality.",
     "tabs": {
@@ -98,7 +102,12 @@
       "description": "Manage extensions"
     },
     "title": "Extensions",
-    "description": "Extensions management is available in Pro."
+    "description": "Extensions management is available in Pro.",
+    "unavailable": {
+      "metadataTitle": "Extensions (EE only)",
+      "title": "Extensions Not Available",
+      "description": "Available in Pro."
+    }
   },
   "detail": {
     "metadataTitle": "Extensions - Pro Feature",
@@ -121,7 +130,12 @@
       "description": "View extension details"
     },
     "title": "Extension Details",
-    "description": "Extension details are available in Pro."
+    "description": "Extension details are available in Pro.",
+    "unavailable": {
+      "metadataTitle": "Extension Details (EE only)",
+      "title": "Extension Details Unavailable",
+      "description": "This page is available in Pro."
+    }
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +143,12 @@
       "description": "Configure extension settings"
     },
     "title": "Extension Settings",
-    "description": "Extension settings are available in Pro."
+    "description": "Extension settings are available in Pro.",
+    "unavailable": {
+      "metadataTitle": "Extension Settings (EE only)",
+      "title": "Extension Settings Unavailable",
+      "description": "This page is available in Pro."
+    }
   },
   "details": {
     "label": "Extension Details",
@@ -235,6 +254,10 @@
     "cancel": "Cancel"
   },
   "list": {
+    "unavailable": {
+      "title": "Extensions Not Available",
+      "description": "Extension management is available in AlgaPSA Pro."
+    },
     "label": "Extensions Management",
     "heading": "Extensions",
     "loading": "Loading extensions...",
@@ -294,7 +317,20 @@
     "installCompleteError": "Extension finalized, but install did not complete",
     "installUnexpected": "Unexpected error during installation",
     "finalizeRequireManifest": "Please paste the manifest JSON before finalizing.",
-    "finalizeProvidedFailed": "Failed to finalize with provided manifest"
+    "finalizeProvidedFailed": "Failed to finalize with provided manifest",
+    "pro": {
+      "title": "Extensions (Pro)",
+      "description": "Extension installation and management are available in AlgaPSA Pro.",
+      "featureTitle": "Pro feature",
+      "help": "The extensions installer is only available in AlgaPSA Pro.",
+      "actions": {
+        "learnMore": "Learn about Pro"
+      }
+    },
+    "unavailable": {
+      "title": "Extension Installation Not Available",
+      "description": "Extension installation is available in AlgaPSA Pro."
+    }
   },
   "installSimple": {
     "title": "Install Extension",
@@ -371,5 +407,19 @@
       "medium": "Modification permissions allow the extension to update existing data.",
       "high": "Advanced permissions allow the extension to create, delete, or execute operations."
     }
+  },
+  "iframe": {
+    "title": "Extension App",
+    "starting": "Starting extension",
+    "loadingUi": "Loading extension UI…",
+    "connecting": "Connecting to the runtime workspace…",
+    "loadFailed": "We couldn’t load this extension.",
+    "configurationHint": "Check the extension configuration and try again."
+  },
+  "unavailable": {
+    "metadataTitle": "Extensions (EE only)",
+    "title": "Extension Not Available",
+    "description": "The extensions system is available in Pro and is not included in this Community Edition build.",
+    "requestedId": "Requested ID: {{id}}"
   }
 }

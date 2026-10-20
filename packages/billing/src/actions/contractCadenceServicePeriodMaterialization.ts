@@ -20,6 +20,10 @@ import {
   findUncoveredRecurringServicePeriodCandidates,
   isRecurringServicePeriodCandidateCovered,
 } from '@shared/billingClients/regenerateRecurringServicePeriods';
+import {
+  resolveEffectiveBillingTiming,
+  resolveRecurringChargeFamily,
+} from '@alga-psa/shared/billingClients/contractLineTimingRule';
 
 export { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME };
 
@@ -35,6 +39,9 @@ type ContractCadenceObligationRow = {
   billing_timing: string | null;
   assignment_start_date: unknown;
   assignment_end_date: unknown;
+  /** Authored line bounds, intersected with the assignment below. */
+  line_start_date?: unknown;
+  line_end_date?: unknown;
 };
 
 // LEVERAGE: pattern recurring-period-row-mapping
@@ -137,26 +144,6 @@ function compareIsoDateOnly(left: ISO8601String, right: ISO8601String) {
 
 function maxIsoDateOnly(left: ISO8601String, right: ISO8601String) {
   return compareIsoDateOnly(left, right) >= 0 ? left : right;
-}
-
-function resolveRecurringChargeFamily(contractLineType: string | null): RecurringChargeFamily {
-  switch ((contractLineType ?? 'fixed').toLowerCase()) {
-    case 'fixed':
-      return 'fixed';
-    case 'time':
-    case 'hourly':
-      return 'hourly';
-    case 'usage':
-      return 'usage';
-    case 'bucket':
-      return 'bucket';
-    case 'product':
-      return 'product';
-    case 'license':
-      return 'license';
-    default:
-      return 'fixed';
-  }
 }
 
 function mapRecurringServicePeriodRow(row: RecurringServicePeriodDbRow): IRecurringServicePeriodRecord {
@@ -363,6 +350,7 @@ async function loadContractCadenceObligations(
   // LEVERAGE: friction live-recurring-line-predicate — eligibility re-derived per reader; see whereLiveClientCadenceRecurringLine
   query
     .where('cc.is_active', true)
+    .where('cl.is_active', true)
     .where((builder) =>
       builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
     )
@@ -375,6 +363,8 @@ async function loadContractCadenceObligations(
       'cl.billing_timing',
       'cc.start_date as assignment_start_date',
       'cc.end_date as assignment_end_date',
+      'cl.start_date as line_start_date',
+      'cl.end_date as line_end_date',
     );
 
   if (params.contractId) {
@@ -483,7 +473,18 @@ async function syncContractCadenceObligation(
   }
 
   const assignmentEnd = normalizeDateOnlyValue(params.obligation.assignment_end_date);
-  if (assignmentEnd && compareIsoDateOnly(assignmentEnd, assignmentStart) <= 0) {
+  // The authored line window narrows the assignment window. The cadence anchor
+  // stays at the assignment start so period boundaries do not shift; clipping
+  // trims coverage to the line bounds instead.
+  const lineStart = normalizeDateOnlyValue(params.obligation.line_start_date);
+  const lineEnd = normalizeDateOnlyValue(params.obligation.line_end_date);
+  const obligationStart = lineStart && compareIsoDateOnly(lineStart, assignmentStart) > 0
+    ? lineStart
+    : assignmentStart;
+  const obligationEnd = assignmentEnd && lineEnd
+    ? (compareIsoDateOnly(lineEnd, assignmentEnd) < 0 ? lineEnd : assignmentEnd)
+    : (lineEnd ?? assignmentEnd);
+  if (obligationEnd && compareIsoDateOnly(obligationEnd, obligationStart) <= 0) {
     await retireFutureContractCadenceRowsForLine(trx, {
       tenant: params.tenant,
       contractLineId: params.obligation.contract_line_id,
@@ -492,8 +493,10 @@ async function syncContractCadenceObligation(
     return emptyObligationSyncResult(true);
   }
 
-  const duePosition: DuePosition =
-    params.obligation.billing_timing === 'advance' ? 'advance' : 'arrears';
+  const duePosition: DuePosition = resolveEffectiveBillingTiming(
+    params.obligation.contract_line_type,
+    params.obligation.billing_timing,
+  );
   const sourceRuleVersion = [
     'contract_cadence',
     `billing_cycle:${frequency}`,
@@ -510,8 +513,8 @@ async function syncContractCadenceObligation(
     .map((record) => record.servicePeriod.end)
     .sort((left, right) => compareIsoDateOnly(right, left))[0] ?? null;
   const regenerationStart = billedBoundaryEnd
-    ? maxIsoDateOnly(assignmentStart, billedBoundaryEnd)
-    : assignmentStart;
+    ? maxIsoDateOnly(obligationStart, billedBoundaryEnd)
+    : obligationStart;
 
   // Generation begins at the historical boundary (so the first missing period is
   // recovered), but the rolling 180-day target is anchored to the run date so a
@@ -620,14 +623,14 @@ async function syncContractCadenceObligation(
 
   const candidateRecords = clipRecurringCandidatesToObligationBounds(
     materialized.records,
-    assignmentStart,
-    assignmentEnd,
+    obligationStart,
+    obligationEnd,
   );
 
   const targetHorizonEnd = `${materialized.coverage.targetHorizonEnd}T00:00:00Z` as ISO8601String;
-  const expectedCoverageEnd = assignmentEnd
-    && compareIsoDateOnly(assignmentEnd, targetHorizonEnd) < 0
-    ? assignmentEnd
+  const expectedCoverageEnd = obligationEnd
+    && compareIsoDateOnly(obligationEnd, targetHorizonEnd) < 0
+    ? obligationEnd
     : targetHorizonEnd;
 
   // Generation limits and assignment bounds mean different things. Beyond a
@@ -637,19 +640,19 @@ async function syncContractCadenceObligation(
   const generatedCoverageEnd = materialized.records.at(-1)?.servicePeriod.end
     ?? historicalBoundaryFloor
     ?? targetHorizonEnd;
-  const assignmentCovered = assignmentEnd != null
-    && compareIsoDateOnly(assignmentEnd, generatedCoverageEnd) <= 0;
+  const assignmentCovered = obligationEnd != null
+    && compareIsoDateOnly(obligationEnd, generatedCoverageEnd) <= 0;
   const candidateCoverageEnd = assignmentCovered ? undefined : generatedCoverageEnd;
 
   if (
     assignmentCovered && historicalBoundaryFloor
-    && compareIsoDateOnly(historicalBoundaryFloor, assignmentEnd) > 0
+    && compareIsoDateOnly(historicalBoundaryFloor, obligationEnd) > 0
   ) {
     // Continuation may scan rows beyond a newly shortened assignment. Those
     // rows are not billed history; only the actual billed floor can protect them.
     historicalBoundaryFloor = billedBoundaryEnd
-      ? maxIsoDateOnly(billedBoundaryEnd, assignmentEnd)
-      : assignmentEnd;
+      ? maxIsoDateOnly(billedBoundaryEnd, obligationEnd)
+      : obligationEnd;
   }
 
   const regenerationPlan = backfillRecurringServicePeriods({
@@ -742,6 +745,8 @@ async function loadEligibleContractCadenceObligationsForReplenishment(
       'cl.billing_timing',
       'cc.start_date as assignment_start_date',
       'cc.end_date as assignment_end_date',
+      'cl.start_date as line_start_date',
+      'cl.end_date as line_end_date',
     ) as ContractCadenceObligationRow[];
 
   // A contract assigned to more than one client produces duplicate line rows.

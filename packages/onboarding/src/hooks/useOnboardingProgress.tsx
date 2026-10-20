@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import useSWR from 'swr';
 import { usePostHog } from 'posthog-js/react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { STEP_DEFINITIONS, type StepDefinition } from '@alga-psa/onboarding/lib';
 import {
   getOnboardingProgressAction,
@@ -46,6 +47,7 @@ const fetchOnboardingProgress = async (): Promise<OnboardingProgressResponse> =>
 };
 
 export function useOnboardingProgress(options?: UseOnboardingProgressOptions): UseOnboardingProgressResult {
+  const { t } = useTranslation('msp/dashboard');
   const posthog = usePostHog();
   const previousStatuses = useRef<Record<OnboardingStepId, OnboardingStepStatus>>({
     identity_sso: 'not_started',
@@ -67,7 +69,7 @@ export function useOnboardingProgress(options?: UseOnboardingProgressOptions): U
 
   const typedError = error as Error | undefined;
 
-  const steps = useMemo(() => enrichSteps(data?.steps), [data?.steps]);
+  const steps = useMemo(() => enrichSteps(t, data?.steps), [data?.steps, t]);
 
   useEffect(() => {
     if (!steps.length) {
@@ -114,7 +116,10 @@ export function useOnboardingProgress(options?: UseOnboardingProgressOptions): U
   };
 }
 
-function enrichSteps(stepStates?: OnboardingStepServerState[]): OnboardingStep[] {
+function enrichSteps(
+  t: (key: string, options?: Record<string, unknown>) => string,
+  stepStates?: OnboardingStepServerState[],
+): OnboardingStep[] {
   const stateById = new Map<OnboardingStepId, OnboardingStepServerState>(
     (stepStates ?? []).map((state) => [state.id, state]),
   );
@@ -124,14 +129,27 @@ function enrichSteps(stepStates?: OnboardingStepServerState[]): OnboardingStep[]
 
     return {
       ...definition,
+      title: t(definition.titleKey, { defaultValue: definition.title }),
+      description: t(definition.descriptionKey, { defaultValue: definition.description }),
+      ctaLabel: t(definition.ctaLabelKey, { defaultValue: definition.ctaLabel }),
       status: state?.status ?? 'not_started',
       lastUpdated: state?.lastUpdated ?? null,
-      blocker: state?.blocker ?? null,
+      blocker: state?.blockerKey
+        ? t(state.blockerKey, { defaultValue: state.blocker ?? state.blockerKey, ...state.blockerValues })
+        : state?.blocker ?? null,
       blockerKey: state?.blockerKey ?? null,
       blockerValues: state?.blockerValues,
       progressValue: state?.progressValue ?? null,
       meta: state?.meta ?? {},
-      substeps: state?.substeps ?? [],
+      substeps: state?.substeps?.map((substep) => ({
+        ...substep,
+        title: substep.titleKey
+          ? t(substep.titleKey, { defaultValue: substep.title })
+          : substep.title,
+        blocker: substep.blockerKey
+          ? t(substep.blockerKey, { defaultValue: substep.blocker ?? substep.blockerKey, ...substep.blockerValues })
+          : substep.blocker,
+      })) ?? [],
       dismissed: state?.dismissed ?? false,
       isActionable: state?.status !== 'complete',
     } satisfies OnboardingStep;

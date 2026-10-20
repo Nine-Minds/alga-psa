@@ -1,5 +1,7 @@
 'use server'
 
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+
 import type {
   ContactEmailAddressInput,
   DeletionValidationResult,
@@ -53,19 +55,44 @@ import {
 import { collectReportContactIds } from '../../lib/managerSubtree';
 import { isStructuralFailure, type StructuralResult } from '../../lib/structuralResult';
 
+// Keep the error key alongside localized text so classification never depends on
+// the user's language. Prefixes remain stable for legacy callers.
+type LocalizedContactError = Error & { messageKey: string; messageParams: Record<string, string | number>; permission: boolean };
+
+async function contactText(key: string, params: Record<string, string | number> = {}): Promise<string> {
+  const { t } = await getServerTranslation(undefined, 'msp/contacts');
+  return t(key, params);
+}
+
+async function contactError(key: string, prefix = '', params: Record<string, string | number> = {}): Promise<LocalizedContactError> {
+  return Object.assign(new Error(prefix + await contactText(key, params)), {
+    messageKey: `msp/contacts:${key}`,
+    messageParams: params,
+    permission: prefix === 'Permission denied: ' || key === 'errors.contact.otherClient',
+  });
+}
+
+function localizedContactActionError(error: unknown): ContactUpdateActionError | null {
+  if (!(error instanceof Error) || !('messageKey' in error)) return null;
+  const localized = error as LocalizedContactError;
+  return localized.permission
+    ? permissionError(localized.message, localized.messageKey, localized.messageParams)
+    : actionError(stripExpectedContactErrorPrefix(localized.message), localized.messageKey, localized.messageParams);
+}
+
 /**
  * Structural validation, applied on write only. Pass `existing` on an update so a
  * value that arrives unchanged is skipped rather than re-validated: the contact
  * drawer round-trips the whole record, and a contact that predates the schema has
  * to stay editable on the fields the caller did touch.
  */
-function applyContactStructuralSchema<T extends Record<string, any>>(
+async function applyContactStructuralSchema<T extends Record<string, any>>(
   payload: T,
   options: { partial?: boolean; existing?: Record<string, unknown> | null } = {}
-): StructuralResult<T> {
+): Promise<StructuralResult<T>> {
   const result = parseSubmittedFields(contactCoreFieldsSchema, payload, options);
   if (!result.success) {
-    return { ok: false, error: `VALIDATION_ERROR: ${result.error ?? 'Invalid contact data'}` };
+    return { ok: false, error: `VALIDATION_ERROR: ${result.error ?? await contactText('errors.contact.invalidData')}` };
   }
   return { ok: true, data: { ...payload, ...(result.data ?? {}) } };
 }
@@ -76,10 +103,10 @@ type ContactPhoneRow = { contact_phone_number_id?: string; phone_number?: string
  * Structural check for the phone rows a contact carries, each in its own column pair.
  * A stored row resubmitted unchanged is grandfathered, same rule as the scalar fields.
  */
-function validateContactPhoneRows(
+async function validateContactPhoneRows(
   rows: ContactPhoneRow[] | undefined,
   existingRows?: ContactPhoneRow[]
-): string | null {
+): Promise<string | null> {
   if (!rows?.length) {
     return null;
   }
@@ -98,14 +125,13 @@ function validateContactPhoneRows(
 
     const normalized = normalizePhone(row.phone_number, { extension: row.extension });
     if (normalized.error) {
-      return `VALIDATION_ERROR: Phone ${index + 1}: ${
-        normalized.error === 'extensionInvalid'
-          ? 'Please enter a valid phone extension'
-          : 'Please enter a valid phone number'
-      }`;
+      return `VALIDATION_ERROR: ${await contactText(
+        normalized.error === 'extensionInvalid' ? 'errors.contact.phoneExtensionInvalid' : 'errors.contact.phoneNumberInvalid',
+        { index: index + 1 },
+      )}`;
     }
     if (normalized.value && !row.phone_number?.trim().startsWith('+')) {
-      return `VALIDATION_ERROR: Phone ${index + 1}: Include the country calling code, starting with +`;
+      return `VALIDATION_ERROR: ${await contactText('errors.contact.phoneCountryRequired', { index: index + 1 })}`;
     }
     row.phone_number = normalized.value;
     if (normalized.extension) {
@@ -156,7 +182,7 @@ function stripExpectedContactErrorPrefix(message: string): string {
   return message.replace(/^(VALIDATION_ERROR|EMAIL_EXISTS|FOREIGN_KEY_ERROR):\s*/, '');
 }
 
-function contactEmailConflictMessageFrom(error: unknown): string | null {
+async function contactEmailConflictMessageFrom(error: unknown): Promise<string | null> {
   const dbError = error as { code?: string; constraint?: string };
   if (
     dbError?.code === '23505' &&
@@ -166,7 +192,7 @@ function contactEmailConflictMessageFrom(error: unknown): string | null {
       dbError.constraint === 'contacts_tenant_email_unique'
     )
   ) {
-    return 'A contact with this email address already exists in the system';
+    return await contactText('errors.contact.emailExists');
   }
 
   if (!(error instanceof Error)) {
@@ -182,19 +208,21 @@ function contactEmailConflictMessageFrom(error: unknown): string | null {
       message.includes('contacts_tenant_email_unique')
     )
   ) {
-    return 'A contact with this email address already exists in the system';
+    return await contactText('errors.contact.emailExists');
   }
   if (message.includes('A contact email already exists as an additional email address in this tenant')) {
-    return 'A contact with this email address already exists in the system';
+    return await contactText('errors.contact.emailExists');
   }
   if (message.includes('An additional email address already exists as a contact primary email in this tenant')) {
-    return 'A contact email address already exists in this tenant';
+    return await contactText('errors.contact.tenantEmailExists');
   }
 
   return null;
 }
 
-function contactUpdateActionErrorFrom(error: unknown): ContactUpdateActionError | null {
+async function contactUpdateActionErrorFrom(error: unknown): Promise<ContactUpdateActionError | null> {
+  const localized = localizedContactActionError(error);
+  if (localized) return localized;
   if (error instanceof Error) {
     const message = error.message;
     if (message.includes('Permission denied:') || message.includes('You do not have permission')) {
@@ -221,7 +249,7 @@ function contactUpdateActionErrorFrom(error: unknown): ContactUpdateActionError 
       return actionError('A contact with this email address already exists in the system', 'msp/contacts:errors.contact.emailExists');
     }
     if (message.includes('violates not-null constraint')) {
-      const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
+      const field = message.match(/column "([^"]+)"/)?.[1] || await contactText('errors.contact.field');
       return actionError(`The ${field} is required`, 'msp/contacts:errors.contact.fieldRequired', { field });
     }
     if (message.includes('violates foreign key constraint') && message.includes('client_id')) {
@@ -229,7 +257,7 @@ function contactUpdateActionErrorFrom(error: unknown): ContactUpdateActionError 
     }
   }
 
-  const emailConflict = contactEmailConflictMessageFrom(error);
+  const emailConflict = await contactEmailConflictMessageFrom(error);
   if (emailConflict) {
     return actionError(emailConflict);
   }
@@ -242,7 +270,7 @@ function contactUpdateActionErrorFrom(error: unknown): ContactUpdateActionError 
     return actionError('A contact with these details already exists.', 'msp/contacts:errors.contact.duplicate');
   }
   if (dbError?.code === '23502') {
-    return actionError(`The ${dbError.column || 'field'} is required`, 'msp/contacts:errors.contact.fieldRequired', { field: dbError.column || 'field' });
+    return actionError(`The ${dbError.column || await contactText('errors.contact.field')} is required`, 'msp/contacts:errors.contact.fieldRequired', { field: dbError.column || await contactText('errors.contact.field') });
   }
   if (dbError?.code === '23503') {
     return actionError('The selected client or inbound ticket destination is no longer valid', 'msp/contacts:errors.contact.destinationInvalid');
@@ -260,7 +288,7 @@ function contactUpdateActionErrorFrom(error: unknown): ContactUpdateActionError 
 // Reported as a bare string rather than returned as a payload, so withAuth's
 // boundary never sees the messageKey. Localize before flattening.
 async function contactActionResultErrorFrom(error: unknown, fallback: string): Promise<string> {
-  const expected = contactUpdateActionErrorFrom(error);
+  const expected = await contactUpdateActionErrorFrom(error);
   if (expected) {
     const candidate = (await localizeActionError(expected)) as unknown as {
       actionError?: unknown;
@@ -274,8 +302,8 @@ async function contactActionResultErrorFrom(error: unknown, fallback: string): P
   return fallback;
 }
 
-function prefixedContactActionErrorFrom(error: unknown, fallback: string): string {
-  const emailConflict = contactEmailConflictMessageFrom(error);
+async function prefixedContactActionErrorFrom(error: unknown, fallback: string): Promise<string> {
+  const emailConflict = await contactEmailConflictMessageFrom(error);
   if (emailConflict) {
     return `EMAIL_EXISTS: ${emailConflict}`;
   }
@@ -292,27 +320,27 @@ function prefixedContactActionErrorFrom(error: unknown, fallback: string): strin
     }
 
     if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
-      return 'EMAIL_EXISTS: A contact with this email address already exists in the system';
+      return `EMAIL_EXISTS: ${await contactText('errors.contact.emailExists')}`;
     }
 
     if (message.includes('violates not-null constraint')) {
-      const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
-      return `VALIDATION_ERROR: The ${field} is required`;
+      const field = message.match(/column "([^"]+)"/)?.[1] || await contactText('errors.contact.field');
+      return `VALIDATION_ERROR: ${await contactText('errors.contact.fieldRequired', { field })}`;
     }
 
     if (message.includes('violates foreign key constraint') && message.includes('client_id')) {
-      return 'FOREIGN_KEY_ERROR: The selected client is no longer valid';
+      return `FOREIGN_KEY_ERROR: ${await contactText('errors.contact.clientInvalid')}`;
     }
   }
 
   return fallback;
 }
 
-function contactImportRowMessageFrom(error: unknown): string {
+async function contactImportRowMessageFrom(error: unknown): Promise<string> {
   return stripExpectedContactErrorPrefix(
-    prefixedContactActionErrorFrom(
+    await prefixedContactActionErrorFrom(
       error,
-      'Could not import this contact. Check required fields and client references.',
+      await contactText('errors.contact.importRowFailed'),
     ),
   );
 }
@@ -385,10 +413,10 @@ export const getContactByContactNameId = withAuth(async (
   try {
     // Validate input
     if (!contactNameId) {
-      throw new Error('VALIDATION_ERROR: Contact ID is required');
+      throw await contactError('errors.contact.idRequired', 'VALIDATION_ERROR: ');
     }
 
-    await assertMspPermission(user, 'contact', 'read', 'Permission denied: Cannot read contacts', db);
+    await assertMspPermission(user, 'contact', 'read', `Permission denied: ${await contactText('errors.contact.permissions.readContacts')}`, db);
 
     // Fetch contact with client information
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => ContactModel.getContactById(contactNameId, tenant, trx));
@@ -411,11 +439,11 @@ export const getContactByContactNameId = withAuth(async (
         throw err;
       }
       if (message.includes('relation') && message.includes('does not exist')) {
-        throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
+        throw await contactError('errors.contact.schemaError', 'SYSTEM_ERROR: ');
       }
     }
 
-    throw new Error('SYSTEM_ERROR: An unexpected error occurred while retrieving contact information');
+    throw await contactError('errors.contact.readFailed', 'SYSTEM_ERROR: ');
   }
 });
 
@@ -432,10 +460,10 @@ export const deleteContact = withAuth(async (
 
   try {
     if (!contactId) {
-      throw new Error('VALIDATION_ERROR: Contact ID is required');
+      throw await contactError('errors.contact.idRequired', 'VALIDATION_ERROR: ');
     }
 
-    await assertMspPermission(user, 'contact', 'delete', 'Permission denied: Cannot delete contacts', db);
+    await assertMspPermission(user, 'contact', 'delete', `Permission denied: ${await contactText('errors.contact.permissions.deleteContacts')}`, db);
 
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await tenantScopedTable(trx, 'contacts', tenant)
@@ -448,7 +476,7 @@ export const deleteContact = withAuth(async (
         success: false,
         canDelete: false,
         code: 'NOT_FOUND',
-        message: 'The contact you are trying to delete no longer exists.',
+        message: await contactText('errors.contact.deleteMissing'),
         dependencies: [],
         alternatives: []
       };
@@ -497,7 +525,7 @@ export const deleteContact = withAuth(async (
         .delete();
 
       if (!deleted || deleted === 0) {
-        throw new Error('Contact record not found or could not be deleted');
+        throw new Error(await contactText('errors.contact.deleteRecordFailed'));
       }
     });
 
@@ -534,13 +562,13 @@ export const deleteContact = withAuth(async (
   } catch (err) {
     console.error('Error deleting contact:', err);
 
-    const expected = contactUpdateActionErrorFrom(err);
+    const expected = await contactUpdateActionErrorFrom(err);
     if (expected) {
       return {
         success: false,
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: await contactActionResultErrorFrom(err, 'Unable to delete contact. Please try again.'),
+        message: await contactActionResultErrorFrom(err, await contactText('errors.contact.deleteFailed')),
         dependencies: [],
         alternatives: []
       };
@@ -554,7 +582,7 @@ export const deleteContact = withAuth(async (
           success: false,
           canDelete: false,
           code: 'VALIDATION_FAILED',
-          message: 'Cannot delete contact because it has associated records',
+          message: await contactText('errors.contact.deleteDependencies'),
           dependencies: [],
           alternatives: []
         };
@@ -565,7 +593,7 @@ export const deleteContact = withAuth(async (
           success: false,
           canDelete: false,
           code: 'VALIDATION_FAILED',
-          message: 'Database connection issue. Please try again.',
+          message: await contactText('errors.contact.connectionFailed'),
           dependencies: [],
           alternatives: []
         };
@@ -575,7 +603,7 @@ export const deleteContact = withAuth(async (
         success: false,
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Unable to delete contact. Please try again.',
+        message: await contactText('errors.contact.deleteFailed'),
         dependencies: [],
         alternatives: []
       };
@@ -585,7 +613,7 @@ export const deleteContact = withAuth(async (
       success: false,
       canDelete: false,
       code: 'VALIDATION_FAILED',
-      message: 'An unexpected error occurred while deleting the contact',
+      message: await contactText('errors.contact.deleteUnexpected'),
       dependencies: [],
       alternatives: []
     };
@@ -654,9 +682,9 @@ export const addContact = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   try {
-    await assertMspPermission(user, 'contact', 'create', 'Permission denied: Cannot create contacts', db);
+    await assertMspPermission(user, 'contact', 'create', `Permission denied: ${await contactText('errors.contact.permissions.createContacts')}`, db);
 
-    const structural = applyContactStructuralSchema(
+    const structural = await applyContactStructuralSchema(
       { full_name: contactData.full_name || '', email: contactData.email ?? undefined },
       { partial: false }
     );
@@ -664,7 +692,7 @@ export const addContact = withAuth(async (
       throw new Error(structural.error);
     }
 
-    const phoneRowError = validateContactPhoneRows(contactData.phone_numbers);
+    const phoneRowError = await validateContactPhoneRows(contactData.phone_numbers);
     if (phoneRowError) {
       throw new Error(phoneRowError);
     }
@@ -722,9 +750,9 @@ export const addContact = withAuth(async (
 
     return {
       success: false,
-      error: prefixedContactActionErrorFrom(
+      error: await prefixedContactActionErrorFrom(
         err,
-        'SYSTEM_ERROR: An unexpected error occurred while creating the contact',
+        `SYSTEM_ERROR: ${await contactText('errors.contact.createFailed')}`,
       ),
     };
   }
@@ -790,7 +818,7 @@ export const deleteOrphanedPhoneTypes = withAuth(async (
 ): Promise<number> => {
   const { knex: db } = await createTenantKnex();
 
-  await assertMspPermission(user, 'contact', 'update', 'Permission denied: Cannot manage phone types', db);
+  await assertMspPermission(user, 'contact', 'update', `Permission denied: ${await contactText('errors.contact.permissions.managePhoneTypes')}`, db);
 
   if (typeLabels.length === 0) return 0;
 
@@ -816,10 +844,10 @@ export const updateContact = withAuth(async (
 
   try {
     if (!contactData.contact_name_id) {
-      throw new Error('VALIDATION_ERROR: Contact ID is required for updates');
+      throw await contactError('errors.contact.updateIdRequired', 'VALIDATION_ERROR: ');
     }
 
-    await assertMspPermission(user, 'contact', 'update', 'Permission denied: Cannot update contacts', db);
+    await assertMspPermission(user, 'contact', 'update', `Permission denied: ${await contactText('errors.contact.permissions.updateContacts')}`, db);
 
     if (contactData.email) {
       const existingContact = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -830,7 +858,7 @@ export const updateContact = withAuth(async (
       });
 
       if (existingContact) {
-        throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
+        throw await contactError('errors.contact.emailExists', 'EMAIL_EXISTS: ');
       }
     }
 
@@ -842,7 +870,7 @@ export const updateContact = withAuth(async (
       });
 
       if (!client) {
-        throw new Error('FOREIGN_KEY_ERROR: The selected client no longer exists');
+        throw await contactError('errors.contact.clientMissing', 'FOREIGN_KEY_ERROR: ');
       }
     }
 
@@ -860,7 +888,7 @@ export const updateContact = withAuth(async (
       });
 
       if (!destination) {
-        throw new Error('FOREIGN_KEY_ERROR: The selected inbound ticket destination no longer exists');
+        throw await contactError('errors.contact.destinationMissing', 'FOREIGN_KEY_ERROR: ');
       }
 
       (contactData as any).inbound_ticket_defaults_id = inboundDestinationId;
@@ -870,19 +898,19 @@ export const updateContact = withAuth(async (
       const existingContact = await ContactModel.getContactById(contactData.contact_name_id!, tenant, trx);
 
       if (!existingContact) {
-        throw new Error('VALIDATION_ERROR: The contact you are trying to update no longer exists');
+        throw await contactError('errors.contact.updateMissing', 'VALIDATION_ERROR: ');
       }
 
       // Structural rules come from the shared schema, measured against the stored
       // row: a contact that predates the schema keeps its legacy values until
       // somebody actually edits them.
-      const structural = applyContactStructuralSchema(contactData, { existing: existingContact as Record<string, unknown> });
+      const structural = await applyContactStructuralSchema(contactData, { existing: existingContact as Record<string, unknown> });
       if (isStructuralFailure(structural)) {
         throw new Error(structural.error);
       }
       Object.assign(contactData, structural.data);
 
-      const phoneRowError = validateContactPhoneRows(contactData.phone_numbers, existingContact.phone_numbers);
+      const phoneRowError = await validateContactPhoneRows(contactData.phone_numbers, existingContact.phone_numbers);
       if (phoneRowError) {
         throw new Error(phoneRowError);
       }
@@ -926,7 +954,7 @@ export const updateContact = withAuth(async (
 
     const updatedContact = updateResult.after;
     if (!updatedContact) {
-      throw new Error('Contact update completed without returning the updated contact record');
+      throw new Error(await contactText('errors.contact.updateRecordMissing'));
     }
 
     const occurredAt = updateResult.occurredAt ?? (updatedContact as any)?.updated_at ?? new Date().toISOString();
@@ -976,7 +1004,7 @@ export const updateContact = withAuth(async (
   } catch (err) {
     console.error('Error updating contact:', err);
 
-    const expected = contactUpdateActionErrorFrom(err);
+    const expected = await contactUpdateActionErrorFrom(err);
     if (expected) return expected;
 
     throw err;
@@ -993,10 +1021,10 @@ export const updateContactsForClient = withAuth(async (
 
   try {
     if (!clientId) {
-      throw new Error('VALIDATION_ERROR: Client ID is required');
+      throw await contactError('errors.contact.clientIdRequired', 'VALIDATION_ERROR: ');
     }
 
-    await assertMspPermission(user, 'contact', 'update', 'Permission denied: Cannot update contacts', db);
+    await assertMspPermission(user, 'contact', 'update', `Permission denied: ${await contactText('errors.contact.permissions.updateContacts')}`, db);
 
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await tenantScopedTable(trx, 'clients', tenant)
@@ -1005,17 +1033,17 @@ export const updateContactsForClient = withAuth(async (
     });
 
     if (!client) {
-      throw new Error('VALIDATION_ERROR: The specified client does not exist');
+      throw await contactError('errors.contact.specifiedClientMissing', 'VALIDATION_ERROR: ');
     }
 
     if (Object.keys(updateData).length === 0) {
-      throw new Error('VALIDATION_ERROR: No update data provided');
+      throw await contactError('errors.contact.updateDataRequired', 'VALIDATION_ERROR: ');
     }
 
     if (updateData.email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(updateData.email.trim())) {
-        throw new Error('VALIDATION_ERROR: Please enter a valid email address');
+        throw await contactError('errors.contact.emailInvalid', 'VALIDATION_ERROR: ');
       }
     }
 
@@ -1068,13 +1096,13 @@ export const updateContactsForClient = withAuth(async (
         });
 
       if (!updated) {
-        throw new Error('Client contact update completed without modifying any contact records');
+        throw new Error(await contactText('errors.contact.bulkUpdateFailed'));
       }
     });
   } catch (err) {
     console.error('Error updating contacts for client:', err);
 
-    const expected = contactUpdateActionErrorFrom(err);
+    const expected = await contactUpdateActionErrorFrom(err);
     if (expected) return expected;
 
     if (err instanceof Error) {
@@ -1084,7 +1112,7 @@ export const updateContactsForClient = withAuth(async (
       }
 
       if (message.includes('violates not-null constraint')) {
-        const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
+        const field = message.match(/column "([^"]+)"/)?.[1] || await contactText('errors.contact.field');
         return actionError(`The ${field} is required`, 'msp/contacts:errors.contact.fieldRequired', { field });
       }
 
@@ -1093,7 +1121,7 @@ export const updateContactsForClient = withAuth(async (
       }
     }
 
-    throw new Error('SYSTEM_ERROR: An unexpected error occurred while updating client contacts');
+    throw await contactError('errors.contact.updateFailed', 'SYSTEM_ERROR: ');
   }
 });
 
@@ -1144,9 +1172,9 @@ export async function generateContactCSVTemplate(): Promise<string> {
       additional_email_addresses: 'personal:alice.home@wonderland.com | billing:accounts@wonderland.com',
       phone_number: '+1 212-555-0107',
       client: 'Mad Hatter Tea Client',
-      role: 'Chief Explorer',
-      notes: 'Fell down a rabbit hole and discovered a whole new world',
-      tags: 'Curious, Adventurous, Brave'
+      role: await contactText('csvTemplate.explorerRole'),
+      notes: await contactText('csvTemplate.explorerNotes'),
+      tags: await contactText('csvTemplate.explorerTags')
     },
     {
       full_name: 'Mad Hatter',
@@ -1155,9 +1183,9 @@ export async function generateContactCSVTemplate(): Promise<string> {
       additional_email_addresses: 'billing:tea-bills@teaparty.wonderland | personal:hatter.afterhours@teaparty.wonderland',
       phone_number: '+1 212-555-0108',
       client: 'Mad Hatter Tea Client',
-      role: 'Chief Tea Ceremony Expert',
-      notes: 'Knows why a raven is like a writing desk',
-      tags: 'Creative, Eccentric, Tea Expert'
+      role: await contactText('csvTemplate.teaRole'),
+      notes: await contactText('csvTemplate.teaNotes'),
+      tags: await contactText('csvTemplate.teaTags')
     }
   ];
 
@@ -1207,7 +1235,7 @@ async function findExistingContactByImportedEmails(
   ])];
 
   if (contactIds.length > 1) {
-    throw new Error('VALIDATION_ERROR: Imported email addresses match multiple existing contacts');
+    throw await contactError('errors.contact.importMultipleMatches', 'VALIDATION_ERROR: ');
   }
 
   if (contactIds.length === 0) {
@@ -1238,13 +1266,13 @@ export const importContactsFromCSV = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   try {
-    await assertMspPermission(user, 'contact', 'create', 'Permission denied: Cannot create contacts', db);
+    await assertMspPermission(user, 'contact', 'create', `Permission denied: ${await contactText('errors.contact.permissions.createContacts')}`, db);
     if (updateExisting && !await hasMspPermission(user, 'contact', 'update', db)) {
-      throw new Error('Permission denied: Cannot update contacts');
+      throw await contactError('errors.contact.updatePermission', 'Permission denied: ');
     }
 
     if (!contactsData || contactsData.length === 0) {
-      throw new Error('VALIDATION_ERROR: No contact data provided');
+      throw await contactError('errors.contact.importDataRequired', 'VALIDATION_ERROR: ');
     }
 
     const results: ImportContactResult[] = [];
@@ -1253,7 +1281,7 @@ export const importContactsFromCSV = withAuth(async (
       for (const contactData of contactsData) {
         try {
           if (!contactData.full_name?.trim()) {
-            throw new Error('VALIDATION_ERROR: Full name is required');
+            throw await contactError('errors.contact.fullNameRequired', 'VALIDATION_ERROR: ');
           }
 
           const normalizedPrimaryEmail = normalizeContactCsvEmailValue(contactData.email);
@@ -1262,7 +1290,7 @@ export const importContactsFromCSV = withAuth(async (
           }
 
           if (contactData.email && !isValidContactCsvEmailValue(contactData.email)) {
-            throw new Error(`VALIDATION_ERROR: Invalid email format for contact: ${contactData.full_name}`);
+            throw await contactError('errors.contact.importEmailInvalid', 'VALIDATION_ERROR: ', { name: contactData.full_name! });
           }
 
           if (contactData.client_id) {
@@ -1271,7 +1299,7 @@ export const importContactsFromCSV = withAuth(async (
               .first();
 
             if (!client) {
-              throw new Error(`FOREIGN_KEY_ERROR: Client not found for contact: ${contactData.full_name}`);
+              throw await contactError('errors.contact.importClientMissing', 'FOREIGN_KEY_ERROR: ', { name: contactData.full_name! });
             }
           }
 
@@ -1303,7 +1331,7 @@ export const importContactsFromCSV = withAuth(async (
             const duplicateField = matchedByEmail ? 'email' : 'name';
             results.push({
               success: false,
-              message: `VALIDATION_ERROR: Contact with this ${duplicateField} already exists: ${duplicateField === 'email' ? importEmails[0] ?? contactData.email : contactData.full_name}`,
+              message: `VALIDATION_ERROR: ${await contactText(duplicateField === 'email' ? 'errors.contact.importDuplicateEmail' : 'errors.contact.importDuplicateName', { value: (duplicateField === 'email' ? importEmails[0] ?? contactData.email : contactData.full_name) ?? '' })}`,
               originalData: contactData
             });
             continue;
@@ -1316,7 +1344,7 @@ export const importContactsFromCSV = withAuth(async (
                 ? undefined
                 : []);
           if (importedPhoneRows) {
-            const phoneRowError = validateContactPhoneRows(importedPhoneRows, existingContact?.phone_numbers);
+            const phoneRowError = await validateContactPhoneRows(importedPhoneRows, existingContact?.phone_numbers);
             if (phoneRowError) {
               throw new Error(phoneRowError);
             }
@@ -1417,7 +1445,7 @@ export const importContactsFromCSV = withAuth(async (
 
             results.push({
               success: true,
-              message: 'Contact updated successfully',
+              message: await contactText('messages.success.updated'),
               contact: savedContact,
               originalData: contactData
             });
@@ -1458,7 +1486,7 @@ export const importContactsFromCSV = withAuth(async (
 
             results.push({
               success: true,
-              message: 'Contact created successfully',
+              message: await contactText('messages.success.created'),
               contact: savedContact,
               originalData: contactData
             });
@@ -1468,7 +1496,7 @@ export const importContactsFromCSV = withAuth(async (
 
           results.push({
             success: false,
-            message: contactImportRowMessageFrom(err),
+            message: await contactImportRowMessageFrom(err),
             originalData: contactData
           });
         }
@@ -1479,22 +1507,22 @@ export const importContactsFromCSV = withAuth(async (
   } catch (err) {
     console.error('Error importing contacts:', err);
 
-    const expected = contactUpdateActionErrorFrom(err);
+    const expected = await contactUpdateActionErrorFrom(err);
     if (expected) {
       return contactImportFailureResults(
         contactsData,
-        await contactActionResultErrorFrom(err, 'Unable to import contacts. Please check the file and try again.'),
+        await contactActionResultErrorFrom(err, await contactText('errors.contact.importFileFailed')),
       );
     }
 
     if (err instanceof Error) {
       const message = err.message;
       if (message.includes('relation') && message.includes('does not exist')) {
-        throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
+        throw await contactError('errors.contact.schemaError', 'SYSTEM_ERROR: ');
       }
     }
 
-    throw new Error('SYSTEM_ERROR: An unexpected error occurred while importing contacts');
+    throw await contactError('errors.contact.importFailed', 'SYSTEM_ERROR: ');
   }
 });
 
@@ -1506,20 +1534,20 @@ export const checkExistingEmails = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   try {
-    await assertMspPermission(user, 'contact', 'read', 'Permission denied: Cannot read contacts', db);
+    await assertMspPermission(user, 'contact', 'read', `Permission denied: ${await contactText('errors.contact.permissions.readContacts')}`, db);
 
     if (!emails || emails.length === 0) {
-      throw new Error('VALIDATION_ERROR: No email addresses provided');
+      throw await contactError('errors.contact.emailsRequired', 'VALIDATION_ERROR: ');
     }
 
     const invalidEmail = emails.find((email) => !isValidContactCsvEmailValue(email));
     if (invalidEmail) {
-      throw new Error(`VALIDATION_ERROR: Invalid email format: ${invalidEmail}`);
+      throw await contactError('errors.contact.invalidEmailValue', 'VALIDATION_ERROR: ', { email: invalidEmail });
     }
 
     const sanitizedEmails = normalizeImportedEmailList(emails);
     if (sanitizedEmails.length === 0) {
-      throw new Error('VALIDATION_ERROR: No valid email addresses provided');
+      throw await contactError('errors.contact.validEmailsRequired', 'VALIDATION_ERROR: ');
     }
 
     const existingEmails = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1541,17 +1569,17 @@ export const checkExistingEmails = withAuth(async (
   } catch (err) {
     console.error('Error checking existing emails:', err);
 
-    const expected = contactUpdateActionErrorFrom(err);
+    const expected = await contactUpdateActionErrorFrom(err);
     if (expected) return expected;
 
     if (err instanceof Error) {
       const message = err.message;
       if (message.includes('relation') && message.includes('does not exist')) {
-        throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
+        throw await contactError('errors.contact.schemaError', 'SYSTEM_ERROR: ');
       }
     }
 
-    throw new Error('SYSTEM_ERROR: An unexpected error occurred while checking existing emails');
+    throw await contactError('errors.contact.checkEmailsFailed', 'SYSTEM_ERROR: ');
   }
 });
 
@@ -1569,7 +1597,7 @@ export const getContactByEmail = withAuth(async (
       clientId,
       'contact',
       'read',
-      'Permission denied: Cannot read contacts',
+      `Permission denied: ${await contactText('errors.contact.permissions.readContacts')}`,
       knex
     );
 
@@ -1623,9 +1651,9 @@ export const createClientContact = withAuth(async (
 ) => {
   try {
     const { knex } = await createTenantKnex();
-    await assertMspPermission(user, 'contact', 'create', 'Permission denied: Cannot create contacts', knex);
+    await assertMspPermission(user, 'contact', 'create', `Permission denied: ${await contactText('errors.contact.permissions.createContacts')}`, knex);
 
-    const structural = applyContactStructuralSchema(
+    const structural = await applyContactStructuralSchema(
       { full_name: fullName, email },
       { partial: false }
     );
@@ -1635,7 +1663,7 @@ export const createClientContact = withAuth(async (
     const normalizedEmail = structural.data.email ?? '';
 
     const resolvedPhoneNumbers = phoneNumbers ?? buildDefaultPhoneNumbers(phone);
-    const phoneRowError = validateContactPhoneRows(resolvedPhoneNumbers);
+    const phoneRowError = await validateContactPhoneRows(resolvedPhoneNumbers);
     if (phoneRowError) {
       throw new Error(phoneRowError);
     }
@@ -1647,7 +1675,7 @@ export const createClientContact = withAuth(async (
     });
 
     if (existingContact) {
-      throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
+      throw await contactError('errors.contact.emailExists', 'EMAIL_EXISTS: ');
     }
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1690,11 +1718,11 @@ export const updateContactPortalAdminStatus = withAuth(async (
         contactId,
         'user',
         'update',
-        'You do not have permission to update client users'
+        `Permission denied: ${await contactText('errors.contact.permissions.updateClientUsers')}`
       );
 
       if (isPortalAdmin) {
-        await assertContactIsNotSharedMailbox(trx, tenant, contactId, 'Shared mailbox contacts cannot be client admins.');
+        await assertContactIsNotSharedMailbox(trx, tenant, contactId, await contactText('errors.contact.sharedMailboxAdmin'));
       }
 
       const updated = await tenantScopedTable(trx, 'contacts', tenant)
@@ -1705,7 +1733,7 @@ export const updateContactPortalAdminStatus = withAuth(async (
         });
 
       if (updated === 0) {
-        throw new Error('Contact not found');
+        throw await contactError('errors.contact.notFound');
       }
     });
 
@@ -1716,7 +1744,7 @@ export const updateContactPortalAdminStatus = withAuth(async (
       success: false,
       error: await contactActionResultErrorFrom(
         error,
-        'Unable to update portal admin status. Please refresh and try again.',
+        await contactText('errors.contact.portalAdminUpdateFailed'),
       )
     };
   }
@@ -1741,7 +1769,7 @@ export const getUserByContactId = withAuth(async (
         contactId,
         'user',
         'read',
-        'You do not have permission to view client users'
+        `Permission denied: ${await contactText('errors.contact.permissions.viewClientUsers')}`
       );
 
       const foundUser = await tenantScopedTable(trx, 'users', tenant)
@@ -1776,7 +1804,7 @@ export const getUserByContactId = withAuth(async (
     console.error('[contactActions.getUserByContactId]', error);
     return {
       user: null,
-      error: await contactActionResultErrorFrom(error, 'Failed to get user')
+      error: await contactActionResultErrorFrom(error, await contactText('errors.contact.userLoadFailed'))
     };
   }
 });
@@ -1813,6 +1841,8 @@ function hasValidVisibilityScopes(input: VisibilityGroupPayload): boolean {
 type VisibilityGroupActionError = ActionMessageError | ActionPermissionError;
 
 function visibilityGroupActionErrorFrom(error: unknown): VisibilityGroupActionError | null {
+  const localized = localizedContactActionError(error);
+  if (localized) return localized;
   if (error instanceof Error) {
     const message = error.message;
     if (message.includes('Permission denied:')) {
@@ -1869,11 +1899,11 @@ async function resolveContactClientId(
     .first('contact_name_id', 'client_id');
 
   if (!contact) {
-    throw new Error('Contact not found');
+    throw await contactError('errors.contact.notFound');
   }
 
   if (!contact.client_id) {
-    throw new Error('Contact is not associated with a client');
+    throw await contactError('errors.contact.notAssociatedWithClient');
   }
 
   return contact.client_id;
@@ -1885,7 +1915,7 @@ async function getClientPortalAdminClientId(
   tenant: string
 ): Promise<string> {
   if (!isClientPortalUser(user) || !user.contact_id) {
-    throw new Error('Permission denied: Client portal admin access is required');
+    throw await contactError('errors.contact.portalAdminRequired', 'Permission denied: ');
   }
 
   const actorContact = await tenantScopedTable(trx, 'contacts', tenant)
@@ -1896,7 +1926,7 @@ async function getClientPortalAdminClientId(
     .first();
 
   if (!actorContact?.is_client_admin || !actorContact.client_id) {
-    throw new Error('Permission denied: Client portal admin access is required');
+    throw await contactError('errors.contact.portalAdminRequired', 'Permission denied: ');
   }
 
   return actorContact.client_id;
@@ -1909,8 +1939,9 @@ async function resolveContactAndVerifyPermission(
   contactId: string,
   resource: string = 'contact',
   action: string = 'update',
-  message: string = 'Permission denied: Cannot update contacts'
+  message?: string
 ): Promise<string> {
+  message ??= `Permission denied: ${await contactText('errors.contact.permissions.updateContacts')}`;
   if (isMspUser(user)) {
     await assertMspPermission(user, resource, action, message, trx);
     return resolveContactClientId(trx, tenant, contactId);
@@ -1933,7 +1964,7 @@ async function resolveContactAndVerifyPermission(
 
   const targetClientId = await resolveContactClientId(trx, tenant, contactId);
   if (targetClientId !== actorClientId) {
-    throw new Error('Cannot manage contacts for another client');
+    throw await contactError('errors.contact.otherClient');
   }
 
   return targetClientId;
@@ -1950,7 +1981,7 @@ async function ensureContactPortalGroupsScope(
     .first('group_id');
 
   if (!group) {
-    throw new Error('Assigned visibility group is invalid for this contact');
+    throw await contactError('errors.contact.assignedGroupInvalid');
   }
 }
 
@@ -2072,7 +2103,7 @@ export const getClientPortalVisibilityGroupById = withAuth(async (
         .first('group_id', 'name', 'description', 'ticket_scope', 'asset_scope', 'project_scope');
 
       if (!group) {
-        throw new Error('Visibility group not found');
+        throw await contactError('errors.contact.groupNotFound');
       }
 
       const rows = await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
@@ -2110,7 +2141,7 @@ async function ensureBoardsAreActiveInTenant(
     .first();
 
   if (Number(validBoardCount?.count || 0) !== boardIds.length) {
-    throw new Error('One or more boards are invalid for this tenant');
+    throw await contactError('errors.contact.boardsInvalid');
   }
 }
 
@@ -2140,7 +2171,7 @@ async function ensureBoardsAreActiveOrAlreadyAssignedToGroup(
   ]);
 
   if (boardIds.some((boardId) => !allowedBoardIds.has(boardId))) {
-    throw new Error('One or more boards are invalid for this tenant');
+    throw await contactError('errors.contact.boardsInvalid');
   }
 }
 
@@ -2180,7 +2211,7 @@ export const createClientPortalVisibilityGroupForContact = withAuth(async (
         .returning('group_id');
 
       if (!group?.group_id) {
-        throw new Error('Visibility group creation completed without returning a group id');
+        throw new Error(await contactText('errors.contact.groupCreateFailed'));
       }
 
       if (boardIds.length > 0) {
@@ -2230,7 +2261,7 @@ export const updateClientPortalVisibilityGroupForContact = withAuth(async (
         .first('group_id');
 
       if (!existing) {
-        throw new Error('Visibility group not found');
+        throw await contactError('errors.contact.groupNotFound');
       }
 
       await ensureBoardsAreActiveOrAlreadyAssignedToGroup(trx, tenant, groupId, boardIds);
@@ -2285,7 +2316,7 @@ export const deleteClientPortalVisibilityGroupForContact = withAuth(async (
         .first('group_id');
 
       if (!existing) {
-        throw new Error('Visibility group not found');
+        throw await contactError('errors.contact.groupNotFound');
       }
 
       const assignedCount = await tenantScopedTable(trx, 'contacts', tenant)
@@ -2294,7 +2325,7 @@ export const deleteClientPortalVisibilityGroupForContact = withAuth(async (
         .first();
 
       if (Number(assignedCount?.count || 0) > 0) {
-        throw new Error('Cannot delete visibility group while it is assigned to contacts');
+        throw await contactError('errors.contact.groupInUse');
       }
 
       await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)

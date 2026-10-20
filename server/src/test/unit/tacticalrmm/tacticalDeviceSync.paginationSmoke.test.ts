@@ -33,6 +33,8 @@ function createFakeKnex(state: DbState) {
 
   class QB {
     private _where: Record<string, any>[] = [];
+    private _whereNot: Record<string, any>[] = [];
+    private _notIn: Array<{ col: string; vals: any[] }> = [];
     private _notNull: string[] = [];
     private _andWhere: Array<{ col: string; val: any }> = [];
     private _rawTextEq: { col: string; val: string } | null = null;
@@ -41,6 +43,16 @@ function createFakeKnex(state: DbState) {
 
     where(where: Record<string, any>) {
       this._where.push(where);
+      return this;
+    }
+
+    whereNot(where: Record<string, any>) {
+      this._whereNot.push(where);
+      return this;
+    }
+
+    whereNotIn(col: string, vals: any[]) {
+      this._notIn.push({ col, vals: (vals ?? []).map((v) => String(v)) });
       return this;
     }
 
@@ -67,6 +79,8 @@ function createFakeKnex(state: DbState) {
     private filtered(): any[] {
       let rows = [...tableRows(this.table)];
       for (const w of this._where) rows = rows.filter((r) => matchesWhere(r, w));
+      for (const w of this._whereNot) rows = rows.filter((r) => !matchesWhere(r, w));
+      for (const ni of this._notIn) rows = rows.filter((r) => !ni.vals.includes(String(r[ni.col])));
       for (const nn of this._notNull) rows = rows.filter((r) => r[nn] !== null && typeof r[nn] !== 'undefined');
       for (const aw of this._andWhere) rows = rows.filter((r) => r[aw.col] === aw.val);
       if (this._rawTextEq) rows = rows.filter((r) => String(r[this._rawTextEq!.col]) === this._rawTextEq!.val);

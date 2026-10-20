@@ -18,6 +18,7 @@ import {
     DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
     resolveRecurringAuthoringPolicy,
 } from '@shared/billingClients/recurringAuthoringPolicy';
+import { isContractLineTimingNotAllowedError } from '@shared/billingClients/contractLineTimingRule';
 
 
 
@@ -33,6 +34,7 @@ import {
     isUnitFixedService,
 } from '../lib/fixedServiceBasis';
 import { upsertBucketOverlayInTransaction } from './bucketOverlayActions';
+import { validateContractLineWindow, normalizeContractLineDate } from '../lib/billing/contractLineWindow';
 import {
     actionError,
     permissionError,
@@ -49,7 +51,25 @@ class ContractLinePresetDomainError extends Error {
     }
 }
 
+/**
+ * Recurring rates are never negative. A negative fixed rate is not a discount
+ * (credits are authored as configured discounts or manual invoice adjustments),
+ * so it is rejected here before it can reach a stored charge and silently get
+ * zero tax and no discount-base inclusion.
+ */
+function assertNonNegativeRate(value: number | string | null | undefined, label: string): void {
+    if (value === null || value === undefined) return;
+    const numericValue = typeof value === 'string' && value.trim() === '' ? Number.NaN : Number(value);
+    if (!Number.isFinite(numericValue) || numericValue < 0) {
+        throw new ContractLinePresetDomainError(`${label} must be zero or greater.`);
+    }
+}
+
 function contractLinePresetActionErrorFrom(error: unknown): ContractLinePresetActionError | null {
+    if (isContractLineTimingNotAllowedError(error)) {
+        return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
+    }
+
     if (error instanceof ContractLinePresetDomainError) {
         if (error.message.startsWith('Permission denied:')) {
             return permissionError(error.message);
@@ -459,6 +479,9 @@ export const copyPresetToContractLine = withAuth(async (
         minimum_billable_time?: number;
         round_up_to_nearest?: number;
         cadence_owner?: CadenceOwner;
+        invoice_line_description?: string | null;
+        start_date?: string | null;
+        end_date?: string | null;
     }
 ): Promise<string | ContractLinePresetActionError> => {
     try {
@@ -470,6 +493,22 @@ export const copyPresetToContractLine = withAuth(async (
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(user, 'billing', 'create', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot create contract lines from presets');
+            }
+
+            // Recurring rates come from overrides, preset services and the preset
+            // fixed config; reject a negative value at any of those sources.
+            assertNonNegativeRate(overrides?.base_rate, 'Base rate');
+            if (overrides?.services) {
+                for (const override of Object.values(overrides.services)) {
+                    assertNonNegativeRate(override?.custom_rate, 'Service rate');
+                }
+            }
+            const overrideWindowError = await validateContractLineWindow(trx, tenantId, contractId, {
+                start_date: overrides?.start_date,
+                end_date: overrides?.end_date,
+            });
+            if (overrideWindowError) {
+                throw new ContractLinePresetDomainError(overrideWindowError);
             }
 
             // 1. Fetch the preset
@@ -490,8 +529,11 @@ export const copyPresetToContractLine = withAuth(async (
                     ? await ContractLinePresetFixedConfig.getByPresetId(trx, presetId)
                     : null;
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                lineType: preset.contract_line_type ?? null,
                 cadenceOwner: overrides?.cadence_owner ?? preset.cadence_owner,
-                billingTiming: preset.billing_timing,
+                // The preset's timing is a stored value being copied, not a user choice:
+                // a stale advance on an Hourly/Usage preset normalizes to arrears.
+                fallbackBillingTiming: preset.billing_timing,
                 enableProration: presetFixedConfig?.enable_proration,
                 billingCycleAlignment: presetFixedConfig?.billing_cycle_alignment,
             });
@@ -552,6 +594,9 @@ export const copyPresetToContractLine = withAuth(async (
                     contract_id: contractId,
                     display_order: existingCount,
                     custom_rate: null,
+                    invoice_line_description: overrides?.invoice_line_description?.trim() || null,
+                    start_date: normalizeContractLineDate(overrides?.start_date),
+                    end_date: normalizeContractLineDate(overrides?.end_date),
                     updated_at: trx.fn.now()
                 });
 
@@ -564,6 +609,7 @@ export const copyPresetToContractLine = withAuth(async (
 
                 for (const presetService of presetServices) {
                     const serviceOverride = overrides?.services?.[presetService.service_id];
+                    assertNonNegativeRate(serviceOverride?.custom_rate ?? presetService.custom_rate, 'Service rate');
                     console.log(`[copyPresetToContractLine] Copying service ${presetService.service_id}, override:`, serviceOverride);
 
                     // Insert into contract_line_services table
@@ -754,6 +800,11 @@ export interface CreateCustomContractLineInput {
     billing_frequency: string;
     billing_timing?: 'arrears' | 'advance';
     cadence_owner?: CadenceOwner;
+    /** Verbatim invoice line text; falls back to the line name when null. */
+    invoice_line_description?: string | null;
+    /** Authored line window (half-open), constrained to the client contract. */
+    start_date?: string | null;
+    end_date?: string | null;
     services: CustomContractLineServiceConfig[];
     // Fixed-specific config
     base_rate?: number | null;  // For Fixed type, overall base rate
@@ -800,6 +851,7 @@ export const createCustomContractLine = withAuth(async (
                 if (service.pricing_basis != null && !['bundle', 'unit'].includes(service.pricing_basis)) {
                     throw new ContractLinePresetDomainError('Choose bundle or recurring unit pricing.');
                 }
+                assertNonNegativeRate(service.custom_rate, 'Service rate');
                 if (input.contract_line_type === 'Fixed' && service.pricing_basis === 'unit' &&
                     (service.quantity == null || !Number.isFinite(service.quantity) || service.quantity < 0 ||
                      service.custom_rate == null || !Number.isSafeInteger(service.custom_rate) || service.custom_rate < 0)) {
@@ -808,6 +860,15 @@ export const createCustomContractLine = withAuth(async (
                 if (service.minimum_usage != null && (!Number.isFinite(service.minimum_usage) || service.minimum_usage < 0)) {
                     throw new ContractLinePresetDomainError('Usage minimum must be zero or greater.');
                 }
+            }
+            assertNonNegativeRate(input.base_rate, 'Base rate');
+
+            const windowError = await validateContractLineWindow(trx, tenantId, contractId, {
+                start_date: input.start_date,
+                end_date: input.end_date,
+            });
+            if (windowError) {
+                throw new ContractLinePresetDomainError(windowError);
             }
 
             // 2. Create the contract line
@@ -819,6 +880,7 @@ export const createCustomContractLine = withAuth(async (
                 ? (input.round_up_to_nearest ?? 15)
                 : undefined;
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                lineType: input.contract_line_type ?? null,
                 cadenceOwner: input.cadence_owner,
                 defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                 billingTiming: input.billing_timing,
@@ -866,6 +928,9 @@ export const createCustomContractLine = withAuth(async (
                     contract_id: contractId,
                     display_order: existingCount,
                     custom_rate: null,
+                    invoice_line_description: input.invoice_line_description?.trim() || null,
+                    start_date: normalizeContractLineDate(input.start_date),
+                    end_date: normalizeContractLineDate(input.end_date),
                     updated_at: trx.fn.now()
                 });
 

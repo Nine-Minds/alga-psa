@@ -565,7 +565,8 @@
       "exportCsv": "Esporta CSV",
       "exportJson": "Esporta JSON",
       "close": "Chiudi",
-      "viewRunDetails": "Visualizza dettagli esecuzione"
+      "viewRunDetails": "Visualizza dettagli esecuzione",
+      "backToEvents": "Torna agli eventi"
     },
     "table": {
       "schemaConflict": "catalogo ≠ invio",
@@ -627,7 +628,8 @@
     },
     "actions": {
       "refresh": "Aggiorna",
-      "loadMore": "Carica altri"
+      "loadMore": "Carica altri",
+      "backToList": "Torna ai messaggi non recapitabili"
     },
     "table": {
       "columns": {
@@ -1517,7 +1519,9 @@
         "summary_one": "{{count}} evento saltato negli ultimi {{days}} giorni — {{reasons}}",
         "summary_other": "{{count}} eventi saltati negli ultimi {{days}} giorni — {{reasons}}",
         "lastSkipped": "Ultimo saltato {{when}}",
-        "view": "Visualizza eventi saltati"
+        "view": "Visualizza eventi saltati",
+        "summary_few": "{{count}} eventi saltati negli ultimi {{days}} giorni — {{reasons}}",
+        "summary_many": "{{count}} eventi saltati negli ultimi {{days}} giorni — {{reasons}}"
       },
       "drawer": {
         "title": "Eventi saltati",
@@ -1860,7 +1864,9 @@
     "insertionPointLabel": "I nuovi passaggi vanno qui",
     "emptyBranchPrompt": "Aggiungi un passaggio a questo ramo",
     "emptyActivePrompt": "I nuovi passaggi vanno qui. Scegline uno dalla palette.",
-    "stepCount": "({{count}} passaggi)"
+    "stepCount": "({{count}} passaggi)",
+    "stepCount_few": "({{count}} passaggi)",
+    "stepCount_many": "({{count}} passaggi)"
   },
   "expressionEditor": {
     "ariaLabel": "Editor di espressioni",
@@ -2373,7 +2379,12 @@
       "currentRun": "Esecuzione {{id}}",
       "backToWorkflow": "Torna al workflow"
     },
-    "title": "Studio di esecuzione del workflow"
+    "title": "Studio di esecuzione del workflow",
+    "communityEdition": {
+      "title": "Funzionalità Pro",
+      "description": "Lo studio di esecuzione dei workflow è disponibile solo in Pro.",
+      "runId": "ID esecuzione: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3146,6 +3157,10 @@
         "selectBoard": "Seleziona o inserisci una bacheca",
         "selectPriority": "Seleziona o inserisci una priorità"
       }
+    },
+    "proFeature": {
+      "title": "Funzionalità Pro",
+      "description": "Il sistema di workflow è disponibile solo in Pro. Esegui l’upgrade della tua installazione per accedere a questa funzionalità."
     }
   },
   "toggle": {
@@ -3284,5 +3299,29 @@
       "label": "Profondità di causalità superata",
       "hint": "La catena di eventi causati ha superato la profondità massima; saltato per evitare cicli incontrollati."
     }
+  },
+  "createFromTicket": {
+    "title": "Crea workflow dal ticket",
+    "description": "Crea un workflow in bozza il cui primo passaggio crea un ticket come #{{number}}. Non viene pubblicato nulla.",
+    "cancel": "Annulla",
+    "creating": "Creazione…",
+    "submit": "Crea bozza e apri il designer",
+    "nameLabel": "Nome del workflow",
+    "triggerLabel": "Trigger",
+    "triggerManual": "Manuale (esegui su richiesta)",
+    "ticketCreatedWarning": "Questo workflow crea un ticket e un nuovo ticket attiva di nuovo questo trigger. Aggiungi una condizione prima di pubblicare per evitare un ciclo.",
+    "includeLegend": "Includi dal ticket",
+    "propertiesAlways": "Titolo, descrizione, cliente, contatto, bacheca, categoria e priorità sono sempre inclusi.",
+    "includeAssignment": "Assegnazione",
+    "includeTags": "Tag",
+    "includeCustomFields": "Campi personalizzati",
+    "includeChecklist": "Lista di controllo",
+    "errors": {
+      "nameRequired": "Il nome del workflow è obbligatorio",
+      "generic": "Impossibile creare la bozza del workflow"
+    },
+    "includeCustomFieldsCount": "Campi personalizzati ({{n}})",
+    "includeChecklistCount": "Lista di controllo ({{total}} elementi: {{templates}} da modelli / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Gli elementi dei modelli vengono riapplicati dal modello attuale, quindi le modifiche fatte su questo ticket non vengono riportate."
   }
 }

@@ -40,9 +40,6 @@ describe('CreateCustomContractLineDialog i18n wiring contract', () => {
       'createCustomLine.contractLineNamePlaceholder',
       'createCustomLine.billingFrequencyLabel',
       'createCustomLine.billingFrequencyPlaceholder',
-      'createCustomLine.billingTiming.advance',
-      'createCustomLine.billingTiming.arrears',
-      'createCustomLine.billingTimingHelp',
       'createCustomLine.chooseBillingModel',
       'createCustomLine.chooseBillingModelDescription',
       'createCustomLine.billingModel.fixedTitle',
@@ -64,6 +61,22 @@ describe('CreateCustomContractLineDialog i18n wiring contract', () => {
       expect(source).toContain(`t('${key}'`);
       expect(getLeaf(en, key)).toBeDefined();
     }
+
+    // Billing timing is rendered by the shared BillingTimingField, which owns the
+    // timing option and help keys (Hourly/Usage lines show read-only arrears help).
+    expect(source).toContain('<BillingTimingField');
+    const timingSource = read('../../src/components/billing-dashboard/contracts/BillingTimingField.tsx');
+    for (const key of [
+      'billingTimingField.arrears',
+      'billingTimingField.nonFixedHelp',
+      'billingTimingField.fixedHelp',
+      'billingTimingField.options.arrears',
+      'billingTimingField.options.advance',
+    ]) {
+      expect(timingSource).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+    expect(getLeaf(en, 'createCustomLine.billingTimingHelp')).toBeDefined();
   });
 
   it('T018: bucket/proration labels and validation errors use translated keys', () => {
@@ -111,7 +124,7 @@ describe('CreateCustomContractLineDialog i18n wiring contract', () => {
       new Set(Array.from(source.matchAll(/(?:^|[^\w])t\('([^']+)'/g), (match) => match[1]))
     );
 
-    expect(keys.length).toBeGreaterThan(80);
+    expect(keys.length).toBeGreaterThan(75);
 
     for (const key of keys) {
       const value = getLeaf(xx, key);

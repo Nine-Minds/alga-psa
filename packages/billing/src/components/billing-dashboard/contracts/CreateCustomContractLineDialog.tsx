@@ -19,6 +19,7 @@ import { BucketOverlayInput } from './ContractWizard';
 import { ServiceCatalogPicker } from './ServiceCatalogPicker';
 import { reindexRateInputs } from '../../../lib/serviceRateInputs';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { BillingTimingField } from './BillingTimingField';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
   getErrorMessage,
@@ -59,6 +60,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   const [planType, setPlanType] = useState<PlanType | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('arrears');
+  const [invoiceLineDescription, setInvoiceLineDescription] = useState('');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   // Fixed plan state
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
@@ -270,7 +274,10 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
         contract_line_name: planName,
         contract_line_type: planType!,
         billing_frequency: billingFrequency,
-        billing_timing: billingTiming,
+        billing_timing: planType === 'Fixed' ? billingTiming : 'arrears',
+        invoice_line_description: invoiceLineDescription.trim() || null,
+        start_date: startDate || null,
+        end_date: endDate || null,
         services: serviceConfigs,
         ...(planType === 'Fixed' ? {
           base_rate: fixedServices.some(service => service.pricing_basis === 'bundle') ? baseRate ?? null : null,
@@ -308,6 +315,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
     setPlanType(null);
     setBillingFrequency('monthly');
     setBillingTiming('arrears');
+    setInvoiceLineDescription('');
+    setStartDate('');
+    setEndDate('');
     setBaseRate(undefined);
     setBaseRateInput('');
     setEnableProration(false);
@@ -1057,30 +1067,53 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                 <Label htmlFor="billing-timing">
                   {t('billing.labels.timing', { defaultValue: 'Billing Timing' })}
                 </Label>
-                <CustomSelect
-                  id="billing-timing"
+                <BillingTimingField
+                  lineType={planType ?? 'Fixed'}
                   value={billingTiming}
-                  onValueChange={(value) => setBillingTiming(value as 'arrears' | 'advance')}
-                  options={[
-                    {
-                      value: 'advance',
-                      label: t('createCustomLine.billingTiming.advance', {
-                        defaultValue: 'Advance (bill at start of period)',
-                      }),
-                    },
-                    {
-                      value: 'arrears',
-                      label: t('createCustomLine.billingTiming.arrears', {
-                        defaultValue: 'Arrears (bill at end of period)',
-                      }),
-                    }
-                  ]}
+                  onChange={setBillingTiming}
+                />
+              </div>
+              <div>
+                <Label htmlFor="invoice-line-description">
+                  {t('createCustomLine.invoiceTextLabel', { defaultValue: 'Invoice line text' })}
+                </Label>
+                <Input
+                  id="invoice-line-description"
+                  value={invoiceLineDescription}
+                  onChange={(e) => setInvoiceLineDescription(e.target.value)}
+                  placeholder={t('createCustomLine.invoiceTextPlaceholder', {
+                    defaultValue: 'Printed on the invoice; defaults to the line name',
+                  })}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {t('createCustomLine.billingTimingHelp', {
-                    defaultValue: 'Advance billing is typical for fixed fees; arrears for time/usage-based services.',
+                  {t('createCustomLine.invoiceTextHelp', {
+                    defaultValue: 'This text prints verbatim on the recurring invoice line.',
                   })}
                 </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="line-start-date">
+                    {t('createCustomLine.startDateLabel', { defaultValue: 'Line start date' })}
+                  </Label>
+                  <Input
+                    id="line-start-date"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="line-end-date">
+                    {t('createCustomLine.endDateLabel', { defaultValue: 'Line end date' })}
+                  </Label>
+                  <Input
+                    id="line-end-date"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </section>
@@ -1131,6 +1164,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   key={key}
                   onClick={() => {
                     setPlanType(key);
+                    if (key !== 'Fixed') {
+                      setBillingTiming('arrears');
+                    }
                     clearErrorIfSubmitted();
                   }}
                   className={`text-left p-4 border-2 rounded-lg transition-all focus:outline-none ${

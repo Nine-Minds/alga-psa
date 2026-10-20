@@ -87,17 +87,69 @@ describe('extractLanIp', () => {
 });
 
 describe('mapLevelIoDiskUsage', () => {
-  it('converts partitions to RmmStorageInfo in GB with utilization', () => {
+  const GB = 1024 ** 3;
+
+  it('maps documented disks to capacity-only storage entries in GB', () => {
     const device = makeDevice({
-      disk_partitions: [
-        { mount_point: 'C:', size: 100 * 1024 ** 3, free_space: 25 * 1024 ** 3 },
-        { label: 'no-size partition' },
+      disks: [
+        { disk_type: 'SSD', model: 'Samsung 980', serial_number: 'S1', size: 500 * GB },
+        { disk_type: 'HDD', model: 'WD Blue', serial_number: 'S2', size: 1.5 * GB },
       ],
     });
 
-    expect(mapLevelIoDiskUsage(device)).toEqual([
-      { name: 'C:', total_gb: 100, free_gb: 25, utilization_percent: 75 },
+    const result = mapLevelIoDiskUsage(device);
+    expect(result).toEqual([
+      { name: 'SSD Samsung 980', total_gb: 500 },
+      { name: 'HDD WD Blue', total_gb: 1.5 },
     ]);
+    // Level sends no free space: it must not be fabricated.
+    for (const disk of result) {
+      expect(disk).not.toHaveProperty('free_gb');
+      expect(disk).not.toHaveProperty('utilization_percent');
+    }
+  });
+
+  it('skips disks whose size is zero, negative, missing, or null', () => {
+    const device = makeDevice({
+      disks: [
+        { model: 'zero', size: 0 },
+        { model: 'negative', size: -5 },
+        { model: 'missing' },
+        { model: 'null', size: null },
+        { model: 'kept', size: 10 * GB },
+      ],
+    });
+
+    expect(mapLevelIoDiskUsage(device)).toEqual([{ name: 'kept', total_gb: 10 }]);
+  });
+
+  it('falls back when model or disk_type is missing', () => {
+    const device = makeDevice({
+      disks: [
+        { disk_type: 'NVMe', size: 256 * GB },
+        { model: 'Crucial MX500', disk_type: null, size: 256 * GB },
+        { model: '  ', size: 256 * GB },
+        { size: 256 * GB },
+      ],
+    });
+
+    expect(mapLevelIoDiskUsage(device).map((d) => d.name)).toEqual([
+      'NVMe',
+      'Crucial MX500',
+      'Disk 3',
+      'Disk 4',
+    ]);
+  });
+
+  it('returns [] when disks is absent, null, or empty', () => {
+    expect(mapLevelIoDiskUsage(makeDevice({}))).toEqual([]);
+    expect(mapLevelIoDiskUsage(makeDevice({ disks: null }))).toEqual([]);
+    expect(mapLevelIoDiskUsage(makeDevice({ disks: [] }))).toEqual([]);
+  });
+
+  it('maps a disks payload shaped like the emulator output', () => {
+    const device = makeDevice({ disks: [{ disk_type: 'NVMe', model: 'Samsung', size: 512_000_000_000 }] });
+    expect(mapLevelIoDiskUsage(device)).toEqual([{ name: 'NVMe Samsung', total_gb: 476.84 }]);
   });
 });
 

@@ -573,6 +573,8 @@
         "sending": "Skickar…",
         "rotateSecret": "Rotera hemlighet",
         "rotating": "Roterar…",
+        "retryFailed": "Försök misslyckade leveranser igen",
+        "retryingFailed": "Försöker igen…",
         "back": "Tillbaka till webhookar"
       },
       "deliveries": {
@@ -614,6 +616,8 @@
         "stateChangeFailed": "Det gick inte att uppdatera webhookens tillstånd.",
         "retryQueued": "Ett nytt försök har köats för händelsen {{eventId}}.",
         "retryFailed": "Det gick inte att försöka leverera igen.",
+        "retryFailedQueued": "{{queued}} leveranser har köats för nytt försök, {{skipped}} hoppades över.",
+        "retryFailedFailed": "Det gick inte att försöka de misslyckade leveranserna igen.",
         "invalidHeaderLine": "Ogiltig huvudrad: ”{{line}}”",
         "invalidRetryConfig": "Inställningarna för nya försök måste vara ett JSON-objekt"
       },
@@ -727,6 +731,9 @@
     }
   },
   "connectSso": {
+    "proFeature": {
+      "description": "Kontokoppling med SSO är tillgänglig i Pro. Uppgradera för att ansluta ditt Google Workspace- eller Microsoft 365-konto för smidig autentisering."
+    },
     "linkError": {
       "title": "SSO-kopplingen misslyckades.",
       "no_matching_user": "Kontot du loggade in med är {{providerEmail}}, men din AlgaPSA-inloggning är {{accountEmail}}. Koppla ett konto som använder {{accountEmail}}, eller be administratören för din identitetsleverantör att göra {{accountEmail}} till kontots primära e-postadress.",

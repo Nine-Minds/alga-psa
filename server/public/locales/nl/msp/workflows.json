@@ -565,7 +565,8 @@
       "exportCsv": "CSV exporteren",
       "exportJson": "JSON exporteren",
       "close": "Sluiten",
-      "viewRunDetails": "Uitvoeringsdetails bekijken"
+      "viewRunDetails": "Uitvoeringsdetails bekijken",
+      "backToEvents": "Terug naar gebeurtenissen"
     },
     "table": {
       "schemaConflict": "catalogus ≠ indiening",
@@ -627,7 +628,8 @@
     },
     "actions": {
       "refresh": "Vernieuwen",
-      "loadMore": "Meer laden"
+      "loadMore": "Meer laden",
+      "backToList": "Terug naar dead-letter"
     },
     "table": {
       "columns": {
@@ -1517,7 +1519,9 @@
         "summary_one": "{{count}} gebeurtenis overgeslagen in de afgelopen {{days}} dagen — {{reasons}}",
         "summary_other": "{{count}} gebeurtenissen overgeslagen in de afgelopen {{days}} dagen — {{reasons}}",
         "lastSkipped": "Laatst overgeslagen {{when}}",
-        "view": "Overgeslagen gebeurtenissen bekijken"
+        "view": "Overgeslagen gebeurtenissen bekijken",
+        "summary_few": "{{count}} gebeurtenissen overgeslagen in de afgelopen {{days}} dagen — {{reasons}}",
+        "summary_many": "{{count}} gebeurtenissen overgeslagen in de afgelopen {{days}} dagen — {{reasons}}"
       },
       "drawer": {
         "title": "Overgeslagen gebeurtenissen",
@@ -1860,7 +1864,9 @@
     "insertionPointLabel": "Nieuwe stappen komen hier",
     "emptyBranchPrompt": "Voeg een stap toe aan deze tak",
     "emptyActivePrompt": "Nieuwe stappen komen hier. Kies er een uit het palet.",
-    "stepCount": "({{count}} stappen)"
+    "stepCount": "({{count}} stappen)",
+    "stepCount_few": "({{count}} stappen)",
+    "stepCount_many": "({{count}} stappen)"
   },
   "expressionEditor": {
     "ariaLabel": "Expressie-editor",
@@ -2373,7 +2379,12 @@
       "currentRun": "Uitvoering {{id}}",
       "backToWorkflow": "Terug naar workflow"
     },
-    "title": "Workflow-uitvoeringsstudio"
+    "title": "Workflow-uitvoeringsstudio",
+    "communityEdition": {
+      "title": "Pro-functie",
+      "description": "De studio voor workflowuitvoeringen is alleen beschikbaar in Pro.",
+      "runId": "Uitvoerings-ID: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3146,6 +3157,10 @@
         "selectBoard": "Selecteer of voer een bord in",
         "selectPriority": "Selecteer of voer een prioriteit in"
       }
+    },
+    "proFeature": {
+      "title": "Pro-functie",
+      "description": "Het workflowsysteem is alleen beschikbaar in Pro. Upgrade uw installatie om toegang te krijgen tot deze functie."
     }
   },
   "toggle": {
@@ -3284,5 +3299,29 @@
       "label": "Causaliteitsdiepte overschreden",
       "hint": "De keten van veroorzaakte gebeurtenissen overschreed de maximale diepte; overgeslagen om op hol geslagen lussen te voorkomen."
     }
+  },
+  "createFromTicket": {
+    "title": "Workflow maken van ticket",
+    "description": "Maakt een conceptworkflow waarvan de eerste stap een ticket zoals #{{number}} aanmaakt. Er wordt niets gepubliceerd.",
+    "cancel": "Annuleren",
+    "creating": "Aanmaken…",
+    "submit": "Concept maken en ontwerper openen",
+    "nameLabel": "Workflownaam",
+    "triggerLabel": "Trigger",
+    "triggerManual": "Handmatig (op verzoek uitvoeren)",
+    "ticketCreatedWarning": "Deze workflow maakt een ticket aan, en een nieuw ticket activeert deze trigger opnieuw. Voeg vóór het publiceren een voorwaarde toe om een lus te voorkomen.",
+    "includeLegend": "Overnemen uit het ticket",
+    "propertiesAlways": "Titel, beschrijving, klant, contactpersoon, bord, categorie en prioriteit worden altijd overgenomen.",
+    "includeAssignment": "Toewijzing",
+    "includeTags": "Labels",
+    "includeCustomFields": "Aangepaste velden",
+    "includeChecklist": "Controlelijst",
+    "errors": {
+      "nameRequired": "Workflownaam is vereist",
+      "generic": "Het conceptworkflow kon niet worden aangemaakt"
+    },
+    "includeCustomFieldsCount": "Aangepaste velden ({{n}})",
+    "includeChecklistCount": "Controlelijst ({{total}} items: {{templates}} uit sjablonen / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Items uit sjablonen worden opnieuw toegepast vanuit het huidige sjabloon, dus wijzigingen op dit ticket worden niet overgenomen."
   }
 }

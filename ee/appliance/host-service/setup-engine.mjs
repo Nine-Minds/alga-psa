@@ -8,6 +8,7 @@ import path from 'node:path';
 import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 import { redeemInstallCode, deriveApplianceId, licenseSeedFromRedeem } from './install-code.mjs';
 import { writeSecureJsonFileAtomic } from './update-state.mjs';
+import { describeTuningResult, tuneFluxControllers } from './flux-controller-tuning.mjs';
 import {
   resolveAddressesWithServers,
   resolverLookup,
@@ -842,6 +843,26 @@ export function installFlux(options = {}) {
       updatedAt: nowIso()
     }, stateFile);
 
+    return failure;
+  }
+
+  // `flux install` (re)applies upstream's HA defaults; re-apply the single-node
+  // controller tuning every time (see flux-controller-tuning.mjs).
+  const tuning = (options.tuneFluxControllers || tuneFluxControllers)({ kubeconfigPath });
+  if (!tuning.ok) {
+    const failure = preflightFailure(
+      'flux',
+      'tune-flux-controllers',
+      'Flux controllers were installed but could not be configured for single-node operation.',
+      `Verify cluster access to Deployments in flux-system, then retry. ${describeTuningResult(tuning)}`
+    );
+    writeInstallState({
+      status: 'flux-install-blocked',
+      phase: 'flux',
+      lastAction: failure.message,
+      failure,
+      updatedAt: nowIso()
+    }, stateFile);
     return failure;
   }
 

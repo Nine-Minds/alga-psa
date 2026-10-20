@@ -105,18 +105,14 @@ const connectedPbx = (): ThreecxCardState['pbx'] => ({
   capabilities: { xapi: true, callControl: true },
 });
 
-// Every control in the card shares one `busy` flag that stays set until the
-// action's reload resolves, so a click fired the instant the previous action's
-// mock was called lands on a disabled control and is swallowed. Wait for the
-// control to come back before clicking it.
-async function clickWhenEnabled(find: () => Element | null): Promise<void> {
-  const enabled = await waitFor(() => {
-    const node = find() as HTMLButtonElement | null;
-    if (!node || node.disabled) throw new Error('control is still busy');
-    return node;
+const idleButton = async (name: string): Promise<HTMLButtonElement> => {
+  let button: HTMLButtonElement | null = null;
+  await waitFor(() => {
+    button = screen.getByRole('button', { name }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
   });
-  fireEvent.click(enabled);
-}
+  return button!;
+};
 
 describe('ThreecxIntegrationSettings', () => {
   beforeEach(() => {
@@ -280,13 +276,16 @@ describe('ThreecxIntegrationSettings', () => {
     const { container } = render(<ThreecxIntegrationSettings />);
     await screen.findByText('3CX');
     await waitFor(() => expect(container.querySelector('#threecx-cdr-toggle')).toBeTruthy());
-    await clickWhenEnabled(() => container.querySelector('#threecx-cdr-toggle'));
+    fireEvent.click(container.querySelector('#threecx-cdr-toggle')!);
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ enabled: true, lookbackDays: 30 }));
-    await clickWhenEnabled(() => screen.getByRole('button', { name: 'Push now' }));
+    // Each action holds the panel busy (buttons disabled) until its reload
+    // settles; a click landing before that is dropped, so wait for idle.
+    fireEvent.click(await idleButton('Push now'));
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledTimes(2));
-    await clickWhenEnabled(() => screen.getByRole('button', { name: 'Import now' }));
+    fireEvent.click(await idleButton('Import now'));
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledTimes(3));
-    await clickWhenEnabled(() => container.querySelector('#threecx-phonebook-toggle'));
+    await idleButton('Import now');
+    fireEvent.click(container.querySelector('#threecx-phonebook-toggle')!);
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ enabled: true, schedule: 'daily' }));
   });
 

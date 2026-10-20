@@ -13,7 +13,9 @@ import {
   DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
   resolveRecurringAuthoringPolicy,
 } from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
-import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { normalizeLiveRecurringStorage, normalizeRecurringStorageForLineType } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
+import { toDateOnly } from '../lib/billing/dateOnly';
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -31,6 +33,10 @@ class ContractLineMappingDomainError extends Error {
 }
 
 function contractLineMappingActionErrorFrom(error: unknown): ContractLineMappingActionError | null {
+  if (isContractLineTimingNotAllowedError(error)) {
+    return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
+  }
+
   if (error instanceof ContractLineMappingDomainError) {
     if (error.message.startsWith('Permission denied:')) {
       return permissionError(error.message);
@@ -115,11 +121,18 @@ function normalizeDetailedContractLine<
   T extends {
     cadence_owner?: IContractLineMapping['cadence_owner'] | null;
     billing_timing?: IContractLineMapping['billing_timing'] | null;
+    start_date?: string | Date | null;
+    end_date?: string | Date | null;
   },
 >(
   line: T,
 ): T & Pick<IContractLineMapping, 'cadence_owner' | 'billing_timing'> {
-  return normalizeLiveRecurringStorage(line);
+  const normalized = normalizeLiveRecurringStorage(line);
+  return {
+    ...normalized,
+    ...('start_date' in line ? { start_date: toDateOnly(line.start_date) } : {}),
+    ...('end_date' in line ? { end_date: toDateOnly(line.end_date) } : {}),
+  } as T & Pick<IContractLineMapping, 'cadence_owner' | 'billing_timing'>;
 }
 
 type DetailedContractLineResultRow =
@@ -144,7 +157,8 @@ export async function ensureTemplateLineSnapshot(
   }
 
   const now = new Date().toISOString();
-  const contractRecurringStorage = normalizeLiveRecurringStorage(contractLine);
+  // LEVERAGE: pattern recurring-storage-copy — copy sites each re-derive (billing_timing, cadence_owner) from the source row; a shared copy helper would remove the repeated per-site normalization
+  const contractRecurringStorage = normalizeRecurringStorageForLineType(contractLine, contractLine.contract_line_type);
 
   // All terms columns are now stored directly on contract_lines
   await tenantScopedTable(knex, tenant, 'contract_template_lines')
@@ -531,6 +545,7 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
             'lines.display_order',
             'lines.custom_rate',
             'lines.cadence_owner',
+            'lines.invoice_line_description',
             'lines.created_at',
             'lines.template_line_name as contract_line_name',
             'lines.billing_frequency',
@@ -714,6 +729,9 @@ export const updateContractLineAssociation = withAuth(async (
       if (dbUpdateData.custom_rate === undefined) {
         dbUpdateData.custom_rate = null;
       }
+      if (dbUpdateData.custom_rate !== null && (!Number.isFinite(Number(dbUpdateData.custom_rate)) || Number(dbUpdateData.custom_rate) < 0)) {
+        throw new ContractLineMappingDomainError('Rate must be zero or greater.');
+      }
 
       // Remove tenant field if present to prevent override
       delete dbUpdateData.tenant;
@@ -725,8 +743,9 @@ export const updateContractLineAssociation = withAuth(async (
             template_id: contractId,
             template_line_id: contractLineId,
           })
-          .first(['cadence_owner', 'billing_timing']);
+          .first(['cadence_owner', 'billing_timing', 'line_type']);
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          lineType: existingTemplateLine?.line_type ?? null,
           cadenceOwner: dbUpdateData.cadence_owner,
           fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: dbUpdateData.billing_timing,

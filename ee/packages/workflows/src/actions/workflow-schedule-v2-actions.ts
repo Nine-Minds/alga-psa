@@ -441,7 +441,7 @@ export const getWorkflowScheduleAction = withAuth(async (user, _ctx, input: unkn
     return throwHttpError(400, 'Tenant not found');
   }
 
-  const row = await WorkflowScheduleStateModel.getById(knex, parsed.scheduleId);
+  const row = await WorkflowScheduleStateModel.getById(knex, parsed.scheduleId, tenant);
   if (!row || row.tenant !== tenant) {
     return throwHttpError(404, 'Not found');
   }
@@ -496,7 +496,7 @@ async function mutateWorkflowSchedule(
     return { ok: true, schedule };
   }
 
-  const existing = await WorkflowScheduleStateModel.getById(knex, existingScheduleId);
+  const existing = await WorkflowScheduleStateModel.getById(knex, existingScheduleId, tenant);
   if (!existing || existing.tenant !== tenant) {
     return throwHttpError(404, 'Not found');
   }
@@ -534,7 +534,7 @@ export const pauseWorkflowScheduleAction = withAuth(async (user, _ctx, input: un
   const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
 
-  const existing = await WorkflowScheduleStateModel.getById(knex, parsed.scheduleId);
+  const existing = await WorkflowScheduleStateModel.getById(knex, parsed.scheduleId, tenant);
   if (!existing || existing.tenant !== tenant) {
     return throwHttpError(404, 'Not found');
   }
@@ -552,7 +552,7 @@ export const resumeWorkflowScheduleAction = withAuth(async (user, _ctx, input: u
   const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
 
-  const existing = await WorkflowScheduleStateModel.getById(knex, parsed.scheduleId);
+  const existing = await WorkflowScheduleStateModel.getById(knex, parsed.scheduleId, tenant);
   if (!existing || existing.tenant !== tenant) {
     return throwHttpError(404, 'Not found');
   }
@@ -570,7 +570,7 @@ export const deleteWorkflowScheduleAction = withAuth(async (user, _ctx, input: u
   const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
 
-  const existing = await WorkflowScheduleStateModel.getById(knex, parsed.scheduleId);
+  const existing = await WorkflowScheduleStateModel.getById(knex, parsed.scheduleId, tenant);
   if (!existing || existing.tenant !== tenant) {
     return throwHttpError(404, 'Not found');
   }

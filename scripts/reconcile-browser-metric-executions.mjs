@@ -11,7 +11,9 @@ try {
   if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY,
     `\nBrowser metric export reconciliation: **${result.status}**. Scope: observed executions only; not release readiness.\n\n`
     + result.records.map(record => `- ${record.edition}, attempt ${record.runAttempt}: ${record.status}; export=${record.exportStatus}; legacy run exports=${record.legacyRunExportCount}; unverified current-attempt exports=${record.unverifiedCurrentAttemptRunExportCount}; recorder=${record.recorderStatus ?? 'unknown'}/${record.recorderConclusion ?? 'unknown'}; reasons=${record.issues.join(',') || 'none'}\n`).join(''));
-  process.exitCode = ['passed', 'not-required'].includes(result.status) ? 0 : 1;
+  // lane-unsuccessful: the browser job itself failed or was cancelled; that is
+  // the regression gate's finding, not a reconciliation failure.
+  process.exitCode = ['passed', 'not-required', 'lane-unsuccessful'].includes(result.status) ? 0 : 1;
 } catch {
   if (safeOutput) await rm(output, { force: true }).catch(() => {});
   console.error('Browser metric execution reconciliation failed'); process.exitCode = 1;

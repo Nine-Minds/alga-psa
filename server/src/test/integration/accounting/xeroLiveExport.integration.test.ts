@@ -322,18 +322,79 @@ describe('Live Xero export integration', () => {
   }, HOOK_TIMEOUT);
 
   it('T020: missing net_amount is a per-line readiness error and never reaches the Xero adapter', async () => {
-    const { batchId, lineId } = await seedLiveXeroBatch({ netAmount: null });
-
-    await expect(service.executeBatch(batchId)).rejects.toMatchObject({
-      code: 'ACCOUNTING_EXPORT_VALIDATION_FAILED'
+    // Keep a canonical fixed allocation beneath a consolidated parent. A null
+    // parent amount must be caught as a per-line readiness error before fixed
+    // allocation expansion can coerce it or invoke the adapter.
+    const tenant = ctx.tenantId;
+    const clientId = ctx.clientId;
+    const serviceId = await createTestService(ctx, {
+      service_name: 'Consolidated fixed service', billing_method: 'fixed', default_rate: 5000,
+      unit_of_measure: 'device', description: 'T020 consolidated parent fixture'
     });
+    await ensureClient(clientId, 'T020 consolidated parent client');
+    const invoiceId = uuidv4();
+    const chargeId = uuidv4();
+    const detailId = uuidv4();
+    const configId = uuidv4();
+    const contractId = uuidv4();
+    const contractLineId = uuidv4();
+    const now = new Date().toISOString();
+    await ctx.db('contracts').insert({ tenant, contract_id: contractId,
+      contract_name: 'Missing net amount fixture contract', billing_frequency: 'monthly',
+      is_active: true, is_template: false });
+    await ctx.db('contract_lines').insert({ tenant, contract_line_id: contractLineId,
+      contract_id: contractId, contract_line_name: 'Consolidated fixed fixture',
+      billing_frequency: 'monthly', is_active: true, is_template: false });
+    await ctx.db('contract_line_service_configuration').insert({ tenant, config_id: configId,
+      contract_line_id: contractLineId, service_id: serviceId, configuration_type: 'Fixed', quantity: 1 });
+    await ctx.db('invoices').insert({ tenant, invoice_id: invoiceId, client_id: clientId,
+      invoice_number: `INV-${uuidv4().slice(0, 8)}`, invoice_date: now, due_date: now,
+      subtotal: 5000, tax: 0, total_amount: 5000, currency_code: 'USD', status: 'draft',
+      created_at: now, updated_at: now });
+    await ctx.db('invoice_charges').insert({ tenant, item_id: chargeId, invoice_id: invoiceId,
+        service_id: null, description: 'Consolidated fixed parent with missing net amount', quantity: 1,
+        unit_price: 5000, net_amount: null, total_price: 5000, tax_amount: 0,
+        is_manual: false, is_discount: false, created_at: now, updated_at: now });
+    await ctx.db('invoice_charge_details').insert({ tenant, item_detail_id: detailId, item_id: chargeId,
+      service_id: serviceId, config_id: configId, quantity: 1, rate: 5000,
+      service_period_start: '2025-01-01', service_period_end: '2025-01-31' });
+    await ctx.db('invoice_charge_fixed_details').insert({ tenant, item_detail_id: detailId,
+      base_rate: 5000, allocated_amount: 5000, tax_amount: 0, enable_proration: false,
+      fmv: 5000, proportion: 1 });
+    const batch = await service.createBatch({ adapter_type: 'xero', export_type: 'invoice',
+      target_realm: 'xero-t020-isolated', filters: { start_date: '2025-01-01', end_date: '2025-01-31' },
+      created_by: ctx.user.user_id });
+    const [line] = await service.appendLines(batch.batch_id, { lines: [{ batch_id: batch.batch_id,
+      document_id: invoiceId, document_line_id: chargeId, client_id: clientId,
+      amount_cents: 5000, currency_code: 'USD', service_period_start: '2025-01-01T00:00:00.000Z',
+      service_period_end: '2025-01-31T00:00:00.000Z',
+      payload: { service_period_source: 'canonical_detail_periods' } }] });
+    const reservationSpy = vi.spyOn(repository, 'reserveInvoicesForExport');
+
+    const executionError = await service.executeBatch(batch.batch_id).then(() => null, (error: unknown) => error);
+    expect(executionError).toMatchObject({
+      code: 'ACCOUNTING_EXPORT_VALIDATION_FAILED',
+      details: { validationErrors: [expect.objectContaining({ line_id: line.line_id, code: 'missing_net_amount' })] },
+    });
+    const executionId = reservationSpy.mock.calls[0]?.[4];
+    expect(executionId).toEqual(expect.any(String));
+    const persistedErrors = await repository.listErrors(batch.batch_id);
+    expect(persistedErrors).toEqual(expect.arrayContaining([expect.objectContaining({
+      batch_id: batch.batch_id, line_id: line.line_id, code: 'missing_net_amount',
+    })]));
     expect(xeroCreateMock).not.toHaveBeenCalled();
 
-    const errors = await repository.listErrors(batchId);
-    expect(errors).toContainEqual(expect.objectContaining({
-      line_id: lineId,
-      code: 'missing_net_amount'
-    }));
+    // A delayed failure callback from this attempt cannot overwrite a
+    // replacement reservation or append its stale diagnostics.
+    const replacementExecutionId = uuidv4();
+    await ctx.db('accounting_export_batches').where({ tenant, batch_id: batch.batch_id })
+      .update({ status: 'validating', execution_id: replacementExecutionId });
+    await expect(repository.failExecution(batch.batch_id, executionId!, 'stale attempt', [{
+      line_id: line.line_id, code: 'stale_validation', message: 'stale error',
+    }])).resolves.toBe(false);
+    const replacementBatch = await repository.getBatch(batch.batch_id);
+    expect(replacementBatch).toMatchObject({ status: 'validating', execution_id: replacementExecutionId });
+    expect(await repository.listErrors(batch.batch_id)).toEqual(persistedErrors);
   }, HOOK_TIMEOUT);
 
   it('T021: a realm-less Xero batch fails with XERO_REALM_REQUIRED and never reaches the Xero client', async () => {

@@ -133,4 +133,31 @@ describe('contact list indexed search', () => {
 
     expectStructurallyValidSql(sql, bindings);
   });
+
+  it('adds phone, legacy-notes and client-name legs for a digit query', () => {
+    const { sql, bindings } = buildContactListSearchQuery(trx, TENANT, '521 762', ['contact:read'], USER_ID);
+
+    expectStructurallyValidSql(sql, bindings);
+    expect(sql).toContain(') phone_contact_match');
+    expect(sql).toContain(') legacy_note_contact');
+    expect(sql).toContain(') client_name_contact');
+    expect(sql).toContain('as "client_name_match"');
+    // Digits-only on both sides is what makes a partial number match.
+    expect(sql).toContain("regexp_replace(phone_contact_match.phone_number, '[^0-9]+', '', 'g')");
+    expect(bindings).toContain('521762');
+    expect(bindings).toContain('%521 762%');
+    // The co-located contacts→clients join carries the tenant equality.
+    expect(sql).toMatch(/"client_name_match"\."tenant" = "client_name_contact"\."tenant"/);
+    expect(() => knex.raw(sql, bindings as Knex.RawBinding[]).toSQL().toNative()).not.toThrow();
+  });
+
+  it('omits the phone leg when the query has fewer than three digits', () => {
+    const { sql, bindings } = buildContactListSearchQuery(trx, TENANT, 'Acme 12', ['contact:read'], USER_ID);
+
+    expectStructurallyValidSql(sql, bindings);
+    expect(sql).not.toContain('phone_contact_match');
+    // Notes and client-name legs are not conditional.
+    expect(sql).toContain(') legacy_note_contact');
+    expect(sql).toContain(') client_name_contact');
+  });
 });

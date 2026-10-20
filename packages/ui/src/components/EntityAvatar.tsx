@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useTheme } from 'next-themes';
 import { generateEntityColor, adaptColorsForDarkMode } from '../lib/colorUtils';
 import { cn } from '../lib/utils';
@@ -79,6 +80,7 @@ export const EntityAvatar = ({
   getInitials = getDefaultInitials,
   altText,
 }: EntityAvatarProps) => {
+  const { t } = useTranslation('common');
   const { resolvedTheme } = useTheme();
   // Track mount state to avoid hydration mismatch - useTheme returns undefined on server
   const [mounted, setMounted] = React.useState(false);
@@ -180,7 +182,7 @@ export const EntityAvatar = ({
           <img
             ref={imgRef}
             src={imageUrl!}
-            alt={altText || `${entityName || 'Entity'} image`}
+            alt={altText || (entityName ? t('entityAvatar.alt', { name: entityName }) : t('entityAvatar.defaultAlt'))}
             className={cn(
               'absolute inset-0 h-full w-full object-cover transition-opacity duration-300',
               imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'

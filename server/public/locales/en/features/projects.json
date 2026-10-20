@@ -85,7 +85,9 @@
     "noService": "No service",
     "servicePlaceholder": "Select default service",
     "serviceHelp": "Used for time entries on this phase's tasks when the task itself sets no service.",
-    "serviceDisplayLabel": "Service"
+    "serviceDisplayLabel": "Service",
+    "taskCount_few": "{{count}} tasks",
+    "taskCount_many": "{{count}} tasks"
   },
   "projectList": {
     "addProject": "Add Project",
@@ -314,7 +316,9 @@
     "confirmMoveTasksMessage": "Are you sure you want to move {{count}} selected tasks to phase \"{{targetPhase}}\"?",
     "taskTypeFallback": "Task",
     "timeline": "Timeline",
-    "loadingTimeline": "Loading timeline..."
+    "loadingTimeline": "Loading timeline...",
+    "bulkTagsSuccess_few": "Tags added to {{count}} tasks",
+    "bulkTagsSuccess_many": "Tags added to {{count}} tasks"
   },
   "taskForm": {
     "addTitle": "Add New Task",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "Inherits {{service}} from the project.",
     "startDateLabel": "Start Date",
     "taskStartDateLabel": "Task Start Date",
-    "startDatePlaceholder": "Select start date"
+    "startDatePlaceholder": "Select start date",
+    "createdTicketsIntro_few": "You created {{count}} tickets during this session:",
+    "createdTicketsIntro_many": "You created {{count}} tickets during this session:",
+    "documentCleanupFailure_few": "{{count}} documents could not be deleted and will remain in Documents",
+    "documentCleanupFailure_many": "{{count}} documents could not be deleted and will remain in Documents",
+    "documentsCleanupIntro_few": "You have {{count}} documents that were {{cleanupType}}:",
+    "documentsCleanupIntro_many": "You have {{count}} documents that were {{cleanupType}}:",
+    "ticketCleanupFailure_few": "{{count}} tickets could not be deleted",
+    "ticketCleanupFailure_many": "{{count}} tickets could not be deleted"
   },
   "taskDependencies": {
     "title": "Dependencies",
@@ -644,7 +656,13 @@
     },
     "exportSelected": "Export {{count}} Selected",
     "selectedTasksNotice_one": "Exporting {{count}} selected task.",
-    "selectedTasksNotice_other": "Exporting {{count}} selected tasks."
+    "selectedTasksNotice_other": "Exporting {{count}} selected tasks.",
+    "phasesSelected_few": "{{selected}} of {{total}} phases selected",
+    "phasesSelected_many": "{{selected}} of {{total}} phases selected",
+    "selectedTasksNotice_few": "Exporting {{count}} selected tasks.",
+    "selectedTasksNotice_many": "Exporting {{count}} selected tasks.",
+    "success_few": "Successfully exported {{count}} tasks to CSV.",
+    "success_many": "Successfully exported {{count}} tasks to CSV."
   },
   "import": {
     "title": "Import Phases & Tasks",
@@ -765,7 +783,9 @@
     "statusUnmatchedTooltip": "Status does not match any existing status for this phase. Resolve in the mapping steps before import.",
     "statusFallbackSuffix": "Default",
     "statusFallbackTooltip": "Using the default fallback status for this phase.",
-    "inPhaseBadge": "in {{phase}}"
+    "inPhaseBadge": "in {{phase}}",
+    "taskCountLabel_few": "({{count}} tasks)",
+    "taskCountLabel_many": "({{count}} tasks)"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +859,9 @@
       "restrictedTooltip": "Limited details — you are not assigned to this task",
       "badgeCount_one": "{{count}} Task",
       "billsToProject": "Time bills as project time",
-      "billsToClient": "Time bills at the client level"
+      "billsToClient": "Time bills at the client level",
+      "badgeCount_few": "{{count}} Tasks",
+      "badgeCount_many": "{{count}} Tasks"
     },
     "bulkMoveTask": {
       "title": "Move Tasks",
@@ -943,7 +965,7 @@
       "choose_status": "Choose a status",
       "no_statuses_available": "No statuses available",
       "no_statuses_available_hint": "Create statuses in Settings → Projects → Statuses first.",
-      "task_status_library_title": "Project Task Status Library",
+      "task_status_library_title": "Task Status Library",
       "task_status_library_description": "Manage your organization's project task statuses. These statuses can be used across all projects.",
       "task_status_library_empty": "No project task statuses found",
       "task_status_library_empty_hint": "Create your first status to get started",
@@ -983,12 +1005,33 @@
       "last_closed_error": "At least one status must remain marked as closed",
       "last_closed_delete_error": "Cannot delete the last closed status for this type.",
       "addStatus": "Add new status",
-      "add_from_library": "Add Status"
+      "add_from_library": "Add Status",
+      "closed_badge": "(Closed)",
+      "drag_to_reorder": "Drag to reorder",
+      "refresh_library": "Refresh status library",
+      "all_library_statuses_used": "Every library status is already a column here. Use Create New to add another one.",
+      "delete_no_move_target": "There is no other status column to move these tasks into. Add another column first.",
+      "delete_scope_help": "This removes the column from this scope only. The status stays in your Task Status Library.",
+      "fork_title": "Use custom status columns for this phase?",
+      "fork_message": "This phase will stop inheriting the project default columns. Status columns you add to Project Defaults later will not appear here until you switch the phase back.",
+      "fork_confirm": "Use custom statuses",
+      "phase_uses_custom": "This phase has its own status columns and no longer inherits project defaults.",
+      "pending_title": "Unsaved status column changes",
+      "pending_apply_hint": "Nothing changes until you save.",
+      "pending_fork": "{{phase}} will switch to its own status columns.",
+      "pending_revert": "{{phase}} will go back to the project default columns.",
+      "pending_order": "New column order for {{scope}}.",
+      "pending_preview_hint": "Showing the project default columns as a preview. Save to apply this switch, then add or remove columns here.",
+      "rename_impact_title": "Where this rename lands",
+      "rename_impact_following": "Follows this rename immediately: {{columns}} column(s) in {{projects}}.",
+      "rename_impact_keeping": "Keeps the name \"{{name}}\": {{columns}} column(s) in {{projects}}. These columns are not linked to this status in your Task Status Library, so those projects keep reporting the old name until you rename the column there.",
+      "rename_impact_more": "and {{remaining}} more",
+      "rename_impact_none": "This status is not used as a column in any project yet."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Manage Status Columns",
+      "manage_title": "Task Status Columns",
       "manage_description": "Define the status columns for tasks in this template. Drag to reorder.",
       "template_defaults": "Template Defaults",
       "added": "Status column added",
@@ -1014,7 +1057,8 @@
       "replaced": "Status column replaced",
       "replace_failed": "Failed to replace status column",
       "repair_status_columns": "Repair status columns",
-      "unresolved_apply_guard": "Status columns need repair ({{count}})"
+      "unresolved_apply_guard": "Status columns need repair ({{count}})",
+      "pending_row_hint": "Fill in the empty status column before adding another one."
     },
     "list": {
       "title": "Project Templates",
@@ -1193,7 +1237,9 @@
       "taskCount_other": "{{count}} tasks",
       "unknownUser": "Unknown",
       "unknownTask": "Unknown task",
-      "checklistCountTitle": "{{count}} checklist item"
+      "checklistCountTitle": "{{count}} checklist item",
+      "taskCount_few": "{{count}} tasks",
+      "taskCount_many": "{{count}} tasks"
     },
     "taskForm": {
       "addTitle": "Add Task",
@@ -1456,18 +1502,6 @@
     "loading": "Loading...",
     "empty": "No comments yet. Be the first to comment!"
   },
-  "addStatusDialog": {
-    "phaseTitle": "Add Phase Status from Library",
-    "projectTitle": "Add Status from Library",
-    "selectLabel": "Select from Status Library",
-    "placeholder": "Choose a status",
-    "helpText": "Select a status from your tenant's status library to add to this project.",
-    "noStatusesTitle": "No statuses available",
-    "noStatusesDescription": "Create statuses in Settings → Projects → Statuses first.",
-    "adding": "Adding...",
-    "addStatus": "Add Status",
-    "addFailed": "Failed to add status. Please try again."
-  },
   "taskStatusSelect": {
     "ariaLabel": "Task status",
     "selectStatus": "Select status"
@@ -1554,7 +1588,7 @@
     "statusColor": "Status Color",
     "changeColor": "Change color",
     "markClosed": "Mark as closed status",
-    "markClosedDescription": "Tasks in closed statuses are considered complete",
+    "markClosedDescription": "Tasks with this status will be considered complete",
     "creating": "Creating...",
     "createButton": "Create Status",
     "nameRequired": "Status name is required",
@@ -1615,7 +1649,9 @@
       "submitting": "Adding tags...",
       "confirm_one": "Add Tags to {{count}} Task",
       "confirm_other": "Add Tags to {{count}} Tasks",
-      "failedHeading": "Tags could not be added to the following tasks:"
+      "failedHeading": "Tags could not be added to the following tasks:",
+      "confirm_few": "Add Tags to {{count}} Tasks",
+      "confirm_many": "Add Tags to {{count}} Tasks"
     }
   },
   "common:actions": {
@@ -1678,7 +1714,9 @@
       "lockedSummary_other": "{{count}} entries totaling {{amount}} are locked and will not change.",
       "edit": "Edit terms",
       "saved": "Billing terms updated",
-      "dialogTitle": "Edit billing terms"
+      "dialogTitle": "Edit billing terms",
+      "lockedSummary_few": "{{count}} entries totaling {{amount}} are locked and will not change.",
+      "lockedSummary_many": "{{count}} entries totaling {{amount}} are locked and will not change."
     },
     "setup": {
       "title": "Bill this project",
@@ -2027,5 +2065,22 @@
     "question": "Dependencies are not enforced, so you can continue. Do you want to?",
     "proceed": "Continue anyway",
     "cancel": "Cancel"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Compact"
+    },
+    "spacious": {
+      "label": "Spacious"
+    },
+    "decrease": {
+      "title": "Decrease column width"
+    },
+    "increase": {
+      "title": "Increase column width"
+    },
+    "reset": {
+      "title": "Reset to default"
+    }
   }
 }

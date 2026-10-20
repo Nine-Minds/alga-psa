@@ -443,5 +443,12 @@
     "expires": "Scade il {{date}}",
     "recentBurn": "Utilizzo recente",
     "timeEntry": "Inserimento ore"
+  },
+  "bucketUsage": {
+    "contractLine": "Linea contrattuale per pacchetto ore",
+    "usage": "Utilizzo",
+    "hoursUsed": "{{hours}} ore utilizzate",
+    "hoursTotal": "{{hours}} ore totali",
+    "rolloverHours": "Include {{hours}} ore riportate"
   }
 }

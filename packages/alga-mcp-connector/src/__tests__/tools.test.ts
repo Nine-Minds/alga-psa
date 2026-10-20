@@ -17,6 +17,21 @@ const REGISTRY: ChatApiRegistryEntry[] = [
     approvalRequired: false,
     parameters: [{ name: 'id', in: 'path', required: true }],
   },
+  {
+    id: 'contacts.create',
+    method: 'post',
+    path: '/api/v1/contacts',
+    displayName: 'Create Contact',
+    tags: ['Contacts'],
+    approvalRequired: true,
+    parameters: [],
+    requestBodySchema: {
+      type: 'object',
+      properties: {
+        phone_numbers: { type: 'array', items: { type: 'object', properties: { phone: { type: 'string' } } } },
+      },
+    },
+  },
 ];
 
 function fakeClient(result: EndpointResult): InstanceClient {
@@ -45,6 +60,14 @@ describe('handleSearchApiRegistry', () => {
     const data = out.data as { results: Array<{ entryId: string; method: string }> };
     expect(data.results[0].entryId).toBe('tickets.get');
     expect(data.results[0].method).toBe('GET');
+  });
+
+  it('surfaces requestBodySchema for write endpoints', async () => {
+    const out = await handleSearchApiRegistry(REGISTRY, { query: 'create contact' });
+    expect(out.isError).toBe(false);
+    const data = out.data as { results: Array<{ entryId: string; requestBodySchema?: any }> };
+    const hit = data.results.find((r) => r.entryId === 'contacts.create');
+    expect(hit?.requestBodySchema?.properties.phone_numbers.items.properties.phone).toEqual({ type: 'string' });
   });
 });
 

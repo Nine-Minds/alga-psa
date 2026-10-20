@@ -565,7 +565,8 @@
       "exportCsv": "Exportar CSV",
       "exportJson": "Exportar JSON",
       "close": "Cerrar",
-      "viewRunDetails": "Ver detalles de la ejecución"
+      "viewRunDetails": "Ver detalles de la ejecución",
+      "backToEvents": "Volver a eventos"
     },
     "table": {
       "schemaConflict": "catálogo ≠ envío",
@@ -627,7 +628,8 @@
     },
     "actions": {
       "refresh": "Actualizar",
-      "loadMore": "Cargar más"
+      "loadMore": "Cargar más",
+      "backToList": "Volver a mensajes fallidos"
     },
     "table": {
       "columns": {
@@ -1517,7 +1519,9 @@
         "summary_one": "Se omitió {{count}} evento en los últimos {{days}} días — {{reasons}}",
         "summary_other": "Se omitieron {{count}} eventos en los últimos {{days}} días — {{reasons}}",
         "lastSkipped": "Última omisión {{when}}",
-        "view": "Ver eventos omitidos"
+        "view": "Ver eventos omitidos",
+        "summary_few": "Se omitieron {{count}} eventos en los últimos {{days}} días — {{reasons}}",
+        "summary_many": "Se omitieron {{count}} eventos en los últimos {{days}} días — {{reasons}}"
       },
       "drawer": {
         "title": "Eventos omitidos",
@@ -1860,7 +1864,9 @@
     "insertionPointLabel": "Los pasos nuevos van aquí",
     "emptyBranchPrompt": "Añada un paso a esta rama",
     "emptyActivePrompt": "Los pasos nuevos van aquí. Elija uno de la paleta.",
-    "stepCount": "({{count}} pasos)"
+    "stepCount": "({{count}} pasos)",
+    "stepCount_few": "({{count}} pasos)",
+    "stepCount_many": "({{count}} pasos)"
   },
   "expressionEditor": {
     "ariaLabel": "Editor de expresiones",
@@ -2373,7 +2379,12 @@
       "currentRun": "Ejecución {{id}}",
       "backToWorkflow": "Volver al flujo de trabajo"
     },
-    "title": "Estudio de ejecuciones de flujo de trabajo"
+    "title": "Estudio de ejecuciones de flujo de trabajo",
+    "communityEdition": {
+      "title": "Función Pro",
+      "description": "El estudio de ejecución de flujos de trabajo solo está disponible en Pro.",
+      "runId": "ID de ejecución: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3146,6 +3157,10 @@
         "selectBoard": "Seleccione o introduzca un tablero",
         "selectPriority": "Seleccione o introduzca una prioridad"
       }
+    },
+    "proFeature": {
+      "title": "Función Pro",
+      "description": "El sistema de flujos de trabajo solo está disponible en Pro. Actualice su instalación para acceder a esta función."
     }
   },
   "toggle": {
@@ -3284,5 +3299,29 @@
       "label": "Profundidad de causalidad excedida",
       "hint": "La cadena de eventos causados superó la profundidad máxima; omitido para evitar bucles descontrolados."
     }
+  },
+  "createFromTicket": {
+    "title": "Crear flujo de trabajo desde el ticket",
+    "description": "Crea un flujo de trabajo en borrador cuyo primer paso crea un ticket como #{{number}}. No se publica nada.",
+    "cancel": "Cancelar",
+    "creating": "Creando…",
+    "submit": "Crear borrador y abrir el diseñador",
+    "nameLabel": "Nombre del flujo de trabajo",
+    "triggerLabel": "Desencadenador",
+    "triggerManual": "Manual (ejecutar bajo demanda)",
+    "ticketCreatedWarning": "Este flujo de trabajo crea un ticket, y un ticket nuevo vuelve a activar este desencadenador. Añada una condición antes de publicar para evitar un bucle.",
+    "includeLegend": "Incluir del ticket",
+    "propertiesAlways": "El título, la descripción, el cliente, el contacto, el tablero, la categoría y la prioridad siempre se incluyen.",
+    "includeAssignment": "Asignación",
+    "includeTags": "Etiquetas",
+    "includeCustomFields": "Campos personalizados",
+    "includeChecklist": "Lista de verificación",
+    "errors": {
+      "nameRequired": "El nombre del flujo de trabajo es obligatorio",
+      "generic": "No se pudo crear el borrador del flujo de trabajo"
+    },
+    "includeCustomFieldsCount": "Campos personalizados ({{n}})",
+    "includeChecklistCount": "Lista de verificación ({{total}} elementos: {{templates}} de plantillas / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Los elementos de plantillas se vuelven a aplicar desde la plantilla actual, por lo que las ediciones hechas en este ticket no se trasladan."
   }
 }

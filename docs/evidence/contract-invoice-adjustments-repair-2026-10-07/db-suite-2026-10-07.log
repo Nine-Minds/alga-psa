@@ -1,0 +1,19 @@
+ DEPRECATED  `test.poolOptions` was removed in Vitest 4. All previous `poolOptions` are now top-level options. Please, refer to the migration guide: https://vitest.dev/guide/migration#pool-rework
+ DEPRECATED  `test.poolOptions` was removed in Vitest 4. All previous `poolOptions` are now top-level options. Please, refer to the migration guide: https://vitest.dev/guide/migration#pool-rework
+ DEPRECATED  `test.poolOptions` was removed in Vitest 4. All previous `poolOptions` are now top-level options. Please, refer to the migration guide: https://vitest.dev/guide/migration#pool-rework
+
+ RUN  v4.1.11 /home/robert/alga-copies/feature-contract-invoices-automatic-adjustments-and-disc/server
+      Running tests with seed "1791350704625"
+
+Environment file path: /home/robert/alga-copies/feature-contract-invoices-automatic-adjustments-and-disc/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-contract-invoices-automatic-adjustments-and-disc/.env.localtest
+ ✓ |node| ../packages/billing/src/services/contractInvoiceAdjustments.db.test.ts (63 tests) 18047ms 227 MB heap used
+     ✓ accepts decimal numeric(10,2) quantities and keeps signed half-cent rounding consistent  603ms 133 MB heap used
+     ✓ keeps fixed and Fixed template sources separate through creation and settlement  380ms 157 MB heap used
+     ✓ reloads multiple delivered artifacts byte-for-byte and rejects a foreign-tenant artifact id  457ms 223 MB heap used
+
+ Test Files  1 passed (1)
+      Tests  63 passed (63)
+   Start at  05:25:07
+   Duration  20.20s (transform 1.84s, setup 77ms, import 1.98s, tests 18.05s, environment 0ms)
+

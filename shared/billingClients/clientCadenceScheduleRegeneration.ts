@@ -21,12 +21,16 @@ import {
   backfillRecurringServicePeriods,
   type IRecurringServicePeriodBackfillPlan,
 } from './backfillRecurringServicePeriods';
+import { resolveEffectiveBillingTiming, resolveRecurringChargeFamily } from './contractLineTimingRule';
 
 type ClientCadenceRecurringObligationRow = {
   client_contract_line_id: string;
   contract_id: string;
   start_date: unknown;
   end_date: unknown;
+  /** Authored line bounds, intersected with the assignment in the planner. */
+  line_start_date?: unknown;
+  line_end_date?: unknown;
   contract_line_type: string | null;
   billing_timing: string | null;
 };
@@ -188,26 +192,6 @@ export function isClientCadenceLineExpectedInWindow(input: {
   });
 }
 
-function resolveRecurringChargeFamily(contractLineType: string | null): RecurringChargeFamily {
-  switch ((contractLineType ?? 'fixed').toLowerCase()) {
-    case 'fixed':
-      return 'fixed';
-    case 'time':
-    case 'hourly':
-      return 'hourly';
-    case 'usage':
-      return 'usage';
-    case 'bucket':
-      return 'bucket';
-    case 'product':
-      return 'product';
-    case 'license':
-      return 'license';
-    default:
-      return 'fixed';
-  }
-}
-
 function mapRecurringServicePeriodRow(row: RecurringServicePeriodDbRow): IRecurringServicePeriodRecord {
   return {
     kind: 'persisted_service_period_record',
@@ -297,7 +281,7 @@ function serializeRecurringServicePeriodRecord(record: IRecurringServicePeriodRe
   };
 }
 
-function buildScheduleSourceRuleVersion(
+export function buildScheduleSourceRuleVersion(
   billingCycle: BillingCycleType,
   anchor: NormalizedBillingCycleAnchorSettings,
 ) {
@@ -393,6 +377,8 @@ async function loadClientCadenceRecurringObligations(
       'cl.contract_id as contract_id',
       'cc.start_date',
       'cc.end_date',
+      'cl.start_date as line_start_date',
+      'cl.end_date as line_end_date',
       'cl.contract_line_type',
       'cl.billing_timing',
     );
@@ -521,21 +507,31 @@ async function computeClientCadenceRegeneration(
     // Scoped to the line's contract: another contract's invoices must not
     // suppress this line's periods; its own contract's ledger still limits it.
     const billedBoundaryEnd = billedBoundaryByContract.get(obligation.contract_id) ?? null;
-    const obligationStart =
+    const assignmentStart =
       normalizeDateOnlyValue(obligation.start_date) ?? ensureUtcMidnightIsoDate(materializedAt);
+    const lineStart = normalizeDateOnlyValue(obligation.line_start_date);
+    const obligationStart = lineStart && compareIsoDateOnly(lineStart, assignmentStart) > 0
+      ? lineStart
+      : assignmentStart;
     const regenerationStart = resolveClientCadenceObligationStart({
       assignmentStart: obligationStart,
       billedBoundaryEnd,
       fallbackStart: materializedAt,
     });
-    const obligationEnd = normalizeDateOnlyValue(obligation.end_date);
+    const assignmentEnd = normalizeDateOnlyValue(obligation.end_date);
+    const lineEnd = normalizeDateOnlyValue(obligation.line_end_date);
+    const obligationEnd = assignmentEnd && lineEnd
+      ? (compareIsoDateOnly(lineEnd, assignmentEnd) < 0 ? lineEnd : assignmentEnd)
+      : (lineEnd ?? assignmentEnd);
 
     if (obligationEnd && compareIsoDateOnly(obligationEnd, regenerationStart) <= 0) {
       continue;
     }
 
-    const duePosition: DuePosition =
-      obligation.billing_timing === 'advance' ? 'advance' : 'arrears';
+    const duePosition: DuePosition = resolveEffectiveBillingTiming(
+      obligation.contract_line_type,
+      obligation.billing_timing,
+    );
     const existingRecords = await loadExistingRecurringServicePeriodRecords(trx, {
       tenant: params.tenant,
       obligationId: obligation.client_contract_line_id,

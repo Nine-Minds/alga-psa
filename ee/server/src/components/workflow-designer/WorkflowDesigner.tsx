@@ -2134,6 +2134,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     } else {
       params.set('section', section);
     }
+    // A selected event only makes sense on the events section.
+    if (section !== 'events') {
+      params.delete('eventId');
+    }
     const nextParamsString = params.toString();
     const nextUrl = nextParamsString ? `/msp/workflow-control?${nextParamsString}` : '/msp/workflow-control';
     if (nextParamsString !== searchParamsString) {
@@ -3153,18 +3157,27 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
   // Active/Paused for a published workflow, toggled from the header. Only the pause flag changes;
   // the other settings are sent with their saved values.
-  const [optimisticPaused, setOptimisticPaused] = useState<boolean | null>(null);
+  // The optimistic flip holds only while the same workflow still reports the saved state it was
+  // clicked against. Derived during render rather than cleared by an effect, so a click landing in
+  // the same frame the record first renders is not wiped by that render's pending effect.
+  const [optimisticPaused, setOptimisticPaused] = useState<{
+    workflowId: string;
+    savedIsPaused: boolean;
+    isPaused: boolean;
+  } | null>(null);
   const [isTogglingPaused, setIsTogglingPaused] = useState(false);
   const savedIsPaused = activeWorkflowRecord?.is_paused ?? false;
-  useEffect(() => {
-    setOptimisticPaused(null);
-  }, [savedIsPaused, activeWorkflowId]);
-  const workflowIsPaused = optimisticPaused ?? savedIsPaused;
+  const workflowIsPaused =
+    optimisticPaused
+    && optimisticPaused.workflowId === activeWorkflowId
+    && optimisticPaused.savedIsPaused === savedIsPaused
+      ? optimisticPaused.isPaused
+      : savedIsPaused;
   const handleTogglePaused = async () => {
     if (!activeWorkflowId || !activeWorkflowRecord) return;
     const nextPaused = !workflowIsPaused;
     setIsTogglingPaused(true);
-    setOptimisticPaused(nextPaused);
+    setOptimisticPaused({ workflowId: activeWorkflowId, savedIsPaused, isPaused: nextPaused });
     try {
       await updateWorkflowDefinitionMetadataAction(buildWorkflowMetadataUpdate(activeWorkflowId, {
         ...buildWorkflowMetadataDraft(activeWorkflowRecord),

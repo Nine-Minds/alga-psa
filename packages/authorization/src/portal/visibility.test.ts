@@ -323,3 +323,96 @@ describe('asset and project visibility filters', () => {
     expect(assetMatchesVisibility(records[0].record, null)).toBe(false);
   });
 });
+
+describe('applyTicketVisibilityFilter: shared-workspace tickets (FR-E7b)', () => {
+  const workspaceColumns = {
+    ...allColumns,
+    sharedWorkspaceTickets: {
+      ticketIdColumn: 't.ticket_id',
+      tenantColumn: 't.tenant',
+      closedColumn: 't.is_closed',
+    },
+  };
+
+  it('T155: admits a colleague\u2019s ticket on a workspace the contact uses', () => {
+    const sql = sqlFor({ ...base, visibleContactIds: ['c1', 'c2'] }, workspaceColumns);
+
+    expect(sql).toContain('asset_group_contacts gc');
+    expect(sql).toContain("g.kind = 'shared_workspace'");
+    expect(sql).toContain("gc.role = 'user'");
+    // Scoped to this contact (and their reports), never the whole client.
+    expect(sql).toContain("gc.contact_name_id IN ('c1', 'c2')");
+    expect(sql).toContain("aa.entity_type = 'ticket'");
+    expect(sql).toContain('aa.entity_id = t.ticket_id');
+  });
+
+  it('T156: restricts the inclusion to OPEN tickets', () => {
+    const sql = sqlFor(base, workspaceColumns);
+
+    // Without this predicate a closed ticket about the hot desk stays visible
+    // to whoever occupies it next, which FR-E7b does not grant.
+    expect(sql).toContain('t.is_closed IS NOT TRUE AND EXISTS (');
+  });
+
+  it('T156: omitting the option (the write gate) emits no workspace clause', () => {
+    const writeGate = sqlFor({ ...base, watchGrant: true }, allColumns);
+    const readGate = sqlFor({ ...base, watchGrant: true }, workspaceColumns);
+
+    expect(readGate).toContain('asset_group_contacts gc');
+    expect(writeGate).not.toContain('asset_group_contacts');
+    expect(writeGate).not.toContain('is_closed');
+    // Requester and watcher still pass, which is what a write gate must allow.
+    expect(writeGate).toContain(`"t"."contact_name_id" = 'c1'`);
+    expect(writeGate).toContain('watch_list');
+  });
+
+  it('T157: client ticket scope is unaffected by the workspace inclusion', () => {
+    const clientScoped = sqlFor({ ...base, effectiveTicketScope: 'client' }, workspaceColumns);
+
+    expect(clientScoped).not.toContain('asset_group_contacts');
+    expect(clientScoped).not.toContain('contact_name_id');
+  });
+});
+
+describe('applyAssetVisibilityFilter: shared-workspace assets (FR-E7)', () => {
+  const workspaceCols = {
+    contactColumn: 'assets.contact_name_id',
+    clientColumn: 'assets.client_id',
+    sharedWorkspace: { assetIdColumn: 'assets.asset_id', tenantColumn: 'assets.tenant' },
+  };
+  const sql = (ctx: Parameters<typeof applyAssetVisibilityFilter>[1], cols = workspaceCols) =>
+    applyAssetVisibilityFilter(db('assets').select('*'), ctx, cols).toString();
+  const contactScoped = { contactId: 'c1', clientId: 'cl1', effectiveAssetScope: 'contact' as const };
+
+  it('T118: contact scope admits a workspace asset the contact is a user of', () => {
+    const generated = sql(contactScoped);
+
+    expect(generated).toContain('asset_group_contacts gc');
+    expect(generated).toContain("g.kind = 'shared_workspace'");
+    expect(generated).toContain("gc.role = 'user'");
+    expect(generated).toContain("gc.contact_name_id IN ('c1')");
+    // Still bounded by the client and still admits their own assignments.
+    expect(generated).toContain(`"assets"."client_id" = 'cl1'`);
+    expect(generated).toContain(`"assets"."contact_name_id" in ('c1')`);
+  });
+
+  it('T119: a manager also sees the workspaces their reports use', () => {
+    const generated = sql({ ...contactScoped, visibleContactIds: ['c1', 'c2'] });
+
+    expect(generated).toContain("gc.contact_name_id IN ('c1', 'c2')");
+    expect(generated).toContain(`"assets"."contact_name_id" in ('c1', 'c2')`);
+  });
+
+  it('T120: client asset scope is unchanged by the workspace extension', () => {
+    const generated = sql({ ...contactScoped, effectiveAssetScope: 'client' });
+
+    expect(generated).toBe(`select * from "assets" where "assets"."client_id" = 'cl1'`);
+  });
+
+  it('T118: a call site that has not been taught about workspaces still narrows', () => {
+    const generated = sql(contactScoped, { contactColumn: 'assets.contact_name_id', clientColumn: 'assets.client_id' } as typeof workspaceCols);
+
+    expect(generated).not.toContain('asset_group_contacts');
+    expect(generated).toContain(`"assets"."contact_name_id" = 'c1'`);
+  });
+});

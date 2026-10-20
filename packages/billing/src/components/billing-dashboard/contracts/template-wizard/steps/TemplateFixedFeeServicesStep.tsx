@@ -228,7 +228,7 @@ export function TemplateFixedFeeServicesStep({
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="template-fixed-billing-timing" className="text-sm font-medium">
-              {t('templateFixed.fields.billingTiming', { defaultValue: 'Billing Timing' })}
+              {t('templateFixed.fields.billingTiming', { defaultValue: 'Billing timing for fixed-fee lines' })}
             </Label>
             <CustomSelect
               id="template-fixed-billing-timing"
