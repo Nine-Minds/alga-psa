@@ -1194,17 +1194,38 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
     executionWindow.kind === 'contract_cadence_window'
     && executionWindow.contractLineId
   ) {
-    const linkedRow = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
-      return tenantDb(trx, params.tenant).table('recurring_service_periods')
+    const { linkedRow, hasPendingRow } = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
+      const periods = () => tenantDb(trx, params.tenant).table('recurring_service_periods')
         .where({
           cadence_owner: 'contract',
           obligation_id: executionWindow.contractLineId,
           invoice_window_start: params.selectorInput.windowStart,
           invoice_window_end: params.selectorInput.windowEnd,
-        })
-        .whereNotNull('invoice_id')
-        .first('invoice_id');
+        });
+      const rows = (await periods().select(
+        'invoice_id', 'lifecycle_state', 'provenance_kind', 'reason_code',
+      )) as Array<{
+        invoice_id: string | null;
+        lifecycle_state?: string | null;
+        provenance_kind?: string | null;
+        reason_code?: string | null;
+      }>;
+      return {
+        linkedRow: rows.find((row) => row.invoice_id) ?? null,
+        // A period of the same line and window that is still waiting to be invoiced. This
+        // happens when a repair adds an arrears catch-up row beside an advance period
+        // that was already invoiced for the same window (arrears-only line repair).
+        hasPendingRow: rows.some((row) => !row.invoice_id
+          && row.provenance_kind === 'repair'
+          && row.reason_code === 'stranded_advance_catch_up'
+          && ['generated', 'edited', 'locked'].includes(String(row.lifecycle_state))),
+      };
     });
+
+    if (hasPendingRow) {
+      // A repair catch-up sibling still has to be billed; the window is not a duplicate.
+      return null;
+    }
 
     return linkedRow?.invoice_id
       ? { invoiceId: linkedRow.invoice_id }
@@ -1804,14 +1825,36 @@ async function calculateBillingWithReconciledAttribution(params: {
 }): Promise<IBillingResult> {
   const canonicalSelection = assertSameRecurringSelectionWindow(params.selectorInputs);
 
+  // Arrears periods are billed in a window AFTER the service period they cover,
+  // and the loaders read activity by service period. Reconcile the union of the
+  // invoice window and the service periods being billed, otherwise activity in
+  // an arrears period (every Hourly/Usage period) is never attributed.
+  const servicePeriodRows = await resolveApprovalBlockerRowsForSelectorInputs({
+    knex: params.knex,
+    tenant: params.tenant,
+    selectorInputs: params.selectorInputs,
+  });
+  const toDateOnlyString = (value: unknown): string =>
+    value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+  const reconcileStarts = [
+    canonicalSelection.windowStart,
+    ...servicePeriodRows.map((row) => toDateOnlyString(row.servicePeriodStart)),
+  ].sort();
+  const reconcileEnds = [
+    canonicalSelection.windowEnd,
+    ...servicePeriodRows.map((row) => toDateOnlyString(row.servicePeriodEnd)),
+  ].sort();
+  const reconcileWindowStart = reconcileStarts[0];
+  const reconcileWindowEnd = reconcileEnds[reconcileEnds.length - 1];
+
   try {
     return await withTransaction(params.knex, async (trx: Knex.Transaction) => {
       await reconcileWindowAttribution({
         trx,
         tenant: params.tenant,
         clientId: canonicalSelection.clientId,
-        windowStart: canonicalSelection.windowStart,
-        windowEnd: canonicalSelection.windowEnd,
+        windowStart: reconcileWindowStart,
+        windowEnd: reconcileWindowEnd,
       });
 
       await lockTenantBilling(trx, params.tenant);

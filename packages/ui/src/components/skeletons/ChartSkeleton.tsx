@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BarChart3, PieChart, TrendingUp } from 'lucide-react';
 
 interface ChartSkeletonProps {
@@ -11,9 +14,11 @@ interface ChartSkeletonProps {
 const ChartSkeleton = ({ 
   height = "300px", 
   type = "bar",
-  title = "Chart",
+  title,
   showLegend = true
 }: ChartSkeletonProps) => {
+  const { t } = useTranslation('common');
+
   const getChartIcon = () => {
     switch (type) {
       case 'pie':
@@ -141,7 +146,9 @@ const ChartSkeleton = ({
           <div className="absolute inset-0 bg-[rgb(var(--color-card))]/60 dark:bg-black/60 flex items-center justify-center">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
-              <p className="text-gray-500 text-sm">Loading {title.toLowerCase()}...</p>
+              <p className="text-gray-500 text-sm">{title === undefined
+                ? t('skeletons.chart.loading')
+                : t('skeletons.chart.loadingNamed', { title })}</p>
             </div>
           </div>
         </div>

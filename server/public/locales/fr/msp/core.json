@@ -811,5 +811,37 @@
   "githubStar": {
     "label": "Ajouter une étoile",
     "ariaLabel": "Ajouter une étoile à {{repository}} sur GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "Portail MSP",
+      "dashboard": "Tableau de bord",
+      "ticketDetails": "Détails du ticket",
+      "tickets": "Tickets",
+      "projectDetails": "Détails du projet",
+      "projects": "Projets",
+      "clientDetails": "Détails du client",
+      "clients": "Clients",
+      "contactDetails": "Détails du contact",
+      "contacts": "Contacts",
+      "assetDetails": "Détails de l’actif",
+      "assets": "Actifs",
+      "billing": "Facturation",
+      "settings": "Paramètres",
+      "settingsSection": "Paramètres : {{section}}",
+      "chat": "Discussion"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Fonctionnalité Pro",
+      "description": "Les fonctionnalités de chat avec IA nécessitent Pro. Passez à la version supérieure pour accéder à cette fonctionnalité."
+    },
+    "messages": {
+      "proRequired": "Les fonctionnalités de messagerie nécessitent Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Les fonctionnalités de chat sont uniquement disponibles dans Enterprise Edition"
+    }
   }
 }

@@ -443,5 +443,12 @@
     "expires": "Läuft am {{date}} ab",
     "recentBurn": "Letzte Nutzung",
     "timeEntry": "Zeiteintrag"
+  },
+  "bucketUsage": {
+    "contractLine": "Vertragslinie für Stundenkontingent",
+    "usage": "Verbrauch",
+    "hoursUsed": "{{hours}} Stunden verbraucht",
+    "hoursTotal": "{{hours}} Stunden insgesamt",
+    "rolloverHours": "Enthält {{hours}} übertragene Stunden"
   }
 }

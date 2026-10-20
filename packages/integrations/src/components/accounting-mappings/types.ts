@@ -152,6 +152,13 @@ export interface AccountingMappingModule {
   metadata?: AccountingMetadataConfig;
   /** Present when the external side spans multiple provider catalogs. */
   externalTarget?: AccountingMappingTargetConfig;
+  /**
+   * The external value is typed by hand: file-based exports (QuickBooks CSV,
+   * QuickBooks Desktop, Xero CSV) have no provider catalog to pick from. Bulk
+   * mapping then renders a text input per row. Catalog-backed modules leave
+   * this unset, so an empty or unavailable catalog never turns into free text.
+   */
+  manualExternalEntry?: boolean;
   overridesKey?: string;
   resolveOverrides?: (
     context: AccountingMappingContext

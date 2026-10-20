@@ -445,7 +445,9 @@
     "notSet": "Nie ustawiono",
     "set": "Ustaw stan odpowiedzi",
     "all": "Wszystkie stany odpowiedzi",
-    "none": "Brak stanu odpowiedzi"
+    "none": "Brak stanu odpowiedzi",
+    "awaitingClientTooltip": "Oczekiwanie na odpowiedź klienta",
+    "awaitingInternalTooltip": "Klient odpowiedział, oczekiwanie na działanie wewnętrzne"
   },
   "origin": {
     "internal": "Utworzono wewnętrznie",
@@ -1091,7 +1093,7 @@
     "noContact": "Brak kontaktu",
     "closeTicketTitle": "Zamknij zgłoszenie",
     "resolveAndClose": "Rozwiąż i zamknij",
-    "closeTicketResolutionPrompt": "Wybierz status zamknięcia i dodaj rozwiązanie tego zgłoszenia.",
+    "closeTicketResolutionPrompt": "Wybierz status zamknięcia. Dodaj rozwiązanie lub pozostaw pole puste, aby zamknąć bez rozwiązania.",
     "selectCloseStatus": "Wybierz status zamknięcia",
     "cannotCloseYet": "Tego zgłoszenia nie można jeszcze zamknąć",
     "closeRulesIntro": "Reguły zamykania tablicy wymagają spełnienia poniższych warunków przed zamknięciem tego zgłoszenia:",
@@ -2586,6 +2588,34 @@
       "paused": "wstrzymany",
       "tickets": "{{count}} zgłoszeń utworzonych z tego szablonu",
       "scheduleThis": "Zaplanuj ten szablon…"
+    }
+  },
+  "enums": {
+    "slaStatus": {
+      "paused": "Wstrzymany",
+      "on_track": "Zgodnie z planem",
+      "at_risk": "Zagrożony",
+      "breached": "Naruszony",
+      "unknown": "Nieznany",
+      "response_breached": "Naruszono SLA odpowiedzi",
+      "resolution_breached": "Naruszono SLA rozwiązania"
+    }
+  },
+  "sla": {
+    "tooltip": {
+      "paused": "Licznik SLA: wstrzymany",
+      "status": "Status SLA: {{status}}",
+      "responseBreached": "Odpowiedź: przekroczono o {{time}}",
+      "responseRemaining": "Odpowiedź: pozostały czas — {{time}}",
+      "resolutionBreached": "Rozwiązanie: przekroczono o {{time}}",
+      "resolutionRemaining": "Rozwiązanie: pozostały czas — {{time}}"
+    },
+    "time": {
+      "minutes": "{{minutes}} min",
+      "hoursMinutes": "{{hours}} godz. {{minutes}} min",
+      "hours": "{{hours}} godz.",
+      "daysHours": "{{days}} dn. {{hours}} godz.",
+      "days": "{{days}} dn."
     }
   }
 }

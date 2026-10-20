@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;
@@ -18,15 +19,16 @@ export const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> =
   itemName,
   itemType
 }) => {
+  const { t } = useTranslation('common');
   return (
     <ConfirmationDialog
       isOpen={isOpen}
       onClose={onClose}
       onConfirm={onConfirm}
-      title={`Delete ${itemType}`}
-      message={`Are you sure you want to delete "${itemName}"? This action cannot be undone.`}
-      confirmLabel="Delete"
-      cancelLabel="Cancel"
+      title={t('dialogs.confirmDelete.title', { itemType })}
+      message={t('dialogs.confirmDelete.message', { itemName })}
+      confirmLabel={t('actions.delete')}
+      cancelLabel={t('actions.cancel')}
     />
   );
 };

@@ -66,7 +66,8 @@
       "createTicket": "Utwórz zgłoszenie",
       "requestAppointment": "Zarezerwuj wizytę",
       "viewLatestInvoice": "Zobacz ostatnią fakturę",
-      "newServiceRequest": "Nowe zgłoszenie serwisowe"
+      "newServiceRequest": "Nowe zgłoszenie serwisowe",
+      "createSupportTicket": "Utwórz zgłoszenie do pomocy technicznej"
     },
     "appointments": {
       "title": "Nadchodzące wizyty",
@@ -329,7 +330,25 @@
       "tenant_mismatch": "{{providerEmail}} należy do portalu innej organizacji. Zaloguj się hasłem lub skontaktuj się z usługodawcą."
     },
     "configurationTitle": "Logowanie nie powiodło się",
-    "configurationMessage": "Logowanie nie powiodło się. Spróbuj ponownie lub skontaktuj się z usługodawcą."
+    "configurationMessage": "Logowanie nie powiodło się. Spróbuj ponownie lub skontaktuj się z usługodawcą.",
+    "registration": {
+      "messages": {
+        "verified": "Użytkownik został zweryfikowany i zarejestrowany"
+      },
+      "errors": {
+        "verifyFailed": "Nie udało się zweryfikować i zarejestrować użytkownika",
+        "invalidToken": "Nieprawidłowy token",
+        "tokenExpired": "Token wygasł",
+        "tokenNotActive": "Token nie jest jeszcze aktywny",
+        "unknown": "Nieznany błąd"
+      },
+      "user": "Użytkownik",
+      "clientPortalUser": "Użytkownik portalu klienta",
+      "mspUser": "Użytkownik MSP",
+      "resetExpiration": "1 godzina",
+      "verificationExpiration": "24 godziny",
+      "superadminRole": "Rola superadministratora"
+    }
   },
   "account": {
     "title": "Konto",

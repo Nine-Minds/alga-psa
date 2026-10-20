@@ -19,6 +19,7 @@ import { BucketOverlayInput } from './ContractWizard';
 import { ServiceCatalogPicker } from './ServiceCatalogPicker';
 import { reindexRateInputs } from '../../../lib/serviceRateInputs';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { BillingTimingField } from './BillingTimingField';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
   getErrorMessage,
@@ -273,7 +274,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
         contract_line_name: planName,
         contract_line_type: planType!,
         billing_frequency: billingFrequency,
-        billing_timing: billingTiming,
+        billing_timing: planType === 'Fixed' ? billingTiming : 'arrears',
         invoice_line_description: invoiceLineDescription.trim() || null,
         start_date: startDate || null,
         end_date: endDate || null,
@@ -1066,30 +1067,11 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                 <Label htmlFor="billing-timing">
                   {t('billing.labels.timing', { defaultValue: 'Billing Timing' })}
                 </Label>
-                <CustomSelect
-                  id="billing-timing"
+                <BillingTimingField
+                  lineType={planType ?? 'Fixed'}
                   value={billingTiming}
-                  onValueChange={(value) => setBillingTiming(value as 'arrears' | 'advance')}
-                  options={[
-                    {
-                      value: 'advance',
-                      label: t('createCustomLine.billingTiming.advance', {
-                        defaultValue: 'Advance (bill at start of period)',
-                      }),
-                    },
-                    {
-                      value: 'arrears',
-                      label: t('createCustomLine.billingTiming.arrears', {
-                        defaultValue: 'Arrears (bill at end of period)',
-                      }),
-                    }
-                  ]}
+                  onChange={setBillingTiming}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t('createCustomLine.billingTimingHelp', {
-                    defaultValue: 'Advance billing is typical for fixed fees; arrears for time/usage-based services.',
-                  })}
-                </p>
               </div>
               <div>
                 <Label htmlFor="invoice-line-description">
@@ -1182,6 +1164,9 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   key={key}
                   onClick={() => {
                     setPlanType(key);
+                    if (key !== 'Fixed') {
+                      setBillingTiming('arrears');
+                    }
                     clearErrorIfSubmitted();
                   }}
                   className={`text-left p-4 border-2 rounded-lg transition-all focus:outline-none ${

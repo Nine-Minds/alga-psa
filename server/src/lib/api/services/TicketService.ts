@@ -44,8 +44,7 @@ import {
 } from '@alga-psa/tickets/lib/ticketBundlePolicy';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
 import {
-  TICKET_LATEST_ACTIVITY_PUBLIC_SQL,
-  TICKET_LATEST_ACTIVITY_SQL,
+  ticketLatestActivitySql,
 } from '@alga-psa/tickets/actions/ticketListSortSql';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
 import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
@@ -160,8 +159,9 @@ const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
  * `sort` is a string, so before this map an unknown value reached
  * `orderBy('t.<value>')` and surfaced as a 500 from Postgres instead of a 400.
  *
- * `latest_activity_at` carries no fixed SQL — the expression depends on whether
- * the caller is a client-portal contact (see TICKET_LATEST_ACTIVITY_PUBLIC_SQL).
+ * `latest_activity_at` carries no fixed SQL — the expression depends on the
+ * tenant and on whether the caller is a client-portal contact (see
+ * ticketLatestActivitySql).
  */
 type TicketApiSortSpec = { column?: string; activity?: true };
 
@@ -545,9 +545,9 @@ export class TicketService extends BaseService<ITicket> {
 
     // Client-portal callers must not be able to read the timing of internal
     // notes off this column, nor have them reorder the portal list.
-    const latestActivitySql = clientVisibility
-      ? TICKET_LATEST_ACTIVITY_PUBLIC_SQL
-      : TICKET_LATEST_ACTIVITY_SQL;
+    const latestActivity = ticketLatestActivitySql(context.tenant, {
+      publicOnly: Boolean(clientVisibility),
+    });
 
     const wants = (field: string) => Boolean(selectedFields && selectedFields.includes(field));
 
@@ -591,7 +591,7 @@ export class TicketService extends BaseService<ITicket> {
     // Order by the allowlisted term, then ticket_id desc so pages stay stable
     // across a tie (parity with applyTicketListSort on the web list).
     if (sortSpec.activity) {
-      dataQuery = dataQuery.orderByRaw(`${latestActivitySql} ${sortDirection}`);
+      dataQuery = dataQuery.orderByRaw(`${latestActivity.sql} ${sortDirection}`, latestActivity.bindings);
     } else {
       dataQuery = dataQuery.orderBy(sortSpec.column!, sortDirection);
     }
@@ -633,7 +633,7 @@ export class TicketService extends BaseService<ITicket> {
           END as assigned_to_name`),
           // Same expression the latest_activity_at sort orders by, so the
           // reported value is exactly the one the ordering used.
-          knex.raw(`${latestActivitySql} as latest_activity_at`),
+          knex.raw(`${latestActivity.sql} as latest_activity_at`, latestActivity.bindings),
         );
     } else {
       const selectParts: any[] = [];
@@ -652,7 +652,7 @@ export class TicketService extends BaseService<ITicket> {
       if (selectedFields.includes('closed_at')) selectParts.push('t.closed_at');
       if (selectedFields.includes('master_ticket_id')) selectParts.push('t.master_ticket_id');
       if (selectedFields.includes('latest_activity_at')) {
-        selectParts.push(knex.raw(`${latestActivitySql} as latest_activity_at`));
+        selectParts.push(knex.raw(`${latestActivity.sql} as latest_activity_at`, latestActivity.bindings));
       }
       if (needsBundleMaster) selectParts.push('mt.ticket_number as bundle_master_ticket_number');
       if (needsBundleChildCount) selectParts.push(bundleChildCountSelect);

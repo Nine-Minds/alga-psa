@@ -80,7 +80,7 @@ it.each(['reply', 'new', 'unmatched', 'missing-defaults', 'attachment-failure', 
         taskQueue, workflowId: randomUUID(), workflowExecutionTimeout: '30s',
         args: [{ runId, tenantId: payload.tenantId, workflowId: definition.id, workflowVersion: definition.version }],
       }));
-      expect(completions).toEqual([{ runId, status: 'SUCCEEDED' }]);
+      expect(completions).toEqual([{ runId, tenantId: payload.tenantId, status: 'SUCCEEDED' }]);
       const actions = calls.map(call => call.action);
       if (scenario === 'parse-failure') {
         expect(states.slice(-2)).toEqual(['ERROR_PROCESSING_EMAIL', 'AWAITING_MANUAL_RESOLUTION']);

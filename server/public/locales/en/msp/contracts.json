@@ -833,7 +833,7 @@
       "advance": "Advance (bill at start of period)",
       "arrears": "Arrears (bill at end of period)"
     },
-    "billingTimingHelp": "Advance billing is typical for fixed fees; arrears for time/usage-based services.",
+    "billingTimingHelp": "Fixed lines can bill in advance or in arrears. Hourly and usage lines always bill in arrears, after the work happens.",
     "chooseBillingModel": "Choose a Billing Model *",
     "chooseBillingModelDescription": "Select the billing behavior that fits this offering.",
     "contractLineNameLabel": "Contract Line Name *",
@@ -2092,7 +2092,7 @@
       "advance": "Advance - invoice at the start of the period"
     },
     "fields": {
-      "billingTiming": "Billing Timing",
+      "billingTiming": "Billing timing for fixed-fee lines",
       "adjustPartialPeriods": "Adjust for Partial Periods",
       "services": "Services",
       "serviceNumber": "Service {{index}}",
@@ -2540,7 +2540,8 @@
       "tieredPricing": "tiered pricing",
       "timing": {
         "advance": "Bill in advance",
-        "arrears": "Bill in arrears"
+        "arrears": "Bill in arrears",
+        "arrearsOnly": "Billed in arrears"
       },
       "types": {
         "bucket": "Bucket overlay",
@@ -2707,6 +2708,15 @@
   },
   "sellHourBlockNote": {
     "text": "A contract hour bucket bills only the overage. To charge for a block of hours up front, use Sell block under Hour Blocks on the client's Billing Dashboard tab."
+  },
+  "billingTimingField": {
+    "arrears": "In Arrears",
+    "fixedHelp": "Fixed lines can bill in advance or in arrears.",
+    "nonFixedHelp": "Hourly and usage lines always bill in arrears, after the work happens.",
+    "options": {
+      "advance": "In Advance (bill at start of period)",
+      "arrears": "In Arrears (bill at end of period)"
+    }
   },
   "contractDiscounts": {
     "title": "Discounts",

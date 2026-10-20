@@ -26,6 +26,8 @@
     "@tanstack/react-table": "^8.21.3"
   },
   "peerDependencies": {
+    "i18next": "^25.5.2",
+    "react-i18next": "^15.7.3",
     "react": "^18 || ^19",
     "react-dom": "^18 || ^19"
   },

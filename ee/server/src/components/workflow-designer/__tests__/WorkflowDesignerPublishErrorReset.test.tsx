@@ -335,6 +335,31 @@ describe('WorkflowDesigner publish error reset', () => {
     expect(screen.getByRole('switch')).toHaveTextContent('Paused');
   });
 
+  it('keeps a pause clicked the moment the header switch first appears', async () => {
+    // Click from a MutationObserver callback: it runs right after the commit that first renders the
+    // switch, before React flushes that commit's effects, which is where a slow machine's click lands.
+    const clickedOnAppearance = new Promise<void>((resolve) => {
+      const observer = new MutationObserver(() => {
+        const toggle = document.querySelector<HTMLElement>('[role="switch"]');
+        if (!toggle) return;
+        observer.disconnect();
+        fireEvent.click(toggle);
+        resolve();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+    render(<WorkflowDesigner mode="editor-designer" workflowId={WORKFLOW_ID} />);
+    await clickedOnAppearance;
+
+    await waitFor(() => expect(updateWorkflowDefinitionMetadataActionMock).toHaveBeenCalledWith(expect.objectContaining({
+      workflowId: WORKFLOW_ID,
+      isPaused: true,
+    })));
+    await waitFor(() => expect(screen.getByRole('switch')).not.toBeDisabled());
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('switch')).toHaveTextContent('Paused');
+  });
+
   it('rolls the header switch back and explains the error when pausing fails', async () => {
     updateWorkflowDefinitionMetadataActionMock.mockRejectedValue(new Error('Database unavailable'));
     render(<WorkflowDesigner mode="editor-designer" workflowId={WORKFLOW_ID} />);

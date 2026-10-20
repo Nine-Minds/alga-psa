@@ -1,6 +1,9 @@
+'use client';
+
 import React from 'react';
 import { Card } from '../Card';
 import { Code2 } from 'lucide-react';
+import { useTranslation } from '../../lib/i18n/client';
 
 interface EditorSkeletonProps {
   height?: string;
@@ -13,6 +16,7 @@ const EditorSkeleton = ({
   showHeader = true, 
   showButtons = true 
 }: EditorSkeletonProps) => {
+  const { t } = useTranslation('common');
   return (
     <Card className="p-4 animate-pulse">
       {showHeader && (
@@ -34,7 +38,7 @@ const EditorSkeleton = ({
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-gray-500">Loading editor...</p>
+            <p className="text-gray-500">{t('skeletons.editor.loading')}</p>
           </div>
         </div>
       </div>

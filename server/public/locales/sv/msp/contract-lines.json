@@ -821,7 +821,8 @@
       "conflict": "Ändringen av avtalsraden står i konflikt med en befintlig post. Ladda om sidan och försök igen.",
       "notAllowed": "Ett av avtalsradens värden är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt fält för avtalsraden saknas.",
-      "missingFieldNamed": "Ett obligatoriskt fält för avtalsraden saknas: {{field}}."
+      "missingFieldNamed": "Ett obligatoriskt fält för avtalsraden saknas: {{field}}.",
+      "advanceTimingNotAllowed": "Fakturering i förskott är bara tillgänglig för fasta avtalsrader. Timbaserade rader och användningsrader faktureras alltid i efterskott, efter att arbetet har utförts."
     },
     "templateLine": {
       "unavailable": "Den valda mallraden är inte längre tillgänglig. Ladda om sidan och försök igen."

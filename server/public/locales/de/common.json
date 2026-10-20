@@ -1,4 +1,7 @@
 {
+  "breadcrumbs": {
+    "ariaLabel": "Navigationspfad"
+  },
   "phone": {
     "extension": "Durchw."
   },
@@ -22,13 +25,19 @@
     "add": "Reagieren",
     "ariaSummary_one": "{{emoji}} {{count}} Reaktion",
     "ariaSummary_other": "{{emoji}} {{count}} Reaktionen",
-    "ariaYouReacted": ", Sie haben reagiert"
+    "ariaYouReacted": ", Sie haben reagiert",
+    "ariaSummary_few": "{{emoji}} {{count}} Reaktionen",
+    "ariaSummary_many": "{{emoji}} {{count}} Reaktionen"
   },
   "credits": {
     "expiresInDaysOn_one": "Läuft in {{count}} Tag ab, am {{date}}",
     "expiresInDaysOn_other": "Läuft in {{count}} Tagen ab, am {{date}}",
     "expiringForClient_one": "{{count}} Guthaben für {{clientName}} läuft bald ab",
-    "expiringForClient_other": "{{count}} Guthaben für {{clientName}} laufen bald ab"
+    "expiringForClient_other": "{{count}} Guthaben für {{clientName}} laufen bald ab",
+    "expiresInDaysOn_few": "Läuft in {{count}} Tagen ab, am {{date}}",
+    "expiresInDaysOn_many": "Läuft in {{count}} Tagen ab, am {{date}}",
+    "expiringForClient_few": "{{count}} Guthaben für {{clientName}} laufen bald ab",
+    "expiringForClient_many": "{{count}} Guthaben für {{clientName}} laufen bald ab"
   },
   "staleAction": {
     "message": "Diese Seite ist nicht mehr aktuell. Aktualisieren Sie sie, um Live-Updates und Aktionen wiederherzustellen."
@@ -46,7 +55,13 @@
     "licenseWrongTenant": "Diese Lizenz wurde für eine andere Appliance ausgestellt und ist hier nicht gültig. Die Installation verwendet Essentials-Funktionen.",
     "manageLicense": "Lizenz verwalten",
     "ariaLabel": "Lizenzstatus",
-    "dismiss": "Schließen"
+    "dismiss": "Schließen",
+    "licenseExpiresIn_few": "Die Lizenz läuft in {{count}} Tagen ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden.",
+    "licenseExpiresIn_many": "Die Lizenz läuft in {{count}} Tagen ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden.",
+    "trialDaysRemaining_few": "Pro-Testphase aktiv — noch {{count}} Tage.",
+    "trialDaysRemaining_many": "Pro-Testphase aktiv — noch {{count}} Tage.",
+    "trialExpiresIn_few": "Die Pro-Testphase läuft in {{count}} Tagen ab. Geben Sie einen Lizenzschlüssel ein, um die Pro-Funktionen zu behalten.",
+    "trialExpiresIn_many": "Die Pro-Testphase läuft in {{count}} Tagen ab. Geben Sie einen Lizenzschlüssel ein, um die Pro-Funktionen zu behalten."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -99,7 +114,18 @@
     "done": "Fertig",
     "continue": "Weiter",
     "printSelected": "Ausgewählte drucken ({{count}})",
-    "removeTag": "Tag entfernen"
+    "removeTag": "Tag entfernen",
+    "saveChanges": "Änderungen speichern",
+    "printSelected_few": "Auswahl drucken ({{count}})",
+    "printSelected_many": "Auswahl drucken ({{count}})",
+    "saveSettings": "Einstellungen speichern",
+    "finishSetup": "Einrichtung abschließen",
+    "skip": "Überspringen",
+    "saveAsDraft": "Als Entwurf speichern",
+    "completing": "Abschließen...",
+    "more": "Mehr",
+    "closeDialog": "Dialog schließen",
+    "clearSearch": "Suche löschen"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -117,7 +143,8 @@
     "inactive": "Inaktiv",
     "completed": "Abgeschlossen",
     "cancelled": "Abgebrochen",
-    "processing": "Wird verarbeitet..."
+    "processing": "Wird verarbeitet...",
+    "loadingLabel": "Wird geladen"
   },
   "messages": {
     "welcome": "Willkommen",
@@ -479,7 +506,11 @@
     "expand": "Ausklappen",
     "showInDrawer": "In Seitenleiste anzeigen",
     "showEarlierReplies_one": "{{count}} frühere Antwort anzeigen",
-    "showEarlierReplies_other": "{{count}} frühere Antworten anzeigen"
+    "showEarlierReplies_other": "{{count}} frühere Antworten anzeigen",
+    "replies_few": "{{count}} Antworten",
+    "replies_many": "{{count}} Antworten",
+    "showEarlierReplies_few": "{{count}} frühere Antworten anzeigen",
+    "showEarlierReplies_many": "{{count}} frühere Antworten anzeigen"
   },
   "pagination": {
     "previous": "Zurück",
@@ -501,7 +532,9 @@
     "totalRecordsInline": "({{count}} Gesamteinträge)",
     "pageOf": "Seite {{current}} von {{total}}",
     "itemsLabel_one": "Eintrag",
-    "itemsLabel_other": "Einträge"
+    "itemsLabel_other": "Einträge",
+    "itemsLabel_few": "Einträge",
+    "itemsLabel_many": "Einträge"
   },
   "documents": {
     "title": "Dokumente",
@@ -554,7 +587,11 @@
       "downloadFailed": "Dokument konnte nicht heruntergeladen werden",
       "bulkDeleteFailed": "Einige Dokumente konnten nicht gelöscht werden",
       "bulkDeleteSuccess_one": "{{count}} Dokument wurde erfolgreich gelöscht",
-      "bulkDeleteSuccess_other": "{{count}} Dokumente wurden erfolgreich gelöscht"
+      "bulkDeleteSuccess_other": "{{count}} Dokumente wurden erfolgreich gelöscht",
+      "bulkDeleteSuccess_few": "{{count}} Dokumente wurden erfolgreich gelöscht",
+      "bulkDeleteSuccess_many": "{{count}} Dokumente wurden erfolgreich gelöscht",
+      "moveDocumentsSuccess_few": "{{count}} Dokumente wurden nach {{destination}} verschoben",
+      "moveDocumentsSuccess_many": "{{count}} Dokumente wurden nach {{destination}} verschoben"
     },
     "empty": {
       "default": "Keine Dokumente gefunden",
@@ -568,11 +605,15 @@
       "selected_other": "{{count}} Dokumente ausgewählt",
       "moveToFolder": "In Ordner verschieben",
       "deleteSelected": "Ausgewählte löschen",
-      "clearSelection": "Auswahl aufheben"
+      "clearSelection": "Auswahl aufheben",
+      "selected_few": "{{count}} Dokumente ausgewählt",
+      "selected_many": "{{count}} Dokumente ausgewählt"
     },
     "prompts": {
       "confirmBulkDelete_one": "Möchten Sie wirklich {{count}} Dokument löschen?",
-      "confirmBulkDelete_other": "Möchten Sie wirklich {{count}} Dokumente löschen?"
+      "confirmBulkDelete_other": "Möchten Sie wirklich {{count}} Dokumente löschen?",
+      "confirmBulkDelete_few": "Möchten Sie wirklich {{count}} Dokumente löschen?",
+      "confirmBulkDelete_many": "Möchten Sie wirklich {{count}} Dokumente löschen?"
     },
     "pagination": {
       "perPage": "{{count}} pro Seite"
@@ -605,7 +646,9 @@
       "rootOption": "Stamm (kein Ordner)",
       "empty": "Keine Ordner vorhanden. Dokumente werden im Stammverzeichnis gespeichert.",
       "showAllFolders": "Alle Ordner anzeigen",
-      "showEntityFolders": "Zugehörige Ordner anzeigen"
+      "showEntityFolders": "Zugehörige Ordner anzeigen",
+      "bulkMoveDescription_few": "Zielordner für {{count}} Dokumente auswählen",
+      "bulkMoveDescription_many": "Zielordner für {{count}} Dokumente auswählen"
     },
     "filters": {
       "searchLabel": "Dokumente suchen",
@@ -784,7 +827,18 @@
     }
   },
   "fields": {
-    "notes": "Notizen"
+    "notes": "Notizen",
+    "phone": {
+      "label": "Telefon",
+      "placeholder": "+1 (555) 123-4567"
+    },
+    "phoneExtension": {
+      "label": "Durchwahl",
+      "placeholder": "Durchw. 1234"
+    },
+    "priority": {
+      "placeholder": "Priorität auswählen"
+    }
   },
   "auth": {
     "signOut": {
@@ -1199,7 +1253,9 @@
       "revoking": "Wird widerrufen...",
       "loggingOut": "Wird abgemeldet...",
       "logoutFromOther_one": "Von {{count}} anderem Gerät abmelden",
-      "logoutFromOther_other": "Von {{count}} anderen Geräten abmelden"
+      "logoutFromOther_other": "Von {{count}} anderen Geräten abmelden",
+      "logoutFromOther_few": "Von {{count}} anderen Geräten abmelden",
+      "logoutFromOther_many": "Von {{count}} anderen Geräten abmelden"
     },
     "confirmations": {
       "logoutCurrent": "Dies meldet Sie von Ihrer aktuellen Sitzung ab. Sind Sie sicher?",
@@ -1295,8 +1351,34 @@
     "saving": "Wird gespeichert..."
   },
   "enums": {
+    "locale": {
+      "en": "Englisch",
+      "fr": "Französisch",
+      "es": "Spanisch",
+      "de": "Deutsch",
+      "nl": "Niederländisch",
+      "it": "Italienisch",
+      "pl": "Polnisch",
+      "pt": "Portugiesisch (Brasilien)",
+      "sv": "Schwedisch",
+      "xx": "Pseudosprache (xx)",
+      "yy": "Pseudosprache (yy)"
+    },
     "addOnDescription": {
       "ai_assistant": "Schalten Sie KI-Chat, Dokumentenhilfe, Seitenleisten-Assistenz und Workflow-KI-Tools für Ihr Team frei."
+    },
+    "notificationCategory": {
+      "tickets": "Tickets",
+      "invoices": "Rechnungen",
+      "messages": "Nachrichten",
+      "projects": "Projekte",
+      "system": "System",
+      "appointments": "Termine"
+    },
+    "theme": {
+      "light": "Hell",
+      "dark": "Dunkel",
+      "system": "System"
     }
   },
   "form": {
@@ -1322,7 +1404,9 @@
     "notAssigned": "Nicht zugewiesen",
     "searchUsersOrTeams": "Benutzer oder Teams suchen...",
     "unnamedUser": "Unbenannter Benutzer",
-    "unnamedTeam": "Unbenanntes Team"
+    "unnamedTeam": "Unbenanntes Team",
+    "userPicker": "Benutzerauswahl",
+    "noUsersFound": "Keine Benutzer gefunden"
   },
   "serviceTypeSelect": {
     "placeholder": "Servicetyp auswählen ...",
@@ -1525,7 +1609,22 @@
     "showAll": "Alle anzeigen",
     "showingAllColumns": "Alle Spalten werden angezeigt; horizontal scrollen, um sie zu sehen.",
     "showLess": "Weniger anzeigen",
-    "columnsHidden": "{{count}} Spalten aufgrund von begrenztem Platz ausgeblendet."
+    "columnsHidden": "{{count}} Spalten aufgrund von begrenztem Platz ausgeblendet.",
+    "columnsHidden_few": "{{count}} Spalten aus Platzgründen ausgeblendet.",
+    "columnsHidden_many": "{{count}} Spalten aus Platzgründen ausgeblendet.",
+    "responsiveColumnsHidden_one": "{{count}} Spalte wegen Platzmangels ausgeblendet. Vergrößern Sie den Bereich, um mehr zu sehen.",
+    "responsiveColumnsHidden_other": "{{count}} Spalten wegen Platzmangels ausgeblendet. Vergrößern Sie den Bereich, um mehr zu sehen.",
+    "responsiveColumnsHidden_few": "{{count}} Spalten wegen Platzmangels ausgeblendet. Vergrößern Sie den Bereich, um mehr zu sehen.",
+    "responsiveColumnsHidden_many": "{{count}} Spalten wegen Platzmangels ausgeblendet. Vergrößern Sie den Bereich, um mehr zu sehen.",
+    "empty": "Keine Ergebnisse",
+    "pagination": {
+      "empty": "0 Einträge",
+      "range_one": "{{first}}–{{last}} von {{count}} Eintrag",
+      "range_other": "{{first}}–{{last}} von {{count}} Einträgen",
+      "range_few": "{{first}}–{{last}} von {{count}} Einträgen",
+      "range_many": "{{first}}–{{last}} von {{count}} Einträgen",
+      "perPage": "{{count}} pro Seite"
+    }
   },
   "richTextEditorSkeleton": {
     "loading": "Editor wird geladen…"
@@ -1544,7 +1643,36 @@
   },
   "notifications": {
     "needsAttention": "Erfordert Aufmerksamkeit ({{count}})",
-    "lowPriority": "Niedrige Priorität ({{count}})"
+    "lowPriority": "Niedrige Priorität ({{count}})",
+    "detail": {
+      "document": "Dokument",
+      "actions": {
+        "openDocument": "Dokument öffnen",
+        "viewTicket": "Ticket anzeigen",
+        "viewTask": "Aufgabe anzeigen",
+        "viewDetails": "Details anzeigen"
+      },
+      "changes": "Änderungen:",
+      "status": "Status:",
+      "priority": "Priorität:",
+      "assignedTo": "Zugewiesen an:",
+      "changedBy": "Geändert von:",
+      "assignedBy": "Zugewiesen von:",
+      "unread": "Ungelesen",
+      "internalComment": "Interner Kommentar",
+      "commentBy": "Kommentar von {{author}}:",
+      "readAt": "Gelesen {{time}}"
+    },
+    "item": {
+      "unknown": "Unbekannt",
+      "justNow": "Gerade eben",
+      "minutesAgo": "vor {{minutes}} Min.",
+      "hoursAgo": "vor {{hours}} Std.",
+      "daysAgo": "vor {{days}} T.",
+      "assigned": "Zugewiesen:",
+      "performedBy": "von {{name}}",
+      "internal": "Intern"
+    }
   },
   "importConflicts": {
     "title": "Importkonflikte lösen",
@@ -1593,7 +1721,41 @@
       "document": "Dokumenten",
       "knowledge_base_article": "Wissensdatenbank-Artikeln",
       "opportunity": "Verkaufschancen"
-    }
+    },
+    "messages": {
+      "error": {
+        "duplicate": "Das Tag „{{tag}}“ ist für dieses Element bereits vorhanden",
+        "missingEntityId": "Tag kann nicht hinzugefügt werden: Die Entitäts-ID fehlt"
+      },
+      "success": {
+        "added": "Tag „{{tag}}“ erfolgreich hinzugefügt"
+      }
+    },
+    "dialogs": {
+      "lastUsage": {
+        "title": "Letzte Verwendung des Tags",
+        "message": "Dies ist die letzte Verwendung des Tags „{{tag}}“. Möchten Sie die Tag-Definition löschen oder für die zukünftige Verwendung behalten?",
+        "confirm": "Entfernen und Definition löschen",
+        "keep": "Entfernen und Definition behalten"
+      }
+    },
+    "fields": {
+      "tags": {
+        "label": "Tags",
+        "placeholder": "Tag hinzufügen..."
+      },
+      "newTag": {
+        "placeholder": "Neues Tag"
+      }
+    },
+    "actions": {
+      "removeTag": "Tag {{tag}} entfernen",
+      "saving": "..."
+    },
+    "errors": {
+      "providerRequired": "useTags muss innerhalb eines TagProvider verwendet werden"
+    },
+    "empty": "Keine Tags gefunden"
   },
   "statusDialog": {
     "nameRequired": "Der Statusname ist erforderlich",
@@ -1632,7 +1794,14 @@
   "editor": {
     "attachFiles": "Dateien anhängen",
     "uploadingFiles": "Dateien werden hochgeladen…",
-    "fileUploadFailed": "Datei konnte nicht hochgeladen werden."
+    "fileUploadFailed": "Datei konnte nicht hochgeladen werden.",
+    "mentions": {
+      "everyone": "Alle",
+      "aiAssistant": "Alga AI-Assistent",
+      "noUsername": "kein Benutzername",
+      "userTitle": "{{displayName}} ({{username}})",
+      "fallback": "Erwähnung"
+    }
   },
   "emailPreferences": {
     "loading": "E-Mail-Einstellungen werden geladen…",
@@ -1754,5 +1923,254 @@
   "emailRecipients": {
     "remove": "{{email}} entfernen",
     "placeholder": "Adresse eingeben und Eingabetaste drücken"
+  },
+  "iconPicker": {
+    "enums": {
+      "icons": {
+        "phone": "Telefon",
+        "mail": "E-Mail",
+        "message-circle": "Nachricht",
+        "video": "Videoanruf",
+        "send": "Senden",
+        "users": "Treffen",
+        "calendar": "Termin",
+        "presentation": "Präsentation",
+        "coffee": "Informelles Treffen",
+        "handshake": "Vereinbarung",
+        "file-text": "Dokument",
+        "sticky-note": "Notiz",
+        "edit": "Bearbeiten",
+        "flag": "Nachverfolgung",
+        "alarm-clock": "Erinnerung",
+        "clock": "Zeiterfassung",
+        "activity": "Allgemeine Aktivität",
+        "briefcase": "Kontoverwaltung",
+        "search": "Recherche",
+        "book-open": "Schulung",
+        "headphones": "Support",
+        "check-square": "Überprüfung",
+        "clipboard": "Dokumentation",
+        "users-2": "Beratung",
+        "target": "Planung",
+        "settings": "Konfiguration",
+        "star": "Wichtig",
+        "award": "Erfolg",
+        "zap": "Schnellaktion",
+        "map-pin": "Standort",
+        "tag": "Bezeichnung",
+        "bell": "Benachrichtigung",
+        "shield": "Sicherheit",
+        "key": "Zugriff",
+        "heart": "Favorit"
+      },
+      "categories": {
+        "Communication": "Kommunikation",
+        "Meetings": "Besprechungen",
+        "Documents": "Dokumente",
+        "Tasks": "Aufgaben",
+        "Activities": "Aktivitäten",
+        "Business": "Geschäftliches"
+      }
+    },
+    "selected": "Ausgewählt: {{label}}",
+    "help": "Wählen Sie ein Symbol für diesen Interaktionstyp. Das Symbol wird in Listen und Formularen angezeigt."
+  },
+  "skeletons": {
+    "calendar": {
+      "loading": "Kalender wird geladen..."
+    },
+    "kanbanBoard": {
+      "loading": "Kanban-Board wird geladen"
+    },
+    "chart": {
+      "loading": "Diagramm wird geladen...",
+      "loadingNamed": "{{title}} wird geladen..."
+    },
+    "settingsTab": {
+      "loading": "Einstellungen werden geladen..."
+    },
+    "editor": {
+      "loading": "Editor wird geladen..."
+    },
+    "taskForm": {
+      "loading": "Aufgabenformular wird geladen..."
+    },
+    "workflow": {
+      "loading": "Workflow-Visualisierung wird geladen..."
+    }
+  },
+  "dialogs": {
+    "success": {
+      "title": "Erfolg",
+      "confirm": "OK"
+    },
+    "contactPicker": {
+      "title": "Kontakt auswählen",
+      "columns": {
+        "name": "Name",
+        "email": "E-Mail",
+        "phone": "Telefon",
+        "action": "Aktion"
+      },
+      "select": "Auswählen",
+      "searchPlaceholder": "Nach Name, E-Mail oder Telefon suchen..."
+    },
+    "defaultTitle": "Dialog",
+    "confirmDelete": {
+      "title": "{{itemType}} löschen",
+      "message": "Möchten Sie „{{itemName}}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+    },
+    "unsavedChanges": {
+      "title": "Ungespeicherte Änderungen",
+      "message": "Sie haben ungespeicherte Änderungen. Möchten Sie die Seite wirklich verlassen? Ihre Änderungen gehen verloren.",
+      "confirm": "Ohne Speichern verlassen",
+      "cancel": "Bleiben"
+    },
+    "confirmAction": {
+      "title": "Aktion bestätigen"
+    },
+    "contentTitle": "Dialoginhalt"
+  },
+  "viewDensity": {
+    "compact": {
+      "label": "Kompakt",
+      "title": "Zur kompakten Ansicht wechseln"
+    },
+    "spacious": {
+      "label": "Großzügig",
+      "title": "Zur großzügigen Ansicht wechseln"
+    },
+    "decrease": {
+      "title": "Abstände verringern"
+    },
+    "reset": {
+      "title": "Auf Standard zurücksetzen"
+    },
+    "increase": {
+      "title": "Abstände vergrößern"
+    }
+  },
+  "multiContactPicker": {
+    "fields": {
+      "contacts": {
+        "placeholder": "Kontakte auswählen..."
+      },
+      "search": {
+        "placeholder": "Kontakte suchen..."
+      }
+    },
+    "noResults": "Keine Ergebnisse gefunden",
+    "noContacts": "Keine Kontakte verfügbar",
+    "noEmail": "keine E-Mail",
+    "actions": {
+      "clearAll": "Alles löschen"
+    }
+  },
+  "themeToggle": {
+    "ariaLabel": "Design wechseln",
+    "selected": "Ausgewählt"
+  },
+  "drawer": {
+    "formTitle": "{{title}} - Formular",
+    "actions": {
+      "goBack": "Zurück",
+      "goForward": "Vorwärts",
+      "close": "Seitenbereich schließen"
+    }
+  },
+  "countryPicker": {
+    "placeholder": "Land auswählen",
+    "searchPlaceholder": "Länder suchen...",
+    "otherCountries": "Andere Länder",
+    "empty": "Keine Länder gefunden"
+  },
+  "input": {
+    "actions": {
+      "typeIntoLabel": "Geben Sie Text in das Feld {{label}} ein",
+      "type": "Geben Sie Text in dieses Feld ein",
+      "focus": "Fokussieren Sie dieses Eingabefeld",
+      "clear": "Löschen Sie den aktuellen Text"
+    }
+  },
+  "button": {
+    "actions": {
+      "clickLabel": "Klicken Sie auf {{label}}",
+      "click": "Klicken Sie auf diese Schaltfläche",
+      "focus": "Fokussieren Sie diese Schaltfläche"
+    }
+  },
+  "inlineReplyComposer": {
+    "actions": {
+      "reply": "Antworten"
+    },
+    "fields": {
+      "internal": {
+        "label": "Als intern markieren"
+      }
+    }
+  },
+  "featureUpgradeNotice": {
+    "title": "{{featureName}} erfordert {{tierLabel}}",
+    "description": "Wechseln Sie zum Tarif {{tierLabel}}, um {{featureName}} und weitere leistungsstarke Funktionen freizuschalten.",
+    "actions": {
+      "viewPlans": "Tarife anzeigen"
+    }
+  },
+  "widgets": {
+    "highlight": {
+      "ariaLabel": "Hervorgehobener Inhalt"
+    },
+    "buttonLink": {
+      "unavailable": "Link nicht verfügbar",
+      "actions": {
+        "openLink": "Link öffnen"
+      }
+    },
+    "richTextViewer": {
+      "loading": "Inhalt wird geladen...",
+      "errors": {
+        "loadFailed": "Fehler beim Laden des Inhalts"
+      }
+    }
+  },
+  "reflection": {
+    "parentId": "ID der übergeordneten Komponente: {{id}}",
+    "noParent": "Keine übergeordnete Komponente"
+  },
+  "teamAvatar": {
+    "alt": "Avatar von {{name}}",
+    "defaultAlt": "Teamavatar"
+  },
+  "userAvatar": {
+    "alt": "Avatar von {{name}}",
+    "defaultAlt": "Benutzeravatar"
+  },
+  "featurePlaceholder": {
+    "description": "404 - Diese Seite befindet sich im Aufbau. Sie haben einen Bereich der Website erreicht, der noch nicht ganz fertig ist. Alga legt hinter den Kulissen die Grundlagen. Schauen Sie bald wieder vorbei!"
+  },
+  "contactAvatar": {
+    "alt": "Avatar von {{name}}",
+    "defaultAlt": "Kontaktavatar"
+  },
+  "entityAvatar": {
+    "alt": "Bild von {{name}}",
+    "defaultAlt": "Entitätsbild"
+  },
+  "editableField": {
+    "notSet": "Nicht festgelegt"
+  },
+  "editableText": {
+    "actions": {
+      "edit": "Klicken Sie zum Bearbeiten"
+    }
+  },
+  "label": {
+    "required": "Erforderlich"
+  },
+  "tabs": {
+    "ariaLabel": "Registerkarten"
+  },
+  "viewSwitcher": {
+    "ariaLabel": "Ansicht wechseln"
   }
 }

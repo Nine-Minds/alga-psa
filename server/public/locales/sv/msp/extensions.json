@@ -7,6 +7,10 @@
     "description": "{{feature}} kräver Pro. Uppgradera för att få tillgång till den här funktionen."
   },
   "settings": {
+    "unavailable": {
+      "title": "Tilläggsinställningar är inte tillgängliga",
+      "description": "Hantering av tilläggsinställningar är tillgänglig i AlgaPSA Pro."
+    },
     "title": "Tilläggshantering",
     "description": "Installera, konfigurera och hantera tillägg för att utöka funktionaliteten i AlgaPSA.",
     "tabs": {
@@ -98,7 +102,12 @@
       "description": "Hantera tillägg"
     },
     "title": "Tillägg",
-    "description": "Tilläggshantering är tillgänglig i Pro."
+    "description": "Tilläggshantering är tillgänglig i Pro.",
+    "unavailable": {
+      "metadataTitle": "Tillägg (endast EE)",
+      "title": "Tillägg är inte tillgängliga",
+      "description": "Tillgängligt i Pro."
+    }
   },
   "detail": {
     "metadataTitle": "Tillägg - Pro-funktion",
@@ -121,7 +130,12 @@
       "description": "Visa information om tillägget"
     },
     "title": "Information om tillägget",
-    "description": "Information om tillägget är tillgänglig i Pro."
+    "description": "Information om tillägget är tillgänglig i Pro.",
+    "unavailable": {
+      "metadataTitle": "Information om tillägget (endast EE)",
+      "title": "Information om tillägget är inte tillgänglig",
+      "description": "Den här sidan är tillgänglig i Pro."
+    }
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +143,12 @@
       "description": "Konfigurera tilläggsinställningar"
     },
     "title": "Tilläggsinställningar",
-    "description": "Tilläggsinställningar är tillgängliga i Pro."
+    "description": "Tilläggsinställningar är tillgängliga i Pro.",
+    "unavailable": {
+      "metadataTitle": "Tilläggsinställningar (endast EE)",
+      "title": "Tilläggsinställningar är inte tillgängliga",
+      "description": "Den här sidan är tillgänglig i Pro."
+    }
   },
   "details": {
     "label": "Information om tillägget",
@@ -235,6 +254,10 @@
     "cancel": "Avbryt"
   },
   "list": {
+    "unavailable": {
+      "title": "Tillägg är inte tillgängliga",
+      "description": "Hantering av tillägg är tillgänglig i AlgaPSA Pro."
+    },
     "label": "Tilläggshantering",
     "heading": "Tillägg",
     "loading": "Läser in tillägg…",
@@ -294,7 +317,20 @@
     "installCompleteError": "Tillägget har slutförts, men installationen blev inte klar",
     "installUnexpected": "Ett oväntat fel uppstod under installationen",
     "finalizeRequireManifest": "Klistra in manifestet i JSON-format innan du slutför installationen.",
-    "finalizeProvidedFailed": "Det gick inte att slutföra installationen med det angivna manifestet"
+    "finalizeProvidedFailed": "Det gick inte att slutföra installationen med det angivna manifestet",
+    "pro": {
+      "title": "Tillägg (Pro)",
+      "description": "Installation och hantering av tillägg är tillgängliga i AlgaPSA Pro.",
+      "featureTitle": "Pro-funktion",
+      "help": "Installationsprogrammet för tillägg är endast tillgängligt i AlgaPSA Pro.",
+      "actions": {
+        "learnMore": "Läs mer om Pro"
+      }
+    },
+    "unavailable": {
+      "title": "Installation av tillägg är inte tillgänglig",
+      "description": "Installation av tillägg är tillgänglig i AlgaPSA Pro."
+    }
   },
   "installSimple": {
     "title": "Installera tillägg",
@@ -371,5 +407,19 @@
       "medium": "Ändringsbehörigheter låter tillägget uppdatera befintliga data.",
       "high": "Avancerade behörigheter låter tillägget skapa, radera eller utföra åtgärder."
     }
+  },
+  "iframe": {
+    "title": "Tilläggsapp",
+    "starting": "Startar tillägget",
+    "loadingUi": "Läser in tilläggets gränssnitt…",
+    "connecting": "Ansluter till körmiljöns arbetsyta…",
+    "loadFailed": "Det gick inte att läsa in det här tillägget.",
+    "configurationHint": "Kontrollera tilläggets konfiguration och försök igen."
+  },
+  "unavailable": {
+    "metadataTitle": "Tillägg (endast EE)",
+    "title": "Tillägget är inte tillgängligt",
+    "description": "Tilläggssystemet finns i Pro och ingår inte i denna version av Community Edition.",
+    "requestedId": "Begärt ID: {{id}}"
   }
 }
