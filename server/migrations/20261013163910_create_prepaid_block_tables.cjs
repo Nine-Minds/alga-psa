@@ -158,6 +158,11 @@ exports.up = async function up(knex) {
     ['invoice_id', 'invoices', 'invoice_id', 'invoice'],
     ['invoice_charge_id', 'invoice_charges', 'item_id', 'invoice_charge'],
   ];
+  // Citus forbids SET NULL on an FK that includes the distribution key, so the
+  // backstop degrades to a plain FK there (same as hour_blocks_invoice_fkey in
+  // 20260813120000); the lifecycle service clears block/invoice/charge refs
+  // before those rows go away.
+  const issuancesDistributed = (await hasCitus(knex)) && (await isDistributed(knex, 'contract_line_block_issuances'));
   for (const [column, refTable, refColumn, label] of softFks) {
     const name = `contract_line_block_issuances_${label}_fkey`;
     await knex.raw(`
@@ -166,7 +171,7 @@ exports.up = async function up(knex) {
           ALTER TABLE contract_line_block_issuances
             ADD CONSTRAINT ${name}
             FOREIGN KEY (tenant, ${column}) REFERENCES ${refTable}(tenant, ${refColumn})
-            ON DELETE SET NULL (${column});
+            ${issuancesDistributed ? '' : `ON DELETE SET NULL (${column})`};
         END IF;
       END $$;
     `);

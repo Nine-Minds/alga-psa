@@ -11,6 +11,8 @@
  * Transaction-free (composite FKs to distributed tables). Down refuses when
  * rows that use the widened values exist, rather than silently deleting data.
  */
+const { hasCitus, isDistributed } = require('./utils/citusDistribution.cjs');
+
 exports.config = { transaction: false };
 
 const AUDIT_BASE = [
@@ -51,8 +53,12 @@ exports.up = async function up(knex) {
     'tenant, contract_line_id', 'contract_lines', 'tenant, contract_line_id');
   await addFk(knex, 'hour_blocks', 'hour_blocks_client_contract_fkey',
     'tenant, client_contract_id', 'client_contracts', 'tenant, client_contract_id');
+  // Citus forbids SET NULL on an FK that includes the distribution key; the
+  // issuance is restored/cancelled (and the block voided) rather than deleted.
+  const hourBlocksDistributed = (await hasCitus(knex)) && (await isDistributed(knex, 'hour_blocks'));
   await addFk(knex, 'hour_blocks', 'hour_blocks_issuance_fkey',
-    'tenant, issuance_id', 'contract_line_block_issuances', 'tenant, issuance_id', 'SET NULL (issuance_id)');
+    'tenant, issuance_id', 'contract_line_block_issuances', 'tenant, issuance_id',
+    hourBlocksDistributed ? undefined : 'SET NULL (issuance_id)');
   await knex.raw(
     'CREATE INDEX IF NOT EXISTS hour_blocks_contract_line_status_idx ON hour_blocks (tenant, contract_line_id, status)',
   );
