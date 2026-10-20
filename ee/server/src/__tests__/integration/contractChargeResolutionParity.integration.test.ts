@@ -19,6 +19,7 @@ import {
   it,
   vi,
 } from "vitest";
+import { writeFileSync } from "node:fs";
 import { v4 as uuidv4 } from "uuid";
 import type { Knex } from "knex";
 import type { ContractScenario } from "@alga-psa/types";
@@ -89,6 +90,8 @@ interface PoolSpec {
   /** burn multiplier per hourly service (default 1). */
   burn?: number;
   allowRollover?: boolean;
+  /** Catch-all pool: covers every configured service on the line (no member rows). */
+  coversAll?: boolean;
   /**
    * `typed-config` keeps the legacy `Bucket` configuration row (what the
    * simulator understood); `pool-only` carries the pool solely in
@@ -129,6 +132,7 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
 
   afterAll(async () => {
     await helpers.afterAll();
+    writeInvoiceLineDump();
   }, 60_000);
 
   it("fixed, product, license and hourly (no pool) charges match the engine line by line", async () => {
@@ -232,6 +236,19 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
     ).toHaveLength(0);
     expect(simulator).toEqual(engine);
   }, 120_000);
+  // RED at a62fafbcb5 (same cause). Flip to `it` when the scenario source lands.
+  it.fails("catch-all pool (covers_all_services, no member rows) matches the engine", async () => {
+    const contract = await seedParityContract(context, {
+      hourlyMinutes: [840],
+      usageQuantities: [3],
+      pool: { totalMinutes: 600, overageRate: 15_000, coversAll: true, shape: "pool-only" },
+    });
+    const { engine, simulator } = await compare(context, contract, {
+      hourlyHours: 14,
+    });
+    expect(engine.filter((line) => line.kind === "bucket")).toHaveLength(1);
+    expect(simulator).toEqual(engine);
+  }, 120_000);
 });
 
 // ---------------------------------------------------------------------------
@@ -317,6 +334,7 @@ async function runEngineDryRun(
   }
   const result = captured[0];
   if (!result) throw new Error("Engine did not run for the window");
+  recordInvoiceLineDump(result);
   if (result.error) throw new Error(`Engine failed: ${result.error}`);
   return (result.charges as any[])
     .filter((charge) => !charge.is_discount)
@@ -330,6 +348,37 @@ async function runEngineDryRun(
       };
     })
     .sort(compareLines);
+}
+
+// ---------------------------------------------------------------------------
+// Invoice-line dump (before/after engine switch). When CHARGE_RESOLUTION_DUMP
+// names a file, every engine result seen by this suite is written there with
+// ids replaced by order-of-appearance tokens, in engine output order, so two
+// runs (before and after the engine change) can be diffed byte for byte.
+
+const dumpedResults: unknown[] = [];
+
+function recordInvoiceLineDump(result: unknown): void {
+  dumpedResults.push(result);
+}
+
+function writeInvoiceLineDump(): void {
+  const target = process.env.CHARGE_RESOLUTION_DUMP;
+  if (!target || dumpedResults.length === 0) return;
+  const ids = new Map<string, string>();
+  const uuid = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
+  const text = JSON.stringify(
+    dumpedResults,
+    (key, value) =>
+      key === "created_at" || key === "updated_at" || key === "tenant"
+        ? undefined
+        : value,
+    2,
+  ).replace(uuid, (match) => {
+    if (!ids.has(match)) ids.set(match, `<id${ids.size}>`);
+    return ids.get(match) as string;
+  });
+  writeFileSync(target, text);
 }
 
 function normalizeKind(kind: string): string {
@@ -561,15 +610,17 @@ async function addPool(
     overage_rate: pool.overageRate,
     allow_rollover: pool.allowRollover ?? false,
     billing_period: "monthly",
-    covers_all_services: false,
+    covers_all_services: pool.coversAll ?? false,
   });
-  await context.db("contract_line_bucket_services").insert({
-    tenant: context.tenantId,
-    bucket_id: bucketId,
-    contract_line_id: contractLineId,
-    service_id: serviceId,
-    burn_multiplier: pool.burn ?? 1,
-  });
+  if (!pool.coversAll) {
+    await context.db("contract_line_bucket_services").insert({
+      tenant: context.tenantId,
+      bucket_id: bucketId,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      burn_multiplier: pool.burn ?? 1,
+    });
+  }
 }
 
 /**
@@ -611,7 +662,7 @@ async function seedActivity(
     {
       clientId: context.clientId,
       title: "Parity activity",
-      ticketNumber: `PAR-${uuidv4().slice(0, 8)}`,
+      ticketNumber: "PAR-0001",
     },
   );
   let offset = 0;
