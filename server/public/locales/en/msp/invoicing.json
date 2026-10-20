@@ -2472,7 +2472,8 @@
     "types": {
       "salesOrder": "Sales Order",
       "packingSlip": "Packing Slip",
-      "pickList": "Pick List"
+      "pickList": "Pick List",
+      "workTag": "Work Tag / Label"
     }
   },
   "errors": {

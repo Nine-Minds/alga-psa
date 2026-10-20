@@ -35,7 +35,7 @@ export interface LayoutPresetNodeDefinition {
 }
 
 export interface LayoutPresetDefinition {
-  documentKind?: 'invoice' | 'quote' | 'sales-order';
+  documentKind?: 'invoice' | 'quote' | 'sales-order' | 'work-tag';
   id: string;
   label: string;
   description: string;

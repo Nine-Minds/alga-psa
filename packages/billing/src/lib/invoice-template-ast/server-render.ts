@@ -98,11 +98,17 @@ async function inlineDocumentImages(
 // Public API
 // ---------------------------------------------------------------------------
 
-export const renderTemplateAstHtmlDocument = async (
+/**
+ * Render a template to its body markup + CSS without the surrounding HTML document. Includes the
+ * async barcode prepass (server-only; skipped with no library load when there is no barcode node).
+ * Used by the document renderer below and by the label batch layer, which composes many fragments
+ * into one document.
+ */
+export const renderTemplateAstFragment = async (
   ast: TemplateAst,
   evaluation: TemplateEvaluationResult,
-  options: TemplateHtmlDocumentOptions = {}
-): Promise<string> => {
+  options: Pick<TemplateHtmlDocumentOptions, 'locale' | 'dateFormat'> = {}
+): Promise<{ html: string; css: string; locale: string | undefined }> => {
   const { ast: localizedAst, locale, t } = await localizeTemplateAstForLocale(ast, options.locale);
   // Barcode prepass: async + server-only (qrcode / bwip-js are dynamically imported, never bundled
   // for the client). Skipped entirely, with no library load, when the template has no barcode node.
@@ -114,6 +120,15 @@ export const renderTemplateAstHtmlDocument = async (
     dateFormat: options.dateFormat,
     t,
   });
+  return { html, css, locale };
+};
+
+export const renderTemplateAstHtmlDocument = async (
+  ast: TemplateAst,
+  evaluation: TemplateEvaluationResult,
+  options: TemplateHtmlDocumentOptions = {}
+): Promise<string> => {
+  const { html, css, locale } = await renderTemplateAstFragment(ast, evaluation, options);
   const title = escapeHtml(options.title ?? 'Invoice');
   // Custom page size: emit a real @page rule (preferCSSPageSize makes Chromium honour it).
   const customPageCss = resolveCustomPageCssFromAst(ast);

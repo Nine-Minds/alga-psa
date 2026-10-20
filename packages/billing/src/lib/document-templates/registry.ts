@@ -15,6 +15,13 @@ import {
   getStandardPackingSlipTemplateAstByCode,
   getStandardPickListTemplateAstByCode,
 } from '../sales-order-template-ast/otherDocuments';
+import { buildLabelTemplateBindings } from '../label-template-ast/bindings';
+import { buildSampleLabelViewModel } from '../label-template-ast/sampleData';
+import {
+  STANDARD_LABEL_TEMPLATE_ASTS,
+  STANDARD_LABEL_TICKET_WORK_TAG_CODE,
+  getStandardLabelTemplateAstByCode,
+} from '../label-template-ast/standardTemplates';
 
 /**
  * The generic document-template registry (Approach C). Each registered document type contributes
@@ -25,7 +32,7 @@ import {
  * Sales Order is the first registered type. Invoice and quote keep their existing dedicated stacks
  * for now; the registry is shaped so they could migrate onto it later.
  */
-export type DocumentType = 'sales-order' | 'packing-slip' | 'pick-list';
+export type DocumentType = 'sales-order' | 'packing-slip' | 'pick-list' | 'work-tag';
 
 export interface DocumentTypeRegistryEntry {
   /** Human label for menus / the management route. */
@@ -68,6 +75,17 @@ export const DOCUMENT_TYPE_REGISTRY: Record<DocumentType, DocumentTypeRegistryEn
     getStandardTemplateAstByCode: getStandardPickListTemplateAstByCode,
     buildBindings: buildSalesOrderTemplateBindings,
     buildSampleViewModel: () => buildSampleSalesOrderViewModel() as unknown as Record<string, unknown>,
+  },
+  // ONE generic label type (decision for alga-2026-0002683 PLAN.md question 3): every label class
+  // (ticket work tag, asset label, stock-unit label) renders from the uniform LabelViewModel, with
+  // one standard template per class. Tenants manage one template list, not one per entity.
+  'work-tag': {
+    label: 'Work Tag / Label',
+    defaultStandardCode: STANDARD_LABEL_TICKET_WORK_TAG_CODE,
+    standardCodes: Object.keys(STANDARD_LABEL_TEMPLATE_ASTS),
+    getStandardTemplateAstByCode: getStandardLabelTemplateAstByCode,
+    buildBindings: buildLabelTemplateBindings,
+    buildSampleViewModel: () => buildSampleLabelViewModel() as unknown as Record<string, unknown>,
   },
 };
 

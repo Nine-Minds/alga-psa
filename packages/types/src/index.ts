@@ -24,6 +24,7 @@ export * from './lib/invoice-renderer/types';
 export * from './lib/invoice-template-ast';
 export * from './lib/invoice-print-settings';
 export * from './lib/recordLinks';
+export * from './lib/labels';
 export * from './lib/xeroCsvTaxImport';
 export * from './lib/companySync';
 export * from './lib/telemetry';
