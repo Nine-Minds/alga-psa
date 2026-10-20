@@ -54,6 +54,7 @@
     "taxBreakdown": "Tax Breakdown",
     "manualInvoice": "Manual Invoice",
     "credits": "Credits",
+    "currency": "Currency",
     "financialArtifactSummary": "Financial-only invoice. Recurring service periods appear only on recurring detail lines.",
     "servicePeriod": "Service Period",
     "servicePeriods": "Service Periods",

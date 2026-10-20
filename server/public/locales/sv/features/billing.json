@@ -54,6 +54,7 @@
     "taxBreakdown": "Momsspecifikation",
     "manualInvoice": "Manuell faktura",
     "credits": "Krediteringar",
+    "currency": "Valuta",
     "financialArtifactSummary": "Faktura som endast avser finansiella transaktioner. Återkommande tjänsteperioder visas bara på detaljrader för återkommande tjänster.",
     "servicePeriod": "Tjänsteperiod",
     "servicePeriods": "Tjänsteperioder",

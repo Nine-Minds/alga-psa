@@ -54,6 +54,7 @@
     "taxBreakdown": "Repartição de impostos",
     "manualInvoice": "Fatura manual",
     "credits": "Créditos",
+    "currency": "Moeda",
     "financialArtifactSummary": "Fatura apenas financeira. Os períodos de serviço recorrentes aparecem somente nas linhas de detalhe recorrentes.",
     "servicePeriod": "Período de serviço",
     "servicePeriods": "Períodos de serviço",

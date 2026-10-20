@@ -67,6 +67,7 @@
     "taxBreakdown": "Desglose de impuestos",
     "manualInvoice": "Factura manual",
     "credits": "Créditos",
+    "currency": "Moneda",
     "financialArtifactSummary": "Factura solo financiera. Los períodos de servicio recurrentes aparecen únicamente en las líneas de detalle recurrentes.",
     "servicePeriod": "Período de servicio",
     "servicePeriods": "Períodos de servicio",
