@@ -22,7 +22,8 @@
  */
 
 import type { IUserWithRoles } from '@alga-psa/types';
-import { runWithTenant } from '@alga-psa/db';
+import { getAdminConnection, runWithTenant } from '@alga-psa/db';
+import { coManagedAcceptancePendingError, isCoManagedAwaitingAcceptance } from '@alga-psa/licensing';
 import { getCurrentUserWithRevocationCheck } from './getCurrentUser';
 import { localizeActionError } from './localizeActionError';
 
@@ -53,6 +54,39 @@ export interface WithAuthOptions {
    * Useful for actions that have different behavior for authenticated vs anonymous users.
    */
   allowUnauthenticated?: boolean;
+  /**
+   * The action is part of reviewing and accepting a co-managed relationship
+   * (or a personal preference the review screen reads), so it runs while the
+   * workspace awaits acceptance. Every other browser-invoked action is refused
+   * until then.
+   */
+  allowBeforeCoManagedAcceptance?: boolean;
+}
+
+/**
+ * A browser-invoked server action or an API request, as opposed to a direct
+ * call while a page renders. The middleware stamps x-pathname on every request
+ * it forwards, overwriting any client value.
+ */
+async function isActionOrApiRequest(): Promise<boolean> {
+  try {
+    const { headers } = await import('next/headers.js');
+    const requestHeaders = await headers();
+    return Boolean(requestHeaders.get('next-action')) || (requestHeaders.get('x-pathname') ?? '').startsWith('/api/');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Until the customer accepts, a co-managed workspace is the MSP's proposal:
+ * only the review and acceptance screen may be used. The screen and layout
+ * render server-side, so direct calls while rendering are unaffected; any
+ * other action invoked from the browser or through the API is refused.
+ */
+async function assertCoManagedWorkspaceUsable(tenant: string, options?: WithAuthOptions): Promise<void> {
+  if (options?.allowBeforeCoManagedAcceptance || !await isActionOrApiRequest()) return;
+  if (await isCoManagedAwaitingAcceptance(await getAdminConnection(), tenant)) throw coManagedAcceptancePendingError();
 }
 
 /**
@@ -99,6 +133,8 @@ export function withAuth<TArgs extends unknown[], TResult>(
     const ctx: AuthContext = {
       tenant: user.tenant,
     };
+
+    await assertCoManagedWorkspaceUsable(user.tenant, options);
 
     // Use runWithTenant to set AsyncLocalStorage context
     // This ensures createTenantKnex() works without explicit tenant argument.

@@ -89,6 +89,35 @@ async function readState(trx: Knex.Transaction, tenant: string): Promise<CoManag
   return { state: entitlement.graceEndsAt ? 'grace' : 'active', canWrite: true, graceEndsAt: entitlement.graceEndsAt };
 }
 
+// A tenant is created co-managed or not and only ever leaves that product
+// (independent upgrade), so a tenant seen as anything else stays that way.
+const notCoManagedTenants = new Set<string>();
+
+/**
+ * Request admission, not write authorization: is this a co-managed workspace
+ * whose relationship the customer has not accepted yet? Until then the
+ * workspace may only be reviewed and accepted, so request gates (server
+ * actions, the REST API) refuse everything else. It takes none of the
+ * admission locks; writes still use assertCoManagedOperationalWrite.
+ */
+export async function isCoManagedAwaitingAcceptance(db: Knex, tenant: string): Promise<boolean> {
+  if (!tenant || notCoManagedTenants.has(tenant)) return false;
+  const customer = tenantDb(db, tenant);
+  const workspace = await customer.table('tenants').first('product_code');
+  if (!workspace) return false;
+  if (workspace.product_code !== 'co_managed') {
+    notCoManagedTenants.add(tenant);
+    return false;
+  }
+  const relationship = await customer.table('co_management_relationships').whereNull('ended_at').first('state');
+  return Boolean(relationship && relationship.state !== 'active' && relationship.state !== 'terminated');
+}
+
+/** The refusal a request gate raises for isCoManagedAwaitingAcceptance. */
+export function coManagedAcceptancePendingError(): CoManagedLifecycleError {
+  return new CoManagedLifecycleError({ state: 'pending_acceptance', canWrite: false, graceEndsAt: null });
+}
+
 /** For lifecycle displays and intake scheduling. A successful probe does not
  * authorize a later write: use the transaction guard at the write boundary. */
 export async function getCoManagedOperationalState(db: Knex, tenant: string): Promise<CoManagedOperationalState> {

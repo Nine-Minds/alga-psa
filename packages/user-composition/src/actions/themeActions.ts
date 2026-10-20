@@ -79,4 +79,4 @@ export const updateThemePreferenceAction = withAuth(async (
   }
 
   return { success: true };
-});
+}, { allowBeforeCoManagedAcceptance: true });

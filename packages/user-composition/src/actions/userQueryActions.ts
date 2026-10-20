@@ -416,7 +416,7 @@ export const getUserPreference = withAuth(async (
     }
     throw error;
   }
-});
+}, { allowBeforeCoManagedAcceptance: true });
 
 export const getUserPreferencesBatch = withAuth(async (
   _user,
@@ -448,7 +448,7 @@ export const getUserPreferencesBatch = withAuth(async (
     }
     throw error;
   }
-});
+}, { allowBeforeCoManagedAcceptance: true });
 
 export const setUserPreference = withAuth(async (
   _user,
@@ -472,7 +472,7 @@ export const setUserPreference = withAuth(async (
     logger.error('Failed to set user preference:', error);
     throw error;
   }
-});
+}, { allowBeforeCoManagedAcceptance: true });
 
 export const getUserClientId = withAuth(async (
   currentUser,

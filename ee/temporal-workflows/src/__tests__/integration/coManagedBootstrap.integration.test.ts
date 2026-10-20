@@ -749,6 +749,15 @@ async function ticketServiceForTest() {
 }
 
 describe('ticket API lifecycle admission against PostgreSQL', () => {
+  it('reports a workspace as awaiting acceptance from bootstrap until the customer accepts', async () => {
+    const { isCoManagedAwaitingAcceptance } = await import('@alga-psa/licensing');
+    const { operation, actor, input } = await readyForAcceptance();
+    await expect(isCoManagedAwaitingAcceptance(db, operation.customer_tenant)).resolves.toBe(true);
+    await expect(isCoManagedAwaitingAcceptance(db, operation.tenant)).resolves.toBe(false);
+    await acceptCoManagedRelationship(db, actor, input);
+    await expect(isCoManagedAwaitingAcceptance(db, operation.customer_tenant)).resolves.toBe(false);
+  });
+
   it('refuses a mailbox before acceptance, since a cancelled setup cannot clean one up', async () => {
     // Cleanup refuses to acknowledge a workspace that still holds external
     // mail resources, so one created before acceptance would strand the seats.
