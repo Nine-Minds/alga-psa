@@ -20,7 +20,9 @@ import { Temporal } from "@js-temporal/polyfill";
 import type {
   ChargeExplanation,
   ContractScenario,
+  IBillingCharge,
   IBillingPeriod,
+  IBucketCharge,
   IRecurringActivityWindow,
   IRecurringServicePeriod,
   IRecurringServicePeriodRecord,
@@ -401,6 +403,26 @@ function buildResolvedContractLineFacts(
 /* Result assembly                                                    */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The quantity an invoice line shows. Bucket charges leave `quantity`
+ * undefined for hour pools (canonical quantity 1), so the displayed quantity
+ * comes from the bucket facts with the rule invoices use
+ * (invoiceGeneration getChargeQuantity). Presentation only: the canonical
+ * line and the engine's output are untouched.
+ */
+function presentedQuantity(
+  canonicalLine: { chargeFamily: string; quantity: number },
+  sourceCharge: IBillingCharge | undefined,
+): number {
+  if (canonicalLine.chargeFamily !== "bucket" || sourceCharge?.type !== "bucket") {
+    return canonicalLine.quantity;
+  }
+  const bucket = sourceCharge as IBucketCharge;
+  return bucket.isUsageBucket
+    ? (bucket.overageUnits ?? bucket.quantity ?? 0)
+    : bucket.overageHours;
+}
+
 export function buildSimulatedPeriod(
   accumulator: SimulationCalculationPeriodInput,
   scenario: ContractScenario,
@@ -413,9 +435,14 @@ export function buildSimulatedPeriod(
     obligations.map((obligation) => [obligation.obligationId, obligation]),
   );
   const presentationLines: SimulatedInvoiceLine[] = calculation.lines.map(
-    (canonicalLine) => {
+    (canonicalLine, lineIndex) => {
       const obligation = obligationById.get(canonicalLine.obligationId);
       const unit = obligation?.metadata?.quantityLabel;
+      const displayQuantity = presentedQuantity(
+        canonicalLine,
+        // sourceCharges and lines keep the same order (calculateContractBilling).
+        calculation.sourceCharges[lineIndex],
+      );
       const quantityLabel =
         canonicalLine.chargeFamily === "discount"
           ? "discount"
@@ -423,7 +450,7 @@ export function buildSimulatedPeriod(
             ? "adjustment"
             : unit?.includes("month")
               ? unit
-              : `${formatHours(canonicalLine.quantity)} ${unit ?? resolveUnitOfMeasure({ fallback: 'C62' }).pluralLabel}`;
+              : `${formatHours(displayQuantity)} ${unit ?? resolveUnitOfMeasure({ fallback: 'C62' }).pluralLabel}`;
       const adjustmentIndex =
         canonicalLine.chargeFamily === "adjustment"
           ? Number(canonicalLine.lineKey.split(":")[1])
@@ -446,7 +473,7 @@ export function buildSimulatedPeriod(
         charge_type: chargeType,
         quantity_label: quantityLabel,
         rate_label: formatCents(canonicalLine.unitRate, scenario.currency_code),
-        quantity: canonicalLine.quantity,
+        quantity: displayQuantity,
         unit_price: canonicalLine.unitRate,
         net_amount: canonicalLine.netAmount,
         tax_amount: canonicalLine.taxAmount,

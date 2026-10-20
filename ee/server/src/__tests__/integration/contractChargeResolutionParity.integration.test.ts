@@ -273,6 +273,11 @@ describe("Contract charge resolution parity (simulator vs engine dry run)", () =
     expect(bucketLines.length).toBeGreaterThan(0);
     for (const line of bucketLines) {
       expect(line.net_amount).toBe(4 * 15_000);
+      // Displayed quantity follows the invoice rule (overage hours), not the
+      // canonical line's quantity of 1.
+      expect(line.quantity).toBe(4);
+      expect(line.quantity_label).toBe("4 hrs overage");
+      expect(line.unit_price).toBe(15_000);
     }
     const hourlyForPooled = allLines.filter(
       (line) =>
