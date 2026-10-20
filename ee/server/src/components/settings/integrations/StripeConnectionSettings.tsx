@@ -29,6 +29,7 @@ import {
   testStripeConnectionAction,
   retryStripeWebhookConfigurationAction,
 } from '@ee/lib/actions/payment-actions';
+import StripeCustomerImport from '../billing/StripeCustomerImport';
 
 interface PaymentConfigDisplay {
   provider_type: string;
@@ -392,6 +393,9 @@ export const StripeConnectionSettings: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Tenant-wide migration of existing Stripe customers and saved cards (only while connected) */}
+      {config?.is_enabled && <StripeCustomerImport />}
 
       {/* Disconnect Stripe Confirmation Dialog */}
       <ConfirmationDialog

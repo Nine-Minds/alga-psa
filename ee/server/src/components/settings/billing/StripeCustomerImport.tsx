@@ -26,6 +26,9 @@ import { parseImportCsv, type RawImportRow } from '@ee/lib/payments/stripeImport
 import type { ImportPlan, MatchAmbiguity, RowPlan } from '@ee/lib/payments/stripeImportClassifier';
 import type { ImportRowResult } from '@ee/lib/payments/StripeCustomerImportService';
 
+const CSV_HEADER = 'client,billing_profile,customer_id';
+const csvCell = (value: string) => (/[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);
+
 const CSV_PLACEHOLDER = 'client,billing_profile,customer_id\nAcme Corp,Default,cus_ABC123';
 
 const StripeCustomerImport: React.FC = () => {
@@ -90,7 +93,12 @@ const StripeCustomerImport: React.FC = () => {
       if (proposals.length === 0) return;
       setBusy(false);
       setAttested(new Set());
-      await runPreview(proposals.map((p) => ({ client: p.clientId, profile: p.billingProfileId, customerId: p.customerId, source: 'assisted' as const })));
+      // Seed the CSV box with the matched rows (parser column order) so "Add as row" on an ambiguous match
+      // appends to ONE combined input; re-previewing the CSV then keeps the matched rows. Preview still
+      // goes through the server classifier on exactly the parsed rows.
+      const seeded = [CSV_HEADER, ...proposals.map((p) => [p.clientId, p.billingProfileId, p.customerId].map(csvCell).join(','))].join('\n');
+      setCsv(seeded);
+      await runPreview(parseImportCsv(seeded).map((row) => ({ ...row, source: 'assisted' as const })));
     } finally { setBusy(false); }
   };
 
