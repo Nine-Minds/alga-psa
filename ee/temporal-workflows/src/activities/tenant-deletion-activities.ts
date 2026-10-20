@@ -144,6 +144,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Prepaid hour blocks. The three child tables FK to hour_blocks, so they go
   // first; hour_blocks itself FKs to time_entries, service_catalog, invoices and
   // clients, so the whole group has to precede time tracking below.
+  // Prepaid Block issuances soft-reference hour_blocks, invoices and alerts
+  // (SET NULL) and hour_blocks references them back (SET NULL), so the ledger
+  // goes with the hour-block group ahead of contract lines.
+  'contract_line_block_issuances',
   'hour_block_audit', 'hour_block_service_scopes', 'hour_block_time_allocations',
   'hour_blocks',
 
@@ -375,15 +379,16 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'service_catalog_mode_defaults',
   'service_rate_tiers', 'service_prices', 'contract_line_discounts', 'contract_discount_assignments', 'discounts',
   'client_billing_cycles', 'client_billing_settings',
-  'contract_line_services', 'contract_lines', 'contracts',
+  'contract_line_prepaid_blocks', 'contract_line_services', 'contract_lines', 'contracts',
 
   // Contract line presets
-  'contract_line_preset_fixed_config', 'contract_line_preset_services', 'contract_line_presets',
+  'contract_line_preset_prepaid_blocks', 'contract_line_preset_fixed_config', 'contract_line_preset_services', 'contract_line_presets',
 
   // Contract templates (must be deleted before contracts)
   // Hourly/usage configs reference contract_template_line_service_configuration
   // with NO ACTION and must be deleted before it.
   'contract_template_line_defaults',
+  'contract_template_line_prepaid_blocks',
   'contract_template_line_bucket_services', 'contract_template_line_buckets',
   'contract_template_line_fixed_config', 'contract_template_line_service_bucket_config',
   'contract_template_line_service_fixed_config',

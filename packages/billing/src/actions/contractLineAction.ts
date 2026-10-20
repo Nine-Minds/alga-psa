@@ -27,6 +27,7 @@ import {
 } from '@shared/billingClients/contractLineTimingRule';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 import { validateContractLineWindow, normalizeContractLineDate } from '../lib/billing/contractLineWindow';
+import { syncPrepaidBlockIssuancesForContractLine } from '../services/prepaidBlockIssuanceSync';
 import { actionError, getErrorMessage, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -313,11 +314,13 @@ export const createContractLine = withAuth(async (
             const enrichedPlan: IContractLine = normalizeLiveRecurringStorage(plan);
 
             if (enrichedPlan.contract_line_id) {
+                // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
                 await syncRecurringServicePeriodsForContractLine(trx, {
                     tenant,
                     contractLineId: enrichedPlan.contract_line_id,
                     sourceRunPrefix: 'contract_line_create',
                 });
+                await syncPrepaidBlockIssuancesForContractLine(trx, tenant, enrichedPlan.contract_line_id);
             }
 
             // Track analytics
@@ -494,11 +497,13 @@ export const updateContractLine = withAuth(async (
             const plan = await ContractLine.update(trx, planId, safeUpdateData);
             const enrichedPlan: IContractLine = normalizeLiveRecurringStorage(plan);
 
+            // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
             await syncRecurringServicePeriodsForContractLine(trx, {
                 tenant,
                 contractLineId: planId,
                 sourceRunPrefix: 'contract_line_update',
             });
+            await syncPrepaidBlockIssuancesForContractLine(trx, tenant, planId);
 
             // Track analytics
             const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
@@ -555,11 +560,13 @@ export const upsertContractLineTerms = withAuth(async (
                     updated_at: trx.fn.now(),
                 });
 
+            // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
             await syncRecurringServicePeriodsForContractLine(trx, {
                 tenant,
                 contractLineId,
                 sourceRunPrefix: 'contract_line_terms_update',
             });
+            await syncPrepaidBlockIssuancesForContractLine(trx, tenant, contractLineId);
 
         });
     } catch (error) {
