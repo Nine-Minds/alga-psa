@@ -33,6 +33,7 @@ import {
   testStripeConnectionAction,
   retryStripeWebhookConfigurationAction,
 } from '@ee/lib/actions/payment-actions';
+import StripeCustomerImport from './StripeCustomerImport';
 import type { PaymentSettings as PaymentSettingsType } from 'server/src/interfaces/payment.interfaces';
 
 // Payment Link Expiration Selector Component
@@ -629,6 +630,9 @@ export const PaymentSettings: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Tenant-wide migration of existing Stripe customers and saved cards */}
+      {config?.is_enabled && <StripeCustomerImport />}
 
       {/* Disconnect Stripe Confirmation Dialog */}
       <ConfirmationDialog

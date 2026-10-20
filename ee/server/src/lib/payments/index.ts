@@ -37,3 +37,4 @@ export { StripePaymentProvider, createStripePaymentProvider } from './StripePaym
 export { PaymentService } from './PaymentService';
 export { SavedPaymentMethodService } from './SavedPaymentMethodService';
 export { AutopayService } from './AutopayService';
+export { StripeCustomerImportService } from './StripeCustomerImportService';
