@@ -408,6 +408,45 @@ describe('customer-owned co-management acceptance', () => {
     expect(await customer.table('co_management_relationship_events')).toHaveLength(0);
   });
 
+  it('refuses acceptance while the sponsor is suspended for deletion, and accepts once it is restored', async () => {
+    const { operation, actor, input } = await readyForAcceptance();
+    const sponsor = tenantDb(db, operation.tenant);
+    await sponsor.table('tenants').update({ suspended_at: new Date(), suspended_reason: 'tenant_cancelled' });
+    await expect(acceptCoManagedRelationship(db, actor, input)).rejects.toMatchObject({ code: 'CAPACITY_UNAVAILABLE' });
+    expect(await sponsor.table('co_managed_allocations').first()).toMatchObject({ state: 'reserved' });
+    await sponsor.table('tenants').update({ suspended_at: null, suspended_reason: null });
+    await acceptCoManagedRelationship(db, actor, input);
+    expect(await sponsor.table('co_managed_allocations').first()).toMatchObject({ state: 'active' });
+  });
+
+  it('ends every sponsorship before the sponsor is deleted, leaving no customer pointing at it', async () => {
+    const { endCoManagedSponsorshipsForDeletion } = await import('../../../../../packages/co-managed/src/relationshipClosure');
+    const { deleteCoManagedProvisioningRows } = await import('../../db/co-managed-provisioning-cleanup');
+    const { TENANT_TABLES_DELETION_ORDER } = await import('../../activities/tenant-deletion-activities');
+    const cleanup = (trx: Knex.Transaction, operation: any) => deleteCoManagedProvisioningRows(trx, operation, TENANT_TABLES_DELETION_ORDER);
+    // One accepted relationship and one setup still awaiting acceptance.
+    const accepted = await readyForAcceptance();
+    await acceptCoManagedRelationship(db, accepted.actor, accepted.input);
+    const sponsor = tenantDb(db, accepted.operation.tenant);
+    await sponsor.table('co_managed_entitlements').update({ capacity: 4 });
+    const clientId = randomUUID();
+    await sponsor.table('clients').insert({ tenant: accepted.operation.tenant, client_id: clientId, client_name: 'Second customer' });
+    const pending = await prepareCoManagedProvisioning(db, { sponsorTenant: accepted.operation.tenant, clientId,
+      requestedBy: accepted.operation.requested_by, escalationBoardId: accepted.operation.escalation_board_id, operationId: randomUUID(),
+      seats: 2, visibilityMode: 'board_scope', workspaceName: 'Second IT',
+      administrator: { firstName: 'Second', lastName: 'Admin', email: `admin-${randomUUID()}@example.test` } });
+    await bootstrapCoManagedWorkspace(db, pending.tenant, pending.operation_id, log);
+
+    await expect(endCoManagedSponsorshipsForDeletion(db, accepted.operation.tenant, cleanup)).resolves.toEqual({ cancelled: 1, terminated: 1 });
+    expect(await accepted.customer.table('co_management_relationships').first()).toMatchObject({ state: 'terminated' });
+    expect(await accepted.customer.table('tenants').first()).toMatchObject({ product_code: 'co_managed' });
+    expect(await tenantDb(db, pending.customer_tenant).table('tenants').first()).toBeUndefined();
+    expect(await sponsor.table('co_managed_provisioning_operations').where('operation_id', pending.operation_id).first()).toMatchObject({ state: 'cancelled' });
+    expect((await sponsor.table('co_managed_allocations')).map(row => row.state)).toEqual(['released', 'released']);
+    // Retrying the deletion step finds nothing left to end.
+    await expect(endCoManagedSponsorshipsForDeletion(db, accepted.operation.tenant, cleanup)).resolves.toEqual({ cancelled: 0, terminated: 0 });
+  });
+
   it('serializes acceptance against cancellation so only one may win', async () => {
     const { operation, customer, actor, input } = await readyForAcceptance();
     const results = await Promise.allSettled([acceptCoManagedRelationship(db, actor, input),

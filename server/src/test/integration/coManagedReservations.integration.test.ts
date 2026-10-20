@@ -44,6 +44,7 @@ beforeAll(async () => {
   await db.schema.createTable('tenants', (table) => {
     table.uuid('tenant').primary();
     table.text('plan').notNullable().defaultTo('pro');
+    table.timestamp('suspended_at', { useTz: true });
   });
   await db.schema.createTable('clients', (table) => {
     table.uuid('tenant').notNullable();

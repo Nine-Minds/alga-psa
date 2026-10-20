@@ -33,6 +33,8 @@ import type {
   RecordReactivationPaymentAlertInput,
 } from '../types/tenant-deletion-types.js';
 import { insertStripeSubscriptionForTenant } from '../db/tenant-operations.js';
+import { endCoManagedSponsorshipsForDeletion } from '@alga-psa/co-managed';
+import { deleteCoManagedProvisioningRows } from '../db/co-managed-provisioning-cleanup.js';
 import { updateSubscriptionMetadata } from '../services/stripe-service.js';
 
 export {
@@ -907,6 +909,19 @@ async function findCustomerClientInManagementTenant(
     tenantName: tenant?.client_name,
   });
   return null;
+}
+
+/**
+ * A co-managed sponsor's customers must not outlive it pointing at a tenant
+ * that no longer exists. Before the sponsor's data is deleted, setups its
+ * customers never accepted are cancelled (their unclaimed workspaces deleted)
+ * and accepted relationships end; those customers keep their workspaces.
+ */
+export async function endTenantCoManagedSponsorships(tenantId: string): Promise<{ cancelled: number; terminated: number }> {
+  const result = await endCoManagedSponsorshipsForDeletion(await getAdminConnection(), tenantId,
+    (trx, operation) => deleteCoManagedProvisioningRows(trx, operation, TENANT_TABLES_DELETION_ORDER));
+  logger().info('Ended co-managed sponsorships before tenant deletion', { tenantId, ...result });
+  return result;
 }
 
 /**

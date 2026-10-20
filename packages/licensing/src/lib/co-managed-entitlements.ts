@@ -48,11 +48,14 @@ function signedCapacity(row: any, sponsor: string, now: Date): { capacity: numbe
 async function materializeState(trx: Knex.Transaction, sponsor: string, row: any, now: Date,
   inactiveSince?: Date): Promise<CoManagedEntitlementState> {
   const allocated = await allocatedSeats(trx, sponsor);
-  const owner = await tenantDb(trx, sponsor).table('tenants').forShare().first('product_code', 'plan');
+  const owner = await tenantDb(trx, sponsor).table('tenants').forShare().first('product_code', 'plan', 'suspended_at');
   now = await databaseNow(trx);
   const signed = signedCapacity(row, sponsor, now);
   const expires = new Date(row.valid_until);
-  const eligible = owner?.product_code === 'psa' && (row.source !== 'hosted' || owner.plan === 'pro');
+  // A suspended sponsor (cancelled and awaiting deletion) sponsors nothing new:
+  // its capacity lapses like an expired license, so setups and acceptance stop
+  // and live workspaces get the usual grace. Lifting the suspension restores it.
+  const eligible = owner?.product_code === 'psa' && !owner.suspended_at && (row.source !== 'hosted' || owner.plan === 'pro');
   const active = eligible && signed.active && expires.getTime() > now.getTime();
   const capacity = active ? signed.capacity : 0;
   const lapsed = !active || capacity < allocated;

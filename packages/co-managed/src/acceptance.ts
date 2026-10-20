@@ -93,6 +93,8 @@ export async function getCoManagedAcceptanceState(db: Knex, actor: CoManagedCust
     }
     if (relationship.state === 'provisioning') return { state: 'unavailable' };
     if (relationship.state === 'active' || relationship.state === 'terminated') return { state: relationship.state };
+    // A sponsor that no longer exists proposes nothing; there is nothing to review.
+    if (!await tenantDb(trx, relationship.sponsor_tenant).table('tenants').first('tenant')) return { state: 'unavailable' };
     let scope: CoManagedAcceptanceScope;
     try { scope = await readScope(trx, relationship); }
     catch (error) {

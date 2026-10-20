@@ -7,6 +7,7 @@ import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, assertCoMa
   isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { applyCoManagedTicketSlaTransition } from './ticketSla';
 import type { CoManagedPolicyTarget } from './policy';
+import { requestCoManagedProvisioningCleanup, runCoManagedProvisioningCleanup, type CoManagedProvisioningOperation } from './provisioning';
 
 export interface CoManagedClosureRequest {
   operationId: string;
@@ -84,25 +85,81 @@ export async function closeCoManagedRelationship(db: Knex, inputActor: CoManaged
     await finalizeEvidence(evidenceContext);
     await sealCoManagedArchive({ trx, sponsorTenant: found.sponsor_tenant, ...target, operationId: request.operationId, cutoffAt: new Date(cutoffAt) });
     await assertCoManagedSessionUnexpired(trx, actor);
-    const work = await customer.table('co_management_ticket_work').where('relationship_id', target.relationshipId).orderBy('ticket_id').forUpdate();
-    for (const ticket of work) {
-      await applyCoManagedTicketSlaTransition(trx, relationship, { tenant: target.customerTenant, relationshipId: target.relationshipId, kind: 'ticket', id: ticket.ticket_id },
-        { workId: ticket.work_id, firstEscalatedAt: ticket.first_escalated_at }, request.operationId, 'access_revoked', cutoffAt);
-    }
-    const allocations = await sponsor.table('co_managed_allocations').where({ customer_tenant: target.customerTenant, relationship_id: target.relationshipId })
-      .whereNot('state', 'released').forUpdate().select('allocation_id', 'seats');
-    const releasedSeats = allocations.reduce((sum, allocation) => sum + Number(allocation.seats), 0);
-    if (!Number.isSafeInteger(releasedSeats) || releasedSeats < 0 || releasedSeats > 2147483647) throw new Error('Invalid co-managed seat allocation');
-    const closedAt = new Date((await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at);
-    await customer.table('co_management_relationships').where('relationship_id', target.relationshipId).update({ state: 'terminated', ended_at: closedAt,
-      revision: relationship.revision + 1, updated_at: closedAt });
-    await sponsor.table('co_managed_allocations').whereIn('allocation_id', allocations.map(row => row.allocation_id))
-      .update({ state: 'released', released_at: closedAt, updated_at: closedAt });
+    const { releasedSeats, closedAt } = await endCoManagedRelationshipAccess(trx, found.sponsor_tenant, target.customerTenant,
+      relationship, request.operationId, cutoffAt);
     const row = { tenant: found.sponsor_tenant, operation_id: request.operationId, customer_tenant: target.customerTenant, relationship_id: target.relationshipId,
       actor_tenant: actor.tenant, actor_user_id: actor.userId, request_fingerprint: fingerprint, reason: request.reason,
       applied_revision: relationship.revision + 1, released_seats: releasedSeats, cutoff_at: cutoffAt, closed_at: closedAt };
     await sponsor.table('co_managed_relationship_closures').insert(row);
     await assertCoManagedSessionUnexpired(trx, actor);
     return receipt(row);
+  });
+}
+
+/** Ending a relationship, whoever ends it: shared ticket SLAs stop as access
+ * revoked at the cutoff, the allocation's seats return to the sponsor's pool,
+ * and the relationship becomes terminated history. The caller holds the
+ * entitlement and relationship locks. */
+async function endCoManagedRelationshipAccess(trx: Knex.Transaction, sponsorTenant: string, customerTenant: string,
+  relationship: any, operationId: string, cutoffAt: Date): Promise<{ releasedSeats: number; closedAt: Date }> {
+  const customer = tenantDb(trx, customerTenant), sponsor = tenantDb(trx, sponsorTenant);
+  const relationshipId = relationship.relationship_id as string;
+  const work = await customer.table('co_management_ticket_work').where('relationship_id', relationshipId).orderBy('ticket_id').forUpdate();
+  for (const ticket of work) {
+    await applyCoManagedTicketSlaTransition(trx, relationship, { tenant: customerTenant, relationshipId, kind: 'ticket', id: ticket.ticket_id },
+      { workId: ticket.work_id, firstEscalatedAt: ticket.first_escalated_at }, operationId, 'access_revoked', cutoffAt);
+  }
+  const allocations = await sponsor.table('co_managed_allocations').where({ customer_tenant: customerTenant, relationship_id: relationshipId })
+    .whereNot('state', 'released').forUpdate().select('allocation_id', 'seats');
+  const releasedSeats = allocations.reduce((sum, allocation) => sum + Number(allocation.seats), 0);
+  if (!Number.isSafeInteger(releasedSeats) || releasedSeats < 0 || releasedSeats > 2147483647) throw new Error('Invalid co-managed seat allocation');
+  const closedAt = new Date((await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at);
+  await customer.table('co_management_relationships').where('relationship_id', relationshipId).update({ state: 'terminated', ended_at: closedAt,
+    revision: relationship.revision + 1, updated_at: closedAt });
+  await sponsor.table('co_managed_allocations').whereIn('allocation_id', allocations.map(row => row.allocation_id))
+    .update({ state: 'released', released_at: closedAt, updated_at: closedAt });
+  return { releasedSeats, closedAt };
+}
+
+/**
+ * The sponsor is being deleted: end everything it sponsored first, so no
+ * customer is left pointing at a sponsor that no longer exists. A setup the
+ * customer never accepted is cancelled and its unclaimed workspace deleted
+ * (cleanup proves it empty, as an MSP cancel would); an accepted relationship
+ * ends as terminated history and the customer keeps its workspace, read-only
+ * with export and independent upgrade, as after a departure.
+ */
+export async function endCoManagedSponsorshipsForDeletion(db: Knex, sponsorTenant: string,
+  cleanup: (trx: Knex.Transaction, operation: CoManagedProvisioningOperation) => Promise<void>): Promise<{ cancelled: number; terminated: number }> {
+  const operations = await tenantDb(db, sponsorTenant).table('co_managed_provisioning_operations')
+    .whereNot('state', 'cancelled').orderBy('operation_id').select('operation_id', 'customer_tenant', 'relationship_id');
+  let cancelled = 0, terminated = 0;
+  for (const operation of operations) {
+    const relationship = await tenantDb(db, operation.customer_tenant).table('co_management_relationships')
+      .where('relationship_id', operation.relationship_id).first('state', 'ended_at');
+    if (relationship && relationship.state === 'active' && !relationship.ended_at) {
+      if (await terminateForSponsorDeletion(db, sponsorTenant, operation)) terminated++;
+    } else if (!relationship || (relationship.state !== 'terminated' && !relationship.ended_at)) {
+      await requestCoManagedProvisioningCleanup(db, sponsorTenant, operation.operation_id);
+      await runCoManagedProvisioningCleanup(db, sponsorTenant, operation.operation_id, cleanup);
+      cancelled++;
+    }
+  }
+  return { cancelled, terminated };
+}
+
+async function terminateForSponsorDeletion(db: Knex, sponsorTenant: string,
+  operation: { operation_id: string; customer_tenant: string; relationship_id: string }): Promise<boolean> {
+  return withTransaction(db, async trx => {
+    const sponsor = tenantDb(trx, sponsorTenant), customer = tenantDb(trx, operation.customer_tenant);
+    // Same lock order as closure, provisioning and operational admission.
+    await sponsor.table('co_managed_entitlements').forUpdate().first();
+    await sponsor.table('tenants').forShare().first('tenant');
+    const relationship = await customer.table('co_management_relationships').where('relationship_id', operation.relationship_id).forUpdate().first();
+    await customer.table('tenants').forShare().first('product_code');
+    if (!relationship || relationship.state !== 'active' || relationship.ended_at || relationship.sponsor_tenant !== sponsorTenant) return false;
+    const cutoffAt = new Date((await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at);
+    await endCoManagedRelationshipAccess(trx, sponsorTenant, operation.customer_tenant, relationship, operation.operation_id, cutoffAt);
+    return true;
   });
 }
