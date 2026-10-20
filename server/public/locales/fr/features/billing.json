@@ -241,7 +241,8 @@
     "contractLineType": {
       "Fixed": "Forfait",
       "Hourly": "Horaire",
-      "Usage": "À l'usage"
+      "Usage": "À l'usage",
+      "PrepaidBlock": "Bloc prépayé"
     },
     "quoteStatus": {
       "draft": "Brouillon",
@@ -442,7 +443,8 @@
     "hoursLeft": "{{hours}} h restantes",
     "expires": "Expire le {{date}}",
     "recentBurn": "Consommation récente",
-    "timeEntry": "Entrée de temps"
+    "timeEntry": "Entrée de temps",
+    "contractLabel": "Contrat : {{contract}}"
   },
   "bucketUsage": {
     "contractLine": "Ligne de contrat de forfait d’heures",

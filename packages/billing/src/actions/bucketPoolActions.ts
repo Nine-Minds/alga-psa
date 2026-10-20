@@ -12,6 +12,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { assertContractLineHasNoPrepaidBlock } from '../services/prepaidBlockConfigService';
 
 /**
  * Flag-on pool editor actions for the weighted-burn bucket model.
@@ -262,6 +263,8 @@ async function insertBucketPool(
   pool: BucketPoolInput,
   coversAllServices: boolean,
 ): Promise<void> {
+  // A Prepaid Block line carries no bucket pools (plan D1).
+  await assertContractLineHasNoPrepaidBlock(trx, tenant, contractLineId);
   const db = tenantDb(trx, tenant);
 
   // At most one catch-all per line is enforced by the schema; surface a clear
@@ -297,6 +300,7 @@ async function insertBucketPoolMember(
   bucketId: string,
   member: BucketPoolMemberInput,
 ): Promise<void> {
+  await assertContractLineHasNoPrepaidBlock(trx, tenant, contractLineId);
   const db = tenantDb(trx, tenant);
 
   // One bucket per (line, service) is enforced by the schema; surface a clear

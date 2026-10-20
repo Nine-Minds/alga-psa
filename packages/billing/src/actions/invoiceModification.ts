@@ -46,6 +46,13 @@ import {
   classifyInvoiceCreditHandling,
   settlePrepaidReplenishmentInvoice as settlePrepaidReplenishmentInvoiceCore,
 } from '../services/prepaidReplenishmentSettlement';
+import {
+  lockInvoiceBlocksWithLineSiblings,
+  lockPrepaidBlockOwnersForInvoice,
+  redrawContractLines,
+  releaseAndVoidLinkedBlock,
+  supersedeExpiryIssuancesForLine,
+} from '../services/prepaidBlockLifecycleService';
 import { assertInvoiceExportReady, InvoiceExportReadinessError } from '../services/accountingSync/exportReadiness';
 import { AuthenticationError, withAuth } from '@alga-psa/auth';
 import { withSerializableAuth } from './serializableAuth';
@@ -111,11 +118,13 @@ async function deactivateHourBlocksForUnfinalizedInvoice(
   // it (review run b2b3038e). Holding the lock means an in-flight allocation
   // has necessarily committed (marker visible, allocation rows countable) or
   // rolled back before the check runs.
+  // Prepaid Block config/issuance rows lock before any block row (plan Risk 6).
+  await lockPrepaidBlockOwnersForInvoice(trx, tenant, invoiceId);
   const linkedBlocks = await tenantScopedTable(trx, tenant, 'hour_blocks')
     .where({ tenant, source_invoice_id: invoiceId })
     .orderBy('block_id', 'asc')
     .forUpdate()
-    .select('block_id', 'status', 'total_minutes', 'remaining_minutes', 'first_allocated_at');
+    .select('block_id', 'status', 'total_minutes', 'remaining_minutes', 'first_allocated_at', 'contract_line_id');
 
   for (const block of linkedBlocks) {
     if (block.status !== 'active') {
@@ -159,6 +168,15 @@ async function deactivateHourBlocksForUnfinalizedInvoice(
       created_by: userId,
       metadata: { source_invoice_id: invoiceId },
     });
+
+    if (block.contract_line_id) {
+      // The expiry follow-on scheduled at activation belongs to the activated
+      // block; finalizing again reschedules it from the (possibly new) date.
+      await supersedeExpiryIssuancesForLine(trx, tenant, block.contract_line_id, {
+        reason: 'Source block returned to pending (invoice unfinalized)',
+        onlySourceBlockId: block.block_id,
+      });
+    }
   }
 }
 
@@ -363,11 +381,11 @@ async function voidPendingHourBlocksForDeletedInvoice(
   userId: string,
   now: string,
 ): Promise<void> {
-  const linkedBlocks = await tenantScopedTable(trx, tenant, 'hour_blocks')
-    .where({ tenant, source_invoice_id: invoiceId })
-    .orderBy('block_id', 'asc')
-    .forUpdate()
-    .select('block_id', 'status');
+  // Lock order (plan Risk 6): Prepaid Block config + issuance rows first, then
+  // the invoice's blocks together with their lines' other blocks in one
+  // canonical block_id-ordered statement (the later re-draw locks the same set).
+  const { contractLineIds } = await lockPrepaidBlockOwnersForInvoice(trx, tenant, invoiceId);
+  const linkedBlocks = await lockInvoiceBlocksWithLineSiblings(trx, tenant, invoiceId, contractLineIds);
 
   // Non-pending, non-voided linked blocks are an impossible state for a draft
   // invoice deletion — refuse rather than silently voiding an active/expired
@@ -385,34 +403,26 @@ async function voidPendingHourBlocksForDeletedInvoice(
     }
   }
 
+  const linesToRedraw = new Set<string>();
   for (const block of linkedBlocks) {
     if (block.status === 'pending') {
-      const voidedCount = await tenantScopedTable(trx, tenant, 'hour_blocks')
-        // Belt-and-suspenders alongside the row lock: only a still-pending row
-        // may be voided here. If a concurrent transition somehow beat the
-        // lock (0 affected rows), the block is skipped — never overwritten —
-        // and no void audit row is fabricated for a void that did not happen.
-        .where({ tenant, block_id: block.block_id, status: 'pending' })
-        .update({
-          status: 'voided',
-          voided_at: now,
-          voided_by: userId,
-          void_reason: 'Draft purchase invoice deleted',
-          updated_at: now,
-          source_invoice_id: null,
-        });
-      if (voidedCount === 0) {
-        continue;
-      }
-      await tenantScopedTable(trx, tenant, 'hour_block_audit').insert({
-        tenant,
-        block_id: block.block_id,
-        type: 'void',
-        minutes_delta: null,
+      // Releases any gap-draw allocations (contract blocks: `allocation_release`
+      // audit), voids the block (status-guarded: a block that left `pending`
+      // under the deletion is skipped, never overwritten, and no void audit row
+      // is fabricated), and restores the issuance: date-driven kinds become
+      // `scheduled` again, usage-driven/manual ones are `cancelled`.
+      const result = await releaseAndVoidLinkedBlock(trx, tenant, {
+        blockId: block.block_id,
+        status: 'pending',
+        contractLineId: block.contract_line_id,
+        issuanceId: block.issuance_id,
+        invoiceId,
+        userId,
+        now,
         reason: 'Draft purchase invoice deleted',
-        created_by: userId,
-        metadata: { source_invoice_id: invoiceId },
+        detachInvoice: true,
       });
+      if (result.voided && result.contractLineId) linesToRedraw.add(result.contractLineId);
     } else {
       await tenantScopedTable(trx, tenant, 'hour_blocks')
         // Same guard for the detach of an already-voided block: a row that
@@ -422,6 +432,9 @@ async function voidPendingHourBlocksForDeletedInvoice(
         .update({ source_invoice_id: null, updated_at: now });
     }
   }
+
+  // Released minutes fall to overage (or another block of the line).
+  await redrawContractLines(trx, tenant, linesToRedraw);
 }
 
 type ProjectDepositCreditEvent = {
@@ -1098,6 +1111,7 @@ export async function finalizeInvoiceWithKnex(
     sourceServicePeriodEnd: string | null;
   } | null = null;
   let deferPrepaidActivation = options.deferPrepaidActivation === true;
+  let prepaidBlockActivatesAtFinalize = false;
 
   // Validate tax source before finalization
   const taxValidation = userId === null
@@ -1147,8 +1161,13 @@ export async function finalizeInvoiceWithKnex(
     const linkedReplenishment = await tenantScopedTable(trx, tenant, 'prepaid_balance_alerts')
       .where({ replenishment_invoice_id: invoiceId })
       .forUpdate()
-      .first('alert_id');
-    deferPrepaidActivation = deferPrepaidActivation || Boolean(linkedReplenishment);
+      .first('alert_id', 'alert_type');
+    // Prepaid Block follow-ons are the one exception: a contract block activates
+    // at finalize (never payment). Only alert_type = 'prepaid_block' is exempt;
+    // credit and bucket replenishment stay payment-gated.
+    prepaidBlockActivatesAtFinalize = linkedReplenishment?.alert_type === 'prepaid_block';
+    deferPrepaidActivation = deferPrepaidActivation
+      || (Boolean(linkedReplenishment) && !prepaidBlockActivatesAtFinalize);
 
     if (invoice.finalized_at) {
       throw expectedInvoiceActionError('Invoice is already finalized');
@@ -1519,7 +1538,7 @@ export async function finalizeInvoiceWithKnex(
 
   // Auto-export producer (accounting sync): fire-and-forget, never blocks finalize.
   await enqueueInvoiceAutoExport(knex, tenant, invoiceId);
-  if (deferPrepaidActivation && options.markReplenishmentIssued !== false) {
+  if ((deferPrepaidActivation || prepaidBlockActivatesAtFinalize) && options.markReplenishmentIssued !== false) {
     await tenantScopedTable(knex, tenant, 'prepaid_balance_alerts')
       .where({ replenishment_invoice_id: invoiceId, replenishment_status: 'pending' })
       .update({ replenishment_status: 'issued', updated_at: knex.fn.now() });

@@ -41,7 +41,7 @@ import {
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
 } from '@alga-psa/types';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
-import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, IUsageServicePeriodStatus, IFixedLineBlocker, BillingCycleType } from '@alga-psa/types';
+import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, IPrepaidBlockCharge, IUsageServicePeriodStatus, IFixedLineBlocker, BillingCycleType } from '@alga-psa/types';
 import { IClient, IClientWithLocation } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { attachInvoiceTimeCollections } from '../lib/adapters/invoiceAdapters';
@@ -194,6 +194,10 @@ function isHourBlockCharge(charge: IBillingCharge): charge is IHourBlockCharge {
   return charge.type === 'hour_block';
 }
 
+function isPrepaidBlockCharge(charge: IBillingCharge): charge is IPrepaidBlockCharge {
+  return charge.type === 'prepaid_block';
+}
+
 function isProductCharge(charge: IBillingCharge): charge is IProductCharge {
   return charge.type === 'product';
 }
@@ -250,6 +254,7 @@ function getSingleClientContractIdFromCharges(charges: IBillingCharge[]): string
 function getChargeQuantity(charge: IBillingCharge): number {
   if (isBucketCharge(charge)) return charge.isUsageBucket ? charge.overageUnits ?? charge.quantity ?? 0 : charge.overageHours;
   if (isHourBlockCharge(charge)) return charge.hoursUsed;
+  if (isPrepaidBlockCharge(charge)) return charge.quantity;
   if (isFixedPriceCharge(charge) || isUsageBasedCharge(charge)) return charge.quantity;
   if (isTimeBasedCharge(charge)) return charge.duration;
   if (isProductCharge(charge) || isLicenseCharge(charge)) return charge.quantity;
@@ -261,6 +266,7 @@ function getChargeQuantity(charge: IBillingCharge): number {
 function getChargeUnitPrice(charge: IBillingCharge): number {
   if (isBucketCharge(charge)) return charge.overageRate;
   if (isHourBlockCharge(charge)) return 0;
+  if (isPrepaidBlockCharge(charge)) return charge.rate;
   return charge.rate;
 }
 
@@ -278,6 +284,11 @@ function timeChargeDescription(charge: IBillingCharge): string {
 function formatHourBlockChargeDescription(charge: IHourBlockCharge): string {
   const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;
   return `Prepaid hour block (${charge.serviceName}) — ${charge.hoursUsed.toFixed(1)} ${hourShortLabel} consumed, ${charge.hoursRemaining.toFixed(1)} ${hourShortLabel} remaining`;
+}
+
+function formatPrepaidBlockChargeDescription(charge: IPrepaidBlockCharge): string {
+  const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;
+  return `Prepaid block (${charge.serviceName}) — ${charge.quantity.toFixed(2)} ${hourShortLabel}`;
 }
 
 function normalizePreviewRecurringDetailPeriods(
@@ -1412,7 +1423,7 @@ async function normalizeRecurringSelectorInput(params: {
     params.selectorInput.windowEnd,
   );
 
-  if (isUnresolvedSelectorInput(params.selectorInput)) {
+  if (isNonPeriodSelectorInput(params.selectorInput)) {
     return buildClientCadenceDueSelectionInput({
       clientId: params.selectorInput.clientId,
       scheduleKey: params.selectorInput.executionWindow.scheduleKey ?? '',
@@ -1576,6 +1587,36 @@ function parseUnresolvedSelectionFromScheduleKey(scheduleKey: string | null | un
   };
 }
 
+/**
+ * `schedule:{tenant}:prepaid_block:{issuanceId}` identifies a scheduled Prepaid
+ * Block issuance (contract_line_block_issuances), not a recurring obligation.
+ * Like unresolved time/usage keys it rides in a client-cadence selector and has
+ * no recurring_service_periods rows.
+ */
+function parsePrepaidBlockSelectionFromScheduleKey(
+  scheduleKey: string | null | undefined,
+): { issuanceId: string } | null {
+  if (!scheduleKey) {
+    return null;
+  }
+  const match = scheduleKey.match(/^schedule:[^:]+:prepaid_block:([^:]+)$/);
+  return match?.[1] ? { issuanceId: match[1] } : null;
+}
+
+function isPrepaidBlockSelectorInput(selectorInput: IRecurringDueSelectionInput): boolean {
+  return (
+    selectorInput.executionWindow.kind === 'client_cadence_window'
+    && Boolean(
+      parsePrepaidBlockSelectionFromScheduleKey(selectorInput.executionWindow.scheduleKey ?? null),
+    )
+  );
+}
+
+/** Selectors that identify source records rather than persisted recurring obligations. */
+function isNonPeriodSelectorInput(selectorInput: IRecurringDueSelectionInput): boolean {
+  return isUnresolvedSelectorInput(selectorInput) || isPrepaidBlockSelectorInput(selectorInput);
+}
+
 function isUnresolvedSelectorInput(selectorInput: IRecurringDueSelectionInput): boolean {
   if (selectorInput.executionWindow.kind !== 'client_cadence_window') {
     return false;
@@ -1594,6 +1635,12 @@ function getSelectedRecurringObligationIdFromSelectorInput(
     const nonContractSelection = parseUnresolvedSelectionFromScheduleKey(
       executionWindow.scheduleKey,
     );
+    const prepaidBlockSelection = parsePrepaidBlockSelectionFromScheduleKey(
+      executionWindow.scheduleKey,
+    );
+    if (prepaidBlockSelection) {
+      return `__prepaid_block__:${prepaidBlockSelection.issuanceId}`;
+    }
     if (nonContractSelection) {
       return `__unresolved__:${nonContractSelection.chargeType}:${nonContractSelection.recordId}`;
     }
@@ -1638,7 +1685,8 @@ function scopeRecurringTimingSelectionsForSelectorInputs(
     new Set(selectorInputs.map(getSelectedRecurringObligationIdFromSelectorInput)),
   );
   const selectedContractObligationIds = selectedObligationIds.filter(
-    (obligationId) => !obligationId.startsWith('__unresolved__:'),
+    (obligationId) =>
+      !obligationId.startsWith('__unresolved__:') && !obligationId.startsWith('__prepaid_block__:'),
   );
   const selectionEntries = Object.entries(recurringTimingSelections ?? {});
   if (selectionEntries.length === 0) {
@@ -1707,7 +1755,15 @@ async function resolveApprovalBlockerRowsForSelectorInputs(params: {
     scheduleKey?: string | null;
   }> = [];
 
-  const persistedWindowRows = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
+  // A mixed-charge window is blocked in full by its unapproved time (T003/T008):
+  // any selection that touches a persisted period, or carries unresolved time,
+  // checks the whole window. Only a selection made solely of source-record rows
+  // that owe no time (prepaid_block issuances, usage) skips the lookup: a block
+  // charge does not depend on time, so block rows alone must not inherit the
+  // window's other lines' unapproved entries.
+  const selectsPersistedPeriod = params.selectorInputs.some((selectorInput) => !isNonPeriodSelectorInput(selectorInput));
+  const checksWholeWindow = selectsPersistedPeriod || params.selectorInputs.some(isUnresolvedSelectorInput);
+  const persistedWindowRows = !checksWholeWindow ? [] : await withTransaction(params.knex, async (trx: Knex.Transaction) => {
     const db = tenantDb(trx, params.tenant);
     const query = db.table('recurring_service_periods as rsp');
     db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
@@ -1777,12 +1833,34 @@ export async function calculateBillingForSelectionInputs(input: {
     .filter((selection) => selection.chargeType === 'usage')
     .map((selection) => selection.recordId);
 
-  const recurringTimingSelections =
-    await input.billingEngine.selectDueRecurringServicePeriodsForBillingWindow(
+  const prepaidBlockIssuanceIds = Array.from(
+    new Set(
+      input.selectorInputs
+        .map((selectorInput) =>
+          parsePrepaidBlockSelectionFromScheduleKey(
+            selectorInput.executionWindow.kind === 'client_cadence_window'
+              ? selectorInput.executionWindow.scheduleKey ?? null
+              : null,
+          ),
+        )
+        .filter((selection): selection is { issuanceId: string } => Boolean(selection))
+        .map((selection) => selection.issuanceId),
+    ),
+  );
+
+  // A selection made only of source-record rows (unresolved time/usage, prepaid
+  // block issuances) selects no persisted periods, and scoping below would
+  // discard them anyway. Skipping the lookup also lets a client whose only live
+  // line is an Hourly / Prepaid Block line (which has no materialized periods)
+  // generate instead of failing the "not materialized" guard.
+  const selectsPersistedPeriods = input.selectorInputs.some((selectorInput) => !isNonPeriodSelectorInput(selectorInput));
+  const recurringTimingSelections = selectsPersistedPeriods
+    ? await input.billingEngine.selectDueRecurringServicePeriodsForBillingWindow(
       canonicalSelection.clientId,
       canonicalSelection.windowStart,
       canonicalSelection.windowEnd,
-    );
+    )
+    : {};
   const scopedRecurringTimingSelections = scopeRecurringTimingSelectionsForSelectorInputs(
     recurringTimingSelections,
     input.selectorInputs,
@@ -1795,6 +1873,9 @@ export async function calculateBillingForSelectionInputs(input: {
     {
       recurringTimingSelections: scopedRecurringTimingSelections,
       recurringTimingSelectionSource: 'persisted',
+      ...(prepaidBlockIssuanceIds.length > 0
+        ? { prepaidBlockSelection: { issuanceIds: prepaidBlockIssuanceIds } }
+        : {}),
       nonContractSelection: {
         include: selectedNonContractSelections.length > 0,
         timeEntryIds: nonContractTimeEntryIds,
@@ -2459,7 +2540,9 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       service_id: charge.serviceId,
       description: isHourBlockCharge(charge)
         ? formatHourBlockChargeDescription(charge)
-        : (timeChargeDescription(charge) || 'Charge'),
+        : isPrepaidBlockCharge(charge)
+          ? formatPrepaidBlockChargeDescription(charge)
+          : (timeChargeDescription(charge) || 'Charge'),
       quantity: getChargeQuantity(charge),
       unit_price: getChargeUnitPrice(charge),
       total_price: charge.total,
@@ -2691,7 +2774,7 @@ async function resolveRecurringSelectionBillingProfileId(
       // Non-contract time/usage keys identify source records, not persisted
       // recurring obligations. Their eligibility and charge attribution are
       // resolved by the billing engine; they supply no contract profile here.
-      if (isUnresolvedSelectorInput(selector)) {
+      if (isNonPeriodSelectorInput(selector)) {
         continue;
       }
       const db = tenantDb(knex, tenant);
@@ -4139,7 +4222,7 @@ export async function createInvoiceFromBillingResultImpl(
         invoiceId: newInvoice!.invoice_id,
         // Unresolved time/usage selections identify source records, not
         // recurring obligations. Their invoice linkage is handled by charges.
-        selectorInputs: options.recurringSelectorInputs.filter((selector) => !isUnresolvedSelectorInput(selector)),
+        selectorInputs: options.recurringSelectorInputs.filter((selector) => !isNonPeriodSelectorInput(selector)),
         linkedAt: Temporal.Now.instant().toString(),
         omittedUsagePeriods: selectUnreportedUsageStatuses(billingResult.usageServicePeriodStatuses ?? []),
         excludedServicePeriodRecordIds,

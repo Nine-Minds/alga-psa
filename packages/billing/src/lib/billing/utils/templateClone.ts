@@ -4,7 +4,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import type { IContractTemplateLine } from '@alga-psa/types';
-import { cloneTemplateLinePools, cloneTemplateServiceFixedConfig } from '@alga-psa/shared/billingClients/templateClone';
+import { cloneTemplateLinePools, cloneTemplateLinePrepaidBlock, cloneTemplateServiceFixedConfig } from '@alga-psa/shared/billingClients/templateClone';
 
 // LEVERAGE: pattern template-clone-substrate — older, divergent template->contract clone. The faithful one is cloneTemplateLineToContract in packages/billing/src/repositories/contractLineRepository.ts (alga-2026-0002371).
 interface CloneTemplateOptions {
@@ -68,6 +68,7 @@ export async function cloneTemplateContractLine(
   // Clone services from template to contract_line_services
   const hasTemplatePools = await cloneTemplateLinePools(trx, tenant, templateContractLineId, targetContractLineId);
   await cloneServices(trx, tenant, templateContractLineId, targetContractLineId, hasTemplatePools);
+  await cloneTemplateLinePrepaidBlock(trx, tenant, templateContractLineId, targetContractLineId);
 
   // Resolve the custom rate to apply
   const templateCustomRate = await resolveTemplateCustomRate(
