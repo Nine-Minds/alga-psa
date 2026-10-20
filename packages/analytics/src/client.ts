@@ -5,6 +5,7 @@
 
 // Re-export client-safe PostHog configuration
 export { posthogConfig, isPostHogEnabled } from './config/posthog.config';
+export { redactSecretQueryValues } from './lib/redactSecretUrls';
 
 export const analytics = {
   capture: (event: string, properties?: Record<string, any>, userId?: string) => {

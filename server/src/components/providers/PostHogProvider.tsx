@@ -4,7 +4,7 @@ import posthog from 'posthog-js';
 import { PostHogProvider as PHProvider, usePostHog } from 'posthog-js/react';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { isPostHogEnabled, posthogConfig } from '@alga-psa/analytics/client';
+import { isPostHogEnabled, posthogConfig, redactSecretQueryValues } from '@alga-psa/analytics/client';
 import { FeatureFlagBootstrapProvider } from '@alga-psa/ui/hooks';
 
 function SuspendedPostHogPageView() {
@@ -15,7 +15,7 @@ function SuspendedPostHogPageView() {
   useEffect(() => {
     if (!posthogClient) return;
     const search = searchParams?.toString() ?? '';
-    const url = search ? `${pathname}?${search}` : pathname;
+    const url = redactSecretQueryValues(search ? `${pathname}?${search}` : pathname);
     posthogClient.capture('$pageview', { path: pathname, url });
   }, [posthogClient, pathname, searchParams]);
 
