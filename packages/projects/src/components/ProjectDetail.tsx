@@ -7,7 +7,7 @@ import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { ITaskResource } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
-import { extractTaskDescriptionText } from '../lib/taskRichText';
+import { filterTasks, type TaskFilterCriteria } from '../lib/taskFilters';
 import { useTaskTypeLabel } from '../lib/useTaskTypeLabel';
 import {
   projectKanbanHiddenStatusesKey,
@@ -39,6 +39,8 @@ import { addDependencyToMap, removeDependencyFromMap } from '../lib/taskDependen
 import ProjectGanttView, { DEFAULT_GANTT_SETTINGS, type GanttSettings } from './ProjectGanttView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase, markPhaseComplete, reopenPhase } from '../actions/projectActions';
+import { getPhaseCustomStatusCounts } from '../actions/projectTaskStatusActions';
+import { PhaseStatusScopeChip } from './status-columns';
 import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
 import type { ProjectBillingOverview } from '@alga-psa/types';
 import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
@@ -230,6 +232,12 @@ interface ProjectDetailProps {
   initialPhaseId?: string | null;
   initialViewMode?: 'kanban' | 'list' | 'billing' | 'gantt' | null;
   onUrlUpdate?: (phaseId: string | null, taskId: string | null) => void;
+  /**
+   * Bumped by the host when status columns were edited somewhere else (the
+   * project edit drawer), so the board re-reads its statuses and tasks instead
+   * of waiting for a page reload.
+   */
+  statusRefreshKey?: number;
 }
 
 export default function ProjectDetail({
@@ -244,7 +252,8 @@ export default function ProjectDetail({
   initialTaskId,
   initialPhaseId,
   initialViewMode,
-  onUrlUpdate
+  onUrlUpdate,
+  statusRefreshKey
 }: ProjectDetailProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   const taskTypeLabel = useTaskTypeLabel();
@@ -332,7 +341,16 @@ export default function ProjectDetail({
   const [isTeamSwitchDialogOpen, setIsTeamSwitchDialogOpen] = useState(false);
   const [projectPhases, setProjectPhases] = useState<IProjectPhase[]>(phases);
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>(initialStatuses);
-  const [statusVersion, setStatusVersion] = useState(0);
+  const [localStatusVersion, setLocalStatusVersion] = useState(0);
+  // Status columns are also edited in the project edit drawer, which lives
+  // outside this component; the host bumps `statusRefreshKey` there. Both
+  // sources feed the one value the status/task re-reads watch.
+  const statusVersion = localStatusVersion + (statusRefreshKey ?? 0);
+  // Per-phase count of phase-scoped status columns; 0 means the phase still
+  // inherits the project defaults. Drives the inheritance chip on the phase
+  // list and the kanban header so forked phases are visible without opening
+  // every Configure dialog.
+  const [phaseCustomStatusCounts, setPhaseCustomStatusCounts] = useState<Record<string, number> | undefined>(undefined);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [defaultStatus, setDefaultStatus] = useState<ProjectStatus | null>(null);
@@ -476,6 +494,21 @@ export default function ProjectDetail({
     return () => { stale = true; };
   }, [initialStatuses, project.project_id, selectedPhase?.phase_id, statusVersion]);
 
+  // One query per project resolves which phases have forked onto their own
+  // status columns; re-read whenever a status edit bumps statusVersion.
+  useEffect(() => {
+    let stale = false;
+
+    getPhaseCustomStatusCounts(project.project_id)
+      .then((counts) => {
+        if (stale || !counts || 'actionError' in counts || 'permissionError' in counts) return;
+        setPhaseCustomStatusCounts(counts);
+      })
+      .catch(() => { /* chip simply stays hidden */ });
+
+    return () => { stale = true; };
+  }, [project.project_id, statusVersion]);
+
   // Fetch tags when component mounts
   useEffect(() => {
     let stale = false;
@@ -542,91 +575,30 @@ export default function ProjectDetail({
   const [taskDocumentCounts, setTaskDocumentCounts] = useState<Map<string, number>>(new Map());
   const [taskCommentCounts, setTaskCommentCounts] = useState<Record<string, number>>({});
 
-  const matchesSearch = useCallback((task: IProjectTask): boolean => {
-    if (!searchQuery.trim()) return true;
-    const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
-    const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
-    const descText = extractTaskDescriptionText(task.description_rich_text ?? task.description);
-    const taskDescription = searchCaseSensitive ? descText : descText.toLowerCase();
-
-    if (searchWholeWord) {
-      const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
-      return wordRegex.test(task.task_name) || wordRegex.test(descText);
-    }
-    return taskName.includes(query) || taskDescription.includes(query);
-  }, [searchQuery, searchCaseSensitive, searchWholeWord]);
+  // One criteria object drives the list, board, Gantt and every derived count
+  // through the shared predicate in lib/taskFilters.
+  const taskFilterCriteria = useMemo<TaskFilterCriteria>(() => ({
+    searchQuery,
+    searchWholeWord,
+    searchCaseSensitive,
+    priorityId: selectedPriorityFilter,
+    taskTypeKey: selectedTaskTypeFilter,
+    tags: selectedTaskTags,
+    agentIds: selectedAgentFilter,
+    teamIds: selectedTeamFilter,
+    includeUnassigned: includeUnassignedAgents,
+    primaryAgentOnly,
+  }), [searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly]);
 
   const filteredTasks = useMemo(() => {
     if (!selectedPhase) return [];
-    let tasks = projectTasks.filter(task => task.wbs_code.startsWith(selectedPhase.wbs_code + '.'));
+    const phaseTasks = projectTasks.filter(task => task.wbs_code.startsWith(selectedPhase.wbs_code + '.'));
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      tasks = tasks.filter(matchesSearch);
-    }
-
-    // Apply priority filter
-    if (selectedPriorityFilter !== 'all') {
-      tasks = tasks.filter(task => task.priority_id === selectedPriorityFilter);
-    }
-
-    // Apply task type filter
-    if (selectedTaskTypeFilter !== 'all') {
-      tasks = tasks.filter(task => task.task_type_key === selectedTaskTypeFilter);
-    }
-
-    // Apply tag filter
-    if (selectedTaskTags.length > 0) {
-      tasks = tasks.filter(task => {
-        const tags = taskTags[task.task_id] || [];
-        const tagTexts = tags.map(tag => tag.tag_text);
-        return selectedTaskTags.some(selectedTag => tagTexts.includes(selectedTag));
-      });
-    }
-
-    // Apply agent / team filter
-    if (selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents) {
-      tasks = tasks.filter(task => {
-        // Check if task is unassigned (no primary assignee)
-        const isUnassigned = !task.assigned_to;
-
-        // If includeUnassignedAgents is selected and task is unassigned, include it
-        if (includeUnassignedAgents && isUnassigned) {
-          return true;
-        }
-
-        // If specific agents are selected, check if task matches
-        if (selectedAgentFilter.length > 0) {
-          // Check primary assignee
-          if (task.assigned_to && selectedAgentFilter.includes(task.assigned_to)) {
-            return true;
-          }
-
-          // Check additional agents from task resources (only if not filtering for primary only)
-          // Primary only filter is only applicable when exactly one agent is selected
-          if (!(primaryAgentOnly && selectedAgentFilter.length === 1)) {
-            const resources = phaseTaskResources[task.task_id] || [];
-            const hasMatchingAdditionalAgent = resources.some(
-              resource => resource.additional_user_id && selectedAgentFilter.includes(resource.additional_user_id)
-            );
-            if (hasMatchingAdditionalAgent) {
-              return true;
-            }
-          }
-        }
-
-        // If specific teams are selected, match by the task's assigned team
-        if (selectedTeamFilter.length > 0 && task.assigned_team_id && selectedTeamFilter.includes(task.assigned_team_id)) {
-          return true;
-        }
-
-        return false;
-      });
-    }
-
-    return tasks;
-  }, [projectTasks, selectedPhase, matchesSearch, searchQuery, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
+    return filterTasks(phaseTasks, taskFilterCriteria, {
+      tags: taskTags,
+      resources: phaseTaskResources,
+    });
+  }, [projectTasks, selectedPhase, taskFilterCriteria, taskTags, phaseTaskResources]);
 
   const phaseStatusLookup = useMemo(
     () => new Map(projectStatuses.map((status) => [status.project_status_mapping_id, status])),
@@ -812,7 +784,12 @@ export default function ProjectDetail({
     return () => clearTimeout(timer);
   }, [billingHighlightEntryId]);
 
-  // Fetch all project task data on mount (shared by list view, sidebar counts, and filtering)
+  // Fetch all project task data (shared by list view, sidebar counts, and
+  // filtering). It re-reads on statusVersion too: the list view buckets tasks
+  // by `statusesByPhase` and offers that phase's columns in its row status
+  // picker, so a status column added or deleted elsewhere would otherwise keep
+  // listing a column that no longer exists — and keep its tasks under it —
+  // until a page reload.
   useEffect(() => {
     let stale = false;
     const fetchAllTaskData = async () => {
@@ -843,71 +820,16 @@ export default function ProjectDetail({
     };
     fetchAllTaskData();
     return () => { stale = true; };
-  }, [project.project_id]);
+  }, [project.project_id, statusVersion]);
 
-  // Filter all project tasks (same logic as list view) for phase count calculation
-  const allFilteredTasks = useMemo(() => {
-    let filtered = allProjectTasks;
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(matchesSearch);
-    }
-
-    // Apply priority filter
-    if (selectedPriorityFilter !== 'all') {
-      filtered = filtered.filter(task => task.priority_id === selectedPriorityFilter);
-    }
-
-    // Apply task type filter
-    if (selectedTaskTypeFilter !== 'all') {
-      filtered = filtered.filter(task => task.task_type_key === selectedTaskTypeFilter);
-    }
-
-    // Apply tag filter
-    if (selectedTaskTags.length > 0) {
-      filtered = filtered.filter(task => {
-        const tags = allProjectTaskTags[task.task_id] || [];
-        const tagTexts = tags.map(tag => tag.tag_text);
-        return selectedTaskTags.some(selectedTag => tagTexts.includes(selectedTag));
-      });
-    }
-
-    // Apply agent / team filter
-    if (selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents) {
-      filtered = filtered.filter(task => {
-        const isUnassigned = !task.assigned_to;
-
-        if (includeUnassignedAgents && isUnassigned) {
-          return true;
-        }
-
-        if (selectedAgentFilter.length > 0) {
-          if (task.assigned_to && selectedAgentFilter.includes(task.assigned_to)) {
-            return true;
-          }
-
-          if (!(primaryAgentOnly && selectedAgentFilter.length === 1)) {
-            const resources = allProjectTaskResources[task.task_id] || [];
-            const hasMatchingAdditionalAgent = resources.some(
-              resource => resource.additional_user_id && selectedAgentFilter.includes(resource.additional_user_id)
-            );
-            if (hasMatchingAdditionalAgent) {
-              return true;
-            }
-          }
-        }
-
-        if (selectedTeamFilter.length > 0 && task.assigned_team_id && selectedTeamFilter.includes(task.assigned_team_id)) {
-          return true;
-        }
-
-        return false;
-      });
-    }
-
-    return filtered;
-  }, [allProjectTasks, matchesSearch, searchQuery, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, allProjectTaskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, allProjectTaskResources]);
+  // Filter all project tasks (same predicate as the list view) for phase counts
+  const allFilteredTasks = useMemo(
+    () => filterTasks(allProjectTasks, taskFilterCriteria, {
+      tags: allProjectTaskTags,
+      resources: allProjectTaskResources,
+    }),
+    [allProjectTasks, taskFilterCriteria, allProjectTaskTags, allProjectTaskResources]
+  );
 
   const hasActiveTaskFilters = Boolean(
     searchQuery.trim() ||
@@ -1562,7 +1484,7 @@ export default function ProjectDetail({
           }
           return t;
         }));
-        setStatusVersion(v => v + 1);
+        setLocalStatusVersion(v => v + 1);
       } else {
         // Pure same-phase reorder/status change — apply server-returned
         // order_key/status so the list reflects the exact drop position.
@@ -2117,7 +2039,7 @@ export default function ProjectDetail({
           }
           return t;
         }));
-        setStatusVersion(v => v + 1);
+        setLocalStatusVersion(v => v + 1);
         playTaskLayoutAnimation(beforeLayout, movedTaskIds);
       } else {
         // Pure same-phase status change — update in place to avoid a reload flicker
@@ -3830,6 +3752,16 @@ export default function ProjectDetail({
                 ? t('projectDetail.kanbanBoardWithPhase', 'Kanban Board: {{phaseName}}', { phaseName: selectedPhase.phase_name })
                 : t('projectDetail.kanbanBoard', 'Kanban Board')}
             </h2>
+            {selectedPhase && (
+              <div className="mt-1">
+                <PhaseStatusScopeChip
+                  customStatusCount={phaseCustomStatusCounts
+                    ? phaseCustomStatusCounts[selectedPhase.phase_id] ?? 0
+                    : undefined}
+                  id={`kanban-phase-status-scope-${selectedPhase.phase_id}`}
+                />
+              </div>
+            )}
             {selectedPhase?.description && (
               <p className="text-sm text-gray-600 mt-0.5">{selectedPhase.description}</p>
             )}
@@ -4264,6 +4196,7 @@ export default function ProjectDetail({
           teamNames={teamNames}
           teamAvatarUrls={teamAvatarUrls}
           selectedPriorityFilter={selectedPriorityFilter}
+          selectedTaskTypeFilter={selectedTaskTypeFilter}
           selectedTaskTags={selectedTaskTags}
           selectedAgentFilter={selectedAgentFilter}
           selectedTeamFilter={selectedTeamFilter}
@@ -4443,10 +4376,11 @@ export default function ProjectDetail({
                   onDrop={handlePhaseDropZone}
                   onDragStart={handlePhaseDragStart}
                   onDragEnd={handlePhaseDragEnd}
-                  onStatusesChanged={() => setStatusVersion(v => v + 1)}
+                  onStatusesChanged={() => setLocalStatusVersion(v => v + 1)}
                   onImport={() => setShowImportDialog(true)}
                   phaseBillingBadges={phaseBillingBadges}
                   phaseAllTasksClosed={phaseAllTasksClosed}
+                  phaseCustomStatusCounts={phaseCustomStatusCounts}
                   canCompletePhase={canCompletePhase}
                   onMarkPhaseComplete={handleMarkPhaseComplete}
                   onReopenPhase={handleReopenPhase}

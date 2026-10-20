@@ -1630,7 +1630,8 @@
         "warrantyEnd": "Koniec gwarancji",
         "agent": "Agent",
         "patching": "Poprawki",
-        "coverage": "Zakres"
+        "coverage": "Zakres",
+        "assignedTo": "Przypisano do"
       },
       "details": {
         "local": "Lokalny",
@@ -1677,7 +1678,28 @@
         "workstation": "Stacja robocza"
       },
       "loadError": "Nie można teraz załadować zasobów.",
-      "retry": "Ponów"
+      "retry": "Ponów",
+      "views": {
+        "assets": "Zasoby",
+        "groups": "Grupy"
+      },
+      "groups": {
+        "newGroup": "Nowa grupa",
+        "drawerTitle": "Grupa zasobów",
+        "name": "Nazwa",
+        "kind": "Rodzaj",
+        "kinds": {
+          "bundle": "Zestaw",
+          "shared_workspace": "Współdzielone stanowisko"
+        },
+        "columns": {
+          "name": "Nazwa",
+          "kind": "Rodzaj",
+          "location": "Lokalizacja",
+          "members": "Elementy",
+          "people": "Osoby"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Dodaj zgłoszenie",
@@ -2034,7 +2056,15 @@
     "accountingApply": "Zastosuj zaznaczone",
     "accountingSkip": "Pomiń na razie",
     "accountingRemapped": "Powiązania księgowe przestawione",
-    "accountingSkipped": "Nie udało się przestawić {{count}} powiązań — wymagają ręcznego powiązania."
+    "accountingSkipped": "Nie udało się przestawić {{count}} powiązań — wymagają ręcznego powiązania.",
+    "assetsDescription": "Te urządzenia i organizacje RMM zostaną przeniesione do klienta docelowego. Synchronizacja utrzyma je tam.",
+    "assetsTotal": "Zasoby",
+    "assetGroups": "Grupy zasobów",
+    "deviceCount": "{{count}} urządzeń",
+    "billingStrategyHeading": "Rozliczaj scaloną pracę i urządzenia w",
+    "billingStrategySource": "Profil rozliczeniowy {{source}}, zachowany jako osobny profil u {{target}}",
+    "billingStrategyTarget": "Domyślny profil rozliczeniowy {{target}}",
+    "billingStrategyHelp": "Dotyczy {{tickets}} zgłoszeń, {{projects}} projektów, {{assets}} zasobów i {{mappings}} grup urządzeń RMM bez własnego profilu rozliczeniowego. Wiersze z jawnym profilem go zachowują, a faktury, cykle rozliczeniowe, płatności i kredyty zawsze pozostają w scalonym profilu."
   },
   "billingProfileContacts": {
     "title": "Kontakty profilu",

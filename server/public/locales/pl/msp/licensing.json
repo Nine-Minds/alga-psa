@@ -10,7 +10,8 @@
   },
   "purchasePage": {
     "title": "Kup licencje",
-    "description": "Dodaj więcej licencji użytkowników do swojego konta AlgaPSA"
+    "description": "Dodaj więcej licencji użytkowników do swojego konta AlgaPSA",
+    "communityEditionDescription": "Samodzielnie hostowana Community Edition oferuje nieograniczoną liczbę użytkowników bez ograniczeń licencyjnych ani dodatkowych kosztów."
   },
   "purchaseSuccess": {
     "metaTitle": "Zakup zakończony",
@@ -37,7 +38,8 @@
     },
     "sessionDetails": "Szczegóły sesji (dla wsparcia)",
     "sessionId": "ID sesji:",
-    "goToAccountManagement": "Przejdź do zarządzania kontem"
+    "goToAccountManagement": "Przejdź do zarządzania kontem",
+    "enterpriseOnly": "Ta funkcja jest dostępna tylko w Pro."
   },
   "subscriptionForm": {
     "title": "Zarządzaj subskrypcją licencji",

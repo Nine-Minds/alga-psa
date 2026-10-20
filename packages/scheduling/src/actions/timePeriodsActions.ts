@@ -22,7 +22,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex, tenantDb, withTransaction, getTenantContext } from '@alga-psa/db';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
-import { getSession, withAuth } from '@alga-psa/auth';
+import { getSession, hasPermission, withAuth } from '@alga-psa/auth';
 import { resolveUserTimeZone } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -76,6 +76,8 @@ const toTimePeriodView = (period: ITimePeriod): ITimePeriodView => ({
   end_date: serializeDateOnly(period.end_date),
 });
 
+const CLOSED_TIME_PERIOD_MESSAGE = 'Time period is closed; reopen it first';
+
 function timePeriodActionErrorMessage(error: unknown, fallback: string): string {
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
 
@@ -84,6 +86,7 @@ function timePeriodActionErrorMessage(error: unknown, fallback: string): string 
   }
 
   if (
+    message === CLOSED_TIME_PERIOD_MESSAGE ||
     message === 'Cannot delete time period with associated time sheets' ||
     message === 'Cannot remove a period that has timesheets' ||
     message === 'Cannot remove the current period' ||
@@ -116,12 +119,72 @@ function timePeriodActionErrorFrom(error: unknown, fallback = ''): TimePeriodAct
     return permissionError(message);
   }
 
+  if (message === CLOSED_TIME_PERIOD_MESSAGE) {
+    return actionError(message, 'msp/time-entry:errors.timePeriod.closed');
+  }
+
   return actionError(message);
 }
 
-export const getLatestTimePeriod = withAuth(async (_user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView | null>> => {
+// Time periods are tenant-wide (they bound everyone's time sheets), so reading and
+// changing them is reserved for roles holding the `time_period` permission. The
+// time-entry flow itself stays ungated — getCurrentTimePeriod and
+// getTimeEntryUserTimeZone must keep working for a technician filling a time sheet.
+const TIME_PERIOD_PERMISSION_MESSAGES: Record<'read' | 'create' | 'update' | 'delete', string> = {
+  read: 'Permission denied: cannot view time periods.',
+  create: 'Permission denied: cannot create time periods.',
+  update: 'Permission denied: cannot update time periods.',
+  delete: 'Permission denied: cannot delete time periods.',
+};
+
+async function timePeriodPermissionError(
+  user: Parameters<typeof hasPermission>[0],
+  action: 'read' | 'create' | 'update' | 'delete',
+  knex: Knex | Knex.Transaction
+): Promise<ActionPermissionError | null> {
+  if (await hasPermission(user, 'time_period', action, knex)) {
+    return null;
+  }
+  return permissionError(
+    TIME_PERIOD_PERMISSION_MESSAGES[action],
+    `msp/time-entry:errors.timePeriod.permissions.${action}`
+  );
+}
+
+export interface TimePeriodCapabilities {
+  read: boolean;
+  create: boolean;
+  update: boolean;
+  delete: boolean;
+  /** Governs the time-period *settings* (the cadence rules), mirroring the v1 API. */
+  manage: boolean;
+}
+
+/**
+ * The viewer's `time_period` permissions, for gating the Settings > Time Entry controls.
+ * The actions above remain the authoritative check; this only decides what to render.
+ */
+export const getTimePeriodCapabilities = withAuth(async (user): Promise<TimePeriodCapabilities> => {
+  const { knex } = await createTenantKnex();
+  const [read, create, update, remove, manage] = await Promise.all([
+    hasPermission(user, 'time_period', 'read', knex),
+    hasPermission(user, 'time_period', 'create', knex),
+    hasPermission(user, 'time_period', 'update', knex),
+    hasPermission(user, 'time_period', 'delete', knex),
+    hasPermission(user, 'time_period', 'manage', knex),
+  ]);
+
+  return { read, create, update, delete: remove, manage };
+});
+
+export const getLatestTimePeriod = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView | null>> => {
   try {
     const { knex } = await createTenantKnex();
+    const denied = await timePeriodPermissionError(user, 'read', knex);
+    if (denied) {
+      return denied;
+    }
+
     const latestPeriod = await TimePeriod.getLatest(knex, tenant);
     if (!latestPeriod) {
       return null;
@@ -139,9 +202,14 @@ export const getLatestTimePeriod = withAuth(async (_user, { tenant }): Promise<T
   }
 });
 
-export const getTimePeriodSettings = withAuth(async (_user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodSettings[]>> => {
+export const getTimePeriodSettings = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodSettings[]>> => {
   try {
     const { knex } = await createTenantKnex();
+    const denied = await timePeriodPermissionError(user, 'read', knex);
+    if (denied) {
+      return denied;
+    }
+
     const settings = await TimePeriodSettings.getActiveSettings(knex, tenant);
     return validateArray(timePeriodSettingsSchema, settings);
   } catch (error) {
@@ -155,7 +223,7 @@ export const getTimePeriodSettings = withAuth(async (_user, { tenant }): Promise
 });
 
 export const createTimePeriod = withAuth(async (
-  _user,
+  user,
   { tenant },
   input: TimePeriodInput
 ): Promise<TimePeriodActionResult<ITimePeriodView>> => {
@@ -171,6 +239,11 @@ export const createTimePeriod = withAuth(async (
   }
 
   const { knex: db } = await createTenantKnex();
+  const denied = await timePeriodPermissionError(user, 'create', db);
+  if (denied) {
+    return denied;
+  }
+
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -204,11 +277,16 @@ export const createTimePeriod = withAuth(async (
   }
 });
 
-export const fetchAllTimePeriods = withAuth(async (_user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView[]>> => {
+export const fetchAllTimePeriods = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView[]>> => {
   try {
     console.log('Fetching all time periods...');
 
     const { knex } = await createTenantKnex();
+    const denied = await timePeriodPermissionError(user, 'read', knex);
+    if (denied) {
+      return denied;
+    }
+
     const timePeriods = await TimePeriod.getAll(knex, tenant);
 
     // Convert model types to view types
@@ -472,13 +550,22 @@ function alignToMonthDay(dateStr: string, targetDay: number): string {
   return alignedDate.toString();
 }
 
-export const deleteTimePeriod = withAuth(async (_user, { tenant }, periodId: string): Promise<TimePeriodActionResult<void>> => {
+export const deleteTimePeriod = withAuth(async (user, { tenant }, periodId: string): Promise<TimePeriodActionResult<void>> => {
   try {
     const { knex } = await createTenantKnex();
+    const denied = await timePeriodPermissionError(user, 'delete', knex);
+    if (denied) {
+      return denied;
+    }
+
     // Check if period exists and has no associated time records
     const period = await TimePeriod.findById(knex, tenant, periodId);
     if (!period) {
       throw new Error('Time period not found');
+    }
+
+    if (period.is_closed) {
+      throw new Error(CLOSED_TIME_PERIOD_MESSAGE);
     }
 
     const isEditable = await TimePeriod.isEditable(knex, tenant, periodId);
@@ -510,8 +597,10 @@ export const deleteTimePeriod = withAuth(async (_user, { tenant }, periodId: str
  * Remove unused/unneeded time periods directly from the Time Entry list. A period is only
  * removable when it is completely unused: no timesheets exist for it (for any user, which
  * also implies no time entries) and it is not the current period. Because deleting a period
- * is tenant-wide, this is restricted to team managers. Removal is per-id and isolated, so a
- * blocked period only fails itself (reported in `failed`) without aborting the batch.
+ * is tenant-wide, this is restricted to team managers (or to roles granted
+ * `time_period:delete`, which is the admin-side route into the same removal). Removal is
+ * per-id and isolated, so a blocked period only fails itself (reported in `failed`) without
+ * aborting the batch.
  */
 export const deleteTimePeriods = withAuth(async (
   user,
@@ -525,6 +614,7 @@ export const deleteTimePeriods = withAuth(async (
     .where({ manager_id: user.user_id })
     .first('team_id');
   const isManager = !!managedTeam;
+  const canDelete = isManager || await hasPermission(user, 'time_period', 'delete', knex);
 
   const uniqueIds = Array.from(
     new Set((periodIds ?? []).filter((id) => typeof id === 'string' && id.length > 0))
@@ -533,7 +623,7 @@ export const deleteTimePeriods = withAuth(async (
   const deletedIds: string[] = [];
   const failed: Array<{ periodId: string; message: string }> = [];
 
-  if (!isManager) {
+  if (!canDelete) {
     for (const periodId of uniqueIds) {
       failed.push({ periodId, message: 'Only managers can remove time periods' });
     }
@@ -547,6 +637,10 @@ export const deleteTimePeriods = withAuth(async (
       const period = await TimePeriod.findById(knex, tenant, periodId);
       if (!period) {
         throw new Error('Time period not found');
+      }
+
+      if (period.is_closed) {
+        throw new Error(CLOSED_TIME_PERIOD_MESSAGE);
       }
 
       // Tenant-wide guard: refuse if any timesheet exists for the period.
@@ -584,7 +678,7 @@ export const deleteTimePeriods = withAuth(async (
 });
 
 export const updateTimePeriod = withAuth(async (
-  _user,
+  user,
   { tenant },
   periodId: string,
   input: Partial<TimePeriodInput>
@@ -599,6 +693,11 @@ export const updateTimePeriod = withAuth(async (
   }
 
   const { knex: db } = await createTenantKnex();
+  const denied = await timePeriodPermissionError(user, 'update', db);
+  if (denied) {
+    return denied;
+  }
+
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -606,6 +705,10 @@ export const updateTimePeriod = withAuth(async (
       const period = await TimePeriod.findById(trx, tenant, periodId);
       if (!period) {
         throw new Error('Time period not found');
+      }
+
+      if (period.is_closed) {
+        throw new Error(CLOSED_TIME_PERIOD_MESSAGE);
       }
 
       const isEditable = await TimePeriod.isEditable(trx, tenant, periodId);
@@ -651,8 +754,13 @@ export const updateTimePeriod = withAuth(async (
   }
 });
 
-export const generateAndSaveTimePeriods = withAuth(async (_user, { tenant }, startDate: ISO8601String, endDate: ISO8601String): Promise<TimePeriodActionResult<ITimePeriodView[]>> => {
+export const generateAndSaveTimePeriods = withAuth(async (user, { tenant }, startDate: ISO8601String, endDate: ISO8601String): Promise<TimePeriodActionResult<ITimePeriodView[]>> => {
   const { knex: db } = await createTenantKnex();
+  const denied = await timePeriodPermissionError(user, 'create', db);
+  if (denied) {
+    return denied;
+  }
+
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const settings = await getTimePeriodSettings();

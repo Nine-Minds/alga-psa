@@ -1,4 +1,6 @@
-import { beforeAll, afterAll, describe, it, expect, vi } from 'vitest';
+import { repairArrearsOnlyLineSchedulesForTenant } from '@alga-psa/billing/actions/arrearsOnlyLineRepair';
+import { beforeAll, afterAll, afterEach, describe, it, expect, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -49,6 +51,7 @@ let calculateBillingForSelectionInputAction: typeof import('@alga-psa/billing/ac
 let previewInvoiceForSelectionInputAction: typeof import('@alga-psa/billing/actions/invoiceGeneration').previewInvoiceForSelectionInput;
 let getPurchaseOrderOverageForSelectionInputAction: typeof import('@alga-psa/billing/actions/invoiceGeneration').getPurchaseOrderOverageForSelectionInput;
 let getAvailableRecurringDueWorkAction: typeof import('@alga-psa/billing/actions/billingAndTax').getAvailableRecurringDueWork;
+let repairAllRecurringServicePeriodsForTenantAction: typeof import('@alga-psa/billing/actions/recurringServicePeriodActions').repairAllRecurringServicePeriodsForTenant;
 let hardDeleteInvoiceAction: typeof import('@alga-psa/billing/actions/invoiceModification').hardDeleteInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let getInvoicedBillingCyclesPaginatedAction: typeof import('@alga-psa/billing/actions/billingCycleActions').getInvoicedBillingCyclesPaginated;
@@ -90,6 +93,11 @@ async function hasSchemaTable(connection: Knex, tableName: string): Promise<bool
     .first('table_name');
   return Boolean(row);
 }
+
+vi.mock('next/server', async () => ({
+  ...await import('next/dist/server/web/spec-extension/request'),
+  ...await import('next/dist/server/web/spec-extension/response'),
+}));
 
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
@@ -208,6 +216,7 @@ describe('Billing Invoice Timing Integration', () => {
     ({
       getAvailableRecurringDueWork: getAvailableRecurringDueWorkAction,
     } = await import('@alga-psa/billing/actions/billingAndTax'));
+    ({ repairAllRecurringServicePeriodsForTenant: repairAllRecurringServicePeriodsForTenantAction } = await import('@alga-psa/billing/actions/recurringServicePeriodActions'));
     ({ hardDeleteInvoice: hardDeleteInvoiceAction } = await import('@alga-psa/billing/actions/invoiceModification'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
     ({
@@ -217,7 +226,14 @@ describe('Billing Invoice Timing Integration', () => {
     } = await import('@alga-psa/billing/actions/billingCycleActions'));
   }, HOOK_TIMEOUT);
 
+  // Legacy-advance fixtures bypass Migration B's CHECK constraints. After every test, repair the
+  // rows they wrote and leave the schema exactly as the migrations produced it (VALID).
+  afterEach(async () => {
+    await restoreArrearsOnlyChecks();
+  }, HOOK_TIMEOUT);
+
   afterAll(async () => {
+    await restoreArrearsOnlyChecks();
     await db?.destroy();
   }, HOOK_TIMEOUT);
 
@@ -1190,7 +1206,7 @@ it('T069: hourly recurring charges bill approved time entries that fall inside a
     planName: 'Contract Hourly Window Plan',
     baseRateCents: 12000,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1204,7 +1220,7 @@ it('T069: hourly recurring charges bill approved time entries that fall inside a
       obligationId: hourlyLine.contractLineId,
       chargeFamily: 'hourly',
     },
-    duePosition: 'advance',
+    duePosition: 'arrears',
     sourceRuleVersion: `${hourlyLine.contractLineId}:approval-blocked:v1`,
     sourceRunKey: 'integration-approval-blocked-hourly',
     targetHorizonDays: 32,
@@ -1239,8 +1255,10 @@ it('T069: hourly recurring charges bill approved time entries that fall inside a
     clientId: contextLike.clientId,
     contractId: hourlyLine.contractId,
     contractLineId: hourlyLine.contractLineId,
-    windowStart: '2025-02-08T00:00:00Z',
-    windowEnd: '2025-03-08T00:00:00Z',
+    // Hourly lines always bill in arrears: the 02-08..03-07 service period is
+    // invoiced in the window after it ends.
+    windowStart: '2025-03-08T00:00:00Z',
+    windowEnd: '2025-04-08T00:00:00Z',
   });
 
   const billingResult = await calculateBillingForSelectionInputAction({
@@ -1261,7 +1279,7 @@ it('T069: hourly recurring charges bill approved time entries that fall inside a
   for (const charge of timeCharges) {
     expect(charge.servicePeriodStart).toBe('2025-02-08');
     expect(charge.servicePeriodEnd).toBe('2025-03-07');
-    expect(charge.billingTiming).toBe('advance');
+    expect(charge.billingTiming).toBe('arrears');
   }
 }, HOOK_TIMEOUT);
 
@@ -1281,7 +1299,7 @@ it('T070: hourly recurring charges with no billable time inside the service peri
     planName: 'Contract Hourly Empty Plan',
     baseRateCents: 12000,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1295,7 +1313,7 @@ it('T070: hourly recurring charges with no billable time inside the service peri
       obligationId: hourlyLine.contractLineId,
       chargeFamily: 'hourly',
     },
-    duePosition: 'advance',
+    duePosition: 'arrears',
     sourceRuleVersion: `${hourlyLine.contractLineId}:approval-window-specific:v1`,
     sourceRunKey: 'integration-approval-window-specific',
     targetHorizonDays: 32,
@@ -1323,8 +1341,10 @@ it('T070: hourly recurring charges with no billable time inside the service peri
     clientId: contextLike.clientId,
     contractId: hourlyLine.contractId,
     contractLineId: hourlyLine.contractLineId,
-    windowStart: '2025-02-08T00:00:00Z',
-    windowEnd: '2025-03-08T00:00:00Z',
+    // Hourly lines always bill in arrears: the 02-08..03-07 service period is
+    // invoiced in the window after it ends.
+    windowStart: '2025-03-08T00:00:00Z',
+    windowEnd: '2025-04-08T00:00:00Z',
   });
 
   const invoice = await generateInvoiceForSelectionInput(selectorInput);
@@ -1352,7 +1372,7 @@ it('T001/T004: recurring due-work marks a contract-hourly window as approval-blo
     planName: 'Approval Blocked Hourly Plan',
     baseRateCents: 12000,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1366,7 +1386,7 @@ it('T001/T004: recurring due-work marks a contract-hourly window as approval-blo
       obligationId: hourlyLine.contractLineId,
       chargeFamily: 'hourly',
     },
-    duePosition: 'advance',
+    duePosition: 'arrears',
     sourceRuleVersion: `${hourlyLine.contractLineId}:approval-blocked-hourly:v1`,
     sourceRunKey: 'integration-approval-blocked-hourly',
     targetHorizonDays: 32,
@@ -1427,7 +1447,7 @@ it('parity: recurring due-work blocks uniquely assignable unassigned hourly time
     planName: 'Approval Unique Unassigned Plan',
     baseRateCents: 12000,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1441,7 +1461,7 @@ it('parity: recurring due-work blocks uniquely assignable unassigned hourly time
       obligationId: hourlyLine.contractLineId,
       chargeFamily: 'hourly',
     },
-    duePosition: 'advance',
+    duePosition: 'arrears',
     sourceRuleVersion: `${hourlyLine.contractLineId}:approval-unique-unassigned:v1`,
     sourceRunKey: 'integration-approval-unique-unassigned',
     targetHorizonDays: 32,
@@ -1578,7 +1598,7 @@ it('T002: recurring due-work does not block a window for unrelated non-approved 
     planName: 'Approval Window Specific Plan',
     baseRateCents: 12000,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1592,7 +1612,7 @@ it('T002: recurring due-work does not block a window for unrelated non-approved 
       obligationId: hourlyLine.contractLineId,
       chargeFamily: 'hourly',
     },
-    duePosition: 'advance',
+    duePosition: 'arrears',
     sourceRuleVersion: `${hourlyLine.contractLineId}:approval-window-specific:v1`,
     sourceRunKey: 'integration-approval-window-specific',
     targetHorizonDays: 32,
@@ -1659,12 +1679,15 @@ it('T003/T008/T017: mixed-charge recurring windows are blocked in full by matchi
     planName: 'Approval Mixed Hourly Plan',
     baseRateCents: 12000,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
+  // The hourly line bills in arrears, so its 02-08..03-07 service period is
+  // invoiced in the 03-08 window. Materialize the advance fixed line's 03-08
+  // period so both land in the same invoice window.
   const mixedFixedMaterializationPlan = materializeContractCadenceServicePeriods({
-    asOf: '2025-02-08T00:00:00Z',
+    asOf: '2025-03-08T00:00:00Z',
     materializedAt: '2026-04-12T00:10:00.000Z',
     billingCycle: 'monthly',
     anchorDate: '2025-02-08T00:00:00Z',
@@ -1690,7 +1713,7 @@ it('T003/T008/T017: mixed-charge recurring windows are blocked in full by matchi
       obligationId: hourlyLine.contractLineId,
       chargeFamily: 'hourly',
     },
-    duePosition: 'advance',
+    duePosition: 'arrears',
     sourceRuleVersion: `${hourlyLine.contractLineId}:approval-mixed-hourly:v1`,
     sourceRunKey: 'integration-approval-mixed-hourly',
     targetHorizonDays: 32,
@@ -1753,7 +1776,7 @@ it('T009/T011: server-side guard re-checks approval state at generation time and
     planName: 'Approval Transition Plan',
     baseRateCents: 12000,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1767,7 +1790,7 @@ it('T009/T011: server-side guard re-checks approval state at generation time and
       obligationId: hourlyLine.contractLineId,
       chargeFamily: 'hourly',
     },
-    duePosition: 'advance',
+    duePosition: 'arrears',
     sourceRuleVersion: `${hourlyLine.contractLineId}:approval-transition:v1`,
     sourceRunKey: 'integration-approval-transition',
     targetHorizonDays: 32,
@@ -1843,7 +1866,7 @@ it('T071: usage recurring charges bill usage records that fall inside a contract
     planName: 'Contract Usage Window Plan',
     baseRateCents: 900,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1875,8 +1898,9 @@ it('T071: usage recurring charges bill usage records that fall inside a contract
     clientId: contextLike.clientId,
     contractId: usageLine.contractId,
     contractLineId: usageLine.contractLineId,
-    windowStart: '2025-02-08T00:00:00Z',
-    windowEnd: '2025-03-08T00:00:00Z',
+    // Arrears: the 02-08..03-07 service period is invoiced in the window after it ends.
+    windowStart: '2025-03-08T00:00:00Z',
+    windowEnd: '2025-04-08T00:00:00Z',
   });
 
   const billingResult = await calculateBillingForSelectionInputAction({
@@ -1897,7 +1921,7 @@ it('T071: usage recurring charges bill usage records that fall inside a contract
   for (const charge of usageCharges) {
     expect(charge.servicePeriodStart).toBe('2025-02-08');
     expect(charge.servicePeriodEnd).toBe('2025-03-07');
-    expect(charge.billingTiming).toBe('advance');
+    expect(charge.billingTiming).toBe('arrears');
   }
 }, HOOK_TIMEOUT);
 
@@ -1917,7 +1941,7 @@ it('T072: usage recurring charges with no usage inside the service period refuse
     planName: 'Contract Usage Empty Plan',
     baseRateCents: 900,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1942,8 +1966,9 @@ it('T072: usage recurring charges with no usage inside the service period refuse
     clientId: contextLike.clientId,
     contractId: usageLine.contractId,
     contractLineId: usageLine.contractLineId,
-    windowStart: '2025-02-08T00:00:00Z',
-    windowEnd: '2025-03-08T00:00:00Z',
+    // Arrears: the 02-08..03-07 service period is invoiced in the window after it ends.
+    windowStart: '2025-03-08T00:00:00Z',
+    windowEnd: '2025-04-08T00:00:00Z',
   });
 
   // Usage billing is record-driven: neither seeded record falls inside the
@@ -1997,8 +2022,10 @@ it('T073: mixed recurring invoice generation can combine fixed, hourly, and usag
     serviceName: 'Mixed Hourly Service',
     planName: 'Mixed Window Contract Hourly',
     baseRateCents: 12500,
-    startDate: currentPeriodStart,
-    billingTiming: 'advance',
+    // Hourly and usage always bill in arrears, so the February invoice cycle
+    // bills their January service period next to the advance fixed line.
+    startDate: '2025-01-01',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'client',
     contractId: fixedLine.contractId,
@@ -2008,8 +2035,8 @@ it('T073: mixed recurring invoice generation can combine fixed, hourly, and usag
     serviceName: 'Mixed Usage Service',
     planName: 'Mixed Window Contract Usage',
     baseRateCents: 700,
-    startDate: currentPeriodStart,
-    billingTiming: 'advance',
+    startDate: '2025-01-01',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'client',
     contractId: fixedLine.contractId,
@@ -2024,14 +2051,14 @@ it('T073: mixed recurring invoice generation can combine fixed, hourly, and usag
     clientId: contextLike.clientId,
     serviceId: hourlyLine.serviceId,
     contractLineId: hourlyLine.contractLineId,
-    startTime: '2025-02-14T09:00:00.000Z',
-    endTime: '2025-02-14T11:00:00.000Z',
+    startTime: '2025-01-14T09:00:00.000Z',
+    endTime: '2025-01-14T11:00:00.000Z',
   });
   await createUsageRecordForContractLine({
     clientId: contextLike.clientId,
     serviceId: usageLine.serviceId,
     contractLineId: usageLine.contractLineId,
-    usageDate: '2025-02-20',
+    usageDate: '2025-01-20',
     quantity: 6,
   });
 
@@ -2060,7 +2087,17 @@ it('T073: mixed recurring invoice generation can combine fixed, hourly, and usag
       normalizeDateValue(row.service_period_start) === currentPeriodStart
       && normalizeDateValue(row.service_period_end) === currentPeriodEnd,
   );
-  expect(detailRowsForCurrentWindow).toHaveLength(3);
+  // The advance fixed line bills the current period; hourly and usage bill the
+  // January period that just ended.
+  expect(detailRowsForCurrentWindow.map((row) => row.service_id)).toEqual([fixedLine.serviceId]);
+  const detailRowsForPriorWindow = detailRows.filter(
+    (row) =>
+      normalizeDateValue(row.service_period_start) === '2025-01-01'
+      && normalizeDateValue(row.service_period_end) === '2025-01-31',
+  );
+  expect(new Set(detailRowsForPriorWindow.map((row) => row.service_id))).toEqual(
+    new Set([hourlyLine.serviceId, usageLine.serviceId]),
+  );
 }, HOOK_TIMEOUT);
 
 it('excludes zero-billable time entries from recurring hourly charges and leaves them uninvoiced', async () => {
@@ -2078,8 +2115,9 @@ it('excludes zero-billable time entries from recurring hourly charges and leaves
     serviceName: 'Zero Billable Service',
     planName: 'Zero Billable Plan',
     baseRateCents: 12000,
-    startDate: '2025-02-01',
-    billingTiming: 'advance',
+    // Arrears: the February cycle invoice bills the January service period.
+    startDate: '2025-01-01',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'client',
   });
@@ -2089,8 +2127,8 @@ it('excludes zero-billable time entries from recurring hourly charges and leaves
     clientId: contextLike.clientId,
     serviceId: hourlyLine.serviceId,
     contractLineId: hourlyLine.contractLineId,
-    startTime: '2025-02-14T09:00:00.000Z',
-    endTime: '2025-02-14T11:00:00.000Z',
+    startTime: '2025-01-14T09:00:00.000Z',
+    endTime: '2025-01-14T11:00:00.000Z',
     billableDuration: 0,
   });
 
@@ -2129,8 +2167,9 @@ it('charges billable minutes, not elapsed start/end time, for recurring hourly e
     serviceName: 'Billable Minutes Service',
     planName: 'Billable Minutes Plan',
     baseRateCents: 12000,
-    startDate: '2025-02-01',
-    billingTiming: 'advance',
+    // Arrears: the February cycle invoice bills the January service period.
+    startDate: '2025-01-01',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'client',
   });
@@ -2141,8 +2180,8 @@ it('charges billable minutes, not elapsed start/end time, for recurring hourly e
     clientId: contextLike.clientId,
     serviceId: hourlyLine.serviceId,
     contractLineId: hourlyLine.contractLineId,
-    startTime: '2025-02-14T09:00:00.000Z',
-    endTime: '2025-02-14T11:00:00.000Z',
+    startTime: '2025-01-14T09:00:00.000Z',
+    endTime: '2025-01-14T11:00:00.000Z',
     billableDuration: 45,
   });
 
@@ -2173,8 +2212,9 @@ it('invoices multiple approved hourly entries sharing one recurring period with 
     serviceName: 'Shared Period Hourly Service',
     planName: 'Shared Period Hourly Plan',
     baseRateCents: 12000,
-    startDate: '2025-02-01',
-    billingTiming: 'advance',
+    // Arrears: the February cycle invoice bills the January service period.
+    startDate: '2025-01-01',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'client',
   });
@@ -2184,15 +2224,15 @@ it('invoices multiple approved hourly entries sharing one recurring period with 
     clientId: contextLike.clientId,
     serviceId: hourlyLine.serviceId,
     contractLineId: hourlyLine.contractLineId,
-    startTime: '2025-02-14T09:00:00.000Z',
-    endTime: '2025-02-14T11:00:00.000Z',
+    startTime: '2025-01-14T09:00:00.000Z',
+    endTime: '2025-01-14T11:00:00.000Z',
   });
   const secondEntry = await createApprovedTimeEntryForContractLine({
     clientId: contextLike.clientId,
     serviceId: hourlyLine.serviceId,
     contractLineId: hourlyLine.contractLineId,
-    startTime: '2025-02-15T09:00:00.000Z',
-    endTime: '2025-02-15T10:00:00.000Z',
+    startTime: '2025-01-15T09:00:00.000Z',
+    endTime: '2025-01-15T10:00:00.000Z',
   });
 
   const result = await generateInvoice(cycleId);
@@ -2329,6 +2369,340 @@ it('T021: deleting a recurring invoice clears service-period invoice linkage and
     .select('record_id');
 
   expect(invoiceableRows.map((row) => row.record_id)).toEqual([materializationPlan.records[0].recordId]);
+}, HOOK_TIMEOUT);
+
+// ---------------------------------------------------------------------------
+// alga0002228: REST DELETE /api/v1/invoices/:id shares the UI's delete engine.
+// The controller is exercised with authenticate/checkPermission stubbed to a
+// context for a real tenant user; everything below the controller (service,
+// shared delete engine, DB) is real.
+// ---------------------------------------------------------------------------
+async function createRestInvoiceHarness() {
+  const { ApiInvoiceController } = await import('../../lib/api/controllers/ApiInvoiceController');
+  const { InvoiceService } = await import('../../lib/api/services/InvoiceService');
+  const userId = await createUser(db, tenantId, { user_type: 'internal' });
+  const context = { tenant: tenantId, userId, user: { user_id: userId, user_type: 'internal' } } as any;
+
+  class TestInvoiceController extends ApiInvoiceController {
+    protected async authenticate(req: NextRequest) {
+      return Object.assign(req, { context }) as any;
+    }
+    protected async checkPermission() {}
+    protected runWithApiKeyContext<T>(_req: any, fn: () => Promise<T>): Promise<T> {
+      return fn();
+    }
+  }
+
+  // BaseService resolves its connection through the real tenant AsyncLocalStorage
+  // context; this file mocks @alga-psa/db's runWithTenant to a passthrough.
+  const { runWithTenant: realRunWithTenant } = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
+  const inTenant = <T,>(fn: () => Promise<T>): Promise<T> =>
+    withRealTransactions(() => realRunWithTenant(tenantId, fn));
+
+  const controller = new TestInvoiceController();
+  const service = new InvoiceService();
+  const restDelete = (invoiceId: string) =>
+    inTenant(() =>
+      controller.delete()(new NextRequest(`http://localhost/api/v1/invoices/${invoiceId}`, { method: 'DELETE' })),
+    );
+  return { context, service, restDelete, userId, inTenant };
+}
+
+async function insertPlainInvoice(clientId: string, status: 'draft' | 'sent' = 'draft') {
+  const invoiceId = uuidv4();
+  const now = '2026-03-18T15:15:00.000Z';
+  await tenantTable(db, tenantId, 'invoices').insert({
+    invoice_id: invoiceId,
+    tenant: tenantId,
+    client_id: clientId,
+    invoice_number: `INV-${invoiceId.slice(0, 8)}`,
+    invoice_date: now,
+    due_date: now,
+    subtotal: 1000,
+    tax: 0,
+    total_amount: 1000,
+    status,
+    currency_code: 'USD',
+    created_at: now,
+    updated_at: now,
+  });
+  const chargeIds: string[] = [];
+  for (const description of ['Manual line A', 'Manual line B']) {
+    const itemId = uuidv4();
+    chargeIds.push(itemId);
+    await tenantTable(db, tenantId, 'invoice_charges').insert({
+      item_id: itemId,
+      tenant: tenantId,
+      invoice_id: invoiceId,
+      description,
+      quantity: 1,
+      unit_price: 5,
+      total_price: 5,
+      net_amount: 5,
+      tax_amount: 0,
+      is_manual: true,
+      created_at: now,
+      updated_at: now,
+    });
+  }
+  return { invoiceId, chargeIds };
+}
+
+const NOT_DRAFT_DELETE_MESSAGE = 'Only draft invoices can be deleted; void the invoice instead.';
+const HAS_PAYMENTS_DELETE_MESSAGE = 'Invoices with recorded payments cannot be deleted';
+
+it('T-REST-DEL-1: REST DELETE of a fresh recurring draft removes it, releases its periods, and the window is due and regenerable again', async () => {
+  setupCommonMocks({ tenantId, userId: 'rest-delete-recurring-user', permissionCheck: () => true });
+  const { restDelete, service, context, inTenant } = await createRestInvoiceHarness();
+
+  const { contextLike, currentPeriodStart, nextPeriodStart } = await createClientWithRecurringCycles({
+    clientName: 'REST Delete Recurring Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2025-03-12',
+    currentPeriodStart: '2025-04-12',
+    nextPeriodStart: '2025-05-12',
+  });
+  const fixedLine = await createFixedContractLine(contextLike, {
+    serviceName: 'REST Delete Service',
+    planName: 'REST Delete Plan',
+    baseRateCents: 245,
+    startDate: currentPeriodStart,
+    billingTiming: 'advance',
+    billingFrequency: 'monthly',
+    cadenceOwner: 'contract',
+  });
+  const plan = materializeContractCadenceServicePeriods({
+    asOf: `${currentPeriodStart}T00:00:00Z`,
+    materializedAt: '2026-03-18T18:30:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: `${currentPeriodStart}T00:00:00Z`,
+    sourceObligation: { tenant: tenantId, obligationId: fixedLine.contractLineId, chargeFamily: 'fixed' },
+    duePosition: 'advance',
+    sourceRuleVersion: `${fixedLine.contractLineId}:v1`,
+    sourceRunKey: 'integration-rest-delete',
+    targetHorizonDays: 32,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  await upsertRecurringServicePeriodRecord(plan.records[0]);
+
+  const selectorInput = buildContractCadenceDueSelectionInput({
+    clientId: contextLike.clientId,
+    contractId: fixedLine.contractId,
+    contractLineId: fixedLine.contractLineId,
+    windowStart: `${currentPeriodStart}T00:00:00Z`,
+    windowEnd: `${nextPeriodStart}T00:00:00Z`,
+  });
+  const generated = await generateInvoiceForSelectionInput(selectorInput);
+  expect(generated).toBeTruthy();
+  const invoiceId = generated!.invoice_id;
+
+  const chargeIds = await tenantTable(db, tenantId, 'invoice_charges')
+    .where({ tenant: tenantId, invoice_id: invoiceId })
+    .pluck('item_id');
+  expect(chargeIds.length).toBeGreaterThan(0);
+
+  // Recurring drafts cannot have their items replaced through update().
+  await expect(
+    inTenant(() =>
+      service.update(invoiceId, { items: [{ description: 'x', quantity: 1, unit_price: 1 }] } as any, context),
+    ),
+  ).rejects.toMatchObject({ statusCode: 409 });
+  expect(
+    await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).pluck('item_id'),
+  ).toHaveLength(chargeIds.length);
+
+  const response = await restDelete(invoiceId);
+  expect(response.status).toBe(204);
+
+  // The audit row is written through onBeforeCommit, atomically with the delete.
+  const auditRow = await tenantTable(db, tenantId, 'audit_logs')
+    .where({ tenant: tenantId, table_name: 'invoices', record_id: invoiceId, operation: 'DELETE' })
+    .first();
+  expect(auditRow).toBeTruthy();
+  expect(auditRow.details).toMatchObject({ action: 'invoice.deleted' });
+
+  expect(await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
+  expect(await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
+  expect(
+    await tenantTable(db, tenantId, 'invoice_charge_details').whereIn('item_id', chargeIds).first(),
+  ).toBeUndefined();
+  expect(await tenantTable(db, tenantId, 'transactions').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
+
+  const reopened = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, record_id: plan.records[0].recordId })
+    .first(['lifecycle_state', 'invoice_id', 'invoice_charge_id', 'invoice_charge_detail_id', 'invoice_linked_at']);
+  expect(reopened).toMatchObject({
+    lifecycle_state: 'locked',
+    invoice_id: null,
+    invoice_charge_id: null,
+    invoice_charge_detail_id: null,
+    invoice_linked_at: null,
+  });
+
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'REST Delete Recurring Client',
+  });
+  const dueRow = dueWork.invoiceCandidates
+    .flatMap((candidate) => candidate.members)
+    .find((row) =>
+      row.contractLineId === fixedLine.contractLineId
+      && normalizeDateValue(row.invoiceWindowStart) === currentPeriodStart
+      && normalizeDateValue(row.invoiceWindowEnd) === nextPeriodStart,
+    );
+  expect(dueRow).toBeTruthy();
+
+  const regenerated = await generateInvoiceForSelectionInput(dueRow!.selectorInput);
+  expect(regenerated).toBeTruthy();
+  expect(regenerated!.invoice_id).not.toBe(invoiceId);
+}, HOOK_TIMEOUT);
+
+it('T-REST-DEL-2: REST DELETE of a non-recurring draft removes the invoice and its charges', async () => {
+  const { restDelete } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Delete Manual Client' });
+  const { invoiceId } = await insertPlainInvoice(contextLike.clientId);
+
+  const response = await restDelete(invoiceId);
+  expect(response.status).toBe(204);
+
+  expect(await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
+  expect(await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
+}, HOOK_TIMEOUT);
+
+it('T-REST-DEL-3: REST DELETE of a finalized invoice answers 409 and leaves the invoice untouched', async () => {
+  const { restDelete, service, context, inTenant } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Delete Finalized Client' });
+  const { invoiceId, chargeIds } = await insertPlainInvoice(contextLike.clientId);
+
+  await inTenant(() => service.finalizeInvoice({ invoice_id: invoiceId } as any, context));
+  const before = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(before.finalized_at).toBeTruthy();
+
+  const response = await restDelete(invoiceId);
+  expect(response.status).toBe(409);
+  const body = await response.json();
+  expect(body.error.code).toBe('CONFLICT');
+  expect(body.error.message).toBe(NOT_DRAFT_DELETE_MESSAGE);
+
+  const after = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(after).toBeTruthy();
+  expect(after.status).toBe(before.status);
+  expect(after.status).not.toBe('cancelled');
+  expect(String(after.finalized_at)).toBe(String(before.finalized_at));
+  const charges = await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).pluck('item_id');
+  expect(charges.sort()).toEqual([...chargeIds].sort());
+}, HOOK_TIMEOUT);
+
+async function expectRestDeleteRefused(
+  restDelete: (id: string) => Promise<Response>,
+  invoiceId: string,
+  chargeIds: string[],
+  expectedStatus: string,
+  expectedMessage: string = NOT_DRAFT_DELETE_MESSAGE,
+) {
+  const response = await restDelete(invoiceId);
+  expect(response.status).toBe(409);
+  const body = await response.json();
+  expect(body.error.code).toBe('CONFLICT');
+  expect(body.error.message).toBe(expectedMessage);
+
+  const after = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(after).toBeTruthy();
+  expect(after.status).toBe(expectedStatus);
+  const charges = await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).pluck('item_id');
+  expect(charges.sort()).toEqual([...chargeIds].sort());
+}
+
+it.each([
+  ['T-REST-DEL-5', 'sent'],
+  ['T-REST-DEL-6', 'paid'],
+])('%s: REST DELETE of a %s invoice with NULL finalized_at answers 409 and leaves it untouched', async (_id, status) => {
+  const { restDelete } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: `REST Delete ${status} Client` });
+  const { invoiceId, chargeIds } = await insertPlainInvoice(contextLike.clientId);
+  await tenantTable(db, tenantId, 'invoices')
+    .where({ tenant: tenantId, invoice_id: invoiceId })
+    .update({ status, finalized_at: null });
+
+  await expectRestDeleteRefused(restDelete, invoiceId, chargeIds, status);
+}, HOOK_TIMEOUT);
+
+it('T-REST-DEL-7: REST DELETE of a draft that has a recorded payment answers 409 and keeps the payment', async () => {
+  const { restDelete } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Delete Paid Draft Client' });
+  const { invoiceId, chargeIds } = await insertPlainInvoice(contextLike.clientId);
+  const paymentId = uuidv4();
+  await tenantTable(db, tenantId, 'invoice_payments').insert({
+    payment_id: paymentId,
+    tenant: tenantId,
+    invoice_id: invoiceId,
+    amount: 500,
+    payment_method: 'check',
+    status: 'completed',
+  });
+
+  await expectRestDeleteRefused(restDelete, invoiceId, chargeIds, 'draft', HAS_PAYMENTS_DELETE_MESSAGE);
+  const payment = await tenantTable(db, tenantId, 'invoice_payments')
+    .where({ tenant: tenantId, payment_id: paymentId })
+    .first();
+  expect(payment).toBeTruthy();
+}, HOOK_TIMEOUT);
+
+it('T-REST-DEL-4: REST DELETE of an unknown invoice id answers 404', async () => {
+  const { restDelete, service, context, inTenant } = await createRestInvoiceHarness();
+  const response = await restDelete(uuidv4());
+  expect(response.status).toBe(404);
+
+  // The service itself (past the controller's getById pre-check) also maps a
+  // missing invoice to NotFound rather than silently succeeding.
+  await expect(inTenant(() => service.delete(uuidv4(), context))).rejects.toMatchObject({ statusCode: 404 });
+}, HOOK_TIMEOUT);
+
+it('T-REST-UPD-1: REST update writes a header-only change without a missing-column error and replaces invoice_charges for a non-recurring draft', async () => {
+  const { service, context, inTenant } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Update Client' });
+  const { invoiceId, chargeIds } = await insertPlainInvoice(contextLike.clientId);
+
+  await inTenant(() => service.update(invoiceId, { due_date: '2026-06-30' } as any, context));
+  const headerOnly = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(normalizeDateValue(headerOnly.due_date)).toBe('2026-06-30');
+
+  const serviceId = await createTestService(contextLike, {});
+  await inTenant(() =>
+    service.update(
+      invoiceId,
+      { items: [{ service_id: serviceId, description: 'Replacement line', quantity: 2, unit_price: 7 }] } as any,
+      context,
+    ),
+  );
+  const charges = await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId });
+  expect(charges).toHaveLength(1);
+  expect(charges[0].description).toBe('Replacement line');
+  expect(chargeIds).not.toContain(charges[0].item_id);
+
+  // A finalized invoice may not have its items replaced.
+  await inTenant(() => service.finalizeInvoice({ invoice_id: invoiceId } as any, context));
+  await expect(
+    inTenant(() => service.update(invoiceId, { items: [{ description: 'x', quantity: 1, unit_price: 1 }] } as any, context)),
+  ).rejects.toMatchObject({ statusCode: 409 });
+}, HOOK_TIMEOUT);
+
+it('T-REST-STATUS-1: sendInvoice on a finalized invoice no longer fails on the missing invoices.updated_by column', async () => {
+  const { service, context, inTenant } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Status Client' });
+  const { invoiceId } = await insertPlainInvoice(contextLike.clientId);
+  await inTenant(() => service.finalizeInvoice({ invoice_id: invoiceId } as any, context));
+
+  await inTenant(() =>
+    service.sendInvoice({ invoice_id: invoiceId, email_addresses: ['billing@example.com'], include_pdf: false } as any, context),
+  );
+  const sent = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(sent.status).toBe('sent');
+
+  // recordPayment is intentionally not asserted here: it has a separate, pre-existing
+  // defect (invoice_payments.created_by does not exist), outside alga0002228's scope.
 }, HOOK_TIMEOUT);
 
 it('T051/T078: invoiced-history reader returns client-cadence recurring invoices with service-period metadata after the hard cutover', async () => {
@@ -5248,21 +5622,21 @@ it('T155: real-schema classification keeps unique, ambiguous, and no-match billi
     planName: 'Unique Classification Plan',
     baseRateCents: 10000,
     startDate: '2024-12-01',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
   });
   const ambiguousFirst = await createHourlyContractLine(ambiguousClient.contextLike, {
     serviceName: 'Ambiguous Classification Service',
     planName: 'Ambiguous Classification Plan A',
     baseRateCents: 10000,
     startDate: '2024-12-01',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
   });
   const ambiguousSecond = await createHourlyContractLine(ambiguousClient.contextLike, {
     serviceName: 'Ambiguous Classification Service B',
     planName: 'Ambiguous Classification Plan B',
     baseRateCents: 10000,
     startDate: '2024-12-01',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
   });
   // Force the second line to cover the first line's service, creating the
   // exact multi-candidate case without introducing an arbitrary tie-break.
@@ -5336,7 +5710,7 @@ it('T156: generation reconciles before calculation, bills the newly covered entr
     planName: 'Same-Run Reconciliation Plan',
     baseRateCents: 10000,
     startDate: '2025-02-01',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     cadenceOwner: 'contract',
   });
   await syncContractLineRecurringPeriods(line.contractLineId);
@@ -5345,7 +5719,7 @@ it('T156: generation reconciles before calculation, bills the newly covered entr
     planName: 'Same-Run Reconciliation Usage Plan',
     baseRateCents: 2000,
     startDate: '2025-02-01',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     cadenceOwner: 'contract',
   });
   await syncContractLineRecurringPeriods(usageLine.contractLineId);
@@ -5367,17 +5741,18 @@ it('T156: generation reconciles before calculation, bills the newly covered entr
   // fixture window explicitly rather than assuming it remains on the first page.
   const dueWork = await getAvailableRecurringDueWorkAction({
     page: 1, pageSize: 20, searchTerm: 'Same-Run Reconciliation Client',
+    // Arrears: the February service period (ending 03-01) is invoiced in the March window.
     dateRange: { from: '2025-02-01', to: '2025-03-01' },
   });
   const dueRows = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
   const dueRow = dueRows
     .find((row) => row.contractLineId === line.contractLineId
-      && row.invoiceWindowStart === '2025-02-01'
-      && row.invoiceWindowEnd === '2025-03-01');
+      && row.invoiceWindowStart === '2025-03-01'
+      && row.invoiceWindowEnd === '2025-04-01');
   const usageDueRow = dueRows
     .find((row) => row.contractLineId === usageLine.contractLineId
-      && row.invoiceWindowStart === '2025-02-01'
-      && row.invoiceWindowEnd === '2025-03-01');
+      && row.invoiceWindowStart === '2025-03-01'
+      && row.invoiceWindowEnd === '2025-04-01');
   expect(dueRow).toBeTruthy();
   expect(usageDueRow).toBeTruthy();
 
@@ -5424,7 +5799,7 @@ it('T157: preview and PO-overage calculation reconcile for pricing but roll back
     planName: 'Rollback Reconciliation Plan',
     baseRateCents: 10000,
     startDate: '2025-02-01',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     cadenceOwner: 'contract',
   });
   await syncContractLineRecurringPeriods(line.contractLineId);
@@ -5439,12 +5814,13 @@ it('T157: preview and PO-overage calculation reconcile for pricing but roll back
   // fixture window explicitly rather than assuming it remains on the first page.
   const dueWork = await getAvailableRecurringDueWorkAction({
     page: 1, pageSize: 20, searchTerm: 'Rollback Reconciliation Client',
+    // Arrears: the February service period (ending 03-01) is invoiced in the March window.
     dateRange: { from: '2025-02-01', to: '2025-03-01' },
   });
   const selectorInput = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
     .find((row) => row.contractLineId === line.contractLineId
-      && row.invoiceWindowStart === '2025-02-01'
-      && row.invoiceWindowEnd === '2025-03-01')?.selectorInput;
+      && row.invoiceWindowStart === '2025-03-01'
+      && row.invoiceWindowEnd === '2025-04-01')?.selectorInput;
   expect(selectorInput).toBeTruthy();
 
   const preview = await withRealTransactions(() => previewInvoiceForSelectionInputAction(selectorInput!));
@@ -5473,7 +5849,7 @@ it('T158: failed generation rolls back reconciliation and a corrected retry can 
     planName: 'Failed Generation Retry Plan',
     baseRateCents: 10000,
     startDate: '2025-02-01',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     cadenceOwner: 'contract',
   });
   await syncContractLineRecurringPeriods(line.contractLineId);
@@ -5488,12 +5864,13 @@ it('T158: failed generation rolls back reconciliation and a corrected retry can 
   // fixture window explicitly rather than assuming it remains on the first page.
   const dueWork = await getAvailableRecurringDueWorkAction({
     page: 1, pageSize: 20, searchTerm: 'Failed Generation Retry Client',
+    // Arrears: the February service period (ending 03-01) is invoiced in the March window.
     dateRange: { from: '2025-02-01', to: '2025-03-01' },
   });
   const selectorInput = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
     .find((row) => row.contractLineId === line.contractLineId
-      && row.invoiceWindowStart === '2025-02-01'
-      && row.invoiceWindowEnd === '2025-03-01')?.selectorInput;
+      && row.invoiceWindowStart === '2025-03-01'
+      && row.invoiceWindowEnd === '2025-04-01')?.selectorInput;
   expect(selectorInput).toBeTruthy();
 
   const calculationFailure = vi.spyOn(BillingEngine.prototype, 'calculateBillingForExecutionWindow')
@@ -5512,6 +5889,785 @@ it('T158: failed generation rolls back reconciliation and a corrected retry can 
   await expect(withRealTransactions(() => generateInvoiceForSelectionInput(selectorInput!))).resolves.toBeTruthy();
   expect(await tenantTable(db, tenantId, 'time_entries').where({ entry_id: entry.entry_id }).first('contract_line_id'))
     .toMatchObject({ contract_line_id: line.contractLineId });
+}, HOOK_TIMEOUT);
+
+const ARREARS_ONLY_CHECKS = [
+  { table: 'contract_lines', typeColumn: 'contract_line_type', name: 'contract_lines_hourly_usage_not_advance_check' },
+  { table: 'contract_template_lines', typeColumn: 'line_type', name: 'contract_template_lines_hourly_usage_not_advance_check' },
+  { table: 'contract_line_presets', typeColumn: 'contract_line_type', name: 'contract_line_presets_hourly_usage_not_advance_check' },
+] as const;
+
+/** Drops one or all Migration B CHECK constraints so a fixture can store legacy advance timing. */
+async function dropArrearsOnlyChecks(tables?: string[]): Promise<void> {
+  for (const check of ARREARS_ONLY_CHECKS) {
+    if (tables && !tables.includes(check.table)) continue;
+    await db.raw(`ALTER TABLE ${check.table} DROP CONSTRAINT IF EXISTS ${check.name}`);
+  }
+}
+
+/**
+ * Flips any legacy Hourly/Usage advance rows to arrears and re-adds each CHECK constraint as a
+ * fully validated constraint, identical to what Migration B creates.
+ */
+async function restoreArrearsOnlyChecks(): Promise<void> {
+  if (!db) return;
+  for (const check of ARREARS_ONLY_CHECKS) {
+    await db.raw(`ALTER TABLE ${check.table} DROP CONSTRAINT IF EXISTS ${check.name}`);
+    await db.raw(
+      `UPDATE ${check.table} SET billing_timing = 'arrears' `
+      + `WHERE ${check.typeColumn} IN ('Hourly', 'Usage') AND billing_timing = 'advance'`,
+    );
+    await db.raw(
+      `ALTER TABLE ${check.table} ADD CONSTRAINT ${check.name} `
+      + `CHECK (NOT (${check.typeColumn} IN ('Hourly', 'Usage') AND billing_timing = 'advance'))`,
+    );
+  }
+}
+
+/** Simulates legacy bad data on contract_lines (the constraint is restored in afterEach). */
+async function storeLegacyAdvanceTiming(lineIds: string[]): Promise<void> {
+  await dropArrearsOnlyChecks(['contract_lines']);
+  await tenantTable(db, tenantId, 'contract_lines')
+    .where({ tenant: tenantId })
+    .whereIn('contract_line_id', lineIds)
+    .update({ billing_timing: 'advance' });
+}
+
+it('T1: time logged after an empty legacy advance hourly period is stranded, then the repair makes it billable once', async () => {
+  setupCommonMocks({ tenantId, userId: 'stranding-probe-user', permissionCheck: () => true });
+  const { contextLike, clientId } = await createClientWithRecurringCycles({
+    clientName: 'Stranding Probe Client',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  // Legacy state: an Hourly line stored as advance, with advance service periods
+  // (the way a row written before the arrears-only rule looks). The authoring
+  // policy and the engine now refuse to create this, so the periods are
+  // materialized by hand, exactly as T069 does.
+  const line = await createHourlyContractLine(contextLike, {
+    serviceName: 'Stranding Probe Service',
+    planName: 'Stranding Probe Plan',
+    baseRateCents: 11000,
+    startDate: '2025-02-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  await storeLegacyAdvanceTiming([line.contractLineId]);
+  const legacyAdvancePlan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-01T00:00:00Z',
+    materializedAt: '2025-01-15T00:00:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-01T00:00:00Z',
+    sourceObligation: { tenant: tenantId, obligationId: line.contractLineId, chargeFamily: 'hourly' },
+    duePosition: 'advance',
+    sourceRuleVersion: `${line.contractLineId}:legacy-advance:v1`,
+    sourceRunKey: 'integration-legacy-advance-hourly',
+    targetHorizonDays: 70,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  for (const record of legacyAdvancePlan.records) {
+    await upsertRecurringServicePeriodRecord(record);
+  }
+
+  const findDueRow = async (windowStart: string, windowEnd: string, range?: { from: string; to: string }) => {
+    const dueWork = await getAvailableRecurringDueWorkAction({
+      page: 1, pageSize: 20, searchTerm: 'Stranding Probe Client',
+      dateRange: range ?? { from: windowStart, to: windowEnd },
+    });
+    return dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
+      .find((row) => row.contractLineId === line.contractLineId
+        && row.invoiceWindowStart === windowStart
+        && row.invoiceWindowEnd === windowEnd);
+  };
+
+  // 1. February advance invoice on Feb 1: no time exists yet.
+  const februaryRow = await findDueRow('2025-02-01', '2025-03-01');
+  expect(februaryRow).toBeTruthy();
+  const februaryResult = await generateInvoiceForSelectionInput(februaryRow!.selectorInput);
+  expect(februaryResult).toMatchObject({ invoice_id: expect.any(String) });
+  const februaryPeriods = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: line.contractLineId })
+    .orderBy('service_period_start')
+    .select('service_period_start', 'service_period_end', 'lifecycle_state', 'invoice_id', 'invoice_charge_detail_id', 'due_position');
+  // The empty February advance period was claimed anyway: billed, linked to an
+  // invoice, with no charge detail behind it.
+  expect(februaryPeriods[0]).toMatchObject({
+    lifecycle_state: 'billed',
+    due_position: 'advance',
+    invoice_charge_detail_id: null,
+  });
+  expect(februaryPeriods[0].invoice_id).toBeTruthy();
+
+  // 2. Time logged on Feb 15, after the empty invoice.
+  const entry = await createApprovedTimeEntryForContractLine({
+    clientId,
+    serviceId: line.serviceId,
+    contractLineId: line.contractLineId,
+    startTime: '2025-02-15T10:00:00.000Z',
+    endTime: '2025-02-15T11:00:00.000Z',
+  });
+
+  // 3. March invoice.
+  const marchRow = await findDueRow('2025-03-01', '2025-04-01');
+  expect(marchRow).toBeTruthy();
+  const marchResult = await generateInvoiceForSelectionInput(marchRow!.selectorInput);
+  expect(marchResult).toMatchObject({ invoice_id: expect.any(String) });
+
+  // 4. Was the Feb 15 entry billed anywhere?
+  const persisted = await tenantTable(db, tenantId, 'time_entries')
+    .where({ tenant: tenantId, entry_id: entry.entry_id })
+    .first('invoiced');
+  const billedLinks = await tenantTable(db, tenantId, 'invoice_time_entries')
+    .where({ tenant: tenantId, entry_id: entry.entry_id });
+  expect({ invoiced: persisted?.invoiced, links: billedLinks.length }).toEqual({ invoiced: false, links: 0 });
+
+  // 5. Repair. The billed advance rows stay exactly as they are; a sibling arrears
+  //    catch-up row for February makes the stranded entry billable again.
+  const billedBefore = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: line.contractLineId, due_position: 'advance', lifecycle_state: 'billed' })
+    .orderBy('service_period_start')
+    .select('record_id', 'invoice_id', 'invoice_charge_detail_id', 'service_period_start', 'revision');
+  expect(billedBefore.length).toBeGreaterThanOrEqual(2);
+
+  const repair = await db.transaction((trx) => repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: tenantId }));
+  // Other tests in this file leave stored-advance legacy lines in the tenant; the repair is tenant-wide.
+  expect(repair.timingFlipped).toBeGreaterThanOrEqual(1);
+  expect(repair).toMatchObject({ catchUpRowsCreated: 1, rowsRehomed: 0 });
+  // The repair is tenant-wide: other tests' flagged lines (e.g. the T5b bucket line) re-appear here.
+  expect(repair.manualReview.filter((item) => item.contractLineId === line.contractLineId)).toEqual([]);
+  expect(await tenantTable(db, tenantId, 'contract_lines')
+    .where({ tenant: tenantId, contract_line_id: line.contractLineId })
+    .first('billing_timing')).toMatchObject({ billing_timing: 'arrears' });
+
+  const billedAfter = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: line.contractLineId, due_position: 'advance', lifecycle_state: 'billed' })
+    .orderBy('service_period_start')
+    .select('record_id', 'invoice_id', 'invoice_charge_detail_id', 'service_period_start', 'revision');
+  expect(billedAfter).toEqual(billedBefore);
+
+  const catchUps = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: line.contractLineId, reason_code: 'stranded_advance_catch_up' })
+    .select('due_position', 'lifecycle_state', 'provenance_kind', 'revision', 'service_period_start', 'service_period_end',
+      'invoice_window_start', 'invoice_window_end');
+  expect(catchUps).toHaveLength(1);
+  expect(catchUps[0]).toMatchObject({ due_position: 'arrears', lifecycle_state: 'generated', provenance_kind: 'repair', revision: 1 });
+  expect(String(catchUps[0].service_period_start).slice(0, 10) === '2025-02-01' || catchUps[0].service_period_start instanceof Date).toBe(true);
+
+  // 6. The catch-up window bills the stranded entry exactly once.
+  // Arrears: the February service period is invoiced in the March window.
+  const catchUpRow = await findDueRow('2025-03-01', '2025-04-01', { from: '2025-02-01', to: '2025-03-01' });
+  expect(catchUpRow).toBeTruthy();
+  const catchUpResult = await generateInvoiceForSelectionInput(catchUpRow!.selectorInput);
+  expect(catchUpResult).toMatchObject({ invoice_id: expect.any(String) });
+  expect(await tenantTable(db, tenantId, 'time_entries')
+    .where({ tenant: tenantId, entry_id: entry.entry_id })
+    .first('invoiced')).toMatchObject({ invoiced: true });
+  expect(await tenantTable(db, tenantId, 'invoice_time_entries')
+    .where({ tenant: tenantId, entry_id: entry.entry_id })).toHaveLength(1);
+
+  // 7. Idempotent: a second run changes nothing.
+  const countRows = async () => Number((await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: line.contractLineId })
+    .count('* as n').first())?.n);
+  const rowsBeforeSecondRun = await countRows();
+  const second = await db.transaction((trx) => repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: tenantId }));
+  expect(second).toMatchObject({
+    timingFlipped: 0, advanceRowsSuperseded: 0, rowsRehomed: 0, catchUpRowsCreated: 0,
+  });
+  // Other tests' flagged lines (T5b bucket) legitimately re-appear on every tenant-wide run.
+  expect(second.manualReview.filter((item) => item.contractLineId === line.contractLineId)).toEqual([]);
+  expect(await countRows()).toBe(rowsBeforeSecondRun);
+}, HOOK_TIMEOUT);
+
+/**
+ * Seeds the legacy state the arrears-only rule leaves behind: an Hourly line stored as advance
+ * with advance service periods from Feb 2025. Returns helpers to find the Generate-page row for an
+ * invoice window.
+ */
+async function seedLegacyAdvanceHourlyLine(label: string) {
+  const clientName = `${label} Client`;
+  const { contextLike, clientId } = await createClientWithRecurringCycles({
+    clientName,
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  const line = await createHourlyContractLine(contextLike, {
+    serviceName: `${label} Service`,
+    planName: `${label} Plan`,
+    baseRateCents: 11000,
+    startDate: '2025-02-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  await storeLegacyAdvanceTiming([line.contractLineId]);
+  const plan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-01T00:00:00Z',
+    materializedAt: '2025-01-15T00:00:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-01T00:00:00Z',
+    sourceObligation: { tenant: tenantId, obligationId: line.contractLineId, chargeFamily: 'hourly' },
+    duePosition: 'advance',
+    sourceRuleVersion: `${line.contractLineId}:legacy-advance:v1`,
+    sourceRunKey: `integration-legacy-advance-${label}`,
+    targetHorizonDays: 100,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  for (const record of plan.records) {
+    await upsertRecurringServicePeriodRecord(record);
+  }
+  const findDueRow = async (windowStart: string, windowEnd: string, range: { from: string; to: string }) => {
+    const dueWork = await getAvailableRecurringDueWorkAction({
+      page: 1, pageSize: 50, searchTerm: clientName, dateRange: range,
+    });
+    return dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
+      .find((row) => row.contractLineId === line.contractLineId
+        && row.invoiceWindowStart === windowStart
+        && row.invoiceWindowEnd === windowEnd);
+  };
+  const strandedGaps = async () => {
+    const dueWork = await getAvailableRecurringDueWorkAction({
+      page: 1, pageSize: 50, searchTerm: clientName, dateRange: { from: '2025-02-01', to: '2025-04-01' },
+    });
+    return dueWork.materializationGaps.filter((gap) => gap.clientId === clientId && gap.reason === 'stranded_arrears_only_line');
+  };
+  return { clientId, clientName, line, findDueRow, strandedGaps };
+}
+
+const runMigrationA = async () => {
+  const migrationA = createRequire(import.meta.url)('../../../migrations/20261013120000_hourly_usage_lines_bill_in_arrears.cjs');
+  await migrationA.up(db);
+};
+
+it('T10: unbilled advance period before the billed boundary gets an arrears catch-up row; its time bills once and the billed period is untouched', async () => {
+  setupCommonMocks({ tenantId, userId: 'pre-boundary-user', permissionCheck: () => true });
+  const { clientId, line, findDueRow } = await seedLegacyAdvanceHourlyLine('Pre Boundary');
+  // Feb (unbilled) advance period has time; only the March advance period is invoiced.
+  const febEntry = await createApprovedTimeEntryForContractLine({
+    clientId, serviceId: line.serviceId, contractLineId: line.contractLineId,
+    startTime: '2025-02-10T10:00:00.000Z', endTime: '2025-02-10T11:00:00.000Z',
+  });
+  const marchRow = await findDueRow('2025-03-01', '2025-04-01', { from: '2025-03-01', to: '2025-04-01' });
+  expect(marchRow).toBeTruthy();
+  expect(await generateInvoiceForSelectionInput(marchRow!.selectorInput)).toMatchObject({ invoice_id: expect.any(String) });
+  const periods = () => tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: line.contractLineId })
+    .orderBy('service_period_start')
+    .select('*');
+  const before = await periods();
+  const febAdvanceBefore = before.find((row) => row.due_position === 'advance' && dateOnlyOf(row.service_period_start) === '2025-02-01');
+  const marchBilledBefore = before.find((row) => row.due_position === 'advance' && row.lifecycle_state === 'billed');
+  expect(febAdvanceBefore).toMatchObject({ lifecycle_state: 'generated' });
+  expect(dateOnlyOf(marchBilledBefore!.service_period_start)).toBe('2025-03-01');
+
+  await runMigrationA();
+  const repair = await db.transaction((trx) => repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: tenantId }));
+  expect(repair.manualReview.filter((item) => item.contractLineId === line.contractLineId)).toEqual([]);
+
+  const after = await periods();
+  // The billed March advance row is untouched.
+  expect(after.find((row) => row.record_id === marchBilledBefore!.record_id)).toEqual(marchBilledBefore);
+  // February's retired advance row now has exactly one live arrears counterpart for the same span.
+  const febArrears = after.filter((row) => row.due_position === 'arrears'
+    && dateOnlyOf(row.service_period_start) === '2025-02-01'
+    && !['superseded', 'archived'].includes(row.lifecycle_state));
+  expect(febArrears).toHaveLength(1);
+  expect(febArrears[0]).toMatchObject({ lifecycle_state: 'generated', reason_code: 'stranded_advance_catch_up', provenance_kind: 'repair' });
+  // No service period exists twice among live rows.
+  const liveSpans = after
+    .filter((row) => !['superseded', 'archived'].includes(row.lifecycle_state))
+    .map((row) => `${row.due_position}|${dateOnlyOf(row.service_period_start)}|${dateOnlyOf(row.service_period_end)}`);
+  expect(new Set(liveSpans).size).toBe(liveSpans.length);
+
+  // February's time is billable exactly once through the catch-up row; March is not billed again.
+  const catchUpRow = await findDueRow(
+    dateOnlyOf(febArrears[0].invoice_window_start), dateOnlyOf(febArrears[0].invoice_window_end),
+    { from: '2025-02-01', to: '2025-04-01' },
+  );
+  expect(catchUpRow).toBeTruthy();
+  expect(await generateInvoiceForSelectionInput(catchUpRow!.selectorInput)).toMatchObject({ invoice_id: expect.any(String) });
+  const febLinks = () => tenantTable(db, tenantId, 'invoice_time_entries').where({ tenant: tenantId, entry_id: febEntry.entry_id });
+  expect(await febLinks()).toHaveLength(1);
+  expect(await tenantTable(db, tenantId, 'time_entries').where({ tenant: tenantId, entry_id: febEntry.entry_id }).first('invoiced'))
+    .toMatchObject({ invoiced: true });
+
+  const second = await db.transaction((trx) => repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: tenantId }));
+  expect(second).toMatchObject({ timingFlipped: 0, advanceRowsSuperseded: 0, rowsRehomed: 0, catchUpRowsCreated: 0 });
+  expect(await febLinks()).toHaveLength(1);
+  const final = await periods();
+  expect(final.filter((row) => row.lifecycle_state === 'billed' && row.due_position === 'advance')).toHaveLength(1);
+  expect(final.find((row) => row.record_id === marchBilledBefore!.record_id)).toEqual(marchBilledBefore);
+}, HOOK_TIMEOUT);
+
+it('T11: Generate page reports a billed empty advance Hourly period with later time; Fix all repairs it and the time bills once', async () => {
+  setupCommonMocks({ tenantId, userId: 'gap-fix-user', permissionCheck: () => true });
+  const { clientId, line, findDueRow, strandedGaps } = await seedLegacyAdvanceHourlyLine('Gap Fix');
+  // February is invoiced empty on the advance schedule, then time is logged in it.
+  const februaryRow = await findDueRow('2025-02-01', '2025-03-01', { from: '2025-02-01', to: '2025-03-01' });
+  expect(februaryRow).toBeTruthy();
+  expect(await generateInvoiceForSelectionInput(februaryRow!.selectorInput)).toMatchObject({ invoice_id: expect.any(String) });
+  const entry = await createApprovedTimeEntryForContractLine({
+    clientId, serviceId: line.serviceId, contractLineId: line.contractLineId,
+    startTime: '2025-02-15T10:00:00.000Z', endTime: '2025-02-15T11:00:00.000Z',
+  });
+
+  // After Migration A (no repair yet) the Generate-page data reports the gap.
+  await runMigrationA();
+  const gapsBefore = await strandedGaps();
+  expect(gapsBefore.length).toBeGreaterThanOrEqual(1);
+  expect(gapsBefore.some((gap) => gap.servicePeriodStart === '2025-02-01' && gap.servicePeriodEnd === '2025-03-01')).toBe(true);
+
+  // "Fix all" runs the arrears-only repair, then the client-cadence repair.
+  const summary: any = await repairAllRecurringServicePeriodsForTenantAction();
+  expect(summary.arrearsOnlyLines.catchUpRowsCreated).toBeGreaterThanOrEqual(1);
+  expect(await strandedGaps()).toEqual([]);
+
+  // The stranded time appears as a Ready catch-up row and bills exactly once.
+  const catchUpRow = await findDueRow('2025-03-01', '2025-04-01', { from: '2025-02-01', to: '2025-04-01' });
+  expect(catchUpRow).toBeTruthy();
+  expect(await generateInvoiceForSelectionInput(catchUpRow!.selectorInput)).toMatchObject({ invoice_id: expect.any(String) });
+  const links = () => tenantTable(db, tenantId, 'invoice_time_entries').where({ tenant: tenantId, entry_id: entry.entry_id });
+  expect(await links()).toHaveLength(1);
+
+  // A second invoice run does not bill it again.
+  expect(await findDueRow('2025-03-01', '2025-04-01', { from: '2025-02-01', to: '2025-04-01' })).toBeUndefined();
+  await generateInvoiceForSelectionInput(catchUpRow!.selectorInput).catch(() => undefined);
+  expect(await links()).toHaveLength(1);
+  await repairAllRecurringServicePeriodsForTenantAction();
+  expect(await links()).toHaveLength(1);
+  expect(await strandedGaps()).toEqual([]);
+}, HOOK_TIMEOUT);
+
+it('T4: a stored-advance Hourly or Usage line materializes arrears service periods (engine backstop)', async () => {
+  setupCommonMocks({ tenantId, userId: 'engine-backstop-user', permissionCheck: () => true });
+  const { contextLike } = await createClientWithRecurringCycles({
+    clientName: 'Engine Backstop Client',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  const hourly = await createHourlyContractLine(contextLike, {
+    serviceName: 'Engine Backstop Hourly Service',
+    planName: 'Engine Backstop Hourly Plan',
+    baseRateCents: 11000,
+    startDate: '2025-02-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  const usage = await createUsageContractLine(contextLike, {
+    serviceName: 'Engine Backstop Usage Service',
+    planName: 'Engine Backstop Usage Plan',
+    baseRateCents: 900,
+    startDate: '2025-02-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  const fixed = await createFixedContractLine(contextLike, {
+    serviceName: 'Engine Backstop Fixed Service',
+    planName: 'Engine Backstop Fixed Plan',
+    baseRateCents: 500,
+    startDate: '2025-02-01',
+    billingTiming: 'advance',
+    cadenceOwner: 'contract',
+  });
+  // Legacy bad rows: advance stored on Hourly and Usage lines.
+  await storeLegacyAdvanceTiming([hourly.contractLineId, usage.contractLineId]);
+
+  for (const lineId of [hourly.contractLineId, usage.contractLineId, fixed.contractLineId]) {
+    await syncContractLineRecurringPeriods(lineId);
+  }
+  const duePositions = async (lineId: string) => (await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: lineId })
+    .select('due_position')).map((row) => row.due_position);
+
+  const hourlyPositions = await duePositions(hourly.contractLineId);
+  const usagePositions = await duePositions(usage.contractLineId);
+  expect(hourlyPositions.length).toBeGreaterThan(0);
+  expect(usagePositions.length).toBeGreaterThan(0);
+  expect(new Set(hourlyPositions)).toEqual(new Set(['arrears']));
+  expect(new Set(usagePositions)).toEqual(new Set(['arrears']));
+  // A Fixed line is unaffected.
+  expect(new Set(await duePositions(fixed.contractLineId))).toEqual(new Set(['advance']));
+}, HOOK_TIMEOUT);
+
+it('T9: the database rejects Hourly and Usage contract lines stored as advance (Migration B)', async () => {
+  setupCommonMocks({ tenantId, userId: 'constraint-user', permissionCheck: () => true });
+  const { contextLike } = await createClientWithRecurringCycles({
+    clientName: 'Constraint Client',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  const hourly = await createHourlyContractLine(contextLike, {
+    serviceName: 'Constraint Hourly Service',
+    planName: 'Constraint Hourly Plan',
+    baseRateCents: 11000,
+    startDate: '2025-02-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  const fixed = await createFixedContractLine(contextLike, {
+    serviceName: 'Constraint Fixed Service',
+    planName: 'Constraint Fixed Plan',
+    baseRateCents: 500,
+    startDate: '2025-02-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  const validated = await db.raw(
+    'SELECT conname, convalidated FROM pg_constraint WHERE conname = ANY(?)',
+    [ARREARS_ONLY_CHECKS.map((check) => check.name)],
+  );
+  expect(validated.rows).toHaveLength(3);
+  expect(validated.rows.every((row: { convalidated: boolean }) => row.convalidated)).toBe(true);
+  await expect(
+    tenantTable(db, tenantId, 'contract_lines')
+      .where({ tenant: tenantId, contract_line_id: hourly.contractLineId })
+      .update({ billing_timing: 'advance' }),
+  ).rejects.toThrow(/hourly_usage_not_advance_check/);
+  await expect(
+    tenantTable(db, tenantId, 'contract_lines')
+      .where({ tenant: tenantId, contract_line_id: fixed.contractLineId })
+      .update({ billing_timing: 'advance' }),
+  ).resolves.toBe(1);
+}, HOOK_TIMEOUT);
+
+it('T5/T2: Migration A flips stored-advance Hourly/Usage rows to arrears and supersedes unbilled advance rows; the repair re-homes edited rows', async () => {
+  setupCommonMocks({ tenantId, userId: 'migration-a-user', permissionCheck: () => true });
+  const { contextLike } = await createClientWithRecurringCycles({
+    clientName: 'Migration A Client',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  const line = await createHourlyContractLine(contextLike, {
+    serviceName: 'Migration A Hourly Service',
+    planName: 'Migration A Hourly Plan',
+    baseRateCents: 11000,
+    startDate: '2025-02-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  const fixed = await createFixedContractLine(contextLike, {
+    serviceName: 'Migration A Fixed Service',
+    planName: 'Migration A Fixed Plan',
+    baseRateCents: 500,
+    startDate: '2025-02-01',
+    billingTiming: 'advance',
+    cadenceOwner: 'contract',
+  });
+  await storeLegacyAdvanceTiming([line.contractLineId]);
+
+  const templateId = uuidv4();
+  const templateLineId = uuidv4();
+  const presetId = uuidv4();
+  const fixedPresetId = uuidv4();
+  await dropArrearsOnlyChecks(['contract_template_lines', 'contract_line_presets']);
+  await tenantTable(db, tenantId, 'contract_templates').insert({
+    tenant: tenantId, template_id: templateId, template_name: 'Migration A Template',
+  });
+  await tenantTable(db, tenantId, 'contract_template_lines').insert({
+    tenant: tenantId, template_id: templateId, template_line_id: templateLineId,
+    template_line_name: 'Legacy Hourly Template Line', line_type: 'Hourly', billing_timing: 'advance',
+  });
+  await tenantTable(db, tenantId, 'contract_line_presets').insert([
+    { tenant: tenantId, preset_id: presetId, preset_name: 'Legacy Hourly Preset', contract_line_type: 'Hourly', billing_timing: 'advance' },
+    { tenant: tenantId, preset_id: fixedPresetId, preset_name: 'Fixed Advance Preset', contract_line_type: 'Fixed', billing_timing: 'advance' },
+  ]);
+
+  const plan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-01T00:00:00Z',
+    materializedAt: '2025-01-15T00:00:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-01T00:00:00Z',
+    sourceObligation: { tenant: tenantId, obligationId: line.contractLineId, chargeFamily: 'hourly' },
+    duePosition: 'advance',
+    sourceRuleVersion: `${line.contractLineId}:legacy-advance:v1`,
+    sourceRunKey: 'integration-migration-a',
+    targetHorizonDays: 100,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  for (const record of plan.records) {
+    await upsertRecurringServicePeriodRecord(record);
+  }
+  const advanceRows = () => tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: line.contractLineId, due_position: 'advance' })
+    .orderBy('service_period_start')
+    .select('record_id', 'lifecycle_state', 'reason_code', 'service_period_start');
+  const before = await advanceRows();
+  expect(before.length).toBeGreaterThanOrEqual(2);
+  // The first row is user-edited and must survive the migration untouched.
+  const editedId = before[0].record_id;
+  await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, record_id: editedId })
+    .update({ lifecycle_state: 'edited', provenance_kind: 'user_edited' });
+
+  const migrationA = createRequire(import.meta.url)('../../../migrations/20261013120000_hourly_usage_lines_bill_in_arrears.cjs');
+  await migrationA.up(db);
+
+  const lineTiming = (id: string) => tenantTable(db, tenantId, 'contract_lines')
+    .where({ tenant: tenantId, contract_line_id: id }).first('billing_timing');
+  expect(await lineTiming(line.contractLineId)).toMatchObject({ billing_timing: 'arrears' });
+  expect(await lineTiming(fixed.contractLineId)).toMatchObject({ billing_timing: 'advance' });
+  expect(await tenantTable(db, tenantId, 'contract_template_lines')
+    .where({ tenant: tenantId, template_line_id: templateLineId }).first('billing_timing'))
+    .toMatchObject({ billing_timing: 'arrears' });
+  expect(await tenantTable(db, tenantId, 'contract_line_presets')
+    .where({ tenant: tenantId, preset_id: presetId }).first('billing_timing')).toMatchObject({ billing_timing: 'arrears' });
+  expect(await tenantTable(db, tenantId, 'contract_line_presets')
+    .where({ tenant: tenantId, preset_id: fixedPresetId }).first('billing_timing')).toMatchObject({ billing_timing: 'advance' });
+
+  const after = await advanceRows();
+  expect(after.find((row) => row.record_id === editedId)).toMatchObject({ lifecycle_state: 'edited', reason_code: before[0].reason_code });
+  for (const row of after.filter((r) => r.record_id !== editedId)) {
+    expect(row).toMatchObject({ lifecycle_state: 'superseded', reason_code: 'hourly_usage_arrears_repair' });
+  }
+
+  // Re-running the migration changes nothing.
+  await migrationA.up(db);
+  expect(await advanceRows()).toEqual(after);
+
+  // T2a: an edited advance row is retired and carried onto the arrears schedule when the
+  // line's arrears twin can be materialized; otherwise it is flagged for manual review.
+  const repair = await db.transaction((trx) => repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: tenantId }));
+  const editedHandled = repair.rowsRehomed
+    + repair.manualReview.filter((entry) => entry.recordId === editedId).length;
+  expect(editedHandled).toBeGreaterThanOrEqual(1);
+  expect(await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, record_id: editedId }).first('lifecycle_state')).toMatchObject({ lifecycle_state: 'superseded' });
+
+  // T2b: a current/future edited advance row moves onto the arrears schedule.
+  const futureLine = await createHourlyContractLine(contextLike, {
+    serviceName: 'Migration A Future Hourly Service',
+    planName: 'Migration A Future Hourly Plan',
+    baseRateCents: 11000,
+    startDate: '2026-11-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  await storeLegacyAdvanceTiming([futureLine.contractLineId]);
+  const futurePlan = materializeContractCadenceServicePeriods({
+    asOf: '2026-11-01T00:00:00Z',
+    materializedAt: '2026-10-01T00:00:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2026-11-01T00:00:00Z',
+    sourceObligation: { tenant: tenantId, obligationId: futureLine.contractLineId, chargeFamily: 'hourly' },
+    duePosition: 'advance',
+    sourceRuleVersion: `${futureLine.contractLineId}:legacy-advance:v1`,
+    sourceRunKey: 'integration-migration-a-future',
+    targetHorizonDays: 70,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  for (const record of futurePlan.records) {
+    await upsertRecurringServicePeriodRecord(record);
+  }
+  const futureAdvance = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: futureLine.contractLineId, due_position: 'advance', lifecycle_state: 'generated' })
+    .orderBy('service_period_start')
+    .select('record_id');
+  expect(futureAdvance.length).toBeGreaterThanOrEqual(1);
+  const futureEditedId = futureAdvance[0].record_id;
+  await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, record_id: futureEditedId })
+    .update({ lifecycle_state: 'edited', provenance_kind: 'user_edited' });
+
+  await migrationA.up(db);
+  const repairFuture = await db.transaction((trx) => repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: tenantId }));
+  expect(repairFuture.rowsRehomed).toBeGreaterThanOrEqual(1);
+  expect(await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, record_id: futureEditedId }).first('lifecycle_state')).toMatchObject({ lifecycle_state: 'superseded' });
+  const rehomed = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: futureLine.contractLineId, due_position: 'arrears', supersedes_record_id: futureEditedId })
+    .select('lifecycle_state', 'provenance_kind', 'revision');
+  expect(rehomed).toHaveLength(1);
+  expect(rehomed[0]).toMatchObject({ lifecycle_state: 'edited', provenance_kind: 'repair' });
+  expect(Number(rehomed[0].revision)).toBeGreaterThanOrEqual(2);
+}, HOOK_TIMEOUT);
+
+it('T5b: charged billed advance Hourly periods: catch-up bills only the uninvoiced time once; bucket lines go to manual review', async () => {
+  setupCommonMocks({ tenantId, userId: 'charged-repair-user', permissionCheck: () => true });
+
+  const seed = async (label: string) => {
+    const { contextLike, clientId } = await createClientWithRecurringCycles({
+      clientName: `Charged Repair ${label} Client`,
+      currentPeriodStart: '2025-02-01',
+      nextPeriodStart: '2025-03-01',
+    });
+    const line = await createHourlyContractLine(contextLike, {
+      serviceName: `Charged Repair ${label} Service`,
+      planName: `Charged Repair ${label} Plan`,
+      baseRateCents: 11000,
+      startDate: '2025-02-01',
+      billingTiming: 'arrears',
+      cadenceOwner: 'contract',
+    });
+    await storeLegacyAdvanceTiming([line.contractLineId]);
+    const plan = materializeContractCadenceServicePeriods({
+      asOf: '2025-02-01T00:00:00Z',
+      materializedAt: '2025-01-15T00:00:00.000Z',
+      billingCycle: 'monthly',
+      anchorDate: '2025-02-01T00:00:00Z',
+      sourceObligation: { tenant: tenantId, obligationId: line.contractLineId, chargeFamily: 'hourly' },
+      duePosition: 'advance',
+      sourceRuleVersion: `${line.contractLineId}:legacy-advance:v1`,
+      sourceRunKey: `integration-charged-repair-${label}`,
+      targetHorizonDays: 70,
+      replenishmentThresholdDays: 15,
+      recordIdFactory: () => uuidv4(),
+    });
+    for (const record of plan.records) {
+      await upsertRecurringServicePeriodRecord(record);
+    }
+    // Time already worked in February is invoiced by the legacy advance February invoice.
+    const invoicedEntry = await createApprovedTimeEntryForContractLine({
+      clientId, serviceId: line.serviceId, contractLineId: line.contractLineId,
+      startTime: '2025-02-10T10:00:00.000Z', endTime: '2025-02-10T11:00:00.000Z',
+    });
+    const dueWork = await getAvailableRecurringDueWorkAction({
+      page: 1, pageSize: 20, searchTerm: `Charged Repair ${label} Client`,
+      dateRange: { from: '2025-02-01', to: '2025-03-01' },
+    });
+    const februaryRow = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
+      .find((row) => row.contractLineId === line.contractLineId
+        && row.invoiceWindowStart === '2025-02-01' && row.invoiceWindowEnd === '2025-03-01');
+    expect(februaryRow).toBeTruthy();
+    expect(await generateInvoiceForSelectionInput(februaryRow!.selectorInput))
+      .toMatchObject({ invoice_id: expect.any(String) });
+    expect(await tenantTable(db, tenantId, 'time_entries')
+      .where({ tenant: tenantId, entry_id: invoicedEntry.entry_id }).first('invoiced'))
+      .toMatchObject({ invoiced: true });
+    // More February time is logged afterwards and is stranded.
+    const lateEntry = await createApprovedTimeEntryForContractLine({
+      clientId, serviceId: line.serviceId, contractLineId: line.contractLineId,
+      startTime: '2025-02-20T10:00:00.000Z', endTime: '2025-02-20T11:00:00.000Z',
+    });
+    return { line, invoicedEntry, lateEntry };
+  };
+
+  const plain = await seed('Plain');
+  const bucket = await seed('Bucket');
+
+  const febBilled = (lineId: string) => tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: lineId, due_position: 'advance', lifecycle_state: 'billed' })
+    .orderBy('service_period_start')
+    .select('*');
+  const plainBefore = await febBilled(plain.line.contractLineId);
+  const bucketBefore = await febBilled(bucket.line.contractLineId);
+  expect(plainBefore).toHaveLength(1);
+  expect(plainBefore[0].invoice_id).toBeTruthy();
+
+  // A bucket overlay on the second line's service configuration.
+  const bucketConfig = await tenantTable(db, tenantId, 'contract_line_service_configuration')
+    .where({ tenant: tenantId, contract_line_id: bucket.line.contractLineId })
+    .first('config_id');
+  expect(bucketConfig).toBeTruthy();
+  await tenantTable(db, tenantId, 'contract_line_service_bucket_config').insert({
+    tenant: tenantId, config_id: bucketConfig!.config_id, total_minutes: 600,
+  });
+
+  // Migration A, then the repair.
+  const migrationA = createRequire(import.meta.url)('../../../migrations/20261013120000_hourly_usage_lines_bill_in_arrears.cjs');
+  await migrationA.up(db);
+  const repair = await db.transaction((trx) => repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: tenantId }));
+
+  // Billed rows are byte-for-byte unchanged, including invoice_id and invoice_charge_detail_id.
+  expect(await febBilled(plain.line.contractLineId)).toEqual(plainBefore);
+  expect(await febBilled(bucket.line.contractLineId)).toEqual(bucketBefore);
+
+  // Plain line: one catch-up row, no manual review. Bucket line: manual review, no catch-up row.
+  const catchUps = (lineId: string) => tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: lineId, reason_code: 'stranded_advance_catch_up' }).select('record_id');
+  expect(await catchUps(plain.line.contractLineId)).toHaveLength(1);
+  expect(await catchUps(bucket.line.contractLineId)).toHaveLength(0);
+  expect(repair.manualReview.filter((entry) => entry.contractLineId === plain.line.contractLineId)).toEqual([]);
+  expect(repair.manualReview.filter((entry) => entry.contractLineId === bucket.line.contractLineId))
+    .toEqual([expect.objectContaining({ reason: 'charged_period_with_bucket_or_period_total' })]);
+
+  // Bill the catch-up window: the late entry is billed once, the invoiced one is not billed again.
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1, pageSize: 20, searchTerm: 'Charged Repair Plain Client',
+    dateRange: { from: '2025-02-01', to: '2025-03-01' },
+  });
+  const catchUpRow = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
+    .find((row) => row.contractLineId === plain.line.contractLineId
+      && row.invoiceWindowStart === '2025-03-01' && row.invoiceWindowEnd === '2025-04-01');
+  expect(catchUpRow).toBeTruthy();
+  expect(await generateInvoiceForSelectionInput(catchUpRow!.selectorInput))
+    .toMatchObject({ invoice_id: expect.any(String) });
+
+  const links = async (entryId: string) => tenantTable(db, tenantId, 'invoice_time_entries')
+    .where({ tenant: tenantId, entry_id: entryId }).select('invoice_id');
+  expect(await links(plain.invoicedEntry.entry_id)).toHaveLength(1);
+  expect(await links(plain.lateEntry.entry_id)).toHaveLength(1);
+  const invoiceIds = [...new Set([
+    ...(await links(plain.invoicedEntry.entry_id)),
+    ...(await links(plain.lateEntry.entry_id)),
+  ].map((row) => row.invoice_id))];
+  expect(invoiceIds).toHaveLength(2);
+  // Everything logged (2 hours at $110) is invoiced exactly once across all invoices.
+  const billedTotal = await tenantTable(db, tenantId, 'invoice_charges')
+    .whereIn('invoice_id', invoiceIds)
+    .sum({ total: 'net_amount' }).first();
+  expect(Number(billedTotal?.total)).toBe(22000);
+}, HOOK_TIMEOUT);
+
+it('T5c: a period billed to another invoice still aborts the claim when the window has no repair catch-up sibling', async () => {
+  setupCommonMocks({ tenantId, userId: 'claim-guard-user', permissionCheck: () => true });
+  const { contextLike } = await createClientWithRecurringCycles({
+    clientName: 'Claim Guard Client',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  const line = await createHourlyContractLine(contextLike, {
+    serviceName: 'Claim Guard Service',
+    planName: 'Claim Guard Plan',
+    baseRateCents: 11000,
+    startDate: '2025-02-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  await syncContractLineRecurringPeriods(line.contractLineId);
+  const periods = () => tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: line.contractLineId, due_position: 'arrears' })
+    .whereNotIn('lifecycle_state', ['superseded', 'archived'])
+    .orderBy('service_period_start');
+  const [arrearsRow] = await periods().select('*');
+  expect(arrearsRow).toBeTruthy();
+  const windowDate = (value: string | Date) => (value instanceof Date ? value.toISOString() : String(value)).slice(0, 10);
+  const selectorInput = buildContractCadenceDueSelectionInput({
+    clientId: arrearsRow.client_id,
+    contractId: arrearsRow.contract_id,
+    contractLineId: line.contractLineId,
+    windowStart: windowDate(arrearsRow.invoice_window_start),
+    windowEnd: windowDate(arrearsRow.invoice_window_end),
+  });
+  // The arrears period is billed to a different invoice; a pending ordinary (non-repair) sibling
+  // exists in the same window. Only a repair catch-up sibling may relax the guard.
+  const { record_id: _drop, ...carried } = arrearsRow;
+  await tenantTable(db, tenantId, 'recurring_service_periods').insert({
+    ...carried,
+    record_id: uuidv4(),
+    schedule_key: `${arrearsRow.schedule_key}:ordinary-sibling`,
+    due_position: 'advance',
+    lifecycle_state: 'generated',
+    invoice_id: null,
+    invoice_linked_at: null,
+  });
+  const otherInvoiceId = uuidv4();
+  await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, record_id: arrearsRow.record_id })
+    .update({ lifecycle_state: 'billed', invoice_id: otherInvoiceId, invoice_linked_at: new Date().toISOString() });
+
+  const { claimRecurringServicePeriodsForSelectionInputs } = await import('@alga-psa/billing/services/invoiceService');
+  await expect(
+    db.transaction((trx) => claimRecurringServicePeriodsForSelectionInputs({
+      tx: trx,
+      tenant: tenantId,
+      invoiceId: uuidv4(),
+      selectorInputs: [selectorInput],
+      linkedAt: new Date().toISOString(),
+    })),
+  ).rejects.toThrow(/already claimed by invoice/);
 }, HOOK_TIMEOUT);
 
 it('T159: production schema has time-entry updated_at but no usage_tracking updated_at', async () => {
@@ -5779,6 +6935,9 @@ async function createHourlyContractLine(
   contextLike: { db: Knex; tenantId: string; clientId: string },
   options: FixedLineOptions,
 ): Promise<{ serviceId: string; contractLineId: string; clientContractLineId: string; contractId: string; clientContractId: string }> {
+  if (options.billingTiming === 'advance') {
+    throw new Error('Hourly/Usage lines cannot bill in advance; use arrears (see contractLineTimingRule).');
+  }
   const serviceId = await createTestService(contextLike as any, {
     service_name: options.serviceName,
     billing_method: 'hourly',
@@ -5822,6 +6981,9 @@ async function createUsageContractLine(
   contextLike: { db: Knex; tenantId: string; clientId: string },
   options: FixedLineOptions,
 ): Promise<{ serviceId: string; contractLineId: string; clientContractLineId: string; contractId: string; clientContractId: string }> {
+  if (options.billingTiming === 'advance') {
+    throw new Error('Hourly/Usage lines cannot bill in advance; use arrears (see contractLineTimingRule).');
+  }
   const serviceId = await createTestService(contextLike as any, {
     service_name: options.serviceName,
     billing_method: 'usage',
@@ -6478,6 +7640,10 @@ function normalizeDateValue(value: unknown): string | null {
   } catch (error) {
     return null;
   }
+}
+
+function dateOnlyOf(value: unknown): string {
+  return value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
 }
 
 async function ensureTenant(connection: Knex): Promise<string> {

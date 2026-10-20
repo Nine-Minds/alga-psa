@@ -89,6 +89,7 @@ export { default as InteractionIcon } from './InteractionIcon';
 // import directly from '@alga-psa/ui/components/InlineReplyComposer'.
 export * from './Label';
 export * from './LanguagePreference';
+export * from './ListDetailLayout';
 export * from './LoadingIndicator';
 export { default as LoadingIndicator } from './LoadingIndicator';
 export * from './ModalityContext';

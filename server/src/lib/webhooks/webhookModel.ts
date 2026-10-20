@@ -157,6 +157,19 @@ export interface ListWebhookDeliveriesOptions {
   limit?: number;
 }
 
+export interface ListRetryableDeliveriesOptions {
+  /** Lower bound on attempted_at; omit to consider the whole retention window. */
+  since?: Date;
+  limit: number;
+}
+
+/**
+ * `retrying` rows are still inside the automatic backoff schedule and
+ * `pending`/`delivered` rows have nothing to retry, so only terminal failures
+ * are retry candidates.
+ */
+const RETRYABLE_DELIVERY_STATUSES = ['failed', 'abandoned'] as const;
+
 function mapWebhookRow(row: any): WebhookRecord {
   return {
     tenant: row.tenant,
@@ -558,6 +571,48 @@ async function listDeliveries(
   };
 }
 
+async function listRetryableDeliveries(
+  tenant: string,
+  webhookId: string,
+  options: ListRetryableDeliveriesOptions,
+): Promise<{
+  data: WebhookDeliveryRecord[];
+  totalCandidates: number;
+}> {
+  const limit = Math.max(1, options.limit);
+  const knex = await getConnection(tenant);
+  const db = tenantDb(knex, tenant);
+
+  const candidateQuery = () => {
+    const query = db.table(WEBHOOK_DELIVERIES_TABLE)
+      .where({
+        webhook_id: webhookId,
+        is_test: false,
+      })
+      .whereIn('status', [...RETRYABLE_DELIVERY_STATUSES]);
+
+    if (options.since) {
+      query.where('attempted_at', '>=', options.since);
+    }
+
+    return query;
+  };
+
+  const [rows, totalRow] = await Promise.all([
+    candidateQuery()
+      .orderBy('attempted_at', 'asc')
+      .limit(limit),
+    candidateQuery()
+      .count<{ count: string }[]>({ count: '*' })
+      .first(),
+  ]);
+
+  return {
+    data: rows.map(mapDeliveryRow),
+    totalCandidates: Number(totalRow?.count ?? 0),
+  };
+}
+
 async function updateStats(
   input: UpdateWebhookStatsInput,
 ): Promise<WebhookRecord | null> {
@@ -634,6 +689,7 @@ export const webhookModel = {
   recordDelivery,
   getDeliveryById,
   listDeliveries,
+  listRetryableDeliveries,
   updateStats,
   markAbandoned,
   getSigningSecret,

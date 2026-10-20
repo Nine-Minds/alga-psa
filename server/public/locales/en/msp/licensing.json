@@ -10,7 +10,8 @@
   },
   "purchasePage": {
     "title": "Purchase Licenses",
-    "description": "Add more user licenses to your AlgaPSA account"
+    "description": "Add more user licenses to your AlgaPSA account",
+    "communityEditionDescription": "Self-hosted Community Edition has unlimited users with no license restrictions or additional costs."
   },
   "purchaseSuccess": {
     "metaTitle": "Purchase Success",
@@ -37,7 +38,8 @@
     },
     "sessionDetails": "Session Details (for support)",
     "sessionId": "Session ID:",
-    "goToAccountManagement": "Go to Account Management"
+    "goToAccountManagement": "Go to Account Management",
+    "enterpriseOnly": "This feature is available in Pro only."
   },
   "subscriptionForm": {
     "title": "Manage License Subscription",
@@ -255,7 +257,9 @@
         "description_one": "You have {{count}} day left to use all Pro features.",
         "description_other": "You have {{count}} days left to use all Pro features.",
         "descriptionNoDays": "You can use all Pro features during the trial period.",
-        "badge": "Trial active"
+        "badge": "Trial active",
+        "description_few": "You have {{count}} days left to use all Pro features.",
+        "description_many": "You have {{count}} days left to use all Pro features."
       },
       "licensed": {
         "eyebrow": "Paid license",
@@ -302,7 +306,9 @@
       "refreshLabel": "License refresh",
       "connected": "Connected",
       "lastCheckIn": "Last check-in: {{timestamp}}",
-      "refreshHelp": "Applies seat or plan changes made in the portal immediately."
+      "refreshHelp": "Applies seat or plan changes made in the portal immediately.",
+      "daysRemaining_few": "{{count}} days remaining",
+      "daysRemaining_many": "{{count}} days remaining"
     },
     "portal": {
       "manageTitle": "Seats, billing, and activation codes",

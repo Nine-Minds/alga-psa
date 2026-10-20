@@ -6,6 +6,7 @@ import SidebarWithFeatureFlags from './SidebarWithFeatureFlags';
 import Header from './Header';
 import Body from './Body';
 import { PlatformNotificationBanner } from './PlatformNotificationBanner';
+import { IntegrationHealthBanner } from '@alga-psa/integrations/components/IntegrationHealthBanner';
 import { DrawerProvider, DrawerOutlet } from '@alga-psa/ui';
 import GlobalShortcutLayer from './GlobalShortcutLayer';
 import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents/MspDocumentsCrossFeatureProvider';
@@ -81,6 +82,7 @@ export default function AlgaDeskMspShell({
             setRightSidebarOpen={setRightSidebarOpen}
           />
           <PlatformNotificationBanner />
+          <IntegrationHealthBanner />
           <StaleActionBanner />
           <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
             <Body>{children}</Body>

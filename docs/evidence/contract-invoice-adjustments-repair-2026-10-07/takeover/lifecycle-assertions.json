@@ -1,0 +1,50 @@
+[
+  {
+    "state": "paid",
+    "alerts": [
+      "3 columns hidden.\nShow all",
+      "quickbooks_csv: assign a mapped service to Product: SMOKE Prod Users before exporting.\nquickbooks_csv: assign a mapped service to Product: SMOKE Prod Endpoints before exporting.\nquickbooks_csv: assign a mapped service to Product: SMOKE Prod Locations before exporting.\nquickbooks_csv: assign a mapped service to Must reject paid before exporting.\nxero_csv: assign a mapped service to Product: SMOKE Prod Users before exporting.\nxero_csv: assign a mapped service to Product: SMOKE Prod Endpoints before exporting.\nxero_csv: assign a mapped service to Product: SMOKE Prod Locations before exporting.\nxero_csv: assign a mapped service to Must reject paid before exporting.",
+      "Invoice cannot be modified (paid/cancelled)."
+    ],
+    "persisted": {
+      "status": "paid",
+      "finalized_at": null,
+      "total_amount": "390000",
+      "draft_adjustment_revision": 0,
+      "charges": "3",
+      "principal": "390000"
+    }
+  },
+  {
+    "state": "cancelled",
+    "alerts": [
+      "3 columns hidden.\nShow all",
+      "quickbooks_csv: assign a mapped service to Product: SMOKE Prod Users before exporting.\nquickbooks_csv: assign a mapped service to Product: SMOKE Prod Endpoints before exporting.\nquickbooks_csv: assign a mapped service to Product: SMOKE Prod Locations before exporting.\nquickbooks_csv: assign a mapped service to Must reject cancelled before exporting.\nxero_csv: assign a mapped service to Product: SMOKE Prod Users before exporting.\nxero_csv: assign a mapped service to Product: SMOKE Prod Endpoints before exporting.\nxero_csv: assign a mapped service to Product: SMOKE Prod Locations before exporting.\nxero_csv: assign a mapped service to Must reject cancelled before exporting.",
+      "Invoice cannot be modified (paid/cancelled)."
+    ],
+    "persisted": {
+      "status": "cancelled",
+      "finalized_at": null,
+      "total_amount": "390000",
+      "draft_adjustment_revision": 0,
+      "charges": "3",
+      "principal": "390000"
+    }
+  },
+  {
+    "state": "finalized",
+    "alerts": [
+      "3 columns hidden.\nShow all",
+      "quickbooks_csv: assign a mapped service to Product: SMOKE Prod Users before exporting.\nquickbooks_csv: assign a mapped service to Product: SMOKE Prod Endpoints before exporting.\nquickbooks_csv: assign a mapped service to Product: SMOKE Prod Locations before exporting.\nquickbooks_csv: assign a mapped service to Must reject finalized before exporting.\nxero_csv: assign a mapped service to Product: SMOKE Prod Users before exporting.\nxero_csv: assign a mapped service to Product: SMOKE Prod Endpoints before exporting.\nxero_csv: assign a mapped service to Product: SMOKE Prod Locations before exporting.\nxero_csv: assign a mapped service to Must reject finalized before exporting.",
+      "Error updating invoice"
+    ],
+    "persisted": {
+      "status": "draft",
+      "finalized_at": "2026-10-07T06:21:08.528Z",
+      "total_amount": "390000",
+      "draft_adjustment_revision": 0,
+      "charges": "3",
+      "principal": "390000"
+    }
+  }
+]

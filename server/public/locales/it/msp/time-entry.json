@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Aggiungi inserimento ore"
+    }
+  },
   "common": {
     "actions": {
       "view": "Visualizza",
@@ -457,14 +462,25 @@
       "missingFieldNamed": "Manca un campo obbligatorio del foglio ore o dell’inserimento ore: {{field}}."
     },
     "timePeriod": {
-      "datesRequired": "Inserire date di inizio e di fine valide."
+      "datesRequired": "Inserire date di inizio e di fine valide.",
+      "closed": "Questo periodo di tempo è chiuso. Riaprilo prima di apportare modifiche.",
+      "permissions": {
+        "read": "Autorizzazione negata: impossibile visualizzare i periodi.",
+        "create": "Autorizzazione negata: impossibile creare periodi.",
+        "update": "Autorizzazione negata: impossibile aggiornare i periodi.",
+        "delete": "Autorizzazione negata: impossibile eliminare i periodi."
+      }
     },
     "timePeriodSettings": {
       "invalidValue": "Uno dei valori dell’impostazione del periodo non è valido. Aggiornare la pagina e riprovare.",
       "referenceMissing": "L’impostazione del periodo selezionata non è più valida. Aggiornare la pagina e riprovare.",
       "duplicate": "Esiste già un’impostazione del periodo in conflitto.",
       "missingField": "Manca un campo obbligatorio dell’impostazione del periodo.",
-      "missingFieldNamed": "Manca un campo obbligatorio dell’impostazione del periodo: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio dell’impostazione del periodo: {{field}}.",
+      "permissions": {
+        "read": "Autorizzazione negata: impossibile visualizzare le impostazioni dei periodi.",
+        "manage": "Autorizzazione negata: impossibile gestire le impostazioni dei periodi."
+      }
     },
     "stopwatch": {
       "notFound": "Sessione del cronometro non trovata. Potrebbe essere già stata registrata o scartata. Aggiorna la pagina.",
@@ -502,7 +518,8 @@
     "entryMissingPeriod": "Alla scheda attività di questo inserimento ore manca il periodo e non può essere aperta.",
     "noPeriods": "Non sono ancora stati configurati periodi di tempo, quindi non è possibile registrare tempo. Chiedi a un amministratore di creare periodi di tempo in Impostazioni → Registrazione tempo.",
     "noEditablePeriods": "Tutte le schede attività sono inviate o approvate, quindi non c’è alcun giorno a cui aggiungere tempo. Chiedi a un approvatore di riaprire una scheda o a un amministratore di aggiungere un periodo.",
-    "prepareFailed": "Si è verificato un errore durante la preparazione dell'inserimento ore. Riprova."
+    "prepareFailed": "Si è verificato un errore durante la preparazione dell'inserimento ore. Riprova.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Suggerimenti",
@@ -527,7 +544,9 @@
       "checklistChanged": "checklist modificata",
       "linksChanged": "link modificati",
       "updated": "aggiornato"
-    }
+    },
+    "activitySummary_few": "prima attività {{first}} · ultima {{last}} · {{count}} azioni ({{kinds}})",
+    "activitySummary_many": "prima attività {{first}} · ultima {{last}} · {{count}} azioni ({{kinds}})"
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} tracciato in {{count}} segmento (in pausa {{paused}})",
@@ -546,6 +565,8 @@
       "confirm": "Continua",
       "cancel": "Annulla"
     },
-    "ticketFallbackName": "Ticket {{number}}"
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "{{active}} tracciati in {{count}} segmenti (in pausa {{paused}})",
+    "pausedNotice_many": "{{active}} tracciati in {{count}} segmenti (in pausa {{paused}})"
   }
 }

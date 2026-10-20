@@ -36,6 +36,7 @@ vi.mock('@alga-psa/ui/components', () => ({
 
 vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
   withDataAutomationId: ({ id }: { id: string }) => ({ 'data-testid': id }),
+  withUIReflectionId: (Component: unknown) => Component,
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({

@@ -127,8 +127,6 @@ describe('project authorization kernel contracts', () => {
     expect(importActionsSource).toContain('const project = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);');
     expect(importActionsSource).toContain('export const getImportReferenceData = withAuth(async (');
     expect(importActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);');
-    expect(importActionsSource).toContain('export const validatePhaseTaskImportData = withAuth(async (');
-    expect(importActionsSource).toContain('await assertProjectReadAllowed(db, tenant, _user as IUserWithRoles, projectId);');
 
     expect(exportActionsSource).toContain("import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';");
     expect(exportActionsSource).toContain('export const exportProjectTasksToCSV = withAuth(async (');

@@ -42,19 +42,40 @@ test('installFlux records success when flux install command exits cleanly', () =
   const stateFile = path.join(tmp, 'state', 'install-state.json');
   const marker = path.join(tmp, 'flux-ok.txt');
 
+  const tuned = [];
   const result = installFlux({
     stateFile,
     kubeconfigPath: path.join(tmp, 'k3s.yaml'),
-    fluxInstallCommand: `printf 'ok' > ${marker}`
+    fluxInstallCommand: `printf 'ok' > ${marker}`,
+    tuneFluxControllers: (options) => { tuned.push(options.kubeconfigPath); return { ok: true, controllers: [] }; }
   });
 
   assert.equal(result.ok, true);
   assert.equal(result.phase, 'flux');
   assert.equal(fs.readFileSync(marker, 'utf8'), 'ok');
+  assert.deepEqual(tuned, [path.join(tmp, 'k3s.yaml')]);
 
   const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
   assert.equal(persisted.status, 'flux-install-complete');
   assert.equal(persisted.phase, 'flux');
+});
+
+test('installFlux blocks setup when the single-node controller tuning fails', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-flux-tune-'));
+  const stateFile = path.join(tmp, 'state', 'install-state.json');
+
+  const result = installFlux({
+    stateFile,
+    kubeconfigPath: path.join(tmp, 'k3s.yaml'),
+    fluxInstallCommand: 'true',
+    tuneFluxControllers: () => ({ ok: false, controllers: [{ name: 'helm-controller', action: 'failed', error: 'forbidden' }] })
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.step, 'tune-flux-controllers');
+  assert.match(result.details, /helm-controller: failed \(forbidden\)/);
+  const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  assert.equal(persisted.status, 'flux-install-blocked');
 });
 
 test('installStorage records the runtime result of the storage reconciliation', () => {

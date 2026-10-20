@@ -85,7 +85,9 @@
     "noService": "Aucun service",
     "servicePlaceholder": "Sélectionner un service par défaut",
     "serviceHelp": "Utilisé pour les saisies de temps sur les tâches de cette phase lorsque la tâche elle-même ne définit aucun service.",
-    "serviceDisplayLabel": "Service"
+    "serviceDisplayLabel": "Service",
+    "taskCount_few": "{{count}} tâches",
+    "taskCount_many": "{{count}} tâches"
   },
   "projectList": {
     "addProject": "Ajouter un projet",
@@ -314,7 +316,9 @@
     "bulkTagsFailure": "Échec de l'ajout d'étiquettes aux tâches sélectionnées",
     "taskTypeFallback": "Tâche",
     "timeline": "Chronologie",
-    "loadingTimeline": "Chargement de la chronologie..."
+    "loadingTimeline": "Chargement de la chronologie...",
+    "bulkTagsSuccess_few": "Étiquettes ajoutées à {{count}} tâches",
+    "bulkTagsSuccess_many": "Étiquettes ajoutées à {{count}} tâches"
   },
   "taskForm": {
     "addTitle": "Ajouter une tâche",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "Hérite de {{service}} depuis le projet.",
     "startDateLabel": "Date de début",
     "taskStartDateLabel": "Date de début de la tâche",
-    "startDatePlaceholder": "Sélectionner une date de début"
+    "startDatePlaceholder": "Sélectionner une date de début",
+    "createdTicketsIntro_few": "Vous avez créé {{count}} tickets pendant cette session :",
+    "createdTicketsIntro_many": "Vous avez créé {{count}} tickets pendant cette session :",
+    "documentCleanupFailure_few": "{{count}} documents n’ont pas pu être supprimés et resteront dans Documents",
+    "documentCleanupFailure_many": "{{count}} documents n’ont pas pu être supprimés et resteront dans Documents",
+    "documentsCleanupIntro_few": "Vous avez {{count}} documents qui ont été {{cleanupType}} :",
+    "documentsCleanupIntro_many": "Vous avez {{count}} documents qui ont été {{cleanupType}} :",
+    "ticketCleanupFailure_few": "{{count}} tickets n’ont pas pu être supprimés",
+    "ticketCleanupFailure_many": "{{count}} tickets n’ont pas pu être supprimés"
   },
   "taskDependencies": {
     "title": "Dépendances",
@@ -644,7 +656,13 @@
     },
     "exportSelected": "Exporter {{count}} sélectionnée(s)",
     "selectedTasksNotice_one": "Export de {{count}} tâche sélectionnée.",
-    "selectedTasksNotice_other": "Export de {{count}} tâches sélectionnées."
+    "selectedTasksNotice_other": "Export de {{count}} tâches sélectionnées.",
+    "phasesSelected_few": "{{selected}} phase(s) sélectionnée(s) sur {{total}}",
+    "phasesSelected_many": "{{selected}} phase(s) sélectionnée(s) sur {{total}}",
+    "selectedTasksNotice_few": "Export de {{count}} tâches sélectionnées.",
+    "selectedTasksNotice_many": "Export de {{count}} tâches sélectionnées.",
+    "success_few": "Export CSV réussi pour {{count}} tâches.",
+    "success_many": "Export CSV réussi pour {{count}} tâches."
   },
   "import": {
     "title": "Importer des phases et des tâches",
@@ -765,7 +783,9 @@
     "statusUnmatchedTooltip": "Le statut ne correspond à aucun statut existant pour cette phase. À résoudre dans les étapes de mappage avant l'import.",
     "statusFallbackSuffix": "Par défaut",
     "statusFallbackTooltip": "Utilisation du statut de repli par défaut pour cette phase.",
-    "inPhaseBadge": "dans {{phase}}"
+    "inPhaseBadge": "dans {{phase}}",
+    "taskCountLabel_few": "({{count}} tâches)",
+    "taskCountLabel_many": "({{count}} tâches)"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +859,9 @@
       "badgeCount_other": "{{count}} Tâches",
       "badgeCount_one": "{{count}} Tâche",
       "billsToProject": "Le temps est facturé comme temps de projet",
-      "billsToClient": "Le temps est facturé au niveau du client"
+      "billsToClient": "Le temps est facturé au niveau du client",
+      "badgeCount_few": "{{count}} Tâches",
+      "badgeCount_many": "{{count}} Tâches"
     },
     "bulkMoveTask": {
       "title": "Déplacer les tâches",
@@ -943,7 +965,7 @@
       "choose_status": "Choisir un statut",
       "no_statuses_available": "Aucun statut disponible",
       "no_statuses_available_hint": "Créez d’abord des statuts dans Paramètres → Projets → Statuts.",
-      "task_status_library_title": "Bibliothèque des statuts de tâches de projet",
+      "task_status_library_title": "Bibliothèque des statuts de tâches",
       "task_status_library_description": "Gérez les statuts des tâches de projet de votre organisation. Ces statuts peuvent être utilisés dans tous les projets.",
       "task_status_library_empty": "Aucun statut de tâche de projet trouvé",
       "task_status_library_empty_hint": "Créez votre premier statut pour commencer",
@@ -983,12 +1005,33 @@
       "last_closed_error": "Au moins un statut doit rester marqué comme fermé",
       "last_closed_delete_error": "Impossible de supprimer le dernier statut fermé pour ce type.",
       "addStatus": "Ajouter un nouveau statut",
-      "add_from_library": "Ajouter un statut"
+      "add_from_library": "Ajouter un statut",
+      "closed_badge": "(Fermé)",
+      "drag_to_reorder": "Glisser pour réorganiser",
+      "refresh_library": "Actualiser la bibliothèque de statuts",
+      "all_library_statuses_used": "Tous les statuts de la bibliothèque sont déjà des colonnes ici. Utilisez « Créer » pour en ajouter un autre.",
+      "delete_no_move_target": "Il n'existe aucune autre colonne de statut vers laquelle déplacer ces tâches. Ajoutez d'abord une autre colonne.",
+      "delete_scope_help": "Cela supprime la colonne uniquement dans cette portée. Le statut reste dans votre Bibliothèque des statuts de tâches.",
+      "fork_title": "Utiliser des colonnes de statut personnalisées pour cette phase ?",
+      "fork_message": "Cette phase cessera d'hériter des colonnes par défaut du projet. Les colonnes de statut que vous ajouterez ensuite aux valeurs par défaut du projet n'apparaîtront ici qu'après avoir rebasculé la phase.",
+      "fork_confirm": "Utiliser des statuts personnalisés",
+      "phase_uses_custom": "Cette phase possède ses propres colonnes de statut et n'hérite plus des valeurs par défaut du projet.",
+      "pending_title": "Modifications non enregistrées des colonnes de statut",
+      "pending_apply_hint": "Rien ne change tant que vous n'enregistrez pas.",
+      "pending_fork": "{{phase}} utilisera ses propres colonnes de statut.",
+      "pending_revert": "{{phase}} reviendra aux colonnes par défaut du projet.",
+      "pending_order": "Nouvel ordre des colonnes pour {{scope}}.",
+      "pending_preview_hint": "Les colonnes par défaut du projet sont affichées en aperçu. Enregistrez pour appliquer ce changement, puis ajoutez ou supprimez des colonnes ici.",
+      "rename_impact_title": "Où ce renommage s’applique",
+      "rename_impact_following": "Reprend ce renommage immédiatement : {{columns}} colonne(s) dans {{projects}}.",
+      "rename_impact_keeping": "Conserve le nom « {{name}} » : {{columns}} colonne(s) dans {{projects}}. Ces colonnes ne sont pas liées à ce statut de votre Bibliothèque des statuts de tâches, donc ces projets continueront d’afficher l’ancien nom jusqu’à ce que vous renommiez la colonne sur place.",
+      "rename_impact_more": "et {{remaining}} de plus",
+      "rename_impact_none": "Ce statut n'est encore utilisé comme colonne dans aucun projet."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Gérer les colonnes de statut",
+      "manage_title": "Colonnes de statut des tâches",
       "manage_description": "Définissez les colonnes de statut pour les tâches de ce modèle. Glissez pour réorganiser.",
       "template_defaults": "Valeurs par défaut du modèle",
       "added": "Colonne de statut ajoutée",
@@ -1014,7 +1057,8 @@
       "replaced": "Colonne de statut remplacée",
       "replace_failed": "Échec du remplacement de la colonne de statut",
       "repair_status_columns": "Réparer les colonnes de statut",
-      "unresolved_apply_guard": "Les colonnes de statut doivent être réparées ({{count}})"
+      "unresolved_apply_guard": "Les colonnes de statut doivent être réparées ({{count}})",
+      "pending_row_hint": "Complétez la colonne de statut vide avant d’en ajouter une autre."
     },
     "list": {
       "title": "Modèles de projet",
@@ -1193,7 +1237,9 @@
       "taskCount_other": "{{count}} tâches",
       "unknownUser": "Inconnu",
       "unknownTask": "Tâche inconnue",
-      "checklistCountTitle": "{{count}} élément de liste"
+      "checklistCountTitle": "{{count}} élément de liste",
+      "taskCount_few": "{{count}} tâches",
+      "taskCount_many": "{{count}} tâches"
     },
     "taskForm": {
       "addTitle": "Ajouter une tâche",
@@ -1458,18 +1504,6 @@
     "title": "Phases du projet",
     "import": "Importer"
   },
-  "addStatusDialog": {
-    "phaseTitle": "Ajouter un statut de phase depuis la bibliothèque",
-    "projectTitle": "Ajouter un statut depuis la bibliothèque",
-    "selectLabel": "Sélectionner depuis la bibliothèque de statuts",
-    "placeholder": "Choisir un statut",
-    "helpText": "Sélectionnez un statut de la bibliothèque de votre locataire à ajouter à ce projet.",
-    "noStatusesTitle": "Aucun statut disponible",
-    "noStatusesDescription": "Créez des statuts dans Paramètres → Projets → Statuts.",
-    "adding": "Ajout...",
-    "addStatus": "Ajouter un statut",
-    "addFailed": "Échec de l'ajout du statut. Veuillez réessayer."
-  },
   "taskStatusSelect": {
     "ariaLabel": "Statut de la tâche",
     "selectStatus": "Sélectionner le statut"
@@ -1554,7 +1588,7 @@
     "statusColor": "Couleur du statut",
     "changeColor": "Changer la couleur",
     "markClosed": "Marquer comme statut fermé",
-    "markClosedDescription": "Les tâches dans les statuts fermés sont considérées comme terminées",
+    "markClosedDescription": "Les tâches avec ce statut seront considérées comme terminées",
     "creating": "Création...",
     "createButton": "Créer le statut",
     "nameRequired": "Le nom du statut est requis",
@@ -1615,7 +1649,9 @@
       "submitting": "Ajout des étiquettes...",
       "confirm_one": "Ajouter des étiquettes à {{count}} tâche",
       "confirm_other": "Ajouter des étiquettes à {{count}} tâches",
-      "failedHeading": "Impossible d'ajouter des étiquettes aux tâches suivantes :"
+      "failedHeading": "Impossible d'ajouter des étiquettes aux tâches suivantes :",
+      "confirm_few": "Ajouter des étiquettes à {{count}} tâches",
+      "confirm_many": "Ajouter des étiquettes à {{count}} tâches"
     }
   },
   "common:actions": {
@@ -1678,7 +1714,9 @@
       "lockedSummary_other": "{{count}} éléments totalisant {{amount}} sont verrouillés et ne changeront pas.",
       "edit": "Modifier les conditions",
       "saved": "Conditions de facturation mises à jour",
-      "dialogTitle": "Modifier les conditions de facturation"
+      "dialogTitle": "Modifier les conditions de facturation",
+      "lockedSummary_few": "{{count}} éléments totalisant {{amount}} sont verrouillés et ne changeront pas.",
+      "lockedSummary_many": "{{count}} éléments totalisant {{amount}} sont verrouillés et ne changeront pas."
     },
     "setup": {
       "title": "Facturer ce projet",
@@ -2027,5 +2065,22 @@
     "question": "Les dépendances ne sont pas imposées, vous pouvez donc continuer. Voulez-vous le faire ?",
     "proceed": "Continuer quand même",
     "cancel": "Annuler"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Compact"
+    },
+    "spacious": {
+      "label": "Spacieux"
+    },
+    "decrease": {
+      "title": "Réduire la largeur des colonnes"
+    },
+    "increase": {
+      "title": "Augmenter la largeur des colonnes"
+    },
+    "reset": {
+      "title": "Rétablir la valeur par défaut"
+    }
   }
 }

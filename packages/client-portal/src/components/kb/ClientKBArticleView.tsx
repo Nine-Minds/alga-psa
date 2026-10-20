@@ -491,7 +491,7 @@ export default function ClientKBArticleView({
 
       {/* Article Header */}
       <Card className="mb-6">
-        <CardContent className="p-6">
+        <CardContent className="p-6 !pt-6">
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0 p-3 bg-muted rounded-lg">
               {TYPE_ICONS[article.article_type] || <FileText className="w-6 h-6" />}
@@ -522,14 +522,14 @@ export default function ClientKBArticleView({
 
       {/* Article Content */}
       <Card className="mb-6">
-        <CardContent className="p-6">
+        <CardContent className="p-6 !pt-6">
           {renderBlockContent((article as any).block_data)}
         </CardContent>
       </Card>
 
       {/* Feedback Section */}
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-6 !pt-6">
           <div className="text-center">
             <h3 className="text-lg font-medium mb-2">
               {t('kb.wasHelpful', 'Was this article helpful?')}

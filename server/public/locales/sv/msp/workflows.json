@@ -565,7 +565,8 @@
       "exportCsv": "Exportera CSV",
       "exportJson": "Exportera JSON",
       "close": "Stäng",
-      "viewRunDetails": "Visa körningsdetaljer"
+      "viewRunDetails": "Visa körningsdetaljer",
+      "backToEvents": "Tillbaka till händelser"
     },
     "table": {
       "schemaConflict": "katalog ≠ inskickat",
@@ -627,7 +628,8 @@
     },
     "actions": {
       "refresh": "Uppdatera",
-      "loadMore": "Läs in fler"
+      "loadMore": "Läs in fler",
+      "backToList": "Tillbaka till dead letter"
     },
     "table": {
       "columns": {
@@ -1395,7 +1397,9 @@
         "summary_one": "{{count}} händelse hoppades över de senaste {{days}} dagarna — {{reasons}}",
         "summary_other": "{{count}} händelser hoppades över de senaste {{days}} dagarna — {{reasons}}",
         "lastSkipped": "Senast överhoppad {{when}}",
-        "view": "Visa överhoppade händelser"
+        "view": "Visa överhoppade händelser",
+        "summary_few": "{{count}} händelser hoppades över de senaste {{days}} dagarna — {{reasons}}",
+        "summary_many": "{{count}} händelser hoppades över de senaste {{days}} dagarna — {{reasons}}"
       },
       "drawer": {
         "title": "Överhoppade händelser",
@@ -1738,7 +1742,9 @@
     "insertionPointLabel": "Nya steg hamnar här",
     "emptyBranchPrompt": "Lägg till ett steg i den här grenen",
     "emptyActivePrompt": "Nya steg hamnar här. Välj ett från paletten.",
-    "stepCount": "({{count}} steg)"
+    "stepCount": "({{count}} steg)",
+    "stepCount_few": "({{count}} steg)",
+    "stepCount_many": "({{count}} steg)"
   },
   "expressionEditor": {
     "ariaLabel": "Uttrycksredigerare",
@@ -2251,7 +2257,12 @@
       "currentRun": "Körning {{id}}",
       "backToWorkflow": "Tillbaka till arbetsflödet"
     },
-    "title": "Studio för arbetsflödeskörningar"
+    "title": "Studio för arbetsflödeskörningar",
+    "communityEdition": {
+      "title": "Pro-funktion",
+      "description": "Studion för arbetsflödeskörningar är endast tillgänglig i Pro.",
+      "runId": "Körnings-ID: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3024,6 +3035,10 @@
         "selectBoard": "Välj eller ange en tavla",
         "selectPriority": "Välj eller ange en prioritet"
       }
+    },
+    "proFeature": {
+      "title": "Pro-funktion",
+      "description": "Arbetsflödessystemet är endast tillgängligt i Pro. Uppgradera din installation för att få tillgång till den här funktionen."
     }
   },
   "toggle": {
@@ -3162,5 +3177,29 @@
       "label": "Orsakskedjans djup överskreds",
       "hint": "Kedjan av orsakade händelser överskred maxdjupet; hoppades över för att förhindra skenande loopar."
     }
+  },
+  "createFromTicket": {
+    "title": "Skapa arbetsflöde från ärende",
+    "description": "Skapar ett arbetsflödesutkast vars första steg skapar ett ärende som #{{number}}. Inget publiceras.",
+    "cancel": "Avbryt",
+    "creating": "Skapar…",
+    "submit": "Skapa utkast och öppna designern",
+    "nameLabel": "Arbetsflödesnamn",
+    "triggerLabel": "Utlösare",
+    "triggerManual": "Manuell (kör vid behov)",
+    "ticketCreatedWarning": "Det här arbetsflödet skapar ett ärende, och ett nytt ärende utlöser samma utlösare igen. Lägg till ett villkor före publicering för att undvika en loop.",
+    "includeLegend": "Ta med från ärendet",
+    "propertiesAlways": "Rubrik, beskrivning, kund, kontakt, tavla, kategori och prioritet tas alltid med.",
+    "includeAssignment": "Tilldelning",
+    "includeTags": "Taggar",
+    "includeCustomFields": "Anpassade fält",
+    "includeChecklist": "Checklista",
+    "errors": {
+      "nameRequired": "Arbetsflödesnamn krävs",
+      "generic": "Det gick inte att skapa arbetsflödesutkastet"
+    },
+    "includeCustomFieldsCount": "Anpassade fält ({{n}})",
+    "includeChecklistCount": "Checklista ({{total}} punkter: {{templates}} från mallar / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Punkter från mallar tillämpas på nytt från den aktuella mallen, så ändringar som gjorts på det här ärendet förs inte över."
   }
 }

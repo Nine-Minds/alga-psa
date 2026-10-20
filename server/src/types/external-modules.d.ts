@@ -23,6 +23,20 @@ declare module '@product/extensions/entry' {
   export default _default;
 }
 
+declare module '@alga-psa/workflows/ticket-actions' {
+  import type { ComponentType } from 'react';
+
+  export const createWorkflowFromTicketEnabled: boolean;
+  export interface CreateWorkflowFromTicketDialogProps {
+    ticketId: string;
+    ticketNumber: string;
+    title: string;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  }
+  export const CreateWorkflowFromTicketDialog: ComponentType<CreateWorkflowFromTicketDialogProps>;
+}
+
 declare module '@alga-psa/workflows/entry' {
   import type { ComponentType } from 'react';
 

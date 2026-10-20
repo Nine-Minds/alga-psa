@@ -1,4 +1,7 @@
 {
+  "breadcrumbs": {
+    "ariaLabel": "Breadcrumb"
+  },
   "phone": {
     "extension": "ext."
   },
@@ -22,13 +25,19 @@
     "add": "React",
     "ariaSummary_one": "{{emoji}} {{count}} reaction",
     "ariaSummary_other": "{{emoji}} {{count}} reactions",
-    "ariaYouReacted": ", you reacted"
+    "ariaYouReacted": ", you reacted",
+    "ariaSummary_few": "{{emoji}} {{count}} reactions",
+    "ariaSummary_many": "{{emoji}} {{count}} reactions"
   },
   "credits": {
     "expiresInDaysOn_one": "Expires in {{count}} day on {{date}}",
     "expiresInDaysOn_other": "Expires in {{count}} days on {{date}}",
     "expiringForClient_one": "{{count}} credit for {{clientName}} will expire soon",
-    "expiringForClient_other": "{{count}} credits for {{clientName}} will expire soon"
+    "expiringForClient_other": "{{count}} credits for {{clientName}} will expire soon",
+    "expiresInDaysOn_few": "Expires in {{count}} days on {{date}}",
+    "expiresInDaysOn_many": "Expires in {{count}} days on {{date}}",
+    "expiringForClient_few": "{{count}} credits for {{clientName}} will expire soon",
+    "expiringForClient_many": "{{count}} credits for {{clientName}} will expire soon"
   },
   "staleAction": {
     "message": "This page is out of date. Refresh to restore live updates and actions."
@@ -46,7 +55,13 @@
     "licenseWrongTenant": "This license was issued for a different appliance and is not valid here. The install is running Essentials features.",
     "manageLicense": "Manage License",
     "ariaLabel": "License status",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "licenseExpiresIn_few": "License expires in {{count}} days. Renew to avoid service interruption.",
+    "licenseExpiresIn_many": "License expires in {{count}} days. Renew to avoid service interruption.",
+    "trialDaysRemaining_few": "Pro trial active — {{count}} days remaining.",
+    "trialDaysRemaining_many": "Pro trial active — {{count}} days remaining.",
+    "trialExpiresIn_few": "Pro trial expires in {{count}} days. Enter a license key to keep Pro features.",
+    "trialExpiresIn_many": "Pro trial expires in {{count}} days. Enter a license key to keep Pro features."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -99,7 +114,18 @@
     "done": "Done",
     "continue": "Continue",
     "printSelected": "Print selected ({{count}})",
-    "removeTag": "Remove tag"
+    "removeTag": "Remove tag",
+    "saveChanges": "Save Changes",
+    "printSelected_few": "Print selected ({{count}})",
+    "printSelected_many": "Print selected ({{count}})",
+    "saveSettings": "Save Settings",
+    "finishSetup": "Finish Setup",
+    "skip": "Skip",
+    "saveAsDraft": "Save as Draft",
+    "completing": "Completing...",
+    "more": "More",
+    "closeDialog": "Close Dialog",
+    "clearSearch": "Clear search"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -128,7 +154,9 @@
     "notAssigned": "Not assigned",
     "searchUsersOrTeams": "Search users or teams...",
     "unnamedUser": "Unnamed User",
-    "unnamedTeam": "Unnamed Team"
+    "unnamedTeam": "Unnamed Team",
+    "userPicker": "User Picker",
+    "noUsersFound": "No users found"
   },
   "serviceTypeSelect": {
     "placeholder": "Select service type...",
@@ -159,7 +187,8 @@
     "active": "Active",
     "inactive": "Inactive",
     "completed": "Completed",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "loadingLabel": "Loading"
   },
   "messages": {
     "welcome": "Welcome",
@@ -239,7 +268,18 @@
     }
   },
   "fields": {
-    "notes": "Notes"
+    "notes": "Notes",
+    "phone": {
+      "label": "Phone",
+      "placeholder": "+1 (555) 123-4567"
+    },
+    "phoneExtension": {
+      "label": "Extension",
+      "placeholder": "ext. 1234"
+    },
+    "priority": {
+      "placeholder": "Select Priority"
+    }
   },
   "auth": {
     "signOut": {
@@ -612,7 +652,11 @@
     "expand": "Expand",
     "showInDrawer": "Show in drawer",
     "showEarlierReplies_one": "Show {{count}} earlier reply",
-    "showEarlierReplies_other": "Show {{count}} earlier replies"
+    "showEarlierReplies_other": "Show {{count}} earlier replies",
+    "replies_few": "{{count}} replies",
+    "replies_many": "{{count}} replies",
+    "showEarlierReplies_few": "Show {{count}} earlier replies",
+    "showEarlierReplies_many": "Show {{count}} earlier replies"
   },
   "pagination": {
     "previous": "Previous",
@@ -634,7 +678,9 @@
     "ariaLabel": "Pagination",
     "totalItems": "{{count}} {{itemLabel}} total",
     "totalRecordsInline": "({{count}} total records)",
-    "pageOf": "Page {{current}} of {{total}}"
+    "pageOf": "Page {{current}} of {{total}}",
+    "itemsLabel_few": "items",
+    "itemsLabel_many": "items"
   },
   "documents": {
     "title": "Documents",
@@ -687,7 +733,11 @@
       "downloadFailed": "Failed to download document",
       "bulkDeleteFailed": "Failed to delete some documents",
       "bulkDeleteSuccess_one": "{{count}} document deleted successfully",
-      "bulkDeleteSuccess_other": "{{count}} documents deleted successfully"
+      "bulkDeleteSuccess_other": "{{count}} documents deleted successfully",
+      "bulkDeleteSuccess_few": "{{count}} documents deleted successfully",
+      "bulkDeleteSuccess_many": "{{count}} documents deleted successfully",
+      "moveDocumentsSuccess_few": "{{count}} documents moved to {{destination}}",
+      "moveDocumentsSuccess_many": "{{count}} documents moved to {{destination}}"
     },
     "empty": {
       "default": "No documents found",
@@ -701,11 +751,15 @@
       "selected_other": "{{count}} documents selected",
       "moveToFolder": "Move to Folder",
       "deleteSelected": "Delete Selected",
-      "clearSelection": "Clear Selection"
+      "clearSelection": "Clear Selection",
+      "selected_few": "{{count}} documents selected",
+      "selected_many": "{{count}} documents selected"
     },
     "prompts": {
       "confirmBulkDelete_one": "Are you sure you want to delete {{count}} document?",
-      "confirmBulkDelete_other": "Are you sure you want to delete {{count}} documents?"
+      "confirmBulkDelete_other": "Are you sure you want to delete {{count}} documents?",
+      "confirmBulkDelete_few": "Are you sure you want to delete {{count}} documents?",
+      "confirmBulkDelete_many": "Are you sure you want to delete {{count}} documents?"
     },
     "pagination": {
       "perPage": "{{count}} per page"
@@ -738,7 +792,9 @@
       "rootOption": "Root (No folder)",
       "empty": "No folders available. Documents will be saved to root.",
       "showAllFolders": "Show all folders",
-      "showEntityFolders": "Show entity folders"
+      "showEntityFolders": "Show entity folders",
+      "bulkMoveDescription_few": "Select destination folder for {{count}} documents",
+      "bulkMoveDescription_many": "Select destination folder for {{count}} documents"
     },
     "filters": {
       "searchLabel": "Search Documents",
@@ -1289,7 +1345,9 @@
       "revoking": "Revoking...",
       "loggingOut": "Logging out...",
       "logoutFromOther_one": "Logout from {{count}} other device",
-      "logoutFromOther_other": "Logout from {{count}} other devices"
+      "logoutFromOther_other": "Logout from {{count}} other devices",
+      "logoutFromOther_few": "Logout from {{count}} other devices",
+      "logoutFromOther_many": "Logout from {{count}} other devices"
     },
     "confirmations": {
       "logoutCurrent": "This will log you out of your current session. Are you sure?",
@@ -1337,8 +1395,34 @@
     }
   },
   "enums": {
+    "locale": {
+      "en": "English",
+      "fr": "French",
+      "es": "Spanish",
+      "de": "German",
+      "nl": "Dutch",
+      "it": "Italian",
+      "pl": "Polish",
+      "pt": "Portuguese (Brazil)",
+      "sv": "Swedish",
+      "xx": "Pseudo (xx)",
+      "yy": "Pseudo (yy)"
+    },
     "addOnDescription": {
       "ai_assistant": "Unlock AI chat, document assistance, sidebar help, and workflow AI tools for your team."
+    },
+    "notificationCategory": {
+      "tickets": "Tickets",
+      "invoices": "Invoices",
+      "messages": "Messages",
+      "projects": "Projects",
+      "system": "System",
+      "appointments": "Appointments"
+    },
+    "theme": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
     }
   },
   "timePicker": {
@@ -1525,7 +1609,22 @@
     "showAll": "Show all",
     "showingAllColumns": "Showing all columns; scroll horizontally to see them.",
     "showLess": "Show less",
-    "columnsHidden": "{{count}} columns hidden due to limited space."
+    "columnsHidden": "{{count}} columns hidden due to limited space.",
+    "columnsHidden_few": "{{count}} columns hidden.",
+    "columnsHidden_many": "{{count}} columns hidden.",
+    "responsiveColumnsHidden_one": "{{count}} column hidden due to limited space. Resize to see more.",
+    "responsiveColumnsHidden_other": "{{count}} columns hidden due to limited space. Resize to see more.",
+    "responsiveColumnsHidden_few": "{{count}} columns hidden due to limited space. Resize to see more.",
+    "responsiveColumnsHidden_many": "{{count}} columns hidden due to limited space. Resize to see more.",
+    "empty": "No results",
+    "pagination": {
+      "empty": "0 items",
+      "range_one": "{{first}}–{{last}} of {{count}} item",
+      "range_other": "{{first}}–{{last}} of {{count}} items",
+      "range_few": "{{first}}–{{last}} of {{count}} items",
+      "range_many": "{{first}}–{{last}} of {{count}} items",
+      "perPage": "{{count}} per page"
+    }
   },
   "richTextEditorSkeleton": {
     "loading": "Loading editor…"
@@ -1544,7 +1643,36 @@
   },
   "notifications": {
     "needsAttention": "Needs attention ({{count}})",
-    "lowPriority": "Low priority ({{count}})"
+    "lowPriority": "Low priority ({{count}})",
+    "detail": {
+      "document": "Document",
+      "actions": {
+        "openDocument": "Open Document",
+        "viewTicket": "View Ticket",
+        "viewTask": "View Task",
+        "viewDetails": "View Details"
+      },
+      "changes": "Changes:",
+      "status": "Status:",
+      "priority": "Priority:",
+      "assignedTo": "Assigned to:",
+      "changedBy": "Changed by:",
+      "assignedBy": "Assigned by:",
+      "unread": "Unread",
+      "internalComment": "Internal Comment",
+      "commentBy": "Comment by {{author}}:",
+      "readAt": "Read {{time}}"
+    },
+    "item": {
+      "unknown": "Unknown",
+      "justNow": "Just now",
+      "minutesAgo": "{{minutes}}m ago",
+      "hoursAgo": "{{hours}}h ago",
+      "daysAgo": "{{days}}d ago",
+      "assigned": "Assigned:",
+      "performedBy": "by {{name}}",
+      "internal": "Internal"
+    }
   },
   "importConflicts": {
     "title": "Resolve Import Conflicts",
@@ -1593,7 +1721,41 @@
       "document": "documents",
       "knowledge_base_article": "knowledge base articles",
       "opportunity": "opportunities"
-    }
+    },
+    "messages": {
+      "error": {
+        "duplicate": "Tag \"{{tag}}\" already exists on this item",
+        "missingEntityId": "Cannot add tag: entity ID is missing"
+      },
+      "success": {
+        "added": "Tag \"{{tag}}\" added successfully"
+      }
+    },
+    "dialogs": {
+      "lastUsage": {
+        "title": "Last Tag Usage",
+        "message": "This is the last use of tag \"{{tag}}\". Delete the tag definition, or keep it for future use?",
+        "confirm": "Remove & Delete Definition",
+        "keep": "Remove & Keep Definition"
+      }
+    },
+    "fields": {
+      "tags": {
+        "label": "Tags",
+        "placeholder": "Add tag..."
+      },
+      "newTag": {
+        "placeholder": "New tag"
+      }
+    },
+    "actions": {
+      "removeTag": "Remove tag {{tag}}",
+      "saving": "..."
+    },
+    "errors": {
+      "providerRequired": "useTags must be used within a TagProvider"
+    },
+    "empty": "No tags found"
   },
   "statusDialog": {
     "nameRequired": "Status name is required",
@@ -1632,7 +1794,14 @@
   "editor": {
     "attachFiles": "Attach files",
     "uploadingFiles": "Uploading files…",
-    "fileUploadFailed": "File upload failed."
+    "fileUploadFailed": "File upload failed.",
+    "mentions": {
+      "everyone": "Everyone",
+      "aiAssistant": "Alga AI Assistant",
+      "noUsername": "no username",
+      "userTitle": "{{displayName}} ({{username}})",
+      "fallback": "mention"
+    }
   },
   "emailPreferences": {
     "loading": "Loading email preferences…",
@@ -1754,5 +1923,254 @@
   "emailRecipients": {
     "remove": "Remove {{email}}",
     "placeholder": "Type an address and press Enter"
+  },
+  "iconPicker": {
+    "enums": {
+      "icons": {
+        "phone": "Phone",
+        "mail": "Email",
+        "message-circle": "Message",
+        "video": "Video Call",
+        "send": "Send",
+        "users": "Meeting",
+        "calendar": "Appointment",
+        "presentation": "Presentation",
+        "coffee": "Informal Meeting",
+        "handshake": "Agreement",
+        "file-text": "Document",
+        "sticky-note": "Note",
+        "edit": "Edit",
+        "flag": "Follow-up",
+        "alarm-clock": "Reminder",
+        "clock": "Time Tracking",
+        "activity": "General Activity",
+        "briefcase": "Account Management",
+        "search": "Research",
+        "book-open": "Training",
+        "headphones": "Support",
+        "check-square": "Review",
+        "clipboard": "Documentation",
+        "users-2": "Consultation",
+        "target": "Planning",
+        "settings": "Configuration",
+        "star": "Important",
+        "award": "Achievement",
+        "zap": "Quick Action",
+        "map-pin": "Location",
+        "tag": "Label",
+        "bell": "Notification",
+        "shield": "Security",
+        "key": "Access",
+        "heart": "Favorite"
+      },
+      "categories": {
+        "Communication": "Communication",
+        "Meetings": "Meetings",
+        "Documents": "Documents",
+        "Tasks": "Tasks",
+        "Activities": "Activities",
+        "Business": "Business"
+      }
+    },
+    "selected": "Selected: {{label}}",
+    "help": "Select an icon to represent this interaction type. The icon will be displayed in lists and forms."
+  },
+  "skeletons": {
+    "calendar": {
+      "loading": "Loading calendar..."
+    },
+    "kanbanBoard": {
+      "loading": "Loading Kanban board"
+    },
+    "chart": {
+      "loading": "Loading chart...",
+      "loadingNamed": "Loading {{title}}..."
+    },
+    "settingsTab": {
+      "loading": "Loading settings configuration..."
+    },
+    "editor": {
+      "loading": "Loading editor..."
+    },
+    "taskForm": {
+      "loading": "Loading task form..."
+    },
+    "workflow": {
+      "loading": "Loading workflow visualization..."
+    }
+  },
+  "dialogs": {
+    "success": {
+      "title": "Success",
+      "confirm": "OK"
+    },
+    "contactPicker": {
+      "title": "Select Contact",
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "action": "Action"
+      },
+      "select": "Select",
+      "searchPlaceholder": "Search by name, email, or phone..."
+    },
+    "defaultTitle": "Dialog",
+    "confirmDelete": {
+      "title": "Delete {{itemType}}",
+      "message": "Are you sure you want to delete \"{{itemName}}\"? This action cannot be undone."
+    },
+    "unsavedChanges": {
+      "title": "Unsaved Changes",
+      "message": "You have unsaved changes. Are you sure you want to leave? Your changes will be lost.",
+      "confirm": "Leave Without Saving",
+      "cancel": "Stay"
+    },
+    "confirmAction": {
+      "title": "Confirm Action"
+    },
+    "contentTitle": "Dialog Content"
+  },
+  "viewDensity": {
+    "compact": {
+      "label": "Compact",
+      "title": "Snap to compact view"
+    },
+    "spacious": {
+      "label": "Spacious",
+      "title": "Snap to spacious view"
+    },
+    "decrease": {
+      "title": "Decrease spacing"
+    },
+    "reset": {
+      "title": "Reset to default"
+    },
+    "increase": {
+      "title": "Increase spacing"
+    }
+  },
+  "multiContactPicker": {
+    "fields": {
+      "contacts": {
+        "placeholder": "Select contacts..."
+      },
+      "search": {
+        "placeholder": "Search contacts..."
+      }
+    },
+    "noResults": "No results found",
+    "noContacts": "No contacts available",
+    "noEmail": "no email",
+    "actions": {
+      "clearAll": "Clear all"
+    }
+  },
+  "themeToggle": {
+    "ariaLabel": "Theme toggle",
+    "selected": "Selected"
+  },
+  "drawer": {
+    "formTitle": "{{title}} - Form",
+    "actions": {
+      "goBack": "Go back",
+      "goForward": "Go forward",
+      "close": "Close drawer"
+    }
+  },
+  "countryPicker": {
+    "placeholder": "Select Country",
+    "searchPlaceholder": "Search countries...",
+    "otherCountries": "Other Countries",
+    "empty": "No countries found"
+  },
+  "input": {
+    "actions": {
+      "typeIntoLabel": "Type text into {{label}} field",
+      "type": "Type text into this field",
+      "focus": "Focus this input field",
+      "clear": "Clear the current text"
+    }
+  },
+  "button": {
+    "actions": {
+      "clickLabel": "Click {{label}}",
+      "click": "Click this button",
+      "focus": "Focus this button"
+    }
+  },
+  "inlineReplyComposer": {
+    "actions": {
+      "reply": "Reply"
+    },
+    "fields": {
+      "internal": {
+        "label": "Mark as Internal"
+      }
+    }
+  },
+  "featureUpgradeNotice": {
+    "title": "{{featureName}} requires {{tierLabel}}",
+    "description": "Upgrade to the {{tierLabel}} tier to unlock {{featureName}} and more powerful features.",
+    "actions": {
+      "viewPlans": "View Plans"
+    }
+  },
+  "widgets": {
+    "highlight": {
+      "ariaLabel": "Highlighted Content"
+    },
+    "buttonLink": {
+      "unavailable": "Link Not Available",
+      "actions": {
+        "openLink": "Open Link"
+      }
+    },
+    "richTextViewer": {
+      "loading": "Loading content...",
+      "errors": {
+        "loadFailed": "Error loading content"
+      }
+    }
+  },
+  "reflection": {
+    "parentId": "Parent ID: {{id}}",
+    "noParent": "No Parent"
+  },
+  "teamAvatar": {
+    "alt": "{{name}} avatar",
+    "defaultAlt": "Team avatar"
+  },
+  "userAvatar": {
+    "alt": "{{name}} avatar",
+    "defaultAlt": "User avatar"
+  },
+  "featurePlaceholder": {
+    "description": "404 - This Page is Under Construction. You've reached a part of the site that isn't quite ready yet. Alga is laying the groundwork behind the scenes. Come back soon!"
+  },
+  "contactAvatar": {
+    "alt": "{{name}} avatar",
+    "defaultAlt": "Contact avatar"
+  },
+  "entityAvatar": {
+    "alt": "{{name}} image",
+    "defaultAlt": "Entity image"
+  },
+  "editableField": {
+    "notSet": "Not set"
+  },
+  "editableText": {
+    "actions": {
+      "edit": "Click to edit"
+    }
+  },
+  "label": {
+    "required": "Required"
+  },
+  "tabs": {
+    "ariaLabel": "Tabs"
+  },
+  "viewSwitcher": {
+    "ariaLabel": "Switch view"
   }
 }

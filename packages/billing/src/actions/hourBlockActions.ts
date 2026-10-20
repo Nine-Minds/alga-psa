@@ -13,14 +13,21 @@ import type {
   IHourBlockServiceScope,
   IHourBlockPurchaseInput,
   IHourBlockGrantInput,
+  ServiceContractLineCoverage,
 } from '@alga-psa/types';
-import { getAvailableHourBlockMinutes } from '@alga-psa/shared/billingClients/hourBlockService';
+import {
+  getAvailableHourBlockMinutes,
+  getContractLineCoverageForClient,
+  getContractLineCoverageRowsForClient,
+  classifyContractLineCoverageForWindow,
+} from '@alga-psa/shared/billingClients/hourBlockService';
 import { toCalendarDateString } from '@alga-psa/core';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { getDueDate } from './billingAndTax';
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
 import * as invoiceService from '../services/invoiceService';
 import { TaxService } from '../services/taxService';
+import { createPendingHourBlockForInvoiceCharge } from '../services/pendingHourBlockService';
 import {
   actionError,
   getErrorMessage,
@@ -212,7 +219,6 @@ export async function createHourBlockPurchaseInvoiceInternal(
   } = input;
   const sessionLike = { user: { id: createdBy } };
   const invoiceId = uuidv4();
-  const blockId = uuidv4();
   const totalMinutes = Math.round(hours * 60);
   const purchaseAmount = Math.round(hours * hourlyRate);
   const invoice = {
@@ -258,27 +264,23 @@ export async function createHourBlockPurchaseInvoiceInternal(
     .first();
   if (!purchaseLine) throw new Error('Purchase invoice line not found after creation');
 
-  await tenantScopedTable(trx, tenant, 'hour_blocks').insert({
-    block_id: blockId,
+  const { blockId } = await createPendingHourBlockForInvoiceCharge(trx, {
     tenant,
-    client_id: clientId,
-    service_id: serviceId,
-    total_minutes: totalMinutes,
-    remaining_minutes: totalMinutes,
-    hourly_rate: Math.round(hourlyRate),
-    purchase_amount: purchaseAmount,
-    currency_code: currencyCode,
-    status: 'pending',
-    purchased_at: null,
-    expiration_date: toCalendarDateString(expirationDate),
-    source_invoice_id: invoiceId,
-    source_invoice_charge_id: purchaseLine.item_id,
-    replenishment_bucket_usage_id: replenishmentBucketUsageId ?? null,
-    source_type: 'purchase',
-    created_by: createdBy,
-    notes: notes?.trim() || null,
+    clientId,
+    serviceId,
+    minutes: totalMinutes,
+    hourlyRate,
+    purchaseAmount,
+    currencyCode,
+    invoiceId,
+    invoiceChargeId: purchaseLine.item_id,
+    expirationDate,
+    scopeServiceIds,
+    sourceType: 'purchase',
+    replenishmentBucketUsageId,
+    createdBy,
+    notes,
   });
-  await resolveScopeServiceIds(trx, tenant, blockId, scopeServiceIds);
   return { invoiceId, blockId, invoiceNumber };
 }
 
@@ -350,6 +352,15 @@ export const createHourBlockPurchaseInvoice = withAuth(async (
   });
 });
 
+const CONTRACT_BLOCK_VOID_MESSAGE =
+  'Contract prepaid blocks cannot be voided here; void or delete the invoice that issued the block';
+const CONTRACT_BLOCK_GRANT_MESSAGE =
+  'Contract prepaid blocks cannot be granted; they are issued by invoicing the Prepaid Block contract line';
+
+function isContractIssuedBlock(block: { source_type?: string | null; contract_line_id?: string | null }): boolean {
+  return block.source_type === 'contract' || block.contract_line_id != null;
+}
+
 /**
  * Mints an hour block directly — no invoice (comped hours / PSA migrations).
  * The block is `active` immediately and carries an audit `grant` row.
@@ -364,6 +375,11 @@ export const grantHourBlock = withAuth(async (
       throw new Error('Permission denied: Cannot grant hour blocks');
     }
     const { clientId, serviceId, hours, hourlyRate, expirationDate, scopeServiceIds, reason, notes } = input;
+    // Grants mint ad-hoc blocks only; contract blocks are issued by invoicing.
+    const contractOwnership = input as { contractLineId?: unknown; contract_line_id?: unknown };
+    if (contractOwnership.contractLineId != null || contractOwnership.contract_line_id != null) {
+      throw new Error(CONTRACT_BLOCK_GRANT_MESSAGE);
+    }
     if (!clientId) throw new Error('Client ID is required');
     if (!Number.isFinite(hours) || hours <= 0) throw new Error('Block hours must be greater than zero');
     if (hourlyRate != null && (!Number.isFinite(hourlyRate) || hourlyRate < 0)) {
@@ -614,6 +630,9 @@ export const voidHourBlock = withAuth(async (
         .forUpdate()
         .first();
       if (!block) throw new Error(`Hour block with ID ${blockId} not found`);
+      if (isContractIssuedBlock(block)) {
+        throw new Error(CONTRACT_BLOCK_VOID_MESSAGE);
+      }
       if (block.status !== 'pending' && block.status !== 'active') {
         throw new Error('Only pending or active hour blocks can be voided');
       }
@@ -658,6 +677,44 @@ export const voidHourBlock = withAuth(async (
 });
 
 /**
+ * Service set checked for contract overlap: empty scope means all labor
+ * (null, no filter); otherwise the scope plus the sold-as service, deduped.
+ */
+function coverageServiceIds(scopeServiceIds: string[], serviceId: string): string[] | null {
+  if (scopeServiceIds.length === 0) return null;
+  return Array.from(new Set([...scopeServiceIds, serviceId]));
+}
+
+/** Only live blocks with hours left can still be double-charged. */
+function isCoverageEligibleBlock(block: DbRow): boolean {
+  return (block.status === 'active' || block.status === 'pending') && Number(block.remaining_minutes) > 0;
+}
+
+/**
+ * Contract lines that already cover the services an hour block would be
+ * sold/granted for (advisory; backs the Sell/Grant dialog warning). Uses the
+ * same coverage rule as the burn engine.
+ */
+export const getHourBlockContractCoverage = withAuth(async (
+  user,
+  { tenant },
+  input: { clientId: string; serviceId: string; scopeServiceIds: string[]; expirationDate: string | null },
+): Promise<{ unscoped: boolean; services: ServiceContractLineCoverage[] } | HourBlockActionError> => {
+  return withHourBlockActionErrors(async () => {
+    if (!await hasPermission(user, 'billing', 'read')) {
+      throw new Error('Permission denied: Cannot read hour blocks');
+    }
+    const { knex } = await createTenantKnex();
+    const serviceIds = coverageServiceIds(input.scopeServiceIds ?? [], input.serviceId);
+    const services = await getContractLineCoverageForClient(knex, tenant, input.clientId, {
+      serviceIds,
+      expirationDate: input.expirationDate,
+    });
+    return { unscoped: serviceIds === null, services };
+  });
+});
+
+/**
  * Lists a client's hour blocks with display joins (service name, source
  * invoice number, scopes, and a used flag for the void guard). The used flag
  * derives from the immutable `first_allocated_at` marker so it agrees with the
@@ -680,6 +737,9 @@ export const listHourBlocks = withAuth(async (
       const blocksQuery = scopedDb.table('hour_blocks as hb') as Knex.QueryBuilder;
       scopedDb.tenantJoin(blocksQuery, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
       scopedDb.tenantJoin(blocksQuery, 'invoices as inv', 'hb.source_invoice_id', 'inv.invoice_id', { type: 'left' });
+      // Contract-issued blocks (contract_line_id set) show their owning contract in the Source column.
+      scopedDb.tenantJoin(blocksQuery, 'contract_lines as cl', 'hb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
+      scopedDb.tenantJoin(blocksQuery, 'contracts as ct', 'cl.contract_id', 'ct.contract_id', { type: 'left' });
       const rows = await blocksQuery
         .where({ 'hb.client_id': clientId })
         .select(
@@ -687,6 +747,8 @@ export const listHourBlocks = withAuth(async (
           'sc.service_name as service_name',
           'inv.invoice_number as invoice_number',
           'inv.status as invoice_status',
+          'ct.contract_name as contract_name',
+          'cl.contract_line_name as contract_line_name',
           trx.raw('(hb.first_allocated_at IS NOT NULL) as has_allocations'),
         )
         .orderBy('hb.purchased_at', 'asc')
@@ -707,14 +769,46 @@ export const listHourBlocks = withAuth(async (
         }
       }
 
-      return rows.map((row: DbRow) => ({
-        ...row,
-        scope_service_ids: scopesByBlock.get(row.block_id)?.map((scope) => scope.service_id) ?? [],
-        scope_services: scopesByBlock.get(row.block_id) ?? [],
-        has_allocations: Boolean(row.has_allocations),
-        expiration_date: toCalendarDateString(row.expiration_date),
-        remaining_value: Math.round((Number(row.remaining_minutes) / 60) * Number(row.hourly_rate)),
-      })) as IHourBlock[];
+      // Contract overlap: one query over the widest window, then classify each
+      // eligible block in JS against its own service set and window (no N+1).
+      const coverageCandidates = rows.filter(isCoverageEligibleBlock);
+      let coverageRows: Awaited<ReturnType<typeof getContractLineCoverageRowsForClient>> | null = null;
+      if (coverageCandidates.length > 0) {
+        const expirations = coverageCandidates
+          .map((row: DbRow) => toCalendarDateString(row.expiration_date) as string | null)
+          .filter((value: string | null): value is string => !!value)
+          .sort();
+        coverageRows = await getContractLineCoverageRowsForClient(trx, tenant, clientId, {
+          serviceIds: null,
+          expirationDate: expirations.length > 0 ? expirations[expirations.length - 1] : null,
+          // Blocks without an expiry use today + 12 months; make sure that is loaded too.
+          includeDefaultHorizon: coverageCandidates.some((row: DbRow) => !row.expiration_date),
+        });
+      }
+
+      return rows.map((row: DbRow) => {
+        const scopeIds = scopesByBlock.get(row.block_id)?.map((scope) => scope.service_id) ?? [];
+        const block: DbRow = {
+          ...row,
+          scope_service_ids: scopeIds,
+          scope_services: scopesByBlock.get(row.block_id) ?? [],
+          has_allocations: Boolean(row.has_allocations),
+          expiration_date: toCalendarDateString(row.expiration_date),
+          remaining_value: Math.round((Number(row.remaining_minutes) / 60) * Number(row.hourly_rate)),
+        };
+        if (coverageRows && isCoverageEligibleBlock(row)) {
+          // Same window rule as the single-block helper: tenant today .. expiry
+          // (or today + 12 months when there is none).
+          block.contract_coverage = classifyContractLineCoverageForWindow(coverageRows.rows, {
+            serviceIds: coverageServiceIds(scopeIds, row.service_id),
+            window: {
+              from: coverageRows.window.from,
+              to: (block.expiration_date as string | null) ?? coverageRows.defaultTo,
+            },
+          });
+        }
+        return block;
+      }) as IHourBlock[];
     });
   });
 });
@@ -744,6 +838,8 @@ export const getHourBlockDetail = withAuth(async (
       const blockQuery = scopedDb.table('hour_blocks as hb') as Knex.QueryBuilder;
       scopedDb.tenantJoin(blockQuery, 'invoices as inv', 'hb.source_invoice_id', 'inv.invoice_id', { type: 'left' });
       scopedDb.tenantJoin(blockQuery, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
+      scopedDb.tenantJoin(blockQuery, 'contract_lines as cl', 'hb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
+      scopedDb.tenantJoin(blockQuery, 'contracts as ct', 'cl.contract_id', 'ct.contract_id', { type: 'left' });
       const block = await blockQuery
         .where({ 'hb.block_id': blockId })
         .select(
@@ -751,6 +847,8 @@ export const getHourBlockDetail = withAuth(async (
           'inv.invoice_number as invoice_number',
           'inv.status as invoice_status',
           'sc.service_name as service_name',
+          'ct.contract_name as contract_name',
+          'cl.contract_line_name as contract_line_name',
         )
         .first();
       if (!block) throw new Error(`Hour block with ID ${blockId} not found`);
@@ -796,11 +894,23 @@ export const getHourBlockDetail = withAuth(async (
         .where({ block_id: blockId, tenant })
         .orderBy('created_at', 'desc');
 
+      let contractCoverage: ServiceContractLineCoverage[] | undefined;
+      if (isCoverageEligibleBlock(block)) {
+        contractCoverage = await getContractLineCoverageForClient(trx, tenant, block.client_id, {
+          serviceIds: coverageServiceIds(
+            (scopes as DbRow[]).map((scope) => scope.service_id),
+            block.service_id,
+          ),
+          expirationDate: toCalendarDateString(block.expiration_date),
+        });
+      }
+
       return {
         block: {
           ...block,
           expiration_date: toCalendarDateString(block.expiration_date),
           remaining_value: Math.round((Number(block.remaining_minutes) / 60) * Number(block.hourly_rate)),
+          ...(contractCoverage ? { contract_coverage: contractCoverage } : {}),
         } as IHourBlock,
         scopes: scopes as IHourBlockServiceScope[],
         allocations: allocationsWithUser as IHourBlockAllocation[],
@@ -825,6 +935,6 @@ export const getAvailableHourBlockMinutesForClient = withAuth(async (
       throw new Error('Permission denied: Cannot read hour blocks');
     }
     const { knex } = await createTenantKnex();
-    return getAvailableHourBlockMinutes(knex, tenant, clientId, serviceId);
+    return getAvailableHourBlockMinutes(knex, tenant, clientId, serviceId, { adhocOnly: true });
   });
 });

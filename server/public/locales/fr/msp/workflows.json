@@ -565,7 +565,8 @@
       "exportCsv": "Exporter en CSV",
       "exportJson": "Exporter en JSON",
       "close": "Fermer",
-      "viewRunDetails": "Voir les détails de l’exécution"
+      "viewRunDetails": "Voir les détails de l’exécution",
+      "backToEvents": "Retour aux événements"
     },
     "table": {
       "schemaConflict": "catalogue ≠ soumission",
@@ -627,7 +628,8 @@
     },
     "actions": {
       "refresh": "Actualiser",
-      "loadMore": "Charger plus"
+      "loadMore": "Charger plus",
+      "backToList": "Retour aux messages en échec"
     },
     "table": {
       "columns": {
@@ -1517,7 +1519,9 @@
         "summary_one": "{{count}} événement ignoré au cours des {{days}} derniers jours — {{reasons}}",
         "summary_other": "{{count}} événements ignorés au cours des {{days}} derniers jours — {{reasons}}",
         "lastSkipped": "Dernier ignoré {{when}}",
-        "view": "Voir les événements ignorés"
+        "view": "Voir les événements ignorés",
+        "summary_few": "{{count}} événements ignorés au cours des {{days}} derniers jours — {{reasons}}",
+        "summary_many": "{{count}} événements ignorés au cours des {{days}} derniers jours — {{reasons}}"
       },
       "drawer": {
         "title": "Événements ignorés",
@@ -1860,7 +1864,9 @@
     "insertionPointLabel": "Les nouvelles étapes vont ici",
     "emptyBranchPrompt": "Ajoutez une étape à cette branche",
     "emptyActivePrompt": "Les nouvelles étapes vont ici. Choisissez-en une dans la palette.",
-    "stepCount": "({{count}} étapes)"
+    "stepCount": "({{count}} étapes)",
+    "stepCount_few": "({{count}} étapes)",
+    "stepCount_many": "({{count}} étapes)"
   },
   "expressionEditor": {
     "ariaLabel": "Éditeur d’expression",
@@ -2373,7 +2379,12 @@
       "currentRun": "Exécution {{id}}",
       "backToWorkflow": "Retour au workflow"
     },
-    "title": "Studio d'exécution de workflow"
+    "title": "Studio d'exécution de workflow",
+    "communityEdition": {
+      "title": "Fonctionnalité Pro",
+      "description": "Le studio d’exécution des workflows est disponible uniquement dans Pro.",
+      "runId": "ID d’exécution : {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3146,6 +3157,10 @@
         "selectBoard": "Sélectionnez ou saisissez un tableau",
         "selectPriority": "Sélectionnez ou saisissez une priorité"
       }
+    },
+    "proFeature": {
+      "title": "Fonctionnalité Pro",
+      "description": "Le système de workflows est uniquement disponible dans Pro. Veuillez mettre à niveau votre installation pour accéder à cette fonctionnalité."
     }
   },
   "toggle": {
@@ -3284,5 +3299,29 @@
       "label": "Profondeur de causalité dépassée",
       "hint": "La chaîne d'événements provoqués a dépassé la profondeur maximale ; ignoré pour éviter les boucles incontrôlées."
     }
+  },
+  "createFromTicket": {
+    "title": "Créer un workflow à partir du ticket",
+    "description": "Crée un workflow brouillon dont la première étape crée un ticket comme #{{number}}. Rien n’est publié.",
+    "cancel": "Annuler",
+    "creating": "Création…",
+    "submit": "Créer le brouillon et ouvrir le concepteur",
+    "nameLabel": "Nom du workflow",
+    "triggerLabel": "Déclencheur",
+    "triggerManual": "Manuel (exécuter à la demande)",
+    "ticketCreatedWarning": "Ce workflow crée un ticket, et un nouveau ticket déclenche à nouveau ce déclencheur. Ajoutez une condition avant la publication pour éviter une boucle.",
+    "includeLegend": "Inclure depuis le ticket",
+    "propertiesAlways": "Le titre, la description, le client, le contact, le tableau, la catégorie et la priorité sont toujours inclus.",
+    "includeAssignment": "Affectation",
+    "includeTags": "Étiquettes",
+    "includeCustomFields": "Champs personnalisés",
+    "includeChecklist": "Liste de contrôle",
+    "errors": {
+      "nameRequired": "Le nom du workflow est obligatoire",
+      "generic": "Échec de la création du brouillon du workflow"
+    },
+    "includeCustomFieldsCount": "Champs personnalisés ({{n}})",
+    "includeChecklistCount": "Liste de contrôle ({{total}} éléments : {{templates}} issus de modèles / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Les éléments issus de modèles sont réappliqués depuis le modèle actuel ; les modifications faites sur ce ticket ne sont donc pas reprises."
   }
 }

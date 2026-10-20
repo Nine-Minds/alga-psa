@@ -8,6 +8,10 @@
  */
 
 import logger from '@alga-psa/core/logger';
+import type { Knex } from 'knex';
+import { moveRmmOrganizationAssets } from '@alga-psa/shared/rmm/moveRmmOrganizationAssets';
+import { resolveMappingBillingProfileId } from '@alga-psa/shared/rmm/mappingBillingProfile';
+import { isRmmContactAssignmentMode } from '@alga-psa/shared/rmm/userMatching';
 import axios from 'axios';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -16,6 +20,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@/lib/db';
 import { auditLog } from '@/lib/logging/auditLog';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
@@ -704,6 +709,10 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
     default_contact_id?: string | null;
     auto_sync_assets?: boolean;
     auto_create_tickets?: boolean;
+    /** FR-D3: off | suggest | auto. */
+    contact_assignment_mode?: string;
+      /** FR-F1: the organization's billing profile, or null. */
+      billing_profile_id?: string | null;
   }
 ): Promise<{ success: boolean; error?: string }> => {
   try {
@@ -730,13 +739,44 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
     if ('default_contact_id' in updates) {
       dbUpdates.default_contact_id = updates.default_contact_id;
     }
+    if ('contact_assignment_mode' in updates) {
+      if (!isRmmContactAssignmentMode(updates.contact_assignment_mode)) {
+        return { success: false, error: 'Invalid people mode' };
+      }
+      dbUpdates.contact_assignment_mode = updates.contact_assignment_mode;
+    }
+    // FR-G4: a client change moves the organization's assets in the same
+    // transaction as the mapping update, so the two can never disagree.
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+      const existing = await db.table('rmm_organization_mappings')
+        .where('mapping_id', mappingId)
+        .first('client_id', 'integration_id', 'external_organization_id');
 
-    await db.table('rmm_organization_mappings')
-      .where('mapping_id', mappingId)
-      .update({
-        ...dbUpdates,
-        updated_at: knex.fn.now(),
+      // FR-F1: validated against the client the mapping ends up on, and
+      // cleared by a client change whatever else the patch carries.
+      const billingProfileId = await resolveMappingBillingProfileId(trx, tenant, {
+        existingClientId: existing?.client_id ?? null,
+        nextClientId: 'company_id' in updates ? updates.company_id ?? null : undefined,
+        billingProfileId: 'billing_profile_id' in updates ? updates.billing_profile_id ?? null : undefined,
       });
+      if (typeof billingProfileId !== 'undefined') dbUpdates.billing_profile_id = billingProfileId;
+
+      await db.table('rmm_organization_mappings')
+        .where('mapping_id', mappingId)
+        .update({ ...dbUpdates, updated_at: trx.fn.now() });
+
+      const nextClientId = dbUpdates.client_id as string | null | undefined;
+      if (nextClientId && existing && String(existing.client_id ?? '') !== String(nextClientId)) {
+        await moveRmmOrganizationAssets(trx, tenant, {
+          integrationId: String(existing.integration_id),
+          provider: 'ninjaone',
+          externalOrganizationId: String(existing.external_organization_id),
+          newClientId: String(nextClientId),
+          actorUserId: (user as { user_id?: string }).user_id ?? null,
+        });
+      }
+    });
 
     revalidatePath('/msp/settings');
 

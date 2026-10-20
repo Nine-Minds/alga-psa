@@ -37,8 +37,8 @@ function stubClient(overrides: Partial<Record<'getDevice' | 'listGroups', any>> 
 const ARGS = { tenant: 'tenant-1', integrationId: 'int-1', deviceId: 'dev-1' };
 
 describe('resolveLevelIoWebhookOrganization', () => {
-  it('(a) prefers an explicit body.group_id and never touches the client or DB', async () => {
-    const knex = createKnexStub({});
+  it('(a) an explicit group that is itself mapped wins without a Level API call', async () => {
+    const knex = createKnexStub({ rmm_organization_mappings: [{ external_organization_id: 'g-explicit' }] });
     const createClient = vi.fn(stubClient);
     const result = await resolveLevelIoWebhookOrganization(
       { knex, createClient },
@@ -47,6 +47,26 @@ describe('resolveLevelIoWebhookOrganization', () => {
 
     expect(result).toBe('g-explicit');
     expect(createClient).not.toHaveBeenCalled();
+  });
+
+  it('(a) an explicit unmapped child group canonicalizes to the deepest mapped ancestor', async () => {
+    const knex = createKnexStub({ rmm_organization_mappings: [{ external_organization_id: 'g-root' }] });
+    const result = await resolveLevelIoWebhookOrganization(
+      { knex, createClient: async () => stubClient(), deviceMapping: { external_realm_id: 'g-other' } },
+      { ...ARGS, explicitGroupId: 'g-sub' }
+    );
+
+    expect(result).toBe('g-root');
+  });
+
+  it('(a) an explicit group with no mapped ancestor falls through to the device realm', async () => {
+    const knex = createKnexStub({ rmm_organization_mappings: [{ external_organization_id: 'g-unrelated' }] });
+    const result = await resolveLevelIoWebhookOrganization(
+      { knex, createClient: async () => stubClient(), deviceMapping: { external_realm_id: 'g-mapped' } },
+      { ...ARGS, explicitGroupId: 'g-sub' }
+    );
+
+    expect(result).toBe('g-mapped');
   });
 
   it('(b) falls back to the passed device mapping external_realm_id when no group_id', async () => {

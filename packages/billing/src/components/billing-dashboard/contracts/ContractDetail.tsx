@@ -59,6 +59,7 @@ import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
 import ContractOverview from './ContractOverview';
 import PricingSchedules from './PricingSchedules';
+import ContractDiscounts from './ContractDiscounts';
 import InvoicePreviewPanel from '../invoicing/InvoicePreviewPanel';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
@@ -67,6 +68,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useUnsavedNavigationGuard } from '../../../hooks/useUnsavedNavigationGuard';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -264,13 +266,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   });
   const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;
   const clientContractId = searchParams?.get('clientContractId') ?? resolvedClientContractId ?? null;
+  const focusedContractLineId = searchParams?.get('contractLineId') ?? null;
   const tenant = useTenant()!;
   const { getDocumentsByContractId, renderDocuments } = useDocumentsCrossFeature();
 
   const [contract, setContract] = useState<IContract | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const validTabs = useMemo(() => new Set(['edit', 'lines', 'pricing', 'documents', 'invoices', 'simulator']), []);
+  const validTabs = useMemo(() => new Set(['edit', 'lines', 'pricing', 'discounts', 'documents', 'invoices', 'simulator']), []);
   const initialTab = useMemo(() => {
     const requested = searchParams?.get('contractView');
     if (!requested || !validTabs.has(requested)) {
@@ -298,9 +301,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
   // Confirmation dialog state
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [showNavigateAwayConfirm, setShowNavigateAwayConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   // Edit tab state
   const [editContractName, setEditContractName] = useState('');
@@ -616,44 +617,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     }
   }, [contractId, clientContractId]);
 
-  // Warn before leaving page with unsaved changes (browser navigation)
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = ''; // Required for Chrome
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
-  // Intercept internal navigation (clicking links)
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (!hasUnsavedChanges) return;
-
-      const target = e.target as HTMLElement;
-      const link = target.closest('a[href]') as HTMLAnchorElement;
-
-      if (link && link.href) {
-        const currentPath = window.location.pathname + window.location.search;
-        const linkPath = new URL(link.href, window.location.origin).pathname + new URL(link.href, window.location.origin).search;
-
-        // Only intercept if navigating to a different page
-        if (linkPath !== currentPath && !link.target && !link.download) {
-          e.preventDefault();
-          e.stopPropagation();
-          setPendingNavigation(link.href);
-          setShowNavigateAwayConfirm(true);
-        }
-      }
-    };
-
-    document.addEventListener('click', handleClick, true);
-    return () => document.removeEventListener('click', handleClick, true);
-  }, [hasUnsavedChanges]);
+  // Warn before leaving this editor with unsaved changes
+  const {
+    showConfirm: showNavigateAwayConfirm,
+    confirmNavigation: handleNavigateAwayConfirm,
+    cancelNavigation: handleNavigateAwayDismiss,
+  } = useUnsavedNavigationGuard(hasUnsavedChanges);
 
   // Initialize edit form when contract loads
   useEffect(() => {
@@ -918,20 +887,6 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     setShowCancelConfirm(false);
   };
 
-  const handleNavigateAwayConfirm = () => {
-    if (pendingNavigation) {
-      // Allow navigation
-      window.location.href = pendingNavigation;
-    }
-    setShowNavigateAwayConfirm(false);
-    setPendingNavigation(null);
-  };
-
-  const handleNavigateAwayDismiss = () => {
-    setShowNavigateAwayConfirm(false);
-    setPendingNavigation(null);
-  };
-
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
       setValidationErrors([]);
@@ -1158,7 +1113,6 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     setEditingAssignmentId(null);
     setPreEditSnapshot(null);
   };
-
 
   const handleAssignmentFieldChange = (
     assignmentId: string,
@@ -1487,6 +1441,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           </TabsTrigger>
           <TabsTrigger value="pricing" disabled={isSystemManagedDefault}>
             {t('contractDetail.tabs.pricing', { defaultValue: 'Pricing Schedules' })}
+          </TabsTrigger>
+          <TabsTrigger value="discounts" disabled={isSystemManagedDefault}>
+            {t('contractDetail.tabs.discounts', { defaultValue: 'Discounts' })}
           </TabsTrigger>
           <TabsTrigger value="documents">
             {t('contractDetail.tabs.documents', { defaultValue: 'Documents' })}
@@ -2718,6 +2675,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           <ContractLines
             contract={contract}
             clientId={primaryAssignment?.client_id ?? contract.owner_client_id ?? null}
+            focusContractLineId={focusedContractLineId}
             onContractLinesChanged={handleContractLinesChanged}
             isReadOnly={isSystemManagedDefault}
           />
@@ -2727,6 +2685,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           <PricingSchedules
             contractId={contract.contract_id}
             currencyCode={currencyMeta.currencyCode}
+            isReadOnly={isSystemManagedDefault}
+          />
+        </TabsContent>
+
+        <TabsContent value="discounts">
+          <ContractDiscounts
+            contractId={contract.contract_id}
+            clientContractId={clientContractId ?? assignments[0]?.client_contract_id ?? null}
             isReadOnly={isSystemManagedDefault}
           />
         </TabsContent>

@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Pro-funktion"
+    },
     "accounting": {
       "bulk": {
         "button": "Massmappning",
@@ -124,6 +127,15 @@
           "paymentTerms": "Betalningsvillkor",
           "discounts": "Rabatter"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Tjänstekonton i Desktop",
+        "desktopDiscounts": "Rabatter i Desktop",
+        "desktopAccount": "Intäktskontots namn i Desktop",
+        "description": "Mappa fakturarabatter och krediteringar före export. Mappningen tillhör det här bokföringsföretaget.",
+        "add": "Lägg till mappning",
+        "remove": "Ta bort mappning",
+        "removeConfirm": "Vill du ta bort den här bokföringsmappningen?"
       }
     },
     "calendar": {
@@ -1223,7 +1235,12 @@
         "recommendedUnsaved": "Rekommenderat – inte sparat",
         "unsavedChange": "Osparad ändring",
         "unsavedNotice": "De här filterinställningarna gäller först när du har sparat dem."
-      }
+      },
+      "proFeature": {
+        "description": "Integrationen med Microsoft Entra är tillgänglig i AlgaPSA Pro.",
+        "notice": "Identitetsintegrationen med Microsoft Entra är en Pro-funktion."
+      },
+      "loading": "Läser in integrationen med Microsoft Entra…"
     },
     "google": {
       "settings": {
@@ -1294,6 +1311,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "Integrationen med Hudu för IT-dokumentation är tillgänglig i AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Källa: Hudu",
         "openInHudu": "Öppna i Hudu",
@@ -2337,6 +2357,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "RMM-integrationen med NinjaOne är tillgänglig i AlgaPSA Pro."
+        },
         "loading": "Läser in inställningar för NinjaOne-integration…",
         "card": {
           "title": "RMM-integration för NinjaOne",
@@ -2614,6 +2637,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "RMM-integrationen med Tanium är tillgänglig i AlgaPSA Pro."
+        },
         "loading": "Läser in inställningar för Tanium-integration…",
         "actions": {
           "discoverScopes": "Identifiera omfång",
@@ -2684,6 +2710,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "RMM-integrationen med Level.io är tillgänglig i AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Efterhämta larm",
           "disconnect": "Koppla från",
@@ -2756,16 +2785,35 @@
           "copied": "Kopierat",
           "copy": "Kopiera",
           "description": "Level kan inte registrera webhookar via sitt API. Skapa en automatisering i Level med en HTTP POST-åtgärd som använder URL:en, HTTP-huvudet och nyttolasten nedan för att skicka larm till Alga i realtid.",
+          "fallbackDescription": "Använd den här reserven endast när Levels inbyggda webhooks under Inställningar → Webhooks inte kan användas. Skapa en automation med en HTTP POST-åtgärd med URL:en, headern och payloaden nedan för att skicka larm till Alga.",
+          "fallbackNameHint": "Redigera värdet \"name\" i varje automation. Tillsammans med enheten identifierar det larmet, så upprepningar med samma namn på samma enhet räknas som ett larm.",
+          "fallbackTitle": "Reserv: HTTP-anrop från automation",
           "header": "HTTP-huvud: {{name}}",
           "hideSecret": "Dölj hemlighet",
           "loading": "Webhook-detaljer läses in när integrationen har konfigurerats.",
+          "nativeDescription": "Öppna Inställningar → Webhooks i Level, lägg till en webhook med URL:en och signeringsnyckeln nedan och aktivera de listade händelserna. Level signerar varje leverans och Alga verifierar signaturen.",
+          "nativeEvents": "Händelser att aktivera",
+          "nativeEventsHelp": "Aktivera alert_active och alert_resolved. Övriga händelser bekräftas och ignoreras.",
+          "nativeSigningSecret": "Signeringsnyckel",
+          "nativeTitle": "Inbyggd webhook (rekommenderas)",
           "payload": "Nyttolastmall",
+          "regenerateCancel": "Avbryt",
+          "regenerateConfirmLabel": "Generera ny",
+          "regenerateConfirmMessage": "Befintliga Level-webhooks misslyckas med 401 tills du klistrar in den nya signeringsnyckeln i Levels webhook-inställningar. Level försöker leverera igen, men leveranser kan gå förlorade om nyckeln inte uppdateras.",
+          "regenerateConfirmTitle": "Generera ny signeringsnyckel?",
+          "regenerateConfirmed": "Signeringsnyckeln har genererats på nytt. Uppdatera den i Levels webhook-inställningar.",
+          "regenerateFailed": "Det gick inte att generera ny signeringsnyckel",
+          "regenerateSecret": "Generera ny nyckel",
           "showSecret": "Visa hemlighet",
           "title": "Larmwebhook",
           "url": "Webhook-URL"
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Huntress-integration",
+          "description": "Säkerhetsintegrationen med Huntress är en Pro-funktion."
+        },
         "columns": {
           "organization": "Huntress-organisation",
           "client": "Alga-kund",
@@ -2907,6 +2955,54 @@
         "errors": {
           "saveFailed": "Det går inte att spara enhetssynkroniseringsschemat."
         }
+      },
+      "peopleMode": {
+        "label": "Personer",
+        "options": {
+          "off": "Av",
+          "suggest": "Föreslå",
+          "auto": "Tilldela automatiskt"
+        },
+        "updateFailed": "Kunde inte uppdatera personläget"
+      },
+      "signedInUsers": {
+        "title": "Inloggade användare",
+        "description": "Användarnamnen som den här organisationens enheter rapporterar, och kontakten var och ett matchar.",
+        "empty": "Inga inloggade användare har rapporterats än.",
+        "noClient": "Koppla organisationen till en kund innan du kopplar dess användare.",
+        "refresh": "Uppdatera",
+        "selectContact": "Välj kontakt",
+        "loadFailed": "Kunde inte läsa in inloggade användare.",
+        "saveFailed": "Kunde inte spara kopplingen.",
+        "columns": {
+          "user": "Inloggad användare",
+          "devices": "Enheter",
+          "method": "Matchad via",
+          "contact": "Kontakt"
+        },
+        "methods": {
+          "mapped": "Sparad koppling",
+          "email": "E-post",
+          "username": "Användarnamn",
+          "name": "Fullständigt namn",
+          "none": "Ingen matchning"
+        }
+      },
+      "clientChange": {
+        "title": "Flytta den här organisationens enheter?",
+        "message": "{{count}} tillgång(ar) flyttas till {{client}}. Tilldelningar, grupper och faktureringsprofiler som hör till den tidigare kunden rensas.",
+        "confirm": "Flytta enheter"
+      },
+      "billingProfile": {
+        "label": "Faktureringsprofil",
+        "clientDefault": "Kundens standard",
+        "updateFailed": "Kunde inte uppdatera faktureringsprofilen"
+      },
+      "errors": {
+        "invalidPeopleMode": "Det är inte ett giltigt personläge.",
+        "billingProfileUnavailable": "Den faktureringsprofilen är inte tillgänglig för den här kunden.",
+        "mappingNotFound": "Kopplingen finns inte längre. Uppdatera sidan och försök igen.",
+        "forbidden": "Du har inte behörighet att ändra detta."
       }
     },
     "sso": {
@@ -3477,6 +3573,11 @@
           "regenerate": "Generera paketet igen",
           "regenerating": "Genererar igen…"
         }
+      },
+      "unavailable": {
+        "signInTitle": "Teams-inloggning är inte tillgänglig",
+        "tabTitle": "Teams-fliken är inte tillgänglig",
+        "description": "Integrationen med Microsoft Teams är endast tillgänglig i Pro."
       }
     },
     "xero": {
@@ -3980,6 +4081,8 @@
       "managePermission": "Åtkomst nekad: Du har inte behörighet att hantera bokföringsmappningar.",
       "loadFailed": "Det går inte att läsa in mappningsdata. Försök igen.",
       "duplicate": "En mappning finns redan för den här entiteten. Redigera den befintliga mappningen i stället.",
+      "duplicateTarget": "Det här målet är redan kopplat till en annan enhet i organisationen. Välj ett annat mål.",
+      "duplicateXeroItem": "Den här Xero-artikeln är redan kopplad till en annan tjänst. En artikel kan bara kopplas till en tjänst; för att fakturera flera tjänster med samma kod, koppla dem till ett intäktskonto.",
       "saveFailed": "Det går inte att spara mappningen. Försök igen.",
       "idRequiredForUpdate": "Mappnings-ID krävs för uppdatering.",
       "noUpdateData": "Inga uppdateringsdata har angetts.",
