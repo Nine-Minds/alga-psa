@@ -1463,7 +1463,7 @@
       },
       "table": {
         "customer": "Klient Stripe",
-        "plan": "Plan",
+        "plan": "Planowana akcja",
         "cards": "Karty",
         "enroll": "Zapisz do automatycznych płatności",
         "clientProfile": "Klient / profil rozliczeniowy",
@@ -1497,7 +1497,7 @@
         "duplicate-customer-in-input": "Ten sam klient Stripe występuje w więcej niż jednym wierszu",
         "duplicate-profile-in-input": "Ten sam profil rozliczeniowy występuje z więcej niż jednym klientem Stripe",
         "customer-claimed-by-other": "Klient Stripe jest już przypisany do innego klienta lub profilu rozliczeniowego",
-        "customer-metadata-owned-by-other": "Metadane klienta Stripe wskazują innego najemcę, klienta lub profil rozliczeniowy",
+        "customer-metadata-owned-by-other": "Metadane klienta Stripe wskazują inną organizację, klienta lub profil rozliczeniowy",
         "profile-mapped-to-other-customer": "Ten profil rozliczeniowy używa już innego klienta Stripe"
       },
       "warnings": {
