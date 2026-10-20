@@ -366,20 +366,24 @@ async function getSafeUserWithRoles(
   return sanitizeUserForResponse({ ...user, roles });
 }
 
-// LEVERAGE: pattern global-internal-email — internal email uniqueness across tenants is also
-// checked in prepareCoManagedProvisioning and the team invitation send/accept actions.
-async function findExistingUserByEmailGlobally(
+/**
+ * Whether an email is already taken for a user of this type. An internal email
+ * identifies one account platform-wide, including a co-managed administrator
+ * nobody has signed up for yet (User.findInternalEmailClaim). Client users are
+ * unique per type only: the same person can be an internal user in their MSP
+ * tenant and a client user in the master tenant (tenant-provisioning flow).
+ */
+async function findEmailClaim(
   email: string,
-  options?: { excludeUserId?: string; userType?: 'internal' | 'client' }
-): Promise<Pick<IUser, 'user_id'> | undefined> {
+  options: { excludeUserId?: string; userType?: 'internal' | 'client' }
+): Promise<'user' | 'pending_administrator' | null> {
+  if (options.userType === 'internal') {
+    return (await User.findInternalEmailClaim(email, { excludeUserId: options.excludeUserId }))?.kind ?? null;
+  }
   const db = await getAdminConnection();
-
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    // Email uniqueness is scoped per user_type because the same person can
-    // legitimately exist as an `internal` user in their MSP tenant *and* as a
-    // `client` user in the master tenant (see tenant-provisioning flow).
     const criteria: Record<string, unknown> = { email: email.toLowerCase() };
-    if (options?.userType) {
+    if (options.userType) {
       criteria.user_type = options.userType;
     }
 
@@ -387,13 +391,17 @@ async function findExistingUserByEmailGlobally(
       .unscoped('users', 'global identity email uniqueness check before tenant selection')
       .where(criteria);
 
-    if (options?.excludeUserId) {
+    if (options.excludeUserId) {
       query = query.whereNot('user_id', options.excludeUserId);
     }
 
-    return await query.first('user_id');
+    return (await query.first('user_id')) ? 'user' : null;
   });
 }
+
+const EMAIL_PENDING_ELSEWHERE_MESSAGE = 'This email address has a pending invitation to another workspace. Use a different email address.';
+const emailClaimMessage = (claim: 'user' | 'pending_administrator') => claim === 'pending_administrator'
+  ? EMAIL_PENDING_ELSEWHERE_MESSAGE : 'A user with this email address already exists';
 
 /**
  * Client-portal callers may only manage client users of their own company
@@ -550,14 +558,14 @@ export const addUser = withAuth(async (
 
       // Check if email already exists globally for this user_type. Internal
       // and client users may share an email by design.
-      const emailExists = await findExistingUserByEmailGlobally(userData.email, {
+      const emailClaim = await findEmailClaim(userData.email, {
         userType: userData.userType || 'internal',
       });
-      if (emailExists) {
+      if (emailClaim) {
         return {
           success: false,
           code: 'EMAIL_ALREADY_EXISTS',
-          error: 'A user with this email address already exists',
+          error: emailClaimMessage(emailClaim),
         };
       }
 
@@ -1091,16 +1099,16 @@ export const updateUser = withAuth(async (
         const currentEmail = existing?.email?.toLowerCase();
 
         if (currentEmail !== normalizedEmail) {
-          const existingUser = await findExistingUserByEmailGlobally(normalizedEmail, {
+          const emailClaim = await findEmailClaim(normalizedEmail, {
             excludeUserId: userId,
             userType: existing?.user_type as 'internal' | 'client' | undefined,
           });
 
-          if (existingUser) {
+          if (emailClaim) {
             return {
               success: false,
               code: 'EMAIL_ALREADY_EXISTS',
-              error: 'A user with this email address already exists',
+              error: emailClaimMessage(emailClaim),
             };
           }
         }
@@ -1643,7 +1651,7 @@ export const registerClientUser = withAuth(async (
 
       // Check if a client user with this email already exists. Internal users
       // with the same email are allowed (tenant provisioning creates both).
-      const emailExists = await findExistingUserByEmailGlobally(email, {
+      const emailExists = await findEmailClaim(email, {
         userType: 'client',
       });
       if (emailExists) {

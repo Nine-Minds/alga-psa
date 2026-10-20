@@ -105,6 +105,13 @@ export interface UserActivityFilter {
   ip_address?: string;
 }
 
+async function assertInternalEmailUnclaimed(email: string, options: { excludeUserId?: string; excludeTenant: string }): Promise<void> {
+  const claim = await User.findInternalEmailClaim(email, options);
+  if (claim) throw new Error(claim.kind === 'pending_administrator'
+    ? 'This email address has a pending invitation to another workspace. Use a different email address.'
+    : 'A user with this email address already exists');
+}
+
 export class UserService extends BaseService<IUser> {
   constructor() {
     super({
@@ -273,6 +280,10 @@ export class UserService extends BaseService<IUser> {
     if (existingUserByEmail) {
       throw new Error('A user with this email address already exists');
     }
+    // An internal email identifies one account platform-wide, including a
+    // co-managed administrator nobody has signed up for yet. This tenant's own
+    // pending administrator is the account an invitation here creates.
+    if (targetUserType === 'internal') await assertInternalEmailUnclaimed(data.email, { excludeTenant: context.tenant });
 
     // Validate username uniqueness within tenant + user_type (allow same username across different types)
     const existingUserByUsername = await this.buildTenantScopedQuery(trx, context)
@@ -395,6 +406,7 @@ export class UserService extends BaseService<IUser> {
         if (emailExists) {
           throw new Error('A user with this email address already exists');
         }
+        if (userTypeToCheck === 'internal') await assertInternalEmailUnclaimed(data.email, { excludeUserId: id, excludeTenant: context.tenant });
       }
 
       // Prepare update data

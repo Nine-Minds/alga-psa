@@ -269,6 +269,25 @@ describe('co-managed bootstrap against the complete installed schema', () => {
     expect(await customer.table('user_invitations')).toHaveLength(1);
   });
 
+  it('reports a pending co-managed administrator as claiming their email everywhere else', async () => {
+    // Another workspace taking the email first would leave this setup unclaimable.
+    const { default: User } = await import('../../../../../packages/db/src/models/user');
+    const operation = await prepare();
+    const email = ` ${operation.request.administrator.email.toUpperCase()} `;
+    await expect(User.findInternalEmailClaim(email, { db })).resolves.toEqual({ kind: 'pending_administrator', tenant: operation.customer_tenant });
+    await expect(User.findInternalEmailClaim(email, { db, excludeTenant: operation.customer_tenant })).resolves.toBeNull();
+    await expect(User.findInternalEmailClaim(email, { db, excludeOperationId: operation.operation_id })).resolves.toBeNull();
+    await bootstrapCoManagedWorkspace(db, operation.tenant, operation.operation_id, log);
+    await expect(User.findInternalEmailClaim(email, { db })).resolves.toMatchObject({ kind: 'pending_administrator' });
+    // Signing up creates the user, which then claims the email as a user.
+    await tenantDb(db, operation.customer_tenant).table('user_invitations').update({ used_at: new Date() });
+    await expect(User.findInternalEmailClaim(email, { db })).resolves.toBeNull();
+    await tenantDb(db, operation.customer_tenant).table('users').insert({ tenant: operation.customer_tenant, user_id: randomUUID(),
+      username: operation.request.administrator.email, email: operation.request.administrator.email, first_name: 'Customer',
+      last_name: 'Admin', hashed_password: 'not-a-login', user_type: 'internal', is_inactive: false });
+    await expect(User.findInternalEmailClaim(email, { db })).resolves.toMatchObject({ kind: 'user', tenant: operation.customer_tenant });
+  });
+
   it('refuses an unreserved co-managed bootstrap through the ordinary tenant factory', async () => {
     const tenantId = randomUUID();
     await expect(db.transaction(trx => createTenantInDB({ tenantId, tenantName: 'Unreserved', email: 'not-created@example.test',

@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb, tenantTableMetadata } from '@alga-psa/db';
+import User from '@alga-psa/db/models/user';
 import { reserveCoManagedWorkspace, getCoManagedEntitlementState } from '@alga-psa/licensing';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -94,38 +95,19 @@ export async function prepareCoManagedProvisioning(db: Knex, input: CoManagedPro
       return existing;
     }
     if (reservation.state !== 'reserved') throw new CoManagedProvisioningError('OPERATION_CLOSED');
-    // Internal users sign in with an email and no tenant, so an internal email
-    // must identify one account platform-wide. The customer administrator is an
-    // internal user of the new workspace; reusing an MSP technician's or another
-    // workspace's administrator email would leave sign-in resolving to either.
-    // LEVERAGE: pattern global-internal-email — the same platform-wide check lives in
-    // userActions.findExistingUserByEmailGlobally and User.findUsersByEmailAndType callers.
-    const emailTaken = await tenantDb(trx, input.sponsorTenant)
-      .unscoped('users', 'internal user emails are unique across tenants')
-      .where({ email: request.administrator.email, user_type: 'internal' }).first('user_id');
-    if (emailTaken) throw new CoManagedProvisioningError('ADMINISTRATOR_EMAIL_IN_USE');
-    // An unaccepted invitation claims the email too: whichever invitee signs up
-    // first creates the account, and the other workspace can then never be
-    // claimed, holding its seats. That covers any unexpired team invitation and
-    // another live setup's administrator, whose invitation may not exist yet
-    // (queued) or may have expired awaiting a resend.
+    // The customer administrator becomes an internal user of the new
+    // workspace, and internal users sign in by email with no tenant: the email
+    // must not already identify, or be promised to, an account elsewhere.
+    const claim = await User.findInternalEmailClaim(request.administrator.email, { db: trx, excludeOperationId: input.operationId });
+    if (claim?.kind === 'user') throw new CoManagedProvisioningError('ADMINISTRATOR_EMAIL_IN_USE');
+    // An unexpired team invitation claims it too: whichever invitee signs up
+    // first creates the account, and this workspace could then never be
+    // claimed, holding its seats.
     const pendingInvitation = await tenantDb(trx, input.sponsorTenant)
       .unscoped('user_invitations', 'internal user emails are unique across tenants, including pending invitations')
       .whereRaw('lower(trim(email)) = ?', [request.administrator.email]).whereNull('used_at')
       .where('expires_at', '>', trx.fn.now()).first('invitation_id');
-    const pendingSetup = await tenantDb(trx, input.sponsorTenant)
-      .unscoped('co_managed_provisioning_operations as o', 'a pending co-managed administrator claims its email across sponsors')
-      .leftJoin('user_invitations as i', function () {
-        this.on('i.tenant', 'o.customer_tenant').andOn('i.invitation_id', 'o.administrator_invitation_id');
-      })
-      .whereRaw("lower(trim(o.request->'administrator'->>'email')) = ?", [request.administrator.email])
-      .whereNot('o.operation_id', input.operationId)
-      .where(function () {
-        this.where(function () { this.whereNull('i.invitation_id').whereIn('o.state', ['queued', 'provisioning', 'failed']); })
-          .orWhere(function () { this.whereNotNull('i.invitation_id').whereNull('i.used_at'); });
-      })
-      .first('o.operation_id');
-    if (pendingInvitation || pendingSetup) throw new CoManagedProvisioningError('ADMINISTRATOR_EMAIL_PENDING');
+    if (claim || pendingInvitation) throw new CoManagedProvisioningError('ADMINISTRATOR_EMAIL_PENDING');
     const board = await sponsor.table('boards').where({ board_id: input.escalationBoardId, is_inactive: false }).forShare().first();
     if (!board) throw new CoManagedProvisioningError('DESTINATION_NOT_FOUND');
     const [operation] = await sponsor.table('co_managed_provisioning_operations').insert({

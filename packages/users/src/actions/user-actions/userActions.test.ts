@@ -61,6 +61,14 @@ vi.mock('@alga-psa/db/models/user', () => ({
     getUserWithRoles: getUserWithRolesMock,
     getUserRoles: modelGetUserRolesMock,
     isInReportsToChain: isInReportsToChainMock,
+    // Same lookup the admin connection fakes below answer for users.
+    findInternalEmailClaim: async (email: string, options: { excludeUserId?: string } = {}) => {
+      const db = await getAdminConnectionMock();
+      if (!db) return null;
+      const query = db('users').where({ email: email.toLowerCase(), user_type: 'internal' });
+      const row = options.excludeUserId ? await query.whereNot('user_id', options.excludeUserId).first() : await query.first();
+      return row ? { kind: 'user', tenant: 'other-tenant', userId: row.user_id } : null;
+    },
   },
 }));
 

@@ -120,11 +120,14 @@ export const sendUserInvitation = withAuth(async (
     }
 
     // Internal users sign in with an email and no tenant, so the email must not
-    // belong to an internal user in any other tenant either (addUser enforces
-    // the same). Refusing here tells the inviter before the invitee finds out.
-    // LEVERAGE: pattern global-internal-email — see prepareCoManagedProvisioning.
-    if ((await User.findUsersByEmailAndType(normalizedEmail, 'internal')).length) {
-      return { success: false, error: 'A user with this email address already exists', errorCode: 'EMAIL_ALREADY_EXISTS' };
+    // identify, or be promised to, an account in another workspace either
+    // (addUser enforces the same). Refusing here tells the inviter before the
+    // invitee finds out.
+    const emailClaim = await User.findInternalEmailClaim(normalizedEmail, { excludeTenant: tenant });
+    if (emailClaim) {
+      return { success: false, errorCode: 'EMAIL_ALREADY_EXISTS', error: emailClaim.kind === 'pending_administrator'
+        ? 'This email address has a pending invitation to another workspace. Use a different email address.'
+        : 'A user with this email address already exists' };
     }
 
     // Same seat-limit enforcement addUser applies to a direct password-based

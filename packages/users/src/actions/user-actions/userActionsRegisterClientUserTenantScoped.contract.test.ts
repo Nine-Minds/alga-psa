@@ -29,7 +29,7 @@ describe('user actions register client user tenant-scoped query contract', () =>
 
     expect(section).toContain(".unscoped('contacts', 'tenant discovery for client portal registration contact lookup')");
     expect(section).toContain("discoveryDb.tenantJoin(contactQuery, 'clients', 'clients.client_id', 'contacts.client_id')");
-    expect(section).toContain('findExistingUserByEmailGlobally(email');
+    expect(section).toContain('findEmailClaim(email');
     expect(section).toContain("contact_kind: 'contacts.contact_kind'");
     expect(section).toContain("contact.contact_kind === 'shared_mailbox'");
     expect(section).toContain("await tenantDb(trx, contact.tenant).table('users')");

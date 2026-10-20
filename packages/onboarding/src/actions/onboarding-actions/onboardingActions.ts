@@ -146,7 +146,7 @@ export const saveClientInfo = withAuth(async (
     if (newEmail && newEmail !== (currentUser.email ?? '').trim().toLowerCase()) {
       if (!isValidEmail(newEmail)) return { success: false, error: 'Enter a valid email address.' };
       const { default: User } = await import('@alga-psa/db/models/user');
-      if ((await User.findUsersByEmailAndType(newEmail, 'internal')).some(found => found.user_id !== currentUser.user_id)) {
+      if (await User.findInternalEmailClaim(newEmail, { excludeUserId: currentUser.user_id, excludeTenant: tenant })) {
         return { success: false, error: 'This email address is already used by another account. Use a different email address.' };
       }
     }

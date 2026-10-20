@@ -9,13 +9,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  */
 const mocks = vi.hoisted(() => ({
   findUsersByEmailAndType: vi.fn(),
+  findInternalEmailClaim: vi.fn(async () => null as null | { kind: string; tenant: string }),
   verifyToken: vi.fn(),
   createFromInvitation: vi.fn(),
   createInvitationWithTransaction: vi.fn(),
   first: vi.fn(),
 }));
 
-vi.mock('@alga-psa/db/models/user', () => ({ default: { findUsersByEmailAndType: mocks.findUsersByEmailAndType } }));
+vi.mock('@alga-psa/db/models/user', () => ({ default: { findUsersByEmailAndType: mocks.findUsersByEmailAndType, findInternalEmailClaim: mocks.findInternalEmailClaim } }));
 vi.mock('@alga-psa/db', () => {
   const builder = () => {
     const query: any = { where: () => query, whereNull: () => query, whereNot: () => query, count: () => query, first: mocks.first };
@@ -87,16 +88,29 @@ describe('team invitation acceptance', () => {
 });
 
 describe('team invitation send', () => {
+  it('refuses an email a pending co-managed administrator of another workspace holds', async () => {
+    // Signing that person up here first would leave their workspace unclaimable.
+    mocks.first
+      .mockResolvedValueOnce({ role_id: 'role-1', role_name: 'Technician' })
+      .mockResolvedValueOnce(undefined);
+    mocks.findInternalEmailClaim.mockResolvedValue({ kind: 'pending_administrator', tenant: 'workspace-2' });
+
+    const result = await sendUserInvitation({ email: 'admin@example.test', firstName: 'A', lastName: 'B', roleId: 'role-1' });
+
+    expect(result).toMatchObject({ success: false, errorCode: 'EMAIL_ALREADY_EXISTS', error: expect.stringContaining('pending invitation to another workspace') });
+    expect(mocks.createInvitationWithTransaction).not.toHaveBeenCalled();
+  });
+
   it('refuses before creating an invitation when another tenant has an internal user with the email', async () => {
     mocks.first
       .mockResolvedValueOnce({ role_id: 'role-1', role_name: 'Technician' }) // role
       .mockResolvedValueOnce(undefined); // no same-tenant user
-    mocks.findUsersByEmailAndType.mockResolvedValue([{ user_id: 'elsewhere', tenant: 'tenant-2' }]);
+    mocks.findInternalEmailClaim.mockResolvedValue({ kind: 'user', tenant: 'tenant-2' });
 
     const result = await sendUserInvitation({ email: 'Admin@Example.test', firstName: 'A', lastName: 'B', roleId: 'role-1' });
 
-    expect(result).toMatchObject({ success: false, errorCode: 'EMAIL_ALREADY_EXISTS' });
-    expect(mocks.findUsersByEmailAndType).toHaveBeenCalledWith('admin@example.test', 'internal');
+    expect(result).toMatchObject({ success: false, errorCode: 'EMAIL_ALREADY_EXISTS', error: 'A user with this email address already exists' });
+    expect(mocks.findInternalEmailClaim).toHaveBeenCalledWith('admin@example.test', { excludeTenant: 'tenant-1' });
     expect(mocks.createInvitationWithTransaction).not.toHaveBeenCalled();
   });
 });

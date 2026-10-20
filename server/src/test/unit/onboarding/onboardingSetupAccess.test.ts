@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   productCode: 'psa',
   createClient: vi.fn(),
   addUser: vi.fn(),
-  findUsersByEmailAndType: vi.fn(async () => [] as Array<{ user_id: string }>),
+  findInternalEmailClaim: vi.fn(async () => null as null | { kind: string }),
   userUpdates: [] as unknown[],
 }));
 
@@ -36,7 +36,7 @@ vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions
   saveTenantOnboardingProgress: vi.fn(), updateTenantOnboardingStatus: vi.fn(async () => ({ success: true })),
 }));
 vi.mock('@alga-psa/users/actions/user-actions/userActions', () => ({ addUser: mocks.addUser }));
-vi.mock('@alga-psa/db/models/user', () => ({ default: { findUsersByEmailAndType: mocks.findUsersByEmailAndType } }));
+vi.mock('@alga-psa/db/models/user', () => ({ default: { findInternalEmailClaim: mocks.findInternalEmailClaim } }));
 vi.mock('@alga-psa/clients/actions/clientActions', () => ({ createClient: mocks.createClient }));
 vi.mock('@alga-psa/clients/actions/contact-actions/contactActions', () => ({ createClientContact: vi.fn() }));
 vi.mock('../../../../../packages/licensing/src/lib/get-license-usage', () => ({
@@ -99,10 +99,10 @@ describe('workspace setup sign-in email', () => {
   beforeEach(() => mocks.hasPermission.mockResolvedValue(true));
 
   it('refuses an email that belongs to another internal account', async () => {
-    mocks.findUsersByEmailAndType.mockResolvedValueOnce([{ user_id: 'someone-else' }]);
+    mocks.findInternalEmailClaim.mockResolvedValueOnce({ kind: 'user' });
     const result = await actions.saveClientInfo(admin, context, info('Taken@Example.test'));
     expect(result).toMatchObject({ success: false, error: expect.stringContaining('already used by another account') });
-    expect(mocks.findUsersByEmailAndType).toHaveBeenCalledWith('taken@example.test', 'internal');
+    expect(mocks.findInternalEmailClaim).toHaveBeenCalledWith('taken@example.test', { excludeUserId: 'admin', excludeTenant: 'tenant-1' });
     expect(mocks.userUpdates).toEqual([]);
   });
 
@@ -113,6 +113,6 @@ describe('workspace setup sign-in email', () => {
 
   it('does not re-check an unchanged email', async () => {
     await actions.saveClientInfo(admin, context, info('ADMIN@example.test'));
-    expect(mocks.findUsersByEmailAndType).not.toHaveBeenCalled();
+    expect(mocks.findInternalEmailClaim).not.toHaveBeenCalled();
   });
 });

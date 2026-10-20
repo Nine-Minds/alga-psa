@@ -21,7 +21,7 @@ describe('user actions update user tenant-scoped query contract', () => {
 
     expect(section).toContain(".table('boards");
     expect(section).toContain(".table('users");
-    expect(section).toContain('findExistingUserByEmailGlobally(normalizedEmail');
+    expect(section).toContain('findEmailClaim(normalizedEmail');
     expect(section).toContain('await User.update(trx, userId, normalizedUserData)');
 
     expect(section).not.toMatch(/trx\('boards'\)\s*[\r\n]+\s*\.where\(\{\s*default_assigned_to: userId,\s*tenant\s*\}\)/);

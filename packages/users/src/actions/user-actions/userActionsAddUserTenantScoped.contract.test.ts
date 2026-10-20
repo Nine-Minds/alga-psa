@@ -21,7 +21,7 @@ function sectionBetween(startMarker: string, endMarker: string): string {
 
 describe('user actions add-user tenant-scoped query contract', () => {
   it('uses structural tenant scoping for safe user lookup and tenant-known add-user reads', () => {
-    const helperSection = sectionBetween('async function getSafeUserWithRoles', 'async function findExistingUserByEmailGlobally');
+    const helperSection = sectionBetween('async function getSafeUserWithRoles', 'async function findEmailClaim');
     const addUserSection = sectionBetween('export const addUser', 'export const deleteUser');
 
     expect(helperSection).toContain('tenantDb(trx, ');
