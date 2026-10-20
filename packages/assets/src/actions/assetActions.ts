@@ -89,6 +89,7 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { listAvailableAssetFactsForAsset } from '../lib/assetFactsService';
+import { resolveAssetAuthorizationRecords } from '../lib/assetRecordAuthorization';
 import {
   EXTENSION_TABLE_BY_ASSET_TYPE,
   attributeValidationError,
@@ -539,49 +540,6 @@ async function resolveAuthorizationSubjectForUser(
         clientId: user.clientId ?? null,
         portfolioClientIds: user.clientId ? [user.clientId] : [],
     };
-}
-
-async function resolveAssetAuthorizationRecords(
-    trx: Knex.Transaction,
-    tenant: string,
-    assets: Array<Pick<Asset, 'asset_id' | 'client_id'>>
-): Promise<Map<string, AuthorizationRecord>> {
-    const assetIds = assets.map((asset) => asset.asset_id);
-    if (assetIds.length === 0) {
-        return new Map();
-    }
-
-    const associationRows = await tenantScopedTable(trx, 'asset_associations', tenant)
-        .whereIn('asset_id', assetIds)
-        .select<Array<{ asset_id: string; entity_type: string; entity_id: string }>>('asset_id', 'entity_type', 'entity_id');
-
-    const associationsByAsset = new Map<string, Array<{ entity_type: string; entity_id: string }>>();
-    for (const row of associationRows) {
-        const existing = associationsByAsset.get(row.asset_id) ?? [];
-        existing.push({ entity_type: row.entity_type, entity_id: row.entity_id });
-        associationsByAsset.set(row.asset_id, existing);
-    }
-
-    const records = new Map<string, AuthorizationRecord>();
-    for (const asset of assets) {
-        const associations = associationsByAsset.get(asset.asset_id) ?? [];
-        const assignedUserIds = associations
-            .filter((association) => association.entity_type === 'user')
-            .map((association) => association.entity_id);
-        const teamIds = associations
-            .filter((association) => association.entity_type === 'team')
-            .map((association) => association.entity_id);
-
-        records.set(asset.asset_id, {
-            id: asset.asset_id,
-            ownerUserId: assignedUserIds[0] ?? null,
-            assignedUserIds,
-            clientId: asset.client_id ?? null,
-            teamIds,
-        });
-    }
-
-    return records;
 }
 
 type AssetAuthorizationInput = Pick<Asset, 'asset_id' | 'client_id'>;

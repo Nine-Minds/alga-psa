@@ -28,7 +28,8 @@ describe('asset action helper tenant-scoped query contract', () => {
         expect(helperSection).toContain("tenantScopedTable(trx, 'user_roles', tenant)");
         expect(helperSection).toContain("tenantScopedTable(trx, 'team_members', tenant)");
         expect(helperSection).toContain("tenantScopedTable(trx, 'users', tenant)");
-        expect(helperSection).toContain("tenantScopedTable(trx, 'asset_associations', tenant)");
+        expect(readFileSync(resolve(__dirname, '../lib/assetRecordAuthorization.ts'), 'utf8'))
+            .toContain("tenantDb(trx, tenant)\n        .table('asset_associations')");
         expect(helperSection).toContain("tenantScopedTable(trx, 'assets', tenant)");
         expect(helperSection).toContain("tenantScopedTable(knex, 'workstation_assets', tenant)");
         expect(helperSection).toContain("tenantScopedTable(knex, table, tenant)");
