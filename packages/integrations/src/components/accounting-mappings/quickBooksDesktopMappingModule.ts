@@ -30,7 +30,7 @@ export function createQuickBooksDesktopMappingModule(entity: DesktopEntity, t?: 
     : label('desktopDiscounts', 'Desktop discounts');
   const target = label('desktopAccount', 'Desktop income account name');
   return {
-    id, adapterType: ADAPTER_TYPE, algaEntityType: entity, externalEntityType: 'Account',
+    id, adapterType: ADAPTER_TYPE, algaEntityType: entity, externalEntityType: 'Account', manualExternalEntry: true,
     labels: {
       tab: title, description: label('description', 'Map invoice discounts and credits before exporting. The mapping belongs to this accounting company.'),
       addButton: label('add', 'Add mapping'), algaColumn: title, externalColumn: target,

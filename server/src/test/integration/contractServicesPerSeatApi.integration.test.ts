@@ -286,8 +286,8 @@ describe('contract line API: per-seat recurring services', () => {
     await service.addServiceToPlan(lineId, { service_id: user.serviceId, quantity: 20, type_config: { pricing_basis: 'unit', base_rate: 10000 } } as any, apiContext as any);
     await service.addServiceToPlan(lineId, { service_id: endpoint.serviceId, quantity: 30, type_config: { pricing_basis: 'unit' } } as any, apiContext as any);
 
-    // The public copyPlan insert stamps created_by, which contract_lines does not
-    // have (pre-existing, unrelated to seats), so drive the services copy directly.
+    // Drive the services copy directly to isolate seat cloning; the public
+    // copyPlan insert is covered by contractLineService.auditFields.integration.test.ts.
     const target = uuidv4();
     const [source] = await tenantTable(db, tenantId, 'contract_lines').where({ tenant: tenantId, contract_line_id: lineId });
     await tenantTable(db, tenantId, 'contract_lines').insert({ ...source, contract_line_id: target, contract_line_name: 'Copy' });

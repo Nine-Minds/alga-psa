@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Input } from './Input';
 import { AutomationProps } from '../ui-reflection/types';
 
@@ -12,6 +13,7 @@ interface EditableTextProps {
 }
 
 const EditableText = ({ value, onChange, placeholder, className }: EditableTextProps & AutomationProps) => {
+  const { t } = useTranslation('common');
   const [isEditing, setIsEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,7 +53,7 @@ const EditableText = ({ value, onChange, placeholder, className }: EditableTextP
           className="cursor-pointer p-2 hover:bg-gray-100 rounded transition-colors duration-200"
           onClick={() => setIsEditing(true)}
         >
-          {value || placeholder || 'Click to edit'}
+          {value || placeholder || t('editableText.actions.edit')}
         </div>
       )}
     </div>

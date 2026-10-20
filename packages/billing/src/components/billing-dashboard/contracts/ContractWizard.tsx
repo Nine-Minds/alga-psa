@@ -24,6 +24,12 @@ import { ContractBasicsStep } from "./wizard-steps/ContractBasicsStep";
 import { FixedFeeServicesStep } from "./wizard-steps/FixedFeeServicesStep";
 import { ProductsStep } from "./wizard-steps/ProductsStep";
 import { HourlyServicesStep } from "./wizard-steps/HourlyServicesStep";
+import {
+  prepaidLineDraftFromSubmission,
+  prepaidLineDraftsToSubmission,
+  type PrepaidBlockLineDraft,
+  type PrepaidBlockLineSubmission,
+} from "./prepaidBlockConfigDraft";
 import { UsageBasedServicesStep } from "./wizard-steps/UsageBasedServicesStep";
 import { ReviewContractStep } from "./wizard-steps/ReviewContractStep";
 import { ContractDiscountsPanel } from "./wizard-steps/ContractDiscountsPanel";
@@ -215,6 +221,13 @@ export interface ContractWizardData {
     bucket_overlay?: BucketOverlayInput | null;
   }>;
   usage_billing_frequency?: string;
+  /** Prepaid Block lines being authored (each becomes its own Hourly line plus block config). */
+  prepaid_block_drafts?: PrepaidBlockLineDraft[];
+  /**
+   * Server-shaped Prepaid Block lines of a resumed draft contract. Only read by
+   * `buildInitialContractWizardData`, which turns them into `prepaid_block_drafts`.
+   */
+  prepaid_block_lines?: PrepaidBlockLineSubmission[];
   /** Flag-on line-level bucket pools (weighted-burn model), materialized after the line is created. */
   bucket_pools?: BucketPoolDraft[];
   /**
@@ -255,6 +268,7 @@ export const createDefaultContractWizardData = (): ContractWizardData => ({
   minimum_billable_time: undefined,
   round_up_to_nearest: undefined,
   usage_services: [],
+  prepaid_block_drafts: [],
   bucket_pools: [],
   discounts: [],
   template_id: undefined,
@@ -315,6 +329,13 @@ export const buildInitialContractWizardData = (
   if (!initial.fixed_lines || initial.fixed_lines.length === 0) {
     initial.fixed_lines = [createEmptyFixedLine(initial.enable_proration)];
   }
+
+  if (editingContract?.prepaid_block_lines?.length) {
+    initial.prepaid_block_drafts = editingContract.prepaid_block_lines.map(
+      prepaidLineDraftFromSubmission,
+    );
+  }
+  delete initial.prepaid_block_lines;
 
   return initial;
 };
@@ -531,6 +552,11 @@ export function ContractWizard({
         ...wizardData,
         fixed_lines: meaningfulFixedLines(wizardData.fixed_lines),
         discounts: wizardData.discounts ?? [],
+        // Complete prepaid block lines only; incomplete drafts are not simulated (as on submit).
+        prepaid_block_lines: (() => {
+          const parsed = prepaidLineDraftsToSubmission(wizardData.prepaid_block_drafts);
+          return "lines" in parsed ? parsed.lines : [];
+        })(),
       }) as ContractDraftSimulationInput,
     [wizardData],
   );
@@ -577,6 +603,7 @@ export function ContractWizard({
       product_services: [],
       hourly_services: [],
       usage_services: [],
+      prepaid_block_drafts: [],
       bucket_pools: [],
     });
   };
@@ -714,6 +741,15 @@ export function ContractWizard({
           : undefined,
       };
 
+      // Prepaid Block lines are not cloned from a template; drafts with no service are dropped and
+      // invalid ones block Next/Finish (see the step-5 validation), so only valid entries get here.
+      if (!wizardData.template_id) {
+        const prepaid = prepaidLineDraftsToSubmission(wizardData.prepaid_block_drafts);
+        if ("lines" in prepaid && prepaid.lines.length > 0) {
+          submission.prepaid_block_lines = prepaid.lines;
+        }
+      }
+
       // Bucket authoring is line-level pools; conflicting legacy
       // bucket_overlay fields are stripped from every service above.
       submission.bucket_pools = wizardData.bucket_pools ?? [];
@@ -741,11 +777,15 @@ export function ContractWizard({
             billingFrequency: wizardData.billing_frequency,
           })
         : null,
-      wizardData.hourly_services.length > 0
+      wizardData.hourly_services.length > 0 ||
+      (wizardData.prepaid_block_drafts ?? []).some((line) =>
+        line.services.some((service) => service.service_id),
+      )
         ? getUnsupportedRecurringAuthoringCombination({
             lineType: "Hourly",
             cadenceOwner: wizardData.cadence_owner,
-            billingTiming: wizardData.billing_timing,
+            // Hourly lines always bill in arrears, whatever the contract-wide timing says.
+            billingTiming: "arrears",
             billingFrequency:
               wizardData.hourly_billing_frequency ??
               wizardData.billing_frequency,
@@ -755,7 +795,8 @@ export function ContractWizard({
         ? getUnsupportedRecurringAuthoringCombination({
             lineType: "Usage",
             cadenceOwner: wizardData.cadence_owner,
-            billingTiming: wizardData.billing_timing,
+            // Usage lines always bill in arrears, whatever the contract-wide timing says.
+            billingTiming: "arrears",
             billingFrequency:
               wizardData.usage_billing_frequency ??
               wizardData.billing_frequency,
@@ -983,6 +1024,9 @@ export function ContractWizard({
           meaningfulFixedLines(wizardData.fixed_lines).length > 0 ||
           wizardData.product_services.length > 0 ||
           wizardData.hourly_services.length > 0 ||
+          (wizardData.prepaid_block_drafts ?? []).some((line) =>
+            line.services.some((service) => service.service_id),
+          ) ||
           !!(wizardData.usage_services && wizardData.usage_services.length > 0);
         if (!hasServices) {
           setErrors((prev) => ({
@@ -990,6 +1034,31 @@ export function ContractWizard({
             [stepIndex]: t("wizard.validation.addAtLeastOneService", {
               defaultValue:
                 "Add at least one service before creating the contract",
+            }),
+          }));
+          return false;
+        }
+        const prepaidParsed = prepaidLineDraftsToSubmission(wizardData.prepaid_block_drafts);
+        if ("errors" in prepaidParsed) {
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t("wizardPrepaidBlock.validation.invalidBlock", {
+              defaultValue:
+                "Complete the block size, price and trigger settings for every prepaid block line before finishing.",
+            }),
+          }));
+          return false;
+        }
+        const unpricedPrepaid = prepaidParsed.lines
+          .flatMap((line) => line.services)
+          .find((service) => !(service.hourly_rate && service.hourly_rate > 0));
+        if (unpricedPrepaid) {
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t("wizardPrepaidBlock.validation.rateRequired", {
+              defaultValue:
+                'Prepaid block service "{{serviceName}}" needs an hourly rate above zero (hours beyond the block bill at that rate).',
+              serviceName: unpricedPrepaid.service_name || unpricedPrepaid.service_id,
             }),
           }));
           return false;
@@ -1161,6 +1230,21 @@ export function ContractWizard({
       setErrors((prev) => ({
         ...prev,
         [currentStep]: recurringAuthoringError,
+      }));
+      return;
+    }
+
+    // An incomplete prepaid block line would be dropped from the draft, losing the author's work.
+    if (
+      !wizardData.template_id &&
+      "errors" in prepaidLineDraftsToSubmission(wizardData.prepaid_block_drafts)
+    ) {
+      setErrors((prev) => ({
+        ...prev,
+        [currentStep]: t("wizardPrepaidBlock.validation.invalidBlock", {
+          defaultValue:
+            "Complete the block size, price and trigger settings for every prepaid block line before finishing.",
+        }),
       }));
       return;
     }

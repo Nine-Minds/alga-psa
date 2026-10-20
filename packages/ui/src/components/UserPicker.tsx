@@ -12,6 +12,7 @@ import { Button } from './Button';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { useRegisterUIComponent } from '../ui-reflection/useRegisterUIComponent';
 import { CommonActions } from '../ui-reflection/actionBuilders';
+import { useTranslation } from '../lib/i18n/client';
 
 export type GetUserAvatarUrlsBatch = (
   userIds: string[],
@@ -82,13 +83,15 @@ const UserPicker = ({
   triggerClassName = '',
   labelStyle = 'bold',
   buttonWidth = 'fit',
-  placeholder = 'Not assigned',
-  unassignedLabel = 'Not assigned',
+  placeholder,
+  unassignedLabel,
   userTypeFilter = 'internal',
   modal = true,
   'data-automation-id': dataAutomationId,
   'data-automation-type': dataAutomationType = 'user-picker'
 }: UserPickerProps & AutomationProps) => {
+  const { t } = useTranslation('common');
+  const resolvedUnassignedLabel = unassignedLabel ?? t('pickers.notAssigned');
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
@@ -135,15 +138,15 @@ const UserPicker = ({
 
   // Calculate selected user name for display
   const selectedUserName = currentUser
-    ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || 'Unnamed User'
-    : placeholder;
+    ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || t('pickers.unnamedUser')
+    : placeholder ?? t('pickers.notAssigned');
 
   // Register the main container first, then the trigger button
   // Try to register as a child of client-details if we're in that context
   useRegisterUIComponent<ContainerComponent>({
     type: 'container',
     id: pickerId,
-    label: label || 'User Picker'
+    label: label || t('pickers.userPicker')
   }, 'client-details');
 
   // Register the trigger button as a child component
@@ -376,7 +379,7 @@ const UserPicker = ({
               ref={searchInputRef}
               data-automation-id={dataAutomationId ? `${dataAutomationId}-search` : undefined}
               type="text"
-              placeholder="Search users..."
+              placeholder={t('pickers.searchUsers')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-3 py-2 pl-9 text-sm border border-[rgb(var(--color-border-200))] rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
@@ -401,17 +404,17 @@ const UserPicker = ({
           {/* Not assigned / clear option */}
           <OptionButton
             id={`${pickerId}-option-unassigned`}
-            label={unassignedLabel}
+            label={resolvedUnassignedLabel}
             onClick={() => handleSelectUser('unassigned')}
             className="relative flex items-center px-3 py-2 text-sm rounded text-gray-900 cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)]"
             parentId={pickerId}
           >
-            {unassignedLabel}
+            {resolvedUnassignedLabel}
           </OptionButton>
 
           {/* User options */}
           {filteredUsers.map((user): React.JSX.Element => {
-            const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User';
+            const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || t('pickers.unnamedUser');
             return (
               <OptionButton
                 key={user.user_id}
@@ -435,7 +438,7 @@ const UserPicker = ({
           })}
 
           {filteredUsers.length === 0 && searchQuery && (
-            <div className="px-3 py-2 text-sm text-gray-500">No users found</div>
+            <div className="px-3 py-2 text-sm text-gray-500">{t('pickers.noUsersFound')}</div>
           )}
         </div>
       </div>

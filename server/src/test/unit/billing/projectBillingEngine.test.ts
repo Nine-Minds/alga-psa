@@ -1125,6 +1125,7 @@ describe("project billing engine orchestration", () => {
     ]);
     vi.spyOn(engine as any, "calculateProductCharges").mockResolvedValue([]);
     vi.spyOn(engine as any, "calculateLicenseCharges").mockResolvedValue([]);
+    vi.spyOn(engine as any, "calculateContractLineHourBlockCharges").mockResolvedValue([]);
     vi.spyOn(engine as any, "calculateMaterialCharges").mockResolvedValue([
       material,
     ]);

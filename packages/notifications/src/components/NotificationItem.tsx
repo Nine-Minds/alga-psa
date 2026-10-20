@@ -2,6 +2,7 @@
 
 
 import React from 'react';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { Info, CheckCircle, AlertTriangle, AlertCircle, ExternalLink, ArrowRight } from 'lucide-react';
 import type { InternalNotification } from '../types/internalNotification';
 
@@ -11,6 +12,8 @@ interface NotificationItemProps {
 }
 
 export function NotificationItem({ notification, onClick }: NotificationItemProps) {
+  const { t } = useTranslation('common');
+  const { formatDate } = useFormatters();
   const isUnread = !notification.is_read;
 
   // Priority styles the row; the `type` icon logic below is unchanged.
@@ -68,7 +71,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
   // Format timestamp
   const formatTimestamp = (timestamp: string | null | undefined): string => {
     if (!timestamp) {
-      return 'Unknown';
+      return t('notifications.item.unknown');
     }
 
     try {
@@ -77,7 +80,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
       // Check if date is valid
       if (isNaN(date.getTime())) {
         console.warn('Invalid date for notification:', timestamp);
-        return 'Unknown';
+        return t('notifications.item.unknown');
       }
 
       const now = new Date();
@@ -87,15 +90,15 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
       const diffDays = Math.floor(diffHours / 24);
 
       if (diffMins < 1) {
-        return 'Just now';
+        return t('notifications.item.justNow');
       } else if (diffMins < 60) {
-        return `${diffMins}m ago`;
+        return t('notifications.item.minutesAgo', { minutes: diffMins });
       } else if (diffHours < 24) {
-        return `${diffHours}h ago`;
+        return t('notifications.item.hoursAgo', { hours: diffHours });
       } else if (diffDays < 7) {
-        return `${diffDays}d ago`;
+        return t('notifications.item.daysAgo', { days: diffDays });
       } else {
-        return date.toLocaleDateString('en-US', {
+        return formatDate(date, {
           month: 'short',
           day: 'numeric',
           year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
@@ -103,7 +106,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
       }
     } catch (error) {
       console.error('Error formatting date:', error, timestamp);
-      return 'Unknown';
+      return t('notifications.item.unknown');
     }
   };
 
@@ -135,7 +138,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
             {/* Status change */}
             {changes.status && (
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-[rgb(var(--color-text-600))]">Status:</span>
+                <span className="text-[rgb(var(--color-text-600))]">{t('notifications.detail.status')}</span>
                 <span className="font-medium text-[rgb(var(--color-text-900))]">{changes.status.old}</span>
                 <ArrowRight className="w-4 h-4 text-[rgb(var(--color-text-400))]" />
                 <span className="font-medium text-blue-600">{changes.status.new}</span>
@@ -145,7 +148,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
             {/* Priority change */}
             {changes.priority && (
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-[rgb(var(--color-text-600))]">Priority:</span>
+                <span className="text-[rgb(var(--color-text-600))]">{t('notifications.detail.priority')}</span>
                 {renderPriority(changes.priority.old, changes.priority.oldColor)}
                 <ArrowRight className="w-4 h-4 text-[rgb(var(--color-text-400))]" />
                 {renderPriority(changes.priority.new, changes.priority.newColor)}
@@ -155,7 +158,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
             {/* Assignment change */}
             {changes.assigned_to && (
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-[rgb(var(--color-text-600))]">Assigned:</span>
+                <span className="text-[rgb(var(--color-text-600))]">{t('notifications.item.assigned')}</span>
                 <span className="font-medium text-[rgb(var(--color-text-900))]">{changes.assigned_to.old}</span>
                 <ArrowRight className="w-4 h-4 text-[rgb(var(--color-text-400))]" />
                 <span className="font-medium text-blue-600">{changes.assigned_to.new}</span>
@@ -165,7 +168,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
             {/* Performed by info */}
             {data.performedByName && (
               <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
-                by {data.performedByName}
+                {t('notifications.item.performedBy', { name: data.performedByName })}
               </p>
             )}
           </div>
@@ -180,12 +183,12 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
               {notification.message}
             </p>
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-[rgb(var(--color-text-600))]">Priority:</span>
+              <span className="text-[rgb(var(--color-text-600))]">{t('notifications.detail.priority')}</span>
               {renderPriority(data.priority, data.priorityColor)}
             </div>
             {data.performedByName && (
               <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
-                by {data.performedByName}
+                {t('notifications.item.performedBy', { name: data.performedByName })}
               </p>
             )}
           </div>
@@ -249,7 +252,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                   </svg>
-                  Internal
+                  {t('notifications.item.internal')}
                 </span>
               )}
             </div>
@@ -260,7 +263,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
             {/* Category badge */}
             {notification.category && (
               <span className={`px-2 py-0.5 rounded-full font-medium ${getCategoryColor()}`}>
-                {notification.category}
+                {t(`enums.notificationCategory.${notification.category}`, { defaultValue: notification.category })}
               </span>
             )}
 

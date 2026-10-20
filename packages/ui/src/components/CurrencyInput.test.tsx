@@ -13,6 +13,7 @@ let mockLocale: string | null = 'en';
 
 vi.mock('../lib/i18n/client', () => ({
   useOptionalI18n: () => (mockLocale ? { locale: mockLocale } : null),
+  useTranslation: () => ({ t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key }),
 }));
 
 vi.mock('../ui-reflection/useAutomationIdAndRegister', () => ({

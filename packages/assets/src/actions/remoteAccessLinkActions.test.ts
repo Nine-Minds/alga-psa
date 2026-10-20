@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => {
     { label: 'Serial link', url_template: 'https://remote.example/{asset.serial_number}' },
     { label: 'Ninja link', url_template: 'https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview' },
     { label: 'Org link', url_template: 'https://remote.example/{asset.rmm_organization_id}' },
+    { label: 'RMM link', url_template: 'https://remote.example/#/deviceDashboard/{asset.rmm_device_id}/details' },
   ];
   const assetQuery: any = {
     select: vi.fn(() => assetQuery),
@@ -92,6 +93,26 @@ describe('getRemoteAccessLinksForAsset', () => {
       { label: 'Serial link', url: null },
       { label: 'Ninja link', url: 'https://app.ninjarmm.com/#/deviceDashboard/12345/overview' },
       { label: 'Org link', url: null },
+      { label: 'RMM link', url: 'https://remote.example/#/deviceDashboard/12345/details' },
     ]);
+    expect(mocks.assetQuery.select).toHaveBeenCalledWith(expect.arrayContaining([
+      'assets.rmm_device_id',
+      'assets.rmm_provider',
+      'assets.rmm_organization_id',
+    ]));
+  });
+
+  it('accepts the RMM device id placeholder when saving a template', async () => {
+    const result = await saveRemoteAccessLink({
+      label: 'NinjaOne',
+      url_template: 'https://example.rmmservice.com/#/deviceDashboard/{asset.rmm_device_id}/details',
+    });
+    expect(result).toBeUndefined();
+    expect(mocks.linkQuery.insert).toHaveBeenCalled();
+  });
+
+  it('still rejects unsupported asset placeholders when saving a template', async () => {
+    const result = await saveRemoteAccessLink({ label: 'Bad', url_template: 'https://remote.example/{asset.hostname}' });
+    expect(result).toMatchObject({ actionError: 'Template contains an unsupported placeholder.' });
   });
 });

@@ -43,9 +43,15 @@ export async function handleReconcileHourBlockAllocations(
       return;
     }
 
+    // Clients with an active block, plus clients whose Prepaid Block line has a
+    // pending contract block (gap-drawn entries need nightly convergence too).
     const clientRows = await tenantDb(knex, tenantId)
       .table('hour_blocks')
-      .where({ status: 'active' })
+      .where(function (this: Knex.QueryBuilder) {
+        this.where({ status: 'active' }).orWhere(function (this: Knex.QueryBuilder) {
+          this.where({ status: 'pending' }).whereNotNull('contract_line_id');
+        });
+      })
       .distinct('client_id')
       .select('client_id');
 

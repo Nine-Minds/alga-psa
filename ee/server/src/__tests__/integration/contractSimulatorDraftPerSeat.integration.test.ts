@@ -180,4 +180,39 @@ describe("Draft contract simulation – per-seat fixed services", () => {
     expect(byService.get(flat)).toBe(300_000);
     expect(byService.get(endpoint)).toBe(105_000);
   });
+
+  it("simulates a Prepaid Block draft line: a 40 h / $4,400 block is issued in the start period (alga-2026-0002695)", async () => {
+    const remote = await createTestService(context, { service_name: "Remote Support", default_rate: 11_000 });
+    const input = draft([], {
+      start_date: "2026-10-01T00:00:00Z",
+      fixed_lines: [],
+      prepaid_block_lines: [
+        {
+          name: "Remote Support block",
+          services: [{ service_id: remote, hourly_rate: 11_000 }],
+          block: {
+            block_minutes: 2_400,
+            block_price: 440_000,
+            sold_as_service_id: remote,
+            expiry_months: 12,
+            trigger_on_exhaustion: true,
+            trigger_on_expiry: true,
+          },
+        },
+      ],
+    });
+    const scenario = await draftContractToScenario(context.db, context.tenantId, input);
+    const blockLine = scenario.lines.find((l) => l.prepaid_block);
+    expect(blockLine).toMatchObject({
+      contract_line_type: "Hourly",
+      prepaid_block: { block_minutes: 2_400, block_price: 440_000, expiry_months: 12, trigger_on_expiry: true },
+    });
+
+    const result = await simulateContractScenario(context.db, context.tenantId, scenario);
+    const issues = result.periods.flatMap((p) => p.lines.filter((l) => l.charge_type === "prepaid_block"));
+    expect(issues.length).toBeGreaterThan(0);
+    expect(issues[0].net_amount).toBe(440_000);
+    const october = result.periods.find((p) => p.lines.some((l) => l.charge_type === "prepaid_block"));
+    expect(JSON.stringify(october)).toContain("2026-10");
+  });
 });

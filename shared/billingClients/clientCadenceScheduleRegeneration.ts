@@ -21,6 +21,7 @@ import {
   backfillRecurringServicePeriods,
   type IRecurringServicePeriodBackfillPlan,
 } from './backfillRecurringServicePeriods';
+import { resolveEffectiveBillingTiming, resolveRecurringChargeFamily } from './contractLineTimingRule';
 
 type ClientCadenceRecurringObligationRow = {
   client_contract_line_id: string;
@@ -191,26 +192,6 @@ export function isClientCadenceLineExpectedInWindow(input: {
   });
 }
 
-function resolveRecurringChargeFamily(contractLineType: string | null): RecurringChargeFamily {
-  switch ((contractLineType ?? 'fixed').toLowerCase()) {
-    case 'fixed':
-      return 'fixed';
-    case 'time':
-    case 'hourly':
-      return 'hourly';
-    case 'usage':
-      return 'usage';
-    case 'bucket':
-      return 'bucket';
-    case 'product':
-      return 'product';
-    case 'license':
-      return 'license';
-    default:
-      return 'fixed';
-  }
-}
-
 function mapRecurringServicePeriodRow(row: RecurringServicePeriodDbRow): IRecurringServicePeriodRecord {
   return {
     kind: 'persisted_service_period_record',
@@ -300,7 +281,7 @@ function serializeRecurringServicePeriodRecord(record: IRecurringServicePeriodRe
   };
 }
 
-function buildScheduleSourceRuleVersion(
+export function buildScheduleSourceRuleVersion(
   billingCycle: BillingCycleType,
   anchor: NormalizedBillingCycleAnchorSettings,
 ) {
@@ -547,8 +528,10 @@ async function computeClientCadenceRegeneration(
       continue;
     }
 
-    const duePosition: DuePosition =
-      obligation.billing_timing === 'advance' ? 'advance' : 'arrears';
+    const duePosition: DuePosition = resolveEffectiveBillingTiming(
+      obligation.contract_line_type,
+      obligation.billing_timing,
+    );
     const existingRecords = await loadExistingRecurringServicePeriodRecords(trx, {
       tenant: params.tenant,
       obligationId: obligation.client_contract_line_id,

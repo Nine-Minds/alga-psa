@@ -12,6 +12,8 @@ import { TemplateServicePreviewSection } from '../TemplateServicePreviewSection'
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from '../../BucketOverlayFields';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { PrepaidBlockLinesEditor } from '../../PrepaidBlockLinesEditor';
 
 interface TemplateHourlyServicesStepProps {
   data: TemplateWizardData;
@@ -23,6 +25,8 @@ export function TemplateHourlyServicesStep({
   updateData,
 }: TemplateHourlyServicesStepProps) {
   const { t } = useTranslation('msp/contracts');
+  // Templates are currency-neutral; the authoring currency only sets the price's decimal scale.
+  const { currencyCode: authoringCurrency } = useCurrencyFormat();
 
   const handleAddService = () => {
     updateData({
@@ -144,7 +148,7 @@ export function TemplateHourlyServicesStep({
         />
 
         {/* Time rounding settings - shown once if any hourly services are added */}
-        {data.hourly_services.length > 0 && (
+        {(data.hourly_services.length > 0 || (data.prepaid_block_drafts ?? []).length > 0) && (
           <div className="p-4 border border-[rgb(var(--color-border-200))] rounded-md bg-[rgb(var(--color-border-50))]">
             <h4 className="text-sm font-medium mb-3">
               {t('templateHourly.rounding.heading', { defaultValue: 'Time Rounding Settings' })}
@@ -288,6 +292,16 @@ export function TemplateHourlyServicesStep({
             <Plus className="h-4 w-4" />
             {t('templateHourly.actions.addService', { defaultValue: 'Add Service' })}
           </Button>
+        </div>
+
+        <div className="rounded-lg border border-[rgb(var(--color-border-200))] p-4">
+          <PrepaidBlockLinesEditor
+            idPrefix="template-prepaid-block"
+            lines={data.prepaid_block_drafts ?? []}
+            onChange={(lines) => updateData({ prepaid_block_drafts: lines })}
+            currencyCode={authoringCurrency}
+            neutral
+          />
         </div>
       </div>
     </ReflectionContainer>

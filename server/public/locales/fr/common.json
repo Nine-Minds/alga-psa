@@ -1,4 +1,7 @@
 {
+  "breadcrumbs": {
+    "ariaLabel": "Fil d’Ariane"
+  },
   "phone": {
     "extension": "poste"
   },
@@ -22,13 +25,19 @@
     "add": "Réagir",
     "ariaSummary_one": "{{emoji}} {{count}} réaction",
     "ariaSummary_other": "{{emoji}} {{count}} réactions",
-    "ariaYouReacted": ", vous avez réagi"
+    "ariaYouReacted": ", vous avez réagi",
+    "ariaSummary_few": "{{emoji}} {{count}} réactions",
+    "ariaSummary_many": "{{emoji}} {{count}} réactions"
   },
   "credits": {
     "expiresInDaysOn_one": "Expire dans {{count}} jour, le {{date}}",
     "expiresInDaysOn_other": "Expire dans {{count}} jours, le {{date}}",
     "expiringForClient_one": "{{count}} crédit pour {{clientName}} expirera bientôt",
-    "expiringForClient_other": "{{count}} crédits pour {{clientName}} expireront bientôt"
+    "expiringForClient_other": "{{count}} crédits pour {{clientName}} expireront bientôt",
+    "expiresInDaysOn_few": "Expire dans {{count}} jours, le {{date}}",
+    "expiresInDaysOn_many": "Expire dans {{count}} jours, le {{date}}",
+    "expiringForClient_few": "{{count}} crédits pour {{clientName}} expireront bientôt",
+    "expiringForClient_many": "{{count}} crédits pour {{clientName}} expireront bientôt"
   },
   "staleAction": {
     "message": "Cette page n’est plus à jour. Actualisez-la pour rétablir les mises à jour et les actions."
@@ -46,7 +55,13 @@
     "licenseWrongTenant": "Cette licence a été émise pour une autre instance et n'est pas valide ici. L'installation utilise les fonctionnalités Essentials.",
     "manageLicense": "Gérer la licence",
     "ariaLabel": "Statut de la licence",
-    "dismiss": "Masquer"
+    "dismiss": "Masquer",
+    "licenseExpiresIn_few": "La licence expire dans {{count}} jours. Renouvelez pour éviter toute interruption de service.",
+    "licenseExpiresIn_many": "La licence expire dans {{count}} jours. Renouvelez pour éviter toute interruption de service.",
+    "trialDaysRemaining_few": "Essai Pro actif — {{count}} jours restants.",
+    "trialDaysRemaining_many": "Essai Pro actif — {{count}} jours restants.",
+    "trialExpiresIn_few": "L'essai Pro expire dans {{count}} jours. Saisissez une clé de licence pour conserver les fonctionnalités Pro.",
+    "trialExpiresIn_many": "L'essai Pro expire dans {{count}} jours. Saisissez une clé de licence pour conserver les fonctionnalités Pro."
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -99,7 +114,18 @@
     "done": "Terminé",
     "continue": "Continuer",
     "printSelected": "Imprimer la sélection ({{count}})",
-    "removeTag": "Retirer l'étiquette"
+    "removeTag": "Retirer l'étiquette",
+    "saveChanges": "Enregistrer les modifications",
+    "printSelected_few": "Imprimer la sélection ({{count}})",
+    "printSelected_many": "Imprimer la sélection ({{count}})",
+    "saveSettings": "Enregistrer les paramètres",
+    "finishSetup": "Terminer la configuration",
+    "skip": "Passer",
+    "saveAsDraft": "Enregistrer comme brouillon",
+    "completing": "Finalisation...",
+    "more": "Plus",
+    "closeDialog": "Fermer la boîte de dialogue",
+    "clearSearch": "Effacer la recherche"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -117,7 +143,8 @@
     "inactive": "Inactif",
     "completed": "Terminé",
     "cancelled": "Annulé",
-    "processing": "Traitement en cours..."
+    "processing": "Traitement en cours...",
+    "loadingLabel": "Chargement"
   },
   "messages": {
     "welcome": "Bienvenue",
@@ -479,7 +506,11 @@
     "expand": "Développer",
     "showInDrawer": "Afficher dans le panneau",
     "showEarlierReplies_one": "Afficher {{count}} réponse précédente",
-    "showEarlierReplies_other": "Afficher {{count}} réponses précédentes"
+    "showEarlierReplies_other": "Afficher {{count}} réponses précédentes",
+    "replies_few": "{{count}} réponses",
+    "replies_many": "{{count}} réponses",
+    "showEarlierReplies_few": "Afficher {{count}} réponses précédentes",
+    "showEarlierReplies_many": "Afficher {{count}} réponses précédentes"
   },
   "pagination": {
     "previous": "Précédent",
@@ -501,7 +532,9 @@
     "totalRecordsInline": "({{count}} enregistrements au total)",
     "pageOf": "Page {{current}} sur {{total}}",
     "itemsLabel_one": "élément",
-    "itemsLabel_other": "éléments"
+    "itemsLabel_other": "éléments",
+    "itemsLabel_few": "éléments",
+    "itemsLabel_many": "éléments"
   },
   "documents": {
     "title": "Documents",
@@ -554,7 +587,11 @@
       "downloadFailed": "Impossible de télécharger le document",
       "bulkDeleteFailed": "Impossible de supprimer certains documents",
       "bulkDeleteSuccess_one": "{{count}} document a été supprimé avec succès",
-      "bulkDeleteSuccess_other": "{{count}} documents ont été supprimés avec succès"
+      "bulkDeleteSuccess_other": "{{count}} documents ont été supprimés avec succès",
+      "bulkDeleteSuccess_few": "{{count}} documents ont été supprimés avec succès",
+      "bulkDeleteSuccess_many": "{{count}} documents ont été supprimés avec succès",
+      "moveDocumentsSuccess_few": "{{count}} documents ont été déplacés vers {{destination}}",
+      "moveDocumentsSuccess_many": "{{count}} documents ont été déplacés vers {{destination}}"
     },
     "empty": {
       "default": "Aucun document trouvé",
@@ -568,11 +605,15 @@
       "selected_other": "{{count}} documents sélectionnés",
       "moveToFolder": "Déplacer vers un dossier",
       "deleteSelected": "Supprimer la sélection",
-      "clearSelection": "Effacer la sélection"
+      "clearSelection": "Effacer la sélection",
+      "selected_few": "{{count}} documents sélectionnés",
+      "selected_many": "{{count}} documents sélectionnés"
     },
     "prompts": {
       "confirmBulkDelete_one": "Voulez-vous vraiment supprimer {{count}} document ?",
-      "confirmBulkDelete_other": "Voulez-vous vraiment supprimer {{count}} documents ?"
+      "confirmBulkDelete_other": "Voulez-vous vraiment supprimer {{count}} documents ?",
+      "confirmBulkDelete_few": "Voulez-vous vraiment supprimer {{count}} documents ?",
+      "confirmBulkDelete_many": "Voulez-vous vraiment supprimer {{count}} documents ?"
     },
     "pagination": {
       "perPage": "{{count}} par page"
@@ -605,7 +646,9 @@
       "rootOption": "Racine (aucun dossier)",
       "empty": "Aucun dossier disponible. Les documents seront enregistrés à la racine.",
       "showAllFolders": "Afficher tous les dossiers",
-      "showEntityFolders": "Afficher les dossiers de l'entité"
+      "showEntityFolders": "Afficher les dossiers de l'entité",
+      "bulkMoveDescription_few": "Sélectionnez le dossier de destination pour {{count}} documents",
+      "bulkMoveDescription_many": "Sélectionnez le dossier de destination pour {{count}} documents"
     },
     "filters": {
       "searchLabel": "Rechercher des documents",
@@ -784,7 +827,18 @@
     }
   },
   "fields": {
-    "notes": "Notes"
+    "notes": "Notes",
+    "phone": {
+      "label": "Téléphone",
+      "placeholder": "+1 (555) 123-4567"
+    },
+    "phoneExtension": {
+      "label": "Poste",
+      "placeholder": "poste 1234"
+    },
+    "priority": {
+      "placeholder": "Sélectionner une priorité"
+    }
   },
   "auth": {
     "signOut": {
@@ -1199,7 +1253,9 @@
       "revoking": "Révocation...",
       "loggingOut": "Déconnexion...",
       "logoutFromOther_one": "Déconnecter de {{count}} autre appareil",
-      "logoutFromOther_other": "Déconnecter de {{count}} autres appareils"
+      "logoutFromOther_other": "Déconnecter de {{count}} autres appareils",
+      "logoutFromOther_few": "Déconnecter de {{count}} autres appareils",
+      "logoutFromOther_many": "Déconnecter de {{count}} autres appareils"
     },
     "confirmations": {
       "logoutCurrent": "Cela vous déconnectera de votre session actuelle. Êtes-vous sûr ?",
@@ -1295,8 +1351,34 @@
     "saving": "Enregistrement..."
   },
   "enums": {
+    "locale": {
+      "en": "Anglais",
+      "fr": "Français",
+      "es": "Espagnol",
+      "de": "Allemand",
+      "nl": "Néerlandais",
+      "it": "Italien",
+      "pl": "Polonais",
+      "pt": "Portugais (Brésil)",
+      "sv": "Suédois",
+      "xx": "Pseudo-langue (xx)",
+      "yy": "Pseudo-langue (yy)"
+    },
     "addOnDescription": {
       "ai_assistant": "Débloquez le chat IA, l'assistance documentaire, l'aide en barre latérale et les outils IA de workflow pour votre équipe."
+    },
+    "notificationCategory": {
+      "tickets": "Tickets",
+      "invoices": "Factures",
+      "messages": "Messages",
+      "projects": "Projets",
+      "system": "Système",
+      "appointments": "Rendez-vous"
+    },
+    "theme": {
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Système"
     }
   },
   "form": {
@@ -1322,7 +1404,9 @@
     "notAssigned": "Non attribué",
     "searchUsersOrTeams": "Rechercher des utilisateurs ou des équipes...",
     "unnamedUser": "Utilisateur sans nom",
-    "unnamedTeam": "Équipe sans nom"
+    "unnamedTeam": "Équipe sans nom",
+    "userPicker": "Sélecteur d’utilisateurs",
+    "noUsersFound": "Aucun utilisateur trouvé"
   },
   "serviceTypeSelect": {
     "placeholder": "Sélectionner un type de service...",
@@ -1525,7 +1609,22 @@
     "showAll": "Tout afficher",
     "showingAllColumns": "Toutes les colonnes sont affichées ; faites défiler horizontalement pour les voir.",
     "showLess": "Afficher moins",
-    "columnsHidden": "{{count}} colonnes masquées en raison de l'espace limité."
+    "columnsHidden": "{{count}} colonnes masquées en raison de l'espace limité.",
+    "columnsHidden_few": "{{count}} colonnes masquées faute de place.",
+    "columnsHidden_many": "{{count}} colonnes masquées faute de place.",
+    "responsiveColumnsHidden_one": "{{count}} colonne masquée par manque d’espace. Redimensionnez la zone pour en voir davantage.",
+    "responsiveColumnsHidden_other": "{{count}} colonnes masquées par manque d’espace. Redimensionnez la zone pour en voir davantage.",
+    "responsiveColumnsHidden_few": "{{count}} colonnes masquées par manque d’espace. Redimensionnez la zone pour en voir davantage.",
+    "responsiveColumnsHidden_many": "{{count}} colonnes masquées par manque d’espace. Redimensionnez la zone pour en voir davantage.",
+    "empty": "Aucun résultat",
+    "pagination": {
+      "empty": "0 élément",
+      "range_one": "{{first}}–{{last}} sur {{count}} élément",
+      "range_other": "{{first}}–{{last}} sur {{count}} éléments",
+      "range_few": "{{first}}–{{last}} sur {{count}} éléments",
+      "range_many": "{{first}}–{{last}} sur {{count}} éléments",
+      "perPage": "{{count}} par page"
+    }
   },
   "richTextEditorSkeleton": {
     "loading": "Chargement de l'éditeur…"
@@ -1544,7 +1643,36 @@
   },
   "notifications": {
     "needsAttention": "Requiert votre attention ({{count}})",
-    "lowPriority": "Priorité basse ({{count}})"
+    "lowPriority": "Priorité basse ({{count}})",
+    "detail": {
+      "document": "Document",
+      "actions": {
+        "openDocument": "Ouvrir le document",
+        "viewTicket": "Voir le ticket",
+        "viewTask": "Voir la tâche",
+        "viewDetails": "Voir les détails"
+      },
+      "changes": "Modifications :",
+      "status": "Statut :",
+      "priority": "Priorité :",
+      "assignedTo": "Attribué à :",
+      "changedBy": "Modifié par :",
+      "assignedBy": "Attribué par :",
+      "unread": "Non lue",
+      "internalComment": "Commentaire interne",
+      "commentBy": "Commentaire de {{author}} :",
+      "readAt": "Lu {{time}}"
+    },
+    "item": {
+      "unknown": "Inconnu",
+      "justNow": "À l’instant",
+      "minutesAgo": "il y a {{minutes}} min",
+      "hoursAgo": "il y a {{hours}} h",
+      "daysAgo": "il y a {{days}} j",
+      "assigned": "Attribué :",
+      "performedBy": "par {{name}}",
+      "internal": "Interne"
+    }
   },
   "importConflicts": {
     "title": "Résoudre les conflits d'import",
@@ -1593,7 +1721,41 @@
       "document": "documents",
       "knowledge_base_article": "articles de la base de connaissances",
       "opportunity": "opportunités"
-    }
+    },
+    "messages": {
+      "error": {
+        "duplicate": "L’étiquette « {{tag}} » existe déjà sur cet élément",
+        "missingEntityId": "Impossible d’ajouter l’étiquette : l’identifiant de l’entité est manquant"
+      },
+      "success": {
+        "added": "L’étiquette « {{tag}} » a été ajoutée avec succès"
+      }
+    },
+    "dialogs": {
+      "lastUsage": {
+        "title": "Dernière utilisation de l’étiquette",
+        "message": "Il s’agit de la dernière utilisation de l’étiquette « {{tag}} ». Supprimer sa définition ou la conserver pour une utilisation ultérieure ?",
+        "confirm": "Retirer et supprimer la définition",
+        "keep": "Retirer et conserver la définition"
+      }
+    },
+    "fields": {
+      "tags": {
+        "label": "Étiquettes",
+        "placeholder": "Ajouter une étiquette..."
+      },
+      "newTag": {
+        "placeholder": "Nouvelle étiquette"
+      }
+    },
+    "actions": {
+      "removeTag": "Retirer l’étiquette {{tag}}",
+      "saving": "..."
+    },
+    "errors": {
+      "providerRequired": "useTags doit être utilisé au sein d’un TagProvider"
+    },
+    "empty": "Aucune étiquette trouvée"
   },
   "statusDialog": {
     "nameRequired": "Le nom du statut est obligatoire",
@@ -1632,7 +1794,14 @@
   "editor": {
     "attachFiles": "Joindre des fichiers",
     "uploadingFiles": "Envoi des fichiers…",
-    "fileUploadFailed": "Échec de l’envoi du fichier."
+    "fileUploadFailed": "Échec de l’envoi du fichier.",
+    "mentions": {
+      "everyone": "Tout le monde",
+      "aiAssistant": "Assistant Alga AI",
+      "noUsername": "aucun nom d’utilisateur",
+      "userTitle": "{{displayName}} ({{username}})",
+      "fallback": "mention"
+    }
   },
   "emailPreferences": {
     "loading": "Chargement des préférences e-mail…",
@@ -1754,5 +1923,254 @@
   "emailRecipients": {
     "remove": "Supprimer {{email}}",
     "placeholder": "Saisissez une adresse puis appuyez sur Entrée"
+  },
+  "iconPicker": {
+    "enums": {
+      "icons": {
+        "phone": "Téléphone",
+        "mail": "E-mail",
+        "message-circle": "Message",
+        "video": "Appel vidéo",
+        "send": "Envoyer",
+        "users": "Réunion",
+        "calendar": "Rendez-vous",
+        "presentation": "Présentation",
+        "coffee": "Réunion informelle",
+        "handshake": "Accord",
+        "file-text": "Document",
+        "sticky-note": "Note",
+        "edit": "Modifier",
+        "flag": "Suivi",
+        "alarm-clock": "Rappel",
+        "clock": "Suivi du temps",
+        "activity": "Activité générale",
+        "briefcase": "Gestion du compte",
+        "search": "Recherche",
+        "book-open": "Formation",
+        "headphones": "Assistance",
+        "check-square": "Revue",
+        "clipboard": "Documentation",
+        "users-2": "Consultation",
+        "target": "Planification",
+        "settings": "Configuration",
+        "star": "Important",
+        "award": "Réussite",
+        "zap": "Action rapide",
+        "map-pin": "Emplacement",
+        "tag": "Libellé",
+        "bell": "Notification",
+        "shield": "Sécurité",
+        "key": "Accès",
+        "heart": "Favori"
+      },
+      "categories": {
+        "Communication": "Communication",
+        "Meetings": "Réunions",
+        "Documents": "Documents",
+        "Tasks": "Tâches",
+        "Activities": "Activités",
+        "Business": "Entreprise"
+      }
+    },
+    "selected": "Sélection : {{label}}",
+    "help": "Sélectionnez une icône pour représenter ce type d’interaction. Elle sera affichée dans les listes et les formulaires."
+  },
+  "skeletons": {
+    "calendar": {
+      "loading": "Chargement du calendrier..."
+    },
+    "kanbanBoard": {
+      "loading": "Chargement du tableau Kanban"
+    },
+    "chart": {
+      "loading": "Chargement du graphique...",
+      "loadingNamed": "Chargement : {{title}}..."
+    },
+    "settingsTab": {
+      "loading": "Chargement des paramètres..."
+    },
+    "editor": {
+      "loading": "Chargement de l’éditeur..."
+    },
+    "taskForm": {
+      "loading": "Chargement du formulaire de tâche..."
+    },
+    "workflow": {
+      "loading": "Chargement de la visualisation du workflow..."
+    }
+  },
+  "dialogs": {
+    "success": {
+      "title": "Succès",
+      "confirm": "OK"
+    },
+    "contactPicker": {
+      "title": "Sélectionner un contact",
+      "columns": {
+        "name": "Nom",
+        "email": "E-mail",
+        "phone": "Téléphone",
+        "action": "Action"
+      },
+      "select": "Sélectionner",
+      "searchPlaceholder": "Rechercher par nom, e-mail ou téléphone..."
+    },
+    "defaultTitle": "Boîte de dialogue",
+    "confirmDelete": {
+      "title": "Supprimer {{itemType}}",
+      "message": "Voulez-vous vraiment supprimer « {{itemName}} » ? Cette action est irréversible."
+    },
+    "unsavedChanges": {
+      "title": "Modifications non enregistrées",
+      "message": "Vous avez des modifications non enregistrées. Voulez-vous vraiment quitter cette page ? Vos modifications seront perdues.",
+      "confirm": "Quitter sans enregistrer",
+      "cancel": "Rester"
+    },
+    "confirmAction": {
+      "title": "Confirmer l’action"
+    },
+    "contentTitle": "Contenu de la boîte de dialogue"
+  },
+  "viewDensity": {
+    "compact": {
+      "label": "Compacte",
+      "title": "Passer à la vue compacte"
+    },
+    "spacious": {
+      "label": "Aérée",
+      "title": "Passer à la vue aérée"
+    },
+    "decrease": {
+      "title": "Réduire l’espacement"
+    },
+    "reset": {
+      "title": "Rétablir les valeurs par défaut"
+    },
+    "increase": {
+      "title": "Augmenter l’espacement"
+    }
+  },
+  "multiContactPicker": {
+    "fields": {
+      "contacts": {
+        "placeholder": "Sélectionner des contacts..."
+      },
+      "search": {
+        "placeholder": "Rechercher des contacts..."
+      }
+    },
+    "noResults": "Aucun résultat trouvé",
+    "noContacts": "Aucun contact disponible",
+    "noEmail": "sans e-mail",
+    "actions": {
+      "clearAll": "Tout effacer"
+    }
+  },
+  "themeToggle": {
+    "ariaLabel": "Changer de thème",
+    "selected": "Sélectionné"
+  },
+  "drawer": {
+    "formTitle": "{{title}} - Formulaire",
+    "actions": {
+      "goBack": "Revenir en arrière",
+      "goForward": "Avancer",
+      "close": "Fermer le panneau latéral"
+    }
+  },
+  "countryPicker": {
+    "placeholder": "Sélectionner un pays",
+    "searchPlaceholder": "Rechercher des pays...",
+    "otherCountries": "Autres pays",
+    "empty": "Aucun pays trouvé"
+  },
+  "input": {
+    "actions": {
+      "typeIntoLabel": "Saisir du texte dans le champ {{label}}",
+      "type": "Saisir du texte dans ce champ",
+      "focus": "Placer le curseur dans ce champ de saisie",
+      "clear": "Effacer le texte actuel"
+    }
+  },
+  "button": {
+    "actions": {
+      "clickLabel": "Cliquer sur {{label}}",
+      "click": "Cliquer sur ce bouton",
+      "focus": "Placer le focus sur ce bouton"
+    }
+  },
+  "inlineReplyComposer": {
+    "actions": {
+      "reply": "Répondre"
+    },
+    "fields": {
+      "internal": {
+        "label": "Marquer comme interne"
+      }
+    }
+  },
+  "featureUpgradeNotice": {
+    "title": "{{featureName}} nécessite {{tierLabel}}",
+    "description": "Passez à l’offre {{tierLabel}} pour débloquer {{featureName}} et d’autres fonctionnalités avancées.",
+    "actions": {
+      "viewPlans": "Voir les offres"
+    }
+  },
+  "widgets": {
+    "highlight": {
+      "ariaLabel": "Contenu mis en évidence"
+    },
+    "buttonLink": {
+      "unavailable": "Lien indisponible",
+      "actions": {
+        "openLink": "Ouvrir le lien"
+      }
+    },
+    "richTextViewer": {
+      "loading": "Chargement du contenu...",
+      "errors": {
+        "loadFailed": "Erreur lors du chargement du contenu"
+      }
+    }
+  },
+  "reflection": {
+    "parentId": "ID du composant parent : {{id}}",
+    "noParent": "Aucun composant parent"
+  },
+  "teamAvatar": {
+    "alt": "Avatar de {{name}}",
+    "defaultAlt": "Avatar de l’équipe"
+  },
+  "userAvatar": {
+    "alt": "Avatar de {{name}}",
+    "defaultAlt": "Avatar de l’utilisateur"
+  },
+  "featurePlaceholder": {
+    "description": "404 - Cette page est en cours de construction. Vous avez atteint une partie du site qui n’est pas encore tout à fait prête. Alga prépare le terrain en coulisses. Revenez bientôt !"
+  },
+  "contactAvatar": {
+    "alt": "Avatar de {{name}}",
+    "defaultAlt": "Avatar du contact"
+  },
+  "entityAvatar": {
+    "alt": "Image de {{name}}",
+    "defaultAlt": "Image de l’entité"
+  },
+  "editableField": {
+    "notSet": "Non défini"
+  },
+  "editableText": {
+    "actions": {
+      "edit": "Cliquer pour modifier"
+    }
+  },
+  "label": {
+    "required": "Obligatoire"
+  },
+  "tabs": {
+    "ariaLabel": "Onglets"
+  },
+  "viewSwitcher": {
+    "ariaLabel": "Changer de vue"
   }
 }

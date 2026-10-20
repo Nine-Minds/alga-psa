@@ -371,11 +371,19 @@ function renderDetails(props: Record<string, unknown> = {}) {
   return onSaved;
 }
 
-async function resolveAndClose() {
+const resolutionBlocks = [
+  {
+    type: 'paragraph',
+    props: { textAlignment: 'left', backgroundColor: 'default', textColor: 'default' },
+    content: [{ type: 'text', text: 'Replaced the failed switch.', styles: {} }],
+  },
+] as any[];
+
+async function resolveAndClose(contentBlocks: any[] = resolutionBlocks) {
   await waitFor(() => expect(resolutionConfirm).toBeTruthy());
   let result: boolean | undefined;
   await act(async () => {
-    result = await resolutionConfirm!('status-closed', [], noSuppression, false);
+    result = await resolutionConfirm!('status-closed', contentBlocks, noSuppression, false);
   });
   return result;
 }
@@ -439,6 +447,28 @@ describe('TicketDetails onSaved notifications (activity list refresh)', () => {
     const onSaved = renderDetails();
     expect(await resolveAndClose()).toBe(false);
     expect(updateTicketWithCacheMock).not.toHaveBeenCalled();
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  // A resolution is optional: an empty editor closes the ticket without
+  // inserting a blank comment.
+  it('closes without a comment when the resolution editor was left empty', async () => {
+    const onSaved = renderDetails();
+    expect(await resolveAndClose([])).toBe(true);
+    expect(addTicketCommentWithCacheMock).not.toHaveBeenCalled();
+    expect(updateTicketWithCacheMock).toHaveBeenCalledWith(
+      'ticket-1',
+      { status_id: 'status-closed' },
+      expect.anything(),
+    );
+    expect(onSaved).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fire onSaved when a no-comment close fails the status write', async () => {
+    updateTicketWithCacheMock.mockRejectedValue(new Error('boom'));
+    const onSaved = renderDetails();
+    expect(await resolveAndClose([])).toBe(false);
+    expect(addTicketCommentWithCacheMock).not.toHaveBeenCalled();
     expect(onSaved).not.toHaveBeenCalled();
   });
 

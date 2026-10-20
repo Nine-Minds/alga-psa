@@ -731,6 +731,9 @@
     }
   },
   "connectSso": {
+    "proFeature": {
+      "description": "Il collegamento degli account SSO è disponibile in Pro. Passa a Pro per connettere il tuo account Google Workspace o Microsoft 365 e ottenere un’autenticazione senza interruzioni."
+    },
     "linkError": {
       "title": "Collegamento SSO non riuscito.",
       "no_matching_user": "L'account con cui hai effettuato l'accesso è {{providerEmail}}, mentre il tuo accesso AlgaPSA è {{accountEmail}}. Collega un account che usa {{accountEmail}} oppure chiedi all'amministratore del tuo provider di identità di impostare {{accountEmail}} come indirizzo email principale di quell'account.",

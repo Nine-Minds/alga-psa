@@ -97,6 +97,13 @@ vi.mock('../src/actions/recurringServicePeriodSync', () => ({
   syncRecurringServicePeriodsForContractLine: (...args: any[]) => syncRecurringServicePeriods(...args),
 }));
 
+// The prepaid block issuance sync reads tables this mock surface does not model;
+// it has its own DB tests (prepaidBlockDueWork.db.test.ts).
+vi.mock('../src/services/prepaidBlockIssuanceSync', () => ({
+  syncPrepaidBlockIssuancesForContractLine: vi.fn(async () => ({ action: 'none' })),
+  syncPrepaidBlockIssuancesForContract: vi.fn(async () => undefined),
+}));
+
 const makeTrx = () => {
   const contractLinesBuilder: any = {};
   contractLinesBuilder.where = vi.fn(() => contractLinesBuilder);

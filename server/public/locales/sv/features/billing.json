@@ -360,7 +360,8 @@
     "contractLineType": {
       "Fixed": "Fast",
       "Hourly": "Per timme",
-      "Usage": "Förbrukningsbaserad"
+      "Usage": "Förbrukningsbaserad",
+      "PrepaidBlock": "Förbetalt block"
     },
     "quoteStatus": {
       "draft": "Utkast",
@@ -442,6 +443,14 @@
     "hoursLeft": "{{hours}} h kvar",
     "expires": "Löper ut {{date}}",
     "recentBurn": "Senaste förbrukning",
-    "timeEntry": "Tidpost"
+    "timeEntry": "Tidpost",
+    "contractLabel": "Avtal: {{contract}}"
+  },
+  "bucketUsage": {
+    "contractLine": "Avtalsrad med timpott",
+    "usage": "Förbrukning",
+    "hoursUsed": "{{hours}} h förbrukade",
+    "hoursTotal": "{{hours}} h totalt",
+    "rolloverHours": "Inkluderar {{hours}} h överförd tid"
   }
 }

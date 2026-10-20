@@ -419,6 +419,8 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   // cannot be preserved; moving makes them spendable across the parent, which is
   // still better than stranding them on a client that will never file a ticket.
   { table: 'hour_blocks', label: 'hour block' },
+  // Prepaid Block issuances follow the hour blocks and contract assignments they schedule.
+  { table: 'contract_line_block_issuances', label: 'prepaid block issuance' },
   { table: 'prepaid_balance_alerts', label: 'prepaid balance alert' },
   { table: 'usage_tracking', label: 'usage record' },
   { table: 'bucket_usage', label: 'bucket usage record' },

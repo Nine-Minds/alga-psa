@@ -6,6 +6,7 @@ import { Extension, Node, mergeAttributes } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
 import type { Editor } from '@tiptap/react';
+import { translate, useTranslation } from '../lib/i18n/client';
 
 // ── Types ────────────────────────────────────────────────────────
 export interface MentionUser {
@@ -65,10 +66,12 @@ function createMentionSuggestionPlugin(onStateChange: OnStateChange) {
 
 // ── Mention Node (inline, read-only badge) ───────────────────────
 function MentionNodeView(props: any) {
+  const { t } = useTranslation('common');
   const { userId, username, displayName, status } = props.node.attrs;
+  const resolvedDisplayName = userId === '@everyone' ? t('editor.mentions.everyone') : (displayName || t('common.unknown'));
   const isAi = userId === '@ai-assistant' || userId === '@ai-assistant-done';
   const isDone = status === 'done' || userId === '@ai-assistant-done';
-  const displayText = isAi ? '@Alga AI' : (username ? `@${username}` : `@${displayName}`);
+  const displayText = isAi ? '@Alga AI' : (username ? `@${username}` : `@${resolvedDisplayName}`);
 
   const baseClass = isAi
     ? isDone
@@ -81,7 +84,7 @@ function MentionNodeView(props: any) {
       <span
         className={baseClass}
         data-user-id={userId}
-        title={isAi ? 'Alga AI Assistant' : `${displayName} (${username || 'no username'})`}
+        title={isAi ? t('editor.mentions.aiAssistant') : t('editor.mentions.userTitle', { displayName: resolvedDisplayName, username: username || t('editor.mentions.noUsername') })}
       >
         {displayText}
       </span>
@@ -100,7 +103,7 @@ export const MentionNode = Node.create({
     return {
       userId: { default: '' },
       username: { default: '' },
-      displayName: { default: 'Unknown' },
+      displayName: { default: '' },
       status: { default: '' },
     };
   },
@@ -113,7 +116,7 @@ export const MentionNode = Node.create({
     const { userId, username, displayName, status } = HTMLAttributes;
     const isAi = userId === '@ai-assistant' || userId === '@ai-assistant-done';
     const isDone = status === 'done' || userId === '@ai-assistant-done';
-    const displayText = isAi ? '@Alga AI' : (username ? `@${username}` : `@${displayName}`);
+    const displayText = isAi ? '@Alga AI' : (username ? `@${username}` : `@${displayName || translate('common', 'common.unknown', { defaultValue: 'Unknown' })}`);
     const className = isAi
       ? isDone
         ? 'inline-flex items-center px-1 py-0.5 rounded bg-purple-100 text-purple-400 font-medium opacity-60'
@@ -169,6 +172,7 @@ export function MentionSuggestionPopup({
   searchMentions,
   aiAssistantEnabled = false,
 }: MentionSuggestionPopupProps) {
+  const { t } = useTranslation('common');
   const [items, setItems] = useState<MentionUser[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -199,7 +203,7 @@ export function MentionSuggestionPopup({
         if ('everyone'.includes(query.toLowerCase()) || query === '') {
           results.push({
             user_id: '@everyone',
-            display_name: 'Everyone',
+            display_name: t('editor.mentions.everyone'),
             username: 'everyone',
             email: '',
           });
@@ -232,7 +236,7 @@ export function MentionSuggestionPopup({
     };
 
     void fetchResults();
-  }, [suggestionState?.query, suggestionState?.active, searchMentions, aiAssistantEnabled]);
+  }, [suggestionState?.query, suggestionState?.active, searchMentions, aiAssistantEnabled, t]);
 
   // Insert mention helper
   const insertMention = useCallback(
@@ -344,7 +348,7 @@ export function MentionSuggestionPopup({
             color: 'rgb(var(--color-text-400, 113 128 150))',
           }}
         >
-          Loading...
+          {t('status.loading')}
         </div>
       ) : (
         items.map((user, i) => (
