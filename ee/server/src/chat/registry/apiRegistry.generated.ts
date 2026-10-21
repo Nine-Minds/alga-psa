@@ -5440,6 +5440,62 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "date-time",
           "description": "Optional warranty end date/time."
         },
+        "manufacturer": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Hardware make. RMM sync fills it when the provider reports one."
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Hardware model. A first-class column, not a system_info lookup."
+        },
+        "vendor_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Supplier; an inventory vendors.vendor_id of this tenant."
+        },
+        "purchase_cost": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Purchase cost in minor units (cents)."
+        },
+        "purchase_cost_currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO currency code; defaults to the tenant currency when a cost is written without one."
+        },
+        "order_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Purchase order number."
+        },
+        "billing_profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Billing profile for work on this device. Must belong to the asset client and be active; cleared when the client changes."
+        },
         "attributes": {
           "$ref": "#/components/schemas/AssetAttributes"
         },
@@ -6203,6 +6259,62 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "date-time",
           "description": "Warranty end date/time."
         },
+        "manufacturer": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Hardware make. RMM sync fills it when the provider reports one."
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Hardware model. A first-class column, not a system_info lookup."
+        },
+        "vendor_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Supplier; an inventory vendors.vendor_id of this tenant."
+        },
+        "purchase_cost": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Purchase cost in minor units (cents)."
+        },
+        "purchase_cost_currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO currency code; defaults to the tenant currency when a cost is written without one."
+        },
+        "order_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Purchase order number."
+        },
+        "billing_profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Billing profile for work on this device. Must belong to the asset client and be active; cleared when the client changes."
+        },
         "attributes": {
           "$ref": "#/components/schemas/AssetAttributes"
         }
@@ -6397,6 +6509,549 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "success",
         "data",
         "meta"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assets_id_assignments",
+    "method": "get",
+    "path": "/api/v1/assets/{id}/assignments",
+    "displayName": "List asset assignment history",
+    "summary": "List asset assignment history",
+    "description": "Returns every assignment of the path asset, newest first, with the contact name joined. An asset that does not exist in the authenticated tenant returns 404 rather than an empty array.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Asset UUID from assets.asset_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Asset UUID from assets.asset_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/AssetAssignment"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assetstatuses",
+    "method": "get",
+    "path": "/api/v1/asset-statuses",
+    "displayName": "List asset statuses",
+    "summary": "List asset statuses",
+    "description": "Returns the tenant asset status registry in display order. Active statuses only unless include_archived=true. assets.status stores the slug.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "include_archived",
+        "in": "query",
+        "required": false,
+        "description": "true also returns archived (is_active false) statuses.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "true also returns archived (is_active false) statuses."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/AssetStatus"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assetgroups",
+    "method": "get",
+    "path": "/api/v1/asset-groups",
+    "displayName": "List asset groups for a client",
+    "summary": "List asset groups for a client",
+    "description": "Returns the client’s bundles and shared workspaces with member and people counts. client_id is required.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": true,
+        "description": "Required; groups belong to a client.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required; groups belong to a client."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/AssetGroup"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetgroups",
+    "method": "post",
+    "path": "/api/v1/asset-groups",
+    "displayName": "Create an asset group",
+    "summary": "Create an asset group",
+    "description": "Creates a bundle or shared workspace for a client, optionally with its first members. Adding a member to a bundle assigns it to the owner and moves it to the group location; adding one to a shared workspace unassigns it.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "bundle",
+            "shared_workspace"
+          ]
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Members to add in the same transaction."
+        }
+      },
+      "required": [
+        "client_id",
+        "name",
+        "kind"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_assetgroups_id",
+    "method": "get",
+    "path": "/api/v1/asset-groups/{id}",
+    "displayName": "Get an asset group",
+    "summary": "Get an asset group",
+    "description": "Returns the group with its members and people.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_assetgroups_id",
+    "method": "put",
+    "path": "/api/v1/asset-groups/{id}",
+    "displayName": "Update an asset group",
+    "summary": "Update an asset group",
+    "description": "Renames the group, changes its kind or moves its location. A location change moves every member. shared_workspace to bundle is refused while users exist; bundle to shared_workspace unassigns every member and drops the owner.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "bundle",
+            "shared_workspace"
+          ],
+          "description": "shared_workspace to bundle is refused while users exist; the reverse unassigns every member."
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Propagates to every member."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_assetgroups_id",
+    "method": "delete",
+    "path": "/api/v1/asset-groups/{id}",
+    "displayName": "Delete an asset group",
+    "summary": "Delete an asset group",
+    "description": "Deletes the group and its member and people rows. Members keep their current assignee and location.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetgroups_id_members",
+    "method": "post",
+    "path": "/api/v1/asset-groups/{id}/members",
+    "displayName": "Add assets to a group",
+    "summary": "Add assets to a group",
+    "description": "Adds members. For a bundle each new member is assigned to the owner and moved to the group location; for a shared workspace each is unassigned. An asset of another client or already in another group is a 400.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "asset_ids"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_assetgroups_id_members",
+    "method": "delete",
+    "path": "/api/v1/asset-groups/{id}/members",
+    "displayName": "Remove an asset from a group",
+    "summary": "Remove an asset from a group",
+    "description": "Removes the asset named by asset_id. Its assignee and location are left as they are.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      },
+      {
+        "name": "asset_id",
+        "in": "query",
+        "required": true,
+        "description": "Required.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_assetgroups_id_contacts",
+    "method": "post",
+    "path": "/api/v1/asset-groups/{id}/contacts",
+    "displayName": "Set a group owner or add a workspace user",
+    "summary": "Set a group owner or add a workspace user",
+    "description": "With role owner, sets (or with a null contact clears) the bundle owner, which assigns or unassigns every member. With role user, adds a shared-workspace user. A user on a bundle or an owner on a workspace is a 400.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contact_name_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Null with role owner clears the bundle owner."
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "owner",
+            "user"
+          ]
+        }
+      },
+      "required": [
+        "contact_name_id",
+        "role"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_assetgroups_id_contacts",
+    "method": "delete",
+    "path": "/api/v1/asset-groups/{id}/contacts",
+    "displayName": "Remove a group owner or workspace user",
+    "summary": "Remove a group owner or workspace user",
+    "description": "Removes the contact named by contact_name_id. On a bundle this clears the owner, which unassigns every member.",
+    "tags": [
+      "Assets"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "asset_groups.group_id",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "asset_groups.group_id"
+        }
+      },
+      {
+        "name": "contact_name_id",
+        "in": "query",
+        "required": true,
+        "description": "Required.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AssetGroup"
+        }
+      },
+      "required": [
+        "data"
       ]
     }
   },
@@ -12609,6 +13264,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "apply"
             ]
           }
+        },
+        "billing_strategy": {
+          "type": "string",
+          "enum": [
+            "source_profile",
+            "target_default"
+          ],
+          "description": "F099: what happens to tickets, projects, assets and RMM mappings that carry no billing profile. `source_profile` (the default) stamps them with the moved default profile; `target_default` leaves them unattributed so they fall through to the destination client's default. Billing history (invoices, cycles, payments, credits, tax settings) is stamped either way."
         }
       },
       "required": [
@@ -40003,7 +40666,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/{id}/deliveries/{delivery_id}/retry",
     "displayName": "Retry delivery",
     "summary": "Retry delivery",
-    "description": "Re-sends a previously failed delivery and records a new attempt on the same delivery row.",
+    "description": "Re-queues a previously failed delivery as a fresh attempt on the shared webhook delivery queue (rate limiting, backoff and auto-disable still apply). Returns 202 without sending the request in-band; the new attempt lands as its own delivery row. Test deliveries are rejected.",
     "tags": [
       "Webhooks"
     ],
@@ -40036,7 +40699,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {
         "data": {
-          "$ref": "#/components/schemas/WebhookDeliveryRecordV1"
+          "$ref": "#/components/schemas/WebhookDeliveryRetryQueuedV1"
         },
         "meta": {
           "type": "object",
@@ -40077,6 +40740,63 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "data": {
           "$ref": "#/components/schemas/WebhookHealthV1"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_webhooks_id_retryfailed",
+    "method": "post",
+    "path": "/api/v1/webhooks/{id}/retry-failed",
+    "displayName": "Retry failed deliveries",
+    "summary": "Retry failed deliveries",
+    "description": "Re-queues every failed/abandoned non-test delivery of the webhook, oldest first, collapsing repeated attempts of the same event to a single enqueue. Accepts an optional since/limit body (default limit 500, max 1000) and never performs the HTTP calls in-band.",
+    "tags": [
+      "Webhooks"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Webhook UUID from webhooks.webhook_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Webhook UUID from webhooks.webhook_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "since": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Only consider deliveries whose attempted_at is at or after this timestamp."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Maximum number of candidate delivery rows to re-queue. Defaults to 500."
+        }
+      },
+      "description": "All fields optional; an empty body retries the newest 500 candidates."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WebhookRetryFailedResultV1"
         },
         "meta": {
           "type": "object",
@@ -47377,7 +48097,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}",
     "displayName": "Update Ticket",
     "summary": "Update a ticket with optional silent-notification controls",
-    "description": "Updates one or more ticket fields. Set suppressContactNotifications=true to avoid customer email and portal notifications for this operation. Set suppressInternalNotifications=true as well to also avoid agent and watcher notifications; internal suppression requires customer suppression. Silent updates still create normal audit, workflow, and webhook records.",
+    "description": "Updates one or more ticket fields. Set suppressContactNotifications=true to avoid customer email and portal notifications for this operation. Set suppressInternalNotifications=true as well to also avoid agent and watcher notifications; internal suppression requires customer suppression. Silent updates still create normal audit, workflow, and webhook records. Do not hand-edit attributes.watch_list: it is a derived mirror, and any watch_list sent here is ignored and the stored list preserved. To copy contacts, users or external emails on updates use POST /tickets/{id}/watchers (and PATCH/DELETE on the same path).",
     "tags": [
       "Work Management v1"
     ],
@@ -47454,7 +48174,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "object",
             "null"
           ],
-          "additionalProperties": true
+          "additionalProperties": true,
+          "description": "Free-form ticket attributes. Do not put watch_list here: it is ignored and the stored list preserved. Use POST/PATCH/DELETE /tickets/{id}/watchers."
         },
         "tags": {
           "type": "array",
@@ -53803,13 +54524,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "post-_api_v1_tickets_id_agents",
     "method": "post",
     "path": "/api/v1/tickets/{id}/agents",
-    "displayName": "Add a ticket additional agent",
-    "summary": "Add a ticket additional agent",
-    "description": "Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI unless suppressed. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.",
+    "displayName": "Add Ticket Additional Agent",
+    "summary": "Add an internal staff member as an additional agent",
+    "description": "Adds an INTERNAL user (staff) as an additional agent working the ticket and publishes the additional-agent-assigned event so notifications fire unless suppressed. Internal staff only: to copy an external person, client contact or bare email on updates, use POST /tickets/{id}/watchers instead; for a one-off copy of a single comment use the comment cc/bcc fields. A ticket with no primary agent promotes the user to primary. A duplicate returns 409.",
     "tags": [
       "Work Management v1"
     ],
-    "approvalRequired": false,
+    "rbacResource": "ticket",
+    "approvalRequired": true,
     "parameters": [
       {
         "name": "id",
@@ -53910,6 +54632,374 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "uuid",
           "description": "User UUID of the additional agent."
         }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_tickets_id_watchers",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/watchers",
+    "displayName": "List Ticket Watchers",
+    "summary": "List ticket watchers: who is copied or cc'd on a ticket's updates",
+    "description": "Watchers vs. additional agents vs. comment cc: WATCHERS (these endpoints) are the persistent watch list - client contacts, internal users or any bare external email - copied on ticket updates until removed; they can be added silently. ADDITIONAL AGENTS (/tickets/{id}/agents) are internal staff working the ticket only; never use them for external people. COMMENT CC/BCC is a one-off copy of a single comment email and never joins the watch list. Use this for requests like 'cc X on updates', 'copy X on this ticket', 'notify X when it changes', 'add to the watch list', 'add a watcher', 'add an external contact / external email'. Returns the current watch list of the ticket, including paused (active=false) watchers. A change to the watch list is not itself emailed to anyone: the new watcher is simply copied on later ticket updates. Unless silent=true the write publishes one ticket-updated event with no field changes; it creates no watcher email, but it does create the generic 'ticket updated' in-app notification for the assigned agents and the client-portal contact. silent=true sets suppressContactNotifications and suppressInternalNotifications on that event, which skips those in-app notifications (request-scoped, never stored); use it when the change should leave no trace for staff or the customer. Every response is the full list of watchers: {email, name, active, entity_type, entity_id, source}; email (case-insensitive) is the key.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "playbooks": [
+      "See who is copied or cc'd on ticket updates: list the ticket watchers."
+    ],
+    "examples": [
+      {
+        "name": "See who is watching a ticket",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          }
+        },
+        "notes": "Read data[] for each watcher; check email before adding to avoid redundant calls (adds are idempotent anyway)."
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_tickets_id_watchers",
+    "method": "post",
+    "path": "/api/v1/tickets/{id}/watchers",
+    "displayName": "Add Ticket Watcher",
+    "summary": "Add a ticket watcher: copy or cc a contact, user or external email on ticket updates",
+    "description": "Watchers vs. additional agents vs. comment cc: WATCHERS (these endpoints) are the persistent watch list - client contacts, internal users or any bare external email - copied on ticket updates until removed; they can be added silently. ADDITIONAL AGENTS (/tickets/{id}/agents) are internal staff working the ticket only; never use them for external people. COMMENT CC/BCC is a one-off copy of a single comment email and never joins the watch list. Use this for requests like 'cc X on updates', 'copy X on this ticket', 'notify X when it changes', 'add to the watch list', 'add a watcher', 'add an external contact / external email'. Provide exactly one of contact_id (client contact), user_id (internal user) or email (any mailbox, e.g. an external address). The contact/user is resolved to its email and name server-side; an unknown or other-tenant id, or one without an email, returns 422. Idempotent set-add: an email already on the list is re-activated, never duplicated. Example: to copy Dorothy Gale (a client contact) and an outside mailbox on updates, call this once with her contact_id and once with {\"email\":\"ops@vendor.example\"}. A change to the watch list is not itself emailed to anyone: the new watcher is simply copied on later ticket updates. Unless silent=true the write publishes one ticket-updated event with no field changes; it creates no watcher email, but it does create the generic 'ticket updated' in-app notification for the assigned agents and the client-portal contact. silent=true sets suppressContactNotifications and suppressInternalNotifications on that event, which skips those in-app notifications (request-scoped, never stored); use it when the change should leave no trace for staff or the customer. Every response is the full list of watchers: {email, name, active, entity_type, entity_id, source}; email (case-insensitive) is the key.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contact_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client contact to watch. Exactly one of contact_id, user_id, email."
+        },
+        "user_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Internal user to watch. Exactly one of contact_id, user_id, email."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Any bare email address, including external mailboxes. Exactly one of contact_id, user_id, email."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Optional display name, used only when the watcher has none yet."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Defaults to true."
+        },
+        "silent": {
+          "type": "boolean",
+          "description": "Request-scoped, never stored. true = send no customer or internal notification for this write."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "playbooks": [
+      "Copy, cc or notify a client contact, internal user or external email on ticket updates: POST the watcher endpoint with contact_id, user_id or email.",
+      "Add an external watcher or external email to a ticket: use the watcher endpoint, not additional agents (internal staff only) and not comment cc (one comment only).",
+      "Example: to copy Dorothy Gale and an outside mailbox on updates, POST once with her contact_id and once with the mailbox email."
+    ],
+    "examples": [
+      {
+        "name": "Copy a client contact on updates",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          },
+          "body": {
+            "contact_id": "22222222-2222-2222-2222-222222222222"
+          }
+        },
+        "notes": "Persistent watch-list entry; the contact's email and name are resolved server-side."
+      },
+      {
+        "name": "Copy an external mailbox silently",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          },
+          "body": {
+            "email": "ops@vendor.example",
+            "silent": true
+          }
+        },
+        "notes": "Adds the watcher without notifying anyone about the change itself; the mailbox receives future ticket updates."
+      }
+    ]
+  },
+  {
+    "id": "patch-_api_v1_tickets_id_watchers",
+    "method": "patch",
+    "path": "/api/v1/tickets/{id}/watchers",
+    "displayName": "Pause or Resume Ticket Watcher",
+    "summary": "Pause or resume a ticket watcher (cc on updates) without removing it",
+    "description": "Watchers vs. additional agents vs. comment cc: WATCHERS (these endpoints) are the persistent watch list - client contacts, internal users or any bare external email - copied on ticket updates until removed; they can be added silently. ADDITIONAL AGENTS (/tickets/{id}/agents) are internal staff working the ticket only; never use them for external people. COMMENT CC/BCC is a one-off copy of a single comment email and never joins the watch list. Use this for requests like 'cc X on updates', 'copy X on this ticket', 'notify X when it changes', 'add to the watch list', 'add a watcher', 'add an external contact / external email'. Identifies the watcher by email (case-insensitive) and toggles active. A paused watcher stays on the list but is not copied. Returns 404 if the email is not a watcher. A change to the watch list is not itself emailed to anyone: the new watcher is simply copied on later ticket updates. Unless silent=true the write publishes one ticket-updated event with no field changes; it creates no watcher email, but it does create the generic 'ticket updated' in-app notification for the assigned agents and the client-portal contact. silent=true sets suppressContactNotifications and suppressInternalNotifications on that event, which skips those in-app notifications (request-scoped, never stored); use it when the change should leave no trace for staff or the customer. Every response is the full list of watchers: {email, name, active, entity_type, entity_id, source}; email (case-insensitive) is the key.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "required": [
+        "email",
+        "active"
+      ],
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email of an existing watcher."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "false pauses updates, true resumes them."
+        },
+        "silent": {
+          "type": "boolean",
+          "description": "Request-scoped, never stored. true = send no customer or internal notification for this write."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "playbooks": [
+      "Pause or resume a watcher: PATCH with email and active=false or true."
+    ],
+    "examples": [
+      {
+        "name": "Pause a watcher",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          },
+          "body": {
+            "email": "ops@vendor.example",
+            "active": false
+          }
+        },
+        "notes": "The watcher remains listed with active=false."
+      }
+    ]
+  },
+  {
+    "id": "delete-_api_v1_tickets_id_watchers",
+    "method": "delete",
+    "path": "/api/v1/tickets/{id}/watchers",
+    "displayName": "Remove Ticket Watcher",
+    "summary": "Remove a ticket watcher so they are no longer copied or cc'd on updates",
+    "description": "Watchers vs. additional agents vs. comment cc: WATCHERS (these endpoints) are the persistent watch list - client contacts, internal users or any bare external email - copied on ticket updates until removed; they can be added silently. ADDITIONAL AGENTS (/tickets/{id}/agents) are internal staff working the ticket only; never use them for external people. COMMENT CC/BCC is a one-off copy of a single comment email and never joins the watch list. Use this for requests like 'cc X on updates', 'copy X on this ticket', 'notify X when it changes', 'add to the watch list', 'add a watcher', 'add an external contact / external email'. Removes the watcher whose email matches the ?email= query parameter (optional &silent=true). Returns 404 when that email is not a watcher. A change to the watch list is not itself emailed to anyone: the new watcher is simply copied on later ticket updates. Unless silent=true the write publishes one ticket-updated event with no field changes; it creates no watcher email, but it does create the generic 'ticket updated' in-app notification for the assigned agents and the client-portal contact. silent=true sets suppressContactNotifications and suppressInternalNotifications on that event, which skips those in-app notifications (request-scoped, never stored); use it when the change should leave no trace for staff or the customer. Every response is the full list of watchers: {email, name, active, entity_type, entity_id, source}; email (case-insensitive) is the key.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "email",
+        "in": "query",
+        "required": true,
+        "description": "Email of the watcher to remove (case-insensitive).",
+        "schema": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      {
+        "name": "silent",
+        "in": "query",
+        "required": false,
+        "description": "true = send no notification for this removal.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "playbooks": [
+      "Stop copying or cc'ing someone on ticket updates: DELETE the watcher with ?email=."
+    ],
+    "examples": [
+      {
+        "name": "Stop copying an external mailbox",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          },
+          "query": {
+            "email": "ops@vendor.example"
+          }
+        },
+        "notes": "Use this for the persistent watch list; comment cc needs no cleanup."
       }
     ]
   },
