@@ -6,7 +6,7 @@ import { computeBalanceDue } from '@alga-psa/billing/services/accountingSync/rec
 import { PaymentService } from './PaymentService';
 import { createStripePaymentProvider } from './StripePaymentProvider';
 import { classifyAutopayFailure, isAutopayEnrollmentValid, resolveConsentTextVersion, retryAt, shouldScheduleAutopay } from './autopayPolicy';
-import type { PaymentWebhookEvent } from '@alga-psa/types';
+import { PAYMENT_LINK_EXPIRATION_MAX_HOURS, type PaymentWebhookEvent } from '@alga-psa/types';
 import { buildPaymentFailedPayload } from 'server/src/lib/api/services/paymentWorkflowEvents';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import logger from '@alga-psa/core/logger';
@@ -14,6 +14,7 @@ import { reconcileStripeWebhookEvents } from './stripeWebhookEvents';
 import { startInvoiceAutopay, signalInvoiceAutopay, signalProfileAutopayChanged } from '../temporal/invoiceAutopay';
 import { getSystemEmailService } from '@alga-psa/email';
 import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services/invoiceBillingRecipientService';
+import { buildDurablePaymentUrl, buildPortalInvoiceUrl } from '@alga-psa/billing/actions/invoiceEmailLinkContext';
 
 type Authorization = { userId: string | null; source: 'client_portal' | 'msp'; ip?: string | null; userAgent?: string | null; consentTextVersion: string };
 
@@ -300,15 +301,23 @@ export class AutopayService {
     const balanceDue = computeBalanceDue({ totalAmount: Number(invoice.total_amount), creditApplied: Number(invoice.credit_applied ?? 0), totalPaid: Number(payments?.total ?? 0) });
     if (invoice.status !== 'sent' || balanceDue <= 0) return;
     const paymentService = await PaymentService.create(this.tenantId);
-    const link = await paymentService.getOrCreatePaymentLink(invoiceId);
     const recipient = await resolveInvoiceBillingRecipient({ knexOrTrx: this.knex, tenantId: this.tenantId, clientId: invoice.client_id });
-    if (recipient.recipientEmail && link?.url) {
-      const emailService = await getSystemEmailService();
-      const safeUrl = link.url.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-      await emailService.sendEmail({ to: recipient.recipientEmail, tenantId: this.tenantId, entityType: 'invoice', entityId: invoiceId,
-        subject: `Payment needed for invoice ${invoice.invoice_number ?? ''}`.trim(),
-        html: `<p>We could not complete auto-pay for invoice ${invoice.invoice_number ?? ''}.</p><p><a href="${safeUrl}">Pay invoice</a></p>`,
-        text: `We could not complete auto-pay for invoice ${invoice.invoice_number ?? ''}. Pay here: ${link.url}` });
+    if (recipient.recipientEmail) {
+      // Durable signed /pay/<token> link: the Checkout Session is minted on click, never ahead of time,
+      // and the email never carries a (24h) provider session URL.
+      const settings = await paymentService.getPaymentSettings();
+      const lifetimeHours = settings?.paymentLinkExpirationHours ?? PAYMENT_LINK_EXPIRATION_MAX_HOURS;
+      const payUrl = await buildDurablePaymentUrl(this.tenantId, invoiceId, lifetimeHours)
+        ?? await buildPortalInvoiceUrl(this.tenantId, invoiceId);
+      if (payUrl) {
+        const emailService = await getSystemEmailService();
+        // LEVERAGE: pattern html-escape-url — inline HTML attribute escaping, also written elsewhere in billing emails
+        const safeUrl = payUrl.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+        await emailService.sendEmail({ to: recipient.recipientEmail, tenantId: this.tenantId, entityType: 'invoice', entityId: invoiceId,
+          subject: `Payment needed for invoice ${invoice.invoice_number ?? ''}`.trim(),
+          html: `<p>We could not complete auto-pay for invoice ${invoice.invoice_number ?? ''}.</p><p><a href="${safeUrl}">Pay invoice</a></p>`,
+          text: `We could not complete auto-pay for invoice ${invoice.invoice_number ?? ''}. Pay here: ${payUrl}` });
+      }
     }
     const failedAt = new Date().toISOString();
     await publishWorkflowEvent({ eventType: 'PAYMENT_FAILED', payload: buildPaymentFailedPayload({ invoiceId, clientId: invoice.client_id,
