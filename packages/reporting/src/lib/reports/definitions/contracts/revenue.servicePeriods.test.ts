@@ -21,8 +21,12 @@ describe('contract revenue report definition service-period wiring', () => {
     expect(source).toContain('{{tenant_table:invoice_charge_fixed_details AS iifd}}');
 
     expect(source).not.toContain('WHERE ic.tenant = {{tenant}}');
-    expect(source).not.toContain('inv.tenant = ic.tenant');
-    expect(source).not.toContain('iid.tenant = ic.tenant');
-    expect(source).not.toContain('iifd.tenant = iid.tenant');
+  });
+
+  it('carries tenant through the grouped derived table and tenant-joins its relations (Citus colocation)', () => {
+    expect(source).toContain('GROUP BY ic.tenant, ic.item_id');
+    expect(source).toContain('inv.tenant = ic.tenant');
+    expect(source).toContain('iid.tenant = ic.tenant');
+    expect(source).toContain('iifd.tenant = iid.tenant');
   });
 });

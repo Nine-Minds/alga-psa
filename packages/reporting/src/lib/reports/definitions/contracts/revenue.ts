@@ -83,6 +83,7 @@ export const contractRevenueReport: ReportDefinition = {
           SELECT COALESCE(SUM(contract_revenue_facts.amount_cents), 0) AS sum
           FROM (
             SELECT
+              ic.tenant,
               ic.item_id,
               CASE
                 WHEN COUNT(iid.item_detail_id) FILTER (WHERE iid.item_detail_id IS NOT NULL) = 0
@@ -94,14 +95,17 @@ export const contractRevenueReport: ReportDefinition = {
               COALESCE(MAX(iid.service_period_end)::timestamp, MAX(inv.invoice_date)::timestamp) AS reporting_period_end
             FROM {{tenant_table:invoice_charges AS ic}}
             JOIN {{tenant_table:invoices AS inv}}
-              ON inv.invoice_id = ic.invoice_id
+              ON inv.tenant = ic.tenant
+             AND inv.invoice_id = ic.invoice_id
             LEFT JOIN {{tenant_table:invoice_charge_details AS iid}}
-              ON iid.item_id = ic.item_id
+              ON iid.tenant = ic.tenant
+             AND iid.item_id = ic.item_id
             LEFT JOIN {{tenant_table:invoice_charge_fixed_details AS iifd}}
-              ON iifd.item_detail_id = iid.item_detail_id
+              ON iifd.tenant = iid.tenant
+             AND iifd.item_detail_id = iid.item_detail_id
             WHERE inv.status IN ('paid', 'completed', 'sent', 'open', 'overdue')
               AND ic.client_contract_id IS NOT NULL
-            GROUP BY ic.item_id
+            GROUP BY ic.tenant, ic.item_id
           ) AS contract_revenue_facts
           WHERE contract_revenue_facts.reporting_period_end >= {{start_of_year}}
             AND contract_revenue_facts.reporting_period_end < {{end_of_year}}
