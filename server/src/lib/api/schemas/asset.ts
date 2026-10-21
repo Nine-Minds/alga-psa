@@ -42,8 +42,13 @@ export const createAssetSchema = z.object({
   attributes: z.record(z.unknown()).optional()
 });
 
+// Checked per asset type in AssetService: an untagged union matched workstation first and stripped other types' fields.
+const assetExtensionDataInputSchema = z.record(z.unknown());
+
 // Update asset schema (all fields optional)
-export const updateAssetSchema = createUpdateSchema(createAssetSchema);
+export const updateAssetSchema = createUpdateSchema(createAssetSchema).extend({
+  extension_data: assetExtensionDataInputSchema.optional()
+});
 
 // Asset extension schemas for different types
 export const workstationAssetSchema = z.object({
@@ -109,15 +114,23 @@ export const printerAssetSchema = z.object({
   supply_levels: z.record(z.number()).optional()
 });
 
+const assetExtensionSchemas: Record<string, z.AnyZodObject> = {
+  workstation: workstationAssetSchema,
+  network_device: networkDeviceAssetSchema,
+  server: serverAssetSchema,
+  mobile_device: mobileDeviceAssetSchema,
+  printer: printerAssetSchema
+};
+
+/** Validates extension_data against the schema of the asset type; null when the type has no extension table. */
+export function parseAssetExtensionData(assetType: string, data: unknown) {
+  const schema = assetExtensionSchemas[assetType];
+  return schema ? schema.safeParse(data) : null;
+}
+
 // Combined asset creation schema with extension data
 export const createAssetWithExtensionSchema = createAssetSchema.extend({
-  extension_data: z.union([
-    workstationAssetSchema,
-    networkDeviceAssetSchema,
-    serverAssetSchema,
-    mobileDeviceAssetSchema,
-    printerAssetSchema
-  ]).optional()
+  extension_data: assetExtensionDataInputSchema.optional()
 });
 
 // Asset filter schema

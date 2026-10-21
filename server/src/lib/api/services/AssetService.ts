@@ -21,7 +21,8 @@ import {
   NetworkDeviceAssetData,
   ServerAssetData,
   MobileDeviceAssetData,
-  PrinterAssetData
+  PrinterAssetData,
+  parseAssetExtensionData
 } from '../schemas/asset';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { buildAssetCreatedPayload, buildAssetUpdatedPayload } from '@alga-psa/workflow-streams';
@@ -35,6 +36,27 @@ import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBill
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
   return issues.map((issue) => ({ path: ['attributes', issue.key], code: issue.code, message: issue.message }));
+}
+
+function hasExtensionData(data: Record<string, unknown> | undefined): data is Record<string, unknown> {
+  return !!data && Object.keys(data).length > 0;
+}
+
+function validateExtensionData(assetType: string, data: Record<string, unknown>): Record<string, unknown> {
+  const parsed = parseAssetExtensionData(assetType, data);
+  if (!parsed) {
+    throw new ValidationError('Invalid extension_data', [
+      { path: ['extension_data'], code: 'unsupported_asset_type', message: `Asset type '${assetType}' has no extension data` }
+    ]);
+  }
+  if (!parsed.success) {
+    throw new ValidationError('Invalid extension_data', parsed.error.errors.map((issue) => ({
+      path: ['extension_data', ...issue.path],
+      code: issue.code,
+      message: issue.message
+    })));
+  }
+  return parsed.data;
 }
 
 function mapInvalidAssetTypeError(error: unknown, slug: string): unknown {
@@ -351,6 +373,9 @@ export class AssetService extends BaseService<any> {
     const typeEntry = await resolveRestAssetType(knex, context.tenant, assetData.asset_type);
     const issues = validateAttributesForWrite(typeEntry, attributes, 'create');
     if (issues.length) throw new ValidationError('Invalid asset attributes', validationDetails(issues));
+    const extensionData = hasExtensionData(extension_data)
+      ? validateExtensionData(assetData.asset_type, extension_data)
+      : undefined;
 
     if (assetData.location_id) {
       await this.assertLocationBelongsToClient(knex, context.tenant, assetData.client_id, assetData.location_id);
@@ -396,8 +421,8 @@ export class AssetService extends BaseService<any> {
     });
 
     // Handle extension data if provided
-    if (extension_data && Object.keys(extension_data).length > 0) {
-      await this.upsertExtensionData(asset.asset_id, asset.asset_type, extension_data, context);
+    if (extensionData) {
+      await this.upsertExtensionData(asset.asset_id, asset.asset_type, extensionData, context);
     }
 
     // Publish event
@@ -426,14 +451,17 @@ export class AssetService extends BaseService<any> {
     const knex = await this.getDbForContext(context);
     const updateData: Record<string, unknown> = { ...data };
     const attributes = data.attributes as Record<string, unknown> | undefined;
+    const extensionInput = data.extension_data;
     delete updateData.attributes;
+    delete updateData.extension_data;
 
     const needsCurrent =
       data.location_id !== undefined ||
       data.contact_name_id !== undefined ||
       data.status !== undefined ||
       data.client_id !== undefined;
-    const needsAssetContext = needsCurrent || data.attributes !== undefined || data.asset_type !== undefined;
+    const needsAssetContext =
+      needsCurrent || data.attributes !== undefined || data.asset_type !== undefined || hasExtensionData(extensionInput);
 
     const current = needsAssetContext
       ? await scopedTable(knex, context.tenant, this.tableName)
@@ -455,6 +483,11 @@ export class AssetService extends BaseService<any> {
       if (issues.length) throw new ValidationError('Invalid asset attributes', validationDetails(issues));
       if (attributes !== undefined) updateData.attributes = attributesMergeExpression(knex, attributes);
     }
+
+    const effectiveAssetType = data.asset_type ?? current?.asset_type;
+    const extensionData = hasExtensionData(extensionInput)
+      ? validateExtensionData(effectiveAssetType, extensionInput)
+      : undefined;
 
     if (data.location_id) {
       const clientId = data.client_id || current?.client_id;
@@ -558,6 +591,10 @@ export class AssetService extends BaseService<any> {
 
       return updated;
     });
+
+    if (extensionData) {
+      await this.upsertExtensionData(id, effectiveAssetType, extensionData, context);
+    }
 
     // Publish event
     const updatePayload = buildAssetUpdatedPayload({
