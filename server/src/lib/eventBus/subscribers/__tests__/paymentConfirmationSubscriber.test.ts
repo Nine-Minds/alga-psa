@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
-  settings: undefined as undefined | { sendPaymentConfirmations?: boolean },
+  hasTable: true,
+  config: true,
+  settings: {} as undefined | { sendPaymentConfirmations?: boolean },
+  portalUrl: 'https://portal.acme.test/client-portal/billing?tab=invoices&invoiceId=inv-1' as string | null,
   recipientEmail: 'billing@acme.test' as string,
   claimed: new Set<string>(),
   sendError: null as null | Error,
@@ -18,7 +21,7 @@ vi.mock('@alga-psa/db', () => {
         orderBy: () => b,
         delete: async () => { state.claimed.clear(); },
         first: async () => {
-          if (name === 'payment_provider_configs') return state.settings ? { settings: state.settings } : undefined;
+          if (name === 'payment_provider_configs') return state.config ? { settings: state.settings } : undefined;
           if (name === 'invoice_payments')
             return { invoice_id: 'inv-1', amount: 12500, payment_method: 'stripe', payment_date: '2026-10-01T00:00:00Z' };
           if (name === 'invoices')
@@ -45,13 +48,16 @@ vi.mock('@alga-psa/db', () => {
   return {
     tenantDb,
     runWithTenant: async (_t: string, fn: () => Promise<unknown>) => fn(),
-    createTenantKnex: async () => ({ knex: { schema: { hasTable: async () => true } } }),
+    createTenantKnex: async () => ({ knex: { schema: { hasTable: async () => state.hasTable } } }),
   };
 });
 vi.mock('@alga-psa/billing/services', () => ({
   resolveInvoiceBillingRecipient: async () => ({
     clientId: 'c-1', clientName: 'Acme', recipientEmail: state.recipientEmail, recipientName: 'AP', recipientSource: 'billing_email',
   }),
+}));
+vi.mock('@alga-psa/billing/actions/invoiceEmailLinkContext', () => ({
+  buildPortalInvoiceUrl: async () => state.portalUrl,
 }));
 vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({
   getUserInfoForEmail: async () => null,
@@ -90,7 +96,10 @@ function event(source?: string) {
 
 describe('paymentConfirmationSubscriber', () => {
   beforeEach(() => {
-    state.settings = undefined;
+    state.hasTable = true;
+    state.config = true;
+    state.settings = {};
+    state.portalUrl = 'https://portal.acme.test/client-portal/billing?tab=invoices&invoiceId=inv-1';
     state.recipientEmail = 'billing@acme.test';
     state.claimed.clear();
     state.sendError = null;
@@ -115,6 +124,40 @@ describe('paymentConfirmationSubscriber', () => {
     state.settings = { sendPaymentConfirmations: false };
     await handlePaymentRecordedEvent(event('online_payment'));
     expect(state.sent).toHaveLength(0);
+  });
+
+  it('does not send when the payment_provider_configs table is absent (CE)', async () => {
+    state.hasTable = false;
+    await handlePaymentRecordedEvent(event('online_payment'));
+    expect(state.sent).toHaveLength(0);
+    expect(state.claimed.size).toBe(0);
+  });
+
+  it('does not send when no enabled provider config exists', async () => {
+    state.config = false;
+    await handlePaymentRecordedEvent(event('manual'));
+    expect(state.sent).toHaveLength(0);
+    expect(state.claimed.size).toBe(0);
+  });
+
+  it('sends when an enabled config leaves sendPaymentConfirmations absent', async () => {
+    state.settings = {};
+    await handlePaymentRecordedEvent(event('manual'));
+    expect(state.sent).toHaveLength(1);
+  });
+
+  it('passes the portal-domain URL from buildPortalInvoiceUrl into context.invoice.url', async () => {
+    await handlePaymentRecordedEvent(event('manual'));
+    expect(state.sent[0].context.invoice.url).toBe(
+      'https://portal.acme.test/client-portal/billing?tab=invoices&invoiceId=inv-1',
+    );
+  });
+
+  it('still sends without a url when buildPortalInvoiceUrl returns null', async () => {
+    state.portalUrl = null;
+    await handlePaymentRecordedEvent(event('manual'));
+    expect(state.sent).toHaveLength(1);
+    expect(state.sent[0].context.invoice.url).toBeUndefined();
   });
 
   it('does not send for accounting_sync provenance', async () => {

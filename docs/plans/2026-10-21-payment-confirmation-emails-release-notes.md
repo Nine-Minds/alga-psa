@@ -4,8 +4,13 @@ The "Send payment confirmations" payment setting now does what it says. When a p
 and the setting is on, the client's billing recipient gets one localized "Payment received" email for that payment.
 
 **What changes for you**
-- **The setting defaults to on, and it now takes effect.** Tenants that never touched the toggle will start sending
-  confirmations for new payments. Turn "Send payment confirmations" off under payment settings to stop them.
+- **Default-on applies only to tenants with an enabled payment provider configuration.** Those tenants can see the
+  setting; if they never touched it, they start sending confirmations for new payments. Turn "Send payment
+  confirmations" off under payment settings to stop them.
+- **Tenants without an enabled payment provider configuration, including Community Edition, do not receive
+  confirmations**, because the setting is not available to them.
+- **The email's "View Invoice" link uses the tenant's portal domain** (custom domain when active, otherwise the
+  configured app URL). If no public URL can be determined, the email is still sent without the link.
 - **Which payments send:** online payments (Stripe, Alternative Payments) and payments entered manually by staff.
 - **Which never send:** payments imported by the QuickBooks/Xero sync, so a sync or backfill cannot email a client's
   payment history.

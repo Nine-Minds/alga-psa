@@ -3,7 +3,7 @@
  *
  * Sends the localized `payment-received` email to the client's billing
  * recipient when PAYMENT_RECORDED fires and the tenant has
- * `sendPaymentConfirmations` enabled.
+ * an enabled payment provider config with `sendPaymentConfirmations` on.
  *
  * Safety properties:
  *  - Provenance is default-deny: only the PAYMENT_CONFIRMATION_SOURCES
@@ -23,6 +23,7 @@ import { EventSchemas } from '@alga-psa/event-schemas';
 import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
 import { DEFAULT_PAYMENT_SETTINGS } from '@alga-psa/types';
 import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
+import { buildPortalInvoiceUrl } from '@alga-psa/billing/actions/invoiceEmailLinkContext';
 import { formatCurrencyFromMinorUnits, formatDate } from '@alga-psa/core/formatters';
 import { getUserInfoForEmail, resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { sendEventEmail } from '../../notifications/sendEventEmail';
@@ -55,19 +56,27 @@ export async function unregisterPaymentConfirmationSubscriber(): Promise<void> {
 }
 
 /**
- * Tenant setting. `payment_provider_configs` only exists on EE schemas; a
- * missing table or no enabled provider config means the default applies.
+ * Tenant setting. The "Send payment confirmations" toggle only exists in EE
+ * and only renders when an enabled `payment_provider_configs` row exists. A
+ * missing table (CE) or no enabled config therefore means the tenant has no
+ * visible control and cannot have opted in, so no confirmation is sent. With
+ * an enabled config the tenant can see (and turn off) the toggle, so an absent
+ * key keeps the design default (on); the UI shows the same value because
+ * PaymentService.getPaymentSettings merges DEFAULT_PAYMENT_SETTINGS.
  */
 async function isPaymentConfirmationEnabled(knex: Knex, tenantId: string): Promise<boolean> {
   if (!(await knex.schema.hasTable('payment_provider_configs'))) {
-    return DEFAULT_PAYMENT_SETTINGS.sendPaymentConfirmations;
+    return false;
   }
   const config = await tenantDb(knex, tenantId)
     .table('payment_provider_configs')
     .where({ is_enabled: true })
     .orderBy('is_default', 'desc')
     .first<{ settings?: { sendPaymentConfirmations?: boolean } | null }>();
-  const configured = config?.settings?.sendPaymentConfirmations;
+  if (!config) {
+    return false;
+  }
+  const configured = config.settings?.sendPaymentConfirmations;
   return typeof configured === 'boolean' ? configured : DEFAULT_PAYMENT_SETTINGS.sendPaymentConfirmations;
 }
 
@@ -154,7 +163,8 @@ export async function handlePaymentRecordedEvent(event: unknown): Promise<void> 
       };
       const locale = await resolveEmailLocale(tenantId, { ...baseInfo, clientId: invoice.client_id });
       const currency = (invoice.currency_code || validated.payload.currency || 'USD').toUpperCase();
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || '';
+      // Null when no absolute public base exists: the template then omits the link.
+      const portalUrl = await buildPortalInvoiceUrl(tenantId, invoice.invoice_id);
 
       await sendEventEmail({
         mailClass: 'billing',
@@ -173,7 +183,7 @@ export async function handlePaymentRecordedEvent(event: unknown): Promise<void> 
             amountPaid: formatCurrencyFromMinorUnits(Number(payment.amount), locale, currency),
             paymentDate: formatDate(payment.payment_date ?? validated.payload.receivedAt, locale),
             paymentMethod: payment.payment_method ?? validated.payload.method,
-            url: `${baseUrl}/client-portal/billing?tab=invoices&invoiceId=${encodeURIComponent(invoice.invoice_id)}`,
+            url: portalUrl ?? undefined,
           },
         },
       });
