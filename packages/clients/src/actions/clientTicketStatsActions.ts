@@ -9,7 +9,7 @@ export interface ClientTicketStats {
 }
 
 /**
- * Open ticket counts for every client in the tenant, in one grouped query.
+ * Open ticket counts for the given clients (the visible page), in one grouped query.
  *
  * Feeds the client grid cards, which render immediately and fill the count in
  * when it lands — the same out-of-band pattern the board tab strip uses for
@@ -24,12 +24,17 @@ export interface ClientTicketStats {
  *
  * Only clients with at least one open ticket get an entry. The card hides the
  * row when there is no count, so absent and zero mean the same thing here and
- * a tenant-wide LEFT JOIN to seed zeroes would buy nothing.
+ * a LEFT JOIN to seed zeroes for the page would buy nothing.
  */
 export const getClientOpenTicketCounts = withAuth(
-  async (user, { tenant }): Promise<Record<string, number>> => {
+  async (user, { tenant }, clientIds: string[]): Promise<Record<string, number>> => {
     if (!(await hasPermission(user, 'ticket', 'read'))) {
       // Not an error: a user without ticket access sees cards without counts.
+      return {};
+    }
+
+    const ids = Array.from(new Set(clientIds ?? []));
+    if (ids.length === 0) {
       return {};
     }
 
@@ -41,7 +46,7 @@ export const getClientOpenTicketCounts = withAuth(
           this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
         })
         .where('t.tenant', tenant)
-        .whereNotNull('t.client_id')
+        .whereIn('t.client_id', ids)
         .whereRaw('s.is_closed IS NOT TRUE')
         .groupBy('t.client_id')
         .select('t.client_id')

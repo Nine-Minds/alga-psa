@@ -4,15 +4,12 @@ import {
   recurringSchedulePreviewInputSchema,
   recurringTicketClientUpdateSchema,
   recurringTicketDefinitionInputSchema,
-  titleTemplateSchema,
 } from '../definitionInput';
 
 const id = '3f8d1f0e-6a43-4a8c-9f7e-1d2b3c4d5e6f';
 const valid = {
   name: 'Patching',
-  title_template: '{{client}} patching {{month}}',
-  board_id: id,
-  priority_id: id,
+  ticket_template_id: id,
   recurrence: { frequency: 'weekly', interval: 1, weekdays: ['mon'], end: { type: 'never' } },
   start_date: '2026-01-05',
 };
@@ -22,10 +19,10 @@ describe('recurringTicketDefinitionInputSchema', () => {
     const parsed = recurringTicketDefinitionInputSchema.parse(valid);
     expect(parsed).toMatchObject({
       is_active: true,
-      description: null,
+      overrides: {},
       status_id: null,
+      assigned_to: null,
       additional_agent_ids: [],
-      tags: [],
       create_time: '08:00',
       due_time: '17:00',
       lead_days: 0,
@@ -47,41 +44,34 @@ describe('recurringTicketDefinitionInputSchema', () => {
     ['fractional lead', { lead_days: 1.5 }],
     ['bad date', { start_date: '2026-02-30' }],
     ['bad policy', { open_previous_policy: 'cancel' }],
-    ['non-uuid board', { board_id: 'x' }],
+    ['non-uuid template', { ticket_template_id: 'x' }],
+    ['override with a content field', { overrides: { title: 'x' } }],
+    ['override with a half board group', { overrides: { board: { board_id: id } } }],
   ])('rejects %s', (_label, patch) => {
     expect(recurringTicketDefinitionInputSchema.safeParse({ ...valid, ...patch }).success).toBe(false);
   });
 
-  it('requires a category for a subcategory, with a localizable key', () => {
-    const result = recurringTicketDefinitionInputSchema.safeParse({ ...valid, subcategory_id: id });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect((result.error.issues[0] as any).params.messageKey).toBe('features/tickets:recurring.errors.subcategoryNeedsCategory');
-      expect(result.error.issues[0].path).toEqual(['subcategory_id']);
+  it('requires a ticket template', () => {
+    const { ticket_template_id: _omit, ...withoutTemplate } = valid;
+    expect(recurringTicketDefinitionInputSchema.safeParse(withoutTemplate).success).toBe(false);
+  });
+
+  it.each(['title_template', 'description', 'board_id', 'priority_id', 'category_id', 'subcategory_id', 'tags', 'checklist_template_id'])(
+    'no longer accepts the content field %s (the template owns it)',
+    (field) => {
+      expect(recurringTicketDefinitionInputSchema.safeParse({ ...valid, [field]: field === 'tags' ? [] : null }).success).toBe(false);
     }
-    expect(recurringTicketDefinitionInputSchema.safeParse({ ...valid, category_id: id, subcategory_id: id }).success).toBe(true);
-  });
-});
+  );
 
-describe('titleTemplateSchema', () => {
-  it('trims and accepts known tokens', () => {
-    expect(titleTemplateSchema.parse('  {{client}} {{year}}  ')).toBe('{{client}} {{year}}');
-  });
-
-  it('rejects unknown tokens naming every one of them', () => {
-    const result = titleTemplateSchema.safeParse('{{client}} {{quarter}} {{week}}');
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const issue = result.error.issues[0] as any;
-      expect(issue.params.messageKey).toBe('features/tickets:recurring.errors.unknownTitleTokens');
-      expect(issue.params.messageParams.tokens).toBe('{{quarter}}, {{week}}');
-      expect(issue.params.messageParams.available).toContain('{{client}}');
-    }
-  });
-
-  it('rejects empty and over-long titles', () => {
-    expect(titleTemplateSchema.safeParse('  ').success).toBe(false);
-    expect(titleTemplateSchema.safeParse('a'.repeat(501)).success).toBe(false);
+  it('accepts overrides for board+status, priority and category, and dispatch fields', () => {
+    const parsed = recurringTicketDefinitionInputSchema.parse({
+      ...valid,
+      status_id: id,
+      assigned_team_id: id,
+      overrides: { board: { board_id: id, status_id: null }, priority: { priority_id: id }, category: { category_id: id, subcategory_id: null } },
+    });
+    expect(parsed.overrides.priority?.priority_id).toBe(id);
+    expect(parsed.assigned_team_id).toBe(id);
   });
 });
 
