@@ -1397,7 +1397,15 @@
     "selectUnit": "Wybierz jednostkę do dostarczenia...",
     "onHandByLocation": "Stan według lokalizacji",
     "catalogUnitCost": "Katalogowy koszt jednostkowy",
-    "costNotConfigured": "Nie skonfigurowano"
+    "costNotConfigured": "Nie skonfigurowano",
+    "availableBadge": "Dostępne: {{available}}",
+    "availableByLocation": "Wolny zapas według lokalizacji",
+    "freeOfOnHand": "{{free}} wolnych z {{onHand}}",
+    "stockHeld": "Dostępne tylko {{free}}. {{held}} sztuk na stanie jest twardo zablokowanych dla zamówień sprzedaży i nie można ich tu użyć.",
+    "stockInsufficient": "Na stanie tylko {{onHand}}, żądano {{requested}}.",
+    "reservedStockTitle": "Zapas jest zarezerwowany dla zamówienia sprzedaży",
+    "reservedStockMessage": "Tylko {{free}} sztuk tego produktu jest wolnych. {{reserved}} sztuk na stanie jest zarezerwowanych dla zamówień sprzedaży, a żądano {{requested}}. Dodanie ich mimo to zabiera zapas, na który liczy zamówienie sprzedaży, i może spowodować braki w tym zamówieniu.",
+    "reservedStockConfirm": "Dodaj mimo to"
   },
   "watchList": {
     "title": "Lista obserwujących",
