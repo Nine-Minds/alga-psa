@@ -2379,14 +2379,39 @@ export const markClientActiveWithContacts = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
+    const occurredAt = new Date().toISOString();
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
       let contactsReactivated = 0;
 
+      // Read the prior state so client.updated[is_inactive] is only emitted on a real inactive -> active flip.
+      const existing = await db.table('clients')
+        .select('is_inactive')
+        .where({ client_id: clientId })
+        .first();
+
       // Mark the client as active first
       await db.table('clients')
         .where({ client_id: clientId })
-        .update({ is_inactive: false, updated_at: new Date().toISOString() });
+        .update({ is_inactive: false, updated_at: occurredAt });
+
+      if (existing && existing.is_inactive) {
+        const updatedPayload = buildClientUpdatedPayload({
+          clientId,
+          before: { is_inactive: true } as any,
+          after: { is_inactive: false } as any,
+          updatedFieldKeys: ['is_inactive'],
+          updatedAt: occurredAt,
+        });
+        if (((updatedPayload as any).updatedFields ?? []).length) {
+          registerAfterCommit(trx, () => publishWorkflowEvent({
+            eventType: 'CLIENT_UPDATED',
+            payload: updatedPayload,
+            ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(user) },
+            idempotencyKey: `client_updated:${clientId}:${occurredAt}`,
+          }), `CLIENT_UPDATED client=${clientId}`);
+        }
+      }
 
       if (reactivateContacts) {
         // Get all inactive contact IDs for this client
