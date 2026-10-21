@@ -80,11 +80,13 @@ browser. Mailbox and calendar are the representative browser journeys. Teams bot
 and meeting behavior is protocol-matrix work and lives at the wire level, where
 it runs on every candidate.
 
-So the deferred item is the Teams **browser** journey specifically, not Teams
-and not Microsoft. `development-tests/teams-profile.spec.ts` is quarantined to
-2026-10-21 under F034/T028 for the development-server chunk truncation recorded
-in `evidence/native-teams-12gib-chunk-failure.json`. Teams wire coverage is
-unaffected and keeps running.
+So the deferred item was the Teams **browser** journey specifically, not Teams
+and not Microsoft. `development-tests/teams-profile.spec.ts` was quarantined
+under F034/T028 until 2026-10-21, first for the development-server chunk
+truncation recorded in `evidence/native-teams-12gib-chunk-failure.json` and then
+for the styling failure described below. That entry has been removed; the journey
+executes and passes on its own and is mandatory again. Teams wire coverage was
+unaffected throughout and keeps running.
 
 ### Recurrence and timezone expansion
 
@@ -147,3 +149,22 @@ problem than "reduce an 81.7MB webpack chunk", so the lane stays on Turbopack.
 The quarantine entry remains until a run reports the lane passing. A quarantined
 requirement that passes is reported as `quarantined-passing`, which is the signal
 to remove the entry rather than an assumption that it can be removed.
+
+That signal arrived, so the entry is gone. `main` reported
+`teams-development-execution` as `quarantined-passing` on 2026-10-15 (run
+38805928842) and again on 2026-10-19 (run 39340052825), both under a full
+selection. After the entry expired on 2026-10-21 the requirement was enforced on
+its own and still passed, on `main` (runs 39511993999 and 39516074407) and on
+three feature-branch candidates (runs 39516191455, 39529676648 and 39534131640).
+The recorded evidence is an execution rather than a skip: one case, `Teams
+profile recovery and calendar meeting creation preserve saved identities`, in
+`enterprise-chromium`, runner exit 0, counts 1 passed with nothing failed, flaky
+or skipped, against a clean candidate development server.
+
+Why the unstyled profile dialog stopped reproducing was not established here; the
+lane simply stopped failing. The Tailwind-under-Turbopack theory above therefore
+stays a theory, neither confirmed nor relied on, and if the failure returns the
+readiness gate now vetoes the candidate instead of reporting it as quarantined.
+The execution step keeps `continue-on-error` so a Teams failure cannot drag down
+the other requirements that share the browser job; the uploaded verdict is what
+readiness enforces.

@@ -1381,9 +1381,10 @@ jobs:
       - name: Run Teams development execution gate
         id: teams_development_browser
         if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' && steps.teams_auth_preflight.outcome == 'success' && steps.browser_ready.outcome == 'success' && steps.teams_dashboard_ready.outcome == 'success' }}
-        # Owned, expiring quarantine (scripts/lib/quarantine.json). The verdict is
-        # still produced, uploaded and reported by the readiness gate; it just does
-        # not veto the job while the entry is valid. Readiness fails once it expires.
+        # No longer quarantined (scripts/lib/quarantine.json is empty). Like the
+        # Teams setup steps above, this one does not veto the browser job it shares
+        # with other requirements; the readiness gate enforces the uploaded verdict,
+        # so a failure here fails readiness on teams-development-execution alone.
         continue-on-error: true
         timeout-minutes: 10
         env:
