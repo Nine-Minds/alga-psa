@@ -17,8 +17,8 @@ export const dynamic = 'force-dynamic';
  * the caller already holds.
  */
 /** True only for lookups made by our own middleware (carries the internal token). */
-function isInternalLookup(request: Pick<NextRequest, 'headers'>): boolean {
-  const expected = getInternalLookupToken();
+async function isInternalLookup(request: Pick<NextRequest, 'headers'>): Promise<boolean> {
+  const expected = await getInternalLookupToken();
   const provided = request.headers.get(INTERNAL_LOOKUP_HEADER);
   if (!expected || !provided) {
     return false;
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
         // with that Host, so its lookup doubles as the last-seen signal ("proxy passes Host
         // through"). Never trust `?host=` from other callers: anyone could otherwise mark a
         // domain as seen and hide the "proxy isn't forwarding Host" warning.
-        if (isInternalLookup(request)) {
+        if (await isInternalLookup(request)) {
           await recordPortalDomainSeen(candidate).catch(() => undefined);
         }
         return NextResponse.json({ surface: record.surface }, { headers: { 'cache-control': 'no-store' } });

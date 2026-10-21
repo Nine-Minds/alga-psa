@@ -10,7 +10,7 @@ vi.mock('server/src/models/PortalDomainModel', () => ({ getPortalDomainByHostnam
 vi.mock('server/src/lib/portal-domains/portalDomainSeen', () => ({ recordPortalDomainSeen }));
 
 import { GET } from 'server/src/app/api/portal-domain/surface/route';
-import { INTERNAL_LOOKUP_HEADER } from 'server/src/lib/portal-domains/hostSurface';
+import { getInternalLookupToken, INTERNAL_LOOKUP_HEADER } from 'server/src/lib/portal-domains/hostSurface';
 
 function req(host: string, headers: Record<string, string> = {}) {
   const url = new URL('http://127.0.0.1:3000/api/portal-domain/surface');
@@ -37,20 +37,30 @@ describe('/api/portal-domain/surface last-seen recording', () => {
     expect(recordPortalDomainSeen).not.toHaveBeenCalled();
   });
 
-  it('records last-seen for the middleware (internal token)', async () => {
+  it('does not accept the raw auth secret as the token', async () => {
     await GET(req('helpdesk.acme.com', { [INTERNAL_LOOKUP_HEADER]: 'test-secret' }));
+    expect(recordPortalDomainSeen).not.toHaveBeenCalled();
+  });
+
+  it('records last-seen for the middleware (HMAC-derived internal token)', async () => {
+    const token = await getInternalLookupToken();
+    expect(token).toMatch(/^[0-9a-f]{64}$/);
+    expect(token).not.toBe('test-secret');
+    await GET(req('helpdesk.acme.com', { [INTERNAL_LOOKUP_HEADER]: token as string }));
     expect(recordPortalDomainSeen).toHaveBeenCalledWith('helpdesk.acme.com');
   });
 
   it('never records when no secret is configured', async () => {
+    const token = await getInternalLookupToken();
     delete process.env.NEXTAUTH_SECRET;
-    await GET(req('helpdesk.acme.com', { [INTERNAL_LOOKUP_HEADER]: 'undefined' }));
+    expect(await getInternalLookupToken()).toBeNull();
+    await GET(req('helpdesk.acme.com', { [INTERNAL_LOOKUP_HEADER]: token as string }));
     expect(recordPortalDomainSeen).not.toHaveBeenCalled();
   });
 
   it('does not record for hosts that are not active domains', async () => {
     getPortalDomainByHostname.mockResolvedValue(null);
-    await GET(req('unknown.example.com', { [INTERNAL_LOOKUP_HEADER]: 'test-secret' }));
+    await GET(req('unknown.example.com', { [INTERNAL_LOOKUP_HEADER]: (await getInternalLookupToken()) as string }));
     expect(recordPortalDomainSeen).not.toHaveBeenCalled();
   });
 });

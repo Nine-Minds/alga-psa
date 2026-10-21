@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { clearHostSurfaceCache, INTERNAL_LOOKUP_HEADER, resolveHostSurface } from 'server/src/lib/portal-domains/hostSurface';
+import { clearHostSurfaceCache, getInternalLookupToken, INTERNAL_LOOKUP_HEADER, resolveHostSurface } from 'server/src/lib/portal-domains/hostSurface';
 
 const ok = (body: unknown) => ({ ok: true, json: async () => body }) as unknown as Response;
 
@@ -19,12 +19,26 @@ describe('resolveHostSurface', () => {
     expect(url.searchParams.get('host')).toBe('helpdesk.pbnj.ca');
   });
 
-  it('sends the internal lookup token so the route can trust the host as the real request Host', async () => {
+  it('sends an HMAC-derived lookup token, never the raw auth secret', async () => {
+    delete process.env.AUTH_SECRET;
     process.env.NEXTAUTH_SECRET = 'test-secret';
     const fetchImpl = vi.fn(async () => ok({ surface: 'msp' }));
     await resolveHostSurface('helpdesk.pbnj.ca', { fetchImpl: fetchImpl as unknown as typeof fetch });
-    const init = (fetchImpl.mock.calls[0] as any)[1];
-    expect(init.headers[INTERNAL_LOOKUP_HEADER]).toBe(process.env.AUTH_SECRET || 'test-secret');
+    const sent = (fetchImpl.mock.calls[0] as any)[1].headers[INTERNAL_LOOKUP_HEADER];
+    expect(sent).toBe(await getInternalLookupToken());
+    expect(sent).toMatch(/^[0-9a-f]{64}$/);
+    expect(sent).not.toBe('test-secret');
+    // purpose-bound: HMAC-SHA256('test-secret', 'portal-domain-surface-lookup:v1')
+    const { createHmac } = await import('node:crypto');
+    expect(sent).toBe(createHmac('sha256', 'test-secret').update('portal-domain-surface-lookup:v1').digest('hex'));
+  });
+
+  it('sends no token header when no secret is configured', async () => {
+    delete process.env.AUTH_SECRET;
+    delete process.env.NEXTAUTH_SECRET;
+    const fetchImpl = vi.fn(async () => ok({ surface: 'msp' }));
+    await resolveHostSurface('nosecret.pbnj.ca', { fetchImpl: fetchImpl as unknown as typeof fetch });
+    expect((fetchImpl.mock.calls[0] as any)[1].headers[INTERNAL_LOOKUP_HEADER]).toBeUndefined();
   });
 
   it('returns null for an unknown host', async () => {

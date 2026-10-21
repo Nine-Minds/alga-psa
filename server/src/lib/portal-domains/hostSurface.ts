@@ -19,12 +19,40 @@ export const HOST_SURFACE_LOOKUP_PATH = '/api/portal-domain/surface';
 /**
  * Header the middleware attaches so the route can tell its own lookups (whose `host`
  * is the real incoming request Host) from arbitrary callers (whose `?host=` is
- * attacker-chosen). The value is the server's auth secret, sent over loopback only.
+ * attacker-chosen). The value is a purpose-bound HMAC derived from the auth secret
+ * (HMAC-SHA256(secret, TOKEN_PURPOSE), hex) - never the secret itself, so a
+ * misconfigured PORTAL_DOMAIN_LOOKUP_ORIGIN cannot leak the session-signing key.
  */
 export const INTERNAL_LOOKUP_HEADER = 'x-portal-domain-lookup-token';
+const TOKEN_PURPOSE = 'portal-domain-surface-lookup:v1';
 
-export function getInternalLookupToken(env: Record<string, string | undefined> = process.env): string | null {
-  return env.AUTH_SECRET || env.NEXTAUTH_SECRET || null;
+const tokenCache = new Map<string, string>();
+
+/** Web Crypto only, so it runs in the Edge middleware and in Node alike. */
+export async function getInternalLookupToken(
+  env: Record<string, string | undefined> = process.env
+): Promise<string | null> {
+  const secret = env.AUTH_SECRET || env.NEXTAUTH_SECRET;
+  if (!secret) {
+    return null;
+  }
+  const cached = tokenCache.get(secret);
+  if (cached) {
+    return cached;
+  }
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(TOKEN_PURPOSE)));
+  const token = Array.from(signature, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  tokenCache.clear();
+  tokenCache.set(secret, token);
+  return token;
 }
 
 const POSITIVE_TTL_MS = 30_000;
@@ -72,10 +100,11 @@ export async function resolveHostSurface(
   try {
     const url = new URL(HOST_SURFACE_LOOKUP_PATH, options.lookupOrigin ?? getHostSurfaceLookupOrigin());
     url.searchParams.set('host', host);
+    const token = await getInternalLookupToken();
     const response = await (options.fetchImpl ?? fetch)(url, {
       headers: {
         accept: 'application/json',
-        ...(getInternalLookupToken() ? { [INTERNAL_LOOKUP_HEADER]: getInternalLookupToken() as string } : {}),
+        ...(token ? { [INTERNAL_LOOKUP_HEADER]: token } : {}),
       },
       cache: 'no-store',
     });
