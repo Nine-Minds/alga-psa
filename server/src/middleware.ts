@@ -3,7 +3,7 @@ import { auth } from './app/api/auth/[...nextauth]/edge-auth';
 import { getSessionCookieName } from './lib/auth/sessionCookies';
 import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
-import { resolveRequestHost, detectForwardedHostRewrite } from './lib/deployment/requestHost';
+import { resolveRequestHost, resolveRequestOrigin, detectForwardedHostRewrite } from './lib/deployment/requestHost';
 import { MIGRATED_SETTINGS_TAB_IDS } from './components/settings/settingsTabsRegistry';
 import { resolveHostSurface } from './lib/portal-domains/hostSurface';
 import { portalDomainServes, surfaceForPath, type PortalDomainSurface } from '@alga-psa/shared/core/portalDomainSurface';
@@ -358,6 +358,13 @@ const _middleware = auth(async (request) => {
   const deploymentCaps = resolveDeploymentCapabilities();
   const { hostname: requestHostname, hostHeader: requestHostHeader } = resolveRequestHost(request, deploymentCaps);
   maybeWarnForwardedHostRewrite(request, deploymentCaps);
+  // The origin the browser actually used. next-auth's `auth()` wrapper rewrites
+  // `request.nextUrl` to NEXTAUTH_URL, so on a custom host nextUrl.origin is the canonical
+  // origin and must not be used for "stay on this host" redirects.
+  const requestOrigin = resolveRequestOrigin(request, deploymentCaps, {
+    fallbackProto: request.nextUrl.protocol.replace(/:$/, ''),
+    fallbackHost: request.nextUrl.host,
+  }).origin;
   // Surface served by a custom host (null on the canonical host / unknown host). Only the
   // routes that branch on it pay for the lookup (cached per isolate, fails closed to null).
   const canonicalHostname = getCanonicalUrl()?.hostname ?? null;
@@ -396,7 +403,7 @@ const _middleware = auth(async (request) => {
     requestHostname,
     canonicalUrlEnv: getCanonicalUrl(),
     hostSurface,
-    requestOrigin: request.nextUrl.origin,
+    requestOrigin,
   });
   if (surfaceGateRedirect) {
     const gateResponse = NextResponse.redirect(surfaceGateRedirect);
@@ -532,7 +539,7 @@ const _middleware = auth(async (request) => {
         canonicalUrlEnv,
         userType: request.auth?.user?.user_type,
         hostSurface,
-        requestOrigin: request.nextUrl.origin,
+        requestOrigin,
       });
       if (redirectTarget) {
         const redirectResponse = NextResponse.redirect(redirectTarget);
@@ -602,6 +609,10 @@ const _middleware = auth(async (request) => {
       }
 
       const loginUrl = request.nextUrl.clone();
+      // Sign in on the host the user is on (custom MSP/both host), not the canonical one.
+      const loginOrigin = new URL(requestOrigin);
+      loginUrl.protocol = loginOrigin.protocol;
+      loginUrl.host = loginOrigin.host;
       loginUrl.pathname = '/auth/signin';
       const callbackUrl = request.nextUrl.pathname + (request.nextUrl.search || '');
       loginUrl.searchParams.set('callbackUrl', callbackUrl);
@@ -615,7 +626,7 @@ const _middleware = auth(async (request) => {
       const canonicalUrlEnv = getCanonicalUrl();
       const redirectTarget = canonicalUrlEnv && !(hostSurface === 'both')
         ? new URL('/client-portal/dashboard', canonicalUrlEnv.origin)
-        : new URL('/client-portal/dashboard', request.nextUrl);
+        : new URL('/client-portal/dashboard', requestOrigin);
       const redirectResponse = NextResponse.redirect(redirectTarget);
       redirectResponse.headers.set('x-pathname', redirectTarget.pathname);
       return redirectResponse;
@@ -690,7 +701,7 @@ const _middleware = auth(async (request) => {
         canonicalUrlEnv: getCanonicalUrl(),
         userType: request.auth.user?.user_type,
         hostSurface,
-        requestOrigin: request.nextUrl.origin,
+        requestOrigin,
       });
       if (redirectTarget) {
         const redirectResponse = NextResponse.redirect(redirectTarget);
