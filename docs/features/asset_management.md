@@ -20,7 +20,11 @@ schemas, and the Hudu import mapping.
 - Location management (free-text `location` field and structured `location_id` FK to `client_locations`)
 - Warranty tracking
 - Client association
-- Status management
+- Tenant-managed status registry (`asset_statuses` table): each status has a lifecycle kind (`active`, `inactive`, or `maintenance`), a display label, and a sort order; built-in statuses can be renamed and reordered; RMM sync no longer overwrites a manually set status
+- Procurement tracking: `manufacturer`, `model`, `vendor_id`, `purchase_cost` (with `purchase_cost_currency`), `order_number` — populated from RMM hardware data where available, editable manually
+- Contact assignment with full history (`asset_assignments` table): record who is responsible for or in possession of each device; every assign/unassign is stored
+- RMM signed-in-user matching to client contacts by email, username, or name — with per-organization suggest/auto-assign mode (`signedInUserMappings`, `autoAssignFromSignedInUser`)
+- Asset grouping into bundles (single owner, travels as a unit) or shared workspaces (location + member contacts) via `asset_groups` and `asset_group_members` tables
 
 ### Location Linking
 
@@ -80,21 +84,88 @@ CREATE TABLE assets (
     tenant UUID NOT NULL REFERENCES tenants,
     asset_id UUID DEFAULT gen_random_uuid() NOT NULL,
     type_id UUID NOT NULL,
-    client_id UUID NOT NULL, -- Client association
+    client_id UUID NOT NULL,
     asset_tag TEXT NOT NULL,
     serial_number TEXT,
     name TEXT NOT NULL,
-    status TEXT NOT NULL,
+    status_id UUID,                  -- FK to asset_statuses; replaces the old free-text status column
     location TEXT,
-    location_id UUID,            -- Optional FK to client_locations; validated against the asset's client
+    location_id UUID,                -- Optional FK to client_locations; validated against the asset's client
     purchase_date DATE,
     warranty_end_date DATE,
+    -- Procurement fields
+    manufacturer TEXT,               -- Hardware maker; synced from RMM system_info where available
+    model TEXT,                      -- Device model; synced from RMM system_info where available
+    vendor_id UUID,                  -- FK to vendors table
+    purchase_cost NUMERIC(12,2),
+    purchase_cost_currency TEXT,
+    order_number TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (tenant, asset_id),
     FOREIGN KEY (tenant, type_id) REFERENCES asset_types(tenant, type_id),
     FOREIGN KEY (tenant, client_id) REFERENCES clients(tenant, client_id),
+    FOREIGN KEY (tenant, location_id) REFERENCES client_locations(tenant, location_id),
+    FOREIGN KEY (tenant, status_id) REFERENCES asset_statuses(tenant, status_id)
+);
+```
+
+### Asset Statuses (Tenant-Managed)
+```sql
+CREATE TABLE asset_statuses (
+    tenant UUID NOT NULL REFERENCES tenants,
+    status_id UUID DEFAULT gen_random_uuid() NOT NULL,
+    label TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('active', 'inactive', 'maintenance')),
+    is_builtin BOOLEAN NOT NULL DEFAULT false,
+    display_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (tenant, status_id)
+);
+```
+
+### Asset Assignments
+```sql
+CREATE TABLE asset_assignments (
+    tenant UUID NOT NULL REFERENCES tenants,
+    assignment_id UUID DEFAULT gen_random_uuid() NOT NULL,
+    asset_id UUID NOT NULL,
+    contact_id UUID NOT NULL,
+    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    unassigned_at TIMESTAMP WITH TIME ZONE,
+    notes TEXT,
+    created_by UUID NOT NULL,
+    PRIMARY KEY (tenant, assignment_id),
+    FOREIGN KEY (tenant, asset_id) REFERENCES assets(tenant, asset_id) ON DELETE CASCADE,
+    FOREIGN KEY (tenant, contact_id) REFERENCES contacts(tenant, contact_id),
+    FOREIGN KEY (tenant, created_by) REFERENCES users(tenant, user_id)
+);
+```
+
+### Asset Groups and Members
+```sql
+CREATE TABLE asset_groups (
+    tenant UUID NOT NULL REFERENCES tenants,
+    group_id UUID DEFAULT gen_random_uuid() NOT NULL,
+    name TEXT NOT NULL,
+    group_type TEXT NOT NULL CHECK (group_type IN ('bundle', 'workspace')),
+    owner_contact_id UUID,           -- For bundles: the single owner
+    location_id UUID,                -- For workspaces: the shared location
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (tenant, group_id),
+    FOREIGN KEY (tenant, owner_contact_id) REFERENCES contacts(tenant, contact_id),
     FOREIGN KEY (tenant, location_id) REFERENCES client_locations(tenant, location_id)
+);
+
+CREATE TABLE asset_group_members (
+    tenant UUID NOT NULL REFERENCES tenants,
+    group_id UUID NOT NULL,
+    asset_id UUID NOT NULL,
+    PRIMARY KEY (tenant, group_id, asset_id),
+    FOREIGN KEY (tenant, group_id) REFERENCES asset_groups(tenant, group_id) ON DELETE CASCADE,
+    FOREIGN KEY (tenant, asset_id) REFERENCES assets(tenant, asset_id) ON DELETE CASCADE
 );
 ```
 
@@ -239,6 +310,24 @@ CREATE TABLE asset_history (
   - Set status ✓
   - Set location ✓
   - Delete ✓
+- Tenant-managed asset statuses ✓
+  - Status registry CRUD with display_order ✓
+  - Built-in status protection ✓
+  - RMM sync no longer overwrites manual status ✓
+- Procurement fields ✓
+  - manufacturer, model, vendor_id, purchase_cost, order_number ✓
+  - RMM hardware/system_info backfill ✓
+- Contact assignment ✓
+  - asset_assignments history table ✓
+  - Assign/unassign actions and REST API ✓
+  - Portal and mobile (read-only) ✓
+- RMM signed-in-user matching ✓
+  - Match by email/username/name to client contacts ✓
+  - Per-organization suggest/auto-assign mode ✓
+- Asset groups ✓
+  - Bundles (single owner) ✓
+  - Shared workspaces (location + member contacts) ✓
+  - REST API and bulk assignment ✓
 - Advanced reporting
   - Custom report builder
   - Dashboard integration

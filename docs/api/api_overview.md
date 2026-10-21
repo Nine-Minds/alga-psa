@@ -129,7 +129,7 @@ The following REST API groups are available in the Community Edition under the b
 - [API Rate Limiting and Webhooks](api-rate-limiting-and-webhooks.md)
 - [Unified Full-Text Search](search.md)
 - **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling, asset links, and agent/team assignment sub-resources (see below). `GET /api/v1/tickets` supports a `fields` query parameter for sparse field sets; pass `fields=tags` to include each ticket's tag array in the response — each entry contains `tag_id`, `tag_text`, `background_color`, and `text_color`. The endpoint also accepts a `sort` query parameter validated against an explicit allowlist; passing an unrecognised sort key returns `400 Bad Request` rather than a database error. Pass `sort=latest_activity_at` (with optional `order=asc` or `order=desc`) to order results by the most recent visible activity on each ticket — the newest of the ticket's own timestamps and its latest non-draft, non-deleted comment. `created_at` is accepted as a sort alias for the underlying `entered_at` column. `latest_activity_at` is also available as a selectable response field (its value is an ISO timestamp string); for client-portal callers the field is computed from non-internal comments only, so internal notes do not expose their timing to portal contacts.
-- **Assets** — Register hardware assets, schedule maintenance, map relationships between devices, drive RMM actions, and link assets to tickets (see below).
+- **Assets** — Register hardware assets (including procurement fields: manufacturer, model, vendor, purchase cost, and order number), schedule maintenance, map relationships between devices, drive RMM actions, and link assets to tickets. Supports asset-to-contact assignment history, tenant-managed asset status registry, and asset grouping into bundles and shared workspaces. See sub-resource tables below.
 - **Users** — Create and administer user accounts, manage passwords and two-factor authentication, and read roles, teams, and effective permissions.
 - **Billing** — Access contracts, contract lines, invoices, and billing analytics.
 - **Email Templates** — Read, create, and delete per-language notification email templates. `GET /api/v1/email/templates` lists all effective templates, merging system defaults with tenant overrides, and is filterable by `name`, `language`, `category`, and `customized` (pass `customized=true` to list only templates the tenant has overridden). `GET`, `PUT`, and `DELETE` on `/api/v1/email/templates/{name}` read, upsert, and remove individual tenant overrides; on the first `PUT` the system default is cloned as the baseline. Write and delete operations require the `settings` write permission and are flagged as requiring approval in the AI/MCP tool registry.
@@ -208,6 +208,8 @@ Both endpoints require `client:update` and `client:delete` permissions. The exec
 
 Supply `target_client_id` in the request body. Additional options control per-contract date treatment (`original` vs `cutover`), contact-to-billing-profile mapping, and whether existing portal access grants are pinned to the target profile.
 
+The merge request body also accepts an `assets_billing_strategy` option (`keep_separate` or `use_destination_default`) that controls how the billing profile of moving assets and their RMM organizations is resolved after the merge. `keep_separate` retains each asset's own billing profile; `use_destination_default` reassigns all moving assets to the destination client's default billing profile.
+
 #### Billing Profile Contacts
 
 After a merge, a target client may carry multiple billing profiles — one per absorbed source client. Each profile can have dedicated contacts designated as profile managers, who gain visibility into that profile's tickets from the client portal without affecting any other contact's access.
@@ -218,6 +220,50 @@ After a merge, a target client may carry multiple billing profiles — one per a
 | `PUT` | `/clients/{id}/billing-profiles/{profileId}/contacts` | Replace the full contact list for a billing profile |
 
 A contact designated as a profile manager with `can_view_profile_tickets: true` gains read access to tickets attributed to that billing profile. Clients that have only one billing profile do not require profile contact management and behave exactly as before.
+
+#### Asset Assignments
+
+An asset can be assigned to a client contact to record who is responsible for or in possession of the device. Assignments form a history: every assign and unassign is recorded so you can see every contact who held the asset.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `GET` | `/assets/{id}/assignments` | List the assignment history for an asset |
+| `POST` | `/assets/{id}/assignments` | Assign the asset to a contact. Requires `contact_id`; accepts optional `notes` |
+| `DELETE` | `/assets/{id}/assignments/{assignmentId}` | Remove an assignment record |
+
+**Permissions:** all routes require `asset:update`.
+
+#### Asset Statuses
+
+Asset statuses are tenant-managed rather than hardcoded. Each status has a lifecycle `kind` (`active`, `inactive`, or `maintenance`), a display label, and a sort order. Built-in statuses are always present but their labels can be renamed; custom statuses can be added freely. RMM sync no longer overwrites a status that was set manually.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `GET` | `/asset-statuses` | List all statuses for the tenant, ordered by `display_order` |
+| `POST` | `/asset-statuses` | Create a new status. Requires `label` and `kind` (`active`, `inactive`, or `maintenance`) |
+| `PUT` | `/asset-statuses/{id}` | Update a status's label, kind, or display order |
+| `DELETE` | `/asset-statuses/{id}` | Archive a custom status; returns `400` for built-in statuses |
+
+**Permissions:** reads require `asset:read`; writes require `asset:update`.
+
+#### Asset Groups (Bundles and Shared Workspaces)
+
+Assets can be organized into named groups of two kinds:
+- **Bundle** — devices with a single owner that travel or are managed as a unit (e.g., a laptop + docking station assigned to one technician).
+- **Workspace** — a shared location with a member list of contacts who regularly use the devices there (e.g., a reception desk with multiple PCs).
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `GET` | `/asset-groups` | List all asset groups for the tenant |
+| `POST` | `/asset-groups` | Create a group. Requires `name` and `group_type` (`bundle` or `workspace`) |
+| `GET` | `/asset-groups/{id}` | Retrieve a group and its members |
+| `PUT` | `/asset-groups/{id}` | Update a group's name, owner contact, location, or workspace member list |
+| `DELETE` | `/asset-groups/{id}` | Delete a group (member assets are not deleted) |
+| `GET` | `/assets/{id}/groups` | List the groups an asset belongs to |
+| `POST` | `/assets/{id}/groups` | Add an asset to a group. Requires `group_id` |
+| `DELETE` | `/assets/{id}/groups/{groupId}` | Remove an asset from a group |
+
+**Permissions:** reads require `asset:read`; writes require `asset:update`.
 
 #### Time Periods
 
