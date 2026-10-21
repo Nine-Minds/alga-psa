@@ -135,20 +135,59 @@ export async function inlineDocumentImageUrls(
   );
 }
 
+// A value that is, in its entirety, a document view URL (optionally `?t=...`).
+const WHOLE_DOC_VIEW_URL_RE = /^\/api\/documents\/view\/[a-f0-9-]+(\?[^"'\s)]*)?$/i;
+
 /**
- * Same as inlineDocumentImageUrls but for structured values (invoice view
- * models, template ASTs): inlines every document URL found in any string.
- * Data URIs contain no JSON metacharacters, so the serialize/replace/parse
- * round trip is lossless.
+ * Inline a single image URL field. Only a value that is *entirely* a
+ * `/api/documents/view/{id}` URL is touched; anything else is returned as is.
+ *
+ * Use this (not inlineDocumentImageUrls) for data a viewer can influence:
+ * callers pick the specific MSP-authored fields to inline, so text such as a
+ * client name or address containing a document URL is never resolved.
  */
-export async function inlineDocumentImagesInValue<T>(
-  value: T,
+export async function inlineDocumentImageUrl<T>(
+  url: T,
+  options: InlineDocumentImagesOptions,
+): Promise<T | string> {
+  if (typeof url !== 'string' || !WHOLE_DOC_VIEW_URL_RE.test(url)) return url;
+  return inlineDocumentImageUrls(url, options);
+}
+
+/**
+ * Inline the `src` of every image node in a template AST whose `src` is a
+ * literal document URL (what DocumentImagePickerWidget writes). No other
+ * string in the AST is touched. Returns a copy; the input is not mutated.
+ */
+export async function inlineTemplateImageSources<T>(
+  ast: T,
   options: InlineDocumentImagesOptions,
 ): Promise<T> {
-  const serialized = JSON.stringify(value);
-  if (serialized === undefined) return value;
-  const inlined = await inlineDocumentImageUrls(serialized, options);
-  return inlined === serialized ? value : (JSON.parse(inlined) as T);
+  const pending: Array<() => Promise<void>> = [];
+
+  const walk = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(walk);
+    if (value === null || typeof value !== 'object') return value;
+    const copy: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      copy[key] = walk(child);
+    }
+    if (copy.type === 'image') {
+      const src = copy.src as { type?: string; value?: unknown } | undefined;
+      if (src && src.type === 'literal' && typeof src.value === 'string' && WHOLE_DOC_VIEW_URL_RE.test(src.value)) {
+        const literal = { ...src };
+        copy.src = literal;
+        pending.push(async () => {
+          literal.value = await inlineDocumentImageUrl(src.value, options);
+        });
+      }
+    }
+    return copy;
+  };
+
+  const result = walk(ast) as T;
+  await Promise.all(pending.map((run) => run()));
+  return result;
 }
 
 // ---------------------------------------------------------------------------

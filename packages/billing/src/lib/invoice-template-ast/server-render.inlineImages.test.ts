@@ -35,7 +35,8 @@ vi.mock('@alga-psa/db', () => ({
 import {
   MAX_INLINED_IMAGE_BYTES,
   inlineDocumentImageUrls,
-  inlineDocumentImagesInValue,
+  inlineDocumentImageUrl,
+  inlineTemplateImageSources,
   renderTemplateAstHtmlDocument,
 } from './server-render';
 import { evaluateTemplateAst } from './evaluator';
@@ -111,14 +112,32 @@ describe('inlineDocumentImageUrls', () => {
     expect(mocks.download).toHaveBeenCalledTimes(1);
   });
 
-  it('inlines URLs found anywhere inside a structured value', async () => {
+  it('inlineDocumentImageUrl only touches a value that is wholly a document URL', async () => {
     mocks.findById.mockResolvedValue(file());
-    const value = { tenantClient: { logoUrl: '/api/documents/view/aaaa-1111?t=9' }, other: 1, list: ['/api/documents/view/aaaa-1111'] };
-    expect(await inlineDocumentImagesInValue(value, { knex })).toEqual({
-      tenantClient: { logoUrl: PNG_URI },
-      other: 1,
-      list: [PNG_URI],
-    });
+    expect(await inlineDocumentImageUrl('/api/documents/view/aaaa-1111?t=9', { knex })).toBe(PNG_URI);
+    const text = 'Acme /api/documents/view/aaaa-1111 Ltd';
+    expect(await inlineDocumentImageUrl(text, { knex })).toBe(text);
+    expect(await inlineDocumentImageUrl(undefined, { knex })).toBeUndefined();
+  });
+
+  it('inlineTemplateImageSources inlines only literal image node srcs', async () => {
+    mocks.findById.mockResolvedValue(file());
+    const url = '/api/documents/view/aaaa-1111';
+    const ast = {
+      layout: {
+        type: 'document',
+        children: [
+          { type: 'image', src: { type: 'literal', value: url } },
+          { type: 'text', content: { type: 'literal', value: url } },
+          { type: 'image', src: { type: 'path', path: url } },
+        ],
+      },
+    };
+    const out: any = await inlineTemplateImageSources(ast, { knex });
+    expect(out.layout.children[0].src.value).toBe(PNG_URI);
+    expect(out.layout.children[1].content.value).toBe(url);
+    expect(out.layout.children[2].src.path).toBe(url);
+    expect((ast.layout.children[0] as any).src.value).toBe(url);
   });
 });
 

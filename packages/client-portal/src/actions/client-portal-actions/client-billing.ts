@@ -900,12 +900,24 @@ export const getClientInvoicePreview = withAuth(async (user, { tenant }, invoice
     const template = resolvedTemplate || templates.find((entry) => entry.isStandard) || templates[0] || null;
 
     // Loaded on demand: the template renderer module is heavy and only this action needs it.
-    const { inlineDocumentImagesInValue } = await import('@alga-psa/billing/lib/invoice-template-ast/server-render');
+    //
+    // Only MSP-authored image fields are inlined: the tenant logo binding and
+    // the src of image nodes in the template. The rest of the invoice (client
+    // name, address, line descriptions, notes) can be edited by the portal
+    // user, so resolving document URLs found there would let them read any
+    // image in the tenant by file id.
+    const { inlineDocumentImageUrl, inlineTemplateImageSources } = await import('@alga-psa/billing/lib/invoice-template-ast/server-render');
     const inlineOptions = { knex, tenant };
-    const [inlinedInvoice, inlinedTemplate] = await Promise.all([
-      inlineDocumentImagesInValue(invoice, inlineOptions),
-      template ? inlineDocumentImagesInValue(template, inlineOptions) : Promise.resolve(null),
+    const [logoUrl, inlinedTemplateAst] = await Promise.all([
+      inlineDocumentImageUrl(invoice.tenantClient?.logoUrl, inlineOptions),
+      template?.templateAst ? inlineTemplateImageSources(template.templateAst, inlineOptions) : Promise.resolve(null),
     ]);
+    const inlinedInvoice: InvoiceViewModel = invoice.tenantClient
+      ? { ...invoice, tenantClient: { ...invoice.tenantClient, logoUrl: (logoUrl as string | null | undefined) ?? null } }
+      : invoice;
+    const inlinedTemplate: IInvoiceTemplate | null = template
+      ? { ...template, templateAst: template.templateAst ? inlinedTemplateAst : template.templateAst }
+      : null;
 
     return { invoice: inlinedInvoice, template: inlinedTemplate };
   } catch (error) {

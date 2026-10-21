@@ -164,6 +164,24 @@ describe('getClientInvoicePreview', () => {
     expect(mocks.download).not.toHaveBeenCalled();
   });
 
+  it('leaves viewer-editable fields containing a document URL unchanged', async () => {
+    const url = '/api/documents/view/bbbb2222-0000-4000-8000-000000000002';
+    mocks.getInvoiceForRendering.mockResolvedValue({
+      invoice_id: 'inv-1',
+      customer: { name: url, address: `1 ${url}` },
+      items: [{ description: `see ${url}` }],
+      tenantClient: { name: 'MSP', address: null, logoUrl: '/api/documents/view/aaaa1111-0000-4000-8000-000000000001' },
+    });
+    const { getClientInvoicePreview } = await import('./client-billing');
+    const result: any = await getClientInvoicePreview('inv-1');
+
+    expect(result.invoice.customer).toEqual({ name: url, address: `1 ${url}` });
+    expect(result.invoice.items[0].description).toBe(`see ${url}`);
+    expect(result.invoice.tenantClient.logoUrl).toBe(PNG_URI);
+    expect(result.template.templateAst.layout.children[0].src.value).toBe(PNG_URI);
+    expect(mocks.download).toHaveBeenCalledTimes(2);
+  });
+
   describe('template selection', () => {
     it('uses the resolved client/tenant template when available', async () => {
       mocks.getResolvedInvoiceTemplateId.mockResolvedValue('tpl-custom');
