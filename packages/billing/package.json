@@ -62,6 +62,7 @@
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "@alga-psa/event-bus": "*",
+    "@alga-psa/event-schemas": "*",
     "@alga-psa/integrations": "*",
     "@alga-psa/validation": "*",
     "@alga-psa/workflow-streams": "*",

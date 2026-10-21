@@ -43,7 +43,6 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildPaymentAppliedPayload,
   buildPaymentFailedPayload,
-  buildPaymentRecordedPayload,
   buildPaymentRefundedPayload,
 } from 'server/src/lib/api/services/paymentWorkflowEvents';
 
@@ -765,6 +764,9 @@ export class PaymentService {
       referenceNumber: event.paymentIntentId,
       // A PaymentIntent settles once; auto-pay lands it from both the charge path and the webhook.
       dedupeByReference: true,
+      // recordExternalPayment publishes PAYMENT_RECORDED (post-commit, real insert only).
+      source: 'online_payment',
+      gatewayTransactionId: event.paymentIntentId,
       // The settling Checkout Session id so the terminal-status cleanup never
       // retires the very session whose completion settled the invoice.
       externalLinkId: event.externalLinkId,
@@ -807,25 +809,6 @@ export class PaymentService {
     });
 
     const occurredAt = new Date().toISOString();
-    await publishWorkflowEvent({
-      eventType: 'PAYMENT_RECORDED',
-      payload: buildPaymentRecordedPayload({
-        paymentId,
-        clientId: invoice.client_id,
-        receivedAt: occurredAt,
-        amount: event.amount,
-        currency: String(invoice.currency_code || event.currency || 'USD'),
-        method: event.provider,
-        gatewayTransactionId: event.paymentIntentId,
-      }),
-      ctx: {
-        tenantId: this.tenantId,
-        occurredAt,
-        actor: { actorType: 'SYSTEM' },
-      },
-      idempotencyKey: `payment_recorded:${paymentId}`,
-    });
-
     await publishWorkflowEvent({
       eventType: 'PAYMENT_APPLIED',
       payload: buildPaymentAppliedPayload({

@@ -255,6 +255,7 @@ export const billingContracts = {
             method: 'check',
             receivedByUserId: IDS.user,
             gatewayTransactionId: 'CHK-1042',
+            source: 'manual',
           }),
       },
       {
@@ -269,6 +270,7 @@ export const billingContracts = {
             currency: 'USD',
             method: 'stripe',
             gatewayTransactionId: 'pi_3Nabc',
+            source: 'online_payment',
           }),
       },
     ],
