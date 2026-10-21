@@ -48639,6 +48639,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "tax_region": {
           "type": "string"
         },
+        "tax_rate_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+        },
+        "contract_line_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
+        },
         "is_billable": {
           "type": "boolean",
           "default": true
@@ -48881,6 +48894,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "tax_region": {
                 "type": "string"
               },
+              "tax_rate_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+              },
+              "contract_line_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
+              },
               "is_billable": {
                 "type": "boolean",
                 "default": true
@@ -48991,6 +49017,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   },
                   "tax_region": {
                     "type": "string"
+                  },
+                  "tax_rate_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid",
+                    "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+                  },
+                  "contract_line_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
                   },
                   "is_billable": {
                     "type": "boolean",
@@ -49857,6 +49896,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "tax_region": {
           "type": "string"
+        },
+        "tax_rate_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+        },
+        "contract_line_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
         },
         "is_billable": {
           "type": "boolean",
