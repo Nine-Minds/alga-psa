@@ -314,7 +314,7 @@ describe('QuoteDetail accepted optional item review state', () => {
       contract_items: [{ quote_item_id: 'item-required', description: 'Core managed services', quantity: 1, unit_price: 7000, total_price: 7000, is_optional: false, is_selected: true, is_recurring: true, target: 'contract' }],
       invoice_items: [{ quote_item_id: 'item-selected', description: 'Optional security bundle', quantity: 1, unit_price: 5000, total_price: 5000, is_optional: true, is_selected: true, is_recurring: false, target: 'invoice' }],
       sales_order_items: [{ quote_item_id: 'item-selected', description: 'Optional security bundle', quantity: 1, unit_price: 5000, total_price: 5000, is_optional: true, is_selected: true, is_recurring: false, target: 'sales_order' }],
-      excluded_items: [],
+      excluded_items: [], contract_discounts: [], contract_monthly_before_discounts: 0, contract_monthly_total: 0,
       existing_sales_order: null,
     });
 
@@ -342,7 +342,7 @@ describe('QuoteDetail accepted optional item review state', () => {
       contract_items: [{ quote_item_id: 'item-required', description: 'Core managed services', quantity: 1, unit_price: 7000, total_price: 7000, is_optional: false, is_selected: true, is_recurring: true, target: 'contract' }],
       invoice_items: [],
       sales_order_items: [{ quote_item_id: 'item-selected', description: 'Optional security bundle', quantity: 1, unit_price: 5000, total_price: 5000, is_optional: true, is_selected: true, is_recurring: false, target: 'sales_order' }],
-      excluded_items: [],
+      excluded_items: [], contract_discounts: [], contract_monthly_before_discounts: 0, contract_monthly_total: 0,
       existing_sales_order: { so_id: 'so-1', so_number: 'SO00001' },
     });
 
