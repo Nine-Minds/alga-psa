@@ -33,6 +33,10 @@
       "types": "./src/lib/catalog/serviceCatalogPricing.ts",
       "import": "./dist/lib/catalog/serviceCatalogPricing.mjs"
     },
+    "./lib/catalog/productCatalogCore": {
+      "types": "./src/lib/catalog/productCatalogCore.ts",
+      "import": "./dist/lib/catalog/productCatalogCore.mjs"
+    },
     "./services": {
       "types": "./src/services/index.ts",
       "import": "./dist/services/index.mjs"

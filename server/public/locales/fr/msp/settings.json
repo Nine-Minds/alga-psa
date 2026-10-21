@@ -2352,7 +2352,23 @@
         "nothingImportedBody": "Cette exécution n'a créé aucun nouvel enregistrement. Chaque ligne correspondait à quelque chose qui existait déjà, donc rien n'a été modifié.",
         "claimedBySamePackage": "Déjà migré par ce paquet",
         "claimedByOtherPackage": "Déjà migré par {{file}}",
-        "claimedByExistingEntity": "Associé à une entité existante"
+        "claimedByExistingEntity": "Associé à une entité existante",
+        "matchedBySku": "Associé à un produit existant par SKU"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Produits (catalogue / liste de prix)",
+          "vendorProducts": "Liste de prix fournisseur (coûts du distributeur)"
+        },
+        "productsHint": "Les prix et coûts sont lus comme des montants décimaux (par exemple 1,299.50) avec la colonne de devise si elle existe, sinon avec la devise du locataire. Les montants négatifs, non numériques ou trop précis sont supprimés et signalés ; la ligne est tout de même importée. Les produits sont associés aux produits existants par SKU ; les lignes de la liste fournisseur référencent un produit par SKU et créent ou associent le fournisseur par son nom."
+      },
+      "configure": {
+        "products": {
+          "title": "Produits",
+          "serviceType": "Type de service pour les nouveaux produits",
+          "serviceTypePlaceholder": "Sélectionnez un type de service",
+          "serviceTypeHelp": "Les produits dont le SKU existe déjà sont associés et laissés inchangés ; seuls les nouveaux produits sont classés sous ce type de service."
+        }
       }
     },
     "jobDetails": {

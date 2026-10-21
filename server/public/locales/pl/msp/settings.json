@@ -2352,7 +2352,23 @@
         "nothingImportedBody": "To uruchomienie nie utworzyło żadnych nowych rekordów. Każdy wiersz odpowiadał czemuś, co już istniało, więc nic nie zmieniono.",
         "claimedBySamePackage": "Już zmigrowane przez ten pakiet",
         "claimedByOtherPackage": "Już zmigrowane przez {{file}}",
-        "claimedByExistingEntity": "Dopasowano do istniejącej encji"
+        "claimedByExistingEntity": "Dopasowano do istniejącej encji",
+        "matchedBySku": "Dopasowano do istniejącego produktu według SKU"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Produkty (katalog / cennik)",
+          "vendorProducts": "Cennik dostawców (koszty dystrybutora)"
+        },
+        "productsHint": "Ceny i koszty są odczytywane jako kwoty dziesiętne (np. 1,299.50) z kolumną waluty, jeśli istnieje, w przeciwnym razie z walutą organizacji. Ujemne, nienumeryczne lub zbyt dokładne kwoty są odrzucane i zgłaszane; wiersz jest mimo to importowany. Produkty są dopasowywane do istniejących według SKU; wiersze cennika dostawców odwołują się do produktu przez SKU i tworzą lub dopasowują dostawcę według nazwy."
+      },
+      "configure": {
+        "products": {
+          "title": "Produkty",
+          "serviceType": "Typ usługi dla nowych produktów",
+          "serviceTypePlaceholder": "Wybierz typ usługi",
+          "serviceTypeHelp": "Produkty, których SKU już istnieje, są dopasowywane i pozostają bez zmian; tylko nowe produkty są przypisywane do tego typu usługi."
+        }
       }
     },
     "jobDetails": {

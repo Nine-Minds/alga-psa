@@ -2352,7 +2352,23 @@
         "nothingImportedBody": "Esta ejecución no creó registros nuevos. Cada fila coincidió con algo que ya existía, así que no se cambió nada.",
         "claimedBySamePackage": "Ya migrado por este paquete",
         "claimedByOtherPackage": "Ya migrado por {{file}}",
-        "claimedByExistingEntity": "Coincide con una entidad existente"
+        "claimedByExistingEntity": "Coincide con una entidad existente",
+        "matchedBySku": "Coincide con un producto existente por SKU"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Productos (catálogo / lista de precios)",
+          "vendorProducts": "Lista de precios de proveedores (costos del distribuidor)"
+        },
+        "productsHint": "Los precios y costos se leen como importes decimales (por ejemplo 1,299.50) con la columna de moneda si existe; de lo contrario, con la moneda del inquilino. Los importes negativos, no numéricos o con demasiada precisión se descartan y se informan; la fila se importa igualmente. Los productos se vinculan a los existentes por SKU; las filas de la lista de proveedores hacen referencia a un producto por SKU y crean o vinculan al proveedor por nombre."
+      },
+      "configure": {
+        "products": {
+          "title": "Productos",
+          "serviceType": "Tipo de servicio para productos nuevos",
+          "serviceTypePlaceholder": "Selecciona un tipo de servicio",
+          "serviceTypeHelp": "Los productos cuyo SKU ya existe se vinculan y no se modifican; solo los productos nuevos se archivan bajo este tipo de servicio."
+        }
       }
     },
     "jobDetails": {

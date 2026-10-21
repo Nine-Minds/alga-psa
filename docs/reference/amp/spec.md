@@ -1,4 +1,4 @@
-# AMP format v1.0.0
+# AMP format v1.1.0
 
 ## Container
 
@@ -14,7 +14,7 @@ Allowlisted tables, and only these:
 
 - `amp_manifest` — exactly one row of package metadata
 - Entity tables: `organizations`, `locations`, `contacts`, `tickets`,
-  `ticket_comments`, `assets`
+  `ticket_comments`, `assets`, `products`, `vendor_products`
 - Auxiliary tables: `external_identifiers`, `custom_field_values`,
   `package_diagnostics`
 
@@ -29,7 +29,7 @@ column is a schema mismatch.
 
 | Field | Required | Meaning |
 | --- | --- | --- |
-| `format_version` | yes | Semantic version of the AMP format, e.g. `1.0.0` |
+| `format_version` | yes | Semantic version of the AMP format, e.g. `1.1.0` |
 | `package_id` | yes | Producer-chosen opaque identifier for this package |
 | `created_at` | yes | RFC 3339 UTC creation time |
 | `producer_name` / `producer_version` | yes | Tool that produced the package |
