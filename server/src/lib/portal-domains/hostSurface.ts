@@ -1,0 +1,84 @@
+import {
+  normalizePortalDomainSurface,
+  type PortalDomainSurface,
+} from '@alga-psa/shared/core/portalDomainSurface';
+
+/**
+ * Edge-safe lookup of which surface a request host serves.
+ *
+ * The Edge middleware cannot query the database, so it asks the Node runtime
+ * (`/api/portal-domain/surface`) and caches the answer per isolate for a short
+ * time. Result semantics:
+ *   - a PortalDomainSurface: the host is an ACTIVE custom portal domain
+ *   - null: not a known/active custom domain, or the lookup failed
+ * Callers must treat null exactly like the legacy behaviour (a `client_portal`
+ * vanity host), so a failed lookup can never grant MSP access in place.
+ */
+
+export const HOST_SURFACE_LOOKUP_PATH = '/api/portal-domain/surface';
+const POSITIVE_TTL_MS = 30_000;
+const NEGATIVE_TTL_MS = 10_000;
+const MAX_CACHE_ENTRIES = 500;
+
+interface CacheEntry {
+  surface: PortalDomainSurface | null;
+  expiresAt: number;
+}
+
+const cache = new Map<string, CacheEntry>();
+
+export function clearHostSurfaceCache(): void {
+  cache.clear();
+}
+
+export function getHostSurfaceLookupOrigin(env: Record<string, string | undefined> = process.env): string {
+  return env.PORTAL_DOMAIN_LOOKUP_ORIGIN || `http://127.0.0.1:${env.PORT || '3000'}`;
+}
+
+export interface ResolveHostSurfaceOptions {
+  fetchImpl?: typeof fetch;
+  now?: () => number;
+  lookupOrigin?: string;
+}
+
+export async function resolveHostSurface(
+  hostname: string,
+  options: ResolveHostSurfaceOptions = {}
+): Promise<PortalDomainSurface | null> {
+  const host = hostname.trim().toLowerCase();
+  if (!host) {
+    return null;
+  }
+
+  const now = (options.now ?? Date.now)();
+  const hit = cache.get(host);
+  if (hit && hit.expiresAt > now) {
+    return hit.surface;
+  }
+
+  let surface: PortalDomainSurface | null = null;
+  let ttl = NEGATIVE_TTL_MS;
+  try {
+    const url = new URL(HOST_SURFACE_LOOKUP_PATH, options.lookupOrigin ?? getHostSurfaceLookupOrigin());
+    url.searchParams.set('host', host);
+    const response = await (options.fetchImpl ?? fetch)(url, {
+      headers: { accept: 'application/json' },
+      cache: 'no-store',
+    });
+    if (response.ok) {
+      const body = (await response.json()) as { surface?: unknown } | null;
+      if (body && typeof body.surface === 'string') {
+        surface = normalizePortalDomainSurface(body.surface);
+        ttl = POSITIVE_TTL_MS;
+      }
+    }
+  } catch {
+    surface = null;
+  }
+
+  if (cache.size >= MAX_CACHE_ENTRIES) {
+    cache.clear();
+  }
+  cache.set(host, { surface, expiresAt: now + ttl });
+  return surface;
+}

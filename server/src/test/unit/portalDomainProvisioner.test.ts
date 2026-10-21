@@ -64,6 +64,7 @@ describe('directProvisioner (appliance, trust-on-submit)', () => {
       domain: 'portal.acme.com',
       existing: null,
       domainChanged: false,
+      surface: 'client_portal',
     });
 
     expect(result.enqueued).toBe(false);
@@ -85,6 +86,7 @@ describe('directProvisioner (appliance, trust-on-submit)', () => {
         domain: 'alga.acme.com',
         existing: null,
         domainChanged: false,
+        surface: 'client_portal',
       })
     ).rejects.toThrow(/primary host/i);
     expect(upsertPortalDomain).not.toHaveBeenCalled();
@@ -105,6 +107,86 @@ describe('directProvisioner (appliance, trust-on-submit)', () => {
   });
 });
 
+describe('surface + SSO redirect-URI gate (alga-2026-0002799)', () => {
+  const regInput = (surface: 'client_portal' | 'msp' | 'both', existing: any = null) => ({
+    knex: fakeKnex,
+    tenant: 't1',
+    canonicalHost: 'abc1234.portal.alga.acme.com',
+    domain: 'helpdesk.acme.com',
+    existing,
+    domainChanged: false,
+    surface,
+  });
+  const providerEnv = { GOOGLE_OAUTH_CLIENT_ID: 'id', GOOGLE_OAUTH_CLIENT_SECRET: 'secret' };
+
+  beforeEach(() => {
+    delete process.env.PORTAL_DOMAIN_SSO_REDIRECT_URIS_PREREGISTERED;
+    for (const key of Object.keys(providerEnv)) delete (process.env as any)[key];
+  });
+
+  it('direct: msp surface with SSO configured stays pending_redirect_uri until confirmed', async () => {
+    Object.assign(process.env, providerEnv);
+    await directProvisioner.register(regInput('msp'));
+    const input = upsertPortalDomain.mock.calls[0][2];
+    expect(input.surface).toBe('msp');
+    expect(input.status).toBe('pending_redirect_uri');
+    expect(input.verificationDetails.sso_redirect_uris.required).toEqual([
+      'https://helpdesk.acme.com/api/auth/callback/google',
+    ]);
+    Object.keys(providerEnv).forEach((k) => delete (process.env as any)[k]);
+  });
+
+  it('direct: msp surface activates when no SSO provider needs a redirect URI', async () => {
+    await directProvisioner.register(regInput('both'));
+    expect(upsertPortalDomain.mock.calls[0][2].status).toBe('active');
+  });
+
+  it('direct: pre-registered redirect URIs activate immediately', async () => {
+    Object.assign(process.env, providerEnv, { PORTAL_DOMAIN_SSO_REDIRECT_URIS_PREREGISTERED: 'true' });
+    await directProvisioner.register(regInput('msp'));
+    expect(upsertPortalDomain.mock.calls[0][2].status).toBe('active');
+    Object.keys(providerEnv).forEach((k) => delete (process.env as any)[k]);
+  });
+
+  it('direct: changing the surface updates the existing row in place (matchSurface)', async () => {
+    await directProvisioner.register(regInput('both', { surface: 'client_portal', domain: 'helpdesk.acme.com', verificationDetails: {} }));
+    expect(upsertPortalDomain.mock.calls[0][2].matchSurface).toBe('client_portal');
+  });
+
+  it('direct: refresh activates a pending_redirect_uri row once confirmed', async () => {
+    const existing: any = {
+      domain: 'helpdesk.acme.com',
+      surface: 'msp',
+      status: 'pending_redirect_uri',
+      verificationDetails: { sso_redirect_uris: { required: ['u'], confirmed: ['u'] } },
+    };
+    await directProvisioner.refresh({ knex: fakeKnex, tenant: 't1', existing });
+    expect(updatePortalDomain.mock.calls[0][2].status).toBe('active');
+  });
+
+  it('direct: refresh leaves an unconfirmed pending_redirect_uri row alone', async () => {
+    const existing: any = {
+      domain: 'helpdesk.acme.com',
+      surface: 'msp',
+      status: 'pending_redirect_uri',
+      verificationDetails: { sso_redirect_uris: { required: ['u'], confirmed: [] } },
+    };
+    await directProvisioner.refresh({ knex: fakeKnex, tenant: 't1', existing });
+    expect(updatePortalDomain).not.toHaveBeenCalled();
+  });
+
+  it('temporal: passes surface to the row and the workflow and stores the redirect-URI state', async () => {
+    Object.assign(process.env, providerEnv);
+    await temporalProvisioner.register(regInput('msp'));
+    const input = upsertPortalDomain.mock.calls[0][2];
+    expect(input.surface).toBe('msp');
+    expect(input.status).toBe('pending_dns');
+    expect(input.verificationDetails.sso_redirect_uris.required).toHaveLength(1);
+    expect(enqueuePortalDomainWorkflow.mock.calls[0][0].surface).toBe('msp');
+    Object.keys(providerEnv).forEach((k) => delete (process.env as any)[k]);
+  });
+});
+
 describe('temporalProvisioner (hosted, regression)', () => {
   it('register upserts pending_dns and enqueues with the register trigger', async () => {
     const result = await temporalProvisioner.register({
@@ -114,6 +196,7 @@ describe('temporalProvisioner (hosted, regression)', () => {
       domain: 'portal.acme.com',
       existing: null,
       domainChanged: false,
+      surface: 'client_portal',
     });
 
     expect(result.enqueued).toBe(true);
@@ -131,6 +214,7 @@ describe('temporalProvisioner (hosted, regression)', () => {
       domain: 'new.acme.com',
       existing: { id: 'pd-1', domain: 'old.acme.com' } as any,
       domainChanged: true,
+      surface: 'client_portal',
     });
     expect(enqueuePortalDomainWorkflow.mock.calls[0][0].trigger).toBe('refresh');
   });

@@ -18,11 +18,24 @@ export const PORTAL_DOMAIN_STATUSES = [
   'certificate_issuing',
   'certificate_failed',
   'deploying',
+  'pending_redirect_uri',
   'active',
   'disabled',
 ] as const;
 
 export type PortalDomainStatus = (typeof PORTAL_DOMAIN_STATUSES)[number];
+
+// LEVERAGE: pattern portal-domain-model-copies — PortalDomainModel is duplicated in server, tenancy, client-portal and auth; the surface type/consts below are copied into each.
+export const PORTAL_DOMAIN_SURFACES = ['client_portal', 'msp', 'both'] as const;
+
+/** Which app(s) a custom domain serves: the client portal, the MSP app, or both (split by path prefix). */
+export type PortalDomainSurface = (typeof PORTAL_DOMAIN_SURFACES)[number];
+
+export const DEFAULT_PORTAL_DOMAIN_SURFACE: PortalDomainSurface = 'client_portal';
+
+export function isPortalDomainSurface(value: unknown): value is PortalDomainSurface {
+  return typeof value === 'string' && (PORTAL_DOMAIN_SURFACES as readonly string[]).includes(value);
+}
 
 export type PortalDomainVerificationMethod = 'cname';
 
@@ -31,6 +44,7 @@ export interface PortalDomainRecord {
   tenant: string;
   domain: string;
   canonical_host: string;
+  surface: PortalDomainSurface;
   status: PortalDomainStatus;
   status_message: string | null;
   last_checked_at: Date | null;
@@ -47,6 +61,7 @@ export interface PortalDomain {
   tenant: string;
   domain: string;
   canonicalHost: string;
+  surface: PortalDomainSurface;
   status: PortalDomainStatus;
   statusMessage: string | null;
   lastCheckedAt: Date | null;
@@ -60,6 +75,14 @@ export interface PortalDomain {
 
 export interface UpsertPortalDomainInput {
   domain: string;
+  surface?: PortalDomainSurface;
+  /**
+   * The surface of the row being replaced. A tenant's domain keeps one row per
+   * (tenant, surface); changing the surface of an existing domain must update that
+   * row in place (domain uniqueness is global, so inserting a second row would collide).
+   * Defaults to `surface`.
+   */
+  matchSurface?: PortalDomainSurface;
   status?: PortalDomainStatus;
   statusMessage?: string | null;
   verificationMethod?: PortalDomainVerificationMethod;
@@ -121,6 +144,7 @@ function mapRow(row: PortalDomainRecord): PortalDomain {
     tenant: row.tenant,
     domain: row.domain,
     canonicalHost: row.canonical_host,
+    surface: isPortalDomainSurface(row.surface) ? row.surface : DEFAULT_PORTAL_DOMAIN_SURFACE,
     status: row.status,
     statusMessage: row.status_message,
     lastCheckedAt: row.last_checked_at,
@@ -148,6 +172,12 @@ export async function getPortalDomain(knex: Knex, tenant: string): Promise<Porta
   return mapRow(record);
 }
 
+/** All domains registered for a tenant (one row per surface). */
+export async function listPortalDomains(knex: Knex, tenant: string): Promise<PortalDomain[]> {
+  const records = await portalDomainsQuery(knex, tenant).select('*') as PortalDomainRecord[];
+  return records.map(mapRow);
+}
+
 export async function getPortalDomainByHostname(knex: Knex, domain: string): Promise<PortalDomain | null> {
   const normalized = normalizeHostname(domain);
   const record = await tenantDb(knex, PORTAL_DOMAIN_HOSTNAME_DISCOVERY_TENANT)
@@ -173,6 +203,7 @@ export async function upsertPortalDomain(knex: Knex, tenant: string, input: Upse
     tenant,
     domain: normalizedDomain,
     canonical_host: canonicalHost,
+    surface: input.matchSurface ?? input.surface ?? DEFAULT_PORTAL_DOMAIN_SURFACE,
     status: input.status ?? 'pending_dns',
     status_message: input.statusMessage ?? null,
     last_checked_at: lastCheckedAt,
@@ -186,10 +217,11 @@ export async function upsertPortalDomain(knex: Knex, tenant: string, input: Upse
 
   const [record] = await portalDomainsQuery(knex, tenant)
     .insert(payload)
-    .onConflict('tenant')
+    .onConflict(['tenant', 'surface'])
     .merge({
       domain: payload.domain,
       canonical_host: payload.canonical_host,
+      surface: input.surface ?? payload.surface,
       status: payload.status,
       status_message: payload.status_message,
       last_checked_at: payload.last_checked_at,
@@ -220,6 +252,10 @@ export async function updatePortalDomain(
 
   if (patch.domain) {
     updates.domain = normalizeHostname(patch.domain);
+  }
+
+  if (patch.surface) {
+    updates.surface = patch.surface;
   }
 
   if (patch.status) {

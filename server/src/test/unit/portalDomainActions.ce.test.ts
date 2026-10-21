@@ -17,6 +17,7 @@ const baseRecord: PortalDomain = {
   statusMessage: 'Active',
   lastCheckedAt: new Date(),
   verificationMethod: 'cname',
+  surface: 'client_portal',
   verificationDetails: { forward_host_header: true },
   certificateSecretName: null,
   lastSyncedResourceVersion: null,
@@ -25,6 +26,7 @@ const baseRecord: PortalDomain = {
 };
 
 let portalDomainStore: PortalDomain | null = null;
+let hostnameOwner: PortalDomain | null = null;
 
 const { upsertPortalDomain, deletePortalDomain, updatePortalDomain } = vi.hoisted(() => ({
   upsertPortalDomain: vi.fn(),
@@ -63,6 +65,7 @@ vi.mock('@/models/PortalDomainModel', async () => {
   return {
     ...actual,
     getPortalDomain: vi.fn(async () => (portalDomainStore ? { ...portalDomainStore } : null)),
+    getPortalDomainByHostname: vi.fn(async () => hostnameOwner),
     upsertPortalDomain,
     updatePortalDomain,
     deletePortalDomain,
@@ -100,6 +103,7 @@ afterAll(() => {
 
 beforeEach(() => {
   portalDomainStore = null;
+  hostnameOwner = null;
   vi.clearAllMocks();
   delete process.env.EDITION;
   delete process.env.NEXT_PUBLIC_EDITION;
@@ -148,6 +152,30 @@ describe.each([
       throw new Error(`Expected registration to succeed, got ${JSON.stringify(result)}`);
     }
     expect(result.status).toMatchObject({ domain: 'portal.acme.com', status: 'active', mode: 'direct', isEditable: true });
+  });
+
+  it('rejects a domain already claimed by another tenant (one host, one tenant)', async () => {
+    hostnameOwner = { ...baseRecord, tenant: 'other-tenant' };
+
+    const result = await requestPortalDomainRegistrationAction({ domain: 'portal.acme.com' });
+
+    expect(result).toMatchObject({ messageKey: 'msp/settings:errors.clientPortalDomain.alreadyInUse' });
+    expect(upsertPortalDomain).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown surface', async () => {
+    const result = await requestPortalDomainRegistrationAction({ domain: 'portal.acme.com', surface: 'nope' as any });
+
+    expect(result).toMatchObject({ messageKey: 'msp/settings:errors.clientPortalDomain.invalidSurface' });
+    expect(upsertPortalDomain).not.toHaveBeenCalled();
+  });
+
+  it('registers an msp surface and reports it in the status', async () => {
+    const result = await requestPortalDomainRegistrationAction({ domain: 'helpdesk.acme.com', surface: 'msp' });
+
+    expect(upsertPortalDomain.mock.calls[0][2].surface).toBe('msp');
+    if (!('status' in result)) throw new Error('expected success');
+    expect(result.status.surface).toBe('msp');
   });
 
   it("rejects the server's own primary host before touching the row", async () => {

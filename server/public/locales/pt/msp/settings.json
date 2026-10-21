@@ -1396,7 +1396,9 @@
         "saveDomain": "Salvar domínio",
         "updateDomain": "Atualizar domínio",
         "submitting": "Enviando…",
-        "cancelEdit": "Cancelar edição"
+        "cancelEdit": "Cancelar edição",
+        "confirmUris": "Já os registrei — confirmar",
+        "confirmingUris": "Confirmando…"
       },
       "form": {
         "label": "Domínio personalizado",
@@ -1434,7 +1436,8 @@
         "deploying": "Implantando",
         "active": "Ativo",
         "disabled": "Desabilitado",
-        "unknown": "Desconhecido"
+        "unknown": "Desconhecido",
+        "pending_redirect_uri": "URIs de redirecionamento pendentes"
       },
       "messages": {
         "requestSubmitted": "Solicitação de domínio personalizado enviada.",
@@ -1446,9 +1449,32 @@
         "registerFailed": "Falha ao registrar o domínio personalizado.",
         "refreshFailed": "Falha ao atualizar o status do domínio.",
         "retryFailed": "Falha na nova tentativa.",
-        "disableFailed": "Falha ao desativar o domínio personalizado."
+        "disableFailed": "Falha ao desativar o domínio personalizado.",
+        "confirmUrisFailed": "Falha ao confirmar os URIs de redirecionamento.",
+        "urisConfirmed": "URIs de redirecionamento confirmados."
       },
-      "hostedTlsNote": "Forneceremos certificados TLS automaticamente assim que o DNS for verificado."
+      "hostedTlsNote": "Forneceremos certificados TLS automaticamente assim que o DNS for verificado.",
+      "surface": {
+        "label": "Atende",
+        "current": "Atende: {{value}}",
+        "updatingSurface": "Salvar mudará o aplicativo atendido por este domínio e reiniciará o provisionamento.",
+        "options": {
+          "client_portal": "Portal do cliente",
+          "msp": "Aplicativo MSP",
+          "both": "Ambos"
+        },
+        "descriptions": {
+          "client_portal": "O domínio abre o portal do cliente. Este é o padrão.",
+          "msp": "O domínio abre o aplicativo MSP (técnicos). Os URIs de redirecionamento do login único precisam ser registrados antes.",
+          "both": "Um domínio atende os dois aplicativos. Caminhos em /msp abrem o aplicativo MSP e caminhos em /client-portal abrem o portal do cliente."
+        }
+      },
+      "redirectUris": {
+        "title": "Os URIs de redirecionamento de SSO precisam ser registrados",
+        "description": "Este domínio atende o aplicativo MSP, então o login único só funcionará depois que os URIs de redirecionamento abaixo forem registrados no seu provedor de SSO. O domínio fica pendente até a confirmação.",
+        "listLabel": "Registre estes URIs de redirecionamento:",
+        "contactSupport": "Peça ao administrador ou entre em contato com o suporte para registrar e confirmar estes URIs de redirecionamento."
+      }
     },
     "yourCompanyName": "Nome da sua empresa",
     "brandingPreviewMode": "Modo de tema de visualização da marca",

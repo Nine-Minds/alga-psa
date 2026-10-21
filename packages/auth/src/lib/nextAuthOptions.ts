@@ -555,6 +555,12 @@ async function computeVanityRedirect({
             if (!portalDomain || portalDomain.status !== 'active') {
                 return null;
             }
+            // Already on the tenant's own custom domain (an MSP/both domain authenticates in
+            // place, see nextauth/customHostAuth.ts): the session cookie is host-only on this
+            // host, so a handoff to ourselves would be a pointless redirect loop.
+            if (portalDomain.domain.toLowerCase() === base.host.toLowerCase()) {
+                return null;
+            }
             return portalDomain;
         };
 

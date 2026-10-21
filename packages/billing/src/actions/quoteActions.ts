@@ -1729,6 +1729,7 @@ export const sendQuote = withAuth(async (
     if (recipients.length > 0) {
       emailRecipients = recipients;
       const companyName = tenantParty?.name || 'Your Company';
+      // LEVERAGE: pattern tenant-link-context — hand-built client-portal base URL (billing emails out of scope for custom-domain routing; left canonical).
       const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
       const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
@@ -1830,6 +1831,7 @@ export const resendQuote = withAuth(async (
     if (recipients.length > 0) {
       emailRecipients = recipients;
       const companyName = tenantParty?.name || 'Your Company';
+      // LEVERAGE: pattern tenant-link-context — hand-built client-portal base URL (billing emails out of scope for custom-domain routing; left canonical).
       const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
       const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
@@ -1927,6 +1929,7 @@ export const sendQuoteReminder = withAuth(async (
     if (recipients.length > 0) {
       emailRecipients = recipients;
       const companyName = tenantParty?.name || 'Your Company';
+      // LEVERAGE: pattern tenant-link-context — hand-built client-portal base URL (billing emails out of scope for custom-domain routing; left canonical).
       const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
       const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);

@@ -12,6 +12,7 @@ import os from "os";
 
 import { getAdminConnection, retryOnAdminReadOnly } from "@alga-psa/db/admin.js";
 import { tenantDb } from "@alga-psa/db";
+import { evaluateSsoRedirectUriGate } from "@alga-psa/shared/core/portalDomainSurface.js";
 
 import type {
   PortalDomainActivityRecord,
@@ -121,6 +122,7 @@ const ACTIVE_RECONCILE_STATUSES = new Set([
   "certificate_issuing",
   "certificate_failed",
   "deploying",
+  "pending_redirect_uri",
   "active",
 ]);
 
@@ -547,6 +549,7 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
           await k(TABLE_NAME).where({ id: manifest.record.id }).update({
             certificate_secret_name: manifest.secretName,
             last_synced_resource_version: null,
+            surface: 'client_portal',
             updated_at: k.fn.now(),
             last_checked_at: k.fn.now(),
           });
@@ -579,6 +582,7 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
           await k(TABLE_NAME).whereIn("id", cleanupIds).update({
             certificate_secret_name: null,
             last_synced_resource_version: null,
+            surface: 'client_portal',
             updated_at: k.fn.now(),
             last_checked_at: k.fn.now(),
           });
@@ -647,7 +651,7 @@ export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: 
     return null;
   }
 
-  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed']);
+  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed', 'pending_redirect_uri']);
   if (terminalStatuses.has(record.status)) {
     return { status: record.status, statusMessage: record.status_message };
   }
@@ -709,8 +713,16 @@ export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: 
     );
 
       if (gatewayExists && virtualServiceExists) {
-        nextStatus = 'active';
-        nextMessage = 'Your domain is live and protected by HTTPS.';
+        const redirectGate = evaluateSsoRedirectUriGate(record.surface, record.verification_details);
+        if (redirectGate.ok) {
+          nextStatus = 'active';
+          nextMessage = 'Your domain is live and protected by HTTPS.';
+        } else {
+          nextStatus = 'pending_redirect_uri';
+          nextMessage = redirectGate.missing.length > 0
+            ? `HTTPS is ready. Register these SSO redirect URIs with your identity provider(s) to finish activation: ${redirectGate.missing.join(', ')}`
+            : 'HTTPS is ready, but the SSO redirect URI state for this domain could not be confirmed. Confirm the redirect URIs to finish activation.';
+        }
       } else {
         nextStatus = 'deploying';
         nextMessage = 'SSL is ready. Finishing the domain routing setup...';

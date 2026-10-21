@@ -5,6 +5,8 @@ import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
 import { resolveRequestHost, detectForwardedHostRewrite } from './lib/deployment/requestHost';
 import { MIGRATED_SETTINGS_TAB_IDS } from './components/settings/settingsTabsRegistry';
+import { resolveHostSurface } from './lib/portal-domains/hostSurface';
+import { portalDomainServes, type PortalDomainSurface } from '@alga-psa/shared/core/portalDomainSurface';
 
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
@@ -97,6 +99,8 @@ function getCanonicalUrl(): URL | null {
 }
 
 const apiKeySkipPaths = [
+  // Edge middleware asks this (unauthenticated, loopback) which surface a custom host serves.
+  '/api/portal-domain/surface',
   '/api/health',
   '/api/healthz',
   '/api/readyz',
@@ -245,6 +249,16 @@ export function getVanityClientPortalInternalRedirectTarget(args: {
   requestHostname: string;
   canonicalUrlEnv: URL | null;
   userType?: string | null;
+  /**
+   * Surface served by the request host when it is an active custom domain
+   * (null/undefined = unknown host or failed lookup => legacy client-portal behaviour).
+   * Only `client_portal` hosts evict internal users to the canonical host; `msp`/`both`
+   * hosts serve the MSP app in place, so the internal user is sent to the dashboard on
+   * the SAME host.
+   */
+  hostSurface?: PortalDomainSurface | null;
+  /** Origin of the current request, used to stay on a custom host that serves the MSP app. */
+  requestOrigin?: string;
 }): URL | null {
   const {
     pathname,
@@ -252,6 +266,8 @@ export function getVanityClientPortalInternalRedirectTarget(args: {
     requestHostname,
     canonicalUrlEnv,
     userType,
+    hostSurface,
+    requestOrigin,
   } = args;
 
   if (
@@ -266,7 +282,8 @@ export function getVanityClientPortalInternalRedirectTarget(args: {
     pathname === '/auth/client-portal/signin' ||
     (pathname.startsWith(clientPortalPrefix) && !isAuthPage)
   ) {
-    return new URL('/msp/dashboard', canonicalUrlEnv.origin);
+    const servesMspInPlace = hostSurface != null && portalDomainServes(hostSurface, 'msp') && Boolean(requestOrigin);
+    return new URL('/msp/dashboard', servesMspInPlace ? requestOrigin : canonicalUrlEnv.origin);
   }
 
   return null;
@@ -298,11 +315,23 @@ function maybeWarnForwardedHostRewrite(
   });
 }
 
-const _middleware = auth((request) => {
+const _middleware = auth(async (request) => {
   const pathname = request.nextUrl.pathname;
   const deploymentCaps = resolveDeploymentCapabilities();
   const { hostname: requestHostname, hostHeader: requestHostHeader } = resolveRequestHost(request, deploymentCaps);
   maybeWarnForwardedHostRewrite(request, deploymentCaps);
+  // Surface served by a custom host (null on the canonical host / unknown host). Only the
+  // routes that branch on it pay for the lookup (cached per isolate, fails closed to null).
+  const canonicalHostname = getCanonicalUrl()?.hostname ?? null;
+  const needsHostSurface = Boolean(canonicalHostname)
+    && requestHostname !== canonicalHostname
+    && !pathname.startsWith('/api/')
+    && (pathname.startsWith(protectedPrefix)
+      || pathname.startsWith(clientPortalPrefix)
+      || pathname === '/auth/client-portal/signin');
+  const hostSurface: PortalDomainSurface | null = needsHostSurface
+    ? await resolveHostSurface(requestHostname)
+    : null;
   const origin = request.headers.get('origin');
   const nextAction = request.headers.get('next-action');
 
@@ -448,6 +477,8 @@ const _middleware = auth((request) => {
         requestHostname,
         canonicalUrlEnv,
         userType: request.auth?.user?.user_type,
+        hostSurface,
+        requestOrigin: request.nextUrl.origin,
       });
       if (redirectTarget) {
         const redirectResponse = NextResponse.redirect(redirectTarget);
@@ -525,8 +556,10 @@ const _middleware = auth((request) => {
       return redirectResponse;
     } else if (request.auth.user?.user_type !== 'internal') {
       // Redirect authenticated client users to their dashboard instead of trapping them in a login loop
+      // On a custom host that also serves the client portal (`both`) the client user
+      // stays on that host; everywhere else they go to the canonical portal as before.
       const canonicalUrlEnv = getCanonicalUrl();
-      const redirectTarget = canonicalUrlEnv
+      const redirectTarget = canonicalUrlEnv && !(hostSurface === 'both')
         ? new URL('/client-portal/dashboard', canonicalUrlEnv.origin)
         : new URL('/client-portal/dashboard', request.nextUrl);
       const redirectResponse = NextResponse.redirect(redirectTarget);
@@ -602,6 +635,8 @@ const _middleware = auth((request) => {
         requestHostname,
         canonicalUrlEnv: getCanonicalUrl(),
         userType: request.auth.user?.user_type,
+        hostSurface,
+        requestOrigin: request.nextUrl.origin,
       });
       if (redirectTarget) {
         const redirectResponse = NextResponse.redirect(redirectTarget);

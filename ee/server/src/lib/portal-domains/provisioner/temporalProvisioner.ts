@@ -6,6 +6,11 @@ import {
 } from '@/models/PortalDomainModel';
 
 import { enqueuePortalDomainWorkflow } from '../workflowClient';
+import {
+  buildSsoRedirectUriState,
+  readSsoRedirectUriState,
+  withSsoRedirectUriState,
+} from '@/lib/portal-domains/ssoRedirectUris';
 import type {
   PortalDomainProvisioner,
   ReconcileInput,
@@ -20,19 +25,29 @@ import type {
  */
 export const temporalProvisioner: PortalDomainProvisioner = {
   async register(input: RegisterInput): Promise<RegisterResult> {
-    const { knex, tenant, canonicalHost, domain, existing, domainChanged } = input;
+    const { knex, tenant, canonicalHost, domain, existing, domainChanged, surface } = input;
 
     const record = await upsertPortalDomain(knex, tenant, {
       domain,
+      surface,
+      matchSurface: existing?.surface,
       status: 'pending_dns',
       statusMessage: domainChanged
         ? `Updating custom domain. Waiting for DNS verification of ${domain}.`
         : `Waiting for DNS verification. Point a CNAME to ${canonicalHost}.`,
-      verificationDetails: {
-        expected_cname: canonicalHost,
-        requested_domain: domain,
-        ...(existing && domainChanged ? { previous_domain: existing.domain } : {}),
-      },
+      // The worker reads (never computes) sso_redirect_uris to gate activation of MSP surfaces.
+      verificationDetails: withSsoRedirectUriState(
+        {
+          expected_cname: canonicalHost,
+          requested_domain: domain,
+          ...(existing && domainChanged ? { previous_domain: existing.domain } : {}),
+        },
+        buildSsoRedirectUriState({
+          domain,
+          surface,
+          previous: existing && !domainChanged ? readSsoRedirectUriState(existing.verificationDetails) : null,
+        })
+      ),
       lastCheckedAt: new Date().toISOString(),
       certificateSecretName: null,
       lastSyncedResourceVersion: null,
@@ -41,6 +56,7 @@ export const temporalProvisioner: PortalDomainProvisioner = {
     const workflowResult = await enqueuePortalDomainWorkflow({
       tenantId: tenant,
       portalDomainId: record.id,
+      surface,
       trigger: domainChanged ? 'refresh' : 'register',
     });
 

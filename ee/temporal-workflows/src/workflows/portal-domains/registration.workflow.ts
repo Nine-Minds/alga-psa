@@ -139,7 +139,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
   pendingTrigger = undefined;
   await runOnce(initialTrigger);
 
-  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed']);
+  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed', 'pending_redirect_uri']);
 
   while (true) {
     const timeoutPromise = sleep('1 minute');

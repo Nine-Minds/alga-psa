@@ -235,7 +235,7 @@ describe('upsertPortalDomain', () => {
     expect(payload.canonical_host).toBe('tenant-.portal.algapsa.com');
     expect(payload.status).toBe('pending_dns');
     expect(payload.verification_method).toBe('cname');
-    expect(calls.conflicts).toEqual(['tenant']);
+    expect(calls.conflicts).toEqual([['tenant', 'surface']]);
 
     expect(result.tenant).toBe('tenant-a');
     expect(result.domain).toBe('custom.tenant-a.example');

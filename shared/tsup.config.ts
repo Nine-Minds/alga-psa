@@ -9,6 +9,7 @@ export default defineConfig({
     'core/logger': 'core/logger.ts',
     'core/secretProvider': 'core/secretProvider.ts',
     'core/deploymentProfile': 'core/deploymentProfile.ts',
+    'core/portalDomainSurface': 'core/portalDomainSurface.ts',
     'db/index': 'db/index.ts',
     'db/admin': 'db/admin.ts',
     'db/connection': 'db/connection.ts',
