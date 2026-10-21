@@ -116,27 +116,8 @@ export class EmailProviderService {
 
       const providers = await query;
       
-      // Load vendor configs for each provider
-      const providersWithConfig = await Promise.all(providers.map(async (provider) => {
-        let vendorConfig = null;
-        const providerDb = tenantDb(db, provider.tenant);
-        if (provider.provider_type === 'google') {
-          vendorConfig = await providerDb.table('google_email_provider_config')
-            .where('email_provider_id', provider.id)
-            .first();
-        } else if (provider.provider_type === 'microsoft') {
-          vendorConfig = await providerDb.table('microsoft_email_provider_config')
-            .where('email_provider_id', provider.id)
-            .first();
-        } else if (provider.provider_type === 'imap') {
-          vendorConfig = await providerDb.table('imap_email_provider_config')
-            .where('email_provider_id', provider.id)
-            .first();
-        }
-        return this.mapCurrentDbRowToProvider(provider, vendorConfig);
-      }));
-
-      return providersWithConfig;
+      const configs = await this.loadVendorConfigsByProviderId(scopedDb, providers);
+      return providers.map((p) => this.mapCurrentDbRowToProvider(p, configs.get(p.id) ?? null));
     } catch (error: any) {
       console.error('Error fetching email providers:', error);
       throw new Error(`Failed to fetch email providers: ${error.message}`);
@@ -580,6 +561,33 @@ export class EmailProviderService {
       console.error(`❌ Failed to deactivate webhook for provider ${providerId}:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Load vendor config rows for a provider list, one batched query per vendor
+   * table, run sequentially so at most one pool connection is in use.
+   */
+  // LEVERAGE: pattern provider-vendor-config-load — same per-type vendor-config
+  // loader in server + packages/integrations EmailProviderService and the three
+  // CalendarProviderService copies; candidate for a shared batched loader.
+  private async loadVendorConfigsByProviderId(
+    scopedDb: TenantDb,
+    providers: Array<{ id: string; provider_type: string }>
+  ): Promise<Map<string, any>> {
+    const tables = {
+      google: 'google_email_provider_config',
+      microsoft: 'microsoft_email_provider_config',
+      imap: 'imap_email_provider_config',
+    } as const;
+    const byId = new Map<string, any>();
+    for (const [type, table] of Object.entries(tables)) {
+      const ids = providers.filter((p) => p.provider_type === type).map((p) => p.id);
+      if (ids.length === 0) continue;
+      // Sequential by design: avoids pool fan-out.
+      const rows = await scopedDb.table(table).whereIn('email_provider_id', ids);
+      for (const row of rows) byId.set(row.email_provider_id, row);
+    }
+    return byId;
   }
 
   /**

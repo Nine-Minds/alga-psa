@@ -51,9 +51,9 @@ jobs:
     needs: [check-changes, images]
     # `needs` is skipped entirely on schedule; `always()` lets the nightly run proceed.
     if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true') && needs.images.result == 'success'
-    # Pinned: ubuntu-latest moved to 26.04, where the Chromium install below
-    # refuses to run ("does not support chromium on ubuntu26.04-x64").
-    # Drop the pin once Playwright knows the image.
+    # Pinned: `ubuntu-latest` rolled to ubuntu-26.04 on 2026-10-21 and the
+    # Chromium install below dies with "Playwright does not support chromium
+    # on ubuntu26.04-x64". Unpin once Playwright ships 26.04 dependencies.
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:

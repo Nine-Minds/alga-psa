@@ -80,13 +80,13 @@ browser. Mailbox and calendar are the representative browser journeys. Teams bot
 and meeting behavior is protocol-matrix work and lives at the wire level, where
 it runs on every candidate.
 
-So the deferred item was the Teams **browser** journey specifically, not Teams
-and not Microsoft. `development-tests/teams-profile.spec.ts` was quarantined
-under F034/T028 until 2026-10-21, first for the development-server chunk
-truncation recorded in `evidence/native-teams-12gib-chunk-failure.json` and then
-for the styling failure described below. That entry has been removed; the journey
-executes and passes on its own and is mandatory again. Teams wire coverage was
-unaffected throughout and keeps running.
+So the deferred item is the Teams **browser** journey specifically, not Teams
+and not Microsoft. `development-tests/teams-profile.spec.ts` is quarantined to
+2026-12-02 under F034/T028, renewed once on 2026-10-21, for the
+development-server failure recorded in
+`evidence/native-teams-12gib-chunk-failure.json` -- the chunk truncation in that
+file is resolved under Turbopack and the lane now stops on the unstyled profile
+dialog instead. Teams wire coverage is unaffected and keeps running.
 
 ### Recurrence and timezone expansion
 

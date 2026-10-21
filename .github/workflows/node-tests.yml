@@ -51,9 +51,9 @@ jobs:
 
   node-tooling:
     name: Node tooling execution complete
-    # Pinned: ubuntu-latest moved to 26.04, where `playwright install
-    # --with-deps` refuses to run ("does not support chromium on
-    # ubuntu26.04-x64"). Drop the pin once Playwright knows the image.
+    # Pinned: `ubuntu-latest` rolled to ubuntu-26.04 on 2026-10-21 and the
+    # Chromium install below dies with "Playwright does not support chromium
+    # on ubuntu26.04-x64". Unpin once Playwright ships 26.04 dependencies.
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
