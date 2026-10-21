@@ -52,8 +52,8 @@ export interface FamilyEntry {
   /**
    * What this family claims. A configured service whose `configuration_type`,
    * or a line whose `contract_line_type`, no entry claims is a configuration
-   * the engine cannot price; the resolver throws instead of returning no
-   * charges. Claiming is declaration, not output: a claimed service with no
+   * the engine cannot price; the resolver reports it in its diagnostics (it
+   * never throws, and the line resolves as it always did). Claiming is declaration, not output: a claimed service with no
    * activity this period is fine.
    */
   handles: {

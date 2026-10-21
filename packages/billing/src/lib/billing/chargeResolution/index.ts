@@ -1,4 +1,8 @@
-export { resolveContractLineCharges, chargeObligationId } from "./resolveContractLineCharges";
+export {
+  resolveContractLineCharges,
+  resolveContractLineChargesWithDiagnostics,
+  chargeObligationId,
+} from "./resolveContractLineCharges";
 export { CHARGE_FAMILY_REGISTRY } from "./registry";
 export { coveredServiceIds, resolvePoolForService } from "./poolCoverage";
 export {

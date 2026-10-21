@@ -18,10 +18,17 @@ import { coveredServiceIds } from "./poolCoverage";
 import { CHARGE_FAMILY_REGISTRY, type FamilyContext } from "./registry";
 import type {
   ContractChargeSource,
+  ResolutionDiagnostics,
   ResolveContractLineChargesOptions,
+  ResolvedContractLineCharges,
   ResolvedLineCharge,
   TimingResolution,
 } from "./types";
+
+const NO_DIAGNOSTICS: ResolutionDiagnostics = {
+  unhandledLineType: null,
+  unhandledServices: [],
+};
 
 export function chargeObligationId(
   family: string,
@@ -35,10 +42,22 @@ export async function resolveContractLineCharges(
   source: ContractChargeSource,
   options: ResolveContractLineChargesOptions = {},
 ): Promise<ResolvedLineCharge[]> {
+  return (await resolveContractLineChargesWithDiagnostics(source, options)).charges;
+}
+
+/**
+ * As resolveContractLineCharges, plus what the line configures that no family
+ * handles. Never throws for that; a source that must fail loudly does so in
+ * its optional `reportUnhandled` hook.
+ */
+export async function resolveContractLineChargesWithDiagnostics(
+  source: ContractChargeSource,
+  options: ResolveContractLineChargesOptions = {},
+): Promise<ResolvedContractLineCharges> {
   const entries = CHARGE_FAMILY_REGISTRY.filter(
     (entry) => !options.families || options.families.has(entry.family),
   );
-  if (entries.length === 0) return [];
+  if (entries.length === 0) return { charges: [], diagnostics: NO_DIAGNOSTICS };
 
   const applyPools = (options.pools ?? "apply") === "apply";
   const pools = applyPools ? await source.pools() : [];
@@ -88,20 +107,27 @@ export async function resolveContractLineCharges(
   );
   // Registry order, regardless of which source query finished first.
   const charges = collected.flat();
-  await assertEverythingClaimed(source, pooledServiceIds);
-  return charges;
+  const diagnostics = await diagnose(source, pooledServiceIds);
+  if (diagnostics.unhandledLineType || diagnostics.unhandledServices.length > 0) {
+    source.reportUnhandled?.(diagnostics);
+  }
+  return { charges, diagnostics };
 }
 
 /**
- * Every configured service kind and the line type must be claimed by some
- * registry family (whether or not it was requested or produced a charge this
+ * Which configured service kinds and which line type no registry family
+ * claims (whether or not a family was requested or produced a charge this
  * period). Driven only by what entries declare in `handles`, so a new family
  * is one registry entry and nothing here. Services a pool absorbed are exempt.
+ *
+ * Never throws: an unclaimed kind is something the engine's own loaders skip
+ * (and an unknown line type was never validated), so the line resolves as it
+ * always did and the finding is reported instead.
  */
-async function assertEverythingClaimed(
+async function diagnose(
   source: ContractChargeSource,
   pooledServiceIds: readonly string[],
-): Promise<void> {
+): Promise<ResolutionDiagnostics> {
   const claimedConfigurationTypes = new Set(
     CHARGE_FAMILY_REGISTRY.flatMap((entry) => entry.handles.configurationTypes),
   );
@@ -109,15 +135,13 @@ async function assertEverythingClaimed(
     CHARGE_FAMILY_REGISTRY.flatMap((entry) => entry.handles.lineTypes),
   );
   const pooled = new Set(pooledServiceIds);
-  const lineId = source.line.clientContractLineId;
   const lineType = source.line.contractLineType;
 
-  if (lineType && !claimedLineTypes.has(lineType)) {
-    throw new Error(
-      `Contract line ${lineId} has contract_line_type "${lineType}", which no charge family handles (handled: ${[...claimedLineTypes].join(", ")})`,
-    );
-  }
-  const services = await source.configuredServices();
+  const unhandledLineType =
+    lineType && !claimedLineTypes.has(lineType) ? lineType : null;
+
+  // null: the source has not loaded service kinds and will not query for them.
+  const services = (await source.configuredServices()) ?? [];
   const hasFallbackFamily =
     lineType != null &&
     CHARGE_FAMILY_REGISTRY.some(
@@ -127,21 +151,11 @@ async function assertEverythingClaimed(
           entry.handles.configurationTypes.includes(service.configurationType ?? ""),
         ),
     );
-  const unclaimed = services.filter(
+  const unhandledServices = services.filter(
     (service) =>
       !pooled.has(service.serviceId) &&
       !hasFallbackFamily &&
       !claimedConfigurationTypes.has(service.configurationType ?? ""),
   );
-  if (unclaimed.length > 0) {
-    const detail = unclaimed
-      .map(
-        (service) =>
-          `service ${service.serviceId} (configuration_type "${service.configurationType ?? "null"}")`,
-      )
-      .join("; ");
-    throw new Error(
-      `Contract line ${lineId} (contract_line_type "${lineType ?? "unknown"}") configures services no charge family handles: ${detail}`,
-    );
-  }
+  return { unhandledLineType, unhandledServices };
 }

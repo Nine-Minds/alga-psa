@@ -36,6 +36,7 @@ import {
   type ContractChargeSource,
   type PoolDefinition,
   type PoolPeriodState,
+  type ResolutionDiagnostics,
   type PooledTimeExclusion,
   type SuppliedCharge,
   type TaxContextDemand,
@@ -169,13 +170,32 @@ export class ScenarioChargeSource implements ContractChargeSource {
     );
   }
 
-  async configuredServices(): Promise<ConfiguredService[]> {
+  async configuredServices(): Promise<ConfiguredService[] | null> {
     return this.input.line.services
       .filter((service) => !isProductService(service))
       .map((service) => ({
         serviceId: service.service_id,
         configurationType: service.configuration.configuration_type ?? null,
       }));
+  }
+
+  /** The simulator must fail loudly: it cannot show a charge it cannot price. */
+  reportUnhandled(diagnostics: ResolutionDiagnostics): void {
+    const lineId = this.line.clientContractLineId;
+    if (diagnostics.unhandledLineType) {
+      throw new Error(
+        `Contract line ${lineId} has contract_line_type "${diagnostics.unhandledLineType}", which no charge family handles`,
+      );
+    }
+    const detail = diagnostics.unhandledServices
+      .map(
+        (service) =>
+          `service ${service.serviceId} (configuration_type "${service.configurationType ?? "null"}")`,
+      )
+      .join("; ");
+    throw new Error(
+      `Contract line ${lineId} (contract_line_type "${this.line.contractLineType ?? "unknown"}") configures services no charge family handles: ${detail}`,
+    );
   }
 
   async poolPeriodState(

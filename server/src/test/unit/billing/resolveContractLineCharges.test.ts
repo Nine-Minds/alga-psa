@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { resolveContractLineCharges } from "@alga-psa/billing/lib/billing/chargeResolution";
+import { resolveContractLineCharges, resolveContractLineChargesWithDiagnostics } from "@alga-psa/billing/lib/billing/chargeResolution";
 import { coveredServiceIds, resolvePoolForService } from "@alga-psa/billing/lib/billing/chargeResolution";
 import type {
   ContractChargeSource,
@@ -67,27 +67,66 @@ function fakeSource(overrides: Partial<ContractChargeSource> & {
 }
 
 describe("resolveContractLineCharges", () => {
-  it("rejects a configured service of a kind no registry family handles", async () => {
-    const { source } = fakeSource({
-      services: [{ serviceId: "svc-x", configurationType: "Mystery" }],
+  const withLine = (source: ContractChargeSource, contractLineType: string) => {
+    (source as any).line = { clientContractLineId: "ccl-1", tenantId: "t", contractLineType };
+  };
+
+  it("a Hourly line with an unknown-kind service: known services still charge, the unknown one is reported and skipped", async () => {
+    const { source, calls } = fakeSource({
+      services: [
+        { serviceId: "svc-h", configurationType: "Hourly" },
+        { serviceId: "svc-x", configurationType: "Mystery" },
+      ],
     });
-    await expect(resolveContractLineCharges(source)).rejects.toThrow(
-      /ccl-1.*svc-x.*Mystery/,
-    );
+    withLine(source, "Hourly");
+    const { charges, diagnostics } = await resolveContractLineChargesWithDiagnostics(source);
+    // Same charges as without the unknown service: the resolver never asks a
+    // source about individual services, so the unknown one is simply skipped.
+    const baseline = fakeSource();
+    withLine(baseline.source, "Hourly");
+    const expected = await resolveContractLineCharges(baseline.source);
+    expect(charges.map((charge) => charge.family)).toEqual(expected.map((charge) => charge.family));
+    expect(calls).toEqual(baseline.calls);
+    expect(diagnostics).toEqual({
+      unhandledLineType: null,
+      unhandledServices: [{ serviceId: "svc-x", configurationType: "Mystery" }],
+    });
   });
 
-  it("rejects a line whose contract_line_type no family handles", async () => {
+  it("an unknown contract_line_type does not throw and is reported", async () => {
     const { source } = fakeSource();
-    (source as any).line = { clientContractLineId: "ccl-1", tenantId: "t", contractLineType: "Weird" };
-    await expect(resolveContractLineCharges(source)).rejects.toThrow(/ccl-1.*Weird/);
+    withLine(source, "Weird");
+    const { charges, diagnostics } = await resolveContractLineChargesWithDiagnostics(source);
+    expect(charges.length).toBeGreaterThan(0);
+    expect(diagnostics.unhandledLineType).toBe("Weird");
+    expect(diagnostics.unhandledServices).toEqual([]);
+  });
+
+  it("a source that has not loaded service kinds yields no service diagnostics", async () => {
+    const { source } = fakeSource();
+    source.configuredServices = async () => null;
+    const { diagnostics } = await resolveContractLineChargesWithDiagnostics(source);
+    expect(diagnostics.unhandledServices).toEqual([]);
+  });
+
+  it("calls the source's reportUnhandled hook only when something is unhandled", async () => {
+    const { source } = fakeSource();
+    const report = vi.fn();
+    source.reportUnhandled = report;
+    await resolveContractLineCharges(source);
+    expect(report).not.toHaveBeenCalled();
+    withLine(source, "Weird");
+    await resolveContractLineCharges(source);
+    expect(report).toHaveBeenCalledWith({ unhandledLineType: "Weird", unhandledServices: [] });
   });
 
   it("tolerates unrecognised service kinds on an Hourly line with no Hourly config (legacy fallback)", async () => {
     const { source } = fakeSource({
       services: [{ serviceId: "svc-t", configurationType: "Time" }],
     });
-    (source as any).line = { clientContractLineId: "ccl-1", tenantId: "t", contractLineType: "Hourly" };
-    await expect(resolveContractLineCharges(source)).resolves.toBeDefined();
+    withLine(source, "Hourly");
+    const { diagnostics } = await resolveContractLineChargesWithDiagnostics(source);
+    expect(diagnostics.unhandledServices).toEqual([]);
     // ...but not once the line has a real Hourly config alongside it.
     const mixed = fakeSource({
       services: [
@@ -95,8 +134,9 @@ describe("resolveContractLineCharges", () => {
         { serviceId: "svc-h", configurationType: "Hourly" },
       ],
     }).source;
-    (mixed as any).line = { clientContractLineId: "ccl-1", tenantId: "t", contractLineType: "Hourly" };
-    await expect(resolveContractLineCharges(mixed)).rejects.toThrow(/svc-t/);
+    withLine(mixed, "Hourly");
+    const result = await resolveContractLineChargesWithDiagnostics(mixed);
+    expect(result.diagnostics.unhandledServices.map((service) => service.serviceId)).toEqual(["svc-t"]);
   });
 
   it("does not flag a service a pool absorbed", async () => {
@@ -104,7 +144,8 @@ describe("resolveContractLineCharges", () => {
       pools: [POOL],
       services: [{ serviceId: "svc-a", configurationType: "Mystery" }],
     });
-    await expect(resolveContractLineCharges(source)).resolves.toBeDefined();
+    const { diagnostics } = await resolveContractLineChargesWithDiagnostics(source);
+    expect(diagnostics.unhandledServices).toEqual([]);
   });
 
   it("a claimed hourly service with no activity resolves to [] without throwing", async () => {

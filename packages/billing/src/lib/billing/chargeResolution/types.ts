@@ -143,10 +143,19 @@ export interface ContractChargeSource {
   configuredServiceIds(): Promise<string[]>;
   /**
    * The same services with the kind each is configured as
-   * (`configuration_type`). The resolver checks every kind against what the
-   * registry's families declare they handle; it never interprets the kinds.
+   * (`configuration_type`), or `null` when the source has not loaded them.
+   * Never issues a new query: it returns what the source already holds. The
+   * resolver checks every kind against what the registry's families declare
+   * they handle; it never interprets the kinds.
    */
-  configuredServices(): Promise<ConfiguredService[]>;
+  configuredServices(): Promise<ConfiguredService[] | null>;
+  /**
+   * Called when the line has something no family handles (see
+   * ResolutionDiagnostics). Optional: a source that must fail loudly (the
+   * simulator) throws here; the engine omits it and reports the returned
+   * diagnostics instead.
+   */
+  reportUnhandled?(diagnostics: ResolutionDiagnostics): void;
   /**
    * One pool's allowance state for `timing` (see PoolPeriodState). `periods`
    * empty means the pool has nothing to charge for this window.
@@ -176,6 +185,19 @@ export interface ResolvedLineCharge {
   family: ChargeFamily;
   obligation: UnpricedContractBillingObligation;
   taxContext: ChargeComputeTaxContext;
+}
+
+/** What a line configures that no registry family handles. */
+export interface ResolutionDiagnostics {
+  /** The line's `contract_line_type` when no family handles it, else null. */
+  unhandledLineType: string | null;
+  /** Configured services whose `configuration_type` no family handles. */
+  unhandledServices: ConfiguredService[];
+}
+
+export interface ResolvedContractLineCharges {
+  charges: ResolvedLineCharge[];
+  diagnostics: ResolutionDiagnostics;
 }
 
 export interface ResolveContractLineChargesOptions {

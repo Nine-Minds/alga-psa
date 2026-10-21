@@ -144,6 +144,7 @@ export class DatabaseChargeSource implements ContractChargeSource {
   /** "Missing usage" statuses gathered while loading; read by the engine afterwards. */
   readonly usageStatuses: Array<unknown> = [];
   private clientRowPromise?: Promise<ClientRow>;
+  private loadedServices: ConfiguredService[] | null = null;
 
   constructor(
     private readonly host: DatabaseChargeHost,
@@ -311,23 +312,17 @@ export class DatabaseChargeSource implements ContractChargeSource {
         tenant: this.host.tenant,
         contract_line_id: this.input.clientContractLine.contract_line_id,
       })
-      .select("service_id");
-    return Array.from(new Set(rows.map((row) => row.service_id as string)));
-  }
-
-  async configuredServices(): Promise<ConfiguredService[]> {
-    const db = tenantDb(this.host.knex, this.host.tenant);
-    const rows = await db
-      .table<any>("contract_line_service_configuration")
-      .where({
-        tenant: this.host.tenant,
-        contract_line_id: this.input.clientContractLine.contract_line_id,
-      })
       .select("service_id", "configuration_type");
-    return rows.map((row) => ({
+    this.loadedServices = rows.map((row) => ({
       serviceId: row.service_id as string,
       configurationType: (row.configuration_type as string | null) ?? null,
     }));
+    return Array.from(new Set(rows.map((row) => row.service_id as string)));
+  }
+
+  /** Only what configuredServiceIds() already read; never a new query. */
+  async configuredServices(): Promise<ConfiguredService[] | null> {
+    return this.loadedServices;
   }
 
   async poolPeriodState(

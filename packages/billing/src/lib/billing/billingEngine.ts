@@ -115,7 +115,7 @@ import {
 } from "./billingProfileResolution";
 import {
   DatabaseChargeSource,
-  resolveContractLineCharges,
+  resolveContractLineChargesWithDiagnostics,
   type ChargeFamily,
   type ContractObligationSink,
   type PooledTimeExclusion,
@@ -4234,10 +4234,18 @@ export class BillingEngine {
         },
       },
     );
-    const charges = await resolveContractLineCharges(source, {
+    const { charges, diagnostics } = await resolveContractLineChargesWithDiagnostics(source, {
       families: input.families,
       pools: input.pools,
     });
+    if (diagnostics.unhandledLineType || diagnostics.unhandledServices.length > 0) {
+      // The engine prices the line as it always has; this only reports what no
+      // charge family handles. (The simulator throws for the same input.)
+      console.warn(
+        `[BillingEngine] Contract line ${source.line.clientContractLineId} has configuration no charge family handles`,
+        diagnostics,
+      );
+    }
     return {
       charges,
       usageStatuses: source.usageStatuses as IUsageServicePeriodStatus[],

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { resolveContractLineCharges } from "@alga-psa/billing/lib/billing/chargeResolution";
 import { ScenarioChargeSource, createScenarioRunState } from "@ee/lib/billing/simulator/scenarioChargeSource";
 
 const service = (service_id: string, configuration: Record<string, unknown>) =>
@@ -52,5 +53,21 @@ describe("ScenarioChargeSource", () => {
     expect(pools.map((pool) => pool.poolId)).toHaveLength(2);
     expect(pools.map((pool) => pool.poolId)).toContain("declared");
     expect(await source.configuredServiceIds()).toEqual(["svc-a", "svc-b", "svc-c"]);
+  });
+
+  it("fails loudly (the simulator throws where the engine only warns) for a service kind no family handles", async () => {
+    const source = sourceFor({
+      services: [
+        service("svc-h", { configuration_type: "Hourly" }),
+        service("svc-x", { configuration_type: "Mystery" }),
+      ],
+    });
+    await expect(resolveContractLineCharges(source)).rejects.toThrow(/ccl-1.*svc-x.*Mystery/);
+  });
+
+  it("fails loudly for a contract_line_type no family handles", async () => {
+    const source = sourceFor({ services: [], contract_line_type: "Weird" });
+    (source as any).line = { clientContractLineId: "ccl-1", contractLineType: "Weird" };
+    await expect(resolveContractLineCharges(source)).rejects.toThrow(/ccl-1.*Weird/);
   });
 });
