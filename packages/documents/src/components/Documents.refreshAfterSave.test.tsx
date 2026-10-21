@@ -93,7 +93,7 @@ vi.mock('./DocumentStorageCard', async () => {
 vi.mock('./DocumentUpload', () => ({ default: () => null }));
 vi.mock('./DocumentSelector', () => ({ default: () => null }));
 vi.mock('./FolderTreeView', () => ({
-  default: (props: { selectedFolder: string | null; entityId?: string; entityType?: string }) => {
+  default: function FolderTreeViewMock(props: { selectedFolder: string | null; entityId?: string; entityType?: string }) {
     React.useEffect(() => { mockTreeMounts += 1; }, []);
     return mockFolderTreeView(props);
   },
@@ -112,7 +112,7 @@ let mockFallbackUnsaved = false;
 let mockFallbackContent: Record<string, any> | null = null;
 
 vi.mock('./CollaborativeEditor', () => ({
-  CollaborativeEditor: (props: { onConnectionStatusChange?: (status: string) => void }) => {
+  CollaborativeEditor: function CollaborativeEditorMock(props: { onConnectionStatusChange?: (status: string) => void }) {
     React.useEffect(() => {
       if (mockCollabStatus) {
         props.onConnectionStatusChange?.(mockCollabStatus);
@@ -123,13 +123,13 @@ vi.mock('./CollaborativeEditor', () => ({
 }));
 
 vi.mock('./DocumentEditor', () => ({
-  DocumentEditor: ({
+  DocumentEditor: function DocumentEditorMock({
     onUnsavedChangesChange,
     onContentChange,
   }: {
     onUnsavedChangesChange?: (hasChanges: boolean) => void;
     onContentChange?: (content: Record<string, any> | null) => void;
-  }) => {
+  }) {
     React.useEffect(() => {
       onUnsavedChangesChange?.(mockFallbackUnsaved);
       if (mockFallbackContent) {
