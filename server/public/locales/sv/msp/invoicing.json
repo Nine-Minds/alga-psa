@@ -2365,7 +2365,7 @@
     },
     "imagePicker": {
       "browse": "Bläddra bland dokument",
-      "hiddenFromClients": "{{document}} är dolt för kunder. Det visas inte på offerter eller fakturor som öppnas via kundportalen.",
+      "hiddenFromClients": "{{document}} är dolt för kunder, som därför inte kan öppna det i kundportalen. Det visas fortfarande på fakturor och i PDF-filer för offerter som använder det.",
       "updating": "Uppdaterar…",
       "markVisible": "Markera som synlig för kunder",
       "visibleInPortal": "Synlig i kundportalen",

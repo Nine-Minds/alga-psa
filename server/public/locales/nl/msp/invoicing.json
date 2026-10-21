@@ -2365,7 +2365,7 @@
     },
     "imagePicker": {
       "browse": "Documenten doorzoeken",
-      "hiddenFromClients": "{{document}} is verborgen voor klanten. Het wordt niet weergegeven op offertes of facturen die via het klantenportaal worden bekeken.",
+      "hiddenFromClients": "{{document}} is verborgen voor klanten, dus zij kunnen het niet openen in het klantenportaal. Het wordt nog steeds weergegeven op facturen en in PDF's van offertes die het gebruiken.",
       "updating": "Bijwerken...",
       "markVisible": "Markeren als zichtbaar voor klanten",
       "visibleInPortal": "Zichtbaar in het klantenportaal",

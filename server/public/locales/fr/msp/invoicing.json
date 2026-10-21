@@ -2365,7 +2365,7 @@
     },
     "imagePicker": {
       "browse": "Parcourir les documents",
-      "hiddenFromClients": "{{document}} est masqué pour les clients. Il n’apparaîtra pas sur les devis ni les factures consultés depuis le portail client.",
+      "hiddenFromClients": "{{document}} est masqué pour les clients, qui ne peuvent donc pas l’ouvrir dans le portail client. Il apparaît toujours sur les factures et dans les PDF de devis qui l’utilisent.",
       "updating": "Mise à jour...",
       "markVisible": "Rendre visible pour les clients",
       "visibleInPortal": "Visible dans le portail client",

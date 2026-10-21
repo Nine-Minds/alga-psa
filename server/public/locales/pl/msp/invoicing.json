@@ -2417,7 +2417,7 @@
     },
     "imagePicker": {
       "browse": "Przeglądaj dokumenty",
-      "hiddenFromClients": "Dokument {{document}} jest ukryty przed klientami. Nie pojawi się w ofertach ani fakturach wyświetlanych przez portal klienta.",
+      "hiddenFromClients": "Dokument {{document}} jest ukryty przed klientami, więc nie mogą go otworzyć w portalu klienta. Nadal pojawia się na fakturach i w plikach PDF ofert, które go używają.",
       "updating": "Aktualizowanie...",
       "markVisible": "Oznacz jako widoczny dla klientów",
       "visibleInPortal": "Widoczny w portalu klienta",

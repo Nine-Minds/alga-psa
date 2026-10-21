@@ -2365,7 +2365,7 @@
     },
     "imagePicker": {
       "browse": "Sfoglia documenti",
-      "hiddenFromClients": "{{document}} è nascosto ai clienti. Non comparirà nei preventivi o nelle fatture visualizzati tramite il portale clienti.",
+      "hiddenFromClients": "{{document}} è nascosto ai clienti, che quindi non possono aprirlo nel portale clienti. Compare comunque nelle fatture e nei PDF dei preventivi che lo usano.",
       "updating": "Aggiornamento...",
       "markVisible": "Contrassegna come visibile ai clienti",
       "visibleInPortal": "Visibile nel portale clienti",
