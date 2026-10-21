@@ -36,6 +36,31 @@ function unregisterAll(reg: ReturnType<typeof make>['reg'], n: number) {
   return performance.now() - t0;
 }
 
+const BATCH = 5;
+const TRIALS = 3;
+
+/** Sum BATCH cycles so even the 1k sample lands well above timer resolution. */
+function timeBatch(n: number) {
+  let reg = 0;
+  let unreg = 0;
+  for (let i = 0; i < BATCH; i++) {
+    const { reg: registry } = make();
+    reg += registerMix(registry, n);
+    unreg += unregisterAll(registry, n);
+  }
+  return { reg, unreg };
+}
+
+/** Keep the fastest trial: scheduler noise on a busy runner only ever adds time. */
+function bestTrial(n: number) {
+  let best = timeBatch(n);
+  for (let i = 1; i < TRIALS; i++) {
+    const next = timeBatch(n);
+    best = { reg: Math.min(best.reg, next.reg), unreg: Math.min(best.unreg, next.unreg) };
+  }
+  return best;
+}
+
 describe('uiStateRegistry', () => {
   it('builds a correct tree for 5000 components and empties on unregister, within budget', () => {
     const { reg } = make();
@@ -77,15 +102,14 @@ describe('uiStateRegistry', () => {
     // warm up the JIT so the 1k sample isn't artificially slow
     { const { reg } = make(); registerMix(reg, 2000); unregisterAll(reg, 2000); }
     for (const n of [1000, 2000, 5000]) {
-      const { reg } = make();
-      const r = registerMix(reg, n);
-      const u = unregisterAll(reg, n);
-      results[n] = { reg: r, unreg: u };
+      results[n] = bestTrial(n);
     }
     // eslint-disable-next-line no-console
     console.info('registry bench (ms)', JSON.stringify(results));
     // Perfectly linear = 5x; quadratic = 25x. Allow generous noise margin.
-    const floor = (x: number) => Math.max(x, 1);
+    // Batching keeps the 1k baseline above timer resolution, so this floor stays
+    // a divide-by-zero guard rather than decaying into an absolute time budget.
+    const floor = (x: number) => Math.max(x, 0.05);
     expect(results[5000].reg / floor(results[1000].reg)).toBeLessThan(10);
     expect(results[5000].unreg / floor(results[1000].unreg)).toBeLessThan(10);
   });
