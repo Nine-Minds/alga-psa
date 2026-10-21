@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { displayAddressField, displayCountry, isOptional, isQuoteItemIncluded } from '@alga-psa/core';
+import { computeQuoteTotals, displayAddressField, displayCountry, isOptional, isQuoteItemIncluded } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useRouter } from 'next/navigation';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
@@ -21,7 +21,6 @@ import {
   getClientQuoteById,
   getLocationsForClientQuote,
   rejectClientQuote,
-  updateClientQuoteSelections,
   type ClientPortalLocationSummary,
 } from '@alga-psa/client-portal/actions';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -122,10 +121,11 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
   const [clientLocations, setClientLocations] = useState<ClientPortalLocationSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectionError, setSelectionError] = useState<string | null>(null);
   const [decisionError, setDecisionError] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [isUpdatingSelections, setIsUpdatingSelections] = useState(false);
+  // Local-only optional-item selection. Toggling never touches the server; the
+  // selection is persisted solely by Accept.
+  const [selectedOptionalIds, setSelectedOptionalIds] = useState<Set<string>>(new Set());
   const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'accept' | 'reject' | null>(null);
@@ -191,11 +191,16 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
     fetchQuote();
   }, [quoteId]);
 
-  const optionalSelectedItemIds = useMemo(() => {
-    if (!quote?.quote_items) return [];
-    return quote.quote_items
-      .filter((item) => isOptional(item) && isQuoteItemIncluded(item))
-      .map((item) => item.quote_item_id);
+  // (Re)initialise the local selection from the persisted `is_selected` values
+  // whenever a quote is loaded or replaced (e.g. after Accept/Reject).
+  useEffect(() => {
+    setSelectedOptionalIds(
+      new Set(
+        (quote?.quote_items || [])
+          .filter((item) => isOptional(item) && isQuoteItemIncluded(item))
+          .map((item) => item.quote_item_id)
+      )
+    );
   }, [quote]);
 
   const hasOptionalItems = useMemo(() => {
@@ -204,33 +209,53 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
 
   const canEditSelections = quote?.status === 'sent';
 
-  const handleSelectionToggle = async (quoteItemId: string, checked: boolean) => {
-    if (!quote) return;
-
-    const nextSelectedIds = new Set(optionalSelectedItemIds);
-    if (checked) {
-      nextSelectedIds.add(quoteItemId);
-    } else {
-      nextSelectedIds.delete(quoteItemId);
-    }
-
-    const nextSelectedList = Array.from(nextSelectedIds);
-    setSelectionError(null);
-    setIsUpdatingSelections(true);
-
-    try {
-      const persistedQuote = await updateClientQuoteSelections(quote.quote_id, nextSelectedList);
-      if (isBillingActionError(persistedQuote)) {
-        setSelectionError(getErrorMessage(persistedQuote));
-        return;
+  const handleSelectionToggle = (quoteItemId: string, checked: boolean) => {
+    setSelectedOptionalIds((current) => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(quoteItemId);
+      } else {
+        next.delete(quoteItemId);
       }
-      setQuote(persistedQuote);
-    } catch (err) {
-      console.error('Error updating optional quote selections:', err);
-      setSelectionError('Failed to save your optional item selections. Please try again.');
-    } finally {
-      setIsUpdatingSelections(false);
-    }
+      return next;
+    });
+  };
+
+  // Items as the client currently sees them: persisted rows with optional
+  // `is_selected` overridden by the local selection.
+  const previewItems = useMemo(
+    () =>
+      (quote?.quote_items || []).map((item) =>
+        item.is_optional ? { ...item, is_selected: selectedOptionalIds.has(item.quote_item_id) } : item
+      ),
+    [quote, selectedOptionalIds]
+  );
+
+  // Preview totals come from the same pure function the server's
+  // recalculateQuoteFinancials uses. If any base row lacks the server-resolved
+  // tax input, fall back to the persisted totals (never to a write).
+  const preview = useMemo(() => {
+    if (!quote || !canEditSelections || !hasOptionalItems) return null;
+    const baseRows = previewItems.filter((item) => !item.is_discount);
+    if (baseRows.some((item) => typeof item.tax_amount_if_included !== 'number')) return null;
+    return computeQuoteTotals(
+      previewItems.map((item) => ({
+        ...item,
+        id: item.quote_item_id,
+        groupKey: item.location_id && item.location_id.trim().length > 0 ? item.location_id : UNASSIGNED_KEY,
+        taxAmountIfIncluded: item.tax_amount_if_included ?? 0,
+      }))
+    );
+  }, [quote, canEditSelections, hasOptionalItems, previewItems]);
+
+  // LEVERAGE: friction quote-tax-resolution — tax is only resolvable through the DB-backed engine, so the portal needs a server-resolved per-row tax input instead of deriving it from tax_rate
+  const previewUnavailable = canEditSelections && hasOptionalItems && preview === null;
+
+  const displayTotals = {
+    subtotal: preview ? preview.subtotal : quote?.subtotal || 0,
+    discountTotal: preview ? preview.discountTotal : quote?.discount_total || 0,
+    tax: preview ? preview.tax : quote?.tax || 0,
+    totalAmount: preview ? preview.totalAmount : quote?.total_amount || 0,
   };
 
   const handleAcceptQuote = async () => {
@@ -240,7 +265,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
     setIsSubmittingDecision(true);
 
     try {
-      const acceptedQuote = await acceptClientQuote(quote.quote_id, optionalSelectedItemIds);
+      const acceptedQuote = await acceptClientQuote(quote.quote_id, [...selectedOptionalIds]);
       if (isBillingActionError(acceptedQuote)) {
         setDecisionError(getErrorMessage(acceptedQuote));
         setConfirmAction(null);
@@ -381,11 +406,6 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
         </div>
 
         <div className="space-y-6 p-6">
-          {selectionError && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {selectionError}
-            </div>
-          )}
           {decisionError && (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {decisionError}
@@ -408,7 +428,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
             <div>
               <p className="text-xs font-medium uppercase text-muted-foreground">{t('quotes.detail.total', { defaultValue: 'Total' })}</p>
               <p className="mt-1 text-lg font-semibold">
-                {formatCurrency(quote.total_amount || 0, quote.currency_code)}
+                {formatCurrency(displayTotals.totalAmount, quote.currency_code)}
               </p>
             </div>
           </div>
@@ -437,8 +457,13 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                   : t('quotes.detail.optionalLockedHint', { defaultValue: 'Optional item selections are locked once the quote is no longer awaiting your response.' })}
               </p>
             )}
+            {previewUnavailable && (
+              <p className="mb-3 text-sm text-muted-foreground">
+                {t('quotes.detail.previewUnavailable', { defaultValue: 'A live preview is unavailable for this quote, so the totals shown are the current saved totals. Your selections are still sent when you accept.' })}
+              </p>
+            )}
             {(() => {
-              const items = quote.quote_items || [];
+              const items = previewItems;
               const renderItemsTable = (rowItems: IQuoteItem[]) => (
                 <div className="overflow-x-auto rounded-md border">
                   <table className="min-w-full divide-y text-sm">
@@ -473,8 +498,8 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                                     <Switch
                                       id={`quote-item-${item.quote_item_id}-selection`}
                                       checked={isIncluded}
-                                      disabled={!canEditSelections || isUpdatingSelections}
-                                      onCheckedChange={(checked) => void handleSelectionToggle(item.quote_item_id, checked)}
+                                      disabled={!canEditSelections || isSubmittingDecision}
+                                      onCheckedChange={(checked) => handleSelectionToggle(item.quote_item_id, checked)}
                                       className="data-[state=checked]:bg-primary-500"
                                       label={isIncluded
                                         ? t('quotes.detail.include', { defaultValue: 'Include' })
@@ -490,7 +515,12 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                               {formatCurrency(item.unit_price || 0, quote.currency_code)}
                             </td>
                             <td className="px-3 py-2">
-                              {formatCurrency(item.total_price || 0, quote.currency_code)}
+                              {formatCurrency(
+                                preview && item.is_discount
+                                  ? preview.discountAmountById.get(item.quote_item_id) ?? 0
+                                  : item.total_price || 0,
+                                quote.currency_code
+                              )}
                             </td>
                           </tr>
                         );
@@ -505,10 +535,13 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                 return (
                   <div className="space-y-4">
                     {groups.map((group) => {
-                      // Live per-group subtotal honours the optional-item toggle.
-                      const subtotal = group.items
-                        .filter((i) => !i.is_discount && isQuoteItemIncluded(i))
-                        .reduce((sum, i) => sum + (Number(i.total_price) || 0), 0);
+                      // Per-group subtotal honours the local optional-item selection,
+                      // via the shared totals function when the preview is available.
+                      const subtotal = preview
+                        ? preview.perGroup.get(group.key)?.subtotal ?? 0
+                        : group.items
+                            .filter((i) => !i.is_discount && isQuoteItemIncluded(i))
+                            .reduce((sum, i) => sum + (Number(i.total_price) || 0), 0);
                       const addressLines = formatClientPortalLocationLines(group.location);
                       return (
                         <div key={group.key} className="overflow-hidden rounded-md border">
@@ -549,32 +582,29 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
 
               return renderItemsTable(items);
             })()}
-            {isUpdatingSelections && (
-              <p className="mt-2 text-sm text-muted-foreground">{t('quotes.detail.savingSelections', { defaultValue: 'Saving optional item selections...' })}</p>
-            )}
           </div>
 
           {/* Totals */}
           <div className="grid gap-2 md:max-w-sm md:ml-auto">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">{t('quotes.detail.subtotal', { defaultValue: 'Subtotal' })}</span>
-              <span>{formatCurrency(quote.subtotal || 0, quote.currency_code)}</span>
+              <span>{formatCurrency(displayTotals.subtotal, quote.currency_code)}</span>
             </div>
-            {(quote.discount_total ?? 0) !== 0 && (
+            {displayTotals.discountTotal !== 0 && (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">{t('quotes.detail.discounts', { defaultValue: 'Discounts' })}</span>
-                <span>-{formatCurrency(Math.abs(quote.discount_total || 0), quote.currency_code)}</span>
+                <span>-{formatCurrency(Math.abs(displayTotals.discountTotal), quote.currency_code)}</span>
               </div>
             )}
-            {(quote.tax ?? 0) !== 0 && (
+            {displayTotals.tax !== 0 && (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">{t('quotes.detail.tax', { defaultValue: 'Tax' })}</span>
-                <span>{formatCurrency(quote.tax || 0, quote.currency_code)}</span>
+                <span>{formatCurrency(displayTotals.tax, quote.currency_code)}</span>
               </div>
             )}
             <div className="flex items-center justify-between border-t pt-2 text-sm font-semibold">
               <span>{t('quotes.detail.total', { defaultValue: 'Total' })}</span>
-              <span>{formatCurrency(quote.total_amount || 0, quote.currency_code)}</span>
+              <span>{formatCurrency(displayTotals.totalAmount, quote.currency_code)}</span>
             </div>
           </div>
 
@@ -593,7 +623,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                 <Button
                   id="accept-quote-button"
                   onClick={() => setConfirmAction('accept')}
-                  disabled={isUpdatingSelections || isSubmittingDecision}
+                  disabled={isSubmittingDecision}
                   className="mt-2 sm:mt-0"
                 >
                   {t('quotes.detail.acceptQuote', { defaultValue: 'Accept Quote' })}
@@ -609,7 +639,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                   value={rejectionReason}
                   onChange={(event) => setRejectionReason(event.target.value)}
                   placeholder={t('quotes.detail.rejectPlaceholder', { defaultValue: 'Tell the MSP what needs to change' })}
-                  disabled={isUpdatingSelections || isSubmittingDecision}
+                  disabled={isSubmittingDecision}
                   className="min-h-24"
                 />
                 <div className="flex justify-end">
@@ -623,7 +653,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                       }
                       setConfirmAction('reject');
                     }}
-                    disabled={isUpdatingSelections || isSubmittingDecision}
+                    disabled={isSubmittingDecision}
                   >
                     {t('quotes.detail.rejectQuote', { defaultValue: 'Reject Quote' })}
                   </Button>

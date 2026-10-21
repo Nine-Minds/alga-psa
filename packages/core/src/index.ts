@@ -35,6 +35,8 @@ export * from './lib/templateUtils';
 
 // Quote line inclusion rule (required always; optional only while selected)
 export * from './lib/quoteItemInclusion';
+export * from './lib/quoteDiscountAllocation';
+export * from './lib/quoteTotals';
 
 // Formatting utilities
 export * from './lib/formatters';
