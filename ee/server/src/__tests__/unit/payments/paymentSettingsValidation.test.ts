@@ -40,4 +40,18 @@ describe('updatePaymentSettingsAction — payment link expiration', () => {
     expect(result.data.paymentLinkExpirationHours).toBe(hours);
     expect(mocks.update).toHaveBeenCalledTimes(1);
   });
+  it('round-trips 720 through save -> persisted payload -> read-back -> unrelated save without clamping', async () => {
+    const saved: any = await (updatePaymentSettingsAction as any)({ paymentLinkExpirationHours: 720 });
+    expect(saved.success).toBe(true);
+    const persisted = mocks.update.mock.calls[0][0].settings;
+    expect(persisted.paymentLinkExpirationHours).toBe(720);
+
+    // Read-back: the stored row feeds the next merge (same merge getPaymentConfigAction uses).
+    mocks.update.mockClear();
+    mocks.first.mockResolvedValue({ config_id: 'c1', settings: persisted });
+    const next: any = await (updatePaymentSettingsAction as any)({ paymentLinksInEmails: false });
+    expect(next.success).toBe(true);
+    expect(next.data.paymentLinkExpirationHours).toBe(720);
+    expect(mocks.update.mock.calls[0][0].settings.paymentLinkExpirationHours).toBe(720);
+  });
 });
