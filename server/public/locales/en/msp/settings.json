@@ -3668,7 +3668,12 @@
       "noLeadingTrailingDot": "Domain cannot start or end with a dot.",
       "notApplianceHost": "Choose a domain other than this server's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here.",
       "nothingToRetry": "No failed custom domain registration to retry.",
-      "retryOnlyAfterFailure": "Retry is only available after a failed registration."
+      "retryOnlyAfterFailure": "Retry is only available after a failed registration.",
+      "alreadyInUse": "This domain is already in use. Choose a different domain.",
+      "usedByOtherSurface": "This domain is already used by another of your custom domains. To serve the client portal and the MSP app from one domain, choose \"Both\".",
+      "invalidSurface": "Choose where the custom domain is served: client portal, MSP app, or both.",
+      "redirectUrisHosted": "Redirect URIs for hosted domains are registered by platform support.",
+      "nothingToConfirm": "No pending SSO redirect URI confirmation for this domain."
     }
   },
   "common": {

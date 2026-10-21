@@ -40,15 +40,28 @@ describe('checkPortalDomainDeploymentStatus SSO redirect URI gate', () => {
     process.env.PORTAL_DOMAIN_CERT_NAMESPACE = 'msp';
     updates = [];
 
-    const knexFn: any = () => ({
-      where: () => ({
-        first: async () => row,
+    // Chainable query mock that honours where() criteria (object or column/value form, as
+    // used by tenantDb), so tenant + row scoping is actually exercised.
+    const knexFn: any = () => {
+      const criteria: Record<string, unknown> = {};
+      const matches = () =>
+        Object.entries(criteria).every(([key, value]) => (row as any)[key.split('.').pop() as string] === value);
+      const query: any = {
+        where(arg: Record<string, unknown> | string, value?: unknown) {
+          if (typeof arg === 'string') criteria[arg] = value;
+          else Object.assign(criteria, arg);
+          return query;
+        },
+        first: async () => (matches() ? row : undefined),
         update: async (values: Record<string, unknown>) => {
+          if (!matches()) return 0;
           updates.push(values);
           row = { ...row, ...(values as any) };
+          return 1;
         },
-      }),
-    });
+      };
+      return query;
+    };
     knexFn.fn = { now: () => 'now()' };
     __setConnectionFactoryForTests(() => Promise.resolve(knexFn as Knex));
 
@@ -68,7 +81,7 @@ describe('checkPortalDomainDeploymentStatus SSO redirect URI gate', () => {
 
   it('activates a client_portal domain regardless of redirect URI state', async () => {
     row = createRecord({ surface: 'client_portal' });
-    const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id });
+    const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id, tenantId: row.tenant });
     expect(result?.status).toBe('active');
     expect(updates.at(-1)?.status).toBe('active');
   });
@@ -78,7 +91,7 @@ describe('checkPortalDomainDeploymentStatus SSO redirect URI gate', () => {
       surface,
       verification_details: { sso_redirect_uris: { required: [URI], confirmed: [] } },
     });
-    const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id });
+    const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id, tenantId: row.tenant });
     expect(result?.status).toBe('pending_redirect_uri');
     expect(result?.statusMessage).toContain(URI);
     expect(updates.at(-1)?.status).toBe('pending_redirect_uri');
@@ -86,7 +99,7 @@ describe('checkPortalDomainDeploymentStatus SSO redirect URI gate', () => {
 
   it('says the state could not be confirmed when no redirect URI state exists', async () => {
     row = createRecord({ surface: 'msp', verification_details: {} });
-    const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id });
+    const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id, tenantId: row.tenant });
     expect(result?.status).toBe('pending_redirect_uri');
     expect(result?.statusMessage).toContain('could not be confirmed');
   });
@@ -96,13 +109,13 @@ describe('checkPortalDomainDeploymentStatus SSO redirect URI gate', () => {
       surface,
       verification_details: { sso_redirect_uris: { required: [URI], confirmed: [URI], source: 'operator' } },
     });
-    const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id });
+    const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id, tenantId: row.tenant });
     expect(result?.status).toBe('active');
   });
 
   it('does not regress a domain already in pending_redirect_uri', async () => {
     row = createRecord({ surface: 'msp', status: 'pending_redirect_uri', status_message: 'waiting' });
-    const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id });
+    const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id, tenantId: row.tenant });
     expect(result).toEqual({ status: 'pending_redirect_uri', statusMessage: 'waiting' });
     expect(updates).toHaveLength(0);
   });
@@ -126,5 +139,11 @@ describe('checkPortalDomainDeploymentStatus SSO redirect URI gate', () => {
       const manifests = renderPortalDomainResources(createRecord({ surface }), config);
       expect(manifests.virtualService.spec.http[0].match[0].uri).toEqual({ prefix: '/' });
     }
+  });
+  it('is tenant-scoped: a row id under another tenant is not visible', async () => {
+    row = createRecord({ surface: 'msp', verification_details: {} });
+    const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id, tenantId: 'tenant-other' });
+    expect(result).toBeNull();
+    expect(updates).toHaveLength(0);
   });
 });

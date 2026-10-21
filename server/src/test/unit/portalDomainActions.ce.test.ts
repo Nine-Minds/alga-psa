@@ -163,6 +163,28 @@ describe.each([
     expect(upsertPortalDomain).not.toHaveBeenCalled();
   });
 
+  it('rejects a host already held by another surface row of the same tenant (use "both", never a second row)', async () => {
+    portalDomainStore = { ...baseRecord, id: 'portal-domain-1', domain: 'portal.acme.com', surface: 'client_portal' };
+    hostnameOwner = { ...baseRecord, id: 'portal-domain-2', domain: 'helpdesk.acme.com', surface: 'msp' };
+
+    const result = await requestPortalDomainRegistrationAction({ domain: 'helpdesk.acme.com', surface: 'msp' });
+
+    expect(result).toMatchObject({ messageKey: 'msp/settings:errors.clientPortalDomain.usedByOtherSurface' });
+    expect(upsertPortalDomain).not.toHaveBeenCalled();
+  });
+
+  it('re-saving the tenant\'s own row for the same host (e.g. switching to "both") is allowed', async () => {
+    portalDomainStore = { ...baseRecord, id: 'portal-domain-1', domain: 'helpdesk.acme.com', surface: 'msp' };
+    hostnameOwner = { ...portalDomainStore };
+
+    const result = await requestPortalDomainRegistrationAction({ domain: 'helpdesk.acme.com', surface: 'both' });
+
+    expect(upsertPortalDomain).toHaveBeenCalledTimes(1);
+    const input = upsertPortalDomain.mock.calls[0][2];
+    expect(input).toMatchObject({ domain: 'helpdesk.acme.com', surface: 'both', matchSurface: 'msp' });
+    expect('status' in result).toBe(true);
+  });
+
   it('rejects an unknown surface', async () => {
     const result = await requestPortalDomainRegistrationAction({ domain: 'portal.acme.com', surface: 'nope' as any });
 
@@ -205,7 +227,7 @@ describe.each([
 
     const status = await disablePortalDomainAction();
 
-    expect(deletePortalDomain).toHaveBeenCalledWith({}, 'tenant-123');
+    expect(deletePortalDomain).toHaveBeenCalledWith({}, 'tenant-123', { id: 'portal-domain-1' });
     expect(status).toMatchObject({ domain: null, status: 'disabled', isEditable: true });
   });
 });

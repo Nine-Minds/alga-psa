@@ -8,6 +8,7 @@ import {
 import { enqueuePortalDomainWorkflow } from '../workflowClient';
 import {
   buildSsoRedirectUriState,
+  resolveSsoProvidersForTenant,
   readSsoRedirectUriState,
   withSsoRedirectUriState,
 } from '@/lib/portal-domains/ssoRedirectUris';
@@ -26,6 +27,8 @@ import type {
 export const temporalProvisioner: PortalDomainProvisioner = {
   async register(input: RegisterInput): Promise<RegisterResult> {
     const { knex, tenant, canonicalHost, domain, existing, domainChanged, surface } = input;
+    // Every provider that can sign in on the domain (platform env + the tenant's own IdPs).
+    const ssoProviders = await resolveSsoProvidersForTenant(tenant);
 
     const record = await upsertPortalDomain(knex, tenant, {
       domain,
@@ -45,6 +48,7 @@ export const temporalProvisioner: PortalDomainProvisioner = {
         buildSsoRedirectUriState({
           domain,
           surface,
+          providers: ssoProviders,
           previous: existing && !domainChanged ? readSsoRedirectUriState(existing.verificationDetails) : null,
         })
       ),
@@ -61,7 +65,7 @@ export const temporalProvisioner: PortalDomainProvisioner = {
     });
 
     if (!workflowResult.enqueued) {
-      await updatePortalDomain(knex, tenant, {
+      await updatePortalDomain(knex, tenant, { id: record.id }, {
         status: 'pending_dns',
         statusMessage: domainChanged
           ? 'Saved domain change, but failed to enqueue provisioning. Please retry or contact support.'
@@ -98,7 +102,7 @@ export const temporalProvisioner: PortalDomainProvisioner = {
       nextStatus.statusMessage = 'Retrying certificate provisioning. Verifying ACME challenge reachability.';
     }
 
-    const updated = await updatePortalDomain(knex, tenant, nextStatus);
+    const updated = await updatePortalDomain(knex, tenant, { id: existing.id }, nextStatus);
 
     if (updated) {
       await enqueuePortalDomainWorkflow({
@@ -110,9 +114,9 @@ export const temporalProvisioner: PortalDomainProvisioner = {
   },
 
   async disable(input: ReconcileInput): Promise<void> {
-    const { knex, tenant } = input;
+    const { knex, tenant, existing } = input;
 
-    const updated = await updatePortalDomain(knex, tenant, {
+    const updated = await updatePortalDomain(knex, tenant, { id: existing.id }, {
       status: 'disabled',
       statusMessage: 'Custom domain disabled by administrator.',
       lastCheckedAt: new Date().toISOString(),

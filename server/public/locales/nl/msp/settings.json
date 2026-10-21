@@ -3668,7 +3668,12 @@
       "noLeadingTrailingDot": "Het domein mag niet met een punt beginnen of eindigen.",
       "notApplianceHost": "Kies een ander domein dan de primaire host van deze server. Het aangepaste portaaldomein moet een andere hostnaam zijn die uw reverse proxy hierheen doorstuurt.",
       "nothingToRetry": "Er is geen mislukte registratie van een aangepast domein om opnieuw te proberen.",
-      "retryOnlyAfterFailure": "Opnieuw proberen is alleen mogelijk na een mislukte registratie."
+      "retryOnlyAfterFailure": "Opnieuw proberen is alleen mogelijk na een mislukte registratie.",
+      "alreadyInUse": "Dit domein is al in gebruik. Kies een ander domein.",
+      "usedByOtherSurface": "Dit domein wordt al gebruikt door een ander aangepast domein van u. Kies \"Beide\" om het klantportaal en de MSP-app via één domein aan te bieden.",
+      "invalidSurface": "Kies wat het aangepaste domein aanbiedt: klantportaal, MSP-app of beide.",
+      "redirectUrisHosted": "Omleidings-URI's voor gehoste domeinen worden door platformondersteuning geregistreerd.",
+      "nothingToConfirm": "Er staat geen bevestiging van SSO-omleidings-URI's open voor dit domein."
     }
   },
   "common": {

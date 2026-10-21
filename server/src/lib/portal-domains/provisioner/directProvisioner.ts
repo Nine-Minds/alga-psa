@@ -6,6 +6,7 @@ import {
 import { clearPortalDomainSeen } from '@/lib/portal-domains/portalDomainSeen';
 import {
   buildSsoRedirectUriState,
+  resolveSsoProvidersForTenant,
   describeMissingRedirectUris,
   evaluateSsoRedirectUriGate,
   readSsoRedirectUriState,
@@ -47,6 +48,8 @@ function getAppHost(): string | null {
 export const directProvisioner: PortalDomainProvisioner = {
   async register(input: RegisterInput): Promise<RegisterResult> {
     const { knex, tenant, domain, surface, existing } = input;
+    // Every provider that can sign in on the domain (platform env + the tenant's own IdPs).
+    const ssoProviders = await resolveSsoProvidersForTenant(tenant);
 
     const appHost = getAppHost();
     if (appHost && domain === appHost) {
@@ -58,6 +61,7 @@ export const directProvisioner: PortalDomainProvisioner = {
     const ssoState = buildSsoRedirectUriState({
       domain,
       surface,
+      providers: ssoProviders,
       previous: existing && existing.domain === domain ? readSsoRedirectUriState(existing.verificationDetails) : null,
     });
     const verificationDetails = withSsoRedirectUriState(
@@ -101,7 +105,7 @@ export const directProvisioner: PortalDomainProvisioner = {
     if (!gate.ok) {
       return;
     }
-    await updatePortalDomain(knex, tenant, {
+    await updatePortalDomain(knex, tenant, { id: existing.id }, {
       status: 'active',
       statusMessage:
         `Active. Ensure ${existing.domain} resolves to this server and that your reverse proxy ` +
@@ -121,7 +125,7 @@ export const directProvisioner: PortalDomainProvisioner = {
     const { knex, tenant, existing } = input;
     // Delete the row outright — there are no K8s/cert resources to tear down, and
     // outstanding one-time-tokens cascade away (portal_domain_session_otts FK).
-    await deletePortalDomain(knex, tenant);
+    await deletePortalDomain(knex, tenant, { id: existing.id });
     // Clear the last-seen marker so re-adding the domain starts from a clean slate.
     await clearPortalDomainSeen(existing.domain);
   },

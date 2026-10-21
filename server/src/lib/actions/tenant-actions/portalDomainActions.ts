@@ -255,10 +255,19 @@ export const requestPortalDomainRegistrationAction = withAuth(async (
     return actionError('Choose where the custom domain is served: client portal, MSP app, or both.', 'msp/settings:errors.clientPortalDomain.invalidSurface');
   }
 
-  // D7: one host maps to exactly one tenant.
+  // D7: one host maps to exactly one tenant AND one surface row. The global unique index on
+  // lower(domain) enforces this in the database; these checks turn it into a clear refusal.
   const claimedBy = await getPortalDomainByHostname(knex, normalizedDomain);
   if (claimedBy && claimedBy.tenant !== tenant) {
     return actionError('This domain is already in use. Choose a different domain.', 'msp/settings:errors.clientPortalDomain.alreadyInUse');
+  }
+  if (claimedBy && claimedBy.id !== existing?.id) {
+    // Same tenant, different surface row. Serving both apps from one host is `surface=both`
+    // on a single row (path routing), never a second row for the same host.
+    return actionError(
+      'This domain is already used by another of your custom domains. To serve the client portal and the MSP app from one domain, choose "Both".',
+      'msp/settings:errors.clientPortalDomain.usedByOtherSurface'
+    );
   }
 
   const domainChanged = existing ? existing.domain !== normalizedDomain : false;
@@ -390,7 +399,7 @@ export const confirmPortalDomainRedirectUrisAction = withAuth(async (user, { ten
     return actionError('No pending SSO redirect URI confirmation for this domain.', 'msp/settings:errors.clientPortalDomain.nothingToConfirm');
   }
 
-  const updated = await updatePortalDomain(knex, tenant, {
+  const updated = await updatePortalDomain(knex, tenant, { id: current.id }, {
     verificationDetails: withSsoRedirectUriState(current.verificationDetails, confirmAllRequired(state)),
     statusMessage: describeMissingRedirectUris([]),
   });

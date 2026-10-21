@@ -38,6 +38,7 @@ export interface VerifyCnameResult {
 
 export interface MarkStatusInput {
   portalDomainId: string;
+  tenantId: string;
   status: string;
   statusMessage?: string | null;
   verificationDetails?: Record<string, unknown> | null;

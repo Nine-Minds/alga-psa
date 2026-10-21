@@ -3668,7 +3668,12 @@
       "noLeadingTrailingDot": "Domena nie może zaczynać się ani kończyć kropką.",
       "notApplianceHost": "Wybierz domenę inną niż główny host tego serwera. Niestandardowa domena portalu musi być inną nazwą hosta, którą serwer proxy przekierowuje tutaj.",
       "nothingToRetry": "Brak nieudanej rejestracji domeny niestandardowej do ponowienia.",
-      "retryOnlyAfterFailure": "Ponowienie jest dostępne tylko po nieudanej rejestracji."
+      "retryOnlyAfterFailure": "Ponowienie jest dostępne tylko po nieudanej rejestracji.",
+      "alreadyInUse": "Ta domena jest już używana. Wybierz inną domenę.",
+      "usedByOtherSurface": "Ta domena jest już używana przez inną z Twoich domen niestandardowych. Aby udostępniać portal klienta i aplikację MSP z jednej domeny, wybierz „Oba”.",
+      "invalidSurface": "Wybierz, co udostępnia domena niestandardowa: portal klienta, aplikację MSP lub oba.",
+      "redirectUrisHosted": "Identyfikatory URI przekierowań dla domen hostowanych rejestruje wsparcie platformy.",
+      "nothingToConfirm": "Brak oczekującego potwierdzenia identyfikatorów URI przekierowań SSO dla tej domeny."
     }
   },
   "common": {

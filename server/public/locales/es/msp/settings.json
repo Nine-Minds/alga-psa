@@ -3668,7 +3668,12 @@
       "noLeadingTrailingDot": "El dominio no puede empezar ni terminar con un punto.",
       "notApplianceHost": "Elija un dominio distinto del host principal de este servidor. El dominio personalizado del portal debe ser otro nombre de host que su proxy inverso reenvíe aquí.",
       "nothingToRetry": "No hay ningún registro de dominio personalizado fallido que reintentar.",
-      "retryOnlyAfterFailure": "El reintento solo está disponible después de un registro fallido."
+      "retryOnlyAfterFailure": "El reintento solo está disponible después de un registro fallido.",
+      "alreadyInUse": "Este dominio ya está en uso. Elija otro dominio.",
+      "usedByOtherSurface": "Este dominio ya lo usa otro de sus dominios personalizados. Para servir el portal de clientes y la aplicación MSP desde un mismo dominio, elija «Ambos».",
+      "invalidSurface": "Elija qué sirve el dominio personalizado: portal de clientes, aplicación MSP o ambos.",
+      "redirectUrisHosted": "El soporte de la plataforma registra los URI de redirección de los dominios alojados.",
+      "nothingToConfirm": "No hay ninguna confirmación de URI de redirección SSO pendiente para este dominio."
     }
   },
   "common": {

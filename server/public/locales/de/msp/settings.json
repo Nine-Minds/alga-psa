@@ -3668,7 +3668,12 @@
       "noLeadingTrailingDot": "Die Domain darf nicht mit einem Punkt beginnen oder enden.",
       "notApplianceHost": "Wählen Sie eine andere Domain als den primären Host dieses Servers. Die eigene Portal-Domain muss ein anderer Hostname sein, den Ihr Reverse-Proxy hierher weiterleitet.",
       "nothingToRetry": "Es gibt keine fehlgeschlagene Registrierung einer eigenen Domain, die wiederholt werden könnte.",
-      "retryOnlyAfterFailure": "Ein erneuter Versuch ist nur nach einer fehlgeschlagenen Registrierung möglich."
+      "retryOnlyAfterFailure": "Ein erneuter Versuch ist nur nach einer fehlgeschlagenen Registrierung möglich.",
+      "alreadyInUse": "Diese Domain wird bereits verwendet. Wählen Sie eine andere Domain.",
+      "usedByOtherSurface": "Diese Domain wird bereits von einer anderen Ihrer benutzerdefinierten Domains verwendet. Um das Kundenportal und die MSP-App über eine Domain bereitzustellen, wählen Sie „Beide“.",
+      "invalidSurface": "Wählen Sie aus, was die benutzerdefinierte Domain bereitstellt: Kundenportal, MSP-App oder beides.",
+      "redirectUrisHosted": "Weiterleitungs-URIs für gehostete Domains werden vom Plattform-Support registriert.",
+      "nothingToConfirm": "Für diese Domain steht keine Bestätigung von SSO-Weiterleitungs-URIs aus."
     }
   },
   "common": {

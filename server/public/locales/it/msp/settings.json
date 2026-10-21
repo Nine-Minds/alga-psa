@@ -3668,7 +3668,12 @@
       "noLeadingTrailingDot": "Il dominio non può iniziare o terminare con un punto.",
       "notApplianceHost": "Scegli un dominio diverso dall'host principale di questo server. Il dominio personalizzato del portale deve essere un altro nome host che il tuo reverse proxy inoltra qui.",
       "nothingToRetry": "Non c'è alcuna registrazione di dominio personalizzato non riuscita da ritentare.",
-      "retryOnlyAfterFailure": "Il nuovo tentativo è disponibile solo dopo una registrazione non riuscita."
+      "retryOnlyAfterFailure": "Il nuovo tentativo è disponibile solo dopo una registrazione non riuscita.",
+      "alreadyInUse": "Questo dominio è già in uso. Scegli un dominio diverso.",
+      "usedByOtherSurface": "Questo dominio è già usato da un altro dei tuoi domini personalizzati. Per servire il portale clienti e l’app MSP da un unico dominio, scegli «Entrambi».",
+      "invalidSurface": "Scegli cosa serve il dominio personalizzato: portale clienti, app MSP o entrambi.",
+      "redirectUrisHosted": "Gli URI di reindirizzamento per i domini ospitati vengono registrati dal supporto della piattaforma.",
+      "nothingToConfirm": "Nessuna conferma di URI di reindirizzamento SSO in sospeso per questo dominio."
     }
   },
   "common": {

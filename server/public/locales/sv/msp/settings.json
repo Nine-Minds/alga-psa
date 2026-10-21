@@ -3668,7 +3668,12 @@
       "noLeadingTrailingDot": "Domänen får inte börja eller sluta med en punkt.",
       "notApplianceHost": "Välj en annan domän än serverns primära värdnamn. Den egna portaldomänen måste vara ett annat värdnamn som din omvända proxy vidarebefordrar hit.",
       "nothingToRetry": "Det finns ingen misslyckad registrering av egen domän att försöka igen med.",
-      "retryOnlyAfterFailure": "Nytt försök är endast tillgängligt efter en misslyckad registrering."
+      "retryOnlyAfterFailure": "Nytt försök är endast tillgängligt efter en misslyckad registrering.",
+      "alreadyInUse": "Den här domänen används redan. Välj en annan domän.",
+      "usedByOtherSurface": "Den här domänen används redan av en annan av dina anpassade domäner. Välj ”Båda” för att visa kundportalen och MSP-appen från samma domän.",
+      "invalidSurface": "Välj vad den anpassade domänen visar: kundportal, MSP-app eller båda.",
+      "redirectUrisHosted": "Omdirigerings-URI:er för värdade domäner registreras av plattformssupporten.",
+      "nothingToConfirm": "Det finns ingen väntande bekräftelse av SSO-omdirigerings-URI:er för den här domänen."
     }
   },
   "common": {

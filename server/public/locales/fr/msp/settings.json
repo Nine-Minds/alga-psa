@@ -3668,7 +3668,12 @@
       "noLeadingTrailingDot": "Le domaine ne peut pas commencer ni se terminer par un point.",
       "notApplianceHost": "Choisissez un domaine différent de l'hôte principal de ce serveur. Le domaine personnalisé du portail doit être un autre nom d'hôte que votre proxy inverse redirige ici.",
       "nothingToRetry": "Aucun enregistrement de domaine personnalisé en échec à relancer.",
-      "retryOnlyAfterFailure": "La relance n'est possible qu'après un enregistrement en échec."
+      "retryOnlyAfterFailure": "La relance n'est possible qu'après un enregistrement en échec.",
+      "alreadyInUse": "Ce domaine est déjà utilisé. Choisissez un autre domaine.",
+      "usedByOtherSurface": "Ce domaine est déjà utilisé par un autre de vos domaines personnalisés. Pour servir le portail client et l’application MSP depuis un même domaine, choisissez « Les deux ».",
+      "invalidSurface": "Choisissez ce que sert le domaine personnalisé : portail client, application MSP ou les deux.",
+      "redirectUrisHosted": "Les URI de redirection des domaines hébergés sont enregistrées par le support de la plateforme.",
+      "nothingToConfirm": "Aucune confirmation d’URI de redirection SSO en attente pour ce domaine."
     }
   },
   "common": {

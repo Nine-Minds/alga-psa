@@ -82,7 +82,7 @@ vi.mock('@/models/PortalDomainModel', async () => {
       } satisfies PortalDomain;
       return { ...portalDomainStore };
     }),
-    updatePortalDomain: vi.fn(async (_knex: any, _tenant: string, patch: any) => {
+    updatePortalDomain: vi.fn(async (_knex: any, _tenant: string, _target: any, patch: any) => {
       const current = portalDomainStore ?? baseRecord;
       const next: PortalDomain = {
         ...current,
