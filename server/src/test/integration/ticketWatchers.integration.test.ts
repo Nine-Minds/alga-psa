@@ -81,7 +81,7 @@ let contactId: string;
 let contactNoEmailId: string;
 let otherTenantContactId: string;
 let ticketId: string;
-let pascaleEmail: string;
+let dorothyEmail: string;
 const service = new TicketService();
 
 function scoped(table: string, tenant: string = tenantId) {
@@ -173,11 +173,11 @@ describe('ticket watchers', () => {
       created_by: actorId,
     });
 
-    pascaleEmail = `Pascale.Nepveu.${suffix}@Client.example`;
+    dorothyEmail = `Dorothy.Gale.${suffix}@Client.example`;
     contactId = uuidv4();
     contactNoEmailId = uuidv4();
     await scoped('contacts').insert([
-      { tenant: tenantId, contact_name_id: contactId, full_name: 'Pascale Nepveu', email: pascaleEmail, client_id: clientId },
+      { tenant: tenantId, contact_name_id: contactId, full_name: 'Dorothy Gale', email: dorothyEmail, client_id: clientId },
       { tenant: tenantId, contact_name_id: contactNoEmailId, full_name: 'No Email', email: '', client_id: clientId },
     ]);
 
@@ -224,8 +224,8 @@ describe('ticket watchers', () => {
       expect(result.changed).toBe(true);
       expect(result.watchers).toEqual([
         {
-          email: pascaleEmail.toLowerCase(),
-          name: 'Pascale Nepveu',
+          email: dorothyEmail.toLowerCase(),
+          name: 'Dorothy Gale',
           active: true,
           entity_type: 'contact',
           entity_id: contactId,
@@ -234,7 +234,7 @@ describe('ticket watchers', () => {
       ]);
       await expectMirrorMatchesTable();
       const [mirrored] = await mirror();
-      expect(mirrored).toMatchObject({ email: pascaleEmail.toLowerCase(), entity_type: 'contact', entity_id: contactId });
+      expect(mirrored).toMatchObject({ email: dorothyEmail.toLowerCase(), entity_type: 'contact', entity_id: contactId });
     });
 
     it('adds an internal user by user_id and a bare external mailbox by email', async () => {
@@ -261,7 +261,7 @@ describe('ticket watchers', () => {
       const again = await withTransaction(db, (trx) =>
         TicketWatcherService.add(trx, tenantId, ticketId, { email: 'DUP@Vendor.example' }, actorId));
       const viaContact = await withTransaction(db, async (trx) => {
-        await TicketWatcherService.add(trx, tenantId, ticketId, { email: pascaleEmail.toUpperCase() }, actorId);
+        await TicketWatcherService.add(trx, tenantId, ticketId, { email: dorothyEmail.toUpperCase() }, actorId);
         return TicketWatcherService.add(trx, tenantId, ticketId, { contact_id: contactId }, actorId);
       });
 
@@ -269,7 +269,7 @@ describe('ticket watchers', () => {
       expect(again.changed).toBe(false);
       expect(await tableRows()).toHaveLength(2);
       // Adding the same mailbox by contact_id fills in the entity instead of duplicating.
-      expect(viaContact.watchers.find((w) => w.email === pascaleEmail.toLowerCase())).toMatchObject({
+      expect(viaContact.watchers.find((w) => w.email === dorothyEmail.toLowerCase())).toMatchObject({
         entity_type: 'contact',
         entity_id: contactId,
       });
@@ -374,7 +374,7 @@ describe('ticket watchers', () => {
       await service.addWatcher(ticketId, { contact_id: contactId }, ctx());
       const list = await service.addWatcher(ticketId, { email: 'ops@vendor.example' }, ctx());
 
-      expect(list.map((w) => w.email).sort()).toEqual([pascaleEmail.toLowerCase(), 'ops@vendor.example'].sort());
+      expect(list.map((w) => w.email).sort()).toEqual([dorothyEmail.toLowerCase(), 'ops@vendor.example'].sort());
       const events = published().filter((e) => e.eventType === 'TICKET_UPDATED');
       expect(events).toHaveLength(2);
       expect(events[1].payload.changes).toEqual({});
@@ -562,7 +562,7 @@ describe('ticket watchers', () => {
 
     it('addRecipients with an already-present set is a no-op', async () => {
       const result = await inTrx((trx) =>
-        TicketWatcherService.addRecipients(trx, tenantId, ticketId, [{ email: 'steady@vendor.example', name: 'Steady' }, { email: pascaleEmail }], actorId)
+        TicketWatcherService.addRecipients(trx, tenantId, ticketId, [{ email: 'steady@vendor.example', name: 'Steady' }, { email: dorothyEmail }], actorId)
       );
       expect(result.changed).toBe(false);
       await expectStampUntouched();
@@ -575,7 +575,7 @@ describe('ticket watchers', () => {
 
     it('REST add (re-POST) and PATCH with unchanged active return 200 data and leave the stamp alone', async () => {
       const posted = await service.addWatcher(ticketId, { email: 'steady@vendor.example' }, ctx());
-      expect(posted.map((w) => w.email).sort()).toEqual(['steady@vendor.example', pascaleEmail.toLowerCase()].sort());
+      expect(posted.map((w) => w.email).sort()).toEqual(['steady@vendor.example', dorothyEmail.toLowerCase()].sort());
       const patched = await service.setWatcherActive(ticketId, { email: 'steady@vendor.example', active: true }, ctx());
       expect(patched).toHaveLength(2);
       expect(publishWorkflowEventMock).not.toHaveBeenCalledWith(expect.objectContaining({ eventType: 'TICKET_UPDATED' }));
