@@ -64,6 +64,7 @@ import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
 import { getLocationFromIp } from "./geolocation";
 import { getConnection, tenantDb } from "@alga-psa/db";
 import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel";
+import { portalDomainServes } from "@alga-psa/shared/core/portalDomainSurface";
 import { resolveMicrosoftConsumerProfileConfig } from "./microsoftConsumerProfileResolution";
 
 /**
@@ -508,6 +509,15 @@ async function ensureEnterpriseSsoRegistryInitialized(): Promise<void> {
     }
 }
 
+/**
+ * A custom domain a signed-in client user may be handed off to: active AND serving the client
+ * portal. An MSP-only domain would land the user on the middleware surface gate, which sends
+ * portal paths on that host to /auth/signin (alga-2026-0002799).
+ */
+export function isClientPortalHandoffDomain(portalDomain: { status: string; surface?: unknown }): boolean {
+    return portalDomain.status === 'active' && portalDomainServes(portalDomain.surface, 'client_portal');
+}
+
 async function computeVanityRedirect({
     url,
     baseUrl,
@@ -552,7 +562,7 @@ async function computeVanityRedirect({
 
         const fetchPortalDomainForTenant = async () => {
             const portalDomain = await getPortalDomain(knex, tenantId);
-            if (!portalDomain || portalDomain.status !== 'active') {
+            if (!portalDomain || !isClientPortalHandoffDomain(portalDomain)) {
                 return null;
             }
             // Already on the tenant's own custom domain (an MSP/both domain authenticates in
@@ -572,7 +582,7 @@ async function computeVanityRedirect({
 
             for (const candidate of candidates) {
                 const portalDomain = await getPortalDomainByHostname(knex, candidate);
-                if (!portalDomain || portalDomain.status !== 'active') {
+                if (!portalDomain || !isClientPortalHandoffDomain(portalDomain)) {
                     continue;
                 }
                 if (portalDomain.tenant !== tenantId) {
