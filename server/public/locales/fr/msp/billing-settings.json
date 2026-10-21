@@ -1446,7 +1446,8 @@
       "daysPlural": "{{count}} jours",
       "daysDecimal": "{{count}} jours",
       "hoursUnit": "heures ({{formatted}})",
-      "willExpireAfter": "Les liens de paiement expireront après {{duration}}"
+      "willExpireAfter": "Les liens de paiement expireront après {{duration}}",
+      "cappedNote": "Stripe limite les sessions Checkout à 24 heures ; un réglage plus long expire donc quand même après 24 heures. Les clients peuvent obtenir un nouveau lien de paiement depuis le portail client tant que la facture est impayée."
     },
     "notConnected": {
       "title": "Stripe non connecté",
@@ -1460,11 +1461,11 @@
       },
       "paymentConfirmations": {
         "label": "Envoyer des e-mails de confirmation de paiement",
-        "description": "Envoyer un e-mail aux clients lorsque leur paiement est reçu"
+        "description": "Envoyer un reçu par e-mail au contact de facturation du client lorsqu'un paiement en ligne est reçu."
       },
       "paymentLinkExpiration": {
         "label": "Expiration du lien de paiement",
-        "description": "Durée pendant laquelle les liens de paiement restent valides avant d'expirer"
+        "description": "Durée de validité d'un lien de paiement envoyé avec une facture, jusqu'à 24 heures. Les sessions Stripe Checkout durent 24 heures au maximum ; des valeurs plus longues n'ont donc aucun effet supplémentaire."
       },
       "actions": {
         "save": "Enregistrer les paramètres",

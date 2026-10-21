@@ -1446,7 +1446,8 @@
       "daysPlural": "{{count}} dagen",
       "daysDecimal": "{{count}} dagen",
       "hoursUnit": "uur ({{formatted}})",
-      "willExpireAfter": "Betaallinks verlopen na {{duration}}"
+      "willExpireAfter": "Betaallinks verlopen na {{duration}}",
+      "cappedNote": "Stripe beperkt Checkout-sessies tot 24 uur, dus een langere instelling verloopt toch na 24 uur. Klanten kunnen in het klantenportaal een nieuwe betaallink krijgen zolang de factuur openstaat."
     },
     "notConnected": {
       "title": "Stripe niet verbonden",
@@ -1460,11 +1461,11 @@
       },
       "paymentConfirmations": {
         "label": "Betalingsbevestigingsmails verzenden",
-        "description": "E-mail klanten wanneer hun betaling is ontvangen"
+        "description": "Stuur een ontvangstbewijs per e-mail naar de factuurcontactpersoon van de klant wanneer een online betaling is ontvangen."
       },
       "paymentLinkExpiration": {
         "label": "Vervaldatum betaallink",
-        "description": "Hoe lang betaallinks geldig blijven voordat ze verlopen"
+        "description": "Hoe lang een met een factuur verzonden betaallink geldig blijft, maximaal 24 uur. Stripe Checkout-sessies duren maximaal 24 uur, dus langere waarden hebben geen extra effect."
       },
       "actions": {
         "save": "Instellingen opslaan",

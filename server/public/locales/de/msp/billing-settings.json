@@ -1446,7 +1446,8 @@
       "daysPlural": "{{count}} Tage",
       "daysDecimal": "{{count}} Tage",
       "hoursUnit": "Stunden ({{formatted}})",
-      "willExpireAfter": "Zahlungslinks laufen nach {{duration}} ab"
+      "willExpireAfter": "Zahlungslinks laufen nach {{duration}} ab",
+      "cappedNote": "Stripe begrenzt Checkout-Sitzungen auf 24 Stunden, daher läuft der Link auch bei einer längeren Einstellung nach 24 Stunden ab. Kunden können im Kundenportal einen neuen Zahlungslink erhalten, solange die Rechnung offen ist."
     },
     "notConnected": {
       "title": "Stripe nicht verbunden",
@@ -1460,11 +1461,11 @@
       },
       "paymentConfirmations": {
         "label": "Zahlungsbestätigungs-E-Mails senden",
-        "description": "Kunden per E-Mail benachrichtigen, wenn ihre Zahlung eingegangen ist"
+        "description": "Eine Quittung per E-Mail an den Rechnungskontakt des Kunden senden, wenn eine Online-Zahlung eingeht."
       },
       "paymentLinkExpiration": {
         "label": "Ablauf des Zahlungslinks",
-        "description": "Wie lange Zahlungslinks gültig bleiben, bevor sie ablaufen"
+        "description": "Wie lange ein mit einer Rechnung versendeter Zahlungslink gültig bleibt, höchstens 24 Stunden. Stripe-Checkout-Sitzungen gelten maximal 24 Stunden, längere Werte haben daher keine zusätzliche Wirkung."
       },
       "actions": {
         "save": "Einstellungen speichern",

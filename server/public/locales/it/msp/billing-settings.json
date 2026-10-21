@@ -1446,7 +1446,8 @@
       "daysPlural": "{{count}} giorni",
       "daysDecimal": "{{count}} giorni",
       "hoursUnit": "ore ({{formatted}})",
-      "willExpireAfter": "I link di pagamento scadranno dopo {{duration}}"
+      "willExpireAfter": "I link di pagamento scadranno dopo {{duration}}",
+      "cappedNote": "Stripe limita le sessioni Checkout a 24 ore, quindi un'impostazione più lunga scade comunque dopo 24 ore. I clienti possono ottenere un nuovo link di pagamento dal portale clienti finché la fattura non è pagata."
     },
     "notConnected": {
       "title": "Stripe non connesso",
@@ -1460,11 +1461,11 @@
       },
       "paymentConfirmations": {
         "label": "Invia email di conferma pagamento",
-        "description": "Invia un'email ai clienti quando viene ricevuto il loro pagamento"
+        "description": "Invia una ricevuta via email al contatto di fatturazione del cliente quando viene ricevuto un pagamento online."
       },
       "paymentLinkExpiration": {
         "label": "Scadenza dei link di pagamento",
-        "description": "Per quanto tempo i link di pagamento restano validi prima di scadere"
+        "description": "Per quanto tempo resta valido un link di pagamento inviato con una fattura, fino a 24 ore. Le sessioni Stripe Checkout durano al massimo 24 ore, quindi valori più lunghi non hanno effetto aggiuntivo."
       },
       "actions": {
         "save": "Salva impostazioni",

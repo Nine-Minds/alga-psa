@@ -1500,7 +1500,8 @@
       "daysPlural": "{{count}} dagar",
       "daysDecimal": "{{count}} dagar",
       "hoursUnit": "timmar ({{formatted}})",
-      "willExpireAfter": "Betalningslänkar löper ut efter {{duration}}"
+      "willExpireAfter": "Betalningslänkar löper ut efter {{duration}}",
+      "cappedNote": "Stripe begränsar Checkout-sessioner till 24 timmar, så en längre inställning löper ändå ut efter 24 timmar. Kunder kan få en ny betalningslänk i kundportalen så länge fakturan är obetald."
     },
     "notConnected": {
       "title": "Stripe är inte anslutet",
@@ -1514,11 +1515,11 @@
       },
       "paymentConfirmations": {
         "label": "Skicka betalningsbekräftelser via e-post",
-        "description": "Skicka e-post till kunder när deras betalning har tagits emot"
+        "description": "Skicka ett kvitto via e-post till kundens faktureringskontakt när en onlinebetalning tas emot."
       },
       "paymentLinkExpiration": {
         "label": "Giltighetstid för betalningslänkar",
-        "description": "Hur länge betalningslänkar är giltiga innan de löper ut"
+        "description": "Hur länge en betalningslänk som skickas med en faktura är giltig, högst 24 timmar. Stripe Checkout-sessioner varar högst 24 timmar, så längre värden har ingen extra effekt."
       },
       "actions": {
         "save": "Spara inställningar",

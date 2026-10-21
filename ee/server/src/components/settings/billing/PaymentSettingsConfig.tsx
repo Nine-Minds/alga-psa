@@ -28,6 +28,9 @@ import {
 } from '@ee/lib/actions/payment-actions';
 import type { PaymentSettings as PaymentSettingsType } from 'server/src/interfaces/payment.interfaces';
 
+// Stripe Checkout sessions last at most 24 hours (see PaymentService), so longer settings are capped.
+const STRIPE_MAX_SESSION_HOURS = 24;
+
 // Payment Link Expiration Selector Component
 interface PaymentLinkExpirationSelectorProps {
   value: number; // hours
@@ -133,7 +136,13 @@ const PaymentLinkExpirationSelector: React.FC<PaymentLinkExpirationSelectorProps
 
       {!showCustomInput && currentOption && (
         <p className="text-sm text-gray-500 pl-2">
-          {t('payment.expiration.willExpireAfter', { duration: formatHours(value) })}
+          {t('payment.expiration.willExpireAfter', { duration: formatHours(Math.min(value, STRIPE_MAX_SESSION_HOURS)) })}
+        </p>
+      )}
+
+      {value > STRIPE_MAX_SESSION_HOURS && (
+        <p className="text-sm text-gray-500 pl-2">
+          {t('payment.expiration.cappedNote')}
         </p>
       )}
     </div>

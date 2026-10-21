@@ -1448,7 +1448,8 @@
       "daysPlural": "{{count}} dni",
       "daysDecimal": "{{count}} dni",
       "hoursUnit": "godzin ({{formatted}})",
-      "willExpireAfter": "Linki płatności wygasną po {{duration}}"
+      "willExpireAfter": "Linki płatności wygasną po {{duration}}",
+      "cappedNote": "Stripe ogranicza sesje Checkout do 24 godzin, więc dłuższe ustawienie i tak wygasa po 24 godzinach. Klienci mogą uzyskać nowy link płatności w portalu klienta, dopóki faktura jest nieopłacona."
     },
     "notConnected": {
       "title": "Stripe nie jest połączony",
@@ -1462,11 +1463,11 @@
       },
       "paymentConfirmations": {
         "label": "Wysyłaj wiadomości potwierdzające płatność",
-        "description": "Wysyłaj klientom wiadomość e-mail po otrzymaniu płatności"
+        "description": "Wysyłaj potwierdzenie e-mailem do kontaktu rozliczeniowego klienta po otrzymaniu płatności online."
       },
       "paymentLinkExpiration": {
         "label": "Wygaśnięcie linku płatności",
-        "description": "Jak długo linki płatności pozostają ważne, zanim wygasną"
+        "description": "Jak długo link płatności wysłany z fakturą pozostaje ważny, maksymalnie 24 godziny. Sesje Stripe Checkout trwają co najwyżej 24 godziny, więc dłuższe wartości nie mają dodatkowego efektu."
       },
       "actions": {
         "save": "Zapisz ustawienia",

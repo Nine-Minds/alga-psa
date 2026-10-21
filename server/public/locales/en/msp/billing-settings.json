@@ -1483,7 +1483,8 @@
       "daysPlural": "{{count}} days",
       "daysDecimal": "{{count}} days",
       "hoursUnit": "hours ({{formatted}})",
-      "willExpireAfter": "Payment links will expire after {{duration}}"
+      "willExpireAfter": "Payment links will expire after {{duration}}",
+      "cappedNote": "Stripe limits checkout sessions to 24 hours, so a longer setting still expires after 24 hours. Clients can get a fresh payment link from the client portal while the invoice is unpaid."
     },
     "notConnected": {
       "title": "Stripe Not Connected",
@@ -1497,11 +1498,11 @@
       },
       "paymentConfirmations": {
         "label": "Send Payment Confirmation Emails",
-        "description": "Email customers when their payment is received"
+        "description": "Email a receipt to the client's billing contact when an online payment is received."
       },
       "paymentLinkExpiration": {
         "label": "Payment Link Expiration",
-        "description": "How long payment links remain valid before expiring"
+        "description": "How long a payment link sent with an invoice stays valid, up to 24 hours. Stripe Checkout sessions last at most 24 hours, so longer values have no extra effect."
       },
       "actions": {
         "save": "Save Settings",
