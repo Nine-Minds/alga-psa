@@ -1,6 +1,7 @@
 'use server'
 
 import type { Knex } from 'knex';
+import { findTicketFieldReferenceProblems } from '../lib/ticketFieldReferences';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import TagDefinition from '@alga-psa/tags/models/tagDefinition';
@@ -10,11 +11,11 @@ import type {
   TicketTemplateForCreate,
   TicketTemplateListItem,
   TicketTemplateOption,
+  TicketTemplateUsage,
   TicketTemplateReferenceProblem,
 } from '@alga-psa/types';
 import { countDuplicableCustomFields, pickDuplicableAttributes } from '../lib/ticketDuplicate';
 import {
-  findTicketTemplateReferenceProblems,
   ticketTemplateInputSchema,
   type ParsedTicketTemplateInput,
   type TicketTemplateInput,
@@ -54,11 +55,11 @@ function toIso(value: Date | string): string {
   return (value instanceof Date ? value : new Date(value)).toISOString();
 }
 
-async function loadTemplateRow(trx: Knex.Transaction, tenant: string, templateId: string, opts: { activeOnly?: boolean } = {}) {
+async function loadTemplateRow(trx: Knex.Transaction, tenant: string, templateId: string, opts: { activeOnly?: boolean; manualUseOnly?: boolean } = {}) {
   const row = UUID_PATTERN.test(templateId)
     ? await tenantDb(trx, tenant)
         .table(TEMPLATES)
-        .where({ template_id: templateId, ...(opts.activeOnly ? { is_active: true } : {}) })
+        .where({ template_id: templateId, ...(opts.activeOnly || opts.manualUseOnly ? { is_active: true } : {}), ...(opts.manualUseOnly ? { offer_for_manual_use: true } : {}) })
         .first()
     : undefined;
   if (!row) throw new TicketTemplateError('Ticket template not found', 'TEMPLATE_NOT_FOUND');
@@ -91,6 +92,7 @@ function toTemplate(row: Record<string, any>, items: Record<string, any>[]): ITi
     tags: asJsonColumn<string[]>(row.tags ?? []),
     custom_fields: asJsonColumn<Record<string, unknown>>(row.custom_fields ?? {}),
     is_active: row.is_active,
+    offer_for_manual_use: row.offer_for_manual_use,
     source_ticket_id: row.source_ticket_id ?? null,
     created_by: row.created_by ?? null,
     updated_by: row.updated_by ?? null,
@@ -115,13 +117,49 @@ function allowlistedCustomFields(fields: Record<string, unknown>): Record<string
 }
 
 async function assertValidReferences(trx: Knex.Transaction, tenant: string, input: ParsedTicketTemplateInput) {
-  const problems = await findTicketTemplateReferenceProblems(trx, tenant, input);
+  const problems = await findTicketFieldReferenceProblems(trx, tenant, { fields: input });
   if (problems.length > 0) {
     throw new TicketTemplateError(
       problems.map((problem) => problem.message).join('. '),
       'INVALID_REFERENCES'
     );
   }
+}
+
+/** Per template: non-archived schedules using it and tickets created from it. */
+async function loadTemplateUsage(
+  trx: Knex.Transaction,
+  tenant: string,
+  templateIds: string[]
+): Promise<Map<string, TicketTemplateUsage>> {
+  const db = tenantDb(trx, tenant);
+  const schedules = await db
+    .table('recurring_ticket_definitions')
+    .whereIn('ticket_template_id', templateIds)
+    .whereNull('archived_at')
+    .groupBy('ticket_template_id')
+    .select('ticket_template_id')
+    .count('* as total');
+  const tickets = await db
+    .table('tickets')
+    .whereIn('created_from_template_id', templateIds)
+    .groupBy('created_from_template_id')
+    .select('created_from_template_id')
+    .count('* as total');
+  const usage = new Map<string, TicketTemplateUsage>(templateIds.map((id) => [id, { schedule_count: 0, ticket_count: 0 }]));
+  for (const row of schedules) usage.get(row.ticket_template_id as string)!.schedule_count = Number(row.total);
+  for (const row of tickets) usage.get(row.created_from_template_id as string)!.ticket_count = Number(row.total);
+  return usage;
+}
+
+/** Non-archived schedules (active or paused) that use the template: what blocks its deletion (R3). */
+async function listBlockingSchedules(trx: Knex.Transaction, tenant: string, templateId: string) {
+  return tenantDb(trx, tenant)
+    .table('recurring_ticket_definitions')
+    .where({ ticket_template_id: templateId })
+    .whereNull('archived_at')
+    .orderBy('name', 'asc')
+    .select('definition_id', 'name', 'is_active', 'status_id');
 }
 
 function duplicateNameError(name: string): TicketTemplateError {
@@ -164,6 +202,8 @@ function templateColumns(input: ParsedTicketTemplateInput) {
     itil_urgency: input.itil_urgency,
     tags: JSON.stringify(input.tags),
     custom_fields: JSON.stringify(allowlistedCustomFields(input.custom_fields)),
+    // Unset on update leaves the stored value alone; a new template is offered unless said otherwise.
+    ...(input.offer_for_manual_use === undefined ? {} : { offer_for_manual_use: input.offer_for_manual_use }),
   };
 }
 
@@ -199,6 +239,7 @@ export const listTicketTemplates = withAuth(async (
         .select('template_id')
         .count('* as total');
       const countById = new Map(counts.map((row) => [row.template_id as string, Number(row.total)]));
+      const usageById = await loadTemplateUsage(trx, tenant, rows.map((row) => row.template_id as string));
 
       return rows.map((row): TicketTemplateListItem => ({
         template_id: row.template_id,
@@ -209,6 +250,9 @@ export const listTicketTemplates = withAuth(async (
         checklist_count: countById.get(row.template_id) ?? 0,
         tag_count: asJsonColumn<string[]>(row.tags ?? []).length,
         is_active: row.is_active,
+        offer_for_manual_use: row.offer_for_manual_use,
+        schedule_count: usageById.get(row.template_id)?.schedule_count ?? 0,
+        ticket_count: usageById.get(row.template_id)?.ticket_count ?? 0,
         updated_at: toIso(row.updated_at),
       }));
     });
@@ -221,7 +265,7 @@ export const getTicketTemplate = withAuth(async (
   user,
   { tenant },
   templateId: string
-): Promise<(ITicketTemplate & { referenceProblems: TicketTemplateReferenceProblem[] }) | TicketTemplateActionError> => {
+): Promise<(ITicketTemplate & TicketTemplateUsage & { referenceProblems: TicketTemplateReferenceProblem[] }) | TicketTemplateActionError> => {
   try {
     requireInternal(user);
     const { knex } = await createTenantKnex();
@@ -230,8 +274,9 @@ export const getTicketTemplate = withAuth(async (
       const row = await loadTemplateRow(trx, tenant, templateId);
       const items = await loadItemRows(trx, tenant, row.template_id);
       const template = toTemplate(row, items);
-      const referenceProblems = await findTicketTemplateReferenceProblems(trx, tenant, template);
-      return { ...template, referenceProblems };
+      const referenceProblems = await findTicketFieldReferenceProblems(trx, tenant, { fields: template });
+      const usage = (await loadTemplateUsage(trx, tenant, [template.template_id])).get(template.template_id)!;
+      return { ...template, referenceProblems, ...usage };
     });
   } catch (error) {
     return failed(error, 'getTicketTemplate');
@@ -347,6 +392,16 @@ export const deleteTicketTemplate = withAuth(async (
     return await withTransaction(knex, async (trx) => {
       await requirePermission(user, 'ticket_template', 'delete', trx);
       const existing = await loadTemplateRow(trx, tenant, templateId);
+      // R3: refused while any non-archived schedule (active or paused) uses the template. The tenant-composite
+      // FK (ON DELETE RESTRICT) enforces the same rule for any other writer; this gives the actionable message.
+      const blocking = await listBlockingSchedules(trx, tenant, existing.template_id);
+      if (blocking.length > 0) {
+        throw new TicketTemplateError(
+          `Used by ${blocking.length} recurring schedule${blocking.length === 1 ? '' : 's'}: ${blocking.map((row) => row.name).join(', ')}. Point them at another template or archive them first.`,
+          'IN_USE_BY_SCHEDULES',
+          { count: blocking.length, schedules: blocking.map((row) => row.name).join(', ') }
+        );
+      }
       // Hard delete. Tickets keep created_from_template_id (no FK) and the activity-row name snapshot.
       await tenantDb(trx, tenant).table(ITEMS).where({ template_id: existing.template_id }).delete();
       await tenantDb(trx, tenant).table(TEMPLATES).where({ template_id: existing.template_id }).delete();
@@ -370,7 +425,7 @@ export const listTicketTemplatesForCreate = withAuth(async (
       await requirePermission(user, 'ticket_template', 'read', trx);
       const rows = await tenantDb(trx, tenant)
         .table(TEMPLATES)
-        .where({ is_active: true })
+        .where({ is_active: true, offer_for_manual_use: true })
         .orderBy('name', 'asc')
         .select('template_id', 'name', 'board_id');
       return rows.map((row): TicketTemplateOption => ({
@@ -399,11 +454,11 @@ export const getTicketTemplateForCreate = withAuth(async (
     return await withTransaction(knex, async (trx) => {
       await requirePermission(user, 'ticket', 'create', trx);
       await requirePermission(user, 'ticket_template', 'read', trx);
-      const row = await loadTemplateRow(trx, tenant, templateId, { activeOnly: true });
+      const row = await loadTemplateRow(trx, tenant, templateId, { manualUseOnly: true });
       const items = await loadItemRows(trx, tenant, row.template_id);
       const template = toTemplate(row, items);
 
-      const problems = await findTicketTemplateReferenceProblems(trx, tenant, template);
+      const problems = await findTicketFieldReferenceProblems(trx, tenant, { fields: template });
       const bad = new Set(problems.map((problem) => problem.field));
       const boardGone = bad.has('board_id');
       const categoryGone = boardGone || bad.has('category_id');
@@ -440,5 +495,37 @@ export const getTicketTemplateForCreate = withAuth(async (
     });
   } catch (error) {
     return failed(error, 'getTicketTemplateForCreate');
+  }
+});
+
+/** A non-archived schedule using a template. `pins_status`: it dispatches into a fixed status that belongs to one board. */
+export interface TicketTemplateScheduleUse {
+  definition_id: string;
+  name: string;
+  is_active: boolean;
+  pins_status: boolean;
+}
+
+/** Non-archived schedules using a template, for the editor's "Used by" panel. */
+export const listSchedulesForTemplate = withAuth(async (
+  user,
+  { tenant },
+  templateId: string
+): Promise<TicketTemplateScheduleUse[] | TicketTemplateActionError> => {
+  try {
+    requireInternal(user);
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx) => {
+      await requirePermission(user, 'ticket_template', 'read', trx);
+      const existing = await loadTemplateRow(trx, tenant, templateId);
+      return (await listBlockingSchedules(trx, tenant, existing.template_id)).map((row) => ({
+        definition_id: row.definition_id as string,
+        name: row.name as string,
+        is_active: row.is_active as boolean,
+        pins_status: row.status_id !== null && row.status_id !== undefined,
+      }));
+    });
+  } catch (error) {
+    return failed(error, 'listSchedulesForTemplate');
   }
 });
