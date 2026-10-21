@@ -30,25 +30,36 @@ export interface CustomAuthHost {
   /** Host as the browser addressed it (may include a port). */
   hostHeader: string;
   proto: string;
+  /** Tenant that owns the host (D7: one host = one tenant). Sign-in is bound to it. */
+  tenant: string;
+}
+
+export interface CustomHostLookupResult {
+  surface: PortalDomainSurface;
+  tenant: string;
 }
 
 const HOST_CACHE_TTL_MS = 30_000;
-const hostCache = new Map<string, { value: PortalDomainSurface | null; expiresAt: number }>();
+const hostCache = new Map<string, { value: CustomHostLookupResult | null; expiresAt: number }>();
 
 export function clearCustomAuthHostCache(): void {
   hostCache.clear();
 }
 
-async function defaultLookupSurface(hostname: string): Promise<PortalDomainSurface | null> {
+// LEVERAGE: pattern portal-domain-host-lookup — same "active portal domain by hostname" lookup as
+// server/src/lib/portal-domains/hostSurface.ts (resolveHostSurface); two copies (Edge via HTTP, Node via DB).
+async function defaultLookupSurface(hostname: string): Promise<CustomHostLookupResult | null> {
   const { getAdminConnection } = await import('@alga-psa/db/admin');
   const { getPortalDomainByHostname } = await import('../lib/PortalDomainModel');
   const knex = await getAdminConnection();
   const record = await getPortalDomainByHostname(knex, hostname);
-  return record && record.status === 'active' ? record.surface : null;
+  return record && record.status === 'active' && record.tenant
+    ? { surface: record.surface, tenant: record.tenant }
+    : null;
 }
 
 export interface ResolveCustomAuthHostOptions {
-  lookupSurface?: (hostname: string) => Promise<PortalDomainSurface | null>;
+  lookupSurface?: (hostname: string) => Promise<CustomHostLookupResult | null>;
 }
 
 /**
@@ -80,24 +91,24 @@ export async function resolveCustomAuthHost(
   }
 
   const now = Date.now();
-  let surface: PortalDomainSurface | null;
+  let found: CustomHostLookupResult | null;
   const cached = hostCache.get(hostHeader);
   if (cached && cached.expiresAt > now) {
-    surface = cached.value;
+    found = cached.value;
   } else {
     try {
-      surface = await (options.lookupSurface ?? defaultLookupSurface)(hostname);
+      found = await (options.lookupSurface ?? defaultLookupSurface)(hostname);
     } catch (error) {
       console.warn('[auth] custom host lookup failed; using canonical origin', {
         hostname,
         error: error instanceof Error ? error.message : error,
       });
-      surface = null;
+      found = null;
     }
-    hostCache.set(hostHeader, { value: surface, expiresAt: now + HOST_CACHE_TTL_MS });
+    hostCache.set(hostHeader, { value: found, expiresAt: now + HOST_CACHE_TTL_MS });
   }
 
-  if (!surface || !portalDomainServes(surface, 'msp')) {
+  if (!found || !portalDomainServes(found.surface, 'msp')) {
     return null;
   }
 
@@ -105,7 +116,7 @@ export async function resolveCustomAuthHost(
   const proto = protoHeader && /^[a-z][a-z0-9+.-]*$/.test(protoHeader)
     ? protoHeader
     : process.env.NODE_ENV === 'production' ? 'https' : new URL(request.url).protocol.replace(/:$/, '');
-  return { hostHeader, proto };
+  return { hostHeader, proto, tenant: found.tenant };
 }
 
 /** Same request (method, headers, body) addressed to the custom host. */
@@ -113,6 +124,66 @@ export function rebaseRequestOntoHost(request: Request, host: CustomAuthHost): R
   const url = new URL(request.url);
   const rebased = new URL(`${host.proto}://${host.hostHeader}${url.pathname}${url.search}`);
   return new Request(rebased, request);
+}
+
+/**
+ * D7: one host = one tenant. Wraps a freshly built auth config (per request, closing over the
+ * tenant resolved server-side from the Host header - never a client-supplied value) so that
+ * every sign-in path refuses a user of another tenant with an ordinary auth failure:
+ *  - credentials `authorize()` returns null (CredentialsSignin),
+ *  - the `signIn` callback returns false (AccessDenied) before AND after the original runs
+ *    (OAuth/SSO profile hints can set the tenant inside it),
+ *  - `session` presents a foreign-tenant token as signed out.
+ * The canonical-host path never goes through this.
+ */
+export function bindAuthConfigToTenant(config: Record<string, any>, hostTenant: string): Record<string, any> {
+  const wrapAuthorize = (authorize: any) => typeof authorize === 'function'
+    ? async (...args: any[]) => {
+        const user = await authorize(...args);
+        return user && user.tenant === hostTenant ? user : null;
+      }
+    : authorize;
+
+  const providers = (config.providers ?? []).map((provider: any) => {
+    if (!provider || (!provider.authorize && !provider.options?.authorize)) {
+      return provider;
+    }
+    return {
+      ...provider,
+      ...(provider.authorize ? { authorize: wrapAuthorize(provider.authorize) } : {}),
+      ...(provider.options?.authorize
+        ? { options: { ...provider.options, authorize: wrapAuthorize(provider.options.authorize) } }
+        : {}),
+    };
+  });
+
+  const callbacks = config.callbacks ?? {};
+  return {
+    ...config,
+    providers,
+    callbacks: {
+      ...callbacks,
+      async signIn(params: any) {
+        const foreign = (u: any) => !u || u.tenant !== hostTenant;
+        // Credentials users already passed the authorize() check; for OAuth the profile
+        // callback usually carries the tenant, so refuse early to skip side effects.
+        if (params?.account?.provider !== 'credentials' && params?.user?.tenant && foreign(params.user)) {
+          return false;
+        }
+        const result = callbacks.signIn ? await callbacks.signIn(params) : true;
+        if (result === false) {
+          return false;
+        }
+        return foreign(params?.user) ? false : result;
+      },
+      async session(params: any) {
+        if (params?.token && params.token.tenant !== hostTenant) {
+          return { expires: '0' };
+        }
+        return callbacks.session ? callbacks.session(params) : params.session;
+      },
+    },
+  };
 }
 
 export interface CustomHostAwareHandlerDeps {
@@ -132,7 +203,10 @@ export function createCustomHostAwareHandler(deps: CustomHostAwareHandlerDeps) {
       return deps.defaultHandler(request);
     }
 
-    const config: Record<string, any> = { ...(await deps.loadConfig()), trustHost: true };
+    const config: Record<string, any> = {
+      ...bindAuthConfigToTenant(await deps.loadConfig(), host.tenant),
+      trustHost: true,
+    };
     // Mirror what next-auth's setEnvDefaults does (secret, basePath, provider env defaults).
     config.secret ??= process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
     config.basePath ||= '/api/auth';

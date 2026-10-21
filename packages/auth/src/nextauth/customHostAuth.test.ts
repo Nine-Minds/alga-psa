@@ -13,6 +13,7 @@ import Credentials from '@auth/core/providers/credentials';
 import Google from '@auth/core/providers/google';
 
 import {
+  bindAuthConfigToTenant,
   createCustomHostAwareHandler,
   rebaseRequestOntoHost,
   resolveCustomAuthHost,
@@ -40,7 +41,7 @@ describe('rebaseRequestOntoHost', () => {
       headers: { cookie: 'a=b', 'content-type': 'application/x-www-form-urlencoded' },
       body: 'csrfToken=abc',
     });
-    const rebased = rebaseRequestOntoHost(req, { hostHeader: 'helpdesk.pbnj.ca', proto: 'https' });
+    const rebased = rebaseRequestOntoHost(req, { hostHeader: 'helpdesk.pbnj.ca', proto: 'https', tenant: 'tenant-a' });
     expect(new URL(rebased.url).origin).toBe('https://helpdesk.pbnj.ca');
     expect(new URL(rebased.url).pathname + new URL(rebased.url).search).toBe('/api/auth/callback/credentials?x=1');
     expect(rebased.method).toBe('POST');
@@ -67,16 +68,16 @@ describe('resolveCustomAuthHost', () => {
   });
 
   it('returns the host for an active msp or both domain', async () => {
-    lookup.mockResolvedValueOnce('msp');
+    lookup.mockResolvedValueOnce({ surface: 'msp', tenant: 'tenant-a' });
     expect(await resolveCustomAuthHost(req('helpdesk.pbnj.ca'), { lookupSurface: lookup }))
-      .toEqual({ hostHeader: 'helpdesk.pbnj.ca', proto: 'https' });
+      .toEqual({ hostHeader: 'helpdesk.pbnj.ca', proto: 'https', tenant: 'tenant-a' });
     clearCustomAuthHostCache();
-    lookup.mockResolvedValueOnce('both');
+    lookup.mockResolvedValueOnce({ surface: 'both', tenant: 'tenant-a' });
     expect(await resolveCustomAuthHost(req('helpdesk.pbnj.ca'), { lookupSurface: lookup })).not.toBeNull();
   });
 
   it('keeps client_portal-only and unknown hosts on the legacy canonical-origin path', async () => {
-    lookup.mockResolvedValueOnce('client_portal');
+    lookup.mockResolvedValueOnce({ surface: 'client_portal', tenant: 'tenant-a' });
     expect(await resolveCustomAuthHost(req('portal.pbnj.ca'), { lookupSurface: lookup })).toBeNull();
     clearCustomAuthHostCache();
     lookup.mockResolvedValueOnce(null);
@@ -87,19 +88,19 @@ describe('resolveCustomAuthHost', () => {
   });
 
   it('does not trust X-Forwarded-Host unless the deployment opts in', async () => {
-    lookup.mockResolvedValue('msp');
+    lookup.mockResolvedValue({ surface: 'msp', tenant: 'tenant-a' });
     expect(await resolveCustomAuthHost(req('algapsa.com', { 'x-forwarded-host': 'helpdesk.pbnj.ca' }), { lookupSurface: lookup })).toBeNull();
 
     vi.stubEnv('TRUST_FORWARDED_HOST', 'true');
     clearCustomAuthHostCache();
     expect(await resolveCustomAuthHost(req('algapsa.com', { 'x-forwarded-host': 'helpdesk.pbnj.ca' }), { lookupSurface: lookup }))
-      .toEqual({ hostHeader: 'helpdesk.pbnj.ca', proto: 'https' });
+      .toEqual({ hostHeader: 'helpdesk.pbnj.ca', proto: 'https', tenant: 'tenant-a' });
   });
 });
 
 describe('createCustomHostAwareHandler (real @auth/core over the rebased request)', () => {
   const defaultHandler = vi.fn(async () => new Response('default'));
-  const make = (host: { hostHeader: string; proto: string } | null) =>
+  const make = (host: { hostHeader: string; proto: string; tenant: string } | null) =>
     createCustomHostAwareHandler({
       defaultHandler,
       resolveHost: async () => host,
@@ -120,7 +121,7 @@ describe('createCustomHostAwareHandler (real @auth/core over the rebased request
   });
 
   it('credentials and SSO callback URLs resolve to the custom host', async () => {
-    const res = await make({ hostHeader: 'helpdesk.pbnj.ca', proto: 'https' })(
+    const res = await make({ hostHeader: 'helpdesk.pbnj.ca', proto: 'https', tenant: 'tenant-a' })(
       new Request(`${CANONICAL}/api/auth/providers`, { headers: { host: 'helpdesk.pbnj.ca' } })
     );
     expect(defaultHandler).not.toHaveBeenCalled();
@@ -133,7 +134,7 @@ describe('createCustomHostAwareHandler (real @auth/core over the rebased request
     const config = baseConfig();
     const handler = createCustomHostAwareHandler({
       defaultHandler,
-      resolveHost: async () => ({ hostHeader: 'helpdesk.pbnj.ca', proto: 'https' }),
+      resolveHost: async () => ({ hostHeader: 'helpdesk.pbnj.ca', proto: 'https', tenant: 'tenant-a' }),
       loadConfig: async () => config,
       runAuth: Auth as any,
     });
@@ -156,5 +157,95 @@ describe('createCustomHostAwareHandler (real @auth/core over the rebased request
     for (const cookie of setCookies) {
       expect(cookie.toLowerCase()).not.toContain('domain=');
     }
+  });
+});
+
+describe('tenant binding on a custom host (D7: one host = one tenant)', () => {
+  const HOST = { hostHeader: 'helpdesk.pbnj.ca', proto: 'https', tenant: 'tenant-a' };
+  const users: Record<string, { id: string; email: string; tenant: string; user_type: string }> = {
+    'tech-a@example.com': { id: 'u-a', email: 'tech-a@example.com', tenant: 'tenant-a', user_type: 'internal' },
+    'tech-b@example.com': { id: 'u-b', email: 'tech-b@example.com', tenant: 'tenant-b', user_type: 'internal' },
+  };
+
+  // Both technicians have VALID credentials; only the host's tenant may sign in.
+  const config = () => ({
+    secret: 'unit-test-secret',
+    basePath: '/api/auth',
+    session: { strategy: 'jwt' as const },
+    providers: [
+      Credentials({
+        credentials: { email: {}, password: {} },
+        authorize: async (c: any) => (c?.password === 'correct' ? users[String(c.email)] ?? null : null),
+      }),
+    ],
+    callbacks: {
+      signIn: async () => true,
+      jwt: async ({ token, user }: any) => (user ? { ...token, tenant: user.tenant, id: user.id } : token),
+      session: async ({ session, token }: any) => ({ ...session, user: { id: token.id, tenant: token.tenant } }),
+    },
+  });
+
+  const handler = (cfg: any = config()) =>
+    createCustomHostAwareHandler({
+      defaultHandler: vi.fn(async () => new Response('default')),
+      resolveHost: async () => HOST,
+      loadConfig: async () => cfg,
+      runAuth: Auth as any,
+    });
+
+  beforeEach(() => vi.stubEnv('NEXTAUTH_URL', CANONICAL));
+  afterEach(() => vi.unstubAllEnvs());
+
+  async function signInWithCredentials(email: string) {
+    const h = handler();
+    const csrf = await h(new Request(`${CANONICAL}/api/auth/csrf`));
+    const { csrfToken } = await csrf.json();
+    const cookie = (csrf.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).join('; ');
+    return h(
+      new Request(`${CANONICAL}/api/auth/callback/credentials`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+        body: new URLSearchParams({ csrfToken, email, password: 'correct', callbackUrl: '/msp/dashboard' }),
+      })
+    );
+  }
+
+  const sessionCookies = (res: Response) =>
+    (res.headers.getSetCookie?.() ?? []).filter((c) => /session-token/.test(c));
+
+  it('refuses a technician of another tenant: no session cookie, ordinary CredentialsSignin', async () => {
+    const res = await signInWithCredentials('tech-b@example.com');
+    expect(sessionCookies(res)).toHaveLength(0);
+    const location = res.headers.get('location') ?? '';
+    expect(new URL(location).searchParams.get('error')).toBe('CredentialsSignin');
+    expect(location).not.toMatch(/tenant-b|tech-b/);
+  });
+
+  it('lets a technician of the owning tenant sign in', async () => {
+    const res = await signInWithCredentials('tech-a@example.com');
+    expect(sessionCookies(res).length).toBeGreaterThan(0);
+    expect(res.headers.get('location') ?? '').not.toContain('error=');
+  });
+
+  it('refuses an SSO signIn callback for a foreign tenant (before and after the original callback)', async () => {
+    const original = vi.fn(async () => true);
+    const bound: any = bindAuthConfigToTenant({ ...config(), callbacks: { signIn: original } }, 'tenant-a');
+    const oauth = { provider: 'google' };
+    expect(await bound.callbacks.signIn({ user: users['tech-b@example.com'], account: oauth })).toBe(false);
+    expect(original).not.toHaveBeenCalled();
+    // tenant only resolved inside the original callback (OAuth account hints)
+    const lateTenant = { id: 'x', email: 'x@example.com' } as any;
+    const late: any = bindAuthConfigToTenant(
+      { callbacks: { signIn: async ({ user }: any) => { user.tenant = 'tenant-b'; return true; } } },
+      'tenant-a'
+    );
+    expect(await late.callbacks.signIn({ user: lateTenant, account: oauth })).toBe(false);
+    expect(await bound.callbacks.signIn({ user: users['tech-a@example.com'], account: oauth })).toBe(true);
+  });
+
+  it('presents a foreign-tenant session token as signed out', async () => {
+    const bound: any = bindAuthConfigToTenant(config(), 'tenant-a');
+    expect(await bound.callbacks.session({ session: {}, token: { tenant: 'tenant-b', id: 'u-b' } })).toEqual({ expires: '0' });
+    expect((await bound.callbacks.session({ session: {}, token: { tenant: 'tenant-a', id: 'u-a' } })).user.id).toBe('u-a');
   });
 });

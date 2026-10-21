@@ -6,7 +6,7 @@ import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './li
 import { resolveRequestHost, detectForwardedHostRewrite } from './lib/deployment/requestHost';
 import { MIGRATED_SETTINGS_TAB_IDS } from './components/settings/settingsTabsRegistry';
 import { resolveHostSurface } from './lib/portal-domains/hostSurface';
-import { portalDomainServes, type PortalDomainSurface } from '@alga-psa/shared/core/portalDomainSurface';
+import { portalDomainServes, surfaceForPath, type PortalDomainSurface } from '@alga-psa/shared/core/portalDomainSurface';
 
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
@@ -289,6 +289,44 @@ export function getVanityClientPortalInternalRedirectTarget(args: {
   return null;
 }
 
+/**
+ * Surface gate for custom domains (alga-2026-0002799, D6): a custom host serves only the
+ * app(s) its portal_domains.surface allows. Returns where to send the request instead of
+ * serving it, or null to leave it alone (canonical host, API/asset/shared-auth paths, or a
+ * path the host serves).
+ *
+ * `hostSurface` null (unknown host / failed lookup) fails closed to the legacy
+ * `client_portal`-only behaviour, so MSP routes are never opened on a host we cannot vouch for.
+ */
+export function getCustomDomainSurfaceGateRedirect(args: {
+  pathname: string;
+  search?: string;
+  requestHostname: string;
+  canonicalUrlEnv: URL | null;
+  hostSurface?: PortalDomainSurface | null;
+  requestOrigin: string;
+}): URL | null {
+  const { pathname, search = '', requestHostname, canonicalUrlEnv, hostSurface, requestOrigin } = args;
+  // No Host at all cannot be a custom domain (nothing to bind a surface to): not gated.
+  if (!canonicalUrlEnv || !requestHostname || requestHostname === canonicalUrlEnv.hostname) {
+    return null;
+  }
+  const pathSurface = surfaceForPath(pathname);
+  if (!pathSurface) {
+    return null;
+  }
+  const effectiveSurface: PortalDomainSurface = hostSurface ?? 'client_portal';
+  if (portalDomainServes(effectiveSurface, pathSurface)) {
+    return null;
+  }
+  if (pathSurface === 'msp') {
+    // Client-portal-only host: MSP routes live on the canonical origin.
+    return new URL(`${pathname}${search}`, canonicalUrlEnv.origin);
+  }
+  // MSP-only host: never serve the portal; send the user to the MSP app on the same host.
+  return new URL(pathname.startsWith('/auth/') ? '/auth/signin' : '/msp/dashboard', requestOrigin);
+}
+
 // Best-effort, per-isolate throttle for the X-Forwarded-Host rewrite tell-tale.
 const forwardedHostWarnAt = new Map<string, number>();
 const FORWARDED_HOST_WARN_INTERVAL_MS = 5 * 60 * 1000;
@@ -328,7 +366,8 @@ const _middleware = auth(async (request) => {
     && !pathname.startsWith('/api/')
     && (pathname.startsWith(protectedPrefix)
       || pathname.startsWith(clientPortalPrefix)
-      || pathname === '/auth/client-portal/signin');
+      || pathname === '/auth/client-portal/signin'
+      || surfaceForPath(pathname) !== null);
   const hostSurface: PortalDomainSurface | null = needsHostSurface
     ? await resolveHostSurface(requestHostname)
     : null;
@@ -348,6 +387,21 @@ const _middleware = auth(async (request) => {
       { status: 409 }
     );
     return applyCorsHeaders(errorResponse, origin);
+  }
+
+  // Surface gate: a custom host only serves the app(s) its surface allows (fails closed).
+  const surfaceGateRedirect = getCustomDomainSurfaceGateRedirect({
+    pathname,
+    search: request.nextUrl.search,
+    requestHostname,
+    canonicalUrlEnv: getCanonicalUrl(),
+    hostSurface,
+    requestOrigin: request.nextUrl.origin,
+  });
+  if (surfaceGateRedirect) {
+    const gateResponse = NextResponse.redirect(surfaceGateRedirect);
+    gateResponse.headers.set('x-pathname', surfaceGateRedirect.pathname);
+    return applyCorsHeaders(gateResponse, origin);
   }
 
   // Clone request headers so we can pass additional metadata downstream
