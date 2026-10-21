@@ -32,6 +32,7 @@ import {
   Layers3,
   LayoutDashboard,
   LayoutTemplate,
+  MessageSquareText,
   ListTodo,
   ListChecks,
   ListTree,
@@ -117,7 +118,8 @@ export const navigationSections: NavigationSection[] = [
         subItems: [
           { name: 'All Tickets', translationKey: 'nav.ticketsAll', icon: Ticket, href: '/msp/tickets' },
           { name: 'Recurring Tickets', translationKey: 'nav.ticketsRecurring', icon: Repeat, href: '/msp/tickets/recurring', requiredPermission: 'recurring_ticket:read' },
-          { name: 'Ticket Templates', translationKey: 'nav.ticketsTemplates', icon: LayoutTemplate, href: '/msp/tickets/templates', requiredPermission: 'ticket_template:read' }
+          { name: 'Ticket Templates', translationKey: 'nav.ticketsTemplates', icon: LayoutTemplate, href: '/msp/tickets/templates', requiredPermission: 'ticket_template:read' },
+          { name: 'Canned Responses', translationKey: 'nav.ticketsCannedResponses', icon: MessageSquareText, href: '/msp/tickets/canned-responses', requiredPermission: 'canned_response:read' }
         ]
       },
       {

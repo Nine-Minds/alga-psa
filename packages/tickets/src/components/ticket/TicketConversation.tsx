@@ -37,6 +37,7 @@ export const DEFAULT_BLOCK: PartialBlock[] = [{
     styles: {}
   }]
 }];
+import { useCannedResponseSnippets } from '../cannedResponses/useCannedResponseSnippets';
 import CommentItem from './CommentItem';
 import type { ITicketExternalLinkView } from '../../actions/externalLinks/externalLinkActions';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
@@ -211,6 +212,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const replyEmailRecipients = useCommentEmailRecipientsDraft();
   const searchEmailRecipients = useCommentEmailRecipientSuggestions(ticket.client_id);
   const showEmailRecipients = allowEmailRecipients && !hideInternalTab;
+  // Canned responses are an MSP-agent tool: this component is also the client portal's conversation view
+  // (hideInternalTab), where customers must not see the library.
+  const cannedResponseSnippets = useCannedResponseSnippets(ticket.ticket_id, !hideInternalTab);
   // A reply inherits is_internal from its parent, so the control only appears
   // under a public comment.
   const showReplyEmailRecipients = (parent?: IComment | null) =>
@@ -599,6 +603,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             showInternalToggle={false}
             uploadFile={existingCommentUploadSession.uploadFile}
             searchMentions={searchUsersForMentions}
+            snippets={cannedResponseSnippets}
             footerActions={showReplyEmailRecipients(mergedConversation) ? (
               <>
                 <CommentEmailRecipientsControl
@@ -933,6 +938,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             onContentChange={handleComposeContentChange}
             searchMentions={searchUsersForMentions}
             uploadFile={composeUploadSession.uploadFile}
+            snippets={cannedResponseSnippets}
             footerActions={showEmailRecipients ? (
               <CommentEmailRecipientsControl
                 idPrefix={compId}

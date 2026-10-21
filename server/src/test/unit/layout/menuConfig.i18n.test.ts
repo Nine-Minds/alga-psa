@@ -78,6 +78,7 @@ describe('menuConfig i18n metadata', () => {
       'nav.ticketsAll',
       'nav.ticketsRecurring',
       'nav.ticketsTemplates',
+      'nav.ticketsCannedResponses',
       'nav.projectsAll',
       'nav.projectsTemplates',
       'nav.marketing.calendar',

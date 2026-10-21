@@ -2617,5 +2617,115 @@
       "daysHours": "{{days}} dn. {{hours}} godz.",
       "days": "{{days}} dn."
     }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Gotowe odpowiedzi",
+      "buttonTooltip": "Wstaw gotową odpowiedź (Ctrl/Cmd+J lub wpisz /)",
+      "title": "Wstaw gotową odpowiedź",
+      "searchPlaceholder": "Szukaj gotowych odpowiedzi…",
+      "searchLabel": "Szukaj gotowych odpowiedzi",
+      "loading": "Ładowanie gotowych odpowiedzi…",
+      "empty": "Nie ma jeszcze gotowych odpowiedzi.",
+      "noResults": "Żadne gotowe odpowiedzi nie pasują do wyszukiwania.",
+      "loadFailed": "Nie udało się załadować gotowych odpowiedzi.",
+      "insertFailed": "Nie udało się wstawić gotowej odpowiedzi.",
+      "favorites": "Ulubione",
+      "recent": "Ostatnio używane",
+      "uncategorized": "Bez kategorii",
+      "slashGroup": "Gotowe odpowiedzi",
+      "slashBrowse": "Gotowe odpowiedzi…",
+      "slashBrowseHint": "Przeglądaj i wstaw zapisaną odpowiedź"
+    },
+    "scope": {
+      "personal": "Osobista",
+      "team": "Zespół",
+      "board": "Tablica",
+      "clientPortal": "Portal klienta",
+      "personalHelp": "Tylko Ty możesz używać tej odpowiedzi.",
+      "teamHelp": "Członkowie wybranego zespołu mogą używać tej odpowiedzi.",
+      "boardHelp": "Każdy, kto odpowiada na zgłoszenia z wybranej tablicy, może używać tej odpowiedzi.",
+      "clientPortalHelp": "Zarezerwowana dla odpowiedzi w portalu klienta. Nie jest oferowana przy odpowiadaniu z portalu MSP."
+    },
+    "list": {
+      "title": "Gotowe odpowiedzi",
+      "new": "Nowa gotowa odpowiedź",
+      "showInactive": "Pokaż nieaktywne",
+      "searchPlaceholder": "Szukaj według nazwy, kategorii lub tekstu…",
+      "searchLabel": "Szukaj gotowych odpowiedzi",
+      "allCategories": "Wszystkie kategorie",
+      "noResults": "Żadne gotowe odpowiedzi nie pasują do filtrów.",
+      "empty": "Brak gotowych odpowiedzi. Utwórz jedną, aby używać jej ponownie w odpowiedziach na zgłoszenia.",
+      "deleteTitle": "Usuń gotową odpowiedź",
+      "deleteMessage": "Usunąć „{{name}}”? Odpowiedzi, które już jej użyły, nie zostaną zmienione.",
+      "deleted": "Gotowa odpowiedź usunięta",
+      "favorite": "Ulubiona",
+      "columns": {
+        "name": "Nazwa",
+        "category": "Kategoria",
+        "scope": "Dostępna dla",
+        "preview": "Podgląd",
+        "status": "Status"
+      }
+    },
+    "status": {
+      "active": "Aktywna",
+      "inactive": "Nieaktywna"
+    },
+    "actions": {
+      "favorite": "Dodaj do ulubionych",
+      "unfavorite": "Usuń z ulubionych",
+      "edit": "Edytuj",
+      "activate": "Aktywuj",
+      "deactivate": "Dezaktywuj",
+      "delete": "Usuń",
+      "cancel": "Anuluj"
+    },
+    "loading": "Ładowanie…",
+    "editor": {
+      "back": "Gotowe odpowiedzi",
+      "newTitle": "Nowa gotowa odpowiedź",
+      "save": "Zapisz",
+      "saving": "Zapisywanie…",
+      "saved": "Gotowa odpowiedź zapisana",
+      "created": "Gotowa odpowiedź utworzona",
+      "viewOnly": "Możesz wyświetlić tę gotową odpowiedź, ale nie możesz jej zmieniać."
+    },
+    "sections": {
+      "details": "Szczegóły",
+      "body": "Odpowiedź"
+    },
+    "fields": {
+      "name": "Nazwa",
+      "category": "Kategoria",
+      "categoryHelp": "Grupuje odpowiedzi w selektorze. Opcjonalne.",
+      "scope": "Dostępna dla",
+      "team": "Zespół",
+      "teamPlaceholder": "Wybierz zespół",
+      "board": "Tablica",
+      "boardPlaceholder": "Wybierz tablicę",
+      "body": "Treść odpowiedzi",
+      "bodyPlaceholder": "Napisz odpowiedź…"
+    },
+    "mergeFields": {
+      "title": "Pola scalania",
+      "help": "Wypełniane po wstawieniu odpowiedzi do wiadomości. Pole bez wartości staje się puste; nierozpoznane pole pozostaje bez zmian.",
+      "descriptions": {
+        "contact_first_name": "Imię kontaktu",
+        "contact_last_name": "Nazwisko kontaktu",
+        "contact_name": "Pełne imię i nazwisko kontaktu",
+        "ticket_number": "Numer zgłoszenia",
+        "ticket_title": "Tytuł zgłoszenia",
+        "agent_name": "Twoje imię i nazwisko (odpowiadający agent)",
+        "client_name": "Nazwa klienta"
+      }
+    },
+    "errors": {
+      "notFound": "Nie znaleziono gotowej odpowiedzi.",
+      "duplicateName": "Gotowa odpowiedź o nazwie „{{name}}” już tu istnieje.",
+      "invalidReferences": "Wybrany zespół lub tablica już nie istnieje.",
+      "notAvailable": "Ta gotowa odpowiedź nie jest dostępna dla tego zgłoszenia.",
+      "notATeamMember": "Możesz zarządzać odpowiedziami zespołu tylko dla zespołów, do których należysz."
+    }
   }
 }

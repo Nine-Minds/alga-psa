@@ -2,6 +2,7 @@
 
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
+import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -3448,7 +3449,7 @@ export async function addTicketCommentInTransaction(
 ): Promise<IComment> {
   const {
     ticketId,
-    content,
+    content: rawContent,
     isInternal,
     isResolution,
     closesTicket = false,
@@ -3505,6 +3506,10 @@ export async function addTicketCommentInTransaction(
   if (!ticket) {
     throw new Error('Ticket not found');
   }
+
+  // Canned responses: resolve merge fields once, on this trx, before anything reads the content. Every later
+  // use (markdown, insert, bundle mirrors, events) sees only this resolved value. Internal authors only.
+  const content = await resolveCommentMergeTokens(trx, tenant, ticketId, user.user_id, authorType, rawContent);
 
   // Use the centralized utility to convert BlockNote JSON to markdown
   let markdownContent = "";

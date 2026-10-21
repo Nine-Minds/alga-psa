@@ -66,6 +66,7 @@ export * from './salesOrderDocument.interfaces';
 export * from './recurrenceRule.interfaces';
 export * from './recurringTiming.interfaces';
 export * from './ticketTemplate.interfaces';
+export * from './cannedResponse.interfaces';
 export * from './schedule.interfaces';
 export * from './scheduling.interfaces';
 export * from './stopwatch.interfaces';
