@@ -76,7 +76,10 @@ jobs:
   build-images:
     needs: [changes, browser-collection]
     if: needs.changes.outputs.run_tests == 'true'
-    runs-on: ubuntu-latest
+    # Pinned with production-browser: the candidate identity check compares
+    # buildx's config digest against `docker image inspect` on the consumer,
+    # so both sides must run the same Docker. See production-browser below.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -233,7 +236,11 @@ jobs:
     name: Production browser (${{ matrix.edition }})
     needs: [changes, browser-collection, build-images]
     if: always()
-    runs-on: ubuntu-latest
+    # Pinned: `ubuntu-latest` rolled to ubuntu-26.04 on 2026-10-21, whose
+    # Docker reports a different image Id for a loaded archive, so candidate
+    # identity verification failed, and whose Playwright cannot install
+    # Chromium. Unpin once both tolerate 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
       fail-fast: false
