@@ -387,6 +387,11 @@ export const createContractSchema = contractCreateObject.superRefine((data, ctx)
 
 export const updateContractSchema = createUpdateSchema(contractCreateObject);
 
+export const CONTRACT_START_DATE_DESCRIPTION =
+  "Earliest start_date across the contract's client assignments (client_contracts); MIN ignores assignments with a null start_date. Falls back to the contract's own stored start_date only when the contract has no assignments.";
+export const CONTRACT_END_DATE_DESCRIPTION =
+  "Latest end_date across the contract's client assignments (client_contracts); MAX ignores assignments with a null (open-ended) end_date. Falls back to the contract's own stored end_date only when the contract has no assignments.";
+
 export const contractResponseSchema = z.object({
   contract_id: uuidSchema,
   contract_name: z.string(),
@@ -399,8 +404,8 @@ export const contractResponseSchema = z.object({
   is_active: z.boolean(),
   is_system_managed_default: z.boolean().optional(),
   is_template: z.boolean().optional(),
-  start_date: z.string().datetime().nullable().optional(),
-  end_date: z.string().datetime().nullable().optional(),
+  start_date: z.string().datetime().nullable().optional().describe(CONTRACT_START_DATE_DESCRIPTION),
+  end_date: z.string().datetime().nullable().optional().describe(CONTRACT_END_DATE_DESCRIPTION),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
