@@ -372,6 +372,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   opportunity_commitments: { scope: 'tenant' },
   opportunity_qbr_triggers: { scope: 'tenant' },
   password_reset_tokens: { scope: 'tenant' },
+  payment_confirmation_emails: { scope: 'tenant' },
   payment_methods: { scope: 'tenant' },
   payment_provider_configs: { scope: 'tenant' },
   payment_webhook_events: { scope: 'tenant' },
