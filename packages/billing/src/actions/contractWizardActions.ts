@@ -1898,7 +1898,7 @@ export const createClientContractFromWizard = withAuth(async (
       const templateAmounts = await resolveTemplateAmounts(trx, tenant, templateId, contractCurrency);
 
       const saveTemplateAmounts = submission.save_template_amounts === true && templateAmounts.source !== 'base';
-      if (saveTemplateAmounts && !(await hasPermission(user, 'billing', 'update'))) {
+      if (saveTemplateAmounts && !(await hasPermission(user, 'billing', 'update', trx))) {
         throw new Error('Permission denied: Cannot save amounts to the contract template');
       }
 
