@@ -1360,6 +1360,8 @@ export interface ClientPortalHourBlock {
   expiration_date: string | null;
   status: string;
   currency_code: string | null;
+  /** Owning contract's name for contract-issued (Prepaid Block) blocks; null for ad-hoc blocks. */
+  contract_name: string | null;
   expiring_soon_days: number | null;
 }
 
@@ -1369,10 +1371,14 @@ export interface ClientPortalHourBlockBurnEntry {
   hours: number;
   entry_date: string | null;
   work_item_title: string | null;
+  /** Owning contract's name when the drawn block is contract-issued; null otherwise. */
+  contract_name: string | null;
 }
 
 /**
- * The signed-in client's hour blocks (active or expiring), newest first. Rows
+ * The signed-in client's active hour blocks (non-zero balance, including those
+ * expiring soon), oldest purchase first. Contract-issued blocks carry the owning
+ * contract's name; pending blocks (draft invoice) are never shown. Rows
  * are scoped to the portal user's client and gated by the client billing read
  * permission. No cross-client or MSP-internal fields leak through.
  */
@@ -1400,6 +1406,8 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
       const today = toCalendarDateStringInTimeZone(new Date(), timeZone);
       const query = db.table('hour_blocks as hb');
       db.tenantJoin(query, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
+      db.tenantJoin(query, 'contract_lines as cl', 'hb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
+      db.tenantJoin(query, 'contracts as ct', 'cl.contract_id', 'ct.contract_id', { type: 'left' });
       const rows = await query
         .where({ 'hb.client_id': clientId, 'hb.status': 'active' })
         .where('hb.remaining_minutes', '>', 0)
@@ -1411,6 +1419,7 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
           'hb.status',
           'hb.currency_code',
           { service_name: 'sc.service_name' },
+          { contract_name: 'ct.contract_name' },
         )
         .orderBy('hb.purchased_at', 'asc')
         .orderBy('hb.created_at', 'asc');
@@ -1443,6 +1452,7 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
           expiration_date: expirationDate,
           status: String(row.status),
           currency_code: (row.currency_code as string) ?? null,
+          contract_name: (row.contract_name as string | null) ?? null,
           expiring_soon_days: expiringSoonDays,
         };
       });
@@ -1482,9 +1492,14 @@ export const getClientHourBlockBurnHistory = withAuth(async (user, { tenant }): 
       db.tenantJoin(query, 'time_entries as te', 'hba.time_entry_id', 'te.entry_id', { type: 'left' });
       db.tenantJoin(query, 'tickets as tk', 'te.work_item_id', 'tk.ticket_id', { type: 'left' });
       db.tenantJoin(query, 'project_tasks as pt', 'te.work_item_id', 'pt.task_id', { type: 'left' });
+      db.tenantJoin(query, 'contract_lines as cl', 'hb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
+      db.tenantJoin(query, 'contracts as ct', 'cl.contract_id', 'ct.contract_id', { type: 'left' });
       const rows = await query
         .where({ 'hb.client_id': clientId })
+        // Pending blocks (draft invoice) hold allocations that clients must not see yet.
+        .whereNot({ 'hb.status': 'pending' })
         .select(
+          'ct.contract_name',
           'hba.allocation_id',
           'hba.minutes',
           'hba.created_at',
@@ -1501,6 +1516,7 @@ export const getClientHourBlockBurnHistory = withAuth(async (user, { tenant }): 
         hours: Math.round((Number(row.minutes ?? 0) / 60) * 10) / 10,
         entry_date: toCalendarDateString(row.work_date as string | Date | null),
         work_item_title: (row.ticket_title as string) ?? (row.task_title as string) ?? null,
+        contract_name: (row.contract_name as string | null) ?? null,
       }));
     });
   } catch (error) {

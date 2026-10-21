@@ -18,7 +18,10 @@ import { Temporal } from "@js-temporal/polyfill";
 import type {
   ChargeExplanation,
   ContractScenario,
+  IBillingCharge,
   IBillingPeriod,
+  IHourBlockCharge,
+  IPrepaidBlockCharge,
   IRecurringActivityWindow,
   IRecurringServicePeriod,
   IRecurringServicePeriodRecord,
@@ -62,6 +65,7 @@ import {
   syntheticConfigId,
 } from "./syntheticActivity";
 import { createReadOnlyTaxPorts } from "./readOnlyTaxPorts";
+import { simulatePrepaidBlockTimeline } from "./prepaidBlockTimeline";
 import { validateScenarioTenantScope } from "./validateScenarioTenantScope";
 import {
   loadSimulatorInvoiceParties,
@@ -87,6 +91,12 @@ export interface SimulationCalculationPeriodInput {
   window: SimulatedInvoicePeriodWindow;
   obligations: UnpricedContractBillingObligation[];
   taxContexts: Record<string, ResolvedChargeTaxPolicy>;
+  /**
+   * Dated one-off charges that are not recurring-service-period obligations:
+   * the Prepaid Block issuance (`prepaid_block`) and its $0 consumption lines
+   * (`hour_block`). Passed to the domain as its supplemental carve-out.
+   */
+  supplementalCharges: IBillingCharge[];
 }
 
 export interface SimulationCalculationInput {
@@ -198,6 +208,7 @@ export async function loadSimulationCalculationInput(
       window,
       obligations: [],
       taxContexts: {},
+      supplementalCharges: [],
     }));
   const bucketStateByService = new Map<
     string,
@@ -223,6 +234,27 @@ export async function loadSimulationCalculationInput(
     simulateLineDiagnostics(line, diagnostics, currencyCode);
 
     const lineCycle = normalizeBillingCycle(line.billing_frequency);
+
+    // Prepaid Block lines: issuance and consumption are dated one-offs, not
+    // service periods, so they are simulated on the invoice timeline before
+    // (and independently of) the line's own arrears assignments. The hourly
+    // charge below then prices only the demand no block absorbed.
+    const blockResult = line.prepaid_block
+      ? simulatePrepaidBlockLine({
+          tenant,
+          scenario,
+          line,
+          client,
+          taxPorts,
+          currencyCode,
+          invoicePeriods,
+          periodAccumulators,
+          contractStartDate,
+          contractEndDate,
+          diagnostics,
+        })
+      : null;
+
     const records = generateLineServicePeriods({
       line,
       horizon: scenario.horizon,
@@ -332,6 +364,7 @@ export async function loadSimulationCalculationInput(
           lineCycle,
           accumulator,
           diagnostics,
+          coveredByBlock: blockResult?.demandCoverage.get(periodIndex) ?? null,
         });
       }
 
@@ -737,6 +770,209 @@ async function simulateUsageCharges(
 }
 
 /* ------------------------------------------------------------------ */
+/* Prepaid Block lines                                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Simulates one Prepaid Block line over the horizon and appends the dated
+ * `prepaid_block` issuance charges and $0 `hour_block` consumption lines to the
+ * owning invoice periods. Returns, per period index, the share of assumed
+ * hourly demand that blocks absorbed so the line's hourly charge can bill only
+ * the remainder at the overage (hourly) rate.
+ */
+function simulatePrepaidBlockLine(input: {
+  tenant: string;
+  scenario: ContractScenario;
+  line: ScenarioLine;
+  client: SimulationBillingClient;
+  taxPorts: ResolvedChargeTaxPolicy;
+  currencyCode: string;
+  invoicePeriods: SimulatedInvoicePeriodWindow[];
+  periodAccumulators: SimulationCalculationPeriodInput[];
+  contractStartDate: string | null;
+  contractEndDate: string | null;
+  diagnostics: SimulationDiagnostic[];
+}): { demandCoverage: Map<number, number> } {
+  const {
+    tenant,
+    scenario,
+    line,
+    client,
+    taxPorts,
+    currencyCode,
+    invoicePeriods,
+    periodAccumulators,
+    contractStartDate,
+    contractEndDate,
+    diagnostics,
+  } = input;
+  const config = line.prepaid_block!;
+  const demandCoverage = new Map<number, number>();
+
+  const hourlyServices = line.services.filter(
+    (service) =>
+      service.item_kind !== "product" &&
+      service.configuration.configuration_type === "Hourly",
+  );
+  const soldAs =
+    line.services.find(
+      (service) => service.service_id === config.sold_as_service_id,
+    ) ?? hourlyServices[0];
+
+  if (!(config.block_minutes > 0)) {
+    diagnostics.push({
+      severity: "warning",
+      line_key: line.key,
+      message: "Prepaid block has no block size, so no blocks are simulated.",
+    });
+    return { demandCoverage };
+  }
+  if (!soldAs) {
+    diagnostics.push({
+      severity: "warning",
+      line_key: line.key,
+      message:
+        "Prepaid block has no service to sell the block as, so no blocks are simulated.",
+    });
+    return { demandCoverage };
+  }
+  if (config.trigger_on_renewal) {
+    diagnostics.push({
+      severity: "info",
+      line_key: line.key,
+      message:
+        "Renewal-triggered blocks are not simulated; only the start, usage and expiry triggers are.",
+    });
+  }
+
+  const demandMinutesByPeriod = new Map<number, number>();
+  for (const window of invoicePeriods) {
+    let minutes = 0;
+    for (const service of hourlyServices) {
+      minutes +=
+        Math.max(
+          0,
+          resolveAssumedQuantity(
+            scenario.assumptions,
+            line.key,
+            service.service_id,
+            window.index,
+          ),
+        ) * 60;
+    }
+    demandMinutesByPeriod.set(window.index, Math.round(minutes));
+  }
+
+  const timeline = simulatePrepaidBlockTimeline({
+    config,
+    periods: invoicePeriods.map((window) => ({
+      index: window.index,
+      startDate: window.startDate,
+      endDateExclusive: window.endDateExclusive,
+    })),
+    contractStartDate,
+    contractEndDate,
+    demandMinutesByPeriod,
+  });
+
+  for (const [periodIndex, demand] of demandMinutesByPeriod) {
+    const overage = timeline.overageMinutesByPeriod.get(periodIndex) ?? 0;
+    demandCoverage.set(
+      periodIndex,
+      demand > 0 ? Math.max(0, Math.min(1, (demand - overage) / demand)) : 0,
+    );
+  }
+
+  const hours = config.block_minutes / 60;
+  const rate = Math.round(config.block_price / hours);
+  const taxInfo = taxPorts.getTaxInfoFromService({
+    service_id: soldAs.service_id,
+    tax_rate_id: soldAs.tax_rate_id,
+  });
+  const taxRegion =
+    taxInfo.taxRegion ?? taxPorts.getClientDefaultTaxRegionCode(client.client_id);
+
+  for (const issue of timeline.issues) {
+    const accumulator = periodAccumulators[issue.periodIndex];
+    let taxAmount = 0;
+    let taxRate = 0;
+    if (!client.is_tax_exempt && taxInfo.isTaxable && taxRegion) {
+      const result = taxPorts.calculateTax(
+        client.client_id,
+        config.block_price,
+        issue.issueDate,
+        taxRegion,
+        true,
+        currencyCode,
+      );
+      taxAmount = result.taxAmount;
+      taxRate = result.taxRate;
+    }
+    const blockCharge: IPrepaidBlockCharge = {
+      type: "prepaid_block",
+      tenant,
+      issuance_id: `sim-issuance:${line.key}:${issue.blockOrdinal}`,
+      contract_line_id: line.key,
+      client_contract_line_id: line.key,
+      client_contract_id: scenario.contract_id,
+      contract_name: scenario.name,
+      serviceId: soldAs.service_id,
+      serviceName: `${soldAs.service_name} - prepaid block (${formatHours(hours)} h, ${issue.trigger.replace("_", " ")})`,
+      block_minutes: config.block_minutes,
+      block_price: config.block_price,
+      currency_code: currencyCode,
+      expiry_months: config.expiry_months,
+      scope_service_ids: line.services.map((service) => service.service_id),
+      quantity: hours,
+      rate,
+      total: config.block_price,
+      tax_amount: taxAmount,
+      tax_rate: taxRate,
+      tax_region: taxRegion ?? undefined,
+      is_taxable: taxInfo.isTaxable,
+      servicePeriodStart: issue.issueDate,
+      servicePeriodEnd: accumulator.window.endDateExclusive,
+      billingTiming: "advance",
+    };
+    accumulator.supplementalCharges.push(blockCharge);
+  }
+
+  for (const draw of timeline.draws) {
+    const accumulator = periodAccumulators[draw.periodIndex];
+    const drawCharge: IHourBlockCharge = {
+      type: "hour_block",
+      tenant,
+      block_id: `sim-block:${line.key}:${draw.blockOrdinal}`,
+      client_contract_line_id: line.key,
+      serviceId: soldAs.service_id,
+      serviceName: `${soldAs.service_name} - block draw (block ${draw.blockOrdinal})`,
+      hoursUsed: draw.minutes / 60,
+      hoursRemaining: draw.remainingMinutes / 60,
+      coveredEntryIds: [],
+      quantity: draw.minutes / 60,
+      rate: 0,
+      total: 0,
+      tax_amount: 0,
+      tax_rate: 0,
+      servicePeriodStart: accumulator.window.startDate,
+      servicePeriodEnd: accumulator.window.endDateExclusive,
+      billingTiming: "arrears",
+    };
+    accumulator.supplementalCharges.push(drawCharge);
+  }
+
+  for (const forfeiture of timeline.forfeitures) {
+    diagnostics.push({
+      severity: "info",
+      line_key: line.key,
+      message: `Block ${forfeiture.blockOrdinal} expires on ${forfeiture.date} with ${formatHours(forfeiture.minutes / 60)} h unused, which are forfeited.`,
+    });
+  }
+
+  return { demandCoverage };
+}
+
+/* ------------------------------------------------------------------ */
 /* Timing                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -981,6 +1217,11 @@ async function simulateHourlyCharges(
   input: SimulateFamilyInput & {
     hourlyServices: ScenarioLineService[];
     diagnostics: SimulationDiagnostic[];
+    /**
+     * Prepaid Block lines: share of this period's assumed hours that blocks
+     * absorb (0-1). Only the remainder bills at the hourly (overage) rate.
+     */
+    coveredByBlock?: number | null;
   },
 ): Promise<void> {
   const {
@@ -1002,12 +1243,14 @@ async function simulateHourlyCharges(
   const timeEntries = [] as Array<ReturnType<typeof buildSyntheticTimeEntry>>;
 
   for (const service of hourlyServices) {
-    const assumedHours = resolveAssumedQuantity(
-      scenario.assumptions,
-      line.key,
-      service.service_id,
-      periodIndex,
-    );
+    const assumedHours =
+      resolveAssumedQuantity(
+        scenario.assumptions,
+        line.key,
+        service.service_id,
+        periodIndex,
+      ) *
+      (1 - Math.min(1, Math.max(0, input.coveredByBlock ?? 0)));
     if (!(assumedHours > 0)) {
       continue;
     }
@@ -1103,8 +1346,20 @@ export function buildSimulatedPeriod(
     (canonicalLine) => {
       const obligation = obligationById.get(canonicalLine.obligationId);
       const unit = obligation?.metadata?.quantityLabel;
-      const quantityLabel =
-        canonicalLine.chargeFamily === "discount"
+      const supplemental = canonicalLine.obligationId.startsWith("supplemental:")
+        ? accumulator.supplementalCharges[
+            Number(canonicalLine.obligationId.split(":")[1])
+          ]
+        : undefined;
+      const blockLine =
+        supplemental?.type === "prepaid_block"
+          ? ("prepaid_block" as const)
+          : supplemental?.type === "hour_block"
+            ? ("block_draw" as const)
+            : null;
+      const quantityLabel = blockLine
+        ? `${formatHours(canonicalLine.quantity)} hrs`
+        : canonicalLine.chargeFamily === "discount"
           ? "discount"
           : canonicalLine.chargeFamily === "adjustment"
             ? "adjustment"
@@ -1112,11 +1367,12 @@ export function buildSimulatedPeriod(
               ? unit
               : `${formatHours(canonicalLine.quantity)} ${unit ?? resolveUnitOfMeasure({ fallback: 'C62' }).pluralLabel}`;
       const adjustmentIndex =
-        canonicalLine.chargeFamily === "adjustment"
+        canonicalLine.chargeFamily === "adjustment" && !blockLine
           ? Number(canonicalLine.lineKey.split(":")[1])
           : -1;
       const chargeType =
-        canonicalLine.chargeFamily === "hourly"
+        blockLine ??
+        (canonicalLine.chargeFamily === "hourly"
           ? "time"
           : canonicalLine.chargeFamily === "adjustment" &&
               (scenario.adjustments ?? []).filter(
@@ -1125,11 +1381,15 @@ export function buildSimulatedPeriod(
                   adjustment.period_index === window.index,
               )[adjustmentIndex]?.one_time
             ? "one_time"
-            : canonicalLine.chargeFamily;
+            : canonicalLine.chargeFamily);
       return {
         line_key: canonicalLine.lineKey,
         service_id: canonicalLine.serviceId ?? null,
-        service_name: canonicalLine.description,
+        service_name: blockLine
+          ? blockLine === "prepaid_block"
+            ? `Prepaid block issued - ${canonicalLine.description}`
+            : `Block draw - ${canonicalLine.description}`
+          : canonicalLine.description,
         charge_type: chargeType,
         quantity_label: quantityLabel,
         rate_label: formatCents(canonicalLine.unitRate, scenario.currency_code),

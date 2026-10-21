@@ -241,7 +241,8 @@
     "contractLineType": {
       "Fixed": "Vast",
       "Hourly": "Per uur",
-      "Usage": "Op verbruik"
+      "Usage": "Op verbruik",
+      "PrepaidBlock": "Prepaid blok"
     },
     "quoteStatus": {
       "draft": "Concept",
@@ -442,7 +443,8 @@
     "hoursLeft": "Nog {{hours}}u",
     "expires": "Vervalt op {{date}}",
     "recentBurn": "Recent verbruik",
-    "timeEntry": "Tijdsvermelding"
+    "timeEntry": "Tijdsvermelding",
+    "contractLabel": "Contract: {{contract}}"
   },
   "bucketUsage": {
     "contractLine": "Contractregel voor urenbundel",

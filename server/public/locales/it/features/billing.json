@@ -241,7 +241,8 @@
     "contractLineType": {
       "Fixed": "Fisso",
       "Hourly": "A ore",
-      "Usage": "A consumo"
+      "Usage": "A consumo",
+      "PrepaidBlock": "Blocco prepagato"
     },
     "quoteStatus": {
       "draft": "Bozza",
@@ -442,7 +443,8 @@
     "hoursLeft": "{{hours}} h rimanenti",
     "expires": "Scade il {{date}}",
     "recentBurn": "Utilizzo recente",
-    "timeEntry": "Inserimento ore"
+    "timeEntry": "Inserimento ore",
+    "contractLabel": "Contratto: {{contract}}"
   },
   "bucketUsage": {
     "contractLine": "Linea contrattuale per pacchetto ore",
