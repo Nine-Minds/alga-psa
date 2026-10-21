@@ -557,6 +557,17 @@
         "selectedCount": "Markerade: {{count}}",
         "clear": "Rensa"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Fakturan är slutförd, men ett efterföljande steg slutfördes inte: {{steps}}. Fakturan är slutförd; du kan försöka igen med steget.",
+      "steps": {
+        "credit_auto_apply": "automatisk kreditering",
+        "project_deposit_credits": "projektförskottskrediter",
+        "workflow_events": "arbetsflödeshändelser",
+        "accounting_export": "bokföringsexport",
+        "replenishment_status": "status för förbetald påfyllning",
+        "autopay": "autogiro"
+      }
     }
   },
   "finalizedTab": {
@@ -857,6 +868,19 @@
       "cancel": "Avbryt",
       "confirm": "Makulera faktura",
       "voiding": "Makulerar…"
+    },
+    "history": {
+      "title": "Historik",
+      "empty": "Ingen historik registrerad.",
+      "loadFailed": "Det gick inte att läsa in fakturahistoriken.",
+      "system": "System",
+      "ops": {
+        "invoice_finalized": "Slutförd",
+        "invoice_unfinalized": "Återöppnad",
+        "invoice_deleted": "Borttagen"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "ingen"
     }
   },
   "templateEditor": {
@@ -2495,7 +2519,8 @@
       "invoiceUpdate": "Åtkomst nekad: Du saknar behörighet att uppdatera fakturor",
       "invoiceDelete": "Åtkomst nekad: Du saknar behörighet att radera fakturor",
       "invoiceAccess": "Åtkomst nekad: Du saknar behörighet att komma åt fakturor",
-      "otherClientInvoices": "Åtkomst nekad: Du saknar behörighet att komma åt en annan kunds fakturor"
+      "otherClientInvoices": "Åtkomst nekad: Du saknar behörighet att komma åt en annan kunds fakturor",
+      "invoiceRead": "Åtkomst nekad: behörighet att läsa fakturor krävs"
     },
     "invoice": {
       "notFound": "Fakturan hittades inte",
@@ -2517,7 +2542,9 @@
       "duplicate": "En faktura med motstridiga uppgifter finns redan. Ladda om sidan och försök igen.",
       "missingField": "Ett obligatoriskt fakturafält saknas.",
       "missingFieldNamed": "Ett obligatoriskt fakturafält saknas: {{field}}.",
-      "billingProfileUnavailable": "Den valda faktureringsprofilen är inte tillgänglig för kunden."
+      "billingProfileUnavailable": "Den valda faktureringsprofilen är inte tillgänglig för kunden.",
+      "deleteNotDraft": "Endast fakturautkast kan tas bort; makulera fakturan i stället.",
+      "deleteHasPayments": "Fakturor med registrerade betalningar kan inte tas bort."
     },
     "billingCycle": {
       "notFoundRefresh": "Faktureringscykeln hittades inte. Den kan ha uppdaterats eller raderats. Ladda om sidan och försök igen.",

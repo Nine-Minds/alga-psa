@@ -557,6 +557,17 @@
         "selectedCount": "{{count}} geselecteerd",
         "clear": "Selectie wissen"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Factuur definitief gemaakt, maar een vervolgstap is niet voltooid: {{steps}}. De factuur is definitief; u kunt die stap opnieuw proberen.",
+      "steps": {
+        "credit_auto_apply": "automatische tegoedtoepassing",
+        "project_deposit_credits": "projectaanbetalingstegoeden",
+        "workflow_events": "workflowgebeurtenissen",
+        "accounting_export": "boekhoudexport",
+        "replenishment_status": "status prepaid-aanvulling",
+        "autopay": "automatische betaling"
+      }
     }
   },
   "finalizedTab": {
@@ -857,6 +868,19 @@
       "cancel": "Annuleren",
       "confirm": "Factuur ongeldig maken",
       "voiding": "Ongeldig maken…"
+    },
+    "history": {
+      "title": "Geschiedenis",
+      "empty": "Geen geschiedenis vastgelegd.",
+      "loadFailed": "Factuurgeschiedenis laden mislukt.",
+      "system": "Systeem",
+      "ops": {
+        "invoice_finalized": "Definitief gemaakt",
+        "invoice_unfinalized": "Heropend",
+        "invoice_deleted": "Verwijderd"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "geen"
     }
   },
   "templateEditor": {
@@ -2495,7 +2519,8 @@
       "invoiceUpdate": "Toestemming geweigerd: bijwerkrechten voor facturen vereist",
       "invoiceDelete": "Toestemming geweigerd: verwijderrechten voor facturen vereist",
       "invoiceAccess": "Toestemming geweigerd: toegang tot de factuur geweigerd",
-      "otherClientInvoices": "Toestemming geweigerd: facturen van een andere klant zijn niet toegankelijk"
+      "otherClientInvoices": "Toestemming geweigerd: facturen van een andere klant zijn niet toegankelijk",
+      "invoiceRead": "Toegang geweigerd: leesrechten voor facturen vereist"
     },
     "invoice": {
       "notFound": "Factuur niet gevonden",
@@ -2517,7 +2542,9 @@
       "duplicate": "Er bestaat al een conflicterende factuur. Vernieuw de pagina en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht factuurveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht factuurveld: {{field}}.",
-      "billingProfileUnavailable": "Het geselecteerde factureringsprofiel is niet beschikbaar voor deze klant."
+      "billingProfileUnavailable": "Het geselecteerde factureringsprofiel is niet beschikbaar voor deze klant.",
+      "deleteNotDraft": "Alleen conceptfacturen kunnen worden verwijderd; annuleer de factuur in plaats daarvan.",
+      "deleteHasPayments": "Facturen met geregistreerde betalingen kunnen niet worden verwijderd."
     },
     "billingCycle": {
       "notFoundRefresh": "Factuurcyclus niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",

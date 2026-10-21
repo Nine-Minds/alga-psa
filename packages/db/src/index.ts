@@ -37,6 +37,8 @@ export { resolveTenantId, requireTenantId } from './lib/tenantId';
 export { auditLog } from './lib/auditLog';
 export { writeAccountingAudit } from './lib/accountingAudit';
 export type { AccountingAuditOperation, AccountingAuditProvider, AccountingAuditParams } from './lib/accountingAudit';
+export { writeInvoiceAudit, listInvoiceAuditHistory, INVOICE_AUDIT_OPERATIONS } from './lib/invoiceAudit';
+export type { InvoiceAuditOperation, InvoiceAuditParams, InvoiceAuditState, InvoiceHistoryEntry } from './lib/invoiceAudit';
 export * from './lib/workDate';
 
 // Shared invoice external-sync row lock (billing adapters + integrations

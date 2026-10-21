@@ -8,7 +8,7 @@ import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, listInvoiceAuditHistory, type InvoiceHistoryEntry } from '@alga-psa/db';
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '../../auth/rbac';
@@ -44,6 +44,7 @@ import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditAc
 import {
   settlePrepaidReplenishmentInvoice,
   deleteInvoiceWithKnex,
+  finalizeInvoiceWithKnex,
 } from '@alga-psa/billing/actions/invoiceModification';
 import { ExpectedInvoiceActionError, InvoiceNotDraftError, InvoiceHasPaymentsError } from '@alga-psa/billing/lib/invoiceDeletionErrors';
 import { TaxService } from '@alga-psa/billing/services/taxService';
@@ -894,22 +895,9 @@ export class InvoiceService extends BaseService<IInvoice> {
     try {
       result = await deleteInvoiceWithKnex(knex, context.tenant, id, context.userId, {
         requireDraft: true,
-        // Audit row commits atomically with the delete.
-        onBeforeCommit: async (trx) => {
-          // auditLog silently skips when the tenant GUC is unset; scope it to this trx.
-          await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', context.tenant]);
-          await auditLog(trx, {
-            userId: context.userId,
-            operation: 'DELETE',
-            tableName: 'invoices',
-            recordId: id,
-            changedData: {},
-            details: {
-              action: 'invoice.deleted',
-              ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
-            },
-          });
-        },
+        // The engine writes the invoice_deleted audit row (writeInvoiceAudit) in the
+        // delete transaction; recurring provenance rides along as extra details.
+        auditDetails: recurringProvenance ? { recurring_provenance: recurringProvenance } : undefined,
       });
     } catch (error) {
       if (error instanceof InvoiceNotDraftError || error instanceof InvoiceHasPaymentsError) {
@@ -940,98 +928,91 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'finalize');
 
     const { knex } = await this.getKnex();
-    const deferredEvents: DeferredEvent[] = [];
 
-    await withTransaction(knex, async (trx) => {
-      const invoice = await tenantDb(trx, context.tenant).table('invoices')
+    // Cheap REST-contract pre-checks (404 / 409) before delegating. The engine
+    // re-validates under the row lock, so these are not a race.
+    const invoice = await tenantDb(knex, context.tenant).table('invoices')
+      .where({ invoice_id: data.invoice_id })
+      .first();
+    if (!invoice) {
+      throw new NotFoundError('Invoice not found');
+    }
+    if (invoice.status !== 'draft') {
+      throw new ConflictError('Only draft invoices can be finalized');
+    }
+    const lineItems = await InvoiceModel.getInvoiceCharges(knex, context.tenant, data.invoice_id);
+    if (!lineItems.length) {
+      throw new ConflictError('Invoice must have line items to be finalized');
+    }
+
+    // REST and the UI share ONE finalize engine (finalizeInvoiceWithKnex): same
+    // locking, tax-source and export-readiness guards, hour-block activation,
+    // prepayment / negative-total credit issuance, audit row and best-effort
+    // post-commit steps. `internalValidation` because API-key requests carry no
+    // session; permission was checked above. Previously this method re-derived
+    // totals from the line items and skipped all of that.
+    let warnings: Array<{ step: string; message: string }> = [];
+    try {
+      ({ warnings } = await finalizeInvoiceWithKnex(data.invoice_id, knex, context.tenant, context.userId, {
+        internalValidation: true,
+      }));
+    } catch (error) {
+      if (error instanceof ExpectedInvoiceActionError) {
+        throw new ConflictError(error.message);
+      }
+      throw error;
+    }
+
+    // INVOICE_FINALIZED / INVOICE_STATUS_CHANGED are API-surface events whose
+    // payload builders live in the server package (billing cannot import them),
+    // so they are published here, after the commit, best-effort.
+    try {
+      const recurringProvenance = await this.getInvoiceRecurringProvenance(knex as any, context.tenant, data.invoice_id);
+      const finalized = await tenantDb(knex, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
         .first();
-
-      if (!invoice) {
-        throw new NotFoundError('Invoice not found');
-      }
-
-      if (invoice.status !== 'draft') {
-        throw new ConflictError('Only draft invoices can be finalized');
-      }
-
-      // Validate invoice has required data
-      const lineItems = await InvoiceModel.getInvoiceCharges(trx, context.tenant, data.invoice_id);
-
-      if (!lineItems.length) {
-        throw new ConflictError('Invoice must have line items to be finalized');
-      }
-
-      // Calculate final amounts
-      const subtotal = lineItems.reduce((sum: number, item: any) => sum + Number(item.total_price || 0), 0);
-      const taxAmount = lineItems.reduce((sum: number, item: any) => sum + Number(item.tax_amount || 0), 0);
-      const totalAmount = subtotal + taxAmount;
-
-      const invoiceUpdate = await this.addUpdateAuditFields(trx, {
-        status: 'sent', // Change to sent instead of finalized
-        subtotal,
-        tax: taxAmount,
-        total_amount: totalAmount,
-        finalized_at: data.finalized_at || new Date().toISOString().split('T')[0],
-      }, context, 'invoices');
-
-      // Update invoice status and amounts
-      await tenantDb(trx, context.tenant).table('invoices')
-        .where({ invoice_id: data.invoice_id })
-        .update(invoiceUpdate);
-
-      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
-
-      // Audit log
-      await auditLog(trx, {
-        userId: context.userId,
-        operation: 'UPDATE',
-        tableName: 'invoices',
-        recordId: data.invoice_id,
-        changedData: { status: 'finalized', subtotal, tax_amount: taxAmount, total_amount: totalAmount },
-        details: {
-          action: 'invoice.finalized',
-          ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
-        }
-      });
-
-      // Publish event
       const finalizedAt = new Date().toISOString();
-      deferredEvents.push(() => publishWorkflowEvent({
-        eventType: 'INVOICE_FINALIZED',
-        payload: buildInvoiceFinalizedPayload({
-          invoiceId: data.invoice_id,
-          totalAmount,
-          userId: context.userId,
-          occurredAt: finalizedAt,
+      await publishDeferredEvents([
+        () => publishWorkflowEvent({
+          eventType: 'INVOICE_FINALIZED',
+          payload: buildInvoiceFinalizedPayload({
+            invoiceId: data.invoice_id,
+            totalAmount: Number(finalized?.total_amount ?? 0),
+            userId: context.userId,
+            occurredAt: finalizedAt,
+          }),
+          ctx: {
+            tenantId: context.tenant,
+            occurredAt: finalizedAt,
+            actor: { actorType: 'USER', actorUserId: context.userId },
+          },
         }),
-        ctx: {
-          tenantId: context.tenant,
-          occurredAt: finalizedAt,
-          actor: { actorType: 'USER', actorUserId: context.userId },
-        },
-      }));
-
-      deferredEvents.push(() => publishWorkflowEvent({
-        eventType: 'INVOICE_STATUS_CHANGED',
-        payload: buildInvoiceStatusChangedPayload({
-          invoiceId: data.invoice_id,
-          previousStatus: String(invoice.status),
-          newStatus: 'sent',
-          changedAt: new Date().toISOString(),
-          recurringProvenance,
+        () => publishWorkflowEvent({
+          eventType: 'INVOICE_STATUS_CHANGED',
+          payload: buildInvoiceStatusChangedPayload({
+            invoiceId: data.invoice_id,
+            previousStatus: String(invoice.status),
+            newStatus: String(finalized?.status ?? 'sent'),
+            changedAt: new Date().toISOString(),
+            recurringProvenance,
+          }),
+          ctx: {
+            tenantId: context.tenant,
+            actor: { actorType: 'USER', actorUserId: context.userId },
+          },
         }),
-        ctx: {
-          tenantId: context.tenant,
-          actor: { actorType: 'USER', actorUserId: context.userId },
-        },
-      }));
-    });
+      ]);
+    } catch (error) {
+      console.error('[InvoiceService.finalizeInvoice] Failed to publish finalize events', error);
+    }
 
-    await publishDeferredEvents(deferredEvents);
+    if (warnings.length > 0) {
+      console.warn('[InvoiceService.finalizeInvoice] Finalized with post-commit warnings', {
+        invoiceId: data.invoice_id,
+        warnings,
+      });
+    }
 
-    // Re-fetch after commit: getById runs on a pooled (non-transaction)
-    // connection, so it must read the row only after the tx commits.
     return this.getById(data.invoice_id, context) as Promise<IInvoice>;
   }
 
@@ -2400,6 +2381,31 @@ export class InvoiceService extends BaseService<IInvoice> {
     return tenantDb(trx, context.tenant).table('tax_rates')
       .where({ tax_rate_id: taxRateId })
       .first();
+  }
+
+  /**
+   * Lifecycle audit trail (finalize / unfinalize / delete) for one invoice,
+   * oldest first. A deleted invoice's rows survive in audit_logs, so history of
+   * a deleted invoice is still readable, but a never-existing id has no rows and
+   * 404s.
+   */
+  async getInvoiceHistory(invoiceId: string, context: ServiceContext): Promise<InvoiceHistoryEntry[]> {
+    await this.validatePermissions(context, 'invoice', 'read');
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      const history = await listInvoiceAuditHistory(trx, context.tenant, invoiceId);
+      if (history.length === 0) {
+        const exists = await tenantDb(trx, context.tenant).table('invoices')
+          .where({ invoice_id: invoiceId })
+          .select('invoice_id')
+          .first();
+        if (!exists) {
+          throw new NotFoundError('Invoice not found');
+        }
+      }
+      return history;
+    });
   }
 
   async getInvoiceTransactions(invoiceId: string, context: ServiceContext): Promise<any[]> {

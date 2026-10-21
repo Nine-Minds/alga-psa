@@ -557,6 +557,17 @@
         "selectedCount": "{{count}} seleccionados",
         "clear": "Limpiar selección"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Factura finalizada, pero un paso posterior no se completó: {{steps}}. La factura está finalizada; puede reintentar ese paso.",
+      "steps": {
+        "credit_auto_apply": "aplicación automática de crédito",
+        "project_deposit_credits": "créditos de depósito de proyecto",
+        "workflow_events": "eventos de flujo de trabajo",
+        "accounting_export": "exportación contable",
+        "replenishment_status": "estado de reposición prepagada",
+        "autopay": "pago automático"
+      }
     }
   },
   "finalizedTab": {
@@ -857,6 +868,19 @@
       "cancel": "Cancelar",
       "confirm": "Anular factura",
       "voiding": "Anulando…"
+    },
+    "history": {
+      "title": "Historial",
+      "empty": "No hay historial registrado.",
+      "loadFailed": "No se pudo cargar el historial de la factura.",
+      "system": "Sistema",
+      "ops": {
+        "invoice_finalized": "Finalizada",
+        "invoice_unfinalized": "Reabierta",
+        "invoice_deleted": "Eliminada"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "ninguno"
     }
   },
   "templateEditor": {
@@ -2495,7 +2519,8 @@
       "invoiceUpdate": "Permiso denegado: se requiere permiso de actualización de facturas",
       "invoiceDelete": "Permiso denegado: se requiere permiso de eliminación de facturas",
       "invoiceAccess": "Permiso denegado: acceso a la factura denegado",
-      "otherClientInvoices": "Permiso denegado: no se puede acceder a las facturas de otro cliente"
+      "otherClientInvoices": "Permiso denegado: no se puede acceder a las facturas de otro cliente",
+      "invoiceRead": "Permiso denegado: se requiere permiso de lectura de facturas"
     },
     "invoice": {
       "notFound": "Factura no encontrada",
@@ -2517,7 +2542,9 @@
       "duplicate": "Ya existe una factura en conflicto. Actualice la página e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio de la factura.",
       "missingFieldNamed": "Falta un campo obligatorio de la factura: {{field}}.",
-      "billingProfileUnavailable": "El perfil de facturación seleccionado no está disponible para este cliente."
+      "billingProfileUnavailable": "El perfil de facturación seleccionado no está disponible para este cliente.",
+      "deleteNotDraft": "Solo se pueden eliminar facturas en borrador; anule la factura en su lugar.",
+      "deleteHasPayments": "No se pueden eliminar facturas con pagos registrados."
     },
     "billingCycle": {
       "notFoundRefresh": "No se encontró el ciclo de facturación. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",

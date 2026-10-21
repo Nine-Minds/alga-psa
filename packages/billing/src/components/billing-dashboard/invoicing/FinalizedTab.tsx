@@ -339,6 +339,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                 reason: getErrorMessage(result),
               })
             : getErrorMessage(result));
+          // Earlier invoices in the batch were already unfinalized and committed.
+          await loadData();
+          onRefreshNeeded();
           return;
         }
       }
