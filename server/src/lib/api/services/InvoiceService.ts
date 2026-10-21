@@ -2186,15 +2186,15 @@ export class InvoiceService extends BaseService<IInvoice> {
   /**
    * Joins clients plus their billing address. The address derived table carries
    * `tenant` and is joined on it (tenantJoinSubquery) so Citus keeps the join
-   * on one shard. NOTE: the subquery's limit(1) is pre-existing behaviour and
-   * is not scoped per client; see the summary for this work order.
+   * on one shard. One location per client (DISTINCT ON), billing address first,
+   * then default - same precedence as models/invoice.ts and invoiceQueries.ts.
    */
   protected joinClientBillingAddress(trx: Knex.Transaction, context: ServiceContext, query: Knex.QueryBuilder): Knex.QueryBuilder {
     const db = tenantDb(trx, context.tenant);
     // Use a subquery to get the billing address to avoid aggregate issues with Citus
     const billingAddressSubquery = db.table('client_locations as cl')
       .select(
-        'cl.client_id',
+        trx.raw('DISTINCT ON (cl.tenant, cl.client_id) cl.client_id'),
         'cl.tenant',
         trx.raw(`CONCAT_WS(', ',
           NULLIF(cl.address_line1, 'N/A'),
@@ -2209,9 +2209,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         this.where('cl.is_billing_address', true)
             .orWhere('cl.is_default', true);
       })
-      .orderByRaw('cl.is_billing_address DESC, cl.is_default DESC')
-      // LEVERAGE: pattern tenant-colocated-aggregate — limit(1) is global, not per client; pre-existing, left as is (semantics change out of scope)
-      .limit(1)
+      .orderByRaw('cl.tenant, cl.client_id, cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST, cl.created_at ASC, cl.location_id ASC')
       .as('billing_loc');
 
     db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id', { type: 'left' });

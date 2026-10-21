@@ -101,6 +101,7 @@ export default defineConfig({
       'src/actions/billingProfileArActions.citus.test.ts',
       // Shared pure balance formula used by REST invoice reads and the client portal.
       'src/lib/balanceDue.test.ts',
+      'src/lib/creditBalance.test.ts',
     ],
     testTimeout: 20000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing

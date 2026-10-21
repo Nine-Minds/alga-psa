@@ -294,15 +294,15 @@ interface KitBaseRow {
 async function queryKitBaseRows(trx: Knex.Transaction, tenant: string, serviceId?: string): Promise<KitBaseRow[]> {
   const componentCounts = trx('kit_components')
     .where({ tenant })
-    .groupBy('kit_service_id')
-    .select('kit_service_id')
+    .groupBy('tenant', 'kit_service_id')
+    .select('tenant', 'kit_service_id')
     .count('* as component_count')
     .as('kc_counts');
 
   const usageCounts = trx('sales_order_lines')
     .where({ tenant, parent_so_line_id: null })
-    .groupBy('service_id')
-    .select('service_id')
+    .groupBy('tenant', 'service_id')
+    .select('tenant', 'service_id')
     .countDistinct('so_id as sales_order_count')
     .as('usage_counts');
 
@@ -310,8 +310,12 @@ async function queryKitBaseRows(trx: Knex.Transaction, tenant: string, serviceId
     .join('service_catalog as sc', function () {
       this.on('pis.service_id', '=', 'sc.service_id').andOn('pis.tenant', '=', 'sc.tenant');
     })
-    .leftJoin(componentCounts, 'kc_counts.kit_service_id', 'pis.service_id')
-    .leftJoin(usageCounts, 'usage_counts.service_id', 'pis.service_id')
+    .leftJoin(componentCounts, function () {
+      this.on('kc_counts.kit_service_id', '=', 'pis.service_id').andOn('kc_counts.tenant', '=', 'pis.tenant');
+    })
+    .leftJoin(usageCounts, function () {
+      this.on('usage_counts.service_id', '=', 'pis.service_id').andOn('usage_counts.tenant', '=', 'pis.tenant');
+    })
     .where({ 'pis.tenant': tenant, 'pis.is_kit': true })
     .select(
       'sc.service_id',
@@ -347,8 +351,8 @@ async function queryKitComponents(
 
   const stockTotals = trx('stock_levels')
     .where({ tenant })
-    .groupBy('service_id')
-    .select('service_id')
+    .groupBy('tenant', 'service_id')
+    .select('tenant', 'service_id')
     .select(trx.raw('COALESCE(SUM(quantity_on_hand), 0)::int as on_hand'))
     .select(trx.raw('COALESCE(SUM(quantity_on_hand - reserved_quantity - held_quantity), 0)::int as available'))
     .as('stock_totals');
@@ -360,7 +364,9 @@ async function queryKitComponents(
     .leftJoin('product_inventory_settings as pis', function () {
       this.on('pis.service_id', '=', 'kc.component_service_id').andOn('pis.tenant', '=', 'kc.tenant');
     })
-    .leftJoin(stockTotals, 'stock_totals.service_id', 'kc.component_service_id')
+    .leftJoin(stockTotals, function () {
+      this.on('stock_totals.service_id', '=', 'kc.component_service_id').andOn('stock_totals.tenant', '=', 'kc.tenant');
+    })
     .where({ 'kc.tenant': tenant })
     .whereIn('kc.kit_service_id', ids)
     .select(
@@ -484,8 +490,8 @@ export const listKitComponentCandidates = withAuth(
       return withTransaction(db, async (trx: Knex.Transaction) => {
         const stockTotals = trx('stock_levels')
           .where({ tenant })
-          .groupBy('service_id')
-          .select('service_id')
+          .groupBy('tenant', 'service_id')
+          .select('tenant', 'service_id')
           .select(trx.raw('COALESCE(SUM(quantity_on_hand), 0)::int as on_hand'))
           .select(trx.raw('COALESCE(SUM(quantity_on_hand - reserved_quantity - held_quantity), 0)::int as available'))
           .as('stock_totals');
@@ -494,7 +500,9 @@ export const listKitComponentCandidates = withAuth(
           .leftJoin('product_inventory_settings as pis', function () {
             this.on('pis.service_id', '=', 'sc.service_id').andOn('pis.tenant', '=', 'sc.tenant');
           })
-          .leftJoin(stockTotals, 'stock_totals.service_id', 'sc.service_id')
+          .leftJoin(stockTotals, function () {
+            this.on('stock_totals.service_id', '=', 'sc.service_id').andOn('stock_totals.tenant', '=', 'sc.tenant');
+          })
           .where({ 'sc.tenant': tenant, 'sc.item_kind': 'product' })
           .andWhereRaw('COALESCE(pis.is_kit, false) = false')
           .select(

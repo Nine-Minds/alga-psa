@@ -55,4 +55,14 @@ describe('InvoiceService.joinClientBillingAddress SQL shape (include_client)', (
     expect(sql).toContain('"clients"."client_id" = "billing_loc"."client_id"');
     expect(sql).toContain('"billing_loc"."tenant" = "clients"."tenant"');
   });
+
+  it('picks one location per client (DISTINCT ON tenant, client_id) with no global limit', () => {
+    const knex = knexFactory({ client: 'pg' });
+    const service = new InvoiceService() as any;
+    const base = service.buildBaseQuery(knex, { tenant: TENANT });
+    const sql = service.joinClientBillingAddress(knex, { tenant: TENANT }, base).toSQL().sql as string;
+    expect(sql).toContain('DISTINCT ON (cl.tenant, cl.client_id)');
+    expect(sql).toContain('order by cl.tenant, cl.client_id, cl.is_billing_address DESC');
+    expect(sql).not.toMatch(/limit \?[^)]*\) as "billing_loc"/);
+  });
 });
