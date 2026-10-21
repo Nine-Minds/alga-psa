@@ -1377,7 +1377,7 @@
       "mediaSource": "Bildquelle",
       "mediaSourceLogo": "Firmenlogo",
       "mediaSourceCustom": "Eigenes Bild",
-      "mediaSourceLogoHint": "Zeigt auf jedem Dokument das Logo aus den Branding-Einstellungen Ihres Unternehmens.",
+      "mediaSourceLogoHint": "Zeigt auf jedem Dokument das Logo aus dem Kundendatensatz Ihres eigenen Unternehmens.",
       "mediaSourceUrl": "Quell-URL",
       "renameInner": "Auch {{count}} innere Ebenen umbenennen ({{from}} → {{to}}…)?",
       "renameInnerApply": "Umbenennen",

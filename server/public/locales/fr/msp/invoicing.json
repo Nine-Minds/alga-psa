@@ -1377,7 +1377,7 @@
       "mediaSource": "Source de l'image",
       "mediaSourceLogo": "Logo de l'entreprise",
       "mediaSourceCustom": "Image personnalisée",
-      "mediaSourceLogoHint": "Affiche sur chaque document le logo défini dans les paramètres de marque de votre entreprise.",
+      "mediaSourceLogoHint": "Affiche sur chaque document le logo de la fiche client de votre propre entreprise.",
       "mediaSourceUrl": "URL source",
       "renameInner": "Renommer aussi {{count}} calques internes ({{from}} → {{to}}…) ?",
       "renameInnerApply": "Renommer",

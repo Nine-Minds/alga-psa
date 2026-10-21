@@ -1377,7 +1377,7 @@
       "mediaSource": "Origine immagine",
       "mediaSourceLogo": "Logo aziendale",
       "mediaSourceCustom": "Immagine personalizzata",
-      "mediaSourceLogoHint": "Mostra su ogni documento il logo delle impostazioni di branding della tua azienda.",
+      "mediaSourceLogoHint": "Mostra su ogni documento il logo della scheda cliente della tua azienda.",
       "mediaSourceUrl": "URL di origine",
       "renameInner": "Rinominare anche {{count}} livelli interni ({{from}} → {{to}}…)?",
       "renameInnerApply": "Rinomina",

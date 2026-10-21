@@ -1377,7 +1377,7 @@
       "mediaSource": "Origen de la imagen",
       "mediaSourceLogo": "Logotipo de la empresa",
       "mediaSourceCustom": "Imagen personalizada",
-      "mediaSourceLogoHint": "Muestra en cada documento el logotipo de la configuración de marca de su empresa.",
+      "mediaSourceLogoHint": "Muestra en cada documento el logotipo del registro de cliente de su propia empresa.",
       "mediaSourceUrl": "URL de origen",
       "renameInner": "¿Cambiar también el nombre de {{count}} capas internas ({{from}} → {{to}}…)?",
       "renameInnerApply": "Cambiar nombre",

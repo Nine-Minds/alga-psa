@@ -1377,7 +1377,7 @@
       "mediaSource": "Bildkälla",
       "mediaSourceLogo": "Företagslogotyp",
       "mediaSourceCustom": "Egen bild",
-      "mediaSourceLogoHint": "Visar logotypen från företagets profilinställningar på alla dokument.",
+      "mediaSourceLogoHint": "Visar logotypen från kundposten för ditt eget företag på alla dokument.",
       "mediaSourceUrl": "Käll-URL",
       "renameInner": "Vill du byta namn på {{count}} inre lager också ({{from}} → {{to}}…)?",
       "renameInnerApply": "Byt namn",

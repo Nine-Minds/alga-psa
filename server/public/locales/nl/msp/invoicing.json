@@ -1377,7 +1377,7 @@
       "mediaSource": "Afbeeldingsbron",
       "mediaSourceLogo": "Bedrijfslogo",
       "mediaSourceCustom": "Eigen afbeelding",
-      "mediaSourceLogoHint": "Toont op elk document het logo uit de huisstijlinstellingen van uw bedrijf.",
+      "mediaSourceLogoHint": "Toont op elk document het logo uit het klantrecord van uw eigen bedrijf.",
       "mediaSourceUrl": "Bron-URL",
       "renameInner": "Ook {{count}} onderliggende lagen hernoemen ({{from}} → {{to}}…)?",
       "renameInnerApply": "Hernoemen",

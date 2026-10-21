@@ -1377,7 +1377,7 @@
       "mediaSource": "Image source",
       "mediaSourceLogo": "Company logo",
       "mediaSourceCustom": "Custom image",
-      "mediaSourceLogoHint": "Shows the logo from your company branding settings on every document.",
+      "mediaSourceLogoHint": "Shows the logo from your own company's client record on every document.",
       "mediaSourceUrl": "Source URL",
       "renameInner": "Rename {{count}} inner layers too ({{from}} → {{to}}…)?",
       "renameInnerApply": "Rename",

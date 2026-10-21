@@ -4,7 +4,9 @@ import type { TemplateAst } from '@alga-psa/types';
 import type { TemplateEvaluationResult } from './evaluator';
 import { renderEvaluatedTemplateAst } from './react-renderer';
 import { localizeTemplateAstForLocale } from './i18nLabels';
+import { tenantDb } from '@alga-psa/db';
 import { StorageProviderFactory, FileStoreModel } from '@alga-psa/storage';
+import type { FileStore } from '@alga-psa/storage';
 
 const escapeHtml = (value: string): string =>
   value
@@ -45,24 +47,49 @@ export interface TemplateHtmlDocumentOptions {
 // Image inlining
 // ---------------------------------------------------------------------------
 
-const DOC_VIEW_URL_RE = /\/api\/documents\/view\/([a-f0-9-]+)/gi;
+/**
+ * Largest single file inlined as a `data:` URI. Inlined images ride along in the
+ * HTML (and, for the portal preview, in a server-action response), and base64
+ * adds ~33%, so this stays well below typical request limits. A logo or
+ * designer image is a few hundred KB at most; 5 MiB leaves ample headroom for
+ * high-resolution letterhead art. Larger files stay as URLs.
+ */
+export const MAX_INLINED_IMAGE_BYTES = 5 * 1024 * 1024;
+
+const DOC_VIEW_ID_RE = /\/api\/documents\/view\/([a-f0-9-]+)/gi;
+// Matches the URL plus an optional query string such as `?t=...`.
+const DOC_VIEW_URL_RE = /\/api\/documents\/view\/([a-f0-9-]+)(\?[^"'\s)]*)?/gi;
+
+export interface InlineDocumentImagesOptions {
+  knex: Knex | Knex.Transaction;
+  /**
+   * When set, files are looked up with this tenant applied explicitly and a row
+   * belonging to any other tenant is ignored. `FileStoreModel.findById` scopes
+   * by the ambient tenant context rather than by the connection, so callers
+   * that run for an untrusted viewer (client portal) must pass this.
+   */
+  tenant?: string;
+}
 
 /**
- * Find every `/api/documents/view/{fileId}` occurrence in `html`, read the
- * file directly from storage, and replace the URL with a `data:` URI.
+ * Find every `/api/documents/view/{fileId}` occurrence in `text` (HTML or any
+ * serialized value), read the file directly from storage, and replace the URL
+ * with a `data:` URI. Only `image/*` files up to MAX_INLINED_IMAGE_BYTES are
+ * inlined; anything else, and any file that cannot be resolved, stays a URL.
  */
-async function inlineDocumentImages(
-  html: string,
-  knex: Knex | Knex.Transaction,
+export async function inlineDocumentImageUrls(
+  text: string,
+  options: InlineDocumentImagesOptions,
 ): Promise<string> {
-  // Collect unique file IDs referenced in the HTML.
+  const { knex, tenant } = options;
+
+  // Collect unique file IDs referenced in the text.
   const fileIds = new Set<string>();
-  let match: RegExpExecArray | null;
-  while ((match = DOC_VIEW_URL_RE.exec(html)) !== null) {
+  for (const match of text.matchAll(DOC_VIEW_ID_RE)) {
     fileIds.add(match[1]);
   }
 
-  if (fileIds.size === 0) return html;
+  if (fileIds.size === 0) return text;
 
   const provider = await StorageProviderFactory.createProvider();
 
@@ -72,10 +99,25 @@ async function inlineDocumentImages(
   await Promise.all(
     Array.from(fileIds).map(async (fileId) => {
       try {
-        const file = await FileStoreModel.findById(knex, fileId);
+        // LEVERAGE: friction file-store-ambient-tenant — FileStoreModel.findById scopes by ambient
+        // tenant context (AsyncLocalStorage), not by the connection/caller's tenant, so untrusted-viewer
+        // paths must bypass it and query tenantDb(knex, tenant) directly. A tenant-explicit variant belongs in the model.
+        const file = tenant
+          ? await tenantDb(knex, tenant)
+              .table<FileStore>('external_files')
+              .where({ file_id: fileId, is_deleted: false })
+              .first()
+          : await FileStoreModel.findById(knex, fileId);
         if (!file?.storage_path) return;
+        if (tenant && file.tenant !== tenant) return;
+
+        const mime = (file.mime_type || '').toLowerCase();
+        if (!mime.startsWith('image/')) return;
+        if (Number(file.file_size) > MAX_INLINED_IMAGE_BYTES) return;
+
         const buffer = await provider.download(file.storage_path);
-        const mime = file.mime_type || 'application/octet-stream';
+        // file_size is metadata; re-check the bytes actually read.
+        if (buffer.length > MAX_INLINED_IMAGE_BYTES) return;
         replacements.set(fileId, `data:${mime};base64,${buffer.toString('base64')}`);
       } catch {
         // Skip files that can't be resolved — the image will remain a URL
@@ -84,13 +126,29 @@ async function inlineDocumentImages(
     }),
   );
 
-  if (replacements.size === 0) return html;
+  if (replacements.size === 0) return text;
 
   // Replace all occurrences (including query-string variants like `?t=...`).
-  return html.replace(
-    /\/api\/documents\/view\/([a-f0-9-]+)(\?[^"'\s)]*)?/gi,
+  return text.replace(
+    DOC_VIEW_URL_RE,
     (fullMatch, id: string) => replacements.get(id) ?? fullMatch,
   );
+}
+
+/**
+ * Same as inlineDocumentImageUrls but for structured values (invoice view
+ * models, template ASTs): inlines every document URL found in any string.
+ * Data URIs contain no JSON metacharacters, so the serialize/replace/parse
+ * round trip is lossless.
+ */
+export async function inlineDocumentImagesInValue<T>(
+  value: T,
+  options: InlineDocumentImagesOptions,
+): Promise<T> {
+  const serialized = JSON.stringify(value);
+  if (serialized === undefined) return value;
+  const inlined = await inlineDocumentImageUrls(serialized, options);
+  return inlined === serialized ? value : (JSON.parse(inlined) as T);
 }
 
 // ---------------------------------------------------------------------------
@@ -136,7 +194,7 @@ ${html}
 
   // Inline document images as base64 so Puppeteer can render them without auth.
   if (options.knex) {
-    renderedHtml = await inlineDocumentImages(renderedHtml, options.knex);
+    renderedHtml = await inlineDocumentImageUrls(renderedHtml, { knex: options.knex });
   }
 
   return renderedHtml;

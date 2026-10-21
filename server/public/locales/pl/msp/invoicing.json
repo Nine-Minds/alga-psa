@@ -1429,7 +1429,7 @@
       "mediaSource": "Źródło obrazu",
       "mediaSourceLogo": "Logotyp firmy",
       "mediaSourceCustom": "Własny obraz",
-      "mediaSourceLogoHint": "Wyświetla na każdym dokumencie logotyp z ustawień marki Twojej firmy.",
+      "mediaSourceLogoHint": "Wyświetla na każdym dokumencie logotyp z rekordu klienta Twojej własnej firmy.",
       "mediaSourceUrl": "Adres URL źródła",
       "renameInner": "Zmienić też nazwy {{count}} warstw wewnętrznych ({{from}} → {{to}}…)?",
       "renameInnerApply": "Zmień nazwy",

@@ -19,7 +19,8 @@ import {
 import {
   fetchInvoicesByClient,
   getInvoiceLineItems,
-  getInvoiceForRendering
+  getInvoiceForRendering,
+  getResolvedInvoiceTemplateId
 } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 import { finalizeInvoice, unfinalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
@@ -842,6 +843,77 @@ export const getClientInvoiceTemplates = withAuth(async (user, { tenant }): Prom
       return expected;
     }
     console.error('Error fetching invoice templates:', error);
+    throw error;
+  }
+});
+
+export interface ClientInvoicePreviewData {
+  invoice: InvoiceViewModel;
+  template: IInvoiceTemplate | null;
+}
+
+/**
+ * Invoice + resolved template for the portal preview, with the template logo
+ * and designer-picked images already inlined as `data:` URIs.
+ *
+ * The browser cannot fetch those images itself: `/api/documents/view/<id>`
+ * only serves a portal user their own client's documents, and the logo and
+ * designer images belong to the MSP's own company. They are read here, after
+ * the invoice access check, with the tenant applied explicitly. The documents
+ * route guard is intentionally unchanged.
+ */
+export const getClientInvoicePreview = withAuth(async (user, { tenant }, invoiceId: string): Promise<ClientBillingActionResult<ClientInvoicePreviewData>> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    const accessError = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return validateClientInvoiceAccess(trx, user, tenant, invoiceId);
+    });
+    if (accessError) {
+      return accessError;
+    }
+
+    const invoice = await getInvoiceForRendering(invoiceId);
+    if (isClientBillingActionError(invoice)) {
+      return invoice;
+    }
+    if (!invoice) {
+      return actionError('Invoice not found or access denied', 'client-portal:errors.billing.invoiceNotFound');
+    }
+
+    const [templates, resolvedTemplateId] = await Promise.all([
+      getInvoiceTemplates(),
+      getResolvedInvoiceTemplateId(invoiceId),
+    ]);
+    if (isClientBillingActionError(templates)) {
+      return templates;
+    }
+    if (isClientBillingActionError(resolvedTemplateId)) {
+      return resolvedTemplateId;
+    }
+
+    // Client override / tenant default when it is among the available
+    // templates, otherwise the first standard template, then the first one.
+    const resolvedTemplate = resolvedTemplateId
+      ? templates.find((entry) => entry.template_id === resolvedTemplateId)
+      : undefined;
+    const template = resolvedTemplate || templates.find((entry) => entry.isStandard) || templates[0] || null;
+
+    // Loaded on demand: the template renderer module is heavy and only this action needs it.
+    const { inlineDocumentImagesInValue } = await import('@alga-psa/billing/lib/invoice-template-ast/server-render');
+    const inlineOptions = { knex, tenant };
+    const [inlinedInvoice, inlinedTemplate] = await Promise.all([
+      inlineDocumentImagesInValue(invoice, inlineOptions),
+      template ? inlineDocumentImagesInValue(template, inlineOptions) : Promise.resolve(null),
+    ]);
+
+    return { invoice: inlinedInvoice, template: inlinedTemplate };
+  } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error fetching client invoice preview:', error);
     throw error;
   }
 });
