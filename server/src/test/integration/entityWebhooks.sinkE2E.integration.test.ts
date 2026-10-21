@@ -381,8 +381,60 @@ describe('entity webhooks → signed delivery at the webhook-sink (no app server
     let clientService: ClientService;
     let contactService: ContactService;
 
+    // ClientService.update's is_inactive cascade (contact:update) and the delete paths check RBAC
+    // against the DB. Use a dedicated user whose only role is created here, so the test does not
+    // depend on whatever roles the seeded user happens to hold in a given environment.
+    let restUserId: string;
+    let restRoleId: string;
+
+    beforeAll(async () => {
+      const seeded = await knex('users').where({ tenant, user_id: userId }).first();
+      restUserId = uuidv4();
+      await knex('users').insert({
+        ...seeded,
+        user_id: restUserId,
+        username: `rest-e2e-${restUserId.slice(0, 8)}`,
+        email: `rest-e2e-${restUserId.slice(0, 8)}@example.test`,
+      });
+      restRoleId = uuidv4();
+      await knex('roles').insert({
+        tenant,
+        role_id: restRoleId,
+        role_name: `Webhook REST e2e ${restRoleId.slice(0, 8)}`,
+        description: 'entityWebhooks.sinkE2E REST publisher role',
+        msp: true,
+        client: false,
+      });
+      await knex('user_roles').insert({ tenant, user_id: restUserId, role_id: restRoleId });
+      const grants = ['client', 'contact'].flatMap((resource) =>
+        ['create', 'read', 'update', 'delete'].map((action) => ({
+          tenant,
+          permission_id: uuidv4(),
+          resource,
+          action,
+          msp: true,
+          client: false,
+        })),
+      );
+      await knex('permissions').insert(grants);
+      await knex('role_permissions').insert(
+        grants.map((g) => ({ tenant, role_id: restRoleId, permission_id: g.permission_id })),
+      );
+    });
+
+    afterAll(async () => {
+      const permissionIds = (await knex('role_permissions').where({ tenant, role_id: restRoleId }).select('permission_id')).map(
+        (r: any) => r.permission_id,
+      );
+      await knex('role_permissions').where({ tenant, role_id: restRoleId }).del();
+      await knex('permissions').where({ tenant }).whereIn('permission_id', permissionIds).del();
+      await knex('user_roles').where({ tenant, role_id: restRoleId }).del();
+      await knex('roles').where({ tenant, role_id: restRoleId }).del();
+      await knex('users').where({ tenant, user_id: restUserId }).del();
+    });
+
     beforeEach(() => {
-      ctx = { tenant, userId, user: { user_id: userId, tenant, user_type: 'internal', roles: [] } } as any;
+      ctx = { tenant, userId: restUserId, user: { user_id: restUserId, tenant, user_type: 'internal', roles: [] } } as any;
       clientService = new ClientService();
       contactService = new ContactService();
       vi.spyOn(clientService as any, 'getKnex').mockResolvedValue({ knex, tenant });
