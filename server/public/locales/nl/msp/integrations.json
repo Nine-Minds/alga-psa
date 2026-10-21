@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Pro-functie"
+    },
     "accounting": {
       "bulk": {
         "button": "Bulkkoppeling",
@@ -1232,7 +1235,12 @@
         "recommendedUnsaved": "Aanbevolen — niet opgeslagen",
         "unsavedChange": "Niet-opgeslagen wijziging",
         "unsavedNotice": "Deze filters worden pas toegepast nadat u ze hebt opgeslagen."
-      }
+      },
+      "proFeature": {
+        "description": "De Microsoft Entra-integratie is beschikbaar in AlgaPSA Pro.",
+        "notice": "De identiteitsintegratie met Microsoft Entra is een Pro-functie."
+      },
+      "loading": "Microsoft Entra-integratie laden…"
     },
     "google": {
       "settings": {
@@ -1303,6 +1311,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "De integratie met de IT-documentatie van Hudu is beschikbaar in AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Bron: Hudu",
         "openInHudu": "Openen in Hudu",
@@ -2323,6 +2334,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "De RMM-integratie met NinjaOne is beschikbaar in AlgaPSA Pro."
+        },
         "loading": "NinjaOne-integratie-instellingen laden...",
         "card": {
           "title": "NinjaOne RMM-integratie",
@@ -2600,6 +2614,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "De RMM-integratie met Tanium is beschikbaar in AlgaPSA Pro."
+        },
         "loading": "Tanium-integratie-instellingen worden geladen...",
         "actions": {
           "discoverScopes": "Scopes ontdekken",
@@ -2670,6 +2687,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "De RMM-integratie met Level.io is beschikbaar in AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Waarschuwingen backfillen",
           "disconnect": "Verbinding verbreken",
@@ -2742,16 +2762,35 @@
           "copied": "Gekopieerd",
           "copy": "Kopiëren",
           "description": "Level kan geen webhooks registreren via zijn API. Maak in Level een automatisering met een HTTP POST-actie met de onderstaande URL, header en payload om waarschuwingen in realtime naar Alga te pushen.",
+          "fallbackDescription": "Gebruik deze terugval alleen als de native webhooks onder Instellingen → Webhooks in Level niet kunnen worden gebruikt. Maak een automatisering met een HTTP POST-actie met de onderstaande URL, header en payload om meldingen naar Alga te sturen.",
+          "fallbackNameHint": "Pas de waarde \"name\" aan in elke automatisering. Samen met het apparaat identificeert die de melding; herhalingen met dezelfde naam op hetzelfde apparaat gelden als één melding.",
+          "fallbackTitle": "Terugval: HTTP-verzoek via automatisering",
           "header": "Header: {{name}}",
           "hideSecret": "Geheim verbergen",
           "loading": "Webhookdetails worden geladen nadat de integratie is geconfigureerd.",
+          "nativeDescription": "Open in Level Instellingen → Webhooks, voeg een webhook toe met de URL en de ondertekeningssleutel hieronder en schakel de genoemde events in. Level ondertekent elke aanlevering en Alga controleert de handtekening.",
+          "nativeEvents": "In te schakelen events",
+          "nativeEventsHelp": "Schakel alert_active en alert_resolved in. Andere events worden bevestigd en genegeerd.",
+          "nativeSigningSecret": "Ondertekeningssleutel",
+          "nativeTitle": "Native webhook (aanbevolen)",
           "payload": "Payloadsjabloon",
+          "regenerateCancel": "Annuleren",
+          "regenerateConfirmLabel": "Opnieuw genereren",
+          "regenerateConfirmMessage": "Bestaande Level-webhooks mislukken met 401 totdat u de nieuwe ondertekeningssleutel in de webhookinstellingen van Level plakt. Level probeert aanleveringen opnieuw, maar ze kunnen verloren gaan als de sleutel niet wordt bijgewerkt.",
+          "regenerateConfirmTitle": "Ondertekeningssleutel opnieuw genereren?",
+          "regenerateConfirmed": "Ondertekeningssleutel opnieuw gegenereerd. Werk hem bij in de webhookinstellingen van Level.",
+          "regenerateFailed": "Ondertekeningssleutel opnieuw genereren mislukt",
+          "regenerateSecret": "Sleutel opnieuw genereren",
           "showSecret": "Geheim tonen",
           "title": "Waarschuwingswebhook",
           "url": "Webhook-URL"
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Huntress-integratie",
+          "description": "De beveiligingsintegratie met Huntress is een Pro-functie."
+        },
         "columns": {
           "organization": "Huntress-organisatie",
           "client": "Alga-klant",
@@ -3511,6 +3550,11 @@
           "regenerate": "Pakket opnieuw genereren",
           "regenerating": "Opnieuw genereren..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Aanmelden bij Teams niet beschikbaar",
+        "tabTitle": "Teams-tabblad niet beschikbaar",
+        "description": "De Microsoft Teams-integratie is alleen beschikbaar in Pro."
       }
     },
     "xero": {

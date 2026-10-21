@@ -583,7 +583,8 @@
       "failedToUpdate": "No se pudo actualizar la línea de contrato",
       "failedToResetRate": "No se pudo restablecer el precio de la línea",
       "protectedStartDate": "La fecha de inicio debe ser el {{boundary}} o anterior para incluir el historial protegido.",
-      "protectedEndDate": "La fecha de fin debe ser el {{boundary}} o posterior para incluir el historial protegido."
+      "protectedEndDate": "La fecha de fin debe ser el {{boundary}} o posterior para incluir el historial protegido.",
+      "cannotEditWithInvoices": "No se puede editar la línea de contrato: este contrato tiene facturas asociadas. Las líneas de contrato no se pueden editar una vez que se han generado facturas."
     },
     "loading": {
       "contractLines": "Cargando líneas de contrato",
@@ -827,13 +828,15 @@
       "hourlyTitle": "Por hora",
       "usageDescription": "Facturar por unidades consumidas.",
       "usageTitle": "Basado en uso",
-      "fixedSemantics": "Facture un precio de paquete o una cantidad recurrente × tarifa por unidad en cada período."
+      "fixedSemantics": "Facture un precio de paquete o una cantidad recurrente × tarifa por unidad en cada período.",
+      "prepaidBlockTitle": "Bloque prepagado",
+      "prepaidBlockDescription": "Facture un bloque de horas por adelantado; el tiempo registrado lo consume y el siguiente bloque se factura cuando se agota."
     },
     "billingTiming": {
       "advance": "Anticipado (facturar al inicio del período)",
       "arrears": "A plazo vencido (facturar al final del período)"
     },
-    "billingTimingHelp": "La facturación anticipada es habitual para tarifas fijas; a plazo vencido para servicios basados en tiempo/uso.",
+    "billingTimingHelp": "Las líneas fijas pueden facturarse por adelantado o al vencimiento. Las líneas por horas y por uso siempre se facturan al vencimiento, después de realizar el trabajo.",
     "chooseBillingModel": "Elija un modelo de facturación *",
     "chooseBillingModelDescription": "Seleccione el comportamiento de facturación que se adapte a esta oferta.",
     "contractLineNameLabel": "Nombre de la línea de contrato *",
@@ -895,7 +898,8 @@
       "usageServiceRequired": "Se requiere al menos un servicio basado en uso",
       "usageServiceSelectRequired": "Servicio {{index}}: seleccione un servicio",
       "invalidQuantity": "La cantidad debe ser cero o mayor.",
-      "recurringUnitRateRequired": "Ingrese una tarifa por unidad para cada servicio recurrente."
+      "recurringUnitRateRequired": "Ingrese una tarifa por unidad para cada servicio recurrente.",
+      "prepaidBlockCurrencyRequired": "El contrato necesita una moneda antes de poder fijar el precio de un bloque prepagado."
     },
     "fixedServicesPricingIntent": "Elija un precio de paquete o puestos/unidades recurrentes para cada servicio.",
     "fixedServicesPricingExplanation": "Las asignaciones del paquete comparten la tarifa base de la línea. Los puestos recurrentes facturan la cantidad acordada × tarifa por unidad en cada período sin registros de uso.",
@@ -906,7 +910,9 @@
     "invoiceTextPlaceholder": "Se imprime en la factura; por defecto, el nombre de la línea",
     "invoiceTextHelp": "Este texto se imprime textualmente en la línea de factura recurrente.",
     "startDateLabel": "Fecha de inicio de la línea",
-    "endDateLabel": "Fecha de fin de la línea"
+    "endDateLabel": "Fecha de fin de la línea",
+    "prepaidBlockTitle": "Bloque prepagado",
+    "prepaidBlockDescription": "Defina el tamaño y el precio del bloque. El precio por defecto es horas x tarifa del servicio y se guarda como un importe explícito."
   },
   "pricingSchedules": {
     "list": {
@@ -1252,7 +1258,8 @@
       "hourlyRateLabel": "Tarifa por hora:",
       "unitRateFromCatalog": "Precio de catálogo en la moneda del cliente",
       "unitAmountLabel": "Importe recurrente:",
-      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}",
+      "prepaidBlockKind": "Bloque prepagado"
     },
     "editBasicsTitle": "Editar información básica de la plantilla",
     "editGuidanceTitle": "Editar orientación de la plantilla",
@@ -1341,6 +1348,10 @@
       "add": "Añadir descuento predeterminado",
       "chooseLine": "Elige una línea de plantilla",
       "chooseService": "Elige un servicio"
+    },
+    "prepaidBlock": {
+      "setup": "Vender como bloque prepagado",
+      "blockNeutral": "{{hours}} h / {{price}} (en la moneda del cliente)"
     }
   },
   "quickStart": {
@@ -1850,7 +1861,8 @@
       "products": "Productos",
       "hourlyServices": "Servicios por hora",
       "usageBasedServices": "Servicios basados en uso",
-      "fixedFeeServicesNumbered": "Servicios de tarifa fija ({{number}})"
+      "fixedFeeServicesNumbered": "Servicios de tarifa fija ({{number}})",
+      "prepaidBlocks": "Líneas de bloques prepagados"
     },
     "fields": {
       "client": "Cliente",
@@ -1979,6 +1991,14 @@
       "itemPo": "Confirme los requisitos de OC (si los hay)",
       "itemDates": "Verifique las fechas de inicio y finalización",
       "itemEditLater": "Recuerde: puede editar el contrato más tarde si es necesario"
+    },
+    "prepaid": {
+      "badgeCount_one": "{{count}} línea",
+      "badgeCount_other": "{{count}} líneas",
+      "blockSummary": "{{hours}} horas por {{price}}",
+      "expiresAfter_one": "caduca tras {{count}} mes",
+      "expiresAfter_other": "caduca tras {{count}} meses",
+      "neverExpires": "no caduca"
     }
   },
   "wizardTemplateLines": {
@@ -2092,7 +2112,7 @@
       "advance": "Anticipado: facturar al inicio del período"
     },
     "fields": {
-      "billingTiming": "Momento de facturación",
+      "billingTiming": "Momento de facturación de las líneas de tarifa fija",
       "adjustPartialPeriods": "Ajustar por períodos parciales",
       "services": "Servicios",
       "serviceNumber": "Servicio {{index}}",
@@ -2206,7 +2226,8 @@
       "fixedFeeServices": "Servicios de tarifa fija",
       "products": "Productos",
       "hourlyServices": "Servicios por hora",
-      "usageBasedServices": "Servicios basados en uso"
+      "usageBasedServices": "Servicios basados en uso",
+      "prepaidBlocks": "Líneas de bloques prepagados"
     },
     "fields": {
       "templateName": "Nombre de la plantilla",
@@ -2267,6 +2288,9 @@
       "unitSingular": "unidad",
       "rolloverEnabled": "Acumulación habilitada",
       "period": "Período: {{period}}"
+    },
+    "prepaid": {
+      "blockSummaryNeutral": "{{hours}} horas por {{price}} (en la moneda del cliente)"
     }
   },
   "templatePreview": {
@@ -2539,7 +2563,8 @@
       "tieredPricing": "precios por niveles",
       "timing": {
         "advance": "Facturar por adelantado",
-        "arrears": "Facturar a período vencido"
+        "arrears": "Facturar a período vencido",
+        "arrearsOnly": "Facturado a período vencido"
       },
       "title": "Cambios del contrato",
       "types": {
@@ -2706,7 +2731,16 @@
     "done": "Listo"
   },
   "sellHourBlockNote": {
-    "text": "Una bolsa de horas del contrato solo factura el exceso. Para cobrar por adelantado un bloque de horas, use Vender bloque en Bloques de horas, en la pestaña Panel de facturación del cliente."
+    "text": "Una bolsa de horas del contrato solo factura el exceso. Para cobrar por adelantado un bloque de horas, agregue una línea de Bloque prepagado a este contrato."
+  },
+  "billingTimingField": {
+    "arrears": "Al vencimiento",
+    "fixedHelp": "Las líneas fijas pueden facturarse por adelantado o al vencimiento.",
+    "nonFixedHelp": "Las líneas por horas y por uso siempre se facturan al vencimiento, después de realizar el trabajo.",
+    "options": {
+      "advance": "Por adelantado (facturar al inicio del periodo)",
+      "arrears": "Al vencimiento (facturar al final del periodo)"
+    }
   },
   "contractDiscounts": {
     "title": "Descuentos",
@@ -2778,6 +2812,126 @@
     "errors": {
       "loadFailed": "No se pudieron cargar los descuentos.",
       "saveFailed": "No se pudo guardar el descuento."
+    }
+  },
+  "prepaidBlock": {
+    "errors": {
+      "hoursInvalid": "Introduzca un tamaño de bloque mayor que cero (se permiten fracciones de hora).",
+      "priceInvalid": "Introduzca un precio de bloque de cero o más.",
+      "expiryInvalid": "El vencimiento debe ser un número entero de meses entre 1 y 120, o estar vacío.",
+      "thresholdInvalid": "El umbral de uso debe ser un porcentaje entero de 1 a 99, o estar vacío.",
+      "serviceRequired": "La línea necesita al menos un servicio por horas."
+    },
+    "hoursValue": "{{hours}} h",
+    "trigger": {
+      "initial": "Bloque inicial",
+      "exhaustion": "Bloque agotado",
+      "threshold": "Umbral de uso",
+      "expiry": "Bloque vencido",
+      "renewal": "Renovación del contrato",
+      "manual": "Emitido manualmente"
+    },
+    "loading": "Cargando detalles del bloque prepagado...",
+    "heading": "Bloque prepagado",
+    "actions": {
+      "edit": "Editar",
+      "remove": "Quitar configuración de bloque",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "issueNext": "Emitir siguiente bloque"
+    },
+    "warnings": {
+      "coveredServiceOnOtherLine": "{{service}} también está en otra línea activa ({{line}}). Su tiempo puede facturarse allí en lugar de descontarse de este bloque."
+    },
+    "summary": {
+      "block": "Bloque",
+      "expiry": "Vencimiento",
+      "neverExpires": "No vence nunca",
+      "expiresAfterMonths": "{{months}} meses",
+      "soldAs": "Vendido como",
+      "triggers": "El siguiente bloque se factura cuando",
+      "onExhaustion": "el bloque se agota",
+      "onThreshold": "{{percent}} % usado",
+      "onExpiry": "el bloque vence",
+      "onRenewal": "el contrato se renueva",
+      "tierAutoIssue": "Finalizado automáticamente",
+      "tierDraft": "Borrador para revisión"
+    },
+    "balance": {
+      "label": "Saldo activo",
+      "value": "{{remaining}} de {{total}} restantes",
+      "none": "Aún no hay un bloque activo. Un bloque se activa cuando se finaliza su factura.",
+      "contractEnded": "Contrato finalizado; las horas restantes se han perdido."
+    },
+    "pending": {
+      "heading": "Bloque pendiente a la espera de finalizar la factura",
+      "draftInvoice": "Factura borrador",
+      "noInvoice": "Sin factura vinculada",
+      "ageDays": "{{days}} días de antigüedad",
+      "held": "{{hours}} de tiempo registrado se retiene hasta que este bloque se active."
+    },
+    "next": {
+      "label": "Próxima emisión programada",
+      "none": "Ninguna"
+    },
+    "history": {
+      "heading": "Historial de bloques",
+      "empty": "Aún no se ha emitido ningún bloque.",
+      "columns": {
+        "issued": "Emitido",
+        "reason": "Motivo",
+        "status": "Estado",
+        "hours": "Restante",
+        "amount": "Importe",
+        "invoice": "Factura"
+      }
+    },
+    "fields": {
+      "blockHours": "Tamaño del bloque (horas)",
+      "blockHoursHelp": "Se admiten fracciones, por ejemplo 1,5 para 90 minutos.",
+      "blockPrice": "Precio del bloque ({{currency}})",
+      "blockPriceManualHelp": "Establecido explícitamente. Se guarda tal como se introdujo y no sigue la tarifa por hora.",
+      "blockPriceDefaultHelp": "Por defecto, horas x tarifa del servicio. Se guarda como un precio explícito.",
+      "useRateTimesHours": "Usar horas x tarifa",
+      "soldAs": "La línea de factura se vende como",
+      "soldAsHelp": "Determina el impuesto, el libro mayor y la asignación de exportación contable de la línea de factura del bloque.",
+      "expiryMonths": "Vence tras (meses)",
+      "neverExpires": "No vence nunca",
+      "expiryMonthsHelp": "Déjelo vacío para horas que no vencen. Las horas sin usar se pierden al vencer.",
+      "thresholdPercent": "Emitir el siguiente bloque al uso (%)",
+      "noThreshold": "Sin umbral",
+      "triggersHeading": "Facturar el siguiente bloque cuando",
+      "triggerExhaustion": "El bloque se agota",
+      "triggerExpiry": "El bloque vence",
+      "triggerRenewal": "El contrato se renueva",
+      "triggerRenewalHint": "Factura un bloque nuevo en cada renovación (aniversario de un contrato indefinido o contrato de renovación activado). Los bloques existentes conservan su propia caducidad.",
+      "tier": "Factura de seguimiento",
+      "tierDraft": "Crear un borrador para revisión",
+      "tierAutoIssue": "Finalizar y enviar automáticamente",
+      "blockPriceNeutral": "Precio del bloque (en la moneda del cliente)"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "active": "Activo",
+      "expired": "Vencido",
+      "voided": "Anulado"
+    }
+  },
+  "wizardPrepaidBlock": {
+    "heading": "Líneas de bloques prepagados",
+    "description": "Venda horas por adelantado. Cada línea factura un bloque de horas a un precio fijo y el tiempo registrado consume el bloque; las horas que excedan el bloque se facturan a la tarifa por hora.",
+    "templateDescription": "Venda horas por adelantado. Cada línea factura un bloque de horas a un precio fijo y el tiempo registrado consume el bloque. El precio adopta la moneda del cliente cuando se crea un contrato a partir de esta plantilla.",
+    "lineName": "Nombre de la línea (opcional)",
+    "lineNamePlaceholder": "Bloque prepagado",
+    "removeLine": "Quitar línea de bloque prepagado",
+    "serviceItem": "Servicio {{index}}",
+    "overageRate": "Tarifa por hora",
+    "removeService": "Quitar servicio",
+    "addService": "Añadir servicio a esta línea",
+    "addLine": "Añadir línea de bloque prepagado",
+    "validation": {
+      "invalidBlock": "Complete el tamaño, el precio y los disparadores de cada línea de bloque prepagado antes de finalizar.",
+      "rateRequired": "El servicio de bloque prepagado \"{{serviceName}}\" necesita una tarifa por hora superior a cero (las horas que excedan el bloque se facturan a esa tarifa)."
     }
   }
 }

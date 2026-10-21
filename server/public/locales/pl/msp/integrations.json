@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Funkcja Pro"
+    },
     "accounting": {
       "bulk": {
         "button": "Mapowanie zbiorcze",
@@ -1232,7 +1235,12 @@
         "recommendedUnsaved": "Zalecane — niezapisane",
         "unsavedChange": "Niezapisana zmiana",
         "unsavedNotice": "Te filtry zaczną działać dopiero po zapisaniu."
-      }
+      },
+      "proFeature": {
+        "description": "Integracja z Microsoft Entra jest dostępna w AlgaPSA Pro.",
+        "notice": "Integracja tożsamości Microsoft Entra jest funkcją Pro."
+      },
+      "loading": "Ładowanie integracji z Microsoft Entra…"
     },
     "google": {
       "settings": {
@@ -1303,6 +1311,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "Integracja z dokumentacją IT Hudu jest dostępna w AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Źródło: Hudu",
         "openInHudu": "Otwórz w Hudu",
@@ -2323,6 +2334,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "Integracja z systemem RMM NinjaOne jest dostępna w AlgaPSA Pro."
+        },
         "loading": "Ładowanie ustawień integracji NinjaOne...",
         "card": {
           "title": "Integracja NinjaOne RMM",
@@ -2600,6 +2614,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "Integracja z systemem RMM Tanium jest dostępna w AlgaPSA Pro."
+        },
         "loading": "Ładowanie ustawień integracji Tanium...",
         "actions": {
           "discoverScopes": "Wykryj zakresy",
@@ -2670,6 +2687,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "Integracja z systemem RMM Level.io jest dostępna w AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Uzupełnij alerty",
           "disconnect": "Rozłącz",
@@ -2742,16 +2762,35 @@
           "copied": "Skopiowano",
           "copy": "Kopiuj",
           "description": "Level nie umożliwia rejestrowania webhooków przez swoje API. W Level utwórz automatyzację z akcją HTTP POST, używając poniższego adresu URL, nagłówka i ładunku, aby przesyłać alerty do Alga w czasie rzeczywistym.",
+          "fallbackDescription": "Użyj tego rozwiązania zapasowego tylko wtedy, gdy natywne webhooki w Ustawienia → Webhooks w Level nie mogą być użyte. Utwórz automatyzację z akcją HTTP POST, używając poniższego adresu URL, nagłówka i ładunku, aby przesyłać alerty do Alga.",
+          "fallbackNameHint": "Edytuj wartość \"name\" w każdej automatyzacji. Razem z urządzeniem identyfikuje ona alert, więc powtórzenia o tej samej nazwie na tym samym urządzeniu to jeden alert.",
+          "fallbackTitle": "Rozwiązanie zapasowe: żądanie HTTP z automatyzacji",
           "header": "Nagłówek: {{name}}",
           "hideSecret": "Ukryj sekret",
           "loading": "Szczegóły webhooka załadują się po skonfigurowaniu integracji.",
+          "nativeDescription": "W Level otwórz Ustawienia → Webhooks, dodaj webhook z poniższym adresem URL i kluczem podpisu oraz włącz wymienione zdarzenia. Level podpisuje każde dostarczenie, a Alga weryfikuje podpis.",
+          "nativeEvents": "Zdarzenia do włączenia",
+          "nativeEventsHelp": "Włącz alert_active i alert_resolved. Pozostałe zdarzenia są potwierdzane i ignorowane.",
+          "nativeSigningSecret": "Klucz podpisu",
+          "nativeTitle": "Natywny webhook (zalecany)",
           "payload": "Szablon ładunku",
+          "regenerateCancel": "Anuluj",
+          "regenerateConfirmLabel": "Wygeneruj ponownie",
+          "regenerateConfirmMessage": "Istniejące webhooki Level będą zwracać błąd 401, dopóki nie wkleisz nowego klucza podpisu w ustawieniach webhooków w Level. Level ponawia dostarczenia, ale mogą zostać utracone, jeśli klucz nie zostanie zaktualizowany.",
+          "regenerateConfirmTitle": "Wygenerować ponownie klucz podpisu?",
+          "regenerateConfirmed": "Klucz podpisu wygenerowany ponownie. Zaktualizuj go w ustawieniach webhooków w Level.",
+          "regenerateFailed": "Nie udało się ponownie wygenerować klucza podpisu",
+          "regenerateSecret": "Wygeneruj klucz ponownie",
           "showSecret": "Pokaż sekret",
           "title": "Webhook alertów",
           "url": "Adres URL webhooka"
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Integracja z Huntress",
+          "description": "Integracja z systemem bezpieczeństwa Huntress jest funkcją Pro."
+        },
         "columns": {
           "organization": "Organizacja Huntress",
           "client": "Klient Alga",
@@ -3511,6 +3550,11 @@
           "regenerate": "Wygeneruj pakiet ponownie",
           "regenerating": "Ponowne generowanie..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Logowanie do Teams jest niedostępne",
+        "tabTitle": "Karta Teams jest niedostępna",
+        "description": "Integracja z Microsoft Teams jest dostępna tylko w Pro."
       }
     },
     "xero": {

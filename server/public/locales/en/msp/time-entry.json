@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Add Entry"
+    }
+  },
   "common": {
     "actions": {
       "view": "View",
@@ -513,7 +518,8 @@
     "entryMissingPeriod": "The time sheet for this entry is missing its period and can’t be opened.",
     "noPeriods": "No time periods are set up yet, so time can’t be entered. Ask an administrator to create time periods under Settings → Time Entry.",
     "noEditablePeriods": "Every time sheet is submitted or approved, so there is no day to add time to. Ask an approver to reopen a sheet, or an administrator to add a time period.",
-    "prepareFailed": "An error occurred while preparing the time entry. Please try again."
+    "prepareFailed": "An error occurred while preparing the time entry. Please try again.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Suggestions",
@@ -538,7 +544,9 @@
       "checklistChanged": "checklist changed",
       "linksChanged": "links changed",
       "updated": "updated"
-    }
+    },
+    "activitySummary_few": "first activity {{first}} · last {{last}} · {{count}} actions ({{kinds}})",
+    "activitySummary_many": "first activity {{first}} · last {{last}} · {{count}} actions ({{kinds}})"
   },
   "stopwatch": {
     "pausedNotice_one": "Tracked {{active}} in {{count}} segment (paused {{paused}})",
@@ -557,6 +565,8 @@
       "confirm": "Continue",
       "cancel": "Cancel"
     },
-    "ticketFallbackName": "Ticket {{number}}"
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "Tracked {{active}} across {{count}} segments (paused {{paused}})",
+    "pausedNotice_many": "Tracked {{active}} across {{count}} segments (paused {{paused}})"
   }
 }

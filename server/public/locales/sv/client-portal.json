@@ -179,7 +179,8 @@
       "createTicket": "Skapa ärende",
       "requestAppointment": "Begär bokning",
       "viewLatestInvoice": "Visa senaste fakturan",
-      "newServiceRequest": "Ny tjänsteförfrågan"
+      "newServiceRequest": "Ny tjänsteförfrågan",
+      "createSupportTicket": "Skapa supportärende"
     },
     "appointments": {
       "title": "Kommande bokningar",
@@ -381,7 +382,25 @@
       "tenant_mismatch": "{{providerEmail}} tillhör en annan organisations portal. Logga in med ditt lösenord eller kontakta din tjänsteleverantör."
     },
     "configurationTitle": "Inloggningen misslyckades",
-    "configurationMessage": "Inloggningen misslyckades. Försök igen eller kontakta din tjänsteleverantör."
+    "configurationMessage": "Inloggningen misslyckades. Försök igen eller kontakta din tjänsteleverantör.",
+    "registration": {
+      "messages": {
+        "verified": "Användaren har verifierats och registrerats"
+      },
+      "errors": {
+        "verifyFailed": "Det gick inte att verifiera och registrera användaren",
+        "invalidToken": "Ogiltig token",
+        "tokenExpired": "Token har gått ut",
+        "tokenNotActive": "Token är inte aktiv än",
+        "unknown": "Okänt fel"
+      },
+      "user": "Användare",
+      "clientPortalUser": "Kundportalanvändare",
+      "mspUser": "MSP-användare",
+      "resetExpiration": "1 timme",
+      "verificationExpiration": "24 timmar",
+      "superadminRole": "Superadministratörsroll"
+    }
   },
   "account": {
     "title": "Konto",
@@ -607,7 +626,9 @@
       "invoices": "Fakturaaviseringar",
       "announcements": "Systemmeddelanden",
       "emailPreferences": "E-post",
-      "internalPreferences": "Internt"
+      "internalPreferences": "Internt",
+      "unreadCount_few": "{{count}} olästa aviseringar",
+      "unreadCount_many": "{{count}} olästa aviseringar"
     },
     "actions": {
       "save": "Spara ändringar",
@@ -885,7 +906,9 @@
     "card": {
       "unread": "Oläst",
       "noMessage": "Inget meddelande"
-    }
+    },
+    "unreadCount_few": "{{count}} olästa aviseringar",
+    "unreadCount_many": "{{count}} olästa aviseringar"
   },
   "billing": {
     "columns": {

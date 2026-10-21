@@ -1,3 +1,5 @@
+'use client';
+
 // server/src/components/ui/Drawer.tsx
 import React from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -11,6 +13,7 @@ import { InsideDialogContext, InsideDrawerContext, useInsideDialog, useInsideDra
 import { useRadixEscapeOwner } from '../keyboard-shortcuts';
 import { editorPopupOwnsEscape } from '../keyboard-shortcuts/editable';
 import { DismissGuardProvider, useDismissGuard } from './DismissGuard';
+import { useTranslation } from '../lib/i18n/client';
 
 export interface DrawerProps {
   isOpen: boolean;
@@ -50,6 +53,7 @@ const Drawer = ({
   width,
   hasUnsavedChanges = false
 }: DrawerComponentProps): React.ReactElement => {
+  const { t } = useTranslation('common');
   const contentRef = React.useRef<HTMLDivElement | null>(null);
 
   useRadixEscapeOwner(isOpen);
@@ -145,7 +149,7 @@ const Drawer = ({
         >
           {/* Visually hidden title for accessibility */}
           <Dialog.Title className="sr-only">
-            Dialog Content
+            {t('dialogs.contentTitle', { defaultValue: 'Dialog Content' })}
           </Dialog.Title>
           <InsideDialogContext.Provider value={true}>
             <InsideDrawerContext.Provider value={true}>
@@ -171,7 +175,7 @@ const Drawer = ({
           {!hideCloseButton && (
             <button
               className="absolute top-4 right-4 text-muted-foreground hover:text-[rgb(var(--color-text-600))]"
-              aria-label="Close"
+              aria-label={t('actions.close', { defaultValue: 'Close' })}
               onClick={requestClose}
             >
               <X />

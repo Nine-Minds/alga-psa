@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Zeiteintrag hinzufügen"
+    }
+  },
   "common": {
     "actions": {
       "view": "Anzeigen",
@@ -513,7 +518,8 @@
     "entryMissingPeriod": "Dem Stundenzettel dieses Eintrags fehlt der Zeitraum und er kann nicht geöffnet werden.",
     "noPeriods": "Es sind noch keine Zeiträume eingerichtet, daher kann keine Zeit erfasst werden. Bitten Sie einen Administrator, unter Einstellungen → Zeiterfassung Zeiträume anzulegen.",
     "noEditablePeriods": "Alle Stundenzettel sind eingereicht oder genehmigt, daher gibt es keinen Tag, an dem Zeit erfasst werden kann. Bitten Sie einen Genehmiger, einen Stundenzettel wieder zu öffnen, oder einen Administrator, einen Zeitraum anzulegen.",
-    "prepareFailed": "Beim Vorbereiten des Zeiteintrags ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
+    "prepareFailed": "Beim Vorbereiten des Zeiteintrags ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Vorschläge",
@@ -538,7 +544,9 @@
       "checklistChanged": "Checkliste geändert",
       "linksChanged": "Links geändert",
       "updated": "aktualisiert"
-    }
+    },
+    "activitySummary_few": "erste Aktivität {{first}} · letzte {{last}} · {{count}} Aktionen ({{kinds}})",
+    "activitySummary_many": "erste Aktivität {{first}} · letzte {{last}} · {{count}} Aktionen ({{kinds}})"
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} in {{count}} Abschnitt erfasst (pausiert {{paused}})",
@@ -557,6 +565,8 @@
       "confirm": "Weiter",
       "cancel": "Abbrechen"
     },
-    "ticketFallbackName": "Ticket {{number}}"
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "{{active}} in {{count}} Abschnitten erfasst (pausiert {{paused}})",
+    "pausedNotice_many": "{{active}} in {{count}} Abschnitten erfasst (pausiert {{paused}})"
   }
 }

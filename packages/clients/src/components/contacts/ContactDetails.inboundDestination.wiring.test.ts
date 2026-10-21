@@ -32,11 +32,14 @@ describe('Contact inbound destination wiring', () => {
 
     // updateContact validates a submitted override against inbound_ticket_defaults
     // and surfaces a FOREIGN_KEY_ERROR when the destination no longer exists.
+    // The message is localized (server-side translation path), but the
+    // FOREIGN_KEY_ERROR prefix and the errors.contact.destinationMissing key
+    // it resolves through must still be wired up.
     expect(contactActionsSource).toContain(
       'const inboundDestinationIdRaw = (contactData as any).inbound_ticket_defaults_id;'
     );
     expect(contactActionsSource).toContain(
-      "throw new Error('FOREIGN_KEY_ERROR: The selected inbound ticket destination no longer exists');"
+      "throw await contactError('errors.contact.destinationMissing', 'FOREIGN_KEY_ERROR: ');"
     );
 
     // Regression guard (BUG-1): the validated override must be PERSISTED through

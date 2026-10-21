@@ -1,7 +1,9 @@
 {
   "escalationManager": {
     "unsavedChanges_one": "{{count}} ungespeicherte Änderung",
-    "unsavedChanges_other": "{{count}} ungespeicherte Änderungen"
+    "unsavedChanges_other": "{{count}} ungespeicherte Änderungen",
+    "unsavedChanges_few": "{{count}} ungespeicherte Änderungen",
+    "unsavedChanges_many": "{{count}} ungespeicherte Änderungen"
   },
   "page": {
     "title": "Admin-Einstellungen"
@@ -448,7 +450,9 @@
       },
       "leadName": "Leiter: {{name}}",
       "memberCount_one": "{{count}} Mitglied",
-      "memberCount_other": "{{count}} Mitglieder"
+      "memberCount_other": "{{count}} Mitglieder",
+      "memberCount_few": "{{count}} Mitglieder",
+      "memberCount_many": "{{count}} Mitglieder"
     },
     "messages": {
       "error": {
@@ -1139,7 +1143,9 @@
         "success": {
           "deleted": "Interaktionstyp gelöscht",
           "imported_one": "{{count}} Interaktionstyp importiert",
-          "imported_other": "{{count}} Interaktionstypen importiert"
+          "imported_other": "{{count}} Interaktionstypen importiert",
+          "imported_few": "{{count}} Interaktionstypen importiert",
+          "imported_many": "{{count}} Interaktionstypen importiert"
         },
         "error": {
           "fetchFailed": "Interaktionstypen konnten nicht abgerufen werden",
@@ -1956,6 +1962,48 @@
       "editor": {
         "inlineLogoHint": "Ihr Logo wird beim Versand in die Nachricht eingebettet. Lassen Sie die Referenz src=\"cid:{{cid}}\" unverändert — wird sie durch eine URL ersetzt, müssen Empfänger das Herunterladen des Bildes erst bestätigen."
       }
+    },
+    "templateVariables": {
+      "actions": {
+        "insert": "An Cursorposition einfügen",
+        "guide": "Vollständige Anleitung lesen",
+        "copy": "{{path}} kopieren"
+      },
+      "insertHelp": "Wählen Sie eine Variable aus, um sie einzufügen.",
+      "availableHelp": "Für diese Vorlage verfügbare Variablen.",
+      "fields": {
+        "search": {
+          "placeholder": "Variablen suchen"
+        },
+        "globalSearch": {
+          "placeholder": "Pfade, Beschreibungen und Konzepte suchen"
+        },
+        "category": {
+          "all": "Alle Bereiche"
+        }
+      },
+      "title": "Variablenreferenz für E-Mail-Vorlagen",
+      "panelTitle": "Vorlagenvariablen",
+      "inferredContract": "Wird derzeit nicht gesendet. Dieser Vertrag wird aus der Vorlage abgeleitet.",
+      "empty": "Keine passenden Variablen.",
+      "example": "Beispiel:",
+      "usedBy": "Verwendet von {{templates}}",
+      "description": "Finden Sie die verfügbaren Daten für jede System-E-Mail-Vorlage. Kopieren Sie das genaue Handlebars-Token in eine benutzerdefinierte Vorlage.",
+      "enums": {
+        "categories": {
+          "appointments": "Termine",
+          "auth": "Authentifizierung",
+          "billing": "Abrechnung",
+          "quotes": "Angebote",
+          "invoices": "Rechnungen",
+          "opportunities": "Verkaufschancen",
+          "projects": "Projekte",
+          "sla": "SLA",
+          "surveys": "Umfragen",
+          "tickets": "Tickets",
+          "time": "Zeit"
+        }
+      }
     }
   },
   "timeEntry": {
@@ -2265,7 +2313,9 @@
         "samples_other": "{{sample}} · {{count}} Datensätze",
         "noSample": "Kein Beispiel",
         "missingRequired": "Nicht zugeordnete Pflichtfelder: {{fields}}",
-        "duplicate": "Ein benutzerdefiniertes Feld wurde mehrfach zugeordnet. Wählen Sie für jede Quelle ein eindeutiges Ziel."
+        "duplicate": "Ein benutzerdefiniertes Feld wurde mehrfach zugeordnet. Wählen Sie für jede Quelle ein eindeutiges Ziel.",
+        "samples_few": "{{sample}} · {{count}} Datensätze",
+        "samples_many": "{{sample}} · {{count}} Datensätze"
       },
       "actions": {
         "back": "Zurück zu Migrationen",
@@ -2383,7 +2433,16 @@
   },
   "policyManagement": {
     "title": "Richtlinienverwaltung",
-    "upgradeDescription": "Die Richtlinienverwaltung ist eine Pro-Funktion. Führen Sie ein Upgrade durch, um auf erweiterte Richtliniensteuerungen zuzugreifen."
+    "upgradeDescription": "Die Richtlinienverwaltung ist eine Pro-Funktion. Führen Sie ein Upgrade durch, um auf erweiterte Richtliniensteuerungen zuzugreifen.",
+    "bundleLibrary": {
+      "title": "Bibliothek für Autorisierungspakete",
+      "upgradeDescription": "Die erweiterte Verwaltung von Autorisierungspaketen ist in Pro verfügbar. Führen Sie ein Upgrade durch, um einschränkende Pakete für Rollen, Teams, Benutzer und API-Schlüssel zu konfigurieren.",
+      "protectionsDescription": "Integrierte Autorisierungsschutzmaßnahmen bleiben auch dann aktiv, wenn konfigurierbare erweiterte Steuerelemente in dieser Edition oder Tarifstufe nicht verfügbar sind."
+    },
+    "proFeature": {
+      "title": "Pro-Funktion",
+      "description": "Die Richtlinienverwaltung erfordert Pro. Führen Sie ein Upgrade durch, um auf diese Funktion zuzugreifen."
+    }
   },
   "roleManagement": {
     "title": "Rollen verwalten",
@@ -2528,7 +2587,9 @@
         "noSessions": "Keine aktiven Sitzungen gefunden"
       },
       "subtitle_one": "{{sessionCount}} aktive Sitzung bei {{userCount}} Benutzer",
-      "subtitle_other": "{{sessionCount}} aktive Sitzungen bei {{userCount}} Benutzern"
+      "subtitle_other": "{{sessionCount}} aktive Sitzungen bei {{userCount}} Benutzern",
+      "subtitle_few": "{{sessionCount}} aktive Sitzungen bei {{userCount}} Benutzern",
+      "subtitle_many": "{{sessionCount}} aktive Sitzungen bei {{userCount}} Benutzern"
     }
   },
   "ssoBulk": {
@@ -2621,7 +2682,9 @@
         "unlinkedCount": "Verknüpfung von {{count}} Konten über {{provider}} aufgehoben.",
         "previewUnlink_one": "Vorschau bereit. Wir heben die Verknüpfung von {{count}} ausgewählten Benutzer auf.",
         "previewUnlink_other": "Vorschau bereit. Wir heben die Verknüpfung von {{count}} ausgewählten Benutzern auf.",
-        "previewLink": "Vorschau bereit. Überprüfen Sie die Zusammenfassung, bevor Sie Konten verknüpfen."
+        "previewLink": "Vorschau bereit. Überprüfen Sie die Zusammenfassung, bevor Sie Konten verknüpfen.",
+        "previewUnlink_few": "Vorschau bereit. Wir heben die Verknüpfung von {{count}} ausgewählten Benutzern auf.",
+        "previewUnlink_many": "Vorschau bereit. Wir heben die Verknüpfung von {{count}} ausgewählten Benutzern auf."
       },
       "results": {
         "completeTitle": "Zuweisung abgeschlossen",
@@ -2636,12 +2699,16 @@
         "wouldLink": "Würde verknüpft",
         "alreadyUnlinked": "Bereits nicht verknüpft",
         "alreadyLinked": "Bereits verknüpft",
-        "skippedInactive": "Übersprungen (inaktiv)"
+        "skippedInactive": "Übersprungen (inaktiv)",
+        "processed_few": "{{count}} Benutzer verarbeitet.",
+        "processed_many": "{{count}} Benutzer verarbeitet."
       },
       "providerNames": {
         "google": "Google Workspace",
         "microsoft": "Microsoft 365"
-      }
+      },
+      "selected_few": "{{count}} Benutzer ausgewählt.",
+      "selected_many": "{{count}} Benutzer ausgewählt."
     },
     "clientPortalProvisioning": {
       "deactivateBody": "Wenn diese Option aktiviert ist, werden durch die Entra-Bereitstellung verwaltete Benutzer deaktiviert, sobald ihre Zugriffsgruppenberechtigung entfernt wird.",
@@ -2657,6 +2724,10 @@
       "modeTitle": "Entra-Bereitstellungsmodus für das Kundenportal",
       "modeWorkflowManaged": "Workflow-gesteuert",
       "workflowManagedInfo": "Im Workflow-gesteuerten Modus werden nur Entra-Zugriffsereignisse veröffentlicht. Der ausgewählte Workflow ist für die Bereitstellung von Kundenportalbenutzern, Rollenzuweisungen, Einladungen und Lebenszyklusänderungen verantwortlich."
+    },
+    "proFeature": {
+      "title": "Sammelzuweisung für Single Sign-On",
+      "description": "Diese Funktion ist in Pro verfügbar. Führen Sie ein Upgrade durch, um SSO-Zuweisungen für Google Workspace und Microsoft 365 direkt auf der Seite mit den Sicherheitseinstellungen zu verwalten."
     }
   },
   "profile": {
@@ -2905,7 +2976,9 @@
         "overallCompliance": "Gesamteinhaltung",
         "pausedSla": "Tickets mit pausiertem SLA",
         "ticketsTracked_one": "{{count}} Ticket erfasst",
-        "ticketsTracked_other": "{{count}} Tickets erfasst"
+        "ticketsTracked_other": "{{count}} Tickets erfasst",
+        "ticketsTracked_few": "{{count}} Tickets erfasst",
+        "ticketsTracked_many": "{{count}} Tickets erfasst"
       },
       "recentBreaches": {
         "empty": "Keine SLA-Verstöße im ausgewählten Zeitraum",
@@ -2948,7 +3021,9 @@
         "responseTrackingDisabled": "Verfolgung des Reaktionsstatus deaktiviert",
         "responseTrackingEnabled": "Verfolgung des Reaktionsstatus aktiviert",
         "statusesUpdated_one": "{{count}} Statuskonfiguration wurde erfolgreich aktualisiert",
-        "statusesUpdated_other": "{{count}} Statuskonfigurationen wurden erfolgreich aktualisiert"
+        "statusesUpdated_other": "{{count}} Statuskonfigurationen wurden erfolgreich aktualisiert",
+        "statusesUpdated_few": "{{count}} Statuskonfigurationen wurden erfolgreich aktualisiert",
+        "statusesUpdated_many": "{{count}} Statuskonfigurationen wurden erfolgreich aktualisiert"
       },
       "perStatus": {
         "description": "Konfigurieren Sie, bei welchen Ticketstatus der SLA-Zeitgeber pausiert werden soll. Wenn ein Ticket in einen Status mit aktivierter Pause verschoben wird, hält der SLA-Zeitgeber an, bis das Ticket in einen anderen Status verschoben wird.",
@@ -2960,7 +3035,9 @@
         "resetChanges": "Änderungen zurücksetzen",
         "saveChanges": "Änderungen speichern",
         "saving": "Wird gespeichert...",
-        "title": "Pausenkonfiguration nach Status"
+        "title": "Pausenkonfiguration nach Status",
+        "modifiedCount_few": "{{count}} Status geändert",
+        "modifiedCount_many": "{{count}} Status geändert"
       },
       "retry": "Erneut versuchen"
     },
@@ -3003,7 +3080,9 @@
         "selectAll": "Alle auswählen",
         "selectAllVisible": "Alle sichtbaren Einträge auswählen",
         "selectedCount_one": "{{count}} ausgewählt",
-        "selectedCount_other": "{{count}} ausgewählt"
+        "selectedCount_other": "{{count}} ausgewählt",
+        "selectedCount_few": "{{count}} ausgewählt",
+        "selectedCount_many": "{{count}} ausgewählt"
       },
       "targets": {
         "always": "24/7 (Geschäftszeiten ignorieren)",
@@ -3096,7 +3175,13 @@
         "usageClients_one": "Kunde: {{names}}",
         "usageClients_other": "Kunden: {{names}}",
         "usageTickets_one": "{{count}} Ticket",
-        "usageTickets_other": "{{count}} Tickets"
+        "usageTickets_other": "{{count}} Tickets",
+        "usageBoards_few": "Zugewiesene Boards: {{names}}",
+        "usageBoards_many": "Zugewiesene Boards: {{names}}",
+        "usageClients_few": "Kunden: {{names}}",
+        "usageClients_many": "Kunden: {{names}}",
+        "usageTickets_few": "{{count}} Tickets",
+        "usageTickets_many": "{{count}} Tickets"
       },
       "description": "SLA-Richtlinien verwalten, die Zielwerte für Reaktions- und Lösungszeiten festlegen",
       "empty": "Keine SLA-Richtlinien gefunden. Klicken Sie auf \"Richtlinie hinzufügen\", um Ihre erste Richtlinie zu erstellen.",
@@ -3562,5 +3647,185 @@
   },
   "common": {
     "saving": "Wird gespeichert…"
+  },
+  "featureFlags": {
+    "categories": {
+      "core": {
+        "title": "Kernfunktionen",
+        "description": "Wesentliche Funktionen für den täglichen Betrieb"
+      },
+      "ui": {
+        "title": "Benutzeroberfläche",
+        "description": "Neue Funktionen und Verbesserungen der Benutzeroberfläche"
+      },
+      "ai": {
+        "title": "KI-Funktionen",
+        "description": "Funktionen mit künstlicher Intelligenz"
+      },
+      "integrations": {
+        "title": "Integrationen",
+        "description": "Integrationen mit Drittanbieterdiensten"
+      },
+      "performance": {
+        "title": "Performance",
+        "description": "Funktionen zur Leistungsoptimierung"
+      },
+      "experimental": {
+        "title": "Experimentell",
+        "description": "Innovative Funktionen in Entwicklung"
+      }
+    },
+    "features": {
+      "enable_ticket_automation": {
+        "title": "Ticket-Automatisierung",
+        "description": "Tickets automatisch anhand von Regeln zuweisen und weiterleiten"
+      },
+      "enable_time_tracking": {
+        "title": "Zeiterfassung",
+        "description": "Zeitaufwand für Tickets und Projekte erfassen"
+      },
+      "enable_billing": {
+        "title": "Abrechnungssystem",
+        "description": "Rechnungserstellung und Zahlungsüberwachung"
+      },
+      "new_ticket_ui": {
+        "title": "Neue Ticket-Oberfläche",
+        "description": "Überarbeitete Oberfläche zur Erstellung und Verwaltung von Tickets"
+      },
+      "new_dashboard_layout": {
+        "title": "Modernes Dashboard",
+        "description": "Neues Dashboard mit anpassbaren Widgets"
+      },
+      "ai_ticket_suggestions": {
+        "title": "KI-Ticket-Vorschläge",
+        "description": "KI-gestützte Ticket-Kategorisierung und Prioritätsvorschläge"
+      },
+      "enable_ai_time_tracking": {
+        "title": "KI-Zeiterfassung",
+        "description": "Zeit automatisch anhand der Aktivität erfassen"
+      },
+      "enable_predictive_analytics": {
+        "title": "Prädiktive Analysen",
+        "description": "Ticketaufkommen und Ressourcenbedarf vorhersagen"
+      },
+      "enable_slack_integration": {
+        "title": "Slack-Integration",
+        "description": "Benachrichtigungen und Aktualisierungen an Slack senden"
+      },
+      "teams-integration-ui": {
+        "description": "Mit Microsoft Teams integrieren"
+      },
+      "enable_jira_sync": {
+        "title": "Jira-Synchronisierung",
+        "description": "Tickets mit Jira-Vorgängen synchronisieren"
+      },
+      "enable_query_caching": {
+        "title": "Abfrage-Caching",
+        "description": "Datenbankabfragen für schnellere Antwortzeiten zwischenspeichern"
+      },
+      "enable_lazy_loading": {
+        "title": "Bedarfsgesteuertes Laden",
+        "description": "Inhalte bei Bedarf laden, um die Leistung zu verbessern"
+      },
+      "enable_websocket_updates": {
+        "title": "Echtzeitaktualisierungen",
+        "description": "WebSockets für sofortige Aktualisierungen verwenden"
+      },
+      "enable_voice_commands": {
+        "title": "Sprachbefehle",
+        "description": "Die App mit Sprachbefehlen steuern"
+      },
+      "beta_mobile_app": {
+        "title": "Mobile App (Beta)",
+        "description": "Zugriff auf die Beta-Version der mobilen App"
+      }
+    },
+    "enums": {
+      "stable": "Stabil",
+      "beta": "Beta",
+      "experimental": "Experimentell"
+    },
+    "loading": "Funktionsschalter werden geladen...",
+    "title": "Funktionsschalter",
+    "description": "Aktivieren oder deaktivieren Sie Funktionen in Ihrer Anwendung. Einige Funktionen erfordern möglicherweise einen Neustart.",
+    "unsaved": "Sie haben ungespeicherte Änderungen. Klicken Sie auf Speichern, um sie anzuwenden.",
+    "requiresRestart": "Neustart erforderlich",
+    "errors": {
+      "loadFailed": "Fehler beim Laden der Funktionsschalter: {{message}}"
+    },
+    "dependencies": "Erfordert: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Spracheinstellungen des Kundenportals",
+    "description": "Konfigurieren Sie die Sprachoptionen für Ihre Kunden",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Standardsprache",
+        "help": "Diese Sprache wird für neue Kunden und bei fehlender Spracheinstellung verwendet"
+      },
+      "availableLanguages": {
+        "label": "Verfügbare Sprachen",
+        "help": "Wählen Sie die Sprachen aus, die Ihren Kunden zur Auswahl stehen"
+      }
+    },
+    "defaultSuffix": "(Standard)",
+    "preview": {
+      "title": "Vorschau",
+      "defaultLanguage": "Standardsprache:",
+      "availableLanguages": "Verfügbare Sprachen:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Einstellungen erfolgreich gespeichert"
+      }
+    },
+    "errors": {
+      "saveFailed": "Einstellungen konnten nicht gespeichert werden"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Englisch",
+      "fr": "Französisch",
+      "es": "Spanisch",
+      "de": "Deutsch",
+      "nl": "Niederländisch",
+      "it": "Italienisch",
+      "pl": "Polnisch",
+      "pt": "Portugiesisch (Brasilien)",
+      "sv": "Schwedisch",
+      "xx": "Pseudosprache (xx)",
+      "yy": "Pseudosprache (yy)"
+    }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Nutzungsstatistiken",
+        "enabledDescription": "Aktiviert - Sendet anonyme Nutzungsdaten zur Verbesserung des Produkts",
+        "disabledDescription": "Deaktiviert - Sendet anonyme Nutzungsdaten zur Verbesserung des Produkts"
+      }
+    },
+    "environmentHelp": "Nutzungsstatistiken werden über die Umgebungsvariable {{variable}} gesteuert. Wenden Sie sich an Ihren Systemadministrator, um diese Einstellung zu ändern.",
+    "sections": {
+      "collectedData": {
+        "title": "Welche Daten werden erfasst",
+        "featureUsage": "Nutzungsmuster von Funktionen (keine personenbezogenen Daten)",
+        "errorReports": "Fehlerberichte zur Fehlerbehebung",
+        "performance": "Leistungskennzahlen",
+        "configuration": "Systemkonfiguration (anonymisiert)"
+      }
+    }
+  },
+  "dialogs": {
+    "statusImport": {
+      "title": "Standardstatus importieren",
+      "description": "Wählen Sie die Standardstatus aus, die Sie importieren möchten",
+      "selectAll": "Alle auswählen ({{selected}}/{{total}})",
+      "closed": "Geschlossen",
+      "default": "Standard",
+      "empty": "Keine Standardstatus zum Importieren verfügbar",
+      "importSelected": "Ausgewählte importieren ({{count}})"
+    }
   }
 }

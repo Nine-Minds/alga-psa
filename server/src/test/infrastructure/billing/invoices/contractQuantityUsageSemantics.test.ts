@@ -735,10 +735,11 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       const preview = await previewInvoice(setup.billingCycleId);
       expect(preview.usageServicePeriodStatuses?.[0]).toMatchObject({quantity: 0, billable_quantity: 5, status: 'minimum_raised_zero'});
     });
-    it.each(['advance', 'arrears'])('uses authoritative %s timing when accepting a reported service period', async timing => {
+    // Usage lines always bill in arrears; the authoring policy and the DB CHECK constraint reject 'advance'.
+    it.each(['arrears'])('uses authoritative %s timing when accepting a reported service period', async timing => {
       const setup = await setupUsageLine({measurementMode: 'period_total'});
       await context.db('contract_lines').where({tenant: context.tenantId, contract_line_id: setup.contractLineId}).update({billing_timing: timing});
-      const canonical = timing === 'advance' ? {period_start: '2023-02-01', period_end: '2023-02-28'} : JAN_PERIOD;
+      const canonical = JAN_PERIOD;
       expect(await upsertUsagePeriodTotal({...reportInput(setup), ...canonical})).toHaveProperty('total');
       expect(await upsertUsagePeriodTotal({...reportInput(setup), ...canonical, period_end: '2023-02-27'})).toHaveProperty('actionError');
     });

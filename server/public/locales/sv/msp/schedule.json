@@ -853,5 +853,81 @@
       "members": "Medlemmar",
       "creatorNote": "Du kommer att kunna hantera den här kalendern."
     }
+  },
+  "ticketDetails": {
+    "title": "Ärendedetaljer",
+    "numberedTitle": "Ärende nr {{number}}",
+    "untitled": "Ärende utan titel",
+    "noDescription": "Ingen beskrivning",
+    "notAvailable": "Ej tillgängligt",
+    "unassigned": "Ej tilldelat",
+    "fields": {
+      "title": {
+        "label": "Titel"
+      },
+      "description": {
+        "label": "Beskrivning"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "priority": {
+        "label": "Prioritet"
+      },
+      "board": {
+        "label": "Tavla"
+      },
+      "client": {
+        "label": "Kund"
+      },
+      "contact": {
+        "label": "Kontakt"
+      },
+      "assignedUser": {
+        "label": "Tilldelad användare"
+      },
+      "entered": {
+        "label": "Registrerat"
+      },
+      "updated": {
+        "label": "Uppdaterat"
+      },
+      "closed": {
+        "label": "Stängt"
+      }
+    }
+  },
+  "projectTaskDetails": {
+    "title": "Projektuppgift",
+    "noDescription": "Ingen beskrivning",
+    "notAvailable": "Ej tillgängligt",
+    "unassigned": "Ej tilldelad",
+    "untitledItem": "Post utan titel",
+    "noChecklistItems": "Inga punkter i checklistan",
+    "fields": {
+      "description": {
+        "label": "Beskrivning"
+      },
+      "project": {
+        "label": "Projekt"
+      },
+      "phase": {
+        "label": "Fas"
+      },
+      "assignedTo": {
+        "label": "Tilldelad till"
+      },
+      "dueDate": {
+        "label": "Förfallodatum"
+      },
+      "checklist": {
+        "label": "Checklista"
+      }
+    }
+  },
+  "fallback": {
+    "agentSchedule": "Handläggarens schemavy hanteras nu i Schemaläggning. (agentId: {{agentId}})",
+    "timeEntry": "Tidposter hanteras i Schemaläggning.",
+    "scheduling": "Schemaläggning hanteras i Schemaläggning."
   }
 }

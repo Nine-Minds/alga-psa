@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Ajouter une entrée de temps"
+    }
+  },
   "common": {
     "actions": {
       "view": "Voir",
@@ -513,7 +518,8 @@
     "entryMissingPeriod": "La feuille de temps de cette entrée n'a pas de période et ne peut pas être ouverte.",
     "noPeriods": "Aucune période de temps n'est configurée, la saisie du temps est donc impossible. Demandez à un administrateur de créer des périodes de temps sous Paramètres → Saisie du temps.",
     "noEditablePeriods": "Toutes les feuilles de temps sont soumises ou approuvées ; il n’y a donc aucun jour où ajouter du temps. Demandez à un approbateur de rouvrir une feuille, ou à un administrateur d’ajouter une période.",
-    "prepareFailed": "Une erreur s'est produite lors de la préparation de l'entrée de temps. Veuillez réessayer."
+    "prepareFailed": "Une erreur s'est produite lors de la préparation de l'entrée de temps. Veuillez réessayer.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Suggestions",
@@ -538,7 +544,9 @@
       "checklistChanged": "liste de contrôle modifiée",
       "linksChanged": "liens modifiés",
       "updated": "mis à jour"
-    }
+    },
+    "activitySummary_few": "première activité {{first}} · dernière {{last}} · {{count}} actions ({{kinds}})",
+    "activitySummary_many": "première activité {{first}} · dernière {{last}} · {{count}} actions ({{kinds}})"
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} suivi en {{count}} segment (pause : {{paused}})",
@@ -557,6 +565,8 @@
       "confirm": "Continuer",
       "cancel": "Annuler"
     },
-    "ticketFallbackName": "Ticket {{number}}"
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "{{active}} suivis en {{count}} segments (pause : {{paused}})",
+    "pausedNotice_many": "{{active}} suivis en {{count}} segments (pause : {{paused}})"
   }
 }

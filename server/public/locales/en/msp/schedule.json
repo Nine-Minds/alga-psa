@@ -853,5 +853,81 @@
       "members": "Members",
       "creatorNote": "You will be able to manage this calendar."
     }
+  },
+  "ticketDetails": {
+    "title": "Ticket Details",
+    "numberedTitle": "Ticket #{{number}}",
+    "untitled": "Untitled ticket",
+    "noDescription": "No description",
+    "notAvailable": "N/A",
+    "unassigned": "Unassigned",
+    "fields": {
+      "title": {
+        "label": "Title"
+      },
+      "description": {
+        "label": "Description"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "priority": {
+        "label": "Priority"
+      },
+      "board": {
+        "label": "Board"
+      },
+      "client": {
+        "label": "Client"
+      },
+      "contact": {
+        "label": "Contact"
+      },
+      "assignedUser": {
+        "label": "Assigned User"
+      },
+      "entered": {
+        "label": "Entered"
+      },
+      "updated": {
+        "label": "Updated"
+      },
+      "closed": {
+        "label": "Closed"
+      }
+    }
+  },
+  "projectTaskDetails": {
+    "title": "Project Task",
+    "noDescription": "No description",
+    "notAvailable": "N/A",
+    "unassigned": "Unassigned",
+    "untitledItem": "Untitled item",
+    "noChecklistItems": "No checklist items",
+    "fields": {
+      "description": {
+        "label": "Description"
+      },
+      "project": {
+        "label": "Project"
+      },
+      "phase": {
+        "label": "Phase"
+      },
+      "assignedTo": {
+        "label": "Assigned To"
+      },
+      "dueDate": {
+        "label": "Due Date"
+      },
+      "checklist": {
+        "label": "Checklist"
+      }
+    }
+  },
+  "fallback": {
+    "agentSchedule": "Agent schedule view is now owned by Scheduling. (agentId: {{agentId}})",
+    "timeEntry": "Time entry is managed in Scheduling.",
+    "scheduling": "Scheduling is managed in Scheduling."
   }
 }

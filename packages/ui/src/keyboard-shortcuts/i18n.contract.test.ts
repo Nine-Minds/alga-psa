@@ -54,7 +54,7 @@ describe('keyboard shortcuts i18n contract', () => {
   it('preloads the namespace on MSP routes and uses translation keys in UI', () => {
     const config = readFileSync(resolve(repoRoot, 'packages/core/src/lib/i18n/config.ts'), 'utf8');
     expect(config).toContain("'/msp': ['common', 'msp/core', 'msp/dashboard', 'msp/keyboard-shortcuts']");
-    expect(config).toContain("'/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/keyboard-shortcuts'");
+    expect(config).toContain("'/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/extensions', 'msp/keyboard-shortcuts'");
 
     const userProfile = readFileSync(resolve(repoRoot, 'server/src/components/settings/profile/UserProfile.tsx'), 'utf8');
     expect(userProfile).toContain("t('profile.tabs.keyboardShortcuts'");

@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Lägg till tidpost"
+    }
+  },
   "common": {
     "actions": {
       "view": "Visa",
@@ -513,7 +518,8 @@
     "entryMissingPeriod": "Tidrapporten för den här posten saknar sin tidsperiod och kan inte öppnas.",
     "noPeriods": "Inga tidsperioder har skapats ännu, så tid kan inte registreras. Be en administratör skapa tidsperioder under Inställningar → Tidregistrering.",
     "noEditablePeriods": "Alla tidrapporter är inskickade eller godkända, så det finns ingen dag att lägga till tid på. Be en godkännare öppna en tidrapport igen, eller en administratör att lägga till en tidsperiod.",
-    "prepareFailed": "Ett fel uppstod när tidposten förbereddes. Försök igen."
+    "prepareFailed": "Ett fel uppstod när tidposten förbereddes. Försök igen.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Förslag",
@@ -538,7 +544,9 @@
       "checklistChanged": "checklista ändrad",
       "linksChanged": "länkar ändrade",
       "updated": "uppdaterat"
-    }
+    },
+    "activitySummary_few": "första aktivitet {{first}} · senaste {{last}} · {{count}} åtgärder ({{kinds}})",
+    "activitySummary_many": "första aktivitet {{first}} · senaste {{last}} · {{count}} åtgärder ({{kinds}})"
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} spårat i {{count}} segment (pausat {{paused}})",
@@ -557,6 +565,8 @@
       "confirm": "Fortsätt",
       "cancel": "Avbryt"
     },
-    "ticketFallbackName": "Ärende {{number}}"
+    "ticketFallbackName": "Ärende {{number}}",
+    "pausedNotice_few": "{{active}} spårat i {{count}} segment (pausat {{paused}})",
+    "pausedNotice_many": "{{active}} spårat i {{count}} segment (pausat {{paused}})"
   }
 }

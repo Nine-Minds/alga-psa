@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { useMemo, useState } from "react";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { Button } from "@alga-psa/ui/components/Button";
@@ -44,6 +45,7 @@ function VariableRow({
   onInsert?: (token: string) => void;
   appliesTo?: string[];
 }) {
+  const { t } = useTranslation("msp/settings");
   const [copied, setCopied] = useState(false);
   const token = tokenFor(variable);
   const copy = async () => {
@@ -60,7 +62,7 @@ function VariableRow({
           type="button"
           className={`min-w-0 flex-1 text-left ${onInsert ? "cursor-text" : "cursor-default"}`}
           onClick={() => onInsert?.(token)}
-          title={onInsert ? "Insert at cursor" : undefined}
+          title={onInsert ? t('notifications.templateVariables.actions.insert') : undefined}
         >
           <div className="flex flex-wrap items-center gap-2">
             <code className="break-all text-xs font-semibold text-primary-700 dark:text-primary-300">
@@ -79,11 +81,11 @@ function VariableRow({
             {variable.description}
           </p>
           <p className="mt-1 hidden break-words text-xs text-[rgb(var(--color-text-500))] group-hover:block group-focus-within:block">
-            Example: <span className="font-mono">{variable.example}</span>
+            {t('notifications.templateVariables.example')} <span className="font-mono">{variable.example}</span>
           </p>
           {appliesTo && (
             <p className="mt-1 text-[11px] text-[rgb(var(--color-text-500))]">
-              Used by {appliesTo.join(", ")}
+              {t('notifications.templateVariables.usedBy', { templates: appliesTo.join(', ') })}
             </p>
           )}
         </button>
@@ -94,7 +96,7 @@ function VariableRow({
           size="sm"
           className="h-7 w-7 shrink-0 p-0"
           onClick={copy}
-          aria-label={`Copy ${variable.path}`}
+          aria-label={t('notifications.templateVariables.actions.copy', { path: variable.path })}
         >
           {copied ? (
             <Check className="h-3.5 w-3.5" />
@@ -114,6 +116,7 @@ export function TemplateVariablePanel({
   templateName: string;
   onInsert?: (token: string) => void;
 }) {
+  const { t } = useTranslation("msp/settings");
   const [search, setSearch] = useState("");
   const entry = templateVariableRegistry[templateName];
   const variables = useMemo(
@@ -129,12 +132,12 @@ export function TemplateVariablePanel({
         <div className="flex items-center justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-[rgb(var(--color-text-800))]">
-              Template variables
+              {t('notifications.templateVariables.panelTitle')}
             </h3>
             <p className="mt-0.5 text-xs text-[rgb(var(--color-text-500))]">
               {onInsert
-                ? "Select a variable to insert it."
-                : "Variables available to this template."}
+                ? t('notifications.templateVariables.insertHelp')
+                : t('notifications.templateVariables.availableHelp')}
             </p>
           </div>
           <Badge size="sm" variant="info">
@@ -143,7 +146,7 @@ export function TemplateVariablePanel({
         </div>
         {entry?.contractInferred && (
           <div className="mt-2 rounded-md border border-[rgb(var(--badge-warning-border))] bg-[rgb(var(--badge-warning-bg))] px-2 py-1.5 text-xs text-[rgb(var(--badge-warning-text))]">
-            Not currently sent. This contract is inferred from the template.
+            {t('notifications.templateVariables.inferredContract')}
           </div>
         )}
         <div className="relative mt-3">
@@ -152,7 +155,7 @@ export function TemplateVariablePanel({
             id={`template-variable-search-${templateName}`}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search variables"
+            placeholder={t('notifications.templateVariables.fields.search.placeholder')}
             className="pl-8"
           />
         </div>
@@ -168,7 +171,7 @@ export function TemplateVariablePanel({
         ))}
         {variables.length === 0 && (
           <p className="py-8 text-center text-sm text-[rgb(var(--color-text-500))]">
-            No matching variables.
+            {t('notifications.templateVariables.empty')}
           </p>
         )}
       </div>
@@ -189,6 +192,8 @@ export function VariableReferenceDialog({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("msp/settings");
+  const { t: tCommon } = useTranslation("common");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const grouped = useMemo(() => {
@@ -225,14 +230,14 @@ export function VariableReferenceDialog({
         rel="noreferrer"
         className="inline-flex items-center gap-1 text-sm text-primary-700 hover:underline dark:text-primary-300"
       >
-        Read the complete guide <ExternalLink className="h-3.5 w-3.5" />
+        {t('notifications.templateVariables.actions.guide')} <ExternalLink className="h-3.5 w-3.5" />
       </a>
       <Button
         id="close-variable-reference-dialog"
         type="button"
         onClick={onClose}
       >
-        Close
+        {tCommon('actions.close')}
       </Button>
     </div>
   );
@@ -241,31 +246,30 @@ export function VariableReferenceDialog({
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      title="Email template variable reference"
+      title={t('notifications.templateVariables.title')}
       className="max-w-4xl"
       footer={footer}
     >
       <DialogContent>
         <p className="text-sm text-[rgb(var(--color-text-600))]">
-          Find the data available to each system email template. Copy the exact
-          Handlebars token into a custom template.
+          {t('notifications.templateVariables.description')}
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_14rem]">
           <Input
             id="global-template-variable-search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search paths, descriptions, and concepts"
+            placeholder={t('notifications.templateVariables.fields.globalSearch.placeholder')}
           />
           <CustomSelect
             id="global-template-variable-category"
             value={category}
             onValueChange={setCategory}
             options={[
-              { value: "all", label: "All areas" },
+              { value: "all", label: t('notifications.templateVariables.fields.category.all') },
               ...templateVariableCategories.map((value) => ({
                 value,
-                label: value,
+                label: t(`notifications.templateVariables.enums.categories.${value}`),
               })),
             ]}
           />
@@ -279,7 +283,7 @@ export function VariableReferenceDialog({
                 {(index === 0 ||
                   grouped[index - 1].category !== rowCategory) && (
                   <div className="sticky top-0 z-10 -mx-4 border-y border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[rgb(var(--color-text-600))] first:border-t-0">
-                    {rowCategory}
+                    {t(`notifications.templateVariables.enums.categories.${rowCategory}`)}
                   </div>
                 )}
                 <VariableRow
@@ -292,7 +296,7 @@ export function VariableReferenceDialog({
           )}
           {grouped.length === 0 && (
             <p className="py-10 text-center text-sm text-[rgb(var(--color-text-500))]">
-              No matching variables.
+              {t('notifications.templateVariables.empty')}
             </p>
           )}
         </div>
