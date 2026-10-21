@@ -8,6 +8,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
 import { withAuth } from '@alga-psa/auth';
+import { withSerializableAuth } from './serializableAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   actionError,
@@ -524,6 +525,9 @@ export const getServices = withAuth(async (
         throw error
     }
 });
+
+/** Same catalog read for the draft adjustment loader, with JSON-safe auth recovery. */
+export const getServicesRecoverable = withSerializableAuth(getServices);
 
 export const getServiceById = withAuth(async (user, { tenant }, serviceId: string): Promise<IService | null | ServiceActionError> => {
     const { knex: db } = await createTenantKnex();

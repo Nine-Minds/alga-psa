@@ -209,7 +209,35 @@
       "ariaLabel": "Ressources et aide",
       "title": "Ressources",
       "documentation": "Documentation",
-      "support": "Contacter l'assistance"
+      "support": "Contacter l'assistance",
+      "submitTicket": "Envoyer un ticket à Nine Minds"
+    },
+    "supportDialog": {
+      "title": "Envoyer un ticket à Nine Minds",
+      "intro": "L’assistance Nine Minds reçoit ceci sous forme de ticket et répond par e-mail.",
+      "categoryLabel": "Sur quoi avez-vous besoin d’aide ?",
+      "categories": {
+        "bug": "Quelque chose ne fonctionne pas",
+        "question": "Question",
+        "billing": "Facturation",
+        "feature": "Demande de fonctionnalité"
+      },
+      "subjectLabel": "Objet",
+      "descriptionLabel": "Que s’est-il passé ?",
+      "descriptionPlaceholder": "Précisez ce que vous attendiez, ce qui s’est passé et le client ou la facture concernés.",
+      "replyTo": "Les réponses sont envoyées à {{email}}",
+      "success": "Envoyé à l’assistance Nine Minds. Les réponses sont envoyées à {{email}}.",
+      "submit": "Envoyer à Nine Minds",
+      "sending": "Envoi en cours…",
+      "cancel": "Annuler",
+      "close": "Fermer",
+      "fallbackLink": "Contacter l’assistance sur nineminds.com",
+      "errors": {
+        "invalidInput": "Saisissez un objet de 3 caractères minimum et une description de 20 caractères minimum.",
+        "rateLimited": "Vous venez d’envoyer une demande. Attendez une minute avant d’en envoyer une autre.",
+        "emailNotConfigured": "Aucun envoi d’e-mail n’est configuré sur cette installation, la demande n’a donc pas pu être envoyée.",
+        "sendFailed": "L’envoi de la demande a échoué. Réessayez."
+      }
     },
     "jobs": {
       "ariaLabel": "Voir l'activité des tâches d'arrière-plan",
@@ -783,5 +811,37 @@
   "githubStar": {
     "label": "Ajouter une étoile",
     "ariaLabel": "Ajouter une étoile à {{repository}} sur GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "Portail MSP",
+      "dashboard": "Tableau de bord",
+      "ticketDetails": "Détails du ticket",
+      "tickets": "Tickets",
+      "projectDetails": "Détails du projet",
+      "projects": "Projets",
+      "clientDetails": "Détails du client",
+      "clients": "Clients",
+      "contactDetails": "Détails du contact",
+      "contacts": "Contacts",
+      "assetDetails": "Détails de l’actif",
+      "assets": "Actifs",
+      "billing": "Facturation",
+      "settings": "Paramètres",
+      "settingsSection": "Paramètres : {{section}}",
+      "chat": "Discussion"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Fonctionnalité Pro",
+      "description": "Les fonctionnalités de chat avec IA nécessitent Pro. Passez à la version supérieure pour accéder à cette fonctionnalité."
+    },
+    "messages": {
+      "proRequired": "Les fonctionnalités de messagerie nécessitent Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Les fonctionnalités de chat sont uniquement disponibles dans Enterprise Edition"
+    }
   }
 }

@@ -18,6 +18,12 @@ vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importO
 
 type Row = Record<string, any>;
 
+const adjustmentPreview = vi.hoisted(() => vi.fn());
+vi.mock('../../../../../packages/billing/src/services/invoiceAutomaticAdjustments', () => ({
+  previewAutomaticInvoiceDiscounts: adjustmentPreview,
+  reconcileAutomaticInvoiceAdjustments: vi.fn(),
+}));
+
 // Unknown preview failures surface only a coded UNEXPECTED result whose message
 // carries a short support reference; the raw cause stays in the server log.
 const UNEXPECTED_PREVIEW_FAILURE = {
@@ -414,6 +420,7 @@ const {
 describe('invoice preview recurring timing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    adjustmentPreview.mockResolvedValue({ discounts: [] });
     mocks.missingTables.clear();
     mocks.hasPermission.mockReturnValue(true);
     mocks.validateClientBillingEmail.mockResolvedValue({ valid: true });
@@ -512,6 +519,32 @@ describe('invoice preview recurring timing', () => {
       finalAmount: 4000,
       currency_code: 'USD',
     });
+  });
+
+  it('renders shared automatic settlements instead of the legacy engine discount estimate', async () => {
+    const calculated = await mocks.calculateBillingForExecutionWindow();
+    mocks.calculateBillingForExecutionWindow.mockResolvedValue({
+      ...calculated,
+      discounts: [{ discount_id: 'legacy', discount_name: 'Wrong legacy base', amount: 3200 }],
+    } as any);
+    adjustmentPreview.mockResolvedValue({ discounts: [
+      { discount_id: 'line-term', discount_name: 'Line 10%', discount_type: 'percentage', value: 10, amount: 400 },
+      { discount_id: 'contract-term', discount_name: 'Contract fixed', discount_type: 'fixed', value: 2500, amount: 2500 },
+    ] });
+    const result = await previewInvoice('cycle-1');
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error(result.error);
+    expect(result.data.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ description: 'Line 10%', total: -400 }),
+      expect.objectContaining({ description: 'Contract fixed', total: -2500 }),
+    ]));
+    expect(result.data.items.some((item) => item.description === 'Wrong legacy base')).toBe(false);
+    expect(result.data.subtotal).toBe(1100);
+    expect(result.data.tax).toBe(200);
+    expect(result.data.total).toBe(1300);
+    expect(adjustmentPreview).toHaveBeenCalledWith(
+      expect.anything(), 'tenant-1', 'client-1', calculated.charges, expect.any(String),
+    );
   });
 
   it('T076: one-cycle invoice preview uses canonical service periods and still matches expected recurring totals', async () => {

@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Funzionalità Pro"
+    },
     "accounting": {
       "bulk": {
         "button": "Mappatura in blocco",
@@ -124,6 +127,15 @@
           "paymentTerms": "Termini di pagamento",
           "discounts": "Sconti"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Conti servizi Desktop",
+        "desktopDiscounts": "Sconti Desktop",
+        "desktopAccount": "Nome conto ricavi Desktop",
+        "description": "Associa sconti e crediti prima di esportare. L’associazione appartiene a questa azienda contabile.",
+        "add": "Aggiungi associazione",
+        "remove": "Rimuovi associazione",
+        "removeConfirm": "Rimuovere questa associazione contabile?"
       }
     },
     "calendar": {
@@ -1223,7 +1235,12 @@
         "recommendedUnsaved": "Consigliato — non salvato",
         "unsavedChange": "Modifica non salvata",
         "unsavedNotice": "Questi filtri non saranno applicati finché non li salvi."
-      }
+      },
+      "proFeature": {
+        "description": "L’integrazione con Microsoft Entra è disponibile in AlgaPSA Pro.",
+        "notice": "L’integrazione delle identità di Microsoft Entra è una funzionalità Pro."
+      },
+      "loading": "Caricamento dell’integrazione con Microsoft Entra…"
     },
     "google": {
       "settings": {
@@ -1294,6 +1311,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "L’integrazione della documentazione IT di Hudu è disponibile in AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Origine: Hudu",
         "openInHudu": "Apri in Hudu",
@@ -2314,6 +2334,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "L’integrazione RMM di NinjaOne è disponibile in AlgaPSA Pro."
+        },
         "loading": "Caricamento delle impostazioni di integrazione NinjaOne...",
         "card": {
           "title": "Integrazione NinjaOne RMM",
@@ -2591,6 +2614,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "L’integrazione RMM di Tanium è disponibile in AlgaPSA Pro."
+        },
         "loading": "Caricamento impostazioni integrazione Tanium...",
         "actions": {
           "discoverScopes": "Scopri ambiti",
@@ -2661,6 +2687,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "L’integrazione RMM di Level.io è disponibile in AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Recupera avvisi",
           "disconnect": "Disconnetti",
@@ -2733,16 +2762,35 @@
           "copied": "Copiato",
           "copy": "Copia",
           "description": "Level non può registrare webhook tramite la sua API. In Level, crea un'automazione con un'azione HTTP POST usando l'URL, l'header e il payload qui sotto per inviare gli avvisi ad Alga in tempo reale.",
+          "fallbackDescription": "Usa questa alternativa solo quando i webhook nativi in Impostazioni → Webhooks di Level non sono utilizzabili. Crea un'automazione con un'azione HTTP POST usando l'URL, l'intestazione e il payload qui sotto per inviare gli avvisi ad Alga.",
+          "fallbackNameHint": "Modifica il valore \"name\" in ogni automazione. Insieme al dispositivo identifica l'avviso, quindi le ripetizioni con lo stesso nome sullo stesso dispositivo sono un solo avviso.",
+          "fallbackTitle": "Alternativa: richiesta HTTP di automazione",
           "header": "Intestazione: {{name}}",
           "hideSecret": "Nascondi segreto",
           "loading": "I dettagli del webhook vengono caricati dopo la configurazione dell'integrazione.",
+          "nativeDescription": "In Level apri Impostazioni → Webhooks, aggiungi un webhook con l'URL e la chiave di firma qui sotto e abilita gli eventi elencati. Level firma ogni consegna e Alga verifica la firma.",
+          "nativeEvents": "Eventi da abilitare",
+          "nativeEventsHelp": "Abilita alert_active e alert_resolved. Gli altri eventi vengono confermati e ignorati.",
+          "nativeSigningSecret": "Chiave di firma",
+          "nativeTitle": "Webhook nativo (consigliato)",
           "payload": "Modello di payload",
+          "regenerateCancel": "Annulla",
+          "regenerateConfirmLabel": "Rigenera",
+          "regenerateConfirmMessage": "I webhook Level esistenti falliranno con 401 finché non incolli la nuova chiave di firma nelle impostazioni webhook di Level. Level ritenta le consegne, ma potrebbero andare perse se la chiave non viene aggiornata.",
+          "regenerateConfirmTitle": "Rigenerare la chiave di firma?",
+          "regenerateConfirmed": "Chiave di firma rigenerata. Aggiornala nelle impostazioni webhook di Level.",
+          "regenerateFailed": "Impossibile rigenerare la chiave di firma",
+          "regenerateSecret": "Rigenera chiave",
           "showSecret": "Mostra segreto",
           "title": "Webhook avvisi",
           "url": "URL webhook"
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Integrazione Huntress",
+          "description": "L’integrazione di sicurezza Huntress è una funzionalità Pro."
+        },
         "columns": {
           "organization": "Organizzazione Huntress",
           "client": "Cliente Alga",
@@ -3502,6 +3550,11 @@
           "regenerate": "Rigenera pacchetto",
           "regenerating": "Rigenerazione..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Accesso a Teams non disponibile",
+        "tabTitle": "Scheda Teams non disponibile",
+        "description": "L’integrazione con Microsoft Teams è disponibile solo in Pro."
       }
     },
     "xero": {

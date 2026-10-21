@@ -17,6 +17,13 @@ describe('renderRemoteAccessTemplate', () => {
     )).toBe('https://remote.example/Example%20Co/Workstation/abc');
   });
 
+  it('supports the RMM device id placeholder', () => {
+    expect(renderRemoteAccessTemplate(
+      'https://example.rmmservice.com/#/deviceDashboard/{asset.rmm_device_id}/details',
+      { asset: { rmm_device_id: '2456' }, client: {} }
+    )).toBe('https://example.rmmservice.com/#/deviceDashboard/2456/details');
+  });
+
   it('returns null for a missing placeholder value', () => {
     expect(renderRemoteAccessTemplate(
       'https://remote.example/{field.session}',

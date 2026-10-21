@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
 import { Package, Tag, Building, User, Calendar, FileText } from 'lucide-react';
 
@@ -8,9 +11,10 @@ interface AssetFormSkeletonProps {
 }
 
 const AssetFormSkeleton = ({ 
-  title = "Asset",
   isEdit = false
 }: AssetFormSkeletonProps) => {
+  const { t } = useTranslation('msp/assets');
+
   return (
     <div className="animate-pulse space-y-4">
       {/* Header */}
@@ -170,7 +174,7 @@ const AssetFormSkeleton = ({
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-              <p className="text-gray-500">Loading asset form...</p>
+              <p className="text-gray-500">{t('skeletons.assetForm.loading')}</p>
             </div>
           </div>
         </CardContent>

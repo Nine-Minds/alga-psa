@@ -1,0 +1,8 @@
+[
+  {"phase":"before","total_amount":390000,"revision":0,"posted_principal":390000,"adjustment_count":0,"rows":3},
+  {"phase":"add freeform 2 x 12.34","total_amount":392468,"revision":3,"posted_principal":392468,"adjustment_count":1,"manual_net_amount":2468},
+  {"phase":"repeat save","total_amount":392468,"revision":4,"posted_principal":392468,"adjustment_count":1,"manual_net_amount":2468},
+  {"phase":"edit rate to 15.00","total_amount":393000,"revision":5,"posted_principal":393000,"adjustment_count":2,"manual_net_amount":3000},
+  {"phase":"repeat edited save","total_amount":393000,"revision":6,"posted_principal":393000,"adjustment_count":2,"manual_net_amount":3000},
+  {"phase":"remove manual row","total_amount":390000,"revision":7,"posted_principal":390000,"adjustment_count":3,"rows":3}
+]

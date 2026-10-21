@@ -1,3 +1,6 @@
+import { serializeAccountingCsv } from '../../services/accountingCsv';
+import { expandAccountingExportCharges } from '../../services/accountingExportChargeExpansion';
+import { toDateOnly } from '../../lib/billing/dateOnly';
 import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
 import {
@@ -25,6 +28,12 @@ const XERO_CSV_MAX_QUANTITY_DECIMALS = 4;
 const TRACKING_CATEGORY_SOURCE_SYSTEM = 'Source System';
 const TRACKING_CATEGORY_SOURCE_VALUE = 'AlgaPSA';
 const TRACKING_CATEGORY_INVOICE_ID = 'External Invoice ID';
+const XERO_CSV_HEADERS = [
+  '*ContactName', 'EmailAddress', 'POAddressLine1', 'POAddressLine2', 'POAddressLine3', 'POAddressLine4',
+  'POCity', 'PORegion', 'POPostalCode', 'POCountry', '*InvoiceNumber', 'Reference', '*InvoiceDate',
+  '*DueDate', 'Total', 'InventoryItemCode', '*Description', '*Quantity', '*UnitAmount', 'Discount',
+  '*AccountCode', '*TaxType', 'TrackingName1', 'TrackingOption1', 'TrackingName2', 'TrackingOption2', 'Currency'
+];
 
 export function buildXeroCsvReference(invoiceId: string, poNumber?: string | null): string {
   return poNumber ? `${invoiceId} | PO ${poNumber}` : invoiceId;
@@ -49,7 +58,7 @@ type DbCharge = {
   quantity?: number | null;
   unit_price?: number | null;
   total_price: number;
-  net_amount?: number | null;
+  net_amount?: number | string | null;
   tax_amount?: number | null;
   tax_region?: string | null;
   is_discount?: boolean | null;
@@ -168,7 +177,10 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
     const resolver = await AccountingMappingResolver.create({});
 
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
-    const chargesById = await this.loadCharges(knex, tenantId, context);
+    const loadedCharges = await this.loadCharges(knex, tenantId, context);
+    const expanded = await expandAccountingExportCharges(knex, tenantId, loadedCharges, context.lines);
+    const chargesById = expanded.charges;
+    context = { ...context, lines: expanded.lines };
     const clientData = await this.loadClients(knex, tenantId, context, invoicesById);
 
     const linesByInvoice = groupBy(context.lines, (line) => line.document_id);
@@ -224,17 +236,24 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         const serviceMapping = charge.service_id
           ? await resolver.resolveServiceMapping({
               tenantId: context.batch.tenant,
-              adapterType: 'xero', // Use xero mappings (shared with OAuth adapter)
+              // The Xero CSV mapping screen stores its own xero_csv mappings.
+              adapterType: this.type,
               serviceId: charge.service_id,
               targetRealm: context.batch.target_realm
             })
           : charge.is_discount
             ? await resolver.resolveDiscountMapping({
                 tenantId: context.batch.tenant,
-                adapterType: 'xero',
+                adapterType: this.type,
                 targetRealm: context.batch.target_realm
               })
             : null;
+        if (!serviceMapping && !charge.service_id && charge.is_discount) {
+          throw new AppError(
+            'XERO_CSV_DISCOUNT_MAPPING_MISSING',
+            `No Xero CSV mapping for discount lines on invoice ${invoiceNumber}; configure the discount mapping before export.`
+          );
+        }
 
         if (serviceMapping) {
           const metadata = serviceMapping.metadata ?? {};
@@ -247,7 +266,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         if (charge.tax_region && !taxType) {
           const taxMapping = await resolver.resolveTaxCodeMapping({
             tenantId: context.batch.tenant,
-            adapterType: 'xero', // Use xero mappings
+            adapterType: this.type,
             taxRegionId: charge.tax_region,
             targetRealm: context.batch.target_realm
           });
@@ -325,43 +344,13 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
 
       documents.push({
         documentId: invoiceId,
-        lineIds: exportLines.map((line) => line.line_id),
+        lineIds: [...new Set(exportLines.map((line) => line.line_id))],
         payload: documentPayload as unknown as Record<string, unknown>
       });
     }
 
     // Generate CSV content
-    const csvHeaders = [
-      '*ContactName',
-      'EmailAddress',
-      'POAddressLine1',
-      'POAddressLine2',
-      'POAddressLine3',
-      'POAddressLine4',
-      'POCity',
-      'PORegion',
-      'POPostalCode',
-      'POCountry',
-      '*InvoiceNumber',
-      'Reference',
-      '*InvoiceDate',
-      '*DueDate',
-      'Total',
-      'InventoryItemCode',
-      '*Description',
-      '*Quantity',
-      '*UnitAmount',
-      'Discount',
-      '*AccountCode',
-      '*TaxType',
-      'TrackingName1',
-      'TrackingOption1',
-      'TrackingName2',
-      'TrackingOption2',
-      'Currency'
-    ];
-
-    const csvContent = unparseCSV(allCsvRows, csvHeaders);
+    const csvContent = serializeAccountingCsv(allCsvRows, XERO_CSV_HEADERS, ['*Quantity', '*UnitAmount', 'Discount', 'Total']);
 
     const filename = `xero-invoice-export-${context.batch.batch_id}.csv`;
 
@@ -405,9 +394,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
       throw new AppError('XERO_CSV_TENANT_REQUIRED', 'Xero CSV delivery requires batch tenant identifier');
     }
 
-    const { knex } = await createTenantKnex();
     const artifact = transformResult.files?.[0];
-    const deliveredAt = new Date().toISOString();
 
     logger.info('[XeroCsvAdapter] prepared CSV artifact for download', {
       batchId: context.batch.batch_id,
@@ -415,86 +402,37 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
       documentCount: transformResult.documents.length
     });
 
-    // Mark an invoice exported only after confirming it is not cancelled. The
-    // mapping insert takes the same invoice row lock the void path holds
-    // (invoiceExternalSyncLock.ts), so a concurrent void either commits first
-    // and refuses the export of its invoice, or waits until these mappings
-    // commit and then re-reads the mapping under its own lock.
     const deliveredLines: { lineId: string; externalDocumentRef?: string | null }[] = [];
-    const failedDocuments: Array<{
-      documentId: string;
-      lineIds: string[];
-      code: string;
-      message: string;
-    }> = [];
-
-    // Create invoice mappings to mark invoices as exported (prevents re-export)
     for (const document of transformResult.documents) {
       const payload = document.payload as unknown as XeroCsvDocumentPayload;
       const externalRef = `csv:${payload.invoiceNumber}`;
-
-      try {
-        await withTransaction(knex, async (trx) => {
-          await lockInvoiceForExternalSync(trx, tenantId, document.documentId);
-          const invoiceMappingRepository = new KnexInvoiceMappingRepository(trx);
-          await invoiceMappingRepository.upsertInvoiceMapping({
-            tenantId,
-            adapterType: this.type,
-            invoiceId: document.documentId,
-            externalInvoiceId: externalRef,
-            targetRealm: context.batch.target_realm ?? null,
-            metadata: {
-              last_exported_at: deliveredAt,
-              filename: artifact?.filename,
-              invoiceNumber: payload.invoiceNumber,
-              trackingCategories: {
-                sourceSystem: TRACKING_CATEGORY_SOURCE_SYSTEM,
-                sourceValue: TRACKING_CATEGORY_SOURCE_VALUE,
-                invoiceId: TRACKING_CATEGORY_INVOICE_ID
-              }
-            }
-          });
-        });
-
-        for (const lineId of document.lineIds) {
-          deliveredLines.push({
-            lineId,
-            externalDocumentRef: externalRef
-          });
-        }
-      } catch (error) {
-        const code = error instanceof AppError ? error.code : 'XERO_CSV_DELIVERY_ERROR';
-        const message = error instanceof Error ? error.message : 'Unknown Xero CSV delivery error';
-        logger.warn('[XeroCsvAdapter] Skipping mapping for invoice delivery failure', {
-          batchId: context.batch.batch_id,
-          invoiceId: document.documentId,
-          code,
-          error: message
-        });
-        failedDocuments.push({
-          documentId: document.documentId,
-          lineIds: document.lineIds,
-          code,
-          message
-        });
-      }
+      for (const lineId of document.lineIds) deliveredLines.push({ lineId, externalDocumentRef: externalRef });
     }
 
-    logger.info('[XeroCsvAdapter] created invoice mappings', {
+    logger.info('[XeroCsvAdapter] prepared invoice mappings', {
       batchId: context.batch.batch_id,
       tenant: tenantId,
-      invoiceCount: deliveredLines.length > 0 ? transformResult.documents.length - failedDocuments.length : 0
+      invoiceCount: deliveredLines.length > 0 ? transformResult.documents.length : 0
     });
+
+    const successfulRows = transformResult.documents.flatMap((document) => (document.payload as unknown as XeroCsvDocumentPayload).rows);
+    const deliveredArtifact = artifact && successfulRows.length > 0 ? {
+      ...artifact,
+      content: serializeAccountingCsv(successfulRows, XERO_CSV_HEADERS, ['*Quantity', '*UnitAmount', 'Discount', 'Total'])
+    } : undefined;
 
     return {
       deliveredLines,
-      failedDocuments: failedDocuments.length > 0 ? failedDocuments : undefined,
       artifacts: {
-        file: artifact
+        file: deliveredArtifact
       },
       metadata: {
         adapter: this.type,
         artifactPrepared: Boolean(artifact),
+        invoiceMappings: transformResult.documents.map((document) => {
+          const payload = document.payload as unknown as XeroCsvDocumentPayload;
+          return { invoiceId: document.documentId, invoiceNumber: payload.invoiceNumber };
+        }),
         instructions: {
           step1: 'Download the CSV file',
           step2: 'In Xero: Go to Business → Invoices → Import',
@@ -505,6 +443,33 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         }
       }
     };
+  }
+
+  async postProcess(deliveryResult: AccountingExportDeliveryResult, context: AccountingExportAdapterContext, transaction?: Knex): Promise<void> {
+    const tenantId = context.batch.tenant;
+    if (!tenantId) throw new AppError('XERO_CSV_TENANT_REQUIRED', 'Xero CSV mapping requires a tenant');
+    const metadata = deliveryResult.metadata as { invoiceMappings?: Array<{ invoiceId: string; invoiceNumber: string }> } | undefined;
+    const mappings = metadata?.invoiceMappings ?? [];
+    const knex = transaction ?? (await createTenantKnex()).knex;
+    const deliveredAt = new Date().toISOString();
+    await withTransaction(knex, async (trx) => {
+      for (const mapping of [...mappings].sort((a, b) => a.invoiceId.localeCompare(b.invoiceId))) {
+        await lockInvoiceForExternalSync(trx, tenantId, mapping.invoiceId);
+        await new KnexInvoiceMappingRepository(trx).upsertInvoiceMapping({
+          tenantId, adapterType: this.type, invoiceId: mapping.invoiceId,
+          externalInvoiceId: `csv:${mapping.invoiceNumber}`, targetRealm: context.batch.target_realm ?? null,
+          metadata: {
+            last_exported_at: deliveredAt, filename: `xero-invoice-export-${context.batch.batch_id}.csv`,
+            invoiceNumber: mapping.invoiceNumber,
+            trackingCategories: {
+              sourceSystem: TRACKING_CATEGORY_SOURCE_SYSTEM,
+              sourceValue: TRACKING_CATEGORY_SOURCE_VALUE,
+              invoiceId: TRACKING_CATEGORY_INVOICE_ID,
+            },
+          },
+        });
+      }
+    });
   }
 
   private async loadInvoices(
@@ -551,6 +516,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         'item_id',
         'invoice_id',
         'service_id',
+        'is_manual',
         'description',
         'quantity',
         'unit_price',
@@ -558,7 +524,8 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         'net_amount',
         'tax_amount',
         'tax_region',
-        'is_discount'
+        'is_discount',
+        'adjustment_source_kind'
       )
       .whereIn('item_id', chargeIds);
 
@@ -618,17 +585,15 @@ function safeString(value: unknown): string | undefined {
 
 type XeroDateFormat = 'DD/MM/YYYY' | 'MM/DD/YYYY';
 
-function formatDateForXero(value?: string | Date | null, dateFormat: XeroDateFormat = 'MM/DD/YYYY'): string {
+export function formatDateForXero(value?: string | Date | null, dateFormat: XeroDateFormat = 'MM/DD/YYYY'): string {
   if (!value) {
     return formatCurrentDate(dateFormat);
   }
-  const date = typeof value === 'string' ? new Date(value) : value;
-  if (Number.isNaN(date.getTime())) {
+  const dateOnly = toDateOnly(value);
+  if (!dateOnly) {
     return formatCurrentDate(dateFormat);
   }
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const year = date.getFullYear();
+  const [year, month, day] = dateOnly.split('-');
 
   if (dateFormat === 'DD/MM/YYYY') {
     return `${day}/${month}/${year}`;

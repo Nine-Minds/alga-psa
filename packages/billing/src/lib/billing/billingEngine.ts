@@ -13,6 +13,7 @@ import {
   normalizeResolvedContractCharge,
 } from "./domain/calculateContractCharge";
 import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
+import { resolvePrepaidBlockBusinessDate, toDateOnly as toPrepaidBlockDateOnly } from "../prepaidBlockDates";
 import {
   IBillingPeriod,
   IBillingResult,
@@ -28,6 +29,7 @@ import {
   IProductCharge,
   ILicenseCharge,
   IHourBlockCharge,
+  IPrepaidBlockCharge,
   IProjectBillingConfig,
   IProjectBillingScheduleEntry,
   IProjectPhaseRateOverride,
@@ -68,6 +70,7 @@ import {
 } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
 import { computePoolContributionsByService, resolveBucketForLine } from "@alga-psa/shared/billingClients/bucketUsageService";
+import { isAdvanceTimingAllowedForLineType, resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
 import {
   ambiguousTicketProjectLinksQuery,
   ticketProjectAttributionJoin,
@@ -90,7 +93,7 @@ import {
 // Import necessary functions from invoiceService
 import {
   calculateAndDistributeTax,
-  updateInvoiceTotalsAndRecordTransaction,
+  reconcileInvoiceAdjustmentTransaction,
   getClientDetails,
 } from "../../services/invoiceService";
 import { v4 as uuidv4 } from "uuid";
@@ -111,6 +114,7 @@ import {
 } from "./compute";
 import {
   resolveChargeProfile,
+  resolveChargeProfileFor,
   type ChargeProfileAssignments,
 } from "./billingProfileResolution";
 
@@ -152,6 +156,7 @@ import {
 } from "../../models/projectBillingModelUtils";
 import { isProjectMaterialEligible } from "@alga-psa/inventory/lib";
 import { joinEffectiveServicePrice } from "./pricing/joinEffectiveServicePrice";
+import { resolveContractLineBillingWindow } from "./contractLineWindow";
 import {
   contractAdjustmentDateOnly,
   reconcileContractChangeAdjustmentsForInvoice,
@@ -159,6 +164,7 @@ import {
   resolveContractChangeChargesForWindow,
   type ContractChangeLedgerRow,
 } from "./reconcileContractChangeAdjustments";
+import { describeContractChange } from "./contractChangeDescription";
 import { reconcileAutomaticInvoiceAdjustments } from "./reconcileAutomaticInvoiceDiscounts";
 // Workflow imports removed as event emission is moved back to the calling action
 
@@ -186,6 +192,14 @@ type CalculateBillingOptions = {
     include: boolean;
     timeEntryIds?: string[];
     usageRecordIds?: string[];
+  };
+  /**
+   * Scheduled Prepaid Block issuances selected for this invoice
+   * (`schedule:{tenant}:prepaid_block:{issuanceId}` selector keys). Each one
+   * becomes an up-front `prepaid_block` charge.
+   */
+  prepaidBlockSelection?: {
+    issuanceIds: string[];
   };
   projectTarget?: {
     projectId: string;
@@ -1773,7 +1787,13 @@ export class BillingEngine {
         ]
       : projectMaterialWarnings;
 
-    if (clientContractLines.length === 0 && !nonContractSelection?.include) {
+    const prepaidBlockIssuanceIds =
+      options.prepaidBlockSelection?.issuanceIds ?? [];
+    if (
+      clientContractLines.length === 0 &&
+      !nonContractSelection?.include &&
+      prepaidBlockIssuanceIds.length === 0
+    ) {
       if (materialCharges.length === 0 && !projectBillingContext) {
         return {
           charges: [],
@@ -1915,6 +1935,50 @@ export class BillingEngine {
           usageServicePeriodStatuses.push(...sink.usageStatuses);
         }
       }
+
+      // Prepaid Block lines: zero-dollar consumption info lines for time that
+      // drew the line's blocks within the line's service period. Covered time
+      // is then marked invoiced alongside the hourly remainder (overage).
+      if (
+        !options.projectTarget &&
+        (clientContractLine.contract_line_type === "Hourly" ||
+          clientContractLine.contract_line_type === undefined)
+      ) {
+        const blockLineSelection =
+          recurringTimingSelections[clientContractLine.client_contract_line_id];
+        if (
+          cycle ||
+          blockLineSelection ||
+          options.recurringTimingSelectionSource === "persisted"
+        ) {
+          const blockLineTiming = this.resolveServiceDrivenChargeTiming(
+            billingPeriod,
+            clientContractLine,
+            cycle,
+            blockLineSelection,
+            options.recurringTimingSelectionSource,
+          );
+          if (blockLineTiming) {
+            totalCharges = totalCharges.concat(
+              await this.calculateContractLineHourBlockCharges(
+                clientId,
+                clientContractLine,
+                blockLineTiming,
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    if (prepaidBlockIssuanceIds.length > 0 && !options.projectTarget) {
+      totalCharges = totalCharges.concat(
+        await this.loadPrepaidBlockIssuanceCharges(
+          clientId,
+          billingPeriod,
+          prepaidBlockIssuanceIds,
+        ),
+      );
     }
 
     if (clientContractLines.length > 0 && materialCharges.length > 0) {
@@ -3204,6 +3268,291 @@ export class BillingEngine {
     return computeHourBlockCharges({ billingPeriod, blocks }).charges;
   }
 
+  /**
+   * Contract-line variant of {@link calculateHourBlockUsageCharges}: zero-dollar
+   * consumption lines for a Prepaid Block line's own blocks, in the line's
+   * service period, with `client_contract_line_id` set (plan section 4).
+   *
+   * Only allocations to `active` or `expired` blocks count. An entry with any
+   * allocation to the line's `pending` block is held (see
+   * applyPrepaidBlockCoverageToTimeEntries), so it contributes no consumption
+   * here either; otherwise its minutes would be shown now and again once the
+   * block activates.
+   */
+  private async calculateContractLineHourBlockCharges(
+    clientId: string,
+    clientContractLine: IClientContractLine,
+    timing: ResolvedRecurringChargeTiming,
+  ): Promise<IHourBlockCharge[]> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+    const tenant = this.tenant;
+
+    const db = tenantDb(this.knex, tenant);
+    const query = db.table("hour_block_time_allocations as hba");
+    db.tenantJoin(query, "hour_blocks as hb", "hba.block_id", "hb.block_id");
+    db.tenantJoin(
+      query,
+      "time_entries as te",
+      "hba.time_entry_id",
+      "te.entry_id",
+    );
+    db.tenantJoin(
+      query,
+      "service_catalog as sc",
+      "hb.service_id",
+      "sc.service_id",
+      { type: "left" },
+    );
+
+    const allocationRows = await query
+      .where({
+        "hb.client_id": clientId,
+        "hb.contract_line_id": clientContractLine.contract_line_id,
+        "te.invoiced": false,
+      })
+      .where("te.approval_status", "APPROVED")
+      .where("te.start_time", ">=", timing.servicePeriodStartExclusive)
+      .where("te.end_time", "<", timing.servicePeriodEndExclusive)
+      .orderBy("hb.purchased_at", "asc")
+      .orderBy("hb.block_id", "asc")
+      .select(
+        "hb.block_id",
+        "hb.status as block_status",
+        "hb.remaining_minutes",
+        "hb.service_id",
+        "sc.service_name as service_name",
+        "hba.time_entry_id",
+        "hba.minutes",
+        "te.billable_duration",
+      );
+
+    // Any allocation to the line's pending block holds the whole entry (see
+    // applyPrepaidBlockCoverageToTimeEntries), so it contributes nothing here.
+    const heldEntryIds = new Set<string>(
+      allocationRows
+        .filter((row: any) => row.block_status === "pending")
+        .map((row: any) => row.time_entry_id),
+    );
+    const rows = allocationRows.filter(
+      (row: any) =>
+        !heldEntryIds.has(row.time_entry_id) &&
+        (row.block_status === "active" || row.block_status === "expired"),
+    );
+    if (rows.length === 0) return [];
+
+    const { aggregateHourBlockBurnRows, computeHourBlockCharges } =
+      await import("./compute/computeHourBlockCharges");
+    const blocks = aggregateHourBlockBurnRows(rows);
+    const profile = resolveChargeProfileFor(
+      await this.loadChargeProfileAssignments(clientId, clientContractLine),
+    );
+
+    return computeHourBlockCharges({
+      billingPeriod: {
+        startDate: timing.servicePeriodStart,
+        endDate: timing.servicePeriodEnd,
+      },
+      blocks,
+    }).charges.map((charge) => ({
+      ...charge,
+      client_contract_line_id: clientContractLine.client_contract_line_id,
+      client_contract_id: clientContractLine.client_contract_id || undefined,
+      contract_name: clientContractLine.contract_name || undefined,
+      location_id: clientContractLine.location_id ?? null,
+      billing_profile_id: profile?.billingProfileId ?? null,
+      billing_profile_source: profile?.source ?? null,
+    }));
+  }
+
+  /**
+   * Up-front `prepaid_block` charges for the selected scheduled issuances
+   * (plan section 4). Quantity is the block size in hours, `rate` the price per
+   * hour in whole minor units, and `total` is authoritative at the configured
+   * block price. Currency is the contract's, never a column default.
+   */
+  private async loadPrepaidBlockIssuanceCharges(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    issuanceIds: string[],
+  ): Promise<IPrepaidBlockCharge[]> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+    const tenant = this.tenant;
+    const db = tenantDb(this.knex, tenant);
+
+    const query = db.table("contract_line_block_issuances as cbi");
+    db.tenantJoin(
+      query,
+      "contract_line_prepaid_blocks as cfg",
+      "cfg.contract_line_id",
+      "cbi.contract_line_id",
+    );
+    db.tenantJoin(
+      query,
+      "contract_lines as cl",
+      "cl.contract_line_id",
+      "cbi.contract_line_id",
+    );
+    db.tenantJoin(query, "contracts as ct", "ct.contract_id", "cl.contract_id");
+    db.tenantJoin(
+      query,
+      "service_catalog as sc",
+      "sc.service_id",
+      "cfg.sold_as_service_id",
+      { type: "left" },
+    );
+    const issuances = await query
+      .where("cbi.client_id", clientId)
+      .whereIn("cbi.issuance_id", issuanceIds)
+      .orderBy("cbi.due_date", "asc")
+      .orderBy("cbi.issuance_id", "asc")
+      .select(
+        "cbi.issuance_id",
+        "cbi.contract_line_id",
+        "cbi.client_contract_id",
+        "cbi.status",
+        "cbi.due_date",
+        "cfg.block_minutes",
+        "cfg.block_price",
+        "cfg.expiry_months",
+        "cfg.sold_as_service_id",
+        "ct.currency_code as contract_currency_code",
+        "ct.contract_name",
+        "cl.billing_profile_id as line_billing_profile_id",
+        "cl.location_id as line_location_id",
+        "sc.service_name as sold_as_service_name",
+        "sc.tax_rate_id as sold_as_tax_rate_id",
+      );
+
+    const found = new Set(issuances.map((row: any) => row.issuance_id));
+    const missing = issuanceIds.filter((id) => !found.has(id));
+    if (missing.length > 0) {
+      throw new Error(
+        `Prepaid block issuance ${missing.join(", ")} was not found for this client, or its line no longer has a prepaid block configuration.`,
+      );
+    }
+
+    const client = await db
+      .table("clients")
+      .where({ client_id: clientId })
+      .first();
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${tenant}`);
+    }
+    const defaultTaxRegion = await this.getClientDefaultTaxRegionCode(clientId);
+    const clientDefaultBillingProfileId =
+      await this.getClientDefaultBillingProfileId(clientId);
+
+    const charges: IPrepaidBlockCharge[] = [];
+    const businessToday = await resolvePrepaidBlockBusinessDate(this.knex, tenant);
+    for (const row of issuances) {
+      if (row.status !== "scheduled") {
+        throw new Error(
+          `Prepaid block issuance ${row.issuance_id} is ${row.status}, not scheduled; it cannot be invoiced.`,
+        );
+      }
+      // Server-side readiness guard (the Invoices screen shows such rows as early): a date-triggered
+      // block (expiry, renewal) must not be issued before its due date, or the new block's expiry
+      // clock would start while the old block still has hours.
+      // Both sides on the tenant business date (the listing's readiness uses the same
+      // source), and the due date read TZ-independently from the date column.
+      const dueDate = toPrepaidBlockDateOnly(row.due_date) ?? String(row.due_date).slice(0, 10);
+      if (dueDate > businessToday) {
+        throw new Error(
+          `Prepaid block issuance ${row.issuance_id} is not due until ${dueDate}; it cannot be invoiced yet.`,
+        );
+      }
+      if (!row.sold_as_service_id) {
+        throw new Error(
+          `Prepaid block line ${row.contract_line_id} has no sold-as service configured.`,
+        );
+      }
+      if (!row.contract_currency_code) {
+        throw new Error(
+          `Contract for prepaid block line ${row.contract_line_id} has no currency.`,
+        );
+      }
+      const blockMinutes = Number(row.block_minutes);
+      const blockPrice = Number(row.block_price);
+      const scopeRows = await db
+        .table("contract_line_services")
+        .where({ contract_line_id: row.contract_line_id })
+        .select("service_id");
+      const hours = blockMinutes / 60;
+      const rate = Math.round(blockPrice / hours);
+
+      const { taxRegion: serviceTaxRegion, isTaxable } =
+        await this.getTaxInfoFromService({
+          service_id: row.sold_as_service_id,
+          tax_rate_id: row.sold_as_tax_rate_id,
+        });
+      const effectiveTaxRegion =
+        serviceTaxRegion ?? defaultTaxRegion ?? undefined;
+      let taxAmount = 0;
+      let taxRate = 0;
+      if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+        try {
+          const taxResult = await new TaxService().calculateTax(
+            client.client_id,
+            blockPrice,
+            billingPeriod.endDate,
+            effectiveTaxRegion,
+            true,
+            row.contract_currency_code,
+          );
+          taxRate = taxResult.taxRate;
+          taxAmount = taxResult.taxAmount;
+        } catch (error) {
+          console.error(
+            `Error calculating tax for prepaid block issuance ${row.issuance_id}:`,
+            error,
+          );
+        }
+      }
+
+      const profile = resolveChargeProfile({
+        contractLineBillingProfileId: row.line_billing_profile_id ?? null,
+        clientDefaultBillingProfileId,
+      });
+      charges.push({
+        type: "prepaid_block",
+        issuance_id: row.issuance_id,
+        contract_line_id: row.contract_line_id,
+        client_contract_id: row.client_contract_id,
+        contract_name: row.contract_name || undefined,
+        serviceId: row.sold_as_service_id,
+        serviceName: row.sold_as_service_name ?? "Prepaid block",
+        block_minutes: blockMinutes,
+        block_price: blockPrice,
+        currency_code: row.contract_currency_code,
+        expiry_months:
+          row.expiry_months === null || row.expiry_months === undefined
+            ? null
+            : Number(row.expiry_months),
+        scope_service_ids: scopeRows.map((scope: any) => scope.service_id),
+        quantity: hours,
+        rate,
+        total: blockPrice,
+        tax_amount: taxAmount,
+        tax_rate: taxRate,
+        tax_region: effectiveTaxRegion,
+        is_taxable: isTaxable,
+        servicePeriodStart: billingPeriod.startDate,
+        servicePeriodEnd: billingPeriod.endDate,
+        billingTiming: "advance",
+        location_id: row.line_location_id ?? null,
+        billing_profile_id: profile.billingProfileId,
+        billing_profile_source: profile.source,
+      } satisfies IPrepaidBlockCharge);
+    }
+    return charges;
+  }
+
   private async getClientContractLinesForBillingPeriod(
     clientId: string,
     billingPeriod: IBillingPeriod,
@@ -3278,6 +3627,9 @@ export class BillingEngine {
         // The line's own flag (the scope guarantees the assignment is active
         // too), so the `line.is_active` checks downstream test the line.
         "cl.is_active",
+        // Authored line bounds narrow the assignment window; resolved below.
+        "cl.start_date as line_start_date",
+        "cl.end_date as line_end_date",
         "cc.client_contract_id",
         "cc.template_contract_id",
         "c.contract_id",
@@ -3304,17 +3656,31 @@ export class BillingEngine {
       JSON.stringify(clientContractLines, null, 2),
     );
 
-    // Convert dates from the DB into plain ISO strings and normalize values
+    // Convert dates from the DB into plain ISO strings and normalize values.
+    // `start_date`/`end_date` stay the contract assignment window (the cadence
+    // anchor is the assignment start, matching the service-period materializer);
+    // the authored line bounds are carried separately as a coverage window. The
+    // assignment end is an inclusive last day, the line end is half-open, so the
+    // intersection is computed in exclusive space.
     clientContractLines.forEach((plan: any) => {
-      plan.start_date = toISODate(toPlainDate(plan.start_date));
-      plan.end_date = plan.end_date
-        ? toISODate(toPlainDate(plan.end_date))
-        : null;
+      const billingWindow = resolveContractLineBillingWindow(
+        { start_date: plan.start_date, end_date: plan.end_date },
+        { start_date: plan.line_start_date, end_date: plan.line_end_date },
+      );
+      plan.start_date = billingWindow.anchorStart;
+      plan.end_date = billingWindow.inclusiveEnd;
+      plan.coverage_start_date = billingWindow.coverageStart;
+      plan.coverage_end_date = billingWindow.coverageEndExclusive;
+      delete plan.line_start_date;
+      delete plan.line_end_date;
 
-      // Normalize billing_timing default
-      plan.billing_timing = (plan.billing_timing ?? "arrears") as
-        | "arrears"
-        | "advance";
+      // Normalize billing_timing. Hourly/Usage lines always bill in arrears, so a
+      // stale stored 'advance' can never reach the timing selection or the
+      // advance duplicate guard below.
+      plan.billing_timing = resolveEffectiveBillingTiming(
+        plan.contract_line_type,
+        plan.billing_timing,
+      );
       plan.cadence_owner = resolveCadenceOwner(plan.cadence_owner);
       plan.is_system_managed_default = plan.is_system_managed_default === true;
 
@@ -4925,9 +5291,8 @@ export class BillingEngine {
       contract_line_type?: "Fixed" | "Hourly" | "Usage" | string | null;
     },
   ): boolean {
-    return (
-      clientContractLine.contract_line_type !== "Hourly" &&
-      clientContractLine.contract_line_type !== "Usage"
+    return isAdvanceTimingAllowedForLineType(
+      clientContractLine.contract_line_type,
     );
   }
 
@@ -4952,13 +5317,26 @@ export class BillingEngine {
       chargeFamily: "fixed" as const,
       ...(this.tenant ? { tenant: this.tenant } : {}),
     };
+    // Coverage window: the effective (assignment ∩ authored line) window. The
+    // start is the later of the two and the end is already half-open
+    // (`coverage_end_date`), so an authored line end is never extended by a day.
+    // Callers that do not populate the coverage fields (legacy direct callers)
+    // fall back to the assignment window, preserving prior behavior.
+    const coverageLine = clientContractLine as IClientContractLine & {
+      coverage_start_date?: string | null;
+      coverage_end_date?: string | null;
+    };
     const activityWindow = {
-      start: clientContractLine.start_date
-        ? toISODate(toPlainDate(clientContractLine.start_date))
-        : undefined,
-      end: clientContractLine.end_date
-        ? toISODate(toPlainDate(clientContractLine.end_date).add({ days: 1 }))
-        : undefined,
+      start: coverageLine.coverage_start_date
+        ? toISODate(toPlainDate(coverageLine.coverage_start_date))
+        : clientContractLine.start_date
+          ? toISODate(toPlainDate(clientContractLine.start_date))
+          : undefined,
+      end: coverageLine.coverage_end_date
+        ? toISODate(toPlainDate(coverageLine.coverage_end_date))
+        : clientContractLine.end_date
+          ? toISODate(toPlainDate(clientContractLine.end_date).add({ days: 1 }))
+          : undefined,
       semantics: RECURRING_RANGE_SEMANTICS,
     };
 
@@ -5503,7 +5881,15 @@ export class BillingEngine {
       ),
     );
 
-    const timeEntries = await query;
+    const loadedTimeEntries = await query;
+    // Prepaid Block lines: minutes already drawn from the line's blocks are
+    // not priced here, and entries touching a pending block are held.
+    const timeEntries = projectTarget
+      ? loadedTimeEntries
+      : await this.applyPrepaidBlockCoverageToTimeEntries(
+          clientContractLine.contract_line_id,
+          loadedTimeEntries,
+        );
 
     const obligation = {
       kind: "hourly",
@@ -5563,6 +5949,65 @@ export class BillingEngine {
       charge: obligation,
     });
     return;
+  }
+
+  /**
+   * Overage subtraction for Prepaid Block lines (plan section 4).
+   *
+   * Minutes an entry drew from the line's `active` or `expired` blocks are
+   * already paid for and are removed from what the hourly obligation prices;
+   * the remainder bills at the line's hourly rate. An entry with ANY minutes
+   * allocated to the line's `pending` block is HELD: not priced, not marked
+   * invoiced. It surfaces once the block activates (then it is covered or
+   * partially covered) or falls back to overage if the block is voided. Only
+   * blocks owned by this contract line count; ad-hoc blocks are untouched.
+   * Lines without blocks pay one indexed lookup and change nothing.
+   */
+  private async applyPrepaidBlockCoverageToTimeEntries<
+    T extends { entry_id: string; billable_duration: number | string },
+  >(contractLineId: string, timeEntries: T[]): Promise<T[]> {
+    if (timeEntries.length === 0) return timeEntries;
+    const db = tenantDb(this.knex, this.tenant as string);
+    const query = db.table("hour_block_time_allocations as hba");
+    db.tenantJoin(query, "hour_blocks as hb", "hba.block_id", "hb.block_id");
+    const rows: Array<{ time_entry_id: string; status: string; minutes: string | number }> =
+      await query
+        .where("hb.contract_line_id", contractLineId)
+        .whereIn(
+          "hba.time_entry_id",
+          timeEntries.map((entry) => entry.entry_id),
+        )
+        .select("hba.time_entry_id", "hb.status", "hba.minutes");
+    if (rows.length === 0) return timeEntries;
+
+    const coveredByEntry = new Map<string, number>();
+    const heldEntries = new Set<string>();
+    for (const row of rows) {
+      const minutes = Number(row.minutes) || 0;
+      if (minutes <= 0) continue;
+      if (row.status === "pending") {
+        heldEntries.add(row.time_entry_id);
+      } else if (row.status === "active" || row.status === "expired") {
+        coveredByEntry.set(
+          row.time_entry_id,
+          (coveredByEntry.get(row.time_entry_id) ?? 0) + minutes,
+        );
+      }
+    }
+
+    const result: T[] = [];
+    for (const entry of timeEntries) {
+      if (heldEntries.has(entry.entry_id)) continue;
+      const covered = coveredByEntry.get(entry.entry_id) ?? 0;
+      if (covered <= 0) {
+        result.push(entry);
+        continue;
+      }
+      const remainder = Number(entry.billable_duration) - covered;
+      if (remainder <= 0) continue;
+      result.push({ ...entry, billable_duration: remainder });
+    }
+    return result;
   }
 
   /** Resolve entry eligibility with the same timing/coverage rules used to bill it. */
@@ -6976,7 +7421,16 @@ export class BillingEngine {
         billing_profile_source: profile?.source,
         config_id: String(row.config_id),
         client_contract_line_id: contractLineId,
-        serviceName: `Mid-period quantity change: ${service?.service_name ?? "recurring item"}`,
+        serviceName: describeContractChange(service?.service_name ?? "recurring item", {
+          adjustment_period_start: row.adjustment_period_start,
+          adjustment_period_end: row.adjustment_period_end,
+          mid_period_effective_date: row.mid_period_effective_date,
+          quantity_delta: row.quantity_delta,
+          unit_rate_cents: row.unit_rate_cents,
+          covered_days: row.covered_days,
+          full_period_days: row.full_period_days,
+          amount_cents: row.amount_cents,
+        }, billingCurrency),
         quantity: Math.abs(Number(row.quantity_delta)),
         rate: Number(row.unit_rate_cents),
         total,
@@ -7435,54 +7889,51 @@ export class BillingEngine {
       throw new Error("tenant context not found");
     }
 
-    const connection = existingTransaction ?? this.knex;
-    const db = tenantDb(connection, tenant);
-
-    console.log(`Recalculating invoice ${invoiceId}`);
-
-    const invoice = await db
-      .table("invoices")
-      .where({
-        invoice_id: invoiceId,
-        tenant,
-      })
-      .first();
-
-    if (!invoice) {
-      throw new Error(`Invoice ${invoiceId} not found in tenant ${tenant}`);
-    }
-
-    const client = await db
-      .table("clients")
-      .where({
-        client_id: invoice.client_id,
-        tenant,
-      })
-      .first();
-
-    if (!client) {
-      throw new Error(
-        `Client ${invoice.client_id} not found in tenant ${tenant}`,
-      );
-    }
-
-    // Removed direct use of TaxService here.
-    // Removed subtotal and totalTax accumulation logic.
-
-    console.log("Starting invoice recalculation:", {
-      invoiceId,
-      client: {
-        id: client.client_id,
-        name: client.client_name,
-        isTaxExempt: client.is_tax_exempt,
-        // region_code is still on client table for default fallback, but not primary source for service tax
-      },
-    });
-
-    // Recalculation is intentionally financial-only. Canonical recurring
-    // invoice_charge_details rows remain the persisted source of service-period
-    // truth after invoice creation; this path should only update tax and totals.
     const recalculate = async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
+      console.log(`Recalculating invoice ${invoiceId}`);
+
+      const invoice = await db
+        .table("invoices")
+        .where({
+          invoice_id: invoiceId,
+          tenant,
+        })
+        .forUpdate()
+        .first();
+
+      if (!invoice) {
+        throw new Error(`Invoice ${invoiceId} not found in tenant ${tenant}`);
+      }
+
+      const client = await db
+        .table("clients")
+        .where({
+          client_id: invoice.client_id,
+          tenant,
+        })
+        .first();
+
+      if (!client) {
+        throw new Error(
+          `Client ${invoice.client_id} not found in tenant ${tenant}`,
+        );
+      }
+
+      // Removed direct use of TaxService here.
+      // Removed subtotal and totalTax accumulation logic.
+
+      console.log("Starting invoice recalculation:", {
+        invoiceId,
+        client: {
+          id: client.client_id,
+          name: client.client_name,
+          isTaxExempt: client.is_tax_exempt,
+          // region_code is still on client table for default fallback, but not primary source for service tax
+        },
+      });
+
       // Draft reconciliation: converge any pending/edited/cancelled mid-period
       // true-up onto this editable draft, then re-derive automatic discounts
       // from the reconciled rows through the shared evaluator, before tax.
@@ -7505,32 +7956,30 @@ export class BillingEngine {
         `[recalculateInvoice] Finished calculateAndDistributeTax for invoice ${invoiceId}`,
       );
 
-      // Step 2: Update invoice totals and record the transaction using the service function
-      console.log(
-        `[recalculateInvoice] Calling updateInvoiceTotalsAndRecordTransaction for invoice ${invoiceId}`,
+      // Canonical detail periods remain untouched. Reconcile the principal
+      // already posted at generation, rather than posting the full total again.
+      const finalItems = await tenantDb(trx, tenant)
+        .table("invoice_charges")
+        .where({ invoice_id: invoiceId })
+        .select("net_amount", "tax_amount");
+      const subtotal = finalItems.reduce(
+        (sum: number, item: { net_amount: unknown }) => sum + Number(item.net_amount ?? 0),
+        0,
       );
-      await updateInvoiceTotalsAndRecordTransaction(
-        trx,
-        invoiceId,
-        client, // Pass client object
-        tenant, // Pass tenant
-        invoice.invoice_number, // Pass invoice number
-        undefined,
-        {
-          transactionType: "invoice_adjustment",
-          description: `Adjusted invoice ${invoice.invoice_number}`,
-        },
+      const tax = finalItems.reduce(
+        (sum: number, item: { tax_amount: unknown }) => sum + Number(item.tax_amount ?? 0),
+        0,
       );
-      console.log(
-        `[recalculateInvoice] Finished updateInvoiceTotalsAndRecordTransaction for invoice ${invoiceId}`,
-      );
+      await tenantDb(trx, tenant)
+        .table("invoices")
+        .where({ invoice_id: invoiceId })
+        .update({
+          subtotal: Math.round(subtotal),
+          tax: Math.round(tax),
+          total_amount: Math.round(subtotal + tax),
+        });
 
-      // Note: The original logic for processing discount items and updating their net_amount
-      // based on percentages is removed. It's assumed that calculateAndDistributeTax
-      // handles the correct net amounts and tax distribution, including discounts.
-      // If discount amounts need recalculation based on the new subtotal *before* tax distribution,
-      // that logic would need to be added back here or integrated into calculateAndDistributeTax.
-      // For now, we follow the instruction to delegate fully.
+      await reconcileInvoiceAdjustmentTransaction(trx, tenant, invoice, Math.round(subtotal + tax));
     };
 
     if (existingTransaction) {

@@ -731,6 +731,9 @@
     }
   },
   "connectSso": {
+    "proFeature": {
+      "description": "SSO account linking is available in Pro. Upgrade to connect your Google Workspace or Microsoft 365 account for seamless authentication."
+    },
     "linkError": {
       "title": "SSO link failed.",
       "no_matching_user": "The account you signed in with is {{providerEmail}}, but your AlgaPSA login is {{accountEmail}}. Link an account that uses {{accountEmail}}, or ask your identity provider administrator to make {{accountEmail}} that account's primary email address.",

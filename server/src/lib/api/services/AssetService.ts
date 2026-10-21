@@ -119,9 +119,33 @@ export class AssetService extends BaseService<any> {
     });
   }
 
+  /**
+   * Range keys the asset list accepts: the common created_ and updated_ keys
+   * plus the purchase-date and warranty windows. Any other `_from`/`_to` key is
+   * rejected by `applyRangeFilters`.
+   */
+  protected rangeFilterColumns(): Record<string, string> {
+    return {
+      ...super.rangeFilterColumns(),
+      created_from: `${this.tableName}.created_at`,
+      created_to: `${this.tableName}.created_at`,
+      updated_from: `${this.tableName}.updated_at`,
+      updated_to: `${this.tableName}.updated_at`,
+      purchase_date_from: `${this.tableName}.purchase_date`,
+      purchase_date_to: `${this.tableName}.purchase_date`,
+      warranty_end_from: `${this.tableName}.warranty_end_date`,
+      warranty_end_to: `${this.tableName}.warranty_end_date`,
+    };
+  }
+
   async list(options: ListOptions, context: ServiceContext, filters?: AssetFilterData): Promise<ListResult<any>> {
     const knex = await this.getDbForContext(context);
     const query = scopedTable(knex, context.tenant, this.tableName);
+
+    // Common and asset-specific range filters. Unsupported range keys fail loudly.
+    if (filters) {
+      this.applyRangeFilters(query, filters);
+    }
 
     // Apply filters
     if (filters) {
@@ -167,18 +191,6 @@ export class AssetService extends BaseService<any> {
       if (filters.client_name) {
         tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id');
         query.where('clients.client_name', 'ilike', `%${filters.client_name}%`);
-      }
-      if (filters.purchase_date_from) {
-        query.where(`${this.tableName}.purchase_date`, '>=', filters.purchase_date_from);
-      }
-      if (filters.purchase_date_to) {
-        query.where(`${this.tableName}.purchase_date`, '<=', filters.purchase_date_to);
-      }
-      if (filters.warranty_end_from) {
-        query.where(`${this.tableName}.warranty_end_date`, '>=', filters.warranty_end_from);
-      }
-      if (filters.warranty_end_to) {
-        query.where(`${this.tableName}.warranty_end_date`, '<=', filters.warranty_end_to);
       }
       if (filters.has_warranty !== undefined) {
         if (filters.has_warranty) {
@@ -226,6 +238,8 @@ export class AssetService extends BaseService<any> {
     const countQuery = scopedTable(knex, context.tenant, this.tableName);
 
     if (filters) {
+      // Apply the same range filters to count query
+      this.applyRangeFilters(countQuery, filters);
       // Apply the same filters to count query
       if (filters.search) {
         this.applySearch(countQuery, filters.search);

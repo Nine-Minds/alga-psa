@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Pro Feature"
+    },
     "accounting": {
       "bulk": {
         "button": "Bulk map",
@@ -124,6 +127,15 @@
           "paymentTerms": "Payment Terms",
           "discounts": "Discounts"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Desktop service accounts",
+        "desktopDiscounts": "Desktop discounts",
+        "desktopAccount": "Desktop income account name",
+        "description": "Map invoice discounts and credits before exporting. The mapping belongs to this accounting company.",
+        "add": "Add mapping",
+        "remove": "Remove mapping",
+        "removeConfirm": "Remove this accounting mapping?"
       }
     },
     "calendar": {
@@ -1223,7 +1235,12 @@
         "recommendedUnsaved": "Recommended – not saved",
         "unsavedChange": "Unsaved change",
         "unsavedNotice": "These filter settings are not in effect until you save them."
-      }
+      },
+      "proFeature": {
+        "description": "Microsoft Entra integration is available in AlgaPSA Pro.",
+        "notice": "Microsoft Entra Identity Integration is a Pro Feature."
+      },
+      "loading": "Loading Microsoft Entra integration…"
     },
     "google": {
       "settings": {
@@ -1294,6 +1311,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "The Hudu IT documentation integration is available in AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Source: Hudu",
         "openInHudu": "Open in Hudu",
@@ -2337,6 +2357,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "NinjaOne RMM integration is available in AlgaPSA Pro."
+        },
         "loading": "Loading NinjaOne integration settings...",
         "card": {
           "title": "NinjaOne RMM Integration",
@@ -2614,6 +2637,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "Tanium RMM integration is available in AlgaPSA Pro."
+        },
         "loading": "Loading Tanium integration settings...",
         "actions": {
           "discoverScopes": "Discover Scopes",
@@ -2684,6 +2710,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "Level.io RMM integration is available in AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Backfill Alerts",
           "disconnect": "Disconnect",
@@ -2756,16 +2785,35 @@
           "copied": "Copied",
           "copy": "Copy",
           "description": "Level cannot register webhooks via its API. In Level, create an automation with an HTTP POST action using the URL, header, and payload below to push alerts into Alga in real time.",
+          "fallbackDescription": "Use this fallback only when Level's native Settings → Webhooks can't be used. Create an automation with an HTTP POST action using the URL, header, and payload below to push alerts into Alga.",
+          "fallbackNameHint": "Edit the \"name\" value in each automation. Together with the device it identifies the alert, so repeats of the same name on the same device are treated as one alert.",
+          "fallbackTitle": "Fallback: Automation HTTP Request",
           "header": "Header: {{name}}",
           "hideSecret": "Hide secret",
           "loading": "Webhook details load after the integration is configured.",
+          "nativeDescription": "In Level, open Settings → Webhooks, add a webhook with the URL and signing secret below, and enable the events listed. Level signs every delivery and Alga verifies the signature.",
+          "nativeEvents": "Events to enable",
+          "nativeEventsHelp": "Enable alert_active and alert_resolved. Other events are acknowledged and ignored.",
+          "nativeSigningSecret": "Signing secret",
+          "nativeTitle": "Native Webhook (recommended)",
           "payload": "Payload template",
+          "regenerateCancel": "Cancel",
+          "regenerateConfirmLabel": "Regenerate",
+          "regenerateConfirmMessage": "Existing Level webhooks will fail with 401 until you paste the new signing secret into Level's webhook settings. Alerts sent in the meantime are retried by Level but may be lost if the secret is not updated.",
+          "regenerateConfirmTitle": "Regenerate signing secret?",
+          "regenerateConfirmed": "Signing secret regenerated. Update it in Level's webhook settings.",
+          "regenerateFailed": "Failed to regenerate the signing secret",
+          "regenerateSecret": "Regenerate secret",
           "showSecret": "Show secret",
           "title": "Alert Webhook",
           "url": "Webhook URL"
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Huntress Integration",
+          "description": "The Huntress security integration is a Pro feature."
+        },
         "columns": {
           "organization": "Huntress Organization",
           "client": "Alga Client",
@@ -3525,6 +3573,11 @@
           "regenerate": "Regenerate package",
           "regenerating": "Regenerating..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Teams sign-in unavailable",
+        "tabTitle": "Teams tab unavailable",
+        "description": "Microsoft Teams integration is only available in Pro."
       }
     },
     "xero": {

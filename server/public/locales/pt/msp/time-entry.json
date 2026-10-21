@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Adicionar lançamento de horas"
+    }
+  },
   "common": {
     "actions": {
       "view": "Visualizar",
@@ -458,14 +463,24 @@
     },
     "timePeriod": {
       "datesRequired": "Informe datas de início e de término válidas.",
-      "closed": "Este período de tempo está fechado. Reabra-o antes de fazer alterações."
+      "closed": "Este período de tempo está fechado. Reabra-o antes de fazer alterações.",
+      "permissions": {
+        "read": "Permissão negada: não é possível visualizar os períodos.",
+        "create": "Permissão negada: não é possível criar períodos.",
+        "update": "Permissão negada: não é possível atualizar os períodos.",
+        "delete": "Permissão negada: não é possível excluir os períodos."
+      }
     },
     "timePeriodSettings": {
       "invalidValue": "Um dos valores da configuração de período é inválido. Atualize a página e tente novamente.",
       "referenceMissing": "A configuração de período selecionada não é mais válida. Atualize a página e tente novamente.",
       "duplicate": "Já existe uma configuração de período conflitante.",
       "missingField": "Falta um campo obrigatório da configuração de período.",
-      "missingFieldNamed": "Falta um campo obrigatório da configuração de período: {{field}}."
+      "missingFieldNamed": "Falta um campo obrigatório da configuração de período: {{field}}.",
+      "permissions": {
+        "read": "Permissão negada: não é possível visualizar as configurações de período.",
+        "manage": "Permissão negada: não é possível gerenciar as configurações de período."
+      }
     },
     "stopwatch": {
       "notFound": "Sessão do cronômetro não encontrada. Ela pode já ter sido registrada ou descartada. Atualize a página.",
@@ -503,7 +518,8 @@
     "entryMissingPeriod": "A folha de horas desta entrada não tem período e não pode ser aberta.",
     "noPeriods": "Ainda não há períodos de tempo configurados, portanto não é possível registrar tempo. Peça a um administrador para criar períodos de tempo em Configurações → Registro de tempo.",
     "noEditablePeriods": "Todas as folhas de horas estão submetidas ou aprovadas, pelo que não há nenhum dia a que adicionar tempo. Peça a um aprovador que reabra uma folha ou a um administrador que adicione um período.",
-    "prepareFailed": "Ocorreu um erro ao preparar a entrada de tempo. Tente novamente."
+    "prepareFailed": "Ocorreu um erro ao preparar a entrada de tempo. Tente novamente.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Sugestões",
@@ -528,7 +544,9 @@
       "checklistChanged": "checklist alterado",
       "linksChanged": "links alterados",
       "updated": "atualizado"
-    }
+    },
+    "activitySummary_few": "primeira atividade {{first}} · última {{last}} · {{count}} ações ({{kinds}})",
+    "activitySummary_many": "primeira atividade {{first}} · última {{last}} · {{count}} ações ({{kinds}})"
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} registrado em {{count}} segmento (pausado {{paused}})",
@@ -547,6 +565,8 @@
       "confirm": "Continuar",
       "cancel": "Cancelar"
     },
-    "ticketFallbackName": "Ticket {{number}}"
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "{{active}} registrados em {{count}} segmentos (pausado {{paused}})",
+    "pausedNotice_many": "{{active}} registrados em {{count}} segmentos (pausado {{paused}})"
   }
 }

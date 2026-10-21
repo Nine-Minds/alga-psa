@@ -230,12 +230,14 @@
       "selectService": "Dienst auswählen",
       "taxable": "(Steuerpflichtig)",
       "nonTaxable": "(Nicht steuerpflichtig)",
-      "calculatedOnSave": "(berechnet beim Speichern)"
+      "calculatedOnSave": "(berechnet beim Speichern)",
+      "credit": "Gutschrift"
     },
     "expanded": {
       "discount": "Rabatt",
       "item": "Artikel {{number}}",
-      "markedForRemoval": "Zur Entfernung markiert"
+      "markedForRemoval": "Zur Entfernung markiert",
+      "credit": "Gutschrift"
     },
     "fields": {
       "service": "Dienst",
@@ -247,10 +249,18 @@
       "applyDiscountTo": "Rabatt anwenden auf",
       "entireInvoice": "Gesamte Rechnung",
       "rate": "Preis ({{currencySymbol}})",
-      "description": "Beschreibung"
+      "description": "Beschreibung",
+      "creditUnit": "Gutschrift pro Einheit ({{currencySymbol}})",
+      "taxTreatment": "Steuerliche Behandlung",
+      "nonTaxable": "Nicht steuerpflichtig",
+      "location": "Standort",
+      "clientDefaultLocation": "Standard des Kunden",
+      "billingProfile": "Abrechnungsprofil",
+      "clientDefaultProfile": "Standard des Kunden"
     },
     "placeholders": {
-      "discountDescription": "z. B. Skonto bei vorzeitiger Zahlung"
+      "discountDescription": "z. B. Skonto bei vorzeitiger Zahlung",
+      "creditDescription": "z. B. Kulanzgutschrift"
     },
     "actions": {
       "add": "Hinzufügen",
@@ -267,11 +277,15 @@
       "invoiceTotal": "{{percentage}}% der Rechnungssumme",
       "amount": "Betrag: -{{currencySymbol}}{{amount}}",
       "appliedTo": "Angewendet auf: {{description}}",
-      "subtotal": "Zwischensumme: {{currencySymbol}}{{amount}}"
+      "subtotal": "Zwischensumme: {{currencySymbol}}{{amount}}",
+      "credit": "Gutschrift"
     },
     "options": {
       "percentage": "Prozentsatz",
       "fixedAmount": "Fester Betrag"
+    },
+    "errors": {
+      "serviceRequired": "Weisen Sie dieser Position vor dem Speichern einen Dienst zu."
     }
   },
   "contractLineServices": {
@@ -459,7 +473,8 @@
       "executeError": "Batch konnte nicht ausgeführt werden",
       "cancelled": "Stapel storniert",
       "cancelError": "Batch konnte nicht storniert werden",
-      "realmRequired": "Wählen Sie ein verbundenes Buchhaltungsunternehmen, bevor Sie den Export erstellen."
+      "realmRequired": "Wählen Sie ein verbundenes Buchhaltungsunternehmen, bevor Sie den Export erstellen.",
+      "artifactDownloadError": "Diese Exportdatei kann nicht heruntergeladen werden."
     },
     "status": {
       "pending": "Ausstehend",
@@ -470,6 +485,12 @@
       "failed": "Fehlgeschlagen",
       "cancelled": "Storniert",
       "needsAttention": "Erfordert Aufmerksamkeit"
+    },
+    "artifacts": {
+      "title": "Bereitgestellte Dateien",
+      "download": "Herunterladen",
+      "unavailable": "Für diesen historischen Stapel ist keine Datei gespeichert. Sie kann nur durch einen neuen Export wiederhergestellt werden.",
+      "storageFallback": "In einer Datenbanksicherung gespeichert"
     }
   },
   "templateRenderer": {

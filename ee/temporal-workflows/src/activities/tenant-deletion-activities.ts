@@ -134,6 +134,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'opportunity_meeting_sessions', 'opportunity_settings', 'opportunities',
 
   // Invoice details
+  // invoice_adjustment_operations is a FK-less manual-save idempotency ledger,
+  // so it can drop with the invoice rows it keys.
+  'invoice_adjustment_operations',
   'invoice_charges', 'invoice_annotations', 'invoice_time_entries', 'invoice_usage_records',
   'invoice_charge_details', 'invoice_charge_fixed_details', 'invoice_items',
   'invoice_autopay_attempts', 'billing_profile_autopay', 'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',
@@ -141,6 +144,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Prepaid hour blocks. The three child tables FK to hour_blocks, so they go
   // first; hour_blocks itself FKs to time_entries, service_catalog, invoices and
   // clients, so the whole group has to precede time tracking below.
+  // Prepaid Block issuances soft-reference hour_blocks, invoices and alerts
+  // (SET NULL) and hour_blocks references them back (SET NULL), so the ledger
+  // goes with the hour-block group ahead of contract lines.
+  'contract_line_block_issuances',
   'hour_block_audit', 'hour_block_service_scopes', 'hour_block_time_allocations',
   'hour_blocks',
 
@@ -268,12 +275,14 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Recurring tickets. Client asset links FK to definition clients and assets;
   // definition clients FK to definitions and clients; occurrences FK to
-  // definitions only. All four go before assets and clients.
+  // definitions only. All four go before assets and clients. Definitions also hold a
+  // RESTRICT FK to ticket_templates, so they must stay ahead of the template tables below.
   'recurring_ticket_client_assets', 'recurring_ticket_occurrences',
   'recurring_ticket_definition_clients', 'recurring_ticket_definitions',
 
   // Ticket templates. Both FK to tenants; items FK to templates (ON DELETE CASCADE),
-  // so items go first. Neither references tickets or clients.
+  // so items go first. Neither references tickets or clients. Must come AFTER
+  // recurring_ticket_definitions (ON DELETE RESTRICT on ticket_template_id).
   'ticket_template_checklist_items', 'ticket_templates',
 
   // Asset details
@@ -306,7 +315,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'software_catalog',
 
   // RMM
-  'rmm_maintenance_windows', 'rmm_alert_rules', 'rmm_alerts', 'rmm_organization_mappings', 'rmm_integrations',
+  'rmm_webhook_events', 'rmm_maintenance_windows', 'rmm_alert_rules', 'rmm_alerts', 'rmm_organization_mappings', 'rmm_integrations',
 
   // Survey
   'survey_responses', 'survey_invitations', 'survey_triggers', 'survey_templates',
@@ -362,26 +371,30 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'contract_line_unit_pricing_revision_history', 'contract_recurring_unit_adjustments',
   'contract_line_unit_pricing_revisions', 'billing_semantics_locks',
   'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
-  'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
+  // Artifacts contain adapter-produced financial bytes and have no cascading
+  // FK to the export batch, so remove them explicitly before the batch rows.
+  'accounting_export_artifacts', 'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)
   'accounting_sync_operations', 'accounting_sync_cycles',
   'contract_line_bucket_services', 'contract_line_buckets',
+  'contract_template_discount_copies',
   'client_contracts', 'contract_line_service_rate_tiers', 'contract_line_service_bucket_config',
   'contract_line_service_hourly_config', 'contract_line_service_hourly_configs', 'contract_line_service_usage_config',
   'contract_line_service_fixed_config', 'contract_line_service_configuration',
   'contract_line_service_defaults', 'contract_pricing_schedules',
   'service_catalog_mode_defaults',
-  'service_rate_tiers', 'service_prices', 'contract_line_discounts', 'discounts',
+  'service_rate_tiers', 'service_prices', 'contract_line_discounts', 'contract_discount_assignments', 'discounts',
   'client_billing_cycles', 'client_billing_settings',
-  'contract_line_services', 'contract_lines', 'contracts',
+  'contract_line_prepaid_blocks', 'contract_line_services', 'contract_lines', 'contracts',
 
   // Contract line presets
-  'contract_line_preset_fixed_config', 'contract_line_preset_services', 'contract_line_presets',
+  'contract_line_preset_prepaid_blocks', 'contract_line_preset_fixed_config', 'contract_line_preset_services', 'contract_line_presets',
 
   // Contract templates (must be deleted before contracts)
   // Hourly/usage configs reference contract_template_line_service_configuration
   // with NO ACTION and must be deleted before it.
   'contract_template_line_defaults',
+  'contract_template_line_prepaid_blocks',
   'contract_template_line_bucket_services', 'contract_template_line_buckets',
   'contract_template_line_fixed_config', 'contract_template_line_service_bucket_config',
   'contract_template_line_service_fixed_config',

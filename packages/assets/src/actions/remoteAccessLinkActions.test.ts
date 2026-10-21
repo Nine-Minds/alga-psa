@@ -7,12 +7,14 @@ const mocks = vi.hoisted(() => {
     name: 'Workstation One',
     asset_tag: 'A-1',
     serial_number: null,
+    rmm_device_id: '2456',
     attributes: {},
     client_name: 'Example Client',
   };
   const links = [
     { label: 'Name link', url_template: 'https://remote.example/{asset.name}' },
     { label: 'Serial link', url_template: 'https://remote.example/{asset.serial_number}' },
+    { label: 'RMM link', url_template: 'https://remote.example/#/deviceDashboard/{asset.rmm_device_id}/details' },
   ];
   const assetQuery: any = {
     select: vi.fn(() => assetQuery),
@@ -21,6 +23,7 @@ const mocks = vi.hoisted(() => {
   };
   const linkQuery: any = {
     orderBy: vi.fn(() => linkQuery),
+    insert: vi.fn(async () => undefined),
     then: (resolve: (value: typeof links) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve(links).then(resolve, reject),
   };
@@ -37,7 +40,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: vi.fn(async () => ({ knex: {} })),
+  createTenantKnex: vi.fn(async () => ({ knex: { fn: { now: () => 'now' } } })),
   tenantDb: () => mocks.db,
 }));
 
@@ -69,6 +72,22 @@ describe('getRemoteAccessLinksForAsset', () => {
     await expect(getRemoteAccessLinksForAsset('asset-1')).resolves.toEqual([
       { label: 'Name link', url: 'https://remote.example/Workstation%20One' },
       { label: 'Serial link', url: null },
+      { label: 'RMM link', url: 'https://remote.example/#/deviceDashboard/2456/details' },
     ]);
+    expect(mocks.assetQuery.select).toHaveBeenCalledWith(expect.arrayContaining(['assets.rmm_device_id']));
+  });
+
+  it('accepts the RMM device id placeholder when saving a template', async () => {
+    const result = await saveRemoteAccessLink({
+      label: 'NinjaOne',
+      url_template: 'https://example.rmmservice.com/#/deviceDashboard/{asset.rmm_device_id}/details',
+    });
+    expect(result).toBeUndefined();
+    expect(mocks.linkQuery.insert).toHaveBeenCalled();
+  });
+
+  it('still rejects unsupported asset placeholders when saving a template', async () => {
+    const result = await saveRemoteAccessLink({ label: 'Bad', url_template: 'https://remote.example/{asset.hostname}' });
+    expect(result).toMatchObject({ actionError: 'Template contains an unsupported placeholder.' });
   });
 });

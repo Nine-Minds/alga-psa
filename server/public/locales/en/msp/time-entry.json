@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Add Entry"
+    }
+  },
   "common": {
     "actions": {
       "view": "View",
@@ -458,14 +463,24 @@
     },
     "timePeriod": {
       "datesRequired": "Enter valid start and end dates.",
-      "closed": "This time period is closed. Reopen it before making changes."
+      "closed": "This time period is closed. Reopen it before making changes.",
+      "permissions": {
+        "read": "Permission denied: cannot view time periods.",
+        "create": "Permission denied: cannot create time periods.",
+        "update": "Permission denied: cannot update time periods.",
+        "delete": "Permission denied: cannot delete time periods."
+      }
     },
     "timePeriodSettings": {
       "invalidValue": "One of the time period setting values is invalid. Please refresh and try again.",
       "referenceMissing": "The selected time period setting is no longer valid. Please refresh and try again.",
       "duplicate": "A conflicting time period setting already exists.",
       "missingField": "Missing required time period setting field.",
-      "missingFieldNamed": "Missing required time period setting field: {{field}}."
+      "missingFieldNamed": "Missing required time period setting field: {{field}}.",
+      "permissions": {
+        "read": "Permission denied: cannot view time period settings.",
+        "manage": "Permission denied: cannot manage time period settings."
+      }
     },
     "stopwatch": {
       "notFound": "Stopwatch session not found. It may already have been logged or discarded. Please refresh.",
@@ -503,7 +518,8 @@
     "entryMissingPeriod": "The time sheet for this entry is missing its period and can’t be opened.",
     "noPeriods": "No time periods are set up yet, so time can’t be entered. Ask an administrator to create time periods under Settings → Time Entry.",
     "noEditablePeriods": "Every time sheet is submitted or approved, so there is no day to add time to. Ask an approver to reopen a sheet, or an administrator to add a time period.",
-    "prepareFailed": "An error occurred while preparing the time entry. Please try again."
+    "prepareFailed": "An error occurred while preparing the time entry. Please try again.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Suggestions",
@@ -528,7 +544,9 @@
       "checklistChanged": "checklist changed",
       "linksChanged": "links changed",
       "updated": "updated"
-    }
+    },
+    "activitySummary_few": "first activity {{first}} · last {{last}} · {{count}} actions ({{kinds}})",
+    "activitySummary_many": "first activity {{first}} · last {{last}} · {{count}} actions ({{kinds}})"
   },
   "stopwatch": {
     "pausedNotice_one": "Tracked {{active}} in {{count}} segment (paused {{paused}})",
@@ -547,6 +565,8 @@
       "confirm": "Continue",
       "cancel": "Cancel"
     },
-    "ticketFallbackName": "Ticket {{number}}"
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "Tracked {{active}} across {{count}} segments (paused {{paused}})",
+    "pausedNotice_many": "Tracked {{active}} across {{count}} segments (paused {{paused}})"
   }
 }

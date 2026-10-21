@@ -10,7 +10,8 @@
   },
   "purchasePage": {
     "title": "Licenties aanschaffen",
-    "description": "Voeg meer gebruikerslicenties toe aan uw AlgaPSA-account"
+    "description": "Voeg meer gebruikerslicenties toe aan uw AlgaPSA-account",
+    "communityEditionDescription": "De zelfgehoste Community Edition biedt een onbeperkt aantal gebruikers zonder licentiebeperkingen of extra kosten."
   },
   "purchaseSuccess": {
     "metaTitle": "Aankoop voltooid",
@@ -37,7 +38,8 @@
     },
     "sessionDetails": "Sessiedetails (voor ondersteuning)",
     "sessionId": "Sessie-ID:",
-    "goToAccountManagement": "Ga naar accountbeheer"
+    "goToAccountManagement": "Ga naar accountbeheer",
+    "enterpriseOnly": "Deze functie is alleen beschikbaar in Pro."
   },
   "subscriptionForm": {
     "title": "Licentieabonnement beheren",
@@ -255,7 +257,9 @@
         "description_one": "U hebt nog {{count}} dag om alle Pro-functies te gebruiken.",
         "description_other": "U hebt nog {{count}} dagen om alle Pro-functies te gebruiken.",
         "descriptionNoDays": "U kunt tijdens de proefperiode alle Pro-functies gebruiken.",
-        "badge": "Proefperiode actief"
+        "badge": "Proefperiode actief",
+        "description_few": "U hebt nog {{count}} dagen om alle Pro-functies te gebruiken.",
+        "description_many": "U hebt nog {{count}} dagen om alle Pro-functies te gebruiken."
       },
       "licensed": {
         "eyebrow": "Betaalde licentie",
@@ -302,7 +306,9 @@
       "refreshLabel": "Licentievernieuwing",
       "connected": "Verbonden",
       "lastCheckIn": "Laatste controle: {{timestamp}}",
-      "refreshHelp": "Past wijzigingen in gebruikersplaatsen of het abonnement uit het portaal onmiddellijk toe."
+      "refreshHelp": "Past wijzigingen in gebruikersplaatsen of het abonnement uit het portaal onmiddellijk toe.",
+      "daysRemaining_few": "Nog {{count}} dagen",
+      "daysRemaining_many": "Nog {{count}} dagen"
     },
     "portal": {
       "manageTitle": "Gebruikersplaatsen, facturatie en activeringscodes",

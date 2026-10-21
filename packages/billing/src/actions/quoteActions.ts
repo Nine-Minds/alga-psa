@@ -5,6 +5,7 @@ import Handlebars from 'handlebars';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
+import { withSerializableAuth } from './serializableAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { TenantEmailService } from '@alga-psa/email';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -2216,7 +2217,7 @@ export const getQuoteByConvertedContractId = withAuth(async (
   return applyQuoteRedactions(quote, decision.redactedFields);
 });
 
-export const getQuoteByConvertedInvoiceId = withAuth(async (
+export const getQuoteByConvertedInvoiceId = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string,
@@ -2236,7 +2237,7 @@ export const getQuoteByConvertedInvoiceId = withAuth(async (
     return null;
   }
   return applyQuoteRedactions(quote, decision.redactedFields);
-});
+}));
 
 /**
  * Get the most recent stored PDF file_id for a quote.

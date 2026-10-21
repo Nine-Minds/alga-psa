@@ -214,7 +214,35 @@
       "ariaLabel": "Recursos e ajuda",
       "title": "Recursos",
       "documentation": "Documentação",
-      "support": "Falar com o suporte"
+      "support": "Falar com o suporte",
+      "submitTicket": "Enviar um ticket para a Nine Minds"
+    },
+    "supportDialog": {
+      "title": "Enviar um ticket para a Nine Minds",
+      "intro": "O suporte da Nine Minds recebe isso como ticket e responde por email.",
+      "categoryLabel": "Com o que você precisa de ajuda?",
+      "categories": {
+        "bug": "Algo não está funcionando",
+        "question": "Dúvida",
+        "billing": "Faturamento",
+        "feature": "Solicitação de recurso"
+      },
+      "subjectLabel": "Assunto",
+      "descriptionLabel": "O que aconteceu?",
+      "descriptionPlaceholder": "Informe o que você esperava, o que aconteceu e qual cliente ou fatura está envolvido.",
+      "replyTo": "As respostas vão para {{email}}",
+      "success": "Enviado ao suporte da Nine Minds. As respostas vão para {{email}}.",
+      "submit": "Enviar para a Nine Minds",
+      "sending": "Enviando…",
+      "cancel": "Cancelar",
+      "close": "Fechar",
+      "fallbackLink": "Falar com o suporte em nineminds.com",
+      "errors": {
+        "invalidInput": "Informe um assunto com pelo menos 3 caracteres e uma descrição com pelo menos 20 caracteres.",
+        "rateLimited": "Você acabou de enviar uma solicitação. Aguarde um minuto antes de enviar outra.",
+        "emailNotConfigured": "Esta instalação não tem email de saída configurado, por isso a solicitação não foi enviada.",
+        "sendFailed": "Falha ao enviar a solicitação. Tente novamente."
+      }
     },
     "jobs": {
       "ariaLabel": "Ver atividade de trabalho em segundo plano",
@@ -783,5 +811,37 @@
   "githubStar": {
     "label": "Marcar com estrela",
     "ariaLabel": "Marcar {{repository}} com estrela no GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "Portal MSP",
+      "dashboard": "Painel",
+      "ticketDetails": "Detalhes do ticket",
+      "tickets": "Tickets",
+      "projectDetails": "Detalhes do projeto",
+      "projects": "Projetos",
+      "clientDetails": "Detalhes do cliente",
+      "clients": "Clientes",
+      "contactDetails": "Detalhes do contato",
+      "contacts": "Contatos",
+      "assetDetails": "Detalhes do ativo",
+      "assets": "Ativos",
+      "billing": "Faturamento",
+      "settings": "Configurações",
+      "settingsSection": "Configurações: {{section}}",
+      "chat": "Bate-papo"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Recurso Pro",
+      "description": "Os recursos de bate-papo com IA exigem o Pro. Faça upgrade para acessar este recurso."
+    },
+    "messages": {
+      "proRequired": "Os recursos de mensagens exigem o Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Os recursos de bate-papo estão disponíveis apenas na Enterprise Edition"
+    }
   }
 }

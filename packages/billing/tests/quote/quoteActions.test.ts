@@ -76,6 +76,10 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
+  withOptionalAuth:
+    (fn: any) =>
+    (...args: any[]) =>
+      fn(currentUser, { tenant: TENANT_ID }, ...args),
   withAuth:
     (fn: any) =>
     (...args: any[]) =>
@@ -216,6 +220,16 @@ const templateQuote = {
     },
   ],
 };
+
+// Compiling the quoteActions module graph takes seconds, and every test below
+// reaches it through `await import(...)`. Left to the first test, that whole
+// compile is charged to one test's timeout — which is how T042 (the first one)
+// hit "Test timed out in 20000ms" on a loaded CI runner while the other fifty
+// finished in single-digit milliseconds. Warm the module cache here, during
+// file evaluation, which is not on the test clock; the per-test imports below
+// then resolve from cache. The mock factories above are already defined at
+// this point, so they still intercept the graph.
+await import('../../src/actions/quoteActions');
 
 describe('quoteActions', () => {
   beforeEach(() => {

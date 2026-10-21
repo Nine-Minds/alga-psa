@@ -14,6 +14,8 @@ current revision passed the full CI or browser matrix.
 | Xero revocation | Basic authentication + form refresh token, empty 200; removes connected organisations and rotated credentials. | [Lifecycle HTTP tests](xero/tests/tokenLifecycle.test.ts), [model limits](xero/README.md). One resource owner per client; immediate access-token invalidation is deterministic emulation, not measured JWT propagation. Unknown/repeated/foreign-token success follows RFC 7009. Direct access-token revocation is not modeled. |
 | Actual accounting cleanup consumers | Real `revokeAccountingOAuthGrant` for each provider reaches the journaled vendor route. Success rejects credentials; Xero also verifies connection removal after fresh authorization. Failed cleanup logs without throwing and preserves usable credentials. | [QBO consumer](qbo/tests/accountingCleanupConsumer.test.ts), [Xero consumer](xero/tests/accountingCleanup.test.ts). Native HTTP with guards against external destinations; auth/state/logger seams are isolated. This is the cleanup helper, not the entire denied OAuth callback, database rollback, disconnect UI, or a running worker. |
 | Stripe callback redirects | HTTP 302/307 count as delivery failures; redirect destination receives no request and independent callbacks still receive valid signed payloads. | [Redirect tests](stripe/tests/webhookRedirect.test.ts). SDK verification covers signatures and delivery time; no live sandbox capture, exhaustive event schema, or automatic retry/backoff parity is implied. |
+| Level REST consumer | Alga's real `LevelIoApiClient` over HTTP: `testConnection`, group hierarchy across pages, devices with `include_*` sections and `ancestor_group_id`, alerts by device/status, resolve, updates, 401 envelope, 429 retry on `Retry-After`, persistent 429/5xx errors. | [Consumer tests](levelio/tests/restConsumer.test.ts). Shapes follow the OpenAPI definition only; no live Level capture. The incremental-sync check applies the sync engine's `last_seen_at` filter by hand, not `runLevelIoFullSync`. |
+| Level outbound (route) | Alga's fixed route exercised through the real EE route and a migrated database: signed native webhooks (`X-Level-Signature` over the raw body) are accepted, create tickets, reset on `alert_resolved` and no-op on a re-run of the same `event_id`; Alga's fallback automation template (documented system variables only) produces distinct alerts and tickets; the old literal `{{alert_id}}` template is rejected. Fixed 2026-10-15; no emulator behavior was changed for the fix. | [Route integration test](../../ee/server/src/__tests__/integration/levelioEmulatorRoute.integration.test.ts), [webhook tests](levelio/tests/webhooks.test.ts), [automation tests](levelio/tests/automation.test.ts). Secrets and event publishing are stubbed. Level-side delivery behavior beyond the documented points below is modeled, not observed. |
 | Temporal Stripe routing | Actual subscription-metadata POST and tenant-deletion DELETE use the configured SDK endpoint; missing override retains production default and malformed overrides fail. | [Native consumer tests](../../ee/temporal-workflows/src/config/__tests__/stripe-client-routing.test.ts). Two of five migrated constructors have individual HTTP journeys. DB/secrets/activity context are mocked; no running Temporal worker or workflow-engine routing proof. |
 
 ## Independent references and deliberate model choices
@@ -104,3 +106,72 @@ which methods a given Entra application accepts.
 ## SMTP transaction evidence
 
 The SMTP sink records bounded DATA transactions through the host request-history endpoint: acceptance, rejection, processing failure and interrupted transfers, with in-flight, dropped and reset-generation accounting. Records contain protocol, command, sequence, timestamps and outcome only; they contain no envelope, credentials or message content. Native transport tests cover these outcomes and isolation across reset. Greeting, envelope and authentication failures before DATA are not represented. The browser readiness consumer requires complete, nonempty SMTP evidence for the inbound-email journey; this is emulator observation, not live mail-provider parity.
+
+## Level
+
+Reviewed 2026-10-15 against the Level v2 OpenAPI definition at
+[developers.level.io](https://developers.level.io) (endpoint and webhook
+pages updated 2026-05-22), [About Webhooks](https://developers.level.io/reference/about-webhooks),
+the [system variables](https://docs.level.io/en/articles/11321970-system-variables)
+article and the [HTTP Request action](https://docs.level.io/en/articles/13909223-http-request-action)
+article. No live Level account was used.
+
+Documented and modeled:
+
+- `Authorization: <api key>` with no scheme; 401 `{"error":"Access denied"}`,
+  404 `{"error":"Record not found"}`.
+- List parameters for groups, devices, alerts and updates, including
+  `limit` (1–100, default 20), `starting_after`, `ending_before` and
+  `{ data, has_more }`. Device detail sections only appear with their
+  `include_*` flag. Online devices report `last_seen_at` as the current time.
+- Group, device, alert and update field names. Ids follow Level's examples,
+  unpadded base64 of `gid://level/<Type>/<n>`.
+- Webhook envelope `{ event_type, event_id, occurred_at, data }` for all eight
+  event types. Alert, device and group `data` use the same schemas as the REST
+  resources. `event_id` stays constant across retries.
+- `X-Level-Signature: sha256=<hex>` over the raw body, only when a secret is
+  set, verified with Level's own Node.js snippet. No custom headers.
+- Up to 3 retries with exponential backoff and jitter, 2+ minutes apart; only
+  2xx succeeds; manual "Re-run request".
+- System variable names and rendering rules (unreported values empty,
+  booleans as text). HTTP Request action fields: URL, method, the three content
+  types, header rows, body; 4xx/5xx marks the action failed.
+
+Emulator choices, not confirmed against Level:
+
+- Out-of-range `limit`, an unknown cursor, or both cursors at once answer
+  400. Level documents no error for these.
+- Rate limiting answers 429 with `Retry-After` and `{"error":"Too many requests"}`.
+  Level documents neither the limit nor the envelope.
+- `Bearer <key>` is rejected. Level documents only the bare key.
+- `ancestor_group_id` includes devices directly in that group.
+  `status=installed` on updates means `is_available: false` with an
+  `installed_on` date.
+- Deleting a group moves its children to its parent and ungroups its devices.
+- Device webhook `data` carries every detail section.
+- Retry delays are 2, 4 and 8 minutes plus up to 30 s of jitter. A redirect,
+  a network error or a 10-second timeout counts as a failed delivery. A
+  re-run does not start a new retry chain.
+- System variable formatting where the article is silent: comma-separated
+  lists with no spaces, `level_device_memory_formatted` as `16 GB`,
+  `level_device_os_version` from the OS minor version. Substituted values are
+  inserted as-is, with no JSON escaping.
+- Unknown `{{tokens}}` are sent literally. The docs do not say this; production
+  traffic to Alga on 2026-10-15 showed it.
+- Action retries are immediate. The docs name a retries option without a
+  schedule.
+- `fire-alert`'s `webhookDataExtra` adds fields to alert webhook `data` that
+  Level does not document. Treat anything set there as unverified.
+
+Not modeled: group/tag/custom-field writes and the automations, activities
+and custom-field REST endpoints (all answer 501); custom-field references and
+any alert-specific variables in automations (Level documents none); webhook
+endpoint management through the API; Level's own request-log UI.
+
+Consumer drift (resolved): Level's device schema carries `disks` (`disk_type`,
+`model`, `serial_number`, `size`) and no `disk_partitions`. Alga's
+`LevelIoDevice` type and device mapper read the documented `disks` field, so
+the emulator's payload and Alga's mapping agree. Level reports physical
+capacity only; mapped storage entries carry `total_gb` without `free_gb` or
+`utilization_percent`. `ee/server/src/__tests__/integration/levelioEmulatorApiClient.integration.test.ts` runs the mapper against the
+emulator's `disks` payload.

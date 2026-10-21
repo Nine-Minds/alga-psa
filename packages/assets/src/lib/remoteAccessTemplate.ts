@@ -4,6 +4,9 @@ export interface RemoteAccessTemplateContext {
   field?: Record<string, unknown> | null;
 }
 
+/** Asset columns a URL template may reference as {asset.<key>}. */
+export const REMOTE_ACCESS_ASSET_KEYS: readonly string[] = ['name', 'asset_tag', 'serial_number', 'rmm_device_id'];
+
 const PLACEHOLDER_PATTERN = /\{(asset|client|field)\.([a-zA-Z0-9_-]+)\}/g;
 
 /** Templates must contain an explicit scheme and a literal, valid host. */
@@ -34,7 +37,7 @@ export function renderRemoteAccessTemplate(
 
   let hasMissingValue = false;
   const rendered = normalizedTemplate.replace(PLACEHOLDER_PATTERN, (_token, scope: string, key: string) => {
-    const isSupportedAssetKey = scope !== 'asset' || ['name', 'asset_tag', 'serial_number'].includes(key);
+    const isSupportedAssetKey = scope !== 'asset' || REMOTE_ACCESS_ASSET_KEYS.includes(key);
     const isSupportedClientKey = scope !== 'client' || key === 'name';
     if (!isSupportedAssetKey || !isSupportedClientKey) {
       hasMissingValue = true;

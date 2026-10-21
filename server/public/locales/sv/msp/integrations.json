@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Pro-funktion"
+    },
     "accounting": {
       "bulk": {
         "button": "Massmappning",
@@ -124,6 +127,15 @@
           "paymentTerms": "Betalningsvillkor",
           "discounts": "Rabatter"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Tjänstekonton i Desktop",
+        "desktopDiscounts": "Rabatter i Desktop",
+        "desktopAccount": "Intäktskontots namn i Desktop",
+        "description": "Mappa fakturarabatter och krediteringar före export. Mappningen tillhör det här bokföringsföretaget.",
+        "add": "Lägg till mappning",
+        "remove": "Ta bort mappning",
+        "removeConfirm": "Vill du ta bort den här bokföringsmappningen?"
       }
     },
     "calendar": {
@@ -1223,7 +1235,12 @@
         "recommendedUnsaved": "Rekommenderat – inte sparat",
         "unsavedChange": "Osparad ändring",
         "unsavedNotice": "De här filterinställningarna gäller först när du har sparat dem."
-      }
+      },
+      "proFeature": {
+        "description": "Integrationen med Microsoft Entra är tillgänglig i AlgaPSA Pro.",
+        "notice": "Identitetsintegrationen med Microsoft Entra är en Pro-funktion."
+      },
+      "loading": "Läser in integrationen med Microsoft Entra…"
     },
     "google": {
       "settings": {
@@ -1294,6 +1311,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "Integrationen med Hudu för IT-dokumentation är tillgänglig i AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Källa: Hudu",
         "openInHudu": "Öppna i Hudu",
@@ -2337,6 +2357,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "RMM-integrationen med NinjaOne är tillgänglig i AlgaPSA Pro."
+        },
         "loading": "Läser in inställningar för NinjaOne-integration…",
         "card": {
           "title": "RMM-integration för NinjaOne",
@@ -2614,6 +2637,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "RMM-integrationen med Tanium är tillgänglig i AlgaPSA Pro."
+        },
         "loading": "Läser in inställningar för Tanium-integration…",
         "actions": {
           "discoverScopes": "Identifiera omfång",
@@ -2684,6 +2710,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "RMM-integrationen med Level.io är tillgänglig i AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Efterhämta larm",
           "disconnect": "Koppla från",
@@ -2756,16 +2785,35 @@
           "copied": "Kopierat",
           "copy": "Kopiera",
           "description": "Level kan inte registrera webhookar via sitt API. Skapa en automatisering i Level med en HTTP POST-åtgärd som använder URL:en, HTTP-huvudet och nyttolasten nedan för att skicka larm till Alga i realtid.",
+          "fallbackDescription": "Använd den här reserven endast när Levels inbyggda webhooks under Inställningar → Webhooks inte kan användas. Skapa en automation med en HTTP POST-åtgärd med URL:en, headern och payloaden nedan för att skicka larm till Alga.",
+          "fallbackNameHint": "Redigera värdet \"name\" i varje automation. Tillsammans med enheten identifierar det larmet, så upprepningar med samma namn på samma enhet räknas som ett larm.",
+          "fallbackTitle": "Reserv: HTTP-anrop från automation",
           "header": "HTTP-huvud: {{name}}",
           "hideSecret": "Dölj hemlighet",
           "loading": "Webhook-detaljer läses in när integrationen har konfigurerats.",
+          "nativeDescription": "Öppna Inställningar → Webhooks i Level, lägg till en webhook med URL:en och signeringsnyckeln nedan och aktivera de listade händelserna. Level signerar varje leverans och Alga verifierar signaturen.",
+          "nativeEvents": "Händelser att aktivera",
+          "nativeEventsHelp": "Aktivera alert_active och alert_resolved. Övriga händelser bekräftas och ignoreras.",
+          "nativeSigningSecret": "Signeringsnyckel",
+          "nativeTitle": "Inbyggd webhook (rekommenderas)",
           "payload": "Nyttolastmall",
+          "regenerateCancel": "Avbryt",
+          "regenerateConfirmLabel": "Generera ny",
+          "regenerateConfirmMessage": "Befintliga Level-webhooks misslyckas med 401 tills du klistrar in den nya signeringsnyckeln i Levels webhook-inställningar. Level försöker leverera igen, men leveranser kan gå förlorade om nyckeln inte uppdateras.",
+          "regenerateConfirmTitle": "Generera ny signeringsnyckel?",
+          "regenerateConfirmed": "Signeringsnyckeln har genererats på nytt. Uppdatera den i Levels webhook-inställningar.",
+          "regenerateFailed": "Det gick inte att generera ny signeringsnyckel",
+          "regenerateSecret": "Generera ny nyckel",
           "showSecret": "Visa hemlighet",
           "title": "Larmwebhook",
           "url": "Webhook-URL"
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Huntress-integration",
+          "description": "Säkerhetsintegrationen med Huntress är en Pro-funktion."
+        },
         "columns": {
           "organization": "Huntress-organisation",
           "client": "Alga-kund",
@@ -3525,6 +3573,11 @@
           "regenerate": "Generera paketet igen",
           "regenerating": "Genererar igen…"
         }
+      },
+      "unavailable": {
+        "signInTitle": "Teams-inloggning är inte tillgänglig",
+        "tabTitle": "Teams-fliken är inte tillgänglig",
+        "description": "Integrationen med Microsoft Teams är endast tillgänglig i Pro."
       }
     },
     "xero": {

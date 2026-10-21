@@ -50,6 +50,27 @@ export class TimeEntryService extends BaseService<any> {
     });
   }
 
+  /**
+   * Range keys the time-entry list accepts: the common created_ and updated_
+   * keys, the start/end instants, and `date_*` (mapped to the work_date calendar
+   * column). Any other `_from`/`_to` key is rejected by `applyRangeFilters`.
+   */
+  protected rangeFilterColumns(): Record<string, string> {
+    return {
+      ...super.rangeFilterColumns(),
+      created_from: `${this.tableName}.created_at`,
+      created_to: `${this.tableName}.created_at`,
+      updated_from: `${this.tableName}.updated_at`,
+      updated_to: `${this.tableName}.updated_at`,
+      start_time_from: `${this.tableName}.start_time`,
+      start_time_to: `${this.tableName}.start_time`,
+      end_time_from: `${this.tableName}.end_time`,
+      end_time_to: `${this.tableName}.end_time`,
+      date_from: `${this.tableName}.work_date`,
+      date_to: `${this.tableName}.work_date`,
+    };
+  }
+
   // A PostgreSQL DATE is a calendar date, not an instant. Project it as text
   // before pg hydrates it into a Date in the Node process's timezone.
   private workDateProjection(knex: Knex): Knex.Raw {
@@ -69,7 +90,11 @@ export class TimeEntryService extends BaseService<any> {
 
   protected applyFilters(query: Knex.QueryBuilder, filters: Record<string, any>, knex?: Knex, tenant?: string): Knex.QueryBuilder {
     if (!filters) return query;
-    
+
+    // Created/updated plus start_time/end_time/date windows. Unsupported range
+    // keys throw instead of silently returning unfiltered entries.
+    this.applyRangeFilters(query, filters);
+
     if (filters.user_id) {
       query.where(`${this.tableName}.user_id`, filters.user_id);
     }
@@ -87,24 +112,6 @@ export class TimeEntryService extends BaseService<any> {
     }
     if (filters.is_billable !== undefined) {
       query.where(`${this.tableName}.billable_duration`, filters.is_billable ? '>' : '=', 0);
-    }
-    if (filters.start_time_from) {
-      query.where(`${this.tableName}.start_time`, '>=', filters.start_time_from);
-    }
-    if (filters.start_time_to) {
-      query.where(`${this.tableName}.start_time`, '<=', filters.start_time_to);
-    }
-    if (filters.end_time_from) {
-      query.where(`${this.tableName}.end_time`, '>=', filters.end_time_from);
-    }
-    if (filters.end_time_to) {
-      query.where(`${this.tableName}.end_time`, '<=', filters.end_time_to);
-    }
-    if (filters.date_from) {
-      query.where(`${this.tableName}.work_date`, '>=', filters.date_from);
-    }
-    if (filters.date_to) {
-      query.where(`${this.tableName}.work_date`, '<=', filters.date_to);
     }
     if (filters.time_sheet_id) {
       query.where(`${this.tableName}.time_sheet_id`, filters.time_sheet_id);

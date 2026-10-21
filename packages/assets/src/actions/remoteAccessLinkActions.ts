@@ -5,7 +5,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { AssetRemoteAccessLink } from '@alga-psa/types';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { AssetActionError } from './assetActionErrors';
-import { hasLiteralHttpAuthority, renderRemoteAccessTemplate } from '../lib/remoteAccessTemplate';
+import { hasLiteralHttpAuthority, renderRemoteAccessTemplate, REMOTE_ACCESS_ASSET_KEYS } from '../lib/remoteAccessTemplate';
 
 type RemoteAccessLinkInput = Partial<AssetRemoteAccessLink> & {
   label: string;
@@ -42,7 +42,7 @@ function validateTemplate(template: string): AssetActionError | null {
   const tokens = [...template.matchAll(tokenPattern)];
   const residue = template.replace(tokenPattern, '');
   if (/[{}]/.test(residue) || tokens.some(([, scope, key]) =>
-    (scope === 'asset' && !['name', 'asset_tag', 'serial_number'].includes(key)) ||
+    (scope === 'asset' && !REMOTE_ACCESS_ASSET_KEYS.includes(key)) ||
     (scope === 'client' && key !== 'name')
   )) {
     return actionError('Template contains an unsupported placeholder.', 'msp/assets:remoteAccess.links.errors.templatePlaceholder');
@@ -148,7 +148,7 @@ export const getRemoteAccessLinksForAsset = withAuth(async (
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);
   const assetQuery = db.table('assets')
-    .select(['assets.asset_type', 'assets.name', 'assets.asset_tag', 'assets.serial_number', 'assets.attributes', 'clients.client_name']);
+    .select(['assets.asset_type', 'assets.name', 'assets.asset_tag', 'assets.serial_number', 'assets.rmm_device_id', 'assets.attributes', 'clients.client_name']);
   // pattern tenant-safe-client-join — tenantJoin scopes client rows to the same tenant as the asset.
   db.tenantJoin(assetQuery, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
   const asset = await assetQuery
@@ -165,6 +165,7 @@ export const getRemoteAccessLinksForAsset = withAuth(async (
         name: asset.name,
         asset_tag: asset.asset_tag,
         serial_number: asset.serial_number,
+        rmm_device_id: asset.rmm_device_id,
       },
       client: { name: asset.client_name ?? '' },
       field: fields,

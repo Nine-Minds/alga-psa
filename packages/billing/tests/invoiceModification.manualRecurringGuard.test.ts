@@ -12,21 +12,55 @@ const state = {
     tax_region: 'US-WA',
   } as Record<string, any> | null,
   nonManualTargets: [] as Array<Record<string, any>>,
+  // Persisted manual rows keyed by item_id. The builder's `update` mutates these
+  // so the second pass reads back the values written by the first pass, exactly
+  // as the database would.
+  manualCharges: new Map<string, Record<string, any>>(),
   queriedTables: [] as string[],
+  unauthenticated: false,
+  missingSessionAfterAuth: false,
+  permissionDenied: false,
 };
 
+interface CapturedUpdate {
+  table: string;
+  where: Record<string, any>;
+  payload: Record<string, any>;
+}
+
+const updateCalls: CapturedUpdate[] = [];
 const recalculateInvoiceMock = vi.fn(async () => undefined);
 
 function createBuilder(table: string) {
+  const criteria: Record<string, any> = {};
   const builder: any = {};
+  const isManualRowQuery = () =>
+    table === 'invoice_charges' && criteria.item_id !== undefined;
+
+  builder.clone = vi.fn(() => builder);
+  builder.forUpdate = vi.fn(() => builder);
+  builder.join = vi.fn(() => builder);
   builder.leftJoin = vi.fn(() => builder);
-  builder.where = vi.fn(() => builder);
+  builder.where = vi.fn((value: Record<string, any>) => {
+    Object.assign(criteria, value);
+    return builder;
+  });
   builder.andWhere = vi.fn(() => builder);
   builder.whereIn = vi.fn(() => builder);
   builder.whereNot = vi.fn(() => builder);
+  builder.whereNotIn = vi.fn(() => builder);
   builder.orWhereNull = vi.fn(() => builder);
   builder.select = vi.fn(() => builder);
-  builder.update = vi.fn(async () => 1);
+  builder.pluck = vi.fn(async () => []);
+  builder.increment = vi.fn(async () => 1);
+  builder.update = vi.fn(async (payload: Record<string, any>) => {
+    const row = isManualRowQuery() ? state.manualCharges.get(criteria.item_id) : undefined;
+    updateCalls.push({ table, where: { ...criteria }, payload });
+    if (row) {
+      Object.assign(row, payload);
+    }
+    return 1;
+  });
   builder.delete = vi.fn(async () => 1);
   builder.first = vi.fn(async () => {
     if (table === 'invoices') {
@@ -35,6 +69,10 @@ function createBuilder(table: string) {
 
     if (table === 'clients') {
       return state.client;
+    }
+
+    if (isManualRowQuery()) {
+      return state.manualCharges.get(criteria.item_id) ?? undefined;
     }
 
     return undefined;
@@ -53,14 +91,25 @@ function createMockTrx() {
   }) as any;
 }
 
-vi.mock('@alga-psa/auth', () => ({
-  withAuth: (fn: any) => (...args: any[]) =>
-    fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
-  getSession: vi.fn(async () => ({ user: { id: 'user-1' } })),
-}));
+vi.mock('@alga-psa/auth', () => {
+  class TestAuthenticationError extends Error {
+    constructor() {
+      super('User not authenticated');
+      this.name = 'AuthenticationError';
+    }
+  }
+  return {
+    AuthenticationError: TestAuthenticationError,
+    withAuth: (fn: any) => (...args: any[]) => {
+      if (state.unauthenticated) throw new TestAuthenticationError();
+      return fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args);
+    },
+    getSession: vi.fn(async () => state.missingSessionAfterAuth ? null : ({ user: { id: 'user-1' } })),
+  };
+});
 
 vi.mock('@alga-psa/auth/rbac', () => ({
-  hasPermission: vi.fn().mockResolvedValue(true),
+  hasPermission: vi.fn(async () => !state.permissionDenied),
 }));
 
 vi.mock('@alga-psa/db', async () => {
@@ -79,8 +128,14 @@ vi.mock('../src/lib/billing/billingEngine', () => ({
 }));
 
 vi.mock('../src/services/invoiceService', () => ({
+  recalculatePercentageDiscountInvoiceCharges: vi.fn(async () => undefined),
   persistInvoiceCharges: vi.fn(),
   persistManualInvoiceCharges: vi.fn(),
+  validateManualChargeAttribution: vi.fn(),
+}));
+
+vi.mock('../src/services/invoiceAutomaticAdjustments', () => ({
+  reconcileAutomaticInvoiceAdjustments: vi.fn(async () => ({ automaticDiscountAmount: 0 })),
 }));
 
 vi.mock('../src/models/clientContractLine', () => ({
@@ -114,6 +169,66 @@ vi.mock('../src/actions/taxSourceActions', () => ({
 }));
 
 describe('manual invoice edits preserve recurring provenance', () => {
+  it('returns a JSON-safe unauthenticated result before entering the mutation action', async () => {
+    state.unauthenticated = true;
+    const { updateInvoiceManualItems } = await import('../src/actions/invoiceModification.ts');
+
+    const result = await updateInvoiceManualItems('invoice-1', {
+      newItems: [],
+      updatedItems: [],
+      removedItemIds: [],
+    } as any);
+    const serializedResult = JSON.parse(JSON.stringify(result));
+
+    expect(serializedResult).toEqual({
+      success: false,
+      code: 'UNAUTHENTICATED',
+      params: {},
+      message: 'Authentication required',
+      error: 'Authentication required',
+    });
+    expect(state.queriedTables).toEqual([]);
+    expect(recalculateInvoiceMock).not.toHaveBeenCalled();
+  });
+
+  it('returns a JSON-safe unauthenticated result when the session disappears after withAuth, before mutation', async () => {
+    state.missingSessionAfterAuth = true;
+    const { updateInvoiceManualItems } = await import('../src/actions/invoiceModification.ts');
+
+    const result = await updateInvoiceManualItems('invoice-1', {
+      newItems: [],
+      updatedItems: [],
+      removedItemIds: [],
+    } as any);
+    const serializedResult = JSON.parse(JSON.stringify(result));
+
+    expect(serializedResult).toEqual({
+      success: false,
+      code: 'UNAUTHENTICATED',
+      params: {},
+      message: 'Authentication required',
+      error: 'Authentication required',
+    });
+    expect(state.queriedTables).toEqual([]);
+    expect(updateCalls).toEqual([]);
+    expect(recalculateInvoiceMock).not.toHaveBeenCalled();
+  });
+
+  it('preserves genuine invoice permission denial as a permission failure', async () => {
+    state.permissionDenied = true;
+    const { updateInvoiceManualItems } = await import('../src/actions/invoiceModification.ts');
+
+    const result = await updateInvoiceManualItems('invoice-1', {
+      newItems: [],
+      updatedItems: [],
+      removedItemIds: [],
+    } as any);
+
+    expect(result).toMatchObject({ success: false, code: 'PERMISSION_DENIED' });
+    expect(state.queriedTables).toEqual([]);
+    expect(updateCalls).toEqual([]);
+  });
+
   beforeEach(() => {
     state.invoice = {
       invoice_id: 'invoice-1',
@@ -132,7 +247,12 @@ describe('manual invoice edits preserve recurring provenance', () => {
         item_detail_id: 'detail-1',
       },
     ];
+    state.manualCharges = new Map();
     state.queriedTables = [];
+    state.unauthenticated = false;
+    state.missingSessionAfterAuth = false;
+    state.permissionDenied = false;
+    updateCalls.length = 0;
     recalculateInvoiceMock.mockClear();
   });
 
@@ -172,5 +292,38 @@ describe('manual invoice edits preserve recurring provenance', () => {
 
     expect(recalculateInvoiceMock).toHaveBeenCalledTimes(1);
     expect(recalculateInvoiceMock).toHaveBeenCalledWith('invoice-1', expect.any(Function), 'tenant-1');
+  });
+
+  it('T230: recomputes an edited one-time manual line from its persisted quantity and unit price', async () => {
+    state.nonManualTargets = [];
+    state.manualCharges.set('manual-1', {
+      item_id: 'manual-1',
+      invoice_id: 'invoice-1',
+      quantity: 1,
+      unit_price: 10000,
+      net_amount: 10000,
+      total_price: 10000,
+      is_manual: true,
+      is_discount: false,
+    });
+    const { updateInvoiceManualItems } = await import('../src/actions/invoiceModification.ts');
+
+    await updateInvoiceManualItems('invoice-1', {
+      updatedItems: [
+        {
+          item_id: 'manual-1',
+          quantity: 3,
+          rate: 5000,
+        },
+      ],
+      newItems: [],
+      removedItemIds: [],
+    } as any);
+
+    const amountUpdate = updateCalls.find(
+      (call) => call.table === 'invoice_charges' && call.where.item_id === 'manual-1' && 'net_amount' in call.payload,
+    );
+    expect(amountUpdate).toBeTruthy();
+    expect(amountUpdate!.payload).toMatchObject({ net_amount: 15000, total_price: 15000 });
   });
 });

@@ -7,6 +7,8 @@ export interface ActivityTicketDetailsRenderProps {
   consolidatedData: any;
   currentUser: any;
   onClose: () => void;
+  /** Optional: fired after a ticket edit (field, comment, description) saved successfully. */
+  onSaved?: () => void;
 }
 
 export interface ActivityTaskEditRenderProps {
