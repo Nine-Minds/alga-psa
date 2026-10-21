@@ -462,8 +462,8 @@
         "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
         "ticketFilter": "Filtr zgłoszeń",
         "ticketFilterPlaceholder": "Jeden UUID zgłoszenia na linię. Pozostaw puste, aby otrzymywać wszystkie pasujące zdarzenia zgłoszeń.",
-        "legacyEventsHelp": "These event types are no longer supported. They are kept on this webhook but never deliver. Uncheck one to remove it.",
-        "legacyEventLabel": "unsupported",
+        "legacyEventsHelp": "Te typy zdarzeń nie są już obsługiwane. Pozostają przypisane do tego webhooka, ale nigdy nie są dostarczane. Odznacz typ, aby go usunąć.",
+        "legacyEventLabel": "nieobsługiwany",
         "retryConfig": "Konfiguracja ponowień (JSON)",
         "verifySsl": "Weryfikuj certyfikaty SSL",
         "webhookActive": "Webhook jest aktywny",
@@ -805,7 +805,7 @@
       "deliveryNotFound": "Nie znaleziono dostarczenia.",
       "testNotRetryable": "Dostarczeń testowych nie można ponowić.",
       "validation": { "unknownEntity": "Nieznany typ encji webhooka „{{entity}}”.", "unknownField": "Nieznane pole „{{field}}” dla encji webhooka „{{entity}}”." },
-      "unsupportedEventType": "Unsupported event type: {{eventTypes}}",
+      "unsupportedEventType": "Nieobsługiwany typ zdarzenia: {{eventTypes}}",
       "payloadInvalid": "Tego dostarczenia nie można ponowić, ponieważ zapisany ładunek jest nieprawidłowy."
     },
     "inboundWebhooks": {

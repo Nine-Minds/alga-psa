@@ -460,8 +460,8 @@
         "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
         "ticketFilter": "Filtre de tickets",
         "ticketFilterPlaceholder": "Un UUID de ticket par ligne. Laissez vide pour recevoir tous les événements de ticket correspondants.",
-        "legacyEventsHelp": "These event types are no longer supported. They are kept on this webhook but never deliver. Uncheck one to remove it.",
-        "legacyEventLabel": "unsupported",
+        "legacyEventsHelp": "Ces types d'événements ne sont plus pris en charge. Ils sont conservés sur ce webhook mais ne sont jamais livrés. Décochez-en un pour le supprimer.",
+        "legacyEventLabel": "non pris en charge",
         "retryConfig": "Configuration des nouvelles tentatives (JSON)",
         "verifySsl": "Vérifier les certificats SSL",
         "webhookActive": "Le webhook est actif",
@@ -803,7 +803,7 @@
       "deliveryNotFound": "Livraison introuvable.",
       "testNotRetryable": "Les livraisons de test ne peuvent pas être relancées.",
       "payloadInvalid": "Cette livraison ne peut pas être relancée car la charge utile enregistrée n'est pas valide.",
-      "unsupportedEventType": "Unsupported event type: {{eventTypes}}",
+      "unsupportedEventType": "Type d'événement non pris en charge : {{eventTypes}}",
       "validation": { "unknownEntity": "Entité de webhook inconnue « {{entity}} ».", "unknownField": "Champ « {{field}} » inconnu pour l’entité de webhook « {{entity}} »." }
     },
     "inboundWebhooks": {
