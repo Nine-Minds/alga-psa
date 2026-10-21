@@ -16,7 +16,7 @@ import type {
   DateValue,
 } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
-import { displayAddressField, displayCountry } from '@alga-psa/core';
+import { displayAddressField, displayCountry, formatPostalAddress } from '@alga-psa/core';
 import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
 // toPlainDate is likely not needed here as we format to string for Wasm
 
@@ -205,21 +205,24 @@ const resolveRecurringServicePeriodSummary = (source: Record<string, unknown>, l
 const isRecurringItem = (item: WasmInvoiceLineItem): boolean =>
   (item.recurringDetailPeriods?.length ?? 0) > 0 || !!item.billingTiming;
 
-const buildLocationAddressBlock = (location: WasmInvoiceLineItemLocation | null): string | null => {
+export const buildLocationAddressBlock = (location: WasmInvoiceLineItemLocation | null): string | null => {
   if (!location) return null;
-  const lines: string[] = [];
-  for (const field of [location.address_line1, location.address_line2, location.address_line3]) {
-    const trimmed = displayAddressField(field);
-    if (trimmed) lines.push(trimmed);
-  }
-  const cityLine = [location.city, location.state_province, location.postal_code]
-    .map(displayAddressField)
-    .filter((value) => value.length > 0)
-    .join(', ');
-  if (cityLine) lines.push(cityLine);
-  const country = displayCountry(location.country_name, location.country_code);
-  if (country) lines.push(country);
-  return lines.length > 0 ? lines.join('\n') : null;
+  const cityLine = formatPostalAddress([
+    displayAddressField(location.city),
+    displayAddressField(location.state_province),
+    displayAddressField(location.postal_code),
+  ]);
+  const block = formatPostalAddress(
+    [
+      displayAddressField(location.address_line1),
+      displayAddressField(location.address_line2),
+      displayAddressField(location.address_line3),
+      cityLine,
+      displayCountry(location.country_name, location.country_code),
+    ],
+    { separator: '\n' },
+  );
+  return block || null;
 };
 
 const UNASSIGNED_LOCATION_GROUP_KEY = '__unassigned__';
