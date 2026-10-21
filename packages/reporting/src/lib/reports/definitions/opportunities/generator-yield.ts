@@ -31,8 +31,7 @@ export const opportunityGeneratorYieldReport: ReportDefinition = {
           COALESCE(SUM(opportunity.nrr_cents) FILTER (WHERE opportunity.status = 'won'), 0)::bigint AS won_nrr_cents
         FROM {{tenant_table:opportunity_suggestions AS suggestion}}
         LEFT JOIN {{tenant_table:opportunities AS opportunity}}
-          ON opportunity.tenant = suggestion.tenant
-         AND opportunity.opportunity_id = suggestion.created_opportunity_id
+          ON opportunity.opportunity_id = suggestion.created_opportunity_id
         GROUP BY suggestion.generator_key, suggestion.currency_code
         ORDER BY suggestion.generator_key, suggestion.currency_code
       `],
