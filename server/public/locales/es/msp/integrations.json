@@ -2831,7 +2831,7 @@
         },
         "connection": {
           "title": "Conectado a {{account}}",
-          "summary": "{{organizations}} organizaciones ({{unmapped}} sin asignar) · {{openIncidents}} incidentes abiertos · último sondeo: {{lastPoll}}",
+          "summary": "{{organizations}} organizaciones ({{unmapped}} sin asignar) · {{openAlerts}} alertas abiertas · último sondeo: {{lastPoll}}",
           "neverPolled": "nunca",
           "lastPollFailed": "Error en el último sondeo: {{error}}",
           "routingIncompleteWarning": "El sondeo de incidentes está en pausa hasta que se complete la configuración de enrutamiento siguiente (tablero, cliente/tablero de reserva y las tres prioridades de gravedad).",

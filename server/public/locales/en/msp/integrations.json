@@ -2854,7 +2854,7 @@
         },
         "connection": {
           "title": "Connected to {{account}}",
-          "summary": "{{organizations}} organizations ({{unmapped}} unmapped) · {{openIncidents}} open incidents · last poll: {{lastPoll}}",
+          "summary": "{{organizations}} organizations ({{unmapped}} unmapped) · {{openAlerts}} open alerts · last poll: {{lastPoll}}",
           "neverPolled": "never",
           "lastPollFailed": "Last poll failed: {{error}}",
           "routingIncompleteWarning": "Incident polling is paused until the routing configuration below is complete (board, fallback client/board, and all three severity priorities).",

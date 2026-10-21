@@ -2831,7 +2831,7 @@
         },
         "connection": {
           "title": "Conectado à conta {{account}}",
-          "summary": "{{organizations}} organizações ({{unmapped}} não mapeadas) · {{openIncidents}} incidentes em aberto · última consulta: {{lastPoll}}",
+          "summary": "{{organizations}} organizações ({{unmapped}} não mapeadas) · {{openAlerts}} alertas em aberto · última consulta: {{lastPoll}}",
           "neverPolled": "nunca",
           "lastPollFailed": "Falha na última consulta: {{error}}",
           "routingIncompleteWarning": "A consulta de incidentes está pausada até que a configuração de roteamento abaixo esteja completa (quadro, cliente/quadro alternativo e as prioridades dos três níveis de gravidade).",

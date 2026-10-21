@@ -2831,7 +2831,7 @@
         },
         "connection": {
           "title": "Connesso a {{account}}",
-          "summary": "{{organizations}} organizzazioni ({{unmapped}} non mappate) · {{openIncidents}} incidenti aperti · ultimo polling: {{lastPoll}}",
+          "summary": "{{organizations}} organizzazioni ({{unmapped}} non mappate) · {{openAlerts}} avvisi aperti · ultimo polling: {{lastPoll}}",
           "neverPolled": "mai",
           "lastPollFailed": "Ultimo polling non riuscito: {{error}}",
           "routingIncompleteWarning": "Il polling degli incidenti è sospeso finché la configurazione di instradamento seguente non è completa (bacheca di sicurezza, cliente e bacheca di riserva e tutte e tre le priorità di gravità).",

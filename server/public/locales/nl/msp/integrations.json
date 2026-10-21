@@ -2831,7 +2831,7 @@
         },
         "connection": {
           "title": "Verbonden met {{account}}",
-          "summary": "{{organizations}} organisaties ({{unmapped}} niet gekoppeld) · {{openIncidents}} open incidenten · laatste poll: {{lastPoll}}",
+          "summary": "{{organizations}} organisaties ({{unmapped}} niet gekoppeld) · {{openAlerts}} open waarschuwingen · laatste poll: {{lastPoll}}",
           "neverPolled": "nooit",
           "lastPollFailed": "Laatste poll mislukt: {{error}}",
           "routingIncompleteWarning": "Het pollen van incidenten is gepauzeerd totdat de onderstaande routeringsconfiguratie volledig is (bord, fallbackklant/-bord en alle drie prioriteiten voor ernstniveaus).",

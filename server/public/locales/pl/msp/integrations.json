@@ -2831,7 +2831,7 @@
         },
         "connection": {
           "title": "Połączono z kontem {{account}}",
-          "summary": "Organizacje: {{organizations}} (bez przypisania: {{unmapped}}) · otwarte incydenty: {{openIncidents}} · ostatnie odpytywanie: {{lastPoll}}",
+          "summary": "Organizacje: {{organizations}} (bez przypisania: {{unmapped}}) · otwarte alerty: {{openAlerts}} · ostatnie odpytywanie: {{lastPoll}}",
           "neverPolled": "nigdy",
           "lastPollFailed": "Ostatnie odpytywanie nie powiodło się: {{error}}",
           "routingIncompleteWarning": "Odpytywanie o incydenty jest wstrzymane do czasu uzupełnienia poniższej konfiguracji routingu (tablica zabezpieczeń, zapasowy klient, zapasowa tablica oraz priorytety wszystkich trzech poziomów ważności).",

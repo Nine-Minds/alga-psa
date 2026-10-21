@@ -2831,7 +2831,7 @@
         },
         "connection": {
           "title": "Connecté au compte {{account}}",
-          "summary": "{{organizations}} organisations ({{unmapped}} non associées) · {{openIncidents}} incidents ouverts · dernière synchronisation : {{lastPoll}}",
+          "summary": "{{organizations}} organisations ({{unmapped}} non associées) · {{openAlerts}} alertes ouvertes · dernière synchronisation : {{lastPoll}}",
           "neverPolled": "jamais",
           "lastPollFailed": "Échec de la dernière synchronisation : {{error}}",
           "routingIncompleteWarning": "La synchronisation des incidents est en pause jusqu'à ce que la configuration du routage ci-dessous soit terminée (tableau, client et tableau de repli, ainsi que les trois priorités de gravité).",

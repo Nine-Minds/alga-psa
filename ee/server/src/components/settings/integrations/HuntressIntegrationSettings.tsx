@@ -293,10 +293,10 @@ const HuntressIntegrationSettings: React.FC = () => {
               <CardDescription>
                 {t('integrations.rmm.huntress.connection.summary', {
                   defaultValue:
-                    '{{organizations}} organizations ({{unmapped}} unmapped) · {{openIncidents}} open incidents · last poll: {{lastPoll}}',
+                    '{{organizations}} organizations ({{unmapped}} unmapped) · {{openAlerts}} open alerts · last poll: {{lastPoll}}',
                   organizations: status.organization_count,
                   unmapped: status.unmapped_count,
-                  openIncidents: status.open_alert_count,
+                  openAlerts: status.open_alert_count,
                   lastPoll: status.last_poll_at
                     ? new Date(status.last_poll_at).toLocaleString()
                     : t('integrations.rmm.huntress.connection.neverPolled', { defaultValue: 'never' }),

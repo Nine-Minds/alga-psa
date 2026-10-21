@@ -2831,7 +2831,7 @@
         },
         "connection": {
           "title": "Mit {{account}} verbunden",
-          "summary": "{{organizations}} Organisationen ({{unmapped}} nicht zugeordnet) · {{openIncidents}} offene Vorfälle · letzte Abfrage: {{lastPoll}}",
+          "summary": "{{organizations}} Organisationen ({{unmapped}} nicht zugeordnet) · {{openAlerts}} offene Warnungen · letzte Abfrage: {{lastPoll}}",
           "neverPolled": "nie",
           "lastPollFailed": "Letzte Abfrage fehlgeschlagen: {{error}}",
           "routingIncompleteWarning": "Die Vorfallabfrage ist pausiert, bis die Routing-Konfiguration unten vollständig ist (Board, Fallback-Kunde/-Board und Prioritäten für alle drei Schweregrade).",
