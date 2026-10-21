@@ -1178,6 +1178,9 @@ export class TimeEntryService extends BaseService<any> {
           actor: context.user as IUser,
           entry,
           contractLine,
+          // The sheet was resolved from work_date (getOrCreateTimeSheetForWorkDate),
+          // so the period is checked against the same date the bucketing used.
+          sheetPeriodCheck: 'work_date',
         }),
       );
     } catch (error) {

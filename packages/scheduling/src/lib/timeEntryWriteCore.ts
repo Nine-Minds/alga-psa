@@ -78,6 +78,19 @@ export interface PersistTimeEntryInput {
    * or records why it could not.
    */
   contractLine?: { id: string | null; source: ContractLineSource | null };
+  /**
+   * Which of the entry's dates must fall inside the sheet's time period.
+   *
+   *  - 'span' (default — UI save, stopwatch log): both the start and the end
+   *    work date. The user picked the sheet themselves, so an entry reaching
+   *    past the period is a mis-picked sheet they can correct.
+   *  - 'work_date' (REST time-entry API): the work date only. There the server
+   *    picks the sheet FROM work_date, which is start-based by design, so an
+   *    entry running past local midnight into the next period has no sheet the
+   *    caller could have picked instead and 'span' would make it a permanent
+   *    400 rather than a correctable one.
+   */
+  sheetPeriodCheck?: 'span' | 'work_date';
 }
 
 export interface WorkItemBillingContext {
@@ -254,12 +267,13 @@ export async function persistTimeEntry(
     const periodStart = toPlainDate(timeSheetWithPeriod.start_date).toString();
     const periodEnd = toPlainDate(timeSheetWithPeriod.end_date).toString();
 
-    if (
-      work_date < periodStart ||
-      work_date >= periodEnd ||
-      end_work_date < periodStart ||
-      end_work_date >= periodEnd
-    ) {
+    // See PersistTimeEntryInput.sheetPeriodCheck for why the REST API checks
+    // the bucketing date only.
+    const datesInPeriod = input.sheetPeriodCheck === 'work_date'
+      ? [work_date]
+      : [work_date, end_work_date];
+
+    if (datesInPeriod.some((date) => date < periodStart || date >= periodEnd)) {
       throw new Error('Time entry must fall within the time period for the time sheet');
     }
   }

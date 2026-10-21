@@ -130,8 +130,8 @@ async function seedClient(lines: LineKind[]) {
   return { clientId, ticketId, lineIds, bucketIds };
 }
 
-async function newUser(label: string) {
-  const userId = await createStopwatchUser(db, tenantId, label);
+async function newUser(label: string, timezone = 'UTC') {
+  const userId = await createStopwatchUser(db, tenantId, label, timezone);
   return { userId, ctx: await ctxFor(userId) };
 }
 
@@ -150,6 +150,10 @@ function body(ticketId: string, day: number, extra: Record<string, unknown> = {}
 }
 
 const entryRow = (entryId: string) => tenantDb(db, tenantId).table('time_entries').where({ entry_id: entryId }).first();
+
+/** `work_date` is a DATE column, so the driver may hand back a Date. */
+const dateOnly = (value: unknown) =>
+  value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
 
 async function bucketMinutes(clientId: string): Promise<number> {
   const rows = await tenantDb(db, tenantId).table('bucket_usage').where({ client_id: clientId }).select('minutes_used');
@@ -323,5 +327,28 @@ describe('TimeEntryService create/update contract-line linkage (real DB)', () =>
       service.bulkDeleteTimeEntries({ entry_ids: [a.entry_id, b.entry_id] } as any, ctx));
     expect(results.every((r: any) => r.success)).toBe(true);
     expect(await bucketMinutes(seed.clientId)).toBe(0);
+  });
+
+  it('(i) POST running past local midnight stays on the sheet its work_date buckets to', async () => {
+    // 2026-12-01T07:30Z is 2026-11-30 23:30 in Los Angeles: work_date is the
+    // period's last day while the end work date is already in the next period.
+    // The REST sheet is picked from work_date, so there is no other sheet the
+    // caller could name and this has to save rather than 400.
+    const seed = await seedClient(['bucket']);
+    const { ctx } = await newUser('i', 'America/Los_Angeles');
+    const created = await asTenant(() => service.create({
+      work_item_id: seed.ticketId,
+      work_item_type: 'ticket',
+      service_id: serviceId,
+      start_time: '2026-12-01T07:30:00.000Z',
+      end_time: '2026-12-01T08:30:00.000Z',
+      notes: 'crosses local midnight',
+    } as any, ctx));
+
+    const row = await entryRow(created.entry_id);
+    expect(dateOnly(row.work_date)).toBe('2026-11-30');
+    expect(row.work_timezone).toBe('America/Los_Angeles');
+    expect(row.contract_line_id).toBe(seed.lineIds[0]);
+    expect(await bucketMinutes(seed.clientId)).toBe(60);
   });
 });
