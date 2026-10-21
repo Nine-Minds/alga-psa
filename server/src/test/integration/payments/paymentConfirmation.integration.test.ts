@@ -7,7 +7,7 @@
  *     an active custom domain gets that host; a tenant without one gets the
  *     configured public base URL.
  *  2. Duplicate prevention rests on the REAL (tenant, payment_id) primary key
- *     of `payment_confirmation_emails` (migration 20261021120000): the
+ *     of `payment_confirmation_emails` (migration 20261021050000): the
  *     constraint rejects a duplicate row, and replayed/concurrent deliveries
  *     of one PAYMENT_RECORDED send exactly one email.
  *
