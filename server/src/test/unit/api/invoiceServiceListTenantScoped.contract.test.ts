@@ -22,6 +22,8 @@ describe('invoice service list tenant-scoped query contract', () => {
 
     expect(baseQuerySection).toContain('tenantDb(');
     expect(baseQuerySection).toContain(".table('invoices')");
+    expect(baseQuerySection).not.toContain('recurring_service_periods');
+    expect(baseQuerySection).not.toContain('recurring_invoice_summary');
     expect(baseQuerySection).not.toMatch(/return trx\('invoices'\)\s*\./);
     expect(baseQuerySection).not.toMatch(/\.where\('invoices\.tenant', context\.tenant\)/);
 
