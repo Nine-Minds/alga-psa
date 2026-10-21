@@ -195,6 +195,42 @@ describe('activateClientContractAssignment', () => {
     expect(updateContract).not.toHaveBeenCalled();
   });
 
+  it("stores status 'active' — never the derived 'scheduled' — when a future-start draft is activated", async () => {
+    const updateContract: PayloadMock = vi.fn();
+    const updateAssignment: PayloadMock = vi.fn();
+
+    const activated = await activateClientContractAssignment(
+      createMockTransaction(
+        {
+          contract: {
+            contract_id: 'contract-1',
+            status: 'draft',
+            is_active: false,
+            currency_code: 'USD',
+            contract_name: 'QA Seed - Future Start',
+          },
+          assignment: { ...baseAssignment, start_date: '2099-11-16' },
+        },
+        { updateContract, updateAssignment },
+      ),
+      'tenant-1',
+      'client-contract-1',
+    );
+
+    // 'scheduled' is derived on every read; the contracts.status column only ever holds a
+    // stored status, so neither write may carry it.
+    expect(updateContract).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'active', is_active: true }),
+    );
+    for (const spy of [updateContract, updateAssignment]) {
+      for (const [payload] of spy.mock.calls) {
+        expect(Object.values(payload)).not.toContain('scheduled');
+        expect(Object.keys(payload)).not.toContain('assignment_status');
+      }
+    }
+    expect(activated.assignment_status).toBe('scheduled');
+  });
+
   it('names a clean YYYY-MM-DD start date when the assignment is already scheduled (pg Date value)', async () => {
     const updateContract: PayloadMock = vi.fn();
     const updateAssignment: PayloadMock = vi.fn();
