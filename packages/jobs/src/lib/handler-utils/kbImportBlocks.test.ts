@@ -453,7 +453,12 @@ describe('kbImportBlocks link sanitization', () => {
 // identical, so only the work differs. A wall-clock ratio could not tell the
 // two apart on a loaded CI runner (an 8MB parse is dominated by the linear
 // lexer and GC), so count the characters the search inspects instead.
-describe('kbImportBlocks inline chunk splitting', () => {
+// The guards here scan or parse multi-hundred-KB inputs, and this lane runs
+// several packages' vitest pools at once: the inline-pass guard costs ~1.4s on
+// an idle laptop and overran the default 10s per-test timeout on a loaded
+// runner. Same allowance, for the same reason, as the pathological describe
+// below; the assertions it protects count work and do not time it.
+describe('kbImportBlocks inline chunk splitting', { timeout: 120_000 }, () => {
   // Stands in for the source string and tallies every character a search
   // reads. Any other access throws, so a rewrite that reads the source some
   // new way fails loudly here instead of going uncounted.
