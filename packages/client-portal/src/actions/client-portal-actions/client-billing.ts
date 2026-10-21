@@ -906,8 +906,12 @@ export const getClientInvoicePreview = withAuth(async (user, { tenant }, invoice
     // name, address, line descriptions, notes) can be edited by the portal
     // user, so resolving document URLs found there would let them read any
     // image in the tenant by file id.
+    //
+    // An image that cannot be inlined (missing, not an image, too large) is
+    // dropped rather than left as a URL: the browser would only get a 403 for
+    // it and render a broken image.
     const { inlineDocumentImageUrl, inlineTemplateImageSources } = await import('@alga-psa/billing/lib/invoice-template-ast/server-render');
-    const inlineOptions = { knex, tenant };
+    const inlineOptions = { knex, tenant, unresolved: 'drop' as const };
     const [logoUrl, inlinedTemplateAst] = await Promise.all([
       inlineDocumentImageUrl(invoice.tenantClient?.logoUrl, inlineOptions),
       template?.templateAst ? inlineTemplateImageSources(template.templateAst, inlineOptions) : Promise.resolve(null),

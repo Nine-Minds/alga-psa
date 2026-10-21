@@ -69,6 +69,14 @@ export interface InlineDocumentImagesOptions {
    * that run for an untrusted viewer (client portal) must pass this.
    */
   tenant?: string;
+  /**
+   * What the single-value helpers (inlineDocumentImageUrl,
+   * inlineTemplateImageSources) do with a document URL they could not inline.
+   * 'keep' (default) leaves the URL. 'drop' blanks it so the renderer omits the
+   * image: for a viewer the documents route would refuse (client portal), a
+   * kept URL only renders as a broken image after a 403.
+   */
+  unresolved?: 'keep' | 'drop';
 }
 
 /**
@@ -91,7 +99,13 @@ export async function inlineDocumentImageUrls(
 
   if (fileIds.size === 0) return text;
 
-  const provider = await StorageProviderFactory.createProvider();
+  let provider: Awaited<ReturnType<typeof StorageProviderFactory.createProvider>>;
+  try {
+    provider = await StorageProviderFactory.createProvider();
+  } catch {
+    // No storage available: nothing can be inlined, so every URL stays as is.
+    return text;
+  }
 
   // Resolve each file to a data URI in parallel.
   const replacements = new Map<string, string>();
@@ -149,9 +163,16 @@ const WHOLE_DOC_VIEW_URL_RE = /^\/api\/documents\/view\/[a-f0-9-]+(\?[^"'\s)]*)?
 export async function inlineDocumentImageUrl<T>(
   url: T,
   options: InlineDocumentImagesOptions,
-): Promise<T | string> {
+): Promise<T | string | null> {
   if (typeof url !== 'string' || !WHOLE_DOC_VIEW_URL_RE.test(url)) return url;
-  return inlineDocumentImageUrls(url, options);
+  let inlined: string = url;
+  try {
+    inlined = await inlineDocumentImageUrls(url, options);
+  } catch {
+    // Treated as unresolved below.
+  }
+  if (inlined === url && options.unresolved === 'drop') return null;
+  return inlined;
 }
 
 /**
@@ -178,7 +199,8 @@ export async function inlineTemplateImageSources<T>(
         const literal = { ...src };
         copy.src = literal;
         pending.push(async () => {
-          literal.value = await inlineDocumentImageUrl(src.value, options);
+          // A dropped image becomes an empty src, which the renderer omits.
+          literal.value = (await inlineDocumentImageUrl(src.value, options)) ?? '';
         });
       }
     }

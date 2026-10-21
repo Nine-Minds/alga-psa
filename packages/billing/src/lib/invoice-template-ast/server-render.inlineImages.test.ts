@@ -5,12 +5,13 @@ import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 const mocks = vi.hoisted(() => ({
   findById: vi.fn(),
   download: vi.fn(),
+  createProvider: vi.fn(),
   tenantRows: new Map<string, Record<string, unknown>>(),
   tenantQueries: [] as Array<{ tenant: string; where: Record<string, unknown> }>,
 }));
 
 vi.mock('@alga-psa/storage', () => ({
-  StorageProviderFactory: { createProvider: async () => ({ download: mocks.download }) },
+  StorageProviderFactory: { createProvider: () => mocks.createProvider() },
   FileStoreModel: { findById: mocks.findById },
 }));
 
@@ -60,9 +61,27 @@ beforeEach(() => {
   mocks.tenantRows.clear();
   mocks.tenantQueries.length = 0;
   mocks.download.mockResolvedValue(PNG);
+  mocks.createProvider.mockImplementation(async () => ({ download: mocks.download }));
 });
 
 describe('inlineDocumentImageUrls', () => {
+  it('leaves every URL in place when the storage provider cannot be created', async () => {
+    mocks.createProvider.mockRejectedValueOnce(new Error('no storage'));
+    const html = '<img src="/api/documents/view/aaaa-1111">';
+    expect(await inlineDocumentImageUrls(html, { knex })).toBe(html);
+  });
+
+  it("with unresolved: 'drop', blanks a document image that cannot be inlined", async () => {
+    mocks.findById.mockResolvedValue(null);
+    expect(await inlineDocumentImageUrl('/api/documents/view/aaaa-1111?t=1', { knex, unresolved: 'drop' })).toBeNull();
+    expect(await inlineDocumentImageUrl('/api/documents/view/aaaa-1111?t=1', { knex })).toBe('/api/documents/view/aaaa-1111?t=1');
+    expect(await inlineDocumentImageUrl('https://cdn.example/logo.png', { knex, unresolved: 'drop' })).toBe('https://cdn.example/logo.png');
+
+    const ast = { layout: { type: 'image', src: { type: 'literal', value: '/api/documents/view/aaaa-1111' } } };
+    const out: any = await inlineTemplateImageSources(ast, { knex, unresolved: 'drop' });
+    expect(out.layout.src.value).toBe('');
+  });
+
   it('replaces plain and ?t= variant URLs with data URIs (ambient-tenant lookup, PDF path)', async () => {
     mocks.findById.mockResolvedValue(file());
     const html = '<img src="/api/documents/view/aaaa-1111?t=123"><img src="/api/documents/view/aaaa-1111">';

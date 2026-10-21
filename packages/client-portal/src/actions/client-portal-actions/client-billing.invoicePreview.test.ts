@@ -143,12 +143,12 @@ describe('getClientInvoicePreview', () => {
     expect(mocks.download).not.toHaveBeenCalled();
   });
 
-  it('does not inline a file id that belongs to another tenant', async () => {
+  it('does not inline a file id that belongs to another tenant (and drops it rather than leaving a URL)', async () => {
     mocks.files.set('aaaa1111-0000-4000-8000-000000000001', file('aaaa1111-0000-4000-8000-000000000001', { tenant: 'tenant-OTHER' }));
     const { getClientInvoicePreview } = await import('./client-billing');
     const result: any = await getClientInvoicePreview('inv-1');
 
-    expect(result.invoice.tenantClient.logoUrl).toBe('/api/documents/view/aaaa1111-0000-4000-8000-000000000001?t=123');
+    expect(result.invoice.tenantClient.logoUrl).toBeNull();
     expect(result.template.templateAst.layout.children[0].src.value).toBe(PNG_URI);
     expect(mocks.download).toHaveBeenCalledTimes(1);
   });
@@ -159,9 +159,20 @@ describe('getClientInvoicePreview', () => {
     const { getClientInvoicePreview } = await import('./client-billing');
     const result: any = await getClientInvoicePreview('inv-1');
 
-    expect(result.invoice.tenantClient.logoUrl).toBe('/api/documents/view/aaaa1111-0000-4000-8000-000000000001?t=123');
-    expect(result.template.templateAst.layout.children[0].src.value).toBe('/api/documents/view/bbbb2222-0000-4000-8000-000000000002');
+    expect(result.invoice.tenantClient.logoUrl).toBeNull();
+    expect(result.template.templateAst.layout.children[0].src.value).toBe('');
     expect(mocks.download).not.toHaveBeenCalled();
+  });
+
+  it('still returns the preview, without the images, when a logo file is missing or storage fails', async () => {
+    mocks.files.delete('aaaa1111-0000-4000-8000-000000000001');
+    mocks.download.mockRejectedValue(new Error('object gone'));
+    const { getClientInvoicePreview } = await import('./client-billing');
+    const result: any = await getClientInvoicePreview('inv-1');
+
+    expect(result.invoice.invoice_id).toBe('inv-1');
+    expect(result.invoice.tenantClient).toEqual({ name: 'MSP', address: null, logoUrl: null });
+    expect(result.template.templateAst.layout.children[0].src.value).toBe('');
   });
 
   it('leaves viewer-editable fields containing a document URL unchanged', async () => {
