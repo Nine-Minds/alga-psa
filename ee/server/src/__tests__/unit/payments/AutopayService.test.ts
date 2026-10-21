@@ -19,6 +19,7 @@ vi.mock('@alga-psa/email', () => ({ getSystemEmailService: vi.fn() }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(), publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 
 import { getConnection } from '@alga-psa/db';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { AutopayService } from '../../../lib/payments/AutopayService';
 
 function makeKnex(updatedAt = new Date(), invoiceStatus = 'sent') {
@@ -36,20 +37,22 @@ function makeKnex(updatedAt = new Date(), invoiceStatus = 'sent') {
     invoice_payments: { total: 0 },
   };
   const whereClauses: Record<string, any>[] = [];
+  const updates: Array<{ table: string; where: Record<string, any>[]; values: Record<string, any> }> = [];
   const knex: any = {
     fn: { now: () => new Date() },
     table(name: string) {
+      const scopedWhere: Record<string, any>[] = [];
       const query: any = {
-        where: (clause: Record<string, any>) => { whereClauses.push(clause); return query; },
+        where: (clause: Record<string, any>) => { whereClauses.push(clause); scopedWhere.push(clause); return query; },
         whereIn: () => query,
-        update: async () => 1,
+        update: async (values: Record<string, any>) => { updates.push({ table: name, where: scopedWhere, values }); return 1; },
         first: async () => rows[name],
         sum: () => query,
       };
       return query;
     },
   };
-  return { knex, attempt, whereClauses };
+  return { knex, attempt, whereClauses, updates };
 }
 
 describe('AutopayService single-attempt executor', () => {
@@ -105,5 +108,30 @@ describe('AutopayService single-attempt executor', () => {
     expect(whereClauses).toContainEqual({ attempt_id: 'attempt-1' });
     expect(whereClauses).toContainEqual({ status: 'scheduled' });
     expect(whereClauses).not.toContainEqual({ attempt_id: 'attempt-1', status: 'processing' });
+  });
+
+  it('parks the card as requires_update and still emits PAYMENT_FAILED on authentication_required (not a hard decline)', async () => {
+    const { knex, updates } = makeKnex();
+    vi.mocked(getConnection).mockResolvedValue(knex);
+    stripeCharge.mockResolvedValue({ status: 'failed', paymentIntentId: 'pi-sca', failureCode: 'authentication_required', message: 'Authentication required' });
+    const service = await AutopayService.create('tenant-1');
+
+    const outcome = await service.executeAttempt('attempt-1');
+
+    expect(outcome).toMatchObject({ status: 'failed', hard: false });
+    const parked = updates.find((u) => u.table === 'payment_methods');
+    expect(parked?.values).toMatchObject({ status: 'requires_update' });
+    expect(parked?.where).toContainEqual({ payment_method_id: 'pm-new' });
+    expect(publishWorkflowEvent).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'PAYMENT_FAILED', idempotencyKey: 'autopay_failed:attempt-1' }));
+  });
+
+  it('does not park the card for an ordinary soft decline', async () => {
+    const { knex, updates } = makeKnex();
+    vi.mocked(getConnection).mockResolvedValue(knex);
+    stripeCharge.mockResolvedValue({ status: 'failed', paymentIntentId: 'pi-soft', failureCode: 'card_declined', declineCode: 'insufficient_funds' });
+    const service = await AutopayService.create('tenant-1');
+    await service.executeAttempt('attempt-1');
+    expect(updates.find((u) => u.table === 'payment_methods')).toBeUndefined();
+    expect(publishWorkflowEvent).toHaveBeenCalled();
   });
 });

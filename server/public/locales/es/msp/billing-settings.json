@@ -1420,6 +1420,103 @@
     }
   },
   "payment": {
+    "import": {
+      "title": "Importar clientes de Stripe existentes",
+      "description": "Traiga clientes de Stripe y tarjetas guardadas desde otro sistema. La importación nunca inscribe a un cliente en el pago automático; usted lo confirma por fila.",
+      "open": "Iniciar importación",
+      "preview": "Vista previa",
+      "execute": "Importar",
+      "reset": "Empezar de nuevo",
+      "default": "predeterminada",
+      "done": "Importación finalizada",
+      "attest": "El cliente ha autorizado cargos recurrentes a esta tarjeta",
+      "alreadyEnrolled": "Ya inscrito",
+      "scaRisk": "Riesgo de SCA: no hay prueba de que se guardó para uso fuera de sesión",
+      "cardsImported": "{{count}} tarjeta(s) importada(s)",
+      "csv": {
+        "label": "Filas (cliente, perfil de facturación, ID de cliente de Stripe)",
+        "upload": "Subir CSV"
+      },
+      "assisted": {
+        "run": "Coincidir por correo electrónico y luego por nombre",
+        "summary": "{{matched}} propuestos, {{ambiguous}} ambiguos (no propuestos){{truncated}}",
+        "truncated": "; lista truncada",
+        "ambiguousTitle": "Coincidencias ambiguas (no propuestas)",
+        "addRow": "Añadir como fila",
+        "matchedBy": "Coincidencia por {{by}}",
+        "by": {
+          "email": "correo electrónico",
+          "name": "nombre"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Coincide con varios perfiles de facturación",
+          "multiple-customers": "Coincide con varios clientes de Stripe"
+        }
+      },
+      "errors": {
+        "preview": "Error en la vista previa",
+        "noRows": "Agregue al menos una fila",
+        "match": "Error en la coincidencia",
+        "execute": "Error en la importación"
+      },
+      "table": {
+        "customer": "Cliente de Stripe",
+        "plan": "Plan",
+        "cards": "Tarjetas",
+        "enroll": "Inscribir en pago automático",
+        "clientProfile": "Cliente / perfil de facturación",
+        "include": "Incluir"
+      },
+      "actions": {
+        "adopt": "Adoptar",
+        "already-imported": "Ya importado",
+        "conflict": "Conflicto",
+        "skip": "Omitir"
+      },
+      "cardActions": {
+        "import": "Importar",
+        "already-imported": "Ya importada",
+        "conflict": "Conflicto",
+        "skip": "Omitir"
+      },
+      "cardReasons": {
+        "unsupported-method": "método no compatible",
+        "expired-card": "tarjeta vencida",
+        "card-claimed-elsewhere": "la tarjeta pertenece a otro cliente"
+      },
+      "reasons": {
+        "invalid-customer-id": "No es un ID de cliente de Stripe válido",
+        "customer-not-found": "Cliente no encontrado en Stripe",
+        "customer-deleted": "El cliente está eliminado en Stripe",
+        "profile-not-found": "Cliente o perfil de facturación no encontrado",
+        "profile-inactive": "El perfil de facturación está inactivo",
+        "currency-not-configured": "No hay moneda de facturación configurada para este cliente",
+        "currency-unsupported": "La moneda de facturación no es compatible con el pago automático de Stripe",
+        "duplicate-customer-in-input": "El mismo cliente de Stripe aparece en más de una fila",
+        "duplicate-profile-in-input": "El mismo perfil de facturación aparece con más de un cliente de Stripe",
+        "customer-claimed-by-other": "El cliente de Stripe ya está asignado a otro cliente o perfil de facturación",
+        "customer-metadata-owned-by-other": "Los metadatos del cliente de Stripe indican otro inquilino, cliente o perfil de facturación",
+        "profile-mapped-to-other-customer": "Este perfil de facturación ya usa un cliente de Stripe diferente"
+      },
+      "warnings": {
+        "no-cards": "El cliente no tiene métodos de pago",
+        "customer-currency-mismatch": "La moneda del cliente de Stripe difiere de la moneda de facturación",
+        "no-importable-card": "No se puede importar ninguna tarjeta"
+      },
+      "resultStatus": {
+        "imported": "Importado",
+        "unchanged": "Nada que hacer",
+        "skipped": "Omitido",
+        "conflict": "Conflicto",
+        "failed": "Fallido"
+      },
+      "enrollment": {
+        "enrolled": "inscrito en pago automático",
+        "not-eligible": "no apto para la inscripción",
+        "already-enrolled": "ya inscrito",
+        "failed": "error en la inscripción"
+      }
+    },
     "messages": {
       "loadConfigFailed": "Error al cargar la configuración de pago",
       "keysRequired": "Introduzca tanto la clave secreta como la clave publicable",

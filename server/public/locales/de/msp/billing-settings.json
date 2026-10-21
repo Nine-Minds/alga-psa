@@ -1420,6 +1420,103 @@
     }
   },
   "payment": {
+    "import": {
+      "title": "Bestehende Stripe-Kunden importieren",
+      "description": "Stripe-Kunden und gespeicherte Karten aus einem anderen System übernehmen. Der Import meldet Kunden nie automatisch für Auto-Pay an; das bestätigen Sie pro Zeile.",
+      "open": "Import starten",
+      "preview": "Vorschau",
+      "execute": "Importieren",
+      "reset": "Neu beginnen",
+      "default": "Standard",
+      "done": "Import abgeschlossen",
+      "attest": "Der Kunde hat wiederkehrende Abbuchungen von dieser Karte autorisiert",
+      "alreadyEnrolled": "Bereits angemeldet",
+      "scaRisk": "SCA-Risiko: Kein Nachweis, dass die Karte für Off-Session-Nutzung gespeichert wurde",
+      "cardsImported": "{{count}} Karte(n) importiert",
+      "csv": {
+        "label": "Zeilen (Kunde, Abrechnungsprofil, Stripe-Kunden-ID)",
+        "upload": "CSV hochladen"
+      },
+      "assisted": {
+        "run": "Nach E-Mail, dann nach Name abgleichen",
+        "summary": "{{matched}} vorgeschlagen, {{ambiguous}} mehrdeutig (nicht vorgeschlagen){{truncated}}",
+        "truncated": "; Liste gekürzt",
+        "ambiguousTitle": "Mehrdeutige Treffer (nicht vorgeschlagen)",
+        "addRow": "Als Zeile hinzufügen",
+        "matchedBy": "Abgeglichen nach {{by}}",
+        "by": {
+          "email": "E-Mail",
+          "name": "Name"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Passt zu mehreren Abrechnungsprofilen",
+          "multiple-customers": "Passt zu mehreren Stripe-Kunden"
+        }
+      },
+      "errors": {
+        "preview": "Vorschau fehlgeschlagen",
+        "noRows": "Fügen Sie mindestens eine Zeile hinzu",
+        "match": "Abgleich fehlgeschlagen",
+        "execute": "Import fehlgeschlagen"
+      },
+      "table": {
+        "customer": "Stripe-Kunde",
+        "plan": "Tarif",
+        "cards": "Karten",
+        "enroll": "Für Auto-Pay anmelden",
+        "clientProfile": "Kunde / Abrechnungsprofil",
+        "include": "Einbeziehen"
+      },
+      "actions": {
+        "adopt": "Übernehmen",
+        "already-imported": "Bereits importiert",
+        "conflict": "Konflikt",
+        "skip": "Überspringen"
+      },
+      "cardActions": {
+        "import": "Importieren",
+        "already-imported": "Bereits importiert",
+        "conflict": "Konflikt",
+        "skip": "Überspringen"
+      },
+      "cardReasons": {
+        "unsupported-method": "nicht unterstützte Zahlungsmethode",
+        "expired-card": "abgelaufene Karte",
+        "card-claimed-elsewhere": "Karte gehört zu einem anderen Kunden"
+      },
+      "reasons": {
+        "invalid-customer-id": "Keine gültige Stripe-Kunden-ID",
+        "customer-not-found": "Kunde in Stripe nicht gefunden",
+        "customer-deleted": "Kunde ist in Stripe gelöscht",
+        "profile-not-found": "Kunde oder Abrechnungsprofil nicht gefunden",
+        "profile-inactive": "Abrechnungsprofil ist inaktiv",
+        "currency-not-configured": "Für diesen Kunden ist keine Abrechnungswährung konfiguriert",
+        "currency-unsupported": "Die Abrechnungswährung wird von Stripe Auto-Pay nicht unterstützt",
+        "duplicate-customer-in-input": "Derselbe Stripe-Kunde erscheint in mehr als einer Zeile",
+        "duplicate-profile-in-input": "Dasselbe Abrechnungsprofil erscheint mit mehr als einem Stripe-Kunden",
+        "customer-claimed-by-other": "Der Stripe-Kunde ist bereits einem anderen Kunden oder Abrechnungsprofil zugeordnet",
+        "customer-metadata-owned-by-other": "Die Metadaten des Stripe-Kunden nennen einen anderen Mandanten, Kunden oder ein anderes Abrechnungsprofil",
+        "profile-mapped-to-other-customer": "Dieses Abrechnungsprofil verwendet bereits einen anderen Stripe-Kunden"
+      },
+      "warnings": {
+        "no-cards": "Der Kunde hat keine Zahlungsmethoden",
+        "customer-currency-mismatch": "Die Währung des Stripe-Kunden weicht von der Abrechnungswährung ab",
+        "no-importable-card": "Es kann keine Karte importiert werden"
+      },
+      "resultStatus": {
+        "imported": "Importiert",
+        "unchanged": "Nichts zu tun",
+        "skipped": "Übersprungen",
+        "conflict": "Konflikt",
+        "failed": "Fehlgeschlagen"
+      },
+      "enrollment": {
+        "enrolled": "für Auto-Pay angemeldet",
+        "not-eligible": "nicht für die Anmeldung berechtigt",
+        "already-enrolled": "bereits angemeldet",
+        "failed": "Anmeldung fehlgeschlagen"
+      }
+    },
     "messages": {
       "loadConfigFailed": "Zahlungskonfiguration konnte nicht geladen werden",
       "keysRequired": "Bitte geben Sie sowohl den geheimen Schlüssel als auch den veröffentlichbaren Schlüssel ein",
