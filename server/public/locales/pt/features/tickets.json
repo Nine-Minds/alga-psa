@@ -964,6 +964,7 @@
     "templateReplaceTitle": "Substituir as suas alterações?",
     "templateReplaceMessage": "Aplicar um modelo substitui o título, a descrição e outros campos que preencheu.",
     "templateReplaceConfirm": "Aplicar modelo",
+    "templateTokenHint": "O título é preenchido com o cliente, o contato e a data de vencimento escolhidos, até você editá-lo.",
     "tagCreatePartialFailure_few": "Não foi possível criar tags {{count}}",
     "tagCreatePartialFailure_many": "Não foi possível criar tags {{count}}",
     "tagCreationFailed_few": "Não foi possível criar tags {{count}}",
@@ -2250,7 +2251,9 @@
       "details": "Detalhes",
       "template": "Modelo de ticket",
       "schedule": "Agendamento",
-      "behaviour": "Comportamento"
+      "behaviour": "Comportamento",
+      "overrides": "Substituições para este agendamento",
+      "dispatch": "Despacho"
     },
     "fields": {
       "board": "Quadro",
@@ -2457,6 +2460,22 @@
       "monthlyOnDay": "{{every}} no {{day}}",
       "monthlyOnNthWeekday": "{{every}}, {{ordinal}}: {{weekday}}",
       "yearly": "Todo ano em {{day}} de {{month}}"
+    },
+    "template": {
+      "intro": "A aparência do ticket vem de um modelo de ticket compartilhado. Alterar o modelo altera todos os agendamentos que o usam, a partir do próximo ticket.",
+      "select": "Modelo de ticket",
+      "placeholder": "Selecione um modelo de ticket",
+      "inactiveOption": "{{name}} (inativo)",
+      "summary": "{{checklist}} item(ns) de checklist, {{tags}} tag(s)",
+      "inactiveNotice": "Este modelo está inativo: oculto no seletor de modelos; ainda usado por {{count}} agendamentos.",
+      "sharedNotice": "Usado por {{count}} agendamentos. Editar o modelo altera todos eles.",
+      "edit": "Editar modelo",
+      "new": "Novo modelo",
+      "sampleTitle": "Título do primeiro ticket:",
+      "tokensHelp": "Os títulos de modelo podem usar {{tokens}}; eles são preenchidos por ticket."
+    },
+    "overridesSection": {
+      "intro": "Deixe um grupo desativado para usar o modelo. Cada cliente pode substituí-los novamente."
     }
   },
   "stopwatch": {
@@ -2490,12 +2509,15 @@
         "title": "Título do ticket",
         "board": "Quadro",
         "checklist": "Itens da checklist",
-        "status": "Estado"
-      }
+        "status": "Estado",
+        "schedules": "Agendamentos"
+      },
+      "deleteBlocked": "Usado por {{count}} agendamento(s) recorrente(s). Aponte-os para outro modelo ou arquive-os primeiro."
     },
     "status": {
       "active": "Ativo",
-      "inactive": "Inativo"
+      "inactive": "Inativo",
+      "scheduledOnly": "Apenas agendado"
     },
     "actions": {
       "edit": "Editar",
@@ -2517,7 +2539,10 @@
       "notesHelp": "Apenas para a sua equipa. Não é copiado para os tickets.",
       "title": "Título do ticket",
       "description": "Descrição",
-      "descriptionPlaceholder": "Descrição"
+      "descriptionPlaceholder": "Descrição",
+      "offerForManualUse": "Oferecer no seletor de novo ticket",
+      "offerForManualUseHelp": "Desative para modelos usados apenas por agendamentos recorrentes.",
+      "titleTokens": "Você pode usar {{tokens}} no título; eles são preenchidos por ticket."
     },
     "checklist": {
       "empty": "Sem itens de checklist.",
@@ -2545,14 +2570,24 @@
       "fromTicket": "Preenchido a partir do ticket #{{number}}. Nada é guardado até clicar em Guardar.",
       "inlineImages": "A descrição contém imagens que pertencem ao ticket de origem. Podem deixar de ser apresentadas se esse ticket for eliminado. Remova-as ou carregue-as novamente se o modelo deve sobreviver ao ticket.",
       "viewOnly": "Pode ver este modelo, mas não o alterar.",
-      "referenceProblems": "Alguns campos deste modelo apontam para itens que já não existem. Ficam em branco quando o modelo é usado. Corrija-os e guarde:"
+      "referenceProblems": "Alguns campos deste modelo apontam para itens que já não existem. Ficam em branco quando o modelo é usado. Corrija-os e guarde:",
+      "inactiveWarning": "Inativo: oculto no seletor de modelos; ainda usado por {{count}} agendamentos.",
+      "sharedWarning": "As alterações aplicam-se a todos os agendamentos recorrentes que usam este modelo, a partir do próximo ticket criado.",
+      "boardChangeWarning": "Alterar o quadro limpa a prioridade e a categoria e pode invalidar o status dos agendamentos que usam este modelo. Esses agendamentos falham até que você os edite. Agendamentos afetados: {{schedules}}."
     },
     "errors": {
       "notFound": "Modelo de ticket não encontrado",
       "duplicateName": "Já existe um modelo com o nome {{name}}",
       "invalidReferences": "O modelo refere um quadro, categoria ou prioridade que não está disponível",
       "notAvailable": "Os modelos de tickets não estão disponíveis",
-      "subcategoryNeedsCategory": "Uma subcategoria requer uma categoria"
+      "subcategoryNeedsCategory": "Uma subcategoria requer uma categoria",
+      "inUseBySchedules": "Usado por {{count}} agendamento(s) recorrente(s): {{schedules}}. Aponte-os para outro modelo ou arquive-os primeiro."
+    },
+    "usage": {
+      "schedules": "Usado por {{count}} agendamentos",
+      "paused": "pausado",
+      "tickets": "{{count}} tickets criados a partir deste modelo",
+      "scheduleThis": "Agendar este modelo…"
     }
   },
   "enums": {
