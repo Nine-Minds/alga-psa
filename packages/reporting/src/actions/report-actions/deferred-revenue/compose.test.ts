@@ -548,6 +548,8 @@ function hourBlock(over: Record<string, unknown> = {}) {
     purchasedAt: '2026-02-05',
     expirationDate: null,
     voidedAt: null,
+    expiredAt: null,
+    adjustments: [],
     allocations: [],
     ...over,
   };
@@ -559,7 +561,7 @@ describe('buildDeferredRevenueReportFromData with prepaid hour blocks', () => {
       makeData({
         bucketPeriods: [],
         billedFees: [],
-        hourBlocks: [hourBlock({ allocations: [{ createdAt: '2026-02-10T09:00:00.000Z', minutes: 240 }] })],
+        hourBlocks: [hourBlock({ allocations: [{ date: '2026-02-10T09:00:00.000Z', minutes: 240 }] })],
       }),
       '2026-02',
     );

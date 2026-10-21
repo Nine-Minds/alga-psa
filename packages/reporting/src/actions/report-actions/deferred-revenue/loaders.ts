@@ -16,7 +16,7 @@ import { fixedMemberContributionCents, fixedRateBasisOf } from '@alga-psa/shared
 import { resolvePeriodFee, type BilledFeeCandidate } from './fee';
 import { classifyCreditSource, type CreditSourceInvoice } from './creditSource';
 import type { BucketPeriodInput } from './hours';
-import type { HourBlockAllocationInput, HourBlockInput } from './blocks';
+import type { HourBlockAdjustmentInput, HourBlockAllocationInput, HourBlockInput } from './blocks';
 import { reconstructCreditBalances, type CreditTransactionRow } from './credits';
 import type { CreditDetailRow } from './types';
 
@@ -260,16 +260,52 @@ export async function loadHourBlocks(
       'ct.contract_name',
     );
 
+  const blockIds = blocks.map((block) => block.block_id);
   const allocationsByBlock = new Map<string, HourBlockAllocationInput[]>();
+  const adjustmentsByBlock = new Map<string, HourBlockAdjustmentInput[]>();
+  const expiredAtByBlock = new Map<string, string>();
   if (blocks.length > 0) {
-    const allocationRows = await db
-      .table('hour_block_time_allocations')
-      .whereIn('block_id', blocks.map((block) => block.block_id))
-      .select('block_id', 'minutes', 'created_at');
+    // Burn attribution: the allocation's own created_at moves whenever the
+    // nightly reconcile deletes/re-creates rows for uninvoiced time; the
+    // time entry's work_date is the stable economic event date.
+    const allocationQuery = db.table('hour_block_time_allocations as hba');
+    db.tenantJoin(allocationQuery, 'time_entries as te', 'te.entry_id', 'hba.time_entry_id', { type: 'left' });
+    const allocationRows = await allocationQuery
+      .whereIn('hba.block_id', blockIds)
+      .select('hba.block_id', 'hba.minutes', 'hba.created_at', 'te.work_date');
     for (const row of allocationRows) {
       const list = allocationsByBlock.get(row.block_id) ?? [];
-      list.push({ createdAt: toStringValue(row.created_at), minutes: toNumber(row.minutes) });
+      const attributionDate = row.work_date
+        ? toStringValue(row.work_date)
+        : toStringValue(row.created_at);
+      list.push({ date: attributionDate, minutes: toNumber(row.minutes) });
       allocationsByBlock.set(row.block_id, list);
+    }
+
+    const adjustmentRows = await db
+      .table('hour_block_audit')
+      .whereIn('block_id', blockIds)
+      .where({ type: 'adjustment' })
+      .whereNotNull('minutes_delta')
+      .select('block_id', 'minutes_delta', 'created_at');
+    for (const row of adjustmentRows) {
+      const list = adjustmentsByBlock.get(row.block_id) ?? [];
+      list.push({ date: toStringValue(row.created_at), minutes: toNumber(row.minutes_delta) });
+      adjustmentsByBlock.set(row.block_id, list);
+    }
+
+    // Settled-expiry dates: manual/contract-end expirations may leave
+    // expiration_date null (or in the future), so the audit trail carries the
+    // date the block actually stopped being usable.
+    const expiryRows = await db
+      .table('hour_block_audit')
+      .whereIn('block_id', blockIds)
+      .whereIn('type', ['manual_expiration', 'auto_expiration', 'contract_end_expiration'])
+      .select('block_id', 'created_at');
+    for (const row of expiryRows) {
+      const settled = toStringValue(row.created_at).slice(0, 10);
+      const current = expiredAtByBlock.get(row.block_id);
+      if (!current || settled < current) expiredAtByBlock.set(row.block_id, settled);
     }
   }
 
@@ -286,6 +322,8 @@ export async function loadHourBlocks(
     purchasedAt: row.purchased_at ? toStringValue(row.purchased_at) : null,
     expirationDate: row.expiration_date ? toStringValue(row.expiration_date).slice(0, 10) : null,
     voidedAt: row.voided_at ? toStringValue(row.voided_at) : null,
+    expiredAt: expiredAtByBlock.get(row.block_id) ?? null,
+    adjustments: adjustmentsByBlock.get(row.block_id) ?? [],
     allocations: allocationsByBlock.get(row.block_id) ?? [],
   }));
 }

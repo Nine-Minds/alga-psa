@@ -32,6 +32,7 @@ function hourMovementFrom(rollforward: {
   opening: number;
   issued: number;
   applied: number;
+  adjustments?: number;
   expired: number;
   closing: number;
 }): MovementColumns {
@@ -40,7 +41,7 @@ function hourMovementFrom(rollforward: {
     issued: rollforward.issued,
     applied: rollforward.applied,
     expired: rollforward.expired,
-    adjustments: 0,
+    adjustments: rollforward.adjustments ?? 0,
     closing: rollforward.closing,
   };
 }

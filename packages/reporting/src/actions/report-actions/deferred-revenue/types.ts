@@ -110,9 +110,9 @@ export interface HourBlockDetailRow {
   status: string;
   purchasedAt: string | null;
   expirationDate: string | null;
-  /** Cash billed for the block, minor units (detail display). */
+  /** Cash billed for the block, minor units — also the valuation basis. */
   purchaseAmount: number;
-  /** This block's contribution to the selected month (adjustments always 0). */
+  /** This block's contribution to the selected month. */
   movement: MovementColumns;
 }
 

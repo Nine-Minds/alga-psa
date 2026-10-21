@@ -577,9 +577,17 @@ export const manuallyExpireHourBlock = withAuth(async (
       if (block.status === 'voided') throw new Error('Cannot expire a voided hour block');
       if (block.status === 'pending') throw new Error('Cannot expire a pending hour block; void its draft invoice instead');
 
+      // Stamp the settlement date when the block has none (or one still in
+      // the future): reports key expiration off expiration_date, and a block
+      // marked expired without it would otherwise never leave the liability.
+      const nowIso = new Date().toISOString();
+      const today = toCalendarDateString(nowIso) ?? nowIso.slice(0, 10);
+      const currentExpiry = block.expiration_date ? toCalendarDateString(block.expiration_date) : null;
+      const expirationDate = !currentExpiry || currentExpiry > today ? today : block.expiration_date;
+
       await tenantScopedTable(trx, tenant, 'hour_blocks')
         .where({ block_id: blockId, tenant })
-        .update({ status: 'expired', updated_at: new Date().toISOString() });
+        .update({ status: 'expired', expiration_date: expirationDate, updated_at: nowIso });
 
       await writeAudit(trx, tenant, {
         blockId,
