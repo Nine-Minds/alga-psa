@@ -45,13 +45,6 @@ build
 !packages/storage/dist
 !packages/storage/dist/**
 
-# Environment variables
-.env
-.env.local
-.env.*.local
-.env.development
-.env.production
-
 # Docker files
 Dockerfile
 docker-compose.yml
@@ -108,3 +101,29 @@ server/.next/cache
 server/.next/cache/**
 server/.next/dev/cache
 server/.next/dev/cache/**
+
+# Operator-written secrets and local env files. These must never enter an
+# image build context.
+# .dockerignore patterns are anchored at the context root (unlike .gitignore):
+# `/secrets` matches only the top-level operator directory. Do NOT widen it to
+# `**/secrets`: real source directories use that name (packages/core/src/secrets,
+# packages/core/src/lib/secrets, server/src/app/api/secrets,
+# server/src/app/msp/settings/secrets, server/src/components/settings/secrets,
+# shared/workflow/secrets).
+/secrets
+/.secrets
+/secrets-playwright
+server/secrets-playwright
+# Env files at any depth (server/.env, ee/server/.env, ...). .env.example and
+# the tracked .env.e2e / .env.test / .env.localtest fixtures stay in context.
+**/.env
+**/.env.local
+**/.env.*.local
+**/.env.development
+**/.env.production
+**/.env*.bak*
+server/.env.localtest
+# Written by scripts/set-image-tag.sh after each build; not a secret, but it
+# would otherwise invalidate the COPY . . cache on every run.
+.env.image
+**/*.pem
