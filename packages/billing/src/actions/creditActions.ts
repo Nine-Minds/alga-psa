@@ -1367,6 +1367,13 @@ export async function applyCreditToInvoiceInternal(
         }
     }
 
+    // System-policy callers (finalize auto-apply) have no UI wrapper to do this:
+    // retire active Checkout links so a customer cannot pay the pre-credit
+    // amount through an old link. Best-effort; the helper never throws.
+    if (options.systemPolicy && appliedAmountResult > 0) {
+        await reconcileInvoicePaymentLinksAfterCredit(tenant, invoiceId);
+    }
+
     return { appliedAmount: appliedAmountResult };
 }
 

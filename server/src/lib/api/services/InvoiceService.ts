@@ -953,8 +953,13 @@ export class InvoiceService extends BaseService<IInvoice> {
     // totals from the line items and skipped all of that.
     let warnings: Array<{ step: string; message: string }> = [];
     try {
+      const recurringProvenance = await withTransaction(knex, (trx) =>
+        this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id)
+      );
       ({ warnings } = await finalizeInvoiceWithKnex(data.invoice_id, knex, context.tenant, context.userId, {
         internalValidation: true,
+        finalizedAt: data.finalized_at || undefined,
+        auditDetails: recurringProvenance ? { recurring_provenance: recurringProvenance } : undefined,
       }));
     } catch (error) {
       if (error instanceof ExpectedInvoiceActionError) {

@@ -1123,6 +1123,10 @@ export async function finalizeInvoiceWithKnex(
      * authorized the actor themselves (REST API-key requests carry no session).
      */
     internalValidation?: boolean;
+    /** Caller-supplied finalized_at (REST `finalized_at`); defaults to today. */
+    finalizedAt?: string;
+    /** Extra detail merged into the finalize audit row (e.g. recurring provenance). */
+    auditDetails?: Record<string, unknown>;
   } = {},
 ): Promise<{ warnings: FinalizeWarning[] }> {
   const warnings: FinalizeWarning[] = [];
@@ -1227,7 +1231,7 @@ export async function finalizeInvoiceWithKnex(
 
     const previousStatus = invoice.status ?? null;
     const previousFinalizedAt = invoice.finalized_at ?? null;
-    const finalizedAtValue = toISODate(Temporal.Now.plainDateISO());
+    const finalizedAtValue = options.finalizedAt || toISODate(Temporal.Now.plainDateISO());
 
     await tenantScopedTable(trx, tenant, 'invoices')
       .where({ invoice_id: invoiceId })
@@ -1396,6 +1400,7 @@ export async function finalizeInvoiceWithKnex(
       invoiceNumber: invoice.invoice_number ?? null,
       before: { status: previousStatus, finalized_at: previousFinalizedAt },
       after: { status: 'sent', finalized_at: finalizedAtValue },
+      extraDetails: options.auditDetails,
     });
   });
 
@@ -1458,91 +1463,91 @@ export async function finalizeInvoiceWithKnex(
   }
 
   await runPostCommitStep(warnings, 'workflow_events', invoiceId, tenant, async () => {
-  if (createdCreditNote) {
-    if (createdCreditNote.sourceDocumentKind === 'negative_invoice') {
-      // Negative-invoice credit notes inherit date meaning from the source
-      // invoice when canonical recurring detail rows exist; otherwise they
-      // fall back to the source document date as a financial artifact.
-      const sourceInvoice = await Invoice.getById(knex as any, tenant, createdCreditNote.sourceInvoiceId);
-      const servicePeriodStarts = (sourceInvoice?.invoice_charges ?? [])
-        .map((charge) => charge.service_period_start)
-        .filter((value): value is string => typeof value === 'string' && value.length > 0)
-        .sort();
-      const servicePeriodEnds = (sourceInvoice?.invoice_charges ?? [])
-        .map((charge) => charge.service_period_end)
-        .filter((value): value is string => typeof value === 'string' && value.length > 0)
-        .sort();
+    if (createdCreditNote) {
+      if (createdCreditNote.sourceDocumentKind === 'negative_invoice') {
+        // Negative-invoice credit notes inherit date meaning from the source
+        // invoice when canonical recurring detail rows exist; otherwise they
+        // fall back to the source document date as a financial artifact.
+        const sourceInvoice = await Invoice.getById(knex as any, tenant, createdCreditNote.sourceInvoiceId);
+        const servicePeriodStarts = (sourceInvoice?.invoice_charges ?? [])
+          .map((charge) => charge.service_period_start)
+          .filter((value): value is string => typeof value === 'string' && value.length > 0)
+          .sort();
+        const servicePeriodEnds = (sourceInvoice?.invoice_charges ?? [])
+          .map((charge) => charge.service_period_end)
+          .filter((value): value is string => typeof value === 'string' && value.length > 0)
+          .sort();
 
-      createdCreditNote = {
-        ...createdCreditNote,
-        sourceInvoiceNumber: sourceInvoice?.invoice_number ?? createdCreditNote.sourceInvoiceNumber,
-        sourceInvoiceStatus: sourceInvoice?.status ?? createdCreditNote.sourceInvoiceStatus,
-        sourceInvoiceDateBasis:
-          servicePeriodStarts.length > 0 || servicePeriodEnds.length > 0
-            ? 'canonical_recurring_service_period'
-            : 'financial_document_date',
-        sourceServicePeriodStart: servicePeriodStarts[0] ?? null,
-        sourceServicePeriodEnd: servicePeriodEnds[servicePeriodEnds.length - 1] ?? null,
-      };
+        createdCreditNote = {
+          ...createdCreditNote,
+          sourceInvoiceNumber: sourceInvoice?.invoice_number ?? createdCreditNote.sourceInvoiceNumber,
+          sourceInvoiceStatus: sourceInvoice?.status ?? createdCreditNote.sourceInvoiceStatus,
+          sourceInvoiceDateBasis:
+            servicePeriodStarts.length > 0 || servicePeriodEnds.length > 0
+              ? 'canonical_recurring_service_period'
+              : 'financial_document_date',
+          sourceServicePeriodStart: servicePeriodStarts[0] ?? null,
+          sourceServicePeriodEnd: servicePeriodEnds[servicePeriodEnds.length - 1] ?? null,
+        };
+      }
+
+      await publishWorkflowEvent({
+        eventType: 'CREDIT_NOTE_CREATED',
+        payload: buildCreditNoteCreatedPayload({
+          creditNoteId: createdCreditNote.creditNoteId,
+          clientId: createdCreditNote.clientId,
+          createdByUserId: createdCreditNote.createdByUserId ?? undefined,
+          createdAt: createdCreditNote.createdAt,
+          amount: createdCreditNote.amount,
+          currency: createdCreditNote.currency,
+          status: 'issued',
+          sourceDocumentKind: createdCreditNote.sourceDocumentKind,
+          sourceInvoiceId: createdCreditNote.sourceInvoiceId,
+          sourceInvoiceNumber: createdCreditNote.sourceInvoiceNumber,
+          sourceInvoiceStatus: createdCreditNote.sourceInvoiceStatus,
+          sourceInvoiceDateBasis: createdCreditNote.sourceInvoiceDateBasis,
+          sourceServicePeriodStart: createdCreditNote.sourceServicePeriodStart,
+          sourceServicePeriodEnd: createdCreditNote.sourceServicePeriodEnd,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: createdCreditNote.createdAt,
+          actor: createdCreditNote.createdByUserId
+            ? { actorType: 'USER', actorUserId: createdCreditNote.createdByUserId }
+            : { actorType: 'SYSTEM' },
+        },
+        idempotencyKey: `credit_note_created:${createdCreditNote.creditNoteId}`,
+      });
     }
 
-    await publishWorkflowEvent({
-      eventType: 'CREDIT_NOTE_CREATED',
-      payload: buildCreditNoteCreatedPayload({
-        creditNoteId: createdCreditNote.creditNoteId,
-        clientId: createdCreditNote.clientId,
-        createdByUserId: createdCreditNote.createdByUserId ?? undefined,
-        createdAt: createdCreditNote.createdAt,
-        amount: createdCreditNote.amount,
-        currency: createdCreditNote.currency,
-        status: 'issued',
-        sourceDocumentKind: createdCreditNote.sourceDocumentKind,
-        sourceInvoiceId: createdCreditNote.sourceInvoiceId,
-        sourceInvoiceNumber: createdCreditNote.sourceInvoiceNumber,
-        sourceInvoiceStatus: createdCreditNote.sourceInvoiceStatus,
-        sourceInvoiceDateBasis: createdCreditNote.sourceInvoiceDateBasis,
-        sourceServicePeriodStart: createdCreditNote.sourceServicePeriodStart,
-        sourceServicePeriodEnd: createdCreditNote.sourceServicePeriodEnd,
-      }),
-      ctx: {
-        tenantId: tenant,
-        occurredAt: createdCreditNote.createdAt,
-        actor: createdCreditNote.createdByUserId
-          ? { actorType: 'USER', actorUserId: createdCreditNote.createdByUserId }
-          : { actorType: 'SYSTEM' },
-      },
-      idempotencyKey: `credit_note_created:${createdCreditNote.creditNoteId}`,
-    });
-  }
-
-  for (const event of projectDepositCreditEvents) {
-    await publishWorkflowEvent({
-      eventType: 'CREDIT_NOTE_CREATED',
-      payload: buildCreditNoteCreatedPayload({
-        creditNoteId: event.creditNoteId,
-        clientId: event.clientId,
-        createdByUserId: event.createdByUserId ?? undefined,
-        createdAt: event.createdAt,
-        amount: event.amount,
-        currency: event.currency,
-        status: 'issued',
-        sourceInvoiceId: invoice.invoice_id,
-        sourceInvoiceNumber: invoice.invoice_number ?? null,
-        sourceInvoiceStatus: invoice.status ?? null,
-        sourceInvoiceDateBasis: 'financial_document_date',
-        sourceServicePeriodStart: null,
-        sourceServicePeriodEnd: null,
-      }),
-      ctx: {
-        tenantId: tenant,
-        occurredAt: event.createdAt,
-        actor: event.createdByUserId
-          ? { actorType: 'USER', actorUserId: event.createdByUserId }
-          : { actorType: 'SYSTEM' },
-      },
-      idempotencyKey: `credit_note_created:${event.creditNoteId}`,
-    });
-  }
+    for (const event of projectDepositCreditEvents) {
+      await publishWorkflowEvent({
+        eventType: 'CREDIT_NOTE_CREATED',
+        payload: buildCreditNoteCreatedPayload({
+          creditNoteId: event.creditNoteId,
+          clientId: event.clientId,
+          createdByUserId: event.createdByUserId ?? undefined,
+          createdAt: event.createdAt,
+          amount: event.amount,
+          currency: event.currency,
+          status: 'issued',
+          sourceInvoiceId: invoice.invoice_id,
+          sourceInvoiceNumber: invoice.invoice_number ?? null,
+          sourceInvoiceStatus: invoice.status ?? null,
+          sourceInvoiceDateBasis: 'financial_document_date',
+          sourceServicePeriodStart: null,
+          sourceServicePeriodEnd: null,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: event.createdAt,
+          actor: event.createdByUserId
+            ? { actorType: 'USER', actorUserId: event.createdByUserId }
+            : { actorType: 'SYSTEM' },
+        },
+        idempotencyKey: `credit_note_created:${event.creditNoteId}`,
+      });
+    }
   });
 
   // Auto-export producer (accounting sync): never blocks finalize.
