@@ -118,6 +118,36 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  // GET /api/v1/time-sheets validates `sort` against an allowlist (TimeSheetService
+  // resolveTimeSheetListSort): anything else is a 400, not a database error.
+  const TimeSheetListQuery = registry.registerSchema(
+    'WorkV1TimeSheetListQuery',
+    zOpenApi.object({
+      page: zOpenApi.string().optional(),
+      limit: zOpenApi.string().optional(),
+      sort: zOpenApi
+        .enum(['approval_status', 'approved_at', 'created_at', 'period_end', 'period_start', 'submitted_at'])
+        .optional()
+        .describe(
+          'Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.',
+        ),
+      order: zOpenApi.enum(['asc', 'desc']).optional(),
+      user_id: zOpenApi.string().uuid().optional(),
+      period_id: zOpenApi.string().uuid().optional(),
+      approval_status: zOpenApi.string().optional(),
+      approved_by: zOpenApi.string().uuid().optional(),
+      submitted_from: zOpenApi.string().datetime().optional(),
+      submitted_to: zOpenApi.string().datetime().optional(),
+      approved_from: zOpenApi.string().datetime().optional(),
+      approved_to: zOpenApi.string().datetime().optional(),
+      has_entries: zOpenApi.string().optional(),
+      period_start_from: zOpenApi.string().datetime().optional(),
+      period_start_to: zOpenApi.string().datetime().optional(),
+      period_end_from: zOpenApi.string().datetime().optional(),
+      period_end_to: zOpenApi.string().datetime().optional(),
+    }),
+  );
+
   const GenericBody = registry.registerSchema(
     'WorkV1GenericBody',
     zOpenApi.record(zOpenApi.unknown()).describe('Controller/service-specific payload; see source route/controller for exact required shape.'),
@@ -495,6 +525,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
 
     if (def.method === 'get' && def.path === '/api/v1/tickets') {
       req.query = TicketListQuery;
+    }
+    if (def.method === 'get' && (def.path === '/api/v1/time-sheets' || def.path === '/api/v1/time-sheets/search')) {
+      req.query = TimeSheetListQuery;
     }
 
     if (def.path.startsWith('/api/v1/projects') && (def.method === 'post' || def.method === 'put')) {

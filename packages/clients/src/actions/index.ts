@@ -31,6 +31,7 @@ export * from './onlineMeetingActions';
 export * from './interactionCallArtifactActions';
 export * from './contactAvatarActions';
 export * from './queryActions';
+export * from './clientPickerActions';
 export * from './entraClientSyncActions';
 export * from './clientPulseActions';
 export * from './clientTimelineActions';
