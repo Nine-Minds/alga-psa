@@ -1,7 +1,7 @@
 import type {
   PortalDomainStatus,
   PortalDomainVerificationMethod,
-} from '../../lib/PortalDomainModel';
+} from '../../lib/portalDomainRead';
 
 export type PortalDomainEdition = 'ce' | 'ee';
 

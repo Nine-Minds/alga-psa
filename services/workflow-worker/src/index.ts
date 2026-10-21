@@ -18,7 +18,8 @@ import logger from '@alga-psa/core/logger';
 import { registerFeatureFlagChecker } from '@alga-psa/core/features';
 import { featureFlags } from '@alga-psa/core/server';
 import { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } from '@alga-psa/email';
-import { buildTenantPortalUrl } from '@alga-psa/tenancy/server';
+// LEVERAGE: friction tenancy-server-barrel — the '@alga-psa/tenancy/server' barrel mixes next/auth-dependent and pure code; import the auth-free subpath.
+import { buildTenantPortalUrl } from '@alga-psa/tenancy/server/tenantPortalUrl';
 import { HealthServer } from './healthServer.js';
 import { getWorkflowWorkerMetrics } from './metrics.js';
 import { registerEnterpriseStorageProviders } from './registerEnterpriseStorageProviders.js';

@@ -1,6 +1,6 @@
 import { createTenantKnex } from '@alga-psa/db';
-import { computeCanonicalHost, getPortalDomain } from '../lib/PortalDomainModel';
-import type { PortalDomain } from '../lib/PortalDomainModel';
+import { computeCanonicalHost, getPortalDomain } from '../lib/portalDomainRead';
+import type { PortalDomain } from '../lib/portalDomainRead';
 import type { PortalDomainStatusResponse } from '../actions/tenant-actions/portalDomain.types';
 
 function toIsoString(value: Date | string | null | undefined): string | null {

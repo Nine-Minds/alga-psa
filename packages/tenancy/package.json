@@ -21,6 +21,10 @@
       "import": "./dist/server.mjs",
       "require": "./dist/server.js"
     },
+    "./server/tenantPortalUrl": {
+      "types": "./src/server/tenantPortalUrl.ts",
+      "import": "./src/server/tenantPortalUrl.ts"
+    },
     "./client": {
       "types": "./dist/client.d.ts",
       "import": "./dist/client.mjs",
