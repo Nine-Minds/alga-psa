@@ -51,7 +51,10 @@ jobs:
     needs: [check-changes, images]
     # `needs` is skipped entirely on schedule; `always()` lets the nightly run proceed.
     if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true') && needs.images.result == 'success'
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, where the Chromium install below
+    # refuses to run ("does not support chromium on ubuntu26.04-x64").
+    # Drop the pin once Playwright knows the image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
       fail-fast: false

@@ -233,7 +233,10 @@ jobs:
     name: Production browser (${{ matrix.edition }})
     needs: [changes, browser-collection, build-images]
     if: always()
-    runs-on: ubuntu-latest
+    # Pinned: on ubuntu-latest 26.04 the loaded-image identity check rejects
+    # every archive (newer engine reports a different image Id) and the
+    # Chromium install refuses to run. Drop the pin once both are fixed.
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
       fail-fast: false

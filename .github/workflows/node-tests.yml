@@ -51,7 +51,10 @@ jobs:
 
   node-tooling:
     name: Node tooling execution complete
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, where `playwright install
+    # --with-deps` refuses to run ("does not support chromium on
+    # ubuntu26.04-x64"). Drop the pin once Playwright knows the image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
