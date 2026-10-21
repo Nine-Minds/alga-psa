@@ -172,3 +172,14 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - `ApiKeysSetup.tsx` and `AdminApiKeysSetup.tsx` are near-duplicate components (profile vs admin
   API keys). Worth a separate `apikeys-setup-dup` candidate if it recurs / diverges — left
   unmarked this pass to keep the table-focused ledger clean.
+
+---
+
+## calendar-provider-service-triplicate — pattern
+
+- **What:** `CalendarProviderService` is copied three times (`server/src/services/calendar`,
+  `packages/integrations/src/services/calendar`, `ee/packages/calendar/src/lib/services/calendar`).
+  Fixes (e.g. alga-2026-0002699, the `getProviders` vendor-config fan-out) must be applied 3x.
+- **Missing layer:** one shared implementation. Blocked by the CE/EE packaging boundary and differing
+  tenant semantics (server copy has `PROVIDER_TENANT_DISCOVERY`; integrations copy requires `tenant`).
+- **Where:** `// LEVERAGE: pattern calendar-provider-service-triplicate` above `getProviders` in each copy.

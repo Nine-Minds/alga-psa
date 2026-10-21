@@ -6,6 +6,7 @@ import {
   createTimeEntrySchema,
   updateTimeEntrySchema,
 } from '../../schemas/timeEntry';
+import { createTimePeriodSchema, updateTimePeriodSchema } from '../../schemas/timeSheet';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import {
   activeStopwatchQuerySchema,
@@ -114,6 +115,36 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
         ),
       search: zOpenApi.string().optional(),
       query: zOpenApi.string().optional(),
+    }),
+  );
+
+  // GET /api/v1/time-sheets validates `sort` against an allowlist (TimeSheetService
+  // resolveTimeSheetListSort): anything else is a 400, not a database error.
+  const TimeSheetListQuery = registry.registerSchema(
+    'WorkV1TimeSheetListQuery',
+    zOpenApi.object({
+      page: zOpenApi.string().optional(),
+      limit: zOpenApi.string().optional(),
+      sort: zOpenApi
+        .enum(['approval_status', 'approved_at', 'created_at', 'period_end', 'period_start', 'submitted_at'])
+        .optional()
+        .describe(
+          'Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.',
+        ),
+      order: zOpenApi.enum(['asc', 'desc']).optional(),
+      user_id: zOpenApi.string().uuid().optional(),
+      period_id: zOpenApi.string().uuid().optional(),
+      approval_status: zOpenApi.string().optional(),
+      approved_by: zOpenApi.string().uuid().optional(),
+      submitted_from: zOpenApi.string().datetime().optional(),
+      submitted_to: zOpenApi.string().datetime().optional(),
+      approved_from: zOpenApi.string().datetime().optional(),
+      approved_to: zOpenApi.string().datetime().optional(),
+      has_entries: zOpenApi.string().optional(),
+      period_start_from: zOpenApi.string().datetime().optional(),
+      period_start_to: zOpenApi.string().datetime().optional(),
+      period_end_from: zOpenApi.string().datetime().optional(),
+      period_end_to: zOpenApi.string().datetime().optional(),
     }),
   );
 
@@ -259,6 +290,10 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'put /api/v1/time-entries/bulk': BulkUpdateTimeEntriesBody,
     'delete /api/v1/time-entries/bulk': BulkDeleteTimeEntriesBody,
   };
+
+  // Registered from the real validator schemas so the docs cannot drift from them.
+  const CreateTimePeriodBody = registry.registerSchema('WorkV1CreateTimePeriodBody', createTimePeriodSchema);
+  const UpdateTimePeriodBody = registry.registerSchema('WorkV1UpdateTimePeriodBody', updateTimePeriodSchema);
 
   const CreateTimeSheetBody = registry.registerSchema(
     'WorkV1CreateTimeSheetBody',
@@ -406,13 +441,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'put', path: '/api/v1/time-entries/{id}', summary: 'Update time entry', description: 'Updates time entry UUID.', family: 'time_entry' },
 
     { method: 'get', path: '/api/v1/time-periods', summary: 'List time periods', description: 'Lists time periods via ApiTimeSheetController.listTimePeriods(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
-    { method: 'post', path: '/api/v1/time-periods', summary: 'Create time period', description: 'Creates time period via ApiTimeSheetController.createTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/time-periods/current', summary: 'Get current time period', description: 'Current route delegates to ApiTimeSheetController.list() and does not call a dedicated current-period method.', family: 'time_sheet' },
-    { method: 'delete', path: '/api/v1/time-periods/{id}', summary: 'Delete time period', description: 'Deletes time period UUID via deleteTimePeriod().', family: 'time_sheet' },
+    { method: 'post', path: '/api/v1/time-periods', summary: 'Create time period', description: 'Creates a time period. start_date/end_date accept YYYY-MM-DD (datetimes are truncated to their date). is_current is ignored on input and derived on read. Returns 409 when it overlaps an existing period; periods that touch (one\'s end_date equals the next\'s start_date) are allowed. end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-periods/current', summary: 'Get current time period', description: 'Returns the period containing today (UTC) or ?date=, via getCurrentTimePeriod(). When no period covers today it may materialize one from time period settings.', family: 'time_sheet' },
+    { method: 'delete', path: '/api/v1/time-periods/{id}', summary: 'Delete time period', description: 'Deletes time period UUID via deleteTimePeriod(). Returns 409 when the period is closed or has time sheets.', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/time-periods/{id}', summary: 'Get time period', description: 'Gets time period UUID via getTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
-    { method: 'put', path: '/api/v1/time-periods/{id}', summary: 'Update time period', description: 'Updates time period UUID via updateTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
-    { method: 'post', path: '/api/v1/time-periods/{id}/close', summary: 'Close time period', description: 'Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period close logic.', family: 'time_sheet' },
-    { method: 'post', path: '/api/v1/time-periods/{id}/reopen', summary: 'Reopen time period', description: 'Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period reopen logic.', family: 'time_sheet' },
+    { method: 'put', path: '/api/v1/time-periods/{id}', summary: 'Update time period', description: 'Updates time period UUID via updateTimePeriod(). start_date/end_date accept YYYY-MM-DD (datetimes are truncated to their date); is_current is ignored. Returns 409 when the period is closed, when it has time sheets, or when the new dates overlap another period. end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
+    { method: 'post', path: '/api/v1/time-periods/{id}/close', summary: 'Close time period', description: 'Sets is_closed true (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.', family: 'time_sheet' },
+    { method: 'post', path: '/api/v1/time-periods/{id}/reopen', summary: 'Reopen time period', description: 'Sets is_closed false (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.', family: 'time_sheet' },
 
     { method: 'get', path: '/api/v1/time-sheets', summary: 'List time sheets', description: 'Lists time sheets via ApiTimeSheetController.list().', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets', summary: 'Create time sheet', description: 'Creates time sheet via create() path.', family: 'time_sheet' },
@@ -437,9 +472,6 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'get /api/v1/schedules/search',
     'get /api/v1/schedules/{id}',
     'get /api/v1/schedules/{id}/conflicts',
-    'get /api/v1/time-periods/current',
-    'post /api/v1/time-periods/{id}/close',
-    'post /api/v1/time-periods/{id}/reopen',
     'post /api/v1/time-sheets/bulk',
     'get /api/v1/time-sheets/search',
     'post /api/v1/time-sheets/{id}/add-entry',
@@ -469,6 +501,12 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'put /api/v1/tickets/{id}/status',
   ]);
 
+  const TIME_PERIOD_CONFLICT_OPS = new Set([
+    'post /api/v1/time-periods',
+    'put /api/v1/time-periods/{id}',
+    'delete /api/v1/time-periods/{id}',
+  ]);
+
   function requestFor(def: Def) {
     const req: Record<string, unknown> = {};
 
@@ -488,6 +526,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     if (def.method === 'get' && def.path === '/api/v1/tickets') {
       req.query = TicketListQuery;
     }
+    if (def.method === 'get' && (def.path === '/api/v1/time-sheets' || def.path === '/api/v1/time-sheets/search')) {
+      req.query = TimeSheetListQuery;
+    }
 
     if (def.path.startsWith('/api/v1/projects') && (def.method === 'post' || def.method === 'put')) {
       req.body = { schema: def.path === '/api/v1/projects' ? CreateProjectBody : def.path.includes('/checklist') ? ProjectTaskChecklistItemBody : GenericBody };
@@ -504,7 +545,10 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     if (def.path.startsWith('/api/v1/time-entries') && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) {
       req.body = { schema: timeEntryBodySchemas[`${def.method} ${def.path}`] ?? GenericBody };
     }
-    if ((def.path.startsWith('/api/v1/time-sheets') || def.path.startsWith('/api/v1/time-periods') || def.path.startsWith('/api/v1/schedules')) && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/time-sheets' && def.method === 'post' ? CreateTimeSheetBody : GenericBody };
+    if (def.path.startsWith('/api/v1/time-periods')) {
+      if (def.method === 'post' && def.path === '/api/v1/time-periods') req.body = { schema: CreateTimePeriodBody };
+      if (def.method === 'put' && def.path === '/api/v1/time-periods/{id}') req.body = { schema: UpdateTimePeriodBody };
+    } else if ((def.path.startsWith('/api/v1/time-sheets') || def.path.startsWith('/api/v1/schedules')) && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/time-sheets' && def.method === 'post' ? CreateTimeSheetBody : GenericBody };
 
     return req;
   }
@@ -552,6 +596,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     if (BUNDLE_PROPAGATION_CONFLICT_OPS.has(`${def.method} ${def.path}`)) {
       responses[409] = {
         description: 'Confirmation required: the status change would close or reopen child tickets of a sync-mode bundle master. Retry with propagateToChildren=true or false. The error details carry crossesBoundary and the affected/unaffected children.',
+        schema: ApiError,
+      };
+    }
+
+    if (TIME_PERIOD_CONFLICT_OPS.has(`${def.method} ${def.path}`)) {
+      responses[409] = {
+        description: 'Conflict: the period overlaps an existing period, is closed (reopen it first), or has time sheets that block the change.',
         schema: ApiError,
       };
     }

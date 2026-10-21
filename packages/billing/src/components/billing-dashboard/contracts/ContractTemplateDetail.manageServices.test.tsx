@@ -51,7 +51,9 @@ vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
 }));
 vi.mock('./TemplatePricingSection', () => ({ TemplatePricingSection: () => null }));
 vi.mock('../contract-lines/GenericContractLineServicesList', () => ({
-  default: () => <div />,
+  default: ({ contractLineId }: { contractLineId: string }) => (
+    <div data-testid={`services-list-${contractLineId}`} />
+  ),
 }));
 vi.mock('./ContractLineEditDialog', () => ({ ContractLineEditDialog: () => null }));
 
@@ -103,5 +105,47 @@ describe('ContractTemplateDetail Manage Services', () => {
     const rate = screen.getByText(/123\.45/);
     expect(rate).toHaveTextContent('€123.45');
     expect(rate.textContent).not.toMatch(/\$|USD/);
+    expect(screen.getByTestId('services-list-line-1')).toBeInTheDocument();
+  });
+
+  it('manages services on hourly and usage lines with type-appropriate rate labels', async () => {
+    actions.getDetailedContractLines.mockResolvedValue([
+      {
+        contract_line_id: 'line-hourly',
+        contract_line_name: 'Field Work',
+        contract_line_type: 'Hourly',
+        billing_frequency: 'monthly',
+        rate: 15000,
+      },
+      {
+        contract_line_id: 'line-usage',
+        contract_line_name: 'Bandwidth',
+        contract_line_type: 'Usage',
+        billing_frequency: 'monthly',
+        rate: null,
+      },
+    ]);
+
+    render(
+      <CurrencyFormatProvider currencyCode="USD" locale="en-US">
+        <ContractTemplateDetail />
+      </CurrencyFormatProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Manage Services' }));
+    await waitFor(() => expect(screen.getByText('Manage Template Services')).toBeInTheDocument());
+
+    // Hourly and usage lines get the same services manager a fixed line does.
+    expect(screen.getByTestId('services-list-line-hourly')).toBeInTheDocument();
+    expect(screen.getByTestId('services-list-line-usage')).toBeInTheDocument();
+
+    // The rate badge follows the line type, and the fixed-fee rate editor stays
+    // fixed-only. The amount is formatted in the template's own base currency.
+    expect(screen.getByText(/Hourly rate:/)).toHaveTextContent('€150.00');
+    expect(screen.queryByText(/Fixed Fee Rate:/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Edit Rate' })).toBeNull();
+    // A usage line with no line-level rate shows no rate badge at all: its
+    // rates live on the services below.
+    expect(screen.queryByText(/Unit rate:/)).toBeNull();
   });
 });

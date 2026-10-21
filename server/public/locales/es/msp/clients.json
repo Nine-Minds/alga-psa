@@ -1578,7 +1578,8 @@
         "warrantyEnd": "Fin de garantía",
         "agent": "Agente",
         "patching": "Parches",
-        "coverage": "Cobertura"
+        "coverage": "Cobertura",
+        "assignedTo": "Asignado a"
       },
       "details": {
         "local": "Local",
@@ -1625,7 +1626,28 @@
         "workstation": "Estación de trabajo"
       },
       "loadError": "No se pueden cargar los activos en este momento.",
-      "retry": "Reintentar"
+      "retry": "Reintentar",
+      "views": {
+        "assets": "Activos",
+        "groups": "Grupos"
+      },
+      "groups": {
+        "newGroup": "Nuevo grupo",
+        "drawerTitle": "Grupo de activos",
+        "name": "Nombre",
+        "kind": "Tipo",
+        "kinds": {
+          "bundle": "Paquete",
+          "shared_workspace": "Espacio compartido"
+        },
+        "columns": {
+          "name": "Nombre",
+          "kind": "Tipo",
+          "location": "Ubicación",
+          "members": "Miembros",
+          "people": "Personas"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Agregar ticket",
@@ -1982,7 +2004,15 @@
     "accountingApply": "Aplicar la selección",
     "accountingSkip": "Omitir por ahora",
     "accountingRemapped": "Correspondencias contables redirigidas",
-    "accountingSkipped": "No se han podido redirigir {{count}} correspondencia(s); hay que volver a vincularlas manualmente."
+    "accountingSkipped": "No se han podido redirigir {{count}} correspondencia(s); hay que volver a vincularlas manualmente.",
+    "assetsDescription": "Estos dispositivos y organizaciones RMM se mueven al cliente de destino. La sincronización los mantiene allí.",
+    "assetsTotal": "Activos",
+    "assetGroups": "Grupos de activos",
+    "deviceCount": "{{count}} dispositivos",
+    "billingStrategyHeading": "Facturar el trabajo y los dispositivos combinados en",
+    "billingStrategySource": "Perfil de facturación de {{source}}, mantenido como perfil separado en {{target}}",
+    "billingStrategyTarget": "Perfil de facturación predeterminado de {{target}}",
+    "billingStrategyHelp": "Se aplica a {{tickets}} ticket(s), {{projects}} proyecto(s), {{assets}} activo(s) y {{mappings}} grupo(s) de dispositivos RMM sin perfil de facturación propio. Las filas con un perfil explícito lo conservan, y las facturas, los ciclos de facturación, los pagos y los créditos siempre permanecen en el perfil combinado."
   },
   "billingProfileContacts": {
     "title": "Contactos del perfil",

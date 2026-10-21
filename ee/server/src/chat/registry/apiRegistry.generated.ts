@@ -37543,7 +37543,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/products",
     "displayName": "Create product",
     "summary": "Create product",
-    "description": "Creates a new product catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Products are catalog entries with item_kind product and always use billing_method usage. Supply prices (integer minor units) to set the displayed prices; prices[0] is primary and is mirrored into default_rate.",
+    "description": "Creates a new product catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Products are catalog entries with item_kind product and always use billing_method usage. Supply prices (integer minor units) to set the displayed prices; prices[0] is primary and is mirrored into default_rate. Shorthand: currency_code + default_rate (integer minor units) creates a single price { currency_code, rate: default_rate }; default_rate is required with currency_code and currency_code cannot be combined with prices.",
     "tags": [
       "Products",
       "Service Catalog"
@@ -37571,13 +37571,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "default_rate": {
           "type": "number",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "currency_code": {
           "type": "string",
-          "minLength": 3,
-          "maxLength": 3
+          "description": "Shorthand for one price: with default_rate it upserts a single prices entry { currency_code, rate: default_rate } (default_rate is integer minor units, same as prices[].rate) and never writes a catalog column. Must be from the supported currency list. default_rate is required with it. On create it creates that one price; on update it sets that currency as the primary price (prices[0], mirrored into default_rate), replaces its rate if present or adds it, and leaves the other current prices untouched. Cannot be combined with prices (400)."
         },
         "unit_of_measure": {
           "type": "string",
@@ -37889,7 +37887,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/products/{id}",
     "displayName": "Update product",
     "summary": "Update product",
-    "description": "Updates a product catalog entry by UUID. Send prices to replace the current price window (prices[0] is primary and is mirrored into default_rate) and scheduled_prices to replace the future window; either is applied in full or rejected with 400. Sending only default_rate rewrites the rate of the primary current price. A default_rate that differs from prices[0].rate, a top-level currency_code, an unsupported currency, a fractional or negative rate, or a duplicate currency returns 400.",
+    "description": "Updates a product catalog entry by UUID. Send prices to replace the current price window (prices[0] is primary and is mirrored into default_rate) and scheduled_prices to replace the future window; either is applied in full or rejected with 400. Sending only default_rate rewrites the rate of the primary current price. Shorthand: currency_code + default_rate (integer minor units) upserts that single currency as the primary price (prices[0], mirrored into default_rate), replacing its rate or adding it, and leaves the other current prices of the product untouched; default_rate is required with currency_code and currency_code cannot be combined with prices. A default_rate that differs from prices[0].rate, currency_code without default_rate, currency_code together with prices, an unsupported currency, a fractional or negative rate, or a duplicate currency returns 400.",
     "tags": [
       "Products",
       "Service Catalog"
@@ -37929,13 +37927,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "default_rate": {
           "type": "number",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "currency_code": {
           "type": "string",
-          "minLength": 3,
-          "maxLength": 3
+          "description": "Shorthand for one price: with default_rate it upserts a single prices entry { currency_code, rate: default_rate } (default_rate is integer minor units, same as prices[].rate) and never writes a catalog column. Must be from the supported currency list. default_rate is required with it. On create it creates that one price; on update it sets that currency as the primary price (prices[0], mirrored into default_rate), replaces its rate if present or adds it, and leaves the other current prices untouched. Cannot be combined with prices (400)."
         },
         "unit_of_measure": {
           "type": "string",
@@ -50080,7 +50076,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods",
     "displayName": "Create time period",
     "summary": "Create time period",
-    "description": "Creates time period via ApiTimeSheetController.createTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
+    "description": "Creates a time period. start_date/end_date accept YYYY-MM-DD (datetimes are truncated to their date). is_current is ignored on input and derived on read. Returns 409 when it overlaps an existing period; periods that touch (one's end_date equals the next's start_date) are allowed. end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
@@ -50088,8 +50084,41 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "parameters": [],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ],
+          "description": "Exclusive end of the period: the first day after the period. A period covering Aug 16–22 has end_date 2026-08-23."
+        },
+        "is_current": {
+          "type": "boolean",
+          "description": "Ignored. is_current is derived from the dates on read; accepted for backward compatibility."
+        }
+      },
+      "required": [
+        "start_date",
+        "end_date"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -50125,7 +50154,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/current",
     "displayName": "Get current time period",
     "summary": "Get current time period",
-    "description": "Current route delegates to ApiTimeSheetController.list() and does not call a dedicated current-period method.",
+    "description": "Returns the period containing today (UTC) or ?date=, via getCurrentTimePeriod(). When no period covers today it may materialize one from time period settings.",
     "tags": [
       "Work Management v1"
     ],
@@ -50278,7 +50307,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}",
     "displayName": "Update time period",
     "summary": "Update time period",
-    "description": "Updates time period UUID via updateTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
+    "description": "Updates time period UUID via updateTimePeriod(). start_date/end_date accept YYYY-MM-DD (datetimes are truncated to their date); is_current is ignored. Returns 409 when the period is closed, when it has time sheets, or when the new dates overlap another period. end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
@@ -50298,8 +50327,37 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ],
+          "description": "Exclusive end of the period: the first day after the period. A period covering Aug 16–22 has end_date 2026-08-23."
+        },
+        "is_current": {
+          "type": "boolean",
+          "description": "Ignored. is_current is derived from the dates on read; accepted for backward compatibility."
+        }
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -50335,7 +50393,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}",
     "displayName": "Delete time period",
     "summary": "Delete time period",
-    "description": "Deletes time period UUID via deleteTimePeriod().",
+    "description": "Deletes time period UUID via deleteTimePeriod(). Returns 409 when the period is closed or has time sheets.",
     "tags": [
       "Work Management v1"
     ],
@@ -50353,11 +50411,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
-    "requestBodySchema": {
-      "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
-    },
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -50392,7 +50445,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}/close",
     "displayName": "Close time period",
     "summary": "Close time period",
-    "description": "Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period close logic.",
+    "description": "Sets is_closed true (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.",
     "tags": [
       "Work Management v1"
     ],
@@ -50410,11 +50463,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
-    "requestBodySchema": {
-      "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
-    },
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -50449,7 +50497,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}/reopen",
     "displayName": "Reopen time period",
     "summary": "Reopen time period",
-    "description": "Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period reopen logic.",
+    "description": "Sets is_closed false (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.",
     "tags": [
       "Work Management v1"
     ],
@@ -50467,11 +50515,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
-    "requestBodySchema": {
-      "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
-    },
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -51302,8 +51345,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "sort",
         "in": "query",
         "required": false,
+        "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "approval_status",
+            "approved_at",
+            "created_at",
+            "period_end",
+            "period_start",
+            "submitted_at"
+          ],
+          "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
         }
       },
       {
@@ -51319,7 +51372,25 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "fields",
+        "name": "user_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "period_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "approval_status",
         "in": "query",
         "required": false,
         "schema": {
@@ -51327,7 +51398,52 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "search",
+        "name": "approved_by",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "submitted_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "submitted_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "has_entries",
         "in": "query",
         "required": false,
         "schema": {
@@ -51335,11 +51451,39 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "query",
+        "name": "period_start_from",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_start_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     ],
@@ -51723,8 +51867,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "sort",
         "in": "query",
         "required": false,
+        "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "approval_status",
+            "approved_at",
+            "created_at",
+            "period_end",
+            "period_start",
+            "submitted_at"
+          ],
+          "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
         }
       },
       {
@@ -51740,7 +51894,25 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "fields",
+        "name": "user_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "period_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "approval_status",
         "in": "query",
         "required": false,
         "schema": {
@@ -51748,7 +51920,52 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "search",
+        "name": "approved_by",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "submitted_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "submitted_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "approved_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "has_entries",
         "in": "query",
         "required": false,
         "schema": {
@@ -51756,11 +51973,39 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "query",
+        "name": "period_start_from",
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_start_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "period_end_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     ],

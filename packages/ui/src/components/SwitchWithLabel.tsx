@@ -9,6 +9,8 @@ interface SwitchWithLabelProps {
   onCheckedChange: (checked: boolean) => void
   className?: string
   disabled?: boolean
+  /** Stable id for the switch; defaults to the label text. */
+  id?: string
 }
 
 const SwitchWithLabel = ({
@@ -17,16 +19,18 @@ const SwitchWithLabel = ({
   onCheckedChange,
   className = '',
   disabled = false,
+  id,
 }: SwitchWithLabelProps & AutomationProps) => {
+  const switchId = id ?? label
   return (
     <div className={`switch-with-label ${className}`}>
-      <Switch 
-        id={label} 
-        checked={checked} 
+      <Switch
+        id={switchId}
+        checked={checked}
         onCheckedChange={onCheckedChange}
         disabled={disabled}
       />
-      <Label htmlFor={label} className="switch-label">{label}</Label>
+      <Label htmlFor={switchId} className="switch-label">{label}</Label>
     </div>
   )
 }

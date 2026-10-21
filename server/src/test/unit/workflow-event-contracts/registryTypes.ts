@@ -11,16 +11,16 @@ export type CoveredEntry = {
   status: 'covered';
   cases: [EmitterCase, ...EmitterCase[]];
   /**
-   * Individual emit paths of an otherwise-covered event that are known to drift. They run under
-   * `it.fails`: fixing the drift turns the test red until the case moves into `cases`.
+   * Individual emit paths of an otherwise-covered event that are known to drift. The test asserts
+   * the harness rejects them: fixing the drift turns the test red until the case moves into `cases`.
    */
   knownDriftCases?: Array<{ ticket: TicketRef; reason: string; case: EmitterCase }>;
 };
 
 /**
  * The emitter exists but its payload does not (yet) pass the schema, or its builder has not
- * been extracted yet. Cases run under `it.fails`: fixing the drift turns the test red until the
- * entry is flipped to `covered`.
+ * been extracted yet. The test asserts the harness rejects each case: fixing the drift turns the
+ * test red until the entry is flipped to `covered`.
  */
 export type KnownDriftEntry = {
   status: 'known-drift';

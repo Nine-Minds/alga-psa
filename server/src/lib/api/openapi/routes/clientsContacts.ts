@@ -560,6 +560,23 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
         suggestedChoice: zOpenApi.enum(['original', 'cutover']),
         suggestedCutoverDate: zOpenApi.string(),
       })),
+      assets: zOpenApi.object({
+        total: zOpenApi.number().describe('Assets that would move to the destination client.'),
+        byRmmOrganization: zOpenApi.array(zOpenApi.object({
+          provider: zOpenApi.string(),
+          integrationId: zOpenApi.string().uuid(),
+          externalOrganizationId: zOpenApi.string(),
+          externalOrganizationName: zOpenApi.string().nullable(),
+          deviceCount: zOpenApi.number(),
+        })),
+        groups: zOpenApi.number().describe('Asset groups (bundles and shared workspaces) that would move.'),
+      }),
+      billingChoice: zOpenApi.object({
+        unstampedTickets: zOpenApi.number(),
+        unstampedProjects: zOpenApi.number(),
+        unstampedAssets: zOpenApi.number(),
+        unstampedRmmMappings: zOpenApi.number(),
+      }).describe('Rows with no billing profile — what `billing_strategy` decides the fate of.'),
       visibilityGroupRenames: zOpenApi.array(zOpenApi.object({
         groupId: zOpenApi.string().uuid(),
         from: zOpenApi.string(),
@@ -599,6 +616,8 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
         mapping_id: zOpenApi.string(),
         apply: zOpenApi.boolean(),
       })).optional(),
+      billing_strategy: zOpenApi.enum(['source_profile', 'target_default']).optional()
+        .describe("F099: what happens to tickets, projects, assets and RMM mappings that carry no billing profile. `source_profile` (the default) stamps them with the moved default profile; `target_default` leaves them unattributed so they fall through to the destination client's default. Billing history (invoices, cycles, payments, credits, tax settings) is stamped either way."),
     }),
   );
 
@@ -613,6 +632,8 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       counts: zOpenApi.record(zOpenApi.number()),
       remapped_external_mapping_ids: zOpenApi.array(zOpenApi.string()),
       skipped_external_mapping_ids: zOpenApi.array(zOpenApi.string()),
+      billing_strategy: zOpenApi.enum(['source_profile', 'target_default'])
+        .describe('The strategy actually applied, as recorded on client_merges.'),
     }),
   );
 

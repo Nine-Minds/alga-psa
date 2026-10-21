@@ -19,6 +19,30 @@ import type {
   AccountingMappingModule
 } from './types';
 
+/**
+ * Preferred width and shrink floor per column. Preferred total 1224px, minimum total 824px.
+ * Status has no minWidth, so it stays fixed; Xero Target takes most of the shrink (and of the
+ * stretch at wide widths).
+ */
+export const BULK_GRID_COLUMN_SIZES = {
+  selected: { width: '72px', minWidth: '72px' },
+  name: { width: '220px', minWidth: '160px' },
+  kindId: { width: '200px', minWidth: '140px' },
+  externalId: { width: '520px', minWidth: '240px' },
+  ignored: { width: '72px', minWidth: '72px' },
+  id: { width: '140px' }
+} as const;
+
+/**
+ * Whether bulk mapping types the target instead of picking it from a catalog.
+ * Explicit per module: a catalog-backed module whose catalog happens to be
+ * empty (a new company, nothing of that kind yet) keeps the picker, so a
+ * free-text value can never be saved where a provider id is expected.
+ */
+export function isManualEntryModule(module: Pick<AccountingMappingModule, 'manualExternalEntry' | 'externalTarget'>): boolean {
+  return module.manualExternalEntry === true && !module.externalTarget;
+}
+
 type MappedRow = { externalName?: string; alga_entity_id: string };
 
 type RowEdit = {
@@ -70,6 +94,9 @@ export function AccountingMappingBulkGrid({
   const { t } = useTranslation('msp/integrations');
   const targetConfig = module.externalTarget;
   const idPrefix = `${module.id}-bulk`;
+  // File-based modules (no provider catalog) type the target, exactly as it
+  // appears in the accounting system.
+  const manualEntry = isManualEntryModule(module);
 
   const [filter, setFilter] = useState<MappedFilter>('unmapped');
   const [search, setSearch] = useState('');
@@ -124,7 +151,7 @@ export function AccountingMappingBulkGrid({
         // Exact (code/name) suggestions are preselected; near-misses need an
         // explicit tick so a variant is never saved without review.
         const selected = edit.selected ?? (suggested && !fuzzy);
-        const externalName = mapped?.externalName ?? externalById.get(externalId)?.name ?? '';
+        const externalName = mapped?.externalName ?? externalById.get(externalId)?.name ?? (manualEntry ? externalId : '');
 
         return {
           id: entity.id,
@@ -136,11 +163,11 @@ export function AccountingMappingBulkGrid({
           fuzzy,
           ignored,
           selected,
-          toSave: !mapped && selected && !ignored && Boolean(externalId),
+          toSave: !mapped && selected && !ignored && Boolean(externalId.trim()),
           searchText: `${entity.name} ${externalName}`.toLowerCase()
         };
       }),
-    [algaEntities, edits, mappedByAlga, suggestions, externalById, targetConfig]
+    [algaEntities, edits, mappedByAlga, suggestions, externalById, targetConfig, manualEntry]
   );
 
   const visibleRows = useMemo(() => {
@@ -173,7 +200,7 @@ export function AccountingMappingBulkGrid({
 
   // Only rows with a target and not ignored can ever be "selected to save".
   const selectableVisible = useMemo(
-    () => editableVisible.filter((row) => row.externalId && !row.ignored),
+    () => editableVisible.filter((row) => row.externalId.trim() && !row.ignored),
     [editableVisible]
   );
   const allSelected = selectableVisible.length > 0 && selectableVisible.every((row) => row.selected);
@@ -190,7 +217,7 @@ export function AccountingMappingBulkGrid({
     // infers it, and the module's createMany rejects an unprefixed id per row.
     const inputs: AccountingMappingBulkCreateInput[] = pending.map((row) => ({
       algaEntityId: row.id,
-      externalEntityId: row.externalId
+      externalEntityId: manualEntry ? row.externalId.trim() : row.externalId
     }));
 
     setIsSaving(true);
@@ -237,10 +264,11 @@ export function AccountingMappingBulkGrid({
         title: t('integrations.accounting.bulk.columns.select', { defaultValue: 'Save' }),
         dataIndex: 'selected',
         sortable: false,
-        // px, not %: a % width is only a floor (>=160px) in DataTable. 96px is the
-        // narrowest a non-compact column can be; total widths are kept well under
-        // a 1920px viewport with the sidebar expanded so Status is never hidden.
-        width: '96px',
+        // Widths are px preferences (a % width is only a floor in DataTable). Columns with a
+        // minWidth are shrunk by the table, in proportion to their slack, before any column
+        // is hidden: preferred total 1224px, minimum total 824px, so every column stays
+        // visible down to an 824px container. See BULK_GRID_COLUMN_SIZES.
+        ...BULK_GRID_COLUMN_SIZES.selected,
         render: (_value, row) => (
           <Checkbox
             id={`${idPrefix}-select-${row.id}`}
@@ -258,7 +286,7 @@ export function AccountingMappingBulkGrid({
         title: module.labels.algaColumn,
         dataIndex: 'name',
         sortable: false,
-        width: '220px',
+        ...BULK_GRID_COLUMN_SIZES.name,
         render: (_value, row) => <span>{row.name}</span>
       }
     ];
@@ -268,7 +296,7 @@ export function AccountingMappingBulkGrid({
         title: targetConfig.label,
         dataIndex: 'kindId',
         sortable: false,
-        width: '160px',
+        ...BULK_GRID_COLUMN_SIZES.kindId,
         render: (_value, row) =>
           row.mappedTo !== null ? null : (
             <CustomSelect
@@ -292,9 +320,34 @@ export function AccountingMappingBulkGrid({
         title: module.labels.externalColumn,
         dataIndex: 'externalId',
         sortable: false,
-        width: '520px',
+        ...BULK_GRID_COLUMN_SIZES.externalId,
         render: (_value, row) => {
           if (row.mappedTo !== null) return <span>{row.mappedTo}</span>;
+          if (manualEntry) {
+            return (
+              // The cell clips its content to truncate text, and the field fills
+              // it edge to edge, so the focus ring is drawn outside the clip and
+              // sliced off. The 2px inset is exactly the ring's width.
+              <div className="p-0.5">
+                <Input
+                  id={`${idPrefix}-external-${row.id}`}
+                  value={row.externalId}
+                  disabled={row.ignored || isSaving}
+                  onChange={(event) =>
+                    patchRow(row.id, { externalId: event.target.value, selected: Boolean(event.target.value.trim()) })
+                  }
+                  placeholder={t('integrations.accounting.dialog.enterPlaceholder', {
+                    defaultValue: 'Enter {{field}}...',
+                    field: module.labels.dialog.externalField
+                  })}
+                  aria-label={`${module.labels.dialog.externalField}: ${row.name}`}
+                  // Ignored rows read as disabled here the same way the picker
+                  // rows do.
+                  className="w-full min-w-0 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+            );
+          }
           const options = externalEntities
             .filter((entity) => !targetConfig || !entity.kind || entity.kind === row.kindId)
             .map((entity) => ({ value: entity.id, label: entity.name }));
@@ -334,7 +387,7 @@ export function AccountingMappingBulkGrid({
         title: t('integrations.accounting.bulk.columns.ignore', { defaultValue: 'Ignore' }),
         dataIndex: 'ignored',
         sortable: false,
-        width: '96px',
+        ...BULK_GRID_COLUMN_SIZES.ignored,
         render: (_value, row) => (
           <Checkbox
             id={`${idPrefix}-ignore-${row.id}`}
@@ -352,7 +405,7 @@ export function AccountingMappingBulkGrid({
         title: t('integrations.accounting.bulk.columns.status', { defaultValue: 'Status' }),
         dataIndex: 'id',
         sortable: false,
-        width: '280px',
+        ...BULK_GRID_COLUMN_SIZES.id,
         render: (_value, row) => {
           const error = rowErrors[row.id];
           let content: React.ReactNode;
@@ -394,7 +447,8 @@ export function AccountingMappingBulkGrid({
     rowErrors,
     savedIds,
     isSaving,
-    patchRow
+    patchRow,
+    manualEntry
   ]);
 
   const filterOptions = useMemo(
@@ -471,6 +525,14 @@ export function AccountingMappingBulkGrid({
           </Button>
         </div>
       </div>
+
+      {manualEntry ? (
+        <p className="text-xs text-muted-foreground" id={`${idPrefix}-manual-entry-help`}>
+          {t('integrations.accounting.dialog.manualEntryHelp', {
+            defaultValue: 'Enter the identifier exactly as it appears in your accounting system.'
+          })}
+        </p>
+      ) : null}
 
       {visibleRows.length === 0 ? (
         <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">

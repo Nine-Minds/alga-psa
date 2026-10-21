@@ -79,4 +79,18 @@ describe('UserSession.extendExpiry', () => {
       { userId: 'client-user-1', userType: 'client' }
     )).resolves.toBe(false);
   });
+
+  it('returns distinct safe durable-session rejection reasons', async () => {
+    const identity = { userId: 'user-1', userType: 'internal' as const };
+    firstMock.mockResolvedValueOnce(undefined as any);
+    await expect(UserSession.getRejectionReason('tenant-1', 'missing', identity)).resolves.toBe('missing');
+    firstMock.mockResolvedValueOnce({ revoked_at: new Date(), session_user_id: 'user-1', actual_user_type: 'internal' });
+    await expect(UserSession.getRejectionReason('tenant-1', 'revoked', identity)).resolves.toBe('revoked');
+    firstMock.mockResolvedValueOnce({ revoked_at: null, session_user_id: 'user-1', actual_user_type: null });
+    await expect(UserSession.getRejectionReason('tenant-1', 'missing-user', identity)).resolves.toBe('user_missing');
+    firstMock.mockResolvedValueOnce({ revoked_at: null, session_user_id: 'other-user', actual_user_type: 'internal' });
+    await expect(UserSession.getRejectionReason('tenant-1', 'mismatch', identity)).resolves.toBe('identity_mismatch');
+    firstMock.mockResolvedValueOnce({ revoked_at: null, session_user_id: 'user-1', actual_user_type: 'internal' });
+    await expect(UserSession.getRejectionReason('tenant-1', 'live', identity)).resolves.toBeNull();
+  });
 });

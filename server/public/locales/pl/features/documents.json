@@ -392,5 +392,8 @@
     "pageCount_few": "{{count}} strony",
     "pageCount_many": "{{count}} stron",
     "pageCount_other": "{{count}} strony"
+  },
+  "skeleton": {
+    "cardLabel": "Szkielet karty dokumentu"
   }
 }

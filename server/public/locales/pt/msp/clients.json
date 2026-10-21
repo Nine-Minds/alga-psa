@@ -1578,7 +1578,8 @@
         "warrantyEnd": "Fim da garantia",
         "agent": "Agente",
         "patching": "Patches",
-        "coverage": "Cobertura"
+        "coverage": "Cobertura",
+        "assignedTo": "Atribuído a"
       },
       "details": {
         "local": "Local",
@@ -1625,7 +1626,28 @@
         "workstation": "Estação de trabalho"
       },
       "loadError": "Não é possível carregar os ativos no momento.",
-      "retry": "Tentar novamente"
+      "retry": "Tentar novamente",
+      "views": {
+        "assets": "Ativos",
+        "groups": "Grupos"
+      },
+      "groups": {
+        "newGroup": "Novo grupo",
+        "drawerTitle": "Grupo de ativos",
+        "name": "Nome",
+        "kind": "Tipo",
+        "kinds": {
+          "bundle": "Pacote",
+          "shared_workspace": "Espaço compartilhado"
+        },
+        "columns": {
+          "name": "Nome",
+          "kind": "Tipo",
+          "location": "Localização",
+          "members": "Membros",
+          "people": "Pessoas"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Adicionar ticket",
@@ -1982,7 +2004,15 @@
     "accountingApply": "Aplicar selecionados",
     "accountingSkip": "Deixar para depois",
     "accountingRemapped": "Vínculos contábeis redirecionados",
-    "accountingSkipped": "{{count}} vínculo(s) não puderam ser redirecionados e precisam de revinculação manual."
+    "accountingSkipped": "{{count}} vínculo(s) não puderam ser redirecionados e precisam de revinculação manual.",
+    "assetsDescription": "Estes dispositivos e organizações RMM passam para o cliente de destino. A sincronização os mantém lá.",
+    "assetsTotal": "Ativos",
+    "assetGroups": "Grupos de ativos",
+    "deviceCount": "{{count}} dispositivos",
+    "billingStrategyHeading": "Faturar o trabalho e os dispositivos mesclados em",
+    "billingStrategySource": "Perfil de faturamento de {{source}}, mantido como perfil separado em {{target}}",
+    "billingStrategyTarget": "Perfil de faturamento padrão de {{target}}",
+    "billingStrategyHelp": "Aplica-se a {{tickets}} ticket(s), {{projects}} projeto(s), {{assets}} ativo(s) e {{mappings}} grupo(s) de dispositivos RMM sem perfil de faturamento próprio. Linhas com um perfil explícito o mantêm, e faturas, ciclos de faturamento, pagamentos e créditos permanecem sempre no perfil mesclado."
   },
   "billingProfileContacts": {
     "title": "Contatos do perfil",

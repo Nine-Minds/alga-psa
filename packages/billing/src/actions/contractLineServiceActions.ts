@@ -7,7 +7,7 @@ import { IService } from '@alga-psa/types';
 
 import { v4 as uuidv4 } from 'uuid';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
-import { resolveContractLineServiceConfigurationType } from '../lib/contractLineServiceConfigPolicy';
+import { resolveContractLineServiceConfig } from '../lib/contractLineServiceConfigPolicy';
 import * as planServiceConfigActions from './contractLineServiceConfigurationActions';
 import { Knex } from 'knex';
 import { deleteTemplateServicePrices } from '@alga-psa/shared/billingClients/templateAmounts';
@@ -63,6 +63,9 @@ function isReturnedActionError(value: unknown): value is ContractLineServiceActi
   return isActionMessageError(value) || isActionPermissionError(value);
 }
 
+const TEMPLATE_RATE_TIERS_UNSUPPORTED =
+  'Rate tiers are not supported on contract template lines; remove the tiers or configure them on a live contract line.';
+
 function contractLineServiceActionErrorFrom(error: unknown): ContractLineServiceActionError | null {
   if (error instanceof Error && error.message.startsWith('Permission denied:')) {
     return permissionError(error.message);
@@ -70,9 +73,9 @@ function contractLineServiceActionErrorFrom(error: unknown): ContractLineService
 
   if (error instanceof Error) {
     if (
-      error.message === 'Service management for template lines currently supports fixed fee lines only.' ||
       error.message === 'System-managed default contracts are attribution-only; contract-line service configuration authoring is disabled.' ||
       error.message === 'Products can only be added to fixed-fee contract lines.' ||
+      error.message === TEMPLATE_RATE_TIERS_UNSUPPORTED ||
       error.message.includes('cannot be attached to contract lines') ||
       error.message.includes('does not have') ||
       error.message.includes('requires an hourly rate') ||
@@ -280,12 +283,20 @@ async function addServiceToTemplateLine(
   templateLine: any,
   serviceId: string,
   quantity?: number,
-  customRate?: number
+  customRate?: number,
+  configType?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket',
+  typeConfig?: Partial<
+    IContractLineServiceFixedConfig |
+    IContractLineServiceHourlyConfig |
+    IContractLineServiceUsageConfig |
+    IContractLineServiceBucketConfig
+  >,
+  // Template schema has no rate-tier table; non-empty tiers are rejected rather than dropped.
+  rateTiers?: IContractLineServiceRateTier[],
 ) {
-  if (templateLine.line_type && templateLine.line_type !== 'Fixed') {
-    throw new Error('Service management for template lines currently supports fixed fee lines only.');
+  if (rateTiers && rateTiers.length > 0) {
+    throw new Error(TEMPLATE_RATE_TIERS_UNSUPPORTED);
   }
-
   const service = await tenantScopedTable(trx, tenant, 'service_catalog')
     .where({ service_id: serviceId })
     .first() as IService | undefined;
@@ -293,9 +304,39 @@ async function addServiceToTemplateLine(
   if (!service) {
     throw new Error(`Service ${serviceId} not found`);
   }
+  if (service.is_active === false) {
+    throw new Error(`"${service.service_name}" is inactive and cannot be attached to contract lines.`);
+  }
+
+  const lineType: string = templateLine.line_type || 'Fixed';
+  if (service.item_kind === 'product' && lineType !== 'Fixed') {
+    throw new Error('Products can only be added to fixed-fee contract lines.');
+  }
+
+  // Same policy resolver the live-line path uses: one place decides the
+  // configuration type and the per-type defaults.
+  const { configurationType, typeConfig: policyTypeConfig } = resolveContractLineServiceConfig(
+    lineType,
+    configType,
+    service,
+    typeConfig,
+  );
+
+  let resolvedTypeConfig: Record<string, any> = { ...policyTypeConfig };
+  if (configurationType === 'Bucket') {
+    // Template buckets have no pool row to inherit the period from.
+    resolvedTypeConfig = {
+      ...resolvedTypeConfig,
+      billing_period: resolvedTypeConfig.billing_period ?? templateLine.billing_frequency ?? 'monthly',
+    };
+  }
 
   const now = trx.fn.now();
-  const resolvedQuantity = typeof quantity === 'number' && quantity > 0 ? quantity : 1;
+  // Hourly and usage services bill on reported work, not a quantity: the
+  // template wizard stores no quantity for them, and neither does this path.
+  const resolvedQuantity: number | null = configurationType === 'Usage' || configurationType === 'Hourly'
+    ? null
+    : typeof quantity === 'number' && quantity > 0 ? quantity : 1;
   // A template stores its member rates in its own base currency. Absent an
   // explicit rate, snapshot the catalog price IN THAT CURRENCY (mode default,
   // then the current service_prices row); never the currency-untagged
@@ -312,6 +353,10 @@ async function addServiceToTemplateLine(
       const catalog = await fetchCurrencyCatalogRates(trx, tenant, [serviceId], 'fixed', template.currency_code);
       resolvedRate = catalog.modeDefaults.get(serviceId) ?? catalog.currentPrices.get(serviceId) ?? null;
     }
+  }
+
+  if (configurationType === 'Usage' && resolvedTypeConfig.base_rate === undefined && resolvedRate !== null) {
+    resolvedTypeConfig = { ...resolvedTypeConfig, base_rate: resolvedRate };
   }
 
   const existingService = await tenantScopedTable(trx, tenant, 'contract_template_line_services')
@@ -348,7 +393,7 @@ async function addServiceToTemplateLine(
     await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
       .where({ config_id: existingConfig.config_id })
       .update({
-        configuration_type: 'Fixed',
+        configuration_type: configurationType,
         custom_rate: resolvedRate,
         quantity: resolvedQuantity,
         updated_at: now,
@@ -359,12 +404,18 @@ async function addServiceToTemplateLine(
       config_id: configId,
       template_line_id: templateLine.template_line_id,
       service_id: serviceId,
-      configuration_type: 'Fixed',
+      configuration_type: configurationType,
       custom_rate: resolvedRate,
       quantity: resolvedQuantity,
       created_at: now,
       updated_at: now,
     });
+  }
+
+  const templateConfigService = new ContractLineServiceConfigurationService(trx, tenant);
+  await templateConfigService.clearStaleTemplateTypeRows(trx, configId, configurationType);
+  if (configurationType !== 'Fixed') {
+    await templateConfigService.upsertTemplateTypeConfig(trx, configId, configurationType, resolvedTypeConfig);
   }
 
   return configId;
@@ -424,42 +475,12 @@ async function addServiceToLiveContractLine(
     }
   }
 
-  const configurationType = resolveContractLineServiceConfigurationType(
+  const { configurationType, typeConfig: resolvedTypeConfig } = resolveContractLineServiceConfig(
     contractLine.contract_line_type,
     configType,
+    service,
+    typeConfig,
   );
-
-  let resolvedTypeConfig = typeConfig || {};
-  if (configurationType === 'Bucket') {
-    resolvedTypeConfig = {
-      ...resolvedTypeConfig,
-      overage_rate:
-        (resolvedTypeConfig as Partial<IContractLineServiceBucketConfig>).overage_rate
-        ?? service.default_rate,
-    };
-  } else if (configurationType === 'Hourly') {
-    const providedHourly = resolvedTypeConfig as Partial<IContractLineServiceHourlyConfig>;
-    const hourlyRateValue = providedHourly.hourly_rate ?? service.default_rate;
-    if (hourlyRateValue === undefined || hourlyRateValue === null) {
-      throw new Error(`Service ${service.service_name} requires an hourly rate before it can be added to an hourly contract line.`);
-    }
-    const hourlyRate = Number(hourlyRateValue);
-    if (!Number.isFinite(hourlyRate)) {
-      throw new Error(`Hourly rate for service ${service.service_name} must be a numeric value.`);
-    }
-    resolvedTypeConfig = {
-      ...providedHourly,
-      hourly_rate: hourlyRate,
-      minimum_billable_time:
-        Number(providedHourly.minimum_billable_time) > 0
-          ? Number(providedHourly.minimum_billable_time)
-          : 15,
-      round_up_to_nearest:
-        Number(providedHourly.round_up_to_nearest) > 0
-          ? Number(providedHourly.round_up_to_nearest)
-          : 15,
-    };
-  }
 
   const existingMembership = await tenantScopedTable(trx, tenant, 'contract_line_services')
     .where({ contract_line_id: contractLineId, service_id: serviceId })
@@ -604,6 +625,9 @@ async function addServiceToContractLineInTransaction(
       serviceId,
       quantity,
       customRate ?? undefined,
+      configType,
+      typeConfig,
+      rateTiers,
     );
   }
   return addServiceToLiveContractLine(
@@ -644,7 +668,8 @@ export const addServiceToContractLine = withAuth(async (
   quantity?: number,
   customRate?: number,
   configType?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket',
-  typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>
+  typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>,
+  rateTiers?: IContractLineServiceRateTier[]
 ): Promise<string | ContractLineServiceActionError> => {
   try {
     if (!await hasPermission(user, 'billing', 'create')) {
@@ -664,6 +689,7 @@ export const addServiceToContractLine = withAuth(async (
         customRate,
         configType,
         typeConfig,
+        rateTiers,
       )
     );
   } catch (error) {
@@ -696,7 +722,36 @@ export const updateContractLineService = withAuth(async (
       return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
     }
     const { knex: db } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
     return withTransaction(db, async (trx: Knex.Transaction) => {
+      // LEVERAGE: pattern template-vs-live-branch — template lines write to contract_template_* tables.
+      if (await findTemplateLine(trx, tenant, contractLineId)) {
+        if (rateTiers && rateTiers.length > 0) {
+          // Returned (not thrown): this promise is returned un-awaited, so a throw would bypass the catch.
+          return actionError(TEMPLATE_RATE_TIERS_UNSUPPORTED);
+        }
+        const templateService = new ContractLineServiceConfigurationService(trx, tenant);
+        const templateConfig = await templateService.getConfigurationForService(contractLineId, serviceId);
+        if (!templateConfig) {
+          throw new Error(`Configuration for service ${serviceId} in contract line ${contractLineId} not found`);
+        }
+        const templateBaseUpdates: Partial<IContractLineServiceConfiguration> = {};
+        if (updates.quantity !== undefined) {
+          templateBaseUpdates.quantity = updates.quantity;
+        }
+        if (updates.customRate !== undefined) {
+          templateBaseUpdates.custom_rate = updates.customRate as number; // null clears the override
+        }
+        await templateService.updateTemplateConfiguration(
+          templateConfig.config_id,
+          templateBaseUpdates,
+          updates.typeConfig as Record<string, any> | undefined,
+        );
+        return true;
+      }
+
       const config = await planServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
       if (isReturnedActionError(config)) {
         return config;

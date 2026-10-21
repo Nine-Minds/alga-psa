@@ -378,6 +378,14 @@
       "customLayout": "Benutzerdefiniert",
       "tenantDefault": "Mandanten-Standard",
       "changeLayout": "Ändern"
+    },
+    "sectionTitles": {
+      "title": "Abschnittstitel für gruppierte Angebote",
+      "description": "Optionale Überschriften für das Layout „Standardangebot gruppiert“.",
+      "monthlyLabel": "Titel des Monatsabschnitts",
+      "oneTimeLabel": "Titel des einmaligen Abschnitts",
+      "monthlyPlaceholder": "Monatlich",
+      "oneTimePlaceholder": "Einmalig"
     }
   },
   "quoteDetail": {

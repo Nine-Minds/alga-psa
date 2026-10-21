@@ -230,12 +230,14 @@
       "selectService": "Selecteer Dienst",
       "taxable": "(belastbaar)",
       "nonTaxable": "(Niet-belastbaar)",
-      "calculatedOnSave": "(berekend bij opslaan)"
+      "calculatedOnSave": "(berekend bij opslaan)",
+      "credit": "Krediet"
     },
     "expanded": {
       "discount": "Korting",
       "item": "Artikel {{number}}",
-      "markedForRemoval": "Gemarkeerd voor verwijdering"
+      "markedForRemoval": "Gemarkeerd voor verwijdering",
+      "credit": "Krediet"
     },
     "fields": {
       "service": "Dienst",
@@ -247,10 +249,18 @@
       "applyDiscountTo": "Korting toepassen op",
       "entireInvoice": "Volledige factuur",
       "rate": "Tarief ({{currencySymbol}})",
-      "description": "Beschrijving"
+      "description": "Beschrijving",
+      "creditUnit": "Krediet per eenheid ({{currencySymbol}})",
+      "taxTreatment": "Fiscale behandeling",
+      "nonTaxable": "Niet-belastbaar",
+      "location": "Locatie",
+      "clientDefaultLocation": "Standaard van de klant",
+      "billingProfile": "Facturatieprofiel",
+      "clientDefaultProfile": "Standaard van de klant"
     },
     "placeholders": {
-      "discountDescription": "bijvoorbeeld korting op vroegtijdige betaling"
+      "discountDescription": "bijvoorbeeld korting op vroegtijdige betaling",
+      "creditDescription": "bijvoorbeeld krediet uit goodwill"
     },
     "actions": {
       "add": "Toevoegen",
@@ -267,11 +277,15 @@
       "invoiceTotal": "{{percentage}}% van het factuurtotaal",
       "amount": "Bedrag: -{{currencySymbol}}{{amount}}",
       "appliedTo": "Toegepast op: {{description}}",
-      "subtotal": "Subtotaal: {{currencySymbol}}{{amount}}"
+      "subtotal": "Subtotaal: {{currencySymbol}}{{amount}}",
+      "credit": "Krediet"
     },
     "options": {
       "percentage": "Percentage",
       "fixedAmount": "Vast bedrag"
+    },
+    "errors": {
+      "serviceRequired": "Wijs een dienst toe aan deze kostenpost voordat u opslaat."
     }
   },
   "contractLineServices": {
@@ -459,7 +473,8 @@
       "executeError": "Kan batch niet uitvoeren",
       "cancelled": "Batch geannuleerd",
       "cancelError": "Kan batch niet annuleren",
-      "realmRequired": "Kies een verbonden boekhoudbedrijf voordat u de export aanmaakt."
+      "realmRequired": "Kies een verbonden boekhoudbedrijf voordat u de export aanmaakt.",
+      "artifactDownloadError": "Dit exportbestand kan niet worden gedownload."
     },
     "status": {
       "pending": "In afwachting",
@@ -470,6 +485,12 @@
       "failed": "Mislukt",
       "cancelled": "Geannuleerd",
       "needsAttention": "Vereist aandacht"
+    },
+    "artifacts": {
+      "title": "Geleverde bestanden",
+      "download": "Downloaden",
+      "unavailable": "Voor deze historische batch is geen bestand opgeslagen. Herstel is alleen mogelijk door een nieuwe export uit te voeren.",
+      "storageFallback": "Opgeslagen in een databaseback-up"
     }
   },
   "templateRenderer": {

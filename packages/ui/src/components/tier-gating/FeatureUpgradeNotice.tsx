@@ -3,6 +3,7 @@
 import { Lock } from 'lucide-react';
 import Link from 'next/link';
 import { type TenantTier, TIER_LABELS } from '@alga-psa/types';
+import { useTranslation } from '../../lib/i18n/client';
 
 interface FeatureUpgradeNoticeProps {
   /** The name of the feature being gated (e.g., "Billing") */
@@ -26,8 +27,9 @@ export function FeatureUpgradeNotice({
   requiredTier,
   description,
   upgradeHref = '/msp/account',
-  upgradeLabel = 'View Plans',
+  upgradeLabel,
 }: FeatureUpgradeNoticeProps) {
+  const { t } = useTranslation('common');
   const tierLabel = TIER_LABELS[requiredTier];
 
   return (
@@ -37,19 +39,19 @@ export function FeatureUpgradeNotice({
       </div>
 
       <h2 className="text-xl font-semibold mb-2">
-        {featureName} requires {tierLabel}
+        {t('featureUpgradeNotice.title', { featureName, tierLabel, defaultValue: `${featureName} requires ${tierLabel}` })}
       </h2>
 
       <p className="text-muted-foreground max-w-md mb-6">
         {description ||
-          `Upgrade to the ${tierLabel} tier to unlock ${featureName} and more powerful features.`}
+          t('featureUpgradeNotice.description', { tierLabel, featureName, defaultValue: `Upgrade to the ${tierLabel} tier to unlock ${featureName} and more powerful features.` })}
       </p>
 
       <Link
         href={upgradeHref}
         className="inline-flex items-center justify-center px-6 py-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-lg transition-colors"
       >
-        {upgradeLabel}
+        {upgradeLabel ?? t('featureUpgradeNotice.actions.viewPlans', { defaultValue: 'View Plans' })}
       </Link>
     </div>
   );

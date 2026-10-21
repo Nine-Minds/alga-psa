@@ -47,7 +47,12 @@ import {
   parseTicketStatusFilterValue,
 } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
-import { applyAssetVisibilityFilter } from '@alga-psa/authorization/portal/visibility';
+import {
+  applyAssetVisibilityFilter,
+  extractActiveWatcherContactIds,
+  ticketMatchesVisibility,
+} from '@alga-psa/authorization/portal/visibility';
+import { resolveAssetBillingProfileId } from '@shared/models/assetBillingProfileModel';
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
 
@@ -178,6 +183,10 @@ async function resolveVisibleTicket(
       't.client_id': visibility.clientId
     })
     .modify((queryBuilder: Knex.QueryBuilder) => {
+      // FR-E7b: deliberately WITHOUT `sharedWorkspaceTickets`. This is the gate
+      // for commenting, editing, deleting and status changes; a shared-workspace
+      // colleague reads those tickets but may not touch them unless they are the
+      // requester or a watcher, which this filter still admits.
       applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' });
     })
     .first();
@@ -281,7 +290,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.client_id': visibility.clientId
       });
 
-      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' });
+      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } });
 
     // Filter by status
     if (parsedStatusFilter.kind === 'all') {
@@ -371,7 +380,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           't.client_id': visibility.clientId
         })
         .modify((ticketQuery: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' });
+          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } });
         })
         .first();
 
@@ -490,7 +499,26 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
       // Never fetch link data until the existing client/board/contact ticket scope succeeds.
       const portalExternalLinks = ticket ? await loadPortalTicketExternalLinks(trx, tenant, ticketId) : [];
-      return { ticket, portalExternalLinks, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
+      /**
+       * FR-E7b: a shared-workspace colleague may read an open ticket about the
+       * hot desk, but it is not theirs to comment on or close — the write
+       * paths resolve the ticket without the workspace clause and would refuse
+       * them with "Ticket not found". The read says so up front.
+       */
+      const ticketRow = ticket as unknown as Record<string, any> | undefined;
+      const canInteract = ticketRow
+        ? ticketMatchesVisibility(
+            {
+              clientId: ticketRow.client_id,
+              boardId: ticketRow.board_id,
+              contactId: ticketRow.contact_name_id,
+              billingProfileId: ticketRow.billing_profile_id ?? null,
+              watcherContactIds: extractActiveWatcherContactIds(ticketRow.attributes),
+            },
+            visibility
+          )
+        : false;
+      return { ticket, canInteract, portalExternalLinks, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
     }) as any;
 
     if (!result.ticket) {
@@ -585,6 +613,8 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
     return {
       ...ticketWithoutCreatorType,
+      /** False for a ticket visible only through a shared workspace. */
+      can_interact: result.canInteract,
       ticket_origin: getTicketOrigin(result.ticket as any),
       entered_at: result.ticket.entered_at instanceof Date ? result.ticket.entered_at.toISOString() : result.ticket.entered_at,
       updated_at: result.ticket.updated_at instanceof Date ? result.ticket.updated_at.toISOString() : result.ticket.updated_at,
@@ -1268,7 +1298,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           client_id: visibility.clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes' });
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes', sharedWorkspaceTickets: { ticketIdColumn: 'tickets.ticket_id', tenantColumn: 'tickets.tenant', closedColumn: 'tickets.is_closed' } });
         })
         .first();
 
@@ -1425,6 +1455,14 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         ? (contactProfiles[0].billing_profile_id as string)
         : undefined;
 
+      // FR-F2: a ticket about a specific device bills where the device says.
+      // That is a narrower statement than "this contact usually belongs to
+      // segment X", so the asset's profile (or its location's default) wins
+      // over the contact heuristic; both fall through to the client default.
+      const assetBillingProfileId = validatedData.asset_id
+        ? await resolveAssetBillingProfileId(trx, tenant, validatedData.asset_id)
+        : null;
+
       // Convert to TicketModel input format
       const createTicketInput: CreateTicketInput = {
         title: validatedData.title,
@@ -1432,7 +1470,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         priority_id: validatedData.priority_id,
         client_id: visibility.clientId,
         contact_id: visibility.contactId, // Maps to contact_name_id in database
-        billing_profile_id: contactBillingProfileId,
+        billing_profile_id: assetBillingProfileId ?? contactBillingProfileId,
         entered_by: userId,
         source: 'client_portal',
         ticket_origin: TICKET_ORIGINS.CLIENT_PORTAL,
@@ -1467,7 +1505,12 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
           tenantDb(trx, tenant).table('assets')
             .where({ asset_id: validatedData.asset_id }),
           visibility,
-          { clientColumn: 'assets.client_id', contactColumn: 'assets.contact_name_id' }
+          {
+            clientColumn: 'assets.client_id',
+            contactColumn: 'assets.contact_name_id',
+            // FR-E7b: a workspace user can raise a ticket on any workspace asset.
+            sharedWorkspace: { assetIdColumn: 'assets.asset_id', tenantColumn: 'assets.tenant' },
+          }
         )
           .select('asset_id')
           .first();

@@ -2213,6 +2213,62 @@
             "format": "date-time",
             "description": "Optional warranty end date/time."
           },
+          "manufacturer": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 255,
+            "description": "Hardware make. RMM sync fills it when the provider reports one."
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 255,
+            "description": "Hardware model. A first-class column, not a system_info lookup."
+          },
+          "vendor_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Supplier; an inventory vendors.vendor_id of this tenant."
+          },
+          "purchase_cost": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Purchase cost in minor units (cents)."
+          },
+          "purchase_cost_currency": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "ISO currency code; defaults to the tenant currency when a cost is written without one."
+          },
+          "order_number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 255,
+            "description": "Purchase order number."
+          },
+          "billing_profile_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Billing profile for work on this device. Must belong to the asset client and be active; cleared when the client changes."
+          },
           "attributes": {
             "$ref": "#/components/schemas/AssetAttributes"
           },
@@ -2282,6 +2338,62 @@
             "type": "string",
             "format": "date-time",
             "description": "Warranty end date/time."
+          },
+          "manufacturer": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 255,
+            "description": "Hardware make. RMM sync fills it when the provider reports one."
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 255,
+            "description": "Hardware model. A first-class column, not a system_info lookup."
+          },
+          "vendor_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Supplier; an inventory vendors.vendor_id of this tenant."
+          },
+          "purchase_cost": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Purchase cost in minor units (cents)."
+          },
+          "purchase_cost_currency": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "ISO currency code; defaults to the tenant currency when a cost is written without one."
+          },
+          "order_number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 255,
+            "description": "Purchase order number."
+          },
+          "billing_profile_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Billing profile for work on this device. Must belong to the asset client and be active; cleared when the client changes."
           },
           "attributes": {
             "$ref": "#/components/schemas/AssetAttributes"
@@ -2644,6 +2756,72 @@
               "null"
             ],
             "description": "Warranty end date from assets.warranty_end_date."
+          },
+          "contact_name_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The contact this asset is assigned to; drives portal contact-scoped visibility."
+          },
+          "manufacturer": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Hardware make from assets.manufacturer."
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Hardware model from assets.model."
+          },
+          "vendor_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Supplier from assets.vendor_id (inventory vendors)."
+          },
+          "vendor_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Supplier name from the joined vendors row."
+          },
+          "purchase_cost": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Purchase cost in minor units (cents)."
+          },
+          "purchase_cost_currency": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO currency code of purchase_cost."
+          },
+          "order_number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Purchase order number from assets.order_number."
+          },
+          "billing_profile_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Billing profile for work on this device; null means the location default or the client default applies."
           },
           "created_at": {
             "type": "string",
@@ -4440,6 +4618,504 @@
         "required": [
           "id",
           "assetId"
+        ]
+      },
+      "AssetAssignment": {
+        "type": "object",
+        "properties": {
+          "assignment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "asset_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contact_name_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contact_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Joined from contacts.full_name."
+          },
+          "assigned_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "assigned_by_user_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "unassigned_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Null while this is the current assignment."
+          },
+          "unassigned_by_user_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "api",
+              "rmm",
+              "bundle",
+              "import",
+              "merge",
+              "system"
+            ],
+            "description": "Where the assignment came from."
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For an rmm assignment, the raw signed-in user name."
+          }
+        },
+        "required": [
+          "assignment_id",
+          "asset_id",
+          "contact_name_id",
+          "assigned_at",
+          "source"
+        ]
+      },
+      "AssetAssignmentListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetAssignment"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AssetStatus": {
+        "type": "object",
+        "properties": {
+          "status_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "description": "What assets.status stores."
+          },
+          "label": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "deployable",
+              "pending",
+              "undeployable",
+              "archived"
+            ],
+            "description": "Lifecycle bucket; \"deployed\" metrics use kind = deployable."
+          },
+          "is_builtin": {
+            "type": "boolean"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "display_order": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status_id",
+          "slug",
+          "label",
+          "kind",
+          "is_builtin",
+          "is_active",
+          "display_order"
+        ]
+      },
+      "AssetStatusListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetStatus"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AssetGroup": {
+        "type": "object",
+        "properties": {
+          "group_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "client_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "bundle",
+              "shared_workspace"
+            ],
+            "description": "A bundle has one owner and moves as a unit; a shared workspace has users and its members carry no single assignee."
+          },
+          "location_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "location_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "member_count": {
+            "type": "integer"
+          },
+          "people_count": {
+            "type": "integer"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "asset_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "asset_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "asset_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "asset_tag": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "asset_status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "asset_id"
+              ]
+            }
+          },
+          "contacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "contact_name_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "contact_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "owner",
+                    "user"
+                  ]
+                }
+              },
+              "required": [
+                "contact_name_id",
+                "role"
+              ]
+            }
+          }
+        },
+        "required": [
+          "group_id",
+          "client_id",
+          "name",
+          "kind"
+        ]
+      },
+      "AssetGroupResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AssetGroup"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AssetGroupListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetGroup"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AssetGroupIdParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "asset_groups.group_id"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "CreateAssetGroupRequest": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "bundle",
+              "shared_workspace"
+            ]
+          },
+          "location_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "asset_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Members to add in the same transaction."
+          }
+        },
+        "required": [
+          "client_id",
+          "name",
+          "kind"
+        ]
+      },
+      "UpdateAssetGroupRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "bundle",
+              "shared_workspace"
+            ],
+            "description": "shared_workspace to bundle is refused while users exist; the reverse unassigns every member."
+          },
+          "location_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Propagates to every member."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "AssetGroupMembersRequest": {
+        "type": "object",
+        "properties": {
+          "asset_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "asset_ids"
+        ]
+      },
+      "AssetGroupContactRequest": {
+        "type": "object",
+        "properties": {
+          "contact_name_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Null with role owner clears the bundle owner."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "user"
+            ]
+          }
+        },
+        "required": [
+          "contact_name_id",
+          "role"
+        ]
+      },
+      "AssetStatusListQuery": {
+        "type": "object",
+        "properties": {
+          "include_archived": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "true also returns archived (is_active false) statuses."
+          }
+        }
+      },
+      "AssetGroupListQuery": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Required; groups belong to a client."
+          }
+        },
+        "required": [
+          "client_id"
+        ]
+      },
+      "AssetGroupDeleteResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "success": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "success"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AssetGroupMemberQuery": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Required."
+          }
+        },
+        "required": [
+          "asset_id"
+        ]
+      },
+      "AssetGroupContactQuery": {
+        "type": "object",
+        "properties": {
+          "contact_name_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Required."
+          }
+        },
+        "required": [
+          "contact_name_id"
         ]
       },
       "AssetNotesResponse": {
@@ -9897,6 +10573,82 @@
               ]
             }
           },
+          "assets": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number",
+                "description": "Assets that would move to the destination client."
+              },
+              "byRmmOrganization": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "type": "string"
+                    },
+                    "integrationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "externalOrganizationId": {
+                      "type": "string"
+                    },
+                    "externalOrganizationName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "deviceCount": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "provider",
+                    "integrationId",
+                    "externalOrganizationId",
+                    "externalOrganizationName",
+                    "deviceCount"
+                  ]
+                }
+              },
+              "groups": {
+                "type": "number",
+                "description": "Asset groups (bundles and shared workspaces) that would move."
+              }
+            },
+            "required": [
+              "total",
+              "byRmmOrganization",
+              "groups"
+            ]
+          },
+          "billingChoice": {
+            "type": "object",
+            "properties": {
+              "unstampedTickets": {
+                "type": "number"
+              },
+              "unstampedProjects": {
+                "type": "number"
+              },
+              "unstampedAssets": {
+                "type": "number"
+              },
+              "unstampedRmmMappings": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "unstampedTickets",
+              "unstampedProjects",
+              "unstampedAssets",
+              "unstampedRmmMappings"
+            ],
+            "description": "Rows with no billing profile — what `billing_strategy` decides the fate of."
+          },
           "visibilityGroupRenames": {
             "type": "array",
             "items": {
@@ -9977,6 +10729,8 @@
           "counts",
           "contacts",
           "contracts",
+          "assets",
+          "billingChoice",
           "visibilityGroupRenames",
           "unrestrictedPortalUserIds",
           "externalMappings"
@@ -10065,6 +10819,14 @@
                 "apply"
               ]
             }
+          },
+          "billing_strategy": {
+            "type": "string",
+            "enum": [
+              "source_profile",
+              "target_default"
+            ],
+            "description": "F099: what happens to tickets, projects, assets and RMM mappings that carry no billing profile. `source_profile` (the default) stamps them with the moved default profile; `target_default` leaves them unattributed so they fall through to the destination client's default. Billing history (invoices, cycles, payments, credits, tax settings) is stamped either way."
           }
         },
         "required": [
@@ -10117,6 +10879,14 @@
             "items": {
               "type": "string"
             }
+          },
+          "billing_strategy": {
+            "type": "string",
+            "enum": [
+              "source_profile",
+              "target_default"
+            ],
+            "description": "The strategy actually applied, as recorded on client_merges."
           }
         },
         "required": [
@@ -10127,7 +10897,8 @@
           "moved_default_profile_id",
           "counts",
           "remapped_external_mapping_ids",
-          "skipped_external_mapping_ids"
+          "skipped_external_mapping_ids",
+          "billing_strategy"
         ]
       },
       "BillingProfileContactResource": {
@@ -23576,6 +24347,86 @@
           }
         }
       },
+      "WorkV1TimeSheetListQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "approval_status",
+              "approved_at",
+              "created_at",
+              "period_end",
+              "period_start",
+              "submitted_at"
+            ],
+            "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "period_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "approval_status": {
+            "type": "string"
+          },
+          "approved_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "submitted_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "submitted_to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approved_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approved_to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "has_entries": {
+            "type": "string"
+          },
+          "period_start_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "period_start_to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "period_end_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "period_end_to": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "WorkV1GenericBody": {
         "type": "object",
         "additionalProperties": {},
@@ -24214,6 +25065,78 @@
         "required": [
           "entry_ids"
         ]
+      },
+      "WorkV1CreateTimePeriodBody": {
+        "type": "object",
+        "properties": {
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              }
+            ]
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              }
+            ],
+            "description": "Exclusive end of the period: the first day after the period. A period covering Aug 16–22 has end_date 2026-08-23."
+          },
+          "is_current": {
+            "type": "boolean",
+            "description": "Ignored. is_current is derived from the dates on read; accepted for backward compatibility."
+          }
+        },
+        "required": [
+          "start_date",
+          "end_date"
+        ]
+      },
+      "WorkV1UpdateTimePeriodBody": {
+        "type": "object",
+        "properties": {
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              }
+            ]
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              }
+            ],
+            "description": "Exclusive end of the period: the first day after the period. A period covering Aug 16–22 has end_date 2026-08-23."
+          },
+          "is_current": {
+            "type": "boolean",
+            "description": "Ignored. is_current is derived from the dates on read; accepted for backward compatibility."
+          }
+        }
       },
       "WorkV1CreateTimeSheetBody": {
         "type": "object",
@@ -38930,6 +39853,1036 @@
           },
           "409": {
             "description": "Duplicate association rejected by a database unique constraint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/assignments": {
+      "get": {
+        "summary": "List asset assignment history",
+        "description": "Returns every assignment of the path asset, newest first, with the contact name joined. An asset that does not exist in the authenticated tenant returns 404 rather than an empty array.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "read",
+          "x-not-paginated": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Asset UUID from assets.asset_id."
+            },
+            "required": true,
+            "description": "Asset UUID from assets.asset_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assignment history returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetAssignmentListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Asset not found in this tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/asset-statuses": {
+      "get": {
+        "summary": "List asset statuses",
+        "description": "Returns the tenant asset status registry in display order. Active statuses only unless include_archived=true. assets.status stores the slug.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "read",
+          "x-no-asset-existence-check": true,
+          "x-not-paginated": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "true also returns archived (is_active false) statuses."
+            },
+            "required": false,
+            "description": "true also returns archived (is_active false) statuses.",
+            "name": "include_archived",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asset statuses returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetStatusListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/asset-groups": {
+      "get": {
+        "summary": "List asset groups for a client",
+        "description": "Returns the client’s bundles and shared workspaces with member and people counts. client_id is required.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "read",
+          "x-no-asset-existence-check": true,
+          "x-not-paginated": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Required; groups belong to a client."
+            },
+            "required": true,
+            "description": "Required; groups belong to a client.",
+            "name": "client_id",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asset groups returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetGroupListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "client_id is missing or not a UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create an asset group",
+        "description": "Creates a bundle or shared workspace for a client, optionally with its first members. Adding a member to a bundle assigns it to the owner and moves it to the group location; adding one to a shared workspace unassigns it.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "update",
+          "x-no-asset-existence-check": true,
+          "x-no-event-published": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Group to create, optionally with its first members.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAssetGroupRequest"
+              },
+              "description": "Group to create, optionally with its first members."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Asset group created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetGroupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed, or a group invariant was violated (client mismatch, asset already grouped).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/asset-groups/{id}": {
+      "get": {
+        "summary": "Get an asset group",
+        "description": "Returns the group with its members and people.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "read",
+          "x-no-asset-existence-check": true,
+          "x-not-paginated": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "asset_groups.group_id"
+            },
+            "required": true,
+            "description": "asset_groups.group_id",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asset group returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetGroupResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Asset group not found in this tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an asset group",
+        "description": "Renames the group, changes its kind or moves its location. A location change moves every member. shared_workspace to bundle is refused while users exist; bundle to shared_workspace unassigns every member and drops the owner.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "update",
+          "x-no-asset-existence-check": true,
+          "x-no-event-published": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "asset_groups.group_id"
+            },
+            "required": true,
+            "description": "asset_groups.group_id",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "description": "Fields to change.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAssetGroupRequest"
+              },
+              "description": "Fields to change."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Asset group updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetGroupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or a group invariant was violated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an asset group",
+        "description": "Deletes the group and its member and people rows. Members keep their current assignee and location.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "update",
+          "x-no-asset-existence-check": true,
+          "x-no-event-published": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "asset_groups.group_id"
+            },
+            "required": true,
+            "description": "asset_groups.group_id",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asset group deleted successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetGroupDeleteResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/asset-groups/{id}/members": {
+      "post": {
+        "summary": "Add assets to a group",
+        "description": "Adds members. For a bundle each new member is assigned to the owner and moved to the group location; for a shared workspace each is unassigned. An asset of another client or already in another group is a 400.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "update",
+          "x-no-asset-existence-check": true,
+          "x-no-event-published": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "asset_groups.group_id"
+            },
+            "required": true,
+            "description": "asset_groups.group_id",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "description": "Assets to add as members.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetGroupMembersRequest"
+              },
+              "description": "Assets to add as members."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Members added successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetGroupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or a group invariant was violated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove an asset from a group",
+        "description": "Removes the asset named by asset_id. Its assignee and location are left as they are.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "update",
+          "x-no-asset-existence-check": true,
+          "x-no-event-published": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "asset_groups.group_id"
+            },
+            "required": true,
+            "description": "asset_groups.group_id",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Required."
+            },
+            "required": true,
+            "description": "Required.",
+            "name": "asset_id",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Member removed successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetGroupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "asset_id is missing or not a UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/asset-groups/{id}/contacts": {
+      "post": {
+        "summary": "Set a group owner or add a workspace user",
+        "description": "With role owner, sets (or with a null contact clears) the bundle owner, which assigns or unassigns every member. With role user, adds a shared-workspace user. A user on a bundle or an owner on a workspace is a 400.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "update",
+          "x-no-asset-existence-check": true,
+          "x-no-event-published": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "asset_groups.group_id"
+            },
+            "required": true,
+            "description": "asset_groups.group_id",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "description": "The contact and the role to give them.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetGroupContactRequest"
+              },
+              "description": "The contact and the role to give them."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Group people updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetGroupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or a group invariant was violated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove a group owner or workspace user",
+        "description": "Removes the contact named by contact_name_id. On a bundle this clears the owner, which unassigns every member.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "update",
+          "x-no-asset-existence-check": true,
+          "x-no-event-published": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "asset_groups.group_id"
+            },
+            "required": true,
+            "description": "asset_groups.group_id",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Required."
+            },
+            "required": true,
+            "description": "Required.",
+            "name": "contact_name_id",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group people updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetGroupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "contact_name_id is missing or not a UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks asset update permission.",
             "content": {
               "application/json": {
                 "schema": {
@@ -81451,7 +83404,7 @@
       },
       "post": {
         "summary": "Create product",
-        "description": "Creates a new product catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Products are catalog entries with item_kind product and always use billing_method usage. Supply prices (integer minor units) to set the displayed prices; prices[0] is primary and is mirrored into default_rate.",
+        "description": "Creates a new product catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Products are catalog entries with item_kind product and always use billing_method usage. Supply prices (integer minor units) to set the displayed prices; prices[0] is primary and is mirrored into default_rate. Shorthand: currency_code + default_rate (integer minor units) creates a single price { currency_code, rate: default_rate }; default_rate is required with currency_code and currency_code cannot be combined with prices.",
         "tags": [
           "Products",
           "Service Catalog"
@@ -81498,13 +83451,11 @@
                   },
                   "default_rate": {
                     "type": "number",
-                    "minimum": 0,
-                    "default": 0
+                    "minimum": 0
                   },
                   "currency_code": {
                     "type": "string",
-                    "minLength": 3,
-                    "maxLength": 3
+                    "description": "Shorthand for one price: with default_rate it upserts a single prices entry { currency_code, rate: default_rate } (default_rate is integer minor units, same as prices[].rate) and never writes a catalog column. Must be from the supported currency list. default_rate is required with it. On create it creates that one price; on update it sets that currency as the primary price (prices[0], mirrored into default_rate), replaces its rate if present or adds it, and leaves the other current prices untouched. Cannot be combined with prices (400)."
                   },
                   "unit_of_measure": {
                     "type": "string",
@@ -81769,7 +83720,7 @@
             }
           },
           "400": {
-            "description": "Validation error, including rejected price writes: unsupported currency, fractional or negative rate, duplicate currency, scheduled date not in the future, default_rate conflicting with prices[0].rate, or a top-level currency_code.",
+            "description": "Validation error, including rejected price writes: unsupported currency, fractional or negative rate, duplicate currency, scheduled date not in the future, default_rate conflicting with prices[0].rate, an unsupported currency_code, currency_code without default_rate, or currency_code combined with prices.",
             "content": {
               "application/json": {
                 "schema": {
@@ -81893,7 +83844,7 @@
       },
       "put": {
         "summary": "Update product",
-        "description": "Updates a product catalog entry by UUID. Send prices to replace the current price window (prices[0] is primary and is mirrored into default_rate) and scheduled_prices to replace the future window; either is applied in full or rejected with 400. Sending only default_rate rewrites the rate of the primary current price. A default_rate that differs from prices[0].rate, a top-level currency_code, an unsupported currency, a fractional or negative rate, or a duplicate currency returns 400.",
+        "description": "Updates a product catalog entry by UUID. Send prices to replace the current price window (prices[0] is primary and is mirrored into default_rate) and scheduled_prices to replace the future window; either is applied in full or rejected with 400. Sending only default_rate rewrites the rate of the primary current price. Shorthand: currency_code + default_rate (integer minor units) upserts that single currency as the primary price (prices[0], mirrored into default_rate), replacing its rate or adding it, and leaves the other current prices of the product untouched; default_rate is required with currency_code and currency_code cannot be combined with prices. A default_rate that differs from prices[0].rate, currency_code without default_rate, currency_code together with prices, an unsupported currency, a fractional or negative rate, or a duplicate currency returns 400.",
         "tags": [
           "Products",
           "Service Catalog"
@@ -81953,13 +83904,11 @@
                   },
                   "default_rate": {
                     "type": "number",
-                    "minimum": 0,
-                    "default": 0
+                    "minimum": 0
                   },
                   "currency_code": {
                     "type": "string",
-                    "minLength": 3,
-                    "maxLength": 3
+                    "description": "Shorthand for one price: with default_rate it upserts a single prices entry { currency_code, rate: default_rate } (default_rate is integer minor units, same as prices[].rate) and never writes a catalog column. Must be from the supported currency list. default_rate is required with it. On create it creates that one price; on update it sets that currency as the primary price (prices[0], mirrored into default_rate), replaces its rate if present or adds it, and leaves the other current prices untouched. Cannot be combined with prices (400)."
                   },
                   "unit_of_measure": {
                     "type": "string",
@@ -82220,7 +84169,7 @@
             }
           },
           "400": {
-            "description": "Validation error, including rejected price writes: unsupported currency, fractional or negative rate, duplicate currency, scheduled date not in the future, default_rate conflicting with prices[0].rate, or a top-level currency_code.",
+            "description": "Validation error, including rejected price writes: unsupported currency, fractional or negative rate, duplicate currency, scheduled date not in the future, default_rate conflicting with prices[0].rate, an unsupported currency_code, currency_code without default_rate, or currency_code combined with prices.",
             "content": {
               "application/json": {
                 "schema": {
@@ -98738,7 +100687,7 @@
       },
       "post": {
         "summary": "Create time period",
-        "description": "Creates time period via ApiTimeSheetController.createTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
+        "description": "Creates a time period. start_date/end_date accept YYYY-MM-DD (datetimes are truncated to their date). is_current is ignored on input and derived on read. Returns 409 when it overlaps an existing period; periods that touch (one's end_date equals the next's start_date) are allowed. end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -98761,7 +100710,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
+                "$ref": "#/components/schemas/WorkV1CreateTimePeriodBody"
               }
             }
           }
@@ -98817,6 +100766,16 @@
               }
             }
           },
+          "409": {
+            "description": "Conflict: the period overlaps an existing period, is closed (reopen it first), or has time sheets that block the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unexpected controller/service failure.",
             "content": {
@@ -98833,7 +100792,7 @@
     "/api/v1/time-periods/current": {
       "get": {
         "summary": "Get current time period",
-        "description": "Current route delegates to ApiTimeSheetController.list() and does not call a dedicated current-period method.",
+        "description": "Returns the period containing today (UTC) or ?date=, via getCurrentTimePeriod(). When no period covers today it may materialize one from time period settings.",
         "tags": [
           "Work Management v1"
         ],
@@ -98846,8 +100805,7 @@
           "x-tenant-scoped": true,
           "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
-          "x-rbac-resource": "time_sheet",
-          "x-route-controller-mismatch": true
+          "x-rbac-resource": "time_sheet"
         },
         "x-alga-products": [
           "psa"
@@ -98971,7 +100929,7 @@
     "/api/v1/time-periods/{id}": {
       "delete": {
         "summary": "Delete time period",
-        "description": "Deletes time period UUID via deleteTimePeriod().",
+        "description": "Deletes time period UUID via deleteTimePeriod(). Returns 409 when the period is closed or has time sheets.",
         "tags": [
           "Work Management v1"
         ],
@@ -99002,16 +100960,6 @@
             "in": "path"
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Operation succeeded.",
@@ -99058,6 +101006,16 @@
           },
           "404": {
             "description": "Target resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict: the period overlaps an existing period, is closed (reopen it first), or has time sheets that block the change.",
             "content": {
               "application/json": {
                 "schema": {
@@ -99176,7 +101134,7 @@
       },
       "put": {
         "summary": "Update time period",
-        "description": "Updates time period UUID via updateTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
+        "description": "Updates time period UUID via updateTimePeriod(). start_date/end_date accept YYYY-MM-DD (datetimes are truncated to their date); is_current is ignored. Returns 409 when the period is closed, when it has time sheets, or when the new dates overlap another period. end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -99212,7 +101170,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
+                "$ref": "#/components/schemas/WorkV1UpdateTimePeriodBody"
               }
             }
           }
@@ -99268,6 +101226,16 @@
               }
             }
           },
+          "409": {
+            "description": "Conflict: the period overlaps an existing period, is closed (reopen it first), or has time sheets that block the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unexpected controller/service failure.",
             "content": {
@@ -99284,7 +101252,7 @@
     "/api/v1/time-periods/{id}/close": {
       "post": {
         "summary": "Close time period",
-        "description": "Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period close logic.",
+        "description": "Sets is_closed true (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.",
         "tags": [
           "Work Management v1"
         ],
@@ -99297,8 +101265,7 @@
           "x-tenant-scoped": true,
           "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
-          "x-rbac-resource": "time_sheet",
-          "x-route-controller-mismatch": true
+          "x-rbac-resource": "time_sheet"
         },
         "x-alga-products": [
           "psa"
@@ -99316,16 +101283,6 @@
             "in": "path"
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Operation succeeded.",
@@ -99403,7 +101360,7 @@
     "/api/v1/time-periods/{id}/reopen": {
       "post": {
         "summary": "Reopen time period",
-        "description": "Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period reopen logic.",
+        "description": "Sets is_closed false (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.",
         "tags": [
           "Work Management v1"
         ],
@@ -99416,8 +101373,7 @@
           "x-tenant-scoped": true,
           "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
-          "x-rbac-resource": "time_sheet",
-          "x-route-controller-mismatch": true
+          "x-rbac-resource": "time_sheet"
         },
         "x-alga-products": [
           "psa"
@@ -99435,16 +101391,6 @@
             "in": "path"
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Operation succeeded.",
@@ -99559,9 +101505,19 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "approval_status",
+                "approved_at",
+                "created_at",
+                "period_end",
+                "period_start",
+                "submitted_at"
+              ],
+              "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
             },
             "required": false,
+            "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
             "name": "sort",
             "in": "query"
           },
@@ -99579,10 +101535,20 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             },
             "required": false,
-            "name": "fields",
+            "name": "user_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "period_id",
             "in": "query"
           },
           {
@@ -99590,7 +101556,52 @@
               "type": "string"
             },
             "required": false,
-            "name": "search",
+            "name": "approval_status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "approved_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "submitted_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "submitted_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "approved_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "approved_to",
             "in": "query"
           },
           {
@@ -99598,7 +101609,43 @@
               "type": "string"
             },
             "required": false,
-            "name": "query",
+            "name": "has_entries",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_start_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_start_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_end_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_end_to",
             "in": "query"
           }
         ],
@@ -100023,9 +102070,19 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "approval_status",
+                "approved_at",
+                "created_at",
+                "period_end",
+                "period_start",
+                "submitted_at"
+              ],
+              "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
             },
             "required": false,
+            "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
             "name": "sort",
             "in": "query"
           },
@@ -100043,10 +102100,20 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             },
             "required": false,
-            "name": "fields",
+            "name": "user_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "period_id",
             "in": "query"
           },
           {
@@ -100054,7 +102121,52 @@
               "type": "string"
             },
             "required": false,
-            "name": "search",
+            "name": "approval_status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "approved_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "submitted_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "submitted_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "approved_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "approved_to",
             "in": "query"
           },
           {
@@ -100062,7 +102174,43 @@
               "type": "string"
             },
             "required": false,
-            "name": "query",
+            "name": "has_entries",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_start_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_start_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_end_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_end_to",
             "in": "query"
           }
         ],

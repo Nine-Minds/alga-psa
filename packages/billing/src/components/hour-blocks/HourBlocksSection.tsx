@@ -25,6 +25,7 @@ import AdjustHourBlockDialog from './AdjustHourBlockDialog';
 import EditExpirationDialog from './EditExpirationDialog';
 import VoidHourBlockDialog from './VoidHourBlockDialog';
 import ManuallyExpireHourBlockDialog from './ManuallyExpireHourBlockDialog';
+import HourBlockCoverageNotice from './HourBlockCoverageNotice';
 import HourBlockDetailDrawer from './HourBlockDetailDrawer';
 
 const EXPIRING_SOON_DAYS = 7;
@@ -35,6 +36,11 @@ interface HourBlocksSectionProps {
 }
 
 type TranslateFn = ReturnType<typeof useTranslation>['t'];
+
+/** Contract-issued (Prepaid Block line) blocks: voided via their invoice, never granted/voided directly. */
+export function isContractBlock(block: Pick<IHourBlock, 'source_type' | 'contract_line_id'>): boolean {
+  return block.source_type === 'contract' || block.contract_line_id != null;
+}
 
 function getStatusBadge(t: TranslateFn, block: IHourBlock) {
   switch (block.status) {
@@ -150,7 +156,19 @@ export default function HourBlocksSection({ clientId, currencyCode = 'USD' }: Ho
     {
       title: t('columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
-      render: (_value: string, record) => getStatusBadge(t, record),
+      render: (_value: string, record) => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {getStatusBadge(t, record)}
+          {record.contract_coverage && record.contract_coverage.length > 0 && (
+            <HourBlockCoverageNotice
+              variant="badge"
+              blockId={record.block_id}
+              coverage={record.contract_coverage}
+              unscoped={(record.scope_service_ids ?? []).length === 0}
+            />
+          )}
+        </div>
+      ),
     },
     {
       title: t('columns.expiration', { defaultValue: 'Expiration' }),
@@ -166,6 +184,23 @@ export default function HourBlocksSection({ clientId, currencyCode = 'USD' }: Ho
       title: t('columns.source', { defaultValue: 'Source' }),
       dataIndex: 'source_invoice_id',
       render: (value: string | null | undefined, record) => {
+        if (isContractBlock(record)) {
+          return (
+            <div className="min-w-0" id={`hb-source-contract-${record.block_id}`}>
+              <p className="truncate text-sm text-[rgb(var(--color-text-900))]">
+                {t('detail.sourceContract', {
+                  contract: record.contract_name || record.contract_line_name || '',
+                  defaultValue: 'Contract: {{contract}}',
+                })}
+              </p>
+              {record.invoice_number ? (
+                <p className="truncate text-xs text-[rgb(var(--color-text-500))]">
+                  {t('detail.sourceInvoice', { defaultValue: 'Invoice' })} #{record.invoice_number}
+                </p>
+              ) : null}
+            </div>
+          );
+        }
         if (record.invoice_number) {
           return (
             <span className="text-sm text-[rgb(var(--color-text-900))]">
@@ -243,7 +278,7 @@ export default function HourBlocksSection({ clientId, currencyCode = 'USD' }: Ho
                         {t('actions.expire', { defaultValue: 'Expire' })}
                       </DropdownMenuItem>
                     )}
-                    {!record.has_allocations && (
+                    {!record.has_allocations && !isContractBlock(record) && (
                       <DropdownMenuItem
                         id={`hb-void-${value}`}
                         className="flex items-center gap-2 text-red-600 focus:text-red-600"
@@ -270,7 +305,7 @@ export default function HourBlocksSection({ clientId, currencyCode = 'USD' }: Ho
           <div>
             <CardTitle>{t('section.title', { defaultValue: 'Hour Blocks' })}</CardTitle>
             <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
-              {t('section.description', { defaultValue: 'One-time prepaid hour blocks. Time that isn\'t covered by a contract line draws down these blocks, oldest expiration first.' })}
+              {t('section.description', { defaultValue: 'Ad-hoc prepaid hour blocks. They catch only time that no contract line covers. Blocks issued by a Prepaid Block contract line are drawn only by that line\'s own time.' })}
             </p>
           </div>
           <div className="flex items-center gap-2">

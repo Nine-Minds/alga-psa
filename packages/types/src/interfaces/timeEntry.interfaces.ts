@@ -100,6 +100,7 @@ export interface ITimePeriod extends TenantEntity  {
   period_id: string;
   start_date: DateValue;
   end_date: DateValue;
+  is_closed?: boolean;
 }
 
 export interface ITimePeriodWithStatus extends ITimePeriod {

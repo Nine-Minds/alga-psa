@@ -230,12 +230,14 @@
       "selectService": "Välj tjänst",
       "taxable": "(Momspliktig)",
       "nonTaxable": "(Ej momspliktig)",
-      "calculatedOnSave": "(beräknas när du sparar)"
+      "calculatedOnSave": "(beräknas när du sparar)",
+      "credit": "Kreditering"
     },
     "expanded": {
       "discount": "Rabatt",
       "item": "Rad {{number}}",
-      "markedForRemoval": "Markerad för borttagning"
+      "markedForRemoval": "Markerad för borttagning",
+      "credit": "Kreditering"
     },
     "fields": {
       "service": "Tjänst",
@@ -247,10 +249,18 @@
       "applyDiscountTo": "Tillämpa rabatt på",
       "entireInvoice": "Hela fakturan",
       "rate": "Taxa ({{currencySymbol}})",
-      "description": "Beskrivning"
+      "description": "Beskrivning",
+      "creditUnit": "Kreditering per enhet ({{currencySymbol}})",
+      "taxTreatment": "Skattehantering",
+      "nonTaxable": "Ej skattepliktig",
+      "location": "Plats",
+      "clientDefaultLocation": "Kundens standard",
+      "billingProfile": "Faktureringsprofil",
+      "clientDefaultProfile": "Kundens standard"
     },
     "placeholders": {
-      "discountDescription": "T.ex. rabatt vid tidig betalning"
+      "discountDescription": "T.ex. rabatt vid tidig betalning",
+      "creditDescription": "t.ex. goodwillkreditering"
     },
     "actions": {
       "add": "Lägg till",
@@ -267,11 +277,15 @@
       "invoiceTotal": "{{percentage}} % av fakturans totalsumma",
       "amount": "Belopp: -{{amount}} {{currencySymbol}}",
       "appliedTo": "Tillämpas på: {{description}}",
-      "subtotal": "Delsumma: {{amount}} {{currencySymbol}}"
+      "subtotal": "Delsumma: {{amount}} {{currencySymbol}}",
+      "credit": "Kreditering"
     },
     "options": {
       "percentage": "Procent",
       "fixedAmount": "Fast belopp"
+    },
+    "errors": {
+      "serviceRequired": "Tilldela en tjänst till avgiften innan du sparar."
     }
   },
   "contractLineServices": {
@@ -459,7 +473,8 @@
       "executeError": "Det gick inte att köra batchen",
       "cancelled": "Batchen har avbrutits",
       "cancelError": "Det gick inte att avbryta batchen",
-      "realmRequired": "Välj ett anslutet bokföringsföretag innan du skapar exporten."
+      "realmRequired": "Välj ett anslutet bokföringsföretag innan du skapar exporten.",
+      "artifactDownloadError": "Det gick inte att hämta exportfilen."
     },
     "status": {
       "pending": "Väntande",
@@ -470,6 +485,12 @@
       "failed": "Misslyckades",
       "cancelled": "Avbruten",
       "needsAttention": "Kräver åtgärd"
+    },
+    "artifacts": {
+      "title": "Levererade filer",
+      "download": "Hämta",
+      "unavailable": "Den här historiska exportomgången saknar en sparad fil. Den kan inte återskapas utan en ny export.",
+      "storageFallback": "Lagrad i databasens säkerhetskopia"
     }
   },
   "templateRenderer": {

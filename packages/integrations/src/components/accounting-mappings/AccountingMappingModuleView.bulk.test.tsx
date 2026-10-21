@@ -7,6 +7,7 @@ import '@testing-library/jest-dom';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AccountingMappingModuleView } from './AccountingMappingModuleView';
+import { isManualEntryModule } from './AccountingMappingBulkGrid';
 import type { AccountingMappingModule } from './types';
 
 const loadMock = vi.fn();
@@ -318,5 +319,139 @@ describe('AccountingMappingModuleView bulk grid', () => {
     const error = await screen.findByTestId(`${P}-error-svc-host`);
     expect(error).toHaveTextContent(message);
     expect(error).toHaveAttribute('title', message);
+  });
+});
+
+describe('AccountingMappingModuleView bulk grid without a provider catalog', () => {
+  // QuickBooks CSV/Desktop and Xero CSV have no catalog to pick from, like the
+  // single-mapping dialog's free-text fallback.
+  const MP = 'qbcsv-service-mappings-bulk';
+  const manualModule = () =>
+    buildModule({
+      id: 'qbcsv-service-mappings',
+      adapterType: 'quickbooks_csv',
+      externalTarget: undefined,
+      manualExternalEntry: true,
+      labels: {
+        tab: 'Items / Services',
+        addButton: 'Add Service Mapping',
+        algaColumn: 'Alga Service',
+        externalColumn: 'QuickBooks Item',
+        dialog: { addTitle: 'Add', editTitle: 'Edit', algaField: 'Alga Service', externalField: 'QuickBooks Item' },
+        deleteConfirmation: { title: 'Delete', message: () => 'Delete?' }
+      }
+    } as Partial<AccountingMappingModule>);
+
+  beforeAll(() => {
+    if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
+  });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    loadMock.mockResolvedValue({ ...loadResult([]), externalEntities: [] });
+  });
+  afterEach(() => cleanup());
+
+  async function openManualBulk() {
+    render(<AccountingMappingModuleView module={manualModule()} context={{ realmId: null }} />);
+    fireEvent.click(await screen.findByText('Bulk map'));
+    await screen.findByTestId(`${MP}-grid`);
+  }
+
+  it('renders a writable text field per row instead of an empty picker', async () => {
+    await openManualBulk();
+    const input = el(`${MP}-external-svc-host`);
+    expect(input.tagName).toBe('INPUT');
+    expect(input).toHaveAttribute('placeholder', 'Enter QuickBooks Item...');
+    expect(screen.getByText('Enter the identifier exactly as it appears in your accounting system.')).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: 'Web Hosting' } });
+    expect(el(`${MP}-external-svc-host`).value).toBe('Web Hosting');
+    expect(el(`${MP}-select-svc-host`)).toBeChecked();
+    expect(screen.getByTestId(`${MP}-count`)).toHaveTextContent('1 to save');
+  });
+
+  it('keeps the field focused while a value is typed into it', async () => {
+    await openManualBulk();
+    const input = el(`${MP}-external-svc-host`);
+    input.focus();
+
+    // The first character gives the cell text it did not have, which used to
+    // rebuild the cell and drop the caret after one keystroke.
+    fireEvent.change(input, { target: { value: 'W' } });
+    expect(el(`${MP}-external-svc-host`)).toBe(input);
+    expect(document.activeElement).toBe(input);
+
+    fireEvent.change(input, { target: { value: 'Web Hosting' } });
+    expect(el(`${MP}-external-svc-host`).value).toBe('Web Hosting');
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('greys the field out and drops it from the count when the row is ignored', async () => {
+    await openManualBulk();
+    fireEvent.change(el(`${MP}-external-svc-host`), { target: { value: 'Web Hosting' } });
+    expect(screen.getByTestId(`${MP}-count`)).toHaveTextContent('1 to save');
+
+    fireEvent.click(el(`${MP}-ignore-svc-host`));
+    expect(el(`${MP}-external-svc-host`)).toBeDisabled();
+    expect(el(`${MP}-external-svc-host`).className).toContain('disabled:opacity-50');
+    expect(el(`${MP}-select-svc-host`)).not.toBeChecked();
+    expect(screen.getByTestId(`${MP}-count`)).toHaveTextContent('0 to save');
+    expect(screen.getByTestId(`${MP}-status-svc-host`)).toHaveTextContent('Ignored');
+  });
+
+  it('treats a whitespace-only value as blank', async () => {
+    await openManualBulk();
+    fireEvent.change(el(`${MP}-external-svc-host`), { target: { value: '   ' } });
+    expect(el(`${MP}-select-svc-host`)).not.toBeChecked();
+    expect(screen.getByTestId(`${MP}-count`)).toHaveTextContent('0 to save');
+    expect(screen.getByTestId(`${MP}-status-svc-host`)).toHaveTextContent('—');
+  });
+
+  it('saves the typed values, trimmed, and skips blank or ignored rows', async () => {
+    createManyMock.mockImplementation(async (_ctx: unknown, inputs: any[]) =>
+      inputs.map((i) => ({ algaEntityId: i.algaEntityId, ok: true }))
+    );
+    await openManualBulk();
+    fireEvent.change(el(`${MP}-external-svc-host`), { target: { value: '  Web Hosting  ' } });
+    fireEvent.change(el(`${MP}-external-svc-backup`), { target: { value: 'Managed Backup' } });
+    fireEvent.change(el(`${MP}-external-svc-basic`), { target: { value: '   ' } });
+    fireEvent.click(el(`${MP}-ignore-svc-backup`));
+
+    await act(async () => {
+      fireEvent.click(saveAll());
+    });
+    await waitFor(() => expect(createManyMock).toHaveBeenCalledTimes(1));
+    expect(createManyMock.mock.calls[0][1]).toEqual([
+      expect.objectContaining({ algaEntityId: 'svc-host', externalEntityId: 'Web Hosting' })
+    ]);
+  });
+});
+
+describe('bulk grid manual-entry opt-in', () => {
+  beforeAll(() => {
+    if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
+  });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    loadMock.mockResolvedValue({ ...loadResult([]), externalEntities: [] });
+  });
+  afterEach(() => cleanup());
+
+  it('only file-based modules that opt in type the target', () => {
+    expect(isManualEntryModule({ manualExternalEntry: true })).toBe(true);
+    expect(isManualEntryModule({})).toBe(false);
+    expect(isManualEntryModule({ manualExternalEntry: false })).toBe(false);
+    // A multi-catalog target kind always needs a catalog pick.
+    expect(isManualEntryModule({ manualExternalEntry: true, externalTarget: {} as never })).toBe(false);
+  });
+
+  it('keeps the catalog picker when a catalog-backed module returns an empty catalog', async () => {
+    const qboLike = buildModule({ id: 'qbo-live-service-mappings', adapterType: 'quickbooks_online', externalTarget: undefined } as Partial<AccountingMappingModule>);
+    render(<AccountingMappingModuleView module={qboLike} context={context} />);
+    fireEvent.click(await screen.findByText('Bulk map'));
+    await screen.findByTestId('qbo-live-service-mappings-bulk-grid');
+
+    expect(document.querySelector('input#qbo-live-service-mappings-bulk-external-svc-host')).toBeNull();
+    expect(screen.queryByText('Enter the identifier exactly as it appears in your accounting system.')).toBeNull();
   });
 });

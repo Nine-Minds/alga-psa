@@ -252,7 +252,7 @@ describe('ContractTemplateDetail per-seat unit rate (template currency)', () => 
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
 
     await vi.waitFor(() => expect(updateContractLineRateMock).toHaveBeenCalled());
-    expect(updateContractLineRateMock).toHaveBeenCalledWith('template-1', 'line-1', 20000, 'arrears');
+    expect(updateContractLineRateMock).toHaveBeenCalledWith('template-1', 'line-1', 20000, 'arrears', null);
   });
 
   it('scales the template rate editor by the template currency own fraction digits (zero-decimal currency)', async () => {
@@ -274,7 +274,7 @@ describe('ContractTemplateDetail per-seat unit rate (template currency)', () => 
     fireEvent.change(input, { target: { value: '300' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await vi.waitFor(() => expect(updateContractLineRateMock).toHaveBeenCalled());
-    expect(updateContractLineRateMock).toHaveBeenCalledWith('template-1', 'line-1', 300, 'arrears');
+    expect(updateContractLineRateMock).toHaveBeenCalledWith('template-1', 'line-1', 300, 'arrears', null);
   });
 
   it('summary row shows the template base currency and the basics form has no inline currency input', async () => {

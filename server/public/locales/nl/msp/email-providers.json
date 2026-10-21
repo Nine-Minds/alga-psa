@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Pro-functie",
+      "domainsDescription": "Beheerde domeinen vereisen Pro.",
+      "settingsDescription": "Instellingen voor beheerde e-mail vereisen Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Kan beheerde domeinen niet laden",
       "loadOutboundSettingsFailed": "Kan instellingen voor uitgaande e-mail niet laden",
@@ -930,6 +935,12 @@
       "copyHostAriaLabel": "Host kopiëren",
       "copyFqdnAriaLabel": "Volledige naam kopiëren",
       "hostHint": "Tip: voer bij uw DNS-provider alleen de hierboven getoonde Host in. De meeste providers (Namecheap, GoDaddy, Cloudflare en andere) voegen “{{domain}}” automatisch toe. Als u de volledige naam plakt, wordt het domein herhaald (…{{domain}}.{{domain}}) en wordt het record nooit geverifieerd."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Pro-functie",
+        "description": "Instructies voor DNS-records vereisen Pro."
+      }
     }
   },
   "inboundRules": {
@@ -1131,7 +1142,10 @@
       "duplicateShortName": "Er bestaat al een configuratie met deze korte naam",
       "createFailed": "Kan de standaardwaarden voor inkomende tickets niet aanmaken. Probeer het opnieuw.",
       "notFound": "Standaardconfiguratie niet gevonden",
-      "updateFailed": "Kan de standaardwaarden voor inkomende tickets niet bijwerken. Probeer het opnieuw."
+      "updateFailed": "Kan de standaardwaarden voor inkomende tickets niet bijwerken. Probeer het opnieuw.",
+      "locationRequiresClient": "Selecteer eerst een bedrijf voordat u een locatie selecteert",
+      "locationClientMismatch": "De geselecteerde locatie hoort niet bij het geselecteerde bedrijf",
+      "referencedByProviders": "Deze configuratie wordt nog gebruikt door de volgende e-mailproviders: {{providers}}. Selecteer andere standaardwaarden voor inkomende tickets bij die providers voordat u deze verwijdert."
     },
     "ticketFieldOptions": {
       "permissionDenied": "Toestemming geweigerd: ticketveldopties kunnen niet worden gelezen",

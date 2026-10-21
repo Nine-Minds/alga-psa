@@ -39,6 +39,8 @@ import { addDependencyToMap, removeDependencyFromMap } from '../lib/taskDependen
 import ProjectGanttView, { DEFAULT_GANTT_SETTINGS, type GanttSettings } from './ProjectGanttView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase, markPhaseComplete, reopenPhase } from '../actions/projectActions';
+import { getPhaseCustomStatusCounts } from '../actions/projectTaskStatusActions';
+import { PhaseStatusScopeChip } from './status-columns';
 import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
 import type { ProjectBillingOverview } from '@alga-psa/types';
 import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
@@ -230,6 +232,12 @@ interface ProjectDetailProps {
   initialPhaseId?: string | null;
   initialViewMode?: 'kanban' | 'list' | 'billing' | 'gantt' | null;
   onUrlUpdate?: (phaseId: string | null, taskId: string | null) => void;
+  /**
+   * Bumped by the host when status columns were edited somewhere else (the
+   * project edit drawer), so the board re-reads its statuses and tasks instead
+   * of waiting for a page reload.
+   */
+  statusRefreshKey?: number;
 }
 
 export default function ProjectDetail({
@@ -244,7 +252,8 @@ export default function ProjectDetail({
   initialTaskId,
   initialPhaseId,
   initialViewMode,
-  onUrlUpdate
+  onUrlUpdate,
+  statusRefreshKey
 }: ProjectDetailProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   const taskTypeLabel = useTaskTypeLabel();
@@ -332,7 +341,16 @@ export default function ProjectDetail({
   const [isTeamSwitchDialogOpen, setIsTeamSwitchDialogOpen] = useState(false);
   const [projectPhases, setProjectPhases] = useState<IProjectPhase[]>(phases);
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>(initialStatuses);
-  const [statusVersion, setStatusVersion] = useState(0);
+  const [localStatusVersion, setLocalStatusVersion] = useState(0);
+  // Status columns are also edited in the project edit drawer, which lives
+  // outside this component; the host bumps `statusRefreshKey` there. Both
+  // sources feed the one value the status/task re-reads watch.
+  const statusVersion = localStatusVersion + (statusRefreshKey ?? 0);
+  // Per-phase count of phase-scoped status columns; 0 means the phase still
+  // inherits the project defaults. Drives the inheritance chip on the phase
+  // list and the kanban header so forked phases are visible without opening
+  // every Configure dialog.
+  const [phaseCustomStatusCounts, setPhaseCustomStatusCounts] = useState<Record<string, number> | undefined>(undefined);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [defaultStatus, setDefaultStatus] = useState<ProjectStatus | null>(null);
@@ -475,6 +493,21 @@ export default function ProjectDetail({
     fetchStatusesForPhase();
     return () => { stale = true; };
   }, [initialStatuses, project.project_id, selectedPhase?.phase_id, statusVersion]);
+
+  // One query per project resolves which phases have forked onto their own
+  // status columns; re-read whenever a status edit bumps statusVersion.
+  useEffect(() => {
+    let stale = false;
+
+    getPhaseCustomStatusCounts(project.project_id)
+      .then((counts) => {
+        if (stale || !counts || 'actionError' in counts || 'permissionError' in counts) return;
+        setPhaseCustomStatusCounts(counts);
+      })
+      .catch(() => { /* chip simply stays hidden */ });
+
+    return () => { stale = true; };
+  }, [project.project_id, statusVersion]);
 
   // Fetch tags when component mounts
   useEffect(() => {
@@ -751,7 +784,12 @@ export default function ProjectDetail({
     return () => clearTimeout(timer);
   }, [billingHighlightEntryId]);
 
-  // Fetch all project task data on mount (shared by list view, sidebar counts, and filtering)
+  // Fetch all project task data (shared by list view, sidebar counts, and
+  // filtering). It re-reads on statusVersion too: the list view buckets tasks
+  // by `statusesByPhase` and offers that phase's columns in its row status
+  // picker, so a status column added or deleted elsewhere would otherwise keep
+  // listing a column that no longer exists — and keep its tasks under it —
+  // until a page reload.
   useEffect(() => {
     let stale = false;
     const fetchAllTaskData = async () => {
@@ -782,7 +820,7 @@ export default function ProjectDetail({
     };
     fetchAllTaskData();
     return () => { stale = true; };
-  }, [project.project_id]);
+  }, [project.project_id, statusVersion]);
 
   // Filter all project tasks (same predicate as the list view) for phase counts
   const allFilteredTasks = useMemo(
@@ -1446,7 +1484,7 @@ export default function ProjectDetail({
           }
           return t;
         }));
-        setStatusVersion(v => v + 1);
+        setLocalStatusVersion(v => v + 1);
       } else {
         // Pure same-phase reorder/status change — apply server-returned
         // order_key/status so the list reflects the exact drop position.
@@ -2001,7 +2039,7 @@ export default function ProjectDetail({
           }
           return t;
         }));
-        setStatusVersion(v => v + 1);
+        setLocalStatusVersion(v => v + 1);
         playTaskLayoutAnimation(beforeLayout, movedTaskIds);
       } else {
         // Pure same-phase status change — update in place to avoid a reload flicker
@@ -3714,6 +3752,16 @@ export default function ProjectDetail({
                 ? t('projectDetail.kanbanBoardWithPhase', 'Kanban Board: {{phaseName}}', { phaseName: selectedPhase.phase_name })
                 : t('projectDetail.kanbanBoard', 'Kanban Board')}
             </h2>
+            {selectedPhase && (
+              <div className="mt-1">
+                <PhaseStatusScopeChip
+                  customStatusCount={phaseCustomStatusCounts
+                    ? phaseCustomStatusCounts[selectedPhase.phase_id] ?? 0
+                    : undefined}
+                  id={`kanban-phase-status-scope-${selectedPhase.phase_id}`}
+                />
+              </div>
+            )}
             {selectedPhase?.description && (
               <p className="text-sm text-gray-600 mt-0.5">{selectedPhase.description}</p>
             )}
@@ -4328,10 +4376,11 @@ export default function ProjectDetail({
                   onDrop={handlePhaseDropZone}
                   onDragStart={handlePhaseDragStart}
                   onDragEnd={handlePhaseDragEnd}
-                  onStatusesChanged={() => setStatusVersion(v => v + 1)}
+                  onStatusesChanged={() => setLocalStatusVersion(v => v + 1)}
                   onImport={() => setShowImportDialog(true)}
                   phaseBillingBadges={phaseBillingBadges}
                   phaseAllTasksClosed={phaseAllTasksClosed}
+                  phaseCustomStatusCounts={phaseCustomStatusCounts}
                   canCompletePhase={canCompletePhase}
                   onMarkPhaseComplete={handleMarkPhaseComplete}
                   onReopenPhase={handleReopenPhase}

@@ -295,7 +295,7 @@ describe('Credit Expiration Integration Tests', () => {
 
     const negativeService = await createTestService(context, {
       service_name: 'Credit Service',
-      default_rate: -5000, // -$50.00
+      default_rate: 5000,
       billing_method: 'fixed',
       unit_of_measure: 'unit',
       tax_rate_id: nyTaxRateId,
@@ -304,8 +304,8 @@ describe('Credit Expiration Integration Tests', () => {
 
     const { contractLineId: planId } = await createFixedPlanAssignment(context, negativeService, {
       planName: 'Credit Plan',
-      baseRateCents: -5000,
-      detailBaseRateCents: -5000,
+      baseRateCents: 5000,
+      detailBaseRateCents: 5000,
       quantity: 1,
       billingFrequency: 'monthly',
       startDate

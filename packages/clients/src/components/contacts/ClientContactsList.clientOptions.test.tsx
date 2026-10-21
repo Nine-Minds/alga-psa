@@ -18,6 +18,7 @@ const hoisted = vi.hoisted(() => ({
   getContactsByClient: vi.fn(),
   getContactByContactNameId: vi.fn(),
   getAllClients: vi.fn(),
+  searchContactListIds: vi.fn(),
   getCurrentUserAsync: vi.fn(),
 }));
 
@@ -39,6 +40,7 @@ vi.mock('@alga-psa/clients/actions', () => ({
   getContactsByClient: hoisted.getContactsByClient,
   getContactByContactNameId: hoisted.getContactByContactNameId,
   getAllClients: hoisted.getAllClients,
+  searchContactListIds: hoisted.searchContactListIds,
 }));
 
 vi.mock('../../lib/usersHelpers', () => ({

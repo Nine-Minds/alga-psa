@@ -148,6 +148,21 @@ describe('ClientCommandCenter', () => {
     });
   });
 
+  // The action degrades a section it could not load to a missing key rather
+  // than failing the whole snapshot, so the mosaic has to survive one.
+  it('renders the rest of the mosaic when a pulse section is unavailable', async () => {
+    const { money, ...withoutMoney } = pulse();
+    getClientPulseMock.mockResolvedValue(withoutMoney);
+    renderCenter();
+
+    await waitFor(() => expect(document.getElementById('cc-card-record')).not.toBeNull());
+    expect(document.getElementById('cc-card-money')).toBeNull();
+    expect(document.getElementById('cc-card-service')).not.toBeNull();
+    expect(document.getElementById('cc-card-install-base')).not.toBeNull();
+    expect(document.getElementById('cc-card-people')).not.toBeNull();
+    expect(document.getElementById('cc-pulse-error')).toBeNull();
+  });
+
   it('formats the default location phone with its country and extension in the identity strip', async () => {
     getClientPulseMock.mockResolvedValue(pulse({ locations: [{
       location_id: 'loc-1', location_name: 'HQ', address_line1: null, city: null,

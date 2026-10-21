@@ -35,9 +35,15 @@ import {
 } from '../utils/responseHelpers';
 import { randomBytes } from 'node:crypto';
 import { webhookModel } from '../../webhooks/webhookModel';
+import { enqueueDeliveryRetry, retryFailedDeliveriesForWebhook } from '../../webhooks/deliveryRetry';
 import { performWebhookDeliveryRequest } from '../../webhooks/delivery';
 import { computeBackoff } from '../../webhooks/backoff';
-import { BadGatewayError, ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+import {
+  ConflictError,
+  NotFoundError,
+  UnprocessableEntityError,
+  ValidationError,
+} from '../middleware/apiMiddleware';
 
 export class WebhookService {
   constructor(
@@ -99,7 +105,8 @@ export class WebhookService {
       customActions: {
         test: { method: 'POST', path: 'test' },
         deliveries: { method: 'GET', path: 'deliveries' },
-        analytics: { method: 'GET', path: 'analytics' }
+        analytics: { method: 'GET', path: 'analytics' },
+        'retry-failed': { method: 'POST', path: 'retry-failed' }
       },
       relationships: {
         subscriptions: { resource: 'webhook-subscriptions', many: true },
@@ -162,7 +169,7 @@ export class WebhookService {
           test: { method: 'POST', path: 'test' },
           deliveries: { method: 'GET', path: 'deliveries' },
           analytics: { method: 'GET', path: 'analytics' },
-          retry: { method: 'POST', path: 'retry' }
+          'retry-failed': { method: 'POST', path: 'retry-failed' }
         },
         relationships: {
           subscriptions: { resource: 'webhook-subscriptions', many: true },
@@ -337,7 +344,8 @@ export class WebhookService {
             customActions: {
               test: { method: 'POST', path: 'test' },
               deliveries: { method: 'GET', path: 'deliveries' },
-              analytics: { method: 'GET', path: 'analytics' }
+              analytics: { method: 'GET', path: 'analytics' },
+              'retry-failed': { method: 'POST', path: 'retry-failed' }
             }
           });
           return addHateoasLinks(webhook as WebhookResponse, resourceLinks);
@@ -569,17 +577,24 @@ export class WebhookService {
     }
   }
 
+  /**
+   * Re-queue one delivery. The retry is handed to the delivery queue as a
+   * fresh attempt (same path as the settings UI action) instead of being sent
+   * inline, so rate limiting, backoff and auto-disable still apply.
+   */
   async retryDelivery(
+    webhookId: string,
     deliveryId: string,
-    tenantId: string,
-    userId?: string
-  ): Promise<SuccessResponse<WebhookDelivery>> {
+    tenantId: string
+  ): Promise<SuccessResponse<{
+    queued: true;
+    webhook_id: string;
+    delivery_id: string;
+    event_id: string;
+  }>> {
     await validateTenantAccess(tenantId);
 
-    const delivery = await this.db.findOne('webhook_deliveries', {
-      delivery_id: deliveryId,
-      tenant: tenantId
-    });
+    const delivery = await webhookModel.getDeliveryById(tenantId, webhookId, deliveryId);
 
     if (!delivery) {
       throw new NotFoundError('Webhook delivery not found');
@@ -589,68 +604,61 @@ export class WebhookService {
       throw new ConflictError('Cannot retry successful delivery');
     }
 
-    const webhook = await this.db.findOne('webhooks', {
-      webhook_id: delivery.webhook_id,
-      tenant: tenantId
-    });
+    if (delivery.isTest) {
+      throw new ValidationError('Test deliveries cannot be retried');
+    }
 
+    const enqueued = await enqueueDeliveryRetry(delivery, tenantId);
+    if (!enqueued.queued) {
+      throw new UnprocessableEntityError('Stored delivery payload cannot be replayed');
+    }
+
+    return {
+      success: true,
+      data: {
+        queued: true,
+        webhook_id: webhookId,
+        delivery_id: deliveryId,
+        event_id: enqueued.eventId
+      }
+    };
+  }
+
+  /**
+   * Bulk counterpart of retryDelivery: re-queues every failed/abandoned
+   * delivery of a webhook, collapsing repeated attempts of one event.
+   */
+  async retryFailedDeliveries(
+    webhookId: string,
+    tenantId: string,
+    options: { since?: string; limit?: number } = {}
+  ): Promise<SuccessResponse<{
+    queued: number;
+    skipped: number;
+    total_candidates: number;
+    truncated: boolean;
+  }>> {
+    await validateTenantAccess(tenantId);
+
+    const webhook = await webhookModel.getById(webhookId, tenantId);
     if (!webhook) {
       throw new NotFoundError('Webhook not found');
     }
 
-    // Perform retry
-    try {
-      const payload = JSON.parse(delivery.request_body || '{}');
-      
-      const deliveryResult = await this.performWebhookDelivery({
-        webhook_id: delivery.webhook_id,
-        url: webhook.url,
-        method: webhook.method,
-        headers: webhook.custom_headers || {},
-        payload,
-        security: webhook.security,
-        retry_config: webhook.retry_config,
-        verify_ssl: webhook.verify_ssl
-      });
+    const result = await retryFailedDeliveriesForWebhook(tenantId, webhookId, {
+      since: options.since ? new Date(options.since) : undefined,
+      limit: options.limit
+    });
 
-      // Update delivery record
-      const updated = {
-        ...delivery,
-        response_status: deliveryResult.status_code,
-        response_headers: deliveryResult.response_headers,
-        response_body: deliveryResult.response_body,
-        status: deliveryResult.success ? 'delivered' : 'failed',
-        attempt_number: delivery.attempt_number + 1,
-        duration_ms: deliveryResult.duration_ms,
-        error_message: deliveryResult.error_message,
-        completed_at: new Date().toISOString(),
-        next_retry_at: null
-      };
-
-      await this.db.update('webhook_deliveries',
-        { delivery_id: deliveryId, tenant: tenantId },
-        updated
-      );
-
-      // Update webhook statistics
-      await this.updateWebhookStats(delivery.webhook_id, deliveryResult.success);
-
-      // Publish event
-      await this.eventBus.publish('webhook.delivery.retried', {
-        webhookId: delivery.webhook_id,
-        deliveryId,
-        tenantId,
-        success: deliveryResult.success,
-        userId
-      });
-
-      return {
-        success: true,
-        data: updated as WebhookDelivery
-      };
-    } catch (error) {
-      throw new BadGatewayError('Webhook retry failed. Please try again.');
-    }
+    return {
+      success: true,
+      data: {
+        queued: result.queued,
+        skipped: result.skipped,
+        total_candidates: result.totalCandidates,
+        truncated: result.truncated
+      }
+    };
   }
 
   async getDeliveryHistory(

@@ -301,6 +301,10 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'ticket_settings', action: 'delete', msp: true, client: false, description: 'Delete ticket settings', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'ticket_settings', action: 'read', msp: true, client: false, description: 'View ticket system configuration', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
   { resource: 'ticket_settings', action: 'update', msp: true, client: false, description: 'Configure ticket workflows and rules', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
+  { resource: 'ticket_template', action: 'create', msp: true, client: false, description: 'Create ticket templates', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
+  { resource: 'ticket_template', action: 'delete', msp: true, client: false, description: 'Delete ticket templates', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
+  { resource: 'ticket_template', action: 'read', msp: true, client: false, description: 'View ticket templates and start tickets from them', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
+  { resource: 'ticket_template', action: 'update', msp: true, client: false, description: 'Modify ticket templates', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
 
   { resource: 'time_entry', action: 'approve', msp: true, client: false, description: 'Approve submitted time entries', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'time_entry', action: 'create', msp: true, client: false, description: 'Log time entries for work performed', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },

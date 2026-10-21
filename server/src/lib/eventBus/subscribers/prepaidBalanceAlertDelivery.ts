@@ -86,7 +86,7 @@ interface AlertForDelivery {
   alert_id: string;
   client_id: string;
   client_name: string;
-  alert_type: 'credit' | 'bucket';
+  alert_type: 'credit' | 'bucket' | 'prepaid_block';
   credit_currency_code: string | null;
   credit_threshold: number | string | null;
   bucket_percent: number | string | null;
@@ -150,7 +150,7 @@ function trimEmail(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
-async function loadOpenAlerts(knex: Knex, tenantId: string): Promise<AlertForDelivery[]> {
+async function loadOpenAlerts(knex: Knex, tenantId: string, clientId?: string): Promise<AlertForDelivery[]> {
   const db = tenantDb(knex, tenantId);
   const query = db.table('prepaid_balance_alerts as a')
     .select(
@@ -179,6 +179,9 @@ async function loadOpenAlerts(knex: Knex, tenantId: string): Promise<AlertForDel
   query
     .where('a.tenant', tenantId)
     .whereNull('a.resolved_at');
+  if (clientId) {
+    query.andWhere('a.client_id', clientId);
+  }
   return (await query) as AlertForDelivery[];
 }
 
@@ -398,7 +401,8 @@ async function claimDeliveries(
   knex: Knex,
   tenantId: string,
   summary: DeliverySummary,
-  attemptedDeliveryIds: ReadonlySet<string>
+  attemptedDeliveryIds: ReadonlySet<string>,
+  clientId?: string
 ): Promise<Array<ClaimedDelivery & { alert: AlertForDelivery }>> {
   return knex.transaction(async (trx) => {
     const db = tenantDb(trx, tenantId);
@@ -457,6 +461,9 @@ async function claimDeliveries(
     query
       .where('d.tenant', tenantId)
       .whereNull('a.resolved_at')
+      .modify((qb) => {
+        if (clientId) qb.andWhere('a.client_id', clientId);
+      })
       .andWhere((qb) => {
         qb.where('d.status', DELIVERY_STATUS_PENDING)
           .orWhere('d.status', DELIVERY_STATUS_PROCESSING)
@@ -544,7 +551,7 @@ async function claimDeliveries(
           alert_id: row.alert_id,
           client_id: String(row.client_id),
           client_name: String(row.client_name ?? ''),
-          alert_type: row.alert_type as 'credit' | 'bucket',
+          alert_type: row.alert_type as 'credit' | 'bucket' | 'prepaid_block',
           credit_currency_code: row.credit_currency_code as string | null,
           credit_threshold: row.credit_threshold as number | string | null,
           bucket_percent: row.bucket_percent as number | string | null,
@@ -793,7 +800,7 @@ function replenishmentTemplateAllowedForRole(role: string | null): boolean {
 }
 
 function subtypeAndTemplateFor(
-  alertType: 'credit' | 'bucket',
+  alertType: 'credit' | 'bucket' | 'prepaid_block',
   hasReplenishment: boolean,
 ): { subtypeName: string; templateName: string } {
   if (hasReplenishment) {
@@ -836,6 +843,7 @@ async function buildEmailContext(
         invoiceNumber: alert.replenishment_invoice_number as string,
         outcome: replenishmentOutcomeFromStatus(alert.replenishment_status),
         link,
+        variant: alert.alert_type === 'prepaid_block' ? 'prepaid_block' : 'default',
       },
       locale
     );
@@ -884,6 +892,7 @@ function buildInternalAlertContextForDelivery(
         invoiceNumber: alert.replenishment_invoice_number as string,
         outcome: replenishmentOutcomeFromStatus(alert.replenishment_status),
         link,
+        variant: alert.alert_type === 'prepaid_block' ? 'prepaid_block' : 'default',
       },
       locale
     );
@@ -1185,10 +1194,18 @@ async function processDelivery(
   }
 }
 
-export async function planAndDrainDeliveriesForTenant(knex: Knex, tenantId: string): Promise<DeliverySummary> {
+/**
+ * Plans and drains deliveries for a tenant, or only for `clientId` (the
+ * event-driven Prepaid Block path), leaving other clients' queues untouched.
+ */
+export async function planAndDrainDeliveriesForTenant(
+  knex: Knex,
+  tenantId: string,
+  clientId?: string
+): Promise<DeliverySummary> {
   const summary = emptySummary();
 
-  const alerts = await loadOpenAlerts(knex, tenantId);
+  const alerts = await loadOpenAlerts(knex, tenantId, clientId);
   for (const alert of alerts) {
     try {
       await planDeliveriesForAlert(knex, tenantId, alert, summary);
@@ -1211,7 +1228,7 @@ export async function planAndDrainDeliveriesForTenant(knex: Knex, tenantId: stri
   // batch in this same run.
   const attemptedDeliveryIds = new Set<string>();
   while (true) {
-    const claimed = await claimDeliveries(knex, tenantId, summary, attemptedDeliveryIds);
+    const claimed = await claimDeliveries(knex, tenantId, summary, attemptedDeliveryIds, clientId);
     if (claimed.length === 0) break;
     for (const delivery of claimed) {
       attemptedDeliveryIds.add(delivery.delivery_id);

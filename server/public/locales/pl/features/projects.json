@@ -965,7 +965,7 @@
       "choose_status": "Wybierz status",
       "no_statuses_available": "Brak dostępnych statusów",
       "no_statuses_available_hint": "Najpierw utwórz statusy w Ustawieniach → Projekty → Statusy.",
-      "task_status_library_title": "Biblioteka stanu zadań projektu",
+      "task_status_library_title": "Biblioteka statusów zadań",
       "task_status_library_description": "Zarządzaj statusami zadań projektowych swojej organizacji. Te statusy mogą być używane we wszystkich projektach.",
       "task_status_library_empty": "Nie znaleziono statusów zadań projektu",
       "task_status_library_empty_hint": "Aby rozpocząć, utwórz swój pierwszy status",
@@ -1005,12 +1005,33 @@
       "last_closed_error": "Przynajmniej jeden status musi pozostać oznaczony jako zamknięty",
       "last_closed_delete_error": "Nie można usunąć ostatniego statusu zamkniętego dla tego typu.",
       "addStatus": "Dodaj nowy status",
-      "add_from_library": "Dodaj status"
+      "add_from_library": "Dodaj status",
+      "closed_badge": "(Zamknięty)",
+      "drag_to_reorder": "Przeciągnij, aby zmienić kolejność",
+      "refresh_library": "Odśwież bibliotekę statusów",
+      "all_library_statuses_used": "Każdy status z biblioteki jest już tutaj kolumną. Użyj „Utwórz nowy”, aby dodać kolejny.",
+      "delete_no_move_target": "Nie ma innej kolumny statusu, do której można przenieść te zadania. Najpierw dodaj kolejną kolumnę.",
+      "delete_scope_help": "To usuwa kolumnę tylko w tym zakresie. Status pozostaje w Bibliotece statusów zadań.",
+      "fork_title": "Użyć niestandardowych kolumn statusów dla tej fazy?",
+      "fork_message": "Ta faza przestanie dziedziczyć domyślne kolumny projektu. Kolumny statusów dodane później do domyślnych ustawień projektu nie pojawią się tutaj, dopóki nie przełączysz fazy z powrotem.",
+      "fork_confirm": "Użyj niestandardowych statusów",
+      "phase_uses_custom": "Ta faza ma własne kolumny statusów i nie dziedziczy już domyślnych ustawień projektu.",
+      "pending_title": "Niezapisane zmiany kolumn statusów",
+      "pending_apply_hint": "Nic się nie zmieni, dopóki nie zapiszesz.",
+      "pending_fork": "{{phase}} będzie mieć własne kolumny statusów.",
+      "pending_revert": "{{phase}} wróci do domyślnych kolumn projektu.",
+      "pending_order": "Nowa kolejność kolumn dla {{scope}}.",
+      "pending_preview_hint": "Domyślne kolumny projektu są pokazane jako podgląd. Zapisz, aby zastosować zmianę, a potem dodawaj lub usuwaj tutaj kolumny.",
+      "rename_impact_title": "Gdzie zadziała ta zmiana nazwy",
+      "rename_impact_following": "Od razu przejmuje tę zmianę nazwy: {{columns}} kolumn(y) w {{projects}}.",
+      "rename_impact_keeping": "Zachowuje nazwę „{{name}}”: {{columns}} kolumn(y) w {{projects}}. Te kolumny nie są powiązane z tym statusem z Biblioteki statusów zadań, więc te projekty będą nadal raportować dawną nazwę, dopóki nie zmienisz tam nazwy kolumny.",
+      "rename_impact_more": "i {{remaining}} więcej",
+      "rename_impact_none": "Ten status nie jest jeszcze używany jako kolumna w żadnym projekcie."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Zarządzaj kolumnami statusów",
+      "manage_title": "Kolumny statusów zadań",
       "manage_description": "Zdefiniuj kolumny statusów dla zadań w tym szablonie. Przeciągnij, aby zmienić kolejność.",
       "template_defaults": "Domyślne ustawienia szablonu",
       "added": "Kolumna statusu dodana",
@@ -1036,7 +1057,8 @@
       "replaced": "Kolumna statusu zastąpiona",
       "replace_failed": "Nie udało się zastąpić kolumny statusu",
       "repair_status_columns": "Napraw kolumny statusu",
-      "unresolved_apply_guard": "Kolumny statusu wymagają naprawy ({{count}})"
+      "unresolved_apply_guard": "Kolumny statusu wymagają naprawy ({{count}})",
+      "pending_row_hint": "Wypełnij pustą kolumnę statusu, zanim dodasz kolejną."
     },
     "list": {
       "title": "Szablony projektów",
@@ -1482,18 +1504,6 @@
     "title": "Fazy projektu",
     "import": "Importuj"
   },
-  "addStatusDialog": {
-    "phaseTitle": "Dodaj status fazy z biblioteki",
-    "projectTitle": "Dodaj status z biblioteki",
-    "selectLabel": "Wybierz z biblioteki statusów",
-    "placeholder": "Wybierz status",
-    "helpText": "Wybierz status z biblioteki statusów swojej organizacji, aby dodać go do tego projektu.",
-    "noStatusesTitle": "Brak dostępnych statusów",
-    "noStatusesDescription": "Utwórz statusy w Ustawienia → Projekty → Statusy.",
-    "adding": "Dodawanie...",
-    "addStatus": "Dodaj status",
-    "addFailed": "Nie udało się dodać statusu. Spróbuj ponownie."
-  },
   "taskStatusSelect": {
     "ariaLabel": "Status zadania",
     "selectStatus": "Wybierz status"
@@ -1578,7 +1588,7 @@
     "statusColor": "Kolor statusu",
     "changeColor": "Zmień kolor",
     "markClosed": "Oznacz jako status zamknięty",
-    "markClosedDescription": "Zadania w zamkniętych statusach są uważane za ukończone",
+    "markClosedDescription": "Zadania z tym statusem będą uznawane za ukończone",
     "creating": "Tworzenie...",
     "createButton": "Utwórz status",
     "nameRequired": "Nazwa statusu jest wymagana",
@@ -2055,5 +2065,22 @@
     "question": "Zależności nie są wymuszane, więc możesz kontynuować. Czy chcesz to zrobić?",
     "proceed": "Kontynuuj mimo to",
     "cancel": "Anuluj"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Kompaktowy"
+    },
+    "spacious": {
+      "label": "Przestronny"
+    },
+    "decrease": {
+      "title": "Zmniejsz szerokość kolumn"
+    },
+    "increase": {
+      "title": "Zwiększ szerokość kolumn"
+    },
+    "reset": {
+      "title": "Przywróć wartość domyślną"
+    }
   }
 }

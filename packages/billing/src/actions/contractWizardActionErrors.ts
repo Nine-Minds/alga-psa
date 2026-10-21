@@ -1,3 +1,4 @@
+import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -73,11 +74,18 @@ export function templateAmountsMissingError(currency: string, amountLabels: stri
 
 export const FIXED_LINE_NO_SERVICE_PREFIX = 'Fixed line "';
 
+/** Prefix for a wizard-authored discount the authoring rules refuse. */
+export const CONTRACT_DISCOUNT_PREFIX = 'Contract discount: ';
+
 export function fixedLineNoServiceMessage(lineName: string): string {
   return `Fixed line "${lineName}" has a recurring amount but no service to bill it on — add a service before finishing`;
 }
 
 export function contractWizardActionErrorFrom(error: unknown): ContractWizardActionError | null {
+  if (isContractLineTimingNotAllowedError(error)) {
+    return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
+  }
+
   if (!(error instanceof Error)) return null;
 
   if (error instanceof ContractWizardKeyedError) {
@@ -91,6 +99,10 @@ export function contractWizardActionErrorFrom(error: unknown): ContractWizardAct
   if (error.message.startsWith(FIXED_LINE_NO_SERVICE_PREFIX) && error.message.includes('has a recurring amount but no service')) {
     const match = /^Fixed line "(.*)" has a recurring amount/.exec(error.message);
     return actionError(error.message, 'msp/contracts:errors.wizard.fixedLineNoService', { lineName: match?.[1] ?? '' });
+  }
+
+  if (error.message.startsWith(CONTRACT_DISCOUNT_PREFIX)) {
+    return actionError(error.message);
   }
 
   if (

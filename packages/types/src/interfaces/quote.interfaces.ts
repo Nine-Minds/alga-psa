@@ -99,6 +99,8 @@ export interface IQuote extends TenantEntity {
   version: number;
   parent_quote_id?: string | null;
   po_number?: string | null;
+  recurring_section_title?: string | null;
+  onetime_section_title?: string | null;
   subtotal: number;
   discount_total: number;
   tax: number;
@@ -280,6 +282,12 @@ export interface QuoteViewModelCadenceGroup {
   /** Localized band label; English fallback is emitted by the adapter. */
   name?: string | null;
   /**
+   * Set when `name` came from the quote's own `recurring_section_title` /
+   * `onetime_section_title` instead of the cadence vocabulary, so the document
+   * label localization leaves the author's wording alone.
+   */
+  name_is_custom?: boolean;
+  /**
    * Localized "{{cadence}} Total" band-footer label (e.g. "Monthly Total").
    * English fallback (`${name} Total`) is emitted by the adapter and replaced
    * with the localized template by the PDF service.
@@ -307,6 +315,8 @@ export interface QuoteViewModel {
   status?: QuoteStatus | null;
   version: number;
   po_number?: string | null;
+  recurring_section_title?: string | null;
+  onetime_section_title?: string | null;
   currency_code: string;
   subtotal: number;
   discount_total: number;

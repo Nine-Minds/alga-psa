@@ -279,8 +279,9 @@ const ContractLineMapping = {
           contract_id: contractId,
           contract_line_id: contractLineId,
         })
-        .first(['cadence_owner', 'billing_timing']);
+        .first(['cadence_owner', 'billing_timing', 'contract_line_type']);
       const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+        lineType: existingLine?.contract_line_type ?? null,
         cadenceOwner: dataToUpdate.cadence_owner,
         fallbackCadenceOwner: existingLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
         billingTiming: dataToUpdate.billing_timing,
@@ -392,6 +393,7 @@ const ContractLineMapping = {
             'lines.display_order',
             'lines.custom_rate',
             'lines.cadence_owner',
+            'lines.invoice_line_description',
             'lines.created_at',
             'lines.template_line_name as contract_line_name',
             'lines.billing_frequency',
@@ -420,6 +422,9 @@ const ContractLineMapping = {
           'cl.custom_rate',
           'cl.rate_provenance',
           'cl.cadence_owner',
+          'cl.invoice_line_description',
+          'cl.start_date',
+          'cl.end_date',
           'cl.created_at',
           'cl.contract_line_name',
           'cl.billing_frequency',

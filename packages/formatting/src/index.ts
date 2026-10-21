@@ -6,6 +6,7 @@
  */
 
 export * from './blocknoteUtils';
+export * from './normalizeBlocks';
 export * from './avatarUtils';
 export { getImageUrlInternal } from './imageUrl';
 export * from './timeFormatting';

@@ -316,7 +316,15 @@ export const clientMergeRequestSchema = z.object({
   // Defaults to true in the engine: absence of a portal grant means "every
   // profile", which after a merge would be the whole destination client.
   pin_portal_grants: z.boolean().optional(),
-  external_remap_choices: z.array(clientMergeExternalRemapChoiceSchema).optional()
+  external_remap_choices: z.array(clientMergeExternalRemapChoiceSchema).optional(),
+  /**
+   * FR-G2: what happens to moving tickets, projects, assets and RMM
+   * organization mappings that have no billing profile of their own.
+   * `source_profile` (the default, and the pre-existing behaviour) stamps them
+   * with the moved default; `target_default` leaves them to inherit the
+   * target's.
+   */
+  billing_strategy: z.enum(['source_profile', 'target_default']).optional()
 });
 
 export const clientMergeResponseSchema = z.object({
@@ -327,7 +335,8 @@ export const clientMergeResponseSchema = z.object({
   moved_default_profile_id: uuidSchema.nullable(),
   counts: z.record(z.number()),
   remapped_external_mapping_ids: z.array(z.string()),
-  skipped_external_mapping_ids: z.array(z.string())
+  skipped_external_mapping_ids: z.array(z.string()),
+  billing_strategy: z.enum(['source_profile', 'target_default']).optional()
 });
 
 // ---------------------------------------------------------------------------

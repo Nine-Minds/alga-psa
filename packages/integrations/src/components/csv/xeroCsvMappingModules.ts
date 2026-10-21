@@ -67,6 +67,7 @@ function createClientModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'xero-csv-client-mappings',
     adapterType: ADAPTER_TYPE,
+    manualExternalEntry: true,
     algaEntityType: 'client',
     externalEntityType: 'Contact',
     labels: {
@@ -134,6 +135,7 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'xero-csv-service-mappings',
     adapterType: ADAPTER_TYPE,
+    manualExternalEntry: true,
     algaEntityType: 'service',
     externalEntityType: 'Item',
     overridesKey: 'itemMappingOverrides',
@@ -214,6 +216,7 @@ function createDiscountModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'xero-csv-discount-mappings',
     adapterType: ADAPTER_TYPE,
+    manualExternalEntry: true,
     algaEntityType: DISCOUNT_MAPPING_ENTITY_TYPE,
     externalEntityType: 'Item',
     labels: {
@@ -273,6 +276,7 @@ function createTaxCodeModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'xero-csv-tax-code-mappings',
     adapterType: ADAPTER_TYPE,
+    manualExternalEntry: true,
     algaEntityType: 'tax_code',
     externalEntityType: 'TaxType',
     labels: {

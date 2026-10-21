@@ -1,0 +1,11 @@
+error TS2769: No overload matches this call.
+error TS2769: No overload matches this call.
+error TS2769: No overload matches this call.
+error TS2769: No overload matches this call.
+error TS2769: No overload matches this call.
+error TS2769: No overload matches this call.
+error TS2322: Type '(this: { name: string; options: any; storage: any; editor: Editor; type: NodeType; parent: ((this: ...) => NodeViewRenderer | null) | null | undefined; }) => NodeViewRenderer' is not assignable to type '(this: { name: string; options: any; storage: any; editor: Editor; type: NodeType; parent: ... | null | undefined; }) => NodeViewRenderer | null'.
+error TS2322: Type '(this: { name: string; options: any; storage: any; editor: Editor; type: NodeType; parent: ((this: ...) => NodeViewRenderer | null) | null | undefined; }) => NodeViewRenderer' is not assignable to type '(this: { name: string; options: any; storage: any; editor: Editor; type: NodeType; parent: ... | null | undefined; }) => NodeViewRenderer | null'.
+error TS2322: Type 'Extension<EmoticonOptions, any>' is not assignable to type 'AnyExtension'.
+error TS2322: Type '"mention"' is not assignable to type '"link" | "text"'.
+error TS2322: Type '"mention"' is not assignable to type '"link" | "text"'.

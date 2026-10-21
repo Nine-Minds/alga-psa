@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Funzionalità Pro"
+    },
     "accounting": {
       "bulk": {
         "button": "Mappatura in blocco",
@@ -124,6 +127,15 @@
           "paymentTerms": "Termini di pagamento",
           "discounts": "Sconti"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Conti servizi Desktop",
+        "desktopDiscounts": "Sconti Desktop",
+        "desktopAccount": "Nome conto ricavi Desktop",
+        "description": "Associa sconti e crediti prima di esportare. L’associazione appartiene a questa azienda contabile.",
+        "add": "Aggiungi associazione",
+        "remove": "Rimuovi associazione",
+        "removeConfirm": "Rimuovere questa associazione contabile?"
       }
     },
     "calendar": {
@@ -1223,7 +1235,12 @@
         "recommendedUnsaved": "Consigliato — non salvato",
         "unsavedChange": "Modifica non salvata",
         "unsavedNotice": "Questi filtri non saranno applicati finché non li salvi."
-      }
+      },
+      "proFeature": {
+        "description": "L’integrazione con Microsoft Entra è disponibile in AlgaPSA Pro.",
+        "notice": "L’integrazione delle identità di Microsoft Entra è una funzionalità Pro."
+      },
+      "loading": "Caricamento dell’integrazione con Microsoft Entra…"
     },
     "google": {
       "settings": {
@@ -1294,6 +1311,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "L’integrazione della documentazione IT di Hudu è disponibile in AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Origine: Hudu",
         "openInHudu": "Apri in Hudu",
@@ -2314,6 +2334,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "L’integrazione RMM di NinjaOne è disponibile in AlgaPSA Pro."
+        },
         "loading": "Caricamento delle impostazioni di integrazione NinjaOne...",
         "card": {
           "title": "Integrazione NinjaOne RMM",
@@ -2591,6 +2614,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "L’integrazione RMM di Tanium è disponibile in AlgaPSA Pro."
+        },
         "loading": "Caricamento impostazioni integrazione Tanium...",
         "actions": {
           "discoverScopes": "Scopri ambiti",
@@ -2661,6 +2687,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "L’integrazione RMM di Level.io è disponibile in AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Recupera avvisi",
           "disconnect": "Disconnetti",
@@ -2733,16 +2762,35 @@
           "copied": "Copiato",
           "copy": "Copia",
           "description": "Level non può registrare webhook tramite la sua API. In Level, crea un'automazione con un'azione HTTP POST usando l'URL, l'header e il payload qui sotto per inviare gli avvisi ad Alga in tempo reale.",
+          "fallbackDescription": "Usa questa alternativa solo quando i webhook nativi in Impostazioni → Webhooks di Level non sono utilizzabili. Crea un'automazione con un'azione HTTP POST usando l'URL, l'intestazione e il payload qui sotto per inviare gli avvisi ad Alga.",
+          "fallbackNameHint": "Modifica il valore \"name\" in ogni automazione. Insieme al dispositivo identifica l'avviso, quindi le ripetizioni con lo stesso nome sullo stesso dispositivo sono un solo avviso.",
+          "fallbackTitle": "Alternativa: richiesta HTTP di automazione",
           "header": "Intestazione: {{name}}",
           "hideSecret": "Nascondi segreto",
           "loading": "I dettagli del webhook vengono caricati dopo la configurazione dell'integrazione.",
+          "nativeDescription": "In Level apri Impostazioni → Webhooks, aggiungi un webhook con l'URL e la chiave di firma qui sotto e abilita gli eventi elencati. Level firma ogni consegna e Alga verifica la firma.",
+          "nativeEvents": "Eventi da abilitare",
+          "nativeEventsHelp": "Abilita alert_active e alert_resolved. Gli altri eventi vengono confermati e ignorati.",
+          "nativeSigningSecret": "Chiave di firma",
+          "nativeTitle": "Webhook nativo (consigliato)",
           "payload": "Modello di payload",
+          "regenerateCancel": "Annulla",
+          "regenerateConfirmLabel": "Rigenera",
+          "regenerateConfirmMessage": "I webhook Level esistenti falliranno con 401 finché non incolli la nuova chiave di firma nelle impostazioni webhook di Level. Level ritenta le consegne, ma potrebbero andare perse se la chiave non viene aggiornata.",
+          "regenerateConfirmTitle": "Rigenerare la chiave di firma?",
+          "regenerateConfirmed": "Chiave di firma rigenerata. Aggiornala nelle impostazioni webhook di Level.",
+          "regenerateFailed": "Impossibile rigenerare la chiave di firma",
+          "regenerateSecret": "Rigenera chiave",
           "showSecret": "Mostra segreto",
           "title": "Webhook avvisi",
           "url": "URL webhook"
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Integrazione Huntress",
+          "description": "L’integrazione di sicurezza Huntress è una funzionalità Pro."
+        },
         "columns": {
           "organization": "Organizzazione Huntress",
           "client": "Cliente Alga",
@@ -2884,6 +2932,54 @@
         "errors": {
           "saveFailed": "Impossibile salvare la pianificazione della sincronizzazione dei dispositivi."
         }
+      },
+      "peopleMode": {
+        "label": "Persone",
+        "options": {
+          "off": "Disattivato",
+          "suggest": "Suggerisci",
+          "auto": "Assegna automaticamente"
+        },
+        "updateFailed": "Impossibile aggiornare la modalità Persone"
+      },
+      "signedInUsers": {
+        "title": "Utenti connessi",
+        "description": "I nomi utente segnalati dai dispositivi di questa organizzazione e il contatto a cui ciascuno corrisponde.",
+        "empty": "Nessun utente connesso segnalato finora.",
+        "noClient": "Associa questa organizzazione a un cliente prima di associare i suoi utenti.",
+        "refresh": "Aggiorna",
+        "selectContact": "Seleziona contatto",
+        "loadFailed": "Impossibile caricare gli utenti connessi.",
+        "saveFailed": "Impossibile salvare l'associazione.",
+        "columns": {
+          "user": "Utente connesso",
+          "devices": "Dispositivi",
+          "method": "Associato tramite",
+          "contact": "Contatto"
+        },
+        "methods": {
+          "mapped": "Associazione salvata",
+          "email": "E-mail",
+          "username": "Nome utente",
+          "name": "Nome completo",
+          "none": "Nessuna corrispondenza"
+        }
+      },
+      "clientChange": {
+        "title": "Spostare i dispositivi di questa organizzazione?",
+        "message": "{{count}} asset verranno spostati su {{client}}. Assegnazioni, gruppi e profili di fatturazione del cliente precedente verranno rimossi.",
+        "confirm": "Sposta dispositivi"
+      },
+      "billingProfile": {
+        "label": "Profilo di fatturazione",
+        "clientDefault": "Predefinito del cliente",
+        "updateFailed": "Aggiornamento del profilo di fatturazione non riuscito"
+      },
+      "errors": {
+        "invalidPeopleMode": "Questa modalità persone non è valida.",
+        "billingProfileUnavailable": "Questo profilo di fatturazione non è disponibile per questo cliente.",
+        "mappingNotFound": "Questa associazione non esiste più. Aggiorna la pagina e riprova.",
+        "forbidden": "Non hai il permesso di modificare questo elemento."
       }
     },
     "sso": {
@@ -3454,6 +3550,11 @@
           "regenerate": "Rigenera pacchetto",
           "regenerating": "Rigenerazione..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Accesso a Teams non disponibile",
+        "tabTitle": "Scheda Teams non disponibile",
+        "description": "L’integrazione con Microsoft Teams è disponibile solo in Pro."
       }
     },
     "xero": {
@@ -3980,6 +4081,8 @@
       "managePermission": "Autorizzazione negata: non si dispone dell’autorizzazione per gestire le mappature contabili.",
       "loadFailed": "Impossibile caricare i dati di mappatura. Riprovare.",
       "duplicate": "Esiste già una mappatura per questa entità. Modificare invece la mappatura esistente.",
+      "duplicateTarget": "Questa destinazione è già associata a un'altra entità in questa organizzazione. Scegli una destinazione diversa.",
+      "duplicateXeroItem": "Questo articolo Xero è già associato a un altro servizio. Un articolo può essere associato a un solo servizio; per fatturare più servizi con lo stesso codice, associali a un conto di ricavo.",
       "saveFailed": "Impossibile salvare la mappatura. Riprovare.",
       "idRequiredForUpdate": "Per l’aggiornamento è necessario l’ID della mappatura.",
       "noUpdateData": "Nessun dato di aggiornamento fornito.",

@@ -74,6 +74,13 @@ describe('client portal dashboard visibility enforcement', () => {
           return ticketsQuery;
         }
 
+        // The active-devices count asks the registry which slugs are deployable.
+        if (table === 'asset_statuses') {
+          return {
+            where: vi.fn().mockReturnValue({ pluck: vi.fn().mockResolvedValue(['active', 'in_stock']) }),
+          };
+        }
+
         if (
           table === 'projects' ||
           table === 'invoices' ||
@@ -84,6 +91,7 @@ describe('client portal dashboard visibility enforcement', () => {
             where: vi.fn().mockReturnThis(),
             whereNull: vi.fn().mockReturnThis(),
             andWhere: vi.fn().mockReturnThis(),
+            whereIn: vi.fn().mockReturnThis(),
             count: vi.fn().mockResolvedValue([{ count: 1 }]),
           };
         }
@@ -189,6 +197,7 @@ function chain(initial: any[]) {
     return query;
   });
   query.whereIn = vi.fn((column: string, values: any[]) => { rows = rows.filter((row) => values.includes(row[column.split('.').pop()!])); return query; });
+  query.pluck = (column: string) => Promise.resolve(rows.map((row) => row[column.split('.').pop()!]));
   query.modify = (fn: any) => { fn(query); return query; };
   query.first = () => { first = true; return query; };
   query.count = () => { count = true; return query; };
