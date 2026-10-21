@@ -231,7 +231,9 @@ export const getHuntressConnectionStatus = withHuntressAccess(
         .first(),
       db.table('rmm_alerts')
         .where({ integration_id: row.integration_id })
-        .whereIn('status', ['sent', 'auto_remediating'])
+        // Open incidents (sent, auto_remediating) and open escalations
+        // (open, overdue); the two status sets don't overlap.
+        .whereIn('status', ['sent', 'auto_remediating', 'open', 'overdue'])
         .count('* as n')
         .first(),
     ]);

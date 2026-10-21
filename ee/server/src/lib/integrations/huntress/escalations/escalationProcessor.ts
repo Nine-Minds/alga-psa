@@ -83,7 +83,13 @@ export async function processEscalation(
       existingRows.map((row: any) => [row.external_alert_id, row])
     );
 
-    const currentTargets = escalationTargets(escalation);
+    // The org-less placeholder target is only for escalations that never
+    // named an organization. If one that already has per-org rows comes back
+    // with no orgs, those rows carry on as stale targets (notes, auto-close)
+    // instead of a second ticket being opened on the fallback board.
+    const currentTargets = escalationTargets(escalation).filter(
+      (t) => t.organization !== null || existingRows.length === 0
+    );
     const currentKeys = new Set(currentTargets.map((t) => t.externalAlertId));
     const staleTargets: EscalationTarget[] = existingRows
       .filter((row: any) => !currentKeys.has(row.external_alert_id))

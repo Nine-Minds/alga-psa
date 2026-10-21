@@ -497,4 +497,64 @@ describe('processEscalation (DB integration)', { shuffle: false }, () => {
     expect(tickets.every((t: any) => t.status_id === statusClosedId)).toBe(true);
     expect(alerts.every((a: any) => a.status === 'resolved')).toBe(true);
   });
+
+  it('does not open a fallback ticket when an escalation loses its last organization', async () => {
+    const created = await processEscalation(
+      db, tenantId, integration, escalation({ id: 5000 }), escalationDeps
+    );
+    expect(created.targets.map((t) => t.action)).toEqual(['create_ticket']);
+    const ticketsBefore = await tenantTable('tickets').where({ tenant: tenantId }).count('* as n').first();
+
+    // Huntress now returns the escalation with no organizations.
+    const overdue = await processEscalation(
+      db, tenantId, integration,
+      escalation({ id: 5000, organizations: [], status: 'overdue', updated_at: '2026-06-10T10:00:00Z' }),
+      escalationDeps
+    );
+    expect(overdue.ok).toBe(true);
+    expect(overdue.targets).toEqual([
+      expect.objectContaining({ externalAlertId: 'escalation:5000:org:500', action: 'append_note' }),
+    ]);
+    const ticketsAfter = await tenantTable('tickets').where({ tenant: tenantId }).count('* as n').first();
+    expect(Number(ticketsAfter?.n)).toBe(Number(ticketsBefore?.n));
+
+    await processEscalation(
+      db, tenantId, integration,
+      escalation({
+        id: 5000,
+        organizations: [],
+        status: 'resolved',
+        resolved_at: '2026-06-11T10:00:00Z',
+        updated_at: '2026-06-11T10:00:00Z',
+      }),
+      escalationDeps
+    );
+    const alerts = await alertsFor(5000);
+    expect(alerts.map((a: any) => a.external_alert_id)).toEqual(['escalation:5000:org:500']);
+    const ticket = await tenantTable('tickets').where({ tenant: tenantId, ticket_id: alerts[0].ticket_id }).first();
+    expect(ticket.status_id).toBe(statusClosedId);
+  });
+
+  it('still uses the fallback placeholder for an escalation that never named an organization', async () => {
+    const result = await processEscalation(
+      db, tenantId, integration, escalation({ id: 6000, organizations: [] }), escalationDeps
+    );
+    expect(result.targets).toEqual([
+      expect.objectContaining({ externalAlertId: 'escalation:6000:org:none', action: 'create_ticket' }),
+    ]);
+    const [alert] = await alertsFor(6000);
+    const ticket = await tenantTable('tickets').where({ tenant: tenantId, ticket_id: alert.ticket_id }).first();
+    expect(ticket.client_id).toBe(fallbackClientId);
+    expect(ticket.board_id).toBe(triageBoardId);
+
+    // Reprocessing it with a change updates the same placeholder row.
+    const update = await processEscalation(
+      db, tenantId, integration,
+      escalation({ id: 6000, organizations: [], status: 'overdue', updated_at: '2026-06-10T10:00:00Z' }),
+      escalationDeps
+    );
+    expect(update.targets).toEqual([
+      expect.objectContaining({ externalAlertId: 'escalation:6000:org:none', action: 'append_note' }),
+    ]);
+  });
 });
