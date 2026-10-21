@@ -24,7 +24,7 @@ const {
 const STANDARD_TABLE = 'standard_invoice_templates';
 const CUSTOM_TABLE = 'invoice_templates';
 const REASON = 'refresh untouched clones of the standard invoice templates (service period + currency)';
-const MIGRATION_TENANT = 'migration:20261020120000_invoice_templates_service_period_and_currency';
+const MIGRATION_TENANT = 'migration:20261020000000_invoice_templates_service_period_and_currency';
 
 const parseAst = (value) => (typeof value === 'string' ? JSON.parse(value) : value);
 

@@ -1,6 +1,6 @@
 /**
  * Shared logic for the service-period / currency refresh of the standard invoice
- * templates (see migration 20261020120000_invoice_templates_service_period_and_currency.cjs).
+ * templates (see migration 20261020000000_invoice_templates_service_period_and_currency.cjs).
  *
  * Pure functions only, so the migration's behaviour is unit-testable without a DB.
  *
