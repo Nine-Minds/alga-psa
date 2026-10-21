@@ -390,6 +390,10 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
   // fixes. Reconcile the storage prerequisite first so an appliance affected by
   // the historical duplicate local-path controllers can recover before Helm is
   // asked to converge PostgreSQL, Redis, and the application deployment.
+  // Cluster DNS activation is not part of this step or of the update at all:
+  // the control plane's DNS reconciler owns it and stands down while this
+  // update's owner is alive, so a workload that cannot roll out (often the one
+  // this update fixes) can never block the update.
   const storageResult = installStorage(workflowOptions);
   if (!storageResult.ok) {
     return finishUpdateFailure(storageResult, {
