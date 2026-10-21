@@ -16,9 +16,10 @@ vi.mock('./paymentActions', () => ({
   expireInvoicePaymentLinksForTerminalStatus: vi.fn(),
 }));
 
-vi.mock('@alga-psa/tenancy/server', () => ({
+vi.mock('../../../tenancy/src/server/portalDomainStatus', () => ({
   getPortalDomainStatusForTenant: vi.fn(async () => ({ status: 'none' })),
 }));
+vi.mock('@alga-psa/tenancy/server', async () => import('../../../tenancy/src/server/tenantPortalUrl'));
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: { warn: vi.fn(), error: vi.fn(), info: vi.fn() },

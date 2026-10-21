@@ -6,7 +6,7 @@
  */
 
 import logger from '@alga-psa/core/logger';
-import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
+import { buildTenantPortalUrl } from '@alga-psa/tenancy/server';
 import { isOfflinePaymentMethod } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { getPaymentService, expireInvoicePaymentLinksForTerminalStatus } from './paymentActions';
 
@@ -67,42 +67,7 @@ export function isInvoiceLinkEligible(invoice: InvoiceLinkEligibilityFields | nu
  * omitted from the email rather than leaking an internal worker hostname).
  */
 export async function buildPortalInvoiceUrl(tenantId: string, invoiceId: string): Promise<string | null> {
-  let vanityBaseUrl = '';
-  try {
-    const portalDomain = await getPortalDomainStatusForTenant(tenantId);
-    if (portalDomain.status === 'active' && portalDomain.domain) {
-      vanityBaseUrl = `https://${portalDomain.domain}`;
-    }
-  } catch (error) {
-    logger.warn('[billing/invoiceEmailLinkContext] Failed to resolve custom portal domain', {
-      tenantId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-
-  const baseUrl =
-    vanityBaseUrl ||
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    process.env.NEXTAUTH_URL ||
-    (process.env.HOST ? `https://${process.env.HOST}` : '');
-
-  if (!baseUrl) return null;
-
-  let base: URL;
-  try {
-    base = new URL(baseUrl);
-  } catch {
-    logger.warn('[billing/invoiceEmailLinkContext] Invalid public base URL', { tenantId, baseUrl });
-    return null;
-  }
-  if (base.protocol !== 'http:' && base.protocol !== 'https:') {
-    return null;
-  }
-
-  const url = new URL('/client-portal/billing', base);
-  url.searchParams.set('tab', 'invoices');
-  url.searchParams.set('invoiceId', invoiceId);
-  return url.toString();
+  return buildTenantPortalUrl(tenantId, '/client-portal/billing', { tab: 'invoices', invoiceId });
 }
 
 /**
