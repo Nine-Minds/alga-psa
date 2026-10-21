@@ -1337,7 +1337,7 @@
       "addCurrency": "Aggiungi valuta",
       "removeCurrency": "Rimuovi",
       "missing": "{{count}} importo/i mancante/i",
-      "baseCurrency": "(base)",
+      "baseCurrency": "(valuta di base)",
       "changeBaseCurrency": "Cambia valuta di base",
       "changeBaseConfirm": "Cambiare la valuta di base in {{currency}}? Gli importi esistenti NON vengono convertiti: mantengono il valore numerico e sono letti come {{currency}}.",
       "noSlots": "Questo modello non ha ancora importi da valorizzare."

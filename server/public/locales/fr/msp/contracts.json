@@ -1337,7 +1337,7 @@
       "addCurrency": "Ajouter une devise",
       "removeCurrency": "Retirer",
       "missing": "{{count}} montant(s) manquant(s)",
-      "baseCurrency": "(base)",
+      "baseCurrency": "(devise de base)",
       "changeBaseCurrency": "Changer la devise de base",
       "changeBaseConfirm": "Changer la devise de base en {{currency}} ? Les montants existants ne sont PAS convertis : ils gardent leur valeur numérique et sont lus en {{currency}}.",
       "noSlots": "Ce modèle n’a pas encore de montants à tarifer."

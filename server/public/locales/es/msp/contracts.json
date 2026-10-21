@@ -1337,7 +1337,7 @@
       "addCurrency": "Añadir moneda",
       "removeCurrency": "Quitar",
       "missing": "Faltan {{count}} importe(s)",
-      "baseCurrency": "(base)",
+      "baseCurrency": "(moneda base)",
       "changeBaseCurrency": "Cambiar moneda base",
       "changeBaseConfirm": "¿Cambiar la moneda base a {{currency}}? Los importes existentes NO se convierten: conservan su valor numérico y se interpretan como {{currency}}.",
       "noSlots": "Esta plantilla aún no tiene importes que valorar."

@@ -1337,7 +1337,7 @@
       "addCurrency": "Adicionar moeda",
       "removeCurrency": "Remover",
       "missing": "{{count}} valor(es) em falta",
-      "baseCurrency": "(base)",
+      "baseCurrency": "(moeda base)",
       "changeBaseCurrency": "Alterar moeda base",
       "changeBaseConfirm": "Alterar a moeda base para {{currency}}? Os valores existentes NÃO são convertidos: mantêm o valor numérico e passam a ser lidos como {{currency}}.",
       "noSlots": "Este modelo ainda não tem valores para precificar."
