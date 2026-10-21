@@ -16,7 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { isPendingOptional, isQuoteItemIncluded } from '../lib/quoteItemInclusion';
 import { allocateIncludedQuoteDiscounts } from '../lib/quoteTotals';
-import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
+import { resolveInvoiceBillingTerms } from '../lib/billing/invoiceDueDate';
 import Contract from '../models/contract';
 import Quote from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
@@ -1068,6 +1068,11 @@ export async function convertQuoteToDraftSalesOrder(
   };
 }
 
+/** timestamptz columns come back from pg as Date at runtime despite the string typing. */
+function toIsoString(value: string | Date): string {
+  return value instanceof Date ? value.toISOString() : value;
+}
+
 export async function convertQuoteToDraftInvoice(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
@@ -1157,13 +1162,28 @@ export async function convertQuoteToDraftInvoice(
 
   const invoiceId = uuidv4();
   const db = tenantDb(knexOrTrx, tenant);
+  // Header and charges bill the same profile, so resolve it once, before the
+  // insert. A quote-converted charge has no contract line and no work item, so
+  // the chain terminates immediately at the client default (F032). Terms
+  // resolve profile first, then client. invoice_date is a full timestamp;
+  // the due date is computed from its UTC calendar date.
+  const invoiceDate = toIsoString(quote.accepted_at || quote.quote_date || nowIso);
+  const billingTerms = await resolveInvoiceBillingTerms(
+    knexOrTrx,
+    tenant,
+    quote.client_id,
+    invoiceDate,
+  );
+  const quoteBillingProfileId = billingTerms.billingProfileId;
   await db.table('invoices').insert({
     tenant,
     invoice_id: invoiceId,
     client_id: quote.client_id,
     po_number: quote.po_number ?? null,
-    invoice_date: quote.accepted_at || quote.quote_date || nowIso,
-    due_date: quote.accepted_at || quote.quote_date || nowIso,
+    invoice_date: invoiceDate,
+    due_date: billingTerms.dueDate,
+    payment_method: billingTerms.paymentMethod,
+    billing_profile_id: billingTerms.billingProfileId,
     subtotal: 0,
     tax: 0,
     total_amount: 0,
@@ -1176,13 +1196,6 @@ export async function convertQuoteToDraftInvoice(
   });
 
   const invoiceItemIdsByQuoteItemId = new Map<string, string>();
-  // A quote-converted charge has no contract line and no work item, so the
-  // chain terminates immediately at the client default (F032).
-  const quoteBillingProfileId = await getClientDefaultBillingProfileId(
-    knexOrTrx,
-    tenant,
-    quote.client_id,
-  );
 
   /**
    * Converts a quote row into an invoice charge. Discount rows are always
