@@ -521,6 +521,86 @@ describe('ticket watchers', () => {
     });
   });
 
+  describe('no-op writes leave tickets.updated_at / updated_by alone', () => {
+    const PAST = new Date('2020-01-02T03:04:05.000Z');
+    let pastUser: string;
+
+    async function pinTicketStamp() {
+      pastUser = actorId;
+      await scoped('tickets').where({ ticket_id: ticketId }).update({ updated_at: PAST, updated_by: pastUser });
+    }
+    async function expectStampUntouched() {
+      const row = await scoped('tickets').where({ ticket_id: ticketId }).first('updated_at', 'updated_by');
+      expect(new Date(row.updated_at).toISOString()).toBe(PAST.toISOString());
+      expect(row.updated_by).toBe(pastUser);
+    }
+    const inTrx = <T,>(fn: (trx: Knex.Transaction) => Promise<T>) => withTransaction(db, fn);
+
+    beforeEach(async () => {
+      // Seed with a real add, then pin the stamp to a known past value.
+      await service.addWatcher(ticketId, { email: 'Steady@Vendor.example', name: 'Steady' }, ctx());
+      await service.addWatcher(ticketId, { contact_id: contactId }, ctx());
+      await pinTicketStamp();
+      publishWorkflowEventMock.mockClear();
+    });
+
+    it('re-adding an existing watcher (same and different case) does not touch the ticket or the watcher row', async () => {
+      const rowsBefore = await tableRows();
+      for (const email of ['steady@vendor.example', 'STEADY@VENDOR.EXAMPLE']) {
+        const result = await inTrx((trx) => TicketWatcherService.add(trx, tenantId, ticketId, { email, name: 'Steady' }, actorId));
+        expect(result.changed).toBe(false);
+      }
+      await expectStampUntouched();
+      expect((await tableRows()).map((r) => r.updated_at)).toEqual(rowsBefore.map((r) => r.updated_at));
+    });
+
+    it('setActive to the current value is a no-op', async () => {
+      const result = await inTrx((trx) => TicketWatcherService.setActive(trx, tenantId, ticketId, 'Steady@Vendor.example', true, actorId));
+      expect(result.changed).toBe(false);
+      await expectStampUntouched();
+    });
+
+    it('addRecipients with an already-present set is a no-op', async () => {
+      const result = await inTrx((trx) =>
+        TicketWatcherService.addRecipients(trx, tenantId, ticketId, [{ email: 'steady@vendor.example', name: 'Steady' }, { email: pascaleEmail }], actorId)
+      );
+      expect(result.changed).toBe(false);
+      await expectStampUntouched();
+    });
+
+    it('syncWatchListAttributes on an in-sync ticket writes nothing', async () => {
+      await inTrx((trx) => TicketWatcherService.syncWatchListAttributes(trx, tenantId, ticketId, actorId));
+      await expectStampUntouched();
+    });
+
+    it('REST add (re-POST) and PATCH with unchanged active return 200 data and leave the stamp alone', async () => {
+      const posted = await service.addWatcher(ticketId, { email: 'steady@vendor.example' }, ctx());
+      expect(posted.map((w) => w.email).sort()).toEqual(['steady@vendor.example', pascaleEmail.toLowerCase()].sort());
+      const patched = await service.setWatcherActive(ticketId, { email: 'steady@vendor.example', active: true }, ctx());
+      expect(patched).toHaveLength(2);
+      expect(publishWorkflowEventMock).not.toHaveBeenCalledWith(expect.objectContaining({ eventType: 'TICKET_UPDATED' }));
+      await expectStampUntouched();
+    });
+
+    it('repairs a drifted mirror without stamping the ticket', async () => {
+      await scoped('tickets').where({ ticket_id: ticketId }).update({ attributes: JSON.stringify({ watch_list: [{ email: 'junk@x.example', active: true }] }) });
+      const result = await inTrx((trx) => TicketWatcherService.add(trx, tenantId, ticketId, { email: 'steady@vendor.example', name: 'Steady' }, actorId));
+      expect(result.changed).toBe(false);
+      await expectMirrorMatchesTable();
+      await expectStampUntouched();
+    });
+
+    it('positive control: a real add stamps updated_by with the actor and advances updated_at', async () => {
+      const other = (await scoped('users').whereNot({ user_id: actorId }).first('user_id'))?.user_id;
+      const stampedBy = other ?? actorId;
+      await scoped('tickets').where({ ticket_id: ticketId }).update({ updated_by: null });
+      await service.addWatcher(ticketId, { email: 'brand-new@vendor.example' }, { userId: stampedBy, tenant: tenantId } as any);
+      const row = await scoped('tickets').where({ ticket_id: ticketId }).first('updated_at', 'updated_by');
+      expect(row.updated_by).toBe(stampedBy);
+      expect(new Date(row.updated_at).getTime()).toBeGreaterThan(PAST.getTime());
+    });
+  });
+
   describe('migration 20261020120000_create_ticket_watchers backfill', () => {
     it('backfills from attributes.watch_list normalized and deduped like shared/lib/tickets/watchList.ts', async () => {
       const entityId = uuidv4();
