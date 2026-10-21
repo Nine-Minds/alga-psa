@@ -16,6 +16,17 @@ import {
  */
 
 export const HOST_SURFACE_LOOKUP_PATH = '/api/portal-domain/surface';
+/**
+ * Header the middleware attaches so the route can tell its own lookups (whose `host`
+ * is the real incoming request Host) from arbitrary callers (whose `?host=` is
+ * attacker-chosen). The value is the server's auth secret, sent over loopback only.
+ */
+export const INTERNAL_LOOKUP_HEADER = 'x-portal-domain-lookup-token';
+
+export function getInternalLookupToken(env: Record<string, string | undefined> = process.env): string | null {
+  return env.AUTH_SECRET || env.NEXTAUTH_SECRET || null;
+}
+
 const POSITIVE_TTL_MS = 30_000;
 const NEGATIVE_TTL_MS = 10_000;
 const MAX_CACHE_ENTRIES = 500;
@@ -62,7 +73,10 @@ export async function resolveHostSurface(
     const url = new URL(HOST_SURFACE_LOOKUP_PATH, options.lookupOrigin ?? getHostSurfaceLookupOrigin());
     url.searchParams.set('host', host);
     const response = await (options.fetchImpl ?? fetch)(url, {
-      headers: { accept: 'application/json' },
+      headers: {
+        accept: 'application/json',
+        ...(getInternalLookupToken() ? { [INTERNAL_LOOKUP_HEADER]: getInternalLookupToken() as string } : {}),
+      },
       cache: 'no-store',
     });
     if (response.ok) {

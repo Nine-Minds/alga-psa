@@ -1,5 +1,7 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { getInternalLookupToken, INTERNAL_LOOKUP_HEADER } from 'server/src/lib/portal-domains/hostSurface';
 import { recordPortalDomainSeen } from 'server/src/lib/portal-domains/portalDomainSeen';
 import { getPortalDomainByHostname } from 'server/src/models/PortalDomainModel';
 
@@ -14,6 +16,18 @@ export const dynamic = 'force-dynamic';
  * client-portal-only behaviour. Exposes nothing beyond the surface of a hostname
  * the caller already holds.
  */
+/** True only for lookups made by our own middleware (carries the internal token). */
+function isInternalLookup(request: Pick<NextRequest, 'headers'>): boolean {
+  const expected = getInternalLookupToken();
+  const provided = request.headers.get(INTERNAL_LOOKUP_HEADER);
+  if (!expected || !provided) {
+    return false;
+  }
+  const a = Buffer.from(expected);
+  const b = Buffer.from(provided);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export async function GET(request: NextRequest) {
   const host = request.nextUrl.searchParams.get('host')?.trim().toLowerCase() ?? '';
   if (!host || host.length > 253 || !/^[a-z0-9.-]+(?::\d+)?$/.test(host)) {
@@ -27,8 +41,12 @@ export async function GET(request: NextRequest) {
       const record = await getPortalDomainByHostname(knex, candidate);
       if (record && record.status === 'active') {
         // Appliance parity: the middleware asks about a host only because a request arrived
-        // with that Host, so this doubles as the last-seen signal ("proxy passes Host through").
-        await recordPortalDomainSeen(candidate).catch(() => undefined);
+        // with that Host, so its lookup doubles as the last-seen signal ("proxy passes Host
+        // through"). Never trust `?host=` from other callers: anyone could otherwise mark a
+        // domain as seen and hide the "proxy isn't forwarding Host" warning.
+        if (isInternalLookup(request)) {
+          await recordPortalDomainSeen(candidate).catch(() => undefined);
+        }
         return NextResponse.json({ surface: record.surface }, { headers: { 'cache-control': 'no-store' } });
       }
     }

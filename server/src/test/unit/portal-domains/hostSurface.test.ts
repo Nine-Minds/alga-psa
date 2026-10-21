@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { clearHostSurfaceCache, resolveHostSurface } from 'server/src/lib/portal-domains/hostSurface';
+import { clearHostSurfaceCache, INTERNAL_LOOKUP_HEADER, resolveHostSurface } from 'server/src/lib/portal-domains/hostSurface';
 
 const ok = (body: unknown) => ({ ok: true, json: async () => body }) as unknown as Response;
 
@@ -17,6 +17,14 @@ describe('resolveHostSurface', () => {
     const url = fetchImpl.mock.calls[0][0] as URL;
     expect(url.pathname).toBe('/api/portal-domain/surface');
     expect(url.searchParams.get('host')).toBe('helpdesk.pbnj.ca');
+  });
+
+  it('sends the internal lookup token so the route can trust the host as the real request Host', async () => {
+    process.env.NEXTAUTH_SECRET = 'test-secret';
+    const fetchImpl = vi.fn(async () => ok({ surface: 'msp' }));
+    await resolveHostSurface('helpdesk.pbnj.ca', { fetchImpl: fetchImpl as unknown as typeof fetch });
+    const init = (fetchImpl.mock.calls[0] as any)[1];
+    expect(init.headers[INTERNAL_LOOKUP_HEADER]).toBe(process.env.AUTH_SECRET || 'test-secret');
   });
 
   it('returns null for an unknown host', async () => {
