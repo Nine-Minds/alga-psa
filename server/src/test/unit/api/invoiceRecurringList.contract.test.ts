@@ -115,7 +115,8 @@ describe('invoice recurring list contract', () => {
       min: () => summaryBuilder,
       max: () => summaryBuilder,
       groupBy: () => summaryBuilder,
-      as: () => 'recurring_invoice_summary',
+      sum: () => summaryBuilder,
+      as: (alias: string) => alias,
     };
 
     const operations: Array<{ type: string; args: unknown[] }> = [];
@@ -135,7 +136,7 @@ describe('invoice recurring list contract', () => {
     };
 
     const trx: any = ((tableName: string) => {
-      if (tableName === 'recurring_service_periods as rsp') {
+      if (tableName === 'recurring_service_periods as rsp' || tableName === 'invoice_payments as ip') {
         return summaryBuilder;
       }
       if (tableName === 'invoices') {
@@ -148,14 +149,17 @@ describe('invoice recurring list contract', () => {
     const service = new InvoiceService();
     (service as any).buildBaseQuery(trx, { tenant: 'tenant-1', userId: 'user-1' });
 
-    expect(operations).toEqual(
-      expect.arrayContaining([
-        {
-          type: 'leftJoin',
-          args: ['recurring_invoice_summary', 'recurring_invoice_summary.invoice_id', 'invoices.invoice_id'],
-        },
-      ]),
-    );
+    // Each derived table is joined via the tenant facade: invoice_id AND tenant.
+    const joins = operations.filter((operation) => operation.type === 'leftJoin');
+    expect(joins.map((join) => join.args[0])).toEqual(['recurring_invoice_summary', 'invoice_payments_summary']);
+    const recurringOn: unknown[][] = [];
+    (joins[0].args[1] as (this: any) => void).call({
+      on: (...a: unknown[]) => ({ andOn: (...b: unknown[]) => { recurringOn.push(a, b); } }),
+    });
+    expect(recurringOn).toEqual([
+      ['recurring_invoice_summary.invoice_id', '=', 'invoices.invoice_id'],
+      ['recurring_invoice_summary.tenant', '=', 'invoices.tenant'],
+    ]);
 
     const selectOperation = operations.find((operation) => operation.type === 'select');
     expect(selectOperation?.args).toEqual(

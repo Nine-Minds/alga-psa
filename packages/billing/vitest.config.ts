@@ -99,6 +99,8 @@ export default defineConfig({
       'src/models/templateSaveUpsert.citus.test.ts',
       // Client AR must stay a single-shard, co-located join on Citus.
       'src/actions/billingProfileArActions.citus.test.ts',
+      // Shared pure balance formula used by REST invoice reads and the client portal.
+      'src/lib/balanceDue.test.ts',
     ],
     testTimeout: 20000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing

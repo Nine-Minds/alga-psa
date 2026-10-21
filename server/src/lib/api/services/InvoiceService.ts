@@ -347,16 +347,35 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private buildRecurringInvoiceSummaryQuery(trx: Knex.Transaction, context: ServiceContext) {
+    // `tenant` is selected and grouped so the join in buildBaseQuery can match on
+    // the distribution key; without it Citus cannot push the join to one shard
+    // and opens an extra connection (refused when the coordinator is full).
     return tenantDb(trx, context.tenant).table('recurring_service_periods as rsp')
       .whereNotNull('rsp.invoice_id')
+      .select('rsp.tenant')
       .select('rsp.invoice_id')
       .min('rsp.service_period_start as recurring_service_period_start')
       .max('rsp.service_period_end as recurring_service_period_end')
       .min('rsp.invoice_window_start as recurring_invoice_window_start')
       .max('rsp.invoice_window_end as recurring_invoice_window_end')
       .max('rsp.cadence_owner as recurring_cadence_owner')
-      .groupBy('rsp.invoice_id')
+      .groupBy('rsp.tenant', 'rsp.invoice_id')
       .as('recurring_invoice_summary');
+  }
+
+  /**
+   * Net recorded payments per invoice, in cents. Same definition as
+   * recordExternalPayment's sumPayments: every invoice_payments row counts
+   * (reversals are stored as negative rows), no status filter. Grouped by
+   * tenant so the join in buildBaseQuery is co-located on the distribution key.
+   */
+  private buildInvoicePaymentsSummaryQuery(trx: Knex.Transaction, context: ServiceContext) {
+    return tenantDb(trx, context.tenant).table('invoice_payments as ip')
+      .select('ip.tenant')
+      .select('ip.invoice_id')
+      .sum({ total_paid: 'ip.amount' })
+      .groupBy('ip.tenant', 'ip.invoice_id')
+      .as('invoice_payments_summary');
   }
 
   // ============================================================================
@@ -386,34 +405,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       // Add joins based on include options
       if ((options as any).include_client) {
-        // Use a subquery to get the billing address to avoid aggregate issues with Citus
-        const billingAddressSubquery = db.table('client_locations as cl')
-          .select(
-            'cl.client_id',
-            'cl.tenant',
-            trx.raw(`CONCAT_WS(', ',
-              NULLIF(cl.address_line1, 'N/A'),
-              cl.address_line2,
-              NULLIF(cl.city, 'N/A'),
-              cl.state_province,
-              cl.postal_code,
-              NULLIF(cl.country_name, 'Unknown')
-            ) as formatted_address`)
-          )
-          .where(function() {
-            this.where('cl.is_billing_address', true)
-                .orWhere('cl.is_default', true);
-          })
-          .orderByRaw('cl.is_billing_address DESC, cl.is_default DESC')
-          .limit(1)
-          .as('billing_loc');
-
-        query = db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id', { type: 'left' })
-          .leftJoin(billingAddressSubquery, 'clients.client_id', 'billing_loc.client_id')
-          .select(
-            'clients.client_name',
-            trx.raw('COALESCE(billing_loc.formatted_address, \'\') as billing_address')
-          );
+        query = this.joinClientBillingAddress(trx, context, query);
       }
 
       if ((options as any).include_billing_cycle) {
@@ -2191,15 +2183,73 @@ export class InvoiceService extends BaseService<IInvoice> {
   // Helper Methods
   // ============================================================================
 
-  protected buildBaseQuery(trx: Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
-    const recurringInvoiceSummary = this.buildRecurringInvoiceSummaryQuery(trx, context);
+  /**
+   * Joins clients plus their billing address. The address derived table carries
+   * `tenant` and is joined on it (tenantJoinSubquery) so Citus keeps the join
+   * on one shard. NOTE: the subquery's limit(1) is pre-existing behaviour and
+   * is not scoped per client; see the summary for this work order.
+   */
+  protected joinClientBillingAddress(trx: Knex.Transaction, context: ServiceContext, query: Knex.QueryBuilder): Knex.QueryBuilder {
+    const db = tenantDb(trx, context.tenant);
+    // Use a subquery to get the billing address to avoid aggregate issues with Citus
+    const billingAddressSubquery = db.table('client_locations as cl')
+      .select(
+        'cl.client_id',
+        'cl.tenant',
+        trx.raw(`CONCAT_WS(', ',
+          NULLIF(cl.address_line1, 'N/A'),
+          cl.address_line2,
+          NULLIF(cl.city, 'N/A'),
+          cl.state_province,
+          cl.postal_code,
+          NULLIF(cl.country_name, 'Unknown')
+        ) as formatted_address`)
+      )
+      .where(function() {
+        this.where('cl.is_billing_address', true)
+            .orWhere('cl.is_default', true);
+      })
+      .orderByRaw('cl.is_billing_address DESC, cl.is_default DESC')
+      // LEVERAGE: pattern tenant-colocated-aggregate — limit(1) is global, not per client; pre-existing, left as is (semantics change out of scope)
+      .limit(1)
+      .as('billing_loc');
 
-    return tenantDb(trx, context.tenant).table('invoices')
-      .leftJoin(recurringInvoiceSummary, 'recurring_invoice_summary.invoice_id', 'invoices.invoice_id')
+    db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id', { type: 'left' });
+    db.tenantJoinSubquery(query, billingAddressSubquery, 'clients.client_id', 'billing_loc.client_id', {
+      type: 'left',
+      rootTenantColumn: 'clients.tenant',
+      joinedTenantColumn: 'billing_loc.tenant',
+    });
+    return query.select(
+      'clients.client_name',
+      trx.raw('COALESCE(billing_loc.formatted_address, \'\') as billing_address')
+    );
+  }
+
+  protected buildBaseQuery(trx: Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
+    const db = tenantDb(trx, context.tenant);
+    const recurringInvoiceSummary = this.buildRecurringInvoiceSummaryQuery(trx, context);
+    const paymentsSummary = this.buildInvoicePaymentsSummaryQuery(trx, context);
+
+    const query = db.table('invoices');
+    // Both derived tables join on tenant as well as invoice_id (Citus colocation).
+    db.tenantJoinSubquery(query, recurringInvoiceSummary, 'recurring_invoice_summary.invoice_id', 'invoices.invoice_id', {
+      type: 'left',
+      rootTenantColumn: 'invoices.tenant',
+      joinedTenantColumn: 'recurring_invoice_summary.tenant',
+    });
+    db.tenantJoinSubquery(query, paymentsSummary, 'invoice_payments_summary.invoice_id', 'invoices.invoice_id', {
+      type: 'left',
+      rootTenantColumn: 'invoices.tenant',
+      joinedTenantColumn: 'invoice_payments_summary.tenant',
+    });
+
+    return query
       .select(
         'invoices.*',
         trx.raw('COALESCE(invoices.credit_applied, 0) as credit_applied'),
-        trx.raw('(invoices.total_amount - COALESCE(invoices.credit_applied, 0)) as balance_due'),
+        // Mirrors computeBalanceDue: total - credit - net payments (no clamp).
+        trx.raw('(invoices.total_amount - COALESCE(invoices.credit_applied, 0) - COALESCE(invoice_payments_summary.total_paid, 0)) as balance_due'),
         'recurring_invoice_summary.recurring_service_period_start',
         'recurring_invoice_summary.recurring_service_period_end',
         'recurring_invoice_summary.recurring_invoice_window_start',
