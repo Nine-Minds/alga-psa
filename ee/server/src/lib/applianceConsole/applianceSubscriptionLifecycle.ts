@@ -12,6 +12,8 @@
 import type Stripe from 'stripe';
 import logger from '@alga-psa/core/logger';
 import {
+  AlgaLicenseHttpError,
+  reactivateApplianceEntitlement,
   revokeApplianceEntitlement,
   syncApplianceSubscriptionState,
   updateApplianceEntitlementSeats,
@@ -26,11 +28,13 @@ const LAPSED_STATUSES = new Set<string>(['unpaid', 'canceled', 'incomplete_expir
 /** Sub statuses that mean "paying" for entitlement purposes. */
 const LIVE_STATUSES = new Set<string>(['active', 'trialing']);
 
+export type LifecycleAction = 'revoke' | 'reactivate' | 'sync-seats' | 'none';
+
 export interface ApplianceLifecycleOutcome {
   handled: boolean;
   tenantId: string | null;
   subscriptionId: string | null;
-  action: 'revoke' | 'sync-seats' | 'none';
+  action: LifecycleAction;
   seats?: number;
   /** Set for subscription.* events: the state mirrored to C4. */
   state?: ApplianceSubscriptionState;
@@ -38,6 +42,8 @@ export interface ApplianceLifecycleOutcome {
 
 export interface ApplianceLifecycleDeps {
   revoke: (stripeSubId: string) => Promise<unknown>;
+  /** Re-enable a revoked entitlement, keyed by subscription id (idempotent in C4). */
+  reactivate: (stripeSubId: string) => Promise<unknown>;
   syncSeats: (tenantId: string, seats: number) => Promise<unknown>;
   /** Mirror the subscription snapshot onto the C4 entitlement (display only, never revokes). */
   syncState: (stripeSubId: string, state: ApplianceSubscriptionState) => Promise<unknown>;
@@ -46,6 +52,7 @@ export interface ApplianceLifecycleDeps {
 
 const defaultDeps: ApplianceLifecycleDeps = {
   revoke: revokeApplianceEntitlement,
+  reactivate: reactivateApplianceEntitlement,
   syncSeats: updateApplianceEntitlementSeats,
   syncState: syncApplianceSubscriptionState,
 };
@@ -109,16 +116,33 @@ const isSubscriptionEvent = (event: Stripe.Event) => event.type.startsWith('cust
 /**
  * Pure decision: what does this event mean for the C4 entitlement?
  *
- * Revoke ONLY when the subscription actually ends (deleted, or updated into a
- * LAPSED status). A cancel *request* (`cancel_at_period_end` false→true, or
- * `cancel_at` set) and its undo leave the customer paid-through, so they fall
- * through to 'none' (or a seat sync) and are only mirrored via `state`.
+ * Actions: 'revoke' (the subscription actually ends: deleted, or updated into a
+ * LAPSED status), 'reactivate' (updated back to a LIVE status from a LAPSED
+ * `previous_attributes.status`; carries `seats` when a per-seat line exists so
+ * the seat sync can follow), 'sync-seats' (items changed on a live sub), 'none'.
+ * A cancel *request* (`cancel_at_period_end` false→true, or `cancel_at` set) and
+ * its undo leave the customer paid-through, so they fall through to 'none' (or a
+ * seat sync) and are only mirrored via `state`.
+ *
+ * Status is read from `sub`, which the handler refreshes from Stripe for
+ * `updated` events, so a stale payload cannot flip the decision. Reactivation is
+ * gated on an actual lapsed→live transition: the previous status must be one of
+ * the lapsed statuses this handler revokes on (unpaid/canceled/incomplete_expired).
+ * past_due/incomplete/paused never caused a revoke here, so recovering from them
+ * must not re-enable an operator revoke; they fall through to sync-seats (items
+ * changed) or none. An operator may soft-revoke an entitlement while the Stripe
+ * sub is still active, and routine updates (renewals, period rollovers, metadata
+ * edits) must not undo that. Out-of-order delivery stays safe because the
+ * decision uses fresh state and revoke/reactivate are idempotent: a stale lapse
+ * event whose fresh status is live does not revoke, and a stale
+ * `updated(active, prev unpaid)` whose fresh status is canceled revokes instead
+ * of reactivating.
  */
 export function decideLifecycleAction(
   event: Stripe.Event,
   sub: Stripe.Subscription,
   env: NodeJS.ProcessEnv = process.env,
-): { action: 'revoke' | 'sync-seats' | 'none'; seats?: number; state?: ApplianceSubscriptionState } {
+): { action: LifecycleAction; seats?: number; state?: ApplianceSubscriptionState } {
   const state = isSubscriptionEvent(event) ? subscriptionStateSnapshot(event, sub) : undefined;
   const decision = decideAction(event, sub, env);
   return state ? { ...decision, state } : decision;
@@ -128,36 +152,76 @@ function decideAction(
   event: Stripe.Event,
   sub: Stripe.Subscription,
   env: NodeJS.ProcessEnv,
-): { action: 'revoke' | 'sync-seats' | 'none'; seats?: number } {
+): { action: LifecycleAction; seats?: number } {
   if (event.type === 'customer.subscription.deleted') return { action: 'revoke' };
 
   if (event.type === 'customer.subscription.updated') {
     if (LAPSED_STATUSES.has(sub.status)) return { action: 'revoke' };
 
     const previous = (event.data.previous_attributes ?? {}) as { status?: string; items?: unknown };
-    const item = findPerSeatItem(sub, env);
-    const seats = item?.quantity ?? null;
+    const seats = findPerSeatItem(sub, env)?.quantity ?? null;
 
     const cameBackToLife =
-      LIVE_STATUSES.has(sub.status) && typeof previous.status === 'string' && !LIVE_STATUSES.has(previous.status);
-    const quantityChanged = previous.items !== undefined;
-
-    if ((cameBackToLife || quantityChanged) && seats != null) return { action: 'sync-seats', seats };
-    if (cameBackToLife && seats == null) {
-      // Reactivation with no seat line (flat sub): still needs the entitlement re-enabled;
-      // C4's PATCH upserts active=true via the seats path, so send the current seats (null → skip).
-      return { action: 'none' };
+      LIVE_STATUSES.has(sub.status) && typeof previous.status === 'string' && LAPSED_STATUSES.has(previous.status);
+    if (cameBackToLife) {
+      // C4's seat PATCH only updates an ACTIVE entitlement (404 not_found otherwise), so the
+      // entitlement is re-enabled first; `seats` (if any) is synced afterwards.
+      return seats != null ? { action: 'reactivate', seats } : { action: 'reactivate' };
     }
+
+    const quantityChanged = previous.items !== undefined;
+    if (LIVE_STATUSES.has(sub.status) && quantityChanged && seats != null) return { action: 'sync-seats', seats };
     return { action: 'none' };
   }
 
-  if (event.type === 'invoice.payment_failed') {
-    // Stripe retries on its own schedule; the subscription status flips to
-    // past_due/unpaid and the `updated` event above handles the lapse.
-    return { action: 'none' };
-  }
-
+  // invoice.payment_failed: Stripe retries on its own schedule; the subscription
+  // status flips to past_due/unpaid and the `updated` event above handles the lapse.
   return { action: 'none' };
+}
+
+/**
+ * True only for alga-license's real "no entitlement" answer: 404 with the JSON
+ * body code `not_found` (e.g. operator soft-revoke, or not provisioned yet). A
+ * retry cannot fix that, so it is tolerated. A 404 WITHOUT the code is Fastify's
+ * unknown-route reply: the deployed alga-license lacks the route, which a retry
+ * (after deploying alga-license) does fix, so it must propagate.
+ */
+export function isEntitlementNotFound(err: unknown): boolean {
+  return err instanceof AlgaLicenseHttpError && err.status === 404 && err.code === 'not_found';
+}
+
+/** Log an alga-license failure that looks like a missing route, so the cause is obvious. */
+function logIfRouteMissing(err: unknown, what: string, subId: string): void {
+  if (err instanceof AlgaLicenseHttpError && err.status === 404 && !isEntitlementNotFound(err)) {
+    logger.error(
+      `[ApplianceLifecycle] ${what} for ${subId} got a 404 with no not_found code: alga-license lacks route — deploy alga-license first (event will be retried)`,
+    );
+  }
+}
+
+/**
+ * Seat sync that tolerates only a real entitlement-not-found 404 (see
+ * isEntitlementNotFound), which a retry cannot fix and would otherwise make
+ * Stripe redeliver forever. Every other error, including a route-missing 404,
+ * rethrows so Stripe retries. Returns false when skipped.
+ */
+async function syncSeatsTolerantOfNotFound(
+  deps: ApplianceLifecycleDeps,
+  tenantId: string,
+  subId: string,
+  seats: number,
+): Promise<boolean> {
+  try {
+    await deps.syncSeats(tenantId, seats);
+    return true;
+  } catch (err) {
+    if (!isEntitlementNotFound(err)) {
+      logIfRouteMissing(err, `seat sync (tenant=${tenantId})`, subId);
+      throw err;
+    }
+    logger.warn(`[ApplianceLifecycle] alga-license entitlement inactive or absent for ${subId} (tenant=${tenantId}); seats not synced`);
+    return false;
+  }
 }
 
 export async function handleApplianceSubscriptionEvent(
@@ -165,8 +229,16 @@ export async function handleApplianceSubscriptionEvent(
   stripe: Pick<Stripe, 'subscriptions'>,
   deps: ApplianceLifecycleDeps = defaultDeps,
 ): Promise<ApplianceLifecycleOutcome> {
-  const sub = await resolveApplianceSubscription(event, stripe);
-  if (!sub) return { handled: false, tenantId: null, subscriptionId: null, action: 'none' };
+  const resolved = await resolveApplianceSubscription(event, stripe);
+  if (!resolved) return { handled: false, tenantId: null, subscriptionId: null, action: 'none' };
+
+  // The event payload is a snapshot from when it was emitted; a retried or
+  // out-of-order `updated` event can carry a status that is no longer true (e.g.
+  // updated(active) delivered after the sub was deleted). Decide on the state
+  // Stripe reports now so a stale event can neither resurrect nor revoke wrongly.
+  // `deleted` events are terminal and need no refresh.
+  const sub =
+    event.type === 'customer.subscription.updated' ? await stripe.subscriptions.retrieve(resolved.id) : resolved;
 
   const tenantId = tenantIdFromSubscription(sub);
   const decision = decideLifecycleAction(event, sub);
@@ -183,12 +255,42 @@ export async function handleApplianceSubscriptionEvent(
 
   if (decision.action === 'revoke') {
     await deps.revoke(sub.id);
+  } else if (decision.action === 'reactivate') {
+    // Keyed by subscription id: no tenant id needed.
+    let reactivated = true;
+    try {
+      await deps.reactivate(sub.id);
+    } catch (err) {
+      // C4 says it has no entitlement for this sub (404 + code not_found, e.g.
+      // not provisioned yet): nothing to re-enable, and retrying would only fail
+      // again. Anything else (5xx, network, or a 404 from a missing route) is a
+      // real failure and must propagate so Stripe retries.
+      if (!isEntitlementNotFound(err)) {
+        logIfRouteMissing(err, 'reactivate', sub.id);
+        throw err;
+      }
+      logger.warn(`[ApplianceLifecycle] no alga-license entitlement to reactivate for ${sub.id} (tenant=${tenantId ?? 'unknown'}); skipping`);
+      outcome.action = 'none';
+      outcome.seats = undefined;
+      reactivated = false;
+    }
+    if (reactivated && decision.seats != null) {
+      if (!tenantId) {
+        logger.warn(`[ApplianceLifecycle] cannot sync seats for ${sub.id}: no tenant id in subscription metadata`);
+        outcome.seats = undefined;
+      } else {
+        if (!(await syncSeatsTolerantOfNotFound(deps, tenantId, sub.id, decision.seats))) outcome.seats = undefined;
+      }
+    }
   } else if (decision.action === 'sync-seats') {
     if (!tenantId) {
       logger.warn(`[ApplianceLifecycle] cannot sync seats for ${sub.id}: no tenant id in subscription metadata`);
       outcome.action = 'none';
     } else {
-      await deps.syncSeats(tenantId, decision.seats!);
+      if (!(await syncSeatsTolerantOfNotFound(deps, tenantId, sub.id, decision.seats!))) {
+        outcome.action = 'none';
+        outcome.seats = undefined;
+      }
     }
   }
 
@@ -196,7 +298,12 @@ export async function handleApplianceSubscriptionEvent(
   // After revoke/seats: a failure here must not skip those, and Stripe's retry
   // re-runs all three idempotently.
   if (decision.state) {
-    await deps.syncState(sub.id, decision.state);
+    try {
+      await deps.syncState(sub.id, decision.state);
+    } catch (err) {
+      logIfRouteMissing(err, 'subscription-state mirror', sub.id);
+      throw err;
+    }
   }
 
   if (deps.audit) {

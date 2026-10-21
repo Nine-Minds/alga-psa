@@ -54,7 +54,7 @@ describe('POST /api/webhooks/stripe', () => {
     });
     handleWebhookEvent.mockRejectedValue(err);
     const res = await POST(makeRequest());
-    expect(res.status).toBeGreaterThanOrEqual(500);
+    expect(res.status).toBe(500);
     expect(await res.json()).toMatchObject({ received: true, processed: false, retryable: true });
   });
 
