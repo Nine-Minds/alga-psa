@@ -542,8 +542,11 @@ describe('kbImportBlocks inline chunk splitting', () => {
   // dominated by the linear lexer and by GC, so the ratio moved too little to
   // separate the two: it measured ~2.5x per doubling against a 4x bound, and a
   // loaded CI runner crossed it on correct code (2509ms vs 614ms). The work
-  // itself is deterministic, so assert it instead.
-  it('keeps the inline pass linear as one inline-dense block grows', () => {
+  // itself is deterministic, so assert it instead. The assertions no longer
+  // read the clock, but the two parses still cost seconds of real CPU: a runner
+  // sharing a core with the rest of the matrix stretched them past the default
+  // per-test timeout, so budget them like the pathological cases below.
+  it('keeps the inline pass linear as one inline-dense block grows', { timeout: 120_000 }, () => {
     // Code spans with no whitespace to split on: the densest shape we know of,
     // and the one that grew ~12x per doubling while the inline pass was quadratic.
     for (const repeats of [42_500, 85_000]) {
