@@ -578,6 +578,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   time_period_types: { scope: 'tenant' },
   time_sheets: { scope: 'tenant' },
   time_sheet_comments: { scope: 'tenant' },
+  time_sheet_notes: { scope: 'tenant' },
   transactions: { scope: 'tenant' },
   urgencies: { scope: 'tenant' },
   user_activity_group_items: { scope: 'tenant' },

@@ -52,6 +52,33 @@ import {
 import { ZodError } from 'zod';
 import { uuidSchema } from '../schemas/common';
 
+/**
+ * Query keys the search/export schemas type as `z.array(...)`. Both repeated keys
+ * (`?user_ids=a&user_ids=b`) and comma-separated values (`?user_ids=a,b`) are accepted,
+ * matching the documented array encoding for `/api/v1/time-sheets/{search,export}`.
+ */
+const TIME_SHEET_ARRAY_QUERY_KEYS: ReadonlySet<string> = new Set(['approval_statuses', 'user_ids', 'period_ids', 'fields']);
+
+/**
+ * Shape a query string for timeSheetSearchSchema / timeSheetExportQuerySchema.
+ * `Object.fromEntries(searchParams)` yields one string per key and keeps only the last
+ * repeated value, so no `z.array` filter could ever validate. Array keys collect every
+ * occurrence (split on commas, trimmed, blanks dropped); scalars keep their last value;
+ * absent keys stay absent so the schema defaults apply.
+ */
+// LEVERAGE: pattern multi-value-query-params — ApiAssetController.export() hand-rolls the same
+// getAll + split(',') normalization; a shared query normalizer belongs below the controllers.
+function timeSheetQueryParams(searchParams: URLSearchParams): Record<string, string | string[]> {
+  const params: Record<string, string | string[]> = {};
+  for (const key of new Set(searchParams.keys())) {
+    const values = searchParams.getAll(key);
+    params[key] = TIME_SHEET_ARRAY_QUERY_KEYS.has(key)
+      ? values.flatMap((value) => value.split(',')).map((value) => value.trim()).filter(Boolean)
+      : values[values.length - 1];
+  }
+  return params;
+}
+
 export class ApiTimeSheetController extends ApiBaseController {
   private timeSheetService: TimeSheetService;
 
@@ -782,10 +809,10 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new ForbiddenError('Permission denied: Cannot read time sheets');
         }
 
-        // Validate query parameters
+        // Validate query parameters (array filters arrive repeated or comma-separated)
         const url = new URL(req.url);
-        const queryParams = Object.fromEntries(url.searchParams);
-        
+        const queryParams = timeSheetQueryParams(url.searchParams);
+
         let searchParams;
         try {
           searchParams = timeSheetSearchSchema.parse(queryParams);
@@ -862,10 +889,10 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new ForbiddenError('Permission denied: Cannot export time sheets');
         }
 
-        // Validate query parameters
+        // Validate query parameters (array filters arrive repeated or comma-separated)
         const url = new URL(req.url);
-        const queryParams = Object.fromEntries(url.searchParams);
-        
+        const queryParams = timeSheetQueryParams(url.searchParams);
+
         let exportParams;
         try {
           exportParams = timeSheetExportQuerySchema.parse(queryParams);
@@ -876,15 +903,19 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw error;
         }
 
-        // Export within tenant context
-        const result = await runWithTenant(tenantId!, async () => {
-          const timeSheets = await this.timeSheetService.list({}, {
+        // Export within tenant context: every row matching the filters, not page 1 of list()
+        const rows = await runWithTenant(tenantId!, async () => {
+          return this.timeSheetService.exportTimeSheets(exportParams, {
             userId: user.user_id,
             user,
             tenant: tenantId!,
           });
-          return timeSheets.data;
         });
+
+        const fields = exportParams.fields?.filter((field) => field.length > 0);
+        const result = fields && fields.length > 0
+          ? rows.map((row) => Object.fromEntries(fields.map((field) => [field, row[field]])))
+          : rows;
 
         // Return appropriate response based on format
         if (exportParams.format === 'csv') {

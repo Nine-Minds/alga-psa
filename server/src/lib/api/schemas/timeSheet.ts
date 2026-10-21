@@ -43,13 +43,11 @@ export const timePeriodFrequencySchema = z.enum(['daily', 'weekly', 'monthly', '
 // Create time sheet schema
 export const createTimeSheetSchema = z.object({
   period_id: uuidSchema,
-  user_id: uuidSchema.optional(), // Optional for creating for other users
-  notes: z.string().optional()
+  user_id: uuidSchema.optional() // Optional for creating for other users
 });
 
 // Update time sheet schema
 export const updateTimeSheetSchema = z.object({
-  notes: z.string().optional(),
   approval_status: approvalStatusSchema.optional()
 });
 
@@ -78,7 +76,8 @@ export const timeSheetListQuerySchema = createListQuerySchema(timeSheetFilterSch
     .default(TIME_SHEET_LIST_DEFAULT_SORT)
 });
 
-// Time sheet response schema
+// Time sheet response schema.
+// time_sheets has exactly these columns (no notes, created_at or updated_at); the rest are joined/computed.
 export const timeSheetResponseSchema = z.object({
   id: uuidSchema,
   period_id: uuidSchema,
@@ -87,17 +86,31 @@ export const timeSheetResponseSchema = z.object({
   submitted_at: z.string().datetime().nullable(),
   approved_at: z.string().datetime().nullable(),
   approved_by: uuidSchema.nullable(),
-  notes: z.string().nullable(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
   tenant: uuidSchema,
   
   // Computed/joined fields
-  user_name: z.string().optional(),
-  approver_name: z.string().optional(),
+  user_name: z.string().nullable().optional(),
+  approver_name: z.string().nullable().optional(),
+  period_start: timePeriodDateSchema.nullable().optional(),
+  period_end: timePeriodDateSchema.nullable().optional(),
   total_hours: z.number().optional(),
   billable_hours: z.number().optional(),
   entry_count: z.number().optional()
+});
+
+// One row of the submission / approval history (time_sheet_notes)
+export const timeSheetNoteKindSchema = z.enum(['submission', 'approval', 'request_changes', 'reverse_approval']);
+
+export const timeSheetNoteResponseSchema = z.object({
+  note_id: uuidSchema,
+  time_sheet_id: uuidSchema,
+  kind: timeSheetNoteKindSchema,
+  note: z.string().nullable(),
+  detail: z.string().nullable(),
+  created_by: uuidSchema,
+  created_at: z.string().datetime(),
+  tenant: uuidSchema,
+  user_name: z.string().nullable().optional()
 });
 
 // Time sheet with details response schema
@@ -107,14 +120,15 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
     first_name: z.string(),
     last_name: z.string(),
     email: z.string()
-  }).optional(),
+  }).nullable().optional(),
   
+  // null until the sheet is approved
   approved_by_user: z.object({
     user_id: uuidSchema,
     first_name: z.string(),
     last_name: z.string(),
     email: z.string()
-  }).optional(),
+  }).nullable().optional(),
   
   time_period: z.object({
     period_id: uuidSchema,
@@ -128,12 +142,16 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
   
   comments: z.array(z.object({
     comment_id: uuidSchema,
-    comment_text: z.string(),
+    time_sheet_id: uuidSchema,
+    comment: z.string(),
     user_id: uuidSchema,
-    user_name: z.string(),
-    user_role: z.string(),
-    created_at: z.string().datetime()
+    user_name: z.string().nullable().optional(),
+    is_approver: z.boolean(),
+    created_at: z.string().datetime(),
+    tenant: uuidSchema
   })).optional(),
+  
+  notes: z.array(timeSheetNoteResponseSchema).optional(),
   
   summary: z.object({
     total_hours: z.number(),
@@ -214,16 +232,17 @@ export const timePeriodSettingsResponseSchema = z.object({
 });
 
 // Time sheet comment schemas
+// time_sheet_comments columns: comment_id, time_sheet_id, user_id, comment, created_at, is_approver, tenant
 export const createTimeSheetCommentSchema = z.object({
-  comment_text: z.string().min(1, 'Comment text is required')
+  comment: z.string().min(1, 'Comment is required')
 });
 
 export const timeSheetCommentResponseSchema = z.object({
   comment_id: uuidSchema,
   time_sheet_id: uuidSchema,
-  comment_text: z.string(),
+  comment: z.string(),
   user_id: uuidSchema,
-  user_role: z.string(),
+  is_approver: z.boolean(),
   created_at: z.string().datetime(),
   tenant: uuidSchema,
   
@@ -283,7 +302,7 @@ export const timeSheetStatsResponseSchema = z.object({
 // Time sheet search schema
 export const timeSheetSearchSchema = z.object({
   query: z.string().min(1, 'Search query is required'),
-  fields: z.array(z.enum(['user_name', 'notes', 'approval_notes'])).optional(),
+  fields: z.array(z.enum(['user_name', 'note'])).optional(),
   approval_statuses: z.array(approvalStatusSchema).optional(),
   user_ids: z.array(uuidSchema).optional(),
   period_ids: z.array(uuidSchema).optional(),

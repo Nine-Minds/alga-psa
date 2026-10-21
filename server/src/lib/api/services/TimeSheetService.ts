@@ -184,6 +184,21 @@ export class TimeSheetService extends BaseService<any> {
     };
   }
 
+  /**
+   * Shape a time_sheets row (plus the joins list()/getById() add) for the API.
+   * pg hands back numeric aggregates as strings and DATE columns as Date objects.
+   */
+  private toApiTimeSheetRow(row: any): any {
+    if (!row) return row;
+    const out = { ...row };
+    if ('period_start' in out && out.period_start != null) out.period_start = formatDbDate(out.period_start);
+    if ('period_end' in out && out.period_end != null) out.period_end = formatDbDate(out.period_end);
+    for (const key of ['total_hours', 'billable_hours', 'entry_count'] as const) {
+      if (key in out) out[key] = out[key] == null ? 0 : Number(out[key]);
+    }
+    return out;
+  }
+
   async list(options: ListOptions, context: ServiceContext, filters?: TimeSheetFilterData): Promise<ListResult<any>> {
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
@@ -278,7 +293,7 @@ export class TimeSheetService extends BaseService<any> {
       ]);
   
       return {
-        data,
+        data: data.map((row: any) => this.toApiTimeSheetRow(row)),
         total: parseInt(count as string)
       };
     }
@@ -304,7 +319,7 @@ export class TimeSheetService extends BaseService<any> {
         )
         .first();
   
-      return timeSheet || null;
+      return timeSheet ? this.toApiTimeSheetRow(timeSheet) : null;
     }
 
 
@@ -312,12 +327,13 @@ export class TimeSheetService extends BaseService<any> {
     const timeSheet = await this.getById(id, context);
     if (!timeSheet) return null;
 
-    const [user, approvedByUser, timePeriod, timeEntries, comments, summary] = await Promise.all([
+    const [user, approvedByUser, timePeriod, timeEntries, comments, notes, summary] = await Promise.all([
       this.getTimeSheetUser(timeSheet.user_id, context),
       timeSheet.approved_by ? this.getTimeSheetUser(timeSheet.approved_by, context) : null,
       this.getTimePeriod(timeSheet.period_id, context),
       this.getTimeSheetEntries(id, context),
       this.getTimeSheetComments(id, context),
+      this.getTimeSheetNotes(id, context),
       this.getTimeSheetSummary(id, context)
     ]);
 
@@ -328,6 +344,7 @@ export class TimeSheetService extends BaseService<any> {
       time_period: timePeriod,
       time_entries: timeEntries,
       comments,
+      notes,
       summary
     };
   }
@@ -336,13 +353,12 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       const created = await withTransaction(knex, async (trx) => {
+        // time_sheets has exactly: tenant, id, user_id, period_id, approval_status, submitted_at, approved_at, approved_by.
         const timeSheetData = {
-          ...data,
+          period_id: data.period_id,
           user_id: data.user_id || context.userId,
           approval_status: 'DRAFT',
-          tenant: context.tenant,
-          created_at: new Date(),
-          updated_at: new Date()
+          tenant: context.tenant
         };
 
         const [timeSheet] = await tenantDb(trx, context.tenant).table(this.tableName)
@@ -389,14 +405,17 @@ export class TimeSheetService extends BaseService<any> {
           throw new ConflictError('Cannot modify approved time sheets');
         }
   
-        const updateData = {
-          ...data,
-          updated_at: new Date()
-        };
+        // Only approval_status is writable through PUT; time_sheets has no notes/updated_at columns.
+        const updateData: Record<string, unknown> = {};
+        if (data.approval_status !== undefined) {
+          updateData.approval_status = data.approval_status;
+        }
   
-        await this.buildTenantScopedQuery(trx, context)
-          .where({ [this.primaryKey]: id })
-          .update(updateData);
+        if (Object.keys(updateData).length > 0) {
+          await this.buildTenantScopedQuery(trx, context)
+            .where({ [this.primaryKey]: id })
+            .update(updateData);
+        }
   
       });
 
@@ -485,10 +504,12 @@ export class TimeSheetService extends BaseService<any> {
           .where({ id })
           .update({
             approval_status: 'SUBMITTED',
-            submitted_at: new Date(),
-            submission_notes: data.submission_notes,
-            updated_at: new Date()
+            submitted_at: new Date()
           });
+  
+        if (data.submission_notes) {
+          await this.recordNote(trx, id, 'submission', { note: data.submission_notes }, context);
+        }
   
       });
 
@@ -533,18 +554,18 @@ export class TimeSheetService extends BaseService<any> {
           .update({
             approval_status: 'APPROVED',
             approved_at: new Date(),
-            approved_by: context.userId,
-            approval_notes: data.approval_notes,
-            updated_at: new Date()
+            approved_by: context.userId
           });
   
-        // Update all time entries to approved status
+        if (data.approval_notes) {
+          await this.recordNote(trx, id, 'approval', { note: data.approval_notes }, context);
+        }
+  
+        // Update all time entries to approved status (time_entries has no approved_at/approved_by)
         await tenantDb(trx, context.tenant).table('time_entries')
           .where({ time_sheet_id: id })
           .update({
             approval_status: 'APPROVED',
-            approved_at: new Date(),
-            approved_by: context.userId,
             updated_at: new Date()
           });
   
@@ -589,15 +610,17 @@ export class TimeSheetService extends BaseService<any> {
         await this.buildTenantScopedQuery(trx, context)
           .where({ id })
           .update({
-            approval_status: 'CHANGES_REQUESTED',
-            change_reason: data.change_reason,
-            detailed_feedback: data.detailed_feedback,
-            updated_at: new Date()
+            approval_status: 'CHANGES_REQUESTED'
           });
   
+        await this.recordNote(trx, id, 'request_changes', {
+          note: data.change_reason,
+          detail: data.detailed_feedback
+        }, context);
+  
         // Add comment with feedback
-        await this.addComment(id, {
-          comment_text: `Changes requested: ${data.change_reason}${data.detailed_feedback ? `\n\nDetails: ${data.detailed_feedback}` : ''}`
+        await this.insertComment(trx, id, {
+          comment: `Changes requested: ${data.change_reason}${data.detailed_feedback ? `\n\nDetails: ${data.detailed_feedback}` : ''}`
         }, context);
   
       });
@@ -667,26 +690,22 @@ export class TimeSheetService extends BaseService<any> {
           .update({
             approval_status: 'CHANGES_REQUESTED',
             approved_at: null,
-            approved_by: null,
-            reversal_reason: data.reversal_reason,
-            reversed_at: new Date(),
-            reversed_by: context.userId,
-            updated_at: new Date()
+            approved_by: null
           });
   
-        // Revert time entries to changes requested status
+        await this.recordNote(trx, id, 'reverse_approval', { note: data.reversal_reason }, context);
+  
+        // Revert time entries to changes requested status (time_entries has no approved_at/approved_by)
         await tenantDb(trx, context.tenant).table('time_entries')
           .where({ time_sheet_id: id })
           .update({
             approval_status: 'CHANGES_REQUESTED',
-            approved_at: null,
-            approved_by: null,
             updated_at: new Date()
           });
   
         // Add comment with reversal reason
-        await this.addComment(id, {
-          comment_text: `Approval reversed: ${data.reversal_reason}`
+        await this.insertComment(trx, id, {
+          comment: `Approval reversed: ${data.reversal_reason}`
         }, context);
   
       });
@@ -709,23 +728,71 @@ export class TimeSheetService extends BaseService<any> {
     }
 
 
+  // Time sheet notes (submission / approval history)
+  private async recordNote(
+    trx: Knex.Transaction,
+    timeSheetId: string,
+    kind: 'submission' | 'approval' | 'request_changes' | 'reverse_approval',
+    body: { note?: string | null; detail?: string | null },
+    context: ServiceContext
+  ): Promise<any> {
+    const [note] = await tenantDb(trx, context.tenant).table('time_sheet_notes')
+      .insert({
+        tenant: context.tenant,
+        time_sheet_id: timeSheetId,
+        kind,
+        note: body.note ?? null,
+        detail: body.detail ?? null,
+        created_by: context.userId,
+        created_at: new Date()
+      })
+      .returning('*');
+    return note;
+  }
+
+  async getTimeSheetNotes(timeSheetId: string, context: ServiceContext): Promise<any[]> {
+    const { knex } = await this.getKnex();
+    const db = tenantDb(knex, context.tenant);
+    const query = db.table('time_sheet_notes');
+
+    db.tenantJoin(query, 'users', 'time_sheet_notes.created_by', 'users.user_id', { type: 'left' });
+
+    return query
+      .where({ 'time_sheet_notes.time_sheet_id': timeSheetId })
+      .select(
+        'time_sheet_notes.*',
+        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`)
+      )
+      .orderBy('time_sheet_notes.created_at', 'desc')
+      .orderBy('time_sheet_notes.note_id', 'asc');
+  }
+
   // Time sheet comments
+  private async insertComment(
+    trx: Knex | Knex.Transaction,
+    id: string,
+    data: CreateTimeSheetCommentData,
+    context: ServiceContext
+  ): Promise<any> {
+    // time_sheet_comments columns: comment_id, time_sheet_id, user_id, comment, created_at, is_approver, tenant
+    const [comment] = await tenantDb(trx, context.tenant).table('time_sheet_comments')
+      .insert({
+        time_sheet_id: id,
+        comment: data.comment,
+        user_id: context.userId,
+        is_approver: await this.canApproveTimeSheets(context),
+        tenant: context.tenant,
+        created_at: new Date()
+      })
+      .returning('*');
+    return comment;
+  }
+
   async addComment(id: string, data: CreateTimeSheetCommentData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
-        const commentData = {
-          time_sheet_id: id,
-          comment_text: data.comment_text,
-          user_id: context.userId,
-          user_role: await this.getUserRole(context.userId, context),
-          tenant: context.tenant,
-          created_at: new Date()
-        };
-  
-        const [comment] = await tenantDb(trx, context.tenant).table('time_sheet_comments')
-          .insert(commentData)
-          .returning('*');
+        const comment = await this.insertComment(trx, id, data, context);
   
         return {
           ...comment,
@@ -748,17 +815,9 @@ export class TimeSheetService extends BaseService<any> {
           'time_sheet_comments.*',
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`)
         )
-        .orderBy('created_at', 'desc');
+        .orderBy('time_sheet_comments.created_at', 'desc');
   
-      return comments.map(comment => ({
-        ...comment,
-        user: {
-          user_id: comment.user_id,
-          first_name: comment.first_name,
-          last_name: comment.last_name,
-          email: comment.email
-        }
-      }));
+      return comments;
     }
 
 
@@ -1295,21 +1354,23 @@ export class TimeSheetService extends BaseService<any> {
       
       const query = this.buildTenantScopedQuery(knex, context);
   
-      // Build search query
-      if (searchData.fields && searchData.fields.length > 0) {
-        query.where(function() {
-          searchData.fields!.forEach(field => {
-            if (field === 'user_name') {
-              this.orWhere(knex.raw(`CONCAT(users.first_name, ' ', users.last_name)`), 'ilike', `%${searchData.query}%`);
-            } else {
-              this.orWhere(`${tableName}.${field}`, 'ilike', `%${searchData.query}%`);
-            }
-          });
-        });
-      } else {
-        // Default search in notes
-        query.where(`${tableName}.notes`, 'ilike', `%${searchData.query}%`);
-      }
+      // Build search query. time_sheets has no text columns of its own: match on the
+      // submitter's name and on the submission/approval notes history.
+      const fields = searchData.fields && searchData.fields.length > 0 ? searchData.fields : ['user_name', 'note'];
+      const pattern = `%${searchData.query}%`;
+      const noteMatches = tenantDb(knex, context.tenant).table('time_sheet_notes')
+        .where('time_sheet_notes.time_sheet_id', knex.raw(`${tableName}.id`))
+        .where('time_sheet_notes.note', 'ilike', pattern)
+        .select(knex.raw('1'));
+      query.where(function() {
+        for (const field of fields) {
+          if (field === 'user_name') {
+            this.orWhere(knex.raw(`CONCAT(users.first_name, ' ', users.last_name)`), 'ilike', pattern);
+          } else if (field === 'note') {
+            this.orWhereExists(noteMatches);
+          }
+        }
+      });
   
       // Apply filters
       if (searchData.approval_statuses && searchData.approval_statuses.length > 0) {
@@ -1341,7 +1402,7 @@ export class TimeSheetService extends BaseService<any> {
         )
         .limit(searchData.limit || 25);
   
-      const timeSheets = await query;
+      const timeSheets = (await query).map((row: any) => this.toApiTimeSheetRow(row));
   
       // Include entries if requested
       if (searchData.include_entries) {
@@ -1355,6 +1416,71 @@ export class TimeSheetService extends BaseService<any> {
     }
 
 
+
+  /**
+   * Every time sheet matching the export filters — no pagination. Export is an offline dump,
+   * so the caller gets the whole result set rather than page 1 of list().
+   */
+  // LEVERAGE: pattern time-sheet-list-query — list(), search() and exportTimeSheets() each rebuild the same
+  // joins + computed-hours select over time_sheets; a shared query builder is missing below this layer.
+  async exportTimeSheets(params: TimeSheetExportQuery, context: ServiceContext): Promise<any[]> {
+      const { knex } = await this.getKnex();
+      const db = tenantDb(knex, context.tenant);
+      const tableName = this.tableName;
+
+      const query = this.buildTenantScopedQuery(knex, context);
+
+      if (params.approval_statuses && params.approval_statuses.length > 0) {
+        query.whereIn(`${tableName}.approval_status`, params.approval_statuses);
+      }
+      if (params.user_ids && params.user_ids.length > 0) {
+        query.whereIn(`${tableName}.user_id`, params.user_ids);
+      }
+      if (params.period_ids && params.period_ids.length > 0) {
+        query.whereIn(`${tableName}.period_id`, params.period_ids);
+      }
+
+      db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id', { type: 'left' });
+      db.tenantJoin(query, 'users as approvers', 'time_sheets.approved_by', 'approvers.user_id', { type: 'left' });
+      db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id', { type: 'left' });
+
+      if (params.date_from) {
+        query.where('time_periods.start_date', '>=', params.date_from);
+      }
+      if (params.date_to) {
+        query.where('time_periods.end_date', '<=', params.date_to);
+      }
+
+      // One correlated scalar subquery per aggregate (each selects exactly one column).
+      const entryAggregate = (expression: string) =>
+        tenantDb(knex, context.tenant).table('time_entries')
+          .where('time_entries.time_sheet_id', knex.raw(`${tableName}.id`))
+          .select(knex.raw(expression))
+          .toQuery();
+
+      query.select(
+          `${tableName}.*`,
+          knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
+          knex.raw(`CONCAT(approvers.first_name, ' ', approvers.last_name) as approver_name`),
+          'time_periods.start_date as period_start',
+          'time_periods.end_date as period_end',
+          knex.raw(`(${entryAggregate('SUM(billable_duration) / 60.0')}) as total_hours`),
+          knex.raw(`(${entryAggregate('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0')}) as billable_hours`),
+          knex.raw(`(${entryAggregate('COUNT(*)')}) as entry_count`)
+      );
+      query.orderBy('time_periods.start_date', 'desc').orderBy(`${tableName}.id`, 'asc');
+
+      const rows = (await query).map((row: any) => this.toApiTimeSheetRow(row));
+
+      if (!params.include_time_entries && !params.include_comments) {
+        return rows;
+      }
+      return Promise.all(rows.map(async (row: any) => ({
+        ...row,
+        ...(params.include_time_entries ? { time_entries: await this.getTimeSheetEntries(row.id, context) } : {}),
+        ...(params.include_comments ? { comments: await this.getTimeSheetComments(row.id, context) } : {})
+      })));
+    }
 
   async getStatistics(context: ServiceContext, filters?: TimeSheetFilterData): Promise<any> {
     // Implementation would return comprehensive time sheet statistics
@@ -1384,13 +1510,15 @@ export class TimeSheetService extends BaseService<any> {
   }
 
   private async canManageTimeSheets(context: ServiceContext): Promise<boolean> {
-    // Check RBAC permissions
-    return false; // Simplified for now
+    if (!context.user) return false;
+    const { knex } = await this.getKnex();
+    return hasPermission(context.user, 'time_sheet', 'manage', knex);
   }
 
   private async canApproveTimeSheets(context: ServiceContext): Promise<boolean> {
-    // Check RBAC permissions
-    return false; // Simplified for now
+    if (!context.user) return false;
+    const { knex } = await this.getKnex();
+    return hasPermission(context.user, 'time_sheet', 'approve', knex);
   }
 
   private async canViewAllSchedules(context: ServiceContext): Promise<boolean> {
@@ -1404,16 +1532,6 @@ export class TimeSheetService extends BaseService<any> {
     const { knex } = await this.getKnex();
     return hasPermission(context.user, 'user_schedule', action, knex);
   }
-
-  private async getUserRole(userId: string, context: ServiceContext): Promise<string> {
-      const { knex } = await this.getKnex();
-      
-      const user = await tenantDb(knex, context.tenant).table('users')
-        .where({ user_id: userId })
-        .first();
-      return user?.role || 'user';
-    }
-
 
   private async getTimeSheetUser(userId: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
