@@ -323,6 +323,27 @@ export class InvoiceService extends BaseService<IInvoice> {
     return summarizeInvoiceRecurringProvenance(charges);
   }
 
+  /**
+   * A billing profile may only be attached to an invoice of the client that
+   * owns it, and only while the profile is active.
+   */
+  private async assertBillingProfileBelongsToClient(
+    trx: Knex.Transaction,
+    tenant: string,
+    clientId: string,
+    billingProfileId: string,
+  ): Promise<void> {
+    const profile = await tenantDb(trx, tenant).table('client_billing_profiles')
+      .where({ billing_profile_id: billingProfileId })
+      .first('client_id', 'is_active');
+    if (!profile || profile.client_id !== clientId || profile.is_active === false) {
+      throw new ValidationError('The selected billing profile is not available for this client', {
+        code: 'BILLING_PROFILE_NOT_FOUND',
+        billingProfileId,
+      });
+    }
+  }
+
   private buildRecurringInvoiceSummaryQuery(trx: Knex.Transaction, context: ServiceContext) {
     return tenantDb(trx, context.tenant).table('recurring_service_periods as rsp')
       .whereNotNull('rsp.invoice_id')
@@ -547,6 +568,23 @@ export class InvoiceService extends BaseService<IInvoice> {
         }
       }
 
+      const invoiceDate = data.invoice_date || new Date().toISOString().split('T')[0];
+
+      // Terms follow the client's effective billing identity; explicit caller
+      // values win.
+      if (data.billing_profile_id) {
+        await this.assertBillingProfileBelongsToClient(trx, context.tenant, data.client_id, data.billing_profile_id);
+      }
+      const billingTerms = data.client_id
+        ? await resolveInvoiceBillingTerms(
+            trx,
+            context.tenant,
+            data.client_id,
+            invoiceDate,
+            data.billing_profile_id,
+          )
+        : null;
+
       // Prepare invoice data
       const invoiceData = await this.filterAuditFields(trx, {
         invoice_id: uuidv4(),
@@ -554,10 +592,10 @@ export class InvoiceService extends BaseService<IInvoice> {
         client_id: data.client_id,
         billing_cycle_id: data.billing_cycle_id,
         status: data.status || 'draft',
-        invoice_date: data.invoice_date || new Date().toISOString().split('T')[0],
-        due_date: data.due_date,
-        payment_method: data.payment_method ?? null,
-        billing_profile_id: data.billing_profile_id ?? null,
+        invoice_date: invoiceDate,
+        due_date: data.due_date ?? billingTerms?.dueDate,
+        payment_method: data.payment_method ?? billingTerms?.paymentMethod ?? null,
+        billing_profile_id: data.billing_profile_id ?? billingTerms?.billingProfileId ?? null,
         subtotal: data.subtotal || 0,
         tax: taxCalculation?.tax_amount || 0,
         total_amount: data.total_amount || 0,
@@ -637,10 +675,23 @@ export class InvoiceService extends BaseService<IInvoice> {
         throw new ConflictError('Cannot modify paid invoice status');
       }
 
-      // Payment method is a draft-only term; billing profile is locked once
-      // any payment is recorded against the invoice.
-      if (data.payment_method !== undefined && existing.status !== 'draft') {
+      // Payment method is a draft-only term; an unchanged value (null and
+      // undefined alike) is a harmless round-trip. Billing profile must belong
+      // to the invoice's client and is locked once any payment is recorded.
+      if (
+        data.payment_method !== undefined
+        && existing.status !== 'draft'
+        && (data.payment_method ?? null) !== (existing.payment_method ?? null)
+      ) {
         throw new ConflictError('Payment method can only be changed on draft invoices');
+      }
+      if (data.billing_profile_id) {
+        await this.assertBillingProfileBelongsToClient(
+          trx,
+          context.tenant,
+          data.client_id ?? existing.client_id,
+          data.billing_profile_id,
+        );
       }
       if (
         data.billing_profile_id !== undefined
@@ -1994,15 +2045,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         // A caller-selected profile must belong to this client (and be active);
         // otherwise the client's default profile supplies the terms.
         if (data.billingProfileId) {
-          const profile = await tenantDb(trx, tenant).table('client_billing_profiles')
-            .where({ billing_profile_id: data.billingProfileId })
-            .first('client_id', 'is_active');
-          if (!profile || profile.client_id !== data.clientId || profile.is_active === false) {
-            throw new ValidationError('The selected billing profile is not available for this client', {
-              code: 'BILLING_PROFILE_NOT_FOUND',
-              billingProfileId: data.billingProfileId,
-            });
-          }
+          await this.assertBillingProfileBelongsToClient(trx, tenant, data.clientId, data.billingProfileId);
         }
         const billingTerms = await resolveInvoiceBillingTerms(
           trx,
