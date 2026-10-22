@@ -69,6 +69,11 @@ const styleDeclarationSchema = z.object({
   fontStyle: z.string().optional(),
   lineHeight: z.union([z.string(), z.number()]).optional(),
   textAlign: z.enum(['left', 'center', 'right', 'justify']).optional(),
+  // Table/text fitting: fixed layout lets column widths hold on the page, nowrap
+  // keeps numeric cells on one line, overflow-wrap lets long tokens break.
+  tableLayout: z.enum(['auto', 'fixed']).optional(),
+  whiteSpace: z.enum(['normal', 'nowrap', 'pre', 'pre-line', 'pre-wrap']).optional(),
+  overflowWrap: z.enum(['normal', 'break-word', 'anywhere']).optional(),
   breakInside: z.enum(['auto', 'avoid', 'avoid-page']).optional(),
   breakAfter: z.enum(['auto', 'avoid', 'avoid-page', 'page']).optional(),
   breakBefore: z.enum(['auto', 'avoid', 'avoid-page', 'page']).optional(),

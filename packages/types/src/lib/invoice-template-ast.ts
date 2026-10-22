@@ -278,6 +278,9 @@ export interface TemplateStyleDeclaration {
   fontFamily?: string;
   lineHeight?: string | number;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
+  tableLayout?: 'auto' | 'fixed';
+  whiteSpace?: 'normal' | 'nowrap' | 'pre' | 'pre-line' | 'pre-wrap';
+  overflowWrap?: 'normal' | 'break-word' | 'anywhere';
   flex?: string;
   // Longhand flex has been part of the runtime contract since the AST cutover:
   // the designer export emits it and the zod styleDeclarationSchema accepts it.
