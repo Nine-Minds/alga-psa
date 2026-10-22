@@ -31,6 +31,8 @@ import { getErrorMessage, isActionMessageError, isActionPermissionError } from '
 interface FixedPlanConfigurationProps {
   contractLineId: string;
   className?: string;
+  /** Contract currency code, resolved by the caller: contract.currency_code || client.default_currency_code || 'USD'. */
+  currencyCode: string;
 }
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
@@ -73,6 +75,7 @@ const isReturnedActionError = (value: unknown): boolean =>
 export function FixedPlanConfiguration({
   contractLineId,
   className = '',
+  currencyCode,
 }: FixedPlanConfigurationProps) {
   const { t } = useTranslation('msp/contract-lines');
   const { symbol } = useCurrencyFormat();
@@ -532,7 +535,7 @@ export function FixedPlanConfiguration({
                   {t('configuration.fixed.settings.baseRateLabel', { defaultValue: 'Recurring Base Rate *' })}
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol(currencyCode)}</span>
                   <Input
                     id="base-rate"
                     type="text"

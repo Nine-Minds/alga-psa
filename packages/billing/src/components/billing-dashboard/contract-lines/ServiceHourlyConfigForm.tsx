@@ -39,6 +39,8 @@ interface ServiceHourlyConfigFormProps {
   onHourlyFieldChange: (field: keyof IContractLineServiceHourlyConfig, value: number | null) => void; // Renamed prop
   onUserTypeRatesChange: (newUserTypeRates: IUserTypeRate[]) => void; // Add handler for rates array
   className?: string;
+  /** Contract currency code (e.g. 'EUR'); drives the in-field symbol. */
+  currencyCode: string;
 }
 
 export function ServiceHourlyConfigForm({
@@ -50,6 +52,7 @@ export function ServiceHourlyConfigForm({
   onHourlyFieldChange, // Use renamed prop
   onUserTypeRatesChange, // Destructure new prop
   className = '',
+  currencyCode,
 }: ServiceHourlyConfigFormProps) {
   const { t } = useTranslation('msp/contract-lines');
   const { symbol } = useCurrencyFormat();
@@ -230,7 +233,7 @@ export function ServiceHourlyConfigForm({
 
         {/* This section was incorrectly placed here by the previous diff, removing it */}
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol(currencyCode)}</span>
           <Input
             id="hourly-rate"
             type="text"
@@ -368,7 +371,7 @@ export function ServiceHourlyConfigForm({
                          {t('forms.hourlyConfig.userTypeRates.rateSrLabel', { defaultValue: 'Rate (per hour)' })}
                        </Label>
                        <div className="relative">
-                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
+                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol(currencyCode)}</span>
                          <Input
                              id={`new-user-type-rate-${configId}`}
                              type="text"

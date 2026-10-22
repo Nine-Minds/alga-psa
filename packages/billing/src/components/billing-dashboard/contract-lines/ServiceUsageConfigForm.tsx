@@ -40,6 +40,8 @@ interface ServiceUsageConfigFormProps {
     disabled?: boolean;
     onConfigChange: (serviceId: string, field: keyof ServiceUsageConfig, value: any) => void;
     onTiersChange: (serviceId: string, tiers: TierConfig[]) => void; // Specific handler for tiers array
+    /** Contract currency code; drives the in-field symbol. */
+    currencyCode: string;
 }
 
 export function ServiceUsageConfigForm({
@@ -51,6 +53,7 @@ export function ServiceUsageConfigForm({
     disabled = false,
     onConfigChange,
     onTiersChange,
+    currencyCode,
 }: ServiceUsageConfigFormProps) {
     const { t } = useTranslation('msp/contract-lines');
     const { symbol } = useCurrencyFormat();
@@ -109,7 +112,7 @@ export function ServiceUsageConfigForm({
                         </Tooltip>
                     </Label>
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol(currencyCode)}</span>
                         <Input
                             id={`usage-contract-line-base-rate-${serviceId}`}
                             type="text"

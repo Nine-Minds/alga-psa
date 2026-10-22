@@ -103,11 +103,14 @@ type HourlyPlanData = IContractLine & {
 interface HourlyPlanConfigurationProps {
   contractLineId: string;
   className?: string;
+  /** Contract currency code, resolved by the caller: contract.currency_code || client.default_currency_code || 'USD'. */
+  currencyCode: string;
 }
 
 export function HourlyPlanConfiguration({
   contractLineId,
   className = '',
+  currencyCode,
 }: HourlyPlanConfigurationProps) {
   const { t } = useTranslation('msp/contract-lines');
   const { symbol } = useCurrencyFormat();
@@ -675,7 +678,7 @@ export function HourlyPlanConfiguration({
                                       })}
                                     </Label>
                                     <div className="relative">
-                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol(currencyCode)}</span>
                                       <Input
                                         id="overtime-rate"
                                         type="text"
@@ -953,6 +956,7 @@ export function HourlyPlanConfiguration({
                                             {serviceConfig.isHourlyConfigurable && serviceConfig.hourly_config ? (
                                                 <ServiceHourlyConfigForm
                                                     configId={serviceConfig.config_id} // Pass the config_id
+                                                    currencyCode={currencyCode}
                                                     config={serviceConfig.hourly_config} // Pass hourly fields
                                                     userTypeRates={serviceConfig.user_type_rates || []} // Pass user type rates for this config
                                                     onHourlyFieldChange={(field: keyof IContractLineServiceHourlyConfig, value: any) => handleHourlyFieldChange(serviceConfig.config_id, field, value)}
