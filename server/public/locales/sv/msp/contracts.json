@@ -148,7 +148,11 @@
       "title": "Kundtilldelning",
       "useTenantRenewalDefaults": "Använd organisationens standardinställningar för förnyelse",
       "usingCustomSettings": "Anpassade tilldelningsinställningar används",
-      "usingTenantDefaults": "Organisationens standardinställningar används"
+      "usingTenantDefaults": "Organisationens standardinställningar används",
+      "billingProfileUseDefault": "Använd {{name}} (kundens standard)",
+      "billingProfileAssigned": "Tilldelad faktureringsprofil",
+      "billingProfileUnavailable": "Ingen profil – tilldelning väntar",
+      "billingProfileLoading": "Läser in faktureringsprofil…"
     },
     "clientOwnership": {
       "assignmentStatus": "Tilldelningsstatus",
@@ -371,6 +375,79 @@
         "failed": "Det gick inte att ändra hur tjänsten mäts."
       },
       "effectiveFrom": "Ändrad mätning gäller från"
+    },
+    "billing": {
+      "title": "Faktureringsprofil och betalningsvillkor",
+      "asOf": "per {{date}}",
+      "profileLabel": "Faktureringsprofil",
+      "inactive": "Inaktiv",
+      "lineCountOne": "{{count}} rad",
+      "lineCountOther": "{{count}} rader",
+      "termsLabel": "Betalningsvillkor",
+      "terms": {
+        "net_30": "Netto 30",
+        "net_15": "Netto 15",
+        "due_on_receipt": "Förfaller vid mottagande"
+      },
+      "termsSource": {
+        "profile": "från faktureringsprofilen",
+        "client": "från kunden",
+        "default": "standard – inga villkor angivna"
+      },
+      "profileSource": {
+        "client_default": "kundens standard",
+        "contract": "tilldelad avtalet",
+        "contract_line": "angiven på raden",
+        "work_item": "angiven på ärendet eller projektet"
+      },
+      "valueSource": {
+        "profile": "Profil",
+        "client": "Kund",
+        "contract": "Avtal",
+        "default": "Standard"
+      },
+      "dueSentence": "En faktura daterad {{invoiceDate}} förfaller {{dueDate}} — {{terms}} {{source}}",
+      "detailsToggle": "Övriga faktureringsuppgifter",
+      "fieldNone": "Ingen",
+      "taxRegionChain": "Tjänsteregion, sedan avtalsradens plats, sedan kundens standard",
+      "taxExempt": "Skattebefriad",
+      "taxable": "Skattepliktig",
+      "templateCustom": "Anpassad mall",
+      "templateDefault": "Standardmall",
+      "paymentMethod": {
+        "credit_card": "Kreditkort",
+        "bank_transfer": "Banköverföring",
+        "check": "Check"
+      },
+      "fieldLabel": {
+        "bill_to": "Faktureras till",
+        "payment_method": "Betalningssätt",
+        "tax_exemption": "Skattebefrielse",
+        "tax_region": "Skatteregion",
+        "delivery": "Fakturaleverans",
+        "template": "Fakturamall",
+        "po_number": "Inköpsordernummer",
+        "currency": "Valuta",
+        "cadence": "Faktureringsfrekvens",
+        "profile_billing_cycle": "Profilens faktureringscykel",
+        "profile_billing_cycle_unapplied": "Profilens faktureringscykel (tillämpas ännu inte)"
+      },
+      "warnings": {
+        "inactiveProfile": "{{name}} är inaktiv men fakturerar fortfarande detta avtal. Avgifter ligger kvar på den; de flyttas inte till standardprofilen.",
+        "mixedProfiles": "Det här avtalet faktureras via {{count}} olika profiler, så ingen enskild profil täcker det. Varje faktura använder betalningsvillkoren för den profil den utfärdas på.",
+        "lineOverride": "Raden \"{{line}}\" faktureras via {{name}} i stället för avtalets profil.",
+        "workItemOverride": "Tid på ett ärende eller projekt faktureras via det arbetsobjektets profil om det har en. Annars gäller kundens standardprofil.",
+        "workItemOverrideWithProfiles": "Tid på ett ärende eller projekt faktureras via det arbetsobjektets profil om det har en ({{names}}). Annars gäller kundens standardprofil.",
+        "mixedProfilesSameInvoice": "Avgifterna i det här avtalet är hänförda till {{count}} olika profiler, men alla hamnar på {{invoice}}s faktura, så en enda uppsättning betalningsvillkor gäller.",
+        "bucketCoverageNote": "På rader med förbetalt paket eller timblock följer tid som täcks av paketet eller blocket inte arbetsobjektet; endast den återstående timtiden gör det."
+      },
+      "simulationNote": "Den simulerade prissättningen använder skattebefrielsen på kundnivå. En profils egen befrielse tillämpas inte i denna simulering.",
+      "dueSentenceWorkItem": "En faktura daterad {{invoiceDate}} förfaller {{dueDate}} — {{terms}} {{source}}, om inte ärendet eller projektet faktureras via en annan profil",
+      "workItemProfileLine": "Om ärendet eller projektet faktureras via {{name}}:",
+      "invoiceLanding": {
+        "notBilledSeparately": "Hänförd till {{attributed}}; faktureras på {{invoice}} ({{attributed}} faktureras inte separat) — {{terms}}, förfaller {{dueDate}}",
+        "separateInvoicingOff": "Hänförd till {{attributed}}; faktureras på {{invoice}} (separat fakturering är avstängd för den här hyresgästen) — {{terms}}, förfaller {{dueDate}}"
+      }
     }
   },
   "contractDialog": {

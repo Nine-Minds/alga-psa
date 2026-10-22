@@ -1763,7 +1763,8 @@
     },
     "cardExpiry": ", expira em {{month}}/{{year}}",
     "legacyPaymentTerms": "«{{value}}» não é uma condição de pagamento reconhecida e nunca foi aplicada. Será removida ao guardar.",
-    "cardOnFile": "{{type}} com final {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} com final {{last4}}{{expiry}}",
+    "inheritDefaultTerms": "Herdar do cliente (sem condições definidas — aplica-se {{value}})"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alertas de saldo pré-pago",

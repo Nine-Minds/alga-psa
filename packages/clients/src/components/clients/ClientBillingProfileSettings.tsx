@@ -15,6 +15,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import {
+  DEFAULT_PAYMENT_TERMS,
   isPaymentTerms,
   normalizePaymentTerms,
   normalizePreferredPaymentMethod,
@@ -187,7 +188,7 @@ export function ClientBillingProfileSettings({
     field: 'payment_terms' | 'preferred_payment_method',
     label: string,
     options: Array<{ value: string; label: string }>,
-    inheritedLabel: string | null,
+    inheritLabel: string,
     hint?: string | null,
   ) => (
     <div key={field}>
@@ -199,10 +200,7 @@ export function ClientBillingProfileSettings({
         options={[
           {
             value: INHERIT_VALUE,
-            label: t('clientBillingProfileSettings.inheritFromClient', {
-              value: inheritedLabel ?? notSetLabel,
-              defaultValue: 'Inherit from client ({{value}})',
-            }),
+            label: inheritLabel,
           },
           ...options,
         ]}
@@ -299,7 +297,18 @@ export function ClientBillingProfileSettings({
           'payment_terms',
           t('clientBillingProfileSettings.paymentTerms', { defaultValue: 'Payment terms' }),
           paymentTermsOptions(t),
-          clientValues.paymentTerms ? termsLabels[clientValues.paymentTerms] : null,
+          // With no normalized client terms an invoice under this profile is
+          // still due Net 30, so the option says so rather than "Not set".
+          // `notSetLabel` stays for free-text fields that really have no value.
+          clientValues.paymentTerms
+            ? t('clientBillingProfileSettings.inheritFromClient', {
+                value: termsLabels[clientValues.paymentTerms],
+                defaultValue: 'Inherit from client ({{value}})',
+              })
+            : t('clientBillingProfileSettings.inheritDefaultTerms', {
+                value: termsLabels[DEFAULT_PAYMENT_TERMS],
+                defaultValue: 'Inherit from client (no terms set — {{value}} applies)',
+              }),
           legacyPaymentTerms
             ? t('clientBillingProfileSettings.legacyPaymentTerms', {
                 value: legacyPaymentTerms,
@@ -312,9 +321,12 @@ export function ClientBillingProfileSettings({
           'preferred_payment_method',
           t('clientBillingProfileSettings.paymentMethod', { defaultValue: 'Payment method' }),
           paymentMethodOptions(t),
-          clientValues.preferredPaymentMethod
-            ? methodLabels[clientValues.preferredPaymentMethod]
-            : null,
+          t('clientBillingProfileSettings.inheritFromClient', {
+            value: clientValues.preferredPaymentMethod
+              ? methodLabels[clientValues.preferredPaymentMethod]
+              : notSetLabel,
+            defaultValue: 'Inherit from client ({{value}})',
+          }),
           t('clientBillingProfileSettings.paymentMethodHint', {
             defaultValue:
               'Invoices for Check or Bank Transfer do not include an online "Pay now" link.',

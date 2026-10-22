@@ -362,6 +362,8 @@ export async function draftContractToScenario(
       client_id: client.client_id,
       client_name: client.client_name,
     },
+    // A draft has no assignment or lines yet, so no profile is resolved.
+    billing_identity: null,
     invoice_schedule: {
       billing_cycle: schedule.billingCycle,
       anchor: {

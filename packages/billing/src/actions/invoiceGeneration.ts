@@ -13,6 +13,7 @@ import { reconcileWindowAttribution } from '../lib/billing/contractLineAttributi
 import { listUnmaterializedClientCadenceWindowLineIds } from '../lib/billing/clientCadenceWindowMaterialization';
 import {
   getCycleBillingProfileId,
+  resolveInvoiceProfileForAttribution,
   resolveInvoiceProfileScope,
   scopeChargesToProfile,
 } from '../lib/billing/billingProfileInvoiceScope';
@@ -2859,8 +2860,10 @@ async function resolveRecurringSelectionBillingProfileId(
     return options.fallbackBillingProfileId ?? defaultScope.billingProfileId;
   }
 
+  // The shared landing rule (also read by the contract billing trace): an
+  // attribution that does not land on the default profile's invoice keeps its own.
   const separatelyBilledSelections = [...resolvedProfileIds].filter((billingProfileId) =>
-    defaultScope.separatelyBillingProfileIds.has(billingProfileId),
+    resolveInvoiceProfileForAttribution(billingProfileId, defaultScope) !== defaultScope.billingProfileId,
   );
   if (separatelyBilledSelections.length > 1) {
     throw new Error('A recurring invoice selection cannot combine multiple separately billed profiles.');

@@ -1,8 +1,9 @@
 import type { Knex } from 'knex';
 import type { ISO8601String } from '@alga-psa/types';
-import { toISODate, toPlainDate } from '@alga-psa/core';
 import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
-import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferences';
+import { dueDateForPaymentTerms } from '@alga-psa/shared/billingClients/paymentDueDate';
+
+export { dueDateForPaymentTerms };
 
 /**
  * Invoice due dates follow the payment terms of the billing profile that the
@@ -10,14 +11,6 @@ import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferen
  * client, so a client with no profile overrides gets exactly the due date it
  * always got.
  */
-
-/** Due date for an invoice dated `invoiceDate` under `paymentTerms` (unknown terms → Net 30). */
-export function dueDateForPaymentTerms(
-  invoiceDate: ISO8601String,
-  paymentTerms: string | null | undefined,
-): ISO8601String {
-  return toISODate(toPlainDate(invoiceDate).add({ days: paymentTermDays(paymentTerms) }));
-}
 
 /**
  * Due date for an invoice billed under `billingProfileId`, or under the

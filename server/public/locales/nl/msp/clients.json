@@ -1763,7 +1763,8 @@
     },
     "cardExpiry": ", geldig tot {{month}}/{{year}}",
     "legacyPaymentTerms": "‘{{value}}’ is geen erkende betalingsvoorwaarde en is nooit toegepast. Bij het opslaan wordt deze verwijderd.",
-    "cardOnFile": "{{type}} eindigend op {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} eindigend op {{last4}}{{expiry}}",
+    "inheritDefaultTerms": "Overnemen van klant (geen voorwaarden ingesteld — {{value}} geldt)"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid-saldo-meldingen",

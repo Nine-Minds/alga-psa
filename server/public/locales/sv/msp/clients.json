@@ -1781,7 +1781,8 @@
     },
     "cardExpiry": ", giltigt t.o.m. {{month}}/{{year}}",
     "legacyPaymentTerms": "”{{value}}” är inte ett känt betalningsvillkor och har aldrig tillämpats. Det rensas när du sparar.",
-    "cardOnFile": "{{type}} som slutar på {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} som slutar på {{last4}}{{expiry}}",
+    "inheritDefaultTerms": "Ärv från kunden (inga villkor angivna – {{value}} gäller)"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Aviseringar om förbetalt saldo",
