@@ -2206,6 +2206,12 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Check permissions
         const db = await getConnection(tenantId!);
+
+        // Read is the floor, as in the deleteScheduleEntry server action.
+        if (!await hasPermission(user, 'user_schedule', 'read', db)) {
+          throw new ForbiddenError('Permission denied: Cannot delete schedules');
+        }
+
         // Extract ID from path
         const pathParts = req.url.split('/');
         const id = pathParts[pathParts.length - 1];

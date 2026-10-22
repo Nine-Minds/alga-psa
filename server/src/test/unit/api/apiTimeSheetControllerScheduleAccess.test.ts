@@ -127,6 +127,13 @@ describe('REST schedule update / delete', () => {
     expect((await c.deleteScheduleEntry()(req('DELETE'))).status).toBe(404);
   });
 
+  it('DELETE without user_schedule:read is 403 even with an edit share', async () => {
+    state.perms = {};
+    state.groupLevels = group('edit');
+    expect((await new ApiTimeSheetController().deleteScheduleEntry()(req('DELETE'))).status).toBe(403);
+    expect(state.calls).toEqual([]);
+  });
+
   it('missing entry: 404', async () => {
     state.entry = null;
     expect((await new ApiTimeSheetController().updateScheduleEntry()(req('PUT', { notes: 'x' }))).status).toBe(404);
