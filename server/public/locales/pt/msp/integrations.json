@@ -2831,7 +2831,7 @@
         },
         "connection": {
           "title": "Conectado à conta {{account}}",
-          "summary": "{{organizations}} organizações ({{unmapped}} não mapeadas) · {{openIncidents}} incidentes em aberto · última consulta: {{lastPoll}}",
+          "summary": "{{organizations}} organizações ({{unmapped}} não mapeadas) · {{openAlerts}} alertas em aberto · última consulta: {{lastPoll}}",
           "neverPolled": "nunca",
           "lastPollFailed": "Falha na última consulta: {{error}}",
           "routingIncompleteWarning": "A consulta de incidentes está pausada até que a configuração de roteamento abaixo esteja completa (quadro, cliente/quadro alternativo e as prioridades dos três níveis de gravidade).",
@@ -2854,6 +2854,8 @@
           "selectPriority": "Prioridade",
           "pollInterval": "Intervalo de consulta (minutos)",
           "autoClose": "Fechar os tickets quando a Huntress encerrar o incidente",
+          "ingestEscalations": "Criar tickets a partir das escalações da Huntress",
+          "ingestEscalationsHelp": "As escalações usam as mesmas configurações de quadro, categoria, mapeamento de prioridades e fechamento automático dos incidentes. Uma escalação que abrange várias organizações cria um ticket por organização.",
           "closedStatus": "Status de encerramento",
           "selectStatus": "Selecionar status",
           "save": "Salvar configuração de roteamento",

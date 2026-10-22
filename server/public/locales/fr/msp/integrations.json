@@ -2831,7 +2831,7 @@
         },
         "connection": {
           "title": "Connecté au compte {{account}}",
-          "summary": "{{organizations}} organisations ({{unmapped}} non associées) · {{openIncidents}} incidents ouverts · dernière synchronisation : {{lastPoll}}",
+          "summary": "{{organizations}} organisations ({{unmapped}} non associées) · {{openAlerts}} alertes ouvertes · dernière synchronisation : {{lastPoll}}",
           "neverPolled": "jamais",
           "lastPollFailed": "Échec de la dernière synchronisation : {{error}}",
           "routingIncompleteWarning": "La synchronisation des incidents est en pause jusqu'à ce que la configuration du routage ci-dessous soit terminée (tableau, client et tableau de repli, ainsi que les trois priorités de gravité).",
@@ -2854,6 +2854,8 @@
           "selectPriority": "Sélectionner une priorité",
           "pollInterval": "Intervalle de synchronisation (minutes)",
           "autoClose": "Fermer les tickets lorsque Huntress ferme l'incident",
+          "ingestEscalations": "Créer des tickets à partir des escalades Huntress",
+          "ingestEscalationsHelp": "Les escalades utilisent les mêmes paramètres de tableau, de catégorie, de correspondance des priorités et de fermeture automatique que les incidents. Une escalade qui concerne plusieurs organisations crée un ticket par organisation.",
           "closedStatus": "Statut de fermeture",
           "selectStatus": "Sélectionner un statut",
           "save": "Enregistrer la configuration du routage",

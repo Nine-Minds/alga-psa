@@ -10,6 +10,7 @@ import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import type { ColumnDefinition } from '@alga-psa/types';
+import type { ExternalEntityMapping } from '@alga-psa/integrations/actions';
 
 import { suggestMappingTargets } from './suggestMappingTargets';
 import type {
@@ -43,7 +44,7 @@ export function isManualEntryModule(module: Pick<AccountingMappingModule, 'manua
   return module.manualExternalEntry === true && !module.externalTarget;
 }
 
-type MappedRow = { externalName?: string; alga_entity_id: string };
+type MappedRow = ExternalEntityMapping & { externalName?: string };
 
 type RowEdit = {
   ignored?: boolean;
@@ -115,13 +116,33 @@ export function AccountingMappingBulkGrid({
     [algaEntities, mappedByAlga]
   );
 
-  // Suggestions are computed once per catalog load, only for unmapped rows.
+  // Catalog options an existing mapping holds exclusively, i.e. targets the
+  // server's unique index would reject a second mapping to. Only those are
+  // withheld from suggestions; targets the server lets several mappings share
+  // (Xero revenue accounts) stay suggestable. Multi-catalog modules compare by
+  // option id (`item:200` and `account:200` are different targets); modules
+  // without a target config compare the bare external id (one-to-one).
+  const unavailableExternalIds = useMemo(() => {
+    const held = new Set<string>();
+    for (const mapping of mappings) {
+      if (!targetConfig) {
+        held.add(mapping.external_entity_id);
+      } else if (targetConfig.isExclusiveKind(targetConfig.kindForMapping(mapping))) {
+        held.add(targetConfig.optionIdForMapping(mapping));
+      }
+    }
+    return new Set(externalEntities.filter((entity) => held.has(entity.id)).map((entity) => entity.id));
+  }, [mappings, externalEntities, targetConfig]);
+
+  // Suggestions cover unmapped rows only and never offer a target an existing
+  // mapping holds; recomputed after a save reload so fresh mappings exclude theirs.
   const suggestions = useMemo(
     () =>
       suggestMappingTargets(unmappedAlga, externalEntities, {
-        preferredKind: targetConfig?.defaultKindId
+        preferredKind: targetConfig?.defaultKindId,
+        unavailableExternalIds
       }),
-    [unmappedAlga, externalEntities, targetConfig?.defaultKindId]
+    [unmappedAlga, externalEntities, targetConfig?.defaultKindId, unavailableExternalIds]
   );
 
   const externalById = useMemo(
