@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { buildInboundEmailHtmlFromMime } from '../renderInboundEmailHtml';
@@ -148,5 +150,45 @@ describe('buildInboundEmailHtmlFromMime', () => {
     );
 
     expect(html).toBeNull();
+  });
+});
+
+/**
+ * The renderer is imported by a Next route handler. Pulling
+ * `@blocknote/server-util` (directly or through `contentConversion`) into that
+ * graph evaluates React's `createContext` on the server and the route fails to
+ * instantiate with a 500 before any of the behavior above runs — a failure no
+ * behavioral test here can see.
+ */
+describe('renderInboundEmailHtml module graph', () => {
+  it('never reaches BlockNote conversion', () => {
+    const entry = resolve(__dirname, '../renderInboundEmailHtml.ts');
+    const visited = new Set<string>();
+    const queue = [entry];
+
+    while (queue.length > 0) {
+      const file = queue.shift() as string;
+      if (visited.has(file)) continue;
+      visited.add(file);
+
+      const source = readFileSync(file, 'utf8');
+      const specifiers = Array.from(
+        source.matchAll(/(?:^|\n)\s*(?:import|export)[^'";]*from\s*['"]([^'"]+)['"]/g),
+        (match) => match[1]
+      );
+
+      for (const specifier of specifiers) {
+        expect(specifier).not.toMatch(/@blocknote\//);
+        expect(specifier).not.toMatch(/contentConversion$/);
+        if (!specifier.startsWith('.')) continue;
+
+        const candidate = resolve(dirname(file), specifier);
+        const target = [`${candidate}.ts`, `${candidate}/index.ts`].find((path) => existsSync(path));
+        if (target) queue.push(target);
+      }
+    }
+
+    // A silent resolution failure would make the assertions above vacuous.
+    expect(visited.size).toBeGreaterThan(3);
   });
 });

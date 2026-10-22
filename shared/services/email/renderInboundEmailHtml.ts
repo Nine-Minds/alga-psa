@@ -25,7 +25,11 @@ import { sanitizeEmailHtml } from '../../lib/email/sanitizeEmailHtml';
 import { INBOUND_MIME_PARSE_OPTIONS } from './inboundMimeParseOptions';
 import { ORIGINAL_EMAIL_ATTACHMENT_ID } from './inboundEmailArtifactHelpers';
 import { rfcMessageIdLookupForms } from './inboundEmailIdentity';
-import { rewriteEmbeddedImageSourcesInContent } from './inboundEmbeddedImageUrlRewrite';
+// The pure sibling, not `inboundEmbeddedImageUrlRewrite`: that module also
+// converts bodies to BlockNote, and importing `@blocknote/server-util` into a
+// route handler pulls React's `createContext` into a server graph, which makes
+// the route fail to instantiate.
+import { rewriteEmbeddedImageSourcesInContent } from './embeddedImageSourceRewrite';
 import { getStorageProvider } from './inboundEmailSourceStager';
 import type { EmbeddedImageUrlMapping } from './processInboundEmailArtifacts';
 
