@@ -10,6 +10,7 @@ import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import * as RadixTooltip from '@radix-ui/react-tooltip';
 
 const SYMBOLS: Record<string, string> = { USD: '$', CAD: 'CA$', EUR: '€' };
 
@@ -34,6 +35,7 @@ import { ServiceHourlyConfigForm } from './ServiceHourlyConfigForm';
 
 const renderForm = (currencyCode: string) =>
   render(
+    <RadixTooltip.Provider>
     <ServiceHourlyConfigForm
       configId="cfg-1"
       config={{ hourly_rate: 10000, minimum_billable_time: 15, round_up_to_nearest: 15 }}
@@ -41,7 +43,8 @@ const renderForm = (currencyCode: string) =>
       onHourlyFieldChange={vi.fn()}
       onUserTypeRatesChange={vi.fn()}
       currencyCode={currencyCode}
-    />,
+    />
+    </RadixTooltip.Provider>,
   );
 
 describe('ServiceHourlyConfigForm currency', () => {
