@@ -1094,6 +1094,16 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   });
 
   registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/{id}/project-links',
+    summary: 'List the project tasks a ticket is linked to',
+    description: 'Returns each project task the ticket is linked to, with its project, phase and current status (custom status name, then project status, then standard), is_closed, and when the task last changed. Requires read on the ticket and on project; links to projects the caller cannot read are omitted.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: ticketStdResponses({ code: 200, description: 'Linked project tasks.' }),
+    extensions: ticketExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
     method: 'get', path: '/api/v1/tickets/by-external-link',
     summary: 'Find a ticket by external link',
     description: 'Returns the ticket and matching external link for a given system/external_id (and optional external_parent_id); 404 when no ticket carries it.',
