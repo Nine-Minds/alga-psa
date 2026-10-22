@@ -984,7 +984,8 @@
         "description": "Beskrivning",
         "items": "Poster",
         "status": "Status",
-        "actions": "Åtgärder"
+        "actions": "Åtgärder",
+        "scope": "Tillgänglig för"
       },
       "statusLabels": {
         "active": "Aktiv",
@@ -1002,7 +1003,9 @@
         "down": "Ner",
         "remove": "Ta bort",
         "addItem": "Lägg till post",
-        "addRule": "Lägg till regel"
+        "addRule": "Lägg till regel",
+        "duplicateToClient": "Duplicera till kund…",
+        "duplicate": "Duplicera"
       },
       "fields": {
         "name": {
@@ -1057,7 +1060,13 @@
             "inbound_email": "Inkommande e-post",
             "api": "API",
             "recurring": "Återkommande schema"
-          }
+          },
+          "clientScopedWarning": "Den här mallen är begränsad till {{client}}: dessa regler gäller bara ärenden för {{client}}."
+        },
+        "availableTo": {
+          "label": "Tillgänglig för",
+          "clear": "Alla kunder",
+          "help": "Låt stå på Alla kunder för att erbjuda mallen på alla ärenden, eller välj en kund för att begränsa den till kundens ärenden."
         }
       },
       "dialog": {
@@ -1065,13 +1074,17 @@
         "editTemplate": "Redigera checklistemall",
         "createFirstHelp": "Skapa mallen först och lägg sedan till checklistans poster och regler för automatisk tillämpning.",
         "deleteTitle": "Radera checklistemall",
-        "deleteMessage": "Vill du radera ”{{name}}”? Checklistor som redan lagts till på ärenden påverkas inte."
+        "deleteMessage": "Vill du radera ”{{name}}”? Checklistor som redan lagts till på ärenden påverkas inte.",
+        "duplicateTitle": "Duplicera till kund",
+        "duplicateHelp": "Kopiera \"{{name}}\" och dess punkter till en ny mall som är begränsad till en kund. Kopian är oberoende: senare ändringar i den ena mallen påverkar inte den andra.",
+        "duplicateClientPlaceholder": "Välj en kund"
       },
       "messages": {
         "success": {
           "created": "Checklistemallen har skapats",
           "updated": "Checklistemallen har uppdaterats",
-          "deleted": "Checklistemallen har raderats"
+          "deleted": "Checklistemallen har raderats",
+          "duplicated": "Checklistmall duplicerad till kund"
         },
         "error": {
           "fetchFailed": "Det gick inte att hämta checklistemallar",
@@ -1081,8 +1094,18 @@
           "deleteFailed": "Det gick inte att radera checklistemallen",
           "updateStatusFailed": "Det gick inte att uppdatera mallens status",
           "itemSaveFailed": "Det gick inte att spara checklistans post",
-          "ruleSaveFailed": "Det gick inte att spara regeln för automatisk tillämpning"
+          "ruleSaveFailed": "Det gick inte att spara regeln för automatisk tillämpning",
+          "duplicateFailed": "Det gick inte att duplicera checklistmallen"
         }
+      },
+      "scope": {
+        "allClients": "Alla kunder",
+        "unknownClient": "Okänd kund"
+      },
+      "filter": {
+        "client": "Kund",
+        "allClients": "Alla kunder",
+        "clear": "Rensa filter"
       }
     },
     "externalSystems": {

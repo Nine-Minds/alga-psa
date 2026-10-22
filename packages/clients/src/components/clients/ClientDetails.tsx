@@ -40,6 +40,7 @@ import {
 } from '@alga-psa/clients/actions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
+import ClientChecklistsTab from './ClientChecklistsTab';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -1461,6 +1462,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           {renderClientOpportunities({ clientId: client.client_id, clientName: client.client_name, clientLifecycleStatus: client.lifecycle_status ?? null })}
         </div>
       ),
+    }] : []),
+    ...(shouldRenderPsaOnlyClientSurfaces ? [{
+      id: 'checklists',
+      label: t('clientDetails.checklistsTab', { defaultValue: 'Checklists' }),
+      content: <ClientChecklistsTab clientId={client.client_id} />,
     }] : []),
     {
       id: 'billing',

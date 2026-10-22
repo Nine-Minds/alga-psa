@@ -77,12 +77,16 @@ import {
 } from '../../../../packages/tickets/src/actions/checklists/ticketChecklistActions';
 import {
   createChecklistTemplate,
+  getChecklistTemplates,
+  duplicateChecklistTemplateToClient,
   addChecklistTemplateItem,
   updateChecklistTemplateItem,
   deleteChecklistTemplateItem,
   createChecklistTemplateApplyRule,
   updateChecklistTemplateApplyRule,
 } from '../../../../packages/tickets/src/actions/checklists/checklistTemplateActions';
+import { applyChecklistTemplate } from '../../../../packages/tickets/src/actions/checklists/applyChecklistTemplate';
+import { deactivateClientScopedChecklistTemplates } from '../../../../packages/clients/src/lib/clientChecklistTemplates';
 import {
   applyChecklistTemplateToTicket,
   applyMatchingChecklistTemplates,
@@ -747,6 +751,138 @@ describe('ticket checklists', () => {
 
       const ticketId = await createTicketViaModel(localFixture, { title: 'Anything at all' });
       expect(await appliedTemplateIds(ticketId)).toContain(templateId);
+    });
+  });
+
+  describe('client-scoped templates', () => {
+    async function createScopedTemplate(clientId: string | null, itemNames: string[] = ['Scoped step']): Promise<string> {
+      const template = expectActionSuccess(
+        await createChecklistTemplate({ name: `Scoped ${uuidv4().slice(0, 8)}`, client_id: clientId })
+      );
+      for (const name of itemNames) {
+        expectActionSuccess(await addChecklistTemplateItem(template.template_id, { item_name: name }));
+      }
+      return template.template_id;
+    }
+
+    it('applies a scoped template on its own client\'s ticket', async () => {
+      const ticketId = await insertTicket(db, fixture);
+      const templateId = await createScopedTemplate(fixture.clientId);
+      const result = await db.transaction((trx) =>
+        applyChecklistTemplateToTicket(trx, fixture.tenantId, ticketId, templateId, 'template')
+      );
+      expect(result).toEqual({ applied: true, itemsAdded: 1 });
+    });
+
+    it('refuses a scoped template on another client\'s ticket (shared + manual action)', async () => {
+      const other = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+      const otherTicket = await insertTicket(db, other);
+      const templateId = await createScopedTemplate(fixture.clientId);
+
+      const shared = await db.transaction((trx) =>
+        applyChecklistTemplateToTicket(trx, fixture.tenantId, otherTicket, templateId, 'template')
+      );
+      expect(shared).toEqual({ applied: false, itemsAdded: 0, reason: 'template-client-mismatch' });
+
+      const manual = await applyChecklistTemplate(otherTicket, templateId);
+      expect(manual).toMatchObject({ messageKey: 'features/tickets:errors.checklist.templateClientMismatch' });
+
+      expect(await getTicketChecklistItems(otherTicket)).toHaveLength(0);
+      const audits = await scopedDbFor(fixture.tenantId).table('ticket_audit_logs')
+        .where({ ticket_id: otherTicket, event_type: 'TICKET_CHECKLIST_TEMPLATE_APPLIED' });
+      expect(audits).toHaveLength(0);
+    });
+
+    it('auto-apply skips an out-of-scope template even when the rule matches', async () => {
+      const ruleFixture = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+      const otherClient = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+      const scoped = await createScopedTemplate(otherClient.clientId);
+      const wide = await createScopedTemplate(null, ['Wide step']);
+      for (const templateId of [scoped, wide]) {
+        expectActionSuccess(await createChecklistTemplateApplyRule(templateId, { board_id: ruleFixture.boardId }));
+      }
+      const ticketId = await insertTicket(db, ruleFixture);
+      const applied = await db.transaction((trx) =>
+        applyMatchingChecklistTemplates(trx, ruleFixture.tenantId, {
+          ticket_id: ticketId,
+          board_id: ruleFixture.boardId,
+          priority_id: ruleFixture.priorityId,
+          category_id: null,
+          subcategory_id: null,
+        })
+      );
+      // Only the tenant-wide template applied; the scoped one was skipped without error.
+      expect(applied).toBe(1);
+      const items = await getTicketChecklistItems(ticketId);
+      expect(items.map((i) => i.template_id)).toEqual([wide]);
+    });
+
+    it('a tenant-wide template still applies on every client', async () => {
+      const other = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+      const templateId = await createScopedTemplate(null);
+      for (const f of [fixture, other]) {
+        const ticketId = await insertTicket(db, f);
+        const result = await db.transaction((trx) =>
+          applyChecklistTemplateToTicket(trx, fixture.tenantId, ticketId, templateId, 'template')
+        );
+        expect(result.applied).toBe(true);
+      }
+    });
+
+    it('the picker query excludes other clients\' templates', async () => {
+      const other = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+      const mine = await createScopedTemplate(fixture.clientId);
+      const theirs = await createScopedTemplate(other.clientId);
+      const wide = await createScopedTemplate(null);
+      const ticketId = await insertTicket(db, fixture);
+
+      const picker = (await getChecklistTemplates({ forTicketId: ticketId })).map((t) => t.template_id);
+      expect(picker).toContain(mine);
+      expect(picker).toContain(wide);
+      expect(picker).not.toContain(theirs);
+
+      const settingsList = (await getChecklistTemplates()).map((t) => t.template_id);
+      expect(settingsList).toContain(theirs);
+      const withName = (await getChecklistTemplates({ clientId: other.clientId }))[0];
+      expect(withName).toMatchObject({ template_id: theirs, client_id: other.clientId });
+      expect(withName.client_name).toBeTruthy();
+    });
+
+    it('rejects a client that does not belong to the tenant', async () => {
+      const result = await createChecklistTemplate({ name: 'Bad client', client_id: uuidv4() });
+      expect(result).toMatchObject({ messageKey: 'features/tickets:errors.checklist.templateClientInvalid' });
+    });
+
+    it('client deletion deactivates and detaches that client\'s scoped templates', async () => {
+      const doomed = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+      const scoped = await createScopedTemplate(doomed.clientId);
+      const unrelated = await createScopedTemplate(fixture.clientId);
+
+      const count = await db.transaction((trx) =>
+        deactivateClientScopedChecklistTemplates(trx, fixture.tenantId, doomed.clientId, 'Doomed Co')
+      );
+      expect(count).toBe(1);
+
+      const row = await scopedDbFor(fixture.tenantId).table('checklist_templates').where({ template_id: scoped }).first();
+      expect(row).toMatchObject({ is_active: false, client_id: null });
+      expect(row.description).toContain('Doomed Co');
+      const untouched = await scopedDbFor(fixture.tenantId).table('checklist_templates').where({ template_id: unrelated }).first();
+      expect(untouched).toMatchObject({ is_active: true, client_id: fixture.clientId });
+    });
+
+    it('duplicate-to-client copies items and sets client_id', async () => {
+      const other = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+      const sourceId = await createTemplateWithItems([{ name: 'One' }, { name: 'Two', required: false }]);
+      const copy = expectActionSuccess(await duplicateChecklistTemplateToClient(sourceId, other.clientId));
+      expect(copy.template_id).not.toBe(sourceId);
+      expect(copy.client_id).toBe(other.clientId);
+      expect(copy.description).toContain('Copied from');
+
+      const items = await scopedDbFor(fixture.tenantId).table('checklist_template_items')
+        .where({ template_id: copy.template_id }).orderBy('order_number', 'asc');
+      expect(items.map((i: any) => [i.item_name, i.is_required])).toEqual([['One', true], ['Two', false]]);
+      const source = await scopedDbFor(fixture.tenantId).table('checklist_templates').where({ template_id: sourceId }).first();
+      expect(source.client_id).toBeNull();
     });
   });
 });

@@ -1697,7 +1697,9 @@
       "ruleSubcategoryRequiresCategory": "Välj en kategori innan du väljer en underkategori.",
       "ruleTooManyKeywords": "Använd högst {{max}} nyckelord per regel.",
       "ruleKeywordTooLong": "Varje nyckelord får vara högst {{max}} tecken långt.",
-      "ruleOriginInvalid": "En av de valda ärendekällorna är ogiltig."
+      "ruleOriginInvalid": "En av de valda ärendekällorna är ogiltig.",
+      "templateClientMismatch": "Den här checklistmallen är begränsad till en annan kund än ärendets kund.",
+      "templateClientInvalid": "Den valda kunden hittades inte."
     }
   },
   "ticketSection": {

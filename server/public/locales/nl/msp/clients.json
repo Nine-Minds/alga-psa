@@ -317,7 +317,19 @@
     "inboundDomainAutoCreateUpdated": "Instelling voor afzendercontacten bijgewerkt.",
     "inboundDomainAutoCreateUpdateFailed": "Instelling voor afzendercontacten kan niet worden bijgewerkt.",
     "recurringTickets": "Terugkerende tickets",
-    "software": "Software"
+    "software": "Software",
+    "checklistsTab": "Checklists",
+    "checklists": {
+      "name": "Naam",
+      "items": "Items",
+      "status": "Status",
+      "active": "Actief",
+      "inactive": "Inactief",
+      "description": "Checklistsjablonen die alleen bij tickets van deze klant worden aangeboden. Bewerk ze via Instellingen > Tickets > Checklistsjablonen.",
+      "empty": "Geen klantspecifieke checklistsjablonen.",
+      "loadFailed": "Checklistsjablonen laden mislukt",
+      "retry": "Opnieuw proberen"
+    }
   },
   "clientCommandCenter": {
     "cards": {

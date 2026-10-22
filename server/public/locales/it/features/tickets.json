@@ -1689,7 +1689,9 @@
       "ruleSubcategoryRequiresCategory": "Seleziona una categoria prima di scegliere una sottocategoria.",
       "ruleTooManyKeywords": "Usi al massimo {{max}} parole chiave per regola.",
       "ruleKeywordTooLong": "Ogni parola chiave può avere al massimo {{max}} caratteri.",
-      "ruleOriginInvalid": "Una delle origini ticket selezionate non è valida."
+      "ruleOriginInvalid": "Una delle origini ticket selezionate non è valida.",
+      "templateClientMismatch": "Questo modello di checklist è limitato a un cliente diverso da quello del ticket.",
+      "templateClientInvalid": "Il cliente selezionato non è stato trovato."
     }
   },
   "ticketSection": {

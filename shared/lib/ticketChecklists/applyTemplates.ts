@@ -22,9 +22,30 @@ import {
  * See docs/plans/2026-06-10-ticket-close-rules/PRD.md §5.2.
  */
 
+/** Why a template was not applied, when that is not simply "already applied" / "no items". */
+export const CHECKLIST_TEMPLATE_CLIENT_MISMATCH = 'template-client-mismatch' as const;
+
 export interface ApplyChecklistTemplateResult {
   applied: boolean;
   itemsAdded: number;
+  /**
+   * Set when the template was refused. `template-client-mismatch`: the template is scoped to a
+   * client (checklist_templates.client_id) other than the ticket's client. Nothing is inserted and
+   * no activity is written. Callers decide how to surface it (manual: error; auto-apply and
+   * ticket creation: skip; workflow: report in the action output).
+   */
+  reason?: typeof CHECKLIST_TEMPLATE_CLIENT_MISMATCH;
+}
+
+/**
+ * Template scope predicate: a template with no client is tenant-wide; otherwise it is only in
+ * scope for tickets of that client. Independent of auto-apply rule matching.
+ */
+export function isChecklistTemplateInScopeForClient(
+  templateClientId: string | null | undefined,
+  ticketClientId: string | null | undefined
+): boolean {
+  return !templateClientId || templateClientId === ticketClientId;
 }
 
 export interface ChecklistApplyAuditContext {
@@ -34,6 +55,7 @@ export interface ChecklistApplyAuditContext {
 
 interface ChecklistTemplateRow {
   name: string;
+  client_id: string | null;
 }
 
 interface ChecklistTemplateItemRow {
@@ -225,6 +247,19 @@ export async function applyChecklistTemplateToTicket(
     throw new Error('Checklist template not found');
   }
 
+  // Client scope. Enforced here, the single apply chokepoint, so no caller can bypass it.
+  if (template.client_id) {
+    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ ticket_id: ticketId })
+      .first('client_id') as { client_id: string | null } | undefined;
+    if (!ticket) {
+      throw new Error('Ticket not found');
+    }
+    if (!isChecklistTemplateInScopeForClient(template.client_id, ticket.client_id)) {
+      return { applied: false, itemsAdded: 0, reason: CHECKLIST_TEMPLATE_CLIENT_MISMATCH };
+    }
+  }
+
   // Idempotency: a template never applies twice to the same ticket.
   const alreadyApplied = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
     .where({ ticket_id: ticketId, template_id: templateId })
@@ -347,6 +382,8 @@ export async function applyMatchingChecklistTemplates(
       'template',
       auditContext
     );
+    // Out-of-scope templates (reason set) are skipped silently: rule match and template scope
+    // are independent predicates, and the matcher above deliberately knows nothing of scope.
     if (result.applied) appliedCount++;
   }
   return appliedCount;

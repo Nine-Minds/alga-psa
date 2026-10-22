@@ -1689,7 +1689,9 @@
       "ruleSubcategoryRequiresCategory": "Sélectionnez une catégorie avant de choisir une sous-catégorie.",
       "ruleTooManyKeywords": "Utilisez au maximum {{max}} mots-clés par règle.",
       "ruleKeywordTooLong": "Chaque mot-clé doit comporter {{max}} caractères au plus.",
-      "ruleOriginInvalid": "L'une des sources de ticket sélectionnées n'est pas valide."
+      "ruleOriginInvalid": "L'une des sources de ticket sélectionnées n'est pas valide.",
+      "templateClientMismatch": "Ce modèle de liste de contrôle est limité à un autre client que celui du ticket.",
+      "templateClientInvalid": "Le client sélectionné est introuvable."
     }
   },
   "ticketSection": {

@@ -317,7 +317,19 @@
     "inboundDomainAutoCreateUpdated": "Paramètre des contacts expéditeurs mis à jour.",
     "inboundDomainAutoCreateUpdateFailed": "Impossible de mettre à jour le paramètre des contacts expéditeurs.",
     "recurringTickets": "Tickets récurrents",
-    "software": "Logiciels"
+    "software": "Logiciels",
+    "checklistsTab": "Listes de contrôle",
+    "checklists": {
+      "name": "Nom",
+      "items": "Éléments",
+      "status": "Statut",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "description": "Modèles de listes de contrôle proposés uniquement sur les tickets de ce client. Modifiez-les dans Paramètres > Tickets > Modèles de listes de contrôle.",
+      "empty": "Aucun modèle de liste de contrôle propre au client.",
+      "loadFailed": "Échec du chargement des modèles de listes de contrôle",
+      "retry": "Réessayer"
+    }
   },
   "clientCommandCenter": {
     "cards": {

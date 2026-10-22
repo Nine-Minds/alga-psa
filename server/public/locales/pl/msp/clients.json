@@ -347,7 +347,19 @@
     "inboundDomainAutoCreateUpdated": "Zaktualizowano ustawienie kontaktów nadawców.",
     "inboundDomainAutoCreateUpdateFailed": "Nie udało się zaktualizować ustawienia kontaktów nadawców.",
     "recurringTickets": "Zgłoszenia cykliczne",
-    "software": "Oprogramowanie"
+    "software": "Oprogramowanie",
+    "checklistsTab": "Listy kontrolne",
+    "checklists": {
+      "name": "Nazwa",
+      "items": "Pozycje",
+      "status": "Status",
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "description": "Szablony list kontrolnych oferowane tylko w zgłoszeniach tego klienta. Edytuj je w Ustawienia > Zgłoszenia > Szablony list kontrolnych.",
+      "empty": "Brak szablonów list kontrolnych specyficznych dla klienta.",
+      "loadFailed": "Nie udało się wczytać szablonów list kontrolnych",
+      "retry": "Ponów"
+    }
   },
   "clientCommandCenter": {
     "cards": {

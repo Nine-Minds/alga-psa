@@ -984,7 +984,8 @@
         "description": "Descrizione",
         "items": "Elementi",
         "status": "Stato",
-        "actions": "Azioni"
+        "actions": "Azioni",
+        "scope": "Disponibile per"
       },
       "statusLabels": {
         "active": "Attivo",
@@ -1002,7 +1003,9 @@
         "down": "Giù",
         "remove": "Rimuovi",
         "addItem": "Aggiungi elemento",
-        "addRule": "Aggiungi regola"
+        "addRule": "Aggiungi regola",
+        "duplicateToClient": "Duplica per cliente…",
+        "duplicate": "Duplica"
       },
       "fields": {
         "name": {
@@ -1057,7 +1060,13 @@
             "inbound_email": "E-mail in arrivo",
             "api": "API",
             "recurring": "Pianificazione ricorrente"
-          }
+          },
+          "clientScopedWarning": "Questo modello è limitato a {{client}}: queste regole si applicano solo ai ticket di {{client}}."
+        },
+        "availableTo": {
+          "label": "Disponibile per",
+          "clear": "Tutti i clienti",
+          "help": "Lascia «Tutti i clienti» per offrire il modello su ogni ticket, oppure scegli un cliente per limitarlo ai suoi ticket."
         }
       },
       "dialog": {
@@ -1065,13 +1074,17 @@
         "editTemplate": "Modifica modello di checklist",
         "createFirstHelp": "Crea prima il modello, poi aggiungi gli elementi della checklist e le regole di applicazione automatica.",
         "deleteTitle": "Elimina modello di checklist",
-        "deleteMessage": "Eliminare davvero \"{{name}}\"? Le checklist già aggiunte ai ticket non saranno interessate."
+        "deleteMessage": "Eliminare davvero \"{{name}}\"? Le checklist già aggiunte ai ticket non saranno interessate.",
+        "duplicateTitle": "Duplica per cliente",
+        "duplicateHelp": "Copia «{{name}}» e i suoi elementi in un nuovo modello limitato a un cliente. La copia è indipendente: le modifiche successive all'uno o all'altro non influiscono sull'altro.",
+        "duplicateClientPlaceholder": "Seleziona un cliente"
       },
       "messages": {
         "success": {
           "created": "Modello di checklist creato con successo",
           "updated": "Modello di checklist aggiornato con successo",
-          "deleted": "Modello di checklist eliminato con successo"
+          "deleted": "Modello di checklist eliminato con successo",
+          "duplicated": "Modello di checklist duplicato per il cliente"
         },
         "error": {
           "fetchFailed": "Impossibile recuperare i modelli di checklist",
@@ -1081,8 +1094,18 @@
           "deleteFailed": "Impossibile eliminare il modello di checklist",
           "updateStatusFailed": "Impossibile aggiornare lo stato del modello",
           "itemSaveFailed": "Impossibile salvare l'elemento della checklist",
-          "ruleSaveFailed": "Impossibile salvare la regola di applicazione automatica"
+          "ruleSaveFailed": "Impossibile salvare la regola di applicazione automatica",
+          "duplicateFailed": "Impossibile duplicare il modello di checklist"
         }
+      },
+      "scope": {
+        "allClients": "Tutti i clienti",
+        "unknownClient": "Cliente sconosciuto"
+      },
+      "filter": {
+        "client": "Cliente",
+        "allClients": "Tutti i clienti",
+        "clear": "Cancella filtro"
       }
     },
     "externalSystems": {

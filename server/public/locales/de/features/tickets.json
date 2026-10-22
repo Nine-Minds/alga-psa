@@ -1689,7 +1689,9 @@
       "ruleSubcategoryRequiresCategory": "Wählen Sie eine Kategorie aus, bevor Sie eine Unterkategorie wählen.",
       "ruleTooManyKeywords": "Verwenden Sie höchstens {{max}} Schlüsselwörter pro Regel.",
       "ruleKeywordTooLong": "Jedes Schlüsselwort darf höchstens {{max}} Zeichen lang sein.",
-      "ruleOriginInvalid": "Eine der ausgewählten Ticketquellen ist ungültig."
+      "ruleOriginInvalid": "Eine der ausgewählten Ticketquellen ist ungültig.",
+      "templateClientMismatch": "Diese Checklistenvorlage ist auf einen anderen Client beschränkt als den des Tickets.",
+      "templateClientInvalid": "Der ausgewählte Client wurde nicht gefunden."
     }
   },
   "ticketSection": {
