@@ -535,6 +535,7 @@
         "renewal": "data decyzji o odnowieniu umowy",
         "contractEnd": "data zakończenia umowy",
         "warrantyEnd": "data zakończenia gwarancji zasobu",
+        "maintenanceDue": "data terminu przeglądu zasobu",
         "ticketStatusAge": "dzień, w którym zgłoszenie osiąga liczbę dni w statusie"
       }
     }
@@ -795,6 +796,7 @@
       "dateSourceRenewal": "Data decyzji o odnowieniu umowy",
       "dateSourceContractEnd": "Data zakończenia umowy",
       "dateSourceWarranty": "Koniec gwarancji zasobu",
+      "dateSourceMaintenanceDue": "Przegląd zasobu do wykonania",
       "dateOffset": "Dni",
       "dateDirection": "Moment",
       "before": "Przed",

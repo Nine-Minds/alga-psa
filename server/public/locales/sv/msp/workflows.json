@@ -535,6 +535,7 @@
         "renewal": "avtalets beslutsdatum för förnyelse",
         "contractEnd": "avtalets slutdatum",
         "warrantyEnd": "tillgångens slutdatum för garantin",
+        "maintenanceDue": "underhållets förfallodatum för tillgången",
         "ticketStatusAge": "dagen då ärendet når antalet dagar i status"
       }
     }
@@ -795,6 +796,7 @@
       "dateSourceRenewal": "Beslutsdatum för avtalsförnyelse",
       "dateSourceContractEnd": "Avtalets slutdatum",
       "dateSourceWarranty": "Tillgångens garantislut",
+      "dateSourceMaintenanceDue": "Underhåll av tillgång förfaller",
       "dateOffset": "Dagar",
       "dateDirection": "Tidpunkt",
       "before": "Före",

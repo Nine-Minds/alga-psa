@@ -535,6 +535,7 @@
         "renewal": "a data de decisão de renovação do contrato",
         "contractEnd": "a data de término do contrato",
         "warrantyEnd": "a data de término da garantia do ativo",
+        "maintenanceDue": "a data de vencimento da manutenção do ativo",
         "ticketStatusAge": "o dia em que o ticket atinge o número de dias no status"
       }
     }
@@ -795,6 +796,7 @@
       "dateSourceRenewal": "Data de decisão de renovação do contrato",
       "dateSourceContractEnd": "Data de término do contrato",
       "dateSourceWarranty": "Fim da garantia do ativo",
+      "dateSourceMaintenanceDue": "Manutenção do ativo vencida",
       "dateOffset": "Dias",
       "dateDirection": "Momento",
       "before": "Antes",

@@ -89,6 +89,18 @@ export const dateTriggerSourceDefinitions = [
     domainEvent: { eventType: 'ASSET_WARRANTY_EXPIRING', windowDays: 30 },
   },
   {
+    id: 'asset.maintenance_due',
+    labelKey: 'designer.form.dateSourceMaintenanceDue',
+    defaultLabel: 'Asset maintenance due',
+    payloadSchemaRef: 'payload.AssetMaintenanceDue.v1',
+    mode: 'window',
+    // 'once' per occurrence row: each completed maintenance closes its occurrence and the service
+    // opens a fresh one for the next cycle, so per-occurrence firing is per-cycle firing.
+    recurrence: 'once',
+    hasParams: false,
+    usesOffset: true,
+  },
+  {
     id: 'ticket.status_age',
     labelKey: 'designer.form.dateSourceTicketStatusAge',
     defaultLabel: 'Ticket in status for N days',
