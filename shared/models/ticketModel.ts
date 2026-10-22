@@ -14,7 +14,7 @@ import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
 import { resolveTicketEventActor } from '@alga-psa/event-schemas';
 import { isSilentTicketCreation, isTicketCreationWithPayloadExtras, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
-import { applyMatchingChecklistTemplates, type TicketServiceRequestContext } from '../lib/ticketChecklists';
+import { applyMatchingChecklistTemplates, ticketDescriptionToPlainText, type TicketServiceRequestContext } from '../lib/ticketChecklists';
 import { ticketStatusClockPatch } from '../lib/ticketStatusClock';
 import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipients';
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
@@ -1046,7 +1046,7 @@ export class TicketModel {
         client_id: cleanedInput.client_id ?? null,
         ticket_origin: cleanedInput.ticket_origin || TICKET_ORIGINS.INTERNAL,
         title: cleanedInput.title,
-        description: cleanedInput.description ?? null,
+        description: ticketDescriptionToPlainText(cleanedInput.description),
         // null (not undefined) skips the submissions lookup: a ticket that was
         // just inserted can only be service-request-backed if the caller says so.
         serviceRequest: options?.serviceRequest ?? null,

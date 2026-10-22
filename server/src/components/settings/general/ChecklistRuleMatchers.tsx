@@ -240,6 +240,7 @@ const ChecklistRuleMatchers: React.FC<ChecklistRuleMatchersProps> = ({
                 value={rule.keyword_mode}
                 onValueChange={(value) => onChange({ keyword_mode: value as 'any' | 'all' })}
                 options={modeOptions}
+                showPlaceholderInDropdown={false}
               />
             </div>
             <div>
@@ -251,6 +252,7 @@ const ChecklistRuleMatchers: React.FC<ChecklistRuleMatchersProps> = ({
                   onChange({ keyword_target: value as IChecklistTemplateApplyRule['keyword_target'] })
                 }
                 options={targetOptions}
+                showPlaceholderInDropdown={false}
               />
             </div>
           </div>

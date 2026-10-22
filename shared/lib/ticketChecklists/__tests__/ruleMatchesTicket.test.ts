@@ -5,6 +5,7 @@ vi.mock('@alga-psa/db', () => ({ tenantDb: () => ({}) }));
 import {
   ruleMatchesTicket,
   ticketDescriptionFromAttributes,
+  ticketDescriptionToPlainText,
   type ChecklistApplyRuleMatchers,
   type ChecklistRuleTicketInput,
 } from '../applyTemplates';
@@ -172,5 +173,58 @@ describe('ticketDescriptionFromAttributes', () => {
     expect(ticketDescriptionFromAttributes(null)).toBeNull();
     expect(ticketDescriptionFromAttributes('not json')).toBeNull();
     expect(ticketDescriptionFromAttributes({ description: 3 })).toBeNull();
+  });
+});
+
+describe('BlockNote descriptions are matched on visible text only', () => {
+  const blocks = [
+    {
+      id: 'b1',
+      type: 'paragraph',
+      props: { textColor: 'default', backgroundColor: 'default', textAlignment: 'left' },
+      content: [{ type: 'text', text: 'Mouse is broken, needs replacing', styles: {} }],
+      children: [],
+    },
+  ];
+  const VISIBLE = 'Mouse is broken, needs replacing';
+  const shapes: Record<string, unknown> = {
+    'BlockNote JSON string': JSON.stringify(blocks),
+    'parsed BlockNote array': blocks,
+    'attributes as JSON string': JSON.stringify({ description: JSON.stringify(blocks) }),
+    'attributes with parsed array': { description: blocks },
+    'plain string': VISIBLE,
+  };
+
+  for (const [name, input] of Object.entries(shapes)) {
+    it(`${name}: flattens to visible text; "left" misses, "mouse" hits`, () => {
+      const isAttrs = name.startsWith('attributes');
+      const text = isAttrs ? ticketDescriptionFromAttributes(input) : ticketDescriptionToPlainText(input);
+      expect(text).toBe(VISIBLE);
+      for (const keyword_target of ['description', 'title_and_description'] as const) {
+        const t = ticket({ title: 'Broken peripheral', description: text });
+        expect(ruleMatchesTicket(rule({ keywords: ['left'], keyword_target }), t)).toBe(false);
+        expect(ruleMatchesTicket(rule({ keywords: ['mouse'], keyword_target }), t)).toBe(true);
+      }
+    });
+  }
+
+  it('passes plain/markdown strings through unchanged, including JSON-looking scalars', () => {
+    expect(ticketDescriptionToPlainText('**bold** text')).toBe('**bold** text');
+    expect(ticketDescriptionToPlainText('123')).toBe('123');
+    expect(ticketDescriptionToPlainText('null')).toBe('null');
+    expect(ticketDescriptionToPlainText('[x] done')).toBe('[x] done');
+  });
+
+  it('returns null for empty / unusable input and flattens ProseMirror docs', () => {
+    expect(ticketDescriptionToPlainText('')).toBeNull();
+    expect(ticketDescriptionToPlainText('   ')).toBeNull();
+    expect(ticketDescriptionToPlainText(null)).toBeNull();
+    expect(ticketDescriptionToPlainText(42)).toBeNull();
+    expect(ticketDescriptionToPlainText({ foo: 'left' })).toBeNull();
+    expect(ticketDescriptionToPlainText([])).toBeNull();
+    expect(ticketDescriptionToPlainText([{ type: 'paragraph', content: [], children: [] }])).toBeNull();
+    expect(
+      ticketDescriptionToPlainText({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'hello' }] }] })
+    ).toBe('hello');
   });
 });

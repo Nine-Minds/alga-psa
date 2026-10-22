@@ -675,6 +675,66 @@ describe('ticket checklists', () => {
       expect(await appliedTemplateIds(unlinked)).not.toContain(templateId);
     });
 
+    describe('BlockNote descriptions match on visible text, not raw JSON', () => {
+      const blockNote = [
+        {
+          id: 'bn1',
+          type: 'paragraph',
+          props: { textColor: 'default', backgroundColor: 'default', textAlignment: 'left' },
+          content: [{ type: 'text', text: 'Mouse is broken, needs replacing', styles: {} }],
+          children: [],
+        },
+      ];
+
+      async function keywordRules(boardId: string, clientId: string) {
+        const out: Record<string, string> = {};
+        for (const keyword of ['left', 'mouse']) {
+          const templateId = await createTemplateWithItems([{ name: `Keyword ${keyword} step` }]);
+          expectActionSuccess(
+            await createChecklistTemplateApplyRule(templateId, {
+              board_id: boardId,
+              client_ids: [clientId],
+              keywords: [keyword],
+              keyword_target: 'description',
+            })
+          );
+          out[keyword] = templateId;
+        }
+        return out;
+      }
+
+      it('create path', async () => {
+        const localFixture = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+        const rules = await keywordRules(localFixture.boardId, localFixture.clientId);
+        const ticketId = await createTicketViaModel(localFixture, {
+          title: 'Broken peripheral',
+          description: JSON.stringify(blockNote),
+        });
+        const applied = await appliedTemplateIds(ticketId);
+        expect(applied).not.toContain(rules.left);
+        expect(applied).toContain(rules.mouse);
+      });
+
+      it('board-change re-evaluation', async () => {
+        const sourceFixture = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+        const targetFixture = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+        const rules = await keywordRules(targetFixture.boardId, sourceFixture.clientId);
+        const ticketId = await insertTicket(db, sourceFixture, {
+          title: 'Broken peripheral',
+          attributes: JSON.stringify({ description: JSON.stringify(blockNote) }),
+        } as any);
+        await db.transaction((trx) =>
+          updateTicketInTransaction(trx, userRef.user, sourceFixture.tenantId, ticketId, {
+            board_id: targetFixture.boardId,
+            status_id: targetFixture.openStatusId,
+          })
+        );
+        const applied = await appliedTemplateIds(ticketId);
+        expect(applied).not.toContain(rules.left);
+        expect(applied).toContain(rules.mouse);
+      });
+    });
+
     it('rules without the new matchers still apply to plain tickets', async () => {
       const localFixture = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
       const templateId = await createTemplateWithItems([{ name: 'Legacy board rule step' }]);

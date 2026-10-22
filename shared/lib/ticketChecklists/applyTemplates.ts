@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -94,8 +95,39 @@ export interface TicketServiceRequestContext {
 }
 
 /**
+ * Reduce a ticket description to the text the user can see. Rich-text
+ * descriptions are BlockNote JSON (string, or already-parsed array/object in
+ * jsonb); keyword matching must never run against that raw JSON. Plain /
+ * markdown strings pass through unchanged. Returns null when nothing visible.
+ */
+export function ticketDescriptionToPlainText(value: unknown): string | null {
+  let candidate = value;
+  if (typeof value === 'string') {
+    const raw: string = value;
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        candidate = JSON.parse(trimmed);
+      } catch {
+        // Not JSON (e.g. "[x] done"): plain text, unchanged.
+        return trimmed === '' ? null : raw;
+      }
+    } else {
+      // Includes plain text that happens to be valid JSON scalars ("123", "null").
+      return trimmed === '' ? null : raw;
+    }
+  }
+  const isBlockArray = Array.isArray(candidate);
+  const isDoc =
+    !!candidate && typeof candidate === 'object' && (candidate as { type?: unknown }).type === 'doc';
+  if (!isBlockArray && !isDoc) return null;
+  const text = flattenBlockContentToPlainText(candidate);
+  return text.trim() === '' ? null : text;
+}
+
+/**
  * Tickets have no description column: the text lives in attributes.description
- * (jsonb, normally already parsed; tolerate a JSON string).
+ * (jsonb, normally already parsed; tolerate a JSON string). Returns plain text.
  */
 export function ticketDescriptionFromAttributes(attributes: unknown): string | null {
   let attrs = attributes;
@@ -107,7 +139,7 @@ export function ticketDescriptionFromAttributes(attributes: unknown): string | n
     }
   }
   const description = (attrs as { description?: unknown } | null | undefined)?.description;
-  return typeof description === 'string' ? description : null;
+  return ticketDescriptionToPlainText(description);
 }
 
 function normalizeKeywords(keywords: string[] | null | undefined): string[] {
