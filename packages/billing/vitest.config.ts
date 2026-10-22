@@ -58,6 +58,11 @@ export default defineConfig({
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',
       'src/components/invoice-designer/preview/tenantBrandingOverlay.test.ts',
+      // Tenant logo precedence on generated documents (Settings -> Branding
+      // first, own-company client record second) — listed for the same reason
+      // as the branding-seam suites above.
+      'src/lib/adapters/tenantPartyAdapter.test.ts',
+      'src/services/pdfGenerationService.tenantClientLogo.test.ts',
       // Behavioral coverage for realm-exact QBO mapping resolution — listed
       // explicitly for the same reason as the suites above.
       'src/services/accountingSync/realmScopedOperations.test.ts',
