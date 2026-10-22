@@ -2172,5 +2172,9 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Cambiar vista"
+  },
+  "flags": {
+    "vip": "VIP",
+    "poc": "Contacto principal"
   }
 }

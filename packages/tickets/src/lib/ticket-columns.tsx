@@ -8,6 +8,7 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import { PocBadge, VipBadge } from '@alga-psa/ui/components/FlagBadges';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getUserTimeZone } from '@alga-psa/core';
 import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
@@ -463,7 +464,10 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 </span>
               )}
               <span className="flex flex-col gap-0.5 overflow-hidden">
-                <span className="truncate">{value || 'No Client'}</span>
+                <span className="flex items-center gap-1 overflow-hidden">
+                  <span className="truncate">{value || 'No Client'}</span>
+                  <VipBadge isVip={record.client_is_vip} />
+                </span>
                 {multiClient ? (
                   <span
                     className="w-fit rounded px-2 py-0.5 text-[11px] font-medium"
@@ -518,6 +522,8 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 </span>
               )}
               <span className="truncate">{value || <span className="text-[rgb(var(--color-text-400))]">—</span>}</span>
+              <VipBadge isVip={record.contact_is_vip} />
+              <PocBadge isPoc={record.contact_is_primary_contact} />
             </span>
           );
           if (!onContactClick || !record.contact_name_id) {

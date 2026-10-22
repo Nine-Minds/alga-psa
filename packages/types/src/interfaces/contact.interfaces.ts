@@ -72,6 +72,10 @@ export interface IContact extends TenantEntity, ITaggable {
   notes: string | null;
   notes_document_id?: string | null;
   is_inactive: boolean | null;
+  /** VIP contact: labelling and ticket-list filtering only, no priority/SLA semantics. */
+  is_vip?: boolean;
+  /** Point of contact for the client. Unrelated to clients.properties.primary_contact_id ("Default contact"). Not unique per client. */
+  is_primary_contact?: boolean;
   created_at: string;
   updated_at: string;
 
@@ -150,6 +154,8 @@ export interface CreateContactInput {
   role?: string;
   notes?: string;
   is_inactive?: boolean;
+  is_vip?: boolean;
+  is_primary_contact?: boolean;
 }
 
 /**
@@ -167,4 +173,6 @@ export interface UpdateContactInput {
   role?: string;
   notes?: string;
   is_inactive?: boolean;
+  is_vip?: boolean;
+  is_primary_contact?: boolean;
 }

@@ -100,6 +100,7 @@ const clientBodySchema = z.object({
   billing_email: clientEmailField,
   account_manager_id: uuidSchema.optional(),
   is_inactive: z.boolean().optional().default(false),
+  is_vip: z.boolean().optional(),
   // Relationship lifecycle; mirrors the clients.lifecycle_status CHECK constraint.
   lifecycle_status: z.enum(['prospect', 'active', 'former']).optional(),
   // Calendar date the relationship began; null keeps the created_at fallback.
@@ -131,6 +132,7 @@ export const clientFilterSchema = baseFilterSchema.extend({
   client_type: z.enum(['company', 'individual']).optional(),
   billing_cycle: z.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']).optional(),
   is_inactive: z.string().transform(val => val === 'true').optional(),
+  is_vip: z.string().transform(val => val === 'true').optional(),
   is_tax_exempt: z.string().transform(val => val === 'true').optional(),
   account_manager_id: uuidSchema.optional(),
   region_code: z.string().optional(),
@@ -156,6 +158,7 @@ export const clientResponseSchema = z.object({
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   is_inactive: z.boolean(),
+  is_vip: z.boolean().optional(),
   client_type: z.enum(['company', 'individual']).nullable(),
   tax_id_number: z.string().nullable(),
   notes: z.string().nullable(),

@@ -2172,5 +2172,9 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Switch view"
+  },
+  "flags": {
+    "vip": "VIP",
+    "poc": "POC"
   }
 }

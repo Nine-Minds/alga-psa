@@ -59,6 +59,7 @@ import { useRouter } from 'next/navigation';
 import ContactsSkeleton from './ContactsSkeleton';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { PocBadge, VipBadge } from '@alga-psa/ui/components/FlagBadges';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { useListViews } from '@alga-psa/list-views/hooks';
@@ -109,6 +110,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   const [documentLoading, setDocumentLoading] = useState<Record<string, boolean>>({});
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
+  // Loaded contacts are filtered client-side here (same as status/tags), so VIP follows suit.
+  const [vipOnly, setVipOnly] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [indexedSearchContactIds, setIndexedSearchContactIds] = useState<Set<string> | null>(null);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
@@ -715,6 +718,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           </div>
           {/* Renders nothing unless this contact is directory-maintained. */}
           <EntraContactBadge contact={record as unknown as Record<string, unknown>} />
+          <VipBadge isVip={record.is_vip} />
+          <PocBadge isPoc={record.is_primary_contact} />
           {record.contact_kind === 'shared_mailbox' && <Badge variant="default-muted">{t('contactsPage.sharedMailbox')}</Badge>}
         </div>
       ),
@@ -933,9 +938,11 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         )
       );
 
-      return matchesSearch && matchesStatus && matchesTags;
+      const matchesVip = !vipOnly || contact.is_vip === true;
+
+      return matchesSearch && matchesStatus && matchesTags && matchesVip;
     });
-  }, [contacts, searchTerm, filterStatus, selectedTags, indexedSearchContactIds]);
+  }, [contacts, searchTerm, filterStatus, selectedTags, indexedSearchContactIds, vipOnly]);
 
   // Memoize the data transformation for DataTable
   const tableData = useMemo(() => filteredContacts.map((contact) => ({
@@ -1096,11 +1103,11 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                   value={searchTerm}
                   onChange={(e) => {
                     setSearchTerm(e.target.value);
-                    setIsFiltered(e.target.value !== '' || selectedTags.length > 0 || filterStatus !== 'active');
+                    setIsFiltered(e.target.value !== '' || selectedTags.length > 0 || filterStatus !== 'active' || vipOnly);
                   }}
                   onClear={() => {
                     setSearchTerm('');
-                    setIsFiltered(selectedTags.length > 0 || filterStatus !== 'active');
+                    setIsFiltered(selectedTags.length > 0 || filterStatus !== 'active' || vipOnly);
                   }}
                 />
 
@@ -1112,7 +1119,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                       const newTags = prev.includes(tag)
                         ? prev.filter(t => t !== tag)
                         : [...prev, tag];
-                      setIsFiltered(searchTerm !== '' || newTags.length > 0 || filterStatus !== 'active');
+                      setIsFiltered(searchTerm !== '' || newTags.length > 0 || filterStatus !== 'active' || vipOnly);
                       return newTags;
                     });
                   }}
@@ -1125,11 +1132,26 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                   onValueChange={(value) => {
                     const newStatus = value as 'all' | 'active' | 'inactive';
                     setFilterStatus(newStatus);
-                    setIsFiltered(searchTerm !== '' || selectedTags.length > 0 || newStatus !== 'active');
+                    setIsFiltered(searchTerm !== '' || selectedTags.length > 0 || newStatus !== 'active' || vipOnly);
                   }}
                   options={statusOptions}
                   className="min-w-[180px]"
                 />
+                <Button
+                  id="filter-vip-contacts"
+                  type="button"
+                  variant={vipOnly ? 'default' : 'outline'}
+                  size="sm"
+                  aria-pressed={vipOnly}
+                  className="shrink-0"
+                  onClick={() => {
+                    const next = !vipOnly;
+                    setVipOnly(next);
+                    setIsFiltered(searchTerm !== '' || selectedTags.length > 0 || filterStatus !== 'active' || next);
+                  }}
+                >
+                  {t('contactsPage.filters.vipOnly', { defaultValue: 'VIP only' })}
+                </Button>
                 <Button
                   id="reset-filters-button"
                   variant="ghost"
@@ -1139,6 +1161,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                     setSearchTerm('');
                     setSelectedTags([]);
                     setFilterStatus('active');
+                    setVipOnly(false);
                     setIsFiltered(false);
                   }}
                   disabled={!isFiltered}

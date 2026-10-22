@@ -2172,5 +2172,9 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Ansicht wechseln"
+  },
+  "flags": {
+    "vip": "VIP",
+    "poc": "Ansprechpartner"
   }
 }

@@ -83,4 +83,24 @@ describe('Contact column', () => {
 
     expect(element.type).not.toBe('button');
   });
+
+  it('shows VIP / POC badges only when the requester is flagged', () => {
+    const flagged = renderContact({
+      contact_name: 'Grace Hopper',
+      contact_name_id: 'contact-1',
+      contact_is_vip: true,
+      contact_is_primary_contact: true,
+    });
+    expect(flagged).toContain('data-testid="vip-badge"');
+    expect(flagged).toContain('data-testid="poc-badge"');
+
+    const plain = renderContact({
+      contact_name: 'Grace Hopper',
+      contact_name_id: 'contact-1',
+      contact_is_vip: false,
+      contact_is_primary_contact: false,
+    });
+    expect(plain).not.toContain('vip-badge');
+    expect(plain).not.toContain('poc-badge');
+  });
 });

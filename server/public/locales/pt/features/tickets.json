@@ -527,7 +527,9 @@
       "bundled": "Empacotado",
       "activeBoards": "Quadros Ativos",
       "inactiveBoards": "Quadros Inativos",
-      "allBoards": "Todos os quadros"
+      "allBoards": "Todos os quadros",
+      "vipOnly": "Apenas VIP",
+      "vipRequesters": "Requerentes VIP"
     },
     "selection": {
       "pageSelected_one": "Todos os tickets {{count}} nesta página estão selecionados.",

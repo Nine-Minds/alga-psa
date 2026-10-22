@@ -53,6 +53,7 @@ export const ClientSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   is_inactive: z.boolean(),
+  is_vip: z.boolean().optional(),
   lifecycle_status: ClientLifecycleStatusSchema.default('active'),
   client_type: z.string().optional(),
   tax_id_number: z.string().optional(),
@@ -91,6 +92,7 @@ export const CreateClientSchema = z.object({
   parent_client_id: z.string().uuid().optional(),
   contract_line_id: z.string().uuid().optional(),
   is_default: z.boolean().optional(),
+  is_vip: z.boolean().optional(),
 });
 
 /**

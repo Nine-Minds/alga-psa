@@ -535,7 +535,9 @@
       "bundled": "Grupperade",
       "activeBoards": "Aktiva tavlor",
       "inactiveBoards": "Inaktiva tavlor",
-      "allBoards": "Alla tavlor"
+      "allBoards": "Alla tavlor",
+      "vipOnly": "Endast VIP",
+      "vipRequesters": "VIP-ärendeägare"
     },
     "selection": {
       "pageSelected_one": "{{count}} ärende på den här sidan är markerat.",

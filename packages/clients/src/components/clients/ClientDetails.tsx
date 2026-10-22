@@ -43,6 +43,7 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { Button } from '@alga-psa/ui/components/Button';
+import { VipBadge } from '@alga-psa/ui/components/FlagBadges';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/components/PrintableDetailHeader';
 import { ExternalLink, Merge, RefreshCw, Trash2 } from 'lucide-react';
@@ -1821,6 +1822,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         <div className="flex-1 flex items-center justify-between">
           <Heading size="6" tabIndex={quickView ? 0 : undefined} autoFocus={quickView}>
             {editedClient.client_name}
+            <VipBadge isVip={editedClient.is_vip} size="md" className="ml-2 align-middle" />
           </Heading>
           
           {isInDrawer && (

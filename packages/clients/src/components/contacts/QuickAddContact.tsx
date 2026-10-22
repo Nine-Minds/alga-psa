@@ -111,6 +111,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isInactive, setIsInactive] = useState(false);
+  const [isVip, setIsVip] = useState(false);
+  const [isPrimaryContact, setIsPrimaryContact] = useState(false);
   const [role, setRole] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +179,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         setClientId(null);
       }
       setIsInactive(false);
+      setIsVip(false);
+      setIsPrimaryContact(false);
       setRole('');
       setNotes('');
       setHasAttemptedSubmit(false);
@@ -332,6 +336,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         phone_numbers: sanitizedPhoneNumbers,
         client_id: clientId || undefined,
         is_inactive: isInactive,
+        is_vip: isVip,
+        is_primary_contact: isPrimaryContact,
         role: role.trim(),
         notes: notes.trim(),
       };
@@ -700,6 +706,28 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                 id="quick-add-contact-status"
                 checked={!isInactive}
                 onCheckedChange={(checked) => setIsInactive(!checked)}
+                className="data-[state=checked]:bg-primary-500"
+              />
+            </div>
+            <div className="flex items-center py-2">
+              <Label htmlFor="quick-add-contact-vip" className="mr-2">
+                {t('quickAddContact.vip.label', { defaultValue: 'VIP' })}
+              </Label>
+              <Switch
+                id="quick-add-contact-vip"
+                checked={isVip}
+                onCheckedChange={setIsVip}
+                className="data-[state=checked]:bg-primary-500"
+              />
+            </div>
+            <div className="flex items-center py-2">
+              <Label htmlFor="quick-add-contact-poc" className="mr-2">
+                {t('quickAddContact.poc.label', { defaultValue: 'Point of contact' })}
+              </Label>
+              <Switch
+                id="quick-add-contact-poc"
+                checked={isPrimaryContact}
+                onCheckedChange={setIsPrimaryContact}
                 className="data-[state=checked]:bg-primary-500"
               />
             </div>
