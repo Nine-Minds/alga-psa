@@ -128,6 +128,18 @@ async function insertService(options: {
     tax_rate_id: null,
     category_id: null,
   });
+  // A template member rate is snapshotted from the catalog price IN THE
+  // TEMPLATE'S BASE CURRENCY, never from the currency-untagged
+  // service_catalog.default_rate, so the catalog needs a USD price row to match
+  // the USD templates below.
+  if (options.defaultRate != null) {
+    await t('service_prices').insert({
+      tenant: tenantId,
+      service_id: serviceId,
+      currency_code: 'USD',
+      rate: options.defaultRate,
+    });
+  }
   return serviceId;
 }
 
