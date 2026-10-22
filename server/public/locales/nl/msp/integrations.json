@@ -2831,7 +2831,7 @@
         },
         "connection": {
           "title": "Verbonden met {{account}}",
-          "summary": "{{organizations}} organisaties ({{unmapped}} niet gekoppeld) · {{openIncidents}} open incidenten · laatste poll: {{lastPoll}}",
+          "summary": "{{organizations}} organisaties ({{unmapped}} niet gekoppeld) · {{openAlerts}} open waarschuwingen · laatste poll: {{lastPoll}}",
           "neverPolled": "nooit",
           "lastPollFailed": "Laatste poll mislukt: {{error}}",
           "routingIncompleteWarning": "Het pollen van incidenten is gepauzeerd totdat de onderstaande routeringsconfiguratie volledig is (bord, fallbackklant/-bord en alle drie prioriteiten voor ernstniveaus).",
@@ -2854,6 +2854,8 @@
           "selectPriority": "Prioriteit",
           "pollInterval": "Pollinterval (minuten)",
           "autoClose": "Tickets sluiten wanneer Huntress het incident sluit",
+          "ingestEscalations": "Tickets aanmaken op basis van Huntress-escalaties",
+          "ingestEscalationsHelp": "Escalaties gebruiken dezelfde instellingen voor bord, categorie, prioriteitstoewijzing en automatisch sluiten als incidenten. Een escalatie die meerdere organisaties betreft, maakt één ticket per organisatie aan.",
           "closedStatus": "Status Gesloten",
           "selectStatus": "Status selecteren",
           "save": "Routeringsconfiguratie opslaan",
