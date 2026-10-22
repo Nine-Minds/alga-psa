@@ -95,6 +95,7 @@ import {
   type DesignerWidthMode,
 } from './utils/sizeModes';
 import { resolveDesignerDocumentKind } from './utils/documentKind';
+import { barcodeValuePlaceholder, WORK_TAG_BARCODE_VALUE_EXAMPLE } from './utils/barcodeValueHint';
 import {
   buildDocumentExpressionPathOptions,
   resolveDocumentFieldLabel,
@@ -1929,15 +1930,21 @@ export const DesignerShell: React.FC = () => {
             <Input
               id="designer-barcode-value"
               value={metadata.value ?? ''}
-              placeholder="{{record.url}}"
+              placeholder={barcodeValuePlaceholder(documentKind)}
               onChange={(event) => applyMetadata({ value: event.target.value }, false)}
               onBlur={(event) => applyMetadata({ value: event.target.value }, true)}
               className="text-xs"
             />
             <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-              {t('designer.inspector.barcodeHint', {
-                defaultValue: 'Text, or a field such as {{record.url}}. Keep the code at least about 20 mm wide so it scans.',
-              })}
+              {documentKind === 'work-tag'
+                ? t('designer.inspector.barcodeHintWorkTag', {
+                    defaultValue:
+                      'Text, or a field such as {{example}} (the record link). Keep the code at least about 20 mm wide so it scans.',
+                    example: WORK_TAG_BARCODE_VALUE_EXAMPLE,
+                  })
+                : t('designer.inspector.barcodeHint', {
+                    defaultValue: 'The text to encode. Keep the code at least about 20 mm wide so it scans.',
+                  })}
             </p>
           </div>
         </div>

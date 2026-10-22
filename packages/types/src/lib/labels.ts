@@ -75,3 +75,21 @@ export interface LabelViewModelProvider {
     ids: readonly string[]
   ): Promise<Array<LabelViewModel | null>>;
 }
+
+/**
+ * One record that cannot be printed with the requested template (e.g. an RMM-imported asset tag too
+ * long for Code 128 at the minimum module width). Batches are all-or-nothing: when any record fails,
+ * nothing prints and the 422 response lists EVERY failing record, so the caller can drop them or
+ * reprint them with `suggestedTemplateCode`. Only returned for records the caller was authorized to
+ * read (authorization runs first and fails the whole request as not found).
+ */
+export interface LabelPrintFailure {
+  /** Zero-based position in the request's `ids`. */
+  index: number;
+  recordId: string;
+  identifier: string;
+  templateCode: string;
+  message: string;
+  /** A standard template of the same label class that can print this record, when there is one. */
+  suggestedTemplateCode?: string;
+}

@@ -1,9 +1,18 @@
-import { customPageSizeToMm, matchRecordPath, recordUrl, type LabelViewModel, type TemplateAst } from '@alga-psa/types';
+import {
+  customPageSizeToMm,
+  matchRecordPath,
+  recordUrl,
+  type LabelPrintFailure,
+  type LabelViewModel,
+  type TemplateAst,
+} from '@alga-psa/types';
 
 import { evaluateTemplateAst } from '../invoice-template-ast/evaluator';
 import { renderTemplateAstFragment } from '../invoice-template-ast/server-render';
+import { BarcodeError } from '../invoice-template-ast/barcode/constraints';
 import {
   LABEL_CLASS_BY_STANDARD_CODE,
+  LABEL_FALLBACK_TEMPLATE_BY_CODE,
   LABEL_STANDARD_CODE_BY_CLASS,
   getStandardLabelTemplateAstByCode,
 } from '../label-template-ast/standardTemplates';
@@ -17,10 +26,24 @@ export interface LabelPrintItem {
 }
 
 export class LabelRenderError extends Error {
-  constructor(message: string) {
+  /** Every record of the batch that could not be rendered (empty for request-level errors). */
+  readonly failures: LabelPrintFailure[];
+  constructor(message: string, failures: LabelPrintFailure[] = []) {
     super(message);
     this.name = 'LabelRenderError';
+    this.failures = failures;
   }
+}
+
+function batchFailureMessage(failures: readonly LabelPrintFailure[], total: number): string {
+  const lines = failures.map((f) => `Label ${f.index + 1} (${f.identifier}, ${f.templateCode}): ${f.message}`);
+  const suggestions = Array.from(new Set(failures.map((f) => f.suggestedTemplateCode).filter(Boolean)));
+  const head =
+    failures.length === 1 && total === 1
+      ? ''
+      : `${failures.length} of ${total} labels cannot be printed, so none were. `;
+  const tail = suggestions.length ? ` Print ${failures.length === 1 ? 'it' : 'them'} with ${suggestions.join(' or ')} instead.` : '';
+  return `${head}${lines.join(' ')}${tail}`;
 }
 
 /**
@@ -65,25 +88,38 @@ export async function renderLabelBatchHtml(
   options: { tenantClient?: { name: string | null; logoUrl: string | null } | null; locale?: string } = {}
 ): Promise<ComposedLabelDocument> {
   const cells: RenderedLabelCell[] = [];
+  const failures: LabelPrintFailure[] = [];
+  // All-or-nothing, but every item is tried so the error names EVERY record that cannot print.
   for (const [index, item] of items.entries()) {
-    assertCanonicalLabelUrl(item.viewModel);
-    const { ast, code } = resolveTemplateAst(item);
-    const description = `Label ${index + 1} (${code})`;
-    const model = { ...item.viewModel, tenantClient: options.tenantClient ?? item.viewModel.tenantClient ?? null };
+    const templateCode = item.templateCode ?? LABEL_STANDARD_CODE_BY_CLASS[item.viewModel.labelClass];
     try {
+      assertCanonicalLabelUrl(item.viewModel);
+      const { ast, code } = resolveTemplateAst(item);
+      const model = { ...item.viewModel, tenantClient: options.tenantClient ?? item.viewModel.tenantClient ?? null };
       const evaluation = evaluateTemplateAst(ast, model as unknown as Record<string, unknown>);
       const { html, css } = await renderTemplateAstFragment(ast, evaluation, { locale: options.locale });
       const printSettings = ast.metadata?.printSettings;
       cells.push({
         html,
         css,
-        marginMm: typeof printSettings?.marginMm === 'number' ? printSettings.marginMm : 0,
         designedSizeMm: printSettings?.customPageSize ? customPageSizeToMm(printSettings.customPageSize) : null,
-        description,
+        description: `Label ${index + 1} (${code})`,
       });
     } catch (error) {
-      throw new LabelRenderError(`${description}: ${error instanceof Error ? error.message : String(error)}`);
+      const fallback = LABEL_FALLBACK_TEMPLATE_BY_CODE[templateCode];
+      failures.push({
+        index,
+        recordId: item.viewModel.recordId,
+        identifier: item.viewModel.identifier,
+        templateCode,
+        message: error instanceof Error ? error.message : String(error),
+        // Only a barcode the record's data cannot fit is fixed by switching template.
+        ...(fallback && error instanceof BarcodeError ? { suggestedTemplateCode: fallback } : {}),
+      });
     }
+  }
+  if (failures.length > 0) {
+    throw new LabelRenderError(batchFailureMessage(failures, items.length), failures);
   }
   return composeLabelSheets(cells, layout, { title: 'Labels' });
 }

@@ -93,5 +93,25 @@
     "id": "F019",
     "description": "Translations for workTag in all locales",
     "implemented": true
+  },
+  {
+    "id": "F020",
+    "description": "Label text never leaves the label: wrap-anywhere identifiers (never clipped), whole-line caps on free text; AST style schema accepts overflow/overflowWrap",
+    "implemented": true
+  },
+  {
+    "id": "F021",
+    "description": "Sheet composer applies the template margin once (renderer root padding only); printable area is the designed 95.6 x 44.8 mm on 4x2in",
+    "implemented": true
+  },
+  {
+    "id": "F022",
+    "description": "422 for a refused batch lists every failing record (LabelPrintFailure) with suggestedTemplateCode (Code 128 -> QR-only asset label)",
+    "implemented": true
+  },
+  {
+    "id": "F023",
+    "description": "Designer barcode Value placeholder/hint shows the real work-tag binding {{label.recordUrl}}",
+    "implemented": true
   }
 ]

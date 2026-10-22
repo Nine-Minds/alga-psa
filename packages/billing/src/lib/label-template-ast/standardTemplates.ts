@@ -27,15 +27,35 @@ export const LABEL_CLASS_BY_STANDARD_CODE: Record<string, LabelClass> = {
   [STANDARD_LABEL_STOCK_UNIT_CODE]: 'stock-unit-identity',
 };
 
+/**
+ * Where a record that one template refuses can still print. The Code 128 asset label refuses tags longer
+ * than ~29 characters (RMM-imported tags run to ~40); the QR-only asset label prints any tag.
+ */
+export const LABEL_FALLBACK_TEMPLATE_BY_CODE: Record<string, string> = {
+  [STANDARD_LABEL_ASSET_CODE128_CODE]: STANDARD_LABEL_ASSET_CODE,
+};
+
 const cloneAst = (ast: TemplateAst): TemplateAst => JSON.parse(JSON.stringify(ast)) as TemplateAst;
 
 type Node = Record<string, unknown>;
 
+/**
+ * A label is a fixed-size cell, so no text may run past its column: every line wraps at any character
+ * (an RMM asset tag such as `levelio:Z2lkOi8v...` has no break opportunities), and a block capped with
+ * `maxHeight` clips at the cap instead of spilling into the next line or off the label.
+ */
 const text = (id: string, bindingId: string, inline: Record<string, unknown>): Node => ({
   id,
   type: 'text',
   content: { type: 'binding', bindingId },
-  style: { inline: { margin: '0', ...inline } },
+  style: {
+    inline: {
+      margin: '0',
+      overflowWrap: 'anywhere',
+      ...(inline.maxHeight ? { overflow: 'hidden' } : {}),
+      ...inline,
+    },
+  },
 });
 
 const qr = (id: string, size: string): Node => ({
@@ -56,14 +76,14 @@ const code128 = (id: string): Node => ({
 });
 
 const brandLine = (): Node =>
-  text('brand', 'tenantName', { fontSize: '8px', color: '#4b5563' });
+  text('brand', 'tenantName', { fontSize: '8px', lineHeight: 1.2, maxHeight: '9.6px', color: '#4b5563' });
 
 /**
  * Printable area of the 4 x 2 in cell is 95.6 x 44.8 mm (marginMm 3). Without a footer the content is
  * one 44 mm row. With a footer (full-width Code 128) the layout is a 40 mm column: a 28 mm text+QR row,
  * 2 mm gap, the 9 mm footer, leaving ~5 mm of whitespace below the bars.
  */
-const label = (name: string, left: Node[], right: Node[], footer: Node[] = []): TemplateAst => {
+const label = (name: string, left: Node[], right: Node[], footer: Node[] = [], textGap = '1mm'): TemplateAst => {
   const row: Node = {
     id: footer.length ? 'label-row' : 'label',
     type: 'stack',
@@ -77,7 +97,7 @@ const label = (name: string, left: Node[], right: Node[], footer: Node[] = []): 
       },
     },
     children: [
-      { id: 'label-text', type: 'stack', direction: 'column', style: { inline: { gap: '1mm', flex: '1 1 0', minWidth: '0' } }, children: left },
+      { id: 'label-text', type: 'stack', direction: 'column', style: { inline: { gap: textGap, flex: '1 1 0', minWidth: '0' } }, children: left },
       { id: 'label-code', type: 'stack', direction: 'column', style: { inline: { gap: '1mm', alignItems: 'center' } }, children: right },
     ],
   };
@@ -102,19 +122,35 @@ const label = (name: string, left: Node[], right: Node[], footer: Node[] = []): 
   } as unknown as TemplateAst;
 };
 
+/**
+ * Free text (names, titles, reasons) is capped at whole lines so a long value never pushes the label past
+ * its 44 mm printable height. Identifiers are never capped: they wrap at any character (an RMM tag of 39
+ * characters takes three lines at 22 px in the 58 mm text column) and the caps leave room for that.
+ */
+const lines = (count: number, fontPx: number, lineHeight: number) => ({
+  fontSize: `${fontPx}px`,
+  lineHeight,
+  maxHeight: `${(count * fontPx * lineHeight).toFixed(1)}px`,
+});
+
+const identifier = (id: string, fontPx: number): Node =>
+  text(id, 'identifier', { fontSize: `${fontPx}px`, fontWeight: 800, fontFamily: 'monospace', lineHeight: 1.1 });
+
 const buildTicketWorkTag = (): TemplateAst =>
   label(
     'Standard Ticket Work Tag',
     [
       brandLine(),
-      text('client', 'clientName', { fontSize: '13px', fontWeight: 700, lineHeight: 1.15 }),
-      text('item', 'title', { fontSize: '11px', lineHeight: 1.2, maxHeight: '13mm' }),
-      text('ticket-number', 'identifier', { fontSize: '20px', fontWeight: 800, fontFamily: 'monospace' }),
-      text('reason', 'detail', { fontSize: '10px', color: '#374151', lineHeight: 1.2, maxHeight: '8mm' }),
-      text('asset', 'secondaryIdentifier', { fontSize: '10px', fontFamily: 'monospace' }),
-      text('serial', 'serialSuffix', { fontSize: '9px', color: '#4b5563', fontFamily: 'monospace' }),
+      text('client', 'clientName', { ...lines(1, 13, 1.15), fontWeight: 700 }),
+      text('item', 'title', lines(2, 11, 1.2)),
+      identifier('ticket-number', 20),
+      text('reason', 'detail', { ...lines(1, 10, 1.2), color: '#374151' }),
+      text('asset', 'secondaryIdentifier', { fontSize: '10px', lineHeight: 1.2, fontFamily: 'monospace' }),
+      text('serial', 'serialSuffix', { ...lines(1, 9, 1.2), color: '#4b5563', fontFamily: 'monospace' }),
     ],
     [qr('qr', '34mm')],
+    [],
+    '0.5mm',
   );
 
 const buildAssetLabel = (name: string, withCode128: boolean): TemplateAst =>
@@ -122,9 +158,10 @@ const buildAssetLabel = (name: string, withCode128: boolean): TemplateAst =>
     name,
     [
       brandLine(),
-      text('asset-tag', 'identifier', { fontSize: '22px', fontWeight: 800, fontFamily: 'monospace' }),
-      text('asset-name', 'title', { fontSize: '12px', fontWeight: 600, lineHeight: 1.2, maxHeight: withCode128 ? '8mm' : '14mm' }),
-      text('client', 'clientName', { fontSize: '11px', lineHeight: 1.2 }),
+      identifier('asset-tag', 22),
+      // With the Code 128 footer the text+QR row is 28 mm: one line each for name and client.
+      text('asset-name', 'title', { ...lines(withCode128 ? 1 : 2, 12, 1.2), fontWeight: 600 }),
+      text('client', 'clientName', lines(withCode128 ? 1 : 2, 11, 1.2)),
     ],
     [qr('qr', withCode128 ? '26mm' : '34mm')],
     withCode128 ? [code128('code128')] : [],
@@ -135,10 +172,10 @@ const buildStockUnitLabel = (): TemplateAst =>
     'Standard Stock Unit Label',
     [
       brandLine(),
-      text('product', 'title', { fontSize: '13px', fontWeight: 700, lineHeight: 1.2, maxHeight: '16mm' }),
-      text('unit-code', 'identifier', { fontSize: '18px', fontWeight: 800, fontFamily: 'monospace' }),
-      text('serial', 'serialSuffix', { fontSize: '11px', fontFamily: 'monospace' }),
-      text('detail', 'detail', { fontSize: '10px', color: '#374151' }),
+      text('product', 'title', { ...lines(2, 13, 1.2), fontWeight: 700 }),
+      identifier('unit-code', 18),
+      text('serial', 'serialSuffix', { ...lines(1, 11, 1.2), fontFamily: 'monospace' }),
+      text('detail', 'detail', { ...lines(2, 10, 1.2), color: '#374151' }),
     ],
     [qr('qr', '34mm')],
   );

@@ -8,12 +8,15 @@ import {
 } from './layout';
 import type { InvoicePdfPrintOptions } from '@alga-psa/types';
 
-/** One rendered label: body markup + the CSS that goes with it. */
+/**
+ * One rendered label: body markup + the CSS that goes with it. The markup already carries the
+ * template's print margin (the shared renderer pads the document root by `printSettings.marginMm`,
+ * exactly as the designer preview does), so the cell adds no padding of its own: padding here too
+ * would apply the margin twice and shrink the printable area by 2 x marginMm on each axis.
+ */
 export interface RenderedLabelCell {
   html: string;
   css: string;
-  /** Page margin the template was designed with (mm); applied as padding inside the cell. */
-  marginMm: number;
   /** Size the template was designed for, in mm, when it declares one. */
   designedSizeMm?: { widthMm: number; heightMm: number } | null;
   /** For error messages only. */
@@ -63,7 +66,7 @@ export function composeLabelSheets(
     const p = geometry.placements[index];
     sheets[p.sheet].push(
       `<div class="label-cell" data-label-index="${index}" style="left:${mmCss(p.leftMm)};top:${mmCss(p.topMm)};` +
-        `width:${mmCss(p.widthMm)};height:${mmCss(p.heightMm)};padding:${mmCss(cell.marginMm)};">${cell.html}</div>`
+        `width:${mmCss(p.widthMm)};height:${mmCss(p.heightMm)};">${cell.html}</div>`
     );
   });
 

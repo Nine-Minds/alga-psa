@@ -52,6 +52,21 @@ Print buttons in UI (C2), scanning (C3), custody (C4), RMA (C5), project staging
 - **Decorative designer QR block** became the real `barcode` designer type; it exported an `image` node, so no stored data migrates.
 - **QR content** is only the canonical `recordUrl` (renderer rejects any `url !== recordUrl(...)`): no tokens, secrets or fragments.
 - **Scannability:** quiet zone >= 4 modules (QR) / >= 10 (Code 128), minimum module size, clear error when a value cannot fit.
+- **Long identifiers (human review):** a label is a fixed-size cell, so no text may leave it. Every label text node wraps at
+  any character (`overflowWrap: anywhere`; RMM-imported tags such as `levelio:Z2lkOi8vbGV2ZWwvRGV2aWNlLzkwMDE` have no break
+  opportunities). Identifiers are never clipped; free text (names, titles, reasons) is capped at whole lines (`maxHeight` +
+  `overflow: hidden`) so a 39-character tag (three lines at 22 px in the QR-only asset label's 58 mm column) still fits in 44 mm.
+  The AST style schema gained `overflow` and `overflowWrap` for this.
+- **One margin:** the shared renderer already pads the document root by `printSettings.marginMm` (as the designer preview does),
+  so the sheet composer adds no cell padding. It used to pad as well, applying the margin twice (printable area 89.6 x 38.8 mm
+  instead of 95.6 x 44.8 mm), which pushed the 95 mm Code 128 row to within 0.7 mm of the page edge.
+- **Batch failures (human review):** batches stay all-or-nothing, but every item is tried and the 422 body is
+  `{ error, failures: LabelPrintFailure[] }` naming each record that cannot print (position, record id, identifier, template,
+  reason) with `suggestedTemplateCode` where another standard template of the same class can print it (Code 128 asset label ->
+  QR-only asset label, only for barcode errors). Failures are only reported for records the caller was authorized to read.
+- **Designer barcode hint:** the work-tag binding root is `label.*`, so the Value placeholder and hint show `{{label.recordUrl}}`
+  (the token the designer itself displays for an imported record-URL binding, and which binds back when typed). Other document
+  types get no fake example.
 
 ## Security invariants
 - Route authenticates (`withAuth`), requires an internal (MSP) user, and providers enforce RBAC + record-level permission
@@ -62,7 +77,7 @@ Print buttons in UI (C2), scanning (C3), custody (C4), RMA (C5), project staging
 ## Deferred / stubbed
 - RMA, project, project_task: resolver only; no label class or provider.
 - Ticket label linked asset tag + serial suffix: C2.
-- Batch is all-or-nothing; "skip unreadable records and say so" is C2.
+- Batch is all-or-nothing (the 422 lists every failing record); "skip unprintable records and say so" is C2.
 - Tenant-custom label templates: standard templates via `templateCode` only.
 
 ## Acceptance

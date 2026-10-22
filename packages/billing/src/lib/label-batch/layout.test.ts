@@ -74,7 +74,6 @@ describe('composeLabelSheets', () => {
   const cell = (n: number, designed?: { widthMm: number; heightMm: number }) => ({
     html: `<p>cell-${n}</p>`,
     css: '.same{color:#000}',
-    marginMm: 3,
     designedSizeMm: designed ?? null,
   });
 
@@ -84,6 +83,12 @@ describe('composeLabelSheets', () => {
     expect(html.indexOf('cell-0')).toBeLessThan(html.indexOf('cell-1'));
     expect(html.indexOf('cell-1')).toBeLessThan(html.indexOf('cell-2'));
     expect(html.match(/\.same\{color:#000\}/g)).toHaveLength(1);
+  });
+
+  it('adds no padding of its own: the rendered markup already carries the template margin', () => {
+    const { html } = composeLabelSheets([cell(0)], grid());
+    expect(html).toMatch(/<div class="label-cell"[^>]*style="[^"]*"/);
+    expect(html).not.toMatch(/class="label-cell"[^>]*padding/);
   });
 
   it('refuses a template designed for a bigger label than its cell', () => {

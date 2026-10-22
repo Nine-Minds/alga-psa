@@ -82,6 +82,8 @@ const styleDeclarationSchema = z.object({
   fontStyle: z.string().optional(),
   lineHeight: z.union([z.string(), z.number()]).optional(),
   textAlign: z.enum(['left', 'center', 'right', 'justify']).optional(),
+  overflow: z.enum(['visible', 'hidden', 'clip']).optional(),
+  overflowWrap: z.enum(['normal', 'break-word', 'anywhere']).optional(),
   breakInside: z.enum(['auto', 'avoid', 'avoid-page']).optional(),
   breakAfter: z.enum(['auto', 'avoid', 'avoid-page', 'page']).optional(),
   breakBefore: z.enum(['auto', 'avoid', 'avoid-page', 'page']).optional(),

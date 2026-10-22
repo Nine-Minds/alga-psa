@@ -3,6 +3,8 @@
  * POST /api/labels/pdf — render one or more records as a label PDF (one label per page, or n-up).
  *
  * Body: { labelClass, ids: string[], templateCode?, layout? }
+ * 422: { error, failures?: LabelPrintFailure[] } — all-or-nothing; `failures` lists every record that
+ *      cannot print with the requested template, with a `suggestedTemplateCode` where one exists.
  *
  * Modelled on the sales-order document route: it lives under /api (NOT /api/v1, the API-key
  * namespace), is on the middleware API-key skip-list so the browser session cookie reaches it, and
@@ -34,8 +36,15 @@ const PROVIDERS: Record<LabelClass, LabelViewModelProvider> = {
 const deps: PrintLabelsDeps = {
   providers: PROVIDERS,
   renderPdf: (tenant, items, layout) => renderLabelBatchPdf(tenant, items, layout),
-  isClientError: (error) =>
-    error instanceof LabelLayoutError || error instanceof LabelRenderError || error instanceof BarcodeError,
+  describeClientError: (error) => {
+    if (error instanceof LabelRenderError) {
+      return { message: error.message, failures: error.failures };
+    }
+    if (error instanceof LabelLayoutError || error instanceof BarcodeError) {
+      return { message: error.message };
+    }
+    return null;
+  },
 };
 
 const json = (status: number, body: unknown) =>
@@ -69,7 +78,7 @@ export async function POST(request: Request) {
   try {
     const result = await printLabelsAuthenticated(body as Record<string, unknown>, baseUrl);
     if (!result.ok) {
-      return json(result.status, { error: result.message });
+      return json(result.status, { error: result.message, ...(result.failures ? { failures: result.failures } : {}) });
     }
     return new Response(new Uint8Array(result.pdf), {
       status: 200,

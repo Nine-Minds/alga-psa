@@ -29,7 +29,12 @@ import { recordUrl, type LabelViewModel } from '@alga-psa/types';
 import { browserPoolService } from '../../services/browserPoolService';
 import { renderHtmlToPdf } from '../../services/labelPdfService';
 import { renderLabelBatchHtml, type LabelPrintItem } from './renderLabelBatchHtml';
-import { STANDARD_LABEL_ASSET_CODE128_CODE } from '../label-template-ast/standardTemplates';
+import {
+  STANDARD_LABEL_ASSET_CODE,
+  STANDARD_LABEL_ASSET_CODE128_CODE,
+  STANDARD_LABEL_STOCK_UNIT_CODE,
+  STANDARD_LABEL_TICKET_WORK_TAG_CODE,
+} from '../label-template-ast/standardTemplates';
 import type { LabelBatchLayout } from './layout';
 
 const BASE = 'https://psa.example.com';
@@ -70,6 +75,112 @@ const assetLabel = (n: number, tag?: string): LabelPrintItem => ({
     serialSuffix: null,
   } satisfies LabelViewModel,
 });
+
+// Worst-case real data: an RMM-imported asset tag (39 chars, no break opportunities), a tag at the
+// 29-character Code 128 limit, and long free text everywhere else.
+const RMM_TAG = 'levelio:Z2lkOi8vbGV2ZWwvRGV2aWNlLzkwMDE';
+const CODE128_LIMIT_TAG = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ012';
+const LONG_TITLE = 'Dell Latitude 7440 Ultralight Business Laptop with Docking Station and Spare Charger';
+const LONG_CLIENT = 'Emerald City Dental and Orthodontic Associates of the Greater Oz Metropolitan Area';
+const LONG_DETAIL = 'Customer reports intermittent power loss when docked; replace DC jack and test battery under load';
+
+const worstCase = (
+  templateCode: string,
+  overrides: Partial<LabelViewModel> & Pick<LabelViewModel, 'labelClass' | 'entityType'>
+): LabelPrintItem => {
+  const recordId = uuid(900);
+  return {
+    templateCode,
+    viewModel: {
+      recordId,
+      url: recordUrl(overrides.entityType, recordId, BASE),
+      identifier: RMM_TAG,
+      code128Value: null,
+      title: LONG_TITLE,
+      clientName: LONG_CLIENT,
+      detail: LONG_DETAIL,
+      secondaryIdentifier: RMM_TAG,
+      serialSuffix: 'SN…ZX81QW77',
+      ...overrides,
+    } as LabelViewModel,
+  };
+};
+
+interface ContainmentReport {
+  /** Text whose painted glyphs fall outside the label's printable area. */
+  outside: string[];
+  /** Text whose painted glyphs overlap a barcode. */
+  overBarcode: string[];
+  /** Identifier text as laid out (must be complete: identifiers are never clipped). */
+  identifierText: string[];
+  identifierClipped: boolean[];
+}
+
+/**
+ * Lay the composed document out in Chromium and measure every painted text fragment (Range client
+ * rects, so glyphs that overflow their box count) against the cell's printable area and the barcodes.
+ */
+async function measureContainment(html: string): Promise<ContainmentReport[]> {
+  const browser = await browserPoolService.getBrowser();
+  const page = await browser.newPage();
+  try {
+    await page.setContent(html, { waitUntil: 'load' });
+    await page.emulateMediaType('print');
+    return await page.evaluate(() => {
+      const slack = 0.5; // CSS px of rounding slack
+      const inside = (r: DOMRect, box: { l: number; t: number; r: number; b: number }) =>
+        r.left >= box.l - slack && r.top >= box.t - slack && r.right <= box.r + slack && r.bottom <= box.b + slack;
+      const overlaps = (a: DOMRect, b: DOMRect) =>
+        a.left < b.right - slack && b.left < a.right - slack && a.top < b.bottom - slack && b.top < a.bottom - slack;
+      return Array.from(document.querySelectorAll<HTMLElement>('.label-cell')).map((cell) => {
+        // Printable area = the label cell inset by the template margin (the document root's padding).
+        const rect = cell.getBoundingClientRect();
+        const cs = getComputedStyle(cell.querySelector<HTMLElement>('#root') ?? cell);
+        const box = {
+          l: rect.left + parseFloat(cs.paddingLeft),
+          t: rect.top + parseFloat(cs.paddingTop),
+          r: rect.right - parseFloat(cs.paddingRight),
+          b: rect.bottom - parseFloat(cs.paddingBottom),
+        };
+        const barcodes = Array.from(cell.querySelectorAll<HTMLElement>('svg')).map((svg) => svg.getBoundingClientRect());
+        const outside: string[] = [];
+        const overBarcode: string[] = [];
+        const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          if (!node.textContent?.trim()) continue;
+          // Visible part only: a capped block (overflow hidden) legitimately hides its overflow.
+          let clip: DOMRect | null = null;
+          for (let el = node.parentElement; el && el !== cell; el = el.parentElement) {
+            if (getComputedStyle(el).overflow !== 'visible') {
+              clip = el.getBoundingClientRect();
+              break;
+            }
+          }
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          for (const r of Array.from(range.getClientRects())) {
+            if (clip && (r.top >= clip.bottom - slack || r.bottom <= clip.top + slack)) continue;
+            const visible = clip
+              ? new DOMRect(r.left, Math.max(r.top, clip.top), r.width, Math.min(r.bottom, clip.bottom) - Math.max(r.top, clip.top))
+              : r;
+            if (!inside(visible, box)) outside.push(node.textContent.trim());
+            if (barcodes.some((b) => overlaps(visible, b))) overBarcode.push(node.textContent.trim());
+          }
+        }
+        const identifiers = Array.from(cell.querySelectorAll<HTMLElement>('#asset-tag, #ticket-number, #unit-code'));
+        return {
+          outside: Array.from(new Set(outside)),
+          overBarcode: Array.from(new Set(overBarcode)),
+          identifierText: identifiers.map((el) => el.textContent ?? ''),
+          identifierClipped: identifiers.map((el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1),
+        };
+      });
+    });
+  } finally {
+    await page.close().catch(() => undefined);
+    await browserPoolService.releaseBrowser(browser).catch(() => undefined);
+  }
+}
 
 interface Raster {
   width: number;
@@ -273,4 +384,59 @@ describe('label PDF end to end', () => {
       expect(decodeCode128(cell)).toBe(items[i].viewModel.code128Value);
     });
   }, 120_000);
+
+  describe('long text never leaves the label or covers a code', () => {
+    const cases: Array<[string, LabelPrintItem]> = [
+      [
+        'QR-only asset label, 39-char RMM tag (the Code 128 fallback)',
+        worstCase(STANDARD_LABEL_ASSET_CODE, { labelClass: 'asset-identity', entityType: 'asset' }),
+      ],
+      [
+        'Code 128 asset label, tag at the 29-char Code 128 limit',
+        worstCase(STANDARD_LABEL_ASSET_CODE128_CODE, {
+          labelClass: 'asset-identity',
+          entityType: 'asset',
+          identifier: CODE128_LIMIT_TAG,
+          code128Value: CODE128_LIMIT_TAG,
+        }),
+      ],
+      [
+        'ticket work tag, long ticket number and linked RMM tag',
+        worstCase(STANDARD_LABEL_TICKET_WORK_TAG_CODE, {
+          labelClass: 'ticket-work-tag',
+          entityType: 'ticket',
+          identifier: 'TICKET-2026-0000123456789',
+        }),
+      ],
+      [
+        'stock unit label, long unit code',
+        worstCase(STANDARD_LABEL_STOCK_UNIT_CODE, { labelClass: 'stock-unit-identity', entityType: 'stock_unit' }),
+      ],
+    ];
+
+    for (const [name, item] of cases) {
+      for (const [layoutName, layout] of [
+        ['4x2in', ONE_PER_PAGE],
+        ['Letter 2x5', LETTER_2X5],
+      ] as const) {
+        it(`${name} (${layoutName})`, async () => {
+          const { html } = await renderLabelBatchHtml([item, item], layout, {
+            tenantClient: { name: 'Example MSP', logoUrl: null },
+          });
+          for (const report of await measureContainment(html)) {
+            expect(report.outside).toEqual([]);
+            expect(report.overBarcode).toEqual([]);
+            expect(report.identifierText).toEqual([item.viewModel.identifier]);
+            expect(report.identifierClipped).toEqual([false]);
+          }
+          const { rasters, geometry } = await printLabels([item], layout, `contain-${layoutName}-${item.templateCode}`);
+          const p = geometry.placements[0];
+          const cell = crop(rasters[0], mmToPx(p.leftMm), mmToPx(p.topMm), mmToPx(p.widthMm), mmToPx(p.heightMm));
+          expect(edgeBandIsWhite(cell)).toBe(true);
+          expect(decodeQr(cell)).toBe(item.viewModel.url);
+          if (item.viewModel.code128Value) expect(decodeCode128(cell)).toBe(item.viewModel.code128Value);
+        }, 120_000);
+      }
+    }
+  });
 });

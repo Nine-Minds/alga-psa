@@ -4,6 +4,7 @@ import {
   isLabelClass,
   type IUserWithRoles,
   type LabelClass,
+  type LabelPrintFailure,
   type LabelViewModel,
   type LabelViewModelProvider,
 } from '@alga-psa/types';
@@ -39,7 +40,7 @@ export interface PrintLabelsRequest {
 
 export type PrintLabelsResult =
   | { ok: true; pdf: Buffer; labels: number; sheets: number }
-  | { ok: false; status: 400 | 404 | 422 | 500; message: string };
+  | { ok: false; status: 400 | 404 | 422 | 500; message: string; failures?: LabelPrintFailure[] };
 
 export interface PrintLabelsDeps {
   providers: Record<LabelClass, LabelViewModelProvider | undefined>;
@@ -48,8 +49,11 @@ export interface PrintLabelsDeps {
     items: readonly LabelPrintItem[],
     layout: LabelBatchLayout
   ) => Promise<{ pdf: Buffer; labels: number; sheets: number }>;
-  /** Names the layout / render errors that are the caller's fault (422) rather than ours (500). */
-  isClientError: (error: unknown) => boolean;
+  /**
+   * Describes a layout / render error that is the caller's fault (422) rather than ours (500), with the
+   * records that could not print when the renderer names them; null for anything else (rethrown).
+   */
+  describeClientError: (error: unknown) => { message: string; failures?: LabelPrintFailure[] } | null;
 }
 
 const NOT_FOUND: PrintLabelsResult = { ok: false, status: 404, message: 'Not found.' };
@@ -108,8 +112,14 @@ export async function printLabels(
     );
     return { ok: true, pdf, labels, sheets };
   } catch (error) {
-    if (deps.isClientError(error)) {
-      return { ok: false, status: 422, message: error instanceof Error ? error.message : 'Could not render labels.' };
+    const clientError = deps.describeClientError(error);
+    if (clientError) {
+      return {
+        ok: false,
+        status: 422,
+        message: clientError.message,
+        ...(clientError.failures?.length ? { failures: clientError.failures } : {}),
+      };
     }
     throw error;
   }

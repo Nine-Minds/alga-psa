@@ -20,7 +20,7 @@ const setup = (readable: string[], userType = 'internal') => {
   const renderPdf = vi.fn(async () => ({ pdf: Buffer.from('%PDF'), labels: 1, sheets: 1 }));
   const deps: PrintLabelsDeps = {
     providers: { 'ticket-work-tag': provider, 'asset-identity': undefined, 'stock-unit-identity': undefined },
-    renderPdf, isClientError: () => false,
+    renderPdf, describeClientError: () => null,
   };
   const caller = { user: { user_type: userType } as never, tenant: 't', baseUrl: 'https://x.test' };
   return { deps, provider, renderPdf, caller };
@@ -73,10 +73,30 @@ describe('printLabels', () => {
   it('maps renderer client errors to 422 and rethrows others', async () => {
     const s = setup([A]);
     s.renderPdf.mockRejectedValueOnce(new Error('bad layout'));
-    s.deps.isClientError = () => true;
-    expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', ids: [A] })).toMatchObject({ status: 422 });
+    s.deps.describeClientError = (e) => ({ message: (e as Error).message });
+    expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', ids: [A] })).toEqual({
+      ok: false,
+      status: 422,
+      message: 'bad layout',
+    });
     s.renderPdf.mockRejectedValueOnce(new Error('boom'));
-    s.deps.isClientError = () => false;
+    s.deps.describeClientError = () => null;
     await expect(printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', ids: [A] })).rejects.toThrow('boom');
+  });
+
+  it('a 422 lists every record that cannot print, with the suggested template', async () => {
+    const s = setup([A, B, C]);
+    const failures = [
+      { index: 0, recordId: A, identifier: 'levelio:Z2lk', templateCode: 'standard-asset-label-code128', message: 'too long', suggestedTemplateCode: 'standard-asset-label' },
+      { index: 2, recordId: C, identifier: 'levelio:Z2lm', templateCode: 'standard-asset-label-code128', message: 'too long', suggestedTemplateCode: 'standard-asset-label' },
+    ];
+    s.renderPdf.mockRejectedValueOnce(new Error('2 of 3 labels cannot be printed'));
+    s.deps.describeClientError = (e) => ({ message: (e as Error).message, failures });
+    expect(await printLabels(s.deps, s.caller, { labelClass: 'ticket-work-tag', ids: [A, B, C] })).toEqual({
+      ok: false,
+      status: 422,
+      message: '2 of 3 labels cannot be printed',
+      failures,
+    });
   });
 });
