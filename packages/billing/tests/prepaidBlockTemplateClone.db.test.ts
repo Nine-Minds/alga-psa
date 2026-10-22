@@ -59,7 +59,9 @@ describe.runIf(enabled)('Prepaid Block config through template clone and snapsho
   async function seedTemplateLine(withBlock = true, withHourlyConfig = true) {
     const templateId = uuidv4();
     const templateLineId = uuidv4();
-    await db('contract_templates').insert({ tenant, template_id: templateId, template_name: `Tpl ${templateId.slice(0, 6)}` });
+    // Base currency matches the contracts below (newContract defaults to EUR),
+    // so cloning reads the template's own amounts.
+    await db('contract_templates').insert({ tenant, template_id: templateId, template_name: `Tpl ${templateId.slice(0, 6)}`, currency_code: 'EUR' });
     await db('contract_template_lines').insert({
       tenant, template_line_id: templateLineId, template_id: templateId, template_line_name: 'Prepaid Block', line_type: 'Hourly',
     });
@@ -198,7 +200,9 @@ describe.runIf(enabled)('Prepaid Block config through template clone and snapsho
 
   async function newTemplate() {
     const templateId = uuidv4();
-    await db('contract_templates').insert({ tenant, template_id: templateId, template_name: `Snap ${templateId.slice(0, 6)}` });
+    // The snapshot source lines live on EUR contracts, and a live line may only
+    // be snapshotted into a template whose base currency is the same.
+    await db('contract_templates').insert({ tenant, template_id: templateId, template_name: `Snap ${templateId.slice(0, 6)}`, currency_code: 'EUR' });
     return templateId;
   }
 

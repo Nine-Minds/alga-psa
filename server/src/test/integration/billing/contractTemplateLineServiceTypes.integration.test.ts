@@ -139,6 +139,9 @@ async function insertTemplateLine(lineType: 'Fixed' | 'Hourly' | 'Usage'): Promi
     template_name: `Template ${templateId.slice(0, 6)}`,
     default_billing_frequency: 'monthly',
     template_status: 'published',
+    // Same base currency as the contracts these templates are cloned into, so
+    // the clone reads the template's own amounts.
+    currency_code: 'USD',
   });
   const templateLineId = uuidv4();
   await t('contract_template_lines').insert({
