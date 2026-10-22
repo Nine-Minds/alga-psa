@@ -848,7 +848,9 @@
             "singleTenantApp": "Microsoft rejected the sign-in because this app registration is single-tenant. Entra needs a multi-tenant app: open the app registration, go to Authentication, set Supported account types to \"Accounts in any organizational directory\", then reconnect. Nothing was saved.",
             "appNotInDirectory": "Microsoft could not find this app in the directory named by the Tenant ID on its Microsoft profile. Check that the Tenant ID is the directory (tenant) ID where the app is registered. Nothing was saved.",
             "wrongDirectory": "The account you signed in with is from a different directory than this single-tenant app. Make the app multi-tenant (Accounts in any organizational directory), then reconnect. Nothing was saved.",
-            "redirectUriMismatch": "Microsoft rejected the redirect URI because it is not registered on the app. Add this exact URI under Authentication > Web redirect URIs, then reconnect: {{redirectUri}}"
+            "redirectUriMismatch": "Microsoft rejected the redirect URI because it is not registered on the app. Add this exact URI under Authentication > Web redirect URIs, then reconnect: {{redirectUri}}",
+            "invalidClientSecret": "Microsoft rejected the client secret on the Microsoft profile. Make sure you saved the secret Value, not its Secret ID.",
+            "expiredClientSecret": "The client secret on the Microsoft profile has expired. Create a new secret in Azure and update the profile."
           },
           "connectingSuffix": " (Connecting...)",
           "details": "Connection details",

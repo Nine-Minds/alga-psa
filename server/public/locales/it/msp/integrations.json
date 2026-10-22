@@ -848,7 +848,9 @@
             "singleTenantApp": "Microsoft ha rifiutato l'accesso perché questa registrazione dell'app è a tenant singolo. Entra richiede un'app multi-tenant: apri la registrazione dell'app, vai su Autenticazione, imposta Tipi di account supportati su \"Account in qualsiasi directory organizzativa\" e riconnetti. Non è stato salvato nulla.",
             "appNotInDirectory": "Microsoft non ha trovato questa app nella directory indicata dall'ID tenant del profilo Microsoft. Verifica che l'ID tenant sia l'ID directory (tenant) in cui l'app è registrata. Non è stato salvato nulla.",
             "wrongDirectory": "L'account con cui hai effettuato l'accesso appartiene a una directory diversa da quella di questa app a tenant singolo. Rendi l'app multi-tenant (Account in qualsiasi directory organizzativa) e riconnetti. Non è stato salvato nulla.",
-            "redirectUriMismatch": "Microsoft ha rifiutato l'URI di reindirizzamento perché non è registrato nell'app. Aggiungi questo URI esatto in Autenticazione > URI di reindirizzamento Web, quindi riconnetti: {{redirectUri}}"
+            "redirectUriMismatch": "Microsoft ha rifiutato l'URI di reindirizzamento perché non è registrato nell'app. Aggiungi questo URI esatto in Autenticazione > URI di reindirizzamento Web, quindi riconnetti: {{redirectUri}}",
+            "invalidClientSecret": "Microsoft ha rifiutato il segreto client del profilo Microsoft. Verifica di aver salvato il Valore del segreto, non il suo ID segreto.",
+            "expiredClientSecret": "Il segreto client del profilo Microsoft è scaduto. Crea un nuovo segreto in Azure e aggiorna il profilo."
           },
           "connectingSuffix": " (Connessione...)",
           "details": "Dettagli della connessione",

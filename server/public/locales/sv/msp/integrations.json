@@ -848,7 +848,9 @@
             "singleTenantApp": "Microsoft avvisade inloggningen eftersom den här appregistreringen är för en enda klientorganisation. Entra kräver en app för flera klientorganisationer: öppna appregistreringen, gå till Autentisering, ställ in Kontotyper som stöds på \"Konton i valfri organisationskatalog\" och anslut igen. Inget sparades.",
             "appNotInDirectory": "Microsoft hittade inte appen i katalogen som anges av klientorganisations-ID:t i Microsoft-profilen. Kontrollera att klientorganisations-ID:t är ID:t för katalogen (klientorganisationen) där appen är registrerad. Inget sparades.",
             "wrongDirectory": "Kontot du loggade in med tillhör en annan katalog än den här appen för en enda klientorganisation. Gör appen flerklientorganisationsbar (Konton i valfri organisationskatalog) och anslut igen. Inget sparades.",
-            "redirectUriMismatch": "Microsoft avvisade omdirigerings-URI:n eftersom den inte är registrerad i appen. Lägg till exakt den här URI:n under Autentisering > Omdirigerings-URI:er för webben och anslut igen: {{redirectUri}}"
+            "redirectUriMismatch": "Microsoft avvisade omdirigerings-URI:n eftersom den inte är registrerad i appen. Lägg till exakt den här URI:n under Autentisering > Omdirigerings-URI:er för webben och anslut igen: {{redirectUri}}",
+            "invalidClientSecret": "Microsoft avvisade klienthemligheten i Microsoft-profilen. Kontrollera att du sparade hemlighetens värde, inte dess hemlighets-ID.",
+            "expiredClientSecret": "Klienthemligheten i Microsoft-profilen har gått ut. Skapa en ny hemlighet i Azure och uppdatera profilen."
           },
           "connectingSuffix": " (Ansluter…)",
           "details": "Anslutningsuppgifter",
