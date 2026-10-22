@@ -53,6 +53,8 @@
   },
   "status": {
     "active": "Aktywny",
+    "scheduled": "Zaplanowana",
+    "startsOn": "Rozpoczyna się {{date}}",
     "draft": "Projekt",
     "expired": "Wygasły",
     "terminated": "Zakończony"
@@ -177,6 +179,7 @@
     },
     "headerCard": {
       "assignmentLifecycleHint": "Aktualny status klienta jest kontrolowany przez cykl życia przypisania poniżej.",
+      "scheduledExplanation": "Ta umowa jest aktywna i rozpocznie rozliczanie {{date}}.",
       "assignmentStatus": "Status przypisania",
       "billingFrequencyLabel": "Częstotliwość rozliczeń *",
       "billingFrequencyPlaceholder": "Wybierz częstotliwość rozliczeń",
@@ -298,6 +301,7 @@
     },
     "status": {
       "active": "Aktywny",
+      "scheduled": "Zaplanowana",
       "draft": "Wersja robocza",
       "expired": "Wygasła",
       "terminated": "Zakończona"
