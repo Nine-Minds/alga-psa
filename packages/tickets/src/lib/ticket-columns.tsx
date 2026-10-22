@@ -528,7 +528,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
               )}
               <span className="min-w-[6ch] truncate">{value || <span className="text-[rgb(var(--color-text-400))]">—</span>}</span>
               <span className="flex shrink-0 items-center gap-1">
-                <ContactFlagBadges isVip={record.contact_is_vip} isPoc={record.contact_is_primary_contact} />
+                <ContactFlagBadges compact isVip={record.contact_is_vip} isPoc={record.contact_is_primary_contact} />
               </span>
             </span>
           );

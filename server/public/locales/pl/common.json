@@ -2176,6 +2176,7 @@
   "flags": {
     "vip": "VIP",
     "poc": "Kontakt główny",
-    "pocFull": "Kontakt główny"
+    "pocFull": "Kontakt główny",
+    "pocShort": "KG"
   }
 }

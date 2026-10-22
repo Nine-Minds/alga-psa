@@ -46,36 +46,43 @@ interface ContactFlagBadgesProps {
   isPoc?: boolean | null;
   size?: BadgeSize;
   className?: string;
+  /**
+   * Space-constrained mode (ticket list cells). Uses the short `flags.pocShort` abbreviation, and
+   * merges both flags into ONE badge. Full names stay in aria-label/title. Without it, this
+   * renders the regular VipBadge/PocBadge unchanged.
+   */
+  compact?: boolean;
 }
 
-/**
- * Compact flag display for space-constrained cells (e.g. ticket list). With both flags set it
- * renders ONE combined "VIP·POC" badge (narrower than two badges plus a gap) whose aria-label and
- * tooltip name each flag in full; a single flag renders the regular badge; no flags renders nothing.
- */
-export const ContactFlagBadges = ({ isVip, isPoc, size = 'sm', className }: ContactFlagBadgesProps) => {
+export const ContactFlagBadges = ({ isVip, isPoc, size = 'sm', className, compact = false }: ContactFlagBadgesProps) => {
   const { t } = useTranslation('common');
-  if (isVip === true && isPoc === true) {
-    const vip = t('flags.vip', { defaultValue: 'VIP' });
-    const poc = t('flags.poc', { defaultValue: 'POC' });
-    const full = `${vip}, ${t('flags.pocFull', { defaultValue: 'Point of contact' })}`;
+  if (!compact) {
     return (
-      <Badge
-        variant="warning"
-        size={size}
-        className={cn('shrink-0 whitespace-nowrap uppercase tracking-wide', className)}
-        data-testid="vip-poc-badge"
-        aria-label={full}
-        title={full}
-      >
-        {vip}·{poc}
-      </Badge>
+      <>
+        <VipBadge isVip={isVip} size={size} className={className} />
+        <PocBadge isPoc={isPoc} size={size} className={className} />
+      </>
     );
   }
+  const vip = isVip === true;
+  const poc = isPoc === true;
+  if (!vip && !poc) return null;
+
+  const vipShort = t('flags.vip', { defaultValue: 'VIP' });
+  const pocShort = t('flags.pocShort', { defaultValue: 'POC' });
+  const pocFull = t('flags.pocFull', { defaultValue: 'Point of contact' });
+  const label = vip && poc ? `${vipShort}, ${pocFull}` : vip ? vipShort : pocFull;
+  const text = vip && poc ? `${vipShort}·${pocShort}` : vip ? vipShort : pocShort;
   return (
-    <>
-      <VipBadge isVip={isVip} size={size} className={className} />
-      <PocBadge isPoc={isPoc} size={size} className={className} />
-    </>
+    <Badge
+      variant={vip ? 'warning' : 'info'}
+      size={size}
+      className={cn('shrink-0 whitespace-nowrap uppercase tracking-wide', className)}
+      data-testid={vip && poc ? 'vip-poc-badge' : vip ? 'vip-badge' : 'poc-badge'}
+      aria-label={label}
+      title={label}
+    >
+      {text}
+    </Badge>
   );
 };

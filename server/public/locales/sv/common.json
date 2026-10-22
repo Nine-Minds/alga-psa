@@ -2176,6 +2176,7 @@
   "flags": {
     "vip": "VIP",
     "poc": "Huvudkontakt",
-    "pocFull": "Huvudkontakt"
+    "pocFull": "Huvudkontakt",
+    "pocShort": "HK"
   }
 }

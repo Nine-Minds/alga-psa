@@ -2176,6 +2176,7 @@
   "flags": {
     "vip": "VIP",
     "poc": "Ansprechpartner",
-    "pocFull": "Ansprechpartner"
+    "pocFull": "Ansprechpartner",
+    "pocShort": "AP"
   }
 }
