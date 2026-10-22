@@ -1689,10 +1689,15 @@
           "consentNotGranted": "Microsoft nie potwierdził zgody administratora.",
           "consentPersistFailed": "Nie udało się zapisać zgody administratora Microsoft.",
           "invalidState": "To żądanie konfiguracji Microsoft jest nieprawidłowe lub wygasło. Rozpocznij ponownie w ustawieniach dostawców.",
-          "microsoftError": "Microsoft nie mógł ukończyć żądania konfiguracji. Spróbuj ponownie lub użyj konfiguracji ręcznej.",
+          "microsoftError": "Microsoft nie mógł ukończyć żądania konfiguracji.",
           "missingCode": "Microsoft nie zwrócił kodu autoryzacyjnego. Rozpocznij konfigurację ponownie.",
-          "sessionMismatch": "Twoja sesja AlgaPSA nie odpowiada administratorowi, który rozpoczął tę konfigurację. Zaloguj się i spróbuj ponownie.",
-          "optionsLoadFailed": "Nie udało się wczytać opcji konfiguracji poczty Microsoft."
+          "sessionMismatch": "Ta konfiguracja została rozpoczęta w innej przeglądarce lub w oknie prywatnym. Dokończ ją w tym samym oknie, w którym ją rozpoczęto, albo użyj linku zatwierdzenia.",
+          "optionsLoadFailed": "Nie udało się wczytać opcji konfiguracji poczty Microsoft.",
+          "policyBlocked": "Zasady dostępu warunkowego lub zasady urządzeń w Twojej dzierżawie Microsoft zablokowały logowanie. Poproś administratora Microsoft o wyłączenie tej aplikacji spod zasad albo zatwierdź z urządzenia dozwolonego przez zasady.",
+          "adminRequired": "Aplikację musi zatwierdzić administrator globalny Microsoft. Skopiuj link zatwierdzenia i wyślij go tej osobie.",
+          "wrongTenant": "Użyte konto Microsoft należy do innej dzierżawy Microsoft niż ta, która jest konfigurowana.",
+          "appNotFound": "Nie znaleziono aplikacji Microsoft w tej dzierżawie Microsoft. Mogła zostać usunięta albo dzierżawa Microsoft jest nieprawidłowa. Możesz ręcznie skonfigurować inną aplikację.",
+          "quoteDiagnostics": "Podaj to podczas sprawdzania dzienników logowania Entra: {{diagnostics}}"
         },
         "fields": {
           "clientId": "Identyfikator klienta",

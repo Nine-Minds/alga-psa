@@ -1689,10 +1689,15 @@
           "consentNotGranted": "Microsoft non ha confermato il consenso dell'amministratore.",
           "consentPersistFailed": "Impossibile registrare il consenso dell'amministratore Microsoft.",
           "invalidState": "Questa richiesta di configurazione Microsoft non è valida o è scaduta. Ricomincia dalle impostazioni dei provider.",
-          "microsoftError": "Microsoft non ha potuto completare la richiesta di configurazione. Riprova o usa la configurazione manuale.",
+          "microsoftError": "Microsoft non è riuscita a completare la richiesta di configurazione.",
           "missingCode": "Microsoft non ha restituito un codice di autorizzazione. Riavvia la configurazione.",
-          "sessionMismatch": "La tua sessione AlgaPSA non corrisponde all'amministratore che ha avviato questa configurazione. Accedi e riprova.",
-          "optionsLoadFailed": "Impossibile caricare le opzioni di configurazione dell'email Microsoft."
+          "sessionMismatch": "Questa configurazione è stata avviata in un altro browser o in una finestra privata. Completala nella stessa finestra in cui l'hai avviata, oppure usa il link di approvazione.",
+          "optionsLoadFailed": "Impossibile caricare le opzioni di configurazione dell'email Microsoft.",
+          "policyBlocked": "Un criteria di accesso condizionale o del dispositivo nel tuo tenant Microsoft ha bloccato l'accesso. Chiedi al tuo amministratore Microsoft di escludere questa app, oppure approva da un dispositivo consentito dal criterio.",
+          "adminRequired": "L'app deve essere approvata da un amministratore globale Microsoft. Copia il link di approvazione e invialo a questa persona.",
+          "wrongTenant": "L'account Microsoft utilizzato appartiene a un tenant Microsoft diverso da quello in fase di configurazione.",
+          "appNotFound": "L'app Microsoft non è stata trovata in quel tenant Microsoft. Potrebbe essere stata eliminata oppure il tenant Microsoft è errato. Puoi configurare manualmente un'altra app.",
+          "quoteDiagnostics": "Indica questo valore quando controlli i log di accesso di Entra: {{diagnostics}}"
         },
         "fields": {
           "clientId": "ID client",

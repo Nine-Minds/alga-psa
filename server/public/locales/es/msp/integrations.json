@@ -1689,10 +1689,15 @@
           "consentNotGranted": "Microsoft no confirmó el consentimiento del administrador.",
           "consentPersistFailed": "No se pudo registrar el consentimiento del administrador de Microsoft.",
           "invalidState": "Esta solicitud de configuración de Microsoft no es válida o venció. Inicie de nuevo desde la configuración de Proveedores.",
-          "microsoftError": "Microsoft no pudo completar la solicitud de configuración. Inténtelo de nuevo o use la configuración manual.",
+          "microsoftError": "Microsoft no pudo completar la solicitud de configuración.",
           "missingCode": "Microsoft no devolvió un código de autorización. Inicie de nuevo la configuración.",
-          "sessionMismatch": "Su sesión de AlgaPSA no coincide con el administrador que inició esta configuración. Inicie sesión e inténtelo de nuevo.",
-          "optionsLoadFailed": "No se pudieron cargar las opciones de configuración del correo electrónico de Microsoft."
+          "sessionMismatch": "Esta configuración se inició en otro navegador o en una ventana privada. Termínela en la misma ventana en la que la inició, o use el enlace de aprobación.",
+          "optionsLoadFailed": "No se pudieron cargar las opciones de configuración del correo electrónico de Microsoft.",
+          "policyBlocked": "Una directiva de acceso condicional o de dispositivo de su inquilino de Microsoft bloqueó el inicio de sesión. Pida a su administrador de Microsoft que exima esta aplicación, o apruebe desde un dispositivo que su directiva permita.",
+          "adminRequired": "Un administrador global de Microsoft debe aprobar la aplicación. Copie el enlace de aprobación y envíeselo.",
+          "wrongTenant": "La cuenta de Microsoft utilizada pertenece a un inquilino de Microsoft distinto del que se está configurando.",
+          "appNotFound": "No se encontró la aplicación de Microsoft en ese inquilino de Microsoft. Puede que se haya eliminado o que el inquilino de Microsoft sea incorrecto. Puede configurar otra aplicación manualmente.",
+          "quoteDiagnostics": "Indique esto al revisar los registros de inicio de sesión de Entra: {{diagnostics}}"
         },
         "fields": {
           "clientId": "ID de cliente",

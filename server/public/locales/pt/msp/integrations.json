@@ -1689,10 +1689,15 @@
           "consentNotGranted": "A Microsoft não confirmou o consentimento do administrador.",
           "consentPersistFailed": "Não foi possível registrar o consentimento do administrador da Microsoft.",
           "invalidState": "Esta solicitação de configuração da Microsoft é inválida ou expirou. Inicie novamente nas configurações de Provedores.",
-          "microsoftError": "A Microsoft não conseguiu concluir a solicitação de configuração. Tente novamente ou use a configuração manual.",
+          "microsoftError": "A Microsoft não conseguiu concluir o pedido de configuração.",
           "missingCode": "A Microsoft não retornou um código de autorização. Inicie a configuração novamente.",
-          "sessionMismatch": "Sua sessão do AlgaPSA não corresponde ao administrador que iniciou esta configuração. Faça login e tente novamente.",
-          "optionsLoadFailed": "Não foi possível carregar as opções de configuração do email da Microsoft."
+          "sessionMismatch": "Esta configuração foi iniciada noutro navegador ou numa janela privada. Conclua-a na mesma janela em que a iniciou ou use o link de aprovação.",
+          "optionsLoadFailed": "Não foi possível carregar as opções de configuração do email da Microsoft.",
+          "policyBlocked": "Uma política de Acesso Condicional ou de dispositivo no seu locatário da Microsoft bloqueou o início de sessão. Peça ao administrador da Microsoft que isente esta aplicação ou aprove a partir de um dispositivo permitido pela política.",
+          "adminRequired": "A aplicação tem de ser aprovada por um administrador global da Microsoft. Copie o link de aprovação e envie-o a essa pessoa.",
+          "wrongTenant": "A conta Microsoft utilizada pertence a um locatário da Microsoft diferente daquele que está a ser configurado.",
+          "appNotFound": "A aplicação Microsoft não foi encontrada nesse locatário da Microsoft. Pode ter sido eliminada ou o locatário da Microsoft está incorreto. Pode configurar manualmente outra aplicação.",
+          "quoteDiagnostics": "Indique isto ao verificar os registos de início de sessão do Entra: {{diagnostics}}"
         },
         "fields": {
           "clientId": "ID do cliente",

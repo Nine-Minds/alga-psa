@@ -1689,10 +1689,15 @@
           "consentNotGranted": "Microsoft hat die Einwilligung des Administrators nicht bestätigt.",
           "consentPersistFailed": "Die Microsoft-Administratoreinwilligung konnte nicht gespeichert werden.",
           "invalidState": "Diese Microsoft-Einrichtungsanfrage ist ungültig oder abgelaufen. Starten Sie den Vorgang in den Anbietereinstellungen erneut.",
-          "microsoftError": "Microsoft konnte die Einrichtungsanfrage nicht abschließen. Versuchen Sie es erneut oder verwenden Sie die manuelle Einrichtung.",
+          "microsoftError": "Microsoft konnte die Einrichtungsanfrage nicht abschließen.",
           "missingCode": "Microsoft hat keinen Autorisierungscode zurückgegeben. Starten Sie die Einrichtung erneut.",
-          "sessionMismatch": "Ihre Sitzung in AlgaPSA stimmt nicht mit dem Administrator überein, der diese Einrichtung gestartet hat. Melden Sie sich an und versuchen Sie es erneut.",
-          "optionsLoadFailed": "Die Optionen für die Einrichtung von Microsoft-E-Mail konnten nicht geladen werden."
+          "sessionMismatch": "Diese Einrichtung wurde in einem anderen Browser oder in einem privaten Fenster gestartet. Schließen Sie sie im selben Fenster ab, in dem Sie begonnen haben, oder verwenden Sie den Genehmigungslink.",
+          "optionsLoadFailed": "Die Optionen für die Einrichtung von Microsoft-E-Mail konnten nicht geladen werden.",
+          "policyBlocked": "Eine Conditional-Access- oder Geräterichtlinie in Ihrem Microsoft-Mandanten hat die Anmeldung blockiert. Bitten Sie Ihren Microsoft-Administrator, diese App auszunehmen, oder genehmigen Sie von einem Gerät aus, das Ihre Richtlinie zulässt.",
+          "adminRequired": "Die App muss von einem globalen Microsoft-Administrator genehmigt werden. Kopieren Sie den Genehmigungslink und senden Sie ihn an diese Person.",
+          "wrongTenant": "Das verwendete Microsoft-Konto gehört zu einem anderen Microsoft-Mandanten als dem, der konfiguriert wird.",
+          "appNotFound": "Die Microsoft-App wurde in diesem Microsoft-Mandanten nicht gefunden. Sie wurde möglicherweise gelöscht, oder der Microsoft-Mandant ist falsch. Sie können stattdessen manuell eine andere App einrichten.",
+          "quoteDiagnostics": "Geben Sie dies an, wenn Sie die Entra-Anmeldeprotokolle prüfen: {{diagnostics}}"
         },
         "fields": {
           "clientId": "Client ID",

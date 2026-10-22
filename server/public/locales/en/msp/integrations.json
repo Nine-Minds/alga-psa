@@ -1689,10 +1689,15 @@
           "consentNotGranted": "Microsoft did not confirm administrator consent.",
           "consentPersistFailed": "Failed to record Microsoft administrator consent.",
           "invalidState": "This Microsoft setup request is invalid or expired. Start again from Providers settings.",
-          "microsoftError": "Microsoft could not complete the setup request. Try again or use manual setup.",
+          "microsoftError": "Microsoft could not complete the setup request.",
           "missingCode": "Microsoft did not return an authorization code. Start setup again.",
-          "sessionMismatch": "Your AlgaPSA session does not match the administrator who started this setup. Sign in and try again.",
-          "optionsLoadFailed": "Failed to load Microsoft Email setup options."
+          "sessionMismatch": "This setup was started in a different browser or a private window. Finish it in the same window you started it in, or use the approval link.",
+          "optionsLoadFailed": "Failed to load Microsoft Email setup options.",
+          "policyBlocked": "A Conditional Access or device policy in your Microsoft tenant blocked the sign-in. Ask your Microsoft admin to exempt this app, or approve from a device your policy allows.",
+          "adminRequired": "This needs a Microsoft Global Administrator to approve the app. Copy the approval link and send it to them.",
+          "wrongTenant": "The Microsoft account used belongs to a different Microsoft tenant than the one being configured.",
+          "appNotFound": "The Microsoft app could not be found in that Microsoft tenant. It may have been deleted or the Microsoft tenant is wrong. You can set up a different app manually.",
+          "quoteDiagnostics": "Quote this when checking Entra sign-in logs: {{diagnostics}}"
         },
         "fields": {
           "clientId": "Client ID",
