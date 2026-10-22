@@ -1719,7 +1719,9 @@ export function convertToWorkflowEvent(event: Event, hooks?: WorkflowPublishHook
   // matching workflow at payload validation. Default it at the stream boundary
   // so no publisher can silently opt out of workflow triggers (alga-2026-0002379).
   // LEVERAGE: friction workflow-payload-occurred-at — publishers should build payloads with
-  // buildWorkflowPayload; this default is the backstop for the raw publishEvent callers.
+  // buildWorkflowPayload; this default is the backstop for the raw publishEvent callers. The workflow
+  // worker repeats the default from the envelope timestamp at its consumer boundary
+  // (WorkflowRuntimeV2EventStreamWorker.normalizeSourcePayload), so three layers now stamp one field.
   const rawPayload = event.payload as Record<string, unknown> | undefined;
   const payload =
     rawPayload && typeof rawPayload === 'object' && typeof rawPayload.occurredAt !== 'string'
