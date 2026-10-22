@@ -11,6 +11,7 @@ import {
   type CurrencyAmount,
 } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { mapHourBlockUsageRow, type HourBlockUsageQueryRow } from '../lib/hourBlockUsageRows';
 import type { Knex } from 'knex';
 import { isActionPermissionError, permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -636,29 +637,7 @@ export const getHourBlockUsageReport = withAuth(async (user, { tenant }): Promis
     blockQuery.orderBy('clients.client_name', 'asc').orderBy('hb.purchased_at', 'asc');
     const rows = await blockQuery;
 
-    const minutesToHours = (minutes: number): number => Math.round((minutes / 60) * 100) / 100;
-
-    const usages: HourBlockUsage[] = rows.map((row: any) => {
-      const totalMinutes = Number(row.total_minutes ?? 0);
-      const remainingMinutes = Math.max(0, Number(row.remaining_minutes ?? 0));
-      const usedMinutes = Math.max(0, totalMinutes - remainingMinutes);
-      return {
-        block_id: row.block_id,
-        client_id: row.client_id,
-        client_name: row.client_name || 'Unknown Client',
-        service_name: row.service_name || row.line_name || '—',
-        contract_name: row.contract_name ?? null,
-        status: row.status,
-        total_hours: minutesToHours(totalMinutes),
-        used_hours: minutesToHours(usedMinutes),
-        remaining_hours: minutesToHours(remainingMinutes),
-        utilization_percentage: totalMinutes > 0 ? Math.round((usedMinutes / totalMinutes) * 100) : 0,
-        hourly_rate: Number(row.hourly_rate ?? 0),
-        currency_code: row.currency_code || 'USD',
-        purchased_at: row.purchased_at ? new Date(row.purchased_at).toISOString().slice(0, 10) : null,
-        expiration_date: row.expiration_date ? new Date(row.expiration_date).toISOString().slice(0, 10) : null,
-      };
-    });
+    const usages: HourBlockUsage[] = rows.map((row: HourBlockUsageQueryRow) => mapHourBlockUsageRow(row));
 
     const clientIds = Array.from(new Set(usages.map((row) => row.client_id).filter((id): id is string => Boolean(id))));
     if (clientIds.length > 0) {
