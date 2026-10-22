@@ -7,19 +7,19 @@ import { getTeams } from '@alga-psa/teams/actions/team-actions/teamActions';
 import { isTeamActionError } from '@alga-psa/teams/actions/team-actions/teamActionErrors';
 import { getPrioritiesByBoardType } from '@alga-psa/reference-data/actions/priorityActions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actions/statusActions';
-import { getAllBoards } from '../../actions/board-actions';
-import { getTicketCategoriesByBoard } from '../../actions/ticketCategoryActions';
-import { getChecklistTemplates } from '../../actions/checklists/checklistTemplateActions';
-import { unwrapRecurring } from './recurringUi';
+import { getAllBoards } from '../actions/board-actions';
+import { getTicketCategoriesByBoard } from '../actions/ticketCategoryActions';
+import { getChecklistTemplates } from '../actions/checklists/checklistTemplateActions';
+import { unwrapRecurring } from './recurring/recurringUi';
 
 /** What depends on the selected board: its statuses, its priority set and its categories. */
-export interface RecurringBoardReference {
+export interface TicketBoardReference {
   statuses: ITicketStatus[];
   priorities: IPriority[];
   categories: ITicketCategory[];
 }
 
-export interface RecurringReferenceData {
+export interface TicketFieldReferenceData {
   loading: boolean;
   error: string | null;
   users: IUser[];
@@ -27,19 +27,18 @@ export interface RecurringReferenceData {
   boards: IBoard[];
   checklistTemplates: Array<{ template_id: string; name: string }>;
   /** Per-board data, keyed by board id; filled by `ensureBoard`. */
-  boardData: Record<string, RecurringBoardReference>;
+  boardData: Record<string, TicketBoardReference>;
   /** Load (once) the statuses/priorities/categories of a board. */
   ensureBoard: (boardId: string) => Promise<void>;
 }
 
 /**
- * Reference data for the recurring-ticket editor and the overrides dialog: the same lookups the
- * quick-add ticket dialog uses, loaded once, plus a per-board cache so every board a client override
- * mentions is fetched at most once.
+ * Reference data for every editor of ticket fields (ticket template editor, recurring schedule editor and
+ * its overrides dialog): the same lookups the quick-add ticket dialog uses, loaded once, plus a per-board
+ * cache so every board mentioned is fetched at most once.
  */
-// LEVERAGE: friction recurring-reference-data-hook — board/priority/category lookups are generic ticket-field data but live in a recurring-named hook (also reused by TicketTemplateEditor); extract a neutral useTicketFieldReferenceData
-export function useRecurringReferenceData(): RecurringReferenceData {
-  const [state, setState] = useState<Omit<RecurringReferenceData, 'ensureBoard' | 'boardData'>>({
+export function useTicketFieldReferenceData(): TicketFieldReferenceData {
+  const [state, setState] = useState<Omit<TicketFieldReferenceData, 'ensureBoard' | 'boardData'>>({
     loading: true,
     error: null,
     users: [],
@@ -47,7 +46,7 @@ export function useRecurringReferenceData(): RecurringReferenceData {
     boards: [],
     checklistTemplates: [],
   });
-  const [boardData, setBoardData] = useState<Record<string, RecurringBoardReference>>({});
+  const [boardData, setBoardData] = useState<Record<string, TicketBoardReference>>({});
   const inflight = useRef<Map<string, Promise<void>>>(new Map());
 
   useEffect(() => {

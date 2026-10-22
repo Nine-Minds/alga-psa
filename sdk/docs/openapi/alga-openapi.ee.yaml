@@ -17614,6 +17614,69 @@ components:
           type: string
         query:
           type: string
+    WorkV1TimeSheetListQuery:
+      type: object
+      properties:
+        page:
+          type: string
+        limit:
+          type: string
+        sort:
+          type: string
+          enum:
+            - approval_status
+            - approved_at
+            - created_at
+            - period_end
+            - period_start
+            - submitted_at
+          description: Sort field. Defaults to period_start (descending). `created_at` is
+            a legacy alias for `period_start` (time sheets have no created_at
+            column). Ties break on time sheet id in the same direction;
+            submitted_at and approved_at sort NULLs last. Any other value is
+            rejected with 400.
+        order:
+          type: string
+          enum:
+            - asc
+            - desc
+        user_id:
+          type: string
+          format: uuid
+        period_id:
+          type: string
+          format: uuid
+        approval_status:
+          type: string
+        approved_by:
+          type: string
+          format: uuid
+        submitted_from:
+          type: string
+          format: date-time
+        submitted_to:
+          type: string
+          format: date-time
+        approved_from:
+          type: string
+          format: date-time
+        approved_to:
+          type: string
+          format: date-time
+        has_entries:
+          type: string
+        period_start_from:
+          type: string
+          format: date-time
+        period_start_to:
+          type: string
+          format: date-time
+        period_end_from:
+          type: string
+          format: date-time
+        period_end_to:
+          type: string
+          format: date-time
     WorkV1GenericBody:
       type: object
       additionalProperties: {}
@@ -69400,7 +69463,24 @@ paths:
           in: query
         - schema:
             type: string
+            enum:
+              - approval_status
+              - approved_at
+              - created_at
+              - period_end
+              - period_start
+              - submitted_at
+            description: Sort field. Defaults to period_start (descending). `created_at` is
+              a legacy alias for `period_start` (time sheets have no created_at
+              column). Ties break on time sheet id in the same direction;
+              submitted_at and approved_at sort NULLs last. Any other value is
+              rejected with 400.
           required: false
+          description: Sort field. Defaults to period_start (descending). `created_at` is
+            a legacy alias for `period_start` (time sheets have no created_at
+            column). Ties break on time sheet id in the same direction;
+            submitted_at and approved_at sort NULLs last. Any other value is
+            rejected with 400.
           name: sort
           in: query
         - schema:
@@ -69413,18 +69493,79 @@ paths:
           in: query
         - schema:
             type: string
+            format: uuid
           required: false
-          name: fields
+          name: user_id
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: period_id
           in: query
         - schema:
             type: string
           required: false
-          name: search
+          name: approval_status
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: approved_by
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: submitted_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: submitted_to
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: approved_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: approved_to
           in: query
         - schema:
             type: string
           required: false
-          name: query
+          name: has_entries
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: period_start_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: period_start_to
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: period_end_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: period_end_to
           in: query
       responses:
         "200":
@@ -69693,7 +69834,24 @@ paths:
           in: query
         - schema:
             type: string
+            enum:
+              - approval_status
+              - approved_at
+              - created_at
+              - period_end
+              - period_start
+              - submitted_at
+            description: Sort field. Defaults to period_start (descending). `created_at` is
+              a legacy alias for `period_start` (time sheets have no created_at
+              column). Ties break on time sheet id in the same direction;
+              submitted_at and approved_at sort NULLs last. Any other value is
+              rejected with 400.
           required: false
+          description: Sort field. Defaults to period_start (descending). `created_at` is
+            a legacy alias for `period_start` (time sheets have no created_at
+            column). Ties break on time sheet id in the same direction;
+            submitted_at and approved_at sort NULLs last. Any other value is
+            rejected with 400.
           name: sort
           in: query
         - schema:
@@ -69706,18 +69864,79 @@ paths:
           in: query
         - schema:
             type: string
+            format: uuid
           required: false
-          name: fields
+          name: user_id
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: period_id
           in: query
         - schema:
             type: string
           required: false
-          name: search
+          name: approval_status
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: approved_by
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: submitted_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: submitted_to
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: approved_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: approved_to
           in: query
         - schema:
             type: string
           required: false
-          name: query
+          name: has_entries
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: period_start_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: period_start_to
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: period_end_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: period_end_to
           in: query
       responses:
         "200":
