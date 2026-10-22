@@ -850,6 +850,9 @@ jobs:
         run: npx playwright install chromium
         shell: bash
 
+      - uses: ./.github/actions/prepare-apt
+        if: ${{ !cancelled() && steps.browser_packages.outcome == 'success' }}
+
       - name: Install Playwright system dependencies
         id: browser_system
         if: ${{ !cancelled() && steps.browser_packages.outcome == 'success' }}
@@ -861,18 +864,9 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          # `npx playwright install-deps` shells out to `apt-get`. The runners'
-          # primary mirror (azure.archive.ubuntu.com) intermittently accepts the
-          # connection and then stops sending, and apt's default has no socket
-          # timeout, so a stalled .deb download hung until the attempt timeout.
-          # A short timeout makes the stalled fetch fail in seconds, which is
-          # what lets apt retry and fall through to the next mirror in
-          # /etc/apt/apt-mirrors.txt instead of waiting out the whole attempt.
-          sudo tee /etc/apt/apt.conf.d/99-ci-fetch-timeouts >/dev/null <<'EOF'
-          Acquire::http::Timeout "20";
-          Acquire::https::Timeout "20";
-          Acquire::Retries "3";
-          EOF
+          # `npx playwright install-deps` shells out to `apt-get`; prepare-apt
+          # above keeps a bad mirror from hanging it. Bound each attempt anyway
+          # so a stall that gets past apt's own timeouts cannot eat the job.
           set -x
           attempt=1
           max_attempts=3
