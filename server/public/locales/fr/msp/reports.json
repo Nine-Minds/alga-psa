@@ -318,7 +318,8 @@
       "yes": "Oui",
       "no": "Non",
       "expired": "Expiré",
-      "voided": "Annulé"
+      "voided": "Annulé",
+      "all": "Tous les statuts"
     },
     "profitability": {
       "formats": {

@@ -318,7 +318,8 @@
       "yes": "Ja",
       "no": "Nej",
       "expired": "Utgånget",
-      "voided": "Makulerat"
+      "voided": "Makulerat",
+      "all": "Alla statusar"
     },
     "profitability": {
       "formats": {

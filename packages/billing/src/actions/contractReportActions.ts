@@ -603,7 +603,9 @@ export interface HourBlockUsage {
 /**
  * Get prepaid hour-block usage report data
  * One row per issued block (ad-hoc and contract-issued) with burn progress.
- * Blocks with no liability (pending, or voided before issuance) are excluded.
+ * Blocks with no liability (pending, or voided before issuance) are excluded,
+ * as are blocks that fell out of the trailing 12-month window (see below) so
+ * the report does not accumulate every block the tenant ever bought.
  */
 export const getHourBlockUsageReport = withAuth(async (user, { tenant }): Promise<HourBlockUsage[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
@@ -634,6 +636,20 @@ export const getHourBlockUsageReport = withAuth(async (user, { tenant }): Promis
     db.tenantJoin(blockQuery, 'contracts as c', 'cl.contract_id', 'c.contract_id', { type: 'left' });
     db.tenantJoin(blockQuery, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
     blockQuery.whereNotNull('hb.purchased_at').andWhere('hb.status', '!=', 'pending');
+    // Default window so the table does not grow without bound as blocks age
+    // out: live blocks always, plus blocks that expired, were voided or were
+    // purchased within the last 12 months. Callers narrow further in the UI.
+    const today = new Date();
+    const windowStartDateOnly = new Date(Date.UTC(
+      today.getUTCFullYear() - 1, today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0
+    )).toISOString().slice(0, 10);
+    blockQuery.where((builder) => {
+      builder
+        .where('hb.status', 'active')
+        .orWhere('hb.expiration_date', '>=', windowStartDateOnly)
+        .orWhere('hb.voided_at', '>=', windowStartDateOnly)
+        .orWhere('hb.purchased_at', '>=', windowStartDateOnly);
+    });
     blockQuery.orderBy('clients.client_name', 'asc').orderBy('hb.purchased_at', 'asc');
     const rows = await blockQuery;
 
