@@ -166,3 +166,80 @@ export function buildClientArchivedPayload(params: {
   });
 }
 
+
+// ---- client locations ------------------------------------------------------------------------
+// Kept in this file so the locations ride the existing @alga-psa/workflow-streams export.
+
+export function buildClientLocationCreatedPayload(params: {
+  locationId: string;
+  clientId: string;
+  isDefault?: boolean;
+  createdByUserId?: string;
+  createdAt?: Date | string;
+}): Record<string, unknown> & BuiltWorkflowPayload<'CLIENT_LOCATION_CREATED'> {
+  return builtWorkflowPayload('CLIENT_LOCATION_CREATED', {
+    locationId: params.locationId,
+    clientId: params.clientId,
+    ...(params.isDefault !== undefined ? { isDefault: params.isDefault } : {}),
+    ...(params.createdByUserId ? { createdByUserId: params.createdByUserId } : {}),
+    ...(params.createdAt ? { createdAt: normalizeChangeValue(params.createdAt) } : {}),
+  });
+}
+
+export function buildClientLocationUpdatedPayload(params: {
+  locationId: string;
+  clientId: string;
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+  updatedByUserId?: string;
+  updatedAt?: Date | string;
+}): Record<string, unknown> & BuiltWorkflowPayload<'CLIENT_LOCATION_UPDATED'> {
+  const updatedFields: string[] = [];
+  const changes: Record<string, { previous: unknown; new: unknown }> = {};
+  for (const key of new Set([...Object.keys(params.before), ...Object.keys(params.after)])) {
+    if (key === 'tenant' || key === 'updated_at' || key === 'created_at') continue;
+    const previousValue = params.before[key];
+    const newValue = params.after[key];
+    if (areValuesEqual(previousValue, newValue)) continue;
+    const path = snakeToCamel(key);
+    updatedFields.push(path);
+    changes[path] = { previous: normalizeChangeValue(previousValue), new: normalizeChangeValue(newValue) };
+  }
+
+  return builtWorkflowPayload('CLIENT_LOCATION_UPDATED', {
+    locationId: params.locationId,
+    clientId: params.clientId,
+    ...(params.updatedByUserId ? { updatedByUserId: params.updatedByUserId } : {}),
+    ...(params.updatedAt ? { updatedAt: normalizeChangeValue(params.updatedAt) } : {}),
+    ...(updatedFields.length ? { updatedFields } : {}),
+    ...(Object.keys(changes).length ? { changes } : {}),
+  });
+}
+
+export function buildClientLocationDeactivatedPayload(params: {
+  locationId: string;
+  clientId: string;
+  deactivatedByUserId?: string;
+  deactivatedAt?: Date | string;
+}): Record<string, unknown> & BuiltWorkflowPayload<'CLIENT_LOCATION_DEACTIVATED'> {
+  return builtWorkflowPayload('CLIENT_LOCATION_DEACTIVATED', {
+    locationId: params.locationId,
+    clientId: params.clientId,
+    ...(params.deactivatedByUserId ? { deactivatedByUserId: params.deactivatedByUserId } : {}),
+    ...(params.deactivatedAt ? { deactivatedAt: normalizeChangeValue(params.deactivatedAt) } : {}),
+  });
+}
+
+export function buildClientLocationDeletedPayload(params: {
+  locationId: string;
+  clientId: string;
+  deletedByUserId?: string;
+  deletedAt?: Date | string;
+}): Record<string, unknown> & BuiltWorkflowPayload<'CLIENT_LOCATION_DELETED'> {
+  return builtWorkflowPayload('CLIENT_LOCATION_DELETED', {
+    locationId: params.locationId,
+    clientId: params.clientId,
+    ...(params.deletedByUserId ? { deletedByUserId: params.deletedByUserId } : {}),
+    ...(params.deletedAt ? { deletedAt: normalizeChangeValue(params.deletedAt) } : {}),
+  });
+}

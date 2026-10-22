@@ -10,8 +10,11 @@ import {
   type AmpTicketCommentRecord,
   type AmpTicketRecord,
 } from '@alga-psa/migration-spec';
-import { tenantDb } from '@alga-psa/db';
+import { registerAfterCommit, tenantDb } from '@alga-psa/db';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildClientCreatedPayload } from '@alga-psa/workflow-streams';
 import { createLocation } from '@alga-psa/clients/models';
+import { queueContactCreated } from '@alga-psa/clients/lib/contactEvents';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
@@ -96,6 +99,20 @@ export class OrganizationMigrationApplier implements EntityApplier {
         ...(record.phone ? { phone: record.phone } : {}),
       },
     }, context.tenant, trx);
+
+    // A migrated organization is a real new client; publish client.created once the batch commits.
+    const occurredAt = new Date().toISOString();
+    registerAfterCommit(trx, () => publishWorkflowEvent({
+      eventType: 'CLIENT_CREATED',
+      payload: buildClientCreatedPayload({
+        clientId: client.client_id,
+        clientName: client.client_name,
+        createdAt: occurredAt,
+        status: client.is_inactive ? 'inactive' : 'active',
+      }),
+      ctx: { tenantId: context.tenant, occurredAt },
+      idempotencyKey: `client_created:${client.client_id}`,
+    }), `CLIENT_CREATED client=${client.client_id}`);
 
     return { targetEntityType: this.targetEntityType, targetEntityId: client.client_id };
   }
@@ -233,6 +250,7 @@ export class ContactMigrationApplier implements EntityApplier {
       context.tenant,
       trx
     );
+    queueContactCreated(trx, context.tenant, contact as any);
 
     return {
       targetEntityType: this.targetEntityType,

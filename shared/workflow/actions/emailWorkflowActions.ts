@@ -733,7 +733,7 @@ export async function createOrFindContact(
     throw new Error('Invalid email address');
   }
 
-  return await withAdminTransaction(async (trx: Knex.Transaction) => {
+  const result = await withAdminTransaction(async (trx: Knex.Transaction) => {
       // First try to find existing contact
       const existingContact = await ContactModel.getContactByEmail(normalizedEmail, tenant, trx);
 
@@ -758,6 +758,7 @@ export async function createOrFindContact(
         role: input.title,
       }, tenant, trx);
 
+      const createdAt = createdContact.created_at ? new Date(createdContact.created_at).toISOString() : new Date().toISOString();
       return {
         id: createdContact.contact_name_id,
         name: createdContact.full_name,
@@ -765,10 +766,43 @@ export async function createOrFindContact(
         client_id: createdContact.client_id || input.client_id,
         phone: getDefaultPhoneNumber(createdContact),
         title: createdContact.role || input.title,
-        created_at: createdContact.created_at ? new Date(createdContact.created_at).toISOString() : new Date().toISOString(),
-        is_new: true
+        created_at: createdAt,
+        is_new: true,
+        // carried out of the transaction so the event is published only after it commits
+        __created: createdContact,
       };
     });
+
+  const { __created, ...output } = result as typeof result & { __created?: any };
+  if (__created) {
+    // LEVERAGE: pattern contact-event-publish — CONTACT_CREATED after commit; withAdminTransaction does not flush registerAfterCommit hooks, so publish here.
+    await publishWorkflowEvent({
+      eventType: 'CONTACT_CREATED',
+      payload: buildContactCreatedPayload(contactCreatedParamsFor(__created, output.created_at)),
+      ctx: { tenantId: tenant, occurredAt: output.created_at },
+      idempotencyKey: `contact_created:${__created.contact_name_id}`,
+    }).catch((error) => {
+      console.warn('createOrFindContact: CONTACT_CREATED publish failed', { tenantId: tenant, contactId: __created.contact_name_id, error: error instanceof Error ? error.message : String(error) });
+    });
+  }
+  return output as CreateOrFindContactOutput;
+}
+
+function contactCreatedParamsFor(contact: any, createdAt: string): Parameters<typeof buildContactCreatedPayload>[0] {
+  return {
+    contactId: contact.contact_name_id,
+    clientId: contact.client_id,
+    fullName: contact.full_name,
+    email: contact.email ?? undefined,
+    primaryEmailCanonicalType: contact.primary_email_canonical_type ?? null,
+    primaryEmailCustomTypeId: contact.primary_email_custom_type_id ?? null,
+    primaryEmailType: contact.primary_email_type ?? null,
+    additionalEmailAddresses: contact.additional_email_addresses ?? [],
+    phoneNumbers: contact.phone_numbers ?? [],
+    defaultPhoneNumber: contact.default_phone_number || undefined,
+    defaultPhoneType: contact.default_phone_type || undefined,
+    createdAt,
+  };
 }
 
 // LEVERAGE: pattern contact-create-with-event

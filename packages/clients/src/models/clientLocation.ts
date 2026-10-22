@@ -1,6 +1,12 @@
 import { tenantDb } from '@alga-psa/db';
 import type { IClientLocation } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import {
+  queueClientLocationCreated,
+  queueClientLocationDeleted,
+  queueClientLocationUpdated,
+  type ClientLocationEventOptions,
+} from '../lib/clientLocationEvents';
 
 export type CreateClientLocationInput = Omit<
   IClientLocation,
@@ -41,37 +47,60 @@ async function findNextActiveLocation(
     .first();
 }
 
+/**
+ * Implicit default changes are real field changes on other rows (is_default), so each demoted or
+ * promoted location emits client_location.updated like an explicit edit would.
+ */
 async function clearDefaults(
   trx: Knex.Transaction,
   tenant: string,
   clientId: string,
-  excludedLocationId?: string
+  excludedLocationId?: string,
+  eventOptions: ClientLocationEventOptions = {}
 ): Promise<void> {
-  const query = tenantDb(trx, tenant).table<IClientLocation>('client_locations')
-    .where({ client_id: clientId, is_default: true });
+  const db = tenantDb(trx, tenant);
+  const scope = () => {
+    const query = db.table<IClientLocation>('client_locations').where({ client_id: clientId, is_default: true });
+    if (excludedLocationId) {
+      query.whereNot('location_id', excludedLocationId);
+    }
+    return query;
+  };
+  const before = await scope();
+  if (before.length === 0) return;
 
-  if (excludedLocationId) {
-    query.whereNot('location_id', excludedLocationId);
+  const after = await scope().update({ is_default: false, updated_at: trx.fn.now() }).returning('*');
+  const afterById = new Map(after.map((row) => [row.location_id, row]));
+  for (const row of before) {
+    const updated = afterById.get(row.location_id);
+    if (updated) queueClientLocationUpdated(trx, tenant, row, updated, eventOptions);
   }
-
-  await query.update({ is_default: false, updated_at: trx.fn.now() });
 }
 
 async function promoteLocation(
   trx: Knex.Transaction,
   tenant: string,
-  locationId: string
+  locationId: string,
+  eventOptions: ClientLocationEventOptions = {}
 ): Promise<void> {
-  await tenantDb(trx, tenant).table<IClientLocation>('client_locations')
+  const db = tenantDb(trx, tenant);
+  const before = await db.table<IClientLocation>('client_locations')
     .where({ location_id: locationId, is_active: true })
-    .update({ is_default: true, updated_at: trx.fn.now() });
+    .first();
+  if (!before) return;
+  const [after] = await db.table<IClientLocation>('client_locations')
+    .where({ location_id: locationId, is_active: true })
+    .update({ is_default: true, updated_at: trx.fn.now() })
+    .returning('*');
+  if (after) queueClientLocationUpdated(trx, tenant, before, after, eventOptions);
 }
 
 export async function createLocation(
   trx: Knex.Transaction,
   tenant: string,
   clientId: string,
-  data: CreateClientLocationInput
+  data: CreateClientLocationInput,
+  eventOptions: ClientLocationEventOptions = {}
 ): Promise<IClientLocation> {
   await lockClient(trx, tenant, clientId);
   const db = tenantDb(trx, tenant);
@@ -87,7 +116,7 @@ export async function createLocation(
   const shouldBeDefault = isActive && (data.is_default === true || !existingDefault);
 
   if (shouldBeDefault) {
-    await clearDefaults(trx, tenant, clientId);
+    await clearDefaults(trx, tenant, clientId, undefined, eventOptions);
   }
 
   const [location] = await db.table<IClientLocation>('client_locations')
@@ -103,6 +132,7 @@ export async function createLocation(
     })
     .returning('*');
 
+  queueClientLocationCreated(trx, tenant, location, eventOptions);
   return location;
 }
 
@@ -111,7 +141,8 @@ export async function updateLocation(
   tenant: string,
   clientId: string,
   locationId: string,
-  data: UpdateClientLocationInput
+  data: UpdateClientLocationInput,
+  eventOptions: ClientLocationEventOptions = {}
 ): Promise<IClientLocation> {
   await lockClient(trx, tenant, clientId);
   const db = tenantDb(trx, tenant);
@@ -138,7 +169,7 @@ export async function updateLocation(
   );
 
   if (updateData.is_default === true) {
-    await clearDefaults(trx, tenant, clientId, locationId);
+    await clearDefaults(trx, tenant, clientId, locationId, eventOptions);
   } else if (removesCurrentDefault) {
     const nextDefault = await findNextActiveLocation(trx, tenant, clientId, locationId);
     if (!nextDefault && willBeActive) {
@@ -149,7 +180,7 @@ export async function updateLocation(
       .where({ location_id: locationId })
       .update({ is_default: false, updated_at: trx.fn.now() });
     if (nextDefault) {
-      await promoteLocation(trx, tenant, nextDefault.location_id);
+      await promoteLocation(trx, tenant, nextDefault.location_id, eventOptions);
     }
     delete updateData.is_default;
   } else if (willBeActive && !existing.is_default) {
@@ -175,6 +206,7 @@ export async function updateLocation(
   if (!location) {
     throw new Error('Location not found');
   }
+  queueClientLocationUpdated(trx, tenant, existing, location, eventOptions);
   return location;
 }
 
@@ -182,7 +214,8 @@ export async function deleteLocation(
   trx: Knex.Transaction,
   tenant: string,
   clientId: string,
-  locationId: string
+  locationId: string,
+  eventOptions: ClientLocationEventOptions = {}
 ): Promise<void> {
   await lockClient(trx, tenant, clientId);
   const db = tenantDb(trx, tenant);
@@ -216,11 +249,13 @@ export async function deleteLocation(
       .where({ location_id: locationId })
       .update({ is_default: false, updated_at: trx.fn.now() });
     if (nextDefault) {
-      await promoteLocation(trx, tenant, nextDefault.location_id);
+      await promoteLocation(trx, tenant, nextDefault.location_id, eventOptions);
     }
   }
 
   await db.table<IClientLocation>('client_locations')
     .where({ client_id: clientId, location_id: locationId })
     .delete();
+
+  queueClientLocationDeleted(trx, tenant, location, eventOptions);
 }

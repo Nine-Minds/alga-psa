@@ -460,6 +460,8 @@
         "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
         "ticketFilter": "Filtro de tickets",
         "ticketFilterPlaceholder": "Un UUID de ticket por línea. Deje en blanco para recibir todos los eventos de ticket coincidentes.",
+        "legacyEventsHelp": "Estos tipos de evento ya no son compatibles. Se conservan en este webhook, pero nunca se entregan. Desmarque uno para quitarlo.",
+        "legacyEventLabel": "no compatible",
         "retryConfig": "Configuración de reintentos (JSON)",
         "verifySsl": "Verificar certificados SSL",
         "webhookActive": "El webhook está activo",
@@ -801,6 +803,7 @@
       "deliveryNotFound": "Entrega no encontrada.",
       "testNotRetryable": "Las entregas de prueba no se pueden reintentar.",
       "payloadInvalid": "Esta entrega no se puede reintentar porque la carga útil almacenada no es válida.",
+      "unsupportedEventType": "Tipo de evento no compatible: {{eventTypes}}",
       "validation": { "unknownEntity": "Entidad de webhook desconocida «{{entity}}».", "unknownField": "Campo desconocido «{{field}}» para la entidad de webhook «{{entity}}»." }
     },
     "inboundWebhooks": {
