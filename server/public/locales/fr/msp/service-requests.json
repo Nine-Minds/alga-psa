@@ -93,6 +93,36 @@
         "checkbox": "case à cocher",
         "date": "sélecteur de date",
         "file-upload": "téléversement de fichier"
+      },
+      "visibility": {
+        "title": "Afficher quand…",
+        "none": "Toujours affiché",
+        "addRule": "Ajouter une condition",
+        "removeRule": "Supprimer la condition",
+        "source": "Champ",
+        "selectSource": "Sélectionner un champ",
+        "operator": "Condition",
+        "value": "Valeur",
+        "valueTrue": "Coché",
+        "valueFalse": "Décoché",
+        "selectValue": "Sélectionner une valeur",
+        "legacyBooleanWarning": "Cette règle compare à du texte, mais une case à cocher contient vrai/faux et ne correspondra jamais. Resélectionnez la valeur pour corriger.",
+        "saveFailed": "Échec de l'enregistrement des règles de visibilité.",
+        "contextSources": {
+          "requesterUserId": "Utilisateur demandeur",
+          "clientId": "Client demandeur",
+          "contactId": "Contact demandeur"
+        },
+        "operators": {
+          "equals": "est égal à",
+          "not-equals": "n'est pas égal à",
+          "is-true": "est coché / vrai",
+          "is-false": "est décoché / faux",
+          "has-value": "a une valeur",
+          "is-empty": "est vide"
+        },
+        "advancedJson": "Avancé (JSON)",
+        "advancedJsonHelp": "Vue en lecture seule de la configuration enregistrée, y compris les valeurs par défaut du contexte. Utilisez « Afficher quand… » sur chaque champ pour modifier les règles."
       }
     },
     "execution": {

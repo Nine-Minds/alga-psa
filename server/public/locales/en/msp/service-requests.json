@@ -93,6 +93,36 @@
         "checkbox": "checkbox",
         "date": "date",
         "file-upload": "file-upload"
+      },
+      "visibility": {
+        "title": "Show when…",
+        "none": "Always shown",
+        "addRule": "Add condition",
+        "removeRule": "Remove condition",
+        "source": "Field",
+        "selectSource": "Select a field",
+        "operator": "Condition",
+        "value": "Value",
+        "valueTrue": "Checked",
+        "valueFalse": "Unchecked",
+        "selectValue": "Select a value",
+        "legacyBooleanWarning": "This rule compares against text, but a checkbox holds true/false, so it will never match. Re-select the value to fix it.",
+        "saveFailed": "Failed to save the visibility rules.",
+        "contextSources": {
+          "requesterUserId": "Requesting user",
+          "clientId": "Requesting client",
+          "contactId": "Requesting contact"
+        },
+        "operators": {
+          "equals": "equals",
+          "not-equals": "does not equal",
+          "is-true": "is checked / true",
+          "is-false": "is unchecked / false",
+          "has-value": "has a value",
+          "is-empty": "is empty"
+        },
+        "advancedJson": "Advanced (JSON)",
+        "advancedJsonHelp": "Read-only view of the saved configuration, including context defaults. Use the “Show when…” editor on each field to change visibility rules."
       }
     },
     "execution": {

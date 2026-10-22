@@ -92,3 +92,80 @@ describe("RequestServiceForm long-text fields", () => {
     expect(submittedData.get("notes")).toBe("");
   });
 });
+
+const vpnReason = () => document.getElementById("request-service-field-vpn_reason");
+
+describe("RequestServiceForm live conditional visibility", () => {
+  afterEach(() => cleanup());
+
+  const labels = { selectPlaceholder: "Select", datePlaceholder: "Date", submit: "Submit request" };
+  const visibility = {
+    enabled: true,
+    rules: [{ fieldKey: "vpn_reason", source: "needs_vpn", operator: "is-true" as const }],
+    context: { requesterUserId: "user-1", clientId: "client-1", contactId: null },
+  };
+  const fields = [
+    { key: "needs_vpn", type: "checkbox", label: "Needs VPN" },
+    { key: "vpn_reason", type: "short-text", label: "VPN Reason", required: true },
+  ];
+
+  it("mounts and unmounts the dependent field as soon as the controller changes", async () => {
+    const user = userEvent.setup();
+    render(
+      <RequestServiceForm
+        action={vi.fn()}
+        fields={fields}
+        initialValues={{}}
+        visibility={visibility}
+        labels={labels}
+        clientSubmissionKey="k"
+      />,
+    );
+    expect(vpnReason()).toBeNull();
+    await user.click(screen.getByRole("checkbox", { name: "Needs VPN" }));
+    expect(vpnReason()).not.toBeNull();
+    await user.click(screen.getByRole("checkbox", { name: "Needs VPN" }));
+    expect(vpnReason()).toBeNull();
+  });
+
+  it("omits hidden keys from FormData and does not enforce hidden required fields", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn();
+    render(
+      <RequestServiceForm
+        action={action}
+        fields={fields}
+        initialValues={{}}
+        visibility={visibility}
+        labels={labels}
+        clientSubmissionKey="k"
+      />,
+    );
+    const form = screen.getByRole("button", { name: "Submit request" }).closest("form")!;
+    expect(form.checkValidity()).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Submit request" }));
+    const data = action.mock.calls[0][0] as FormData;
+    expect(data.has("vpn_reason")).toBe(false);
+
+    await user.click(screen.getByRole("checkbox", { name: "Needs VPN" }));
+    expect(form.checkValidity()).toBe(false);
+    await user.type(vpnReason()!, "Remote");
+    expect(form.checkValidity()).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Submit request" }));
+    expect((action.mock.calls[1][0] as FormData).get("vpn_reason")).toBe("Remote");
+  });
+
+  it("renders every field when visibility is disabled", () => {
+    render(
+      <RequestServiceForm
+        action={vi.fn()}
+        fields={fields}
+        initialValues={{}}
+        visibility={{ ...visibility, enabled: false }}
+        labels={labels}
+        clientSubmissionKey="k"
+      />,
+    );
+    expect(vpnReason()).not.toBeNull();
+  });
+});

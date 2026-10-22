@@ -93,6 +93,36 @@
         "checkbox": "caixa de seleção",
         "date": "data",
         "file-upload": "upload de arquivo"
+      },
+      "visibility": {
+        "title": "Mostrar quando…",
+        "none": "Sempre visível",
+        "addRule": "Adicionar condição",
+        "removeRule": "Remover condição",
+        "source": "Campo",
+        "selectSource": "Selecionar um campo",
+        "operator": "Condição",
+        "value": "Valor",
+        "valueTrue": "Marcado",
+        "valueFalse": "Desmarcado",
+        "selectValue": "Selecionar um valor",
+        "legacyBooleanWarning": "Esta regra compara com texto, mas uma caixa de seleção contém verdadeiro/falso e nunca corresponderá. Selecione o valor novamente para corrigir.",
+        "saveFailed": "Não foi possível salvar as regras de visibilidade.",
+        "contextSources": {
+          "requesterUserId": "Usuário solicitante",
+          "clientId": "Cliente solicitante",
+          "contactId": "Contato solicitante"
+        },
+        "operators": {
+          "equals": "é igual a",
+          "not-equals": "não é igual a",
+          "is-true": "está marcado / verdadeiro",
+          "is-false": "está desmarcado / falso",
+          "has-value": "tem um valor",
+          "is-empty": "está vazio"
+        },
+        "advancedJson": "Avançado (JSON)",
+        "advancedJsonHelp": "Visualização somente leitura da configuração salva, incluindo os padrões de contexto. Use “Mostrar quando…” em cada campo para alterar as regras."
       }
     },
     "execution": {

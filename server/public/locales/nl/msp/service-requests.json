@@ -93,6 +93,36 @@
         "checkbox": "checkbox",
         "date": "date",
         "file-upload": "file-upload"
+      },
+      "visibility": {
+        "title": "Tonen wanneer…",
+        "none": "Altijd zichtbaar",
+        "addRule": "Voorwaarde toevoegen",
+        "removeRule": "Voorwaarde verwijderen",
+        "source": "Veld",
+        "selectSource": "Selecteer een veld",
+        "operator": "Voorwaarde",
+        "value": "Waarde",
+        "valueTrue": "Aangevinkt",
+        "valueFalse": "Niet aangevinkt",
+        "selectValue": "Selecteer een waarde",
+        "legacyBooleanWarning": "Deze regel vergelijkt met tekst, maar een selectievakje bevat waar/onwaar en komt dus nooit overeen. Selecteer de waarde opnieuw om dit op te lossen.",
+        "saveFailed": "De zichtbaarheidsregels konden niet worden opgeslagen.",
+        "contextSources": {
+          "requesterUserId": "Aanvragende gebruiker",
+          "clientId": "Aanvragende klant",
+          "contactId": "Aanvragend contact"
+        },
+        "operators": {
+          "equals": "is gelijk aan",
+          "not-equals": "is niet gelijk aan",
+          "is-true": "is aangevinkt / waar",
+          "is-false": "is niet aangevinkt / onwaar",
+          "has-value": "heeft een waarde",
+          "is-empty": "is leeg"
+        },
+        "advancedJson": "Geavanceerd (JSON)",
+        "advancedJsonHelp": "Alleen-lezenweergave van de opgeslagen configuratie, inclusief contextstandaarden. Gebruik „Tonen wanneer…” bij elk veld om regels te wijzigen."
       }
     },
     "execution": {

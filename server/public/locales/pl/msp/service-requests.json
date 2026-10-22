@@ -93,6 +93,36 @@
         "checkbox": "pole wyboru",
         "date": "data",
         "file-upload": "przesyłanie pliku"
+      },
+      "visibility": {
+        "title": "Pokaż, gdy…",
+        "none": "Zawsze widoczne",
+        "addRule": "Dodaj warunek",
+        "removeRule": "Usuń warunek",
+        "source": "Pole",
+        "selectSource": "Wybierz pole",
+        "operator": "Warunek",
+        "value": "Wartość",
+        "valueTrue": "Zaznaczone",
+        "valueFalse": "Niezaznaczone",
+        "selectValue": "Wybierz wartość",
+        "legacyBooleanWarning": "Ta reguła porównuje z tekstem, ale pole wyboru przechowuje prawda/fałsz, więc nigdy nie będzie pasować. Wybierz wartość ponownie, aby to naprawić.",
+        "saveFailed": "Nie udało się zapisać reguł widoczności.",
+        "contextSources": {
+          "requesterUserId": "Użytkownik zgłaszający",
+          "clientId": "Klient zgłaszający",
+          "contactId": "Kontakt zgłaszający"
+        },
+        "operators": {
+          "equals": "jest równe",
+          "not-equals": "nie jest równe",
+          "is-true": "jest zaznaczone / prawda",
+          "is-false": "jest niezaznaczone / fałsz",
+          "has-value": "ma wartość",
+          "is-empty": "jest puste"
+        },
+        "advancedJson": "Zaawansowane (JSON)",
+        "advancedJsonHelp": "Podgląd zapisanej konfiguracji tylko do odczytu, w tym wartości domyślnych kontekstu. Reguły zmieniaj w edytorze „Pokaż, gdy…” przy każdym polu."
       }
     },
     "execution": {

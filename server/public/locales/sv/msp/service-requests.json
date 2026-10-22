@@ -93,6 +93,36 @@
         "checkbox": "Kryssruta",
         "date": "Datum",
         "file-upload": "Filuppladdning"
+      },
+      "visibility": {
+        "title": "Visa när…",
+        "none": "Visas alltid",
+        "addRule": "Lägg till villkor",
+        "removeRule": "Ta bort villkor",
+        "source": "Fält",
+        "selectSource": "Välj ett fält",
+        "operator": "Villkor",
+        "value": "Värde",
+        "valueTrue": "Markerad",
+        "valueFalse": "Avmarkerad",
+        "selectValue": "Välj ett värde",
+        "legacyBooleanWarning": "Den här regeln jämför med text, men en kryssruta innehåller sant/falskt och matchar därför aldrig. Välj värdet igen för att åtgärda.",
+        "saveFailed": "Det gick inte att spara synlighetsreglerna.",
+        "contextSources": {
+          "requesterUserId": "Begärande användare",
+          "clientId": "Begärande kund",
+          "contactId": "Begärande kontakt"
+        },
+        "operators": {
+          "equals": "är lika med",
+          "not-equals": "är inte lika med",
+          "is-true": "är markerad / sant",
+          "is-false": "är avmarkerad / falskt",
+          "has-value": "har ett värde",
+          "is-empty": "är tomt"
+        },
+        "advancedJson": "Avancerat (JSON)",
+        "advancedJsonHelp": "Skrivskyddad vy av den sparade konfigurationen, inklusive kontextstandarder. Använd ”Visa när…” på varje fält för att ändra reglerna."
       }
     },
     "execution": {
