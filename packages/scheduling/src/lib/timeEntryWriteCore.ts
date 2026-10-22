@@ -332,9 +332,9 @@ export async function persistTimeEntry(
         { billingProfileId: workItemBillingProfileId }
       );
 
-      if (selection.selectedContractLineId) {
-        cleanedEntry.contract_line_id = selection.selectedContractLineId;
-      }
+      // Always assign: null (not undefined) so the UPDATE clears a stale id
+      // instead of leaving it next to contract_line_source='unresolved'.
+      cleanedEntry.contract_line_id = selection.selectedContractLineId ?? null;
       // Record how the line was chosen, including the unresolved case — the
       // reason is what the review queue and the attribution inspector read
       // (F062, F063).
@@ -342,6 +342,7 @@ export async function persistTimeEntry(
         CONTRACT_LINE_SOURCE_BY_SELECTION_REASON[selection.reason];
     } catch (error) {
       console.error('Error determining default contract line:', error);
+      cleanedEntry.contract_line_id = null;
       cleanedEntry.contract_line_source = 'unresolved';
     }
   }
