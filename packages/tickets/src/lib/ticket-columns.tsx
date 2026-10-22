@@ -465,8 +465,10 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
               )}
               <span className="flex flex-col gap-0.5 overflow-hidden">
                 <span className="flex items-center gap-1 overflow-hidden">
-                  <span className="truncate">{value || 'No Client'}</span>
-                  <VipBadge isVip={record.client_is_vip} />
+                  <span className="min-w-[6ch] truncate">{value || 'No Client'}</span>
+                  <span className="flex shrink-0 items-center">
+                    <VipBadge isVip={record.client_is_vip} />
+                  </span>
                 </span>
                 {multiClient ? (
                   <span
@@ -521,9 +523,11 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                   —
                 </span>
               )}
-              <span className="truncate">{value || <span className="text-[rgb(var(--color-text-400))]">—</span>}</span>
-              <VipBadge isVip={record.contact_is_vip} />
-              <PocBadge isPoc={record.contact_is_primary_contact} />
+              <span className="min-w-[6ch] truncate">{value || <span className="text-[rgb(var(--color-text-400))]">—</span>}</span>
+              <span className="flex shrink-0 items-center gap-1">
+                <VipBadge isVip={record.contact_is_vip} />
+                <PocBadge isPoc={record.contact_is_primary_contact} />
+              </span>
             </span>
           );
           if (!onContactClick || !record.contact_name_id) {

@@ -111,6 +111,15 @@ describe('TicketNavigation returnFilters round-trip', () => {
     expect(filters.statusId).toBe('status-open');
   });
 
+  it('forwards the VIP requester filter to the pager query', async () => {
+    searchParams = new URLSearchParams(`returnFilters=${encodeURIComponent('requesterVip=true')}`);
+    render(<TicketNavigation currentTicketId="ticket-2" />);
+
+    await waitFor(() => expect(getAdjacentTicketIds).toHaveBeenCalled());
+    const [, filters] = getAdjacentTicketIds.mock.calls[0]!;
+    expect(filters.requester_vip).toBe(true);
+  });
+
   it('omits returnFilters entirely when the URL carries none', async () => {
     searchParams = new URLSearchParams();
     const { getByLabelText } = render(<TicketNavigation currentTicketId="ticket-2" />);

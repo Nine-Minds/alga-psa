@@ -103,4 +103,15 @@ describe('Contact column', () => {
     expect(plain).not.toContain('vip-badge');
     expect(plain).not.toContain('poc-badge');
   });
+
+  it('keeps the name readable: name has a min width, badges cannot shrink', () => {
+    const markup = renderContact({
+      contact_name: 'Grace Hopper',
+      contact_name_id: 'contact-1',
+      contact_is_vip: true,
+      contact_is_primary_contact: true,
+    });
+    expect(markup).toContain('class="min-w-[6ch] truncate"');
+    expect(markup).toMatch(/<span class="flex shrink-0 items-center gap-1">/);
+  });
 });
