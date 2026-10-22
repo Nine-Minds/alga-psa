@@ -197,6 +197,11 @@ CE,/api/v1/ai/document-assist,POST,server/src/app/api/v1/ai/document-assist/rout
 CE,/api/v1/appliance-installs,GET OPTIONS,server/src/app/api/v1/appliance-installs/route.ts,,,
 CE,/api/v1/appliance-installs/access,OPTIONS POST,server/src/app/api/v1/appliance-installs/access/route.ts,,,
 CE,/api/v1/appliance-installs/{tenantId},GET OPTIONS,server/src/app/api/v1/appliance-installs/[tenantId]/route.ts,,,
+CE,/api/v1/asset-groups,GET POST,server/src/app/api/v1/asset-groups/route.ts,ApiAssetGroupController,@/lib/api/controllers/ApiAssetGroupController,server/src/lib/api/controllers/ApiAssetGroupController.ts
+CE,/api/v1/asset-groups/{id},DELETE GET PUT,server/src/app/api/v1/asset-groups/[id]/route.ts,ApiAssetGroupController,@/lib/api/controllers/ApiAssetGroupController,server/src/lib/api/controllers/ApiAssetGroupController.ts
+CE,/api/v1/asset-groups/{id}/contacts,DELETE POST,server/src/app/api/v1/asset-groups/[id]/contacts/route.ts,ApiAssetGroupController,@/lib/api/controllers/ApiAssetGroupController,server/src/lib/api/controllers/ApiAssetGroupController.ts
+CE,/api/v1/asset-groups/{id}/members,DELETE POST,server/src/app/api/v1/asset-groups/[id]/members/route.ts,ApiAssetGroupController,@/lib/api/controllers/ApiAssetGroupController,server/src/lib/api/controllers/ApiAssetGroupController.ts
+CE,/api/v1/asset-statuses,GET,server/src/app/api/v1/asset-statuses/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets,GET POST,server/src/app/api/v1/assets/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/bulk-status,PUT,server/src/app/api/v1/assets/bulk-status/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/bulk-update,PUT,server/src/app/api/v1/assets/bulk-update/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
@@ -207,6 +212,7 @@ CE,/api/v1/assets/relationships/{relationshipId},DELETE,server/src/app/api/v1/as
 CE,/api/v1/assets/search,GET,server/src/app/api/v1/assets/search/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/stats,GET,server/src/app/api/v1/assets/stats/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/{id},DELETE GET PUT,server/src/app/api/v1/assets/[id]/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
+CE,/api/v1/assets/{id}/assignments,GET,server/src/app/api/v1/assets/[id]/assignments/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/{id}/documents,GET POST,server/src/app/api/v1/assets/[id]/documents/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/{id}/history,GET,server/src/app/api/v1/assets/[id]/history/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/{id}/maintenance,GET POST,server/src/app/api/v1/assets/[id]/maintenance/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
